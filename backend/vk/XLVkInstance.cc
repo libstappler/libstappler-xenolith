@@ -87,12 +87,12 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 }
 
 Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-		Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&present)
+		Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled)
 : core::Instance(move(terminate)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
 , _version(targetVersion)
 , _optionals(move(optionals))
 , _checkPresentSupport(move(present)) {
-	if constexpr (s_enableValidationLayers) {
+	if (validationEnabled) {
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { };
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debugCreateInfo.pNext = nullptr;
@@ -140,30 +140,119 @@ Rc<core::Loop> Instance::makeLoop(core::LoopInfo &&info) const {
 	return Rc<vk::Loop>::create(Rc<Instance>(const_cast<Instance *>(this)), move(info));
 }
 
-Rc<Device> Instance::makeDevice(uint32_t deviceIndex) const {
-	if (deviceIndex == maxOf<uint32_t>()) {
-		for (auto &it : _devices) {
-			if (it.supportsPresentation()) {
-				auto requiredFeatures = DeviceInfo::Features::getOptional();
-				requiredFeatures.enableFromFeatures(DeviceInfo::Features::getRequired());
-				requiredFeatures.disableFromFeatures(it.features);
-				requiredFeatures.flags = it.features.flags;
+Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
+	auto data = info.platformData.cast<LoopData>().get();
 
-				if (it.features.canEnable(requiredFeatures, it.properties.device10.properties.apiVersion)) {
-					return Rc<vk::Device>::create(this, DeviceInfo(it), requiredFeatures);
-				}
+	auto isDeviceSupported = [&] (const DeviceInfo &dev) {
+		if (data->deviceSupportCallback) {
+			if (!data->deviceSupportCallback(dev)) {
+				return false;
+			}
+		} else {
+			if (!dev.supportsPresentation()) {
+				return false;
 			}
 		}
-	} else if (deviceIndex < _devices.size()) {
-		if (_devices[deviceIndex].supportsPresentation()) {
-			auto requiredFeatures = DeviceInfo::Features::getOptional();
-			requiredFeatures.enableFromFeatures(DeviceInfo::Features::getRequired());
-			requiredFeatures.disableFromFeatures(_devices[deviceIndex].features);
-			requiredFeatures.flags = _devices[deviceIndex].features.flags;
+		return true;
+	};
 
-			if (_devices[deviceIndex].features.canEnable(requiredFeatures, _devices[deviceIndex].properties.device10.properties.apiVersion)) {
-				return Rc<vk::Device>::create(this, DeviceInfo(_devices[deviceIndex]), requiredFeatures);
+	auto getDeviceExtensions = [&] (const DeviceInfo &dev) {
+		Vector<StringView> requiredExtensions;
+		if (data->deviceExtensionsCallback) {
+			requiredExtensions = data->deviceExtensionsCallback(dev);
+		}
+
+		for (auto &ext : s_requiredDeviceExtensions) {
+			if (ext && !isPromotedExtension(dev.properties.device10.properties.apiVersion, StringView(ext))) {
+				requiredExtensions.emplace_back(ext);
 			}
+		}
+
+		for (auto &ext : dev.optionalExtensions) {
+			requiredExtensions.emplace_back(ext);
+		}
+
+		for (auto &ext : dev.promotedExtensions) {
+			if (!isPromotedExtension(dev.properties.device10.properties.apiVersion, ext)) {
+				requiredExtensions.emplace_back(ext);
+			}
+		}
+
+		return requiredExtensions;
+	};
+
+	auto isExtensionsSupported = [&] (const DeviceInfo &dev, const Vector<StringView> &requiredExtensions) {
+		if (!requiredExtensions.empty()) {
+			bool found = true;
+			for (auto &req : requiredExtensions) {
+				auto iit = std::find(dev.availableExtensions.begin(), dev.availableExtensions.end(), req);
+				if (iit == dev.availableExtensions.end()) {
+					found = false;
+					break;
+				}
+			}
+			if (!found) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	auto buildFeaturesList = [&] (const DeviceInfo &dev, DeviceInfo::Features &features) {
+		if (data->deviceFeaturesCallback) {
+			features = data->deviceFeaturesCallback(dev);
+		}
+
+		features.enableFromFeatures(DeviceInfo::Features::getRequired());
+
+		if (!dev.features.canEnable(features, dev.properties.device10.properties.apiVersion)) {
+			return false;
+		}
+
+		features.enableFromFeatures(DeviceInfo::Features::getOptional());
+		features.disableFromFeatures(dev.features);
+		features.flags = dev.features.flags;
+		return true;
+	};
+
+	if (info.deviceIdx == DefaultDevice) {
+		for (auto &it : _devices) {
+			if (!isDeviceSupported(it)) {
+				continue;
+			}
+
+			auto requiredExtensions = getDeviceExtensions(it);
+			if (!isExtensionsSupported(it, requiredExtensions)) {
+				continue;
+			}
+
+			DeviceInfo::Features targetFeatures;
+			if (!buildFeaturesList(it, targetFeatures)) {
+				continue;
+			}
+
+			if (it.features.canEnable(targetFeatures, it.properties.device10.properties.apiVersion)) {
+				return Rc<vk::Device>::create(this, DeviceInfo(it), targetFeatures, requiredExtensions);
+			}
+		}
+	} else if (info.deviceIdx < _devices.size()) {
+		auto &dev = _devices[info.deviceIdx];
+		if (!isDeviceSupported(dev)) {
+			return nullptr;
+		}
+
+		auto requiredExtensions = getDeviceExtensions(dev);
+		if (!isExtensionsSupported(dev, requiredExtensions)) {
+			return nullptr;
+		}
+
+		DeviceInfo::Features targetFeatures;
+		if (!buildFeaturesList(dev, targetFeatures)) {
+			return nullptr;
+		}
+
+		if (dev.features.canEnable(targetFeatures, dev.properties.device10.properties.apiVersion)) {
+			return Rc<vk::Device>::create(this, DeviceInfo(dev), targetFeatures, requiredExtensions);
 		}
 	}
 	return nullptr;
@@ -555,6 +644,11 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	ret.computeFamily = queueInfo[computeFamily];
 	ret.optionalExtensions = move(enabledOptionals);
 	ret.promotedExtensions = move(promotedOptionals);
+
+	ret.availableExtensions.reserve(availableExtensions.size());
+	for (auto &it : availableExtensions) {
+		ret.availableExtensions.emplace_back(it.extensionName);
+	}
 
 	getDeviceProperties(device, ret.properties, extensionFlags, deviceProperties.apiVersion);
 	getDeviceFeatures(device, ret.features, extensionFlags, deviceProperties.apiVersion);

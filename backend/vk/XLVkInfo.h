@@ -97,6 +97,7 @@ struct DeviceInfo {
 
 	Vector<StringView> optionalExtensions;
 	Vector<StringView> promotedExtensions;
+	Vector<String> availableExtensions;
 
 	Properties properties;
 	Features features;
@@ -119,4 +120,4 @@ struct DeviceInfo {
 
 }
 
-#endif /* XENOLITH_GL_VK_XLVKINFO_H_ */
+#endif /* XENOLITH_BACKEND_VK_XLVKINFO_H_ */

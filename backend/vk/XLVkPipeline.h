@@ -84,4 +84,4 @@ protected:
 
 }
 
-#endif /* XENOLITH_GL_VK_XLVKPIPELINE_H_ */
+#endif /* XENOLITH_BACKEND_VK_XLVKPIPELINE_H_ */

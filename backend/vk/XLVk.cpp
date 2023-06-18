@@ -65,3 +65,6 @@ THE SOFTWARE.
 #include "XLVkQueuePass.cc"
 #include "XLVkRenderQueueCompiler.cc"
 #include "XLVkTransferQueue.cc"
+
+#include "platform/android/XLVkPlatform.cc"
+#include "platform/linux/XLVkPlatform.cc"

@@ -28,13 +28,6 @@ namespace stappler::xenolith::vk {
 
 DeviceInfo::Features DeviceInfo::Features::getRequired() {
 	Features ret;
-#ifdef VK_ENABLE_BETA_EXTENSIONS
-	ret.devicePortability.constantAlphaColorBlendFactors = VK_TRUE;
-	ret.devicePortability.events = VK_TRUE;
-	ret.devicePortability.imageViewFormatSwizzle = VK_TRUE;
-	ret.devicePortability.shaderSampleRateInterpolationFunctions = VK_TRUE;
-#endif
-	ret.device10.features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 	return ret;
 }
 
@@ -79,7 +72,19 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 		| ExtensionFlags::DeviceAddress
 		| ExtensionFlags::ShaderFloat16
 		| ExtensionFlags::ShaderInt8
-		| ExtensionFlags::MemoryBudget;
+		| ExtensionFlags::MemoryBudget
+		| ExtensionFlags::DedicatedAllocation
+		| ExtensionFlags::GetMemoryRequirements2
+		| ExtensionFlags::BufferDeviceAddress;
+
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+	ret.devicePortability.constantAlphaColorBlendFactors = VK_TRUE;
+	ret.devicePortability.events = VK_TRUE;
+	ret.devicePortability.imageViewFormatSwizzle = VK_TRUE;
+	ret.devicePortability.shaderSampleRateInterpolationFunctions = VK_TRUE;
+
+	ret.flags = ExtensionFlags::Portability;
+#endif
 
 	ret.updateTo12();
 	return ret;

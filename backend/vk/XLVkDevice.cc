@@ -86,7 +86,7 @@ Device::~Device() {
 	XL_VKDEVICE_LOG("~Device");
 }
 
-bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &features) {
+bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &features, const Vector<StringView> &extensions) {
 	Set<uint32_t> uniqueQueueFamilies = { info.graphicsFamily.index, info.presentFamily.index, info.transferFamily.index, info.computeFamily.index };
 
 	auto emplaceQueueFamily = [&] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, QueueOperations preferred) {
@@ -103,7 +103,6 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 
 	_presentMask = info.presentFamily.presentSurfaceMask;
 
-	info.graphicsFamily.count = 1;
 	info.presentFamily.count = 1;
 
 	emplaceQueueFamily(info.graphicsFamily, std::thread::hardware_concurrency(), QueueOperations::Graphics);
@@ -111,25 +110,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	emplaceQueueFamily(info.transferFamily, 2, QueueOperations::Transfer);
 	emplaceQueueFamily(info.computeFamily, std::thread::hardware_concurrency(), QueueOperations::Compute);
 
-	Vector<const char *> extensions;
-	for (auto &it : s_requiredDeviceExtensions) {
-		if (it && !isPromotedExtension(inst->getVersion(), StringView(it))) {
-			extensions.emplace_back(it);
-		}
-	}
-
-	for (auto &it : info.optionalExtensions) {
-		extensions.emplace_back(it.data());
-	}
-
-	for (auto &it : info.promotedExtensions) {
-		if (!isPromotedExtension(inst->getVersion(), it)) {
-			extensions.emplace_back(it.data());
-		}
-	}
-
-	_enabledFeatures = features;
-	if (!setup(inst, info.device, info.properties, _families, _enabledFeatures, extensions)) {
+	if (!setup(inst, info.device, info.properties, _families, features, extensions)) {
 		return false;
 	}
 
@@ -659,7 +640,15 @@ void Device::compileSamplers(thread::TaskQueue &q, bool force) {
 }
 
 bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
-		const Vector<DeviceQueueFamily> &queueFamilies, Features &features, const Vector<const char *> &requiredExtension) {
+		const Vector<DeviceQueueFamily> &queueFamilies, const Features &f, const Vector<StringView> &ext) {
+	_enabledFeatures = f;
+
+	Vector<const char *> requiredExtension;
+	requiredExtension.reserve(ext.size());
+	for (auto &it : ext) {
+		requiredExtension.emplace_back(it.data());
+	}
+
 	Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
 	uint32_t maxQueues = 0;
@@ -689,42 +678,42 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 	}
 #endif
 	if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_3) {
-		features.device13.pNext = next;
-		features.device12.pNext = &features.device13;
-		features.device11.pNext = &features.device12;
-		features.device10.pNext = &features.device11;
-		deviceCreateInfo.pNext = &features.device11;
+		_enabledFeatures.device13.pNext = next;
+		_enabledFeatures.device12.pNext = &_enabledFeatures.device13;
+		_enabledFeatures.device11.pNext = &_enabledFeatures.device12;
+		_enabledFeatures.device10.pNext = &_enabledFeatures.device11;
+		deviceCreateInfo.pNext = &_enabledFeatures.device11;
 	} else if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_2) {
-		features.device12.pNext = next;
-		features.device11.pNext = &features.device12;
-		features.device10.pNext = &features.device11;
-		deviceCreateInfo.pNext = &features.device11;
+		_enabledFeatures.device12.pNext = next;
+		_enabledFeatures.device11.pNext = &_enabledFeatures.device12;
+		_enabledFeatures.device10.pNext = &_enabledFeatures.device11;
+		deviceCreateInfo.pNext = &_enabledFeatures.device11;
 	} else {
-		if ((features.flags & ExtensionFlags::Storage16Bit) != ExtensionFlags::None) {
-			features.device16bitStorage.pNext = next;
-			next = &features.device16bitStorage;
+		if ((_enabledFeatures.flags & ExtensionFlags::Storage16Bit) != ExtensionFlags::None) {
+			_enabledFeatures.device16bitStorage.pNext = next;
+			next = &_enabledFeatures.device16bitStorage;
 		}
-		if ((features.flags & ExtensionFlags::Storage8Bit) != ExtensionFlags::None) {
-			features.device8bitStorage.pNext = next;
-			next = &features.device8bitStorage;
+		if ((_enabledFeatures.flags & ExtensionFlags::Storage8Bit) != ExtensionFlags::None) {
+			_enabledFeatures.device8bitStorage.pNext = next;
+			next = &_enabledFeatures.device8bitStorage;
 		}
-		if ((features.flags & ExtensionFlags::ShaderFloat16) != ExtensionFlags::None || (features.flags & ExtensionFlags::ShaderInt8) != ExtensionFlags::None) {
-			features.deviceShaderFloat16Int8.pNext = next;
-			next = &features.deviceShaderFloat16Int8;
+		if ((_enabledFeatures.flags & ExtensionFlags::ShaderFloat16) != ExtensionFlags::None || (_enabledFeatures.flags & ExtensionFlags::ShaderInt8) != ExtensionFlags::None) {
+			_enabledFeatures.deviceShaderFloat16Int8.pNext = next;
+			next = &_enabledFeatures.deviceShaderFloat16Int8;
 		}
-		if ((features.flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
-			features.deviceDescriptorIndexing.pNext = next;
-			next = &features.deviceDescriptorIndexing;
+		if ((_enabledFeatures.flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
+			_enabledFeatures.deviceDescriptorIndexing.pNext = next;
+			next = &_enabledFeatures.deviceDescriptorIndexing;
 		}
-		if ((features.flags & ExtensionFlags::DeviceAddress) != ExtensionFlags::None) {
-			features.deviceBufferDeviceAddress.pNext = next;
-			next = &features.deviceBufferDeviceAddress;
+		if ((_enabledFeatures.flags & ExtensionFlags::DeviceAddress) != ExtensionFlags::None) {
+			_enabledFeatures.deviceBufferDeviceAddress.pNext = next;
+			next = &_enabledFeatures.deviceBufferDeviceAddress;
 		}
 		deviceCreateInfo.pNext = next;
 	}
 	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-	deviceCreateInfo.pEnabledFeatures = &features.device10.features;
+	deviceCreateInfo.pEnabledFeatures = &_enabledFeatures.device10.features;
 	deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtension.size());
 	deviceCreateInfo.ppEnabledExtensionNames = requiredExtension.data();
 

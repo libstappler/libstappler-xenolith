@@ -32,6 +32,10 @@ auto ImageAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<Attachment
 	return Rc<ImageAttachmentHandle>::create(this, handle);
 }
 
+const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const {
+	return _queueData->image;
+}
+
 bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue, DescriptorImageInfo &info) {
 	auto &image = _queueData->image;
 

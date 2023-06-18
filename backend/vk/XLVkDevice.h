@@ -61,7 +61,7 @@ public:
 	Device();
 	virtual ~Device();
 
-	bool init(const vk::Instance *instance, DeviceInfo &&, const Features &);
+	bool init(const vk::Instance *instance, DeviceInfo &&, const Features &, const Vector<StringView> &);
 
 	const Instance *getInstance() const { return _vkInstance; }
 	VkDevice getDevice() const { return _device; }
@@ -142,7 +142,7 @@ private:
 	virtual void compileSamplers(thread::TaskQueue &q, bool force);
 
 	bool setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
-			const Vector<DeviceQueueFamily> &queueFamilies, Features &features, const Vector<const char *> &requiredExtension);
+			const Vector<DeviceQueueFamily> &queueFamilies, const Features &features, const Vector<StringView> &requiredExtension);
 
 	const vk::Instance *_vkInstance = nullptr;
 	const DeviceTable *_table = nullptr;

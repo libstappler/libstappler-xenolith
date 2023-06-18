@@ -54,7 +54,7 @@ class ImageAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~ImageAttachmentHandle() { }
 
-	const Rc<core::ImageStorage> &getImage() const { return _queueData->image; }
+	const Rc<core::ImageStorage> &getImage() const;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorImageInfo &);
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const;
@@ -69,4 +69,4 @@ public:
 
 }
 
-#endif /* XENOLITH_GL_VK_RENDERER_XLVKATTACHMENT_H_ */
+#endif /* XENOLITH_BACKEND_VK_XLVKATTACHMENT_H_ */

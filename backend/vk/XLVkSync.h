@@ -140,4 +140,4 @@ protected:
 
 }
 
-#endif /* XENOLITH_GL_VK_XLVKSYNC_H_ */
+#endif /* XENOLITH_BACKEND_VK_XLVKSYNC_H_ */

@@ -95,7 +95,6 @@ static const char * const s_optionalExtension[] = {
 };
 
 static const char * const s_requiredDeviceExtensions[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
 	nullptr
 };
@@ -137,7 +136,8 @@ enum class ExtensionFlags {
 	MemoryBudget = 1 << 8,
 	GetMemoryRequirements2 = 1 << 9,
 	DedicatedAllocation = 1 << 10,
-	Portability = 1 << 11,
+	BufferDeviceAddress = 1 << 11,
+	Portability = 1 << 12,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ExtensionFlags);

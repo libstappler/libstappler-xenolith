@@ -94,6 +94,9 @@ public:
 	virtual void wakeup() override;
 	virtual void waitIdle() override;
 
+	virtual void captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb,
+			const Rc<core::ImageObject> &image, core::AttachmentLayout l) override;
+
 protected:
 	using core::Loop::init;
 
@@ -113,4 +116,4 @@ protected:
 
 }
 
-#endif /* XENOLITH_GL_VK_XLVKLOOP_H_ */
+#endif /* XENOLITH_BACKEND_VK_XLVKLOOP_H_ */

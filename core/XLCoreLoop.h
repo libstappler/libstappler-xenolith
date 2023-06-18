@@ -39,6 +39,7 @@ struct LoopInfo {
 	uint32_t deviceIdx = core::Instance::DefaultDevice;
 	Function<void(const Loop &, const Device &)> onDeviceStarted;
 	Function<void(const Loop &, const Device &)> onDeviceFinalized;
+	Rc<Ref> platformData;
 };
 
 class Loop : public thread::ThreadInterface<Interface> {
@@ -106,6 +107,8 @@ public:
 
 	virtual void wakeup() = 0;
 	virtual void waitIdle() = 0;
+
+	virtual void captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
 
 protected:
 	std::atomic_flag _shouldExit;

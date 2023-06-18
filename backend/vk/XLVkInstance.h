@@ -31,17 +31,27 @@ namespace stappler::xenolith::vk {
 
 class Device;
 
+struct LoopData : Ref {
+	using DeviceSupportCallback = Function<bool(const DeviceInfo &)>;
+	using DeviceExtensionsCallback = Function<Vector<StringView>(const DeviceInfo &)>;
+	using DeviceFeaturesCallback = Function<DeviceInfo::Features(const DeviceInfo &)>;
+
+	DeviceSupportCallback deviceSupportCallback;
+	DeviceExtensionsCallback deviceExtensionsCallback;
+	DeviceFeaturesCallback deviceFeaturesCallback;
+};
+
 class Instance : public core::Instance, public InstanceTable {
 public:
 	using PresentSupportCallback = Function<uint32_t(const Instance *, VkPhysicalDevice device, uint32_t familyIdx)>;
 
 	Instance(VkInstance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&);
+			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled);
 	virtual ~Instance();
 
 	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const;
 
-	Rc<Device> makeDevice(uint32_t deviceIndex = maxOf<uint32_t>()) const;
+	Rc<Device> makeDevice(const core::LoopInfo &) const;
 
 	core::SurfaceInfo getSurfaceOptions(VkSurfaceKHR, VkPhysicalDevice) const;
 	VkExtent2D getSurfaceExtent(VkSurfaceKHR, VkPhysicalDevice) const;

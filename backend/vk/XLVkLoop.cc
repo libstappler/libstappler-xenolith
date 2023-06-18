@@ -63,7 +63,7 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void setDevice(Rc<Device> &&dev) {
-		requiredTasks += 4;
+		requiredTasks += 2;
 
 		device = move(dev);
 
@@ -316,12 +316,13 @@ void Loop::threadInit() {
 	_internal->queue->spawnWorkers(thread::TaskQueue::Flags::Cancelable | thread::TaskQueue::Flags::Waitable, LoopThreadId,
 			config::getGlThreadCount());
 
-	if (auto dev = _vkInstance->makeDevice(_info.deviceIdx)) {
+	if (auto dev = _vkInstance->makeDevice(_info)) {
 		_internal->setDevice(move(dev));
 		_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 	} else if (_info.deviceIdx != core::Instance::DefaultDevice) {
 		log::vtext("vk::Loop", "Unable to create device with index: ", _info.deviceIdx, ", fallback to default");
-		if (auto dev = _vkInstance->makeDevice(core::Instance::DefaultDevice)) {
+		_info.deviceIdx = core::Instance::DefaultDevice;
+		if (auto dev = _vkInstance->makeDevice(_info)) {
 			_internal->setDevice(move(dev));
 			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 		} else {
@@ -717,6 +718,12 @@ void Loop::waitIdle() {
 	if (_internal) {
 		_internal->waitIdle();
 	}
+}
+
+void Loop::captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
+	performOnGlThread([this, cb = move(cb), image, l] () mutable {
+		_internal->device->getTextureSetLayout()->readImage(*_internal->device, *this, image.cast<Image>(), l, move(cb));
+	}, this, true);
 }
 
 }
