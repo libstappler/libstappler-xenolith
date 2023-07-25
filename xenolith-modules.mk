@@ -22,4 +22,11 @@
 XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 include $(XENOLITH_MODULE_DIR)/core/core.mk
+include $(XENOLITH_MODULE_DIR)/main/main.mk
+include $(XENOLITH_MODULE_DIR)/scene/scene.mk
+include $(XENOLITH_MODULE_DIR)/font/font.mk
+include $(XENOLITH_MODULE_DIR)/platform/platform.mk
 include $(XENOLITH_MODULE_DIR)/backend/vk/vk.mk
+include $(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk
+
+include $(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk

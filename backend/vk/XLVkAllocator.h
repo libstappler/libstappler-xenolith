@@ -144,10 +144,10 @@ public:
 	MemoryRequirements getImageMemoryRequirements(VkImage target);
 
 	Rc<Buffer> spawnPersistent(AllocationUsage, const BufferInfo &, BytesView = BytesView());
-	Rc<Image> spawnPersistent(AllocationUsage, const ImageInfo &, bool preinitialized, uint64_t forceId = 0);
+	Rc<Image> spawnPersistent(AllocationUsage, const ImageInfoData &, bool preinitialized, uint64_t forceId = 0);
 
 	Rc<Buffer> preallocate(const BufferInfo &, BytesView = BytesView());
-	Rc<Image> preallocate(const ImageInfo &, bool preinitialized, uint64_t forceId = 0);
+	Rc<Image> preallocate(const ImageInfoData &, bool preinitialized, uint64_t forceId = 0);
 
 	Rc<DeviceMemory> emplaceObjects(AllocationUsage usage, SpanView<Rc<Image>>, SpanView<Rc<Buffer>>);
 

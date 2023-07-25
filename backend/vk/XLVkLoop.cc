@@ -30,6 +30,8 @@
 
 #include "XLVkTransferQueue.h"
 #include "XLVkRenderQueueCompiler.h"
+#include "XLVkMeshCompiler.h"
+#include "XLVkMaterialCompiler.h"
 
 namespace stappler::xenolith::vk {
 
@@ -78,7 +80,7 @@ struct Loop::Internal final : memory::AllocPool {
 		renderQueueCompiler = Rc<RenderQueueCompiler>::create(*device);
 		transferQueue = Rc<TransferQueue>::create();
 
-		compileRenderQueue(transferQueue, [this] (bool success) {
+		compileQueue(transferQueue, [this] (bool success) {
 			onInitTaskPerformed(success, "TransferQueue");
 		});
 	}
@@ -128,13 +130,18 @@ struct Loop::Internal final : memory::AllocPool {
 		}
 	}
 
-	void compileRenderQueue(const Rc<core::Queue> &req, Function<void(bool)> &&cb) {
+	void compileResource(Rc<TransferResource> &&req) {
+		auto h = loop->makeFrame(transferQueue->makeRequest(move(req)), 0);
+		h->update(true);
+	}
+
+	void compileQueue(const Rc<core::Queue> &req, Function<void(bool)> &&cb) {
 		auto input = Rc<RenderQueueInput>::alloc();
 		input->queue = req;
 
 		auto h = Rc<DeviceFrameHandle>::create(*loop, *device, renderQueueCompiler->makeRequest(move(input)), 0);
 		if (cb) {
-			h->setCompleteCallback([cb] (FrameHandle &handle) {
+			h->setCompleteCallback([this, cb = move(cb), req] (FrameHandle &handle) {
 				cb(handle.isValid());
 			});
 		}
@@ -142,9 +149,14 @@ struct Loop::Internal final : memory::AllocPool {
 		h->update(true);
 	}
 
-	void compileResource(Rc<TransferResource> &&req) {
-		auto h = loop->makeFrame(transferQueue->makeRequest(move(req)), 0);
-		h->update(true);
+	void compileMaterials(Rc<core::MaterialInputData> &&req, Vector<Rc<DependencyEvent>> &&deps) {
+		if (materialQueue->inProgress(req->attachment)) {
+			materialQueue->appendRequest(req->attachment, move(req), move(deps));
+		} else {
+			auto attachment = req->attachment;
+			materialQueue->setInProgress(attachment);
+			materialQueue->runMaterialCompilationFrame(*loop, move(req), move(deps));
+		}
 	}
 
 	void onInitTaskPerformed(bool success, StringView view) {
@@ -237,7 +249,7 @@ struct Loop::Internal final : memory::AllocPool {
 	memory::vector<Timer> *reschedule;
 	memory::vector<Rc<Ref>> *autorelease;
 
-	std::multimap<DependencyEvent *, Rc<DependencyRequest>> dependencyRequests;
+	std::multimap<DependencyEvent *, Rc<DependencyRequest>, std::less<void>> dependencyRequests;
 
 	Mutex resourceMutex;
 
@@ -248,6 +260,8 @@ struct Loop::Internal final : memory::AllocPool {
 
 	Rc<RenderQueueCompiler> renderQueueCompiler;
 	Rc<TransferQueue> transferQueue;
+	Rc<MaterialCompiler> materialQueue;
+	Rc<MeshCompiler> meshQueue;
 	std::atomic<bool> *running = nullptr;
 	uint32_t requiredTasks = 0;
 
@@ -314,7 +328,7 @@ void Loop::threadInit() {
 
 	_internal->queue = Rc<thread::TaskQueue>::alloc("Vk::Loop::Queue");
 	_internal->queue->spawnWorkers(thread::TaskQueue::Flags::Cancelable | thread::TaskQueue::Flags::Waitable, LoopThreadId,
-			config::getGlThreadCount());
+			_internal->info->threadsCount);
 
 	if (auto dev = _vkInstance->makeDevice(_info)) {
 		_internal->setDevice(move(dev));
@@ -507,20 +521,32 @@ void Loop::cancel() {
 	_thread.join();
 }
 
-void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) {
+void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) const {
 	auto res = Rc<TransferResource>::create(_internal->device->getAllocator(), move(req), move(cb));
 	if (preload) {
 		res->initialize();
 	}
 	performOnGlThread([this, res = move(res)] () mutable {
 		_internal->compileResource(move(res));
-	}, this, true);
+	}, (Loop *)this, true);
 }
 
-void Loop::compileRenderQueue(const Rc<RenderQueue> &req, Function<void(bool)> &&callback) {
+void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) const {
 	performOnGlThread([this, req, callback = move(callback)]() mutable {
-		_internal->compileRenderQueue(req, move(callback));
-	}, this, true);
+		_internal->compileQueue(req, move(callback));
+	}, (Loop *)this, true);
+}
+
+void Loop::compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> &deps) const {
+	performOnGlThread([this, req = move(req), deps = deps] () mutable {
+		_internal->compileMaterials(move(req), move(deps));
+	}, (Loop *)this, true);
+}
+
+void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> &&callback) const {
+	performOnGlThread([this, img, callback = move(callback)]() mutable {
+		_internal->device->compileImage(*this, img, move(callback));
+	}, (Loop *)this, true);
 }
 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
@@ -555,7 +581,7 @@ void Loop::schedule(Function<bool(core::Loop &)> &&cb, uint64_t delay, StringVie
 	}
 }
 
-void Loop::performInQueue(Rc<thread::Task> &&task) {
+void Loop::performInQueue(Rc<thread::Task> &&task) const {
 	if (!_internal || !_internal->queue) {
 		auto &tasks = task->getCompleteTasks();
 		for (auto &it : tasks) {
@@ -567,7 +593,7 @@ void Loop::performInQueue(Rc<thread::Task> &&task) {
 	_internal->queue->perform(move(task));
 }
 
-void Loop::performInQueue(Function<void()> &&func, Ref *target) {
+void Loop::performInQueue(Function<void()> &&func, Ref *target) const {
 	if (!_internal || !_internal->queue) {
 		return;
 	}
@@ -575,7 +601,7 @@ void Loop::performInQueue(Function<void()> &&func, Ref *target) {
 	_internal->queue->perform(move(func), target);
 }
 
-void Loop::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) {
+void Loop::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
 	if (!_internal || !_internal->queue) {
 		return;
 	}
@@ -600,25 +626,24 @@ auto Loop::makeFrame(Rc<FrameRequest> &&req, uint64_t gen) -> Rc<FrameHandle> {
 	return nullptr;
 }
 
-Rc<core::Framebuffer> Loop::acquireFramebuffer(const PassData *data, SpanView<Rc<core::ImageView>> views, Extent2 e) {
+Rc<core::Framebuffer> Loop::acquireFramebuffer(const PassData *data, SpanView<Rc<core::ImageView>> views) {
 	if (!_running.load()) {
 		return nullptr;
 	}
 
-	return _frameCache->acquireFramebuffer(data, views, e);
+	return _frameCache->acquireFramebuffer(data, views);
 }
 
 void Loop::releaseFramebuffer(Rc<core::Framebuffer> &&fb) {
 	_frameCache->releaseFramebuffer(move(fb));
 }
 
-auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h, Extent3 e) -> Rc<ImageStorage> {
+auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h, const core::ImageInfoData &i) -> Rc<ImageStorage> {
 	if (!_running.load()) {
 		return nullptr;
 	}
 
-	ImageInfo info = a->getAttachmentInfo(h, e);
-	info.extent = e;
+	core::ImageInfoData info(i);
 	if (a->isTransient()) {
 		if ((info.usage & (core::ImageUsage::ColorAttachment | core::ImageUsage::DepthStencilAttachment | core::ImageUsage::InputAttachment))
 				!= core::ImageUsage::None) {
@@ -627,7 +652,7 @@ auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h, Ext
 	}
 
 	auto views = a->getImageViews(info);
-	return _frameCache->acquireImage(info, views);
+	return _frameCache->acquireImage(a->getId(), info, views);
 }
 
 void Loop::releaseImage(Rc<ImageStorage> &&image) {
@@ -720,7 +745,7 @@ void Loop::waitIdle() {
 	}
 }
 
-void Loop::captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
+void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
 	performOnGlThread([this, cb = move(cb), image, l] () mutable {
 		_internal->device->getTextureSetLayout()->readImage(*_internal->device, *this, image.cast<Image>(), l, move(cb));
 	}, this, true);

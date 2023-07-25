@@ -44,7 +44,7 @@ bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue, 
 	viewInfo.setup(info.descriptor->attachment->colorMode, allowSwizzle);
 	if (auto view = image->getView(viewInfo)) {
 		info.layout = VkImageLayout(info.descriptor->layout);
-		info.imageView = (ImageView *)view.get();
+		info.imageView = static_cast<ImageView *>(view.get());
 		return true;
 	}
 

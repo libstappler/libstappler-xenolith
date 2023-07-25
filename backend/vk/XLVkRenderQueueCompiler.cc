@@ -89,6 +89,9 @@ public:
 	virtual void finalize(FrameQueue &, bool successful) override;
 
 protected:
+	virtual bool prepareMaterials(FrameHandle &frame, VkCommandBuffer buf,
+			const Rc<core::MaterialAttachment> &attachment, Vector<VkBufferMemoryBarrier> &outputBufferBarriers);
+
 	Rc<TransferResource> _resource;
 	Rc<core::Queue> _queue;
 	RenderQueueAttachmentHandle *_attachment;
@@ -141,7 +144,7 @@ auto RenderQueueAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<Atta
 RenderQueueAttachmentHandle::~RenderQueueAttachmentHandle() { }
 
 bool RenderQueueAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)> &&) {
-	_device = (Device *)handle.getFrame()->getDevice();
+	_device = static_cast<Device *>(handle.getFrame()->getDevice());
 	return true;
 }
 
@@ -307,17 +310,26 @@ bool RenderQueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
 }
 
 bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb) {
-	if (auto a = frame.getAttachment(((RenderQueuePass *)_renderPass.get())->getAttachment())) {
-		_attachment = (RenderQueueAttachmentHandle *)a->handle.get();
+	if (auto a = frame.getAttachment(static_cast<RenderQueuePass *>(_queuePass.get())->getAttachment())) {
+		_attachment = static_cast<RenderQueueAttachmentHandle *>(a->handle.get());
 	}
 
-	_loop = (Loop *)frame.getLoop();
-	_device = (Device *)frame.getFrame()->getDevice();
+	_loop = static_cast<Loop *>(frame.getLoop());
+	_device = static_cast<Device *>(frame.getFrame()->getDevice());
 	_queue = _attachment->getRenderQueue();
 
+	auto hasMaterials = false;
 	auto &res = _attachment->getTransferResource();
+	for (auto &it : _queue->getAttachments()) {
+		if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
+			if (!v->getPredefinedMaterials().empty()) {
+				hasMaterials = true;
+				break;
+			}
+		}
+	}
 
-	if (res) {
+	if (res || hasMaterials) {
 		_resource = res;
 		_pool = _device->acquireCommandPool(QueueOperations::Transfer);
 		if (!_pool) {
@@ -325,7 +337,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 			return false;
 		}
 
-		frame.getFrame()->performInQueue([this] (FrameHandle &frame) {
+		frame.getFrame()->performInQueue([this, hasMaterials] (FrameHandle &frame) {
 			auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
 				Vector<VkImageMemoryBarrier> outputImageBarriers;
 				Vector<VkBufferMemoryBarrier> outputBufferBarriers;
@@ -336,6 +348,17 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 						return false;
 					}
 					_resource->compile();
+				}
+
+				if (hasMaterials) {
+					for (auto &it : _queue->getAttachments()) {
+						if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
+							if (!prepareMaterials(frame, buf.getBuffer(), v, outputBufferBarriers)) {
+								log::vtext("vk::RenderQueueCompiler", "Fail to compile predefined materials for ", _queue->getName());
+								return false;
+							}
+						}
+					}
 				}
 
 				_device->getTable()->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -379,22 +402,96 @@ void RenderQueuePassHandle::submit(FrameQueue &queue, Rc<FrameSync> &&sync, Func
 
 void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 	QueuePassHandle::finalize(frame, successful);
-	Vector<uint64_t> ids;
+	Vector<uint64_t> passIds;
 	auto &cache = frame.getLoop()->getFrameCache();
 	for (auto &it : _attachment->getRenderQueue()->getPasses()) {
 		if (it->impl && it->pass->getType() != core::PassType::Generic) {
-			ids.emplace_back(it->impl->getIndex());
+			passIds.emplace_back(it->impl->getIndex());
 			cache->addRenderPass(it->impl->getIndex());
 		}
 	}
-	_attachment->getRenderQueue()->setCompiled(true, [loop = Rc<core::Loop>(frame.getLoop()), ids = move(ids)] {
-		loop->performOnGlThread([loop, ids] {
+
+	Vector<uint64_t> attachmentIds;
+	for (auto &it : _attachment->getRenderQueue()->getAttachments()) {
+		if (it->type == core::AttachmentType::Image) {
+			attachmentIds.emplace_back(it->id);
+			cache->addAttachment(it->id);
+		}
+	}
+
+	_attachment->getRenderQueue()->setCompiled(true, [loop = Rc<core::Loop>(frame.getLoop()),
+			passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
+		loop->performOnGlThread([loop, passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
 			auto &cache = loop->getFrameCache();
-			for (auto &id : ids) {
+			for (auto &id : passIds) {
 				cache->removeRenderPass(id);
 			}
+			for (auto &id : attachmentIds) {
+				cache->removeAttachment(id);
+			}
+			cache->removeUnreachableFramebuffers();
 		});
 	});
+}
+
+bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, VkCommandBuffer buf,
+		const Rc<core::MaterialAttachment> &attachment, Vector<VkBufferMemoryBarrier> &outputBufferBarriers) {
+	auto table = _device->getTable();
+	auto &initial = attachment->getPredefinedMaterials();
+	if (initial.empty()) {
+		return true;
+	}
+
+	auto data = attachment->allocateSet(*_device);
+
+	auto buffers = updateMaterials(iframe, data, initial, SpanView<core::MaterialId>(), SpanView<core::MaterialId>());
+
+	VkBufferCopy indexesCopy;
+	indexesCopy.srcOffset = 0;
+	indexesCopy.dstOffset = 0;
+	indexesCopy.size = buffers.stagingBuffer->getSize();
+
+	auto stagingBuf = buffers.stagingBuffer->getBuffer();
+	auto targetBuf = buffers.targetBuffer->getBuffer();
+
+	Vector<VkImageMemoryBarrier> outputImageBarriers;
+	table->vkCmdCopyBuffer(buf, stagingBuf, targetBuf, 1, &indexesCopy);
+
+	QueueOperations ops = QueueOperations::None;
+	for (auto &it : attachment->getRenderPasses()) {
+		ops |= static_cast<vk::QueuePass *>(it->pass.get())->getQueueOps();
+	}
+
+	if (auto q = _device->getQueueFamily(ops)) {
+		if (q->index == _pool->getFamilyIdx()) {
+			outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+				buffers.targetBuffer->getBuffer(), 0, VK_WHOLE_SIZE
+			}));
+		} else {
+			auto &b = outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+				_pool->getFamilyIdx(), q->index,
+				buffers.targetBuffer->getBuffer(), 0, VK_WHOLE_SIZE
+			}));
+			buffers.targetBuffer->setPendingBarrier(b);
+		}
+
+		auto tmpBuffer = new Rc<Buffer>(move(buffers.targetBuffer));
+		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(move(buffers.ordering));
+		iframe.performOnGlThread([attachment, data, tmpBuffer, tmpOrder] (FrameHandle &) {
+			data->setBuffer(move(*tmpBuffer), move(*tmpOrder));
+			attachment->setMaterials(data);
+			delete tmpBuffer;
+			delete tmpOrder;
+		}, nullptr, false, "RenderQueueRenderPassHandle::prepareMaterials");
+
+		return true;
+	}
+	return false;
 }
 
 }

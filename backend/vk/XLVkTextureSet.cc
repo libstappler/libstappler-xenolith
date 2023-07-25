@@ -204,9 +204,9 @@ Rc<Image> TextureSetLayout::getSolidImageObject() const {
 }
 
 void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image,
-		AttachmentLayout l, Function<void(const ImageInfo &, BytesView)> &&cb) {
+		AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
 	struct ReadImageTask : public Ref {
-		Function<void(const ImageInfo &, BytesView)> callback;
+		Function<void(const ImageInfoData &, BytesView)> callback;
 		Rc<Image> image;
 		Rc<Loop> loop;
 		Device *device;
@@ -312,33 +312,8 @@ void TextureSetLayout::writeDefaults(CommandBuffer &buf) {
 }
 
 void TextureSetLayout::writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &buffer, const Rc<Image> &image) {
-	ImageMemoryBarrier inImageBarrier(image, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
-
-	auto sourceFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	auto targetFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-	if (image->getInfo().type != core::PassType::Generic) {
-		auto q = dev.getQueueFamily(image->getInfo().type);
-		if (qidx != q->index) {
-			sourceFamilyIndex = qidx;
-			targetFamilyIndex = q->index;
-		}
-	}
-
-	buf.cmdCopyBufferToImage(buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
-
-	ImageMemoryBarrier outImageBarrier(image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		QueueFamilyTransfer{sourceFamilyIndex, targetFamilyIndex});
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, makeSpanView(&outImageBarrier, 1));
-
-	if (targetFamilyIndex != VK_QUEUE_FAMILY_IGNORED) {
-		image->setPendingBarrier(outImageBarrier);
-	}
+	auto f = dev.getQueueFamily(image->getInfo().type);
+	buf.writeImageTransfer(qidx, f ? f->index : VK_QUEUE_FAMILY_IGNORED, buffer, image);
 }
 
 void TextureSetLayout::writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &image,

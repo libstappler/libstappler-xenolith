@@ -80,6 +80,7 @@ namespace stappler::xenolith::vk {
 
 using BufferInfo = core::BufferInfo;
 using ImageInfo = core::ImageInfo;
+using ImageInfoData = core::ImageInfoData;
 using ImageViewInfo = core::ImageViewInfo;
 using SamplerInfo = core::SamplerInfo;
 

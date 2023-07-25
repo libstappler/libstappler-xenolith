@@ -245,7 +245,7 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 	auto vkInstance = Rc<vk::Instance>::alloc(instance, table.vkGetInstanceProcAddr, data.targetVulkanVersion, move(enabledOptionals),
 			[handle] {
 		::dlclose(handle);
-	}, move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr));
+	}, move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;

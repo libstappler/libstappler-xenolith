@@ -29,7 +29,7 @@ namespace stappler::xenolith::core {
 
 struct FrameCacheFramebuffer final {
 	Vector<Rc<Framebuffer>> framebuffers;
-	Extent2 extent;
+	Extent3 extent;
 };
 
 struct FrameCacheImageAttachment final {
@@ -44,20 +44,20 @@ public:
 	bool init(Loop &, Device &);
 	void invalidate();
 
-	Rc<Framebuffer> acquireFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>, Extent2 e);
+	Rc<Framebuffer> acquireFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>);
 	void releaseFramebuffer(Rc<Framebuffer> &&);
 
-	Rc<ImageStorage> acquireImage(const ImageInfo &, SpanView<ImageViewInfo> v);
+	Rc<ImageStorage> acquireImage(uint64_t attachment, const ImageInfoData &, SpanView<ImageViewInfo> v);
 	void releaseImage(Rc<ImageStorage> &&);
-
-	void addImage(const ImageInfoData &);
-	void removeImage(const ImageInfoData &);
 
 	void addImageView(uint64_t);
 	void removeImageView(uint64_t);
 
 	void addRenderPass(uint64_t);
 	void removeRenderPass(uint64_t);
+
+	void addAttachment(uint64_t);
+	void removeAttachment(uint64_t);
 
 	void removeUnreachableFramebuffers();
 
@@ -74,6 +74,9 @@ protected:
 	bool isReachable(SpanView<uint64_t> ids) const;
 	bool isReachable(const ImageInfoData &) const;
 
+	const ImageInfoData * addImage(const ImageInfoData &);
+	void removeImage(const ImageInfoData &);
+
 	void makeViews(const Rc<ImageStorage> &, SpanView<ImageViewInfo>);
 
 	Loop *_loop = nullptr;
@@ -82,6 +85,7 @@ protected:
 	Map<Vector<uint64_t>, FrameCacheFramebuffer> _framebuffers;
 	Set<uint64_t> _imageViews;
 	Set<uint64_t> _renderPasses;
+	Map<uint64_t, const ImageInfoData *> _attachments;
 
 	bool _freezed = false;
 	Vector<Rc<Ref>> _autorelease;

@@ -44,7 +44,6 @@ struct FramePassDataRequired {
 struct FramePassData {
 	FrameRenderPassState state = FrameRenderPassState::Initial;
 	Rc<QueuePassHandle> handle;
-	Extent2 extent;
 
 	Vector<Pair<const AttachmentPassData *, FrameAttachmentData *>> attachments;
 	HashMap<const AttachmentData *, FrameAttachmentData *> attachmentMap;
@@ -72,7 +71,7 @@ struct FramePassData {
 struct FrameAttachmentData {
 	FrameAttachmentState state = FrameAttachmentState::Initial;
 	Rc<AttachmentHandle> handle;
-	Extent3 extent;
+	ImageInfoData info;
 
 	Vector<FramePassData *> passes;
 
@@ -106,7 +105,7 @@ class FrameQueue final : public Ref {
 public:
 	virtual ~FrameQueue();
 
-	bool init(const Rc<PoolRef> &, const Rc<Queue> &, FrameHandle &, Extent2);
+	bool init(const Rc<PoolRef> &, const Rc<Queue> &, FrameHandle &);
 
 	bool setup();
 	void update();
@@ -115,7 +114,6 @@ public:
 	bool isFinalized() const { return _finalized; }
 
 	const Rc<FrameHandle> &getFrame() const { return _frame; }
-	Extent2 getExtent() const { return _extent; }
 	const Rc<PoolRef> &getPool() const { return _pool; }
 	const Rc<Queue> &getRenderQueue() const { return _queue; }
 	Loop *getLoop() const;
@@ -171,7 +169,6 @@ protected:
 	Rc<Queue> _queue;
 	Rc<FrameHandle> _frame;
 	Loop *_loop = nullptr;
-	Extent2 _extent;
 	uint64_t _order = 0;
 	bool _finalized = false;
 	bool _success = false;
@@ -179,9 +176,9 @@ protected:
 	HashMap<const QueuePassData *, FramePassData> _renderPasses;
 	HashMap<const AttachmentData *, FrameAttachmentData> _attachments;
 
-	std::unordered_set<FramePassData *> _renderPassesInitial;
-	std::unordered_set<FramePassData *> _renderPassesPrepared;
-	std::unordered_set<FrameAttachmentData *> _attachmentsInitial;
+	HashSet<FramePassData *> _renderPassesInitial;
+	HashSet<FramePassData *> _renderPassesPrepared;
+	HashSet<FrameAttachmentData *> _attachmentsInitial;
 
 	std::forward_list<Rc<Ref>> _autorelease;
 	uint32_t _renderPassSubmitted = 0;

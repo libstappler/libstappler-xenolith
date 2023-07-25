@@ -1,0 +1,223 @@
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+#include "XL2dGlslVertexData.h"
+#include "XL2dGlslShadowData.h"
+#include "XL2dGlslSdfData.h"
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+#include "XL2dGlslSdfDescriptors.h"
+
+layout(set = 0, binding = 3, r16) uniform writeonly image2D sdfImage;
+
+float polygon3d(in vec3 pt, uint origin, uint count, float value) {
+	const float height = value - pt.z;
+	const vec2 p = pt.xy;
+	float d = dot(p - VERTEX_BUFFER[origin].xy, p - VERTEX_BUFFER[origin].xy);
+	float s = 1.0;
+	for (int i = 0, j = int(count) - 1; i < int(count); j = i, i++) {
+		vec2 e = VERTEX_BUFFER[origin + j].xy - VERTEX_BUFFER[origin + i].xy;
+		vec2 w = p - VERTEX_BUFFER[origin + i].xy;
+		vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0 );
+		d = min(d, dot(b, b));
+		bvec3 c = bvec3(p.y >= VERTEX_BUFFER[origin + i].y, p.y <VERTEX_BUFFER[origin + j].y, e.x * w.y > e.y * w.x);
+		if ( all(c) || all(not(c)) ) s *= -1.0;
+	}
+
+	const float ds = s * sqrt(d);
+	return sqrt(ds * ds + height * height);
+}
+
+float intersectTriangle(in vec2 p, uint idx) {
+	const Triangle2DData t = TRIANGLE_DATA_BUFFER[idx];
+	return (triangle2d(p, t.a, t.b, t.c) < -0.5 * shadowData.density) ? t.value : 0.0;
+}
+
+float intersectCircle(in vec2 p, uint idx) {
+	const Circle2DData c = CIRCLE_DATA_BUFFER[idx];
+	const TransformData t = TRANSFORM_BUFFER[c.transform];
+	return (circle2d((t.transform * vec4(p * shadowData.density, 0, 1)).xy, c.origin, c.radius * shadowData.density)
+			< (-0.5 * shadowData.density)) ? c.value : 0.0;
+}
+
+float intersectRect(in vec2 p, uint idx) {
+	const Rect2DData r = RECT_DATA_BUFFER[idx];
+	const TransformData t = TRANSFORM_BUFFER[r.transform];
+	return (rect2d((t.transform * vec4(p * shadowData.density, 0, 1)).xy, r.origin, r.size * shadowData.density)
+			< -0.5 * shadowData.density) ? r.value : 0.0;
+}
+
+float intersectRoundedRect(in vec2 p, uint idx) {
+	const RoundedRect2DData r = ROUNDED_RECT_DATA_BUFFER[idx];
+	const TransformData t = TRANSFORM_BUFFER[r.transform];
+	return (roundedRect2d((t.transform * vec4(p * shadowData.density, 0, 1)).xy, r.origin, r.size * shadowData.density, r.corners * shadowData.density)
+			< -0.5 * shadowData.density) ? r.value : 0.0;
+}
+
+float intersectPolygon(in vec2 p, uint idx) {
+	const Polygon2DData polygon = POLYGON_DATA_BUFFER[idx];
+
+	float d = dot(p - VERTEX_BUFFER[polygon.origin].xy, p - VERTEX_BUFFER[polygon.origin].xy);
+	float s = 1.0;
+	for (int i = 0, j = int(polygon.count) - 1; i < int(polygon.count); j = i, i++) {
+		vec2 e = VERTEX_BUFFER[polygon.origin + j].xy - VERTEX_BUFFER[polygon.origin + i].xy;
+		vec2 w = p - VERTEX_BUFFER[polygon.origin + i].xy;
+		vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0 );
+		d = min(d, dot(b, b));
+		bvec3 c = bvec3(p.y >= VERTEX_BUFFER[polygon.origin + i].y, p.y <VERTEX_BUFFER[polygon.origin + j].y, e.x * w.y > e.y * w.x);
+		if ( all(c) || all(not(c)) ) s *= -1.0;
+	}
+	return ((s * sqrt(d)) < -0.5 * shadowData.density) ? polygon.value : 0.0;
+}
+
+float intersect(in uint cellIdx, in vec2 coord) {
+	float value = 0.0;
+	uint targetOffset;
+
+	if (shadowData.trianglesCount > 0) {
+		targetOffset = cellIdx * shadowData.trianglesCount;
+		for (uint i = 0; i < GRID_SIZE_BUFFER[cellIdx]; ++ i) {
+			value = max(value, intersectTriangle(coord, GRID_INDEX_BUFFER[targetOffset + i]));
+		}
+	}
+
+	if (shadowData.circlesCount > 0) {
+		targetOffset = shadowData.circleGridIndexOffset + cellIdx * shadowData.circlesCount;
+		for (uint i = 0; i < GRID_SIZE_BUFFER[shadowData.circleGridSizeOffset + cellIdx]; ++ i) {
+			value = max(value, intersectCircle(coord, GRID_INDEX_BUFFER[targetOffset + i]));
+		}
+	}
+	
+	if (shadowData.rectsCount > 0) {
+		targetOffset = shadowData.rectGridIndexOffset + cellIdx * shadowData.rectsCount;
+		for (uint i = 0; i < GRID_SIZE_BUFFER[shadowData.rectGridSizeOffset + cellIdx]; ++ i) {
+			value = max(value, intersectRect(coord, GRID_INDEX_BUFFER[targetOffset + i]));
+		}
+	}
+
+	if (shadowData.roundedRectsCount > 0) {
+		targetOffset = shadowData.roundedRectGridIndexOffset + cellIdx * shadowData.roundedRectsCount;
+		for (uint i = 0; i < GRID_SIZE_BUFFER[shadowData.roundedRectGridSizeOffset + cellIdx]; ++ i) {
+			value = max(value, intersectRoundedRect(coord, GRID_INDEX_BUFFER[targetOffset + i]));
+		}
+	}
+
+	if (shadowData.polygonsCount > 0) {
+		targetOffset = shadowData.polygonGridIndexOffset + cellIdx * shadowData.polygonsCount;
+		for (uint i = 0; i < GRID_SIZE_BUFFER[shadowData.polygonGridSizeOffset + cellIdx]; ++ i) {
+			value = max(value, intersectPolygon(coord, GRID_INDEX_BUFFER[targetOffset + i]));
+		}
+	}
+
+	return value;
+}
+
+void main() {
+	const ivec2 imgSize = imageSize(sdfImage);
+	const vec2 rel = vec2(float(gl_GlobalInvocationID.x) / float(imgSize.x - 1), float(gl_GlobalInvocationID.y - 1) / float(imgSize.y));
+	const vec2 coords = (vec2(float(gl_GlobalInvocationID.x) + 0.5, float(gl_GlobalInvocationID.y) + 0.5))
+			* shadowData.shadowSdfDensity
+			- shadowData.shadowOffset * rel 
+			//* shadowData.shadowSdfDensity + shadowData.shadowOffset * rel
+			;
+
+	const uvec2 cellIdxs = uvec2(floor(coords)) / shadowData.gridSize;
+	const uint cellIdx = cellIdxs.y * (shadowData.gridWidth) + cellIdxs.x;
+
+	const float isect = intersect(cellIdx, coords);
+	const vec3 coords3d = vec3(coords, isect);
+	float value = 128.0;
+	float sdf;
+	float height = isect;
+
+	if (shadowData.trianglesCount > 0) {
+		const uint nTriangles = GRID_SIZE_BUFFER[cellIdx];
+		const uint targetOffset = cellIdx * shadowData.trianglesCount;
+		for (uint i = 0; i < nTriangles; ++ i) {
+			const Triangle2DData t = TRIANGLE_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
+			if (t.value >= isect) {
+				sdf = triangle3d(coords3d, t.a, t.b, t.c, t.value);
+		
+				if (sdf < value) {
+					value = sdf;
+					height = t.value;
+				}
+			}
+		}
+	}
+
+	if (shadowData.circlesCount > 0) {
+		const uint nCircles = GRID_SIZE_BUFFER[shadowData.circleGridSizeOffset + cellIdx];
+		const uint targetOffset = shadowData.circleGridIndexOffset + cellIdx * shadowData.circlesCount;
+		for (uint i = 0; i < nCircles; ++ i) {
+			const Circle2DData c = CIRCLE_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
+			if (c.value >= isect) {
+				const TransformData t = TRANSFORM_BUFFER[c.transform];
+		  
+				sdf = circle3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, c.origin,
+					c.radius * shadowData.density, c.value, t.padding / shadowData.density) + 0.25;
+		
+				if (sdf < value) {
+					value = sdf;
+					height = c.value;
+				}
+			}
+		}
+	}
+
+	if (shadowData.rectsCount > 0) {
+		const uint nRects = GRID_SIZE_BUFFER[shadowData.rectGridSizeOffset + cellIdx];
+		const uint targetOffset = shadowData.rectGridIndexOffset + cellIdx * shadowData.rectsCount;
+		for (uint i = 0; i < nRects; ++ i) {
+			const Rect2DData r = RECT_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
+			if (r.value >= isect) {
+				const TransformData t = TRANSFORM_BUFFER[r.transform];
+	
+				sdf = rect3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, r.origin,
+					r.size * shadowData.density, r.value, t.padding / shadowData.density) + 0.25;
+	
+				if (sdf < value) {
+					value = sdf;
+					height = r.value;
+				}
+			}
+		}
+	}
+
+	if (shadowData.roundedRectsCount > 0) {
+		const uint nRoundedRects = GRID_SIZE_BUFFER[shadowData.roundedRectGridSizeOffset + cellIdx];
+		const uint targetOffset = shadowData.roundedRectGridIndexOffset + cellIdx * shadowData.roundedRectsCount;
+		for (uint i = 0; i < nRoundedRects; ++ i) {
+			const RoundedRect2DData r = ROUNDED_RECT_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
+			if (r.value >= isect) {
+				const TransformData t = TRANSFORM_BUFFER[r.transform];
+	
+				sdf = roundedRect3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, r.origin,
+					r.size * shadowData.density, r.corners * shadowData.density, r.value, t.padding / shadowData.density) + 0.25;
+	
+				if (sdf < value) {
+					value = sdf;
+					height = r.value;
+				}
+			}
+		}
+	}
+	
+	if (shadowData.polygonsCount > 0) {
+		const uint nPolygons = GRID_SIZE_BUFFER[shadowData.polygonGridSizeOffset + cellIdx];
+		const uint targetOffset = shadowData.polygonGridIndexOffset + cellIdx * shadowData.polygonsCount;
+		for (uint i = 0; i < nPolygons; ++ i) {
+			const Polygon2DData polygon = POLYGON_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
+			if (polygon.value >= isect) {
+				sdf = polygon3d(coords3d, polygon.origin, polygon.count, polygon.value);
+				if (sdf < value) {
+					value = sdf;
+					height = polygon.value;
+				}
+			}
+		}
+	}
+
+	imageStore(sdfImage, ivec2(gl_GlobalInvocationID.x, imgSize.y - gl_GlobalInvocationID.y - 1), vec4(value, height, 0.0, 0.0));
+}

@@ -22,6 +22,7 @@
 
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameHandle.h"
+#include "XLCoreLoop.h"
 
 namespace stappler::xenolith::core {
 
@@ -30,12 +31,11 @@ FrameQueue::~FrameQueue() {
 	XL_FRAME_QUEUE_LOG("Ended");
 }
 
-bool FrameQueue::init(const Rc<PoolRef> &p, const Rc<Queue> &q, FrameHandle &f, Extent2 ext) {
+bool FrameQueue::init(const Rc<PoolRef> &p, const Rc<Queue> &q, FrameHandle &f) {
 	_pool = p;
 	_queue = q;
 	_frame = &f;
 	_loop = _frame->getLoop();
-	_extent = ext;
 	_order = f.getOrder();
 	XL_FRAME_QUEUE_LOG("Started");
 	return true;
@@ -48,13 +48,11 @@ bool FrameQueue::setup() {
 	_renderPassesInitial.reserve(_queue->getPasses().size());
 
 	for (auto &it : _queue->getPasses()) {
-		Extent2 extent = it->pass->getSizeForFrame(*this);
 		auto pass = it->pass->makeFrameHandle(*this);
 		if (pass->isAvailable(*this)) {
 			auto v = _renderPasses.emplace(it, FramePassData{
 				FrameRenderPassState::Initial,
-				pass,
-				extent
+				pass
 			}).first;
 			pass->setQueueData(v->second);
 			_renderPassesInitial.emplace(&v->second);
@@ -65,18 +63,22 @@ bool FrameQueue::setup() {
 	_attachmentsInitial.reserve(_queue->getAttachments().size());
 
 	for (auto &it : _queue->getAttachments()) {
-		Extent3 extent = _extent;
-		if (it->type == AttachmentType::Image) {
-			auto img = (ImageAttachment *)it->attachment.get();
-			extent = img->getSizeForFrame(*this);
-		}
 		auto h = it->attachment->makeFrameHandle(*this);
 		if (h->isAvailable(*this)) {
 			auto v = _attachments.emplace(it, FrameAttachmentData({
 				FrameAttachmentState::Initial,
-				h,
-				extent
+				h
 			})).first;
+			if (it->type == AttachmentType::Image) {
+				auto img = (ImageAttachment *)it->attachment.get();
+				v->second.info = img->getImageInfo();
+				if ((v->second.info.hints & ImageHints::FixedSize) == ImageHints::None) {
+					v->second.info.extent = _frame->getFrameConstraints().extent;
+				}
+			} else {
+				v->second.info.extent = _frame->getFrameConstraints().extent;
+			}
+
 			h->setQueueData(v->second);
 			_attachmentsInitial.emplace(&v->second);
 		}
@@ -376,12 +378,14 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 	XL_FRAME_QUEUE_LOG("[Attachment:", attachment.handle->getName(), "] State: ResourcesPending");
 	attachment.state = FrameAttachmentState::ResourcesPending;
 	if (attachment.handle->getAttachment()->getData()->type == AttachmentType::Image) {
-		auto img = (ImageAttachment *)attachment.handle->getAttachment().get();
+		auto img = static_cast<ImageAttachment *>(attachment.handle->getAttachment().get());
 
 		attachment.image = _frame->getRenderTarget(attachment.handle->getAttachment());
-
 		if (!attachment.image && attachment.handle->isAvailable(*this)) {
-			attachment.image = _loop->acquireImage(img, attachment.handle.get(), attachment.extent);
+			if (auto spec = _frame->getImageSpecialization(img)) {
+				attachment.info = *spec;
+			}
+			attachment.image = _loop->acquireImage(img, attachment.handle.get(), attachment.info);
 			if (!attachment.image) {
 				invalidate(attachment);
 				return;
@@ -396,6 +400,10 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 			if (attachment.image->getWaitSem()) {
 				_autorelease.emplace_front(attachment.image->getWaitSem());
 			}
+		}
+
+		if (attachment.image) {
+			attachment.info = attachment.image->getInfo();
 		}
 
 		if (isResourcePending(attachment)) {
@@ -551,7 +559,7 @@ void FrameQueue::onRenderPassReady(FramePassData &data) {
 	if (data.handle->isAsync()) {
 		updateRenderPassState(data, FrameRenderPassState::Owned);
 	} else {
-		if (data.handle->getRenderPass()->acquireForFrame(*this, [this, data = &data] (bool success) {
+		if (data.handle->getQueuePass()->acquireForFrame(*this, [this, data = &data] (bool success) {
 			data->waitForResult = false;
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Owned);
@@ -590,13 +598,6 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 		}
 
 		if (view) {
-			auto e = view->getExtent();
-			if (e.width != data.extent.width || e.height != data.extent.height) {
-				XL_FRAME_QUEUE_LOG("Fail to acquire ImageView: invalid extent for RenderPass");
-				_invalidate = true;
-				attachmentsAcquired = false;
-				return;
-			}
 			imageViews.emplace_back(move(view));
 		} else {
 			XL_FRAME_QUEUE_LOG("Fail to acquire ImageView for framebuffer");
@@ -644,8 +645,19 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 
 	if (attachmentsAcquired) {
 		if (!imageViews.empty()) {
+			Extent3 extent = imageViews.front()->getFramebufferExtent();
+			auto it = imageViews.begin();
+			while (it != imageViews.end()) {
+				if ((*it)->getFramebufferExtent() != extent) {
+					log::vtext("FrameQueue", "Invalid extent for framebuffer image: ", (*it)->getFramebufferExtent());
+					it = imageViews.erase(it);
+				} else {
+					++ it;
+				}
+			}
+
 			if (data.handle->isFramebufferRequired()) {
-				data.framebuffer = _loop->acquireFramebuffer(data.handle->getData(), imageViews, data.extent);
+				data.framebuffer = _loop->acquireFramebuffer(data.handle->getData(), imageViews);
 				if (!data.framebuffer) {
 					invalidate();
 				}
@@ -779,7 +791,7 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 		}
 	}
 
-	data.handle->getRenderPass()->releaseForFrame(*this);
+	data.handle->getQueuePass()->releaseForFrame(*this);
 	if (!data.submitTime) {
 		data.submitTime = platform::clock(ClockType::Monotonic);
 	}
@@ -889,7 +901,7 @@ void FrameQueue::invalidate(FramePassData &data) {
 
 	if (data.state == FrameRenderPassState::Ready || data.state == FrameRenderPassState::Owned
 			|| (!data.waitForResult && toInt(data.state) > toInt(FrameRenderPassState::Ready))) {
-		data.handle->getRenderPass()->releaseForFrame(*this);
+		data.handle->getQueuePass()->releaseForFrame(*this);
 		data.waitForResult = false;
 	}
 

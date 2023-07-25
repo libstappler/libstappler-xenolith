@@ -119,8 +119,8 @@ void QueuePassHandle::invalidate() {
 
 bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	_onPrepared = move(cb);
-	_loop = (Loop *)q.getLoop();
-	_device = (Device *)q.getFrame()->getDevice();
+	_loop = static_cast<Loop *>(q.getLoop());
+	_device = static_cast<Device *>(q.getFrame()->getDevice());
 	_pool = _device->acquireCommandPool(getQueueOps());
 
 	_constraints = q.getFrame()->getFrameConstraints();
@@ -137,7 +137,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	if (_data->hasUpdateAfterBind) {
 		q.getFrame()->performInQueue([this] (FrameHandle &frame) {
 			for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
-				if (!((RenderPass *)_data->impl.get())->writeDescriptors(*this, i, true)) {
+				if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, i, true)) {
 					return false;
 				}
 			}
@@ -160,7 +160,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 
 	q.getFrame()->performInQueue([this] (FrameHandle &frame) {
 		for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
-			if (!((RenderPass *)_data->impl.get())->writeDescriptors(*this, i, false)) {
+			if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, i, false)) {
 				return false;
 			}
 		}
@@ -233,7 +233,7 @@ void QueuePassHandle::finalize(FrameQueue &, bool success) {
 }
 
 QueueOperations QueuePassHandle::getQueueOps() const {
-	return ((vk::QueuePass *)_renderPass.get())->getQueueOps();
+	return (static_cast<vk::QueuePass *>(_queuePass.get()))->getQueueOps();
 }
 
 Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &) {
@@ -249,7 +249,7 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &) 
 
 			auto pipeline = _data->subpasses[0]->graphicPipelines.get(StringView("Default"));
 
-			buf.cmdBindPipeline((GraphicPipeline *)pipeline->pipeline.get());
+			buf.cmdBindPipeline(static_cast<GraphicPipeline *>(pipeline->pipeline.get()));
 			buf.cmdDraw(3, 1, 0, 0);
 		});
 		return true;
@@ -288,6 +288,87 @@ void QueuePassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&fun
 
 void QueuePassHandle::doComplete(FrameQueue &, Function<void(bool)> &&func, bool success) {
 	func(success);
+}
+
+void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
+		Vector<ImageMemoryBarrier> &outputImageBarriers, Vector<BufferMemoryBarrier> &outputBufferBarriers) {
+	if (!materials) {
+		return;
+	}
+
+	auto b = static_cast<Buffer *>(materials->getBuffer().get());
+	if (!b) {
+		return;
+	}
+
+	if (auto barrier = b->getPendingBarrier()) {
+		outputBufferBarriers.emplace_back(*barrier);
+		b->dropPendingBarrier();
+	}
+
+	for (auto &it : materials->getLayouts()) {
+		if (it.set) {
+			auto &pendingImageBarriers = (static_cast<TextureSet *>(it.set.get()))->getPendingImageBarriers();
+			for (auto &barrier : pendingImageBarriers) {
+				outputImageBarriers.emplace_back(barrier);
+			}
+			auto &pendingBufferBarriers = (static_cast<TextureSet *>(it.set.get()))->getPendingBufferBarriers();
+			for (auto &barrier : pendingBufferBarriers) {
+				outputBufferBarriers.emplace_back(barrier);
+			}
+			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
+		} else {
+			log::text("MaterialRenderPassHandle", "No set for material layout");
+		}
+	}
+}
+
+auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::MaterialSet> &data, const Vector<Rc<core::Material>> &materials,
+		SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove) -> MaterialBuffers {
+	MaterialBuffers ret;
+	auto &layout = _device->getTextureSetLayout();
+
+	// update list of materials in set
+	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove, [&] (const core::MaterialImage &image) -> Rc<core::ImageView> {
+		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()), image.info);
+	});
+	if (updated.empty()) {
+		return MaterialBuffers();
+	}
+
+	for (auto &it : data->getLayouts()) {
+		frame.performRequiredTask([layout, data, target = &it] (FrameHandle &handle) {
+			auto dev = static_cast<Device *>(handle.getDevice());
+
+			target->set = Rc<TextureSet>(layout->acquireSet(*dev));
+			target->set->write(*target);
+			return true;
+		}, this, "RenderPassHandle::updateMaterials");
+	}
+
+	auto &bufferInfo = data->getInfo();
+
+	auto &pool = static_cast<DeviceFrameHandle &>(frame).getMemPool(&frame);
+
+	ret.stagingBuffer = pool->spawn(AllocationUsage::HostTransitionSource,
+			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), bufferInfo.size));
+	ret.targetBuffer = pool->spawnPersistent(AllocationUsage::DeviceLocal, bufferInfo);
+
+	auto mapped = ret.stagingBuffer->map();
+
+	uint32_t idx = 0;
+	ret.ordering.reserve(data->getMaterials().size());
+
+	uint8_t *target = mapped.ptr;
+	for (auto &it : data->getMaterials()) {
+		data->encode(target, it.second.get());
+ 		target += data->getObjectSize();
+ 		ret.ordering.emplace(it.first, idx);
+ 		++ idx;
+	}
+
+	ret.stagingBuffer->unmap(mapped);
+	return ret;
 }
 
 }

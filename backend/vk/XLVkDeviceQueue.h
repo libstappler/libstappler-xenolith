@@ -271,6 +271,8 @@ public:
 	uint32_t getBoundLayoutIndex() const { return _boundLayoutIndex; }
 	VkPipelineLayout getBoundLayout() const { return _boundLayout; }
 
+	void writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &, const Rc<Image> &);
+
 protected:
 	void addImage(Image *);
 	void addBuffer(Buffer *);

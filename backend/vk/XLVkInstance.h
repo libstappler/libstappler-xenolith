@@ -46,7 +46,7 @@ public:
 	using PresentSupportCallback = Function<uint32_t(const Instance *, VkPhysicalDevice device, uint32_t familyIdx)>;
 
 	Instance(VkInstance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled);
+			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled, Rc<Ref> &&);
 	virtual ~Instance();
 
 	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const;
@@ -61,6 +61,10 @@ public:
 	void printDevicesInfo(std::ostream &stream) const;
 
 	uint32_t getVersion() const { return _version; }
+
+#if MODULE_XENOLITH_FONT
+	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const override;
+#endif
 
 private:
 	void getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &, ExtensionFlags, uint32_t) const;

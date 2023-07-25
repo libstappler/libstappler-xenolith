@@ -39,8 +39,9 @@ bool ImageStorage::init(Rc<ImageObject> &&image) {
 }
 
 bool ImageStorage::isCacheable() const {
-	return !_isSwapchainImage;
+	return !_isSwapchainImage && (!_image || (_image->getInfo().hints & core::ImageHints::DoNotCache) == core::ImageHints::None);
 }
+
 bool ImageStorage::isSwapchainImage() const {
 	return _isSwapchainImage;
 }

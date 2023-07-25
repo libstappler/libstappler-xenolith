@@ -570,6 +570,35 @@ uint32_t CommandBuffer::cmdNextSubpass() {
 	return _currentSubpass;
 }
 
+void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &buffer, const Rc<Image> &image) {
+	ImageMemoryBarrier inImageBarrier(image, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
+
+	auto sourceFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	auto targetFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	if (image->getInfo().type != core::PassType::Generic && sourceFamily != VK_QUEUE_FAMILY_IGNORED && targetFamily != VK_QUEUE_FAMILY_IGNORED) {
+		if (sourceFamily != targetFamily) {
+			sourceFamilyIndex = sourceFamily;
+			targetFamilyIndex = targetFamily;
+		}
+	}
+
+	cmdCopyBufferToImage(buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
+
+	ImageMemoryBarrier outImageBarrier(image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		QueueFamilyTransfer{sourceFamilyIndex, targetFamilyIndex});
+
+	cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, makeSpanView(&outImageBarrier, 1));
+
+	if (targetFamilyIndex != VK_QUEUE_FAMILY_IGNORED) {
+		image->setPendingBarrier(outImageBarrier);
+	}
+}
+
 void CommandBuffer::addImage(Image *image) {
 	_images.emplace(image);
 }

@@ -36,7 +36,7 @@ bool DeviceMemory::init(Device &dev, VkDeviceMemory memory) {
 	}, core::ObjectType::DeviceMemory, ObjectHandle(_memory));
 }
 
-bool Image::init(Device &dev, VkImage image, const ImageInfo &info, uint32_t idx) {
+bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, uint32_t idx) {
 	_info = info;
 	_image = image;
 
@@ -49,7 +49,7 @@ bool Image::init(Device &dev, VkImage image, const ImageInfo &info, uint32_t idx
 	return ret;
 }
 
-bool Image::init(Device &dev, VkImage image, const ImageInfo &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
+bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
 	_info = info;
 	_image = image;
 	_atlas = atlas;
@@ -61,7 +61,7 @@ bool Image::init(Device &dev, VkImage image, const ImageInfo &info, Rc<DeviceMem
 	}, core::ObjectType::Image, ObjectHandle(_image));
 }
 
-bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfo &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
+bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfoData &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
 	_info = info;
 	_image = image;
 	_atlas = atlas;

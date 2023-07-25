@@ -60,7 +60,7 @@ class Framebuffer : public core::Framebuffer {
 public:
 	virtual ~Framebuffer() { }
 
-	bool init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::ImageView>> imageViews, Extent2 extent);
+	bool init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::ImageView>> imageViews);
 
 	VkFramebuffer getFramebuffer() const { return _framebuffer; }
 
@@ -95,8 +95,6 @@ public:
 	VkPipelineLayout getPipelineLayout(uint32_t idx) const { return _data->layouts[idx].layout; }
 	const Vector<Rc<DescriptorSet>> &getDescriptorSets(uint32_t idx) const { return _data->layouts[idx].sets; }
 	const Vector<VkClearValue> &getClearValues() const { return _clearValues; }
-
-	//VkDescriptorSet getDescriptorSet(uint32_t) const;
 
 	// if async is true - update descriptors with updateAfterBind flag
 	// 			   false - without updateAfterBindFlag

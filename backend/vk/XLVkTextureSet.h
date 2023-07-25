@@ -63,11 +63,11 @@ public:
 	Rc<Image> getEmptyImageObject() const;
 	Rc<Image> getSolidImageObject() const;
 
-	void readImage(Device &dev, Loop &loop, const Rc<Image> &, AttachmentLayout, Function<void(const ImageInfo &, BytesView)> &&);
+	void readImage(Device &dev, Loop &loop, const Rc<Image> &, AttachmentLayout, Function<void(const ImageInfoData &, BytesView)> &&);
 
 protected:
 	void writeDefaults(CommandBuffer &buf);
-	void writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &, const Rc<Image> &);
+	void writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t, const Rc<Buffer> &, const Rc<Image> &);
 	void writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &,
 			AttachmentLayout, const Rc<DeviceBuffer> &);
 

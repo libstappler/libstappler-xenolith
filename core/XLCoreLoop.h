@@ -26,6 +26,7 @@
 #include "XLCoreQueueData.h"
 #include "XLCoreAttachment.h"
 #include "XLCoreInstance.h"
+#include "XLCoreMaterial.h"
 
 #include "SPThread.h"
 #include "SPThreadTaskQueue.h"
@@ -37,6 +38,7 @@ class Device;
 
 struct LoopInfo {
 	uint32_t deviceIdx = core::Instance::DefaultDevice;
+	uint32_t threadsCount = 2;
 	Function<void(const Loop &, const Device &)> onDeviceStarted;
 	Function<void(const Loop &, const Device &)> onDeviceFinalized;
 	Rc<Ref> platformData;
@@ -47,7 +49,7 @@ public:
 	using FrameCache = core::FrameCache;
 	using FrameRequest = core::FrameRequest;
 	using ImageStorage = core::ImageStorage;
-	using RenderQueue = core::Queue;
+	using Queue = core::Queue;
 	using FrameHandle = core::FrameHandle;
 	using PassData = core::QueuePassData;
 	using ImageAttachment = core::ImageAttachment;
@@ -73,8 +75,11 @@ public:
 	// in preload mode, resource will be prepared for transfer immediately in caller's thread
 	// (device will allocate transfer buffer then fill it with resource data)
 	// do not use reload with main thread
-	virtual void compileResource(Rc<Resource> &&req, Function<void(bool)> &&, bool preload = false) = 0;
-	virtual void compileRenderQueue(const Rc<RenderQueue> &req, Function<void(bool)> && = nullptr) = 0;
+	virtual void compileResource(Rc<Resource> &&req, Function<void(bool)> &&, bool preload = false) const = 0;
+	virtual void compileQueue(const Rc<Queue> &req, Function<void(bool)> && = nullptr) const = 0;
+
+	virtual void compileMaterials(Rc<MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const = 0;
+	virtual void compileImage(const Rc<DynamicImage> &, Function<void(bool)> && = nullptr) const = 0;
 
 	// run frame with RenderQueue
 	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) = 0;
@@ -83,19 +88,19 @@ public:
 	virtual void schedule(Function<bool(Loop &)> &&, StringView) = 0;
 	virtual void schedule(Function<bool(Loop &)> &&, uint64_t, StringView) = 0;
 
-	virtual void performInQueue(Rc<thread::Task> &&) = 0;
-	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) = 0;
+	virtual void performInQueue(Rc<thread::Task> &&) const = 0;
+	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
-	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) = 0;
+	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const = 0;
 
 	virtual bool isOnGlThread() const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 
-	virtual Rc<Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<ImageView>>, Extent2 e) = 0;
+	virtual Rc<Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<ImageView>>) = 0;
 	virtual void releaseFramebuffer(Rc<Framebuffer> &&) = 0;
 
-	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, Extent3 e) = 0;
+	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, const ImageInfoData &) = 0;
 	virtual void releaseImage(Rc<ImageStorage> &&) = 0;
 
 	virtual Rc<Semaphore> makeSemaphore() = 0;
@@ -108,7 +113,7 @@ public:
 	virtual void wakeup() = 0;
 	virtual void waitIdle() = 0;
 
-	virtual void captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
+	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
 
 protected:
 	std::atomic_flag _shouldExit;

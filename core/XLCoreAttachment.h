@@ -65,6 +65,8 @@ public:
 	virtual void clear();
 
 	virtual StringView getName() const override;
+
+	uint64_t getId() const;
 	AttachmentUsage getUsage() const;
 	bool isTransient() const;
 
@@ -120,16 +122,13 @@ public:
 		AttachmentLayout finalLayout = AttachmentLayout::Ignored;
 		bool clearOnLoad = false;
 		Color4F clearColor = Color4F::BLACK;
-		Function<Extent3(const FrameQueue &, const ImageInfoData *specialization)> frameSizeCallback;
 		ColorMode colorMode;
 	};
 
 	virtual bool init(AttachmentBuilder &builder, const ImageInfo &, AttachmentInfo &&);
 
 	virtual const ImageInfo &getImageInfo() const { return _imageInfo; }
-	virtual ImageInfo getAttachmentInfo(const AttachmentHandle *, Extent3 e) const { return _imageInfo; }
 	virtual bool shouldClearOnLoad() const { return _attachmentInfo.clearOnLoad; }
-	virtual bool isFrameBasedSize() const { return _attachmentInfo.frameSizeCallback != nullptr; }
 	virtual Color4F getClearColor() const { return _attachmentInfo.clearColor; }
 	virtual ColorMode getColorMode() const { return _attachmentInfo.colorMode; }
 
@@ -139,8 +138,6 @@ public:
 	virtual void addImageUsage(ImageUsage);
 
 	virtual bool isCompatible(const ImageInfo &) const override;
-
-	virtual Extent3 getSizeForFrame(const FrameQueue &) const;
 
 	virtual ImageViewInfo getImageViewInfo(const ImageInfoData &info, const AttachmentPassData &) const;
 	virtual Vector<ImageViewInfo> getImageViews(const ImageInfoData &info) const;

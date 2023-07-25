@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLVkLoop.h"
 #include "XLVkAllocator.h"
 #include "XLCoreFrameHandle.h"
-#include "XLCoreFrameEmitter.h"
+#include "XLCoreFrameRequest.h"
 #include "XLVkRenderPass.h"
 
 namespace stappler::xenolith::vk {
@@ -576,11 +576,11 @@ Rc<core::ImageObject> Device::getSolidImageObject() const {
 	return _textureSetLayout->getSolidImageObject();
 }
 
-Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass, SpanView<Rc<core::ImageView>> views, Extent2 extent) {
-	return Rc<Framebuffer>::create(*this, (RenderPass *)pass->impl.get(), views, extent);
+Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass, SpanView<Rc<core::ImageView>> views) {
+	return Rc<Framebuffer>::create(*this, (RenderPass *)pass->impl.get(), views);
 }
 
-auto Device::makeImage(const ImageInfo &imageInfo) -> Rc<ImageStorage> {
+auto Device::makeImage(const ImageInfoData &imageInfo) -> Rc<ImageStorage> {
 	bool isTransient = (imageInfo.usage & core::ImageUsage::TransientAttachment) != core::ImageUsage::None;
 
 	auto img = _allocator->spawnPersistent(
@@ -610,6 +610,91 @@ bool Device::hasDynamicIndexedBuffers() const {
 
 void Device::waitIdle() const {
 	_table->vkDeviceWaitIdle(_device);
+}
+
+void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, Function<void(bool)> &&cb) {
+	struct CompileImageTask : public Ref {
+		Function<void(bool)> callback;
+		Rc<core::DynamicImage> image;
+		Rc<Loop> loop;
+		Device *device;
+
+		Rc<Buffer> transferBuffer;
+		Rc<Image> resultImage;
+		Rc<CommandPool> pool;
+		Rc<DeviceQueue> queue;
+		Rc<Fence> fence;
+	};
+
+	auto task = new CompileImageTask();
+	task->callback = move(cb);
+	task->image = img;
+	task->loop = (Loop *)&loop;
+	task->device = this;
+
+	loop.performInQueue([this, task] () {
+		// make transfer buffer
+
+		task->image->acquireData([&] (BytesView view) {
+			task->transferBuffer = task->device->getAllocator()->spawnPersistent(AllocationUsage::HostTransitionSource,
+					BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), core::PassType::Transfer), view);
+		});
+
+		task->resultImage = task->device->getAllocator()->spawnPersistent(AllocationUsage::DeviceLocal, task->image->getInfo(), false);
+
+		if (!task->transferBuffer) {
+			task->loop->performOnGlThread([task] {
+				task->callback(false);
+				task->release(0);
+			});
+			return;
+		}
+
+		task->loop->performOnGlThread([this, task] {
+			task->device->acquireQueue(QueueOperations::Transfer, *task->loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
+				task->fence = loop.acquireFence(0);
+				task->pool = task->device->acquireCommandPool(QueueOperations::Transfer);
+				task->queue = move(queue);
+
+				auto refId = task->retain();
+				task->fence->addRelease([task, refId] (bool) {
+					task->device->releaseCommandPool(*task->loop, move(task->pool));
+					task->transferBuffer->dropPendingBarrier(); // hold reference while commands is active
+					task->release(refId);
+				}, this, "TextureSetLayout::compileImage transferBuffer->dropPendingBarrier");
+
+				loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
+					auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+						auto f = getQueueFamily(task->resultImage->getInfo().type);
+						buf.writeImageTransfer(task->pool->getFamilyIdx(), f ? f->index : VK_QUEUE_FAMILY_IGNORED,
+								task->transferBuffer, task->resultImage);
+						return true;
+					});
+
+					if (task->queue->submit(*task->fence, buf)) {
+						return true;
+					}
+					return false;
+				}, [task] (const thread::Task &, bool success) {
+					if (task->queue) {
+						task->device->releaseQueue(move(task->queue));
+					}
+					if (success) {
+						task->image->setImage(task->resultImage.get());
+						task->callback(true);
+					} else {
+						task->callback(false);
+					}
+					task->fence->schedule(*task->loop);
+					task->fence = nullptr;
+					task->release(0);
+				}));
+			}, [task] (Loop &) {
+				task->callback(false);
+				task->release(0);
+			});
+		});
+	}, (Loop *)&loop);
 }
 
 void Device::compileSamplers(thread::TaskQueue &q, bool force) {

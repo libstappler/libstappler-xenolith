@@ -667,7 +667,9 @@ enum class AttachmentStorageType {
 
 enum class ImageHints {
 	None = 0,
-	Opaque = 1 << 0
+	Opaque = 1 << 0,
+	FixedSize = 1 << 1,
+	DoNotCache = 1 << 2,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ImageHints);
@@ -757,11 +759,6 @@ enum class StencilOp : uint8_t {
 };
 
 SP_DEFINE_ENUM_AS_MASK(ColorComponentFlags)
-
-enum class MaterialType {
-	Basic2D,
-	Basic3D
-};
 
 enum class SurfaceTransformFlags {
 	None,

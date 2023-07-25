@@ -968,11 +968,11 @@ auto TransferPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHand
 TransferRenderPassHandle::~TransferRenderPassHandle() { }
 
 Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameHandle &) {
-	auto pass = (TransferPass *)_renderPass.get();
+	auto pass = static_cast<TransferPass *>(_queuePass.get());
 	TransferAttachmentHandle *transfer = nullptr;
 	for (auto &it : _queueData->attachments) {
 		if (it.first->attachment == pass->getAttachment()) {
-			transfer = (TransferAttachmentHandle *)it.second->handle.get();
+			transfer = static_cast<TransferAttachmentHandle *>(it.second->handle.get());
 		}
 	}
 
@@ -1012,11 +1012,11 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 
 void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
 	if (success) {
-		auto pass = (TransferPass *)_renderPass.get();
+		auto pass = static_cast<TransferPass *>(_queuePass.get());
 		TransferAttachmentHandle *transfer = nullptr;
 		for (auto &it : _queueData->attachments) {
 			if (it.first->attachment == pass->getAttachment()) {
-				transfer = (TransferAttachmentHandle *)it.second->handle.get();
+				transfer = static_cast<TransferAttachmentHandle *>(it.second->handle.get());
 			}
 		}
 		transfer->getResource()->compile();

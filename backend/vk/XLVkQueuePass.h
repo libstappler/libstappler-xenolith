@@ -35,6 +35,13 @@ class Device;
 class Loop;
 class Fence;
 class CommandPool;
+class DeviceBuffer;
+
+struct MaterialBuffers {
+	Rc<DeviceBuffer> stagingBuffer;
+	Rc<Buffer> targetBuffer;
+	HashMap<core::MaterialId, uint32_t> ordering;
+};
 
 class QueuePass : public core::QueuePass {
 public:
@@ -56,7 +63,7 @@ public:
 	static VkRect2D rotateScissor(const core::FrameContraints &constraints, const URect &scissor);
 
 	virtual ~QueuePassHandle();
-	virtual void invalidate();
+	void invalidate();
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) override;
@@ -72,6 +79,12 @@ protected:
 
 	// called before OnComplete event sended to FrameHandle (so, before any finalization)
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool);
+
+	virtual void doFinalizeTransfer(core::MaterialSet * materials,
+		Vector<ImageMemoryBarrier> &outputImageBarriers, Vector<BufferMemoryBarrier> &outputBufferBarriers);
+
+	virtual MaterialBuffers updateMaterials(FrameHandle &iframe, const Rc<core::MaterialSet> &data,
+			const Vector<Rc<core::Material>> &materials, SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove);
 
 	Function<void(bool)> _onPrepared;
 	bool _valid = true;

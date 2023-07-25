@@ -56,8 +56,6 @@ public:
 
 	const QueuePassData *getData() const { return _data; }
 
-	virtual Extent2 getSizeForFrame(const FrameQueue &) const;
-
 protected:
 	friend class core::Queue;
 
@@ -91,7 +89,7 @@ public:
 	virtual StringView getName() const override;
 
 	virtual const QueuePassData *getData() const { return _data; }
-	virtual const Rc<QueuePass> &getRenderPass() const { return _renderPass; }
+	virtual const Rc<QueuePass> &getQueuePass() const { return _queuePass; }
 	virtual const Rc<Framebuffer> &getFramebuffer() const;
 
 	virtual bool isAvailable(const FrameQueue &) const;
@@ -126,7 +124,7 @@ public:
 
 protected:
 	bool _isAsync = false; // async passes can be submitted before previous frame submits all passes
-	Rc<QueuePass> _renderPass;
+	Rc<QueuePass> _queuePass;
 	const QueuePassData *_data = nullptr;
 	FramePassData *_queueData = nullptr;
 

@@ -1,0 +1,86 @@
+/**
+ Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ **/
+
+#include "XLFontDeferredRequest.h"
+
+namespace stappler::xenolith::font {
+
+void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontLibrary> &lib,
+		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {
+	auto data = Rc<DeferredRequest>::alloc(lib, req);
+	data->onTexture = move(onTex);
+	data->onComplete = move(onComp);
+
+	for (uint32_t i = 0; i < queue.getThreadCount(); ++ i) {
+		queue.perform([data] () {
+			data->runThread();
+		});
+	}
+}
+
+DeferredRequest::~DeferredRequest() { }
+
+DeferredRequest::DeferredRequest(const Rc<FontLibrary> &lib, const Vector<FontUpdateRequest> &req)
+: library(lib) {
+	for (auto &it : req) {
+		nrequests += it.chars.size();
+	}
+
+	fontRequests.reserve(nrequests);
+
+	for (uint32_t i = 0; i < req.size(); ++ i) {
+		faces.emplace_back(req[i].object);
+		for (auto &it : req[i].chars) {
+			fontRequests.emplace_back(i, it);
+		}
+	}
+}
+
+void DeferredRequest::runThread() {
+	Vector<Rc<FontFaceObjectHandle>> threadFaces; threadFaces.resize(faces.size(), nullptr);
+	uint32_t target = current.fetch_add(1);
+	uint32_t c = 0;
+	while (target < nrequests) {
+		auto &v = fontRequests[target];
+		if (v.second == 0) {
+			c = complete.fetch_add(1);
+			target = current.fetch_add(1);
+			continue;
+		}
+
+		if (!threadFaces[v.first]) {
+			threadFaces[v.first] = library->makeThreadHandle(faces[v.first]);
+		}
+
+		threadFaces[v.first]->acquireTexture(v.second, [&] (const font::CharTexture &tex) {
+			onTexture(v.first, tex);
+		});
+		c = complete.fetch_add(1);
+		target = current.fetch_add(1);
+	}
+	threadFaces.clear();
+	if (c == nrequests - 1) {
+		onComplete();
+	}
+}
+
+}

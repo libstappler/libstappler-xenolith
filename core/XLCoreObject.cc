@@ -246,6 +246,14 @@ Extent3 ImageView::getExtent() const {
 	return _image->getInfo().extent;
 }
 
+uint32_t ImageView::getLayerCount() const {
+	return _info.layerCount.get();
+}
+
+Extent3 ImageView::getFramebufferExtent() const {
+	return Extent3(_image->getInfo().extent.width, _image->getInfo().extent.height, getLayerCount());
+}
+
 void TextureSet::write(const MaterialLayout &set) {
 	_layoutIndexes.clear();
 	for (uint32_t i = 0; i < set.usedImageSlots; ++ i) {

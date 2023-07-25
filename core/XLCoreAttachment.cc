@@ -44,6 +44,10 @@ StringView Attachment::getName() const {
 	return _data->key;
 }
 
+uint64_t Attachment::getId() const {
+	return _data->id;
+}
+
 AttachmentUsage Attachment::getUsage() const {
 	return _data->usage;
 }
@@ -158,19 +162,6 @@ void ImageAttachment::addImageUsage(ImageUsage usage) {
 
 bool ImageAttachment::isCompatible(const ImageInfo &image) const {
 	return _imageInfo.isCompatible(image);
-}
-
-Extent3 ImageAttachment::getSizeForFrame(const FrameQueue &frame) const {
-	Extent3 ret = _imageInfo.extent;
-	auto spec = frame.getFrame()->getImageSpecialization(this);
-	if (_attachmentInfo.frameSizeCallback) {
-		ret = _attachmentInfo.frameSizeCallback(frame, spec);
-	} else if (spec) {
-		ret = spec->extent;
-	} else {
-		ret = Extent3(frame.getExtent());
-	}
-	return ret;
 }
 
 ImageViewInfo ImageAttachment::getImageViewInfo(const ImageInfoData &info, const AttachmentPassData &passAttachment) const {

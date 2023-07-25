@@ -25,6 +25,10 @@
 
 namespace stappler::xenolith::core {
 
+const ColorMode ColorMode::SolidColor = ColorMode();
+const ColorMode ColorMode::IntensityChannel(core::ComponentMapping::R, core::ComponentMapping::One);
+const ColorMode ColorMode::AlphaChannel(core::ComponentMapping::One, core::ComponentMapping::R);
+
 String getBufferFlagsDescription(BufferFlags fmt) {
 	StringStream stream;
 	if ((fmt & BufferFlags::SparceBinding) != BufferFlags::None) { stream << " SparceBinding"; }
@@ -471,15 +475,7 @@ String BufferInfo::description() const {
 	return stream.str();
 }
 
-bool ImageInfo::isCompatible(const ImageInfo &img) const {
-	if (img.format == format && img.flags == flags && img.imageType == imageType && img.mipLevels == img.mipLevels
-			&& img.arrayLayers == arrayLayers && img.samples == samples && img.tiling == tiling && img.usage == usage) {
-		return true;
-	}
-	return true;
-}
-
-ImageViewInfo ImageInfo::getViewInfo(const ImageViewInfo &info) const {
+ImageViewInfo ImageInfoData::getViewInfo(const ImageViewInfo &info) const {
 	ImageViewInfo ret(info);
 	if (ret.format == ImageFormat::Undefined) {
 		ret.format = format;
@@ -488,6 +484,14 @@ ImageViewInfo ImageInfo::getViewInfo(const ImageViewInfo &info) const {
 		ret.layerCount = ArrayLayers(arrayLayers.get() - ret.baseArrayLayer.get());
 	}
 	return ret;
+}
+
+bool ImageInfo::isCompatible(const ImageInfo &img) const {
+	if (img.format == format && img.flags == flags && img.imageType == imageType && img.mipLevels == img.mipLevels
+			&& img.arrayLayers == arrayLayers && img.samples == samples && img.tiling == tiling && img.usage == usage) {
+		return true;
+	}
+	return true;
 }
 
 String ImageInfo::description() const {
@@ -511,14 +515,6 @@ String ImageInfo::description() const {
 	}
 	stream << ";";
 	return stream.str();
-}
-
-ImageData ImageData::make(Rc<ImageObject> &&obj) {
-	ImageData ret;
-	static_cast<ImageInfo &>(ret) = obj->getInfo();
-	ret.key = StringView(obj->getInfo().key);
-	ret.image = move(obj);
-	return ret;
 }
 
 void ImageViewInfo::setup(const ImageViewInfo &value) {
@@ -720,6 +716,96 @@ String ImageViewInfo::description() const {
 	stream << "G -> " << getComponentMappingName(g) << "; ";
 	stream << "B -> " << getComponentMappingName(b) << "; ";
 	stream << "A -> " << getComponentMappingName(a) << "; ";
+	return stream.str();
+}
+
+String SwapchainConfig::description() const {
+	StringStream stream;
+	stream << "\nSurfaceInfo:\n";
+	stream << "\tPresentMode: " << getPresentModeName(presentMode);
+	if (presentModeFast != PresentMode::Unsupported) {
+		stream << " (" << getPresentModeName(presentModeFast) << ")";
+	}
+	stream << "\n";
+	stream << "\tSurface format: (" << getImageFormatName(imageFormat) << ":" << getColorSpaceName(colorSpace) << ")\n";
+	stream << "\tTransform:" << getSurfaceTransformFlagsDescription(transform) << "\n";
+	stream << "\tAlpha:" << getCompositeAlphaFlagsDescription(alpha) << "\n";
+	stream << "\tImage count: " << imageCount << "\n";
+	stream << "\tExtent: " << extent.width << "x" << extent.height << "\n";
+	return stream.str();
+}
+
+bool SurfaceInfo::isSupported(const SwapchainConfig &cfg) const {
+	if (std::find(presentModes.begin(), presentModes.end(), cfg.presentMode) == presentModes.end()) {
+		log::vtext("Vk-Error", "SurfaceInfo: presentMode is not supported");
+		return false;
+	}
+
+	if (cfg.presentModeFast != PresentMode::Unsupported && std::find(presentModes.begin(), presentModes.end(),
+			cfg.presentModeFast) == presentModes.end()) {
+		log::vtext("Vk-Error", "SurfaceInfo: presentModeFast is not supported");
+		return false;
+	}
+
+	if (std::find(formats.begin(), formats.end(), pair(cfg.imageFormat, cfg.colorSpace)) == formats.end()) {
+		log::vtext("Vk-Error", "SurfaceInfo: imageFormat or colorSpace is not supported");
+		return false;
+	}
+
+	if ((supportedCompositeAlpha & cfg.alpha) == CompositeAlphaFlags::None) {
+		log::vtext("Vk-Error", "SurfaceInfo: alpha is not supported");
+		return false;
+	}
+
+	if ((supportedTransforms & cfg.transform) == SurfaceTransformFlags::None) {
+		log::vtext("Vk-Error", "SurfaceInfo: transform is not supported");
+		return false;
+	}
+
+	if (cfg.imageCount < minImageCount || (maxImageCount != 0 && cfg.imageCount > maxImageCount)) {
+		log::vtext("Vk-Error", "SurfaceInfo: imageCount is not supported");
+		return false;
+	}
+
+	if (cfg.extent.width < minImageExtent.width || cfg.extent.width > maxImageExtent.width
+			|| cfg.extent.height < minImageExtent.height || cfg.extent.height > maxImageExtent.height) {
+		log::vtext("Vk-Error", "SurfaceInfo: extent is not supported");
+		return false;
+	}
+
+	if (cfg.transfer && (supportedUsageFlags & ImageUsage::TransferDst) == ImageUsage::None) {
+		log::vtext("Vk-Error", "SurfaceInfo: supportedUsageFlags is not supported");
+		return false;
+	}
+
+	return true;
+}
+
+String SurfaceInfo::description() const {
+	StringStream stream;
+	stream << "\nSurfaceInfo:\n";
+	stream << "\tImageCount: " << minImageCount << "-" << maxImageCount << "\n";
+	stream << "\tExtent: " << currentExtent.width << "x" << currentExtent.height
+			<< " (" << minImageExtent.width << "x" << minImageExtent.height
+			<< " - " << maxImageExtent.width << "x" << maxImageExtent.height << ")\n";
+	stream << "\tMax Layers: " << maxImageArrayLayers << "\n";
+
+	stream << "\tSupported transforms:" << getSurfaceTransformFlagsDescription(supportedTransforms) << "\n";
+	stream << "\tCurrent transforms:" << getSurfaceTransformFlagsDescription(currentTransform) << "\n";
+	stream << "\tSupported Alpha:" << getCompositeAlphaFlagsDescription(supportedCompositeAlpha) << "\n";
+	stream << "\tSupported Usage:" << getImageUsageDescription(supportedUsageFlags) << "\n";
+
+	stream << "\tSurface format:";
+	for (auto it : formats) {
+		stream << " (" << getImageFormatName(it.first) << ":" << getColorSpaceName(it.second) << ")";
+	}
+	stream << "\n";
+
+	stream << "\tPresent modes:";
+	for (auto &it : presentModes) {
+		stream << " " << getPresentModeName(it);
+	}
+	stream << "\n";
 	return stream.str();
 }
 
@@ -1289,7 +1375,7 @@ std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value) {
 }
 
 String PipelineMaterialInfo::data() const {
-	BytesView view((const uint8_t *)this, sizeof(PipelineMaterialInfo));
+	BytesView view(reinterpret_cast<const uint8_t *>(this), sizeof(PipelineMaterialInfo));
 	return toString(
 		base16::encode<Interface>(view.sub(0, sizeof(BlendInfo))), "'",
 		base16::encode<Interface>(view.sub(sizeof(BlendInfo), sizeof(DepthInfo))), "'",
@@ -1380,8 +1466,8 @@ void PipelineMaterialInfo::_setup(const DepthInfo &info) {
 	setDepthInfo(info);
 }
 
-void PipelineMaterialInfo::_setup(const DepthBounds &bounds) {
-	setDepthBounds(bounds);
+void PipelineMaterialInfo::_setup(const DepthBounds &b) {
+	setDepthBounds(b);
 }
 
 void PipelineMaterialInfo::_setup(const StencilInfo &info) {

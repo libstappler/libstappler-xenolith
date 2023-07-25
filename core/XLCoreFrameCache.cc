@@ -41,13 +41,14 @@ void FrameCache::invalidate() {
 	_images.clear();
 }
 
-Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data, SpanView<Rc<ImageView>> views, Extent2 e) {
+Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data, SpanView<Rc<ImageView>> views) {
+	auto e = views.front()->getFramebufferExtent();
 	Vector<uint64_t> ids; ids.reserve(views.size() + 2);
 	ids.emplace_back(data->impl->getIndex());
+	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
 	for (auto &it : views) {
 		ids.emplace_back(it->getIndex());
 	}
-	ids.emplace_back(uint64_t(e.width) << uint64_t(32) | uint64_t(e.height));
 
 	auto it = _framebuffers.find(ids);
 	if (it != _framebuffers.end()) {
@@ -58,17 +59,17 @@ Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data, SpanVi
 		}
 	}
 
-	return _device->makeFramebuffer(data, views, e);
+	return _device->makeFramebuffer(data, views);
 }
 
 void FrameCache::releaseFramebuffer(Rc<Framebuffer> &&fb) {
-	auto e = fb->getExtent();
+	auto e = fb->getFramebufferExtent();
 	Vector<uint64_t> ids; ids.reserve(fb->getViewIds().size() + 2);
 	ids.emplace_back(fb->getRenderPass()->getIndex());
+	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
 	for (auto &it : fb->getViewIds()) {
 		ids.emplace_back(it);
 	}
-	ids.emplace_back(uint64_t(e.width) << uint64_t(32) | uint64_t(e.height));
 
 	if (isReachable(SpanView<uint64_t>(ids))) {
 		auto it = _framebuffers.find(ids);
@@ -80,7 +81,26 @@ void FrameCache::releaseFramebuffer(Rc<Framebuffer> &&fb) {
 	}
 }
 
-Rc<ImageStorage> FrameCache::acquireImage(const ImageInfo &info, SpanView<ImageViewInfo> v) {
+Rc<ImageStorage> FrameCache::acquireImage(uint64_t attachment, const ImageInfoData &info, SpanView<ImageViewInfo> v) {
+	auto makeImage = [&] {
+		auto ret = _device->makeImage(info);
+		ret->rearmSemaphores(*_loop);
+		makeViews(ret, v);
+		return ret;
+	};
+
+	auto aIt = _attachments.find(attachment);
+	if (aIt == _attachments.end() || (info.hints & core::ImageHints::DoNotCache) != core::ImageHints::None) {
+		return makeImage();
+	}
+
+	if (aIt->second == nullptr) {
+		aIt->second = addImage(info);
+	} else if (*aIt->second != info) {
+		removeImage(*aIt->second);
+		aIt->second = addImage(info);
+	}
+
 	auto imageIt = _images.find(info);
 	if (imageIt != _images.end()) {
 		if (!imageIt->second.images.empty()) {
@@ -92,10 +112,7 @@ Rc<ImageStorage> FrameCache::acquireImage(const ImageInfo &info, SpanView<ImageV
 		}
 	}
 
-	auto ret = _device->makeImage(info);
-	ret->rearmSemaphores(*_loop);
-	makeViews(ret, v);
-	return ret;
+	return makeImage();
 }
 
 void FrameCache::releaseImage(Rc<ImageStorage> &&img) {
@@ -112,29 +129,6 @@ void FrameCache::releaseImage(Rc<ImageStorage> &&img) {
 	}
 
 	imageIt->second.images.emplace_back(move(img));
-}
-
-void FrameCache::addImage(const ImageInfoData &info) {
-	auto it = _images.find(info);
-	if (it == _images.end()) {
-		_images.emplace(info, FrameCacheImageAttachment{uint32_t(1), Vector<Rc<ImageStorage>>()});
-	} else {
-		++ it->second.refCount;
-	}
-}
-
-void FrameCache::removeImage(const ImageInfoData &info) {
-	auto it = _images.find(info);
-	if (it != _images.end()) {
-		if (it->second.refCount == 1) {
-			for (auto &iit : it->second.images) {
-				_autorelease.emplace_back(iit);
-			}
-			_images.erase(it);
-		} else {
-			-- it->second.refCount;
-		}
-	}
 }
 
 void FrameCache::addImageView(uint64_t id) {
@@ -183,13 +177,29 @@ void FrameCache::removeRenderPass(uint64_t id) {
 	}
 }
 
+void FrameCache::addAttachment(uint64_t id) {
+	_attachments.emplace(id, nullptr);
+}
+
+void FrameCache::removeAttachment(uint64_t id) {
+	auto it = _attachments.find(id);
+	if (it == _attachments.end()) {
+		return;
+	}
+
+	if (it->second) {
+		removeImage(*it->second);
+	}
+	_attachments.erase(it);
+}
+
 void FrameCache::removeUnreachableFramebuffers() {
 	auto fbsIt = _framebuffers.begin();
 	while (fbsIt != _framebuffers.end()) {
 		auto e = fbsIt->second.extent;
 		bool found = false;
 		for (auto &it : _images) {
-			if (it.first.extent == Extent3(e, 1)) {
+			if (it.first.extent.width == e.width && it.first.extent.height == e.height) {
 				found = true;
 			}
 		}
@@ -201,13 +211,13 @@ void FrameCache::removeUnreachableFramebuffers() {
 		} else {
 			auto fbIt = fbsIt->second.framebuffers.begin();
 			while (fbIt != fbsIt->second.framebuffers.end()) {
-				auto e = (*fbIt)->getExtent();
+				auto e = (*fbIt)->getFramebufferExtent();
 				Vector<uint64_t> ids; ids.reserve((*fbIt)->getViewIds().size() + 2);
 				ids.emplace_back((*fbIt)->getRenderPass()->getIndex());
+				ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
 				for (auto &it : (*fbIt)->getViewIds()) {
 					ids.emplace_back(it);
 				}
-				ids.emplace_back(uint64_t(e.width) << uint64_t(32) | uint64_t(e.height));
 
 				if (isReachable(SpanView<uint64_t>(ids))) {
 					_autorelease.emplace_back(*fbIt);
@@ -269,7 +279,7 @@ bool FrameCache::isReachable(SpanView<uint64_t> ids) const {
 		return false;
 	}
 
-	ids = ids.sub(1, ids.size() - 2);
+	ids = ids.sub(2, ids.size() - 2);
 	for (auto &it : ids) {
 		if (_imageViews.find(it) == _imageViews.end()) {
 			return false;
@@ -281,6 +291,30 @@ bool FrameCache::isReachable(SpanView<uint64_t> ids) const {
 bool FrameCache::isReachable(const ImageInfoData &info) const {
 	auto it = _images.find(info);
 	return it != _images.end();
+}
+
+const ImageInfoData *FrameCache::addImage(const ImageInfoData &info) {
+	auto it = _images.find(info);
+	if (it == _images.end()) {
+		it = _images.emplace(info, FrameCacheImageAttachment{uint32_t(1), Vector<Rc<ImageStorage>>()}).first;
+	} else {
+		++ it->second.refCount;
+	}
+	return &it->first;
+}
+
+void FrameCache::removeImage(const ImageInfoData &info) {
+	auto it = _images.find(info);
+	if (it != _images.end()) {
+		if (it->second.refCount == 1) {
+			for (auto &iit : it->second.images) {
+				_autorelease.emplace_back(iit);
+			}
+			_images.erase(it);
+		} else {
+			-- it->second.refCount;
+		}
+	}
 }
 
 void FrameCache::makeViews(const Rc<ImageStorage> &img, SpanView<ImageViewInfo> views) {

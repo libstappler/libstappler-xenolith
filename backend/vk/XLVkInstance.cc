@@ -25,6 +25,10 @@ THE SOFTWARE.
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
 
+#if MODULE_XENOLITH_FONT
+#include "backend/vk/XLVkFontQueue.h"
+#endif
+
 namespace stappler::xenolith::vk {
 
 SPUNUSED static VkResult s_createDebugUtilsMessengerEXT(VkInstance instance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
@@ -87,8 +91,8 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 }
 
 Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-		Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled)
-: core::Instance(move(terminate)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
+		Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled, Rc<Ref> &&userdata)
+: core::Instance(move(terminate), move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
 , _version(targetVersion)
 , _optionals(move(optionals))
 , _checkPresentSupport(move(present)) {
@@ -118,7 +122,7 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 			auto &it = _devices.emplace_back(getDeviceInfo(device));
 
 			_availableDevices.emplace_back(core::DeviceProperties{
-				String((const char *)it.properties.device10.properties.deviceName),
+				String(it.properties.device10.properties.deviceName),
 				it.properties.device10.properties.apiVersion,
 				it.properties.device10.properties.driverVersion,
 				it.supportsPresentation()
@@ -142,6 +146,10 @@ Rc<core::Loop> Instance::makeLoop(core::LoopInfo &&info) const {
 
 Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	auto data = info.platformData.cast<LoopData>().get();
+	if (!data) {
+		log::text("vk::Instance", "Fail to create device: loop platform data is not defined");
+		return nullptr;
+	}
 
 	auto isDeviceSupported = [&] (const DeviceInfo &dev) {
 		if (data->deviceSupportCallback) {
@@ -328,6 +336,13 @@ VkExtent2D Instance::getSurfaceExtent(VkSurfaceKHR surface, VkPhysicalDevice dev
 VkInstance Instance::getInstance() const {
 	return _instance;
 }
+
+#if MODULE_XENOLITH_FONT
+Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
+	Rc<FontQueue>::create(name);
+	return nullptr;
+}
+#endif
 
 void Instance::printDevicesInfo(std::ostream &out) const {
 	out << "\n";

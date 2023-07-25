@@ -226,12 +226,13 @@ struct AttachmentPassData : NamedMem {
 
 struct AttachmentData : NamedMem {
 	const QueueData *queue = nullptr;
-	bool transient = false;
+	uint64_t id = 0;
 	AttachmentOps ops = AttachmentOps::Undefined;
 	AttachmentType type = AttachmentType::Image;
 	AttachmentUsage usage = AttachmentUsage::None;
 	memory::vector<AttachmentPassData *> passes;
 	Rc<Attachment> attachment;
+	bool transient = false;
 };
 
 struct DescriptorSetData : NamedMem {

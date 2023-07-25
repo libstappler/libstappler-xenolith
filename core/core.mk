@@ -23,7 +23,7 @@ MODULE_XENOLITH_CORE_SRCS_DIRS := $(XENOLITH_MODULE_DIR)/core $(XENOLITH_MODULE_
 MODULE_XENOLITH_CORE_SRCS_OBJS :=
 MODULE_XENOLITH_CORE_INCLUDES_DIRS := 
 MODULE_XENOLITH_CORE_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/core $(XENOLITH_MODULE_DIR)/thirdparty
-MODULE_XENOLITH_CORE_DEPENDS_ON := stappler_bitmap stappler_threads stappler_geom
+MODULE_XENOLITH_CORE_DEPENDS_ON := stappler_bitmap stappler_threads stappler_geom stappler_backtrace
 
 # module name resolution
 MODULE_xenolith_core := MODULE_XENOLITH_CORE

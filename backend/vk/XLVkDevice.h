@@ -117,8 +117,8 @@ public:
 	virtual Rc<core::ImageObject> getEmptyImageObject() const override;
 	virtual Rc<core::ImageObject> getSolidImageObject() const override;
 
-	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *, SpanView<Rc<core::ImageView>>, Extent2) override;
-	virtual Rc<ImageStorage> makeImage(const ImageInfo &) override;
+	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *, SpanView<Rc<core::ImageView>>) override;
+	virtual Rc<ImageStorage> makeImage(const ImageInfoData &) override;
 	virtual Rc<core::Semaphore> makeSemaphore() override;
 	virtual Rc<core::ImageView> makeImageView(const Rc<core::ImageObject> &, const ImageViewInfo &) override;
 
@@ -133,6 +133,8 @@ public:
 	bool hasDynamicIndexedBuffers() const;
 
 	virtual void waitIdle() const override;
+
+	void compileImage(const Loop &loop, const Rc<core::DynamicImage> &, Function<void(bool)> &&);
 
 private:
 	using core::Device::init;

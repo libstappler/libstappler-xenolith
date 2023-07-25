@@ -23,8 +23,7 @@
 #ifndef XENOLITH_CORE_XLCOREINFO_H_
 #define XENOLITH_CORE_XLCOREINFO_H_
 
-#include "XLCore.h"
-#include "XLCoreEnum.h"
+#include "XLCorePipelineInfo.h"
 #include "XLCorePlatform.h"
 
 namespace stappler::xenolith::core {
@@ -33,9 +32,6 @@ class BufferObject;
 class ImageObject;
 class DataAtlas;
 class Resource;
-
-using MaterialId = uint32_t;
-using StateId = uint32_t;
 
 using MipLevels = ValueWrapper<uint32_t, class MipLevelFlag>;
 using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
@@ -136,6 +132,8 @@ struct ImageInfoData {
 	PassType type = PassType::Graphics;
 	ImageHints hints = ImageHints::None;
 
+	ImageViewInfo getViewInfo(const ImageViewInfo &info) const;
+
 	bool operator==(const ImageInfoData &) const = default;
 	bool operator!=(const ImageInfoData &) const = default;
 	SP_THREE_WAY_COMPARISON_TYPE(ImageInfoData)
@@ -179,15 +177,11 @@ struct ImageInfo : NamedMem, ImageInfoData {
 
 	bool isCompatible(const ImageInfo &) const;
 
-	ImageViewInfo getViewInfo(const ImageViewInfo &info) const;
-
 	String description() const;
 };
 
 struct ImageData : ImageInfo {
 	using DataCallback = memory::callback<void(BytesView)>;
-
-	static ImageData make(Rc<ImageObject> &&);
 
 	BytesView data;
 	memory::function<void(uint8_t *, uint64_t, const DataCallback &)> memCallback = nullptr;
@@ -259,7 +253,7 @@ struct ImageViewInfo {
 };
 
 struct FrameContraints {
-	Extent2 extent;
+	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
 	float density = 1.0f;
@@ -273,10 +267,9 @@ struct FrameContraints {
 			return Size2(extent.height, extent.width);
 			break;
 		default:
-			return extent;
 			break;
 		}
-		return extent;
+		return Size2(extent.width, extent.height);
 	}
 
 	Padding getRotatedPadding() const {

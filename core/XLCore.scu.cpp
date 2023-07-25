@@ -68,8 +68,12 @@
 #include "XLCoreQueuePass.cc"
 #include "XLCoreInstance.cc"
 #include "XLCoreLoop.cc"
+#include "XLCoreDynamicImage.cc"
+#include "XLCoreMaterial.cc"
+#include "XLCoreMesh.cc"
 
 #include "XLCoreFrameCache.cc"
+#include "XLCoreFrameRequest.cc"
 #include "XLCoreFrameEmitter.cc"
 #include "XLCoreFrameQueue.cc"
 #include "XLCoreFrameHandle.cc"

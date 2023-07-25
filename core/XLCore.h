@@ -39,6 +39,7 @@
 #include "SPMat4.h"
 #include "SPPadding.h"
 #include "SPColor.h"
+#include "SPFontStyle.h"
 
 #include <typeindex>
 #include <forward_list>
@@ -54,6 +55,22 @@
 #else
 #define XLASSERT(cond, msg)
 #endif
+#endif
+
+#if __CDT_PARSER__
+// IDE-specific definition
+
+// enable all modules
+
+#define MODULE_XENOLITH_CORE 1
+#define MODULE_XENOLITH_MAIN 1
+#define MODULE_XENOLITH_FONT 1
+#define MODULE_XENOLITH_PLATFORM 1
+#define MODULE_XENOLITH_SCENE 1
+#define MODULE_XENOLITH_BACKEND_VK 1
+#define MODULE_XENOLITH_BACKEND_VKGUI 1
+#define MODULE_XENOLITH_RENDERER_BASIC2D 1
+
 #endif
 
 namespace stappler::xenolith {
@@ -103,6 +120,10 @@ public:
 	PoolRef(PoolRef *p) : PoolRef(p->_pool) { }
 
 	memory::pool_t *getPool() const { return _pool; }
+
+	void *palloc(size_t size) {
+		return memory::pool::palloc(_pool, size);
+	}
 
 	template <typename Callable>
 	auto perform(const Callable &cb) {

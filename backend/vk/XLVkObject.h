@@ -52,11 +52,11 @@ public:
 	virtual ~Image() { }
 
 	// non-owining image wrapping
-	bool init(Device &dev, VkImage, const ImageInfo &, uint32_t);
+	bool init(Device &dev, VkImage, const ImageInfoData &, uint32_t);
 
 	// owning image wrapping
-	bool init(Device &dev, VkImage, const ImageInfo &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
-	bool init(Device &dev, uint64_t, VkImage, const ImageInfo &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
+	bool init(Device &dev, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
+	bool init(Device &dev, uint64_t, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
 
 	VkImage getImage() const { return _image; }
 	DeviceMemory *getMemory() const { return _memory; }

@@ -93,14 +93,6 @@ bool QueuePass::releaseForFrame(FrameQueue &frame) {
 	return false;
 }
 
-Extent2 QueuePass::getSizeForFrame(const FrameQueue &queue) const {
-	if (_frameSizeCallback) {
-		return _frameSizeCallback(queue);
-	} else {
-		return queue.getExtent();
-	}
-}
-
 void QueuePass::prepare(Device &device) {
 
 }
@@ -108,7 +100,7 @@ void QueuePass::prepare(Device &device) {
 QueuePassHandle::~QueuePassHandle() { }
 
 bool QueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
-	_renderPass = &pass;
+	_queuePass = &pass;
 	_data = pass.getData();
 	return true;
 }
@@ -138,7 +130,7 @@ bool QueuePassHandle::isCompleted() const {
 }
 
 bool QueuePassHandle::isFramebufferRequired() const {
-	return _renderPass->getType() == PassType::Graphics;
+	return _queuePass->getType() == PassType::Graphics;
 }
 
 bool QueuePassHandle::prepare(FrameQueue &, Function<void(bool)> &&) {

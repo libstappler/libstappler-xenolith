@@ -581,7 +581,7 @@ Rc<Buffer> Allocator::spawnPersistent(AllocationUsage usage, const BufferInfo &i
 	return target;
 }
 
-Rc<Image> Allocator::spawnPersistent(AllocationUsage usage, const ImageInfo &info, bool preinitialized, uint64_t forceId) {
+Rc<Image> Allocator::spawnPersistent(AllocationUsage usage, const core::ImageInfoData &info, bool preinitialized, uint64_t forceId) {
 	auto target = preallocate(info, preinitialized, forceId);
 	if (!target) {
 		return nullptr;
@@ -610,7 +610,7 @@ Rc<Buffer> Allocator::preallocate(const BufferInfo &info, BytesView view) {
 	return Rc<Buffer>::create(*_device, target, info, nullptr);
 }
 
-Rc<Image> Allocator::preallocate(const ImageInfo &info, bool preinitialized, uint64_t forceId) {
+Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized, uint64_t forceId) {
 	VkImageCreateInfo imageInfo { };
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.pNext = nullptr;

@@ -23,7 +23,8 @@
 #ifndef XENOLITH_CORE_XLCOREPIPELINEINFO_H_
 #define XENOLITH_CORE_XLCOREPIPELINEINFO_H_
 
-#include "XLCoreInfo.h"
+#include "XLCore.h"
+#include "XLCoreEnum.h"
 
 namespace stappler::xenolith::core {
 

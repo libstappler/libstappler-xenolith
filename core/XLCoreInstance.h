@@ -28,6 +28,7 @@
 namespace stappler::xenolith::core {
 
 class Loop;
+class Queue;
 
 struct LoopInfo;
 
@@ -44,15 +45,22 @@ public:
 
 	static constexpr uint32_t DefaultDevice = maxOf<uint32_t>();
 
-	Instance(TerminateCallback &&);
+	Instance(TerminateCallback &&, Rc<Ref> &&);
 	virtual ~Instance();
 
 	const Vector<DeviceProperties> &getAvailableDevices() const { return _availableDevices; }
 
 	virtual Rc<Loop> makeLoop(LoopInfo &&) const;
 
+	Ref *getUserdata() const { return _userdata; }
+
+#if MODULE_XENOLITH_FONT
+	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const;
+#endif
+
 protected:
 	TerminateCallback _terminate;
+	Rc<Ref> _userdata;
 	Vector<DeviceProperties> _availableDevices;
 };
 

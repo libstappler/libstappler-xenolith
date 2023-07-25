@@ -75,11 +75,11 @@ Rc<Shader> Device::addProgram(Rc<Shader> program) {
 	}
 }
 
-Rc<Framebuffer> Device::makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>, Extent2) {
+Rc<Framebuffer> Device::makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>) {
 	return nullptr;
 }
 
-auto Device::makeImage(const ImageInfo &) -> Rc<ImageStorage> {
+auto Device::makeImage(const ImageInfoData &) -> Rc<ImageStorage> {
 	return nullptr;
 }
 
@@ -122,8 +122,8 @@ void Device::invalidateObjects() {
 	_objects.clear();
 	for (auto &it : objs) {
 		if (auto ref = dynamic_cast<Ref *>(it)) {
-			if (auto img = dynamic_cast<ImageObject *>(it)) {
-				log::vtext("Gl-Device", "Image ", (void *)it, " \"", img->getInfo().key, "\" (", typeid(*it).name(),
+			if (dynamic_cast<ImageObject *>(it)) {
+				log::vtext("Gl-Device", "Image ", (void *)it, " (", typeid(*it).name(),
 						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
 			} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
 				log::vtext("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),

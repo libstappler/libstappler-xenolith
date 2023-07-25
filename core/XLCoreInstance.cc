@@ -25,8 +25,8 @@
 
 namespace stappler::xenolith::core {
 
-Instance::Instance(TerminateCallback &&terminate)
-: _terminate(move(terminate)) { }
+Instance::Instance(TerminateCallback &&terminate, Rc<Ref> &&userdata)
+: _terminate(move(terminate)), _userdata(userdata) { }
 
 Instance::~Instance() {
 	if (_terminate) {
@@ -40,5 +40,11 @@ Instance::~Instance() {
 Rc<Loop> Instance::makeLoop(LoopInfo &&) const {
 	return nullptr;
 }
+
+#if MODULE_XENOLITH_FONT
+Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
+	return nullptr;
+}
+#endif
 
 }

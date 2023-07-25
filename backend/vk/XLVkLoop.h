@@ -55,10 +55,11 @@ public:
 
 	virtual bool isRunning() const override { return _running.load(); }
 
-	// virtual const Rc<gl::Device> &getDevice() const override;
+	virtual void compileResource(Rc<core::Resource> &&req, Function<void(bool)> && = nullptr, bool preload = false) const override;
+	virtual void compileQueue(const Rc<Queue> &req, Function<void(bool)> && = nullptr) const override;
 
-	virtual void compileResource(Rc<core::Resource> &&req, Function<void(bool)> && = nullptr, bool preload = false) override;
-	virtual void compileRenderQueue(const Rc<RenderQueue> &req, Function<void(bool)> && = nullptr) override;
+	virtual void compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const override;
+	virtual void compileImage(const Rc<core::DynamicImage> &, Function<void(bool)> && = nullptr) const override;
 
 	// run frame with RenderQueue
 	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) override;
@@ -67,19 +68,19 @@ public:
 	virtual void schedule(Function<bool(core::Loop &)> &&, StringView) override;
 	virtual void schedule(Function<bool(core::Loop &)> &&, uint64_t, StringView) override;
 
-	virtual void performInQueue(Rc<thread::Task> &&) override;
-	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) override;
+	virtual void performInQueue(Rc<thread::Task> &&) const override;
+	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const override;
 
-	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) override;
+	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const override;
 
 	virtual bool isOnGlThread() const override;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) override;
 
-	virtual Rc<core::Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<core::ImageView>>, Extent2 e) override;
+	virtual Rc<core::Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<core::ImageView>>) override;
 	virtual void releaseFramebuffer(Rc<core::Framebuffer> &&) override;
 
-	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, Extent3 e) override;
+	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, const core::ImageInfoData &) override;
 	virtual void releaseImage(Rc<ImageStorage> &&) override;
 
 	virtual Rc<core::Semaphore> makeSemaphore() override;
@@ -94,7 +95,7 @@ public:
 	virtual void wakeup() override;
 	virtual void waitIdle() override;
 
-	virtual void captureImage(Function<void(const ImageInfo &info, BytesView view)> &&cb,
+	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 			const Rc<core::ImageObject> &image, core::AttachmentLayout l) override;
 
 protected:

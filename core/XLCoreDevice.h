@@ -30,7 +30,6 @@
 namespace stappler::xenolith::core {
 
 class Instance;
-class View;
 class ObjectInterface;
 class Loop;
 
@@ -68,8 +67,8 @@ public:
 	virtual Rc<ImageObject> getEmptyImageObject() const = 0;
 	virtual Rc<ImageObject> getSolidImageObject() const = 0;
 
-	virtual Rc<Framebuffer> makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>, Extent2);
-	virtual Rc<ImageStorage> makeImage(const ImageInfo &);
+	virtual Rc<Framebuffer> makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>);
+	virtual Rc<ImageStorage> makeImage(const ImageInfoData &);
 	virtual Rc<Semaphore> makeSemaphore();
 	virtual Rc<ImageView> makeImageView(const Rc<ImageObject> &, const ImageViewInfo &);
 

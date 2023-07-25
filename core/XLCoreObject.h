@@ -163,6 +163,8 @@ public:
 	virtual ~Framebuffer() { }
 
 	const Extent2 &getExtent() const { return _extent; }
+	uint32_t getLayerCount() const { return _layerCount; }
+	Extent3 getFramebufferExtent() const { return Extent3(_extent, _layerCount); }
 	const Vector<uint64_t> &getViewIds() const { return _viewIds; }
 	const Rc<RenderPass> &getRenderPass() const { return _renderPass; }
 
@@ -170,6 +172,7 @@ public:
 
 protected:
 	Extent2 _extent;
+	uint32_t _layerCount;
 	Vector<uint64_t> _viewIds;
 	Rc<RenderPass> _renderPass;
 	Vector<Rc<ImageView>> _imageViews;
@@ -231,14 +234,14 @@ public:
 	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr) override;
 	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, uint64_t idx);
 
-	const ImageInfo &getInfo() const { return _info; }
+	const ImageInfoData &getInfo() const { return _info; }
 	uint64_t getIndex() const { return _index; }
 	const Rc<DataAtlas> &getAtlas() const { return _atlas; }
 
 	ImageViewInfo getViewInfo(const ImageViewInfo &) const;
 
 protected:
-	ImageInfo _info;
+	ImageInfoData _info;
 	Rc<DataAtlas> _atlas;
 
 	uint64_t _index = 1; // 0 stays as special value
@@ -267,6 +270,9 @@ public:
 	uint64_t getIndex() const { return _index; }
 
 	Extent3 getExtent() const;
+	uint32_t getLayerCount() const;
+
+	Extent3 getFramebufferExtent() const;
 
 protected:
 	ImageViewInfo _info;

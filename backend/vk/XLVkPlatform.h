@@ -41,6 +41,7 @@ struct VulkanInstanceData {
 	Vector<const char *> layersToEnable;
 	Vector<const char *> extensionsToEnable;
 	Function<uint32_t(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx)> checkPresentationSupport;
+	Rc<Ref> userdata;
 };
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);

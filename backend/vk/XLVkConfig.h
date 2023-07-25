@@ -36,14 +36,6 @@ static constexpr uint32_t MaxBufferArrayObjects = 64;
 /* Presentation Scheduler interval, used for non-blocking vkWaitForFence */
 static constexpr uint64_t PresentationSchedulerInterval = 500; // 500 ms or 1/32 of 60fps frame
 
-inline uint16_t getGlThreadCount() {
-#if DEBUG
-	return math::clamp(uint16_t(std::thread::hardware_concurrency()), uint16_t(2), uint16_t(4));
-#else
-	return math::clamp(uint16_t(std::thread::hardware_concurrency()), uint16_t(4), uint16_t(16));
-#endif
-}
-
 }
 
 #endif /* XENOLITH_BACKEND_VK_XLVKCONFIG_H_ */

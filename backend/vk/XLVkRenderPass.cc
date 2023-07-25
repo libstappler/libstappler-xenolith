@@ -54,19 +54,21 @@ Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferViewInfo &&info) 
 	return ret;
 }
 
-bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::ImageView>> imageViews, Extent2 extent) {
+bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::ImageView>> imageViews) {
 	Vector<VkImageView> views; views.reserve(imageViews.size());
 	_viewIds.reserve(imageViews.size());
 	_imageViews.reserve(imageViews.size());
 	_renderPass = renderPass;
+
+	auto extent = imageViews.front()->getFramebufferExtent();
 
 	for (auto &it : imageViews) {
 		views.emplace_back(((ImageView *)it.get())->getImageView());
 		_viewIds.emplace_back(it->getIndex());
 		_imageViews.emplace_back(it);
 
-		auto e = it->getExtent();
-		if (e.width != extent.width || e.height != extent.height) {
+		if (extent != it->getFramebufferExtent()) {
+			log::vtext("Framebuffer", "Invalid extent for framebuffer image: ", it->getFramebufferExtent());
 			return false;
 		}
 	}
@@ -78,10 +80,11 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 	framebufferInfo.pAttachments = views.data();
 	framebufferInfo.width = extent.width;
 	framebufferInfo.height = extent.height;
-	framebufferInfo.layers = 1;
+	framebufferInfo.layers = extent.depth;
 
 	if (dev.getTable()->vkCreateFramebuffer(dev.getDevice(), &framebufferInfo, nullptr, &_framebuffer) == VK_SUCCESS) {
-		_extent = extent;
+		_extent = Extent2(extent.width, extent.height);
+		_layerCount = extent.depth;
 		return core::Framebuffer::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyFramebuffer(d->getDevice(), (VkFramebuffer)ptr.get(), nullptr);

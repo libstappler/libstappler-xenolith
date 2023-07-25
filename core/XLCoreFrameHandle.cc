@@ -323,7 +323,7 @@ void FrameHandle::setCompleteCallback(Function<void(FrameHandle &)> &&cb) {
 
 bool FrameHandle::setup() {
 	_pool->perform([&] {
-		auto q = Rc<FrameQueue>::create(_pool, _request->getQueue(), *this, _request->getFrameConstraints().extent);
+		auto q = Rc<FrameQueue>::create(_pool, _request->getQueue(), *this);
 		q->setup();
 
 		_queues.emplace_back(move(q));

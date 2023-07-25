@@ -1217,12 +1217,15 @@ Queue::Builder::~Builder() {
 	}
 }
 
+static std::atomic<uint64_t> s_AttachmentCurrentIndex = 1;
+
 const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &cb) {
 	auto it = _data->attachments.find(name);
 	if (it == _data->attachments.end()) {
 		memory::pool::push(_data->pool);
 		auto ret = new (_data->pool) AttachmentData();
 		ret->key = name.pdup(_data->pool);
+		ret->id = s_AttachmentCurrentIndex.fetch_add(1);
 		ret->queue = _data;
 
 		AttachmentBuilder builder(ret);
