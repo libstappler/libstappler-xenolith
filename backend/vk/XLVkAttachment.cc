@@ -37,7 +37,10 @@ const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const {
 }
 
 bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue, DescriptorImageInfo &info) {
-	auto &image = _queueData->image;
+	auto image = _queueData->image;
+	if (!image) {
+		return false;
+	}
 
 	bool allowSwizzle = (info.descriptor->type == core::DescriptorType::SampledImage);
 	ImageViewInfo viewInfo(image->getInfo());

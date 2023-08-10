@@ -21,10 +21,10 @@
  **/
 
 #include "XLCommon.h"
+#include "XLVkGuiApplication.cc"
 
 #include "XLVkSwapchain.cc"
 #include "XLVkView.cc"
-#include "XLVkGuiMainLoop.cc"
 
 #if LINUX
 #include "platform/linux/XLVkGuiViewImpl.cc"

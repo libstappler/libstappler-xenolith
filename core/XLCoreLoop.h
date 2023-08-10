@@ -107,7 +107,7 @@ public:
 
 	virtual const Vector<ImageFormat> &getSupportedDepthStencilFormat() const = 0;
 
-	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, bool success) = 0;
+	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) = 0;
 
 	virtual void wakeup() = 0;
@@ -116,6 +116,12 @@ public:
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
 
 protected:
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const override {
+		return true;
+	}
+#endif
+
 	std::atomic_flag _shouldExit;
 	Rc<Instance> _glInstance;
 	Rc<FrameCache> _frameCache;

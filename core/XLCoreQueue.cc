@@ -656,6 +656,7 @@ Queue::~Queue() {
 bool Queue::init(Builder && buf) {
 	if (buf._data) {
 		_data = buf._data;
+		_data->queue = this;
 		buf._data = nullptr;
 
 		for (auto &it : _data->passes) {

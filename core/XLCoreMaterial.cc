@@ -732,11 +732,22 @@ void MaterialAttachment::updateDynamicImage(Loop &loop, const DynamicImage *imag
 			input->dynamicMaterialsToUpdate.emplace_back(materialIt.first);
 		}
 	}
+	for (auto &it : deps) {
+		it->addQueue(getCompiler());
+	}
 	loop.compileMaterials(move(input), deps);
 }
 
 MaterialId MaterialAttachment::getNextMaterialId() const {
 	return _attachmentMaterialId.fetch_add(1);
+}
+
+void MaterialAttachment::setCompiler(Queue *c) {
+	_compiler = c;
+}
+
+Queue *MaterialAttachment::getCompiler() const {
+	return _compiler;
 }
 
 }

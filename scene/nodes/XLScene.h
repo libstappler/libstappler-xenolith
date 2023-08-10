@@ -33,8 +33,7 @@ THE SOFTWARE.
 
 namespace stappler::xenolith {
 
-class MainLoop;
-class SceneLight;
+class Application;
 class SceneContent;
 
 class Scene : public Node {

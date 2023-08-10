@@ -21,13 +21,14 @@
  **/
 
 #include "XL2dVkShadowPass.h"
+
+#include "XLApplication.h"
 #include "XLVkLoop.h"
 #include "XLVkRenderPass.h"
 #include "XLVkPipeline.h"
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
-#include "XLMainLoop.h"
 #include "XL2dFrameContext.h"
 #include "glsl/XL2dShaders.h"
 

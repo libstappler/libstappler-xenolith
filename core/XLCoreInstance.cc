@@ -23,6 +23,14 @@
 #include "XLCoreInstance.h"
 #include "XLCoreLoop.h"
 
+
+#if MODULE_XENOLITH_SCENE
+
+#include "XLView.h"
+
+#endif
+
+
 namespace stappler::xenolith::core {
 
 Instance::Instance(TerminateCallback &&terminate, Rc<Ref> &&userdata)
@@ -47,4 +55,9 @@ Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
 }
 #endif
 
+#if MODULE_XENOLITH_SCENE
+Rc<View> Instance::makeView(Application &, const Device &, ViewInfo &&) const {
+	return nullptr;
+}
+#endif
 }

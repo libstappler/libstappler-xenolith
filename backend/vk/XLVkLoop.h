@@ -89,7 +89,7 @@ public:
 
 	Rc<Fence> acquireFence(uint32_t, bool init = true);
 
-	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, bool success) override;
+	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) override;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) override;
 
 	virtual void wakeup() override;

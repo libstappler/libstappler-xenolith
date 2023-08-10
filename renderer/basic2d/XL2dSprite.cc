@@ -21,10 +21,11 @@
  **/
 
 #include "XL2dSprite.h"
-#include "XLTexture.h"
-#include "XLDirector.h"
+
 #include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
+#include "XLTexture.h"
+#include "XLDirector.h"
 #include "XLFrameInfo.h"
 #include "XLFrameContext.h"
 #include "XL2dCommandList.h"

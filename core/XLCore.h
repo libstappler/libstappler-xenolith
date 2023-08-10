@@ -63,7 +63,7 @@
 // enable all modules
 
 #define MODULE_XENOLITH_CORE 1
-#define MODULE_XENOLITH_MAIN 1
+#define MODULE_XENOLITH_APPLICATION 1
 #define MODULE_XENOLITH_FONT 1
 #define MODULE_XENOLITH_PLATFORM 1
 #define MODULE_XENOLITH_SCENE 1
@@ -98,9 +98,30 @@ using ColorMask = geom::ColorMask;
 using Padding = geom::Padding;
 namespace Anchor = geom::Anchor;
 
-// based on VK_MAKE_API_VERSION
 inline uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
    return (uint32_t(variant) << 29) | (uint32_t(major) << 22) | (uint32_t(minor) << 12) | uint32_t(patch);
+}
+
+// based on VK_MAKE_API_VERSION
+inline uint32_t XL_MAKE_API_VERSION(StringView version) {
+	uint32_t ver[4];
+	uint32_t i = 0;
+	version.split<StringView::Chars<'.'>>([&] (StringView str) {
+		if (i < 4) {
+			ver[i] = str.readInteger(10).get(0);
+		}
+	});
+
+	uint32_t verCode = 0;
+	switch (i) {
+	case 0: verCode = XL_MAKE_API_VERSION(0, 0, 1, 0); break;
+	case 1: verCode = XL_MAKE_API_VERSION(0, ver[0], 0, 0); break;
+	case 2: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], 0); break;
+	case 3: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], ver[2]); break;
+	case 4: verCode = XL_MAKE_API_VERSION(ver[0], ver[1], ver[2], ver[3]); break;
+	default: break;
+	}
+	return verCode;
 }
 
 inline String getVersionDescription(uint32_t version) {

@@ -27,8 +27,7 @@
 #include "XLCoreImageStorage.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
-#include "XLMainLoop.h"
-
+#include "XLApplication.h"
 #include "ft2build.h"
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
@@ -100,9 +99,9 @@ FontLibrary::~FontLibrary() {
 	}
 }
 
-bool FontLibrary::init(Rc<MainLoop> &&loop, Rc<core::Queue> &&q) {
+bool FontLibrary::init(Rc<Application> &&loop, Rc<core::Queue> &&q) {
 	_mainLoop = move(loop);
-	_glLoop = loop->getGlLoop();
+	_glLoop = _mainLoop->getGlLoop();
 	_queue = move(q);
 	if (_queue->isCompiled()) {
 		onActivated();
@@ -234,7 +233,20 @@ Rc<FontFaceObject> FontLibrary::openFontFace(const Rc<FontFaceData> &dataObject,
 	return ret;
 }
 
-void FontLibrary::update(uint64_t clock) {
+void FontLibrary::initialize(Application *) {
+
+}
+
+void FontLibrary::invalidate(Application *) {
+	std::unique_lock uniqueLock(_sharedMutex);
+	_threads.clear();
+
+	_queue = nullptr;
+	_mainLoop = nullptr;
+	_glLoop = nullptr;
+}
+
+void FontLibrary::update(Application *, const UpdateTime &clock) {
 	Vector<Rc<FontFaceObject>> erased;
 	std::unique_lock<Mutex> lock(_mutex);
 
@@ -269,13 +281,6 @@ void FontLibrary::update(uint64_t clock) {
 	for (auto &it : erased) {
 		_threads.erase(it.get());
 	}
-}
-
-void FontLibrary::invalidate() {
-	std::unique_lock uniqueLock(_sharedMutex);
-	_threads.clear();
-
-	_queue = nullptr;
 }
 
 static Bytes openResourceFont(FontLibrary::DefaultFontName name) {
@@ -484,7 +489,9 @@ void FontLibrary::updateImage(const Rc<core::DynamicImage> &image, Vector<font::
 		break;
 	}
 
-	_glLoop->runRenderQueue(move(req));
+	_glLoop->runRenderQueue(move(req), 0, [this] (bool success) {
+		_mainLoop->wakeup();
+	});
 }
 
 uint16_t FontLibrary::getNextId() {

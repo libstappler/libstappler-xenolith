@@ -183,6 +183,9 @@ public:
 
 	MaterialId getNextMaterialId() const;
 
+	void setCompiler(Queue *);
+	Queue *getCompiler() const;
+
 protected:
 	using BufferAttachment::init;
 
@@ -191,6 +194,7 @@ protected:
 		Map<MaterialId, uint32_t> materials;
 	};
 
+	Queue *_compiler = nullptr;
 	mutable std::atomic<MaterialId> _attachmentMaterialId = 1;
 	uint32_t _materialObjectSize = 0;
 	MaterialSet::EncodeCallback _encodeCallback;

@@ -31,6 +31,36 @@ uint32_t DependencyEvent::GetNextId() {
 	return s_eventId.fetch_add(1);
 }
 
+DependencyEvent::~DependencyEvent() { }
+
+DependencyEvent::DependencyEvent(QueueSet &&q) : _queues(move(q)) { }
+
+DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il) : _queues(move(il)) { }
+
+bool DependencyEvent::signal(Queue *q, bool success) {
+	if (!success) {
+		_success = success;
+	}
+
+	auto it = _queues.find(q);
+	if (it != _queues.end()) {
+		_queues.erase(it);
+	}
+	return _queues.empty();
+}
+
+bool DependencyEvent::isSignaled() const {
+	return _queues.empty();
+}
+
+bool DependencyEvent::isSuccessful() const {
+	return _success;
+}
+
+void DependencyEvent::addQueue(Rc<Queue> &&q) {
+	_queues.emplace(move(q));
+}
+
 bool Attachment::init(AttachmentBuilder &builder) {
 	_data = builder.getAttachmentData();
 	return true;

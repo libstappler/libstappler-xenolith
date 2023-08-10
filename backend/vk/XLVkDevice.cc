@@ -468,22 +468,34 @@ Rc<CommandPool> Device::acquireCommandPool(uint32_t familyIndex) {
 }
 
 void Device::releaseCommandPool(core::Loop &loop, Rc<CommandPool> &&pool) {
-	/*pool->reset(*this, true);
+	pool->reset(*this, true);
 
+	/*auto idx = pool->getFamilyIdx();
 	std::unique_lock<Mutex> lock(_resourceMutex);
-	_families[pool->getFamilyIdx()].pools.emplace_back(Rc<CommandPool>(pool));*/
+	for (auto &it : _families) {
+		if (it.index == idx) {
+			it.pools.emplace_back(move(pool));
+			break;
+		}
+	}*/
 
 	auto refId = retain();
-	loop.performInQueue(Rc<thread::Task>::create([this, pool] (const thread::Task &) -> bool {
+	loop.performInQueue(Rc<thread::Task>::create([this, pool = Rc<CommandPool>(pool)] (const thread::Task &) -> bool {
 		pool->reset(*this);
 		return true;
-	}, [this, pool, refId] (const thread::Task &, bool success) {
+	}, [this, pool = Rc<CommandPool>(pool), refId] (const thread::Task &, bool success) mutable {
 		if (success) {
+			auto idx = pool->getFamilyIdx();
 			std::unique_lock<Mutex> lock(_resourceMutex);
-			_families[pool->getFamilyIdx()].pools.emplace_back(Rc<CommandPool>(pool));
+			for (auto &it : _families) {
+				if (it.index == idx) {
+					it.pools.emplace_back(move(pool));
+					break;
+				}
+			}
 		}
 		release(refId);
-	}));
+	}, this));
 }
 
 void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
@@ -617,7 +629,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 		Function<void(bool)> callback;
 		Rc<core::DynamicImage> image;
 		Rc<Loop> loop;
-		Device *device;
+		Rc<Device> device;
 
 		Rc<Buffer> transferBuffer;
 		Rc<Image> resultImage;

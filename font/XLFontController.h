@@ -23,10 +23,10 @@
 #ifndef XENOLITH_FONT_XLFONTCONTROLLER_H_
 #define XENOLITH_FONT_XLFONTCONTROLLER_H_
 
-#include "XLResourceCache.h"
 #include "XLFontFace.h"
 #include "XLEventHeader.h"
-
+#include "XLResourceCache.h"
+#include "XLApplicationExtension.h"
 #include <shared_mutex>
 
 namespace stappler::xenolith::font {
@@ -42,7 +42,7 @@ struct FontUpdateRequest {
 	bool persistent = false;
 };
 
-class FontController : public Ref {
+class FontController : public ApplicationExtension {
 public:
 	static EventHeader onLoaded;
 	static EventHeader onFontSourceUpdated;
@@ -107,7 +107,8 @@ public:
 	virtual ~FontController();
 
 	bool init(const Rc<FontLibrary> &);
-	void invalidate();
+	virtual void initialize(Application *) override;
+	virtual void invalidate(Application *) override;
 
 	void addFont(StringView family, Rc<FontFaceData> &&, bool front = false);
 	void addFont(StringView family, Vector<Rc<FontFaceData>> &&, bool front = false);
@@ -127,7 +128,7 @@ public:
 	uint32_t getFamilyIndex(StringView) const;
 	StringView getFamilyName(uint32_t idx) const;
 
-	void update(uint64_t clock);
+	virtual void update(Application *, const UpdateTime &clock) override;
 
 protected:
 	friend class FontLibrary;

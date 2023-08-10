@@ -99,7 +99,7 @@ protected:
 
 RenderQueueCompiler::~RenderQueueCompiler() { }
 
-bool RenderQueueCompiler::init(Device &dev) {
+bool RenderQueueCompiler::init(Device &dev, TransferQueue *transfer, MaterialCompiler *compiler) {
 	using namespace core;
 
 	Queue::Builder builder("RenderQueueCompiler");
@@ -124,6 +124,8 @@ bool RenderQueueCompiler::init(Device &dev) {
 			it->impl = pass.get();
 		}
 
+		_transfer = transfer;
+		_materialCompiler = compiler;
 		return true;
 	}
 	return false;
@@ -322,6 +324,9 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 	auto &res = _attachment->getTransferResource();
 	for (auto &it : _queue->getAttachments()) {
 		if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
+
+			v->setCompiler(static_cast<RenderQueueCompiler *>(_data->queue->queue)->getMaterialCompiler());
+
 			if (!v->getPredefinedMaterials().empty()) {
 				hasMaterials = true;
 				break;

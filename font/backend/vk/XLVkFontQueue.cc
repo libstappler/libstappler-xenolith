@@ -784,8 +784,10 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 			atlas->setDataBuffer(_targetAtlasData);
 		}
 
+		auto &sig = frame.getSignalDependencies();
+
 		input->image->updateInstance(*frame.getLoop(), _targetImage, move(atlas),
-				Rc<Ref>(_fontAttachment->getUserdata()), frame.getSignalDependencies());
+				Rc<Ref>(_fontAttachment->getUserdata()), sig);
 
 		if (input->output) {
 			auto region = _outBuffer->map(0, _outBuffer->getSize(), true);

@@ -42,7 +42,7 @@ namespace stappler::xenolith::vk {
 
 View::~View() { }
 
-bool View::init(MainLoop &loop, const Device &dev, ViewInfo &&info) {
+bool View::init(Application &loop, const Device &dev, ViewInfo &&info) {
 	if (!xenolith::View::init(loop, move(info))) {
 		return false;
 	}
@@ -132,7 +132,7 @@ void View::update(bool displayLink) {
 
 	acquireScheduledImage();
 
-	auto clock = platform::clock(core::ClockType::Monotonic);
+	auto clock = xenolith::platform::clock(core::ClockType::Monotonic);
 
 	if (!_options.followDisplayLink) {
 		auto it = _scheduledPresent.begin();
@@ -236,7 +236,7 @@ bool View::present(Rc<ImageStorage> &&object) {
 			return false;
 		}
 		auto img = (SwapchainImage *)object.get();
-		if (!img->getPresentWindow() || img->getPresentWindow() < platform::clock(core::ClockType::Monotonic)) {
+		if (!img->getPresentWindow() || img->getPresentWindow() < xenolith::platform::clock(core::ClockType::Monotonic)) {
 			if (_options.presentImmediate) {
 				performOnThread([this, object = move(object)] () mutable {
 					auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, true);
@@ -588,7 +588,7 @@ void View::invalidate() {
 
 void View::scheduleNextImage(uint64_t windowOffset, bool immediately) {
 	performOnThread([this, windowOffset, immediately] {
-		_scheduledTime = platform::clock(core::ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
+		_scheduledTime = xenolith::platform::clock(core::ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
 		if (!_options.renderOnDemand || _readyForNextFrame || immediately) {
 			_frameEmitter->setEnableBarrier(_options.enableFrameEmitterBarrier);
 
@@ -619,7 +619,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 		if (fullOffset > _info.frameInterval) {
 			swapchainImage = Rc<SwapchainImage>::create(Rc<SwapchainHandle>(_swapchain), _frameOrder, 0);
 		} else {
-			auto presentWindow = platform::clock(core::ClockType::Monotonic) + _info.frameInterval - getUpdateInterval() - windowOffset;
+			auto presentWindow = xenolith::platform::clock(core::ClockType::Monotonic) + _info.frameInterval - getUpdateInterval() - windowOffset;
 			swapchainImage = Rc<SwapchainImage>::create(Rc<SwapchainHandle>(_swapchain), _frameOrder, presentWindow);
 		}
 
@@ -1059,7 +1059,7 @@ void View::invalidateSwapchainImage(Rc<ImageStorage> &&image) {
 }
 
 Pair<uint64_t, uint64_t> View::updateFrameInterval() {
-	auto n = platform::clock();
+	auto n = xenolith::platform::clock();
 	auto dt = n - _lastFrameStart;
 	_lastFrameInterval = dt;
 	_avgFrameInterval.addValue(dt);

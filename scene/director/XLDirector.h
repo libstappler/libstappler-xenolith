@@ -24,9 +24,9 @@
 #ifndef XENOLITH_SCENE_DIRECTOR_XLDIRECTOR_H_
 #define XENOLITH_SCENE_DIRECTOR_XLDIRECTOR_H_
 
-#include "XLCoreFrameEmitter.h"
-#include "XLMainLoop.h"
 #include "XLResourceCache.h"
+#include "XLApplication.h"
+#include "XLCoreFrameEmitter.h"
 #include "XLInput.h"
 #include "SPMovingAverage.h"
 
@@ -47,7 +47,7 @@ public:
 
 	Director();
 
-	bool init(MainLoop *, const core::FrameContraints &, View *view);
+	bool init(Application *, const core::FrameContraints &, View *view);
 
 	void runScene(Rc<Scene> &&);
 
@@ -57,7 +57,7 @@ public:
 
 	void end();
 
-	MainLoop *getMainLoop() const { return _mainLoop; }
+	Application *getApplication() const { return _mainLoop; }
 	core::Loop *getGlLoop() const;
 	View *getView() const { return _view; }
 
@@ -93,7 +93,7 @@ protected:
 
 	bool hasActiveInteractions();
 
-	Rc<MainLoop> _mainLoop;
+	Rc<Application> _mainLoop;
 	View *_view = nullptr;
 
 	core::FrameContraints _constraints;

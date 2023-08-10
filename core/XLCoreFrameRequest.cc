@@ -83,19 +83,11 @@ bool FrameRequest::init(const Rc<Queue> &q, const Rc<FrameEmitter> &emitter, con
 
 void FrameRequest::addSignalDependency(Rc<DependencyEvent> &&dep) {
 	if (dep) {
-		if (dep->submitted.exchange(true)) {
-			++ dep->signaled;
-		}
 		_signalDependencies.emplace_back(move(dep));
 	}
 }
 
 void FrameRequest::addSignalDependencies(Vector<Rc<DependencyEvent>> &&deps) {
-	for (auto &dep : deps) {
-		if (dep->submitted.exchange(true)) {
-			++ dep->signaled;
-		}
-	}
 	if (_signalDependencies.empty()) {
 		_signalDependencies = move(deps);
 	} else {
@@ -208,16 +200,11 @@ void FrameRequest::finalize(Loop &loop, HashMap<const AttachmentData *, FrameAtt
 	if (_emitter) {
 		_emitter = nullptr;
 	}
-
-	if (!_signalDependencies.empty()) {
-		loop.signalDependencies(_signalDependencies, success);
-	}
 }
 
-void FrameRequest::signalDependencies(Loop &loop, bool success) {
+void FrameRequest::signalDependencies(Loop &loop, Queue *q, bool success) {
 	if (!_signalDependencies.empty()) {
-		loop.signalDependencies(_signalDependencies, success);
-		_signalDependencies.clear();
+		loop.signalDependencies(_signalDependencies, q, success);
 	}
 }
 

@@ -38,14 +38,14 @@ public:
 	};
 
 	struct RenderQueueInfo {
-		MainLoop *target = nullptr;
+		Application *target = nullptr;
 		Extent2 extent;
 		Flags flags = Flags::None;
 		Function<void(core::Resource::Builder &)> resourceCallback;
 	};
 
 	struct PassCreateInfo {
-		MainLoop *target = nullptr;
+		Application *target = nullptr;
 		Extent2 extent;
 		Flags flags;
 

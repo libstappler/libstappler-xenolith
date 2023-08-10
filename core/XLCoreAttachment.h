@@ -29,16 +29,30 @@
 
 namespace stappler::xenolith::core {
 
-struct DependencyEvent : public Ref {
+class DependencyEvent final : public Ref {
+public:
+	using QueueSet = std::multiset<Rc<Queue>, std::less<Rc<Queue>>, std::allocator<Rc<Queue>>>;
+
 	static uint32_t GetNextId();
 
-	virtual ~DependencyEvent() { }
+	virtual ~DependencyEvent();
 
-	uint32_t id = GetNextId();
-	uint64_t clock = platform::clock(core::ClockType::Monotonic);
-	std::atomic<uint32_t> signaled = 1;
-	std::atomic<bool> submitted = false;
-	bool success = true;
+	DependencyEvent(QueueSet &&);
+	DependencyEvent(InitializerList<Rc<Queue>> &&);
+
+	bool signal(Queue *, bool);
+
+	bool isSignaled() const;
+	bool isSuccessful() const;
+
+	void addQueue(Rc<Queue> &&);
+
+protected:
+	uint32_t _id = GetNextId();
+	StringView _tag;
+	uint64_t _clock = platform::clock(core::ClockType::Monotonic);
+	QueueSet _queues;
+	bool _success = true;
 };
 
 // dummy class for attachment input

@@ -67,7 +67,7 @@ uint64_t clock(core::ClockType type) {
 	case core::ClockType::Thread: clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts); break;
 	}
 
-	return (uint64_t) ts.tv_sec * (uint64_t) 1000'000 + (uint64_t) ts.tv_nsec / 1000;
+	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000) + static_cast<uint64_t>(ts.tv_nsec / 1000);
 }
 
 void sleep(uint64_t microseconds) {

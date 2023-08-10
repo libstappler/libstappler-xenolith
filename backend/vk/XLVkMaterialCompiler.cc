@@ -217,7 +217,7 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 				}
 				_requests.erase(reqIt);
 
-				runMaterialCompilationFrame(*handle.getLoop(), move(req), move(deps));
+				runMaterialCompilationFrame(*handle.getLoop(), move(req), Vector<Rc<core::DependencyEvent>>(deps));
 			} else {
 				clearRequests();
 				dropInProgress(targetAttachment);

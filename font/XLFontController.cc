@@ -21,10 +21,11 @@
  **/
 
 #include "XLFontController.h"
+
+#include "XLTemporaryResource.h"
+#include "XLTexture.h"
 #include "XLFontLibrary.h"
 #include "XLFontLayout.h"
-#include "XLTexture.h"
-#include "XLTemporaryResource.h"
 
 namespace stappler::xenolith::font {
 
@@ -215,7 +216,7 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 }
 
 FontController::~FontController() {
-	invalidate();
+	invalidate(nullptr);
 }
 
 bool FontController::init(const Rc<FontLibrary> &lib) {
@@ -223,7 +224,11 @@ bool FontController::init(const Rc<FontLibrary> &lib) {
 	return true;
 }
 
-void FontController::invalidate() {
+void FontController::initialize(Application *) {
+
+}
+
+void FontController::invalidate(Application *) {
 	if (_image) {
 		// image need to be finalized to remove cycled refs
 		_image->finalize();
@@ -393,7 +398,9 @@ Rc<FontLayout> FontController::getLayoutForString(const FontParameters &f, const
 Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontLayout> &l, SpanView<CharSpec> chars) {
 	if (l->addTextureChars(chars)) {
 		if (!_dependency) {
-			_dependency = Rc<core::DependencyEvent>::alloc();
+			_dependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
+				_library->getQueue()
+			});
 		}
 		_dirty = true;
 		return _dependency;
@@ -418,8 +425,8 @@ StringView FontController::getFamilyName(uint32_t idx) const {
 	return StringView();
 }
 
-void FontController::update(uint64_t clock) {
-	_clock = clock;
+void FontController::update(Application *, const UpdateTime &clock) {
+	_clock = clock.global;
 	removeUnusedLayouts();
 	if (_dirty && _loaded) {
 		Vector<FontUpdateRequest> objects;
@@ -464,7 +471,9 @@ void FontController::setLoaded(bool value) {
 	if (_loaded != value) {
 		_loaded = value;
 		onLoaded(this);
-		update(platform::clock(core::ClockType::Monotonic));
+		UpdateTime t;
+		t.global = platform::clock(core::ClockType::Monotonic);
+		update(nullptr, t);
 	}
 }
 

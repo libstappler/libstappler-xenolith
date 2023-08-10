@@ -125,13 +125,6 @@ public:
 	virtual void cancelTextInput() = 0;
 };
 
-StringView getInputKeyCodeName(InputKeyCode);
-StringView getInputKeyCodeKeyName(InputKeyCode);
-StringView getInputEventName(InputEventName);
-
-std::ostream &operator<<(std::ostream &, InputKeyCode);
-std::ostream &operator<<(std::ostream &, InputEventName);
-
 constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
 
 }

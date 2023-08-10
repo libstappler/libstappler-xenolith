@@ -33,7 +33,7 @@ View::View() { }
 
 View::~View() { }
 
-bool View::init(MainLoop &loop, ViewInfo &&info) {
+bool View::init(Application &loop, ViewInfo &&info) {
 	_mainLoop = &loop;
 	_glLoop = _mainLoop->getGlLoop();
 	_constraints.extent = Extent2(info.rect.width, info.rect.height);
@@ -87,6 +87,10 @@ void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate)
 			_callbacks.emplace_back(move(func), target);
 		}
 	}
+}
+
+const Rc<Director> &View::getDirector() const {
+	return _director;
 }
 
 void View::handleInputEvent(const InputEventData &event) {

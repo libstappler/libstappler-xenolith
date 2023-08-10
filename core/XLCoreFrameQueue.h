@@ -115,7 +115,7 @@ public:
 
 	const Rc<FrameHandle> &getFrame() const { return _frame; }
 	const Rc<PoolRef> &getPool() const { return _pool; }
-	const Rc<Queue> &getRenderQueue() const { return _queue; }
+	const Rc<Queue> &getQueue() const { return _queue; }
 	Loop *getLoop() const;
 
 	const HashMap<const QueuePassData *, FramePassData> &getRenderPasses() const { return _renderPasses; }

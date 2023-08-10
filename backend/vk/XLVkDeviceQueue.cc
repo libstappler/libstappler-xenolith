@@ -702,7 +702,9 @@ void CommandPool::reset(Device &dev, bool release) {
 				buffersToFree.emplace_back(it->getBuffer());
 			}
 		}
-		dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, static_cast<uint32_t>(buffersToFree.size()), buffersToFree.data());
+		if (buffersToFree.size() > 0) {
+			dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, static_cast<uint32_t>(buffersToFree.size()), buffersToFree.data());
+		}
 		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
 
 		VkCommandPoolCreateInfo poolInfo{};

@@ -23,9 +23,9 @@
 #ifndef XENOLITH_SCENE_NODES_XLEVENTLISTENER_H_
 #define XENOLITH_SCENE_NODES_XLEVENTLISTENER_H_
 
-#include "XLComponent.h"
-#include "XLEventHandler.h"
 #include "XLEvent.h"
+#include "XLEventHandler.h"
+#include "XLComponent.h"
 
 namespace stappler::xenolith {
 

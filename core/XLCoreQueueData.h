@@ -317,6 +317,7 @@ struct QueueData : NamedMem {
 	Rc<Resource> resource;
 	bool compiled = false;
 	uint64_t order = 0;
+	Queue *queue = nullptr;
 
 	memory::map<std::type_index, Attachment *> typedInput;
 	memory::map<std::type_index, Attachment *> typedOutput;

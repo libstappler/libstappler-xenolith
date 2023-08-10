@@ -748,13 +748,11 @@ static const char *getCursorName(WaylandCursorImage image) {
 	return nullptr;
 }
 
-bool WaylandCursorTheme::init(WaylandDisplay *display, const char *name, int size) {
+bool WaylandCursorTheme::init(WaylandDisplay *display, StringView name, int size) {
 	wayland = display->wayland;
 	cursorSize = size;
-	if (name) {
-		cursorName = name;
-	}
-	cursorTheme = wayland->wl_cursor_theme_load(name, size, display->shm->shm);
+	cursorName = name.str<Interface>();
+	cursorTheme = wayland->wl_cursor_theme_load(name.data(), size, display->shm->shm);
 
 	if (cursorTheme) {
 		for (int i = 0; i < toInt(WaylandCursorImage::Max); ++ i) {
@@ -1639,87 +1637,14 @@ static struct wl_surface_listener cursor_surface_listener = {
 	}
 };
 
-static bool get_cursor_settings(char **theme, int *size) {
-	static const char name[] = "org.gnome.desktop.interface";
-	static const char key_theme[] = "cursor-theme";
-	static const char key_size[] = "cursor-size";
-
-#if DEBUG
-	static auto s_defaultTheme = "Yaru";
-	*theme = strdup(s_defaultTheme);
-	*size = 24;
-	return true;
-#endif
-
-	DBusLibrary lib;
-	if (lib) {
-		do {
-			DBusError error;
-			DBusConnection *connection;
-			DBusMessage *reply;
-			const char *value_theme = NULL;
-
-			lib.dbus_error_init(&error);
-			connection = lib.dbus_bus_get(DBUS_BUS_SESSION, &error);
-
-			if (lib.dbus_error_is_set(&error))
-				break;
-
-			reply = lib.getSettingSync(connection, name, key_theme);
-			if (!reply)
-				break;
-
-			if (!lib.parseType(reply, DBUS_TYPE_STRING, &value_theme)) {
-				lib.dbus_message_unref(reply);
-				break;
-			}
-
-			*theme = strdup(value_theme);
-
-			lib.dbus_message_unref(reply);
-
-			reply = lib.getSettingSync(connection, name, key_size);
-			if (!reply)
-				break;
-
-			if (!lib.parseType(reply, DBUS_TYPE_INT32, size)) {
-				lib.dbus_message_unref(reply);
-				break;
-			}
-
-			lib.dbus_message_unref(reply);
-			return true;
-		} while (0);
-	}
-
-	char *env_xtheme;
-	char *env_xsize;
-
-	env_xtheme = getenv("XCURSOR_THEME");
-	if (env_xtheme != NULL)
-		*theme = strdup(env_xtheme);
-
-	env_xsize = getenv("XCURSOR_SIZE");
-	if (env_xsize != NULL)
-		*size = atoi(env_xsize);
-
-	return env_xtheme != NULL && env_xsize != NULL;
-}
-
 void WaylandSeat::initCursors() {
-	char *name = nullptr;
-	int size = 24;
+	auto lib = DBusLibrary::get();
+	auto theme = lib.getCurrentInterfaceTheme();
 
-	get_cursor_settings(&name, &size);
+	theme.cursorSize *= pointerScale;
 
-	size *= pointerScale;
-
-	if (!cursorTheme || cursorTheme->cursorSize != size || cursorTheme->cursorName != String(name)) {
-		cursorTheme = Rc<WaylandCursorTheme>::create(root, name, size);
-	}
-
-	if (name) {
-		::free(name);
+	if (!cursorTheme || cursorTheme->cursorSize != theme.cursorSize || cursorTheme->cursorName != String(theme.cursorTheme)) {
+		cursorTheme = Rc<WaylandCursorTheme>::create(root, theme.cursorTheme, theme.cursorSize);
 	}
 
 	if (!cursorSurface) {

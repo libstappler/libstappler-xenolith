@@ -38,7 +38,7 @@ ViewImpl::~ViewImpl() {
 	_view = nullptr;
 }
 
-bool ViewImpl::init(MainLoop &loop, const core::Device &dev, ViewInfo &&info) {
+bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info) {
 	_constraints.density = info.density;
 
 	if (!vk::View::init(loop, static_cast<const vk::Device &>(dev), move(info))) {
@@ -267,7 +267,7 @@ void ViewImpl::finalize() {
 	View::finalize();
 }
 
-Rc<vk::View> createView(MainLoop &loop, core::Device &dev, ViewInfo &&info) {
+Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&info) {
 	return Rc<ViewImpl>::create(loop, dev, move(info));
 }
 

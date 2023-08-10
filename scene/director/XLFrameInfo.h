@@ -84,7 +84,11 @@ struct FrameInfo {
 	void popContext() {
 		currentContext->context->submitHandle(*this, currentContext);
 		contextStack.pop_back();
-		currentContext = contextStack.empty() ? nullptr : contextStack.back();
+		if (contextStack.empty()) {
+			currentContext = nullptr;
+		} else {
+			currentContext = contextStack.back();
+		}
 	}
 };
 

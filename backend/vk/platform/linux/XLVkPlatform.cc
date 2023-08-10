@@ -207,7 +207,7 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = nullptr;
 	appInfo.pApplicationName = data.applicationName.data();
-	appInfo.applicationVersion = data.applicationVersion;
+	appInfo.applicationVersion = XL_MAKE_API_VERSION(data.applicationVersion);
 	appInfo.pEngineName = xenolith::platform::name();
 	appInfo.engineVersion = xenolith::platform::version();
 	appInfo.apiVersion = data.targetVulkanVersion;

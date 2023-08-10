@@ -30,6 +30,24 @@
 
 namespace stappler::xenolith::basic2d {
 
+bool ShadowLightInput::addAmbientLight(const Vec4 &pos, const Color4F &color, bool softShadow) {
+	if (ambientLightCount >= config::MaxAmbientLights) {
+		return false;
+	}
+
+	ambientLights[ambientLightCount++] = AmbientLightData{pos, color, uint32_t(softShadow ? 1 : 0)};
+	return true;
+}
+
+bool ShadowLightInput::addDirectLight(const Vec4 &pos, const Color4F &color, const Vec4 &data) {
+	if (directLightCount >= config::MaxDirectLights) {
+		return false;
+	}
+
+	directLights[directLightCount++] = DirectLightData{pos, color, data};
+	return true;
+}
+
 void FrameContext2d::onEnter(Scene *scene) {
 	FrameContext::onEnter(scene);
 	if (!_init || _queue) {

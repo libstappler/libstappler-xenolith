@@ -38,7 +38,7 @@ public:
 
 	virtual ~FrameContext2d() { }
 
-	virtual void onEnter(Scene *) override;
+	virtual void onEnter(xenolith::Scene *) override;
 	virtual void onExit() override;
 
 	virtual Rc<FrameContextHandle> makeHandle(FrameInfo &) override;

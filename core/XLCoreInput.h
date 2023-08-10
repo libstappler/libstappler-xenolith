@@ -398,6 +398,17 @@ struct InputEventData {
 #endif
 };
 
+StringView getInputKeyCodeName(InputKeyCode);
+StringView getInputKeyCodeKeyName(InputKeyCode);
+StringView getInputEventName(InputEventName);
+
+}
+
+namespace std {
+
+std::ostream &operator<<(std::ostream &, stappler::xenolith::core::InputKeyCode);
+std::ostream &operator<<(std::ostream &, stappler::xenolith::core::InputEventName);
+
 }
 
 #endif /* XENOLITH_CORE_XLCOREINPUT_H_ */

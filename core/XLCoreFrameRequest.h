@@ -73,7 +73,7 @@ public:
 	void onOutputInvalidated(Loop &, FrameAttachmentData &);
 
 	void finalize(Loop &, HashMap<const AttachmentData *, FrameAttachmentData *> &attachments, bool success);
-	void signalDependencies(Loop &, bool success);
+	void signalDependencies(Loop &, Queue *, bool success);
 
 	Rc<AttachmentInputData> getInputData(const AttachmentData *attachment);
 

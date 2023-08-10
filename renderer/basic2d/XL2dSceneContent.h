@@ -25,10 +25,10 @@
 
 #include "XLSceneContent.h"
 #include "XL2dFrameContext.h"
+#include "XL2dSceneLayout.h"
+#include "XL2dSceneLight.h"
 
 namespace stappler::xenolith::basic2d {
-
-class FrameContext2d;
 
 class SceneContent2d : public SceneContent {
 public:
@@ -36,8 +36,76 @@ public:
 
 	virtual bool init() override;
 
+	virtual void onContentSizeDirty() override;
+
+	// replaced node will be alone in stack, so, no need for exit transition
+	virtual void replaceLayout(SceneLayout2d *);
+	virtual void pushLayout(SceneLayout2d *);
+
+	virtual void replaceTopLayout(SceneLayout2d *);
+	virtual void popLayout(SceneLayout2d *);
+
+	virtual bool pushOverlay(SceneLayout2d *);
+	virtual bool popOverlay(SceneLayout2d *);
+
+	virtual SceneLayout2d *getTopLayout();
+	virtual SceneLayout2d *getPrevLayout();
+
+	virtual bool popTopLayout();
+	virtual bool isActive() const;
+
+	virtual bool onBackButton() override;
+	virtual size_t getLayoutsCount() const;
+
+	virtual const Vector<Rc<SceneLayout2d>> &getLayouts() const;
+	virtual const Vector<Rc<SceneLayout2d>> &getOverlays() const;
+
+	Padding getDecorationPadding() const { return _decorationPadding; }
+
+	virtual void updateLayoutNode(SceneLayout2d *);
+
+	virtual bool addLight(SceneLight *, uint64_t tag = InvalidTag, StringView name = StringView());
+
+	virtual SceneLight *getLightByTag(uint64_t) const;
+	virtual SceneLight *getLightByName(StringView) const;
+
+	virtual void removeLight(SceneLight *);
+	virtual void removeLightByTag(uint64_t);
+	virtual void removeLightByName(StringView);
+
+	virtual void removeAllLights();
+	virtual void removeAllLightsByType(SceneLightType);
+
+	virtual void setGlobalLight(const Color4F &);
+	virtual const Color4F & getGlobalLight() const;
+
+	virtual void draw(FrameInfo &, NodeFlags flags) override;
+
 protected:
+	virtual void pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb);
+
+	virtual void eraseLayout(SceneLayout2d *);
+	virtual void eraseOverlay(SceneLayout2d *);
+	virtual void replaceNodes();
+	virtual void updateNodesVisibility();
+
+	virtual void updateBackButtonStatus() override;
+
+	Vector<Rc<SceneLight>>::iterator removeLight(Vector<Rc<SceneLight>>::iterator);
+
+	Vector<Rc<SceneLayout2d>> _layouts;
+	Vector<Rc<SceneLayout2d>> _overlays;
+
 	Rc<FrameContext2d> _2dContext;
+
+	float _shadowDensity = 1.0f;
+	uint32_t _lightsAmbientCount = 0;
+	uint32_t _lightsDirectCount = 0;
+	Vector<Rc<SceneLight>> _lights;
+	Map<uint64_t, SceneLight *> _lightsByTag;
+	Map<StringView, SceneLight *> _lightsByName;
+
+	Color4F _globalLight = Color4F(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
 }

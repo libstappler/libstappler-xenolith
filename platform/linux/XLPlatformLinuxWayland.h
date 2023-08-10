@@ -663,7 +663,7 @@ enum class WaylandDecorationName {
 struct WaylandCursorTheme : public Ref {
 	~WaylandCursorTheme();
 
-	bool init(WaylandDisplay *, const char *name, int size);
+	bool init(WaylandDisplay *, StringView name, int size);
 
 	void setCursor(WaylandSeat *);
 	void setCursor(wl_pointer *, wl_surface *, uint32_t serial, WaylandCursorImage img, int scale);

@@ -219,7 +219,7 @@ bool Label::init(font::FontController *source, const DescriptionStyle &style,
 	}
 
 	if (!source) {
-		source = MainLoop::getInstance()->getFontController();
+		source = Application::getInstance()->getExtension<font::FontController>();
 	}
 
 	_source = source;
@@ -479,7 +479,7 @@ void Label::updateVertexes() {
 	}
 
 	if (_deferred) {
-		_deferredResult = runDeferred(*_director->getMainLoop()->getQueue(), _format, _displayedColor);
+		_deferredResult = runDeferred(*_director->getApplication()->getQueue(), _format, _displayedColor);
 		_vertexes.clear();
 		_vertexColorDirty = false;
 	} else {

@@ -32,6 +32,7 @@
 #include "nodes/XLScene.cc"
 #include "nodes/XLSceneContent.cc"
 #include "nodes/XLComponent.cc"
+#include "nodes/XLSubscriptionListener.cc"
 #include "nodes/XLEventListener.cc"
 
 #include "input/XLGestureRecognizer.cc"

@@ -66,6 +66,10 @@ public:
 	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const override;
 #endif
 
+#if MODULE_XENOLITH_BACKEND_VKGUI
+	virtual Rc<xenolith::View> makeView(Application &, const core::Device &, ViewInfo &&) const override;
+#endif
+
 private:
 	void getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &, ExtensionFlags, uint32_t) const;
 	void getDeviceProperties(const VkPhysicalDevice &device, DeviceInfo::Properties &, ExtensionFlags, uint32_t) const;

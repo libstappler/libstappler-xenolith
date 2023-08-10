@@ -24,6 +24,69 @@
 
 namespace stappler::xenolith::basic2d {
 
+void CmdSdfGroup2D::addCircle2D(Vec2 origin, float r) {
+	auto p = data.get_allocator().getPool();
+
+	auto circle = new (memory::pool::palloc(p, sizeof(SdfCircle2D))) SdfCircle2D;
+	circle->origin = origin;
+	circle->radius = r;
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::Circle2D, BytesView(reinterpret_cast<const uint8_t *>(circle), sizeof(SdfCircle2D))});
+}
+
+void CmdSdfGroup2D::addRect2D(Rect r) {
+	auto p = data.get_allocator().getPool();
+
+	auto rect = new (memory::pool::palloc(p, sizeof(SdfRect2D))) SdfRect2D;
+	rect->origin = Vec2(r.getMidX(), r.getMidY());
+	rect->size = Size2(r.size / 2.0f);
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::Rect2D, BytesView(reinterpret_cast<const uint8_t *>(rect), sizeof(SdfRect2D))});
+}
+
+void CmdSdfGroup2D::addRoundedRect2D(Rect rect, float r) {
+	auto p = data.get_allocator().getPool();
+
+	auto roundedRect = new (memory::pool::palloc(p, sizeof(SdfRoundedRect2D))) SdfRoundedRect2D;
+	roundedRect->origin = Vec2(rect.getMidX(), rect.getMidY());
+	roundedRect->size = Size2(rect.size / 2.0f);
+	roundedRect->radius = Vec4(r, r, r, r);
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::RoundedRect2D, BytesView(reinterpret_cast<const uint8_t *>(roundedRect), sizeof(SdfRoundedRect2D))});
+}
+
+void CmdSdfGroup2D::addRoundedRect2D(Rect rect, Vec4 r) {
+	auto p = data.get_allocator().getPool();
+
+	auto roundedRect = new (memory::pool::palloc(p, sizeof(SdfRoundedRect2D))) SdfRoundedRect2D;
+	roundedRect->origin = Vec2(rect.getMidX(), rect.getMidY());
+	roundedRect->size = Size2(rect.size / 2.0f);
+	roundedRect->radius = Vec4(r);
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::RoundedRect2D, BytesView(reinterpret_cast<const uint8_t *>(roundedRect), sizeof(SdfRoundedRect2D))});
+}
+
+void CmdSdfGroup2D::addTriangle2D(Vec2 origin, Vec2 a, Vec2 b, Vec2 c) {
+	auto p = data.get_allocator().getPool();
+
+	auto triangle = new (memory::pool::palloc(p, sizeof(SdfTriangle2D))) SdfTriangle2D;
+	triangle->origin = origin;
+	triangle->a = a;
+	triangle->b = b;
+	triangle->c = c;
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::Triangle2D, BytesView(reinterpret_cast<const uint8_t *>(triangle), sizeof(SdfTriangle2D))});
+}
+
+void CmdSdfGroup2D::addPolygon2D(SpanView<Vec2> view) {
+	auto p = data.get_allocator().getPool();
+
+	auto polygon = new (memory::pool::palloc(p, sizeof(SdfPolygon2D))) SdfPolygon2D;
+	polygon->points = view.pdup(p);
+
+	data.emplace_back(SdfPrimitive2DHeader{SdfShape::Polygon2D, BytesView(reinterpret_cast<const uint8_t *>(polygon), sizeof(SdfPolygon2D))});
+}
+
 Command *Command::create(memory::pool_t *p, CommandType t, CommandFlags f) {
 	auto commandSize = sizeof(Command);
 

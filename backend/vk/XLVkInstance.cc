@@ -29,6 +29,10 @@ THE SOFTWARE.
 #include "backend/vk/XLVkFontQueue.h"
 #endif
 
+#if MODULE_XENOLITH_BACKEND_VKGUI
+#include "XLVkGuiPlatform.h"
+#endif
+
 namespace stappler::xenolith::vk {
 
 SPUNUSED static VkResult s_createDebugUtilsMessengerEXT(VkInstance instance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
@@ -339,8 +343,13 @@ VkInstance Instance::getInstance() const {
 
 #if MODULE_XENOLITH_FONT
 Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
-	Rc<FontQueue>::create(name);
-	return nullptr;
+	return Rc<FontQueue>::create(name);
+}
+#endif
+
+#if MODULE_XENOLITH_BACKEND_VKGUI
+Rc<xenolith::View> Instance::makeView(Application &loop, const core::Device &dev, ViewInfo &&info) const {
+	return vk::platform::createView(loop, dev, move(info));
 }
 #endif
 

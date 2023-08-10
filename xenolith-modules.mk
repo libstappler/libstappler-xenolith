@@ -22,7 +22,7 @@
 XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 include $(XENOLITH_MODULE_DIR)/core/core.mk
-include $(XENOLITH_MODULE_DIR)/main/main.mk
+include $(XENOLITH_MODULE_DIR)/application/application.mk
 include $(XENOLITH_MODULE_DIR)/scene/scene.mk
 include $(XENOLITH_MODULE_DIR)/font/font.mk
 include $(XENOLITH_MODULE_DIR)/platform/platform.mk
@@ -30,3 +30,10 @@ include $(XENOLITH_MODULE_DIR)/backend/vk/vk.mk
 include $(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk
 
 include $(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk
+include $(XENOLITH_MODULE_DIR)/renderer/gui2d/gui2d.mk
+include $(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk
+
+include $(XENOLITH_MODULE_DIR)/resources/icons/icons.mk
+include $(XENOLITH_MODULE_DIR)/resources/storage/storage.mk
+include $(XENOLITH_MODULE_DIR)/resources/network/network.mk
+include $(XENOLITH_MODULE_DIR)/resources/assets/assets.mk

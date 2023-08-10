@@ -25,10 +25,23 @@
 
 #include "XLCore.h"
 
+#if MODULE_XENOLITH_SCENE
+
+namespace stappler::xenolith {
+
+struct ViewInfo;
+class View;
+class Application;
+
+}
+
+#endif
+
 namespace stappler::xenolith::core {
 
 class Loop;
 class Queue;
+class Device;
 
 struct LoopInfo;
 
@@ -56,6 +69,10 @@ public:
 
 #if MODULE_XENOLITH_FONT
 	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const;
+#endif
+
+#if MODULE_XENOLITH_SCENE
+	virtual Rc<View> makeView(Application &, const Device &, ViewInfo &&) const;
 #endif
 
 protected:

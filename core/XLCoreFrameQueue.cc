@@ -542,8 +542,11 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 
 	for (auto &it : data.attachments) {
 		if (!it.second->passes.empty() && it.second->passes.back() == &data && it.second->state != FrameAttachmentState::ResourcesReleased) {
-			if ((toInt(state) >= toInt(it.second->final))
-					|| (toInt(state) >= toInt(FrameRenderPassState::Submitted) && it.second->final == FrameRenderPassState::Initial)) {
+			if (it.second->final == FrameRenderPassState::Initial) {
+				if (toInt(state) >= toInt(FrameRenderPassState::Submitted)) {
+					onAttachmentRelease(*it.second);
+				}
+			} else if ((toInt(state) >= toInt(it.second->final))) {
 				onAttachmentRelease(*it.second);
 			}
 		}

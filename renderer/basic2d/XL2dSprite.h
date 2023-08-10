@@ -24,8 +24,8 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_XL2DSPRITE_H_
 #define XENOLITH_RENDERER_BASIC2D_XL2DSPRITE_H_
 
-#include "XLDynamicStateNode.h"
 #include "XLResourceCache.h"
+#include "XLDynamicStateNode.h"
 #include "XL2dVertexArray.h"
 
 namespace stappler::xenolith::basic2d {
@@ -55,7 +55,7 @@ public:
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
 
-	virtual void onEnter(Scene *) override;
+	virtual void onEnter(xenolith::Scene *) override;
 	virtual void onExit() override;
 	virtual void onContentSizeDirty() override;
 	virtual void onTextureLoaded();

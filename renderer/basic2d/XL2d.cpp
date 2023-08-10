@@ -29,7 +29,13 @@
 #include "XL2dSprite.cc"
 #include "XL2dLayer.cc"
 #include "XL2dLabel.cc"
+#include "XL2dScene.cc"
 #include "XL2dSceneContent.cc"
+#include "XL2dSceneLayout.cc"
+#include "XL2dSceneLight.cc"
+
+#include "XL2dVectorCanvas.cc"
+#include "XL2dVectorSprite.cc"
 
 #ifdef MODULE_XENOLITH_BACKEND_VK
 #include "backend/vk/XL2dVkMaterial.cc"

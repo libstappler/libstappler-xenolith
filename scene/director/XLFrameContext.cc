@@ -46,8 +46,12 @@ Rc<FrameContextHandle> FrameContext::makeHandle(FrameInfo &) {
 	return nullptr;
 }
 
-void FrameContext::submitHandle(FrameInfo &info, FrameContextHandle *) {
+void FrameContext::submitHandle(FrameInfo &info, FrameContextHandle *handle) {
 	submitMaterials(info);
+
+	if (!handle->waitDependencies.empty()) {
+		info.director->getApplication()->wakeup();
+	}
 }
 
 uint64_t FrameContext::getMaterial(const MaterialInfo &info) const {
@@ -158,7 +162,9 @@ MaterialInfo FrameContext::getMaterialInfo(const Rc<core::Material> &material) c
 void FrameContext::addPendingMaterial(Rc<core::Material> &&material) {
 	_pendingMaterialsToAdd.emplace_back(move(material));
 	if (!_materialDependency) {
-		_materialDependency = Rc<core::DependencyEvent>::alloc();
+		_materialDependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
+			Rc<core::Queue>(_materialAttachment->getCompiler())
+		});
 	}
 }
 

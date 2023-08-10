@@ -27,6 +27,8 @@
 
 namespace stappler::xenolith::vk {
 
+class TransferQueue;
+class MaterialCompiler;
 class RenderQueueAttachment;
 
 struct RenderQueueInput : public core::AttachmentInputData {
@@ -37,13 +39,18 @@ class RenderQueueCompiler : public core::Queue {
 public:
 	virtual ~RenderQueueCompiler();
 
-	bool init(Device &);
+	bool init(Device &, TransferQueue *, MaterialCompiler *);
 
 	Rc<FrameRequest> makeRequest(Rc<RenderQueueInput> &&);
+
+	TransferQueue *getTransferQueue() const { return _transfer; }
+	MaterialCompiler *getMaterialCompiler() const { return _materialCompiler; }
 
 protected:
 	using core::Queue::init;
 
+	TransferQueue *_transfer = nullptr;
+	MaterialCompiler *_materialCompiler = nullptr;
 	const AttachmentData *_attachment;
 };
 

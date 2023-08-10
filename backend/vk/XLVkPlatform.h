@@ -36,7 +36,7 @@ struct VulkanInstanceInfo {
 
 struct VulkanInstanceData {
 	uint32_t targetVulkanVersion;
-	uint32_t applicationVersion;
+	StringView applicationVersion;
 	StringView applicationName;
 	Vector<const char *> layersToEnable;
 	Vector<const char *> extensionsToEnable;

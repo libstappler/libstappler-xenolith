@@ -22,12 +22,13 @@
  **/
 
 #include "XLDirector.h"
+
+#include "XLResourceCache.h"
 #include "XLScheduler.h"
 #include "XLScene.h"
 #include "XLInputDispatcher.h"
 #include "XLTextInputManager.h"
 #include "XLActionManager.h"
-#include "XLResourceCache.h"
 #include "XLCoreLoop.h"
 #include "XLCoreFrameRequest.h"
 #include "XLView.h"
@@ -38,7 +39,7 @@ Director::Director() { }
 
 Director::~Director() { }
 
-bool Director::init(MainLoop *main, const core::FrameContraints &constraints, View *view) {
+bool Director::init(Application *main, const core::FrameContraints &constraints, View *view) {
 	_mainLoop = main;
 	_view = view;
 	_pool = Rc<PoolRef>::alloc();
@@ -146,6 +147,8 @@ void Director::end() {
 		_scene = nullptr;
 		_nextScene = nullptr;
 	}
+
+	_autorelease.clear();
 }
 
 core::Loop *Director::getGlLoop() const {

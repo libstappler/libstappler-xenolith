@@ -38,6 +38,7 @@ namespace stappler::xenolith::vk {
 struct DependencyRequest : public Ref {
 	Vector<Rc<core::DependencyEvent>> events;
 	Function<void(bool)> callback;
+	uint64_t initial = 0;
 	uint32_t signaled = 0;
 	bool success = true;
 };
@@ -65,7 +66,7 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void setDevice(Rc<Device> &&dev) {
-		requiredTasks += 2;
+		requiredTasks += 3;
 
 		device = move(dev);
 
@@ -77,11 +78,15 @@ struct Loop::Internal final : memory::AllocPool {
 			onInitTaskPerformed(success, "DeviceResources");
 		});
 
-		renderQueueCompiler = Rc<RenderQueueCompiler>::create(*device);
 		transferQueue = Rc<TransferQueue>::create();
+		materialQueue = Rc<MaterialCompiler>::create();
+		renderQueueCompiler = Rc<RenderQueueCompiler>::create(*device, transferQueue, materialQueue);
 
 		compileQueue(transferQueue, [this] (bool success) {
 			onInitTaskPerformed(success, "TransferQueue");
+		});
+		compileQueue(materialQueue, [this] (bool success) {
+			onInitTaskPerformed(success, "MaterialCompiler");
 		});
 	}
 
@@ -170,15 +175,9 @@ struct Loop::Internal final : memory::AllocPool {
 		}
 	}
 
-	void signalDependencies(const Vector<Rc<DependencyEvent>> &events, bool success) {
+	void signalDependencies(const Vector<Rc<DependencyEvent>> &events, Queue *queue, bool success) {
 		for (auto &it : events) {
-			if (!success) {
-				it->success = success;
-			}
-
-			-- it->signaled;
-
-			if (it->signaled == 0) {
+			if (it->signal(queue, success)) {
 				auto iit = dependencyRequests.equal_range(it.get());
 				auto tmp = iit;
 				while (iit.first != iit.second) {
@@ -196,7 +195,6 @@ struct Loop::Internal final : memory::AllocPool {
 						str << "\n";
 						log::vtext("vk::Loop", "Signal: " str.str());
 #endif
-
 						v->callback(iit.first->second->success);
 					}
 					++ iit.first;
@@ -219,10 +217,11 @@ struct Loop::Internal final : memory::AllocPool {
 		auto req = Rc<DependencyRequest>::alloc();
 		req->events = move(events);
 		req->callback = move(cb);
+		req->initial = platform::clock(core::ClockType::Monotonic);
 
 		for (auto &it : req->events) {
-			if (it->signaled == 0) {
-				if (!it->success) {
+			if (it->isSignaled()) {
+				if (!it->isSuccessful()) {
 					req->success = false;
 				}
 				++ req->signaled;
@@ -528,25 +527,25 @@ void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, 
 	}
 	performOnGlThread([this, res = move(res)] () mutable {
 		_internal->compileResource(move(res));
-	}, (Loop *)this, true);
+	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) const {
 	performOnGlThread([this, req, callback = move(callback)]() mutable {
 		_internal->compileQueue(req, move(callback));
-	}, (Loop *)this, true);
+	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> &deps) const {
 	performOnGlThread([this, req = move(req), deps = deps] () mutable {
 		_internal->compileMaterials(move(req), move(deps));
-	}, (Loop *)this, true);
+	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> &&callback) const {
 	performOnGlThread([this, img, callback = move(callback)]() mutable {
 		_internal->device->compileImage(*this, img, move(callback));
-	}, (Loop *)this, true);
+	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
@@ -710,15 +709,15 @@ Rc<Fence> Loop::acquireFence(uint32_t v, bool init) {
 	return ref;
 }
 
-void Loop::signalDependencies(const Vector<Rc<DependencyEvent>> &events, bool success) {
+void Loop::signalDependencies(const Vector<Rc<DependencyEvent>> &events, Queue *q, bool success) {
 	if (!events.empty()) {
 		if (isOnGlThread() && _internal) {
-			_internal->signalDependencies(events, success);
+			_internal->signalDependencies(events, q, success);
 			return;
 		}
 
-		performOnGlThread([this, events, success] () {
-			_internal->signalDependencies(events, success);
+		performOnGlThread([this, events, success, q = Rc<Queue>(q)] () {
+			_internal->signalDependencies(events, q, success);
 		}, this, false);
 	}
 }

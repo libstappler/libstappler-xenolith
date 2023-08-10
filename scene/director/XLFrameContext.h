@@ -23,10 +23,10 @@
 #ifndef XENOLITH_SCENE_DIRECTOR_XLFRAMECONTEXT_H_
 #define XENOLITH_SCENE_DIRECTOR_XLFRAMECONTEXT_H_
 
+#include "XLResourceOwner.h"
 #include "XLCoreQueue.h"
 #include "XLCoreMaterial.h"
 #include "XLNodeInfo.h"
-#include "XLResourceOwner.h"
 
 namespace stappler::xenolith {
 

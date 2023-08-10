@@ -24,10 +24,11 @@
 #define XENOLITH_BACKEND_VKGUI_XLVKGUIPLATFORM_H_
 
 #include "XLVkView.h"
+#include "XLVkPlatform.h"
 
 namespace stappler::xenolith::vk::platform {
 
-Rc<vk::View> createView(MainLoop &, core::Device &, ViewInfo &&);
+Rc<vk::View> createView(Application &, const core::Device &, ViewInfo &&);
 
 bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info);
 

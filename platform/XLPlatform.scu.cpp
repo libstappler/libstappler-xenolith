@@ -22,6 +22,8 @@
 
 #include "XLCommon.h"
 
+#include "XLViewCommandLine.cc"
+
 #if LINUX
 #include "linux/thirdparty/glfw/xkb_unicode.cc"
 #include "linux/XLPlatformLinuxDbus.cc"

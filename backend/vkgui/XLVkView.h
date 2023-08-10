@@ -74,7 +74,7 @@ public:
 
 	virtual ~View();
 
-	virtual bool init(MainLoop &, const Device &, ViewInfo &&);
+	virtual bool init(Application &, const Device &, ViewInfo &&);
 
 	virtual void threadInit() override;
 	virtual void threadDispose() override;

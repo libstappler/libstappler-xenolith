@@ -30,8 +30,8 @@ static constexpr ClockType FrameClockType = ClockType::Monotonic;
 
 #ifdef XL_FRAME_LOG
 #define XL_FRAME_LOG_INFO _request->getEmitter() ? "[Emitted] " : "", \
-	"[", _loop->getClock(), "] [", _order, "] [", s_frameCount.load(), \
-	"] [", platform::device::_clock(FrameClockType) - _timeStart, "] "
+	"[", _order, "] [", s_frameCount.load(), \
+	"] [", platform::clock(FrameClockType) - _timeStart, "] "
 #endif
 
 static std::atomic<uint32_t> s_frameCount = 0;
@@ -308,6 +308,9 @@ void FrameHandle::invalidate() {
 
 			if (_request) {
 				_request->finalize(*_loop, attachments, _valid);
+				for (auto &it : _queues) {
+					_request->signalDependencies(*_loop, it->getQueue(), _valid);
+				}
 			}
 		}
 	} else {
@@ -383,7 +386,9 @@ void FrameHandle::waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a,
 }
 
 void FrameHandle::signalDependencies(bool success) {
-	_request->signalDependencies(*_loop, success);
+	for (auto &it : _queues) {
+		_request->signalDependencies(*_loop, it->getQueue(), _valid);
+	}
 }
 
 void FrameHandle::onQueueInvalidated(FrameQueue &) {
@@ -419,6 +424,10 @@ void FrameHandle::onComplete() {
 		}
 
 		_request->finalize(*_loop, attachments, _valid);
+
+		for (auto &it : _queues) {
+			_request->signalDependencies(*_loop, it->getQueue(), _valid);
+		}
 	}
 }
 

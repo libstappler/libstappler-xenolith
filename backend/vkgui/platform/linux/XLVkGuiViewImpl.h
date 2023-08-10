@@ -43,7 +43,7 @@ public:
 	ViewImpl();
 	virtual ~ViewImpl();
 
-	virtual bool init(MainLoop &loop, const core::Device &dev, ViewInfo &&);
+	virtual bool init(Application &loop, const core::Device &dev, ViewInfo &&);
 
 	virtual void threadInit() override;
 	virtual void threadDispose() override;

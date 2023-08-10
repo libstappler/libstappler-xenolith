@@ -23,8 +23,8 @@
 #ifndef XENOLITH_SCENE_NODES_XLNODEINFO_H_
 #define XENOLITH_SCENE_NODES_XLNODEINFO_H_
 
+#include "../../application/XLApplicationInfo.h"
 #include "XLSceneConfig.h"
-#include "XLMainInfo.h"
 
 namespace stappler::xenolith {
 

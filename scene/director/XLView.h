@@ -23,11 +23,11 @@
 #ifndef XENOLITH_SCENE_DIRECTOR_XLVIEW_H_
 #define XENOLITH_SCENE_DIRECTOR_XLVIEW_H_
 
+#include "XLEventHeader.h"
 #include "XLCoreFrameEmitter.h"
 #include "XLCoreLoop.h"
 #include "XLPlatformViewInterface.h"
 #include "XLInput.h"
-#include "XLEventHeader.h"
 #include "XLDirector.h"
 #include "SPThread.h"
 
@@ -38,7 +38,7 @@ class View;
 struct ViewInfo {
 	String name;
 	String bundleId;
-	URect rect = URect{0, 0, 1024, 768};
+	URect rect = URect(0, 0, 1024, 768);
 	Padding decoration;
 	uint64_t frameInterval = 0; // in microseconds ( 1'000'000 / 60 for 60 fps)
 	float density = 0.0f;
@@ -64,7 +64,7 @@ public:
 	View();
 	virtual ~View();
 
-	virtual bool init(MainLoop &, ViewInfo &&);
+	virtual bool init(Application &, ViewInfo &&);
 
 	virtual void run() = 0;
 	virtual void runWithQueue(const Rc<core::Queue> &) = 0;
@@ -92,8 +92,8 @@ public:
 	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,
 			const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 
-	const Rc<Director> &getDirector() const { return _director; }
-	const Rc<MainLoop> &getMainLoop() const { return _mainLoop; }
+	const Rc<Director> &getDirector() const;
+	const Rc<Application> &getMainLoop() const { return _mainLoop; }
 	const Rc<core::Loop> &getGlLoop() const { return _glLoop; }
 
 	// update screen extent, non thread-safe
@@ -151,7 +151,7 @@ protected:
 	std::atomic<bool> _running = false;
 
 	Rc<Director> _director;
-	Rc<MainLoop> _mainLoop;
+	Rc<Application> _mainLoop;
 	Rc<core::Loop> _glLoop;
 	Rc<core::FrameEmitter> _frameEmitter;
 

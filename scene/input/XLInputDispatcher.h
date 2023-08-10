@@ -24,9 +24,9 @@
 #ifndef XENOLITH_SCENE_INPUT_XLINPUTDISPATCHER_H_
 #define XENOLITH_SCENE_INPUT_XLINPUTDISPATCHER_H_
 
+#include "../../application/XLApplicationInfo.h"
 #include "XLInputListener.h"
 #include "XLTextInputManager.h"
-#include "XLMainInfo.h"
 
 namespace stappler::xenolith {
 

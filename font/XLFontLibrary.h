@@ -26,12 +26,6 @@
 #include "XLFontController.h"
 #include "XLCoreAttachment.h"
 
-namespace stappler::xenolith {
-
-class MainLoop;
-
-}
-
 namespace stappler::xenolith::font {
 
 struct RenderFontInput : public core::AttachmentInputData {
@@ -58,7 +52,7 @@ protected:
 	Function<void(const FontFaceObjectHandle *)> _onDestroy;
 };
 
-class FontLibrary : public Ref {
+class FontLibrary : public ApplicationExtension {
 public:
 	enum class DefaultFontName {
 		None,
@@ -93,18 +87,20 @@ public:
 	FontLibrary();
 	virtual ~FontLibrary();
 
-	bool init(Rc<MainLoop> &&, Rc<core::Queue> &&);
+	bool init(Rc<Application> &&, Rc<core::Queue> &&);
 
-	MainLoop *getMainLoop() const { return _mainLoop; }
+	Application *getMainLoop() const { return _mainLoop; }
 	const core::Loop *getGlLoop() const { return _glLoop; }
+	const Rc<core::Queue> &getQueue() const { return _queue; }
 
 	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params, const Callback<FontData()> & = nullptr);
 
 	Rc<FontFaceObject> openFontFace(StringView, const FontSpecializationVector &, const Callback<FontData()> &);
 	Rc<FontFaceObject> openFontFace(const Rc<FontFaceData> &, const FontSpecializationVector &);
 
-	void update(uint64_t clock);
-	void invalidate();
+	virtual void initialize(Application *) override;
+	virtual void invalidate(Application *) override;
+	virtual void update(Application *, const UpdateTime &clock) override;
 
 	FontController::Builder makeDefaultControllerBuilder(StringView);
 
@@ -139,7 +135,7 @@ protected:
 	Map<FontFaceObject *, Map<std::thread::id, Rc<FontFaceObjectHandle>>> _threads;
 	FT_Library _library = nullptr;
 
-	Rc<MainLoop> _mainLoop;
+	Rc<Application> _mainLoop;
 	Rc<core::Loop> _glLoop;
 	Rc<core::Queue> _queue;
 	Vector<ImageQuery> _pendingImageQueries;
