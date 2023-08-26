@@ -259,15 +259,17 @@ struct FrameContraints {
 	float density = 1.0f;
 
 	Size2 getScreenSize() const {
-		switch (transform) {
-		case SurfaceTransformFlags::Rotate90:
-		case SurfaceTransformFlags::Rotate270:
-		case SurfaceTransformFlags::MirrorRotate90:
-		case SurfaceTransformFlags::MirrorRotate270:
-			return Size2(extent.height, extent.width);
-			break;
-		default:
-			break;
+		if ((transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
+			switch (core::getPureTransform(transform)) {
+			case SurfaceTransformFlags::Rotate90:
+			case SurfaceTransformFlags::Rotate270:
+			case SurfaceTransformFlags::MirrorRotate90:
+			case SurfaceTransformFlags::MirrorRotate270:
+				return Size2(extent.height, extent.width);
+				break;
+			default:
+				break;
+			}
 		}
 		return Size2(extent.width, extent.height);
 	}
@@ -316,7 +318,7 @@ struct FrameContraints {
 struct SwapchainConfig {
 	PresentMode presentMode = PresentMode::Mailbox;
 	PresentMode presentModeFast = PresentMode::Unsupported;
-	ImageFormat imageFormat = platform::getCommonFormat();
+	ImageFormat imageFormat = ImageFormat::R8G8B8A8_UNORM;
 	ColorSpace colorSpace = ColorSpace::SRGB_NONLINEAR_KHR;
 	CompositeAlphaFlags alpha = CompositeAlphaFlags::Opaque;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;

@@ -66,7 +66,7 @@ void Scene::renderRequest(const Rc<FrameRequest> &req) {
 		for (auto &it : _queue->getInputAttachments()) {
 			auto iit = info.resolvedInputs.find(it);
 			if (iit == info.resolvedInputs.end()) {
-				log::vtext("Scene", "No input defined for attachment: ", it->key);
+				log::warn("Scene", "No input defined for attachment: ", it->key);
 			}
 		}
 	}
@@ -113,7 +113,7 @@ void Scene::onContentSizeDirty() {
 	updateContentNode(_content);
 
 #if DEBUG
-	log::vtext("Scene", "ContentSize: ", _contentSize, " density: ", _constraints.density);
+	log::info("Scene", "ContentSize: ", _contentSize, " density: ", _constraints.density);
 #endif
 }
 

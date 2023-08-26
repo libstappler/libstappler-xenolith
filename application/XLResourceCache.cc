@@ -97,7 +97,7 @@ Rc<Texture> ResourceCache::acquireTexture(StringView str) const {
 		}
 	}
 
-	log::vtext("ResourceCache", "Texture not found: ", str);
+	log::error("ResourceCache", "Texture not found: ", str);
 	return nullptr;
 }
 
@@ -114,7 +114,7 @@ Rc<MeshIndex> ResourceCache::acquireMeshIndex(StringView str) const {
 		}
 	}
 
-	log::vtext("ResourceCache", "MeshIndex not found: ", str);
+	log::error("ResourceCache", "MeshIndex not found: ", str);
 	return nullptr;
 }
 
@@ -140,7 +140,7 @@ Rc<Texture> ResourceCache::addExternalImageByRef(StringView key, core::ImageInfo
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::vtext("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -159,7 +159,7 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::vtext("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -178,7 +178,7 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::vtext("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -200,7 +200,7 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::vtext("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 

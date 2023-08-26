@@ -48,17 +48,6 @@ struct FramePassData {
 	Vector<Pair<const AttachmentPassData *, FrameAttachmentData *>> attachments;
 	HashMap<const AttachmentData *, FrameAttachmentData *> attachmentMap;
 
-	// Second value, FrameRenderPassState defines a state of required RenderPass, that is required to be reached
-	// to define current RenderPass state as Ready
-	// It is the latest state required for all Attachments to be ready for next RenderPass
-	// Example:
-	// Attachment1 can be used in RenderPass2 after Ready state of RenderPass1
-	// 			(so, there is no actual dependency)
-	// Attachment2 can be used in RenderPass2 after Submitted state of RenderPass1
-	// 			(so, RenderPass2 can be started only after RenderPass1 is submitted, all synchronization done on GPU)
-	// Attachment3 can be used in RenderPass2 after Complete state of RenderPass1
-	// 			(so, there are some actions on CPU required to start RenderPass2 with results of RenderPass1)
-	// Required state for RenderPass1 will be Complete (Ready < Submitted < Complete)
 	Vector<FramePassDataRequired> required;
 	HashMap<FrameRenderPassState, Vector<FramePassData *>> waiters;
 

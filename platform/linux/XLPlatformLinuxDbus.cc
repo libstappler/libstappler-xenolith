@@ -911,7 +911,7 @@ void DBusInterface::threadInit() {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_ADD, eventFd, &epollEventFd);
 	if (err == -1) {
 		char buf[256] = { 0 };
-		log::vtext("DBusInterface", "Fail to add eventFd with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		log::error("DBusInterface", "Fail to add eventFd with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 
 	sessionConnection->setup();
@@ -919,7 +919,7 @@ void DBusInterface::threadInit() {
 
 	addEvent([this] {
 		loadServiceNames(*sessionConnection, sessionServices, [this] {
-			log::text("DBusInterface", "Session bus loaded");
+			log::verbose("DBusInterface", "Session bus loaded");
 			if (sessionServices.find("org.freedesktop.portal.Desktop") != sessionServices.end()) {
 				hasDesktopPortal = true;
 				readInterfaceTheme([this] (InterfaceThemeInfo &&theme) {
@@ -938,7 +938,7 @@ void DBusInterface::threadInit() {
 
 	addEvent([this] {
 		loadServiceNames(*systemConnection, systemServices, [this] {
-			log::text("DBusInterface", "System bus loaded");
+			log::verbose("DBusInterface", "System bus loaded");
 			if (systemServices.find("org.freedesktop.NetworkManager") != systemServices.end()) {
 				Error error(this);
 				hasNetworkManager = true;
@@ -947,7 +947,7 @@ void DBusInterface::threadInit() {
 				// see signals from the given interface
 				systemConnection->flush();
 				if (error.isSet()) {
-					log::vtext("DBusConnection", "fail to add signal match: ", error.error.message);
+					log::error("DBusConnection", "fail to add signal match: ", error.error.message);
 				}
 
 				updateNetworkState(*systemConnection, [this] (NetworkState &&state) {
@@ -976,7 +976,7 @@ bool DBusInterface::worker() {
 		int nevents = epoll_wait(epollFd, _events.data(), 16, 100);
 		if (nevents == -1 && errno != EINTR) {
 			char buf[256] = { 0 };
-			log::vtext("DBusConnection", "epoll_wait() failed with errno ", errno, " (", strerror_r(errno, buf, 255), ")");
+			log::error("DBusConnection", "epoll_wait() failed with errno ", errno, " (", strerror_r(errno, buf, 255), ")");
 			break;
 		} else if (errno == EINTR) {
 			continue;
@@ -1012,7 +1012,7 @@ void DBusInterface::addEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_ADD, ev->fd, &ev->event);
 	if (err == -1) {
 		char buf[256] = { 0 };
-		log::vtext("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
@@ -1020,7 +1020,7 @@ void DBusInterface::updateEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_MOD, ev->fd, &ev->event);
 	if (err == -1) {
 		char buf[256] = { 0 };
-		log::vtext("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
@@ -1028,7 +1028,7 @@ void DBusInterface::removeEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_DEL, ev->fd, &ev->event);
 	if (err == -1) {
 		char buf[256] = { 0 };
-		log::vtext("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
@@ -1052,7 +1052,7 @@ DBusHandlerResult DBusInterface::handleMessage(Connection *, DBusMessage *messag
 	if (dbus_message_is_signal(message, NM_DBUS_INTERFACE_NAME, NM_DBUS_SIGNAL_STATE_CHANGED)) {
 		return handleNetworkStateChanged(message);
 	} else if (type == DBUS_MESSAGE_TYPE_ERROR) {
-		log::text("DBusInterface", "DBUS_MESSAGE_TYPE_ERROR");
+		log::verbose("DBusInterface", "DBUS_MESSAGE_TYPE_ERROR");
 	}
 	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
@@ -1430,7 +1430,7 @@ void DBusInterface::setNetworkState(NetworkState &&state) {
 	if (networkState != state) {
 		networkState = move(state);
 #if DEBUG
-		log::vtext("DBusInterface", "Network: ", networkState.description());
+		log::debug("DBusInterface", "Network: ", networkState.description());
 #endif
 	}
 }

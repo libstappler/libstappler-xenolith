@@ -848,7 +848,7 @@ bool GestureKeyRecognizer::init(InputCallback &&cb, KeyMask &&mask) {
 		return true;
 	}
 
-	log::text("GestureKeyRecognizer", "Callback or key mask is not defined");
+	log::error("GestureKeyRecognizer", "Callback or key mask is not defined");
 	return false;
 }
 
@@ -906,7 +906,7 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 		return true;
 	}
 
-	log::text("GestureKeyRecognizer", "Callback or key mask is not defined");
+	log::error("GestureKeyRecognizer", "Callback or key mask is not defined");
 	return false;
 }
 

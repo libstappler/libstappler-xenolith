@@ -66,7 +66,7 @@ void FrameHandle::DescribeActiveFrames() {
 				}
 			});
 		}
-		stappler::log::text("FrameHandle", stream.str());
+		stappler::log::debug("FrameHandle", stream.str());
 	}
 #endif
 

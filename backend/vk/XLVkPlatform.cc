@@ -22,73 +22,68 @@
 
 #include "XLVkPlatform.h"
 
-#if LINUX
-
-#include <dlfcn.h>
-
 namespace stappler::xenolith::vk::platform {
-
-struct FunctionTable : public vk::LoaderTable {
-	using LoaderTable::LoaderTable;
-
-	operator bool () const {
-		return vkGetInstanceProcAddr != nullptr
-			&& vkCreateInstance != nullptr
-			&& vkEnumerateInstanceExtensionProperties != nullptr
-			&& vkEnumerateInstanceLayerProperties != nullptr;
-	}
-};
 
 static uint32_t s_InstanceVersion = 0;
 static Vector<VkLayerProperties> s_InstanceAvailableLayers;
 static Vector<VkExtensionProperties> s_InstanceAvailableExtensions;
 
-/*SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);*/
-
-Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
-	auto handle = ::dlopen("libvulkan.so.1", RTLD_LAZY | RTLD_LOCAL);
-	if (!handle) {
-		stappler::log::text("Vk", "Fail to open libvulkan.so.1");
-		return nullptr;
-	}
-
-	auto getInstanceProcAddr = (PFN_vkGetInstanceProcAddr)dlsym(handle, "vkGetInstanceProcAddr");
-	if (!getInstanceProcAddr) {
-		return nullptr;
-	}
-
-	FunctionTable table(getInstanceProcAddr);
-
-	if (!table) {
-		::dlclose(handle);
-		return nullptr;
-	}
-
-	if (table.vkEnumerateInstanceVersion) {
-		table.vkEnumerateInstanceVersion(&s_InstanceVersion);
-	} else {
-		s_InstanceVersion = VK_API_VERSION_1_0;
-	}
-
-	VulkanInstanceInfo info;
+Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb, Instance::TerminateCallback &&termCb) const {
+	VulkanInstanceInfo info = loadInfo();
 	VulkanInstanceData data;
-	data.targetVulkanVersion = info.targetVersion = s_InstanceVersion;
 
-	uint32_t layerCount = 0;
-	table.vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	if (!prepareData(data, info)) {
+		return nullptr;
+	}
 
-	s_InstanceAvailableLayers.resize(layerCount);
-	table.vkEnumerateInstanceLayerProperties(&layerCount, s_InstanceAvailableLayers.data());
+	if (!setupCb(data, info)) {
+		log::warn("Vk", "VkInstance creation was aborted by client");
+		return nullptr;
+	}
 
-	uint32_t extensionCount = 0;
-	table.vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+	if (!validateData(data, info)) {
+		return nullptr;
+	}
 
-	s_InstanceAvailableExtensions.resize(extensionCount);
-	table.vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, s_InstanceAvailableExtensions.data());
+	return doCreateInstance(data, move(termCb));
+}
 
-	info.availableLayers = s_InstanceAvailableLayers;
-	info.availableExtensions = s_InstanceAvailableExtensions;
+VulkanInstanceInfo FunctionTable::loadInfo() const {
+	VulkanInstanceInfo ret;
+
+	if (s_InstanceVersion == 0) {
+		if (vkEnumerateInstanceVersion) {
+			vkEnumerateInstanceVersion(&s_InstanceVersion);
+		} else {
+			s_InstanceVersion = VK_API_VERSION_1_0;
+		}
+	}
+
+	if (s_InstanceAvailableLayers.empty()) {
+		uint32_t layerCount = 0;
+		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+		s_InstanceAvailableLayers.resize(layerCount);
+		vkEnumerateInstanceLayerProperties(&layerCount, s_InstanceAvailableLayers.data());
+	}
+
+	if (s_InstanceAvailableExtensions.empty()) {
+		uint32_t extensionCount = 0;
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+		s_InstanceAvailableExtensions.resize(extensionCount);
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, s_InstanceAvailableExtensions.data());
+	}
+
+	ret.targetVersion = s_InstanceVersion;
+	ret.availableLayers = s_InstanceAvailableLayers;
+	ret.availableExtensions = s_InstanceAvailableExtensions;
+
+	return ret;
+}
+
+bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceInfo &info) const {
+	data.targetVulkanVersion = info.targetVersion;
 
 	if constexpr (vk::s_enableValidationLayers) {
 		for (const char *layerName : vk::s_validationLayers) {
@@ -103,8 +98,8 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 			}
 
 			if (!layerFound) {
-				log::format("Vk", "Required validation layer not found: %s", layerName);
-				return nullptr;
+				log::error("Vk", "Required validation layer not found: ", layerName);
+				return false;
 			}
 		}
 	}
@@ -121,20 +116,43 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		}
 	}
 
-	bool completeExt = true;
 	if constexpr (vk::s_enableValidationLayers) {
 		if (!debugExt) {
-			log::format("Vk", "Required extension not found: %s", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			completeExt = false;
+			for (const auto &layerName : vk::s_validationLayers) {
+				uint32_t layer_ext_count;
+				vkEnumerateInstanceExtensionProperties(layerName, &layer_ext_count, nullptr);
+				if (layer_ext_count == 0) {
+					continue;
+				}
+
+				VkExtensionProperties layer_exts[layer_ext_count];
+				vkEnumerateInstanceExtensionProperties(layerName, &layer_ext_count, layer_exts);
+
+				for (auto &extension : layer_exts) {
+					if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, extension.extensionName) == 0) {
+						data.extensionsToEnable.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+						debugExt = extension.extensionName;
+						break;
+					}
+				}
+
+				if (debugExt) {
+					break;
+				}
+			}
+		}
+
+		if (!debugExt) {
+			log::error("Vk", "Required extension not found: ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			return false;
 		}
 	}
 
-	if (!cb(data, info)) {
-		log::text("Vk", "VkInstance creation was aborted by client");
-		::dlclose(handle);
-		return nullptr;
-	}
+	return true;
+}
 
+bool FunctionTable::validateData(VulkanInstanceData &data, const VulkanInstanceInfo &info) const {
+	bool completeExt = true;
 	for (auto &it : vk::s_requiredExtension) {
 		if (!it) {
 			break;
@@ -147,24 +165,27 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		}
 
 		bool found = false;
-		for (auto &extension : s_InstanceAvailableExtensions) {
+		for (auto &extension : info.availableExtensions) {
 			if (strcmp(it, extension.extensionName) == 0) {
 				found = true;
 				data.extensionsToEnable.emplace_back(it);
 			}
 		}
 		if (!found) {
-			log::format("Vk", "Required extension not found: %s", it);
+			log::error("Vk", "Required extension not found: ", it);
 			completeExt = false;
 		}
 	}
 
 	if (!completeExt) {
-		log::text("Vk", "Not all required extensions found, fail to create VkInstance");
-		::dlclose(handle);
-		return nullptr;
+		log::error("Vk", "Not all required extensions found, fail to create VkInstance");
+		return false;
 	}
 
+	return true;
+}
+
+Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Instance::TerminateCallback &&cb) const {
 	Vector<StringView> enabledOptionals;
 	for (auto &opt : s_optionalExtension) {
 		if (!opt) {
@@ -183,7 +204,7 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		}
 	}
 
-	debugExt = nullptr;
+	const char *debugExt = nullptr;
 	for (auto &it : data.extensionsToEnable) {
 		if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, it) == 0) {
 			debugExt = it;
@@ -201,7 +222,7 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		}
 	}
 
-	VkInstance instance;
+	VkInstance instance = VK_NULL_HANDLE;
 
 	VkApplicationInfo appInfo{}; vk::sanitizeVkStruct(appInfo);
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -228,24 +249,22 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		debugCreateInfo.pfnUserCallback = s_debugMessageCallback;
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
+		createInfo.pNext = &debugCreateInfo;
 	} else{
 		createInfo.pNext = nullptr;
 	}
 
 	createInfo.enabledLayerCount = data.layersToEnable.size();
 	createInfo.ppEnabledLayerNames = data.layersToEnable.data();
-	ret = table.vkCreateInstance(&createInfo, nullptr, &instance);
+	ret = vkCreateInstance(&createInfo, nullptr, &instance);
 
 	if (ret != VK_SUCCESS) {
-		log::text("Vk", "Fail to create Vulkan instance");
+		log::error("Vk", "Fail to create Vulkan instance");
 		return nullptr;
 	}
 
-	auto vkInstance = Rc<vk::Instance>::alloc(instance, table.vkGetInstanceProcAddr, data.targetVulkanVersion, move(enabledOptionals),
-			[handle] {
-		::dlclose(handle);
-	}, move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
+	auto vkInstance = Rc<vk::Instance>::alloc(instance, vkGetInstanceProcAddr, data.targetVulkanVersion, move(enabledOptionals),
+			move(cb), move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;
@@ -264,12 +283,10 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 
 		vkInstance->printDevicesInfo(out);
 
-		log::text("Vk-Info", out.str());
+		log::verbose("Vk-Info", out.str());
 	}
 
 	return vkInstance;
 }
 
 }
-
-#endif

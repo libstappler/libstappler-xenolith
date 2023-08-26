@@ -190,7 +190,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		if (_materialId == 0) {
 			_materialId = frame.currentContext->context->acquireMaterial(info, getMaterialImages(), isMaterialRevokable());
 			if (_materialId == 0) {
-				log::vtext("Sprite", "Material for sprite with texture '", _texture->getName(), "' not found");
+				log::warn("Sprite", "Material for sprite with texture '", _texture->getName(), "' not found");
 			}
 		}
 		_materialDirty = false;
@@ -313,9 +313,12 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	Mat4 newMV;
 	if (_normalized) {
 		auto &modelTransform = frame.modelTransformStack.back();
-		newMV.m[12] = floorf(modelTransform.m[12]);
-		newMV.m[13] = floorf(modelTransform.m[13]);
-		newMV.m[14] = floorf(modelTransform.m[14]);
+		newMV.m[12] = floorf(modelTransform.m[12]) + 0.5f;
+		newMV.m[13] = floorf(modelTransform.m[13]) + 0.5f;
+		newMV.m[14] = floorf(modelTransform.m[14]) + 0.5f;
+
+		//auto tmp = Mat4::ROTATION_Z_90 * newMV;
+		//log::info("Sprite", tmp.m[12], " ", tmp.m[13], " ", tmp.m[14]);
 	} else {
 		newMV = frame.modelTransformStack.back();
 	}

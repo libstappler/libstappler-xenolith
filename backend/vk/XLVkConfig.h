@@ -33,9 +33,6 @@ static constexpr uint32_t MaxTextureSetImages = 1024;
 /* Max buffers in buffer array */
 static constexpr uint32_t MaxBufferArrayObjects = 64;
 
-/* Presentation Scheduler interval, used for non-blocking vkWaitForFence */
-static constexpr uint64_t PresentationSchedulerInterval = 500; // 500 ms or 1/32 of 60fps frame
-
 }
 
 #endif /* XENOLITH_BACKEND_VK_XLVKCONFIG_H_ */

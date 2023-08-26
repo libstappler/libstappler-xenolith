@@ -52,7 +52,7 @@ void FrameContext2d::onEnter(Scene *scene) {
 	FrameContext::onEnter(scene);
 	if (!_init || _queue) {
 		if (!initWithQueue(_queue)) {
-			log::vtext("FrameContext2d", "Fail to initialize with queue:", _queue->getName());
+			log::error("FrameContext2d", "Fail to initialize with queue:", _queue->getName());
 		}
 	}
 }
@@ -95,21 +95,21 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 				Bitmap bmpHeight;
 				bmpHeight.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
 
-				auto d1 = bmpSdf.dataPtr();
-				auto d2 = bmpHeight.dataPtr();
+				auto dSdf = bmpSdf.dataPtr();
+				auto dHgt = bmpHeight.dataPtr();
 
 				while (!view.empty()) {
 					auto value = view.readFloat16() / 16.0f;
 
-					*d1 = uint8_t(value * 255.0f);
-					++ d1;
+					*dSdf = uint8_t(value * 255.0f);
+					++ dSdf;
 
-					*d2 = uint8_t((view.readFloat16() / 20.0f) * 255.0f);
-					++ d2;
+					*dHgt = uint8_t((view.readFloat16() / 50.0f) * 255.0f);
+					++ dHgt;
 				}
 
-				bmpSdf.save(toString("sdf-", Time::now().toMicros(), ".png"));
-				bmpHeight.save(toString("height-", Time::now().toMicros(), ".png"));
+				bmpSdf.save(toString("sdf-image-", Time::now().toMicros(), ".png"));
+				bmpHeight.save(toString("sdf-height-", Time::now().toMicros(), ".png"));
 			}, data.image->getImage(), data.image->getLayout());
 			return true;
 		});

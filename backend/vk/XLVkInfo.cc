@@ -1022,7 +1022,7 @@ bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vect
 		Vector<StringView> &optionals, Vector<StringView> &promoted, ExtensionFlags &flags) {
 	auto flag = getFlagForExtension(name);
 	if (flag == ExtensionFlags::None) {
-		log::format("Vk", "Extension is not registered as optional: %s", name);
+		log::error("Vk", "Extension is not registered as optional: %s", name);
 		return false;
 	}
 
@@ -1343,7 +1343,7 @@ size_t getFormatBlockSize(VkFormat format) {
 	case VK_FORMAT_A4R4G4B4_UNORM_PACK16_EXT: return 2; break;
 	case VK_FORMAT_A4B4G4R4_UNORM_PACK16_EXT: return 2; break;
 	default:
-		log::vtext("Vk", "Format is not supported: ", format);
+		log::error("Vk", "Format is not supported: ", format);
 		break;
 	}
 	return 0;

@@ -29,3 +29,7 @@
 #if LINUX
 #include "platform/linux/XLVkGuiViewImpl.cc"
 #endif
+
+#if ANDROID
+#include "platform/android/XLVkGuiViewImpl.cc"
+#endif

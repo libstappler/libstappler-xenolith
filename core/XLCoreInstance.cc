@@ -42,7 +42,7 @@ Instance::~Instance() {
 		_terminate = nullptr;
 	}
 
-	log::text("gl::Instance", "~Instance");
+	log::debug("gl::Instance", "~Instance");
 }
 
 Rc<Loop> Instance::makeLoop(LoopInfo &&) const {

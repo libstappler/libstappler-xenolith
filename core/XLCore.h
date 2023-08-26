@@ -47,7 +47,7 @@
 
 #include "XLCoreConfig.h"
 
-#define XL_ASSERT(cond, msg)  do { if (!(cond)) { stappler::log::text("Assert", msg); } assert((cond)); } while (0)
+#define XL_ASSERT(cond, msg)  do { if (!(cond)) { stappler::log::text(stappler::log::LogType::Fatal, "Assert", msg); } assert((cond)); } while (0)
 
 #ifndef XLASSERT
 #if DEBUG

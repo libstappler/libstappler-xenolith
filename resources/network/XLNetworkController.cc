@@ -81,14 +81,14 @@ struct Controller::Data final : thread::ThreadInterface<Interface> {
 	bool finalize(Handle &handle, Context *ctx, const Callback<bool(CURL *)> &onAfterPerform);
 };
 
-SPUNUSED static void registerNetworkCallback(void *, Function<void(NetworkCapabilities)> &&);
-SPUNUSED static void unregisterNetworkCallback(void *);
+SPUNUSED static void registerNetworkCallback(Application *, void *, Function<void(NetworkCapabilities)> &&);
+SPUNUSED static void unregisterNetworkCallback(Application *, void *);
 
 XL_DECLARE_EVENT(Controller, "network::Controller", onNetworkCapabilities);
 
 Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &&signKey)
 : _application(app), _controller(c), _name(name.str<Interface>()), _signKey(move(signKey)) {
-	registerNetworkCallback(this, [this] (NetworkCapabilities cap) {
+	registerNetworkCallback(_application, this, [this] (NetworkCapabilities cap) {
 		_application->performOnMainThread([this, cap] {
 			_capabilities = cap;
 			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
@@ -97,7 +97,7 @@ Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &
 }
 
 Controller::Data::~Data() {
-	unregisterNetworkCallback(this);
+	unregisterNetworkCallback(_application, this);
 }
 
 bool Controller::Data::init() {
@@ -160,7 +160,7 @@ bool Controller::Data::worker() {
 	int running = 0;
 	auto err = curl_multi_perform(reinterpret_cast<CURLM *>(_handle), &running);
 	if (err != CURLM_OK) {
-		log::text("CURL", toString("Fail to perform multi: ", err));
+		log::error("CURL", toString("Fail to perform multi: ", err));
 		return false;
 	}
 
@@ -171,7 +171,7 @@ bool Controller::Data::worker() {
 
 	err = curl_multi_poll(reinterpret_cast<CURLM *>(_handle), NULL, 0, timeout, nullptr);
 	if (err != CURLM_OK) {
-		log::text("CURL", toString("Fail to poll multi: ", err));
+		log::error("CURL", toString("Fail to poll multi: ", err));
 		return false;
 	}
 

@@ -34,10 +34,6 @@ inline uint32_t version() { return XL_MAKE_API_VERSION(0, 1, 0, 0); }
 uint64_t clock(core::ClockType = core::ClockType::Default);
 void sleep(uint64_t microseconds);
 
-// should be commonly supported format,
-// R8G8B8A8_UNORM on Android, B8G8R8A8_UNORM on others
-core::ImageFormat getCommonFormat();
-
 }
 
 #endif /* XENOLITH_CORE_PLATFORM_XLCOREPLATFORM_H_ */

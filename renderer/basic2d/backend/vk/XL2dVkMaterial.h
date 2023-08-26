@@ -36,7 +36,7 @@ class MaterialAttachment : public core::MaterialAttachment {
 public:
 	virtual ~MaterialAttachment();
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &);
+	virtual bool init(AttachmentBuilder &builder, const BufferInfo &) override;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 

@@ -192,7 +192,7 @@ Rc<ComponentContainer> Server::getComponentContainer(StringView key) const {
 
 bool Server::addComponentContainer(const Rc<ComponentContainer> &comp) {
 	if (getComponentContainer(comp->getName()) != nullptr) {
-		log::vtext("storage::Server", "Component with name ", comp->getName(), " already loaded");
+		log::error("storage::Server", "Component with name ", comp->getName(), " already loaded");
 		return false;
 	}
 
@@ -211,12 +211,12 @@ bool Server::addComponentContainer(const Rc<ComponentContainer> &comp) {
 bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
 	auto it = _data->appComponents.find(comp->getName());
 	if (it == _data->appComponents.end()) {
-		log::vtext("storage::Server", "Component with name ", comp->getName(), " is not loaded");
+		log::error("storage::Server", "Component with name ", comp->getName(), " is not loaded");
 		return false;
 	}
 
 	if (it->second != comp) {
-		log::vtext("storage::Server", "Component you try to remove is not the same that was loaded");
+		log::error("storage::Server", "Component you try to remove is not the same that was loaded");
 		return false;
 	}
 
@@ -799,7 +799,7 @@ void Server::ServerData::threadInit() {
 		for (auto &it : params) {
 			out << "\n\t" << it.first << ": " << it.second;
 		}
-		log::vtext("StorageServer", "Fail to initialize DB with params: ", out.str());
+		log::error("StorageServer", "Fail to initialize DB with params: ", out.str());
 	}
 	memory::pool::pop();
 

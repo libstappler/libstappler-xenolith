@@ -31,7 +31,7 @@
 
 #ifndef XL_WAYLAND_LOG
 #if XL_WAYLAND_DEBUG
-#define XL_WAYLAND_LOG(...) log::vtext("Wayland", __VA_ARGS__)
+#define XL_WAYLAND_LOG(...) log::debug("Wayland", __VA_ARGS__)
 #else
 #define XL_WAYLAND_LOG(...)
 #endif

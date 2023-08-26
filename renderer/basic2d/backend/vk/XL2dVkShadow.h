@@ -33,7 +33,7 @@ class ShadowLightDataAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowLightDataAttachment();
 
-	virtual bool init(AttachmentBuilder &);
+	virtual bool init(AttachmentBuilder &) override;
 
 	virtual bool validateInput(const Rc<core::AttachmentInputData> &) const override;
 
@@ -48,7 +48,7 @@ class ShadowVertexAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowVertexAttachment();
 
-	virtual bool init(AttachmentBuilder &);
+	virtual bool init(AttachmentBuilder &) override;
 
 	virtual bool validateInput(const Rc<core::AttachmentInputData> &) const override;
 
@@ -63,7 +63,7 @@ class ShadowPrimitivesAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowPrimitivesAttachment();
 
-	virtual bool init(AttachmentBuilder &);
+	virtual bool init(AttachmentBuilder &) override;
 
 protected:
 	using BufferAttachment::init;

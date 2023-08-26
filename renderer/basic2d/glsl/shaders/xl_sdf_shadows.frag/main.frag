@@ -139,7 +139,7 @@ void main() {
 	s_cellIdx = cellIdx.y * (shadowData.gridWidth) + cellIdx.x;
 
 	float depth = subpassLoad(inputDepth).r;
-	vec2 sdfValue = texture(sampler2D(sdfImage, immutableSamplers[pushConstants.samplerIdx]), fragTexCoord).xy;
+	vec2 sdfValue = texture(sampler2D(sdfImage, immutableSamplers[pushConstants.samplerIdx]), fragTexCoord).xw;
 
 	if (sdfValue.y < depth + 0.1) {
 		outColor = shadowData.discardColor;
@@ -166,7 +166,6 @@ void main() {
 		outColor = vec4(textureColor.xyz, 1.0);
 	} else {
 		outColor = shadowData.discardColor;
-		//outColor = vec4(1, 0.75, 1, 1);
+		//outColor = vec4(1, 1, 0.75, 1);
 	}
-
 }

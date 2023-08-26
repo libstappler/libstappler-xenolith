@@ -26,11 +26,15 @@
 #include "linux/XLPlatformLinuxDbus.h"
 #endif
 
+#if ANDROID
+#include "android/XLPlatformAndroidActivity.h"
+#endif
+
 namespace stappler::xenolith::network {
 
 #if LINUX
 
-SPUNUSED static void registerNetworkCallback(void *key, Function<void(NetworkCapabilities)> &&cb) {
+SPUNUSED static void registerNetworkCallback(Application *, void *key, Function<void(NetworkCapabilities)> &&cb) {
 	auto lib = stappler::xenolith::platform::DBusLibrary::get();
 	lib.addNetworkConnectionCallback(key, [cb = move(cb)] (const stappler::xenolith::platform::NetworkState &state) {
 		NetworkCapabilities defaultFlags = NetworkCapabilities::NotRoaming | NetworkCapabilities::NotCongested | NetworkCapabilities::NotVpn;
@@ -89,9 +93,27 @@ SPUNUSED static void registerNetworkCallback(void *key, Function<void(NetworkCap
 	});
 }
 
-SPUNUSED static void unregisterNetworkCallback(void *key) {
+SPUNUSED static void unregisterNetworkCallback(Application *, void *key) {
 	auto lib = stappler::xenolith::platform::DBusLibrary::get();
 	lib.removeNetworkConnectionCallback(key);
+}
+
+#endif
+
+#if ANDROID
+
+SPUNUSED static void registerNetworkCallback(Application *app, void *key, Function<void(NetworkCapabilities)> &&cb) {
+	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().nativeHandle);
+	cb(NetworkCapabilities(activity->getNetworkCapabilities()));
+	activity->addNetworkCallback(key, [key, cb = move(cb)] (platform::NetworkCapabilities caps) {
+		cb(NetworkCapabilities(caps));
+	});
+
+}
+
+SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
+	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().nativeHandle);
+	activity->removeNetworkCallback(key);
 }
 
 #endif

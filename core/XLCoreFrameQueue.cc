@@ -70,7 +70,7 @@ bool FrameQueue::setup() {
 				h
 			})).first;
 			if (it->type == AttachmentType::Image) {
-				auto img = (ImageAttachment *)it->attachment.get();
+				auto img = static_cast<ImageAttachment *>(it->attachment.get());
 				v->second.info = img->getImageInfo();
 				if ((v->second.info.hints & ImageHints::FixedSize) == ImageHints::None) {
 					v->second.info.extent = _frame->getFrameConstraints().extent;
@@ -269,7 +269,7 @@ const FramePassData *FrameQueue::getRenderPass(const QueuePassData *p) const {
 
 void FrameQueue::addRequiredPass(FramePassData &pass, const FramePassData &required,
 		const FrameAttachmentData &attachment, const AttachmentPassData &desc) {
-	auto requiredState = desc.dependency.requiredRenderPassState;
+	auto requiredState = (desc.dependency.requiredRenderPassState == FrameRenderPassState::Initial) ? FrameRenderPassState::Submitted : desc.dependency.requiredRenderPassState;
 	auto lockedState = desc.dependency.lockedRenderPassState;
 	if (requiredState == FrameRenderPassState::Initial) {
 		return;
@@ -652,7 +652,7 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 			auto it = imageViews.begin();
 			while (it != imageViews.end()) {
 				if ((*it)->getFramebufferExtent() != extent) {
-					log::vtext("FrameQueue", "Invalid extent for framebuffer image: ", (*it)->getFramebufferExtent());
+					log::warn("FrameQueue", "Invalid extent for framebuffer image: ", (*it)->getFramebufferExtent());
 					it = imageViews.erase(it);
 				} else {
 					++ it;
@@ -844,7 +844,11 @@ Rc<FrameSync> FrameQueue::makeRenderPassSync(FramePassData &data) const {
 PipelineStage FrameQueue::getWaitStageForAttachment(FramePassData &data, const AttachmentHandle *handle) const {
 	for (auto &it : data.handle->getData()->attachments) {
 		if (it->attachment == handle->getAttachment()->getData()) {
-			return it->dependency.initialUsageStage;
+			if (it->dependency.initialUsageStage == PipelineStage::None) {
+				return PipelineStage::BottomOfPipe;
+			} else {
+				return it->dependency.initialUsageStage;
+			}
 		}
 	}
 	return PipelineStage::None;

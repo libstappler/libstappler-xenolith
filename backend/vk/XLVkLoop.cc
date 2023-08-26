@@ -171,7 +171,7 @@ struct Loop::Internal final : memory::AllocPool {
 				signalInit();
 			}
 		} else {
-			log::vtext("Loop", "Fail to initalize: ", view);
+			log::error("Loop", "Fail to initalize: ", view);
 		}
 	}
 
@@ -193,7 +193,7 @@ struct Loop::Internal final : memory::AllocPool {
 							str << " " << it->id;
 						}
 						str << "\n";
-						log::vtext("vk::Loop", "Signal: " str.str());
+						log::debug("vk::Loop", "Signal: " str.str());
 #endif
 						v->callback(iit.first->second->success);
 					}
@@ -211,7 +211,7 @@ struct Loop::Internal final : memory::AllocPool {
 		for (auto &it : events) {
 			str << " " << it->id;
 		}
-		log::vtext("vk::Loop", "Wait: " str.str());
+		log::debug("vk::Loop", "Wait: " str.str());
 #endif
 
 		auto req = Rc<DependencyRequest>::alloc();
@@ -232,7 +232,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 		if (req->signaled == req->events.size()) {
 #if XL_VK_DEBUG
-			log::vtext("vk::Loop", "Run: " str.str());
+			log::debug("vk::Loop", "Run: " str.str());
 #endif
 			req->callback(req->success);
 		}
@@ -333,16 +333,16 @@ void Loop::threadInit() {
 		_internal->setDevice(move(dev));
 		_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 	} else if (_info.deviceIdx != core::Instance::DefaultDevice) {
-		log::vtext("vk::Loop", "Unable to create device with index: ", _info.deviceIdx, ", fallback to default");
+		log::warn("vk::Loop", "Unable to create device with index: ", _info.deviceIdx, ", fallback to default");
 		_info.deviceIdx = core::Instance::DefaultDevice;
 		if (auto dev = _vkInstance->makeDevice(_info)) {
 			_internal->setDevice(move(dev));
 			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 		} else {
-			log::vtext("vk::Loop", "Unable to create device");
+			log::error("vk::Loop", "Unable to create device");
 		}
 	} else {
-		log::vtext("vk::Loop", "Unable to create device");
+		log::error("vk::Loop", "Unable to create device");
 	}
 
 	memory::pool::pop();

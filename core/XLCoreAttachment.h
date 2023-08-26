@@ -167,7 +167,7 @@ class GenericAttachment : public Attachment {
 public:
 	virtual ~GenericAttachment() { }
 
-	virtual bool init(AttachmentBuilder &builder);
+	virtual bool init(AttachmentBuilder &builder) override;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 

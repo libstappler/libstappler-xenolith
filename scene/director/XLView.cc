@@ -237,4 +237,17 @@ void View::setDecorationVisible(bool) {
 
 }
 
+uint64_t View::retainView() {
+	return retain();
+}
+
+void View::releaseView(uint64_t id) {
+	release(id);
+}
+
+void View::setContentPadding(const Padding &padding) {
+	_constraints.contentPadding = padding;
+	setReadyForNextFrame();
+}
+
 }

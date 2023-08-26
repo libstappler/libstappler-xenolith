@@ -45,7 +45,7 @@ Rect ImageLayer::getCorrectRect(Size2 containerSize) {
 	}
 
 	if (isnan(containerSize.width) || isnan(containerSize.height)) {
-		stappler::log::format("ImageLayer", "rect %f %f %f %f : %f %f %f %f",
+		log::format(log::LogType::Error, "ImageLayer", "rect %f %f %f %f : %f %f %f %f",
 				parentSize.width, parentSize.height, containerSize.width, containerSize.height,
 				ret.origin.x, ret.origin.y, ret.size.width, ret.size.height);
 	}
@@ -70,7 +70,7 @@ Vec2 ImageLayer::getCorrectPosition(Size2 containerSize, Vec2 point) {
 	}
 
 	if (isnan(ret.x) || isnan(ret.y)) {
-		log::format("ImageLayer", "pos %f %f %f %f : %f %f : %f %f",
+		log::format(log::LogType::Error, "ImageLayer", "pos %f %f %f %f : %f %f : %f %f",
 				bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height,
 				point.x, point.y, ret.x, ret.y);
 	}

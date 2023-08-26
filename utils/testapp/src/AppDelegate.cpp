@@ -22,6 +22,7 @@
 
 #include "AppDelegate.h"
 #include "AppScene.h"
+#include "XLPlatform.h"
 
 namespace stappler::xenolith::app {
 
@@ -60,7 +61,7 @@ void AppDelegate::run() {
 	_storageServer = Rc<storage::Server>::create(static_cast<Application *>(this), _storageParams);
 
 	if (!_storageServer) {
-		log::text("Application", "Fail to launch application: onBuildStorage failed");
+		log::error("Application", "Fail to launch application: onBuildStorage failed");
 	}
 
 	_networkController = Rc<network::Controller>::alloc(static_cast<Application *>(this), "Root");

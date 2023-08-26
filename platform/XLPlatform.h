@@ -20,14 +20,17 @@
  THE SOFTWARE.
  **/
 
-#include "XLApplicationExtension.h"
+#ifndef XENOLITH_PLATFORM_XLPLATFORM_H_
+#define XENOLITH_PLATFORM_XLPLATFORM_H_
 
-XLApplicationExtension::XLApplicationExtension() {
-	// TODO Auto-generated constructor stub
+#include "XLCommon.h"
+
+namespace stappler::xenolith::platform {
+
+// should be commonly supported format,
+// R8G8B8A8_UNORM on Android, B8G8R8A8_UNORM on others
+core::ImageFormat getCommonFormat();
 
 }
 
-XLApplicationExtension::~XLApplicationExtension() {
-	// TODO Auto-generated destructor stub
-}
-
+#endif /* XENOLITH_PLATFORM_XLPLATFORM_H_ */

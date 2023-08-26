@@ -329,7 +329,7 @@ struct VertexMaterialDrawPlan {
 			}
 		};
 
-		switch (transform) {
+		switch (core::getPureTransform(transform)) {
 		case core::SurfaceTransformFlags::Rotate90:
 			vertexes[0].tex = Vec2::UNIT_Y;
 			vertexes[1].tex = Vec2::ONE;
@@ -366,7 +366,7 @@ struct VertexMaterialDrawPlan {
 	}
 
 	Vec2 rotateVec(const Vec2 &vec) {
-		switch (transform) {
+		switch (core::getPureTransform(transform)) {
 			case core::SurfaceTransformFlags::Rotate90:
 				return Vec2(-vec.y, vec.x);
 				break;
@@ -405,7 +405,7 @@ struct VertexMaterialDrawPlan {
 						t.tex = d->tex;
 					} else {
 	#if DEBUG
-						log::vtext("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
+						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
 	#endif
 						auto anchor = geom::CharLayout::getAnchorForObject(t.object);
 						switch (anchor) {
@@ -796,7 +796,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 				buf.cmdBindDescriptorSets(static_cast<RenderPass *>(_data->impl.get()), 0, makeSpanView(&set, 1), 1);
 				boundTextureSetIndex = textureSetIndex;
 			} else {
-				stappler::log::vtext("MaterialRenderPassHandle", "Invalid textureSetlayout: ", textureSetIndex);
+				stappler::log::error("MaterialRenderPassHandle", "Invalid textureSetlayout: ", textureSetIndex);
 				return;
 			}
 		}

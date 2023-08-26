@@ -214,8 +214,10 @@ void Director::invalidate() {
 }
 
 void Director::updateGeneralTransform() {
+	auto transform = core::getPureTransform(_constraints.transform);
+
 	Mat4 proj;
-	switch (_constraints.transform) {
+	switch (transform) {
 	case core::SurfaceTransformFlags::Rotate90: proj = Mat4::ROTATION_Z_90; break;
 	case core::SurfaceTransformFlags::Rotate180: proj = Mat4::ROTATION_Z_180; break;
 	case core::SurfaceTransformFlags::Rotate270: proj = Mat4::ROTATION_Z_270; break;
@@ -225,13 +227,28 @@ void Director::updateGeneralTransform() {
 	case core::SurfaceTransformFlags::MirrorRotate270: break;
 	default: proj = Mat4::IDENTITY; break;
 	}
-	proj.scale(2.0f / _constraints.extent.width, -2.0f / _constraints.extent.height, -1.0);
+
+	if ((_constraints.transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
+		switch (transform) {
+		case core::SurfaceTransformFlags::Rotate90:
+		case core::SurfaceTransformFlags::Rotate270:
+		case core::SurfaceTransformFlags::MirrorRotate90:
+		case core::SurfaceTransformFlags::MirrorRotate270:
+			proj.scale(2.0f / _constraints.extent.height, -2.0f / _constraints.extent.width, -1.0);
+			break;
+		default:
+			proj.scale(2.0f / _constraints.extent.width, -2.0f / _constraints.extent.height, -1.0);
+			break;
+		}
+	} else {
+		proj.scale(2.0f / _constraints.extent.width, -2.0f / _constraints.extent.height, -1.0);
+	}
 	proj.m[12] = -1.0;
 	proj.m[13] = 1.0f;
 	proj.m[14] = 0.0f;
 	proj.m[15] = 1.0f;
 
-	switch (_constraints.transform) {
+	switch (transform) {
 	case core::SurfaceTransformFlags::Rotate90: proj.m[13] = -1.0f; break;
 	case core::SurfaceTransformFlags::Rotate180: proj.m[12] = 1.0f; proj.m[13] = -1.0f; break;
 	case core::SurfaceTransformFlags::Rotate270: proj.m[12] = 1.0f; break;

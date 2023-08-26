@@ -288,7 +288,7 @@ void VectorCanvas::Data::draw(const VectorPath &path, StringView cache, const Ma
 void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 	VertexData *outData = nullptr;
 	if (out->empty() || !out->back().data->data.empty()) {
-		out->emplace_back(transform, Rc<VertexData>::alloc());
+		out->emplace_back(TransformVertexData{transform, Rc<VertexData>::alloc()});
 	}
 
 	outData = out->back().data.get();
@@ -440,7 +440,7 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	}
 
 	if (!success) {
-		log::vtext("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
+		log::error("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
 	}
 
 	return target.objects;
@@ -561,7 +561,7 @@ void VectorCanvasResult::updateColor(const Color4F &color) {
 	mut.clear();
 	mut.reserve(data.size());
 	for (auto &it : data) {
-		auto &iit = mut.emplace_back(it.transform, copyData(it.data));
+		auto &iit = mut.emplace_back(TransformVertexData{it.transform, copyData(it.data)});
 		for (auto &vertex : iit.data->data) {
 			vertex.color = vertex.color * color;
 		}

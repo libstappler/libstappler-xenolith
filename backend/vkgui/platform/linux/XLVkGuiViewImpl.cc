@@ -22,6 +22,8 @@
 
 #include "XLVkGuiViewImpl.h"
 
+#if LINUX
+
 #include "linux/XLPlatformLinuxWaylandView.h"
 #include "linux/XLPlatformLinuxXcbView.h"
 #include "XLTextInputManager.h"
@@ -105,7 +107,7 @@ void ViewImpl::threadInit() {
 			if (waylandDisplay || strcasecmp("wayland", sessionType) == 0) {
 				auto view = Rc<xenolith::platform::WaylandView>::alloc(wayland, this, _info.name, _info.bundleId, _info.rect);
 				if (!view) {
-					log::text("VkView", "Fail to initialize xcb window");
+					log::error("VkView", "Fail to initialize wayland window");
 					return;
 				}
 
@@ -127,7 +129,7 @@ void ViewImpl::threadInit() {
 			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
 				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb, this, _info.name, _info.bundleId, _info.rect);
 				if (!view) {
-					log::text("VkView", "Fail to initialize xcb window");
+					log::error("VkView", "Fail to initialize xcb window");
 					return;
 				}
 
@@ -140,7 +142,7 @@ void ViewImpl::threadInit() {
 	}
 
 	if (!_view) {
-		log::text("View", "No available surface type");
+		log::error("View", "No available surface type");
 	}
 
 	View::threadInit();
@@ -344,3 +346,5 @@ uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice
 }
 
 }
+
+#endif

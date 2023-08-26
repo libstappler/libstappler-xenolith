@@ -598,8 +598,10 @@ struct DeviceTable {
 #endif /* defined(VK_GOOGLE_display_timing) */
 #if defined(VK_EXT_discard_rectangles)
 	const PFN_vkCmdSetDiscardRectangleEXT vkCmdSetDiscardRectangleEXT = nullptr;
+#if (VK_EXT_DISCARD_RECTANGLES_SPEC_VERSION == 2)
 	const PFN_vkCmdSetDiscardRectangleEnableEXT vkCmdSetDiscardRectangleEnableEXT = nullptr;
 	const PFN_vkCmdSetDiscardRectangleModeEXT vkCmdSetDiscardRectangleModeEXT = nullptr;
+#endif
 #endif /* defined(VK_EXT_discard_rectangles) */
 #if defined(VK_EXT_hdr_metadata)
 	const PFN_vkSetHdrMetadataEXT vkSetHdrMetadataEXT = nullptr;
@@ -731,7 +733,9 @@ struct DeviceTable {
 	const PFN_vkCmdDrawMeshTasksIndirectCountNV vkCmdDrawMeshTasksIndirectCountNV = nullptr;
 #endif /* defined(VK_NV_mesh_shader) */
 #if defined(VK_NV_scissor_exclusive)
+#if (VK_NV_SCISSOR_EXCLUSIVE_SPEC_VERSION == 2)
 	const PFN_vkCmdSetExclusiveScissorEnableNV vkCmdSetExclusiveScissorEnableNV = nullptr;
+#endif
 	const PFN_vkCmdSetExclusiveScissorNV vkCmdSetExclusiveScissorNV = nullptr;
 #endif /* defined(VK_NV_scissor_exclusive) */
 #if defined(VK_NV_device_diagnostic_checkpoints)

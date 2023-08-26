@@ -29,19 +29,19 @@ THE SOFTWARE.
 #define XL_VKAPI_DEBUG 0
 
 #if XL_VK_DEBUG
-#define XL_VK_LOG(...) log::vtext("Vk::Loop", __VA_ARGS__)
+#define XL_VK_LOG(...) log::debug("Vk::Loop", __VA_ARGS__)
 #else
 #define XL_VK_LOG(...)
 #endif
 
 #if XL_VKDEVICE_DEBUG
-#define XL_VKDEVICE_LOG(...) log::vtext("Vk::Device", __VA_ARGS__)
+#define XL_VKDEVICE_LOG(...) log::debug("Vk::Device", __VA_ARGS__)
 #else
 #define XL_VKDEVICE_LOG(...)
 #endif
 
 #if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::vtext("vk::Api", __VA_ARGS__)
+#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
 #else
 #define XL_VKAPI_LOG(...)
 #endif
@@ -68,5 +68,7 @@ THE SOFTWARE.
 #include "XLVkMaterialCompiler.cc"
 #include "XLVkMeshCompiler.cc"
 
-#include "platform/android/XLVkPlatform.cc"
-#include "platform/linux/XLVkPlatform.cc"
+#include "XLVkPlatform.cc"
+
+#include "platform/android/XLVkPlatformAndroid.cc"
+#include "platform/linux/XLVkPlatformLinux.cc"

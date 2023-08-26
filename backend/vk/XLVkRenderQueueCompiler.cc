@@ -205,7 +205,7 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 		frame.performRequiredTask([this, req = it] (FrameHandle &frame) {
 			auto ret = Rc<Shader>::create(*_device, *req);
 			if (!ret) {
-				log::vtext("Gl-Device", "Fail to compile shader program ", req->key);
+				log::error("Gl-Device", "Fail to compile shader program ", req->key);
 				return false;
 			} else {
 				req->program = _device->addProgram(ret);
@@ -223,7 +223,7 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 		frame.performRequiredTask([this, req = it] (FrameHandle &frame) -> bool {
 			auto ret = Rc<RenderPass>::create(*_device, *req);
 			if (!ret) {
-				log::vtext("Gl-Device", "Fail to compile render pass ", req->key);
+				log::error("Gl-Device", "Fail to compile render pass ", req->key);
 				return false;
 			} else {
 				req->impl = ret.get();
@@ -255,7 +255,7 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
 					auto ret = Rc<GraphicPipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::vtext("Gl-Device", "Fail to compile pipeline ", pipeline->key);
+						log::error("Gl-Device", "Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
@@ -267,7 +267,7 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
 					auto ret = Rc<ComputePipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::vtext("Gl-Device", "Fail to compile pipeline ", pipeline->key);
+						log::error("Gl-Device", "Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
@@ -349,7 +349,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 
 				if (_resource) {
 					if (!_resource->prepareCommands(_pool->getFamilyIdx(), buf.getBuffer(), outputImageBarriers, outputBufferBarriers)) {
-						log::vtext("vk::RenderQueueCompiler", "Fail to compile resource for ", _queue->getName());
+						log::error("vk::RenderQueueCompiler", "Fail to compile resource for ", _queue->getName());
 						return false;
 					}
 					_resource->compile();
@@ -359,7 +359,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 					for (auto &it : _queue->getAttachments()) {
 						if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
 							if (!prepareMaterials(frame, buf.getBuffer(), v, outputBufferBarriers)) {
-								log::vtext("vk::RenderQueueCompiler", "Fail to compile predefined materials for ", _queue->getName());
+								log::error("vk::RenderQueueCompiler", "Fail to compile predefined materials for ", _queue->getName());
 								return false;
 							}
 						}
@@ -383,7 +383,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				_commandsReady = true;
 				_descriptorsReady = true;
 			} else {
-				log::vtext("VK-Error", "Fail to doPrepareCommands");
+				log::error("VK-Error", "Fail to doPrepareCommands");
 			}
 			cb(success);
 		}, this, "RenderPass::doPrepareCommands _attachment->getTransferResource");

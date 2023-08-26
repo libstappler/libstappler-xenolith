@@ -68,7 +68,7 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 		_imageViews.emplace_back(it);
 
 		if (extent != it->getFramebufferExtent()) {
-			log::vtext("Framebuffer", "Invalid extent for framebuffer image: ", it->getFramebufferExtent());
+			log::error("Framebuffer", "Invalid extent for framebuffer image: ", it->getFramebufferExtent());
 			return false;
 		}
 	}
@@ -720,7 +720,7 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 			b.stageFlags = VkShaderStageFlags(binding->stages);
 			if (binding->type == DescriptorType::Sampler) {
 				// do nothing
-				log::vtext("vk::RenderPass", "gl::DescriptorType::Sampler is not supported for descriptors");
+				log::warn("vk::RenderPass", "gl::DescriptorType::Sampler is not supported for descriptors");
 			} else {
 				incrementSize(VkDescriptorType(binding->type), binding->count);
 				b.pImmutableSamplers = nullptr;

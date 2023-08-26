@@ -332,16 +332,21 @@ void TextureSetLayout::writeImageRead(Device &dev, CommandBuffer &buf, uint32_t 
 }
 
 bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
-	_count = layout.getImageCount();
+	_imageCount = layout.getImageCount();
+	_bufferCount = layout.getBuffersCount();
 
 	VkDescriptorPoolSize poolSizes[] = {
 		VkDescriptorPoolSize{
 			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			_count
+			_imageCount
 		},
 		VkDescriptorPoolSize{
 			VK_DESCRIPTOR_TYPE_SAMPLER,
 			layout.getSamplersCount()
+		},
+		VkDescriptorPoolSize{
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			_bufferCount
 		},
 	};
 
@@ -471,7 +476,7 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 
 	if (!_partiallyBound) {
 		// write empty
-		for (uint32_t i = set.usedImageSlots; i < _count; ++ i) {
+		for (uint32_t i = set.usedImageSlots; i < _imageCount; ++ i) {
 			if (_layoutIndexes[i] != _layout->getEmptyImageView()->getIndex()) {
 				if (!localImages) {
 					localImages = &imagesList.emplace_front(Vector<VkDescriptorImageInfo>());
@@ -571,7 +576,7 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 
 	if (!_partiallyBound) {
 		// write empty buffers into empty descriptors
-		for (uint32_t i = set.usedBufferSlots; i < _count; ++ i) {
+		for (uint32_t i = set.usedBufferSlots; i < _bufferCount; ++ i) {
 			if (_layoutBuffers[i] != _layout->getEmptyBuffer()) {
 				if (!localBuffers) {
 					localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());

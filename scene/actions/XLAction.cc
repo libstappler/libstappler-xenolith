@@ -45,11 +45,11 @@ bool Action::isDone() const {
 }
 
 void Action::step(float dt) {
-	log::text("Action", "[step]: override me");
+	log::warn("Action", "[step]: override me");
 }
 
 void Action::update(float time) {
-	log::text("Action", "[update]: override me");
+	log::warn("Action", "[update]: override me");
 }
 
 void Action::startWithTarget(Node *aTarget) {

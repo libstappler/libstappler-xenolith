@@ -42,14 +42,14 @@ void Device::end() {
 
 #if SP_REF_DEBUG
 	if (isRetainTrackerEnabled()) {
-		log::vtext("Gl-Device", "Backtrace for ", (void *)this);
+		log::debug("Gl-Device", "Backtrace for ", (void *)this);
 		foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
 			for (auto &it : vec) {
 				stream << "\t" << it << "\n";
 			}
-			log::text("Gl-Device-Backtrace", stream.str());
+			log::debug("Gl-Device-Backtrace", stream.str());
 		});
 	}
 #endif
@@ -123,28 +123,28 @@ void Device::invalidateObjects() {
 	for (auto &it : objs) {
 		if (auto ref = dynamic_cast<Ref *>(it)) {
 			if (dynamic_cast<ImageObject *>(it)) {
-				log::vtext("Gl-Device", "Image ", (void *)it, " (", typeid(*it).name(),
+				log::warn("Gl-Device", "Image ", (void *)it, " (", typeid(*it).name(),
 						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
 			} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
-				log::vtext("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
+				log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
 						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
 			} else {
-				log::vtext("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
+				log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
 						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
 			}
 #if SP_REF_DEBUG
-			log::vtext("Gl-Device", "Backtrace for ", (void *)it);
+			log::warn("Gl-Device", "Backtrace for ", (void *)it);
 			ref->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
 				StringStream stream;
 				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
 				for (auto &it : vec) {
 					stream << "\t" << it << "\n";
 				}
-				log::text("Gl-Device-Backtrace", stream.str());
+				log::warn("Gl-Device-Backtrace", stream.str());
 			});
 #endif
 		} else {
-			log::vtext("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
+			log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
 					") was not destroyed before device destruction");
 		}
 

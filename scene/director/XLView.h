@@ -34,6 +34,7 @@
 namespace stappler::xenolith {
 
 class View;
+class Director;
 
 struct ViewInfo {
 	String name;
@@ -68,9 +69,9 @@ public:
 
 	virtual void run() = 0;
 	virtual void runWithQueue(const Rc<core::Queue> &) = 0;
-	virtual void end();
+	virtual void end() override;
 
-	virtual void update(bool displayLink);
+	virtual void update(bool displayLink) override;
 	virtual void close();
 
 	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false);
@@ -127,7 +128,7 @@ public:
 	uint64_t getFrameInterval() const;
 	void setFrameInterval(uint64_t);
 
-	virtual void setReadyForNextFrame();
+	virtual void setReadyForNextFrame() override;
 
 	virtual void retainBackButton();
 	virtual void releaseBackButton();
@@ -135,6 +136,11 @@ public:
 
 	virtual void setDecorationTone(float); // 0.0 - 1.0
 	virtual void setDecorationVisible(bool);
+
+	virtual uint64_t retainView() override;
+	virtual void releaseView(uint64_t) override;
+
+	virtual void setContentPadding(const Padding &) override;
 
 protected:
 	virtual void wakeup() = 0;

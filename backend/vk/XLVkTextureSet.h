@@ -114,7 +114,8 @@ protected:
 
 	bool _partiallyBound = false;
 	const TextureSetLayout *_layout = nullptr;
-	uint32_t _count = 0;
+	uint32_t _imageCount = 0;
+	uint32_t _bufferCount = 0;
 	VkDescriptorSet _set = VK_NULL_HANDLE;
 	VkDescriptorPool _pool = VK_NULL_HANDLE;
 	Vector<ImageMemoryBarrier> _pendingImageBarriers;

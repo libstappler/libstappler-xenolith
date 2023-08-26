@@ -122,7 +122,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	_info = move(info);
 
 	if constexpr (s_printVkInfo) {
-		log::vtext("Vk-Info", "Device info:\n", info.description());
+		log::verbose("Vk-Info", "Device info:\n", info.description());
 	}
 
 	for (auto &it : _families) {
@@ -225,7 +225,7 @@ const DeviceTable * Device::getTable() const {
 	}, [] (void *ctx, const char *name, PFN_vkVoidFunction fn) {
 		auto dt = platform::device::_clock() - s_vkFnCallStart;
 		if (dt > 200000) {
-			log::vtext("Vk-Call-Timeout", name, ": ", dt);
+			log::debug("Vk-Call-Timeout", name, ": ", dt);
 		}
 	}, _original, nullptr, (void *)this);
 #endif

@@ -101,7 +101,9 @@ void View::threadDispose() {
 
 	finalize();
 
-	_thread.detach();
+	if (_threadStarted) {
+		_thread.detach();
+	}
 	release(0);
 }
 
@@ -166,7 +168,7 @@ void View::runWithQueue(const Rc<RenderQueue> &queue) {
 		a = queue->getTransferImageOutput();
 	}
 	if (!a) {
-		log::vtext("vk::View", "Fail to run view with queue '", queue->getName(),  "': no usable output attachments found");
+		log::error("vk::View", "Fail to run view with queue '", queue->getName(),  "': no usable output attachments found");
 		return;
 	}
 
@@ -643,7 +645,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					}
 					if (!a) {
 						-- _framesInProgress;
-						log::vtext("vk::View", "Fail to run view with queue '", queue->getName(),  "': no usable output attachments found");
+						log::error("vk::View", "Fail to run view with queue '", queue->getName(),  "': no usable output attachments found");
 						return;
 					}
 
@@ -842,7 +844,7 @@ bool View::recreateSwapchain(core::PresentMode mode) {
 	auto cfg = _info.selectConfig(*this, info);
 
 	if (!info.isSupported(cfg)) {
-		log::vtext("Vk-Error", "Presentation with config ", cfg.description(), " is not supported for ", info.description());
+		log::error("Vk-Error", "Presentation with config ", cfg.description(), " is not supported for ", info.description());
 		return false;
 	}
 
@@ -915,7 +917,7 @@ bool View::isImagePresentable(const core::ImageObject &image, VkFilter &filter) 
 	auto &sourceImageInfo = image.getInfo();
 	if (sourceImageInfo.extent.depth != 1 || sourceImageInfo.format != _config.imageFormat
 			|| (sourceImageInfo.usage & core::ImageUsage::TransferSrc) == core::ImageUsage::None) {
-		log::text("Swapchain", "Image can not be presented on swapchain");
+		log::error("Swapchain", "Image can not be presented on swapchain");
 		return false;
 	}
 
@@ -1019,7 +1021,7 @@ void View::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
 		waitForFences(_frameOrder);
 		queue.waitIdle();
 
-		// log::vtext("View", "recreateSwapchain - View::presentWithQueue (", renderqueue::FrameHandle::GetActiveFramesCount(), ")");
+		// log::debug("View", "recreateSwapchain - View::presentWithQueue (", renderqueue::FrameHandle::GetActiveFramesCount(), ")");
 		recreateSwapchain(_swapchain->getRebuildMode());
 	} else {
 		if (!_options.renderOnDemand || _readyForNextFrame) {
@@ -1051,7 +1053,7 @@ void View::invalidateSwapchainImage(Rc<ImageStorage> &&image) {
 	_swapchain->invalidateImage(move(image));
 
 	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
-		// log::vtext("View", "recreateSwapchain - View::invalidateSwapchainImage (", renderqueue::FrameHandle::GetActiveFramesCount(), ")");
+		// log::debug("View", "recreateSwapchain - View::invalidateSwapchainImage (", renderqueue::FrameHandle::GetActiveFramesCount(), ")");
 		recreateSwapchain(_swapchain->getRebuildMode());
 	} else {
 		scheduleNextImage(_info.frameInterval, false);
@@ -1073,7 +1075,7 @@ void View::waitForFences(uint64_t min) {
 	auto it = _fences.begin();
 	while (it != _fences.end()) {
 		if ((*it)->getFrame() <= min) {
-			// log::vtext("View", "waitForFences: ", (*it)->getTag());
+			// log::debug("View", "waitForFences: ", (*it)->getTag());
 			if ((*it)->check(*loop, false)) {
 				it = _fences.erase(it);
 			} else {

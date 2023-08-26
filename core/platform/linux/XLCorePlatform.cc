@@ -74,10 +74,6 @@ void sleep(uint64_t microseconds) {
 	usleep(useconds_t(microseconds));
 }
 
-core::ImageFormat getCommonFormat() {
-	return core::ImageFormat::B8G8R8A8_UNORM;
-}
-
 }
 
 #endif

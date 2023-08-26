@@ -259,7 +259,7 @@ bool Formatter::pushChar(char16_t ch) {
 		if (ch == (char16_t)0x00AD) {
 			charDef = _primaryFontLayout->getChar('-', faceId);
 		} else {
-			log::format("RichTextFormatter", "%s: Attempted to use undefined character: %d '%s'",
+			log::format(log::Warn, "RichTextFormatter", "%s: Attempted to use undefined character: %d '%s'",
 					_primaryFontLayout->getName().data(), ch, string::toUtf8<Interface>(ch).c_str());
 			return true;
 		}

@@ -553,7 +553,7 @@ FT_Face FontLibrary::newFontFace(BytesView data) {
 	err = FT_New_Memory_Face(_library, data.data(), data.size(), 0, &ret );
 	if (err != FT_Err_Ok) {
 		auto str = FT_Error_String(err);
-		log::text("font::FontLibrary", str ? StringView(str) : "Unknown error");
+		log::error("font::FontLibrary", str ? StringView(str) : "Unknown error");
 		return nullptr;
 	}
 

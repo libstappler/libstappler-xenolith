@@ -612,7 +612,7 @@ void CommandBuffer::addBuffer(Buffer *buffer) {
 
 CommandPool::~CommandPool() {
 	if (_commandPool) {
-		log::vtext("VK-Error", "CommandPool was not destroyed");
+		log::error("VK-Error", "CommandPool was not destroyed");
 	}
 }
 
@@ -633,7 +633,7 @@ void CommandPool::invalidate(Device &dev) {
 		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
 		_commandPool = VK_NULL_HANDLE;
 	} else {
-		log::vtext("VK-Error", "CommandPool is not defined");
+		log::error("VK-Error", "CommandPool is not defined");
 	}
 }
 

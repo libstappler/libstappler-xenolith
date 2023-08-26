@@ -68,6 +68,9 @@ public:
 
 	virtual void mapWindow() override;
 
+	virtual void linkWithNativeWindow(void *) override { }
+	virtual void stopNativeWindow() override { }
+
 protected:
 	virtual bool pollInput(bool frameReady) override;
 

@@ -410,32 +410,32 @@ void SceneContent2d::updateLayoutNode(SceneLayout2d *node) {
 bool SceneContent2d::addLight(SceneLight *light, uint64_t tag, StringView name) {
 	if (tag != InvalidTag) {
 		if (_lightsByTag.find(tag) != _lightsByTag.end()) {
-			log::vtext("Scene", "Light with tag ", tag, " is already defined");
+			log::warn("Scene", "Light with tag ", tag, " is already defined");
 			return false;
 		}
 	}
 	if (!name.empty()) {
 		if (_lightsByName.find(name) != _lightsByName.end()) {
-			log::vtext("Scene", "Light with name ", name, " is already defined");
+			log::warn("Scene", "Light with name ", name, " is already defined");
 			return false;
 		}
 	}
 
 	if (light->getScene()) {
-		log::vtext("Scene", "Light is already on scene");
+		log::warn("Scene", "Light is already on scene");
 		return false;
 	}
 
 	switch (light->getType()) {
 	case SceneLightType::Ambient:
 		if (_lightsAmbientCount >= config::MaxAmbientLights) {
-			log::vtext("Scene", "Too many ambient lights");
+			log::warn("Scene", "Too many ambient lights");
 			return false;
 		}
 		break;
 	case SceneLightType::Direct:
 		if (_lightsDirectCount >= config::MaxDirectLights) {
-			log::vtext("Scene", "Too many direct lights");
+			log::warn("Scene", "Too many direct lights");
 			return false;
 		}
 		break;

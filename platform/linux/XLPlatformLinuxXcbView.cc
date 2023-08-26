@@ -28,7 +28,7 @@ uint32_t _glfwKeySym2Unicode(unsigned int keysym);
 namespace stappler::xenolith::platform {
 
 #if XL_X11_DEBUG
-#define XL_X11_LOG(...) log::vtext("Wayland", __VA_ARGS__)
+#define XL_X11_LOG(...) log::debug("Wayland", __VA_ARGS__)
 #else
 #define XL_X11_LOG(...)
 #endif
@@ -36,25 +36,25 @@ namespace stappler::xenolith::platform {
 void XcbView::ReportError(int error) {
 	switch (error) {
 	case XCB_CONN_ERROR:
-		stappler::log::text("XcbView", "XCB_CONN_ERROR: socket error, pipe error or other stream error");
+		stappler::log::error("XcbView", "XCB_CONN_ERROR: socket error, pipe error or other stream error");
 		break;
 	case XCB_CONN_CLOSED_EXT_NOTSUPPORTED:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_EXT_NOTSUPPORTED: extension is not supported");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_EXT_NOTSUPPORTED: extension is not supported");
 		break;
 	case XCB_CONN_CLOSED_MEM_INSUFFICIENT:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_MEM_INSUFFICIENT: out of memory");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_MEM_INSUFFICIENT: out of memory");
 		break;
 	case XCB_CONN_CLOSED_REQ_LEN_EXCEED:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_REQ_LEN_EXCEED: too large request");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_REQ_LEN_EXCEED: too large request");
 		break;
 	case XCB_CONN_CLOSED_PARSE_ERR:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_PARSE_ERR: error during parsing display string");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_PARSE_ERR: error during parsing display string");
 		break;
 	case XCB_CONN_CLOSED_INVALID_SCREEN:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_INVALID_SCREEN: server does not have a screen matching the display");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_INVALID_SCREEN: server does not have a screen matching the display");
 		break;
 	case XCB_CONN_CLOSED_FDPASSING_FAILED:
-		stappler::log::text("XcbView", "XCB_CONN_CLOSED_FDPASSING_FAILED: fail to pass some FD");
+		stappler::log::error("XcbView", "XCB_CONN_CLOSED_FDPASSING_FAILED: fail to pass some FD");
 		break;
 	}
 }
@@ -66,7 +66,7 @@ XcbView::XcbView(XcbLibrary *lib, ViewInterface *view, StringView name, StringVi
 #if DEBUG
 	auto d = getenv("DISPLAY");
 	if (!d) {
-		stappler::log::vtext("XcbView-Info", "DISPLAY is not defined");
+		stappler::log::warn("XcbView-Info", "DISPLAY is not defined");
 	}
 #endif
 

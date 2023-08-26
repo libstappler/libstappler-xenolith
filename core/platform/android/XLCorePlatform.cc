@@ -24,9 +24,9 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::platform {
+#include <unistd.h>
 
-static core::ImageFormat s_getCommonFormat = core::ImageFormat::R8G8B8A8_UNORM;
+namespace stappler::xenolith::platform {
 
 static uint64_t getStaticMinFrameTime() {
 	return 1000'000 / 60;
@@ -69,15 +69,11 @@ uint64_t clock(core::ClockType type) {
 	case core::ClockType::Thread: clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts); break;
 	}
 
-	return (uint64_t) ts.tv_sec * (uint64_t) 1000'000 + (uint64_t) ts.tv_nsec / 1000;
+	return uint64_t(ts.tv_sec) * uint64_t(1000'000) + uint64_t(ts.tv_nsec / 1000);
 }
 
 void sleep(uint64_t microseconds) {
 	usleep(useconds_t(microseconds));
-}
-
-core::ImageFormat getCommonFormat() {
-	return s_getCommonFormat;
 }
 
 }

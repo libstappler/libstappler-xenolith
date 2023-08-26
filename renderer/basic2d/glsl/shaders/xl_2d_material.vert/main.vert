@@ -58,12 +58,13 @@ void main() {
 	if (vertex.object != 0 && (mat.flags & 3) != 0) {
 		uint size = 1 << (mat.flags >> 24);
 		uint slot = hash(vertex.object, size);
-
+		uint dataAtlasIndex = mat.atlasIdx & 0xFFFF;
+		uint dataAtlasValue = mat.atlasIdx >> 16;
 		uint counter = 0;
 		while (counter < size) {
-			const DataAtlasIndex prev = dataAtlasIndexes[mat.atlasIdx & 0xFFFF].indexes[slot];
+			const DataAtlasIndex prev = dataAtlasIndexes[dataAtlasIndex].indexes[slot];
 			if (prev.key == vertex.object) {
-				const DataAtlasValue value = dataAtlasValues[mat.atlasIdx >> 16].values[dataAtlasIndexes[mat.atlasIdx & 0xFFFF].indexes[slot].value];
+				const DataAtlasValue value = dataAtlasValues[dataAtlasValue].values[dataAtlasIndexes[dataAtlasIndex].indexes[slot].value];
 
 				pos += vec4(value.pos, 0, 0);
 				tex = value.tex;

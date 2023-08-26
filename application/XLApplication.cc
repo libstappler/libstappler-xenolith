@@ -46,6 +46,9 @@ namespace stappler::xenolith {
 
 static Application *s_mainLoop = nullptr;
 
+XL_DECLARE_EVENT_CLASS(Application, onMessageToken)
+XL_DECLARE_EVENT_CLASS(Application, onRemoteNotification)
+
 Application *Application::getInstance() {
 	return s_mainLoop;
 }
@@ -67,7 +70,7 @@ bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
 	_name = _info.applicationName;
 	_instance = move(instance);
-	_updatePool = memory::pool::create((memory::pool_t *)nullptr);
+	_updatePool = memory::pool::create(static_cast<memory::pool_t *>(nullptr));
 	return true;
 }
 
@@ -99,7 +102,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	_glLoop = _instance->makeLoop(move(loopInfo));
 
 	if (!spawnWorkers(thread::TaskQueue::Flags::Waitable, 0, threadsCount, _name)) {
-		log::text("MainLoop", "Fail to spawn worker threads");
+		log::error("MainLoop", "Fail to spawn worker threads");
 		return;
 	}
 
@@ -110,6 +113,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	for (auto &it : _extensions) {
 		it.second->initialize(this);
 	}
+
+	nativeInit();
 
 	_glLoop->waitRinning();
 
@@ -168,6 +173,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		it.second->invalidate(this);
 	}
 
+	nativeDispose();
+
 	_glLoop->cancel();
 
 	waitForAll();
@@ -184,7 +191,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 			for (auto &it : vec) {
 				stream << "\t" << it << "\n";
 			}
-			log::text("core::Loop", stream.str());
+			log::debug("core::Loop", stream.str());
 		});
 	} else {
 		_glLoop = nullptr;
@@ -351,6 +358,15 @@ void Application::handleDeviceFinalized(const core::Loop &loop, const core::Devi
 	performOnMainThread([cache = _resourceCache] {
 		cache->invalidate();
 	}, Rc<core::Device>(const_cast<core::Device *>(&dev)));
+}
+
+void Application::handleMessageToken(String &&str) {
+	_messageToken = move(str);
+	onMessageToken(this, _messageToken);
+}
+
+void Application::handleRemoteNotification(Value &&val) {
+	onRemoteNotification(this, move(val));
 }
 
 #if MODULE_XENOLITH_SCENE

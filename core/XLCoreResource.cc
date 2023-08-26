@@ -115,7 +115,7 @@ static void Resource_loadImageConverted(StringView path, uint8_t *glBuffer, Byte
 		}
 		break;
 	default:
-		log::vtext("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
+		log::error("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
 }
@@ -147,7 +147,7 @@ static void Resource_loadImageDefault(StringView path, BytesView encodedImageDat
 		break;
 	default:
 		availableFormat = false;
-		log::vtext("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
+		log::error("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
 
@@ -171,7 +171,7 @@ void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView
 
 		bitmap::ImageInfo info;
 		if (!bitmap::getImageInfo(BytesView(mem, fsize), info)) {
-			log::vtext("Resource", "loadImageFileData: ", path, ": fail to read image info");
+			log::error("Resource", "loadImageFileData: ", path, ": fail to read image info");
 		} else {
 			if (ptr) {
 				// check if we can load directly into GL memory
@@ -226,7 +226,7 @@ void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView
 					}
 					break;
 				default:
-					log::vtext("Resource", "loadImageFileData: ", path, ": Unknown format");
+					log::error("Resource", "loadImageFileData: ", path, ": Unknown format");
 					dcb(BytesView());
 					break;
 				}
@@ -236,7 +236,7 @@ void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView
 			}
 		}
 	} else {
-		log::vtext("Resource", "loadImageFileData: ", path, ": fail to load file");
+		log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
 		dcb(BytesView());
 	}
 	memory::pool::pop();
@@ -380,7 +380,7 @@ Resource::Builder::~Builder() {
 
 const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -394,14 +394,14 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Buffer already added: ", key);
+		log::error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
 }
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, FilePath path, Rc<DataAtlas> &&atlas) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -416,7 +416,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	}
 
 	if (npath.empty()) {
-		log::vtext("Resource", "Fail to add buffer: ", key, ", file not found: ", path.get());
+		log::error("Resource", "Fail to add buffer: ", key, ", file not found: ", path.get());
 		return nullptr;
 	}
 
@@ -436,7 +436,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Buffer already added: ", key);
+		log::error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -444,7 +444,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -458,7 +458,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Buffer already added: ", key);
+		log::error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -466,7 +466,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info,
 		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -479,7 +479,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Buffer already added: ", key);
+		log::error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -487,7 +487,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, BytesView data) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add image: ", key, ", not initialized");
+		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -499,14 +499,14 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Image already added: ", key);
+		log::error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
 }
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, FilePath path) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add image: ", key, ", not initialized");
+		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -521,7 +521,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 	}
 
 	if (npath.empty()) {
-		log::vtext("Resource", "Fail to add image: ", key, ", file not found: ", path.get());
+		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path.get());
 		return nullptr;
 	}
 
@@ -543,14 +543,14 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Image already added: ", key);
+		log::error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
  	return p;
 }
 const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&img, BytesView data) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add image: ", key, ", not initialized");
+		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -562,7 +562,7 @@ const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&im
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Image already added: ", key);
+		log::error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -570,7 +570,7 @@ const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&im
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb) {
 	if (!_data) {
-		log::vtext("Resource", "Fail to add image: ", key, ", not initialized");
+		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -582,7 +582,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::vtext("Resource", _data->key, ": Image already added: ", key);
+		log::error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;

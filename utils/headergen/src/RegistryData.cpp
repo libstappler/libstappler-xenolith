@@ -205,11 +205,11 @@ struct VkRegistryReader {
 			}
 			break;
 		}
-		// log::text("onBeginTag", tag.name);
+		// log::debug("onBeginTag", tag.name);
 	}
 
 	inline void onEndTag(Parser &p, Tag &tag, bool isClosable) {
-		// log::text("onEndTag", tag.name);
+		// log::debug("onEndTag", tag.name);
 	}
 
 	inline void onTagAttribute(Parser &p, Tag &tag, StringView &name, StringView &value) {
@@ -270,7 +270,7 @@ struct VkRegistryReader {
 				|| tag.name == "syncpipelinestage" || tag.name == "syncpipeline" || tag.name == "syncaccess" || tag.name == "syncequivalent"
 				|| tag.name == "sync" || tag.name == "extensions" || tag.name == "remove" || tag.name == "syncequivalent") {
 		} else {
-			log::vtext("onTagAttribute", tag.name, ": ", name, " = ", value);
+			log::debug("onTagAttribute", tag.name, ": ", name, " = ", value);
 		}
 	}
 
@@ -316,11 +316,11 @@ struct VkRegistryReader {
 		} else if (tag.string && tag.name == "type" && p.tagStack.at(p.tagStack.size() - 2).proto) {
 			p.tagStack.at(p.tagStack.size() - 2).proto->type = *tag.string;
 		}
-		// log::text("onPopTag", tag.name);
+		// log::debug("onPopTag", tag.name);
 	}
 
 	inline void onInlineTag(Parser &p, Tag &tag) {
-		// log::text("onInlineTag", tag.name);
+		// log::debug("onInlineTag", tag.name);
 	}
 
 	inline void onTagContent(Parser &p, Tag &tag, StringView &s) {
@@ -329,7 +329,7 @@ struct VkRegistryReader {
 		} else if (tag.string) {
 			*tag.string = normalizeString(s);
 		}
-		// log::vtext("onTagContent", tag.name, ": ", s);
+		// log::debug("onTagContent", tag.name, ": ", s);
 	}
 
 	StringView normalizeString(StringView s) {

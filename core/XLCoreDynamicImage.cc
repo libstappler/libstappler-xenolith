@@ -138,7 +138,7 @@ const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&in
 	}
 
 	if (npath.empty()) {
-		log::vtext("Resource", "Fail to add image: ", key, ", file not found: ", path.get());
+		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path.get());
 		return nullptr;
 	}
 

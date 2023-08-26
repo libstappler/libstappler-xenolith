@@ -22,6 +22,7 @@
 
 #include "XL2dVkShadowPass.h"
 
+#include "XLPlatform.h"
 #include "XLApplication.h"
 #include "XLVkLoop.h"
 #include "XLVkRenderPass.h"
@@ -388,6 +389,7 @@ bool ComputeShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &pas
 
 	_sdf = queueBuilder.addAttachemnt(FrameContext2d::SdfImageAttachmentName, [&] (AttachmentBuilder &builder) -> Rc<Attachment> {
 		builder.defineAsInput();
+		//builder.defineAsOutput();
 		return Rc<ShadowSdfImageAttachment>::create(builder, defaultExtent);
 	});
 

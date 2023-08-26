@@ -771,9 +771,15 @@ enum class SurfaceTransformFlags {
 	MirrorRotate180 = 0x00000040,
 	MirrorRotate270 = 0x00000080,
 	Inherit = 0x00000100,
+	PreRotated = 0x01000000,
+	TransformMask = 0x000001FF,
 };
 
 SP_DEFINE_ENUM_AS_MASK(SurfaceTransformFlags)
+
+inline SurfaceTransformFlags getPureTransform(SurfaceTransformFlags flags) {
+	return flags & SurfaceTransformFlags::TransformMask;
+}
 
 enum class RenderingLevel {
 	Default,

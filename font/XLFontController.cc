@@ -80,7 +80,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		return &it->second;
 	}
 
-	log::vtext("FontController", "Duplicate font source: ", name);
+	log::warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -93,7 +93,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		return &it->second;
 	}
 
-	log::vtext("FontController", "Duplicate font source: ", name);
+	log::warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -106,7 +106,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		return &it->second;
 	}
 
-	log::vtext("FontController", "Duplicate font source: ", name);
+	log::warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -119,7 +119,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		return &it->second;
 	}
 
-	log::vtext("FontController", "Duplicate font source: ", name);
+	log::warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 

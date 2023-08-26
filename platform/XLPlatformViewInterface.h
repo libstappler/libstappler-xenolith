@@ -32,6 +32,9 @@ class ViewInterface {
 public:
 	virtual ~ViewInterface() { }
 
+	virtual void update(bool displayLink) = 0;
+	virtual void end() = 0;
+
 	virtual void handleInputEvent(const core::InputEventData &) = 0;
 	virtual void handleInputEvents(Vector<core::InputEventData> &&) = 0;
 
@@ -40,6 +43,79 @@ public:
 	virtual bool isInputEnabled() const = 0;
 
 	virtual void deprecateSwapchain(bool fast = false) = 0;
+
+	virtual uint64_t retainView() = 0;
+	virtual void releaseView(uint64_t) = 0;
+
+	virtual void setReadyForNextFrame() = 0;
+
+	virtual void linkWithNativeWindow(void *) = 0;
+	virtual void stopNativeWindow() = 0;
+
+	virtual void setContentPadding(const Padding &) = 0;
+};
+
+class ViewInterfaceRef final {
+public:
+	~ViewInterfaceRef() {
+		set(nullptr);
+	}
+
+	ViewInterfaceRef() { }
+
+	ViewInterfaceRef(ViewInterface *iface) {
+		set(iface);
+	}
+
+	ViewInterfaceRef(const ViewInterfaceRef &r) {
+		set(r.get());
+	}
+
+	ViewInterfaceRef(ViewInterfaceRef &&r) : refId(r.refId), ref(r.ref) {
+		r.refId = 0;
+		r.ref = nullptr;
+	}
+
+	ViewInterfaceRef &operator=(ViewInterface *iface) {
+		set(iface);
+		return *this;
+	}
+
+	ViewInterfaceRef &operator=(const ViewInterfaceRef &r) {
+		set(r.get());
+		return *this;
+	}
+
+	ViewInterfaceRef &operator=(ViewInterfaceRef &&r) {
+		set(nullptr);
+		refId = r.refId;
+		ref = r.ref;
+		r.refId = 0;
+		r.ref = nullptr;
+		return *this;
+	}
+
+	ViewInterface *get() const { return ref; }
+
+	inline operator ViewInterface * () const { return get(); }
+	inline operator bool () const { return ref != nullptr; }
+	inline ViewInterface * operator->() const { return get(); }
+
+private:
+	void set(ViewInterface *r) {
+		if (ref) {
+			ref->releaseView(refId);
+		}
+		ref = r;
+		if (ref) {
+			refId = ref->retainView();
+		} else {
+			refId = 0;
+		}
+	}
+
+	uint64_t refId = 0;
+	ViewInterface *ref = nullptr;
 };
 
 }

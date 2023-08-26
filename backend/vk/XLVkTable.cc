@@ -648,8 +648,10 @@ DeviceTable::DeviceTable(PFN_vkGetDeviceProcAddr addr, VkDevice device)
 #endif /* defined(VK_GOOGLE_display_timing) */
 #if defined(VK_EXT_discard_rectangles)
 , vkCmdSetDiscardRectangleEXT((PFN_vkCmdSetDiscardRectangleEXT)addr(device, "vkCmdSetDiscardRectangleEXT"))
+#if (VK_EXT_DISCARD_RECTANGLES_SPEC_VERSION == 2)
 , vkCmdSetDiscardRectangleEnableEXT((PFN_vkCmdSetDiscardRectangleEnableEXT)addr(device, "vkCmdSetDiscardRectangleEnableEXT"))
 , vkCmdSetDiscardRectangleModeEXT((PFN_vkCmdSetDiscardRectangleModeEXT)addr(device, "vkCmdSetDiscardRectangleModeEXT"))
+#endif
 #endif /* defined(VK_EXT_discard_rectangles) */
 #if defined(VK_EXT_hdr_metadata)
 , vkSetHdrMetadataEXT((PFN_vkSetHdrMetadataEXT)addr(device, "vkSetHdrMetadataEXT"))
@@ -781,7 +783,9 @@ DeviceTable::DeviceTable(PFN_vkGetDeviceProcAddr addr, VkDevice device)
 , vkCmdDrawMeshTasksIndirectCountNV((PFN_vkCmdDrawMeshTasksIndirectCountNV)addr(device, "vkCmdDrawMeshTasksIndirectCountNV"))
 #endif /* defined(VK_NV_mesh_shader) */
 #if defined(VK_NV_scissor_exclusive)
+#if (VK_NV_SCISSOR_EXCLUSIVE_SPEC_VERSION == 2)
 , vkCmdSetExclusiveScissorEnableNV((PFN_vkCmdSetExclusiveScissorEnableNV)addr(device, "vkCmdSetExclusiveScissorEnableNV"))
+#endif
 , vkCmdSetExclusiveScissorNV((PFN_vkCmdSetExclusiveScissorNV)addr(device, "vkCmdSetExclusiveScissorNV"))
 #endif /* defined(VK_NV_scissor_exclusive) */
 #if defined(VK_NV_device_diagnostic_checkpoints)

@@ -28,7 +28,7 @@ namespace stappler::xenolith::vk {
 
 DeviceBuffer::~DeviceBuffer() {
 	if (_buffer) {
-		log::vtext("VK-Error", "Buffer was not destroyed");
+		log::error("VK-Error", "Buffer was not destroyed");
 	}
 }
 

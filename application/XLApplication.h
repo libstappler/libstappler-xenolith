@@ -34,27 +34,33 @@
 
 #endif
 
+
+#if MODULE_XENOLITH_SCENE
+
+#include "XLView.h"
+
+#endif
+
+
 namespace stappler::xenolith {
 
 class Event;
 class EventHandlerNode;
 
-#if MODULE_XENOLITH_SCENE
-
-struct ViewInfo;
-class View;
-
-#endif
-
 class Application : protected thread::TaskQueue {
 public:
+	static EventHeader onMessageToken;
+	static EventHeader onRemoteNotification;
+
 	struct CommonInfo {
 		String bundleName;
 		String applicationName;
 		String applicationVersion;
 		String userAgent;
+		String locale;
 
 		uint32_t applicationVersionCode = 0;
+		void *nativeHandle = nullptr;
 	};
 
 	struct CallbackInfo {
@@ -126,9 +132,6 @@ public:
 	template <typename T>
 	T *getExtension();
 
-	void setNativeHandle(void *handle) { _nativeHandle = handle; }
-	void *getNativeHandle() const { return _nativeHandle; }
-
 	const CommonInfo &getInfo() const { return _info; }
 
 protected:
@@ -136,6 +139,12 @@ protected:
 
 	virtual void handleDeviceStarted(const core::Loop &loop, const core::Device &dev);
 	virtual void handleDeviceFinalized(const core::Loop &loop, const core::Device &dev);
+
+	virtual void handleMessageToken(String &&);
+	virtual void handleRemoteNotification(Value &&);
+
+	void nativeInit();
+	void nativeDispose();
 
 	UpdateTime _time;
 	std::thread::id _threadId;
@@ -151,8 +160,8 @@ protected:
 
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
 
+	String _messageToken;
 	CommonInfo _info;
-	void *_nativeHandle = nullptr;
 
 #if MODULE_XENOLITH_SCENE
 public:

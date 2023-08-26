@@ -210,7 +210,7 @@ auto FrameContext::getPipelineForMaterial(const MaterialInfo &info) const -> con
 			}
 		}
 	}
-	log::vtext("Scene", "No pipeline for attachment '", _materialAttachment->getName(), "': ",
+	log::warn("Scene", "No pipeline for attachment '", _materialAttachment->getName(), "': ",
 			info.pipeline.description(), " : ", info.pipeline.data());
 	return nullptr;
 }

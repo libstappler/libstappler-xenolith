@@ -79,7 +79,11 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 
-	swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(cfg.transform);
+	if ((cfg.transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
+		swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(core::getPureTransform(cfg.transform));
+	} else {
+		swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(cfg.transform);
+	}
 	swapChainCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR(cfg.alpha);
 	swapChainCreateInfo.presentMode = getVkPresentMode(presentMode);
 	swapChainCreateInfo.clipped = (cfg.clipped ? VK_TRUE : VK_FALSE);
@@ -372,7 +376,7 @@ bool SwapchainImage::init(Rc<SwapchainHandle> &&swapchain, const SwapchainHandle
 }
 
 void SwapchainImage::cleanup() {
-	stappler::log::text("SwapchainImage", "cleanup");
+	stappler::log::info("SwapchainImage", "cleanup");
 }
 
 void SwapchainImage::rearmSemaphores(core::Loop &loop) {

@@ -345,7 +345,7 @@ bool FontFaceObject::acquireTextureUnsafe(char16_t theChar, const Callback<void(
 		}
 	} else {
 		if (!string::isspace(theChar) && theChar != char16_t(0x0A)) {
-			log::format("Font", "error: no bitmap for (%d) '%s'", theChar, string::toUtf8<Interface>(theChar).data());
+			log::format(log::Warn, "Font", "error: no bitmap for (%d) '%s'", theChar, string::toUtf8<Interface>(theChar).data());
 		}
 	}
 	return false;

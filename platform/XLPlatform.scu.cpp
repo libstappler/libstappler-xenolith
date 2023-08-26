@@ -21,6 +21,7 @@
  **/
 
 #include "XLCommon.h"
+#include "XLPlatform.h"
 
 #include "XLViewCommandLine.cc"
 
@@ -32,4 +33,21 @@
 #include "linux/XLPlatformLinuxWaylandView.cc"
 #include "linux/XLPlatformLinuxXcb.cc"
 #include "linux/XLPlatformLinuxXcbView.cc"
+
+namespace stappler::xenolith::platform {
+
+core::ImageFormat getCommonFormat() {
+	return core::ImageFormat::B8G8R8A8_UNORM;
+}
+
+}
+
+#endif
+
+#if ANDROID
+#include "android/XLPlatformAndroid.cc"
+#include "android/XLPlatformAndroidActivity.cc"
+#include "android/XLPlatformAndroidClassLoader.cc"
+#include "android/XLPlatformAndroidMessageInterface.cc"
+#include "android/XLPlatformAndroidNetworkConnectivity.cc"
 #endif

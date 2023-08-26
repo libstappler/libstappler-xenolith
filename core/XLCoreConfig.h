@@ -30,6 +30,9 @@ namespace stappler::xenolith::config {
 /* Minimal safe interval offset for frame timeout scheduling, to ensure, that actual timeout is less then nominal */
 static constexpr uint64_t FrameIntervalSafeOffset = 200;
 
+/* Presentation Scheduler interval, used for non-blocking vkWaitForFence */
+static constexpr uint64_t PresentationSchedulerInterval = 500; // 500 ms or 1/32 of 60fps frame
+
 }
 
 #endif /* XENOLITH_CORE_XLCORECONFIG_H_ */

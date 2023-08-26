@@ -68,7 +68,7 @@ VkRect2D QueuePassHandle::rotateScissor(const core::FrameContraints &constraints
 		{ scissor.width, scissor.height }
 	};
 
-	switch (constraints.transform) {
+	switch (core::getPureTransform(constraints.transform)) {
 	case core::SurfaceTransformFlags::Rotate90:
 		scissorRect.offset.y = scissor.x;
 		scissorRect.offset.x = scissor.y;
@@ -145,7 +145,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		}, [this] (FrameHandle &frame, bool success) {
 			if (!success) {
 				_valid = false;
-				log::vtext("VK-Error", "Fail to doPrepareDescriptors");
+				log::error("VK-Error", "Fail to doPrepareDescriptors");
 			}
 
 			_descriptorsReady = true;
@@ -173,7 +173,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		return false;
 	}, [this, cb] (FrameHandle &frame, bool success) {
 		if (!success) {
-			log::vtext("VK-Error", "Fail to doPrepareCommands");
+			log::error("VK-Error", "Fail to doPrepareCommands");
 			_valid = false;
 		}
 
@@ -273,7 +273,7 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 		invalidate();
 
 		if (!success) {
-			log::vtext("VK-Error", "Fail to vkQueueSubmit");
+			log::error("VK-Error", "Fail to vkQueueSubmit");
 		}
 		_sync = nullptr;
 	}, nullptr, false, "RenderPassHandle::doSubmit");
@@ -318,7 +318,7 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 			}
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
-			log::text("MaterialRenderPassHandle", "No set for material layout");
+			log::error("MaterialRenderPassHandle", "No set for material layout");
 		}
 	}
 }

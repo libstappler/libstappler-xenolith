@@ -20,8 +20,54 @@
  THE SOFTWARE.
  **/
 
-#include "XLVkPlatform.h"
+#include "XLApplication.h"
 
 #if ANDROID
+
+#include "android/XLPlatformAndroidActivity.h"
+
+namespace stappler::xenolith {
+
+void Application::nativeInit() {
+	auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
+
+	auto tok = activity->getMessageToken();
+	if (!tok.empty()) {
+		handleMessageToken(move(tok));
+	}
+	activity->addTokenCallback(this, [this] (StringView str) {
+		performOnMainThread([this, str = str.str<Interface>()] () mutable {
+			handleMessageToken(move(str));
+		}, this);
+	});
+
+	activity->addRemoteNotificationCallback(this, [this] (const Value &val) {
+		performOnMainThread([this, val = val] () mutable {
+			handleRemoteNotification(move(val));
+		}, this);
+	});
+}
+
+void Application::nativeDispose() {
+	auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
+
+	activity->removeTokenCallback(this);
+	activity->removeNetworkCallback(this);
+}
+
+}
+
+#endif
+
+
+#if LINUX
+
+namespace stappler::xenolith {
+
+void Application::nativeInit() { }
+
+void Application::nativeDispose() { }
+
+}
 
 #endif

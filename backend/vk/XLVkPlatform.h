@@ -23,8 +23,7 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKPLATFORM_H_
 #define XENOLITH_BACKEND_VK_XLVKPLATFORM_H_
 
-#include "XLVk.h"
-#include "XLCoreInstance.h"
+#include "XLVkInstance.h"
 
 namespace stappler::xenolith::vk::platform {
 
@@ -42,6 +41,27 @@ struct VulkanInstanceData {
 	Vector<const char *> extensionsToEnable;
 	Function<uint32_t(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx)> checkPresentationSupport;
 	Rc<Ref> userdata;
+};
+
+class FunctionTable final : public vk::LoaderTable {
+public:
+	using LoaderTable::LoaderTable;
+
+	Rc<Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &, Instance::TerminateCallback &&) const;
+
+	operator bool () const {
+		return vkGetInstanceProcAddr != nullptr
+			&& vkCreateInstance != nullptr
+			&& vkEnumerateInstanceExtensionProperties != nullptr
+			&& vkEnumerateInstanceLayerProperties != nullptr;
+	}
+
+private:
+	VulkanInstanceInfo loadInfo() const;
+	bool prepareData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
+	bool validateData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
+
+	Rc<Instance> doCreateInstance(VulkanInstanceData &, Instance::TerminateCallback &&) const;
 };
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);

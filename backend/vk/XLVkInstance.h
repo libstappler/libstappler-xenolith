@@ -49,7 +49,7 @@ public:
 			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled, Rc<Ref> &&);
 	virtual ~Instance();
 
-	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const;
+	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const override;
 
 	Rc<Device> makeDevice(const core::LoopInfo &) const;
 

@@ -56,13 +56,13 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 					|| StringView(pCallbackData->pMessage).starts_with("Device Extension: ")) {
 				return VK_FALSE;
 			}
-			log::vtext("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::verbose("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-			log::vtext("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::info("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			log::vtext("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::warn("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			log::vtext("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::error("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
 		}
 		return VK_FALSE;
 	} else {
@@ -74,19 +74,19 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 			if (StringView(pCallbackData->pMessage).starts_with("Device Extension: ")) {
 				return VK_FALSE;
 			}
-			log::vtext("Vk-Validation-Verbose", "[",
+			log::verbose("Vk-Validation-Verbose", "[",
 				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
 				"] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-			log::vtext("Vk-Validation-Info", "[",
+			log::info("Vk-Validation-Info", "[",
 				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
 				"] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			log::vtext("Vk-Validation-Warning", "[",
+			log::warn("Vk-Validation-Warning", "[",
 				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
 				"] ", pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			log::vtext("Vk-Validation-Error", "[",
+			log::error("Vk-Validation-Error", "[",
 				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
 				"] ", pCallbackData->pMessage);
 		}
@@ -111,7 +111,7 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 		debugCreateInfo.pUserData = this;
 
 		if (s_createDebugUtilsMessengerEXT(_instance, vkGetInstanceProcAddr, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
-			log::text("Vk", "failed to set up debug messenger!");
+			log::warn("Vk", "failed to set up debug messenger!");
 		}
 	}
 
@@ -151,7 +151,7 @@ Rc<core::Loop> Instance::makeLoop(core::LoopInfo &&info) const {
 Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	auto data = info.platformData.cast<LoopData>().get();
 	if (!data) {
-		log::text("vk::Instance", "Fail to create device: loop platform data is not defined");
+		log::error("vk::Instance", "Fail to create device: loop platform data is not defined");
 		return nullptr;
 	}
 
@@ -635,7 +635,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 		if (!found) {
 			if constexpr (s_printVkInfo) {
-				log::format("Vk-Info", "Required device extension not found: %s", extensionName);
+				log::verbose("Vk-Info", "Required device extension not found: %s", extensionName);
 			}
 			notFound = true;
 			break;
