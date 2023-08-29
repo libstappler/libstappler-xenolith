@@ -734,7 +734,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
 	core::GraphicPipeline *boundPipeline = nullptr;
 
-	uint32_t dynamicStateId = 0;
+	StateId dynamicStateId = maxOf<StateId>();
 	DrawStateValues dynamicState;
 
 	auto enableState = [&] (uint32_t stateId) {
@@ -744,29 +744,34 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 		auto state = commands->getState(stateId);
 		if (!state) {
-			return;
-		}
-
-		if (state->isScissorEnabled()) {
-			if (dynamicState.isScissorEnabled()) {
-				if (dynamicState.scissor != state->scissor) {
-					auto scissorRect = rotateScissor(_constraints, state->scissor);
-					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-					dynamicState.scissor = state->scissor;
-				}
-			} else {
-				dynamicState.enabled |= core::DynamicState::Scissor;
-				auto scissorRect = rotateScissor(_constraints, state->scissor);
-				buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-				dynamicState.scissor = state->scissor;
-			}
-		} else {
 			if (dynamicState.isScissorEnabled()) {
 				dynamicState.enabled &= ~(core::DynamicState::Scissor);
 				VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
 				buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
 			}
+		} else {
+			if (state->isScissorEnabled()) {
+				if (dynamicState.isScissorEnabled()) {
+					if (dynamicState.scissor != state->scissor) {
+						auto scissorRect = rotateScissor(_constraints, state->scissor);
+						buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+						dynamicState.scissor = state->scissor;
+					}
+				} else {
+					dynamicState.enabled |= core::DynamicState::Scissor;
+					auto scissorRect = rotateScissor(_constraints, state->scissor);
+					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+					dynamicState.scissor = state->scissor;
+				}
+			} else {
+				if (dynamicState.isScissorEnabled()) {
+					dynamicState.enabled &= ~(core::DynamicState::Scissor);
+					VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
+					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+				}
+			}
 		}
+
 
 		dynamicStateId = stateId;
 	};

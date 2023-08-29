@@ -25,7 +25,7 @@ LOCAL_EXECUTABLE := testapp
 
 LOCAL_ROOT = .
 
-LOCAL_SRCS_DIRS :=  src
+LOCAL_SRCS_DIRS :=  src proj.android/src
 LOCAL_SRCS_OBJS :=
 
 LOCAL_INCLUDES_DIRS := src

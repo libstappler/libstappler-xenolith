@@ -853,9 +853,13 @@ void ShadowSdfImageAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachm
 
 		_shadowDensity = d->lights.shadowDensity;
 		_sceneDensity = d->lights.sceneDensity;
+
+		auto extent = handle.getFrameConstraints().extent;
+
 		_currentImageInfo = static_cast<ImageAttachment *>(_attachment.get())->getImageInfo();
-		_currentImageInfo.extent = Extent2(std::floor((_currentImageInfo.extent.width / d->lights.sceneDensity) * _shadowDensity),
-				std::floor((_currentImageInfo.extent.height / d->lights.sceneDensity) * _shadowDensity));
+		_currentImageInfo.extent = Extent2(std::floor((extent.width / d->lights.sceneDensity) * _shadowDensity),
+				std::floor((extent.height / d->lights.sceneDensity) * _shadowDensity));
+		handle.getRequest()->addImageSpecialization(static_cast<const ImageAttachment *>(_attachment.get()), ImageInfoData(_currentImageInfo));
 		cb(true);
 	});
 }

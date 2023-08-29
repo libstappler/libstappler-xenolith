@@ -121,6 +121,10 @@ struct FrameContextHandle : public core::AttachmentInputData {
 			return nullptr;
 		}
 	}
+
+	StateId getCurrentState() const {
+		return states.empty() ? maxOf<StateId>() : stateStack.back();
+	}
 };
 
 }

@@ -651,12 +651,6 @@ void Node::onEnter(Scene *scene) {
 		_scheduler->scheduleUpdate(this, 0, _paused);
 	}
 
-	if (_frameContext && _parent && _parent->getFrameContext() != _frameContext) {
-		_frameContext->onExit();
-	} else {
-		_frameContext = nullptr;
-	}
-
 	_running = true;
 	this->resume();
 }
@@ -685,6 +679,12 @@ void Node::onExit() {
 
 	if (_onExitCallback) {
 		_onExitCallback();
+	}
+
+	if (_frameContext && _parent && _parent->getFrameContext() != _frameContext) {
+		_frameContext->onExit();
+	} else {
+		_frameContext = nullptr;
 	}
 
 	// prevent node destruction until update is ended

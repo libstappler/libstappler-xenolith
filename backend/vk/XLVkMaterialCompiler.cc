@@ -178,6 +178,15 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 			it->second.deps.emplace_back(move(iit));
 		}
 	}
+
+	if (it->second.callback) {
+		it->second.callback = [cb = move(it->second.callback), cb2 = move(req->callback)] {
+			cb();
+			cb2();
+		};
+	} else {
+		it->second.callback = move(req->callback);
+	}
 }
 
 void MaterialCompiler::clearRequests() {
@@ -215,6 +224,7 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 				for (auto &m : reqIt->second.dynamic) {
 					req->dynamicMaterialsToUpdate.emplace_back(m);
 				}
+				req->callback = move(reqIt->second.callback);
 				_requests.erase(reqIt);
 
 				runMaterialCompilationFrame(*handle.getLoop(), move(req), Vector<Rc<core::DependencyEvent>>(deps));
@@ -361,6 +371,10 @@ void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<voi
 }
 
 void MaterialCompilationPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+	if (auto &cb = _materialAttachment->getInputData()->callback) {
+		cb();
+	}
+
 	QueuePassHandle::doComplete(queue, move(func), success);
 }
 

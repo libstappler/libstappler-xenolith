@@ -41,6 +41,7 @@ struct MaterialInputData : AttachmentInputData {
 	Vector<Rc<Material>> materialsToAddOrUpdate;
 	Vector<MaterialId> materialsToRemove;
 	Vector<MaterialId> dynamicMaterialsToUpdate;
+	Function<void()> callback;
 };
 
 struct MaterialImage {

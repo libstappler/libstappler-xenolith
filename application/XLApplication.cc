@@ -79,7 +79,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 
 	_shouldQuit.test_and_set();
 	_threadId = std::this_thread::get_id();
-	_resourceCache = Rc<ResourceCache>::create();
+	_resourceCache = Rc<ResourceCache>::create(this);
 
 	auto tmpStarted = move(loopInfo.onDeviceStarted);
 	auto tmpFinalized = move(loopInfo.onDeviceFinalized);
@@ -118,6 +118,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 
 	_glLoop->waitRinning();
 
+	_resourceCache->initialize(*_glLoop);
+
 #if MODULE_XENOLITH_FONT
 	auto lib = Rc<font::FontLibrary>::create(this, _instance->makeFontQueue());
 
@@ -138,6 +140,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	_time.dt = 0.0f;
 
 	update(cb, _time);
+
+	log::debug("Application", "started");
 
 	do {
 		count = 0;
@@ -180,6 +184,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	waitForAll();
 	TaskQueue::update();
 
+	_resourceCache->invalidate();
+
 #if SP_REF_DEBUG
 	if (_glLoop->getReferenceCount() > 1) {
 		auto loop = _glLoop.get();
@@ -199,7 +205,6 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 #else
 	_glLoop = nullptr;
 #endif
-
 	_resourceCache = nullptr;
 
 	if (s_mainLoop == this) {

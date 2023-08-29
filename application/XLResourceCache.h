@@ -46,7 +46,7 @@ class ResourceCache : public Ref {
 public:
 	virtual ~ResourceCache();
 
-	bool init();
+	bool init(Application *);
 
 	void initialize(const core::Loop &);
 	void invalidate();
@@ -56,6 +56,8 @@ public:
 	void addImage(StringView, const Rc<core::ImageObject> &);
 	void addResource(const Rc<core::Resource> &);
 	void removeResource(StringView);
+
+	Application *getApplication() const { return _application; }
 
 	Rc<Texture> acquireTexture(StringView) const;
 	Rc<MeshIndex> acquireMeshIndex(StringView) const;
@@ -90,6 +92,7 @@ protected:
 	void compileResource(TemporaryResource *);
 	bool clearResource(TemporaryResource *);
 
+	Application *_application = nullptr;
 	const core::Loop *_loop = nullptr;
 	Map<StringView, core::ImageData> _images;
 	Map<StringView, Rc<core::Resource>> _resources;

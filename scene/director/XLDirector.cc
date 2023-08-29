@@ -35,7 +35,9 @@
 
 namespace stappler::xenolith {
 
-Director::Director() { }
+Director::Director() {
+	memset(&_drawStat, 0, sizeof(DrawStat));
+}
 
 Director::~Director() { }
 
@@ -56,6 +58,8 @@ bool Director::init(Application *main, const core::FrameContraints &constraints,
 	_constraints = constraints;
 
 	updateGeneralTransform();
+
+	log::verbose("Director", "init");
 
 	return true;
 }
@@ -159,6 +163,8 @@ void Director::runScene(Rc<Scene> &&scene) {
 	if (!scene) {
 		return;
 	}
+
+	log::verbose("Director", "runScene");
 
 	auto linkId = retain();
 	auto &queue = scene->getQueue();

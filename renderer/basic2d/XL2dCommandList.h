@@ -43,7 +43,7 @@ enum class CommandType : uint16_t {
 struct CmdGeneral {
 	SpanView<ZOrder> zPath;
 	core::MaterialId material = 0;
-	StateId state = 0;
+	StateId state = maxOf<StateId>();
 	RenderingLevel renderingLevel = RenderingLevel::Solid;
 	float depthValue = 0.0f;
 };
@@ -108,20 +108,20 @@ public:
 	bool init(const Rc<PoolRef> &);
 
 	void pushVertexArray(Rc<VertexData> &&, const Mat4 &,
-			SpanView<ZOrder> zPath, core::MaterialId material, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
 
 	// data should be preallocated from frame's pool
 	void pushVertexArray(SpanView<TransformVertexData>,
-			SpanView<ZOrder> zPath, core::MaterialId material, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
 
 	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, bool normalized,
-			SpanView<ZOrder> zPath, core::MaterialId material, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
 
-	void pushShadowArray(Rc<VertexData> &&, const Mat4 &, float value);
-	void pushShadowArray(SpanView<TransformVertexData>, float value);
-	void pushDeferredShadow(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, bool normalized, float value);
+	void pushShadowArray(Rc<VertexData> &&, const Mat4 &, StateId state, float value);
+	void pushShadowArray(SpanView<TransformVertexData>, StateId state, float value);
+	void pushDeferredShadow(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, StateId state, bool normalized, float value);
 
-	void pushSdfGroup(const Mat4 &model, float value, const Callback<void(CmdSdfGroup2D &)> &cb);
+	void pushSdfGroup(const Mat4 &model, StateId state, float value, const Callback<void(CmdSdfGroup2D &)> &cb);
 
 	const Command *getFirst() const { return _first; }
 	const Command *getLast() const { return _last; }
@@ -132,7 +132,6 @@ protected:
 	void addCommand(Command *);
 
 	Rc<PoolRef> _pool;
-	StateId _currentState = 0;
 	Command *_first = nullptr;
 	Command *_last = nullptr;
 };

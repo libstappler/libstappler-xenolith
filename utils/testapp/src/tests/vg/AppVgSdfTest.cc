@@ -97,7 +97,7 @@ bool VgSdfTestCircle::init(bool value) {
 void VgSdfTestCircle::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	if (_sdfShadow) {
 		auto ctx = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		ctx->shadows->pushSdfGroup(t, frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		ctx->shadows->pushSdfGroup(t, ctx->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
 			cmd.addCircle2D(_contentSize / 2.0f, min(_contentSize.width, _contentSize.height) / 2.0f);
 		});
 	} else {
@@ -129,7 +129,7 @@ bool VgSdfTestRect::init(bool value, float radius) {
 void VgSdfTestRect::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	if (_sdfShadow) {
 		auto ctx = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		ctx->shadows->pushSdfGroup(t, frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		ctx->shadows->pushSdfGroup(t, ctx->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
 			if (_radius > 0.0f) {
 				cmd.addRoundedRect2D(Rect(Vec2(0, 0), _contentSize), _radius * (_contentSize.width / 16.0f));
 			} else {
@@ -159,7 +159,7 @@ bool VgSdfTestPolygon::init(bool value) {
 void VgSdfTestPolygon::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	if (_sdfShadow) {
 		auto ctx = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		ctx->shadows->pushSdfGroup(t, frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		ctx->shadows->pushSdfGroup(t, ctx->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
 			Vec2 points[4] = {
 				Vec2(0, 0),
 				Vec2(_contentSize),
@@ -191,7 +191,7 @@ bool VgSdfTestTriangle::init(bool value) {
 void VgSdfTestTriangle::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	if (_sdfShadow) {
 		auto ctx = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		ctx->shadows->pushSdfGroup(t, frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		ctx->shadows->pushSdfGroup(t, ctx->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
 			cmd.addTriangle2D(Vec2(0, 0), Vec2(0, 0), Vec2(_contentSize.width / 2.0f, _contentSize.height), Vec2(_contentSize.width, 0));
 		});
 	} else {

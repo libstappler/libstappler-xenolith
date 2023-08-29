@@ -61,6 +61,7 @@ protected:
 		Set<MaterialId> dynamic;
 		Set<MaterialId> remove;
 		Vector<Rc<core::DependencyEvent>> deps;
+		Function<void()> callback;
 	};
 
 	const AttachmentData *_attachment = nullptr;

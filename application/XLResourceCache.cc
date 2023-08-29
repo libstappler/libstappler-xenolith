@@ -29,7 +29,8 @@ namespace stappler::xenolith {
 
 ResourceCache::~ResourceCache() { }
 
-bool ResourceCache::init() {
+bool ResourceCache::init(Application *a) {
+	_application = a;
 	return true;
 }
 
@@ -251,9 +252,10 @@ void ResourceCache::compileResource(TemporaryResource *res) {
 	if (_loop) {
 		res->setRequested(true);
 		_loop->compileResource(Rc<core::Resource>(res->getResource()),
-				[res = Rc<TemporaryResource>(res)] (bool success) mutable {
-			Application::getInstance()->performOnMainThread([res = move(res), success] {
+				[res = Rc<TemporaryResource>(res), guard = Rc<ResourceCache>(this)] (bool success) mutable {
+			guard->getApplication()->performOnMainThread([guard, res = move(res), success] {
 				res->setLoaded(success);
+				guard->getApplication()->wakeup();
 			}, nullptr, false);
 		});
 	}

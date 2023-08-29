@@ -51,12 +51,12 @@ bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 	auto prevStateId = ctx->stateStack.empty() ? maxOf<StateId>() : ctx->stateStack.back();
 	auto currentState = ctx->getState(prevStateId);
-	if (!currentState) {
+	/*if (!currentState) {
 		// invalid state
 		return Node::visitDraw(info, parentFlags);
-	}
+	}*/
 
-	auto newState = updateDynamicState(*currentState);
+	auto newState = updateDynamicState(currentState ? *currentState : DrawStateValues());
 
 	if (newState.enabled == core::DynamicState::None) {
 		// no need to enable anything, drop to 0

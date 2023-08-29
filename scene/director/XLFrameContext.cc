@@ -55,7 +55,8 @@ void FrameContext::submitHandle(FrameInfo &info, FrameContextHandle *handle) {
 }
 
 uint64_t FrameContext::getMaterial(const MaterialInfo &info) const {
-	auto it = _materials.find(info.hash());
+	auto hash = info.hash();
+	auto it = _materials.find(hash);
 	if (it != _materials.end()) {
 		for (auto &m : it->second) {
 			if (m.info == info) {
@@ -232,6 +233,9 @@ void FrameContext::submitMaterials(const FrameInfo &info) {
 			req->attachment = _materialAttachment;
 			req->materialsToAddOrUpdate = move(_pendingMaterialsToAdd);
 			req->materialsToRemove = move(_pendingMaterialsToRemove);
+			req->callback = [app = Rc<Application>(info.director->getApplication())] {
+				app->wakeup();
+			};
 
 			for (auto &it : req->materialsToRemove) {
 				emplace_ordered(_revokedIds, it);

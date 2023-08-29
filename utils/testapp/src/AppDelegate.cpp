@@ -30,14 +30,16 @@ XL_DECLARE_EVENT_CLASS(AppDelegate, onSwapchainConfig);
 
 AppDelegate::~AppDelegate() { }
 
-bool AppDelegate::init(ViewCommandLineData &&data) {
+bool AppDelegate::init(ViewCommandLineData &&data, void *native) {
 	_data = move(data);
 
 	Application::CommonInfo info({
 		.bundleName = _data.bundleName,
 		.applicationName = _data.applicationName,
 		.applicationVersion = _data.applicationVersion,
-		.userAgent = "XenolithTestApp"
+		.userAgent = _data.userAgent,
+		.locale = _data.userLanguage,
+		.nativeHandle = native
 	});
 
 	_storageParams = Value({
@@ -49,7 +51,7 @@ bool AppDelegate::init(ViewCommandLineData &&data) {
 	return GuiApplication::init(move(info));
 }
 
-void AppDelegate::run() {
+void AppDelegate::run(Function<void()> &&initCb) {
 	db::setStorageRoot(&_storageRoot);
 
 	if (_storageParams.getString("driver") == "sqlite") {
@@ -85,6 +87,7 @@ void AppDelegate::run() {
 				.name = _data.applicationName,
 				.bundleId = _data.bundleName,
 				.rect = URect(UVec2{0, 0}, _data.screenSize),
+				.density = _data.density,
 				.selectConfig = [this] (View &, const core::SurfaceInfo &info) -> core::SwapchainConfig {
 					return selectConfig(info);
 				},
@@ -96,6 +99,9 @@ void AppDelegate::run() {
 					end();
 				}
 			});
+			if (initCb) {
+				initCb();
+			}
 		},
 		.updateCallback = [&] (const Application &, const UpdateTime &time) {
 

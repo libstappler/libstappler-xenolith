@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+include ':app'
+include ':appsupport'
+include ':firebase'
+project(':appsupport').projectDir = new File('../../../platform/android/appsupport')
+project(':firebase').projectDir = new File('../../../platform/android/firebase')

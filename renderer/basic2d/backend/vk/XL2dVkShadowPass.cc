@@ -602,6 +602,13 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 
 		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 				bufferBarriers, makeSpanView(&transferImageBarrier, 1));
+	} else {
+		ImageMemoryBarrier transferImageBarrier(sdfImage,
+			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+				makeSpanView(&transferImageBarrier, 1));
 	}
 }
 

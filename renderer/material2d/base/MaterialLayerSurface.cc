@@ -225,7 +225,7 @@ void LayerSurface::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const M
 	auto shadowIndex = frame.depthStack.back();
 
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	handle->shadows->pushSdfGroup(t, shadowIndex, [&] (CmdSdfGroup2D &cmd) {
+	handle->shadows->pushSdfGroup(t, handle->getCurrentState(), shadowIndex, [&] (CmdSdfGroup2D &cmd) {
 		cmd.addRect2D(Rect(Vec2(0, 0), _contentSize));
 	});
 }

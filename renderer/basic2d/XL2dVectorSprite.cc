@@ -214,9 +214,9 @@ void VectorSprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const M
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 	if (_deferredResult) {
 		handle->shadows->pushDeferredShadow(_deferredResult, frame.viewProjectionStack.back(), transform * _targetTransform,
-				_normalized, frame.depthStack.back());
+				handle->getCurrentState(), _normalized, frame.depthStack.back());
 	} else if (!data.empty()) {
-		handle->shadows->pushShadowArray(data, frame.depthStack.back());
+		handle->shadows->pushShadowArray(data, handle->getCurrentState(), frame.depthStack.back());
 	}
 }
 
@@ -267,7 +267,7 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		}
 
 		handle->commands->pushVertexArray(makeSpanView(tmpData, targetData.size()), frame.zPath,
-				_materialId, _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+				_materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
 	} else if (_deferredResult) {
 		if (_deferredResult->isReady() && _deferredResult->getResult()->data.empty()) {
 			return;
@@ -279,7 +279,7 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 
 		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(),
 				frame.modelTransformStack.back() * _targetTransform, _normalized, frame.zPath,
-						_materialId, _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+						_materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
 	}
 }
 

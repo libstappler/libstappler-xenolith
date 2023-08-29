@@ -52,6 +52,7 @@ public:
 	const Rc<Queue> &getQueue() const;
 	const FrameContraints &getFrameConstraints() const;
 	const Rc<PoolRef> &getPool() const { return _pool; }
+	const Rc<FrameRequest> &getRequest() const { return _request; }
 
 	const ImageInfoData *getImageSpecialization(const ImageAttachment *) const;
 

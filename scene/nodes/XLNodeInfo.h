@@ -58,7 +58,7 @@ struct MaterialInfo {
 	core::PipelineMaterialInfo pipeline;
 
 	uint64_t hash() const {
-		return hash::hash64((const char *)this, sizeof(MaterialInfo));
+		return hash::hash64(reinterpret_cast<const char *>(this), sizeof(MaterialInfo));
 	}
 
 	String description() const;
@@ -67,6 +67,10 @@ struct MaterialInfo {
 	bool operator!=(const MaterialInfo &info) const = default;
 
 	bool hasImage(uint64_t id) const;
+
+	MaterialInfo() {
+		memset(this, 0, sizeof(MaterialInfo));
+	}
 };
 
 struct ZOrderLess {

@@ -305,7 +305,7 @@ void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
 
 void Sprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	handle->shadows->pushShadowArray(data, frame.depthStack.back());
+	handle->shadows->pushShadowArray(data, handle->getCurrentState(), frame.depthStack.back());
 }
 
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
@@ -330,7 +330,7 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		pushShadowCommands(frame, flags, newMV, makeSpanView(&transformData, 1));
 	}
 	handle->commands->pushVertexArray(data.get(), frame.viewProjectionStack.back() * newMV,
-			frame.zPath, _materialId, _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+			frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
 }
 
 MaterialInfo Sprite::getMaterialInfo() const {

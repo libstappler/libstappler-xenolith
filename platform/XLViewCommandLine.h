@@ -32,7 +32,7 @@ struct ViewCommandLineData {
 	String applicationName = "Xenolith";
 	String applicationVersion = "0.0.1";
 	String userLanguage = "ru-ru";
-
+	String userAgent = "XenolithTestApp";
 	String launchUrl;
 
 	Extent2 screenSize = Extent2(1024, 768);

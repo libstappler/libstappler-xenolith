@@ -37,9 +37,9 @@ public:
 
 	virtual ~AppDelegate();
 
-	virtual bool init(ViewCommandLineData &&);
+	virtual bool init(ViewCommandLineData &&, void *native = nullptr);
 
-	virtual void run();
+	virtual void run(Function<void()> &&initCb = nullptr);
 
 	using mem_std::AllocBase::operator new;
 	using mem_std::AllocBase::operator delete;

@@ -355,13 +355,10 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 }
 
 bool ComputePipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const RenderQueue &) {
-	VkComputePipelineCreateInfo pipelineInfo{}; sanitizeVkStruct(pipelineInfo);
+	VkComputePipelineCreateInfo pipelineInfo;
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
-	pipelineInfo.stage = VkPipelineShaderStageCreateInfo{
-		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0
-	};
 	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index);
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = 0;
@@ -373,10 +370,13 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 	};
 
 	Vector<SpecInfo> specs;
+	pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	pipelineInfo.stage.pNext = nullptr;
+	pipelineInfo.stage.flags = 0;
 	pipelineInfo.stage.stage = VkShaderStageFlagBits(params.shader.data->stage);
 	pipelineInfo.stage.module = params.shader.data->program.cast<Shader>()->getModule();
-
 	pipelineInfo.stage.pName = params.shader.data->entryPoints.front().name.data();
+	pipelineInfo.stage.pSpecializationInfo = nullptr;
 
 	if (!dev.getInfo().features.device10.features.shaderSampledImageArrayDynamicIndexing) {
 		for (auto &it : params.shader.data->entryPoints) {

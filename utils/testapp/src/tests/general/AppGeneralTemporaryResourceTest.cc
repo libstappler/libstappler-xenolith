@@ -90,7 +90,7 @@ void GeneralTemporaryResourceTest::onContentSizeDirty() {
 }
 
 void GeneralTemporaryResourceTest::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+	LayoutTest::onEnter(scene);
 
 	auto cache = _director->getResourceCache();
 
@@ -119,7 +119,7 @@ void GeneralTemporaryResourceTest::onEnter(Scene *scene) {
 }
 
 void GeneralTemporaryResourceTest::onExit() {
-	Node::onExit();
+	LayoutTest::onExit();
 }
 
 void GeneralTemporaryResourceTest::setResourceTimeout(float val) {
