@@ -742,8 +742,12 @@ void Node::onReorderChildDirty() {
 }
 
 void Node::cleanup() {
-	this->stopAllActions();
-	this->unscheduleUpdate();
+	if (_actionManager) {
+		this->stopAllActions();
+	}
+	if (_scheduler) {
+		this->unscheduleUpdate();
+	}
 
 	for (auto &child : _children) {
 		child->cleanup();

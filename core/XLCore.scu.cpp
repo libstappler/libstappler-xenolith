@@ -25,14 +25,20 @@
 
 #include "XLCommon.h"
 
+#ifndef XL_FRAME_EMITTER_DEBUG
 // Log events in frame emitter (frame submission/completition)
 #define XL_FRAME_EMITTER_DEBUG 0
+#endif
 
+#ifndef XL_FRAME_QUEUE_DEBUG
 // Log FrameQueue attachments and render passes state changes
 #define XL_FRAME_QUEUE_DEBUG 0
+#endif
 
+#ifndef XL_FRAME_DEBUG
 // Log FrameHandle events
 #define XL_FRAME_DEBUG 0
+#endif
 
 #if XL_FRAME_EMITTER_DEBUG
 #define XL_FRAME_EMITTER_LOG(...) log::debug("FrameEmitter", __VA_ARGS__)

@@ -52,7 +52,13 @@ void Application::nativeDispose() {
 	auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
 
 	activity->removeTokenCallback(this);
-	activity->removeNetworkCallback(this);
+	activity->removeRemoteNotificationCallback(this);
+}
+
+void Application::openUrl(StringView url) const {
+	auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
+
+	activity->openUrl(url);
 }
 
 }
@@ -62,11 +68,17 @@ void Application::nativeDispose() {
 
 #if LINUX
 
+#include <stdlib.h>
+
 namespace stappler::xenolith {
 
 void Application::nativeInit() { }
 
 void Application::nativeDispose() { }
+
+void Application::openUrl(StringView url) const {
+	::system(toString("xdg-open ", url).data());
+}
 
 }
 

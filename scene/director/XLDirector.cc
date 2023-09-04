@@ -59,8 +59,6 @@ bool Director::init(Application *main, const core::FrameContraints &constraints,
 
 	updateGeneralTransform();
 
-	log::verbose("Director", "init");
-
 	return true;
 }
 
@@ -164,7 +162,7 @@ void Director::runScene(Rc<Scene> &&scene) {
 		return;
 	}
 
-	log::verbose("Director", "runScene");
+	log::debug("Director", "runScene");
 
 	auto linkId = retain();
 	auto &queue = scene->getQueue();

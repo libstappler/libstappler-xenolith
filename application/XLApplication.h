@@ -82,7 +82,7 @@ public:
 
 	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount, TimeInterval);
 
-	virtual void end() const;
+	virtual void end();
 
 	virtual void wakeup();
 
@@ -134,6 +134,8 @@ public:
 
 	const CommonInfo &getInfo() const { return _info; }
 
+	void openUrl(StringView) const;
+
 protected:
 	void update(const CallbackInfo &, const UpdateTime &);
 
@@ -162,6 +164,14 @@ protected:
 
 	String _messageToken;
 	CommonInfo _info;
+
+	struct WaitCallbackInfo {
+		Function<void()> func;
+		Rc<Ref> target;
+		bool immediate = false;
+	};
+
+	mutable Vector<WaitCallbackInfo> _glWaitCallback;
 
 #if MODULE_XENOLITH_SCENE
 public:

@@ -172,8 +172,11 @@ void View::runWithQueue(const Rc<RenderQueue> &queue) {
 		return;
 	}
 
+	log::verbose("View", "View::runWithQueue");
+
 	auto req = Rc<FrameRequest>::create(queue, _frameEmitter, _constraints);
 	req->setOutput(a, [this] (core::FrameAttachmentData &attachment, bool success, Ref *data) {
+		log::verbose("View", "View::runWithQueue - output");
 		if (success) {
 			_initImage = move(attachment.image);
 		}

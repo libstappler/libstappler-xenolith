@@ -607,8 +607,7 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-				makeSpanView(&transferImageBarrier, 1));
+		sdfImage->setPendingBarrier(transferImageBarrier);
 	}
 }
 

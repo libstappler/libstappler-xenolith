@@ -801,7 +801,9 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 }
 
 void FrameQueue::onRenderPassComplete(FramePassData &data) {
-	_submissionTime += platform::clock(ClockType::Monotonic) - data.submitTime;
+	auto t = platform::clock(ClockType::Monotonic) - data.submitTime;;
+
+	_submissionTime += t;
 	if (_finalized) {
 		invalidate(data);
 		return;

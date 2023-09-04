@@ -40,6 +40,8 @@ public:
 	DependencyEvent(QueueSet &&);
 	DependencyEvent(InitializerList<Rc<Queue>> &&);
 
+	uint32_t getId() const { return _id; }
+
 	bool signal(Queue *, bool);
 
 	bool isSignaled() const;

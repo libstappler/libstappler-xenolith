@@ -78,6 +78,10 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 	frame.resolvedInputs.emplace(_shadowVertexAttachmentData);
 	frame.resolvedInputs.emplace(_sdfImageAttachmentData);
 
+	if (_materialDependency) {
+		handle->waitDependencies.emplace_back(_materialDependency);
+	}
+
 	frame.director->getGlLoop()->performOnGlThread(
 			[this, req = frame.request, q = _queue, dir = frame.director,
 			 h = Rc<FrameContextHandle2d>(h)] () mutable {

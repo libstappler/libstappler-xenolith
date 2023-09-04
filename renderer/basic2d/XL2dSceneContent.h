@@ -36,6 +36,9 @@ public:
 
 	virtual bool init() override;
 
+	virtual void onEnter(Scene *) override;
+	virtual void onExit() override;
+
 	virtual void onContentSizeDirty() override;
 
 	// replaced node will be alone in stack, so, no need for exit transition
@@ -98,7 +101,7 @@ protected:
 
 	Rc<FrameContext2d> _2dContext;
 
-	float _shadowDensity = 1.0f;
+	float _shadowDensity = 0.5f;
 	uint32_t _lightsAmbientCount = 0;
 	uint32_t _lightsDirectCount = 0;
 	Vector<Rc<SceneLight>> _lights;

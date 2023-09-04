@@ -108,7 +108,6 @@ public:
 	virtual ~ImageView() { }
 
 	bool init(Device &dev, VkImage, VkFormat format);
-	bool init(Device &dev, const core::AttachmentPassData &desc, Image *);
 	bool init(Device &dev, Image *, const ImageViewInfo &);
 
 	VkImageView getImageView() const { return _imageView; }

@@ -33,6 +33,8 @@
 #include "XLVkMeshCompiler.h"
 #include "XLVkMaterialCompiler.h"
 
+#define XL_VK_DEPS_DEBUG 0
+
 namespace stappler::xenolith::vk {
 
 struct DependencyRequest : public Ref {
@@ -187,13 +189,13 @@ struct Loop::Internal final : memory::AllocPool {
 					}
 					++ v->signaled;
 					if (v->signaled == v->events.size()) {
-#if XL_VK_DEBUG
+#if XL_VK_DEPS_DEBUG
 						StringStream str; str << "signalDependencies:";
 						for (auto &it : v->events) {
-							str << " " << it->id;
+							str << " " << it->getId();
 						}
 						str << "\n";
-						log::debug("vk::Loop", "Signal: " str.str());
+						log::debug("vk::Loop", "Signal: ", str.str());
 #endif
 						v->callback(iit.first->second->success);
 					}
@@ -206,12 +208,12 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void waitForDependencies(Vector<Rc<DependencyEvent>> &&events, Function<void(bool)> &&cb) {
-#if XL_VK_DEBUG
+#if XL_VK_DEPS_DEBUG
 		StringStream str; str << "waitForDependencies:";
 		for (auto &it : events) {
-			str << " " << it->id;
+			str << " " << it->getId();
 		}
-		log::debug("vk::Loop", "Wait: " str.str());
+		log::debug("vk::Loop", "Wait: ", str.str());
 #endif
 
 		auto req = Rc<DependencyRequest>::alloc();
@@ -231,8 +233,8 @@ struct Loop::Internal final : memory::AllocPool {
 		}
 
 		if (req->signaled == req->events.size()) {
-#if XL_VK_DEBUG
-			log::debug("vk::Loop", "Run: " str.str());
+#if XL_VK_DEPS_DEBUG
+			log::debug("vk::Loop", "Run: ", str.str());
 #endif
 			req->callback(req->success);
 		}

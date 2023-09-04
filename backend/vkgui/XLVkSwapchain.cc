@@ -48,6 +48,7 @@ SwapchainHandle::~SwapchainHandle() {
 	for (auto &it : _images) {
 		for (auto &v : it.views) {
 			if (v.second) {
+				v.second->runReleaseCallback();
 				v.second->invalidate();
 				v.second = nullptr;
 			}
@@ -349,6 +350,8 @@ SwapchainImage::~SwapchainImage() {
 		_swapchain = nullptr;
 		_state = State::Presented;
 	}
+	// prevent views from released
+	_views.clear();
 }
 
 bool SwapchainImage::init(Rc<SwapchainHandle> &&swapchain, uint64_t order, uint64_t presentWindow) {

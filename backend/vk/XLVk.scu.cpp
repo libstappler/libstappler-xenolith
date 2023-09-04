@@ -24,14 +24,14 @@ THE SOFTWARE.
 #include "XLCommon.h"
 #include "XLVk.h"
 
-#define XL_VK_DEBUG 0
+// Enable to log device queues acquisition
+#ifndef XL_VKDEVICE_DEBUG
 #define XL_VKDEVICE_DEBUG 0
-#define XL_VKAPI_DEBUG 0
+#endif
 
-#if XL_VK_DEBUG
-#define XL_VK_LOG(...) log::debug("Vk::Loop", __VA_ARGS__)
-#else
-#define XL_VK_LOG(...)
+// Enable to log key API calls and timings
+#ifndef XL_VKAPI_DEBUG
+#define XL_VKAPI_DEBUG 0
 #endif
 
 #if XL_VKDEVICE_DEBUG

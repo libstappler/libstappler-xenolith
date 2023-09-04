@@ -249,7 +249,7 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	};
 
 	DBusInterface();
-	~DBusInterface();
+	virtual ~DBusInterface();
 
 	DBusMessage *getSettingSync(Connection &c, const char *key, const char *value, Error &err);
 	bool parseType(DBusMessage *const reply, const int type, void *value);
@@ -390,10 +390,15 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	std::mutex eventMutex;
     Vector<Function<void()>> events;
 
-    Map<void *, Function<void(const NetworkState &)>> networkCallbacks;
+    struct StateCallback {
+    	Function<void(const NetworkState &)> callback;
+    	Rc<Ref> ref;
+    };
+
+    Map<void *, StateCallback> networkCallbacks;
 };
 
-static DBusInterface s_connection;
+static Rc<DBusInterface> s_connection = Rc<DBusInterface>::alloc();
 
 static uint32_t DBusInterface_watchFlagsToEpoll(unsigned int flags) {
 	uint32_t events = 0;
@@ -1438,13 +1443,15 @@ void DBusInterface::setNetworkState(NetworkState &&state) {
 void DBusInterface::addNetworkConnectionCallback(void *key, Function<void(const NetworkState &)> &&cb) {
 	addEvent([this, cb = move(cb), key] () mutable {
 		cb(networkState);
-		networkCallbacks.emplace(key, move(cb));
+		networkCallbacks.emplace(key, StateCallback{move(cb), this});
 	});
 }
 
 void DBusInterface::removeNetworkConnectionCallback(void *key) {
 	addEvent([this, key] () mutable {
+		auto refId = retain();
 		networkCallbacks.erase(key);
+		release(refId);
 	});
 }
 
@@ -1503,7 +1510,7 @@ String NetworkState::description() const {
 }
 
 DBusLibrary DBusLibrary::get() {
-	return DBusLibrary(&s_connection);
+	return DBusLibrary(s_connection.get());
 }
 
 bool DBusLibrary::isAvailable() const {

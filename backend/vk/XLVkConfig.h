@@ -27,11 +27,25 @@ THE SOFTWARE.
 
 namespace stappler::xenolith::config {
 
+#if ANDROID
+
+// On mobile platform, use smaller limits
+
+/* Max sampled image descriptors per material texture set (can be actually lower due maxPerStageDescriptorSampledImages) */
+static constexpr uint32_t MaxTextureSetImages = 256;
+
+/* Max buffers in buffer array */
+static constexpr uint32_t MaxBufferArrayObjects = 4;
+
+#else
+
 /* Max sampled image descriptors per material texture set (can be actually lower due maxPerStageDescriptorSampledImages) */
 static constexpr uint32_t MaxTextureSetImages = 1024;
 
 /* Max buffers in buffer array */
 static constexpr uint32_t MaxBufferArrayObjects = 64;
+
+#endif
 
 }
 

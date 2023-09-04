@@ -53,6 +53,8 @@ public:
 	virtual void stopNativeWindow() = 0;
 
 	virtual void setContentPadding(const Padding &) = 0;
+
+	virtual uint64_t getBackButtonCounter() const = 0;
 };
 
 class ViewInterfaceRef final {

@@ -56,7 +56,7 @@ void FrameEmitter::setFrameSubmitted(FrameHandle &frame) {
 		return;
 	}
 
-	XL_FRAME_EMITTER_LOG("FrameTime:        ", _frame.load(), "   ", platform::device::_clock() - _frame.load(), " mks");
+	XL_FRAME_EMITTER_LOG("FrameTime:        ", _frame.load(), "   ", platform::clock(ClockType::Monotonic) - _frame.load(), " mks");
 
 	auto it = _frames.begin();
 	while (it != _frames.end()) {
@@ -236,7 +236,7 @@ void FrameEmitter::scheduleFrameTimeout() {
 		_frameTimeoutPassed = false;
 		++ _order;
 		[[maybe_unused]] auto t = platform::clock();
-		_loop->schedule([=, guard = Rc<FrameEmitter>(this), idx = _order] (Loop &ctx) {
+		_loop->schedule([=, this, guard = Rc<FrameEmitter>(this), idx = _order] (Loop &ctx) {
 			XL_FRAME_EMITTER_LOG("TimeoutPassed:    ", _frame.load(), "   ", platform::clock() - _frame.load(), " (",
 					platform::clock(ClockType::Monotonic) - t, ") mks");
 			guard->onFrameTimeout(idx);
@@ -266,7 +266,7 @@ Rc<FrameHandle> FrameEmitter::submitNextFrame(Rc<FrameRequest> &&req) {
 			onFrameComplete(frame);
 		});
 
-		XL_FRAME_EMITTER_LOG("SubmitNextFrame:  ", _frame.load(), "   ", platform::device::_clock() - _frame.load(), " mks ", readyForSubmit);
+		XL_FRAME_EMITTER_LOG("SubmitNextFrame:  ", _frame.load(), "   ", platform::clock(ClockType::Monotonic) - _frame.load(), " mks ", readyForSubmit);
 
 		_nextFrameAcquired = false;
 		onFrameEmitted(*frame);

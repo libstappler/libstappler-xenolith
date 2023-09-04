@@ -171,49 +171,10 @@ bool Scene2d::isFpsVisible() const {
 void Scene2d::setContent(SceneContent *content) {
 	xenolith::Scene::setContent(content);
 
-	if (_content) {
-		auto mainLoop = Application::getInstance();
-
-		_fps = _content->addChild(Rc<FpsDisplay>::create(mainLoop->getExtension<font::FontController>()), Node::ZOrderMax);
-	} else {
-		_fps = nullptr;
-	}
+	addContentNodes(_content);
 }
 
 void Scene2d::initialize() {
-	do {
-		auto image = Rc<VectorImage>::create(Size2(24, 24));
-		image->addPath()->addCircle(12, 12, 12);
-
-		_pointerReal = addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
-		_pointerReal->setAnchorPoint(Anchor::Middle);
-		_pointerReal->setContentSize(Size2(12, 12));
-		_pointerReal->setColor(Color::Red_500);
-		_pointerReal->setVisible(false);
-	} while (0);
-
-	do {
-		auto image = Rc<VectorImage>::create(Size2(24, 24));
-		image->addPath()->addCircle(12, 12, 12);
-
-		_pointerVirtual = addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
-		_pointerVirtual->setAnchorPoint(Anchor::Middle);
-		_pointerVirtual->setContentSize(Size2(12, 12));
-		_pointerVirtual->setColor(Color::Blue_500);
-		_pointerVirtual->setVisible(false);
-	} while (0);
-
-	do {
-		auto image = Rc<VectorImage>::create(Size2(24, 24));
-		image->addPath()->addCircle(12, 12, 12);
-
-		_pointerCenter = addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
-		_pointerCenter->setAnchorPoint(Anchor::Middle);
-		_pointerCenter->setContentSize(Size2(12, 12));
-		_pointerCenter->setColor(Color::Green_500);
-		_pointerCenter->setVisible(false);
-	} while (0);
-
 	_listener = addInputListener(Rc<InputListener>::create());
 	_listener->addKeyRecognizer([this] (const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
@@ -240,8 +201,8 @@ void Scene2d::initialize() {
 		if ((ev.input->data.modifiers & InputModifier::Ctrl) == InputModifier::None) {
 			if (_data1.event != InputEventName::End && _data1.event != InputEventName::Cancel) {
 
-				updateInputEventData(_data1, ev.input->data, convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
-				updateInputEventData(_data2, ev.input->data, convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
+				updateInputEventData(_data1, ev.input->data, _content->convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
+				updateInputEventData(_data2, ev.input->data, _content->convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
 
 				_data1.event = InputEventName::Cancel;
 				_data2.event = InputEventName::Cancel;
@@ -257,8 +218,8 @@ void Scene2d::initialize() {
 			_listener->setExclusiveForTouch(ev.input->data.id);
 		}
 
-		updateInputEventData(_data1, ev.input->data, convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
-		updateInputEventData(_data2, ev.input->data, convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
+		updateInputEventData(_data1, ev.input->data, _content->convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
+		updateInputEventData(_data2, ev.input->data, _content->convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
 
 		Vector<InputEventData> events{ _data1, _data2 };
 
@@ -270,19 +231,87 @@ void Scene2d::initialize() {
 	_listener->addTapRecognizer([this] (const GestureTap &tap) {
 		if ((tap.input->data.modifiers & InputModifier::Shift) != InputModifier::None
 				&& (tap.input->data.modifiers & InputModifier::Ctrl) != InputModifier::None) {
-			_pointerCenter->setPosition(convertToNodeSpace(tap.input->currentLocation));
+			_pointerCenter->setPosition(_content->convertToNodeSpace(tap.input->currentLocation));
 		}
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}), 1);
 
 	_listener->addMoveRecognizer([this] (const GestureData &ev) {
-		auto pos = convertToNodeSpace(ev.input->currentLocation);
+		auto pos = _content->convertToNodeSpace(ev.input->currentLocation);
 		auto diff = pos - _pointerCenter->getPosition().xy();
 
 		_pointerReal->setPosition(pos);
 		_pointerVirtual->setPosition(pos - diff * 2.0f);
 		return true;
 	});
+
+#if NDEBUG
+	_listener->setEnabled(false);
+#endif
+}
+
+void Scene2d::addContentNodes(SceneContent *root) {
+	if (_fps) {
+		_fps->removeFromParent(true);
+		_fps = nullptr;
+	}
+
+	if (_pointerReal) {
+		_pointerReal->removeFromParent(true);
+		_pointerReal = nullptr;
+	}
+
+	if (_pointerVirtual) {
+		_pointerVirtual->removeFromParent(true);
+		_pointerVirtual = nullptr;
+	}
+
+	if (_pointerCenter) {
+		_pointerCenter->removeFromParent(true);
+		_pointerCenter = nullptr;
+	}
+
+	if (root) {
+		auto mainLoop = Application::getInstance();
+
+		_fps = root->addChild(Rc<FpsDisplay>::create(mainLoop->getExtension<font::FontController>()), Node::ZOrderMax);
+#if NDEBUG
+		_fps->setVisible(false);
+#endif
+
+		do {
+			auto image = Rc<VectorImage>::create(Size2(24, 24));
+			image->addPath()->addCircle(12, 12, 12);
+
+			_pointerReal = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
+			_pointerReal->setAnchorPoint(Anchor::Middle);
+			_pointerReal->setContentSize(Size2(12, 12));
+			_pointerReal->setColor(Color::Red_500);
+			_pointerReal->setVisible(false);
+		} while (0);
+
+		do {
+			auto image = Rc<VectorImage>::create(Size2(24, 24));
+			image->addPath()->addCircle(12, 12, 12);
+
+			_pointerVirtual = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
+			_pointerVirtual->setAnchorPoint(Anchor::Middle);
+			_pointerVirtual->setContentSize(Size2(12, 12));
+			_pointerVirtual->setColor(Color::Blue_500);
+			_pointerVirtual->setVisible(false);
+		} while (0);
+
+		do {
+			auto image = Rc<VectorImage>::create(Size2(24, 24));
+			image->addPath()->addCircle(12, 12, 12);
+
+			_pointerCenter = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
+			_pointerCenter->setAnchorPoint(Anchor::Middle);
+			_pointerCenter->setContentSize(Size2(12, 12));
+			_pointerCenter->setColor(Color::Green_500);
+			_pointerCenter->setVisible(false);
+		} while (0);
+	}
 }
 
 void Scene2d::updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 sourcePosition, uint32_t id) {

@@ -132,7 +132,7 @@ public:
 
 	virtual void retainBackButton();
 	virtual void releaseBackButton();
-	uint64_t getBackButtonCounter() const { return _backButtonCounter; }
+	virtual uint64_t getBackButtonCounter() const override { return _backButtonCounter; }
 
 	virtual void setDecorationTone(float); // 0.0 - 1.0
 	virtual void setDecorationVisible(bool);

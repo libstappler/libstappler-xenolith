@@ -403,6 +403,7 @@ struct VertexMaterialDrawPlan {
 					if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
 						t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
 						t.tex = d->tex;
+						t.object = 0;
 					} else {
 	#if DEBUG
 						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
@@ -535,7 +536,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	auto t = platform::clock();
 
 	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
-	plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
+	//plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
 
 	auto cmd = commands->commands->getFirst();
 	while (cmd) {
@@ -776,7 +777,22 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		dynamicStateId = stateId;
 	};
 
+	/*static size_t ctrl = 0;
+
+	size_t i = 0;
+	size_t min = 0;
+	size_t max = (ctrl ++) % 12;*/
+
 	for (auto &materialVertexSpan : _vertexBuffer->getVertexData()) {
+		/*if (i < min) {
+			++ i;
+			continue;
+		}
+		if (i >= max) {
+			break;
+		}*/
+
+		//++ i;
 		auto materialOrderIdx = materials->getMaterialOrder(materialVertexSpan.material);
 		auto material = materials->getMaterialById(materialVertexSpan.material);
 		if (!material) {

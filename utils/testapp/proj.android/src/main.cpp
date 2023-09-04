@@ -45,6 +45,7 @@ void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_
 			.applicationVersion = move(info.applicationVersion),
 			.userLanguage = move(info.locale),
 			.userAgent = move(info.systemAgent),
+			.screenSize = Extent2 (info.sizeInPixels.width, info.sizeInPixels.height),
 			.density = info.density
 		});
 

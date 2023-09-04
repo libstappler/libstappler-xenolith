@@ -44,6 +44,8 @@ public:
 
 	virtual void onForeground(SceneContent2d *l, SceneLayout2d *overlay) override;
 
+	LayerSurface *getBackground() const { return _background; }
+
 protected:
 	virtual void updateStatusBar(const SurfaceStyleData &style);
 

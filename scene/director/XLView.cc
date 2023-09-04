@@ -44,6 +44,9 @@ bool View::init(Application &loop, ViewInfo &&info) {
 	_constraints.contentPadding = info.decoration;
 	_frameEmitter = Rc<FrameEmitter>::create(_glLoop, info.frameInterval);
 	_info = move(info);
+
+	log::debug("View", "init");
+
 	return true;
 }
 

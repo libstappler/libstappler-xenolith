@@ -100,8 +100,18 @@ void UtilsAssetTest::performTest() {
 }
 
 void UtilsAssetTest::handleAssetUpdate(SubscriptionFlags flags) {
-	if (auto a = _listener->getSubscription()) {
-		_progress->setValue(a->getProgress());
+	if (storage::Asset *a = _listener->getSubscription()) {
+		if (a->isDownloadInProgress()) {
+			_runButton->setText("In progress");
+			_progress->setValue(a->getProgress());
+		} else {
+			if (a->getReadableVersion()) {
+				_runButton->setText("Available");
+			} else {
+				_runButton->setText("Run");
+			}
+			_progress->setValue(1.0f);
+		}
 	}
 }
 

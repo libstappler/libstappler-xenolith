@@ -61,6 +61,7 @@ struct Controller::Data final : thread::ThreadInterface<Interface> {
 	virtual ~Data();
 
 	bool init();
+	void invalidate();
 
 	virtual void threadInit() override;
 	virtual bool worker() override;
@@ -88,21 +89,25 @@ XL_DECLARE_EVENT(Controller, "network::Controller", onNetworkCapabilities);
 
 Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &&signKey)
 : _application(app), _controller(c), _name(name.str<Interface>()), _signKey(move(signKey)) {
+
+}
+
+Controller::Data::~Data() {
+}
+
+bool Controller::Data::init() {
 	registerNetworkCallback(_application, this, [this] (NetworkCapabilities cap) {
 		_application->performOnMainThread([this, cap] {
 			_capabilities = cap;
 			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
 		}, this);
 	});
-}
-
-Controller::Data::~Data() {
-	unregisterNetworkCallback(_application, this);
-}
-
-bool Controller::Data::init() {
 	_thread = std::thread(Controller::Data::workerThread, this, nullptr);
 	return true;
+}
+
+void Controller::Data::invalidate() {
+	unregisterNetworkCallback(_application, this);
 }
 
 void Controller::Data::threadInit() {

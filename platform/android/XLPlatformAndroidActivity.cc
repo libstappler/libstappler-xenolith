@@ -301,6 +301,19 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 		}
 	}
 
+	_startActivityMethod = _activity->env->GetMethodID(activityClass, "startActivity", "(Landroid/content/Intent;)V");
+
+	auto intentClass = _activity->env->FindClass("android/content/Intent");
+	auto uriClass = _activity->env->FindClass("android/net/Uri");
+
+	_intentInitMethod = _activity->env->GetMethodID(intentClass, "<init>", "(Ljava/lang/String;Landroid/net/Uri;)V");
+	_intentAddFlagsMethod = _activity->env->GetMethodID(intentClass, "addFlags", "(I)Landroid/content/Intent;");
+	_intentActionView = _activity->env->GetStaticFieldID(intentClass, "ACTION_VIEW", "Ljava/lang/String;");
+	_uriParseMethod = _activity->env->GetStaticMethodID(uriClass, "parse", "(Ljava/lang/String;)Landroid/net/Uri;");
+
+	_activity->env->DeleteLocalRef(uriClass);
+	_activity->env->DeleteLocalRef(intentClass);
+
 	checkJniError(_activity->env);
 
 	_activity->env->DeleteLocalRef(activityClass);
@@ -362,13 +375,13 @@ void Activity::setNetworkCapabilities(NetworkCapabilities cap) {
 	std::unique_lock lock(_callbackMutex);
 	_capabilities = cap;
 	for (auto &it : _networkCallbacks) {
-		it.second(_capabilities);
+		it.second.second(_capabilities);
 	}
 }
 
 void Activity::addNetworkCallback(void *key, Function<void(NetworkCapabilities)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_networkCallbacks.emplace(key, move(cb));
+	_networkCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
 }
 
 void Activity::removeNetworkCallback(void *key) {
@@ -378,7 +391,7 @@ void Activity::removeNetworkCallback(void *key) {
 
 void Activity::addRemoteNotificationCallback(void *key, Function<void(const Value &)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_notificationCallbacks.emplace(key, move(cb));
+	_notificationCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
 }
 
 void Activity::removeRemoteNotificationCallback(void *key) {
@@ -388,7 +401,7 @@ void Activity::removeRemoteNotificationCallback(void *key) {
 
 void Activity::addTokenCallback(void *key, Function<void(StringView)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_tokenCallbacks.emplace(key, move(cb));
+	_tokenCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
 }
 
 void Activity::removeTokenCallback(void *key) {
@@ -421,7 +434,7 @@ void Activity::setMessageToken(StringView str) {
 	if (_messageToken != str) {
 		_messageToken = str.str<Interface>();
 		for (auto &it : _tokenCallbacks) {
-			it.second(_messageToken);
+			it.second.second(_messageToken);
 		}
 	}
 }
@@ -429,7 +442,7 @@ void Activity::setMessageToken(StringView str) {
 void Activity::handleRemoteNotification(const Value &val) {
 	std::unique_lock lock(_callbackMutex);
 	for (auto &it : _notificationCallbacks) {
-		it.second(val);
+		it.second.second(val);
 	}
 }
 
@@ -1157,12 +1170,28 @@ platform::ViewInterface *Activity::waitForView() {
 			return _rootViewTmp != nullptr;
 		});
 		_rootView = move(_rootViewTmp);
-		//_rootView->setActivity(this);
 	}
 	return _rootView;
 }
 
-void Activity::openUrl(StringView url) { }
+void Activity::openUrl(StringView url) {
+	auto intentClass = _activity->env->FindClass("android/content/Intent");
+	auto uriClass = _activity->env->FindClass("android/net/Uri");
+
+	auto j_str = _activity->env->NewStringUTF(url.data());
+	auto j_uri = _activity->env->CallStaticObjectMethod(uriClass, _uriParseMethod, j_str);
+	auto j_ACTION_VIEW = _activity->env->GetStaticObjectField(intentClass, _intentActionView);
+
+	auto j_intent = _activity->env->NewObject(intentClass, _intentInitMethod, j_ACTION_VIEW, j_uri);
+	_activity->env->CallObjectMethod(j_intent, _intentAddFlagsMethod, FLAG_ACTIVITY_NEW_TASK);
+	_activity->env->CallVoidMethod(_activity->clazz, _startActivityMethod, j_intent);
+
+	_activity->env->DeleteLocalRef(j_intent);
+	_activity->env->DeleteLocalRef(j_ACTION_VIEW);
+	_activity->env->DeleteLocalRef(j_str);
+	_activity->env->DeleteLocalRef(uriClass);
+	_activity->env->DeleteLocalRef(intentClass);
+}
 
 void Activity::transferInputEvent(const core::InputEventData &event) {
 	if (_rootView) {
@@ -1183,6 +1212,9 @@ void Activity::updateView() {
 }
 
 bool Activity::handleBackButton() {
+	if (_rootView->getBackButtonCounter() != 0) {
+		return false;
+	}
 	return true;
 }
 

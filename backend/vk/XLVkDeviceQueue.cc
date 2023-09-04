@@ -85,19 +85,19 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	submitInfo.pSignalSemaphores = signalSem.data();
 
 #if XL_VKAPI_DEBUG
-	auto t = platform::device::_clock(platform::device::Monotonic);
+	auto t = platform::clock(core::ClockType::Monotonic);
 	fence.addRelease([frameIdx = _frameIdx, t] (bool success) {
 		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", platform::device::_clock(platform::device::Monotonic) - t, "]");
+				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
 	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-		auto t = platform::device::_clock(platform::device::Monotonic);
+		auto t = platform::clock(core::ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
-				" [", platform::device::_clock(platform::device::Monotonic) - t, "]");
+				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif
@@ -173,16 +173,16 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers) 
 	[[maybe_unused]] auto t = platform::clock(core::ClockType::Monotonic);
 	fence.addRelease([=] (bool success) {
 		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", platform::device::_clock(platform::device::Monotonic) - t, "]");
+				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
 	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-		auto t = platform::device::_clock(platform::device::Monotonic);
+		auto t = platform::clock(core::ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
-				" [", platform::device::_clock(platform::device::Monotonic) - t, "]");
+				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif

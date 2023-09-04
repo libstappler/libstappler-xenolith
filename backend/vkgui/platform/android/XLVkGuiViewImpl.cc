@@ -51,8 +51,8 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 		return false;
 	}
 
-	_options.presentImmediate = true;
-	_options.acquireImageImmediately = true;
+	_options.presentImmediate = false;
+	_options.acquireImageImmediately = false;
 	_options.renderOnDemand = true;
 
 	return true;

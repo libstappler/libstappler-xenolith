@@ -123,14 +123,6 @@ struct Server::ServerData : public thread::ThreadInterface<Interface> {
 };
 
 Server::~Server() {
-	if (_data) {
-		for (auto &it : _data->appComponents) {
-			it.second->handleComponentsUnloaded(*this);
-		}
-		auto serverPool = _data->serverPool;
-		_data->~ServerData();
-		memory::pool::destroy(serverPool);
-	}
 }
 
 bool Server::init(Application *app, const Value &params) {
@@ -175,7 +167,16 @@ void Server::initialize(Application *) {
 }
 
 void Server::invalidate(Application *) {
+	if (_data) {
+		for (auto &it : _data->appComponents) {
+			it.second->handleComponentsUnloaded(*this);
+		}
 
+		auto serverPool = _data->serverPool;
+		_data->~ServerData();
+		memory::pool::destroy(serverPool);
+		_data = nullptr;
+	}
 }
 
 void Server::update(Application *, const UpdateTime &t) {
@@ -209,6 +210,10 @@ bool Server::addComponentContainer(const Rc<ComponentContainer> &comp) {
 }
 
 bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
+	if (!_data) {
+		return false;
+	}
+
 	auto it = _data->appComponents.find(comp->getName());
 	if (it == _data->appComponents.end()) {
 		log::error("storage::Server", "Component with name ", comp->getName(), " is not loaded");
@@ -220,8 +225,10 @@ bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
 		return false;
 	}
 
-	perform([this, comp] (const Server &serv, const db::Transaction &t) -> bool {
+	auto refId = _data->application->retain();
+	perform([this, comp, refId] (const Server &serv, const db::Transaction &t) -> bool {
 		_data->removeComponent(comp, t);
+		_data->application->release(refId);
 		return true;
 	}, comp);
 	_data->appComponents.erase(it);

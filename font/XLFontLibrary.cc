@@ -239,7 +239,10 @@ void FontLibrary::initialize(Application *) {
 
 void FontLibrary::invalidate(Application *) {
 	std::unique_lock uniqueLock(_sharedMutex);
+
 	_threads.clear();
+	_faces.clear();
+	_data.clear();
 
 	_queue = nullptr;
 	_mainLoop = nullptr;
@@ -489,8 +492,8 @@ void FontLibrary::updateImage(const Rc<core::DynamicImage> &image, Vector<font::
 		break;
 	}
 
-	_glLoop->runRenderQueue(move(req), 0, [this] (bool success) {
-		_mainLoop->wakeup();
+	_glLoop->runRenderQueue(move(req), 0, [this, app = Rc<Application>(_mainLoop)] (bool success) {
+		app->wakeup();
 	});
 }
 

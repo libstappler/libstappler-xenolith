@@ -59,12 +59,18 @@ Application::~Application() {
 	}
 
 	_instance = nullptr;
+
+	if (s_mainLoop == this) {
+		s_mainLoop = nullptr;
+	}
 }
 
 bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 	if (instance == nullptr) {
 		return false;
 	}
+
+	s_mainLoop = this;
 
 	_info = move(info);
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
@@ -75,8 +81,6 @@ bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 }
 
 void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_t threadsCount, TimeInterval iv) {
-	s_mainLoop = this;
-
 	_shouldQuit.test_and_set();
 	_threadId = std::this_thread::get_id();
 	_resourceCache = Rc<ResourceCache>::create(this);
@@ -99,7 +103,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		}
 	};
 
-	_glLoop = _instance->makeLoop(move(loopInfo));
+	auto loop = _instance->makeLoop(move(loopInfo));
 
 	if (!spawnWorkers(thread::TaskQueue::Flags::Waitable, 0, threadsCount, _name)) {
 		log::error("MainLoop", "Fail to spawn worker threads");
@@ -116,9 +120,16 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 
 	nativeInit();
 
-	_glLoop->waitRinning();
+	loop->waitRinning();
+
+	_glLoop = move(loop);
 
 	_resourceCache->initialize(*_glLoop);
+
+	for (auto &it : _glWaitCallback) {
+		_glLoop->performOnGlThread(move(it.func), it.target, it.immediate);
+	}
+	_glWaitCallback.clear();
 
 #if MODULE_XENOLITH_FONT
 	auto lib = Rc<font::FontLibrary>::create(this, _instance->makeFontQueue());
@@ -207,15 +218,14 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 #endif
 	_resourceCache = nullptr;
 
-	if (s_mainLoop == this) {
-		s_mainLoop = nullptr;
-	}
-
 	cancelWorkers();
 }
 
-void Application::end() const {
+void Application::end()  {
 	_shouldQuit.clear();
+	if (!isOnMainThread()) {
+		wakeup();
+	}
 }
 
 void Application::wakeup() {
@@ -243,7 +253,11 @@ bool Application::isOnMainThread() const {
 }
 
 void Application::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
-	_glLoop->performOnGlThread(move(func), target, immediate);
+	if (_glLoop) {
+		_glLoop->performOnGlThread(move(func), target, immediate);
+	} else {
+		_glWaitCallback.emplace_back(WaitCallbackInfo{move(func), target, immediate});
+	}
 }
 
 void Application::performOnMainThread(Function<void()> &&func, Ref *target, bool onNextFrame) {
@@ -338,6 +352,8 @@ void Application::update(const CallbackInfo &cb, const UpdateTime &t) {
 }
 
 void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
+	log::debug("Application", "handleDeviceStarted");
+
 	auto emptyObject = dev.getEmptyImageObject();
 	auto solidObject = dev.getSolidImageObject();
 
@@ -376,11 +392,7 @@ void Application::handleRemoteNotification(Value &&val) {
 
 #if MODULE_XENOLITH_SCENE
 bool Application::addView(ViewInfo &&info) {
-	if (!_glLoop) {
-		return false;
-	}
-
-	_glLoop->performOnGlThread([this, info = move(info)] () mutable {
+	performOnGlThread([this, info = move(info)] () mutable {
 		if (_device) {
 			if (info.onClosed) {
 				auto tmp = move(info.onClosed);

@@ -502,7 +502,11 @@ void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
 	pool->reset(*this);
 
 	std::unique_lock<Mutex> lock(_resourceMutex);
-	_families[pool->getFamilyIdx()].pools.emplace_back(Rc<CommandPool>(pool));
+	for (auto &it : _families) {
+		if (it.index == pool->getFamilyIdx()) {
+			it.pools.emplace_back(Rc<CommandPool>(pool));
+		}
+	}
 }
 
 static BytesView Device_emplaceConstant(Bytes &data, BytesView constant) {

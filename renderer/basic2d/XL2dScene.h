@@ -49,6 +49,7 @@ public:
 
 protected:
 	void initialize();
+	void addContentNodes(SceneContent *);
 
 	void updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 pos, uint32_t id);
 

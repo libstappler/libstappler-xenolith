@@ -98,8 +98,7 @@ bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceIn
 			}
 
 			if (!layerFound) {
-				log::error("Vk", "Required validation layer not found: ", layerName);
-				return false;
+				log::error("Vk", "Validation layer not found: ", layerName);
 			}
 		}
 	}
@@ -144,7 +143,6 @@ bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceIn
 
 		if (!debugExt) {
 			log::error("Vk", "Required extension not found: ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			return false;
 		}
 	}
 

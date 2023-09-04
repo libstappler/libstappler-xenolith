@@ -86,6 +86,8 @@ public:
 	static constexpr StringView NetworkConnectivityClassName = "org.stappler.xenolith.appsupport.NetworkConnectivity";
 	static constexpr StringView NetworkConnectivityClassPath = "org/stappler/xenolith/appsupport/NetworkConnectivity";
 
+	static constexpr int FLAG_ACTIVITY_NEW_TASK =  268435456;
+
 	Activity();
 	virtual ~Activity();
 
@@ -122,6 +124,8 @@ public:
 	virtual void addComponent(Rc<ActivityComponent> &&);
 
 	void handleActivityResult(jint request_code, jint result_code, jobject data);
+
+	virtual void openUrl(StringView url);
 
 protected:
 	struct InputLooperData {
@@ -168,12 +172,16 @@ protected:
 
 	platform::ViewInterface *waitForView();
 
-	virtual void openUrl(StringView url);
-
 	virtual void transferInputEvent(const core::InputEventData &);
 	virtual void transferInputEvents(Vector<core::InputEventData> &&);
 	virtual void updateView();
 	virtual bool handleBackButton();
+
+	jmethodID _startActivityMethod;
+	jmethodID _intentInitMethod;
+	jmethodID _uriParseMethod;
+	jmethodID _intentAddFlagsMethod;
+	jfieldID _intentActionView;
 
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;
@@ -208,9 +216,9 @@ protected:
 	mutable std::mutex _callbackMutex;
 	String _messageToken;
 	NetworkCapabilities _capabilities = NetworkCapabilities::None;
-	Map<void *, Function<void(NetworkCapabilities)>> _networkCallbacks;
-	Map<void *, Function<void(const Value &)>> _notificationCallbacks;
-	Map<void *, Function<void(StringView)>> _tokenCallbacks;
+	Map<void *, Pair<Rc<Ref>, Function<void(NetworkCapabilities)>>> _networkCallbacks;
+	Map<void *, Pair<Rc<Ref>, Function<void(const Value &)>>> _notificationCallbacks;
+	Map<void *, Pair<Rc<Ref>, Function<void(StringView)>>> _tokenCallbacks;
 
 	Value _drawables;
 	Vector<Rc<ActivityComponent>> _components;
