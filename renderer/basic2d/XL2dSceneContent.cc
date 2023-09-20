@@ -21,11 +21,13 @@
  **/
 
 #include "XL2dSceneContent.h"
+#include "XL2dScene.h"
 #include "XL2dFrameContext.h"
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneLight.h"
 #include "XLDirector.h"
 #include "XLView.h"
+#include "XLFrameInfo.h"
 
 namespace stappler::xenolith::basic2d {
 

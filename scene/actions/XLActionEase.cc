@@ -398,8 +398,6 @@ float bezieratFunction(float t, float x1, float y1, float x2, float y2) {
     float start = 0.0f;
     float end = 1.0f;
 
-    uint32_t iter = 0;
-
     while (true) {
     	const float midpoint = (start + end) / 2;
     	const float estimate = evaluateCubic(midpoint, x1, x2);
@@ -411,7 +409,6 @@ float bezieratFunction(float t, float x1, float y1, float x2, float y2) {
 		} else {
 			end = midpoint;
 		}
-		++ iter;
     }
     return nan();
 }

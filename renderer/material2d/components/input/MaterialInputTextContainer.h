@@ -25,6 +25,7 @@
 
 #include "MaterialLabel.h"
 #include "XLTextInputManager.h"
+#include "XL2dLayer.h"
 
 namespace stappler::xenolith::material2d {
 

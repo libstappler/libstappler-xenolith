@@ -24,6 +24,10 @@
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
 #include "XLVkAttachment.h"
+#include "XLVkTextureSet.h"
+#include "XLVkBuffer.h"
+#include "XLCoreAttachment.h"
+#include "XLCoreFrameQueue.h"
 #include <forward_list>
 
 namespace stappler::xenolith::vk {
@@ -438,9 +442,13 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 		default:
 			if (desc->loadOp == core::AttachmentLoadOp::Clear) {
 				auto c = imageAttachment->getClearColor();
-				_clearValues.emplace_back(VkClearValue{c.r, c.g, c.b, c.a});
+				VkClearValue clearValue;
+				clearValue.color = VkClearColorValue{{c.r, c.g, c.b, c.a}};
+				_clearValues.emplace_back(clearValue);
 			} else {
-				_clearValues.emplace_back(VkClearValue{0.0f, 0.0f, 0.0f, 1.0f});
+				VkClearValue clearValue;
+				clearValue.color = VkClearColorValue{{0.0f, 0.0f, 0.0f, 1.0f}};
+				_clearValues.emplace_back(clearValue);
 			}
 			break;
 		}

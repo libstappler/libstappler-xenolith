@@ -21,6 +21,8 @@ THE SOFTWARE.
 **/
 
 // Generated with embedder
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
 
 #pragma once
 const uint32_t s_font_RobotoMono_VariableFont[] = {

@@ -265,7 +265,7 @@ bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) {
 			return true;
 		});
 	} else {
-		return perform([this, key = key.view().bytes<Interface>(), data = move(data)] (const Server &serv, const db::Transaction &t) {
+		return perform([key = key.view().bytes<Interface>(), data = move(data)] (const Server &serv, const db::Transaction &t) {
 			t.getAdapter().set(key, data);
 			return true;
 		});
@@ -285,7 +285,7 @@ bool Server::clear(CoderSource key, DataCallback &&cb) {
 			return true;
 		});
 	} else {
-		return perform([this, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
+		return perform([key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
 			t.getAdapter().clear(key);
 			return true;
 		});
@@ -563,7 +563,7 @@ bool Server::create(const Scheme &scheme, Value &&data, DataCallback &&cb, db::U
 			return true;
 		});
 	} else {
-		return perform([this, scheme = &scheme, data = move(data), flags, conflict] (const Server &serv, const db::Transaction &t) {
+		return perform([scheme = &scheme, data = move(data), flags, conflict] (const Server &serv, const db::Transaction &t) {
 			scheme->create(t, data, flags | db::UpdateFlags::NoReturn, conflict);
 			return true;
 		});
@@ -583,7 +583,7 @@ bool Server::update(const Scheme &scheme, uint64_t oid, Value &&data, DataCallba
 			return true;
 		});
 	} else {
-		return perform([this, scheme = &scheme, oid, data = move(data), flags] (const Server &serv, const db::Transaction &t) {
+		return perform([scheme = &scheme, oid, data = move(data), flags] (const Server &serv, const db::Transaction &t) {
 			db::Value patch(data);
 			scheme->update(t, oid, patch, flags | db::UpdateFlags::NoReturn);
 			return true;
@@ -605,7 +605,7 @@ bool Server::update(const Scheme &scheme, const Value & obj, Value &&data, DataC
 			return true;
 		});
 	} else {
-		return perform([this, scheme = &scheme, obj, data = move(data), flags] (const Server &serv, const db::Transaction &t) {
+		return perform([scheme = &scheme, obj, data = move(data), flags] (const Server &serv, const db::Transaction &t) {
 			db::Value value(obj);
 			db::Value patch(data);
 			scheme->update(t, value, patch, flags | db::UpdateFlags::NoReturn);
@@ -626,7 +626,7 @@ bool Server::remove(const Scheme &scheme, uint64_t oid, Function<void(bool)> &&c
 			return true;
 		});
 	} else {
-		return perform([this, scheme = &scheme, oid] (const Server &serv, const db::Transaction &t) {
+		return perform([scheme = &scheme, oid] (const Server &serv, const db::Transaction &t) {
 			scheme->remove(t, oid);
 			return true;
 		});
@@ -676,14 +676,14 @@ bool Server::count(const Scheme &scheme, Function<void(size_t)> &&cb, QueryCallb
 }
 
 bool Server::touch(const Scheme &scheme, uint64_t id) const {
-	return perform([this, scheme = &scheme, id] (const Server &serv, const db::Transaction &t) {
+	return perform([scheme = &scheme, id] (const Server &serv, const db::Transaction &t) {
 		scheme->touch(t, id);
 		return true;
 	});
 }
 
 bool Server::touch(const Scheme &scheme, const Value & obj) const {
-	return perform([this, scheme = &scheme, obj] (const Server &serv, const db::Transaction &t) {
+	return perform([scheme = &scheme, obj] (const Server &serv, const db::Transaction &t) {
 		db::Value value(obj);
 		scheme->touch(t, value);
 		return true;

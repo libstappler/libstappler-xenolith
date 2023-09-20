@@ -23,7 +23,7 @@
 #ifndef XENOLITH_FONT_XLFONTLABELBASE_H_
 #define XENOLITH_FONT_XLFONTLABELBASE_H_
 
-#include "../application/XLApplicationInfo.h"
+#include "XLApplicationInfo.h"
 #include "XLFontLibrary.h"
 #include "SPMetastring.h"
 #include "XLFontFormatter.h"

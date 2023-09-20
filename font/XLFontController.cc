@@ -180,7 +180,15 @@ Vector<const FontController::FamilyQuery *> FontController::Builder::getFontFami
 	return families;
 }
 
-Map<String, String> FontController::Builder::getAliases() const {
+Map<String, FontController::FontSource> &FontController::Builder::getDataQueries() {
+	return _data->dataQueries;
+}
+
+Map<String, FontController::FamilyQuery> &FontController::Builder::getFamilyQueries() {
+	return _data->familyQueries;
+}
+
+Map<String, String> &FontController::Builder::getAliases() {
 	return _data->aliases;
 }
 

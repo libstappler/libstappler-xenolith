@@ -29,6 +29,9 @@ THE SOFTWARE.
 
 namespace stappler::xenolith::core {
 
+template <typename T>
+static T * Resource_conditionalInsert(HashTable<T *> &vec, StringView key, const Callback<T *()> &cb, memory::pool_t *pool);
+
 static void Queue_buildLoadStore(QueueData *data) {
 	for (auto &attachment : data->attachments) {
 		if (attachment->type != AttachmentType::Image) {

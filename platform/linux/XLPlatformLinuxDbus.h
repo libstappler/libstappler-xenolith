@@ -56,7 +56,7 @@ enum NMMetered {
 
 namespace stappler::xenolith::platform {
 
-class DBusInterface;
+struct DBusInterface;
 
 struct InterfaceThemeInfo {
 	static constexpr auto DefaultCursorTheme = "Yaru";

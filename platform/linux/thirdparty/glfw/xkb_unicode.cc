@@ -66,6 +66,9 @@
 //****                KeySym to Unicode mapping table                 ****
 //************************************************************************
 
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
+
 #if LINUX
 
 #include <stdint.h>

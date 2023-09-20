@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "XLVkPipeline.h"
 #include "XLVkDevice.h"
+#include "XLVkRenderPass.h"
 
 namespace stappler::xenolith::vk {
 

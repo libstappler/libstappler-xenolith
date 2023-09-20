@@ -45,8 +45,8 @@ class Framebuffer;
 class GraphicPipeline;
 class ComputePipeline;
 class CommandBuffer;
-class DescriptorSet;
 class DeviceMemoryPool;
+struct DescriptorSet;
 
 using PipelineDescriptor = core::PipelineDescriptor;
 

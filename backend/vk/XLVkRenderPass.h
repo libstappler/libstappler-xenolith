@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define XENOLITH_BACKEND_VK_XLVKRENDERPASSIMPL_H_
 
 #include "XLVk.h"
+#include "XLVkDeviceQueue.h"
 #include "XLCoreQueuePass.h"
 #include "XLCoreObject.h"
 

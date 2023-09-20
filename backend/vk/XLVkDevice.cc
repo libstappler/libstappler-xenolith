@@ -30,6 +30,10 @@ THE SOFTWARE.
 #include "XLCoreFrameRequest.h"
 #include "XLVkRenderPass.h"
 
+#ifndef XL_VKDEVICE_LOG
+#define XL_VKDEVICE_LOG(...)
+#endif
+
 namespace stappler::xenolith::vk {
 
 DeviceFrameHandle::~DeviceFrameHandle() {

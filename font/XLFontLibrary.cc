@@ -343,7 +343,7 @@ Rc<FontController> FontLibrary::acquireController(FontController::Builder &&b) {
 			}
 
 			library->getMainLoop()->perform([this] (const thread::Task &) -> bool {
-				for (auto &it : builder.getData()->familyQueries) {
+				for (auto &it : builder.getFamilyQueries()) {
 					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
 					for (auto &iit : it.second.sources) {
 						d.emplace_back(move(iit->data));
@@ -351,7 +351,7 @@ Rc<FontController> FontLibrary::acquireController(FontController::Builder &&b) {
 
 					controller->addFont(it.second.family, move(d));
 				}
-				for (auto &it : builder.getData()->familyQueries) {
+				for (auto &it : builder.getFamilyQueries()) {
 					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
 					for (auto &iit : it.second.sources) {
 						d.emplace_back(move(iit->data));
@@ -360,7 +360,7 @@ Rc<FontController> FontLibrary::acquireController(FontController::Builder &&b) {
 				return true;
 			}, [this] (const thread::Task &, bool success) {
 				if (success) {
-					controller->setAliases(builder.getAliases());
+					controller->setAliases(Map<String, String>(builder.getAliases()));
 					controller->setLoaded(true);
 				}
 				controller = nullptr;
@@ -399,10 +399,10 @@ Rc<FontController> FontLibrary::acquireController(FontController::Builder &&b) {
 	builder->library = this;
 	builder->controller = ret;
 
-	builder->pendingData = builder->builder.getData()->dataQueries.size() + 1;
+	builder->pendingData = builder->builder.getDataQueries().size() + 1;
 
-	for (auto &it : builder->builder.getData()->dataQueries) {
-		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) -> bool {
+	for (auto &it : builder->builder.getDataQueries()) {
+		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) mutable -> bool {
 			sourcePtr->data = openFontData(name, sourcePtr->params, [&] () -> FontData {
 				if (sourcePtr->fontCallback) {
 					return FontData(move(sourcePtr->fontCallback));
@@ -492,7 +492,7 @@ void FontLibrary::updateImage(const Rc<core::DynamicImage> &image, Vector<font::
 		break;
 	}
 
-	_glLoop->runRenderQueue(move(req), 0, [this, app = Rc<Application>(_mainLoop)] (bool success) {
+	_glLoop->runRenderQueue(move(req), 0, [app = Rc<Application>(_mainLoop)] (bool success) {
 		app->wakeup();
 	});
 }

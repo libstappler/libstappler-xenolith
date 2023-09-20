@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "XLEvent.h"
+#include "XLApplication.h"
 
 namespace stappler::xenolith {
 

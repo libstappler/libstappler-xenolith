@@ -94,7 +94,10 @@ public:
 		bool addAlias(StringView newAlias, StringView familyName);
 
 		Vector<const FamilyQuery *> getFontFamily(StringView family) const;
-		Map<String, String> getAliases() const;
+
+		Map<String, FontSource> &getDataQueries();
+		Map<String, FamilyQuery> &getFamilyQueries();
+		Map<String, String> &getAliases();
 
 		Data *getData() const { return _data; }
 

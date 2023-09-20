@@ -28,6 +28,10 @@
 #include "XLCorePlatform.h"
 #include "XLCoreFrameRequest.h"
 
+#ifndef XL_FRAME_EMITTER_LOG
+#define XL_FRAME_EMITTER_LOG(...)
+#endif
+
 namespace stappler::xenolith::core {
 
 FrameEmitter::~FrameEmitter() { }
@@ -236,7 +240,7 @@ void FrameEmitter::scheduleFrameTimeout() {
 		_frameTimeoutPassed = false;
 		++ _order;
 		[[maybe_unused]] auto t = platform::clock();
-		_loop->schedule([=, this, guard = Rc<FrameEmitter>(this), idx = _order] (Loop &ctx) {
+		_loop->schedule([=, guard = Rc<FrameEmitter>(this), idx = _order] (Loop &ctx) {
 			XL_FRAME_EMITTER_LOG("TimeoutPassed:    ", _frame.load(), "   ", platform::clock() - _frame.load(), " (",
 					platform::clock(ClockType::Monotonic) - t, ") mks");
 			guard->onFrameTimeout(idx);

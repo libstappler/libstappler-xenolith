@@ -144,14 +144,12 @@ Metrics FontLayout::getMetrics() const {
 
 CharLayout FontLayout::getChar(char16_t ch, uint16_t &face) const {
 	std::shared_lock lock(_mutex);
-	uint16_t i = 0;
 	for (auto &it : _faces) {
 		auto l = it->getChar(ch);
 		if (l.charID != 0) {
 			face = it->getId();
 			return l;
 		}
-		++ i;
 	}
 	return CharLayout();
 }

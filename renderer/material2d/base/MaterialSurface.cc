@@ -24,6 +24,7 @@
 #include "MaterialSurface.h"
 #include "MaterialEasing.h"
 #include "MaterialSurfaceInterior.h"
+#include "MaterialStyleContainer.h"
 #include "XLFrameInfo.h"
 #include "XL2dFrameContext.h"
 #include "XL2dCommandList.h"

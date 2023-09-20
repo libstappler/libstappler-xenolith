@@ -23,7 +23,7 @@
 
 #include "AppLayoutMenu.h"
 
-#include "../AppScene.h"
+#include "AppScene.h"
 #include "AppLayoutMenuItem.h"
 #include "XL2dScrollController.h"
 

@@ -26,6 +26,12 @@
 #include "XLIcons.h"
 #include "SPSubscription.h"
 
+namespace stappler::xenolith {
+
+class Node;
+
+}
+
 namespace stappler::xenolith::material2d {
 
 class Button;

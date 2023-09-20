@@ -21,6 +21,7 @@
  **/
 
 #include "XL2dSceneLight.h"
+#include "XL2dScene.h"
 
 namespace stappler::xenolith::basic2d {
 

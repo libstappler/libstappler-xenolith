@@ -24,6 +24,10 @@ THE SOFTWARE.
 #include "XLVkSync.h"
 #include "XLVkDevice.h"
 
+#ifndef XL_VKAPI_LOG
+#define XL_VKAPI_LOG(...)
+#endif
+
 namespace stappler::xenolith::vk {
 
 Semaphore::~Semaphore() { }

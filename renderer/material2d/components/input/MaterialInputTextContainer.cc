@@ -23,8 +23,10 @@
 #include "MaterialInputTextContainer.h"
 #include "MaterialSurfaceInterior.h"
 #include "MaterialStyleContainer.h"
+#include "MaterialEasing.h"
 #include "XLFrameInfo.h"
 #include "XL2dLayer.h"
+#include "XLAction.h"
 
 namespace stappler::xenolith::material2d {
 

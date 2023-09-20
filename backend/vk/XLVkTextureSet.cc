@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "XLVkTextureSet.h"
 #include "XLVkLoop.h"
+#include "XLVkBuffer.h"
 #include <forward_list>
 
 namespace stappler::xenolith::vk {

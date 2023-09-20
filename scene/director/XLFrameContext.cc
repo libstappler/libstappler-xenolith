@@ -23,6 +23,7 @@
 #include "XLFrameContext.h"
 #include "XLFrameInfo.h"
 #include "XLDirector.h"
+#include "XLScene.h"
 
 namespace stappler::xenolith {
 

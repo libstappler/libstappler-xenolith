@@ -23,6 +23,12 @@
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameHandle.h"
 #include "XLCoreLoop.h"
+#include "XLCoreDevice.h"
+#include "XLCoreQueuePass.h"
+
+#ifndef XL_FRAME_QUEUE_LOG
+#define XL_FRAME_QUEUE_LOG(...)
+#endif
 
 namespace stappler::xenolith::core {
 

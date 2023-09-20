@@ -26,6 +26,7 @@
 #include "XLVkObject.h"
 #include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
+#include "XLCoreFrameRequest.h"
 
 namespace stappler::xenolith::vk {
 

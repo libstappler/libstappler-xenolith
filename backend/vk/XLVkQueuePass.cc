@@ -30,8 +30,9 @@
 #include "XLVkDeviceQueue.h"
 #include "XLVkTextureSet.h"
 #include "XLVkRenderPass.h"
-#include "XLCoreFrameQueue.h"
 #include "XLVkLoop.h"
+#include "XLVkPipeline.h"
+#include "XLCoreFrameQueue.h"
 
 namespace stappler::xenolith::vk {
 
@@ -189,7 +190,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
 	if (!_pool) {
 		onSubmited(true);
-		q.getFrame()->performInQueue([this, onComplete = move(onComplete)] (FrameHandle &frame) mutable {
+		q.getFrame()->performInQueue([onComplete = move(onComplete)] (FrameHandle &frame) mutable {
 			onComplete(true);
 			return true;
 		}, this, "RenderPass::complete");

@@ -20,8 +20,9 @@
  THE SOFTWARE.
  **/
 
-#include "SPIRV-Reflect/spirv_reflect.cc"
+/*
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
+ */
 
-#if LINUX
-#include "glfw/xkb_unicode.cc"
-#endif
+#include "SPIRV-Reflect/spirv_reflect.cc"

@@ -22,6 +22,7 @@
 
 #include "XLCoreQueuePass.h"
 #include "XLCoreQueue.h"
+#include "XLCoreFrameQueue.h"
 
 namespace stappler::xenolith::core {
 

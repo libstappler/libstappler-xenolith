@@ -458,7 +458,7 @@ void DataScroll::onSliceData(DataMap &val, Time time, Request type) {
 
 	auto deferred = _director->getApplication();
 
-	deferred->perform(Rc<thread::Task>::create([this, handlerPtr, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
+	deferred->perform(Rc<thread::Task>::create([handlerPtr, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
 		(*itemPtr) = (*handlerPtr)->run(type, std::move(*dataPtr));
 		for (auto &it : (*itemPtr)) {
 			it.second->setId(it.first.get());

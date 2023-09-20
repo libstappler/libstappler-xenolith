@@ -148,7 +148,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 		auto h = Rc<DeviceFrameHandle>::create(*loop, *device, renderQueueCompiler->makeRequest(move(input)), 0);
 		if (cb) {
-			h->setCompleteCallback([this, cb = move(cb), req] (FrameHandle &handle) {
+			h->setCompleteCallback([cb = move(cb), req] (FrameHandle &handle) {
 				cb(handle.isValid());
 			});
 		}

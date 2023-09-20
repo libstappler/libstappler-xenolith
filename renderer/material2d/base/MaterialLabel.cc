@@ -22,6 +22,8 @@
 
 #include "MaterialLabel.h"
 #include "MaterialSurface.h"
+#include "MaterialStyleContainer.h"
+#include "MaterialSurfaceInterior.h"
 #include "XLFrameInfo.h"
 
 namespace stappler::xenolith::material2d {

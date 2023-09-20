@@ -26,6 +26,7 @@
 #include "XLEventHeader.h"
 #include "XLResourceOwner.h"
 #include "XLCoreResource.h"
+#include "XLResourceCache.h"
 
 namespace stappler::xenolith {
 

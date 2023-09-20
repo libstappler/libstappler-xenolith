@@ -28,6 +28,8 @@
 
 namespace stappler::xenolith {
 
+class Scheduler;
+
 class SubscriptionListener : public Component {
 public:
 	using DirtyCallback = Function<void(SubscriptionFlags)>;

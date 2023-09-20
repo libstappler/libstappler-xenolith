@@ -21,6 +21,7 @@
  **/
 
 #include "MaterialButton.h"
+#include "MaterialLabel.h"
 #include "XLInputListener.h"
 
 namespace stappler::xenolith::material2d {

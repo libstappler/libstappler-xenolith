@@ -23,7 +23,7 @@
 
 #include "AppVgIconList.h"
 
-#include "../../AppScene.h"
+#include "AppScene.h"
 #include "XLIcons.h"
 
 namespace stappler::xenolith::app {

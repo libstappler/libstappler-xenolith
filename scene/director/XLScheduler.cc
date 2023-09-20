@@ -25,9 +25,9 @@
 
 namespace stappler::xenolith {
 
-Scheduler::Scheduler(void) { }
+Scheduler::Scheduler() { }
 
-Scheduler::~Scheduler(void) {
+Scheduler::~Scheduler() {
     unscheduleAll();
 }
 

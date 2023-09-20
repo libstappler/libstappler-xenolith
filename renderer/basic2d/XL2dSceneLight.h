@@ -25,6 +25,12 @@
 
 #include "XL2d.h"
 
+namespace stappler::xenolith {
+
+class Scene;
+
+}
+
 namespace stappler::xenolith::basic2d {
 
 enum class SceneLightType {

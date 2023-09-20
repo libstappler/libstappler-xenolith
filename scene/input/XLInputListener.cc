@@ -26,7 +26,7 @@
 #include "XLInputDispatcher.h"
 #include "XLGestureRecognizer.h"
 #include "XLScheduler.h"
-#include "XLNode.h"
+#include "XLScene.h"
 
 namespace stappler::xenolith {
 

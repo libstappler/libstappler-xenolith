@@ -25,9 +25,12 @@
 #include "XLVkRenderPass.h"
 #include "XLVkRenderQueueCompiler.h"
 #include "XLVkTransferQueue.h"
+#include "XLVkMaterialCompiler.h"
+#include "XLVkBuffer.h"
 #include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
+#include "XLCoreFrameRequest.h"
 
 namespace stappler::xenolith::vk {
 

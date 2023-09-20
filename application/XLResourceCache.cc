@@ -24,6 +24,7 @@
 #include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
 #include "XLCoreLoop.h"
+#include "XLApplication.h"
 
 namespace stappler::xenolith {
 

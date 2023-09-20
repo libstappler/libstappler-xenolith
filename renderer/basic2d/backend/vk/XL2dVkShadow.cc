@@ -24,6 +24,7 @@
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
+#include "XLCoreFrameRequest.h"
 
 namespace stappler::xenolith::basic2d::vk {
 

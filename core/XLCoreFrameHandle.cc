@@ -23,6 +23,8 @@
 #include "XLCoreFrameHandle.h"
 #include "XLCorePlatform.h"
 #include "XLCoreLoop.h"
+#include "XLCoreFrameRequest.h"
+#include "XLCoreFrameQueue.h"
 
 namespace stappler::xenolith::core {
 
@@ -32,6 +34,14 @@ static constexpr ClockType FrameClockType = ClockType::Monotonic;
 #define XL_FRAME_LOG_INFO _request->getEmitter() ? "[Emitted] " : "", \
 	"[", _order, "] [", s_frameCount.load(), \
 	"] [", platform::clock(FrameClockType) - _timeStart, "] "
+#else
+#define XL_FRAME_LOG_INFO
+#define XL_FRAME_LOG(...)
+#endif
+
+#ifndef XL_FRAME_PROFILE
+#define XL_FRAME_PROFILE(fn, tag, max) \
+	do { } while (0);
 #endif
 
 static std::atomic<uint32_t> s_frameCount = 0;

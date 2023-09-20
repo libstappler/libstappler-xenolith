@@ -22,6 +22,7 @@
 
 #include "XLCoreObject.h"
 #include "XLCoreInfo.h"
+#include "XLCoreDevice.h"
 #include "SPIRV-Reflect/spirv_reflect.h"
 
 namespace stappler::xenolith::core {

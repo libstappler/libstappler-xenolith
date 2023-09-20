@@ -22,7 +22,7 @@
 
 #include "AppRootLayout.h"
 
-#include "../AppScene.h"
+#include "AppScene.h"
 #include "AppLayoutMenuItem.h"
 #include "XL2dLayer.h"
 #include "XL2dLabel.h"

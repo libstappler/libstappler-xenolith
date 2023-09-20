@@ -281,6 +281,31 @@ struct InstanceSurfaceData : Ref {
 	Rc<xenolith::platform::XcbLibrary> xcb;
 };
 
+uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
+	InstanceSurfaceData *instanceData = (InstanceSurfaceData *)instance->getUserdata();
+
+	uint32_t ret = 0;
+	if ((instanceData->surfaceType & SurfaceType::Wayland) != SurfaceType::None) {
+		auto display = xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
+		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on " << (void *)display << ": ";
+		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx, display);
+		if (supports) {
+			ret |= toInt(SurfaceType::Wayland);
+			std::cout << "yes\n";
+		} else {
+			std::cout << "no\n";
+		}
+	}
+	if ((instanceData->surfaceType & SurfaceType::XCB) != SurfaceType::None) {
+		auto conn = xenolith::platform::XcbLibrary::getInstance()->getActiveConnection();
+		auto supports = instance->vkGetPhysicalDeviceXcbPresentationSupportKHR(device, queueIdx, conn.connection, conn.screen->root_visual);
+		if (supports) {
+			ret |= toInt(SurfaceType::XCB);
+		}
+	}
+	return ret;
+}
+
 bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
 	auto instanceData = Rc<InstanceSurfaceData>::alloc();
 
@@ -318,31 +343,6 @@ bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::Vu
 	}
 
 	return false;
-}
-
-uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
-	InstanceSurfaceData *instanceData = (InstanceSurfaceData *)instance->getUserdata();
-
-	uint32_t ret = 0;
-	if ((instanceData->surfaceType & SurfaceType::Wayland) != SurfaceType::None) {
-		auto display = xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
-		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on " << (void *)display << ": ";
-		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx, display);
-		if (supports) {
-			ret |= toInt(SurfaceType::Wayland);
-			std::cout << "yes\n";
-		} else {
-			std::cout << "no\n";
-		}
-	}
-	if ((instanceData->surfaceType & SurfaceType::XCB) != SurfaceType::None) {
-		auto conn = xenolith::platform::XcbLibrary::getInstance()->getActiveConnection();
-		auto supports = instance->vkGetPhysicalDeviceXcbPresentationSupportKHR(device, queueIdx, conn.connection, conn.screen->root_visual);
-		if (supports) {
-			ret |= toInt(SurfaceType::XCB);
-		}
-	}
-	return ret;
 }
 
 }
