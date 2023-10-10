@@ -102,7 +102,7 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 	}, this, true);
 
 	_avgFrameTime.addValue(_mainLoop->getClock() - t);
-	_avgFrameTimeValue = _avgFrameTime.getAverage(true);
+	_avgFrameTimeValue = _avgFrameTime.getAverage();
 	return true;
 }
 

@@ -14,6 +14,11 @@
  limitations under the License.
 */
 
+/*
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
+ */
+
 #include "spirv_reflect.h"
 #include <assert.h>
 #include <stdbool.h>

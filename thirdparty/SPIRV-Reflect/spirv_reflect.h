@@ -15,6 +15,11 @@
 */
 
 /*
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
+ */
+
+/*
 
 VERSION HISTORY
 

@@ -1068,7 +1068,7 @@ Pair<uint64_t, uint64_t> View::updateFrameInterval() {
 	auto dt = n - _lastFrameStart;
 	_lastFrameInterval = dt;
 	_avgFrameInterval.addValue(dt);
-	_avgFrameIntervalValue = _avgFrameInterval.getAverage(true);
+	_avgFrameIntervalValue = _avgFrameInterval.getAverage();
 	_lastFrameStart = n;
 	return pair(_avgFrameIntervalValue.load(), dt);
 }

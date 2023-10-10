@@ -147,11 +147,11 @@ void FrameEmitter::onFrameComplete(FrameHandle &frame) {
 
 	_lastFrameTime = frame.getTimeEnd() - frame.getTimeStart();
 	_avgFrameTime.addValue(frame.getTimeEnd() - frame.getTimeStart());
-	_avgFrameTimeValue = _avgFrameTime.getAverage(true);
+	_avgFrameTimeValue = _avgFrameTime.getAverage();
 
 	if (auto t = frame.getSubmissionTime()) {
 		_avgFenceInterval.addValue(t);
-		_avgFenceIntervalValue = _avgFenceInterval.getAverage(true);
+		_avgFenceIntervalValue = _avgFenceInterval.getAverage();
 	}
 
 	auto it = _framesPending.begin();
