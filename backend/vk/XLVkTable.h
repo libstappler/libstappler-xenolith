@@ -27,8 +27,6 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKTABLE_H_
 #define XENOLITH_BACKEND_VK_XLVKTABLE_H_
 
-#include <vulkan/vulkan.h>
-
 namespace stappler::xenolith::vk {
 
 struct LoaderTable {

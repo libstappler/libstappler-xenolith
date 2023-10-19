@@ -77,6 +77,7 @@ public:
 	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
 	VkSwapchainKHR getSwapchain() const { return _swapchain; }
 	uint32_t getAcquiredImagesCount() const { return _acquiredImages; }
+	uint64_t getPresentedFramesCount() const { return _presentedFrames; }
 	const Vector<SwapchainImageData> &getImages() const { return _images; }
 
 	bool isDeprecated();

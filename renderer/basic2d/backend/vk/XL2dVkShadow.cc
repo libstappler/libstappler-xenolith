@@ -110,7 +110,7 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 
 	// pre-calculated color with no shadows
 	Color4F discardColor = _input->lights.globalColor;
-	for (uint i = 0; i < _input->lights.ambientLightCount; ++ i) {
+	for (uint32_t i = 0; i < _input->lights.ambientLightCount; ++ i) {
 		discardColor = discardColor + (_input->lights.ambientLights[i].color * _input->lights.ambientLights[i].color.a) * data->luminosity;
 	}
 	discardColor.a = 1.0f;

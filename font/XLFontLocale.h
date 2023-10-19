@@ -29,18 +29,19 @@
 
 namespace stappler::xenolith {
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
+#endif
+
 // full localized string
 template <typename CharType, CharType ... Chars> auto operator "" _locale() {
 	return metastring::merge("@Locale:"_meta, metastring::metastring<Chars ...>());
 }
 
-/*inline String operator"" _locale ( const char* str, std::size_t len) {
-	String ret;
-	ret.reserve(len + "@Locale:"_len);
-	ret.append("@Locale:");
-	ret.append(str, len);
-	return ret;
-}*/
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 // localized token
 inline String operator"" _token ( const char* str, std::size_t len) {

@@ -27,6 +27,10 @@
 
 #include "curl/curl.h"
 
+#if WIN32
+#undef interface
+#endif
+
 namespace stappler::xenolith::storage {
 
 AssetLock::~AssetLock() {
@@ -330,7 +334,7 @@ bool Asset::startNewDownload(Time ctime, StringView etag) {
 				auto tag = StringView(data->data.etag);
 				tag.trimChars<StringView::Chars<'"', '\'', ' ', '-'>>();
 				data->data.path = toString(_path, "/", data->data.ctime.toMicros(), "-", tag);
-				data->inputFile = fopen(data->data.path.data(), "w");
+				data->inputFile = filesystem::native::fopen_fn(data->data.path.data(), "w");
 				if (!data->inputFile) {
 					return size_t(CURL_WRITEFUNC_ERROR);
 				}
@@ -399,7 +403,7 @@ bool Asset::resumeDownload(VersionData &d) {
 			}
 
 			if (!data->inputFile) {
-				data->inputFile = fopen(data->data.path.data(), "a");
+				data->inputFile = filesystem::native::fopen_fn(data->data.path.data(), "a");
 				if (!data->inputFile) {
 					return size_t(CURL_WRITEFUNC_ERROR);
 				}

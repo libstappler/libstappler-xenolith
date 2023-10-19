@@ -135,7 +135,7 @@ public:
 	virtual Node* getChildByTag(uint64_t tag) const;
 
 	virtual const Vector<Rc<Node>>& getChildren() const { return _children; }
-	virtual ssize_t getChildrenCount() const { return _children.size(); }
+	virtual size_t getChildrenCount() const { return _children.size(); }
 
 	virtual void setParent(Node *parent);
 	virtual Node *getParent() const { return _parent; }

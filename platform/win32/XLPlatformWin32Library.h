@@ -20,33 +20,57 @@
  THE SOFTWARE.
  **/
 
+#ifndef XENOLITH_PLATFORM_WIN32_XLPLATFORMWIN32LIBRARY_H_
+#define XENOLITH_PLATFORM_WIN32_XLPLATFORMWIN32LIBRARY_H_
+
 #include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
+#include "XLCoreInput.h"
+#include "XLPlatformNetwork.h"
 
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
+#include "SPPlatformUnistd.h"
 
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
+namespace stappler::xenolith::platform {
 
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
+struct Win32Display {
+	WideString name;
+	WideString adapterName;
+	WideString displayName;
+	int widthMM;
+	int heightMM;
+	bool modesPruned;
+	bool isPrimary;
+	DEVMODEW dm;
+	RECT rect;
+};
 
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
+class Win32Library : public Ref {
+public:
+	static Win32Library *getInstance();
 
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
+	Win32Library() { }
 
-#if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
-#endif
+	virtual ~Win32Library();
+
+	bool init();
+
+	const core::InputKeyCode *getKeycodes() const { return _keycodes; }
+	const uint16_t *getScancodes() const { return _scancodes; }
+
+	Vector<Win32Display> pollMonitors();
+
+	void addNetworkConnectionCallback(void *key, Function<void(const NetworkCapabilities &)> &&);
+	void removeNetworkConnectionCallback(void *key);
+
+protected:
+	struct Data;
+
+	void loadKeycodes();
+
+	core::InputKeyCode _keycodes[512];
+	uint16_t _scancodes[toInt(core::InputKeyCode::Max)];
+	Data *_data = nullptr;
+};
+
+}
+
+#endif /* XENOLITH_PLATFORM_WIN32_XLPLATFORMWIN32LIBRARY_H_ */

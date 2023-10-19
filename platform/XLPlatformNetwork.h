@@ -20,33 +20,34 @@
  THE SOFTWARE.
  **/
 
+#ifndef XENOLITH_PLATFORM_XLPLATFORMNETWORK_H_
+#define XENOLITH_PLATFORM_XLPLATFORMNETWORK_H_
+
 #include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
 
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
+namespace stappler::xenolith::platform {
 
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
+enum class NetworkCapabilities {
+	None,
+	Internet = (1 << 0),
+	NotCongested = (1 << 1),
+	NotMetered = (1 << 2),
+	NotRestricted = (1 << 3),
+	NotRoaming = (1 << 4),
+	NotSuspended = (1 << 5),
+	NotVpn = (1 << 6),
+	PrioritizeBandwidth = (1 << 7),
+	PrioritizeLatency = (1 << 8),
+	TemporarilyNotMetered = (1 << 9),
+	Trusted = (1 << 10),
+	Validated = (1 << 11),
+	WifiP2P = (1 << 12),
+	CaptivePortal = (1 << 13),
+	Local = (1 << 14)
+};
 
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
+SP_DEFINE_ENUM_AS_MASK(NetworkCapabilities)
 
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
+}
 
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
-
-#if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
-#endif
+#endif /* XENOLITH_PLATFORM_XLPLATFORMNETWORK_H_ */

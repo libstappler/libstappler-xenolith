@@ -481,7 +481,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 				it.targetImage->image, VkImageSubresourceRange({
-					getFormatAspectFlags(it.targetImage->info.format, false),
+					VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
 					0, it.targetImage->data->mipLevels.get(), 0, it.targetImage->data->arrayLayers.get()
 				})
 			}));
@@ -506,7 +506,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 			copyRegion.bufferRowLength = 0; // If either of these values is zero, that aspect of the buffer memory
 			copyRegion.bufferImageHeight = 0; // is considered to be tightly packed according to the imageExtent
 			copyRegion.imageSubresource = VkImageSubresourceLayers({
-				getFormatAspectFlags(it.targetImage->info.format, false), 0, 0, it.targetImage->data->arrayLayers.get()
+				VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)), 0, 0, it.targetImage->data->arrayLayers.get()
 			});
 			copyRegion.imageOffset = VkOffset3D({0, 0, 0});
 			copyRegion.imageExtent = it.targetImage->info.extent;
@@ -533,7 +533,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					srcQueueFamilyIndex, dstQueueFamilyIndex,
 					it.targetImage->image, VkImageSubresourceRange({
-						getFormatAspectFlags(it.targetImage->info.format, false),
+						VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
 						0, it.targetImage->data->mipLevels.get(), 0, it.targetImage->data->arrayLayers.get()
 					})
 				}));

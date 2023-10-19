@@ -164,10 +164,13 @@ protected:
 
 	void clearImages();
 
+	virtual void schedulePresent(SwapchainImage *, uint64_t);
+
 	EngineOptions _options;
 
 	bool _readyForNextFrame = false;
 	bool _blockDeprecation = false;
+	bool _swapchainInvalidated = false;
 	uint64_t _framesInProgress = 0;
 	uint64_t _fenceOrder = 0;
 	uint64_t _frameOrder = 0;

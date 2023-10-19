@@ -25,6 +25,12 @@
 
 #include "XLCore.h"
 
+#if WIN32
+#ifdef DELETE
+#undef DELETE
+#endif
+#endif
+
 namespace stappler::xenolith::core {
 
 enum class InputFlags {
@@ -85,13 +91,21 @@ enum class InputModifier : uint32_t {
 	AltR = 1 << 19,
 	Mod3L = 1 << 20,
 	Mod3R = 1 << 21,
+	Mod4L = 1 << 22,
+	Mod4R = 1 << 23,
 
-	ScrollLock = 1 << 22,
+	ScrollLock = 1 << 24,
 
 	Command = Mod3, // MacOS Command
 	Meta = Mod3, // Android Meta
 	Function = Mod4, // Android Function
 	Sym = Mod5, // Android Sym
+	Win = Mod3,
+	WinL = Mod3L,
+	WinR = Mod3R,
+	Menu = Alt, // VK_MENU
+	MenuL = AltL, // VK_LMENU
+	MenuR = AltR, // VK_RMENU
 
 	// boolean value for switch event (background/focus)
 	ValueFalse = None,
@@ -258,6 +272,7 @@ enum class InputKeyComposeState : uint16_t {
 	Composed,
 	Composing,
 	Disabled, // do not use this key event for text input processing
+	Forced, // use, when key up should be processed
 };
 
 enum class InputEventName : uint32_t {
@@ -292,6 +307,11 @@ struct InputEventData {
 			value ? InputModifier::ValueTrue : InputModifier::None, pt.x, pt.y};
 	}
 
+	static InputEventData BoolEvent(InputEventName event, bool value, InputModifier mod, const Vec2 &pt) {
+		return InputEventData{maxOf<uint32_t>(), event, InputMouseButton::None,
+			mod | (value ? InputModifier::ValueTrue : InputModifier::None), pt.x, pt.y};
+	}
+
 	uint32_t id = maxOf<uint32_t>();
 	InputEventName event = InputEventName::None;
 	InputMouseButton button = InputMouseButton::None;
@@ -303,7 +323,7 @@ struct InputEventData {
 			float valueX = 0.0f;
 			float valueY = 0.0f;
 			float density = 1.0f;
-		} point;
+		} point = { 0.0f, 0.0f, 1.0f };
 		struct {
 			InputKeyCode keycode; // layout-independent key name
 			InputKeyComposeState compose;
@@ -315,7 +335,7 @@ struct InputEventData {
 	bool operator==(const uint32_t &i) const { return id == i; }
 	bool operator!=(const uint32_t &i) const { return id != i; }
 
-	bool getValue() const { return modifiers == InputModifier::ValueTrue; }
+	bool getValue() const { return (modifiers & InputModifier::ValueTrue) != InputModifier::None; }
 
 	bool hasLocation() const {
 		switch (event) {
@@ -401,6 +421,10 @@ struct InputEventData {
 StringView getInputKeyCodeName(InputKeyCode);
 StringView getInputKeyCodeKeyName(InputKeyCode);
 StringView getInputEventName(InputEventName);
+
+StringView getInputButtonName(InputMouseButton);
+
+String getInputModifiersNames(InputModifier);
 
 }
 

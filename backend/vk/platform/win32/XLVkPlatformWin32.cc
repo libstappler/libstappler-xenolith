@@ -20,33 +20,29 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
-
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
-
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
-
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
-
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
-
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
+#include "XLVkPlatform.h"
 
 #if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
+
+#include "SPPlatformUnistd.h"
+#include <libloaderapi.h>
+
+namespace stappler::xenolith::vk::platform {
+
+Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+	FunctionTable table(vkGetInstanceProcAddr);
+
+	if (!table) {
+		return nullptr;
+	}
+
+	if (auto instance = table.createInstance(cb, [] { })) {
+		return instance;
+	}
+
+	return nullptr;
+}
+
+}
+
 #endif

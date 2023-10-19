@@ -220,6 +220,11 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 			return true;
 		});
 		handlers.handle(false);
+
+		if (handlers.event.data.getValue()) {
+			// Mouse left window, cancel active mouse events
+			cancelTouchEvents(event.x, event.y, event.modifiers);
+		}
 		break;
 	}
 	case InputEventName::FocusGain: {
@@ -233,6 +238,11 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 			return true;
 		});
 		handlers.handle(false);
+
+		if (!handlers.event.data.getValue()) {
+			// Mouse left window, cancel active mouse events
+			cancelTouchEvents(event.x, event.y, event.modifiers);
+		}
 		break;
 	}
 	case InputEventName::PointerEnter: {
@@ -250,15 +260,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 
 		if (!handlers.event.data.getValue()) {
 			// Mouse left window, cancel active mouse events
-			auto tmpEvents = _activeEvents;
-			for (auto &it : tmpEvents) {
-				it.second.event.data.x = event.x;
-				it.second.event.data.y = event.y;
-				it.second.event.data.event = InputEventName::Cancel;
-				it.second.event.data.modifiers = event.modifiers;
-				handleInputEvent(it.second.event.data);
-			}
-			_activeEvents.clear();
+			cancelTouchEvents(event.x, event.y, event.modifiers);
 		}
 		break;
 	}
@@ -502,6 +504,18 @@ void InputDispatcher::handleKey(const InputEventData &event, bool clear) {
 			}
 		}
 	}
+}
+
+void InputDispatcher::cancelTouchEvents(float x, float y, InputModifier mods) {
+	auto tmpEvents = _activeEvents;
+	for (auto &it : tmpEvents) {
+		it.second.event.data.x = x;
+		it.second.event.data.y = y;
+		it.second.event.data.event = InputEventName::Cancel;
+		it.second.event.data.modifiers = mods;
+		handleInputEvent(it.second.event.data);
+	}
+	_activeEvents.clear();
 }
 
 }

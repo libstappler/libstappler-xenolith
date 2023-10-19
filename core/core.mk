@@ -25,5 +25,9 @@ MODULE_XENOLITH_CORE_INCLUDES_DIRS :=
 MODULE_XENOLITH_CORE_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/core $(XENOLITH_MODULE_DIR)/thirdparty
 MODULE_XENOLITH_CORE_DEPENDS_ON := stappler_bitmap stappler_threads stappler_geom stappler_backtrace
 
+ifdef VULKAN_SDK_PREFIX
+MODULE_XENOLITH_CORE_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)
+endif
+
 # module name resolution
 MODULE_xenolith_core := MODULE_XENOLITH_CORE

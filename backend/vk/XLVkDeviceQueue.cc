@@ -62,6 +62,7 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 				waitSem.emplace_back(sem);
 				waitStages.emplace_back(VkPipelineStageFlags(it.stages));
 			}
+			commandPool.autorelease(it.semaphore.get());
 		}
 	}
 
@@ -70,6 +71,7 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 			auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
 
 			signalSem.emplace_back(sem);
+			commandPool.autorelease(it.semaphore.get());
 		}
 	}
 
@@ -168,7 +170,7 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers) 
 	submitInfo.signalSemaphoreCount = 0;
 	submitInfo.pSignalSemaphores = nullptr;
 
-#ifdef XL_VKAPI_DEBUG
+#if XL_VKAPI_DEBUG
 	[[maybe_unused]] auto frameIdx = _frameIdx;
 	[[maybe_unused]] auto t = platform::clock(core::ClockType::Monotonic);
 	fence.addRelease([=] (bool success) {
@@ -487,6 +489,8 @@ void CommandBuffer::cmdSetViewport(uint32_t firstViewport, SpanView<VkViewport> 
 }
 
 void CommandBuffer::cmdSetScissor(uint32_t firstScissor, SpanView<VkRect2D> scissors) {
+	//log::verbose("CommandBuffer", "cmdSetScissor: ", scissors.front().offset.x, " ", scissors.front().offset.y, " ",
+	//		scissors.front().extent.width, " ", scissors.front().extent.height);
 	_table->vkCmdSetScissor(_buffer, firstScissor, scissors.size(), scissors.data());
 }
 

@@ -83,3 +83,25 @@ void Application::openUrl(StringView url) const {
 }
 
 #endif
+
+
+#if WIN32
+
+#include "SPPlatformUnistd.h"
+#include <shellapi.h>
+
+namespace stappler::xenolith {
+
+void Application::nativeInit() {
+	platform::clock(core::ClockType::Monotonic);
+}
+
+void Application::nativeDispose() { }
+
+void Application::openUrl(StringView url) const {
+	ShellExecute(0, 0, L"http://www.google.com", 0, 0 , SW_SHOW );
+}
+
+}
+
+#endif

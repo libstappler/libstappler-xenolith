@@ -40,6 +40,10 @@ THE SOFTWARE.
 #define VK_USE_PLATFORM_ANDROID_KHR 1
 #endif
 
+#if WIN32
+#define VK_USE_PLATFORM_WIN32_KHR 1
+#endif
+
 #include <vulkan/vulkan.h>
 
 #if LINUX
@@ -53,6 +57,7 @@ namespace stappler::xenolith::vk {
 #define XL_VK_MIN_MESSAGE_SEVERITY VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
 
 #if DEBUG
+#define XL_VKAPI_DEBUG 0
 #define VK_HOOK_DEBUG 0 // enable engine hooks for Vulkan calls
 static constexpr bool s_enableValidationLayers = true;
 static constexpr bool s_printVkInfo = true;
@@ -277,5 +282,9 @@ void sanitizeVkStruct(T &t) {
 }
 
 std::ostream &operator<< (std::ostream &stream, VkResult res);
+
+#if WIN32
+#undef interface
+#endif
 
 #endif /* XENOLITH_BACKEND_VK_XLVK_H_ */

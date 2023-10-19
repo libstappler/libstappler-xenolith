@@ -44,6 +44,21 @@ core::ImageFormat getCommonFormat() {
 
 #endif
 
+#if WIN32
+
+namespace stappler::xenolith::platform {
+
+core::ImageFormat getCommonFormat() {
+	return core::ImageFormat::B8G8R8A8_UNORM;
+}
+
+}
+
+#include "win32/XLPlatformWin32Library.cc"
+#include "win32/XLPlatformWin32View.cc"
+
+#endif
+
 #if ANDROID
 #include "android/XLPlatformAndroid.cc"
 #include "android/XLPlatformAndroidActivity.cc"

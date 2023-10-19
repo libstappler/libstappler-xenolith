@@ -49,7 +49,7 @@ bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 	auto &ctx = info.contextStack.back();
 
-	auto prevStateId = ctx->stateStack.empty() ? maxOf<StateId>() : ctx->stateStack.back();
+	auto prevStateId = ctx->getCurrentState();
 	auto currentState = ctx->getState(prevStateId);
 	/*if (!currentState) {
 		// invalid state

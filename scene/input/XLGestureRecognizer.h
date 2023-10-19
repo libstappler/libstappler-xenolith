@@ -239,6 +239,7 @@ protected:
 	GestureTap _gesture;
 	InputCallback _callback;
 	uint32_t _maxTapCount = 2;
+	InputEvent _tmpEvent;
 };
 
 class GesturePressRecognizer : public GestureRecognizer {

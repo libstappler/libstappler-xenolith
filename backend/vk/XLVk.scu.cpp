@@ -72,3 +72,4 @@ THE SOFTWARE.
 
 #include "platform/android/XLVkPlatformAndroid.cc"
 #include "platform/linux/XLVkPlatformLinux.cc"
+#include "platform/win32/XLVkPlatformWin32.cc"

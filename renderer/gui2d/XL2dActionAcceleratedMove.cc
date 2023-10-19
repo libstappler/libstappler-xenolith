@@ -337,7 +337,9 @@ Rc<ActionInterval> ActionAcceleratedMove::createWithBounds(float acceleration, V
 				return Rc<Sequence>::create(a1, a2);
 			}
 		} else {
-			a1->setCallback(move(callback));
+			if (a1) {
+				a1->setCallback(move(callback));
+			}
 			return a1;
 		}
 	}

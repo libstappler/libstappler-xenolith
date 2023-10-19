@@ -416,7 +416,7 @@ void WaylandView::handlePointerAxis(uint32_t time, uint32_t axis, wl_fixed_t val
 
 		core::InputEventData event({
 			toInt(btn),
-			core::InputEventName::Begin,
+			core::InputEventName::Scroll,
 			btn,
 			_activeModifiers,
 			float(_surfaceX),

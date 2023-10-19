@@ -1482,6 +1482,7 @@ void PipelineMaterialInfo::_setup(LineWidth width) {
 
 StringView getInputKeyCodeName(InputKeyCode code) {
 	switch (code) {
+	case InputKeyCode::Unknown: return StringView("Unknown"); break;
 	case InputKeyCode::KP_DECIMAL: return StringView("KP_DECIMAL"); break;
 	case InputKeyCode::KP_DIVIDE: return StringView("KP_DIVIDE"); break;
 	case InputKeyCode::KP_MULTIPLY: return StringView("KP_MULTIPLY"); break;
@@ -1778,6 +1779,53 @@ StringView getInputEventName(InputEventName name) {
 	default: break;
 	}
 	return StringView();
+}
+
+StringView getInputButtonName(InputMouseButton btn) {
+	switch (btn) {
+	case InputMouseButton::MouseLeft: return StringView("MouseLeft"); break;
+	case InputMouseButton::MouseMiddle: return StringView("MouseMiddle"); break;
+	case InputMouseButton::MouseRight: return StringView("MouseRight"); break;
+	case InputMouseButton::MouseScrollUp: return StringView("MouseScrollUp"); break;
+	case InputMouseButton::MouseScrollDown: return StringView("MouseScrollDown"); break;
+	case InputMouseButton::MouseScrollLeft: return StringView("MouseScrollLeft"); break;
+	case InputMouseButton::MouseScrollRight: return StringView("MouseScrollRight"); break;
+	case InputMouseButton::Mouse8: return StringView("Mouse8"); break;
+	case InputMouseButton::Mouse9: return StringView("Mouse9"); break;
+	case InputMouseButton::Mouse10: return StringView("Mouse10"); break;
+	case InputMouseButton::Mouse11: return StringView("Mouse11"); break;
+	case InputMouseButton::Mouse12: return StringView("Mouse12"); break;
+	case InputMouseButton::Mouse13: return StringView("Mouse13"); break;
+	case InputMouseButton::Mouse14: return StringView("Mouse14"); break;
+	case InputMouseButton::Mouse15: return StringView("Mouse15"); break;
+	default: break;
+	}
+	return StringView();
+}
+
+String getInputModifiersNames(InputModifier mod) {
+	StringStream out;
+	if ((mod & InputModifier::Shift) != InputModifier::None) { out << " Shift"; }
+	if ((mod & InputModifier::CapsLock) != InputModifier::None) { out << " CapsLock"; }
+	if ((mod & InputModifier::Ctrl) != InputModifier::None) { out << " Ctrl"; }
+	if ((mod & InputModifier::Alt) != InputModifier::None) { out << " Alt"; }
+	if ((mod & InputModifier::NumLock) != InputModifier::None) { out << " NumLock"; }
+	if ((mod & InputModifier::Mod3) != InputModifier::None) { out << " Mod3"; }
+	if ((mod & InputModifier::Mod4) != InputModifier::None) { out << " Mod4"; }
+	if ((mod & InputModifier::Mod5) != InputModifier::None) { out << " Mod5"; }
+	if ((mod & InputModifier::LayoutAlternative) != InputModifier::None) { out << " LayoutAlternative"; }
+	if ((mod & InputModifier::ShiftL) != InputModifier::None) { out << " ShiftL"; }
+	if ((mod & InputModifier::ShiftR) != InputModifier::None) { out << " ShiftR"; }
+	if ((mod & InputModifier::CtrlL) != InputModifier::None) { out << " CtrlL"; }
+	if ((mod & InputModifier::CtrlR) != InputModifier::None) { out << " CtrlR"; }
+	if ((mod & InputModifier::AltL) != InputModifier::None) { out << " AltL"; }
+	if ((mod & InputModifier::AltR) != InputModifier::None) { out << " AltR"; }
+	if ((mod & InputModifier::Mod3L) != InputModifier::None) { out << " Mod3L"; }
+	if ((mod & InputModifier::Mod3L) != InputModifier::None) { out << " Mod3L"; }
+	if ((mod & InputModifier::Mod4L) != InputModifier::None) { out << " Mod4L"; }
+	if ((mod & InputModifier::Mod4R) != InputModifier::None) { out << " Mod4R"; }
+	if ((mod & InputModifier::ScrollLock) != InputModifier::None) { out << " ScrollLock"; }
+	return out.str();
 }
 
 }

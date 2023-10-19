@@ -298,7 +298,7 @@ void GestureTapRecognizer::update(uint64_t dt) {
 	auto now = Time::now();
 	if (_gesture.count > 0 && _gesture.time - now > TapIntervalAllowed) {
 		_gesture.event = GestureEvent::Activated;
-		_gesture.input = &_events.front();
+		_gesture.input = _events.empty() ? &_tmpEvent : &_events.front();
 		_callback(_gesture);
 		_gesture.event = GestureEvent::Cancelled;
 		_gesture.input = nullptr;
@@ -333,6 +333,7 @@ bool GestureTapRecognizer::addEvent(const InputEvent &ev, float density) {
 bool GestureTapRecognizer::removeEvent(const InputEvent &ev, bool successful, float density) {
 	bool ret = false;
 	if (GestureRecognizer::removeEvent(ev, successful, density)) {
+		_tmpEvent = ev;
 		if (successful && _gesture.pos.distance(ev.currentLocation) <= TapDistanceAllowed * density) {
 			registerTap();
 		}
@@ -362,7 +363,7 @@ void GestureTapRecognizer::registerTap() {
 	_gesture.time = currentTime;
 	if (_gesture.count == _maxTapCount) {
 		_gesture.event = GestureEvent::Activated;
-		_gesture.input = &_events.front();
+		_gesture.input = _events.empty() ? &_tmpEvent : &_events.front();
 		_callback(_gesture);
 		_gesture.event = GestureEvent::Cancelled;
 		_gesture.input = nullptr;

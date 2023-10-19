@@ -30,6 +30,10 @@
 #include "android/XLPlatformAndroidActivity.h"
 #endif
 
+#if WIN32
+#include "win32/XLPlatformWin32Library.h"
+#endif
+
 namespace stappler::xenolith::network {
 
 #if LINUX
@@ -114,6 +118,21 @@ SPUNUSED static void registerNetworkCallback(Application *app, void *key, Functi
 SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
 	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().nativeHandle);
 	activity->removeNetworkCallback(key);
+}
+
+#endif
+
+#if WIN32
+
+SPUNUSED static void registerNetworkCallback(Application *, void *key, Function<void(NetworkCapabilities)> &&cb) {
+	auto lib = stappler::xenolith::platform::Win32Library::getInstance();
+	lib->addNetworkConnectionCallback(key, move(cb));
+}
+
+SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
+	auto lib = stappler::xenolith::platform::Win32Library::getInstance();
+	lib->removeNetworkConnectionCallback(key);
+
 }
 
 #endif

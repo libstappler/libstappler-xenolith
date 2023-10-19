@@ -738,12 +738,15 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	StateId dynamicStateId = maxOf<StateId>();
 	DrawStateValues dynamicState;
 
+	//log::verbose("VertexPassHandle", (void *)this, " init");
+
 	auto enableState = [&] (uint32_t stateId) {
 		if (stateId == dynamicStateId) {
 			return;
 		}
 
 		auto state = commands->getState(stateId);
+		//log::verbose("VertexPassHandle", (void *)this, " enable state: ", stateId, " ", (void *)state);
 		if (!state) {
 			if (dynamicState.isScissorEnabled()) {
 				dynamicState.enabled &= ~(core::DynamicState::Scissor);

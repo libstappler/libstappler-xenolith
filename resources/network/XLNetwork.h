@@ -24,28 +24,11 @@
 #define XENOLITH_RESOURCES_NETWORK_XLNETWORK_H_
 
 #include "XLCommon.h"
+#include "XLPlatformNetwork.h"
 
 namespace stappler::xenolith::network {
 
-enum class NetworkCapabilities {
-	None,
-	Internet = (1 << 0),
-	NotCongested = (1 << 1),
-	NotMetered = (1 << 2),
-	NotRestricted = (1 << 3),
-	NotRoaming = (1 << 4),
-	NotSuspended = (1 << 5),
-	NotVpn = (1 << 6),
-	PrioritizeBandwidth = (1 << 7),
-	PrioritizeLatency = (1 << 8),
-	TemporarilyNotMetered = (1 << 9),
-	Trusted = (1 << 10),
-	Validated = (1 << 11),
-	WifiP2P = (1 << 12),
-	CaptivePortal = (1 << 13)
-};
-
-SP_DEFINE_ENUM_AS_MASK(NetworkCapabilities)
+using NetworkCapabilities = platform::NetworkCapabilities;
 
 }
 

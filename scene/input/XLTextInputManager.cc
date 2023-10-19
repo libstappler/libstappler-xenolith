@@ -381,9 +381,16 @@ bool TextInputManager::canHandleInputEvent(const InputEventData &data) {
 }
 
 bool TextInputManager::handleInputEvent(const InputEventData &data) {
+	if (data.event == InputEventName::KeyReleased) {
+		if (data.key.compose != InputKeyComposeState::Forced) {
+			return false;
+		}
+	}
+
 	switch (data.event) {
 	case InputEventName::KeyPressed:
 	case InputEventName::KeyRepeated:
+	case InputEventName::KeyReleased:
 		if (data.key.keycode == InputKeyCode::BACKSPACE || data.key.keychar == char32_t(0x0008)) {
 			deleteBackward();
 			return true;
@@ -400,6 +407,7 @@ bool TextInputManager::handleInputEvent(const InputEventData &data) {
 			}
 			switch (data.key.compose) {
 			case InputKeyComposeState::Nothing:
+			case InputKeyComposeState::Forced:
 				if (_compose == InputKeyComposeState::Composing) {
 					_cursor.start += _cursor.length;
 					_cursor.length = 0;
@@ -419,7 +427,6 @@ bool TextInputManager::handleInputEvent(const InputEventData &data) {
 			return true;
 		}
 		break;
-	case InputEventName::KeyReleased:
 	case InputEventName::KeyCanceled:
 		break;
 	default:

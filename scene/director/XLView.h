@@ -143,7 +143,7 @@ public:
 	virtual void setContentPadding(const Padding &) override;
 
 protected:
-	virtual void wakeup() = 0;
+	virtual void wakeup(std::unique_lock<Mutex> &) = 0;
 
 	core::FrameContraints _constraints;
 

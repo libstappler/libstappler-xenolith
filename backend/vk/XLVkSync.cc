@@ -199,7 +199,7 @@ bool Fence::check(Loop &loop, bool lockfree) {
 	case VK_NOT_READY:
 		_state = Armed;
 		if (platform::clock(core::ClockType::Monotonic) - _armedTime > 1'000'000) {
-			_mutex.unlock();
+			lock.unlock();
 			if (_queue) {
 				XL_VKAPI_LOG("Fence [", _queue->getFrameIndex(), "] Fence is possibly broken: ", _tag);
 			} else {

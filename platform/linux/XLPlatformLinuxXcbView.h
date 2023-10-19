@@ -27,6 +27,8 @@
 #include "XLPlatformLinuxXkb.h"
 #include "XLPlatformLinuxView.h"
 
+#if LINUX
+
 namespace stappler::xenolith::platform {
 
 class XcbView : public LinuxViewInterface {
@@ -108,7 +110,8 @@ protected:
 	String _wmClass;
 };
 
-
 }
+
+#endif
 
 #endif /* XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXXCBVIEW_H_ */

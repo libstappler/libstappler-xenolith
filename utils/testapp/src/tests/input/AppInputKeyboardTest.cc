@@ -271,7 +271,7 @@ void InputKeyboardOnScreenKeyboard::sendInputEvent(ActiveButton btn, InputKeyCod
 	}
 
 	InputEventData data({
-		btn,
+		uint32_t(btn),
 		enabled ? InputEventName::KeyPressed : InputEventName::KeyReleased,
 		InputMouseButton::None,
 		InputModifier::None,

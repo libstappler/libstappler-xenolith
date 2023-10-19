@@ -307,6 +307,8 @@ bool FrameQueue::isResourcePending(const FrameAttachmentData &image) {
 void FrameQueue::waitForResource(const FrameAttachmentData &image, Function<void(bool)> &&cb) {
 	if (image.image) {
 		image.image->waitReady(move(cb));
+	} else {
+		cb(false);
 	}
 }
 
@@ -333,11 +335,11 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 					attachment->waitForResult = false;
 					if (success && !_finalized) {
 						onAttachmentInput(*attachment);
-						_loop->performOnGlThread([this] {
-							if (_frame) {
-								_frame->update();
+						_loop->performOnGlThread([frame = _frame] {
+							if (frame) {
+								frame->update();
 							}
-						}, this);
+						}, _frame);
 					} else {
 						invalidate(*attachment);
 					}
@@ -351,11 +353,11 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 					attachment->waitForResult = false;
 					if (success && !_finalized) {
 						onAttachmentInput(*attachment);
-						_loop->performOnGlThread([this] {
-							if (_frame) {
-								_frame->update();
+						_loop->performOnGlThread([frame = _frame] {
+							if (frame) {
+								frame->update();
 							}
-						}, this);
+						}, _frame);
 					} else {
 						invalidate(*attachment);
 					}
@@ -628,12 +630,15 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 			if (it.second->state != FrameAttachmentState::ResourcesAcquired) {
 				attachmentsAcquired = false;
 				XL_FRAME_QUEUE_LOG("[RenderPass:", data.handle->getName(), "] waitForResource: ", it.second->handle->getName());
-				waitForResource(*it.second, [this, data = &data] (bool success) {
+				auto refId = retain();
+				waitForResource(*it.second, [this, data = &data, refId] (bool success) {
 					if (!success) {
 						invalidate();
+						release(refId);
 						return;
 					}
 					onRenderPassOwned(*data);
+					release(refId);
 				});
 			} else {
 				if (it.second->image && !it.first->subpasses.empty()) {

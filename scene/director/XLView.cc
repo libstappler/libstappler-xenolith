@@ -85,7 +85,7 @@ void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate)
 		std::unique_lock<Mutex> lock(_mutex);
 		if (_running) {
 			_callbacks.emplace_back(move(func), target);
-			wakeup();
+			wakeup(lock);
 		} else if (!_init) {
 			_callbacks.emplace_back(move(func), target);
 		}

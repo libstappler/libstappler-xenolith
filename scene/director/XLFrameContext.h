@@ -107,9 +107,11 @@ struct FrameContextHandle : public core::AttachmentInputData {
 	StateId addState(DrawStateValues values) {
 		auto it = std::find(states.begin(), states.end(), values);
 		if (it != states.end()) {
+			//log::verbose("FrameContextHandle", "addStateRet ", it - states.begin(), " ", values.scissor);
 			return it - states.begin();
 		} else {
 			states.emplace_back(values);
+			//log::verbose("FrameContextHandle", "addState ", states.size() - 1, " ", values.scissor);
 			return states.size() - 1;
 		}
 	}
@@ -123,7 +125,7 @@ struct FrameContextHandle : public core::AttachmentInputData {
 	}
 
 	StateId getCurrentState() const {
-		return states.empty() ? maxOf<StateId>() : stateStack.back();
+		return stateStack.empty() ? maxOf<StateId>() : stateStack.back();
 	}
 };
 

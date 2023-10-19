@@ -278,7 +278,7 @@ void FontLibrary::update(Application *, const UpdateTime &clock) {
 		}
 	} while (0);
 
-	_mutex.unlock();
+	lock.unlock();
 
 	std::unique_lock uniqueLock(_sharedMutex);
 	for (auto &it : erased) {

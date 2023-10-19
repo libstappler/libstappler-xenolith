@@ -226,9 +226,11 @@ bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
 	}
 
 	auto refId = _data->application->retain();
-	perform([this, comp, refId] (const Server &serv, const db::Transaction &t) -> bool {
+	auto selfRefId = retain();
+	perform([this, comp, refId, selfRefId] (const Server &serv, const db::Transaction &t) -> bool {
 		_data->removeComponent(comp, t);
 		_data->application->release(refId);
+		release(selfRefId);
 		return true;
 	}, comp);
 	_data->appComponents.erase(it);
