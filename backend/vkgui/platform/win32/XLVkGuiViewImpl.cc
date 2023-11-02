@@ -70,7 +70,7 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 		return false;
 	}
 
-	_options.flattenFrameRate = true;
+	//_options.flattenFrameRate = true;
 	//_options.renderOnDemand = false;
 
 	return true;

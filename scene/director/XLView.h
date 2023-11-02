@@ -130,6 +130,9 @@ public:
 
 	virtual void setReadyForNextFrame() override;
 
+	virtual void setRenderOnDemand(bool value);
+	virtual bool isRenderOnDemand() const;
+
 	virtual void retainBackButton();
 	virtual void releaseBackButton();
 	virtual uint64_t getBackButtonCounter() const override { return _backButtonCounter; }

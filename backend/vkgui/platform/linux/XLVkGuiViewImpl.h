@@ -49,7 +49,7 @@ public:
 	virtual void threadDispose() override;
 	virtual bool worker() override;
 
-	virtual void wakeup() override;
+	virtual void wakeup(std::unique_lock<Mutex> &) override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
 	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;

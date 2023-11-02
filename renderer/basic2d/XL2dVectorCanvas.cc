@@ -34,8 +34,10 @@ struct VectorCanvasPathOutput {
 struct VectorCanvasPathDrawer {
 	const VectorPath *path = nullptr;
 
+	bool verbose = false;
 	float quality = 0.5f; // approximation level (more is better)
 	Color4F originalColor;
+	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
 
 	uint32_t draw(memory::pool_t *pool, const VectorPath &p, const Mat4 &transform, VertexData *, bool cache);
 };
@@ -178,6 +180,18 @@ void VectorCanvas::setQuality(float value) {
 
 float VectorCanvas::getQuality() const {
 	return _data->pathDrawer.quality;
+}
+
+void VectorCanvas::setRelocateRule(geom::Tesselator::RelocateRule rule) {
+	_data->pathDrawer.relocateRule = rule;
+}
+
+geom::Tesselator::RelocateRule VectorCanvas::getRelocateRule() const {
+	return _data->pathDrawer.relocateRule;
+}
+
+void VectorCanvas::setVerbose(bool val) {
+	_data->pathDrawer.verbose = val;
 }
 
 Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 targetSize) {
@@ -398,6 +412,7 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 		// for cached image, always draw antialias, because user can change color and opacity
 		if (path->isAntialiased() && (path->getStyle() == vg::DrawStyle::Fill || path->getStrokeOpacity() < 96 || cache)) {
 			fillTess->setAntialiasValue(config::VGAntialiasFactor / approxScale);
+			fillTess->setRelocateRule(relocateRule);
 		}
 		fillTess->setWindingRule(path->getWindingRule());
 		if (!fillTess->prepare(result)) {
@@ -440,7 +455,9 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	}
 
 	if (!success) {
-		log::error("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
+		if (verbose) {
+			log::error("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
+		}
 	}
 
 	return target.objects;

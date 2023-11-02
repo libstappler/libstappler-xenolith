@@ -80,6 +80,7 @@ public:
 	virtual void threadDispose() override;
 
 	virtual void update(bool displayLink) override;
+	virtual void close() override;
 
 	virtual void run() override;
 	virtual void runWithQueue(const Rc<RenderQueue> &) override;
@@ -108,6 +109,9 @@ public:
 	vk::Device *getDevice() const { return _device; }
 
 	virtual void setReadyForNextFrame() override;
+
+	virtual void setRenderOnDemand(bool value) override;
+	virtual bool isRenderOnDemand() const override;
 
 protected:
 	using xenolith::View::init;

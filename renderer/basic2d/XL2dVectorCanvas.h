@@ -43,6 +43,11 @@ public:
 	void setQuality(float);
 	float getQuality() const;
 
+	void setRelocateRule(geom::Tesselator::RelocateRule);
+	geom::Tesselator::RelocateRule getRelocateRule() const;
+
+	void setVerbose(bool val);
+
 	Rc<VectorCanvasResult> draw(Rc<VectorImageData> &&, Size2 targetSize);
 
 protected:

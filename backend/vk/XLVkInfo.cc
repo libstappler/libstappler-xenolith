@@ -1343,7 +1343,6 @@ size_t getFormatBlockSize(VkFormat format) {
 	case VK_FORMAT_A4R4G4B4_UNORM_PACK16_EXT: return 2; break;
 	case VK_FORMAT_A4B4G4R4_UNORM_PACK16_EXT: return 2; break;
 	default:
-		log::error("Vk", "Format is not supported: ", format);
 		break;
 	}
 	return 0;

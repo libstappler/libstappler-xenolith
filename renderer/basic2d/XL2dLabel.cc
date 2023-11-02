@@ -43,7 +43,7 @@ static size_t Label_getQuadsCount(const font::FormatSpec *format) {
 		auto end = start + it.count();
 		if (it.line->start + it.line->count == end) {
 			const font::CharSpec &c = format->chars[end - 1];
-			if (!string::isspace(c.charID) && c.charID != char16_t(0x0A)) {
+			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A)) {
 				++ ret;
 			}
 			end -= 1;
@@ -51,7 +51,7 @@ static size_t Label_getQuadsCount(const font::FormatSpec *format) {
 
 		for (auto charIdx = start; charIdx < end; ++ charIdx) {
 			const font::CharSpec &c = format->chars[charIdx];
-			if (!string::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
+			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
 				++ ret;
 			}
 		}
@@ -111,7 +111,7 @@ void Label::writeQuads(VertexArray &vertexes, FormatSpec *format, Vector<ColorMa
 
 		for (auto charIdx = start; charIdx < end; ++ charIdx) {
 			const font::CharSpec &c = format->chars[charIdx];
-			if (!string::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
+			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
 
 				uint16_t face = 0;
 				auto ch = targetRange->layout->getChar(c.charID, face);

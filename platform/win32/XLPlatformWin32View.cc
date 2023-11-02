@@ -94,6 +94,8 @@ bool Win32View::init(ViewInterface *view, Win32Library *win32, Win32ViewInfo &&i
 	_view = view;
 	_win32 = win32;
 	_info = move(info);
+	_width = _info.rect.width;
+	_height = _info.rect.height;
 	_winInstance = GetModuleHandleW(nullptr);
 
 	_monitors = _win32->pollMonitors();

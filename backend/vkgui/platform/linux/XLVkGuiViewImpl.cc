@@ -200,11 +200,15 @@ bool ViewImpl::worker() {
 		}
 	}
 
+	if (_swapchain) {
+		_swapchain->deprecate(false);
+	}
+
 	::close(_eventFd);
 	return false;
 }
 
-void ViewImpl::wakeup() {
+void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
 	if (_eventFd >= 0) {
 		uint64_t value = 1;
 		::write(_eventFd, (const void *)&value, sizeof(uint64_t));

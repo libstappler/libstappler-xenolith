@@ -215,7 +215,7 @@ uint16_t Formatter::checkBullet(uint16_t first, uint16_t len) const {
 		auto ch = _output->chars.at(i).charID;
 		if (chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentBullet>::match(ch)) {
 			offset ++;
-		} else if (string::isspace(ch) && offset >= 1) {
+		} else if (chars::isspace(ch) && offset >= 1) {
 			return offset + 1;
 		} else {
 			break;
@@ -279,7 +279,7 @@ bool Formatter::pushChar(char16_t ch) {
 		}
 	} else if (ch == u'-' || ch == u'+' || ch == u'*' || ch == u'/' || ch == u'\\') {
 		auto pos = charNum;
-		while(pos > firstInLine && (!string::isspace(_output->chars.at(pos - 1).charID))) {
+		while(pos > firstInLine && (!chars::isspace(_output->chars.at(pos - 1).charID))) {
 			pos --;
 		}
 		if (charNum - pos > 2) {
@@ -391,7 +391,7 @@ bool Formatter::pushLine(uint16_t first, uint16_t len, bool forceAlign) {
 
 			for (uint16_t i = first; i < first + len - 1; i++) {
 				auto ch = _output->chars.at(i).charID;
-				if (string::isspace(ch) && ch != '\n') {
+				if (chars::isspace(ch) && ch != '\n') {
 					spacesCount ++;
 				}
 			}
@@ -399,7 +399,7 @@ bool Formatter::pushLine(uint16_t first, uint16_t len, bool forceAlign) {
 			int16_t offset = 0;
 			for (uint16_t i = first; i < first + len; i++) {
 				auto ch = _output->chars.at(i).charID;
-				if (ch != char16_t(0xffff) && string::isspace(ch) && ch != '\n' && spacesCount > 0) {
+				if (ch != char16_t(0xffff) && chars::isspace(ch) && ch != '\n' && spacesCount > 0) {
 					offset += joffset / spacesCount;
 					joffset -= joffset / spacesCount;
 					spacesCount --;
@@ -487,7 +487,7 @@ bool Formatter::pushLineBreak() {
 	} else {
 		// we can wrap the word
 		auto &ch = _output->chars.at((wordWrapPos - 1));
-		if (!string::isspace(ch.charID)) {
+		if (!chars::isspace(ch.charID)) {
 			if (!pushLine(firstInLine, (wordWrapPos) - firstInLine, true)) {
 				return false;
 			}
@@ -576,7 +576,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (c != char16_t(0x00A0) && string::isspace(c) && collapseSpaces) {
+		if (c != char16_t(0x00A0) && chars::isspace(c) && collapseSpaces) {
 			if (!startWhitespace) {
 				bufferedSpace = true;
 			}
@@ -592,7 +592,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (bufferedSpace || (!collapseSpaces && c != 0x00A0 && string::isspace(c))) {
+		if (bufferedSpace || (!collapseSpaces && c != 0x00A0 && chars::isspace(c))) {
 			if (request == ContentRequest::Minimize && charNum > 0) {
 				wordWrapPos = charNum;
 				auto b = bufferedSpace;
@@ -808,7 +808,7 @@ bool Formatter::readWithRange(RangeSpec && range, const TextParameters &s,
 	}
 
 	if (!_output->chars.empty() && _output->chars.back().charID == ' ' && collapseSpaces) {
-		while (len > 0 && ((string::isspace(str[0]) && str[0] != 0x00A0) || str[0] < 0x20)) {
+		while (len > 0 && ((chars::isspace(str[0]) && str[0] != 0x00A0) || str[0] < 0x20)) {
 			len --; str ++;
 		}
 	}
@@ -1019,7 +1019,7 @@ void FormatSpec::setSource(Rc<FontController> &&s) {
 }
 
 inline static bool isSpaceOrLineBreak(char16_t c) {
-	return c == char16_t(0x0A) || string::isspace(c);
+	return c == char16_t(0x0A) || chars::isspace(c);
 }
 
 Pair<uint32_t, FormatSpec::SelectMode> FormatSpec::getChar(int32_t x, int32_t y, SelectMode mode) const {
@@ -1210,7 +1210,7 @@ WideString FormatSpec::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bo
 					const auto &spec = chars[i];
 					if (spec.charID != char16_t(0xAD) && spec.charID != char16_t(0xFFFF)) {
 						ret.push_back(spec.charID);
-						if (string::isspace(spec.charID)) {
+						if (chars::isspace(spec.charID)) {
 							++ counter;
 							if (counter >= maxWords) {
 								break;

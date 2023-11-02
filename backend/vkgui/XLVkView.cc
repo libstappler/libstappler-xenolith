@@ -148,7 +148,7 @@ void View::update(bool displayLink) {
 		}
 	}
 
-	if (!_swapchainInvalidated && _scheduledTime < clock && _options.renderOnDemand) {
+	if (_swapchain && !_swapchainInvalidated && _scheduledTime < clock && _options.renderOnDemand) {
 		auto acquiredImages = _swapchain->getAcquiredImagesCount();
 		if (_swapchain && _framesInProgress == 0 && acquiredImages == 0) {
 			scheduleNextImage(0, true);
@@ -156,6 +156,10 @@ void View::update(bool displayLink) {
 			//log::verbose("vk::View", "Frame dropped: ", acquiredImages, " ", _framesInProgress);
 		}
 	}
+}
+
+void View::close() {
+	xenolith::View::close();
 }
 
 void View::run() {
@@ -585,6 +589,16 @@ void View::setReadyForNextFrame() {
 	}, this, true);
 }
 
+void View::setRenderOnDemand(bool value) {
+	performOnThread([this, value] {
+		_options.renderOnDemand = value;
+	}, this, true);
+}
+
+bool View::isRenderOnDemand() const {
+	return _options.renderOnDemand;
+}
+
 bool View::pollInput(bool frameReady) {
 	return false;
 }
@@ -659,7 +673,8 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					}
 
 					req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
-					req->setOutput(a, [this] (core::FrameAttachmentData &data, bool success, Ref *) {
+					auto refId = _swapchain->retain();
+					req->setOutput(a, [this, refId, swapchain = _swapchain.get()] (core::FrameAttachmentData &data, bool success, Ref *) {
 						if (data.image) {
 							-- _framesInProgress;
 							if (success) {
@@ -668,6 +683,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 								invalidateTarget(move(data.image));
 							}
 						}
+						swapchain->release(refId);
 						return true;
 					}, this);
 					auto order = _frameEmitter->submitNextFrame(move(req))->getOrder();

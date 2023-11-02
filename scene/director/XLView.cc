@@ -220,6 +220,14 @@ void View::setReadyForNextFrame() {
 
 }
 
+void View::setRenderOnDemand(bool value) {
+
+}
+
+bool View::isRenderOnDemand() const {
+	return true;
+}
+
 void View::retainBackButton() {
 	performOnThread([this] {
 		++ _backButtonCounter;
