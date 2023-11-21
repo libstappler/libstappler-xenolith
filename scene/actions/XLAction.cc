@@ -216,20 +216,24 @@ Sequence::~Sequence() { }
 
 void Sequence::stop(void) {
 	if (_prevTime < 1.0f) {
+		bool finalizeInstants = false;
 		auto front = _actions.begin() + _currentIdx;
 		auto end = _actions.end();
 
 		front->action->stop();
+		finalizeInstants = (_prevTime - std::numeric_limits<float>::epsilon()) >= front->maxThreshold;
 		++ front;
 		++ _currentIdx;
 
-		while (front != end && front->threshold <= std::numeric_limits<float>::epsilon()) {
-			front->action->startWithTarget(_target);
-			front->action->update(1.0);
-			front->action->stop();
+		if (finalizeInstants) {
+			while (front != end && front->threshold <= std::numeric_limits<float>::epsilon()) {
+				front->action->startWithTarget(_target);
+				front->action->update(1.0);
+				front->action->stop();
 
-			++ front;
-			++ _currentIdx;
+				++ front;
+				++ _currentIdx;
+			}
 		}
 
 		// do not update any non-instant actions, just start-stop
@@ -334,6 +338,9 @@ void Sequence::startWithTarget(Node *target) {
 	if (_actions.front().threshold != 0.0f) {
 		_actions.front().action->startWithTarget(_target);
 	}
+
+	_prevTime = 0.0f;
+	_currentIdx = 0;
 }
 
 bool Sequence::reserve(size_t s) {
@@ -413,6 +420,103 @@ bool Spawn::addAction(Action *a) {
 	_duration = std::max(_duration, a->getDuration());
 	_actions.emplace_back(ActionData{a});
 	return true;
+}
+
+Repeat::~Repeat() {
+	_innerAction = nullptr;
+}
+
+bool Repeat::init(ActionInterval *action, uint32_t times) {
+    float d = action->getDuration() * times;
+
+	if (ActionInterval::init(d)) {
+		_times = times;
+		_innerAction = action;
+		_actionInstant = dynamic_cast<ActionInstant *>(action) ? true : false;
+		if (_actionInstant) {
+			_times -= 1;
+		}
+		_total = 0;
+		return true;
+	}
+
+	return false;
+}
+
+void Repeat::stop() {
+	_innerAction->stop();
+	ActionInterval::stop();
+}
+
+void Repeat::update(float dt) {
+	if (dt >= _nextDt) {
+		while (dt > _nextDt && _total < _times) {
+			_innerAction->update(1.0f);
+			++ _total;
+
+			_innerAction->stop();
+			_innerAction->startWithTarget(_target);
+			_nextDt = _innerAction->getDuration() / _duration * (_total + 1);
+		}
+
+		if (dt >= 1.0f && _total < _times) {
+			++ _total;
+		}
+
+		// don't set an instant action back or update it, it has no use because it has no duration
+		if (!_actionInstant) {
+			if (_total == _times) {
+				_innerAction->update(1);
+				_innerAction->stop();
+			} else {
+				_innerAction->update(dt - (_nextDt - _innerAction->getDuration() / _duration));
+			}
+		}
+	} else {
+		_innerAction->update(fmodf(dt * _times, 1.0f));
+	}
+}
+
+void Repeat::startWithTarget(Node *target) {
+	_total = 0;
+	_nextDt = _innerAction->getDuration() / _duration;
+	ActionInterval::startWithTarget(target);
+	_innerAction->startWithTarget(target);
+}
+
+bool Repeat::isDone() const {
+	return _total == _times;
+}
+
+RepeatForever::~RepeatForever() {
+	_innerAction = nullptr;
+}
+
+bool RepeatForever::init(ActionInterval *action) {
+	_innerAction = action;
+	return true;
+}
+
+void RepeatForever::startWithTarget(Node *target) {
+	ActionInterval::startWithTarget(target);
+	_innerAction->startWithTarget(target);
+}
+
+void RepeatForever::step(float dt) {
+	_innerAction->step(dt);
+	if (_innerAction->isDone()) {
+		float diff = _innerAction->getElapsed() - _innerAction->getDuration();
+		if (diff > _innerAction->getDuration()) {
+			diff = fmodf(diff, _innerAction->getDuration());
+		}
+		_innerAction->startWithTarget(_target);
+		_innerAction->step(0.0f);
+		_innerAction->step(diff);
+	}
+}
+
+bool RepeatForever::isDone() const {
+	return false;
 }
 
 DelayTime::~DelayTime() { }
@@ -581,5 +685,47 @@ void FadeTo::startWithTarget(Node *target) {
 void FadeTo::update(float time) {
 	_target->setOpacity(progress(_startOpacity, _endOpacity, time));
 }
+
+bool RenderContinuously::init() {
+	_innerAction = Rc<RepeatForever>::create(Rc<DelayTime>::create(1.0f));
+
+	if (_innerAction) {
+		return ActionInterval::init(_innerAction->getDuration());
+	}
+	return false;
+}
+
+bool RenderContinuously::init(float duration) {
+	_innerAction = Rc<DelayTime>::create(1.0f);
+
+	if (_innerAction) {
+		return ActionInterval::init(_innerAction->getDuration());
+	}
+	return false;
+}
+
+void RenderContinuously::step(float dt) {
+	ActionInterval::step(dt);
+	_innerAction->step(dt);
+}
+
+void RenderContinuously::startWithTarget(Node *target) {
+	ActionInterval::startWithTarget(target);
+	_innerAction->startWithTarget(target);
+}
+
+void RenderContinuously::update(float time) {
+	// do nothing
+}
+
+bool RenderContinuously::isDone(void) const {
+	return _innerAction->isDone();
+}
+
+void RenderContinuously::stop() {
+	_innerAction->stop();
+	ActionInterval::stop();
+}
+
 
 }

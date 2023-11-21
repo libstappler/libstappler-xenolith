@@ -153,7 +153,7 @@ bool MaterialColorPickerTest::init() {
 	_background = addChild(Rc<material2d::Surface>::create(material2d::SurfaceStyle::Background), ZOrder(-1));
 	_background->setAnchorPoint(Anchor::Middle);
 
-	_lightCheckbox = addChild(Rc<AppCheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
+	_lightCheckbox = addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
 		if (value) {
 			_themeType = material2d::ThemeType::DarkTheme;
 		} else {
@@ -164,7 +164,7 @@ bool MaterialColorPickerTest::init() {
 	_lightCheckbox->setAnchorPoint(Anchor::TopLeft);
 	_lightCheckbox->setContentSize(Size2(24.0f, 24.0f));
 
-	_contentCheckbox = addChild(Rc<AppCheckboxWithLabel>::create("Content theme", false, [this] (bool value) {
+	_contentCheckbox = addChild(Rc<CheckboxWithLabel>::create("Content theme", false, [this] (bool value) {
 		_isContentColor = value;
 		updateColor(material2d::ColorHCT(_colorHct));
 	}));

@@ -130,10 +130,43 @@ static void drawIcon_Dynamic_DownloadProgress(vg::VectorImage &image, float pr) 
 	image.addPath("")->addRect(Rect(9, 9, 6, 6));
 }
 
+static void drawIcon_Stappler_CursorIcon(vg::VectorImage &image, float pr) {
+	image.addPath()
+		->moveTo(12.0f, 24.0f)
+		.lineTo(5.0f, 17.0f)
+		.arcTo(7.0f * sqrt(2.0f), 7.0f * sqrt(2.0f), 0.0f, true, true, 19.0f, 17.0f)
+		.closePath();
+}
+
+static void drawIcon_Stappler_SelectioinStartIcon(vg::VectorImage &image, float pr) {
+	image.addPath()
+		->moveTo(24, 24)
+		.lineTo(12, 24)
+		.arcTo(12, 12, 0, true, true, 24, 12)
+		.closePath();
+}
+
+static void drawIcon_Stappler_SelectioinEndIcon(vg::VectorImage &image, float pr) {
+	image.addPath()
+		->moveTo(0, 24)
+		.lineTo(0, 12)
+		.arcTo(12, 12, 0, true, true, 12, 24)
+		.closePath();
+}
+
 void drawIcon(vg::VectorImage &image, IconName name, float pr) {
 	switch (name) {
 	case IconName::None:
 	case IconName::Empty:
+		break;
+	case IconName::Stappler_CursorIcon:
+		drawIcon_Stappler_CursorIcon(image, pr);
+		break;
+	case IconName::Stappler_SelectioinStartIcon:
+		drawIcon_Stappler_SelectioinStartIcon(image, pr);
+		break;
+	case IconName::Stappler_SelectioinEndIcon:
+		drawIcon_Stappler_SelectioinEndIcon(image, pr);
 		break;
 	case IconName::Dynamic_Loader:
 		drawIcon_Dynamic_Loader(image, pr);

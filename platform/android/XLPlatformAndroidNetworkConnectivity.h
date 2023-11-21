@@ -24,6 +24,7 @@
 #define XENOLITH_PLATFORM_ANDROID_XLPLATFORMANDROIDNETWORKCONNECTIVITY_H_
 
 #include "XLPlatformAndroid.h"
+#include "XLPlatformNetwork.h"
 
 namespace stappler::xenolith::platform {
 

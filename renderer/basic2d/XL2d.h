@@ -156,6 +156,9 @@ struct ShadowLightInput {
 
 	bool addAmbientLight(const Vec4 &, const Color4F &, bool softShadow);
 	bool addDirectLight(const Vec4 &, const Color4F &, const Vec4 &);
+
+	Extent2 getShadowExtent(Size2 frameSize) const;
+	Size2 getShadowSize(Size2 frameSize) const;
 };
 
 }

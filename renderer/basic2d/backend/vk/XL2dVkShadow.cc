@@ -98,14 +98,14 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 	}
 
 	float fullDensity = _input->lights.sceneDensity;
-	float shadowDensity = _input->lights.sceneDensity / _input->lights.shadowDensity;
 	auto screenSize = devFrame->getFrameConstraints().getScreenSize();
 
 	Extent2 scaledExtent(ceilf(screenSize.width / fullDensity), ceilf(screenSize.height / fullDensity));
 
-	Extent2 shadowExtent(ceilf(screenSize.width / shadowDensity), ceilf(screenSize.height / shadowDensity));
-	Vec2 shadowOffset(shadowExtent.width - screenSize.width / shadowDensity, shadowExtent.height - screenSize.height / shadowDensity);
-
+	//float shadowDensity = _input->lights.sceneDensity / _input->lights.shadowDensity;
+	//Extent2 shadowExtent(ceilf(screenSize.width / shadowDensity), ceilf(screenSize.height / shadowDensity));
+	//Vec2 shadowOffset( screenSize.width / shadowDensity - shadowExtent.width, screenSize.height / shadowDensity - shadowExtent.height);
+	//shadowOffset *= shadowDensity;
 	_shadowData.globalColor = data->globalColor = _input->lights.globalColor * data->luminosity;
 
 	// pre-calculated color with no shadows
@@ -125,7 +125,7 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 	_shadowData.density = data->density = _input->lights.sceneDensity;
 	_shadowData.shadowSdfDensity = data->shadowSdfDensity = 1.0f / _input->lights.shadowDensity;
 	_shadowData.shadowDensity = data->shadowDensity = 1.0f / _input->lights.sceneDensity;
-	_shadowData.shadowOffset = data->shadowOffset = shadowOffset;
+	_shadowData.shadowOffset = data->shadowOffset = Vec2::ZERO;
 	_shadowData.pix = data->pix = Vec2(1.0f / float(screenSize.width), 1.0f / float(screenSize.height));
 
 	_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
@@ -855,11 +855,8 @@ void ShadowSdfImageAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachm
 		_shadowDensity = d->lights.shadowDensity;
 		_sceneDensity = d->lights.sceneDensity;
 
-		auto extent = handle.getFrameConstraints().extent;
-
 		_currentImageInfo = static_cast<ImageAttachment *>(_attachment.get())->getImageInfo();
-		_currentImageInfo.extent = Extent2(std::floor((extent.width / d->lights.sceneDensity) * _shadowDensity),
-				std::floor((extent.height / d->lights.sceneDensity) * _shadowDensity));
+		_currentImageInfo.extent = d->lights.getShadowExtent( handle.getFrameConstraints().getScreenSize());
 		handle.getRequest()->addImageSpecialization(static_cast<const ImageAttachment *>(_attachment.get()), ImageInfoData(_currentImageInfo));
 		cb(true);
 	});

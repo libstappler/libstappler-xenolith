@@ -29,9 +29,9 @@
 
 namespace stappler::xenolith::app {
 
-class AppCheckbox : public Layer {
+class Checkbox : public Layer {
 public:
-	virtual ~AppCheckbox() { }
+	virtual ~Checkbox() { }
 
 	virtual bool init(bool, Function<void(bool)> &&);
 
@@ -57,9 +57,9 @@ protected:
 	InputListener *_input = nullptr;
 };
 
-class AppCheckboxWithLabel : public AppCheckbox {
+class CheckboxWithLabel : public Checkbox {
 public:
-	virtual ~AppCheckboxWithLabel() { }
+	virtual ~CheckboxWithLabel() { }
 
 	virtual bool init(StringView, bool, Function<void(bool)> &&);
 
@@ -68,7 +68,7 @@ public:
 	void setLabelColor(const Color4F &);
 
 protected:
-	using AppCheckbox::init;
+	using Checkbox::init;
 
 	Label *_label = nullptr;
 };

@@ -1068,7 +1068,11 @@ Pair<uint32_t, FormatSpec::SelectMode> FormatSpec::getChar(int32_t x, int32_t y,
 		}
 	}
 
-	if (!pLine || yDistance > pLine->height * 3 / 2) {
+	if (!pLine) {
+		return pair(maxOf<uint32_t>(), mode);
+	}
+
+	if (yDistance > pLine->height * 3 / 2 && mode != Best) {
 		return pair(maxOf<uint32_t>(), mode);
 	}
 
@@ -1245,7 +1249,7 @@ WideString FormatSpec::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bo
 	return ret;
 }
 
-Pair<uint32_t, uint32_t> FormatSpec::selectWord(uint32_t origin) const {
+core::TextCursor FormatSpec::selectWord(uint32_t origin) const {
 	Pair<uint32_t, uint32_t> ret(origin, origin);
 	while (ret.second + 1 < chars.size() && !isSpaceOrLineBreak(chars[ret.second + 1].charID)) {
 		++ ret.second;
@@ -1253,11 +1257,7 @@ Pair<uint32_t, uint32_t> FormatSpec::selectWord(uint32_t origin) const {
 	while (ret.first > 0 && !isSpaceOrLineBreak(chars[ret.first - 1].charID)) {
 		-- ret.first;
 	}
-	return ret;
-}
-
-uint32_t FormatSpec::selectChar(int32_t x, int32_t y, SelectMode mode) const {
-	return getChar(x, y, mode).first;
+	return core::TextCursor(ret.first, ret.second - ret.first + 1);
 }
 
 HyphenMap::~HyphenMap() {

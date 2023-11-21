@@ -29,9 +29,9 @@
 
 namespace stappler::xenolith::app {
 
-class AppSlider : public Layer {
+class Slider : public Layer {
 public:
-	virtual ~AppSlider() { }
+	virtual ~Slider() { }
 
 	virtual bool init(float, Function<void(float)> &&);
 
@@ -58,9 +58,9 @@ protected:
 	InputListener *_input = nullptr;
 };
 
-class AppSliderWithLabel : public AppSlider {
+class SliderWithLabel : public Slider {
 public:
-	virtual ~AppSliderWithLabel() { }
+	virtual ~SliderWithLabel() { }
 
 	virtual bool init(StringView, float, Function<void(float)> &&);
 
@@ -76,7 +76,7 @@ public:
 	virtual void setFontSize(uint16_t);
 
 protected:
-	using AppSlider::init;
+	using Slider::init;
 
 	Label *_prefix = nullptr;
 	Label *_label = nullptr;

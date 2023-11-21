@@ -23,31 +23,40 @@
 #include "AppMaterialBackground.h"
 #include "MaterialStyleContainer.h"
 #include "AppMaterialColorPicker.h"
+#include "XL2dSceneLight.h"
+#include "XL2dSceneContent.h"
 
 namespace stappler::xenolith::app {
 
-bool MaterialBackground::init(const Color4F &c) {
+bool MaterialBackground::init() {
 	if (!BackgroundSurface::init()) {
 		return false;
 	}
 
-	auto color = material2d::ColorHCT(c);
-
-	_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, color, false);
-
-	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, color, [this] (float val) {
+	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, material2d::ColorHCT(), [this] (float val) {
 		auto color = material2d::ColorHCT(val, 100.0f, 50.0f, 1.0f);
 		_styleContainer->setPrimaryScheme(_lightCheckbox->getValue() ? material2d::ThemeType::DarkTheme : material2d::ThemeType::LightTheme, color, false);
+
+		if (_sceneStyleContainer) {
+			_sceneStyleContainer->setPrimaryScheme(_lightCheckbox->getValue() ? material2d::ThemeType::DarkTheme : material2d::ThemeType::LightTheme, color, false);
+		}
 		_huePicker->setTargetColor(color);
 	}));
 	_huePicker->setAnchorPoint(Anchor::TopLeft);
 	_huePicker->setContentSize(Size2(240.0f, 24.0f));
 
-	_lightCheckbox = addChild(Rc<AppCheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
+	_lightCheckbox = addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
 		if (value) {
 			_styleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme, _huePicker->getTargetColor(), false);
 		} else {
 			_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, _huePicker->getTargetColor(), false);
+		}
+		if (_sceneStyleContainer) {
+			if (value) {
+				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme, _huePicker->getTargetColor(), false);
+			} else {
+				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, _huePicker->getTargetColor(), false);
+			}
 		}
 	}));
 	_lightCheckbox->setAnchorPoint(Anchor::TopLeft);
@@ -67,16 +76,30 @@ void MaterialBackground::onContentSizeDirty() {
 void MaterialBackground::onEnter(xenolith::Scene *scene) {
 	BackgroundSurface::onEnter(scene);
 
-	/*auto color = Color4F::WHITE;
+	if (auto sceneStyle = scene->getComponentByType<material2d::StyleContainer>()) {
+		auto color = sceneStyle->getPrimaryScheme().hct(material2d::ColorRole::Primary);
+		auto themeType = sceneStyle->getPrimaryScheme().type;
+
+		_styleContainer->setPrimaryScheme(themeType, color, false);
+		_sceneStyleContainer = sceneStyle;
+		_huePicker->setTargetColor(color);
+		_huePicker->setValue(color.data.hue / 360.0f);
+	}
+
+	auto content = dynamic_cast<SceneContent2d *>(_scene->getContent());
+
+	auto color = Color4F::WHITE;
 	color.a = 0.5f;
+
+	content->removeAllLights();
 
 	auto light = Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.3f), 1.5f, color);
 	auto ambient = Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, color);
 
-	_scene->setGlobalLight(Color4F::WHITE);
-	_scene->removeAllLights();
-	_scene->addLight(move(light));
-	_scene->addLight(move(ambient));*/
+	content->setGlobalLight(Color4F::WHITE);
+	content->removeAllLights();
+	content->addLight(move(light));
+	content->addLight(move(ambient));
 }
 
 }

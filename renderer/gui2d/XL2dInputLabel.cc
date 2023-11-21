@@ -47,9 +47,6 @@ bool InputLabel::Selection::init() {
 		return false;
 	}
 
-	setOpacityModifyRGB(false);
-	setCascadeOpacityEnabled(false);
-
 	return true;
 }
 
@@ -428,10 +425,10 @@ bool InputLabel::onLongPress(const Vec2 &vec, const TimeInterval &time, int coun
 		_isLongPress = true;
 		auto pos = convertToNodeSpace(vec);
 
-		auto chIdx = _format->selectChar(pos.x * _labelDensity, _format->height - pos.y * _labelDensity, FormatSpec::Center);
+		auto chIdx = _format->getChar(pos.x * _labelDensity, _format->height - pos.y * _labelDensity, FormatSpec::Center).first;
 		if (chIdx != maxOf<uint32_t>()) {
 			auto word = _format->selectWord(chIdx);
-			setCursor(Cursor(Cursor(TextCursorPosition(word.first), TextCursorPosition(word.second))));
+			setCursor(word);
 			scheduleCursorPointer();
 		}
 
@@ -539,14 +536,16 @@ bool InputLabel::onSwipe(const Vec2 &vec, const Vec2 &) {
 				}
 			}
 		} else if (_selectedCursor == _cursorStart) {
-			uint32_t charNumber = _format->selectChar(int32_t(roundf(locInLabel.x * _labelDensity)), _format->height - int32_t(roundf(locInLabel.y * _labelDensity)), font::FormatSpec::Prefix);
+			uint32_t charNumber = _format->getChar(int32_t(roundf(locInLabel.x * _labelDensity)),
+					_format->height - int32_t(roundf(locInLabel.y * _labelDensity)), font::FormatSpec::Prefix).first;
 			if (charNumber != maxOf<uint32_t>()) {
 				if (charNumber != _cursor.start && charNumber < _cursor.start + _cursor.length) {
 					setCursor(Cursor(charNumber, (_cursor.start + _cursor.length) - charNumber));
 				}
 			}
 		} else if (_selectedCursor == _cursorEnd) {
-			uint32_t charNumber = _format->selectChar(int32_t(roundf(locInLabel.x * _labelDensity)), _format->height - int32_t(roundf(locInLabel.y * _labelDensity)), font::FormatSpec::Suffix);
+			uint32_t charNumber = _format->getChar(int32_t(roundf(locInLabel.x * _labelDensity)),
+					_format->height - int32_t(roundf(locInLabel.y * _labelDensity)), font::FormatSpec::Suffix).first;
 			if (charNumber != maxOf<uint32_t>()) {
 				if (charNumber != _cursor.start + _cursor.length - 1 && charNumber >= _cursor.start) {
 					setCursor(Cursor(_cursor.start, charNumber - _cursor.start + 1));

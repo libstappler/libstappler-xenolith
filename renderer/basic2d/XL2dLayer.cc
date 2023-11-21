@@ -218,4 +218,13 @@ RenderingLevel Layer::getRealRenderingLevel() const {
 	return level;
 }
 
+void Layer::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
+	auto shadowIndex = frame.depthStack.back();
+
+	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
+	handle->shadows->pushSdfGroup(t, handle->getCurrentState(), shadowIndex, [&] (CmdSdfGroup2D &cmd) {
+		cmd.addRect2D(Rect(Vec2(0, 0), _contentSize));
+	});
+}
+
 }

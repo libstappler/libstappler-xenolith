@@ -251,7 +251,7 @@ bool VgSdfTest::init() {
 	float maxShadow = 20.0f;
 	float initialRotation = 0.0f;
 
-	_sliderScaleX = addChild(Rc<AppSliderWithLabel>::create(toString("Scale X: ", initialScale),
+	_sliderScaleX = addChild(Rc<SliderWithLabel>::create(toString("Scale X: ", initialScale),
 			(initialScale - 0.1f) / 2.9f, [this] (float val) {
 		// updateScaleValue(val);
 		_circleSprite->setScaleX(val * 2.9f + 0.1f);
@@ -269,7 +269,7 @@ bool VgSdfTest::init() {
 	_sliderScaleX->setAnchorPoint(Anchor::TopLeft);
 	_sliderScaleX->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderScaleY = addChild(Rc<AppSliderWithLabel>::create(toString("Scale Y: ", initialScale),
+	_sliderScaleY = addChild(Rc<SliderWithLabel>::create(toString("Scale Y: ", initialScale),
 			(initialScale - 0.1f) / 2.9f, [this] (float val) {
 		_circleSprite->setScaleY(val * 2.9f + 0.1f);
 		_circleTestSprite->setScaleY(val * 2.9f + 0.1f);
@@ -286,7 +286,7 @@ bool VgSdfTest::init() {
 	_sliderScaleY->setAnchorPoint(Anchor::TopLeft);
 	_sliderScaleY->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderShadow = addChild(Rc<AppSliderWithLabel>::create(toString("Shadow: ", initialShadow),
+	_sliderShadow = addChild(Rc<SliderWithLabel>::create(toString("Shadow: ", initialShadow),
 			initialShadow / maxShadow, [this, maxShadow] (float val) {
 		_circleSprite->setDepthIndex(val * maxShadow);
 		_circleTestSprite->setDepthIndex(val * maxShadow);
@@ -303,7 +303,7 @@ bool VgSdfTest::init() {
 	_sliderShadow->setAnchorPoint(Anchor::TopLeft);
 	_sliderShadow->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderRotation = addChild(Rc<AppSliderWithLabel>::create(toString("Rotation: ", initialRotation),
+	_sliderRotation = addChild(Rc<SliderWithLabel>::create(toString("Rotation: ", initialRotation),
 			initialRotation / (numbers::pi * 2.0f), [this, maxShadow] (float val) {
 		_circleSprite->setRotation(val * numbers::pi * 2.0f);
 		_circleTestSprite->setRotation(val * numbers::pi * 2.0f);

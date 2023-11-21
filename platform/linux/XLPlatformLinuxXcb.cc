@@ -67,6 +67,7 @@ bool XcbLibrary::open(void *handle) {
 	this->xcb_flush = reinterpret_cast<decltype(this->xcb_flush)>(dlsym(handle, "xcb_flush"));
 	this->xcb_disconnect = reinterpret_cast<decltype(this->xcb_disconnect)>(dlsym(handle, "xcb_disconnect"));
 	this->xcb_poll_for_event = reinterpret_cast<decltype(this->xcb_poll_for_event)>(dlsym(handle, "xcb_poll_for_event"));
+	this->xcb_get_extension_data = reinterpret_cast<decltype(this->xcb_get_extension_data)>(dlsym(handle, "xcb_get_extension_data"));
 	this->xcb_map_window = reinterpret_cast<decltype(this->xcb_map_window)>(dlsym(handle, "xcb_map_window"));
 	this->xcb_create_window = reinterpret_cast<decltype(this->xcb_create_window)>(dlsym(handle, "xcb_create_window"));
 	this->xcb_change_property = reinterpret_cast<decltype(this->xcb_change_property)>(dlsym(handle, "xcb_change_property"));
@@ -95,6 +96,7 @@ bool XcbLibrary::open(void *handle) {
 			&& this->xcb_flush
 			&& this->xcb_disconnect
 			&& this->xcb_poll_for_event
+			&& this->xcb_get_extension_data
 			&& this->xcb_map_window
 			&& this->xcb_create_window
 			&& this->xcb_change_property
@@ -154,6 +156,9 @@ XcbLibrary::ConnectionData XcbLibrary::getActiveConnection() const {
 
 void XcbLibrary::openAux() {
 	if (auto randr = dlopen("libxcb-randr.so", RTLD_LAZY)) {
+		this->xcb_randr_id =
+				reinterpret_cast<decltype(this->xcb_randr_id)>(dlsym(randr, "xcb_randr_id"));
+
 		this->xcb_randr_query_version =
 				reinterpret_cast<decltype(this->xcb_randr_query_version)>(dlsym(randr, "xcb_randr_query_version"));
 		this->xcb_randr_query_version_reply =
@@ -175,6 +180,8 @@ void XcbLibrary::openAux() {
 				reinterpret_cast<decltype(this->xcb_randr_get_screen_info_rates_iterator)>(dlsym(randr, "xcb_randr_get_screen_info_rates_iterator"));
 		this->xcb_randr_refresh_rates_next =
 				reinterpret_cast<decltype(this->xcb_randr_refresh_rates_next)>(dlsym(randr, "xcb_randr_refresh_rates_next"));
+		this->xcb_randr_refresh_rates_end =
+				reinterpret_cast<decltype(this->xcb_randr_refresh_rates_end)>(dlsym(randr, "xcb_randr_refresh_rates_end"));
 		this->xcb_randr_refresh_rates_rates =
 				reinterpret_cast<decltype(this->xcb_randr_refresh_rates_rates)>(dlsym(randr, "xcb_randr_refresh_rates_rates"));
 		this->xcb_randr_refresh_rates_rates_length =
@@ -197,8 +204,68 @@ void XcbLibrary::openAux() {
 				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_unchecked)>(dlsym(randr, "xcb_randr_get_screen_resources_current_unchecked"));
 		this->xcb_randr_get_screen_resources_current_reply =
 				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_reply)>(dlsym(randr, "xcb_randr_get_screen_resources_current_reply"));
+		this->xcb_randr_get_screen_resources_current_outputs =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_outputs)>(dlsym(randr, "xcb_randr_get_screen_resources_current_outputs"));
+		this->xcb_randr_get_screen_resources_current_outputs_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_outputs_length)>(dlsym(randr, "xcb_randr_get_screen_resources_current_outputs_length"));
+		this->xcb_randr_get_screen_resources_current_modes =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_modes)>(dlsym(randr, "xcb_randr_get_screen_resources_current_modes"));
+		this->xcb_randr_get_screen_resources_current_modes_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_modes_length)>(dlsym(randr, "xcb_randr_get_screen_resources_current_modes_length"));
+		this->xcb_randr_get_screen_resources_current_names =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_names)>(dlsym(randr, "xcb_randr_get_screen_resources_current_names"));
+		this->xcb_randr_get_screen_resources_current_names_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_names_length)>(dlsym(randr, "xcb_randr_get_screen_resources_current_names_length"));
+		this->xcb_randr_get_screen_resources_current_crtcs =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_crtcs)>(dlsym(randr, "xcb_randr_get_screen_resources_current_crtcs"));
+		this->xcb_randr_get_screen_resources_current_crtcs_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_screen_resources_current_crtcs_length)>(dlsym(randr, "xcb_randr_get_screen_resources_current_crtcs_length"));
 
-		if (this->xcb_randr_query_version
+		this->xcb_randr_get_output_primary =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_primary)>(dlsym(randr, "xcb_randr_get_output_primary"));
+		this->xcb_randr_get_output_primary_unchecked =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_primary_unchecked)>(dlsym(randr, "xcb_randr_get_output_primary_unchecked"));
+		this->xcb_randr_get_output_primary_reply =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_primary_reply)>(dlsym(randr, "xcb_randr_get_output_primary_reply"));
+
+		this->xcb_randr_get_output_info =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info)>(dlsym(randr, "xcb_randr_get_output_info"));
+		this->xcb_randr_get_output_info_unchecked =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_unchecked)>(dlsym(randr, "xcb_randr_get_output_info_unchecked"));
+		this->xcb_randr_get_output_info_reply =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_reply)>(dlsym(randr, "xcb_randr_get_output_info_reply"));
+		this->xcb_randr_get_output_info_crtcs =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_crtcs)>(dlsym(randr, "xcb_randr_get_output_info_crtcs"));
+		this->xcb_randr_get_output_info_crtcs_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_crtcs_length)>(dlsym(randr, "xcb_randr_get_output_info_crtcs_length"));
+		this->xcb_randr_get_output_info_crtcs_end =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_crtcs_end)>(dlsym(randr, "xcb_randr_get_output_info_crtcs_end"));
+		this->xcb_randr_get_output_info_modes =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_modes)>(dlsym(randr, "xcb_randr_get_output_info_modes"));
+		this->xcb_randr_get_output_info_modes_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_modes_length)>(dlsym(randr, "xcb_randr_get_output_info_modes_length"));
+		this->xcb_randr_get_output_info_name =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_name)>(dlsym(randr, "xcb_randr_get_output_info_name"));
+		this->xcb_randr_get_output_info_name_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_output_info_name_length)>(dlsym(randr, "xcb_randr_get_output_info_name_length"));
+
+		this->xcb_randr_get_crtc_info =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info)>(dlsym(randr, "xcb_randr_get_crtc_info"));
+		this->xcb_randr_get_crtc_info_unchecked =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_unchecked)>(dlsym(randr, "xcb_randr_get_crtc_info_unchecked"));
+		this->xcb_randr_get_crtc_info_reply =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_reply)>(dlsym(randr, "xcb_randr_get_crtc_info_reply"));
+		this->xcb_randr_get_crtc_info_outputs =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_outputs)>(dlsym(randr, "xcb_randr_get_crtc_info_outputs"));
+		this->xcb_randr_get_crtc_info_outputs_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_outputs_length)>(dlsym(randr, "xcb_randr_get_crtc_info_outputs_length"));
+		this->xcb_randr_get_crtc_info_possible =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_possible)>(dlsym(randr, "xcb_randr_get_crtc_info_possible"));
+		this->xcb_randr_get_crtc_info_possible_length =
+				reinterpret_cast<decltype(this->xcb_randr_get_crtc_info_possible_length)>(dlsym(randr, "xcb_randr_get_crtc_info_possible_length"));
+
+		if (this->xcb_randr_id
+				&&this->xcb_randr_query_version
 				&& this->xcb_randr_query_version_reply
 				&& this->xcb_randr_get_screen_info_unchecked
 				&& this->xcb_randr_get_screen_info_reply
@@ -208,6 +275,7 @@ void XcbLibrary::openAux() {
 				&& this->xcb_randr_get_screen_info_rates_length
 				&& this->xcb_randr_get_screen_info_rates_iterator
 				&& this->xcb_randr_refresh_rates_next
+				&& this->xcb_randr_refresh_rates_end
 				&& this->xcb_randr_refresh_rates_rates
 				&& this->xcb_randr_refresh_rates_rates_length
 				&& this->xcb_randr_get_screen_resources
@@ -217,7 +285,35 @@ void XcbLibrary::openAux() {
 				&& this->xcb_randr_get_screen_resources_modes_length
 				&& this->xcb_randr_get_screen_resources_current
 				&& this->xcb_randr_get_screen_resources_current_unchecked
-				&& this->xcb_randr_get_screen_resources_current_reply) {
+				&& this->xcb_randr_get_screen_resources_current_reply
+				&& this->xcb_randr_get_screen_resources_current_outputs
+				&& this->xcb_randr_get_screen_resources_current_outputs_length
+				&& this->xcb_randr_get_screen_resources_current_modes
+				&& this->xcb_randr_get_screen_resources_current_modes_length
+				&& this->xcb_randr_get_screen_resources_current_names
+				&& this->xcb_randr_get_screen_resources_current_names_length
+				&& this->xcb_randr_get_screen_resources_current_crtcs
+				&& this->xcb_randr_get_screen_resources_current_crtcs_length
+				&& this->xcb_randr_get_output_primary
+				&& this->xcb_randr_get_output_primary_unchecked
+				&& this->xcb_randr_get_output_primary_reply
+				&& this->xcb_randr_get_output_info
+				&& this->xcb_randr_get_output_info_unchecked
+				&& this->xcb_randr_get_output_info_reply
+				&& this->xcb_randr_get_output_info_crtcs
+				&& this->xcb_randr_get_output_info_crtcs_length
+				&& this->xcb_randr_get_output_info_crtcs_end
+				&& this->xcb_randr_get_output_info_modes
+				&& this->xcb_randr_get_output_info_modes_length
+				&& this->xcb_randr_get_output_info_name
+				&& this->xcb_randr_get_output_info_name_length
+				&& this->xcb_randr_get_crtc_info
+				&& this->xcb_randr_get_crtc_info_unchecked
+				&& this->xcb_randr_get_crtc_info_reply
+				&& this->xcb_randr_get_crtc_info_outputs
+				&& this->xcb_randr_get_crtc_info_outputs_length
+				&& this->xcb_randr_get_crtc_info_possible
+				&& this->xcb_randr_get_crtc_info_possible_length) {
 			_randr = randr;
 		} else {
 			this->xcb_randr_query_version = nullptr;

@@ -302,6 +302,10 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	}
 
 	_startActivityMethod = _activity->env->GetMethodID(activityClass, "startActivity", "(Landroid/content/Intent;)V");
+	_runInputMethod = _activity->env->GetMethodID(activityClass, "runInput", "(Ljava/lang/String;III)V");
+	_updateInputMethod = _activity->env->GetMethodID(activityClass, "updateInput", "(Ljava/lang/String;III)V");
+	_updateCursorMethod = _activity->env->GetMethodID(activityClass, "updateCursor", "(II)V");
+	_cancelInputMethod = _activity->env->GetMethodID(activityClass, "cancelInput", "()V");
 
 	auto intentClass = _activity->env->FindClass("android/content/Intent");
 	auto uriClass = _activity->env->FindClass("android/net/Uri");
@@ -852,6 +856,32 @@ void Activity::handleActivityResult(jint request_code, jint result_code, jobject
 	}
 }
 
+void Activity::handleCancelInput() {
+	if (_textInputWrapper) {
+		_textInputWrapper->cancelInput(_textInputWrapper->target);
+		_textInputWrapper = nullptr;
+	}
+}
+
+void Activity::handleTextChanged(jstring text, jint cursor_start, jint cursor_len) {
+	if (_textInputWrapper) {
+		jboolean isCopy = 0;
+		auto jchars = _activity->env->GetStringChars(text, &isCopy);
+		auto len = _activity->env->GetStringLength(text);
+
+		_textInputWrapper->textChanged(_textInputWrapper->target,
+				WideStringView(reinterpret_cast<const char16_t *>(jchars), len), core::TextCursor(cursor_start, cursor_len));
+
+		_activity->env->ReleaseStringChars(text, jchars);
+	}
+}
+
+void Activity::handleInputEnabled(jboolean value) {
+	if (_textInputWrapper) {
+		_textInputWrapper->inputEnabled(_textInputWrapper->target, (value == 0) ? false : true);
+	}
+}
+
 static String Activity_getApplicatioName(JNIEnv *env, jclass activityClass, jobject activity) {
 	static jmethodID j_getApplicationInfo = nullptr;
 	static jfieldID j_labelRes = nullptr;
@@ -1193,6 +1223,28 @@ void Activity::openUrl(StringView url) {
 	_activity->env->DeleteLocalRef(intentClass);
 }
 
+void Activity::updateTextCursor(uint32_t pos, uint32_t len) {
+	_activity->env->CallVoidMethod(_activity->clazz, _updateCursorMethod, jint(pos), jint(len));
+}
+
+void Activity::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, core::TextInputType type) {
+	auto jstr = _activity->env->NewString(reinterpret_cast<const jchar*>(str.data()), str.size());
+	_activity->env->CallVoidMethod(_activity->clazz, _updateInputMethod, jstr, jint(pos), jint(len), jint(type));
+	_activity->env->DeleteLocalRef(jstr);
+}
+
+void Activity::runTextInput(Rc<ActivityTextInputWrapper> &&wrapper, WideStringView str, uint32_t pos, uint32_t len, core::TextInputType type) {
+	_textInputWrapper = move(wrapper);
+
+	auto jstr = _activity->env->NewString(reinterpret_cast<const jchar*>(str.data()), str.size());
+	_activity->env->CallVoidMethod(_activity->clazz, _runInputMethod, jstr, jint(pos), jint(len), jint(type));
+	_activity->env->DeleteLocalRef(jstr);
+}
+
+void Activity::cancelTextInput() {
+	_activity->env->CallVoidMethod(_activity->clazz, _cancelInputMethod);
+}
+
 void Activity::transferInputEvent(const core::InputEventData &event) {
 	if (_rootView) {
 		_rootView->handleInputEvent(event);
@@ -1225,6 +1277,36 @@ Java_org_stappler_xenolith_appsupport_AppSupportActivity_handleActivityResult(JN
 	auto activity = reinterpret_cast<Activity *>(native_pointer);
 	if (activity) {
 		activity->handleActivityResult(request_code, result_code, data);
+	}
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_stappler_xenolith_appsupport_TextInputWrapper_nativeHandleCancelInput(JNIEnv *env,
+		jobject thiz, jlong native_pointer) {
+	auto activity = reinterpret_cast<Activity *>(native_pointer);
+	if (activity) {
+		activity->handleCancelInput();
+	}
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_stappler_xenolith_appsupport_TextInputWrapper_nativeHandleTextChanged(JNIEnv *env,
+		jobject thiz, jlong native_pointer, jstring text, jint cursor_start, jint cursor_len) {
+	auto activity = reinterpret_cast<Activity *>(native_pointer);
+	if (activity) {
+		activity->handleTextChanged(text, cursor_start, cursor_len);
+	}
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_org_stappler_xenolith_appsupport_TextInputWrapper_nativeHandleInputEnabled(JNIEnv *env,
+		jobject thiz, jlong native_pointer, jboolean value) {
+	auto activity = reinterpret_cast<Activity *>(native_pointer);
+	if (activity) {
+		activity->handleInputEnabled(value);
 	}
 }
 

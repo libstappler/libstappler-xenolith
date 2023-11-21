@@ -46,7 +46,7 @@ protected:
 
 	Rc<ActionInterval> makeAction(material2d::EasingType, Rc<ActionInterval> &&) const;
 
-	AppSliderWithLabel *_slider = nullptr;
+	SliderWithLabel *_slider = nullptr;
 	ButtonWithLabel *_button = nullptr;
 	Vector<ActionEaseNode *> _nodes;
 };

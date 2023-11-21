@@ -49,8 +49,8 @@ protected:
 	float _timeoutValue = 0.0f;
 	Sprite *_sprite = nullptr;
 	Label *_label = nullptr;
-	AppSliderWithLabel *_slider = nullptr;
-	AppCheckboxWithLabel *_checkbox = nullptr;
+	SliderWithLabel *_slider = nullptr;
+	CheckboxWithLabel *_checkbox = nullptr;
 	Rc<TemporaryResource> _resource;
 };
 

@@ -151,7 +151,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	if (!_info.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
 		imageLimit = 1;
 	}
-	_textureLayoutImagesCount = imageLimit = std::min(imageLimit, config::MaxTextureSetImages);
+	_textureLayoutImagesCount = imageLimit = std::min(imageLimit, config::MaxTextureSetImages) - 2;
 	_textureLayoutBuffersCount = bufferLimit = std::min(bufferLimit, config::MaxBufferArrayObjects);
 	_textureSetLayout = Rc<TextureSetLayout>::create(*this, imageLimit, bufferLimit);
 

@@ -24,6 +24,7 @@
 #define XENOLITH_FONT_XLFONTFORMATTER_H_
 
 #include "XLFontConfig.h"
+#include "XLCoreInput.h"
 
 typedef struct _HyphenDict HyphenDict;
 
@@ -131,8 +132,8 @@ public:
 
 	WideString str(bool filterAlign = true) const;
 	WideString str(uint32_t, uint32_t, size_t maxWords = maxOf<size_t>(), bool ellipsis = true, bool filterAlign = true) const;
-	Pair<uint32_t, uint32_t> selectWord(uint32_t originChar) const;
-	uint32_t selectChar(int32_t x, int32_t y, SelectMode = Center) const;
+	core::TextCursor selectWord(uint32_t originChar) const;
+	//uint32_t selectChar(int32_t x, int32_t y, SelectMode = Center) const;
 
 	Rect getLineRect(uint32_t lineId, float density, const Vec2 & = Vec2()) const;
 	Rect getLineRect(const LineSpec &, float density, const Vec2 & = Vec2()) const;

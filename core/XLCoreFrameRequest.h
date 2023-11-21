@@ -103,6 +103,10 @@ public:
 
 	const FrameOutputBinding *getOutputBinding(const AttachmentData *) const;
 
+	void autorelease(Ref *ref) {
+		_autorelease.emplace_front(ref);
+	}
+
 protected:
 	FrameRequest(const FrameRequest &) = delete;
 	FrameRequest &operator=(const FrameRequest &) = delete;
@@ -129,6 +133,7 @@ protected:
 	};
 
 	Map<const AttachmentData *, WaitInputData> _waitForInputs;
+	std::forward_list<Rc<Ref>> _autorelease;
 };
 
 }

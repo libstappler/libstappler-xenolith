@@ -110,6 +110,8 @@ public:
 	virtual void expandFlexibleNode(float extraSpace, float animation = 0.0f);
 	virtual void clearFlexibleExpand(float animation = 0.0f);
 
+	virtual DecorationStatus getDecorationStatus() const override;
+
 protected:
 	virtual void updateFlexParams();
 	virtual void onScroll(float delta, bool finished);

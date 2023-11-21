@@ -26,7 +26,7 @@
 namespace stappler::xenolith::core {
 
 Loop::~Loop() {
-	log::debug("gl::Loop", "~Loop");
+	log::debug("core::Loop", "~Loop");
 }
 
 Loop::Loop() { }

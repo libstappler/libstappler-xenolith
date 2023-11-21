@@ -50,7 +50,7 @@ bool MaterialDynamicFontTest::init() {
 	_label->setAlignment(Label::TextAlign::Center);
 	_label->setFontStyle(font::FontStyle::FromDegrees(initialFontStyle));
 
-	_sliderSize = addChild(Rc<AppSliderWithLabel>::create(toString("FontSize: ", std::floor(initialFontSize)),
+	_sliderSize = addChild(Rc<SliderWithLabel>::create(toString("FontSize: ", std::floor(initialFontSize)),
 			(initialFontSize - 28.0f) / 100.0f, [this] (float val) {
 		_sliderSize->setString(toString("FontSize: ", std::floor(val * 100.0f + 28.0f)));
 		_label->setFontSize(uint16_t(std::floor(val * 100.0f + 28.0f)));
@@ -58,7 +58,7 @@ bool MaterialDynamicFontTest::init() {
 	_sliderSize->setAnchorPoint(Anchor::TopLeft);
 	_sliderSize->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderWeight = addChild(Rc<AppSliderWithLabel>::create(toString("FontWeight: ", std::floor(initialFontWeight)),
+	_sliderWeight = addChild(Rc<SliderWithLabel>::create(toString("FontWeight: ", std::floor(initialFontWeight)),
 			(initialFontWeight - 100.0f) / 900.0f, [this] (float val) {
 		_sliderWeight->setString(toString("FontWeight: ", std::floor(val * 900.0f + 100.0f)));
 		_label->setFontWeight(font::FontWeight(std::floor(val * 900.0f + 100.0f)));
@@ -66,7 +66,7 @@ bool MaterialDynamicFontTest::init() {
 	_sliderWeight->setAnchorPoint(Anchor::TopLeft);
 	_sliderWeight->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderWidth = addChild(Rc<AppSliderWithLabel>::create(toString("FontWidth: ", std::floor(initialFontWidth) / 2.0f),
+	_sliderWidth = addChild(Rc<SliderWithLabel>::create(toString("FontWidth: ", std::floor(initialFontWidth) / 2.0f),
 			(initialFontWidth / 2.0f - 25.0f) / (150.0f - 25.0f), [this] (float val) {
 		_sliderWidth->setString(toString("FontWidth: ", std::floor(val * (150.0f - 25.0f) + 25.0f)));
 		_label->setFontStretch(font::FontStretch(std::floor(val * (150.0f - 25.0f) + 25.0f) * 2.0f));
@@ -74,7 +74,7 @@ bool MaterialDynamicFontTest::init() {
 	_sliderWidth->setAnchorPoint(Anchor::TopLeft);
 	_sliderWidth->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderStyle = addChild(Rc<AppSliderWithLabel>::create(toString("FontStyle: ", -initialFontStyle),
+	_sliderStyle = addChild(Rc<SliderWithLabel>::create(toString("FontStyle: ", -initialFontStyle),
 			-initialFontStyle / 10.0f, [this] (float val) {
 		_sliderStyle->setString(toString("FontStyle: ", val * 10.0f));
 		_label->setFontStyle(font::FontStyle::FromDegrees(-val * 10.0f));
@@ -82,7 +82,7 @@ bool MaterialDynamicFontTest::init() {
 	_sliderStyle->setAnchorPoint(Anchor::TopLeft);
 	_sliderStyle->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderGrade = addChild(Rc<AppSliderWithLabel>::create(toString("FontGrade: ", initialFontGrade),
+	_sliderGrade = addChild(Rc<SliderWithLabel>::create(toString("FontGrade: ", initialFontGrade),
 			(initialFontGrade - minFontGrade) / (maxFontGrade - minFontGrade), [this, minFontGrade, maxFontGrade] (float val) {
 		_sliderGrade->setString(toString("FontGrade: ", val * (maxFontGrade - minFontGrade) + minFontGrade));
 		_label->setFontGrade(font::FontGrade(val * (maxFontGrade - minFontGrade) + minFontGrade));

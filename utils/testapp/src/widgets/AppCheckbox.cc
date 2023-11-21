@@ -27,7 +27,7 @@
 
 namespace stappler::xenolith::app {
 
-bool AppCheckbox::init(bool value, Function<void(bool)> &&cb) {
+bool Checkbox::init(bool value, Function<void(bool)> &&cb) {
 	if (!Layer::init(Color::Grey_200)) {
 		return false;
 	}
@@ -55,7 +55,7 @@ bool AppCheckbox::init(bool value, Function<void(bool)> &&cb) {
 	return true;
 }
 
-void AppCheckbox::setValue(bool value) {
+void Checkbox::setValue(bool value) {
 	if (_value != value) {
 		_value = value;
 		updateValue();
@@ -65,33 +65,33 @@ void AppCheckbox::setValue(bool value) {
 	}
 }
 
-bool AppCheckbox::getValue() const {
+bool Checkbox::getValue() const {
 	return _value;
 }
 
-void AppCheckbox::setForegroundColor(const Color4F &color) {
+void Checkbox::setForegroundColor(const Color4F &color) {
 	if (_foregroundColor != color) {
 		_foregroundColor = color;
 		updateValue();
 	}
 }
 
-Color4F AppCheckbox::getForegroundColor() const {
+Color4F Checkbox::getForegroundColor() const {
 	return _foregroundColor;
 }
 
-void AppCheckbox::setBackgroundColor(const Color4F &color) {
+void Checkbox::setBackgroundColor(const Color4F &color) {
 	if (_backgroundColor != color) {
 		_backgroundColor = color;
 		updateValue();
 	}
 }
 
-Color4F AppCheckbox::getBackgroundColor() const {
+Color4F Checkbox::getBackgroundColor() const {
 	return _backgroundColor;
 }
 
-void AppCheckbox::updateValue() {
+void Checkbox::updateValue() {
 	if (_value) {
 		setColor(_foregroundColor);
 	} else {
@@ -99,8 +99,8 @@ void AppCheckbox::updateValue() {
 	}
 }
 
-bool AppCheckboxWithLabel::init(StringView title, bool value, Function<void(bool)> &&cb) {
-	if (!AppCheckbox::init(value, move(cb))) {
+bool CheckboxWithLabel::init(StringView title, bool value, Function<void(bool)> &&cb) {
+	if (!Checkbox::init(value, move(cb))) {
 		return false;
 	}
 
@@ -111,13 +111,13 @@ bool AppCheckboxWithLabel::init(StringView title, bool value, Function<void(bool
 	return true;
 }
 
-void AppCheckboxWithLabel::onContentSizeDirty() {
-	AppCheckbox::onContentSizeDirty();
+void CheckboxWithLabel::onContentSizeDirty() {
+	Checkbox::onContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize.width + 16.0f, _contentSize.height / 2.0f));
 }
 
-void AppCheckboxWithLabel::setLabelColor(const Color4F &color) {
+void CheckboxWithLabel::setLabelColor(const Color4F &color) {
 	_label->setColor(color);
 }
 

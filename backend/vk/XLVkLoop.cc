@@ -553,7 +553,7 @@ void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
 	performOnGlThread([this, req = move(req), gen, callback = move(callback)]() mutable {
 		auto frame = makeFrame(move(req), gen);
-		if (callback) {
+		if (frame && callback) {
 			frame->setCompleteCallback([callback = move(callback)] (FrameHandle &handle) {
 				callback(handle.isValid());
 			});

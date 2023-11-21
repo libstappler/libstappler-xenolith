@@ -152,12 +152,12 @@ WideString LabelBase::getLocalizedString(const WideStringView &s) {
 }
 
 float LabelBase::getStringWidth(font::FontController *source, const DescriptionStyle &style,
-		const StringView &str, float density, bool localized) {
-	return getStringWidth(source, style, string::toUtf16<Interface>(str), density, localized);
+		const StringView &str, bool localized) {
+	return getStringWidth(source, style, string::toUtf16<Interface>(str), localized);
 }
 
 float LabelBase::getStringWidth(font::FontController *source, const DescriptionStyle &style,
-		const WideStringView &str, float density, bool localized) {
+		const WideStringView &str, bool localized) {
 	if (!source) {
 		return 0.0f;
 	}
@@ -177,16 +177,16 @@ float LabelBase::getStringWidth(font::FontController *source, const DescriptionS
 	}
 
 	fmt.finalize();
-	return spec.width / density;
+	return spec.width / style.font.density;
 }
 
 Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionStyle &style,
-		const StringView &s, float w, float density, bool localized) {
-	return getLabelSize(source, style, string::toUtf16<Interface>(s), w, density, localized);
+		const StringView &s, float w, bool localized) {
+	return getLabelSize(source, style, string::toUtf16<Interface>(s), w, localized);
 }
 
 Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionStyle &style,
-		const WideStringView &str, float w, float density, bool localized) {
+		const WideStringView &str, float w, bool localized) {
 	if (str.empty()) {
 		return Size2(0.0f, 0.0f);
 	}
@@ -198,7 +198,7 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 	font::FormatSpec spec;
 	spec.setSource(source);
 	font::Formatter fmt(&spec);
-	fmt.setWidth(static_cast<uint16_t>(roundf(w * density)));
+	fmt.setWidth(static_cast<uint16_t>(roundf(w * style.font.density)));
 	fmt.begin(0, 0);
 
 	if (localized && locale::hasLocaleTags(str)) {
@@ -211,13 +211,13 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 	}
 
 	fmt.finalize();
-	return Size2(spec.maxLineX / density, spec.height / density);
+	return Size2(spec.maxLineX / style.font.density, spec.height / style.font.density);
 }
 
 void LabelBase::setAlignment(TextAlign alignment) {
 	if (_alignment != alignment) {
 		_alignment = alignment;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -228,7 +228,7 @@ TextAlign LabelBase::getAlignment() const {
 void LabelBase::setWidth(float width) {
 	if (_width != width) {
 		_width = width;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -239,7 +239,7 @@ float LabelBase::getWidth() const {
 void LabelBase::setTextIndent(float value) {
 	if (_textIndent != value) {
 		_textIndent = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 float LabelBase::getTextIndent() const {
@@ -249,7 +249,7 @@ float LabelBase::getTextIndent() const {
 void LabelBase::setTextTransform(const TextTransform &value) {
 	if (value != _style.text.textTransform) {
 		_style.text.textTransform = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -260,7 +260,7 @@ TextTransform LabelBase::getTextTransform() const {
 void LabelBase::setTextDecoration(const TextDecoration &value) {
 	if (value != _style.text.textDecoration) {
 		_style.text.textDecoration = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 TextDecoration LabelBase::getTextDecoration() const {
@@ -270,7 +270,7 @@ TextDecoration LabelBase::getTextDecoration() const {
 void LabelBase::setHyphens(const Hyphens &value) {
 	if (value != _style.text.hyphens) {
 		_style.text.hyphens = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 Hyphens LabelBase::getHyphens() const {
@@ -280,7 +280,7 @@ Hyphens LabelBase::getHyphens() const {
 void LabelBase::setVerticalAlign(const VerticalAlign &value) {
 	if (value != _style.text.verticalAlign) {
 		_style.text.verticalAlign = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 VerticalAlign LabelBase::getVerticalAlign() const {
@@ -297,7 +297,7 @@ void LabelBase::setFontSize(const FontSize &value) {
 
 	if (realTargetValue != realSourceValue) {
 		_style.font.fontSize = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 FontSize LabelBase::getFontSize() const {
@@ -307,7 +307,7 @@ FontSize LabelBase::getFontSize() const {
 void LabelBase::setFontStyle(const FontStyle &value) {
 	if (value != _style.font.fontStyle) {
 		_style.font.fontStyle = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 FontStyle LabelBase::getFontStyle() const {
@@ -317,7 +317,7 @@ FontStyle LabelBase::getFontStyle() const {
 void LabelBase::setFontWeight(const FontWeight &value) {
 	if (value != _style.font.fontWeight) {
 		_style.font.fontWeight = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 FontWeight LabelBase::getFontWeight() const {
@@ -327,7 +327,7 @@ FontWeight LabelBase::getFontWeight() const {
 void LabelBase::setFontStretch(const FontStretch &value) {
 	if (value != _style.font.fontStretch) {
 		_style.font.fontStretch = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 FontStretch LabelBase::getFontStretch() const {
@@ -337,7 +337,7 @@ FontStretch LabelBase::getFontStretch() const {
 void LabelBase::setFontGrade(const FontGrade &value) {
 	if (value != _style.font.fontGrade) {
 		_style.font.fontGrade = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -349,7 +349,7 @@ void LabelBase::setFontFamily(const StringView &value) {
 	if (value != _style.font.fontFamily) {
 		_fontFamilyStorage = value.str<Interface>();
 		_style.font.fontFamily = _fontFamilyStorage;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 StringView LabelBase::getFontFamily() const {
@@ -360,14 +360,14 @@ void LabelBase::setLineHeightAbsolute(float value) {
 	if (!_isLineHeightAbsolute || _lineHeight != value) {
 		_isLineHeightAbsolute = true;
 		_lineHeight = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 void LabelBase::setLineHeightRelative(float value) {
 	if (_isLineHeightAbsolute || _lineHeight != value) {
 		_isLineHeightAbsolute = false;
 		_lineHeight = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 float LabelBase::getLineHeight() const {
@@ -380,7 +380,7 @@ bool LabelBase::isLineHeightAbsolute() const {
 void LabelBase::setMaxWidth(float value) {
 	if (_maxWidth != value) {
 		_maxWidth = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 float LabelBase::getMaxWidth() const {
@@ -390,7 +390,7 @@ float LabelBase::getMaxWidth() const {
 void LabelBase::setMaxLines(size_t value) {
 	if (_maxLines != value) {
 		_maxLines = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 size_t LabelBase::getMaxLines() const {
@@ -400,7 +400,7 @@ size_t LabelBase::getMaxLines() const {
 void LabelBase::setMaxChars(size_t value) {
 	if (_maxChars != value) {
 		_maxChars = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 size_t LabelBase::getMaxChars() const {
@@ -410,7 +410,7 @@ size_t LabelBase::getMaxChars() const {
 void LabelBase::setOpticalAlignment(bool value) {
 	if (_opticalAlignment != value) {
 		_opticalAlignment = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 bool LabelBase::isOpticallyAligned() const {
@@ -420,7 +420,7 @@ bool LabelBase::isOpticallyAligned() const {
 void LabelBase::setFillerChar(char16_t c) {
 	if (c != _fillerChar) {
 		_fillerChar = c;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 char16_t LabelBase::getFillerChar() const {
@@ -430,7 +430,7 @@ char16_t LabelBase::getFillerChar() const {
 void LabelBase::setLocaleEnabled(bool value) {
 	if (_localeEnabled != value) {
 		_localeEnabled = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 bool LabelBase::isLocaleEnabled() const {
@@ -440,7 +440,7 @@ bool LabelBase::isLocaleEnabled() const {
 void LabelBase::setPersistentLayout(bool value) {
 	if (_persistentLayout != value) {
 		_persistentLayout = value;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -458,7 +458,7 @@ void LabelBase::setString(const StringView &newString) {
 	if (!_localeEnabled && locale::hasLocaleTagsFast(_string16)) {
 		setLocaleEnabled(true);
 	}
-	_labelDirty = true;
+	setLabelDirty();
 	clearStyles();
 }
 
@@ -472,7 +472,7 @@ void LabelBase::setString(const WideStringView &newString) {
 	if (!_localeEnabled && locale::hasLocaleTagsFast(_string16)) {
 		setLocaleEnabled(true);
 	}
-	_labelDirty = true;
+	setLabelDirty();
 	clearStyles();
 }
 
@@ -496,7 +496,7 @@ void LabelBase::erase16(size_t start, size_t len) {
 
 	_string16.erase(start, len);
 	_string8 = string::toUtf8<Interface>(_string16);
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 void LabelBase::erase8(size_t start, size_t len) {
@@ -506,35 +506,35 @@ void LabelBase::erase8(size_t start, size_t len) {
 
 	_string8.erase(start, len);
 	_string16 = string::toUtf16<Interface>(_string8);
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 void LabelBase::append(const String& value) {
 	_string8.append(value);
 	_string16 = string::toUtf16<Interface>(_string8);
-	_labelDirty = true;
+	setLabelDirty();
 }
 void LabelBase::append(const WideString& value) {
 	_string16.append(value);
 	_string8 = string::toUtf8<Interface>(_string16);
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 void LabelBase::prepend(const String& value) {
 	_string8 = value + _string8;
 	_string16 = string::toUtf16<Interface>(_string8);
-	_labelDirty = true;
+	setLabelDirty();
 }
 void LabelBase::prepend(const WideString& value) {
 	_string16 = value + _string16;
 	_string8 = string::toUtf8<Interface>(_string16);
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 void LabelBase::setTextRangeStyle(size_t start, size_t length, Style &&style) {
 	if (length > 0) {
 		_styles.emplace_back(start, length, std::move(style));
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -562,7 +562,7 @@ void LabelBase::prependTextWithStyle(const WideString &str, Style &&style) {
 
 void LabelBase::clearStyles() {
 	_styles.clear();
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 const LabelBase::StyleVec &LabelBase::getStyles() const {
@@ -575,11 +575,11 @@ const LabelBase::StyleVec &LabelBase::getCompiledStyles() const {
 
 void LabelBase::setStyles(StyleVec &&vec) {
 	_styles = std::move(vec);
-	_labelDirty = true;
+	setLabelDirty();
 }
 void LabelBase::setStyles(const StyleVec &vec) {
 	_styles = vec;
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 bool LabelBase::updateFormatSpec(FormatSpec *format, const StyleVec &compiledStyles, float density, uint8_t _adjustValue) {
@@ -735,6 +735,10 @@ WideString LabelBase::resolveLocaleTags(const WideStringView &str) const {
 void LabelBase::specializeStyle(DescriptionStyle &style, float density) const {
 	style.font.density = density;
 	style.font.persistent = _persistentLayout;
+}
+
+void LabelBase::setLabelDirty() {
+	_labelDirty = true;
 }
 
 }

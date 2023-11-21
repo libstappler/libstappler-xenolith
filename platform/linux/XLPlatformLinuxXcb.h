@@ -78,6 +78,8 @@ public:
 	void (* xcb_disconnect) (xcb_connection_t *c) = nullptr;
 	xcb_generic_event_t * (* xcb_poll_for_event) (xcb_connection_t *c) = nullptr;
 
+	const struct xcb_query_extension_reply_t *(* xcb_get_extension_data) (xcb_connection_t *c, xcb_extension_t *ext) = nullptr;
+
 	xcb_void_cookie_t (* xcb_map_window) (xcb_connection_t *c, xcb_window_t window) = nullptr;
 
 	xcb_void_cookie_t (* xcb_create_window) (xcb_connection_t *c, uint8_t depth, xcb_window_t wid,
@@ -105,6 +107,8 @@ public:
 	xcb_get_keyboard_mapping_reply_t * (* xcb_get_keyboard_mapping_reply) (xcb_connection_t *c,
 			xcb_get_keyboard_mapping_cookie_t cookie /**< */, xcb_generic_error_t **e) = nullptr;
 
+	xcb_extension_t *xcb_randr_id = nullptr;
+
 	xcb_randr_query_version_cookie_t (* xcb_randr_query_version) (xcb_connection_t *c,
 			uint32_t major_version, uint32_t minor_version) = nullptr;
 	xcb_randr_query_version_reply_t * (* xcb_randr_query_version_reply) (xcb_connection_t *c,
@@ -121,6 +125,7 @@ public:
 	int (* xcb_randr_get_screen_info_rates_length) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
 	xcb_randr_refresh_rates_iterator_t (* xcb_randr_get_screen_info_rates_iterator) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
 	void (* xcb_randr_refresh_rates_next) (xcb_randr_refresh_rates_iterator_t *) = nullptr;
+	xcb_generic_iterator_t (* xcb_randr_refresh_rates_end) (xcb_randr_refresh_rates_iterator_t *) = nullptr;
 	uint16_t * (* xcb_randr_refresh_rates_rates) (const xcb_randr_refresh_rates_t *) = nullptr;
 	int (* xcb_randr_refresh_rates_rates_length) (const xcb_randr_refresh_rates_t *) = nullptr;
 
@@ -139,6 +144,44 @@ public:
 			xcb_connection_t *c, xcb_window_t window) = nullptr;
 	xcb_randr_get_screen_resources_current_reply_t * (* xcb_randr_get_screen_resources_current_reply) (
 			xcb_connection_t *c, xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
+	xcb_randr_output_t* (* xcb_randr_get_screen_resources_current_outputs) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	int (* xcb_randr_get_screen_resources_current_outputs_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	xcb_randr_mode_info_t * (* xcb_randr_get_screen_resources_current_modes) (
+			const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	int (* xcb_randr_get_screen_resources_current_modes_length) (
+			const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	uint8_t* (* xcb_randr_get_screen_resources_current_names) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	int (* xcb_randr_get_screen_resources_current_names_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	xcb_randr_crtc_t* (* xcb_randr_get_screen_resources_current_crtcs) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+	int (* xcb_randr_get_screen_resources_current_crtcs_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
+
+	xcb_randr_get_output_primary_cookie_t (* xcb_randr_get_output_primary) (xcb_connection_t *, xcb_window_t) = nullptr;
+	xcb_randr_get_output_primary_cookie_t (* xcb_randr_get_output_primary_unchecked) (xcb_connection_t *, xcb_window_t) = nullptr;
+	xcb_randr_get_output_primary_reply_t * (* xcb_randr_get_output_primary_reply) (xcb_connection_t *,
+			xcb_randr_get_output_primary_cookie_t, xcb_generic_error_t **) = nullptr;
+
+	xcb_randr_get_output_info_cookie_t (* xcb_randr_get_output_info) (xcb_connection_t *,
+			xcb_randr_output_t, xcb_timestamp_t) = nullptr;
+	xcb_randr_get_output_info_cookie_t (* xcb_randr_get_output_info_unchecked) (xcb_connection_t *,
+			xcb_randr_output_t, xcb_timestamp_t) = nullptr;
+	xcb_randr_get_output_info_reply_t* (* xcb_randr_get_output_info_reply) (xcb_connection_t *,
+			xcb_randr_get_output_info_cookie_t, xcb_generic_error_t **) = nullptr;
+	xcb_randr_crtc_t * (* xcb_randr_get_output_info_crtcs) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	int (* xcb_randr_get_output_info_crtcs_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	xcb_generic_iterator_t (* xcb_randr_get_output_info_crtcs_end) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	xcb_randr_mode_t * (* xcb_randr_get_output_info_modes) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	int (* xcb_randr_get_output_info_modes_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	uint8_t * (* xcb_randr_get_output_info_name) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+	int (* xcb_randr_get_output_info_name_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
+
+	xcb_randr_get_crtc_info_cookie_t (* xcb_randr_get_crtc_info) (xcb_connection_t *, xcb_randr_crtc_t, xcb_timestamp_t) = nullptr;
+	xcb_randr_get_crtc_info_cookie_t (* xcb_randr_get_crtc_info_unchecked) (xcb_connection_t *, xcb_randr_crtc_t, xcb_timestamp_t) = nullptr;
+	xcb_randr_get_crtc_info_reply_t* (* xcb_randr_get_crtc_info_reply) (xcb_connection_t *,
+			xcb_randr_get_crtc_info_cookie_t, xcb_generic_error_t **) = nullptr;
+	xcb_randr_output_t* (* xcb_randr_get_crtc_info_outputs) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
+	int (* xcb_randr_get_crtc_info_outputs_length) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
+	xcb_randr_output_t* (* xcb_randr_get_crtc_info_possible) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
+	int (* xcb_randr_get_crtc_info_possible_length) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
 
 	xcb_key_symbols_t * (* xcb_key_symbols_alloc) (xcb_connection_t *c) = nullptr;
 	void (* xcb_key_symbols_free) (xcb_key_symbols_t *syms) = nullptr;

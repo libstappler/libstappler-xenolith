@@ -34,6 +34,10 @@ enum class IconName : uint16_t {
 	None = 0,
 	Empty,
 
+	Stappler_CursorIcon,
+	Stappler_SelectioinStartIcon,
+	Stappler_SelectioinEndIcon,
+
 	Dynamic_Loader,
 	Dynamic_Nav,
 	Dynamic_DownloadProgress,

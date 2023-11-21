@@ -304,8 +304,15 @@ void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
 }
 
 void Sprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
+	auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
+	for (auto &it : data) {
+		p->transform = it.transform;
+		p->data = it.data;
+		++ p;
+	}
+
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	handle->shadows->pushShadowArray(data, handle->getCurrentState(), frame.depthStack.back());
+	handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
 }
 
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {

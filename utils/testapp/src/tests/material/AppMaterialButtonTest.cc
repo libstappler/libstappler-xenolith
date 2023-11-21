@@ -33,7 +33,7 @@ bool MaterialButtonTest::init() {
 		return false;
 	}
 
-	_background = addChild(Rc<MaterialBackground>::create(Color::Red_500), ZOrder(-1));
+	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(-1));
 	_background->setAnchorPoint(Anchor::Middle);
 
 	_label = _background->addChild(Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::HeadlineSmall), ZOrder(1));

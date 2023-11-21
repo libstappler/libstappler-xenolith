@@ -452,7 +452,7 @@ void CommandBuffer::cmdClearColorImage(Image *image, VkImageLayout layout, const
 	VkImageSubresourceRange range{ image->getAspectMask(), 0, image->getInfo().mipLevels.get(), 0, image->getInfo().arrayLayers.get() };
 
 	addImage(image);
-	_table->vkCmdClearColorImage(_buffer, image->getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	_table->vkCmdClearColorImage(_buffer, image->getImage(), layout,
 			&clearColorEmpty, 1, &range);
 }
 

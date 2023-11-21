@@ -123,7 +123,7 @@ core::SwapchainConfig AppDelegate::selectConfig(const core::SurfaceInfo &info) {
 	std::unique_lock<Mutex> lock(_configMutex);
 	core::SwapchainConfig ret;
 	ret.extent = info.currentExtent;
-	ret.imageCount = std::max(uint32_t(2), info.minImageCount);
+	ret.imageCount = std::max(uint32_t(3), info.minImageCount);
 
 	ret.presentMode = info.presentModes.front();
 	if (_preferredPresentMode != core::PresentMode::Unsupported) {

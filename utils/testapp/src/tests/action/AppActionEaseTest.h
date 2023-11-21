@@ -72,7 +72,7 @@ protected:
 	interpolation::Type getSelectedType(interpolation::Type) const;
 
 	Mode _mode = Mode::InOut;
-	AppSliderWithLabel *_slider = nullptr;
+	SliderWithLabel *_slider = nullptr;
 	ButtonWithLabel *_button = nullptr;
 	ButtonWithLabel *_modeButton = nullptr;
 	Vector<ActionEaseNode *> _nodes;

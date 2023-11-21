@@ -191,14 +191,14 @@ bool VgShadowTest::init() {
 	_info->setString("Test");
 	_info->setAnchorPoint(Anchor::MiddleTop);
 
-	_sliderScale = addChild(Rc<AppSliderWithLabel>::create(toString("Scale: ", initialScale),
+	_sliderScale = addChild(Rc<SliderWithLabel>::create(toString("Scale: ", initialScale),
 			(initialScale - 0.1f) / 2.9f, [this] (float val) {
 		updateScaleValue(val);
 	}));
 	_sliderScale->setAnchorPoint(Anchor::TopLeft);
 	_sliderScale->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderShadow = addChild(Rc<AppSliderWithLabel>::create(toString("Shadow: ", initialShadow),
+	_sliderShadow = addChild(Rc<SliderWithLabel>::create(toString("Shadow: ", initialShadow),
 			initialShadow / maxShadow, [this, maxShadow] (float val) {
 		_sprite->setDepthIndex(val * maxShadow);
 		_sliderShadow->setString(toString("Shadow: ", _sprite->getDepthIndex()));
@@ -206,7 +206,7 @@ bool VgShadowTest::init() {
 	_sliderShadow->setAnchorPoint(Anchor::TopLeft);
 	_sliderShadow->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderK = addChild(Rc<AppSliderWithLabel>::create(toString("K: ", initialK),
+	_sliderK = addChild(Rc<SliderWithLabel>::create(toString("K: ", initialK),
 			initialK / 2.0f, [this] (float val) {
 		_normalSelector->setK(val * 2.0f);
 		_sliderK->setString(toString("K: ", val * 2.0f));
@@ -219,7 +219,7 @@ bool VgShadowTest::init() {
 	_normalSelector->setContentSize(Size2(92.0f, 92.0f));
 	_normalSelector->setK(initialK);
 
-	_checkboxAmbient = addChild(Rc<AppCheckboxWithLabel>::create("Ambient", false, [this] (bool value) {
+	_checkboxAmbient = addChild(Rc<CheckboxWithLabel>::create("Ambient", false, [this] (bool value) {
 		_normalSelector->setAmbient(value);
 	}));
 	_checkboxAmbient->setAnchorPoint(Anchor::TopLeft);

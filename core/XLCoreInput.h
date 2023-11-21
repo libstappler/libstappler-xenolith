@@ -418,6 +418,72 @@ struct InputEventData {
 #endif
 };
 
+enum class TextInputType {
+	Empty				= 0,
+	Date_Date			= 1,
+	Date_DateTime		= 2,
+	Date_Time			= 3,
+	Date				= Date_DateTime,
+
+	Number_Numbers		= 4,
+	Number_Decimial		= 5,
+	Number_Signed		= 6,
+	Number				= Number_Numbers,
+
+	Phone				= 7,
+
+	Text_Text			= 8,
+	Text_Search			= 9,
+	Text_Punctuation	= 10,
+	Text_Email			= 11,
+	Text_Url			= 12,
+	Text				= Text_Text,
+
+	Default				= Text_Text,
+
+	ClassMask			= 0b00011111,
+	PasswordBit			= 0b00100000,
+	MultiLineBit		= 0b01000000,
+	AutoCorrectionBit	= 0b10000000,
+
+	ReturnKeyMask		= 0b00001111 << 8,
+
+	ReturnKeyDefault	= 1 << 8,
+	ReturnKeyGo			= 2 << 8,
+	ReturnKeyGoogle		= 3 << 8,
+	ReturnKeyJoin		= 4 << 8,
+	ReturnKeyNext		= 5 << 8,
+	ReturnKeyRoute		= 6 << 8,
+	ReturnKeySearch		= 7 << 8,
+	ReturnKeySend		= 8 << 8,
+	ReturnKeyYahoo		= 9 << 8,
+	ReturnKeyDone		= 10 << 8,
+	ReturnKeyEmergencyCall = 11 << 8,
+};
+
+SP_DEFINE_ENUM_AS_MASK(TextInputType);
+
+using TextCursorPosition = ValueWrapper<uint32_t, class TextCursorPositionFlag>;
+using TextCursorLength = ValueWrapper<uint32_t, class TextCursorStartFlag>;
+
+struct TextCursor {
+	static const TextCursor InvalidCursor;
+
+	uint32_t start;
+	uint32_t length;
+
+	constexpr TextCursor() : start(maxOf<uint32_t>()), length(0) { }
+	constexpr TextCursor(uint32_t pos) : start(pos), length(0) { }
+	constexpr TextCursor(uint32_t st, uint32_t len) : start(st), length(len) { }
+	constexpr TextCursor(TextCursorPosition pos) : start(pos.get()), length(0) { }
+	constexpr TextCursor(TextCursorPosition pos, TextCursorLength len) : start(pos.get()), length(len.get()) { }
+	constexpr TextCursor(TextCursorPosition first, TextCursorPosition last)
+	: start(std::min(first.get(), last.get()))
+	, length(((first > last)?(first - last).get():(last - first).get()) + 1) { }
+
+	constexpr bool operator==(const TextCursor &) const = default;
+};
+
 StringView getInputKeyCodeName(InputKeyCode);
 StringView getInputKeyCodeKeyName(InputKeyCode);
 StringView getInputEventName(InputEventName);

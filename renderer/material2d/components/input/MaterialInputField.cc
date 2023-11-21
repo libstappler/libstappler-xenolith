@@ -73,17 +73,64 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 	_indicator->setAnchorPoint(Anchor::BottomLeft);
 
 	_inputListener = addInputListener(Rc<InputListener>::create());
+
+	_inputListener->setTouchFilter([this] (const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
+		if (cb(event)) {
+			return true;
+		}
+
+		if (_container->getTouchedCursor(event.currentLocation)) {
+			return true;
+		}
+
+		return false;
+	});
+
 	_inputListener->addMouseOverRecognizer([this] (const GestureData &data) {
 		_mouseOver = (data.event == GestureEvent::Began);
 		updateActivityState();
 		return true;
 	});
 	_inputListener->addTapRecognizer([this] (const GestureTap &tap) {
-		if (!_focused) {
-			acquireInput(tap.input->currentLocation);
-		}
-		return true;
+		return handleTap(tap.input->currentLocation);
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+
+	_inputListener->addPressRecognizer([this] (const GesturePress &press) {
+		switch (press.event) {
+		case GestureEvent::Began:
+			return handlePressBegin(press.location());
+			break;
+		case GestureEvent::Activated:
+			return handleLongPress(press.location(), press.tickCount);
+			break;
+		case GestureEvent::Ended:
+			return handlePressEnd(press.location());
+			break;
+		case GestureEvent::Cancelled:
+			return handlePressCancel(press.location());
+			break;
+		}
+		return false;
+	}, TimeInterval::milliseconds(425), true);
+
+	_inputListener->addSwipeRecognizer([this] (const GestureSwipe &swipe) {
+		switch (swipe.event) {
+		case GestureEvent::Began:
+			if (handleSwipeBegin(swipe.input->originalLocation, swipe.delta / swipe.density)) {
+				return handleSwipe(swipe.input->originalLocation, swipe.delta / swipe.density, swipe.velocity / swipe.density);
+			}
+			return false;
+			break;
+		case GestureEvent::Activated:
+			return handleSwipe(swipe.location(), swipe.delta / swipe.density, swipe.velocity / swipe.density);
+			break;
+		case GestureEvent::Ended:
+		case GestureEvent::Cancelled:
+			return handleSwipeEnd(swipe.velocity / swipe.density);
+			break;
+		}
+		return false;
+	});
 
 	_focusInputListener = addInputListener(Rc<InputListener>::create());
 	_focusInputListener->setPriority(1);
@@ -107,6 +154,15 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 	_handler.onInput = std::bind(&InputField::handleInputEnabled, this, std::placeholders::_1);
 
 	return true;
+}
+
+void InputField::onEnter(Scene *scene) {
+	Surface::onEnter(scene);
+}
+
+void InputField::onExit() {
+	Surface::onExit();
+	_container->setCursorCallback(nullptr);
 }
 
 void InputField::onContentSizeDirty() {
@@ -189,6 +245,25 @@ IconName InputField::getTrailingIconName() const {
 	return _trailingIcon->getIconName();
 }
 
+void InputField::setEnabled(bool value) {
+	if (_enabled != value) {
+		_enabled = value;
+		updateActivityState();
+	}
+}
+
+bool InputField::isEnabled() const {
+	return _enabled;
+}
+
+void InputField::setInputType(TextInputType type) {
+	_inputType = type;
+}
+
+void InputField::setPasswordMode(InputFieldPasswordMode mode) {
+	_passwordMode = mode;
+}
+
 void InputField::updateActivityState() {
 	auto style = getStyleTarget();
 	if (!_enabled) {
@@ -201,6 +276,114 @@ void InputField::updateActivityState() {
 		style.activityState = ActivityState::Enabled;
 	}
 	setStyle(style, _activityAnimationDuration);
+}
+
+bool InputField::handleTap(const Vec2 &pt) {
+	if (!isEnabled()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool InputField::handlePressBegin(const Vec2 &pt) {
+	if (!isEnabled()) {
+		return false;
+	}
+
+	if (_leadingIcon && getLeadingIconName() != IconName::None && _leadingIcon->isTouched(pt, 12)) {
+		return false;
+	}
+
+	if (_trailingIcon && getTrailingIconName() != IconName::None && _trailingIcon->isTouched(pt, 12)) {
+		return false;
+	}
+
+	_inputListener->setExclusive();
+	_isLongPress = false;
+	return true;
+}
+
+bool InputField::handleLongPress(const Vec2 &pt, uint32_t tickCount) {
+	if (!isEnabled() || !_rangeSelectionAllowed) {
+		return false;
+	}
+
+	if (_container->handleLongPress(pt, tickCount)) {
+		_isLongPress = true;
+		if (!_focused) {
+			acquireInputFromContainer();
+		}
+		return true;
+	}
+	return false;
+}
+
+bool InputField::handlePressEnd(const Vec2 &pt) {
+	if (_container->isTouched(pt, 8.0f)) {
+		if (!_isLongPress) {
+			if (!_focused) {
+				acquireInput(pt);
+			} else {
+				updateCursorForLocation(pt);
+			}
+		}
+	}
+	_isLongPress = false;
+	return true;
+}
+
+bool InputField::handlePressCancel(const Vec2 &) {
+	_isLongPress = false;
+	return false;
+}
+
+bool InputField::handleSwipeBegin(const Vec2 &pt, const Vec2 &delta) {
+	if (!isEnabled()) {
+		return false;
+	}
+
+	if (_focused) {
+		if (_container->handleSwipeBegin(pt)) {
+			_pointerSwipeCaptured = true;
+			return true;
+		}
+	}
+
+	if (_container->hasHorizontalOverflow() && _container->isTouched(pt, 8.0f)) {
+		_inputListener->setExclusive();
+		_containerSwipeCaptured = true;
+		return true;
+	}
+
+	return false;
+}
+
+bool InputField::handleSwipe(const Vec2 &pt, const Vec2 &delta, const Vec2 &v) {
+	if (_pointerSwipeCaptured) {
+		return _container->handleSwipe(pt, delta);
+	}
+
+	if (_containerSwipeCaptured) {
+		_container->moveHorizontalOverflow(delta.x);
+		return true;
+	}
+
+	return false;
+}
+
+bool InputField::handleSwipeEnd(const Vec2 &pt) {
+	if (_pointerSwipeCaptured) {
+		auto ret = _container->handleSwipeEnd(pt);
+		_pointerSwipeCaptured = false;
+		return ret;
+	}
+
+	if (_containerSwipeCaptured) {
+		_containerSwipeCaptured = false;
+		return true;
+	}
+	return false;
 }
 
 void InputField::updateInputEnabled() {
@@ -250,11 +433,39 @@ void InputField::updateInputEnabled() {
 	_indicator->setStyle(indicatorStyle, _activityAnimationDuration);
 }
 
-void InputField::acquireInput(const Vec2 &targetLocation) {
-	_cursor = TextCursor(_inputString.size(), 0);
+void InputField::acquireInputFromContainer() {
+	_cursor = _container->getCursor();
 	_markedRegion = TextCursor::InvalidCursor;
 	_handler.run(_director->getTextInputManager(), _inputString, _cursor, _markedRegion, _inputType);
 	_focusInputListener->setEnabled(true);
+}
+
+void InputField::acquireInput(const Vec2 &targetLocation) {
+	auto cursor = _container->getCursorForPosition(targetLocation);
+	if (cursor != TextCursor::InvalidCursor) {
+		_cursor = cursor;
+	} else {
+		_cursor = TextCursor(_inputString.size(), 0);
+	}
+
+	_container->setCursor(_cursor);
+	_container->touchPointers();
+	_markedRegion = TextCursor::InvalidCursor;
+	_handler.run(_director->getTextInputManager(), _inputString, _cursor, _markedRegion, _inputType);
+	_focusInputListener->setEnabled(true);
+}
+
+void InputField::updateCursorForLocation(const Vec2 &targetLocation) {
+	auto cursor = _container->getCursorForPosition(targetLocation);
+	if (cursor != TextCursor::InvalidCursor && cursor != _cursor) {
+		_cursor = cursor;
+		if (_handler.isActive()) {
+			_handler.setCursor(cursor);
+			_container->setCursor(cursor);
+			_container->touchPointers();
+			_markedRegion = TextCursor::InvalidCursor;
+		}
+	}
 }
 
 void InputField::handleTextInput(WideStringView str, TextCursor cursor, TextCursor marked) {
@@ -278,8 +489,6 @@ void InputField::handleTextInput(WideStringView str, TextCursor cursor, TextCurs
 			return;
 		}
 	}
-
-	//bool isInsert = str.size() > _inputString.size();
 
 	_container->setCursor(cursor);
 
@@ -316,6 +525,14 @@ void InputField::handleInputEnabled(bool enabled) {
 		_focused = enabled;
 		updateActivityState();
 		updateInputEnabled();
+		if (_enabled) {
+			_container->setCursorCallback([this] (TextCursor cursor) {
+				_cursor = cursor;
+				_handler.setCursor(cursor);
+			});
+		} else {
+			_container->setCursorCallback(nullptr);
+		}
 	}
 	_container->setEnabled(enabled);
 }

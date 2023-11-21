@@ -60,6 +60,10 @@ float IconSprite::getProgress() const {
 	return _progress;
 }
 
+void IconSprite::setColorRole(ColorRole role) {
+	_colorRole = role;
+}
+
 bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	if (!_visible) {
 		return false;
@@ -67,10 +71,20 @@ bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 
 	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
 	if (style) {
-		auto &s = style->getStyle();
-		auto color = s.colorOn.asColor4F();
-		if (color.getColor() != getColor().getColor()) {
-			setColor(color, false);
+		if (_colorRole != ColorRole::Max) {
+			auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+			if (auto s = container->getScheme(style->getStyle().schemeTag)) {
+				auto c = s->get(_colorRole);
+				if (c.getColor() != getColor().getColor()) {
+					setColor(c, false);
+				}
+			}
+		} else {
+			auto &s = style->getStyle();
+			auto color = s.colorOn.asColor4F();
+			if (color.getColor() != getColor().getColor()) {
+				setColor(color, false);
+			}
 		}
 	}
 

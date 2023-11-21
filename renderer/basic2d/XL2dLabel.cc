@@ -29,6 +29,33 @@
 
 namespace stappler::xenolith::basic2d {
 
+Label::Selection::~Selection() { }
+
+bool Label::Selection::init() {
+	if (!Sprite::init()) {
+		return false;
+	}
+
+	return true;
+}
+
+void Label::Selection::clear() {
+	_vertexes.clear();
+}
+
+void Label::Selection::emplaceRect(const Rect &rect) {
+	_vertexes.addQuad().setGeometry(
+			Vec4(rect.origin.x, _contentSize.height - rect.origin.y - rect.size.height, 0.0f, 0.0f), rect.size);
+}
+
+void Label::Selection::updateColor() {
+	Sprite::updateColor();
+}
+
+void Label::Selection::updateVertexes() {
+	//_vertexes.clear();
+}
+
 static size_t Label_getQuadsCount(const font::FormatSpec *format) {
 	size_t ret = 0;
 
@@ -238,9 +265,21 @@ bool Label::init(font::FontController *source, const DescriptionStyle &style,
 		el->onEventWithObject(font::FontController::onLoaded, source, std::bind(&Label::onFontSourceLoaded, this), true);
 	}
 
-	addComponent(el);
+	_listener = addComponent(el);
 
-	_listener = el;
+	_selection = addChild(Rc<Selection>::create());
+	_selection->setAnchorPoint(Vec2(0.0f, 0.0f));
+	_selection->setPosition(Vec2(0.0f, 0.0f));
+	_selection->setColor(Color::BlueGrey_500);
+	_selection->setOpacity(OpacityValue(64));
+	_selection->setVisible(false);
+
+	_marked = addChild(Rc<Selection>::create());
+	_marked->setAnchorPoint(Vec2(0.0f, 0.0f));
+	_marked->setPosition(Vec2(0.0f, 0.0f));
+	_marked->setColor(Color::Green_500);
+	_marked->setOpacity(OpacityValue(64));
+	_marked->setVisible(false);
 
 	setColor(Color4F(_style.text.color, _style.text.opacity), true);
 
@@ -266,7 +305,7 @@ void Label::setStyle(const DescriptionStyle &style) {
 
 	setColor(Color4F(_style.text.color, _style.text.opacity), true);
 
-	_labelDirty = true;
+	setLabelDirty();
 }
 
 const Label::DescriptionStyle &Label::getStyle() const {
@@ -320,10 +359,20 @@ void Label::updateLabel() {
 			setContentSize(Size2(_format->width / _labelDensity, _format->height / _labelDensity));
 		}
 
+		setSelectionCursor(getSelectionCursor());
+		setMarkedCursor(getMarkedCursor());
+
 		_labelDirty = false;
 		_vertexColorDirty = false;
 		_vertexesDirty = true;
 	}
+}
+
+void Label::onContentSizeDirty() {
+	Sprite::onContentSizeDirty();
+
+	_selection->setContentSize(_contentSize);
+	_marked->setContentSize(_contentSize);
 }
 
 void Label::onTransformDirty(const Mat4 &parent) {
@@ -407,7 +456,7 @@ void Label::updateLabelScale(const Mat4 &parent) {
 	auto density = std::min(std::min(scale.x, scale.y), scale.z);
 	if (density != _labelDensity) {
 		_labelDensity = density;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 
 	if (_labelDirty) {
@@ -418,7 +467,7 @@ void Label::updateLabelScale(const Mat4 &parent) {
 void Label::setAdjustValue(uint8_t val) {
 	if (_adjustValue != val) {
 		_adjustValue = val;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 uint8_t Label::getAdjustValue() const {
@@ -497,7 +546,7 @@ void Label::onFontSourceLoaded() {
 	if (_source) {
 		setTexture(Rc<Texture>(_source->getTexture()));
 		_vertexesDirty = true;
-		_labelDirty = true;
+		setLabelDirty();
 	}
 }
 
@@ -543,8 +592,12 @@ Vec2 Label::getCursorOrigin() const {
 	return Vec2::ZERO;
 }
 
-Pair<uint32_t, bool> Label::getCharIndex(const Vec2 &pos) const {
-	auto ret = _format->getChar(pos.x * _labelDensity, _format->height - pos.y * _labelDensity, FormatSpec::Best);
+Pair<uint32_t, bool> Label::getCharIndex(const Vec2 &pos, FormatSpec::SelectMode mode) const {
+	if (!_format) {
+		return pair(0, false);
+	}
+
+	auto ret = _format->getChar(pos.x * _labelDensity, _format->height - pos.y * _labelDensity, mode);
 	if (ret.first == maxOf<uint32_t>()) {
 		return pair(maxOf<uint32_t>(), false);
 	} else if (ret.second == FormatSpec::Prefix) {
@@ -552,6 +605,10 @@ Pair<uint32_t, bool> Label::getCharIndex(const Vec2 &pos) const {
 	} else {
 		return pair(ret.first, true);
 	}
+}
+
+core::TextCursor Label::selectWord(uint32_t chIdx) const {
+	return _format->selectWord(chIdx);
 }
 
 float Label::getMaxLineX() const {
@@ -567,6 +624,57 @@ void Label::setDeferred(bool val) {
 		_vertexesDirty = true;
 	}
 }
+
+void Label::setSelectionCursor(core::TextCursor c) {
+	_selection->clear();
+	_selection->setVisible(c != core::TextCursor::InvalidCursor && c.length > 0);
+	if (c != core::TextCursor::InvalidCursor && c.length > 0) {
+		auto rects = _format->getLabelRects(c.start, c.start + c.length - 1, _labelDensity);
+		for (auto &rect: rects) {
+			_selection->emplaceRect(rect);
+		}
+		_selection->updateColor();
+	}
+	_selection->setTextCursor(c);
+}
+
+core::TextCursor Label::getSelectionCursor() const {
+	return _selection->getTextCursor();
+}
+
+void Label::setSelectionColor(const Color4F &c) {
+	_selection->setColor(c,  false);
+}
+
+Color4F Label::getSelectionColor() const {
+	return _selection->getColor();
+}
+
+void Label::setMarkedCursor(core::TextCursor c) {
+	_marked->clear();
+	_marked->setVisible(c != core::TextCursor::InvalidCursor && c.length > 0);
+	if (c != core::TextCursor::InvalidCursor && c.length > 0) {
+		auto rects = _format->getLabelRects(c.start, c.start + c.length, _labelDensity);
+		for (auto &rect: rects) {
+			_marked->emplaceRect(rect);
+		}
+		_marked->updateColor();
+	}
+	_marked->setTextCursor(c);
+}
+
+core::TextCursor Label::getMarkedCursor() const {
+	return _marked->getTextCursor();
+}
+
+void Label::setMarkedColor(const Color4F &c) {
+	_marked->setColor(c,  false);
+}
+
+Color4F Label::getMarkedColor() const {
+	return _marked->getColor();
+}
+
 
 LabelDeferredResult::~LabelDeferredResult() {
 	if (_future) {

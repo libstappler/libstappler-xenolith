@@ -62,6 +62,9 @@ public:
 	virtual void setText(StringView);
 	virtual StringView getText() const;
 
+	virtual void setTextValue(StringView);
+	virtual StringView getTextValue() const;
+
 	virtual void setIconSize(float);
 	virtual float getIconSize() const;
 
@@ -76,8 +79,10 @@ public:
 	virtual void setDoubleTapCallback(Function<void()> &&);
 
 	virtual void setMenuSourceButton(Rc<MenuSourceButton> &&);
+	virtual MenuSourceButton *getMenuSourceButton() const;
 
-	virtual TypescaleLabel *getLabelNode() const { return _label; };
+	virtual TypescaleLabel *getLabelTextNode() const { return _labelText; }
+	virtual TypescaleLabel *getLabelValueNode() const { return _labelValue; }
 	virtual IconSprite *getLeadingIconNode() const { return _leadingIcon; }
 	virtual IconSprite *getTrailingIconNode() const { return _trailingIcon; }
 
@@ -92,9 +97,11 @@ protected:
 	virtual float getWidthForContent() const;
 
 	virtual void updateMenuButtonSource();
+	virtual void layoutContent();
 
 	InputListener *_inputListener = nullptr;
-	TypescaleLabel *_label = nullptr;
+	TypescaleLabel *_labelText = nullptr;
+	TypescaleLabel *_labelValue = nullptr;
 	IconSprite *_leadingIcon = nullptr;
 	IconSprite *_trailingIcon = nullptr;
 

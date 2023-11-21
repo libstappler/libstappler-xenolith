@@ -27,7 +27,11 @@
 
 namespace stappler::xenolith::core {
 
-bool ObjectInterface::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
+Object::~Object() {
+	invalidate();
+}
+
+bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
 	_device = &dev;
 	_callback = cb;
 	_type = type;
@@ -36,7 +40,7 @@ bool ObjectInterface::init(Device &dev, ClearCallback cb, ObjectType type, Objec
 	return true;
 }
 
-void ObjectInterface::invalidate() {
+void Object::invalidate() {
 	if (_callback) {
 		_callback(_device, _type, _handle);
 		_device->removeObject(this);
@@ -46,18 +50,10 @@ void ObjectInterface::invalidate() {
 	}
 }
 
-NamedObject::~NamedObject() {
-	invalidate();
-}
-
-Object::~Object() {
-	invalidate();
-}
-
 static std::atomic<uint64_t> s_RenderPassImplCurrentIndex = 1;
 
 bool RenderPass::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
-	if (NamedObject::init(dev, cb, type, ptr)) {
+	if (Object::init(dev, cb, type, ptr)) {
 		_index = s_RenderPassImplCurrentIndex.fetch_add(1);
 		return true;
 	}

@@ -66,7 +66,7 @@ bool GeneralTransparencyTest::init() {
 		_labels[i]->setRenderingLevel(RenderingLevel::Default);
 	}
 
-	_labelTransparentCheckbox = addChild(Rc<AppCheckboxWithLabel>::create("Label is surface", false, [this] (bool value) {
+	_labelTransparentCheckbox = addChild(Rc<CheckboxWithLabel>::create("Label is surface", false, [this] (bool value) {
 		for (size_t i = 0; i < 5; ++ i) {
 			_labels[i]->setRenderingLevel(value ? RenderingLevel::Surface : RenderingLevel::Default);
 		}

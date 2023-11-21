@@ -325,7 +325,7 @@ bool InputKeyboardTest::init() {
 	_layer = addChild(Rc<Layer>::create(Color::Red_500));
 	_layer->setAnchorPoint(Anchor::Middle);
 
-	_handleUpdateCheckbox = addChild(Rc<AppCheckboxWithLabel>::create("Use update instead of repeat", _useUpdate, [this] (bool value) {
+	_handleUpdateCheckbox = addChild(Rc<CheckboxWithLabel>::create("Use update instead of repeat", _useUpdate, [this] (bool value) {
 		_useUpdate = value;
 	}), Node::ZOrderMax);
 	_handleUpdateCheckbox->setAnchorPoint(Anchor::MiddleBottom);

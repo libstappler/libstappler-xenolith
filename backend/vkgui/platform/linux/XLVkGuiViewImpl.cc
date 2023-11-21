@@ -50,6 +50,7 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 	return true;
 }
 
+#if XL_ENABLE_WAYLAND
 static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::Instance *instance, VkPhysicalDevice dev) {
 	auto display = v->getDisplay();
 	auto surface = v->getSurface();
@@ -80,6 +81,7 @@ static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::
 	}
 	return nullptr;
 }
+#endif
 
 static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Instance *instance, VkPhysicalDevice dev) {
 	auto connection = v->getConnection();
@@ -99,6 +101,7 @@ void ViewImpl::threadInit() {
 
 	auto presentMask = _device->getPresentatonMask();
 
+#if XL_ENABLE_WAYLAND
 	if (auto wayland = xenolith::platform::WaylandLibrary::getInstance()) {
 		if ((platform::SurfaceType(presentMask) & platform::SurfaceType::Wayland) != platform::SurfaceType::None) {
 			auto waylandDisplay = getenv("WAYLAND_DISPLAY");
@@ -122,6 +125,7 @@ void ViewImpl::threadInit() {
 			}
 		}
 	}
+#endif
 
 	if (!_view) {
 		// try X11
@@ -156,7 +160,9 @@ bool ViewImpl::worker() {
 	_eventFd = eventfd(0, EFD_NONBLOCK);
 	auto socket = _view->getSocketFd();
 
-	int timeoutMin = 1;
+	timespec timeoutMin;
+	timeoutMin.tv_sec = 0;
+	timeoutMin.tv_nsec = 1000 * 250;
 
 	struct pollfd fds[2];
 
@@ -172,7 +178,8 @@ bool ViewImpl::worker() {
 
 	while (_shouldQuit.test_and_set()) {
 		bool shouldUpdate = false;
-		int ret = ::poll( fds, 2, timeoutMin);
+
+		int ret = ::ppoll( fds, 2, &timeoutMin, nullptr);
 		if (ret > 0) {
 			if (fds[0].revents != 0) {
 				uint64_t value = 0;

@@ -48,39 +48,32 @@ class ImageView;
 class BufferObject;
 class Loop;
 
-class ObjectInterface {
+class Object : public NamedRef {
 public:
 	using ObjectHandle = core::ObjectHandle;
 	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle);
 
-	virtual ~ObjectInterface() { }
+	virtual ~Object();
+
 	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr);
 	virtual void invalidate();
 
 	ObjectType getType() const { return _type; }
 	ObjectHandle getObject() const { return _handle; }
 
+	virtual void setName(StringView str) { _name = str.str<Interface>(); }
+	virtual StringView getName() const override { return _name; }
+
 protected:
 	ObjectType _type;
 	Device *_device = nullptr;
 	ClearCallback _callback = nullptr;
 	ObjectHandle _handle;
+	String _name;
 };
 
 
-class NamedObject : public NamedRef, public ObjectInterface {
-public:
-	virtual ~NamedObject();
-};
-
-
-class Object : public Ref, public ObjectInterface {
-public:
-	virtual ~Object();
-};
-
-
-class GraphicPipeline : public NamedObject {
+class GraphicPipeline : public Object {
 public:
 	using PipelineInfo = core::GraphicPipelineInfo;
 	using PipelineData = core::GraphicPipelineData;
@@ -88,15 +81,10 @@ public:
 	using RenderQueue = core::Queue;
 
 	virtual ~GraphicPipeline() { }
-
-	virtual StringView getName() const override { return _name; }
-
-protected:
-	String _name;
 };
 
 
-class ComputePipeline : public NamedObject {
+class ComputePipeline : public Object {
 public:
 	using PipelineInfo = core::ComputePipelineInfo;
 	using PipelineData = core::ComputePipelineData;
@@ -104,15 +92,10 @@ public:
 	using RenderQueue = core::Queue;
 
 	virtual ~ComputePipeline() { }
-
-	virtual StringView getName() const override { return _name; }
-
-protected:
-	String _name;
 };
 
 
-class Shader : public NamedObject {
+class Shader : public Object {
 public:
 	using ProgramData = core::ProgramData;
 	using DescriptorType = core::DescriptorType;
@@ -121,18 +104,16 @@ public:
 
 	virtual ~Shader() { }
 
-	virtual StringView getName() const override { return _name; }
 	virtual ProgramStage getStage() const { return _stage; }
 
 protected:
 	String inspect(SpanView<uint32_t>);
 
-	String _name;
 	ProgramStage _stage = ProgramStage::None;
 };
 
 
-class RenderPass : public NamedObject {
+class RenderPass : public Object {
 public:
 	using QueuePassData = core::QueuePassData;
 	using Attachment = core::Attachment;
@@ -143,14 +124,10 @@ public:
 
 	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle) override;
 
-	virtual StringView getName() const override { return _name; }
-
 	uint64_t getIndex() const { return _index; }
 	PassType getType() const { return _type; }
 
 protected:
-	String _name;
-
 	uint64_t _index = 1; // 0 stays as special value
 	PassType _type = PassType::Generic;
 };
@@ -219,8 +196,8 @@ protected:
 	Type _type = Type::Custom;
 	uint32_t _objectSize;
 	Extent2 _imageExtent;
-	std::unordered_map<uint32_t, uint32_t> _intNames;
-	std::unordered_map<String, uint32_t> _stringNames;
+	HashMap<uint32_t, uint32_t> _intNames;
+	HashMap<String, uint32_t> _stringNames;
 	Bytes _data;
 	Bytes _dataIndex;
 	Rc<BufferObject> _indexBuffer;

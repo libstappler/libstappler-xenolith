@@ -68,6 +68,23 @@ public:
 
 	using ColorMapVec = Vector<Vector<bool>>;
 
+	class Selection : public Sprite {
+	public:
+		virtual ~Selection();
+		virtual bool init() override;
+		virtual void clear();
+		virtual void emplaceRect(const Rect &);
+		virtual void updateColor() override;
+
+		virtual core::TextCursor getTextCursor() const { return _cursor; }
+		virtual void setTextCursor(core::TextCursor c) { _cursor = c; }
+
+	protected:
+		virtual void updateVertexes();
+
+		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
+	};
+
 	static void writeQuads(VertexArray &vertexes, FormatSpec *format, Vector<ColorMask> &colorMap);
 	static Rc<LabelResult> writeResult(FormatSpec *format, const Color4F &);
 
@@ -86,6 +103,7 @@ public:
 	virtual void setStyle(const DescriptionStyle &);
 	virtual const DescriptionStyle &getStyle() const;
 
+	virtual void onContentSizeDirty() override;
 	virtual void onTransformDirty(const Mat4 &) override;
 	virtual void onGlobalTransformDirty(const Mat4 &) override;
 
@@ -106,12 +124,26 @@ public:
 	// returns character index in FormatSpec for position in label or maxOf<uint32_t>()
 	// pair.second - true if index match suffix or false if index match prefix
 	// use convertToNodeSpace to get position
-	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &) const;
+	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &, FormatSpec::SelectMode = FormatSpec::Best) const;
 
-	float getMaxLineX() const;
+	virtual core::TextCursor selectWord(uint32_t) const;
+
+	virtual float getMaxLineX() const;
 
 	virtual void setDeferred(bool);
 	virtual bool isDeferred() const { return _deferred; }
+
+	virtual void setSelectionCursor(core::TextCursor);
+	virtual core::TextCursor getSelectionCursor() const;
+
+	virtual void setSelectionColor(const Color4F &);
+	virtual Color4F getSelectionColor() const;
+
+	virtual void setMarkedCursor(core::TextCursor);
+	virtual core::TextCursor getMarkedCursor() const;
+
+	virtual void setMarkedColor(const Color4F &);
+	virtual Color4F getMarkedColor() const;
 
 protected:
 	using Sprite::init;
@@ -145,6 +177,9 @@ protected:
 
 	uint8_t _adjustValue = 0;
 	size_t _updateCount = 0;
+
+	Selection *_selection = nullptr;
+	Selection *_marked = nullptr;
 
 	Rc<LabelDeferredResult> _deferredResult;
 

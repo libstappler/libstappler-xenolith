@@ -57,6 +57,8 @@ public:
 	virtual bool init(InputFieldStyle = InputFieldStyle::Filled);
 	virtual bool init(InputFieldStyle, const SurfaceStyle &);
 
+	virtual void onEnter(Scene *) override;
+	virtual void onExit() override;
 	virtual void onContentSizeDirty() override;
 
 	virtual void setLabelText(StringView);
@@ -71,13 +73,35 @@ public:
 	virtual void setTrailingIconName(IconName);
 	virtual IconName getTrailingIconName() const;
 
+	virtual void setEnabled(bool);
+	virtual bool isEnabled() const;
+
 	virtual WideStringView getInputString() const { return _inputString; }
 
+	virtual void setInputType(TextInputType);
+	virtual TextInputType getInputType() const { return _inputType; }
+
+	virtual void setPasswordMode(InputFieldPasswordMode);
+	virtual InputFieldPasswordMode getPasswordMode() const { return _passwordMode; }
+
 protected:
+	virtual bool handleTap(const Vec2 &);
+
+	virtual bool handlePressBegin(const Vec2 &);
+	virtual bool handleLongPress(const Vec2 &, uint32_t tickCount);
+	virtual bool handlePressEnd(const Vec2 &);
+	virtual bool handlePressCancel(const Vec2 &);
+
+	virtual bool handleSwipeBegin(const Vec2 &pt, const Vec2 &d);
+	virtual bool handleSwipe(const Vec2 &pt, const Vec2 &d, const Vec2 &v);
+	virtual bool handleSwipeEnd(const Vec2 &v);
+
 	virtual void updateActivityState();
 	virtual void updateInputEnabled();
 
+	virtual void acquireInputFromContainer();
 	virtual void acquireInput(const Vec2 &targetLocation);
+	virtual void updateCursorForLocation(const Vec2 &);
 
 	virtual void handleTextInput(WideStringView, TextCursor, TextCursor);
 	virtual void handleKeyboardEnabled(bool, const Rect &, float);
@@ -108,6 +132,10 @@ protected:
 	bool _mouseOver = false;
 	bool _enabled = true;
 	bool _focused = false;
+	bool _pointerSwipeCaptured = false;
+	bool _containerSwipeCaptured = false;
+	bool _rangeSelectionAllowed = true;
+	bool _isLongPress = false;
 };
 
 }

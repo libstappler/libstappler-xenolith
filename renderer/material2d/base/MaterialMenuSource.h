@@ -59,8 +59,8 @@ public:
 
 	virtual Type getType() const;
 
-	virtual void onNodeAttached(Node *);
-	virtual void onNodeDetached(Node *);
+	virtual void handleNodeAttached(Node *);
+	virtual void handleNodeDetached(Node *);
 
 	void setDirty();
 
@@ -74,8 +74,8 @@ protected:
 
 class MenuSourceCustom : public MenuSourceItem {
 public:
-	using FactoryFunction = Function<Rc<Node>()>;
-	using HeightFunction = Function<float(float)>;
+	using FactoryFunction = Function<Rc<Node>(Node *, MenuSourceCustom *)>;
+	using HeightFunction = Function<float(Node *, float)>;
 
 	virtual bool init() override;
 	virtual bool init(float h, const FactoryFunction &func, float minWidth = 0.0f);
@@ -84,7 +84,7 @@ public:
 	virtual Rc<MenuSourceItem> copy() const override;
 
 	virtual float getMinWidth() const;
-	virtual float getHeight(float) const;
+	virtual float getHeight(Node *, float) const;
 	virtual const HeightFunction & getHeightFunction() const;
 	virtual const FactoryFunction & getFactoryFunction() const;
 
@@ -109,12 +109,12 @@ public:
 	Rc<MenuSource> copy() const;
 
 	void addItem(MenuSourceItem *);
-	Rc<MenuSourceButton> addButton(StringView, Callback && = nullptr);
-	Rc<MenuSourceButton> addButton(StringView, IconName, Callback && = nullptr);
-	Rc<MenuSourceButton> addButton(StringView, IconName, Rc<MenuSource> &&);
-	Rc<MenuSourceCustom> addCustom(float h, const FactoryFunction &func, float minWidth = 0.0f);
-	Rc<MenuSourceCustom> addCustom(const HeightFunction &h, const FactoryFunction &func, float minWidth = 0.0f);
-	Rc<MenuSourceItem> addSeparator();
+	MenuSourceButton *addButton(StringView, Callback && = nullptr);
+	MenuSourceButton *addButton(StringView, IconName, Callback && = nullptr);
+	MenuSourceButton *addButton(StringView, IconName, Rc<MenuSource> &&);
+	MenuSourceCustom *addCustom(float h, const FactoryFunction &func, float minWidth = 0.0f);
+	MenuSourceCustom *addCustom(const HeightFunction &h, const FactoryFunction &func, float minWidth = 0.0f);
+	MenuSourceItem *addSeparator();
 
 	void clear();
 

@@ -63,13 +63,13 @@ MenuSourceItem::Type MenuSourceItem::getType() const {
 	return _type;
 }
 
-void MenuSourceItem::onNodeAttached(Node *n) {
+void MenuSourceItem::handleNodeAttached(Node *n) {
 	if (_attachCallback) {
 		_attachCallback(this, n);
 	}
 }
 
-void MenuSourceItem::onNodeDetached(Node *n) {
+void MenuSourceItem::handleNodeDetached(Node *n) {
 	if (_detachCallback) {
 		_detachCallback(this, n);
 	}
@@ -203,7 +203,7 @@ bool MenuSourceCustom::init() {
 }
 
 bool MenuSourceCustom::init(float h, const FactoryFunction &func, float minWidth) {
-	return init([h] (float w) { return h; }, func);
+	return init([h] (Node *, float w) { return h; }, func);
 }
 
 bool MenuSourceCustom::init(const HeightFunction &h, const FactoryFunction &func, float minWidth) {
@@ -227,8 +227,8 @@ float MenuSourceCustom::getMinWidth() const {
 	return _minWidth;
 }
 
-float MenuSourceCustom::getHeight(float w) const {
-	return _heightFunction(w);
+float MenuSourceCustom::getHeight(Node *n, float w) const {
+	return _heightFunction(n, w);
 }
 
 const MenuSourceCustom::HeightFunction & MenuSourceCustom::getHeightFunction() const {
@@ -265,37 +265,37 @@ void MenuSource::addItem(MenuSourceItem *item) {
 	}
 }
 
-Rc<MenuSourceButton> MenuSource::addButton(StringView str, Callback &&cb) {
+MenuSourceButton *MenuSource::addButton(StringView str, Callback &&cb) {
 	auto item = Rc<MenuSourceButton>::create(str, IconName::None, move(cb));
 	addItem(item);
 	return item;
 }
 
-Rc<MenuSourceButton> MenuSource::addButton(StringView str, IconName name, Callback &&cb) {
+MenuSourceButton *MenuSource::addButton(StringView str, IconName name, Callback &&cb) {
 	auto item = Rc<MenuSourceButton>::create(str, name, move(cb));
 	addItem(item);
 	return item;
 }
 
-Rc<MenuSourceButton> MenuSource::addButton(StringView str, IconName name, Rc<MenuSource> &&source) {
+MenuSourceButton *MenuSource::addButton(StringView str, IconName name, Rc<MenuSource> &&source) {
 	auto item = Rc<MenuSourceButton>::create(str, name, move(source));
 	addItem(item);
 	return item;
 }
 
-Rc<MenuSourceCustom> MenuSource::addCustom(float h, const MenuSourceCustom::FactoryFunction &func, float w) {
+MenuSourceCustom *MenuSource::addCustom(float h, const MenuSourceCustom::FactoryFunction &func, float w) {
 	auto item = Rc<MenuSourceCustom>::create(h, func, w);
 	addItem(item);
 	return item;
 }
 
-Rc<MenuSourceCustom> MenuSource::addCustom(const HeightFunction &h, const FactoryFunction &func, float w) {
+MenuSourceCustom *MenuSource::addCustom(const HeightFunction &h, const FactoryFunction &func, float w) {
 	auto item = Rc<MenuSourceCustom>::create(h, func, w);
 	addItem(item);
 	return item;
 }
 
-Rc<MenuSourceItem> MenuSource::addSeparator() {
+MenuSourceItem *MenuSource::addSeparator() {
 	auto item = Rc<MenuSourceItem>::create();
 	addItem(item);
 	return item;

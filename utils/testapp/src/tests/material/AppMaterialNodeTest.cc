@@ -67,7 +67,7 @@ bool MaterialNodeTest::init() {
 		return false;
 	}
 
-	_background = addChild(Rc<MaterialBackground>::create(Color::Red_500), ZOrder(-1));
+	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(-1));
 	_background->setAnchorPoint(Anchor::Middle);
 
 	_nodeElevation = _background->addChild(Rc<MaterialNodeWithLabel>::create(material2d::SurfaceStyle{

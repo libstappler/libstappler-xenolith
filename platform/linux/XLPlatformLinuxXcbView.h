@@ -41,6 +41,48 @@ public:
 		Vector<uint16_t> rates;
 	};
 
+	struct ModeInfo {
+		uint32_t id;
+	    uint16_t width;
+	    uint16_t height;
+	    uint16_t rate;
+	    String name;
+	};
+
+	struct CrtcInfo {
+		xcb_randr_crtc_t crtc;
+		int16_t x;
+		int16_t y;
+		uint16_t width;
+		uint16_t height;
+		xcb_randr_mode_t mode;
+		uint16_t rotation;
+		uint16_t rotations;
+		Vector<xcb_randr_output_t> outputs;
+		Vector<xcb_randr_output_t> possible;
+	};
+
+	struct OutputInfo {
+		xcb_randr_output_t output;
+	    xcb_randr_crtc_t crtc;
+		Vector<xcb_randr_mode_t> modes;
+		String name;
+	};
+
+	struct ScreenInfoData {
+		Vector<xcb_randr_crtc_t> currentCrtcs;
+		Vector<xcb_randr_output_t> currentOutputs;
+		Vector<ModeInfo> currentModeInfo;
+		Vector<ModeInfo> modeInfo;
+		Vector<ScreenInfo> screenInfo;
+		Vector<CrtcInfo> crtcInfo;
+
+		OutputInfo primaryOutput;
+		CrtcInfo primaryCrtc;
+		ModeInfo primaryMode;
+		xcb_timestamp_t config;
+	};
+
 	static void ReportError(int error);
 
 	XcbView(XcbLibrary *, ViewInterface *, StringView, StringView bundleId, URect);
@@ -60,7 +102,7 @@ public:
 	uint32_t getWindow() const { return _window; }
 
 protected:
-	Vector<ScreenInfo> getScreenInfo() const;
+	ScreenInfoData getScreenInfo() const;
 
 	void initXkb();
 
@@ -99,15 +141,18 @@ protected:
 	uint16_t _modeswitch = 0;
 
 	bool _xcbSetup = false;
+	bool _randrEnabled = true;
 	int32_t _xkbDeviceId = 0;
 	uint8_t _xkbFirstEvent = 0;
 	uint8_t _xkbFirstError = 0;
+	uint8_t _randrFirstEvent = 0;
 	xkb_keymap *_xkbKeymap = nullptr;
 	xkb_state *_xkbState = nullptr;
 	xkb_compose_state *_xkbCompose = nullptr;
 	core::InputKeyCode _keycodes[256] = { core::InputKeyCode::Unknown };
 
 	String _wmClass;
+	ScreenInfoData _screenInfo;
 };
 
 }

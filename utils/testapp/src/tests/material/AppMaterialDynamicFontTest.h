@@ -40,11 +40,11 @@ public:
 
 protected:
 	Label *_label = nullptr;
-	AppSliderWithLabel *_sliderSize = nullptr;
-	AppSliderWithLabel *_sliderWeight = nullptr;
-	AppSliderWithLabel *_sliderWidth = nullptr;
-	AppSliderWithLabel *_sliderStyle = nullptr;
-	AppSliderWithLabel *_sliderGrade = nullptr;
+	SliderWithLabel *_sliderSize = nullptr;
+	SliderWithLabel *_sliderWeight = nullptr;
+	SliderWithLabel *_sliderWidth = nullptr;
+	SliderWithLabel *_sliderStyle = nullptr;
+	SliderWithLabel *_sliderGrade = nullptr;
 };
 
 }

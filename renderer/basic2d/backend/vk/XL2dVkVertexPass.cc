@@ -182,6 +182,8 @@ struct VertexMaterialDrawPlan {
 	uint32_t surfaceCmds = 0;
 	uint32_t transparentCmds = 0;
 
+	Vec2 shadowSize = Vec2(1.0f, 1.0f);
+
 	bool hasGpuSideAtlases = false;
 
 	VertexMaterialDrawPlan(const core::FrameContraints &constraints)
@@ -308,9 +310,10 @@ struct VertexMaterialDrawPlan {
 		memcpy(writeTarget.transform, &val, sizeof(TransformData));
 		transtormOffset += sizeof(TransformData); ++ transformIdx;
 
-		Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2 };
+		Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6 };
 
 		Vector<Vertex> vertexes {
+			// full screen quad data
 			Vertex{
 				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
 				Vec4::ONE, Vec2::ZERO, 0, 0
@@ -326,6 +329,24 @@ struct VertexMaterialDrawPlan {
 			Vertex{
 				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
 				Vec4::ONE, Vec2::UNIT_X, 0, 0
+			},
+
+			// shadow quad data
+			Vertex{
+				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(0.0f, 1.0f - shadowSize.y), 0, 0
+			},
+			Vertex{
+				Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(0.0f, 1.0f), 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(shadowSize.x, 1.0f), 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(shadowSize.x, 1.0f - shadowSize.y), 0, 0
 			}
 		};
 
@@ -335,18 +356,30 @@ struct VertexMaterialDrawPlan {
 			vertexes[1].tex = Vec2::ONE;
 			vertexes[2].tex = Vec2::UNIT_X;
 			vertexes[3].tex = Vec2::ZERO;
+			vertexes[4].tex = Vec2(0.0f, shadowSize.y);
+			vertexes[5].tex = shadowSize;
+			vertexes[6].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[7].tex = Vec2::ZERO;
 			break;
 		case core::SurfaceTransformFlags::Rotate180:
 			vertexes[0].tex = Vec2::ONE;
 			vertexes[1].tex = Vec2::UNIT_X;
 			vertexes[2].tex = Vec2::ZERO;
 			vertexes[3].tex = Vec2::UNIT_Y;
+			vertexes[4].tex = shadowSize;
+			vertexes[5].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[6].tex = Vec2::ZERO;
+			vertexes[7].tex = Vec2(0.0f, shadowSize.y);
 			break;
 		case core::SurfaceTransformFlags::Rotate270:
 			vertexes[0].tex = Vec2::UNIT_X;
 			vertexes[1].tex = Vec2::ZERO;
 			vertexes[2].tex = Vec2::UNIT_Y;
 			vertexes[3].tex = Vec2::ONE;
+			vertexes[4].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[5].tex = Vec2::ZERO;
+			vertexes[6].tex = Vec2(0.0f, shadowSize.y);
+			vertexes[7].tex = shadowSize;
 			break;
 		default:
 			break;
@@ -538,6 +571,11 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
 	//plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
 
+	auto shadowExtent = commands->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
+	auto shadowSize = commands->lights.getShadowSize( fhandle.getFrameConstraints().getScreenSize());
+
+	plan.shadowSize = Vec2(shadowSize.width / float(shadowExtent.width), shadowSize.height / float(shadowExtent.height));
+
 	auto cmd = commands->commands->getFirst();
 	while (cmd) {
 		switch (cmd->type) {
@@ -569,10 +607,10 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 
 	// create buffers
 	_indexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::BufferUsage::IndexBuffer, (plan.globalWritePlan.indexes + 6) * sizeof(uint32_t)));
+			BufferInfo(core::BufferUsage::IndexBuffer, (plan.globalWritePlan.indexes + 12) * sizeof(uint32_t)));
 
 	_vertexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::BufferUsage::StorageBuffer, (plan.globalWritePlan.vertexes + 4) * sizeof(Vertex)));
+			BufferInfo(core::BufferUsage::StorageBuffer, (plan.globalWritePlan.vertexes + 8) * sizeof(Vertex)));
 
 	_transforms = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
 			BufferInfo(core::BufferUsage::StorageBuffer, (plan.globalWritePlan.transforms + 1) * sizeof(TransformData)));
@@ -786,6 +824,14 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	size_t min = 0;
 	size_t max = (ctrl ++) % 12;*/
 
+	struct MaterialData {
+		uint32_t materialIdx;
+		uint32_t imageIdx;
+		uint32_t samplerIdx;
+	};
+
+	MaterialData data;
+
 	for (auto &materialVertexSpan : _vertexBuffer->getVertexData()) {
 		/*if (i < min) {
 			++ i;
@@ -796,11 +842,13 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		}*/
 
 		//++ i;
-		auto materialOrderIdx = materials->getMaterialOrder(materialVertexSpan.material);
-		auto material = materials->getMaterialById(materialVertexSpan.material);
+		data.materialIdx = materials->getMaterialOrder(materialVertexSpan.material);
+		const core::Material * material = materials->getMaterialById(materialVertexSpan.material);
 		if (!material) {
 			continue;
 		}
+		data.imageIdx = material->getImages().front().descriptor;
+		data.samplerIdx = material->getImages().front().sampler;
 
 		auto pipeline = material->getPipeline()->pipeline;
 		auto textureSetIndex =  material->getLayoutIndex();
@@ -829,7 +877,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 		buf.cmdPushConstants(pass->getPipelineLayout(0),
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&materialOrderIdx), sizeof(uint32_t)));
+				BytesView(reinterpret_cast<const uint8_t *>(&data), sizeof(MaterialData)));
 
 		buf.cmdDrawIndexed(
 			materialVertexSpan.indexCount, // indexCount

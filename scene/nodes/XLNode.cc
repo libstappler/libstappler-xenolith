@@ -938,7 +938,7 @@ void Node::setOpacity(float opacity) {
 }
 
 void Node::setOpacity(OpacityValue value) {
-	setOpacity(255.0f / value.get());
+	setOpacity(value.get() / 255.0f);
 }
 
 void Node::updateDisplayedOpacity(float parentOpacity) {
@@ -1147,6 +1147,10 @@ bool Node::isTouched(const Vec2 &location, float padding) {
 }
 
 bool Node::isTouchedNodeSpace(const Vec2 &point, float padding) {
+	if (!isVisible()) {
+		return false;
+	}
+
 	const Size2 &size = getContentSize();
 	if (point.x > -padding && point.y > -padding
 			&& point.x < size.width + padding

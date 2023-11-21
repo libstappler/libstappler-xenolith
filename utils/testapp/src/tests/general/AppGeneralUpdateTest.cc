@@ -32,10 +32,23 @@ bool GeneralUpdateTest::init() {
 
 	_background = addChild(Rc<Layer>::create(Color::White));
 	_background->setAnchorPoint(Anchor::Middle);
+	//_background->setVisible(false);
 
 	scheduleUpdate();
 
 	return true;
+}
+
+void GeneralUpdateTest::onEnter(Scene *scene) {
+	LayoutTest::onEnter(scene);
+
+	runAction(Rc<RenderContinuously>::create());
+}
+
+void GeneralUpdateTest::onExit() {
+	stopAllActions();
+
+	LayoutTest::onExit();
 }
 
 void GeneralUpdateTest::onContentSizeDirty() {

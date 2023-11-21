@@ -21,6 +21,7 @@
  **/
 
 #include "XLVkGuiViewImpl.h"
+#include "XLTextInputManager.h"
 
 #if ANDROID
 
@@ -52,7 +53,7 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 	}
 
 	_options.presentImmediate = false;
-	_options.acquireImageImmediately = false;
+	_options.acquireImageImmediately = true;
 	_options.renderOnDemand = true;
 
 	return true;
@@ -115,24 +116,61 @@ void ViewImpl::end() {
 	}, this, true);
 }
 
-void ViewImpl::wakeup() {
+void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
 	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().nativeHandle)->wakeup();
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
-
+	performOnThread([this, pos, len] {
+		if (_activity) {
+			_activity->updateTextCursor(pos, len);
+		}
+	}, this, true);
 }
 
-void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
-
+void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType type) {
+	performOnThread([this, str = str.str<Interface>(), pos, len, type] {
+		if (_activity) {
+			_activity->updateTextInput(str, pos, len, type);
+		}
+	}, this, true);
 }
 
-void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
+void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType type) {
+	performOnThread([this, str = str.str<Interface>(), pos, len, type] {
+		if (_activity) {
+			auto wrapper = Rc<xenolith::platform::ActivityTextInputWrapper>::alloc();
+			wrapper->target = this;
+			wrapper->textChanged = [this] (Ref *ref, WideStringView text, core::TextCursor cursor) {
+				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this), text = text.str<Interface>(), cursor] {
+					dir->getTextInputManager()->textChanged(text, cursor, core::TextCursor());
+					view->setReadyForNextFrame();
+				}, ref);
+			};
+			wrapper->inputEnabled = [this] (Ref *ref, bool value) {
+				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this), value] {
+					dir->getTextInputManager()->setInputEnabled(value);
+					view->setReadyForNextFrame();
+				}, ref);
+			};
+			wrapper->cancelInput = [this] (Ref *ref) {
+				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this)] {
+					dir->getTextInputManager()->cancel();
+					view->setReadyForNextFrame();
+				}, ref);
+			};
 
+			_activity->runTextInput(move(wrapper), str, pos, len, type);
+		}
+	}, this, true);
 }
 
 void ViewImpl::cancelTextInput() {
-
+	performOnThread([this] {
+		if (_activity) {
+			_activity->cancelTextInput();
+		}
+	}, this, true);
 }
 
 void ViewImpl::runWithWindow(ANativeWindow *window) {

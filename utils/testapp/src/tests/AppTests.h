@@ -57,6 +57,7 @@ enum class LayoutName {
 
 	ActionEaseTest = 256 * 3,
 	ActionMaterialTest,
+	ActionRepeatTest,
 
 	VgTessTest = 256 * 4,
 	VgIconTest,
@@ -75,6 +76,7 @@ enum class LayoutName {
 	MaterialButtonTest,
 	MaterialInputFieldTest,
 	MaterialToolbarTest,
+	MaterialMenuTest,
 };
 
 struct MenuData {

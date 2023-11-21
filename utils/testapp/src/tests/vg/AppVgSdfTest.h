@@ -52,10 +52,10 @@ protected:
 	VectorSprite *_polygonSprite = nullptr;
 	VectorSprite *_polygonTestSprite = nullptr;
 
-	AppSliderWithLabel *_sliderScaleX = nullptr;
-	AppSliderWithLabel *_sliderScaleY = nullptr;
-	AppSliderWithLabel *_sliderShadow = nullptr;
-	AppSliderWithLabel *_sliderRotation = nullptr;
+	SliderWithLabel *_sliderScaleX = nullptr;
+	SliderWithLabel *_sliderScaleY = nullptr;
+	SliderWithLabel *_sliderShadow = nullptr;
+	SliderWithLabel *_sliderRotation = nullptr;
 };
 
 }

@@ -48,4 +48,5 @@ protected:
 };
 
 }
+
 #endif /* TEST_SRC_TESTS_INPUT_APPINPUTFIELDTEST_H_ */

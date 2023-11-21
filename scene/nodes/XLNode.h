@@ -297,9 +297,6 @@ public:
 	virtual void setColor(const Color4F& color, bool withOpacity = false);
 	virtual void updateDisplayedColor(const Color4F& parentColor);
 
-	virtual void setOpacityModifyRGB(bool value) { }
-	virtual bool isOpacityModifyRGB() const { return false; };
-
 	virtual void setDepthIndex(float value) { _depthIndex = value; }
 	virtual float getDepthIndex() const { return _depthIndex; }
 

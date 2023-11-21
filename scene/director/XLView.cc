@@ -31,7 +31,9 @@ XL_DECLARE_EVENT_CLASS(View, onFocus);
 
 View::View() { }
 
-View::~View() { }
+View::~View() {
+	log::debug("xenolith::View", "~View");
+}
 
 bool View::init(Application &loop, ViewInfo &&info) {
 	_mainLoop = &loop;
@@ -212,6 +214,7 @@ void View::setFrameInterval(uint64_t value) {
 	performOnThread([this, value] {
 		std::unique_lock<Mutex> lock(_frameIntervalMutex);
 		_info.frameInterval = value;
+		_frameEmitter->setFrameInterval(value);
 		onFrameRate(this, int64_t(_info.frameInterval));
 	}, this, true);
 }

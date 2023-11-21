@@ -30,7 +30,7 @@
 namespace stappler::xenolith::core {
 
 class Instance;
-class ObjectInterface;
+class Object;
 class Loop;
 
 class Device : public Ref {
@@ -47,8 +47,8 @@ public:
 	Rc<Shader> getProgram(StringView);
 	Rc<Shader> addProgram(Rc<Shader>);
 
-	void addObject(ObjectInterface *);
-	void removeObject(ObjectInterface *);
+	void addObject(Object *);
+	void removeObject(Object *);
 
 	uint32_t getSamplersCount() const { return _samplersCount; }
 	bool isSamplersCompiled() const { return _samplersCompiled; }
@@ -89,7 +89,7 @@ protected:
 
 	Map<String, Rc<Shader>> _shaders;
 
-	std::unordered_set<ObjectInterface *> _objects;
+	HashSet<Object *> _objects;
 
 	Vector<SamplerInfo> _samplersInfo;
 	Vector<ImageFormat> _depthFormats;

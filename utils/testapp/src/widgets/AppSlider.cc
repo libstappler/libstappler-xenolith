@@ -25,7 +25,7 @@
 
 namespace stappler::xenolith::app {
 
-bool AppSlider::init(float value, Function<void(float)> &&cb) {
+bool Slider::init(float value, Function<void(float)> &&cb) {
 	if (!Layer::init(Color::Grey_200)) {
 		return false;
 	}
@@ -53,13 +53,13 @@ bool AppSlider::init(float value, Function<void(float)> &&cb) {
 	return true;
 }
 
-void AppSlider::onContentSizeDirty() {
+void Slider::onContentSizeDirty() {
 	Layer::onContentSizeDirty();
 
 	updateValue();
 }
 
-void AppSlider::setValue(float value) {
+void Slider::setValue(float value) {
 	if (_value != value) {
 		_value = value;
 		updateValue();
@@ -69,33 +69,33 @@ void AppSlider::setValue(float value) {
 	}
 }
 
-float AppSlider::getValue() const {
+float Slider::getValue() const {
 	return _value;
 }
 
-void AppSlider::setForegroundColor(const Color4F &color) {
+void Slider::setForegroundColor(const Color4F &color) {
 	_foreground->setColor(color);
 }
 
-Color4F AppSlider::getForegroundColor() const {
+Color4F Slider::getForegroundColor() const {
 	return _foreground->getColor();
 }
 
-void AppSlider::setBackgroundColor(const Color4F &color) {
+void Slider::setBackgroundColor(const Color4F &color) {
 	setColor(color);
 }
 
-Color4F AppSlider::getBackgroundColor() const {
+Color4F Slider::getBackgroundColor() const {
 	return getColor();
 }
 
-void AppSlider::updateValue() {
+void Slider::updateValue() {
 	_foreground->setContentSize(Size2(_contentSize.width * _value, _contentSize.height));
 }
 
 
-bool AppSliderWithLabel::init(StringView title, float value, Function<void(float)> &&cb) {
-	if (!AppSlider::init(value, move(cb))) {
+bool SliderWithLabel::init(StringView title, float value, Function<void(float)> &&cb) {
+	if (!Slider::init(value, move(cb))) {
 		return false;
 	}
 
@@ -112,34 +112,34 @@ bool AppSliderWithLabel::init(StringView title, float value, Function<void(float
 	return true;
 }
 
-void AppSliderWithLabel::onContentSizeDirty() {
-	AppSlider::onContentSizeDirty();
+void SliderWithLabel::onContentSizeDirty() {
+	Slider::onContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize.width + 16.0f, _contentSize.height / 2.0f));
 	_prefix->setPosition(Vec2(- 16.0f, _contentSize.height / 2.0f));
 }
 
-void AppSliderWithLabel::setString(StringView str) {
+void SliderWithLabel::setString(StringView str) {
 	_label->setString(str);
 }
 
-StringView AppSliderWithLabel::getString() const {
+StringView SliderWithLabel::getString() const {
 	return _label->getString8();
 }
 
-void AppSliderWithLabel::setPrefix(StringView str) {
+void SliderWithLabel::setPrefix(StringView str) {
 	_prefix->setString(str);
 }
 
-StringView AppSliderWithLabel::getPrefix() const {
+StringView SliderWithLabel::getPrefix() const {
 	return _prefix->getString8();
 }
 
-void AppSliderWithLabel::setFontSize(font::FontSize size) {
+void SliderWithLabel::setFontSize(font::FontSize size) {
 	_label->setFontSize(size);
 	_prefix->setFontSize(size);
 }
-void AppSliderWithLabel::setFontSize(uint16_t size) {
+void SliderWithLabel::setFontSize(uint16_t size) {
 	_label->setFontSize(size);
 	_prefix->setFontSize(size);
 }

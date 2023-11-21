@@ -197,14 +197,14 @@ public:
 	static WideString getLocalizedString(const WideStringView &);
 
 	static Size2 getLabelSize(font::FontController *, const DescriptionStyle &,
-			const StringView &, float w = 0.0f, float density = 0.0f, bool localized = false);
+			const StringView &, float w = 0.0f, bool localized = false);
 	static Size2 getLabelSize(font::FontController *, const DescriptionStyle &,
-			const WideStringView &, float w = 0.0f, float density = 0.0f, bool localized = false);
+			const WideStringView &, float w = 0.0f, bool localized = false);
 
 	static float getStringWidth(font::FontController *, const DescriptionStyle &,
-			const StringView &, float density = 0.0f, bool localized = false);
+			const StringView &, bool localized = false);
 	static float getStringWidth(font::FontController *, const DescriptionStyle &,
-			const WideStringView &, float density = 0.0f, bool localized = false);
+			const WideStringView &, bool localized = false);
 
 	virtual ~LabelBase();
 
@@ -324,6 +324,8 @@ protected:
 	virtual WideString resolveLocaleTags(const WideStringView &) const;
 
 	virtual void specializeStyle(DescriptionStyle &style, float density) const;
+
+	virtual void setLabelDirty();
 
 	WideString _string16;
 	String _string8;

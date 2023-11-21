@@ -70,8 +70,8 @@ protected:
 
 	material2d::StyleContainer *_style = nullptr;
 	material2d::Surface *_background = nullptr;
-	AppCheckboxWithLabel *_lightCheckbox = nullptr;
-	AppCheckboxWithLabel *_contentCheckbox = nullptr;
+	CheckboxWithLabel *_lightCheckbox = nullptr;
+	CheckboxWithLabel *_contentCheckbox = nullptr;
 
 	MaterialColorPicker *_huePicker = nullptr;
 	MaterialColorPicker *_chromaPicker = nullptr;

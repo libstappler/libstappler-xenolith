@@ -49,6 +49,8 @@ enum class TypescaleRole {
 
 class TypescaleLabel : public Label {
 public:
+	static DescriptionStyle getTypescaleRoleStyle(TypescaleRole, float density = 0.0f);
+
 	virtual ~TypescaleLabel() { }
 
 	virtual bool init(TypescaleRole);

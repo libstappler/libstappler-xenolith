@@ -31,7 +31,7 @@ bool UtilsAssetTest::init() {
 		return false;
 	}
 
-	_background = addChild(Rc<MaterialBackground>::create(Color::BlueGrey_500), ZOrder(1));
+	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(1));
 	_background->setAnchorPoint(Anchor::Middle);
 
 	_runButton = _background->addChild(Rc<material2d::Button>::create(material2d::NodeStyle::Filled));
@@ -48,7 +48,7 @@ bool UtilsAssetTest::init() {
 	_result->setString("null");
 	_result->setAnchorPoint(Anchor::MiddleTop);
 
-	_progress = _background->addChild(Rc<AppSlider>::create(0.0f, nullptr));
+	_progress = _background->addChild(Rc<Slider>::create(0.0f, nullptr));
 	_progress->setAnchorPoint(Anchor::Middle);
 
 	_listener = addComponent(Rc<DataListener<storage::Asset>>::create([this] (SubscriptionFlags flags) {

@@ -118,7 +118,7 @@ void main() {
 	const vec2 rel = vec2(float(gl_GlobalInvocationID.x) / float(imgSize.x - 1), float(gl_GlobalInvocationID.y - 1) / float(imgSize.y));
 	const vec2 coords = (vec2(float(gl_GlobalInvocationID.x) + 0.5, float(gl_GlobalInvocationID.y) + 0.5))
 			* shadowData.shadowSdfDensity
-			- shadowData.shadowOffset * rel 
+			//- shadowData.shadowOffset * rel 
 			//* shadowData.shadowSdfDensity + shadowData.shadowOffset * rel
 			;
 
@@ -128,8 +128,10 @@ void main() {
 	const float isect = intersect(cellIdx, coords);
 	const vec3 coords3d = vec3(coords, isect);
 	float value = 128.0;
-	float sdf;
 	float height = isect;
+	float control = value;
+	float sdf;
+	float nextControl;
 
 	if (shadowData.trianglesCount > 0) {
 		const uint nTriangles = GRID_SIZE_BUFFER[cellIdx];
@@ -138,8 +140,9 @@ void main() {
 			const Triangle2DData t = TRIANGLE_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
 			if (t.value >= isect) {
 				sdf = triangle3d(coords3d, t.a, t.b, t.c, t.value);
-		
-				if (sdf < value) {
+				nextControl	= sdf - ( (t.value == isect) ? -64.0 : ((t.value - isect)) );
+				if (nextControl < control) {
+					control = nextControl;
 					value = sdf;
 					height = t.value;
 				}
@@ -154,10 +157,9 @@ void main() {
 			const Circle2DData c = CIRCLE_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
 			if (c.value >= isect) {
 				const TransformData t = TRANSFORM_BUFFER[c.transform];
-		  
 				sdf = circle3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, c.origin,
-					c.radius * shadowData.density, c.value, t.padding / shadowData.density) + 0.25;
-		
+					c.radius * shadowData.density, c.value, t.padding / shadowData.density);
+
 				if (sdf < value) {
 					value = sdf;
 					height = c.value;
@@ -173,10 +175,9 @@ void main() {
 			const Rect2DData r = RECT_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
 			if (r.value >= isect) {
 				const TransformData t = TRANSFORM_BUFFER[r.transform];
-	
 				sdf = rect3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, r.origin,
-					r.size * shadowData.density, r.value, t.padding / shadowData.density) + 0.25;
-	
+					r.size * shadowData.density, r.value, t.padding / shadowData.density);
+
 				if (sdf < value) {
 					value = sdf;
 					height = r.value;
@@ -192,11 +193,11 @@ void main() {
 			const RoundedRect2DData r = ROUNDED_RECT_DATA_BUFFER[GRID_INDEX_BUFFER[targetOffset + i]];
 			if (r.value >= isect) {
 				const TransformData t = TRANSFORM_BUFFER[r.transform];
-	
 				sdf = roundedRect3d((t.transform * vec4(coords * shadowData.density, isect, 1)).xyz, r.origin,
-					r.size * shadowData.density, r.corners * shadowData.density, r.value, t.padding / shadowData.density) + 0.25;
-	
-				if (sdf < value) {
+					r.size * shadowData.density, r.corners * shadowData.density, r.value, t.padding / shadowData.density);
+				nextControl	= sdf - ( (r.value == isect) ? -64.0 : ((r.value - isect)) );
+				if (nextControl < control) {
+					control = nextControl;
 					value = sdf;
 					height = r.value;
 				}

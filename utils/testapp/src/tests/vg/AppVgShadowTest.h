@@ -58,11 +58,11 @@ protected:
 	Label *_info = nullptr;
 	VectorSprite *_sprite = nullptr;
 
-	AppSliderWithLabel *_sliderScale = nullptr;
-	AppSliderWithLabel *_sliderShadow = nullptr;
-	AppSliderWithLabel *_sliderK = nullptr;
+	SliderWithLabel *_sliderScale = nullptr;
+	SliderWithLabel *_sliderShadow = nullptr;
+	SliderWithLabel *_sliderK = nullptr;
 	LightNormalSelector *_normalSelector = nullptr;
-	AppCheckboxWithLabel *_checkboxAmbient = nullptr;
+	CheckboxWithLabel *_checkboxAmbient = nullptr;
 };
 
 }

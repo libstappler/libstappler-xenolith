@@ -39,9 +39,15 @@ bool Button::init(const SurfaceStyle &style) {
 		return false;
 	}
 
-	_label = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
-	_label->setAnchorPoint(Anchor::MiddleLeft);
-	_label->setOnContentSizeDirtyCallback([this] {
+	_labelText = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
+	_labelText->setAnchorPoint(Anchor::MiddleLeft);
+	_labelText->setOnContentSizeDirtyCallback([this] {
+		updateSizeFromContent();
+	});
+
+	_labelValue = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
+	_labelValue->setAnchorPoint(Anchor::MiddleLeft);
+	_labelValue->setOnContentSizeDirtyCallback([this] {
 		updateSizeFromContent();
 	});
 
@@ -106,29 +112,7 @@ bool Button::init(const SurfaceStyle &style) {
 void Button::onContentSizeDirty() {
 	Surface::onContentSizeDirty();
 
-	if (getLeadingIconName() != IconName::None && getTrailingIconName() == IconName::None && _label->getString().empty()) {
-		_leadingIcon->setAnchorPoint(Anchor::Middle);
-		_leadingIcon->setPosition(_contentSize / 2.0f);
-	} else {
-		_leadingIcon->setAnchorPoint(Anchor::MiddleLeft);
-
-		float contentWidth = getWidthForContent();
-		float offset = (_contentSize.width - contentWidth) / 2.0f;
-
-		Vec2 target(offset + (_styleTarget.nodeStyle == NodeStyle::Text ? 12.0f : 16.0f), _contentSize.height / 2.0f);
-
-		if (getLeadingIconName() != IconName::None) {
-			_leadingIcon->setPosition(target);
-			target.x += 8.0f + _leadingIcon->getContentSize().width;
-		} else {
-			target.x += 8.0f;
-		}
-
-		_label->setPosition(target);
-		target.x += _label->getContentSize().width + 8.0f;
-
-		_trailingIcon->setPosition(target);
-	}
+	layoutContent();
 }
 
 void Button::setFollowContentSize(bool value) {
@@ -183,11 +167,21 @@ bool Button::isMenuSourceButtonEnabled() const {
 }
 
 void Button::setText(StringView text) {
-	_label->setString(text);
+	_labelText->setString(text);
+	_contentSizeDirty = true;
 }
 
 StringView Button::getText() const {
-	return _label->getString8();
+	return _labelText->getString8();
+}
+
+void Button::setTextValue(StringView text) {
+	_labelValue->setString(text);
+	_contentSizeDirty = true;
+}
+
+StringView Button::getTextValue() const {
+	return _labelValue->getString8();
 }
 
 void Button::setIconSize(float value) {
@@ -239,14 +233,18 @@ void Button::setDoubleTapCallback(Function<void()> &&cb) {
 void Button::setMenuSourceButton(Rc<MenuSourceButton> &&button) {
 	if (button != _menuButtonListener->getSubscription()) {
 		if (auto b = _menuButtonListener->getSubscription()) {
-			b->onNodeDetached(this);
+			b->handleNodeDetached(this);
 		}
 		_menuButtonListener->setSubscription(button.get());
 		updateMenuButtonSource();
 		if (button) {
-			button->onNodeAttached(this);
+			button->handleNodeAttached(this);
 		}
 	}
+}
+
+MenuSourceButton *Button::getMenuSourceButton() const {
+	return _menuButtonListener->getSubscription();
 }
 
 void Button::updateSizeFromContent() {
@@ -256,8 +254,8 @@ void Button::updateSizeFromContent() {
 	}
 
 	Size2 targetSize;
-	if (!_label->empty()) {
-		targetSize = _label->getContentSize();
+	if (!_labelText->empty()) {
+		targetSize = _labelText->getContentSize();
 	} else {
 		targetSize.height = getIconSize();
 	}
@@ -284,17 +282,15 @@ void Button::updateActivityState() {
 }
 
 void Button::handleTap() {
-	if (auto btn = _menuButtonListener->getSubscription()) {
-		auto &cb = btn->getCallback();
-		if (cb) {
-			cb(this, btn);
-		}
-		return;
-	}
 	if (_callbackTap) {
 		auto id = retain();
 		_callbackTap();
 		release(id);
+	} else if (auto btn = _menuButtonListener->getSubscription()) {
+		auto &cb = btn->getCallback();
+		if (cb) {
+			cb(this, btn);
+		}
 	}
 }
 
@@ -316,13 +312,17 @@ void Button::handleDoubleTap() {
 
 float Button::getWidthForContent() const {
 	float contentWidth = 0.0f;
-	if (!_label->empty()) {
-		contentWidth = ((_styleTarget.nodeStyle == NodeStyle::Text) ? 24.0f : 48.0f) + _label->getContentSize().width;
+	if (!_labelText->empty()) {
+		contentWidth = ((_styleTarget.nodeStyle == NodeStyle::Text) ? 24.0f : 48.0f) + _labelText->getContentSize().width;
 		if (_styleTarget.nodeStyle == NodeStyle::Text && (getLeadingIconName() != IconName::None || getTrailingIconName() != IconName::None)) {
 			contentWidth += 16.0f;
 		}
 	} else {
 		contentWidth = 24.0f;
+	}
+
+	if (!_labelValue->empty()) {
+		contentWidth += _labelText->getContentSize().width + 8.0f;
 	}
 
 	if (getLeadingIconName() != IconName::None) {
@@ -342,11 +342,49 @@ void Button::updateMenuButtonSource() {
 		setLeadingIconName(btn->getNameIcon());
 		setTrailingIconName(btn->getValueIcon());
 		setText(btn->getName());
+		setTextValue(btn->getValue());
+
+		if (btn->getNextMenu()) {
+			if (getTrailingIconName() == IconName::None) {
+				setTrailingIconName(IconName::Navigation_arrow_right_solid);
+			}
+		}
 	} else {
 		_selected = false;
 		_floatingMenuSource = nullptr;
 	}
 	updateActivityState();
+}
+
+void Button::layoutContent() {
+	if (getLeadingIconName() != IconName::None && getTrailingIconName() == IconName::None && _labelText->getString().empty() && _labelValue->getString().empty()) {
+		_leadingIcon->setAnchorPoint(Anchor::Middle);
+		_leadingIcon->setPosition(_contentSize / 2.0f);
+	} else {
+		_leadingIcon->setAnchorPoint(Anchor::MiddleLeft);
+
+		float contentWidth = getWidthForContent();
+		float offset = (_contentSize.width - contentWidth) / 2.0f;
+
+		Vec2 target(offset + (_styleTarget.nodeStyle == NodeStyle::Text ? 12.0f : 16.0f), _contentSize.height / 2.0f);
+
+		if (getLeadingIconName() != IconName::None) {
+			_leadingIcon->setPosition(target);
+			target.x += 8.0f + _leadingIcon->getContentSize().width;
+		} else {
+			target.x += 8.0f;
+		}
+
+		_labelText->setPosition(target);
+		target.x += _labelText->getContentSize().width + 8.0f;
+
+		if (!_labelValue->getString().empty()) {
+			_labelValue->setPosition(target);
+			target.x += _labelValue->getContentSize().width + 8.0f;
+		}
+
+		_trailingIcon->setPosition(target);
+	}
 }
 
 }

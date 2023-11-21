@@ -180,7 +180,7 @@ bool UtilsStorageTest::init() {
 
 	_container = Rc<UtilsStorageTestComponentContainer>::create();
 
-	_background = addChild(Rc<MaterialBackground>::create(Color::BlueGrey_500), ZOrder(1));
+	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(1));
 	_background->setAnchorPoint(Anchor::Middle);
 
 	_inputKey = _background->addChild(Rc<material2d::InputField>::create(), ZOrder(1));
@@ -260,19 +260,19 @@ void UtilsStorageTest::onContentSizeDirty() {
 	_background->setContentSize(_contentSize);
 
 	_inputKey->setContentSize(Size2(180.0f, 56.0f));
-	_inputKey->setPosition(Vec2(_contentSize.width / 2.0f - 8.0f, _contentSize.height - 64.0f));
+	_inputKey->setPosition(Vec2(_contentSize.width / 2.0f - 8.0f, _contentSize.height - 86.0f));
 
 	_inputValue->setContentSize(Size2(180.0f, 56.0f));
-	_inputValue->setPosition(Vec2(_contentSize.width / 2.0f + 8.0f, _contentSize.height - 64.0f));
+	_inputValue->setPosition(Vec2(_contentSize.width / 2.0f + 8.0f, _contentSize.height - 86.0f));
 
 	_create->setContentSize(Size2(120.0f, 32.0f));
-	_create->setPosition(Vec2(_contentSize.width / 2.0f - 8.0f, _contentSize.height - 148.0f));
+	_create->setPosition(Vec2(_contentSize.width / 2.0f - 8.0f, _contentSize.height - 160.0f));
 
 	_check->setContentSize(Size2(120.0f, 32.0f));
-	_check->setPosition(Vec2(_contentSize.width / 2.0f + 8.0f, _contentSize.height - 148.0f));
+	_check->setPosition(Vec2(_contentSize.width / 2.0f + 8.0f, _contentSize.height - 160.0f));
 
 	_result->setWidth(180.0f * 2.0f + 16.0f);
-	_result->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 200.0f));
+	_result->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 220.0f));
 }
 
 void UtilsStorageTest::onEnter(Scene *scene) {

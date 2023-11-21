@@ -66,9 +66,6 @@ protected:
 	virtual SurfaceInterior *getSurfaceInteriorForFrame(FrameInfo &) const;
 	virtual RenderingLevel getRealRenderingLevel() const override;
 
-	virtual void pushShadowCommands(FrameInfo &, NodeFlags flags, const Mat4 &,
-			SpanView<TransformVertexData> = SpanView<TransformVertexData>()) override;
-
 	SurfaceInterior *_interior = nullptr;
 
 	SurfaceStyle _styleOrigin;

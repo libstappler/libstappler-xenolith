@@ -48,7 +48,7 @@ protected:
 
 	MaterialBackground *_background = nullptr;
 	material2d::Button *_runButton = nullptr;
-	AppSlider *_progress = nullptr;
+	Slider *_progress = nullptr;
 
 	Label *_result = nullptr;
 

@@ -43,11 +43,6 @@ public:
 		// be careful not to block whole view's thread operation on this
 		bool acquireImageImmediately = false;
 
-		// Компенсировать частоту кадров с учётом предыдущих таймингов кадра
-		// Wayland на nvidia странно использует vsync, что может снизить реальный FPS в два раза, если эта опция отключена
-		// В некоторых случаях может снизить плавность анимаций
-		bool flattenFrameRate = false;
-
 		// Использовать внешний сигнал вертикальной синхронизации (система должна поддерживать)
 		// В этом режиме готовые к презентации кадры ожидают сигнала, прежде, чем отправиться
 		// Также, по сигналу система запрашиваает новый буфер для отрисовки следующего кадра
@@ -116,10 +111,22 @@ public:
 protected:
 	using xenolith::View::init;
 
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const override {
+		return true;
+	}
+#endif
+
 	enum ScheduleImageMode {
 		AcquireSwapchainImageAsync,
 		AcquireSwapchainImageImmediate,
 		AcquireOffscreenImage,
+	};
+
+	struct FrameTimeInfo {
+		uint64_t dt;
+		uint64_t avg;
+		uint64_t clock;
 	};
 
 	virtual bool pollInput(bool frameReady);
@@ -158,7 +165,7 @@ protected:
 	virtual void presentWithQueue(DeviceQueue &, Rc<ImageStorage> &&);
 	void invalidateSwapchainImage(Rc<ImageStorage> &&);
 
-	Pair<uint64_t, uint64_t> updateFrameInterval();
+	FrameTimeInfo updateFrameInterval();
 
 	void waitForFences(uint64_t min);
 
@@ -173,13 +180,15 @@ protected:
 	EngineOptions _options;
 
 	bool _readyForNextFrame = false;
-	bool _blockDeprecation = false;
+	bool _blockSwapchainRecreation = false;
 	bool _swapchainInvalidated = false;
+	uint64_t _refId = 0;
 	uint64_t _framesInProgress = 0;
 	uint64_t _fenceOrder = 0;
 	uint64_t _frameOrder = 0;
 	uint64_t _onDemandOrder = 1;
 	uint64_t _scheduledTime = 0;
+	uint64_t _nextPresentWindow = 0;
 	Rc<Surface> _surface;
 	Rc<Instance> _instance;
 	Rc<Device> _device;

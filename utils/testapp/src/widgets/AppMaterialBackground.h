@@ -35,14 +35,15 @@ class MaterialBackground : public material2d::BackgroundSurface {
 public:
 	virtual ~MaterialBackground() { }
 
-	virtual bool init(const Color4F &);
+	virtual bool init();
 	virtual void onContentSizeDirty() override;
 
 	virtual void onEnter(xenolith::Scene *) override;
 
 protected:
+	material2d::StyleContainer *_sceneStyleContainer = nullptr;
 	MaterialColorPicker *_huePicker = nullptr;
-	AppCheckboxWithLabel *_lightCheckbox = nullptr;
+	CheckboxWithLabel *_lightCheckbox = nullptr;
 };
 
 }

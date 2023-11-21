@@ -24,6 +24,7 @@
 #define XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_INPUT_MATERIALINPUTTEXTCONTAINER_H_
 
 #include "MaterialLabel.h"
+#include "MaterialIconSprite.h"
 #include "XLTextInputManager.h"
 #include "XL2dLayer.h"
 
@@ -34,6 +35,7 @@ public:
 	virtual ~InputTextContainer();
 
 	virtual bool init() override;
+	virtual void update(const UpdateTime &time) override;
 	virtual void onContentSizeDirty() override;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
@@ -44,20 +46,53 @@ public:
 	virtual bool isEnabled() const { return _enabled; }
 
 	virtual void setCursor(TextCursor);
+	virtual TextCursor getCursor() const { return _cursor; }
 
 	virtual void handleLabelChanged();
-	virtual void handleLabelPositionChanged();
+
+	virtual TextCursor getCursorForPosition(const Vec2 &);
+
+	virtual bool hasHorizontalOverflow() const;
+	virtual void moveHorizontalOverflow(float d);
+
+	virtual IconSprite *getTouchedCursor(const Vec2 &, float = 4.0f);
+
+	virtual bool handleLongPress(const Vec2 &, uint32_t tickCount);
+
+	virtual bool handleSwipeBegin(const Vec2 &);
+	virtual bool handleSwipe(const Vec2 &, const Vec2 &);
+	virtual bool handleSwipeEnd(const Vec2 &);
+
+	virtual void touchPointers();
+
+	virtual void setCursorCallback(Function<void(TextCursor)> &&);
+	virtual const Function<void(TextCursor)> &getCursorCallback() const;
 
 protected:
 	virtual void updateCursorPosition();
+	virtual void updateCursorPointers();
 	virtual void runAdjustLabel(float pos);
+
+	void scheduleCursorPointer();
+	void unscheduleCursorPointer();
+	void setPointerEnabled(bool value);
 
 	TypescaleLabel *_label = nullptr;
 	Vec2 _adjustment = Vec2::ZERO;
 	Layer *_caret = nullptr;
+
+	IconSprite *_selectedPointer = nullptr;
+
+	IconSprite *_cursorPointer = nullptr;
+	IconSprite *_selectionPointerStart = nullptr;
+	IconSprite *_selectionPointerEnd = nullptr;
+
+	float _cursorAnchor = 1.2f;
 	TextCursor _cursor = TextCursor::InvalidCursor;
 	bool _enabled = false;
 	bool _cursorDirty = false;
+	bool _pointerEnabled = false;
+	Function<void(TextCursor)> _cursorCallback;
 };
 
 }

@@ -53,6 +53,14 @@ void SceneContent::onEnter(Scene *scene) {
 		_director->getView()->retainBackButton();
 		_backButtonRetained = true;
 	}
+
+	if (_handlesViewDecoration) {
+		if (_decorationVisible) {
+			showViewDecoration();
+		} else {
+			hideViewDecoration();
+		}
+	}
 }
 
 void SceneContent::onExit() {
@@ -72,6 +80,31 @@ void SceneContent::updateBackButtonStatus() { }
 
 bool SceneContent::onBackButton() {
 	return false;
+}
+
+void SceneContent::setHandlesViewDecoration(bool value) {
+	if (_handlesViewDecoration != value) {
+		_handlesViewDecoration = value;
+		if (_decorationVisible) {
+			showViewDecoration();
+		} else {
+			hideViewDecoration();
+		}
+	}
+}
+
+void SceneContent::showViewDecoration() {
+	if (_running && _handlesViewDecoration) {
+		_director->getView()->setDecorationVisible(true);
+	}
+	_decorationVisible = true;
+}
+
+void SceneContent::hideViewDecoration() {
+	if (_running && _handlesViewDecoration) {
+		_director->getView()->setDecorationVisible(false);
+	}
+	_decorationVisible = false;
 }
 
 void SceneContent::setDecorationPadding(Padding padding) {

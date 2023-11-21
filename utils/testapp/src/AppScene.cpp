@@ -35,6 +35,8 @@
 #include "AppDelegate.h"
 #include "backend/vk/XL2dVkShadowPass.h"
 
+#include "MaterialStyleContainer.h"
+
 namespace stappler::xenolith::app {
 
 bool AppScene::init(Application *app, const core::FrameContraints &constraints) {
@@ -58,6 +60,8 @@ bool AppScene::init(Application *app, const core::FrameContraints &constraints) 
 	if (!Scene2d::init(move(builder), constraints)) {
 		return false;
 	}
+
+	addComponent(Rc<material2d::StyleContainer>::create());
 
 	auto content = Rc<SceneContent2d>::create();
 

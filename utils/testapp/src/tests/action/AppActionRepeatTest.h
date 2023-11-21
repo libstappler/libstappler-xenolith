@@ -20,32 +20,44 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#ifndef SRC_TESTS_ACTION_APPACTIONREPEATTEST_H_
+#define SRC_TESTS_ACTION_APPACTIONREPEATTEST_H_
 
-#include "base/MaterialCam16.cc"
-#include "base/MaterialColorScheme.cc"
-#include "base/MaterialDataSource.cc"
-#include "base/MaterialStyleContainer.cc"
-#include "base/MaterialStyleMonitor.cc"
-#include "base/MaterialEasing.cc"
-#include "base/MaterialSurface.cc"
-#include "base/MaterialLabel.cc"
-#include "base/MaterialIconSprite.cc"
-#include "base/MaterialLayerSurface.cc"
-#include "base/MaterialSurfaceInterior.cc"
-#include "base/MaterialSurfaceStyle.cc"
-#include "base/MaterialMenuSource.cc"
+#include "AppLayoutTest.h"
+#include "AppSlider.h"
+#include "AppButton.h"
+#include "AppCheckbox.h"
+#include "MaterialEasing.h"
 
-#include "components/appbar/MaterialAppBar.cc"
-#include "components/button/MaterialButton.cc"
+namespace stappler::xenolith::app {
 
-#include "components/input/MaterialInputTextContainer.cc"
-#include "components/input/MaterialInputField.cc"
+class ActionRepeatTest : public LayoutTest {
+public:
+	virtual ~ActionRepeatTest() { }
 
-#include "components/scroll/MaterialDataScroll.cc"
-#include "components/scroll/MaterialDataScrollHandlerFixed.cc"
-#include "components/scroll/MaterialDataScrollHandlerSlice.cc"
-#include "components/scroll/MaterialDataScrollHandlerGrid.cc"
+	virtual bool init() override;
 
-#include "layout/MaterialDecoratedLayout.cc"
-#include "layout/MaterialFlexibleLayout.cc"
+	virtual void onContentSizeDirty() override;
+
+protected:
+	using LayoutTest::init;
+
+	void runAll();
+	void stopAll();
+
+	ButtonWithLabel *_buttonRun = nullptr;
+	ButtonWithLabel *_buttonStop = nullptr;
+	ButtonWithLabel *_buttonPlus = nullptr;
+	ButtonWithLabel *_buttonMinus = nullptr;
+	CheckboxWithLabel *_checkboxForever = nullptr;
+	Label *_countLabel = nullptr;
+	Label *_currentLabel = nullptr;
+	Layer *_result = nullptr;
+	bool _forever = false;
+	uint32_t _count = 4;
+	uint32_t _current = 0;
+};
+
+}
+
+#endif /* SRC_TESTS_ACTION_APPACTIONREPEATTEST_H_ */

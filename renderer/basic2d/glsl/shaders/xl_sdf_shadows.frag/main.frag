@@ -159,7 +159,8 @@ void main() {
 			vec4 targetSdf = texture(sampler2D(sdfImage, immutableSamplers[pushConstants.samplerIdx]),
 				fragTexCoord + shadowData.ambientLights[i].normal.xy * sdfValue.y);
 			float targetValue = targetSdf.x;
-			float sdf = clamp( (max(targetValue, sdfValue.y - depth) - depth - sdfValue.y * 0.5) / ((sdfValue.y * 0.55 - depth) * k * k), 0.0, 1.0);
+			float targetHeight = targetSdf.w - depth;
+			float sdf = clamp( (max(targetValue, targetHeight) - targetHeight * 0.5) / ((targetHeight * 0.55) * k * k), 0.0, 1.0);
 
 			textureColor += shadowData.ambientLights[i].color
 				* shadowData.ambientLights[i].color.a.xxxx

@@ -73,27 +73,27 @@ bool VgIconTest::init() {
 	_info->setString("Test");
 	_info->setAnchorPoint(Anchor::MiddleTop);
 
-	_sliderQuality = addChild(Rc<AppSliderWithLabel>::create(toString("Quality: ", initialQuality),
+	_sliderQuality = addChild(Rc<SliderWithLabel>::create(toString("Quality: ", initialQuality),
 			(initialQuality - 0.1f) / 4.9f, [this] (float val) {
 		updateQualityValue(val);
 	}));
 	_sliderQuality->setAnchorPoint(Anchor::TopLeft);
 	_sliderQuality->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderScale = addChild(Rc<AppSliderWithLabel>::create(toString("Scale: ", initialScale),
+	_sliderScale = addChild(Rc<SliderWithLabel>::create(toString("Scale: ", initialScale),
 			(initialScale - 0.1f) / 2.9f, [this] (float val) {
 		updateScaleValue(val);
 	}));
 	_sliderScale->setAnchorPoint(Anchor::TopLeft);
 	_sliderScale->setContentSize(Size2(128.0f, 32.0f));
 
-	_checkboxVisible = addChild(Rc<AppCheckboxWithLabel>::create("Triangles", false, [this] (bool value) {
+	_checkboxVisible = addChild(Rc<CheckboxWithLabel>::create("Triangles", false, [this] (bool value) {
 		_triangles->setVisible(value);
 	}));
 	_checkboxVisible->setAnchorPoint(Anchor::TopLeft);
 	_checkboxVisible->setContentSize(Size2(32.0f, 32.0f));
 
-	_checkboxAntialias = addChild(Rc<AppCheckboxWithLabel>::create("Antialias", _antialias, [this] (bool value) {
+	_checkboxAntialias = addChild(Rc<CheckboxWithLabel>::create("Antialias", _antialias, [this] (bool value) {
 		updateAntialiasValue(value);
 	}));
 	_checkboxAntialias->setAnchorPoint(Anchor::TopLeft);

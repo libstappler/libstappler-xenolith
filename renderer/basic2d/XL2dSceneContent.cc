@@ -264,6 +264,20 @@ void SceneContent2d::updateNodesVisibility() {
 			_layouts.at(i)->setVisible(false);
 		}
 	}
+
+	if (!_layouts.empty()) {
+		auto status = _layouts.back()->getDecorationStatus();
+		switch (status) {
+		case DecorationStatus::DontCare:
+			break;
+		case DecorationStatus::Visible:
+			showViewDecoration();
+			break;
+		case DecorationStatus::Hidden:
+			hideViewDecoration();
+			break;
+		}
+	}
 }
 
 void SceneContent2d::updateBackButtonStatus() {

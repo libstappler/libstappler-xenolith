@@ -9,8 +9,8 @@ layout (constant_id = 1) const int IMAGES_ARRAY_SIZE = 128;
 
 layout (push_constant) uniform pcb {
 	uint materialIdx;
-	uint padding0;
-	uint padding1;
+	uint imageIdx;
+	uint samplerIdx;
 } pushConstants;
 
 layout (set = 0, binding = 1) readonly buffer Materials {
@@ -30,8 +30,8 @@ layout (location = 1) out vec4 outShadow;
 void main() {
 	vec4 textureColor = texture(
 		sampler2D(
-			images[materials[pushConstants.materialIdx].samplerImageIdx & 0xFFFF],
-			immutableSamplers[materials[pushConstants.materialIdx].samplerImageIdx >> 16]
+			images[pushConstants.imageIdx],
+			immutableSamplers[pushConstants.samplerIdx]
 		), fragTexCoord);
 	outColor = fragColor * textureColor;
 	outShadow = shadowColor;

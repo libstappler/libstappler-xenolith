@@ -44,7 +44,7 @@ public:
 	virtual void update(bool displayLink) override;
 	virtual void end() override;
 
-	virtual void wakeup() override;
+	virtual void wakeup(std::unique_lock<Mutex> &) override;
 	virtual void mapWindow() override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;

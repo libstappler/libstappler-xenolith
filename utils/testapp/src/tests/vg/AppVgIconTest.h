@@ -60,11 +60,11 @@ protected:
 	VectorSprite *_sprite = nullptr;
 	VectorSprite *_triangles = nullptr;
 
-	AppSliderWithLabel *_sliderQuality = nullptr;
-	AppSliderWithLabel *_sliderScale = nullptr;
+	SliderWithLabel *_sliderQuality = nullptr;
+	SliderWithLabel *_sliderScale = nullptr;
 
-	AppCheckboxWithLabel *_checkboxVisible = nullptr;
-	AppCheckboxWithLabel *_checkboxAntialias = nullptr;
+	CheckboxWithLabel *_checkboxVisible = nullptr;
+	CheckboxWithLabel *_checkboxAntialias = nullptr;
 
 	bool _antialias = false;
 };

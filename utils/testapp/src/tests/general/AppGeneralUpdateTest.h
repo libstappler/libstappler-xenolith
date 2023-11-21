@@ -33,6 +33,9 @@ public:
 
 	virtual bool init() override;
 
+	virtual void onEnter(Scene *) override;
+	virtual void onExit() override;
+
 	virtual void onContentSizeDirty() override;
 
 	virtual void update(const UpdateTime &) override;

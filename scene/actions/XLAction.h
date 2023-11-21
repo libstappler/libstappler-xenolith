@@ -327,6 +327,60 @@ protected:
 	uint32_t _currentIdx = 0;
 };
 
+class Repeat: public ActionInterval {
+public:
+	virtual ~Repeat();
+
+	virtual bool init(ActionInterval *, uint32_t times);
+
+	void setInnerAction(ActionInterval *action) {
+		if (_innerAction != action) {
+			_innerAction = action;
+		}
+	}
+
+	ActionInterval* getInnerAction() const {
+		return _innerAction;
+	}
+
+	virtual void stop() override;
+	virtual void update(float dt) override;
+	virtual void startWithTarget(Node *target) override;
+    virtual bool isDone(void) const override;
+
+protected:
+	uint32_t _times = 0;
+	uint32_t _total = 0;
+	float _nextDt = 0.0f;
+	bool _actionInstant = false;
+	Rc<ActionInterval> _innerAction;
+};
+
+class RepeatForever : public ActionInterval {
+public:
+	virtual ~RepeatForever();
+
+	virtual bool init(ActionInterval *);
+
+	void setInnerAction(ActionInterval *action) {
+		if (_innerAction != action) {
+			_innerAction = action;
+		}
+	}
+
+	ActionInterval* getInnerAction() const {
+		return _innerAction;
+	}
+
+	virtual void step(float dt) override;
+	virtual void startWithTarget(Node *target) override;
+    virtual bool isDone(void) const override;
+
+protected:
+	Rc<ActionInterval> _innerAction;
+};
+
+
 /** @class DelayTime
  * @brief Delays the action a certain amount of seconds.
  */
@@ -446,6 +500,23 @@ public:
 protected:
 	float _startOpacity = 0.0f;
 	float _endOpacity = 1.0f;
+};
+
+class RenderContinuously : public ActionInterval {
+public:
+	virtual ~RenderContinuously() { }
+
+	virtual bool init();
+	virtual bool init(float duration);
+
+	virtual void step(float dt) override;
+	virtual void update(float time) override;
+	virtual void startWithTarget(Node *target) override;
+    virtual bool isDone(void) const override;
+    virtual void stop() override;
+
+protected:
+	Rc<ActionInterval> _innerAction;
 };
 
 }

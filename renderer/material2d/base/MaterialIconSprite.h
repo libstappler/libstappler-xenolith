@@ -41,6 +41,10 @@ public:
 	virtual void setProgress(float);
 	virtual float getProgress() const;
 
+	// ColorRole::Max for default behavior
+	virtual void setColorRole(ColorRole);
+	virtual ColorRole getColorRole() const { return _colorRole; }
+
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void animate();
@@ -51,6 +55,7 @@ protected:
 
 	virtual void updateIcon();
 
+	ColorRole _colorRole = ColorRole::Max;
 	IconName _iconName = IconName::None;
 	float _progress = 0.0f;
 };

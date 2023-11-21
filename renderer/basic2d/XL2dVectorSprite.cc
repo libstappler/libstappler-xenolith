@@ -216,7 +216,14 @@ void VectorSprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const M
 		handle->shadows->pushDeferredShadow(_deferredResult, frame.viewProjectionStack.back(), transform * _targetTransform,
 				handle->getCurrentState(), _normalized, frame.depthStack.back());
 	} else if (!data.empty()) {
-		handle->shadows->pushShadowArray(data, handle->getCurrentState(), frame.depthStack.back());
+		auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
+		for (auto &it : data) {
+			p->transform = it.transform;
+			p->data = it.data;
+			++ p;
+		}
+
+		handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
 	}
 }
 

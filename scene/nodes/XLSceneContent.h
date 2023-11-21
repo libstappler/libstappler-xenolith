@@ -39,6 +39,13 @@ public:
 	virtual void onContentSizeDirty() override;
 
 	virtual bool onBackButton();
+
+	virtual void setHandlesViewDecoration(bool);
+	virtual bool isHandlesViewDecoration() const { return _handlesViewDecoration; }
+
+	virtual void showViewDecoration();
+	virtual void hideViewDecoration();
+
 	Padding getDecorationPadding() const { return _decorationPadding; }
 
 protected:
@@ -53,6 +60,8 @@ protected:
 
 	bool _retainBackButton = false;
 	bool _backButtonRetained = false;
+	bool _handlesViewDecoration = true;
+	bool _decorationVisible = true;
 };
 
 }

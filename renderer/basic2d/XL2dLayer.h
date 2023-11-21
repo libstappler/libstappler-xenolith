@@ -74,6 +74,9 @@ protected:
 
 	virtual RenderingLevel getRealRenderingLevel() const override;
 
+	virtual void pushShadowCommands(FrameInfo &, NodeFlags flags, const Mat4 &,
+			SpanView<TransformVertexData> = SpanView<TransformVertexData>()) override;
+
 	SimpleGradient _gradient;
 };
 

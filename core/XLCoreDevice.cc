@@ -91,12 +91,12 @@ Rc<ImageView> Device::makeImageView(const Rc<ImageObject> &, const ImageViewInfo
 	return nullptr;
 }
 
-void Device::addObject(ObjectInterface *obj) {
+void Device::addObject(Object *obj) {
 	std::unique_lock<Mutex> lock(_objectMutex);
 	_objects.emplace(obj);
 }
 
-void Device::removeObject(ObjectInterface *obj) {
+void Device::removeObject(Object *obj) {
 	std::unique_lock<Mutex> lock(_objectMutex);
 	_objects.erase(obj);
 }
@@ -121,32 +121,33 @@ void Device::invalidateObjects() {
 	auto objs = std::move(_objects);
 	_objects.clear();
 	for (auto &it : objs) {
-		if (auto ref = dynamic_cast<Ref *>(it)) {
-			if (dynamic_cast<ImageObject *>(it)) {
-				log::warn("Gl-Device", "Image ", (void *)it, " (", typeid(*it).name(),
-						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
-			} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
-				log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
-						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
+		if (auto img = dynamic_cast<ImageObject *>(it)) {
+			log::warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((", typeid(*it).name(),
+					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+		} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
+			log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
+					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+		} else {
+			auto name = it->getName();
+			if (!name.empty()) {
+				log::warn("Gl-Device", "Object ", (void *)it, " \"", name, "\" ((", typeid(*it).name(),
+						") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
 			} else {
 				log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
-						") [rc:", ref->getReferenceCount(), "] was not destroyed before device destruction");
+						") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
 			}
-#if SP_REF_DEBUG
-			log::warn("Gl-Device", "Backtrace for ", (void *)it);
-			ref->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
-				StringStream stream;
-				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-				for (auto &it : vec) {
-					stream << "\t" << it << "\n";
-				}
-				log::warn("Gl-Device-Backtrace", stream.str());
-			});
-#endif
-		} else {
-			log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
-					") was not destroyed before device destruction");
 		}
+#if SP_REF_DEBUG
+		log::warn("Gl-Device", "Backtrace for ", (void *)it);
+		it->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+			StringStream stream;
+			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
+			for (auto &it : vec) {
+				stream << "\t" << it << "\n";
+			}
+			log::warn("Gl-Device-Backtrace", stream.str());
+		});
+#endif
 
 		it->invalidate();
 	}

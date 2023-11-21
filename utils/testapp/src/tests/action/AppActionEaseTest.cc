@@ -77,7 +77,7 @@ bool ActionEaseTest::init() {
 		return false;
 	}
 
-	_slider = addChild(Rc<AppSliderWithLabel>::create("Time: 1.0", 0.0f, [this] (float value) {
+	_slider = addChild(Rc<SliderWithLabel>::create("Time: 1.0", 0.0f, [this] (float value) {
 		for (auto &it : _nodes) {
 			it->setTime(1.0f + 9.0f * value);
 		}

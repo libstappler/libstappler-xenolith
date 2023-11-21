@@ -152,7 +152,6 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 #else
 				table.vkDestroySwapchainKHR(device, (VkSwapchainKHR)ptr.get(), nullptr);
 #endif
-
 			});
 		}, core::ObjectType::Swapchain, ObjectHandle(_swapchain));
 	}

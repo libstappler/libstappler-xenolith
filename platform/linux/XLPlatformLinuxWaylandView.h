@@ -136,10 +136,8 @@ public:
 protected:
 	void createDecorations();
 
-	Rc<WaylandDisplay> _display;
 	ViewInterface *_view = nullptr;
 
-	wl_surface *_surface = nullptr;
 	xdg_surface *_xdgSurface = nullptr;
 	xdg_toplevel *_toplevel = nullptr;
 	Extent2 _currentExtent;

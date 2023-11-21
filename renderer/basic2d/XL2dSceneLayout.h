@@ -43,6 +43,12 @@ enum class DecorationMask {
 
 SP_DEFINE_ENUM_AS_MASK(DecorationMask)
 
+enum class DecorationStatus {
+	DontCare,
+	Visible,
+	Hidden
+};
+
 class SceneLayout2d : public DynamicStateNode {
 public:
 	using BackButtonCallback = Function<bool()>;
@@ -80,6 +86,8 @@ public:
 
 	virtual void setLayoutName(StringView);
 	virtual StringView getLayoutName() const;
+
+	virtual DecorationStatus getDecorationStatus() const { return DecorationStatus::DontCare; }
 
 protected:
 	DecorationMask _decorationMask = DecorationMask::None;

@@ -64,7 +64,7 @@ public:
 	vk::Device *getDevice() const { return _device; }
 
 	// minimal poll interval
-	virtual uint64_t getUpdateInterval() const override { return 1000; }
+	virtual uint64_t getUpdateInterval() const override { return 250; }
 
 	virtual void mapWindow() override;
 

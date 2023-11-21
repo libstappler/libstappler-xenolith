@@ -83,46 +83,13 @@ XcbView::XcbView(XcbLibrary *lib, ViewInterface *view, StringView name, StringVi
 	_defaultScreen = connection.screen;
 
 	if (_xcb->hasRandr()) {
-		auto versionCookie = _xcb->xcb_randr_query_version( _connection, XcbLibrary::RANDR_MAJOR_VERSION, XcbLibrary::RANDR_MINOR_VERSION);
-		if (auto versionReply = _xcb->xcb_randr_query_version_reply( _connection, versionCookie, nullptr)) {
-			if (versionReply->major_version == XcbLibrary::RANDR_MAJOR_VERSION) {
-				auto screenResCurrentCookie = _xcb->xcb_randr_get_screen_resources_current_unchecked(_connection, _defaultScreen->root);
-				auto screenResCookie = _xcb->xcb_randr_get_screen_resources_unchecked(_connection, _defaultScreen->root);
+		auto ext = _xcb->xcb_get_extension_data(_connection, _xcb->xcb_randr_id);
 
-				auto replyCurrent = _xcb->xcb_randr_get_screen_resources_current_reply(_connection, screenResCurrentCookie, nullptr);
-				auto reply = _xcb->xcb_randr_get_screen_resources_reply(_connection, screenResCookie, nullptr);
+		_randrEnabled = true;
+		_randrFirstEvent = ext->first_event;
 
-				auto modes = _xcb->xcb_randr_get_screen_resources_modes(reply);
-				auto nmodes = _xcb->xcb_randr_get_screen_resources_modes_length(reply);
-				while (nmodes > 0) {
-					double vTotal = modes->vtotal;
-
-					if (modes->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
-						/* doublescan doubles the number of lines */
-						vTotal *= 2;
-					}
-
-					if (modes->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
-						/* interlace splits the frame into two fields */
-						/* the field rate is what is typically reported by monitors */
-						vTotal /= 2;
-					}
-
-					if (modes->htotal && vTotal) {
-						_rate = (uint16_t)floor((double) modes->dot_clock / ((double) modes->htotal * (double) vTotal));
-						break;
-					}
-
-					++ modes;
-					-- nmodes;
-				}
-
-				::free(replyCurrent);
-				::free(reply);
-			}
-
-			::free(versionReply);
-		}
+		_screenInfo = getScreenInfo();
+		_rate = _screenInfo.primaryMode.rate;
 	}
 
 	if (_xkb && _xkb->hasX11() && _xcb->hasXkb()) {
@@ -247,8 +214,8 @@ bool XcbView::poll(bool frameReady) {
 	Vector<core::InputEventData> inputEvents;
 
 	auto dispatchEvents = [&] {
-		for (auto &it : inputEvents) {
-			_view->handleInputEvent(it);
+		if (!inputEvents.empty()) {
+			_view->handleInputEvents(move(inputEvents));
 		}
 		inputEvents.clear();
 	};
@@ -563,6 +530,11 @@ bool XcbView::poll(bool frameReady) {
 			XL_X11_LOG("XCB_MAPPING_NOTIFY: ", (int) ev->request, " ", (int) ev->first_keycode, " ", (int) ev->count);
 			break;
 		}
+		case XCB_COLORMAP_NOTIFY: {
+			XL_X11_LOG("XCB_COLORMAP_NOTIFY: ", (int) ev->request);
+			printf("XCB_PROPERTY_NOTIFY\n");
+			break;
+		}
 		default:
 			if (et == _xkbFirstEvent) {
 				switch (e->pad0) {
@@ -578,6 +550,14 @@ bool XcbView::poll(bool frameReady) {
 							ev->baseGroup, ev->latchedGroup, ev->lockedGroup);
 					break;
 				}
+				}
+			} else if (et == _randrFirstEvent) {
+				switch (e->pad0) {
+				case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
+					_screenInfo = getScreenInfo();
+					break;
+				default:
+					break;
 				}
 			} else {
 				/* Unknown event type, ignore it */
@@ -608,53 +588,136 @@ void XcbView::mapWindow() {
 	_xcb->xcb_flush(_connection);
 }
 
-Vector<XcbView::ScreenInfo> XcbView::getScreenInfo() const {
+XcbView::ScreenInfoData XcbView::getScreenInfo() const {
 	if (!_xcb->hasRandr()) {
-		return Vector<XcbView::ScreenInfo>();
+		return ScreenInfoData();
 	}
 
+	// submit our version to X11
 	auto versionCookie = _xcb->xcb_randr_query_version( _connection, XcbLibrary::RANDR_MAJOR_VERSION, XcbLibrary::RANDR_MINOR_VERSION);
 	if (auto versionReply = _xcb->xcb_randr_query_version_reply( _connection, versionCookie, nullptr)) {
 		if (versionReply->major_version != XcbLibrary::RANDR_MAJOR_VERSION) {
 			::free(versionReply);
-			return Vector<XcbView::ScreenInfo>();
+			return ScreenInfoData();
 		}
 
 		::free(versionReply);
 	} else {
-		return Vector<XcbView::ScreenInfo>();
+		return ScreenInfoData();
 	}
 
-	xcb_randr_get_screen_info_cookie_t screenInfoCookie =
-			_xcb->xcb_randr_get_screen_info_unchecked(_connection, _defaultScreen->root);
-	auto reply = _xcb->xcb_randr_get_screen_info_reply(_connection, screenInfoCookie, nullptr);
-	auto sizes = size_t(_xcb->xcb_randr_get_screen_info_sizes_length(reply));
+	ScreenInfoData ret;
 
-	Vector<Vector<uint16_t>> ratesVec;
+	// spawn requests
+	auto screenResCurrentCookie = _xcb->xcb_randr_get_screen_resources_current_unchecked(_connection, _defaultScreen->root);
+	auto outputPrimaryCookie = _xcb->xcb_randr_get_output_primary_unchecked(_connection, _defaultScreen->root);
+	auto screenResCookie = _xcb->xcb_randr_get_screen_resources_unchecked(_connection, _defaultScreen->root);
+	auto screenInfoCookie = _xcb->xcb_randr_get_screen_info_unchecked(_connection, _defaultScreen->root);
+	xcb_randr_get_output_info_cookie_t outputInfoCookie;
 
-	auto ratesIt = _xcb->xcb_randr_get_screen_info_rates_iterator(reply);
-	for ( ; ratesIt.rem; _xcb->xcb_randr_refresh_rates_next(&ratesIt)) {
-		auto rates = _xcb->xcb_randr_refresh_rates_rates(ratesIt.data);
-		auto len = _xcb->xcb_randr_refresh_rates_rates_length(ratesIt.data);
+	Vector<Pair<xcb_randr_crtc_t, xcb_randr_get_crtc_info_cookie_t>> crtcCookies;
 
-		Vector<uint16_t> tmp;
+	do {
+		// process current modes
+		auto curReply = _xcb->xcb_randr_get_screen_resources_current_reply(_connection, screenResCurrentCookie, nullptr);
+		auto curModes = _xcb->xcb_randr_get_screen_resources_current_modes(curReply);
+		auto curNmodes = _xcb->xcb_randr_get_screen_resources_current_modes_length(curReply);
+		uint8_t *names = _xcb->xcb_randr_get_screen_resources_current_names(curReply);
 
-		while (len) {
-			tmp.emplace_back(*rates);
-			++ rates;
-			-- len;
+		while (curNmodes > 0) {
+			double vTotal = curModes->vtotal;
+
+			if (curModes->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
+				/* doublescan doubles the number of lines */
+				vTotal *= 2;
+			}
+
+			if (curModes->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
+				/* interlace splits the frame into two fields */
+				/* the field rate is what is typically reported by monitors */
+				vTotal /= 2;
+			}
+
+			if (curModes->htotal && vTotal) {
+				auto rate = uint16_t(floor(double(curModes->dot_clock) / (double(curModes->htotal) * double(vTotal))));
+				ret.currentModeInfo.emplace_back(ModeInfo{curModes->id, curModes->width, curModes->height, rate,
+					String((const char *)names, curModes->name_len)});
+			}
+
+			names += curModes->name_len;
+			++ curModes;
+			-- curNmodes;
 		}
 
-		ratesVec.emplace_back(move(tmp));
-	}
+		auto outputs = _xcb->xcb_randr_get_screen_resources_current_outputs(curReply);
+		auto noutputs = _xcb->xcb_randr_get_screen_resources_current_outputs_length(curReply);
 
-	Vector<ScreenInfo> ret;
-	if (ratesVec.size() == sizes) {
+		while (noutputs > 0) {
+			ret.currentOutputs.emplace_back(*outputs);
+			++ outputs;
+			-- noutputs;
+		}
+
+		ret.config = curReply->config_timestamp;
+
+		auto crtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs(curReply);
+		auto ncrtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs_length(curReply);
+
+		crtcCookies.reserve(ncrtcs);
+
+		while (ncrtcs > 0) {
+			ret.currentCrtcs.emplace_back(*crtcs);
+
+			crtcCookies.emplace_back(*crtcs, _xcb->xcb_randr_get_crtc_info_unchecked(_connection, *crtcs, ret.config));
+
+			++ crtcs;
+			-- ncrtcs;
+		}
+
+		::free(curReply);
+	} while (0);
+
+	do {
+		auto reply = _xcb->xcb_randr_get_output_primary_reply(_connection, outputPrimaryCookie, nullptr);
+		ret.primaryOutput.output = reply->output;
+		::free(reply);
+
+		outputInfoCookie = _xcb->xcb_randr_get_output_info_unchecked(_connection, ret.primaryOutput.output, ret.config);
+	} while (0);
+
+	// process screen info
+	do {
+		auto reply = _xcb->xcb_randr_get_screen_info_reply(_connection, screenInfoCookie, nullptr);
+		auto sizes = size_t(_xcb->xcb_randr_get_screen_info_sizes_length(reply));
+
+		Vector<Vector<uint16_t>> ratesVec;
+		Vector<uint16_t> tmp;
+
+		auto ratesIt = _xcb->xcb_randr_get_screen_info_rates_iterator(reply);
+		while (ratesIt.rem > 0) {
+			auto nRates = _xcb->xcb_randr_refresh_rates_rates_length(ratesIt.data);
+			auto rates = _xcb->xcb_randr_refresh_rates_rates(ratesIt.data);
+			auto tmpNRates = nRates;
+
+			while (tmpNRates) {
+				tmp.emplace_back(*rates);
+				++ rates;
+				-- tmpNRates;
+			}
+
+			_xcb->xcb_randr_refresh_rates_next(&ratesIt);
+			ratesIt.rem += 1 - nRates; // bypass rem bug
+
+			ratesVec.emplace_back(move(tmp));
+			tmp.clear();
+		}
+
 		auto sizesData = _xcb->xcb_randr_get_screen_info_sizes(reply);
 		for (size_t i = 0; i < sizes; ++ i) {
-			ScreenInfo info { sizesData[i].width, sizesData[i].height, sizesData[i].mwidth, sizesData[i].mheight };
+			auto &it = sizesData[i];
+			ScreenInfo info { it.width, it.height, it.mwidth, it.mheight };
 
-			if (ratesVec.size() == sizes) {
+			if (ratesVec.size() > i) {
 				info.rates = ratesVec[i];
 			} else if (ratesVec.size() == 1) {
 				info.rates = ratesVec[0];
@@ -662,11 +725,114 @@ Vector<XcbView::ScreenInfo> XcbView::getScreenInfo() const {
 				info.rates = Vector<uint16_t>{ _rate };
 			}
 
-			ret.emplace_back(move(info));
+			ret.screenInfo.emplace_back(move(info));
 		}
+
+		::free(reply);
+	} while (0);
+
+	do {
+		auto modesReply = _xcb->xcb_randr_get_screen_resources_reply(_connection, screenResCookie, nullptr);
+		auto modes = _xcb->xcb_randr_get_screen_resources_modes(modesReply);
+		auto nmodes = _xcb->xcb_randr_get_screen_resources_modes_length(modesReply);
+
+		while (nmodes > 0) {
+			double vTotal = modes->vtotal;
+
+			if (modes->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
+				/* doublescan doubles the number of lines */
+				vTotal *= 2;
+			}
+
+			if (modes->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
+				/* interlace splits the frame into two fields */
+				/* the field rate is what is typically reported by monitors */
+				vTotal /= 2;
+			}
+
+			if (modes->htotal && vTotal) {
+				auto rate = uint16_t(floor(double(modes->dot_clock) / (double(modes->htotal) * double(vTotal))));
+				ret.modeInfo.emplace_back(ModeInfo{modes->id, modes->width, modes->height, rate});
+			}
+
+			++ modes;
+			-- nmodes;
+		}
+
+		::free(modesReply);
+	} while (0);
+
+	do {
+		auto reply = _xcb->xcb_randr_get_output_info_reply(_connection, outputInfoCookie, nullptr);
+		auto modes = _xcb->xcb_randr_get_output_info_modes(reply);
+		auto nmodes = _xcb->xcb_randr_get_output_info_modes_length(reply);
+
+		while (nmodes > 0) {
+			ret.primaryOutput.modes.emplace_back(*modes);
+
+			++ modes;
+			-- nmodes;
+		}
+
+		auto name = _xcb->xcb_randr_get_output_info_name(reply);
+		auto nameLen = _xcb->xcb_randr_get_output_info_name_length(reply);
+
+		ret.primaryOutput.crtc = reply->crtc;
+		ret.primaryOutput.name = String((const char *)name, nameLen);
+
+		::free(reply);
+	} while (0);
+
+	for (auto &crtcCookie : crtcCookies) {
+		auto reply = _xcb->xcb_randr_get_crtc_info_reply(_connection, crtcCookie.second, nullptr);
+
+		Vector<xcb_randr_output_t> outputs;
+		Vector<xcb_randr_output_t> possible;
+
+		auto outputsPtr = _xcb->xcb_randr_get_crtc_info_outputs(reply);
+		auto noutputs = _xcb->xcb_randr_get_crtc_info_outputs_length(reply);
+
+		outputs.reserve(noutputs);
+
+		while (noutputs) {
+			outputs.emplace_back(*outputsPtr);
+			++ outputsPtr;
+			-- noutputs;
+		}
+
+		auto possiblePtr = _xcb->xcb_randr_get_crtc_info_possible(reply);
+		auto npossible = _xcb->xcb_randr_get_crtc_info_possible_length(reply);
+
+		possible.reserve(npossible);
+
+		while (npossible) {
+			possible.emplace_back(*possiblePtr);
+			++ possiblePtr;
+			-- npossible;
+		}
+
+		ret.crtcInfo.emplace_back(CrtcInfo{
+			crtcCookie.first, reply->x, reply->y, reply->width, reply->height, reply->mode, reply->rotation, reply->rotations,
+			move(outputs), move(possible)
+		});
+
+		::free(reply);
 	}
 
-	::free(reply);
+	for (auto &it : ret.crtcInfo) {
+		if (it.crtc == ret.primaryOutput.crtc) {
+			ret.primaryCrtc = it;
+
+			for (auto &iit : ret.currentModeInfo) {
+				if (iit.id == ret.primaryCrtc.mode) {
+					ret.primaryMode = iit;
+					break;
+				}
+			}
+
+			break;
+		}
+	}
 
 	return ret;
 }

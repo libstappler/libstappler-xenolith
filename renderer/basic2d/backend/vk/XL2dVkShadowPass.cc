@@ -363,7 +363,7 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		buf.cmdDrawIndexed(
 			6, // indexCount
 			1, // instanceCount
-			0, // firstIndex
+			6, // firstIndex
 			0, // int32_t   vertexOffset
 			0  // uint32_t  firstInstance
 		);
@@ -471,11 +471,11 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 
 	if (!_lightsBuffer || _lightsBuffer->getObjectsCount() == 0) {
 		ImageMemoryBarrier inImageBarriers[] = {
-			ImageMemoryBarrier(sdfImage, 0, VK_ACCESS_SHADER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			ImageMemoryBarrier(sdfImage, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL)
 		};
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, inImageBarriers);
-		buf.cmdClearColorImage(sdfImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Color4F(128.0f, 0.0f, 0.0f, 0.0f));
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, inImageBarriers);
+		buf.cmdClearColorImage(sdfImage, VK_IMAGE_LAYOUT_GENERAL, Color4F(128.0f, 0.0f, 0.0f, 0.0f));
 
 		auto gIdx = _device->getQueueFamily(QueueOperations::Graphics)->index;
 
@@ -486,12 +486,18 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 
 			ImageMemoryBarrier transferImageBarrier(sdfImage,
 				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx});
 			sdfImage->setPendingBarrier(transferImageBarrier);
 
 			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 					makeSpanView(&transferBufferBarrier, 1), makeSpanView(&transferImageBarrier, 1));
+		} else {
+			ImageMemoryBarrier transferImageBarrier(sdfImage,
+				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+				VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			sdfImage->setPendingBarrier(transferImageBarrier);
 		}
 		return;
 	}

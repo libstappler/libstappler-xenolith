@@ -26,6 +26,7 @@
 #include "XLPlatformAndroidClassLoader.h"
 #include "XLPlatformAndroidNetworkConnectivity.h"
 #include "XLPlatformViewInterface.h"
+#include "XLCoreInput.h"
 
 #if ANDROID
 
@@ -57,6 +58,13 @@ struct ActivityInfo {
 
 class Activity;
 class EngineMainThread;
+
+struct ActivityTextInputWrapper : public Ref {
+	Rc<Ref> target;
+	Function<void(Ref *, WideStringView, core::TextCursor)> textChanged;
+	Function<void(Ref *, bool)> inputEnabled;
+	Function<void(Ref *)> cancelInput;
+};
 
 class ActivityComponent : public Ref {
 public:
@@ -124,8 +132,16 @@ public:
 	virtual void addComponent(Rc<ActivityComponent> &&);
 
 	void handleActivityResult(jint request_code, jint result_code, jobject data);
+	void handleCancelInput();
+	void handleTextChanged(jstring text, jint cursor_start, jint cursor_len);
+	void handleInputEnabled(jboolean);
 
 	virtual void openUrl(StringView url);
+
+	virtual void updateTextCursor(uint32_t pos, uint32_t len);
+	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
+	virtual void runTextInput(Rc<ActivityTextInputWrapper> &&, WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
+	virtual void cancelTextInput();
 
 protected:
 	struct InputLooperData {
@@ -183,6 +199,11 @@ protected:
 	jmethodID _intentAddFlagsMethod;
 	jfieldID _intentActionView;
 
+	jmethodID _runInputMethod;
+	jmethodID _updateInputMethod;
+	jmethodID _updateCursorMethod;
+	jmethodID _cancelInputMethod;
+
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;
 	AConfiguration *_config = nullptr;
@@ -222,6 +243,7 @@ protected:
 
 	Value _drawables;
 	Vector<Rc<ActivityComponent>> _components;
+	Rc<ActivityTextInputWrapper> _textInputWrapper;
 };
 
 SP_DEFINE_ENUM_AS_MASK(ActivityFlags)

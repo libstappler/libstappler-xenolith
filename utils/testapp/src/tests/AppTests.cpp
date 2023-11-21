@@ -41,6 +41,7 @@
 #include "input/AppInputPinchTest.cc"
 #include "action/AppActionEaseTest.cc"
 #include "action/AppActionMaterialTest.cc"
+#include "action/AppActionRepeatTest.cc"
 #include "vg/AppVgTessCanvas.cc"
 #include "vg/AppVgTessTest.cc"
 #include "vg/AppVgIconTest.cc"
@@ -57,6 +58,7 @@
 #include "material/AppMaterialButtonTest.cc"
 #include "material/AppMaterialInputFieldTest.cc"
 #include "material/AppMaterialToolbarTest.cc"
+#include "material/AppMaterialMenuTest.cc"
 #include "config/AppConfigMenu.cc"
 #include "config/AppConfigPresentModeSwitcher.cc"
 
@@ -96,6 +98,7 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<LayoutMenu>::create(name, Vector<LayoutName>{
 			LayoutName::ActionEaseTest,
 			LayoutName::ActionMaterialTest,
+			LayoutName::ActionRepeatTest,
 		}); }},
 	MenuData{LayoutName::VgTests, LayoutName::Root, "org.stappler.xenolith.test.VgTests", "VG tests",
 		[] (LayoutName name) { return Rc<LayoutMenu>::create(name, Vector<LayoutName>{
@@ -120,6 +123,7 @@ static Vector<MenuData> s_layouts {
 			LayoutName::MaterialButtonTest,
 			LayoutName::MaterialInputFieldTest,
 			LayoutName::MaterialToolbarTest,
+			LayoutName::MaterialMenuTest,
 		}); }},
 
 	MenuData{LayoutName::Config, LayoutName::Root, "org.stappler.xenolith.test.Config", "Config",
@@ -156,6 +160,8 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<ActionEaseTest>::create(); }},
 	MenuData{LayoutName::ActionMaterialTest, LayoutName::ActionTests, "org.stappler.xenolith.test.ActionMaterialTest", "Material test",
 		[] (LayoutName name) { return Rc<ActionMaterialTest>::create(); }},
+	MenuData{LayoutName::ActionRepeatTest, LayoutName::ActionTests, "org.stappler.xenolith.test.ActionRepeatTest", "Repeat test",
+		[] (LayoutName name) { return Rc<ActionRepeatTest>::create(); }},
 
 	MenuData{LayoutName::VgTessTest, LayoutName::VgTests, "org.stappler.xenolith.test.VgTessTest", "Tess test",
 		[] (LayoutName name) { return Rc<VgTessTest>::create(); }},
@@ -189,6 +195,8 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<MaterialInputFieldTest>::create(); }},
 	MenuData{LayoutName::MaterialToolbarTest, LayoutName::MaterialTests, "org.stappler.xenolith.test.MaterialToolbarTest", "Toolbar test",
 		[] (LayoutName name) { return Rc<MaterialToolbarTest>::create(); }},
+	MenuData{LayoutName::MaterialMenuTest, LayoutName::MaterialTests, "org.stappler.xenolith.test.MaterialMenuTest", "Menu test",
+		[] (LayoutName name) { return Rc<MaterialMenuTest>::create(); }},
 };
 
 LayoutName getRootLayoutForLayout(LayoutName name) {

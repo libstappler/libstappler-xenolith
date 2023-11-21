@@ -21,6 +21,7 @@
  **/
 
 #include "MaterialFlexibleLayout.h"
+#include "XL2dSceneContent.h"
 #include "XLDirector.h"
 #include "XLView.h"
 #include "XLAction.h"
@@ -208,8 +209,12 @@ void FlexibleLayout::updateFlexParams() {
 	flexibleNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(), flexSize + _flexibleExtraSpace));
 	flexibleNodeParams.setVisible(flexSize > 0.0f);
 
-	if (_viewDecorationTracked && _director) {
-		_director->getView()->setDecorationVisible(_flexibleLevel == 1.0f);
+	if (_viewDecorationTracked && _sceneContent) {
+		if (_flexibleLevel == 1.0f) {
+			_sceneContent->showViewDecoration();
+		} else {
+			_sceneContent->hideViewDecoration();
+		}
 	}
 
 	Padding padding;
@@ -352,17 +357,9 @@ float FlexibleLayout::getCurrentFlexibleMax() const {
 
 void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 	DecoratedLayout::onPush(l, replace);
-
-	if (_viewDecorationTracked && _director) {
-		_director->getView()->setDecorationVisible(_flexibleLevel == 1.0f);
-	}
 }
 void FlexibleLayout::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
 	DecoratedLayout::onForegroundTransitionBegan(l, overlay);
-
-	if (_viewDecorationTracked && _director) {
-		_director->getView()->setDecorationVisible(_flexibleLevel == 1.0f);
-	}
 }
 
 void FlexibleLayout::onDecorNode(const NodeParams &p) {
@@ -439,6 +436,14 @@ void FlexibleLayout::clearFlexibleExpand(float duration) {
 	} else {
 		_flexibleExtraSpace = 0.0f;
 		updateFlexParams();
+	}
+}
+
+DecorationStatus FlexibleLayout::getDecorationStatus() const {
+	if (_viewDecorationTracked) {
+		return (_flexibleLevel == 1.0f) ? DecorationStatus::Visible : DecorationStatus::Hidden;
+	} else {
+		return DecorationStatus::DontCare;
 	}
 }
 

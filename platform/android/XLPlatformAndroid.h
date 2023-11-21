@@ -36,26 +36,6 @@ namespace stappler::xenolith::platform {
 struct NetworkConnectivity;
 struct ClassLoader;
 
-enum class NetworkCapabilities {
-	None,
-	Internet = (1 << 0),
-	NotCongested = (1 << 1),
-	NotMetered = (1 << 2),
-	NotRestricted = (1 << 3),
-	NotRoaming = (1 << 4),
-	NotSuspended = (1 << 5),
-	NotVpn = (1 << 6),
-	PrioritizeBandwidth = (1 << 7),
-	PrioritizeLatency = (1 << 8),
-	TemporarilyNotMetered = (1 << 9),
-	Trusted = (1 << 10),
-	Validated = (1 << 11),
-	WifiP2P = (1 << 12),
-	CaptivePortal = (1 << 13)
-};
-
-SP_DEFINE_ENUM_AS_MASK(NetworkCapabilities)
-
 struct NativeBufferFormatSupport {
 	bool R8G8B8A8_UNORM = true;
 	bool R8G8B8X8_UNORM = true;

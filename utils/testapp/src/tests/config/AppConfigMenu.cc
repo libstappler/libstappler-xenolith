@@ -62,7 +62,7 @@ protected:
 	using Layer::init;
 
 	uint64_t _currentRate = maxOf<uint64_t>();
-	AppSliderWithLabel *_slider = nullptr;
+	SliderWithLabel *_slider = nullptr;
 };
 
 bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
@@ -135,7 +135,7 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 
 	auto val = 1.0f - float(value - min) / float(max - min);
 
-	_slider = addChild(Rc<AppSliderWithLabel>::create("60", val, [this] (float value) {
+	_slider = addChild(Rc<SliderWithLabel>::create("60", val, [this] (float value) {
 		float max = 1'000'000 / 10;
 		float min = 1'000'000 / 360;
 

@@ -47,6 +47,8 @@ public:
 	virtual bool init(font::FontController *fontController);
 	virtual void update(const UpdateTime &) override;
 
+	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+
 	void incrementMode();
 
 protected:
@@ -125,6 +127,14 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 		}
 		++ _frames;
 	}
+}
+
+bool Scene2d::FpsDisplay::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+	// place above any shadows
+	frame.depthStack.emplace_back(100.0f);
+	auto ret = Layer::visitDraw(frame, parentFlags);
+	frame.depthStack.pop_back();
+	return ret;
 }
 
 void Scene2d::FpsDisplay::incrementMode() {

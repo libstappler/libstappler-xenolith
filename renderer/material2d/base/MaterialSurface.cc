@@ -333,6 +333,7 @@ void Surface::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &
 			cmd.addRect2D(Rect(Vec2(0, 0), _contentSize));
 		});
 	}
+	//VectorSprite::pushShadowCommands(frame, flags, t, data);
 }
 
 bool BackgroundSurface::init() {

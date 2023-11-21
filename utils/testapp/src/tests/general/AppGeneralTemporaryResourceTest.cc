@@ -45,13 +45,13 @@ bool GeneralTemporaryResourceTest::init() {
 	_sprite->setAutofit(Sprite::Autofit::Contain);
 	_sprite->setAnchorPoint(Anchor::Middle);
 
-	_slider = addChild(Rc<AppSliderWithLabel>::create("0.0", 0.0f, [this] (float val) {
+	_slider = addChild(Rc<SliderWithLabel>::create("0.0", 0.0f, [this] (float val) {
 		setResourceTimeout(val);
 	}), ZOrder(2));
 	_slider->setPrefix("Timeout");
 	_slider->setAnchorPoint(Anchor::Middle);
 
-	_checkbox = addChild(Rc<AppCheckboxWithLabel>::create("Show/hide", true, [this] (bool val) {
+	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Show/hide", true, [this] (bool val) {
 		switchVisibility(val);
 	}), ZOrder(2));
 	_checkbox->setAnchorPoint(Anchor::Middle);
