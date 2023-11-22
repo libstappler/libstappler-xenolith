@@ -152,27 +152,19 @@ class ShadowPrimitivesAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ShadowPrimitivesAttachmentHandle();
 
-	void allocateBuffer(DeviceFrameHandle *, uint32_t objects, const ShadowData &);
+	void allocateBuffer(DeviceFrameHandle *, const ShadowData &);
 
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
 			uint32_t, bool isExternal) const override;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
-	const Rc<DeviceBuffer> &getTriangles() const { return _triangles; }
-	const Rc<DeviceBuffer> &getCircles() const { return _circles; }
-	const Rc<DeviceBuffer> &getRects() const { return _rects; }
-	const Rc<DeviceBuffer> &getRoundedRects() const { return _roundedRects; }
-	const Rc<DeviceBuffer> &getPolygons() const { return _polygons; }
+	const Rc<DeviceBuffer> &getObjects() const { return _objects; }
 	const Rc<DeviceBuffer> &getGridSize() const { return _gridSize; }
 	const Rc<DeviceBuffer> &getGridIndex() const { return _gridIndex; }
 
 protected:
-	Rc<DeviceBuffer> _triangles;
-	Rc<DeviceBuffer> _circles;
-	Rc<DeviceBuffer> _rects;
-	Rc<DeviceBuffer> _roundedRects;
-	Rc<DeviceBuffer> _polygons;
+	Rc<DeviceBuffer> _objects;
 	Rc<DeviceBuffer> _gridSize;
 	Rc<DeviceBuffer> _gridIndex;
 };

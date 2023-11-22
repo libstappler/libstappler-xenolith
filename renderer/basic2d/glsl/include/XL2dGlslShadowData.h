@@ -48,36 +48,32 @@ struct ShadowData {
 	color4 globalColor;
 	color4 discardColor;
 
-	vec2 shadowOffset;
 	vec2 pix;
+	float bbOffset;
+	float luminosity;
 
 	float shadowDensity;
+	float density;
+	float shadowSdfDensity;
+	float maxValue;
+
 	uint gridSize;
 	uint gridWidth;
 	uint gridHeight;
+	uint objectsCount;
 
-	float bbOffset;
-	float density;
-	float shadowSdfDensity;
-	float luminosity;
-
+	uint trianglesFirst;
 	uint trianglesCount;
+	uint circlesFirst;
 	uint circlesCount;
+
+	uint rectsFirst;
 	uint rectsCount;
+	uint roundedRectsFirst;
 	uint roundedRectsCount;
 
+	uint polygonsFirst;
 	uint polygonsCount;
-	uint groupsCount;
-	uint circleGridSizeOffset;
-	uint circleGridIndexOffset;
-
-	uint rectGridSizeOffset;
-	uint rectGridIndexOffset;
-	uint roundedRectGridSizeOffset;
-	uint roundedRectGridIndexOffset;
-
-	uint polygonGridSizeOffset;
-	uint polygonGridIndexOffset;
 	uint ambientLightCount;
 	uint directLightCount;
 

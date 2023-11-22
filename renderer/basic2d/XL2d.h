@@ -45,16 +45,18 @@ using DataAtlasValue = glsl::DataAtlasValue;
 using AmbientLightData = glsl::AmbientLightData;
 using DirectLightData = glsl::DirectLightData;
 
-using Circle2DData = glsl::Circle2DData;
+using Sdf2DObjectData = glsl::Sdf2DObjectData;
 using Circle2DIndex = glsl::Circle2DIndex;
-using Triangle2DData = glsl::Triangle2DData;
 using Triangle2DIndex = glsl::Triangle2DIndex;
-using Rect2DData = glsl::Rect2DData;
 using Rect2DIndex = glsl::Rect2DIndex;
-using RoundedRect2DData = glsl::RoundedRect2DData;
 using RoundedRect2DIndex = glsl::RoundedRect2DIndex;
-using Polygon2DData = glsl::Polygon2DData;
 using Polygon2DIndex = glsl::Polygon2DIndex;
+
+//using Circle2DData = glsl::Circle2DData;
+//using Triangle2DData = glsl::Triangle2DData;
+//using Rect2DData = glsl::Rect2DData;
+//using RoundedRect2DData = glsl::RoundedRect2DData;
+//using Polygon2DData = glsl::Polygon2DData;
 
 struct Triangle {
 	Vertex a;

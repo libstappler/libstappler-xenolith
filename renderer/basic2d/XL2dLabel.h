@@ -80,7 +80,7 @@ public:
 		virtual void setTextCursor(core::TextCursor c) { _cursor = c; }
 
 	protected:
-		virtual void updateVertexes();
+		virtual void updateVertexes() override;
 
 		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
 	};

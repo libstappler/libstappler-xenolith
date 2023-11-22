@@ -279,8 +279,8 @@ void ShadowPassHandle::prepareRenderPass(CommandBuffer &buf) {
 		}
 	}
 
-	if (_shadowPrimitives->getTriangles()) {
-		if (auto b = _shadowPrimitives->getTriangles()->getPendingBarrier()) {
+	if (_shadowPrimitives->getObjects()) {
+		if (auto b = _shadowPrimitives->getObjects()->getPendingBarrier()) {
 			bufferBarriers.emplace_back(*b);
 		}
 	}
@@ -293,30 +293,6 @@ void ShadowPassHandle::prepareRenderPass(CommandBuffer &buf) {
 
 	if (_shadowPrimitives->getGridIndex()) {
 		if (auto b = _shadowPrimitives->getGridIndex()->getPendingBarrier()) {
-			bufferBarriers.emplace_back(*b);
-		}
-	}
-
-	if (_shadowPrimitives->getCircles()) {
-		if (auto b = _shadowPrimitives->getCircles()->getPendingBarrier()) {
-			bufferBarriers.emplace_back(*b);
-		}
-	}
-
-	if (_shadowPrimitives->getRects()) {
-		if (auto b = _shadowPrimitives->getRects()->getPendingBarrier()) {
-			bufferBarriers.emplace_back(*b);
-		}
-	}
-
-	if (_shadowPrimitives->getRoundedRects()) {
-		if (auto b = _shadowPrimitives->getRoundedRects()->getPendingBarrier()) {
-			bufferBarriers.emplace_back(*b);
-		}
-	}
-
-	if (_shadowPrimitives->getPolygons()) {
-		if (auto b = _shadowPrimitives->getPolygons()->getPendingBarrier()) {
 			bufferBarriers.emplace_back(*b);
 		}
 	}
@@ -456,7 +432,7 @@ bool ComputeShadowPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) 
 
 		if (lightsHandle->getObjectsCount() > 0 && trianglesHandle) {
 			trianglesHandle->allocateBuffer(static_cast<DeviceFrameHandle *>(q.getFrame().get()),
-					lightsHandle->getObjectsCount(), lightsHandle->getShadowData());
+					lightsHandle->getShadowData());
 		}
 
 		return QueuePassHandle::prepare(q, move(cb));
@@ -544,13 +520,9 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 
 	BufferMemoryBarrier bufferBarriers[] = {
 		BufferMemoryBarrier(_vertexBuffer->getVertexes(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
-		BufferMemoryBarrier(_primitivesBuffer->getTriangles(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
+		BufferMemoryBarrier(_primitivesBuffer->getObjects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
 		BufferMemoryBarrier(_primitivesBuffer->getGridSize(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
 		BufferMemoryBarrier(_primitivesBuffer->getGridIndex(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
-		BufferMemoryBarrier(_primitivesBuffer->getCircles(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
-		BufferMemoryBarrier(_primitivesBuffer->getRects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
-		BufferMemoryBarrier(_primitivesBuffer->getRoundedRects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
-		BufferMemoryBarrier(_primitivesBuffer->getPolygons(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT),
 	};
 
 	ImageMemoryBarrier inImageBarriers[] = {
@@ -573,19 +545,11 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 	if (_pool->getFamilyIdx() != gIdx) {
 
 		BufferMemoryBarrier bufferBarriers[] = {
-			BufferMemoryBarrier(_primitivesBuffer->getTriangles(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+			BufferMemoryBarrier(_primitivesBuffer->getObjects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
 			BufferMemoryBarrier(_primitivesBuffer->getGridSize(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
 			BufferMemoryBarrier(_primitivesBuffer->getGridIndex(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
-			BufferMemoryBarrier(_primitivesBuffer->getCircles(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
-			BufferMemoryBarrier(_primitivesBuffer->getRects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
-			BufferMemoryBarrier(_primitivesBuffer->getRoundedRects(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
-			BufferMemoryBarrier(_primitivesBuffer->getPolygons(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
 					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE),
 			BufferMemoryBarrier(_lightsBuffer->getBuffer(), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 					QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx}, 0, VK_WHOLE_SIZE)
@@ -597,13 +561,9 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 			QueueFamilyTransfer{_pool->getFamilyIdx(), gIdx});
 		sdfImage->setPendingBarrier(transferImageBarrier);
 
-		_primitivesBuffer->getTriangles()->setPendingBarrier(bufferBarriers[0]);
+		_primitivesBuffer->getObjects()->setPendingBarrier(bufferBarriers[0]);
 		_primitivesBuffer->getGridSize()->setPendingBarrier(bufferBarriers[1]);
 		_primitivesBuffer->getGridIndex()->setPendingBarrier(bufferBarriers[2]);
-		_primitivesBuffer->getCircles()->setPendingBarrier(bufferBarriers[3]);
-		_primitivesBuffer->getRects()->setPendingBarrier(bufferBarriers[4]);
-		_primitivesBuffer->getRoundedRects()->setPendingBarrier(bufferBarriers[5]);
-		_primitivesBuffer->getPolygons()->setPendingBarrier(bufferBarriers[6]);
 		_lightsBuffer->getBuffer()->setPendingBarrier(bufferBarriers[3]);
 
 		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,

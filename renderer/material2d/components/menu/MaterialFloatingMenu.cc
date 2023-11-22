@@ -65,6 +65,16 @@ bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, Floa
 	_globalOrigin = globalOrigin;
 	_binding = b;
 
+	auto l = addInputListener(Rc<InputListener>::create());
+	l->addTapRecognizer([this] (const GestureTap &tap) {
+		if (!_menu->isTouched(tap.location())) {
+			if (_sceneContent) {
+				_sceneContent->popOverlay(this);
+			}
+		}
+		return true;
+	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+
 	return true;
 }
 
@@ -188,7 +198,7 @@ bool FloatingMenu::init(MenuSource *source, Menu *root) {
 
 	_root = root;
 
-	setElevation(Elevation(toInt(_root->getStyleOrigin().elevation) + 2));
+	setElevation(Elevation(toInt(_root->getStyleOrigin().elevation) + 1));
 
 	return true;
 }

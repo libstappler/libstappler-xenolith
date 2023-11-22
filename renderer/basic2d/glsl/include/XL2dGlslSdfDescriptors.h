@@ -30,7 +30,7 @@ layout (set = 0, binding = 0) uniform ShadowDataBuffer {
 };
 
 #define INPUT_BUFFER_LAYOUT_SIZE 7
-#define OUTPUT_BUFFER_LAYOUT_SIZE 7
+#define OUTPUT_BUFFER_LAYOUT_SIZE 3
 
 layout (set = 0, binding = 1) readonly buffer TriangleIndexes {
 	Triangle2DIndex indexes[];
@@ -68,9 +68,9 @@ layout (set = 0, binding = 1) readonly buffer PolygonIndexes {
 #define VERTEX_BUFFER vertexBuffer[1].vertices
 #define TRANSFORM_BUFFER transformObjectBuffer[2].transforms
 
-layout(set = 0, binding = 2) buffer TrianglesBuffer {
-	Triangle2DData triangles[];
-} trianglesBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
+layout(set = 0, binding = 2) buffer ObjectsBuffer {
+	Sdf2DObjectData objects[];
+} objectsBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
 layout(set = 0, binding = 2) buffer GridSizeBuffer {
 	uint grid[];
@@ -80,29 +80,17 @@ layout(set = 0, binding = 2) buffer GridIndexesBuffer {
 	uint index[];
 } gridIndexBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
-layout(set = 0, binding = 2) buffer CirclesBuffer {
-	Circle2DData circles[];
-} circlesBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
-
-layout(set = 0, binding = 2) buffer RectsBuffer {
-	Rect2DData rects[];
-} rectsBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
-
-layout(set = 0, binding = 2) buffer RoundedRectsBuffer {
-	RoundedRect2DData rects[];
-} roundedRectsBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
-
-layout(set = 0, binding = 2) buffer PolygonBuffer {
-	Polygon2DData polygons[];
-} polygonBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
-
-#define TRIANGLE_DATA_BUFFER trianglesBuffer[0].triangles
-#define CIRCLE_DATA_BUFFER circlesBuffer[3].circles
-#define RECT_DATA_BUFFER rectsBuffer[4].rects
-#define ROUNDED_RECT_DATA_BUFFER roundedRectsBuffer[5].rects
-#define POLYGON_DATA_BUFFER polygonBuffer[6].polygons
+#define OBJECTS_DATA_BUFFER objectsBuffer[0].objects
 #define GRID_SIZE_BUFFER gridSizeBuffer[1].grid
 #define GRID_INDEX_BUFFER gridIndexBuffer[2].index
+
+void emplaceIntoGrid(const in int i, const in int j, const in uint gID) {
+	if (i >= 0 && i < shadowData.gridWidth && j >= 0 && j < shadowData.gridHeight) {
+		uint gridId = j * shadowData.gridWidth + i;
+		uint target = atomicAdd(GRID_SIZE_BUFFER[gridId], 1);
+		GRID_INDEX_BUFFER[gridId * shadowData.objectsCount + target] = gID;
+	}
+}
 
 #endif
 

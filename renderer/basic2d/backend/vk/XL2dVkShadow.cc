@@ -109,9 +109,12 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 	_shadowData.globalColor = data->globalColor = _input->lights.globalColor * data->luminosity;
 
 	// pre-calculated color with no shadows
-	Color4F discardColor = _input->lights.globalColor;
+	Color4F discardColor = _shadowData.globalColor;
 	for (uint32_t i = 0; i < _input->lights.ambientLightCount; ++ i) {
-		discardColor = discardColor + (_input->lights.ambientLights[i].color * _input->lights.ambientLights[i].color.a) * data->luminosity;
+		auto a = _input->lights.ambientLights[i].color.a * data->luminosity;
+		auto ncolor = (_input->lights.ambientLights[i].color * _input->lights.ambientLights[i].color.a) * data->luminosity;
+		ncolor.a = a;
+		discardColor = discardColor + ncolor;
 	}
 	discardColor.a = 1.0f;
 	_shadowData.discardColor = data->discardColor = discardColor;
@@ -119,47 +122,32 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 	_shadowData.gridSize = data->gridSize = ceilf(gridSize / fullDensity);
 	_shadowData.gridWidth = data->gridWidth = (scaledExtent.width - 1) / data->gridSize + 1;
 	_shadowData.gridHeight = data->gridHeight = (scaledExtent.height - 1) / data->gridSize + 1;
+	_shadowData.objectsCount = data->objectsCount = vertexes->getTrianglesCount() + vertexes->getCirclesCount()
+			+ vertexes->getRectsCount() + vertexes->getRoundedRectsCount() + vertexes->getPolygonsCount();
+
+	_shadowData.trianglesFirst = data->trianglesFirst = 0;
+	_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
+
+	_shadowData.circlesFirst = data->circlesFirst = _shadowData.trianglesFirst + _shadowData.trianglesCount;
+	_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
+
+	_shadowData.rectsFirst = data->rectsFirst = _shadowData.circlesFirst + _shadowData.circlesCount;
+	_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
+
+	_shadowData.roundedRectsFirst = data->roundedRectsFirst = _shadowData.rectsFirst + _shadowData.rectsCount;
+	_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
+
+	_shadowData.polygonsFirst = data->polygonsFirst = _shadowData.roundedRectsFirst + _shadowData.roundedRectsCount;
+	_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
+
 	_shadowData.ambientLightCount = data->ambientLightCount = _input->lights.ambientLightCount;
 	_shadowData.directLightCount = data->directLightCount = _input->lights.directLightCount;
-	_shadowData.bbOffset = data->bbOffset = getBoxOffset(vertexes->getMaxValue());
+	_shadowData.maxValue = data->maxValue = vertexes->getMaxValue();
+	_shadowData.bbOffset = data->bbOffset = getBoxOffset(_shadowData.maxValue);
 	_shadowData.density = data->density = _input->lights.sceneDensity;
 	_shadowData.shadowSdfDensity = data->shadowSdfDensity = 1.0f / _input->lights.shadowDensity;
 	_shadowData.shadowDensity = data->shadowDensity = 1.0f / _input->lights.sceneDensity;
-	_shadowData.shadowOffset = data->shadowOffset = Vec2::ZERO;
 	_shadowData.pix = data->pix = Vec2(1.0f / float(screenSize.width), 1.0f / float(screenSize.height));
-
-	_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
-	_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
-	_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
-	_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
-	_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
-
-	_shadowData.groupsCount = data->groupsCount =
-			(data->trianglesCount > 0 ? 1 : 0)
-			+ (data->circlesCount > 0 ? 1 : 0)
-			+ (data->rectsCount > 0 ? 1 : 0)
-			+ (data->roundedRectsCount > 0 ? 1 : 0)
-			+ (data->polygonsCount > 0 ? 1 : 0);
-
-	_shadowData.circleGridSizeOffset = data->circleGridSizeOffset = data->gridWidth * data->gridHeight
-			* (data->trianglesCount > 0 ? 1 : 0);
-	_shadowData.circleGridIndexOffset = data->circleGridIndexOffset = data->gridWidth * data->gridHeight
-			* data->trianglesCount;
-
-	_shadowData.rectGridSizeOffset = data->rectGridSizeOffset = data->gridWidth * data->gridHeight
-			* ((data->trianglesCount > 0 ? 1 : 0) + (data->circlesCount > 0 ? 1 : 0));
-	_shadowData.rectGridIndexOffset = data->rectGridIndexOffset = data->gridWidth * data->gridHeight
-			* (data->trianglesCount + data->circlesCount);
-
-	_shadowData.roundedRectGridSizeOffset = data->roundedRectGridSizeOffset = data->gridWidth * data->gridHeight
-			* ((data->trianglesCount > 0 ? 1 : 0) + (data->circlesCount > 0 ? 1 : 0) + (data->rectsCount > 0 ? 1 : 0));
-	_shadowData.roundedRectGridIndexOffset = data->roundedRectGridIndexOffset = data->gridWidth * data->gridHeight
-			* (data->trianglesCount + data->circlesCount + data->rectsCount);
-
-	_shadowData.polygonGridSizeOffset = data->polygonGridSizeOffset = data->gridWidth * data->gridHeight
-			* ((data->trianglesCount > 0 ? 1 : 0) + (data->circlesCount > 0 ? 1 : 0) + (data->rectsCount > 0 ? 1 : 0) + (data->roundedRectsCount > 0 ? 1 : 0));
-	_shadowData.polygonGridIndexOffset = data->polygonGridIndexOffset
-			= data->gridWidth * data->gridHeight * (data->trianglesCount + data->circlesCount + data->rectsCount + data->roundedRectsCount);
 
 	memcpy(data->ambientLights, _input->lights.ambientLights, sizeof(AmbientLightData) * config::MaxAmbientLights);
 	memcpy(data->directLights, _input->lights.directLights, sizeof(DirectLightData) * config::MaxDirectLights);
@@ -192,8 +180,7 @@ uint32_t ShadowLightDataAttachmentHandle::getLightsCount() const {
 }
 
 uint32_t ShadowLightDataAttachmentHandle::getObjectsCount() const {
-	return _shadowData.trianglesCount + _shadowData.circlesCount + _shadowData.rectsCount
-			+ _shadowData.roundedRectsCount + _shadowData.polygonsCount;
+	return _shadowData.objectsCount;
 }
 
 ShadowVertexAttachmentHandle::~ShadowVertexAttachmentHandle() { }
@@ -681,34 +668,23 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 
 ShadowPrimitivesAttachmentHandle::~ShadowPrimitivesAttachmentHandle() { }
 
-void ShadowPrimitivesAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, uint32_t objects, const ShadowData &data) {
+void ShadowPrimitivesAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, const ShadowData &data) {
 	auto &pool = devFrame->getMemPool(devFrame);
-	_triangles = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), data.trianglesCount) * sizeof(Triangle2DData)));
-	_circles = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), data.circlesCount) * sizeof(Circle2DData)));
-	_rects = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), data.rectsCount) * sizeof(Rect2DData)));
-	_roundedRects = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), data.roundedRectsCount) * sizeof(RoundedRect2DData)));
-	_polygons = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), data.polygonsCount) * sizeof(Polygon2DData)));
+
+	_objects = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
+			std::max(uint32_t(1), data.objectsCount) * sizeof(Sdf2DObjectData)));
 	_gridSize = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			data.gridWidth * data.gridHeight * data.groupsCount * sizeof(uint32_t)));
+			data.gridWidth * data.gridHeight * sizeof(uint32_t)));
 	_gridIndex = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
-			std::max(uint32_t(1), objects) * data.gridWidth * data.gridHeight * sizeof(uint32_t)));
+			std::max(uint32_t(1), data.objectsCount) * data.gridWidth * data.gridHeight * sizeof(uint32_t)));
 }
 
 bool ShadowPrimitivesAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
 		uint32_t idx, bool isExternal) const {
 	switch (idx) {
-	case 0: return _triangles; break;
+	case 0: return _objects; break;
 	case 1: return _gridSize; break;
 	case 2: return _gridIndex; break;
-	case 3: return _circles; break;
-	case 4: return _rects; break;
-	case 5: return _roundedRects; break;
-	case 6: return _polygons; break;
 	default:
 		break;
 	}
@@ -718,9 +694,9 @@ bool ShadowPrimitivesAttachmentHandle::isDescriptorDirty(const PassHandle &, con
 bool ShadowPrimitivesAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
 	switch (info.index) {
 	case 0:
-		info.buffer = _triangles;
+		info.buffer = _objects;
 		info.offset = 0;
-		info.range = _triangles->getSize();
+		info.range = _objects->getSize();
 		return true;
 		break;
 	case 1:
@@ -733,30 +709,6 @@ bool ShadowPrimitivesAttachmentHandle::writeDescriptor(const core::QueuePassHand
 		info.buffer = _gridIndex;
 		info.offset = 0;
 		info.range = _gridIndex->getSize();
-		return true;
-		break;
-	case 3:
-		info.buffer = _circles;
-		info.offset = 0;
-		info.range = _circles->getSize();
-		return true;
-		break;
-	case 4:
-		info.buffer = _rects;
-		info.offset = 0;
-		info.range = _rects->getSize();
-		return true;
-		break;
-	case 5:
-		info.buffer = _roundedRects;
-		info.offset = 0;
-		info.range = _roundedRects->getSize();
-		return true;
-		break;
-	case 6:
-		info.buffer = _polygons;
-		info.offset = 0;
-		info.range = _polygons->getSize();
 		return true;
 		break;
 	default:
@@ -826,7 +778,7 @@ bool ShadowSdfImageAttachment::init(AttachmentBuilder &builder, Extent2 extent) 
 		extent,
 		core::ForceImageUsage(core::ImageUsage::Storage | core::ImageUsage::Sampled | core::ImageUsage::TransferDst | core::ImageUsage::TransferSrc),
 		core::PassType::Compute,
-		core::ImageFormat::R16G16_SFLOAT),
+		core::ImageFormat::R16G16B16A16_SFLOAT),
 	ImageAttachment::AttachmentInfo{
 		.initialLayout = core::AttachmentLayout::Undefined,
 		.finalLayout = core::AttachmentLayout::ShaderReadOnlyOptimal,

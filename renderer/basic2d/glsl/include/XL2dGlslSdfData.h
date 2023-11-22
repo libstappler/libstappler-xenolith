@@ -29,29 +29,63 @@
 namespace stappler::glsl {
 #endif
 
-struct Circle2DData {
-	vec2 bbMin;
-	vec2 bbMax;
-	vec2 origin;
-	float radius;
+struct Sdf2DObjectData {
+	uint object;
+	uint transform;
 	float value;
 	float opacity;
-	uint transform;
+
+	vec2 bbMin;
+	vec2 bbMax;
+
+	vec2 a;
+	vec2 b;
+
+	vec2 c;
+	vec2 d;
+
+	// 0 - triangle
+	// 1 - Circle
+	// 2 - Rect
+	// 3 - Rounded rect
+	// 4 - Polygon
+	uint type;
+	uint padding0;
+	uint origin;
+	uint count;
 };
+
+/*struct Circle2DData {
+	vec2 origin;
+	float radius;
+	uint padding;
+};
+
+struct Triangle2DData {
+	vec2 a;
+	vec2 b;
+	vec2 c;
+};
+
+struct Rect2DData {
+	vec2 origin;
+	vec2 size;
+};
+
+struct RoundedRect2DData {
+	vec2 origin;
+	vec2 size;
+	vec4 corners;
+};
+
+struct Polygon2DData {
+	uint origin;
+	uint count;
+};*/
 
 struct Circle2DIndex {
 	uint origin;
 	uint transform;
-	float value;
-	float opacity;
-};
-
-struct Triangle2DData {
-	vec2 bbMin;
-	vec2 bbMax;
-	vec2 a;
-	vec2 b;
-	vec2 c;
 	float value;
 	float opacity;
 };
@@ -65,17 +99,6 @@ struct Triangle2DIndex {
 	float opacity;
 };
 
-struct Rect2DData {
-	vec2 bbMin;
-	vec2 bbMax;
-	vec2 origin;
-	vec2 size;
-	float value;
-	float opacity;
-	uint transform;
-	uint padding;
-};
-
 struct Rect2DIndex {
 	uint origin;
 	uint transform;
@@ -83,30 +106,9 @@ struct Rect2DIndex {
 	float opacity;
 };
 
-struct RoundedRect2DData {
-	vec2 bbMin;
-	vec2 bbMax;
-	vec2 origin;
-	vec2 size;
-	vec4 corners;
-	float value;
-	float opacity;
-	uint transform;
-	uint padding;
-};
-
 struct RoundedRect2DIndex {
 	uint origin;
 	uint transform;
-	float value;
-	float opacity;
-};
-
-struct Polygon2DData {
-	vec2 bbMin;
-	vec2 bbMax;
-	uint origin;
-	uint count;
 	float value;
 	float opacity;
 };
@@ -149,7 +151,7 @@ SP_GLSL_INLINE float circle3d(SP_GLSL_IN vec3 p, SP_GLSL_IN vec2 origin, SP_GLSL
 	vec2 originVector = vec2(p.x, p.y) - origin;
 	float l = length(originVector);
 	float d = l - radius;
-	float height = value - p.z;
+	float height = abs(value - p.z);
 
 	if (d <= float(0.0)) {
 		return height;
@@ -194,7 +196,7 @@ SP_GLSL_INLINE float rect2d(SP_GLSL_IN vec2 p, SP_GLSL_IN vec2 origin, SP_GLSL_I
 
 SP_GLSL_INLINE float rect3d(SP_GLSL_IN vec3 p, SP_GLSL_IN vec2 origin, SP_GLSL_IN vec2 size, SP_GLSL_IN float value, SP_GLSL_IN vec4 scale) {
 	vec2 originVector = abs(vec2(p.x, p.y) - origin) - size;
-	float height = value - p.z;
+	float height = abs(value - p.z);
 
 	if (all(lessThanEqual(originVector, vec2(0, 0)))) {
 		return height;
@@ -223,7 +225,7 @@ SP_GLSL_INLINE float roundedRect3d(SP_GLSL_IN vec3 p, SP_GLSL_IN vec2 origin, SP
 	corners.x  = (pt.y > 0.0) ? corners.x  : corners.y;
 #endif
 	vec2 originVector = abs(pt) - size + corners.x;
-	float height = value - p.z;
+	float height = abs(value - p.z);
 
 	if (all(lessThanEqual(originVector, vec2(0, 0)))) {
 		return height;

@@ -35,7 +35,7 @@ class MaterialBackground : public material2d::BackgroundSurface {
 public:
 	virtual ~MaterialBackground() { }
 
-	virtual bool init();
+	virtual bool init() override;
 	virtual void onContentSizeDirty() override;
 
 	virtual void onEnter(xenolith::Scene *) override;

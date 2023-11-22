@@ -88,11 +88,11 @@ void MenuButton::handleButton() {
 		}
 		if (auto nextMenu = s->getNextMenu()) {
 			if (auto content = dynamic_cast<SceneContent2d *>(_scene->getContent())) {
-				auto size = _scene->getContentSize();
-				auto posLeft = content->convertToNodeSpace(convertToWorldSpace(Vec2(0, _contentSize.height)));
+				//auto size = _scene->getContentSize();
+				//auto posLeft = content->convertToNodeSpace(convertToWorldSpace(Vec2(0, _contentSize.height)));
 				auto posRight = content->convertToNodeSpace(convertToWorldSpace(Vec2(_contentSize.width, _contentSize.height)));
-				float pointLeft = posLeft.x;
-				float pointRight = size.width - posRight.x;
+				//float pointLeft = posLeft.x;
+				//float pointRight = size.width - posRight.x;
 
 				FloatingMenu::push(content, nextMenu, posRight,
 					FloatingMenu::Binding::OriginRight, _menu);
