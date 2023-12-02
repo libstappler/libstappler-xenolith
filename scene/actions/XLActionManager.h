@@ -178,6 +178,7 @@ protected:
 		bool paused;
 	};
 
+	bool _inUpdate = false;
 	ActionContainer *_current = nullptr;
 	HashTable<ActionContainer> _actions;
 	Vector<PendingAction> _pending;

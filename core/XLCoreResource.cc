@@ -378,7 +378,7 @@ Resource::Builder::~Builder() {
 	}
 }
 
-const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
+const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
@@ -391,6 +391,7 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 		buf->data = data;
 		buf->size = data.size();
 		buf->atlas = move(atlas);
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -399,7 +400,7 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 	}
 	return p;
 }
-const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, FilePath path, Rc<DataAtlas> &&atlas) {
+const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, FilePath path, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
@@ -433,6 +434,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 			buf->size = stat.size;
 		}
 		buf->atlas = move(atlas);
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -442,7 +444,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	return p;
 }
 
-const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
+const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
@@ -455,6 +457,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		buf->data = data.pdup(_data->pool);
 		buf->size = data.size();
 		buf->atlas = move(atlas);
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -464,7 +467,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	return p;
 }
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info,
-		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas) {
+		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
@@ -476,6 +479,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		buf->key = key.pdup(_data->pool);
 		buf->callback = cb;
 		buf->atlas = move(atlas);
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -485,7 +489,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	return p;
 }
 
-const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, BytesView data) {
+const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, BytesView data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
@@ -496,6 +500,8 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
 		buf->data = data.pdup(_data->pool);
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -504,7 +510,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 	}
 	return p;
 }
-const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, FilePath path) {
+const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, FilePath path, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
@@ -540,6 +546,8 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 			Resource::loadImageFileData(ptr, size, fpath, format, dcb);
 		};
 		buf->extent = extent;
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -548,7 +556,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 	}
  	return p;
 }
-const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&img, BytesView data) {
+const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&img, BytesView data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
@@ -559,6 +567,8 @@ const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&im
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
 		buf->data = data;
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -568,7 +578,7 @@ const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&im
 	return p;
 }
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
-		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb) {
+		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
@@ -579,6 +589,8 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
 		buf->memCallback = cb;
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
 		return buf;
 	}, _data->pool);
 	if (!p) {
@@ -586,6 +598,10 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return nullptr;
 	}
 	return p;
+}
+
+bool Resource::Builder::empty() const {
+	return _data->buffers.empty() && _data->images.empty();
 }
 
 }

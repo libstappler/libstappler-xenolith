@@ -53,7 +53,6 @@ THE SOFTWARE.
 #include "XLVkPipeline.cc"
 #include "XLVkRenderPass.cc"
 #include "XLVkObject.cc"
-#include "XLVkBuffer.cc"
 #include "XLVkTextureSet.cc"
 
 #include "XLVkLoop.cc"

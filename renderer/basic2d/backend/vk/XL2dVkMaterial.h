@@ -26,7 +26,6 @@
 #include "XL2d.h"
 #include "XLVkAttachment.h"
 #include "XLVkQueuePass.h"
-#include "XLVkBuffer.h"
 
 namespace stappler::xenolith::basic2d::vk {
 

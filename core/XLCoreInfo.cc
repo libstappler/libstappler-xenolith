@@ -519,6 +519,35 @@ String ImageInfo::description() const {
 	return stream.str();
 }
 
+size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
+	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth;
+	if (expectedSize > expected) {
+		log::error("core::ImageData", "Not enoudh space for image: ", expectedSize, " required, ", expected, " allocated");
+		return 0;
+	}
+
+	if (!data.empty()) {
+		auto size = data.size();
+		memcpy(mem, data.data(), size);
+		return size;
+	} else if (memCallback) {
+		size_t size = expectedSize;
+		memCallback(mem, expectedSize, [&] (BytesView data) {
+			size = data.size();
+			memcpy(mem, data.data(), size);
+		});
+		return size;
+	} else if (stdCallback) {
+		size_t size = expectedSize;
+		stdCallback(mem, expectedSize, [&] (BytesView data) {
+			size = data.size();
+			memcpy(mem, data.data(), size);
+		});
+		return size;
+	}
+	return 0;
+}
+
 void ImageViewInfo::setup(const ImageViewInfo &value) {
 	*this = value;
 }
@@ -1367,6 +1396,50 @@ bool isDepthFormat(ImageFormat format) {
 		break;
 	default:
 		break;
+	}
+	return false;
+}
+
+bool hasReadAccess(AccessType access) {
+	if ((access & (
+			AccessType::IndirectCommandRead
+			| AccessType::IndexRead
+			| AccessType::VertexAttributeRead
+			| AccessType::UniformRead
+			| AccessType::InputAttachmantRead
+			| AccessType::ShaderRead
+			| AccessType::ColorAttachmentRead
+			| AccessType::DepthStencilAttachmentRead
+			| AccessType::TransferRead
+			| AccessType::HostRead
+			| AccessType::MemoryRead
+			| AccessType::ColorAttachmentReadNonCoherent
+			| AccessType::TransformFeedbackCounterRead
+			| AccessType::ConditionalRenderingRead
+			| AccessType::AccelerationStructureRead
+			| AccessType::ShadingRateImageRead
+			| AccessType::FragmentDensityMapRead
+			| AccessType::CommandPreprocessRead
+			)) != AccessType::None) {
+		return true;
+	}
+	return false;
+}
+
+bool hasWriteAccess(AccessType access) {
+	if ((access & (
+			AccessType::ShaderWrite
+			| AccessType::ColorAttachmentWrite
+			| AccessType::DepthStencilAttachmentWrite
+			| AccessType::TransferWrite
+			| AccessType::HostWrite
+			| AccessType::MemoryWrite
+			| AccessType::TransformFeedbackWrite
+			| AccessType::TransformFeedbackCounterWrite
+			| AccessType::AccelerationStructureWrite
+			| AccessType::CommandPreprocessWrite
+			)) != AccessType::None) {
+		return true;
 	}
 	return false;
 }

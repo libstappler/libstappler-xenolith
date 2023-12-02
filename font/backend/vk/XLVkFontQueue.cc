@@ -28,7 +28,6 @@
 #if MODULE_XENOLITH_BACKEND_VK
 
 #include "XLVkAllocator.h"
-#include "XLVkBuffer.h"
 
 namespace stappler::xenolith::vk {
 
@@ -48,7 +47,7 @@ struct RenderFontCharPersistentData {
 
 struct RenderFontPersistentBufferUserdata : public Ref {
 	Rc<DeviceMemoryPool> mempool;
-	Vector<Rc<DeviceBuffer>> buffers;
+	Vector<Rc<Buffer>> buffers;
 	HashMap<uint32_t, RenderFontCharPersistentData> chars;
 };
 
@@ -68,12 +67,12 @@ public:
 
 	Extent2 getImageExtent() const { return _imageExtent; }
 	const Rc<font::RenderFontInput> &getInput() const { return _input; }
-	const Rc<DeviceBuffer> &getTmpBuffer() const { return _frontBuffer; }
-	const Rc<DeviceBuffer> &getPersistentTargetBuffer() const { return _persistentTargetBuffer; }
+	const Rc<Buffer> &getTmpBuffer() const { return _frontBuffer; }
+	const Rc<Buffer> &getPersistentTargetBuffer() const { return _persistentTargetBuffer; }
 	const Rc<core::DataAtlas> &getAtlas() const { return _atlas; }
 	const Rc<RenderFontPersistentBufferUserdata> &getUserdata() const { return _userdata; }
 	const Vector<VkBufferImageCopy> &getCopyFromTmpBufferData() const { return _copyFromTmpBufferData; }
-	const Map<DeviceBuffer *, Vector<VkBufferImageCopy>> &getCopyFromPersistentBufferData() const { return _copyFromPersistentBufferData; }
+	const Map<Buffer *, Vector<VkBufferImageCopy>> &getCopyFromPersistentBufferData() const { return _copyFromPersistentBufferData; }
 	const Vector<VkBufferCopy> &getCopyToPersistentBufferData() const { return _copyToPersistentBufferData; }
 
 protected:
@@ -98,11 +97,11 @@ protected:
 	std::atomic<uint32_t> _copyFromTmpOffset = 0;
 	std::atomic<uint32_t> _copyToPersistentOffset = 0;
 	std::atomic<uint32_t> _textureTargetOffset = 0;
-	Rc<DeviceBuffer> _frontBuffer;
-	Rc<DeviceBuffer> _persistentTargetBuffer;
+	Rc<Buffer> _frontBuffer;
+	Rc<Buffer> _persistentTargetBuffer;
 	Rc<core::DataAtlas> _atlas;
 	Vector<VkBufferImageCopy> _copyFromTmpBufferData;
-	Map<DeviceBuffer *, Vector<VkBufferImageCopy>> _copyFromPersistentBufferData;
+	Map<Buffer *, Vector<VkBufferImageCopy>> _copyFromPersistentBufferData;
 	Vector<VkBufferCopy> _copyToPersistentBufferData;
 	Vector<RenderFontCharPersistentData> _copyPersistentCharData;
 	Vector<RenderFontCharTextureData> _textureTarget;
@@ -149,7 +148,7 @@ protected:
 	Rc<Image> _targetImage;
 	Rc<Buffer> _targetAtlasIndex;
 	Rc<Buffer> _targetAtlasData;
-	Rc<DeviceBuffer> _outBuffer;
+	Rc<Buffer> _outBuffer;
 };
 
 FontQueue::~FontQueue() { }
@@ -452,8 +451,8 @@ bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char16_t c) {
 
 void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharTexture &texData) {
 	if (texData.width != texData.bitmapWidth || texData.height != texData.bitmapRows) {
-		std::cout << "Invalid size: " << texData.width << ";" << texData.height
-				<< " vs. " << texData.bitmapWidth << ";" << texData.bitmapRows << "\n";
+		log::error("FontAttachmentHandle", "Invalid size: ", texData.width, ";", texData.height,
+				" vs. ", texData.bitmapWidth, ";", texData.bitmapRows, "\n");
 	}
 
 	auto size = texData.bitmapRows * std::abs(texData.pitch);
@@ -636,7 +635,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 	auto frame = static_cast<DeviceFrameHandle *>(&handle);
 	auto &memPool = frame->getMemPool(&handle);
 
-	Rc<DeviceBuffer> stageAtlasIndex, stageAtlasData;
+	Rc<Buffer> stageAtlasIndex, stageAtlasData;
 
 	if (_targetAtlasIndex && _targetAtlasData) {
 		stageAtlasIndex = memPool->spawn(AllocationUsage::HostTransitionSource,
@@ -790,9 +789,9 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 				Rc<Ref>(_fontAttachment->getUserdata()), sig);
 
 		if (input->output) {
-			auto region = _outBuffer->map(0, _outBuffer->getSize(), true);
-			input->output(_targetImage->getInfo(), BytesView(region.ptr, region.size));
-			_outBuffer->unmap(region);
+			_outBuffer->map([&] (uint8_t *ptr, VkDeviceSize size) {
+				input->output(_targetImage->getInfo(), BytesView(ptr, size));
+			});
 		}
 	}
 

@@ -23,7 +23,6 @@
 #ifndef XENOLITH_CORE_XLCOREOBJECT_H_
 #define XENOLITH_CORE_XLCOREOBJECT_H_
 
-#include "XLCoreQueueData.h"
 #include "XLCoreInfo.h"
 
 // check if 64-bit pointer is available for Vulkan
@@ -47,16 +46,28 @@ class TextureSet;
 class ImageView;
 class BufferObject;
 class Loop;
+class Device;
+class Attachment;
+class Queue;
+
+struct GraphicPipelineInfo;
+struct GraphicPipelineData;
+struct ComputePipelineInfo;
+struct ComputePipelineData;
+struct ProgramData;
+struct QueuePassData;
+struct SubpassData;
+struct PipelineDescriptor;
 
 class Object : public NamedRef {
 public:
 	using ObjectHandle = core::ObjectHandle;
-	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle);
+	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
 
 	virtual ~Object();
 
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr);
-	virtual void invalidate();
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void * = nullptr);
+	void invalidate();
 
 	ObjectType getType() const { return _type; }
 	ObjectHandle getObject() const { return _handle; }
@@ -69,6 +80,7 @@ protected:
 	Device *_device = nullptr;
 	ClearCallback _callback = nullptr;
 	ObjectHandle _handle;
+	void *_ptr = nullptr;
 	String _name;
 };
 
@@ -78,7 +90,7 @@ public:
 	using PipelineInfo = core::GraphicPipelineInfo;
 	using PipelineData = core::GraphicPipelineData;
 	using SubpassData = core::SubpassData;
-	using RenderQueue = core::Queue;
+	using Queue = core::Queue;
 
 	virtual ~GraphicPipeline() { }
 };
@@ -89,7 +101,7 @@ public:
 	using PipelineInfo = core::ComputePipelineInfo;
 	using PipelineData = core::ComputePipelineData;
 	using SubpassData = core::SubpassData;
-	using RenderQueue = core::Queue;
+	using Queue = core::Queue;
 
 	virtual ~ComputePipeline() { }
 };
@@ -122,7 +134,7 @@ public:
 
 	virtual ~RenderPass() { }
 
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle) override;
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle, void *) override;
 
 	uint64_t getIndex() const { return _index; }
 	PassType getType() const { return _type; }
@@ -208,8 +220,8 @@ class ImageObject : public Object {
 public:
 	virtual ~ImageObject();
 
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr) override;
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, uint64_t idx);
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void *p) override;
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void *p, uint64_t idx);
 
 	const ImageInfoData &getInfo() const { return _info; }
 	uint64_t getIndex() const { return _index; }
@@ -228,8 +240,7 @@ class ImageView : public Object {
 public:
 	virtual ~ImageView();
 
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr) override;
-	virtual void invalidate() override;
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void *p = nullptr) override;
 
 	void setReleaseCallback(Function<void()> &&);
 	void runReleaseCallback();

@@ -51,7 +51,7 @@ public:
 
 	virtual ~GraphicPipeline() { }
 
-	bool init(Device &dev, const PipelineData &params, const SubpassData &, const RenderQueue &);
+	bool init(Device &dev, const PipelineData &params, const SubpassData &, const Queue &);
 
 	VkPipeline getPipeline() const { return _pipeline; }
 
@@ -65,7 +65,7 @@ class ComputePipeline : public core::ComputePipeline {
 public:
 	virtual ~ComputePipeline() { }
 
-	bool init(Device &dev, const PipelineData &params, const SubpassData &, const RenderQueue &);
+	bool init(Device &dev, const PipelineData &params, const SubpassData &, const Queue &);
 
 	VkPipeline getPipeline() const { return _pipeline; }
 

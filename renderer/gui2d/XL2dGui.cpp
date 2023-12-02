@@ -26,8 +26,6 @@
 #include "XL2dImageLayer.cc"
 #include "XL2dLayerRounded.cc"
 #include "XL2dRoundedProgress.cc"
-#include "XL2dInputLabel.cc"
-#include "XL2dInputField.cc"
 
 #include "XL2dScrollController.cc"
 #include "XL2dScrollItemHandle.cc"

@@ -87,11 +87,6 @@ public:
 
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
 
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-			uint32_t, bool isExternal) const override;
-
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
-
 	bool empty() const;
 
 	uint32_t getTrianglesCount() const { return _trianglesCount; }
@@ -101,18 +96,18 @@ public:
 	uint32_t getPolygonsCount() const { return _polygonsCount; }
 	float getMaxValue() const { return _maxValue; }
 
-	const Rc<DeviceBuffer> &getVertexes() const { return _vertexes; }
+	const Rc<Buffer> &getVertexes() const { return _vertexes; }
 
 protected:
 	virtual bool loadVertexes(FrameHandle &, const Rc<FrameContextHandle2d> &);
 
-	Rc<DeviceBuffer> _indexes;
-	Rc<DeviceBuffer> _vertexes;
-	Rc<DeviceBuffer> _transforms;
-	Rc<DeviceBuffer> _circles;
-	Rc<DeviceBuffer> _rects;
-	Rc<DeviceBuffer> _roundedRects;
-	Rc<DeviceBuffer> _polygons;
+	Rc<Buffer> _indexes;
+	Rc<Buffer> _vertexes;
+	Rc<Buffer> _transforms;
+	Rc<Buffer> _circles;
+	Rc<Buffer> _rects;
+	Rc<Buffer> _roundedRects;
+	Rc<Buffer> _polygons;
 	uint32_t _trianglesCount = 0;
 	uint32_t _circlesCount = 0;
 	uint32_t _rectsCount = 0;
@@ -140,10 +135,10 @@ public:
 	uint32_t getObjectsCount() const;
 
 	const ShadowData &getShadowData() const { return _shadowData; }
-	const Rc<DeviceBuffer> &getBuffer() const { return _data; }
+	const Rc<Buffer> &getBuffer() const { return _data; }
 
 protected:
-	Rc<DeviceBuffer> _data;
+	Rc<Buffer> _data;
 	Rc<FrameContextHandle2d> _input;
 	ShadowData _shadowData;
 };
@@ -154,19 +149,14 @@ public:
 
 	void allocateBuffer(DeviceFrameHandle *, const ShadowData &);
 
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-			uint32_t, bool isExternal) const override;
-
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
-
-	const Rc<DeviceBuffer> &getObjects() const { return _objects; }
-	const Rc<DeviceBuffer> &getGridSize() const { return _gridSize; }
-	const Rc<DeviceBuffer> &getGridIndex() const { return _gridIndex; }
+	const Rc<Buffer> &getObjects() const { return _objects; }
+	const Rc<Buffer> &getGridSize() const { return _gridSize; }
+	const Rc<Buffer> &getGridIndex() const { return _gridIndex; }
 
 protected:
-	Rc<DeviceBuffer> _objects;
-	Rc<DeviceBuffer> _gridSize;
-	Rc<DeviceBuffer> _gridIndex;
+	Rc<Buffer> _objects;
+	Rc<Buffer> _gridSize;
+	Rc<Buffer> _gridIndex;
 };
 
 class ShadowSdfImageAttachmentHandle : public ImageAttachmentHandle {

@@ -105,11 +105,11 @@ struct ProgramData : ProgramInfo {
 
 struct SpecializationInfo {
 	const ProgramData *data = nullptr;
-	memory::vector<PredefinedConstant> constants;
+	memory::vector<SpecializationConstant> constants;
 
 	SpecializationInfo() = default;
 	SpecializationInfo(const ProgramData *);
-	SpecializationInfo(const ProgramData *, SpanView<PredefinedConstant>);
+	SpecializationInfo(const ProgramData *, SpanView<SpecializationConstant>);
 };
 
 struct GraphicPipelineInfo : NamedMem {
@@ -205,12 +205,12 @@ struct AttachmentPassData : NamedMem {
 	// calculated initial layout
 	// for first descriptor in execution chain - initial layout of queue's attachment or first usage layout
 	// for others - final layout of previous descriptor in chain of execution
-	AttachmentLayout initialLayout = AttachmentLayout::Undefined;
+	AttachmentLayout initialLayout = AttachmentLayout::Ignored;
 
 	// calculated final layout
 	// for last descriptor in execution chain - final layout of queue's attachment or last usage layout
 	// for others - last usage layout
-	AttachmentLayout finalLayout = AttachmentLayout::Undefined;
+	AttachmentLayout finalLayout = AttachmentLayout::Ignored;
 
 	AttachmentLoadOp loadOp = AttachmentLoadOp::DontCare;
 	AttachmentStoreOp storeOp = AttachmentStoreOp::DontCare;

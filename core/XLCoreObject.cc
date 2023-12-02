@@ -31,19 +31,24 @@ Object::~Object() {
 	invalidate();
 }
 
-bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
+bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle handle, void *extra) {
 	_device = &dev;
 	_callback = cb;
 	_type = type;
-	_handle = ptr;
-	_device->addObject(this);
+	_handle = handle;
+	_ptr = extra;
+	if (_handle.get()) {
+		_device->addObject(this);
+	}
 	return true;
 }
 
 void Object::invalidate() {
 	if (_callback) {
-		_callback(_device, _type, _handle);
-		_device->removeObject(this);
+		_callback(_device, _type, _handle, _ptr);
+		if (_handle.get()) {
+			_device->removeObject(this);
+		}
 		_callback = nullptr;
 		_device = nullptr;
 		_handle = ObjectHandle::zero();
@@ -52,8 +57,8 @@ void Object::invalidate() {
 
 static std::atomic<uint64_t> s_RenderPassImplCurrentIndex = 1;
 
-bool RenderPass::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
-	if (Object::init(dev, cb, type, ptr)) {
+bool RenderPass::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p) {
+	if (Object::init(dev, cb, type, ptr, p)) {
 		_index = s_RenderPassImplCurrentIndex.fetch_add(1);
 		return true;
 	}
@@ -185,15 +190,15 @@ void DataAtlas::makeHashIndex() {
 
 ImageObject::~ImageObject() { }
 
-bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
-	if (Object::init(dev, cb, type, ptr)) {
+bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p) {
+	if (Object::init(dev, cb, type, ptr, p)) {
 		_index = s_ImageViewCurrentIndex.fetch_add(1);
 		return true;
 	}
 	return false;
 }
-bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, uint64_t idx) {
-	if (Object::init(dev, cb, type, ptr)) {
+bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p, uint64_t idx) {
+	if (Object::init(dev, cb, type, ptr, p)) {
 		_index = idx;
 		return true;
 	}
@@ -211,20 +216,12 @@ ImageView::~ImageView() {
 	}
 }
 
-bool ImageView::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr) {
-	if (Object::init(dev, cb, type, ptr)) {
+bool ImageView::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p) {
+	if (Object::init(dev, cb, type, ptr, p)) {
 		_index = s_ImageViewCurrentIndex.fetch_add(1);
 		return true;
 	}
 	return false;
-}
-
-void ImageView::invalidate() {
-	if (_releaseCallback) {
-		_releaseCallback();
-		_releaseCallback = nullptr;
-	}
-	Object::invalidate();
 }
 
 void ImageView::setReleaseCallback(Function<void()> &&cb) {

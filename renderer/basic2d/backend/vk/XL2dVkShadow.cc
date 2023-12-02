@@ -75,91 +75,79 @@ bool ShadowLightDataAttachmentHandle::writeDescriptor(const core::QueuePassHandl
 }
 
 void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridSize) {
-	ShadowData *data = nullptr;
-	DeviceBuffer::MappedRegion mapped;
-	if (devFrame->isPersistentMapping()) {
-		mapped = _data->map();
-		data = reinterpret_cast<ShadowData *>(mapped.ptr);
-	} else {
-		data = new ShadowData;
-	}
+	_data->map([&] (uint8_t *buf, VkDeviceSize size) {
+		ShadowData *data = reinterpret_cast<ShadowData *>(buf);
 
-	if (isnan(_input->lights.luminosity)) {
-		float l = _input->lights.globalColor.a;
+		if (isnan(_input->lights.luminosity)) {
+			float l = _input->lights.globalColor.a;
+			for (uint32_t i = 0; i < _input->lights.ambientLightCount; ++ i) {
+				l += _input->lights.ambientLights[i].color.a;
+			}
+			for (uint32_t i = 0; i < _input->lights.directLightCount; ++ i) {
+				l += _input->lights.directLights[i].color.a;
+			}
+			_shadowData.luminosity = data->luminosity = 1.0f / l;
+		} else {
+			_shadowData.luminosity = data->luminosity = 1.0f / _input->lights.luminosity;
+		}
+
+		float fullDensity = _input->lights.sceneDensity;
+		auto screenSize = devFrame->getFrameConstraints().getScreenSize();
+
+		Extent2 scaledExtent(ceilf(screenSize.width / fullDensity), ceilf(screenSize.height / fullDensity));
+
+		//float shadowDensity = _input->lights.sceneDensity / _input->lights.shadowDensity;
+		//Extent2 shadowExtent(ceilf(screenSize.width / shadowDensity), ceilf(screenSize.height / shadowDensity));
+		//Vec2 shadowOffset( screenSize.width / shadowDensity - shadowExtent.width, screenSize.height / shadowDensity - shadowExtent.height);
+		//shadowOffset *= shadowDensity;
+		_shadowData.globalColor = data->globalColor = _input->lights.globalColor * data->luminosity;
+
+		// pre-calculated color with no shadows
+		Color4F discardColor = _shadowData.globalColor;
 		for (uint32_t i = 0; i < _input->lights.ambientLightCount; ++ i) {
-			l += _input->lights.ambientLights[i].color.a;
+			auto a = _input->lights.ambientLights[i].color.a * data->luminosity;
+			auto ncolor = (_input->lights.ambientLights[i].color * _input->lights.ambientLights[i].color.a) * data->luminosity;
+			ncolor.a = a;
+			discardColor = discardColor + ncolor;
 		}
-		for (uint32_t i = 0; i < _input->lights.directLightCount; ++ i) {
-			l += _input->lights.directLights[i].color.a;
-		}
-		_shadowData.luminosity = data->luminosity = 1.0f / l;
-	} else {
-		_shadowData.luminosity = data->luminosity = 1.0f / _input->lights.luminosity;
-	}
+		discardColor.a = 1.0f;
+		_shadowData.discardColor = data->discardColor = discardColor;
 
-	float fullDensity = _input->lights.sceneDensity;
-	auto screenSize = devFrame->getFrameConstraints().getScreenSize();
+		_shadowData.gridSize = data->gridSize = ceilf(gridSize / fullDensity);
+		_shadowData.gridWidth = data->gridWidth = (scaledExtent.width - 1) / data->gridSize + 1;
+		_shadowData.gridHeight = data->gridHeight = (scaledExtent.height - 1) / data->gridSize + 1;
+		_shadowData.objectsCount = data->objectsCount = vertexes->getTrianglesCount() + vertexes->getCirclesCount()
+				+ vertexes->getRectsCount() + vertexes->getRoundedRectsCount() + vertexes->getPolygonsCount();
 
-	Extent2 scaledExtent(ceilf(screenSize.width / fullDensity), ceilf(screenSize.height / fullDensity));
+		_shadowData.trianglesFirst = data->trianglesFirst = 0;
+		_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
 
-	//float shadowDensity = _input->lights.sceneDensity / _input->lights.shadowDensity;
-	//Extent2 shadowExtent(ceilf(screenSize.width / shadowDensity), ceilf(screenSize.height / shadowDensity));
-	//Vec2 shadowOffset( screenSize.width / shadowDensity - shadowExtent.width, screenSize.height / shadowDensity - shadowExtent.height);
-	//shadowOffset *= shadowDensity;
-	_shadowData.globalColor = data->globalColor = _input->lights.globalColor * data->luminosity;
+		_shadowData.circlesFirst = data->circlesFirst = _shadowData.trianglesFirst + _shadowData.trianglesCount;
+		_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
 
-	// pre-calculated color with no shadows
-	Color4F discardColor = _shadowData.globalColor;
-	for (uint32_t i = 0; i < _input->lights.ambientLightCount; ++ i) {
-		auto a = _input->lights.ambientLights[i].color.a * data->luminosity;
-		auto ncolor = (_input->lights.ambientLights[i].color * _input->lights.ambientLights[i].color.a) * data->luminosity;
-		ncolor.a = a;
-		discardColor = discardColor + ncolor;
-	}
-	discardColor.a = 1.0f;
-	_shadowData.discardColor = data->discardColor = discardColor;
+		_shadowData.rectsFirst = data->rectsFirst = _shadowData.circlesFirst + _shadowData.circlesCount;
+		_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
 
-	_shadowData.gridSize = data->gridSize = ceilf(gridSize / fullDensity);
-	_shadowData.gridWidth = data->gridWidth = (scaledExtent.width - 1) / data->gridSize + 1;
-	_shadowData.gridHeight = data->gridHeight = (scaledExtent.height - 1) / data->gridSize + 1;
-	_shadowData.objectsCount = data->objectsCount = vertexes->getTrianglesCount() + vertexes->getCirclesCount()
-			+ vertexes->getRectsCount() + vertexes->getRoundedRectsCount() + vertexes->getPolygonsCount();
+		_shadowData.roundedRectsFirst = data->roundedRectsFirst = _shadowData.rectsFirst + _shadowData.rectsCount;
+		_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
 
-	_shadowData.trianglesFirst = data->trianglesFirst = 0;
-	_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
+		_shadowData.polygonsFirst = data->polygonsFirst = _shadowData.roundedRectsFirst + _shadowData.roundedRectsCount;
+		_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
 
-	_shadowData.circlesFirst = data->circlesFirst = _shadowData.trianglesFirst + _shadowData.trianglesCount;
-	_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
+		_shadowData.ambientLightCount = data->ambientLightCount = _input->lights.ambientLightCount;
+		_shadowData.directLightCount = data->directLightCount = _input->lights.directLightCount;
+		_shadowData.maxValue = data->maxValue = vertexes->getMaxValue();
+		_shadowData.bbOffset = data->bbOffset = getBoxOffset(_shadowData.maxValue);
+		_shadowData.density = data->density = _input->lights.sceneDensity;
+		_shadowData.shadowSdfDensity = data->shadowSdfDensity = 1.0f / _input->lights.shadowDensity;
+		_shadowData.shadowDensity = data->shadowDensity = 1.0f / _input->lights.sceneDensity;
+		_shadowData.pix = data->pix = Vec2(1.0f / float(screenSize.width), 1.0f / float(screenSize.height));
 
-	_shadowData.rectsFirst = data->rectsFirst = _shadowData.circlesFirst + _shadowData.circlesCount;
-	_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
-
-	_shadowData.roundedRectsFirst = data->roundedRectsFirst = _shadowData.rectsFirst + _shadowData.rectsCount;
-	_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
-
-	_shadowData.polygonsFirst = data->polygonsFirst = _shadowData.roundedRectsFirst + _shadowData.roundedRectsCount;
-	_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
-
-	_shadowData.ambientLightCount = data->ambientLightCount = _input->lights.ambientLightCount;
-	_shadowData.directLightCount = data->directLightCount = _input->lights.directLightCount;
-	_shadowData.maxValue = data->maxValue = vertexes->getMaxValue();
-	_shadowData.bbOffset = data->bbOffset = getBoxOffset(_shadowData.maxValue);
-	_shadowData.density = data->density = _input->lights.sceneDensity;
-	_shadowData.shadowSdfDensity = data->shadowSdfDensity = 1.0f / _input->lights.shadowDensity;
-	_shadowData.shadowDensity = data->shadowDensity = 1.0f / _input->lights.sceneDensity;
-	_shadowData.pix = data->pix = Vec2(1.0f / float(screenSize.width), 1.0f / float(screenSize.height));
-
-	memcpy(data->ambientLights, _input->lights.ambientLights, sizeof(AmbientLightData) * config::MaxAmbientLights);
-	memcpy(data->directLights, _input->lights.directLights, sizeof(DirectLightData) * config::MaxDirectLights);
-	memcpy(_shadowData.ambientLights, _input->lights.ambientLights, sizeof(AmbientLightData) * config::MaxAmbientLights);
-	memcpy(_shadowData.directLights, _input->lights.directLights, sizeof(DirectLightData) * config::MaxDirectLights);
-
-	if (devFrame->isPersistentMapping()) {
-		_data->unmap(mapped, true);
-	} else {
-		_data->setData(BytesView(reinterpret_cast<const uint8_t *>(data), sizeof(ShadowData)));
-		delete data;
-	}
+		memcpy(data->ambientLights, _input->lights.ambientLights, sizeof(AmbientLightData) * config::MaxAmbientLights);
+		memcpy(data->directLights, _input->lights.directLights, sizeof(DirectLightData) * config::MaxDirectLights);
+		memcpy(_shadowData.ambientLights, _input->lights.ambientLights, sizeof(AmbientLightData) * config::MaxAmbientLights);
+		memcpy(_shadowData.directLights, _input->lights.directLights, sizeof(DirectLightData) * config::MaxDirectLights);
+	});
 }
 
 float ShadowLightDataAttachmentHandle::getBoxOffset(float value) const {
@@ -204,71 +192,6 @@ void ShadowVertexAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachmen
 			cb(success);
 		}, this, "VertexMaterialAttachmentHandle::submitInput");
 	});
-}
-
-bool ShadowVertexAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-		uint32_t idx, bool isExternal) const {
-	switch (idx) {
-	case 0: return _indexes; break;
-	case 1: return _vertexes; break;
-	case 2: return _transforms; break;
-	case 3: return _circles; break;
-	case 4: return _rects; break;
-	case 5: return _roundedRects; break;
-	case 6: return _polygons; break;
-	default: break;
-	}
-	return false;
-}
-
-bool ShadowVertexAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
-	switch (info.index) {
-	case 0:
-		info.buffer = _indexes;
-		info.offset = 0;
-		info.range = _indexes->getSize();
-		return true;
-		break;
-	case 1:
-		info.buffer = _vertexes;
-		info.offset = 0;
-		info.range = _vertexes->getSize();
-		return true;
-		break;
-	case 2:
-		info.buffer = _transforms;
-		info.offset = 0;
-		info.range = _transforms->getSize();
-		return true;
-		break;
-	case 3:
-		info.buffer = _circles;
-		info.offset = 0;
-		info.range = _circles->getSize();
-		return true;
-		break;
-	case 4:
-		info.buffer = _rects;
-		info.offset = 0;
-		info.range = _rects->getSize();
-		return true;
-		break;
-	case 5:
-		info.buffer = _roundedRects;
-		info.offset = 0;
-		info.range = _roundedRects->getSize();
-		return true;
-		break;
-	case 6:
-		info.buffer = _polygons;
-		info.offset = 0;
-		info.range = _polygons->getSize();
-		return true;
-		break;
-	default:
-		break;
-	}
-	return false;
 }
 
 bool ShadowVertexAttachmentHandle::empty() const {
@@ -373,25 +296,25 @@ struct ShadowDrawPlan {
 };
 
 struct ShadowBufferMap {
-	DeviceBuffer::MappedRegion region;
+	uint8_t *region;
 	Bytes external;
-	DeviceBuffer *buffer;
+	Buffer *buffer;
 	bool isPersistent = false;
 
 	~ShadowBufferMap() {
 		if (isPersistent) {
-			buffer->unmap(region, true);
+			buffer->flushMappedRegion();
 		} else {
 			buffer->setData(external);
 		}
 	}
 
-	ShadowBufferMap(DeviceBuffer *b, bool persistent) : buffer(b), isPersistent(persistent) {
+	ShadowBufferMap(Buffer *b, bool persistent) : buffer(b), isPersistent(persistent) {
 		if (isPersistent) {
-			region = buffer->map();
+			region = buffer->getPersistentMappedRegion();
 		} else {
 			external.resize(buffer->getSize());
-			region.ptr = external.data(); region.size = external.size();
+			region = external.data();
 		}
 	}
 };
@@ -469,7 +392,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 	ShadowBufferMap polygonsMap(_polygons, fhandle.isPersistentMapping());
 
 	TransformData val;
-	memcpy(transformMap.region.ptr, &val, sizeof(TransformData));
+	memcpy(transformMap.region, &val, sizeof(TransformData));
 
 	uint32_t vertexOffset = 0;
 	uint32_t indexOffset = 0;
@@ -483,15 +406,15 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 	uint32_t transformIdx = 1;
 
 	auto pushVertexes = [&] (const CmdShadow *cmd, const TransformData &transform, VertexData *vertexes) {
-		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region.ptr) + vertexOffset;
+		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region) + vertexOffset;
 
-		memcpy(transformMap.region.ptr + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
+		memcpy(transformMap.region + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
 
 		for (size_t idx = 0; idx < vertexes->data.size(); ++ idx) {
 			memcpy(target++, &vertexes->data[idx].pos, sizeof(Vec4));
 		}
 
-		auto indexTarget = reinterpret_cast<Triangle2DIndex *>(indexesMap.region.ptr) + indexOffset;
+		auto indexTarget = reinterpret_cast<Triangle2DIndex *>(indexesMap.region) + indexOffset;
 
 		for (size_t idx = 0; idx < vertexes->indexes.size() / 3; ++ idx) {
 			Triangle2DIndex data({
@@ -522,14 +445,14 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 	}
 
 	auto pushSdf = [&] (const CmdSdfGroup2D *cmd, uint32_t triangles, uint32_t objects) {
-		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region.ptr) + vertexOffset;
+		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region) + vertexOffset;
 
 		uint32_t transformTriangles = 0;
 		uint32_t transformObjects = 0;
 
 		if (triangles > 0) {
 			TransformData transform(cmd->modelTransform);
-			memcpy(transformMap.region.ptr + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
+			memcpy(transformMap.region + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
 			transformTriangles = transformIdx;
 			++ transformIdx;
 		}
@@ -537,7 +460,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 		if (objects > 0) {
 			TransformData transform(cmd->modelTransform.getInversed());
 			cmd->modelTransform.getScale(&transform.padding.x);
-			memcpy(transformMap.region.ptr + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
+			memcpy(transformMap.region + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
 			transformObjects = transformIdx;
 			++ transformIdx;
 		}
@@ -556,7 +479,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 				index.value = cmd->value;
 				index.opacity = cmd->opacity;
 
-				memcpy(reinterpret_cast<Circle2DIndex *>(circlesMap.region.ptr) + circleOffset, &index, sizeof(Circle2DIndex));
+				memcpy(reinterpret_cast<Circle2DIndex *>(circlesMap.region) + circleOffset, &index, sizeof(Circle2DIndex));
 
 				++ circleOffset;
 				++ vertexOffset;
@@ -574,7 +497,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 				index.value = cmd->value;
 				index.opacity = cmd->opacity;
 
-				memcpy(reinterpret_cast<Rect2DIndex *>(rectsMap.region.ptr) + rectOffset, &index, sizeof(Rect2DIndex));
+				memcpy(reinterpret_cast<Rect2DIndex *>(rectsMap.region) + rectOffset, &index, sizeof(Rect2DIndex));
 
 				++ rectOffset;
 				++ vertexOffset;
@@ -593,7 +516,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 				index.value = cmd->value;
 				index.opacity = cmd->opacity;
 
-				memcpy(reinterpret_cast<RoundedRect2DIndex *>(roundedRectsMap.region.ptr) + roundedRectOffset, &index, sizeof(RoundedRect2DIndex));
+				memcpy(reinterpret_cast<RoundedRect2DIndex *>(roundedRectsMap.region) + roundedRectOffset, &index, sizeof(RoundedRect2DIndex));
 
 				++ roundedRectOffset;
 				vertexOffset += 2;
@@ -618,7 +541,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 					cmd->opacity
 				});
 
-				memcpy(reinterpret_cast<Triangle2DIndex *>(indexesMap.region.ptr) + indexOffset, &triangle, sizeof(Triangle2DIndex));
+				memcpy(reinterpret_cast<Triangle2DIndex *>(indexesMap.region) + indexOffset, &triangle, sizeof(Triangle2DIndex));
 
 				++ indexOffset;
 				vertexOffset += 3;
@@ -640,7 +563,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 					cmd->opacity
 				});
 
-				memcpy(reinterpret_cast<Polygon2DIndex *>(polygonsMap.region.ptr) + polygonsOffset, &polygon, sizeof(Polygon2DIndex));
+				memcpy(reinterpret_cast<Polygon2DIndex *>(polygonsMap.region) + polygonsOffset, &polygon, sizeof(Polygon2DIndex));
 
 				vertexOffset += data->points.size();
 				++ polygonsOffset;
@@ -663,6 +586,14 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 	_roundedRectsCount = plan.roundedRects;
 	_polygonsCount = plan.polygons;
 
+	addBufferView(_indexes);
+	addBufferView(_vertexes);
+	addBufferView(_transforms);
+	addBufferView(_circles);
+	addBufferView(_rects);
+	addBufferView(_roundedRects);
+	addBufferView(_polygons);
+
 	return true;
 }
 
@@ -677,44 +608,10 @@ void ShadowPrimitivesAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFram
 			data.gridWidth * data.gridHeight * sizeof(uint32_t)));
 	_gridIndex = pool->spawn(AllocationUsage::DeviceLocal, BufferInfo(core::BufferUsage::StorageBuffer,
 			std::max(uint32_t(1), data.objectsCount) * data.gridWidth * data.gridHeight * sizeof(uint32_t)));
-}
 
-bool ShadowPrimitivesAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-		uint32_t idx, bool isExternal) const {
-	switch (idx) {
-	case 0: return _objects; break;
-	case 1: return _gridSize; break;
-	case 2: return _gridIndex; break;
-	default:
-		break;
-	}
-	return false;
-}
-
-bool ShadowPrimitivesAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
-	switch (info.index) {
-	case 0:
-		info.buffer = _objects;
-		info.offset = 0;
-		info.range = _objects->getSize();
-		return true;
-		break;
-	case 1:
-		info.buffer = _gridSize;
-		info.offset = 0;
-		info.range = _gridSize->getSize();
-		return true;
-		break;
-	case 2:
-		info.buffer = _gridIndex;
-		info.offset = 0;
-		info.range = _gridIndex->getSize();
-		return true;
-		break;
-	default:
-		break;
-	}
-	return false;
+	addBufferView(_objects);
+	addBufferView(_gridSize);
+	addBufferView(_gridIndex);
 }
 
 

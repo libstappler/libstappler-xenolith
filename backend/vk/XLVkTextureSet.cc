@@ -23,7 +23,6 @@ THE SOFTWARE.
 
 #include "XLVkTextureSet.h"
 #include "XLVkLoop.h"
-#include "XLVkBuffer.h"
 #include <forward_list>
 
 namespace stappler::xenolith::vk {
@@ -213,7 +212,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 		Device *device;
 		AttachmentLayout layout;
 
-		Rc<DeviceBuffer> transferBuffer;
+		Rc<Buffer> transferBuffer;
 		Rc<CommandPool> pool;
 		Rc<DeviceQueue> queue;
 		Rc<Fence> fence;
@@ -247,9 +246,9 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 			task->fence->addRelease([task, refId] (bool) {
 				task->device->releaseCommandPool(*task->loop, move(task->pool));
 
-				auto region = task->transferBuffer->map(0, task->transferBuffer->getSize(), true);
-				task->callback(task->image->getInfo(), BytesView(region.ptr, region.size));
-				task->transferBuffer->unmap(region);
+				task->transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+					task->callback(task->image->getInfo(), BytesView(buf, size));
+				});
 
 				task->release(refId);
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
@@ -318,7 +317,7 @@ void TextureSetLayout::writeImageTransfer(Device &dev, CommandBuffer &buf, uint3
 }
 
 void TextureSetLayout::writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &image,
-		AttachmentLayout layout, const Rc<DeviceBuffer> &target) {
+		AttachmentLayout layout, const Rc<Buffer> &target) {
 	auto inImageBarrier = ImageMemoryBarrier(image,
 		VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
 		VkImageLayout(layout), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -380,7 +379,7 @@ bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
 
 	_layout = &layout;
 	_partiallyBound = layout.isPartiallyBound();
-	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyDescriptorPool(d->getDevice(), (VkDescriptorPool)ptr.get(), nullptr);
 	}, core::ObjectType::DescriptorPool, ObjectHandle(_pool));

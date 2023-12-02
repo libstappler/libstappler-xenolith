@@ -27,6 +27,22 @@ THE SOFTWARE.
 
 namespace stappler::xenolith::vk {
 
+static BytesView Shader_emplaceConstant(Bytes &data, BytesView constant) {
+	auto originalSize = data.size();
+	auto constantSize = constant.size();
+	data.resize(originalSize + constantSize);
+	memcpy(data.data() + originalSize, constant.data(), constantSize);
+	return BytesView(data.data() + originalSize, constantSize);
+}
+
+static BytesView Shader_emplaceConstant(Bytes &data, float constant) {
+	return Shader_emplaceConstant(data, BytesView((const uint8_t *)&constant, sizeof(float)));
+}
+
+static BytesView Shader_emplaceConstant(Bytes &data, int constant) {
+	return Shader_emplaceConstant(data, BytesView((const uint8_t *)&constant, sizeof(int)));
+}
+
 bool Shader::init(Device &dev, const ProgramData &data) {
 	_stage = data.stage;
 	_name = data.key.str<Interface>();
@@ -52,7 +68,7 @@ bool Shader::setup(Device &dev, const ProgramData &programData, SpanView<uint32_
 	createInfo.pCode = data.data();
 
 	if (dev.getTable()->vkCreateShaderModule(dev.getDevice(), &createInfo, nullptr, &_shaderModule) == VK_SUCCESS) {
-		return core::Shader::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::Shader::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyShaderModule(d->getDevice(), (VkShaderModule)ptr.get(), nullptr);
 		}, core::ObjectType::ShaderModule, ObjectHandle(_shaderModule));
@@ -76,7 +92,7 @@ bool GraphicPipeline::comparePipelineOrdering(const PipelineInfo &l, const Pipel
 	}
 }
 
-bool GraphicPipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const RenderQueue &queue) {
+bool GraphicPipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const Queue &queue) {
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{}; sanitizeVkStruct(vertexInputInfo);
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.pNext = nullptr;
@@ -240,8 +256,22 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 				VkSpecializationMapEntry &entry = spec.entries.emplace_back();
 				entry.constantID = idx;
 				entry.offset = spec.data.size();
-				auto data = dev.emplaceConstant(it, spec.data);
-				entry.size = data.size();
+
+				BytesView data;
+				switch (it.type) {
+				case core::SpecializationConstant::Int:
+					data = Shader_emplaceConstant(spec.data, it.intValue);
+					entry.size = data.size();
+					break;
+				case core::SpecializationConstant::Float:
+					data = Shader_emplaceConstant(spec.data, it.floatValue);
+					entry.size = data.size();
+					break;
+				case core::SpecializationConstant::Predefined:
+					data = dev.emplaceConstant(it.predefinedValue, spec.data);
+					entry.size = data.size();
+					break;
+				}
 				++ idx;
 			}
 
@@ -347,7 +377,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 
 	if (dev.getTable()->vkCreateGraphicsPipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
-		return core::GraphicPipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::GraphicPipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyPipeline(d->getDevice(), (VkPipeline)ptr.get(), nullptr);
 		}, core::ObjectType::Pipeline, ObjectHandle(_pipeline));
@@ -355,7 +385,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	return false;
 }
 
-bool ComputePipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const RenderQueue &) {
+bool ComputePipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const Queue &) {
 	VkComputePipelineCreateInfo pipelineInfo;
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
@@ -404,8 +434,22 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 			VkSpecializationMapEntry &entry = spec.entries.emplace_back();
 			entry.constantID = idx;
 			entry.offset = spec.data.size();
-			auto data = dev.emplaceConstant(it, spec.data);
-			entry.size = data.size();
+
+			BytesView data;
+			switch (it.type) {
+			case core::SpecializationConstant::Int:
+				data = Shader_emplaceConstant(spec.data, it.intValue);
+				entry.size = data.size();
+				break;
+			case core::SpecializationConstant::Float:
+				data = Shader_emplaceConstant(spec.data, it.floatValue);
+				entry.size = data.size();
+				break;
+			case core::SpecializationConstant::Predefined:
+				data = dev.emplaceConstant(it.predefinedValue, spec.data);
+				entry.size = data.size();
+				break;
+			}
 			++ idx;
 		}
 
@@ -420,7 +464,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 
 	if (dev.getTable()->vkCreateComputePipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
-		return core::ComputePipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::ComputePipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyPipeline(d->getDevice(), (VkPipeline)ptr.get(), nullptr);
 		}, core::ObjectType::Pipeline, ObjectHandle(_pipeline));

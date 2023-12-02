@@ -23,6 +23,7 @@
 #include "XLCoreAttachment.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameHandle.h"
+#include "XLCoreDevice.h"
 
 namespace stappler::xenolith::core {
 
@@ -90,6 +91,14 @@ void Attachment::setInputCallback(Function<void(FrameQueue &, const Rc<Attachmen
 	_inputCallback = move(input);
 }
 
+void Attachment::setValidateInputCallback(ValidateInputCallback &&cb) {
+	_validateInputCallback = move(cb);
+}
+
+void Attachment::setFrameHandleCallback(FrameHandleCallback &&cb) {
+	_frameHandleCallback = move(cb);
+}
+
 void Attachment::acquireInput(FrameQueue &frame, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
 	if (_inputCallback) {
 		_inputCallback(frame, a, move(cb));
@@ -99,13 +108,17 @@ void Attachment::acquireInput(FrameQueue &frame, const Rc<AttachmentHandle> &a, 
 	}
 }
 
-bool Attachment::validateInput(const Rc<AttachmentInputData> &) const {
+bool Attachment::validateInput(const Rc<AttachmentInputData> &data) const {
+	if (_validateInputCallback) {
+		return _validateInputCallback(*this, data);
+	}
 	return true;
 }
 
-void Attachment::sortDescriptors(Queue &queue, Device &dev) { }
-
-Rc<AttachmentHandle> Attachment::makeFrameHandle(const FrameQueue &) {
+Rc<AttachmentHandle> Attachment::makeFrameHandle(const FrameQueue &queue) {
+	if (_frameHandleCallback) {
+		return _frameHandleCallback(*this, queue);
+	}
 	return nullptr;
 }
 
@@ -161,6 +174,10 @@ const QueuePassData *Attachment::getPrevRenderPass(const PassData *pass) const {
 	return _data->passes.at(idx - 1)->pass;
 }
 
+void Attachment::setCompiled(Device &dev) {
+
+}
+
 bool BufferAttachment::init(AttachmentBuilder &builder, const BufferInfo &info) {
 	_info = info;
 	builder.setType(AttachmentType::Buffer);
@@ -171,14 +188,61 @@ bool BufferAttachment::init(AttachmentBuilder &builder, const BufferInfo &info) 
 	return false;
 }
 
+bool BufferAttachment::init(AttachmentBuilder &builder, const BufferData *data) {
+	_info = *data;
+	builder.setType(AttachmentType::Buffer);
+	if (Attachment::init(builder)) {
+		_staticBuffers.emplace_back(data);
+		_info.key = _data->key;
+		return true;
+	}
+	return false;
+}
+
+bool BufferAttachment::init(AttachmentBuilder &builder, Vector<const BufferData *> &&buffers) {
+	_info = *buffers.front();
+	builder.setType(AttachmentType::Buffer);
+	if (Attachment::init(builder)) {
+		_staticBuffers = move(buffers);
+		_info.key = _data->key;
+		return true;
+	}
+	return false;
+}
+
 void BufferAttachment::clear() {
 	Attachment::clear();
+}
+
+Vector<BufferObject *> BufferAttachment::getStaticBuffers() const {
+	Vector<BufferObject *> ret; ret.reserve(_staticBuffers.size());
+	for (auto &it : _staticBuffers) {
+		if (it->buffer) {
+			ret.emplace_back(it->buffer);
+		}
+	}
+	return ret;
 }
 
 bool ImageAttachment::init(AttachmentBuilder &builder, const ImageInfo &info, AttachmentInfo &&a) {
 	builder.setType(AttachmentType::Image);
 	if (Attachment::init(builder)) {
 		_imageInfo = info;
+		_attachmentInfo = move(a);
+		_imageInfo.key = _data->key;
+		return true;
+	}
+	return false;
+}
+
+bool ImageAttachment::init(AttachmentBuilder &builder, const ImageData *data, AttachmentInfo &&a) {
+	builder.setType(AttachmentType::Image);
+	if (Attachment::init(builder)) {
+		_imageInfo = *data; // copy info
+		if ((_imageInfo.hints & ImageHints::Static) != ImageHints::Static) {
+			log::error("ImageAttachment", "Image ", data->key, " is not defined as ImageHint::Static to be used as static image attachment");
+		}
+		_staticImage = data;
 		_attachmentInfo = move(a);
 		_imageInfo.key = _data->key;
 		return true;
@@ -237,13 +301,29 @@ Vector<ImageViewInfo> ImageAttachment::getImageViews(const ImageInfoData &info) 
 	return ret;
 }
 
+void ImageAttachment::setCompiled(Device &dev) {
+	Attachment::setCompiled(dev);
+
+	if (!isStatic()) {
+		return;
+	}
+
+	auto views = getImageViews(getImageInfo());
+
+	_staticImageStorage = Rc<ImageStorage>::create(getStaticImage());
+
+	for (auto &info : views) {
+		auto v = _staticImageStorage->getView(info);
+		if (!v) {
+			auto v = dev.makeImageView(_staticImageStorage->getImage(), info);
+			_staticImageStorage->addView(info, move(v));
+		}
+	}
+}
+
 bool GenericAttachment::init(AttachmentBuilder &builder) {
 	builder.setType(AttachmentType::Generic);
 	return Attachment::init(builder);
-}
-
-Rc<AttachmentHandle> GenericAttachment::makeFrameHandle(const FrameQueue &h) {
-	return Rc<AttachmentHandle>::create(this, h);
 }
 
 bool AttachmentHandle::init(const Rc<Attachment> &attachment, const FrameQueue &frame) {
@@ -251,8 +331,16 @@ bool AttachmentHandle::init(const Rc<Attachment> &attachment, const FrameQueue &
 	return true;
 }
 
+bool AttachmentHandle::init(Attachment &attachment, const FrameQueue &frame) {
+	return init(&attachment, frame);
+}
+
 void AttachmentHandle::setQueueData(FrameAttachmentData &data) {
 	_queueData = &data;
+}
+
+void AttachmentHandle::setInputCallback(InputCallback &&cb) {
+	_inputCallback = move(cb);
 }
 
 // returns true for immediate setup, false if seyup job was scheduled
@@ -265,11 +353,24 @@ void AttachmentHandle::finalize(FrameQueue &, bool successful) {
 }
 
 void AttachmentHandle::submitInput(FrameQueue &q, Rc<AttachmentInputData> &&data, Function<void(bool)> &&cb) {
-	if (data->waitDependencies.empty()) {
-		cb(true);
+	_input = move(data);
+
+	if (_input->waitDependencies.empty()) {
+		auto ret = true;
+		if (_inputCallback) {
+			_inputCallback(*this, q, _input, move(cb));
+		} else {
+			cb(ret);
+		}
 	} else {
-		q.getFrame()->waitForDependencies(data->waitDependencies, [cb = move(cb)] (FrameHandle &, bool success) {
-			cb(success);
+		q.getFrame()->waitForDependencies(_input->waitDependencies, [this, cb = move(cb), q = Rc<FrameQueue>(&q)] (FrameHandle &, bool success) mutable {
+			if (!success) {
+				cb(success);
+			} else if (_inputCallback) {
+				_inputCallback(*this, *q, _input, move(cb));
+			} else {
+				cb(success);
+			}
 		});
 	}
 }

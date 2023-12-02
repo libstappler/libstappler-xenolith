@@ -82,41 +82,6 @@ void VertexAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInput
 	});
 }
 
-bool VertexAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-		uint32_t idx, bool isExternal) const {
-	switch (idx) {
-	case 0:
-		return _vertexes;
-		break;
-	case 1:
-		return _transforms;
-		break;
-	default:
-		break;
-	}
-	return false;
-}
-
-bool VertexAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
-	switch (info.index) {
-	case 0:
-		info.buffer = _vertexes;
-		info.offset = 0;
-		info.range = _vertexes->getSize();
-		return true;
-		break;
-	case 1:
-		info.buffer = _transforms;
-		info.offset = 0;
-		info.range = _transforms->getSize();
-		return true;
-		break;
-	default:
-		break;
-	}
-	return false;
-}
-
 bool VertexAttachmentHandle::empty() const {
 	return !_indexes || !_vertexes || !_transforms;
 }
@@ -619,36 +584,32 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 		return false;
 	}
 
-	DeviceBuffer::MappedRegion vertexesMap, indexesMap, transformMap;
-
 	Bytes vertexData, indexData, transformData;
 
-	if (fhandle.isPersistentMapping()) {
-		vertexesMap = _vertexes->map();
-		indexesMap = _indexes->map();
-		transformMap = _transforms->map();
+	VertexMaterialDrawPlan::WriteTarget writeTarget;
 
-		memset(vertexesMap.ptr, 0, sizeof(Vertex) * 1024);
-		memset(indexesMap.ptr, 0, sizeof(uint32_t) * 1024);
+	if (fhandle.isPersistentMapping()) {
+		writeTarget.vertexes = _vertexes->getPersistentMappedRegion();
+		writeTarget.indexes = _indexes->getPersistentMappedRegion();
+		writeTarget.transform = _transforms->getPersistentMappedRegion();
 	} else {
 		vertexData.resize(_vertexes->getSize());
 		indexData.resize(_indexes->getSize());
 		transformData.resize(_transforms->getSize());
 
-		vertexesMap.ptr = vertexData.data(); vertexesMap.size = vertexData.size();
-		indexesMap.ptr = indexData.data(); indexesMap.size = indexData.size();
-		transformMap.ptr = transformData.data(); transformMap.size = transformData.size();
+		writeTarget.vertexes = vertexData.data();
+		writeTarget.indexes = indexData.data();
+		writeTarget.transform = transformData.data();
 	}
 
-	VertexMaterialDrawPlan::WriteTarget writeTarget{transformMap.ptr, vertexesMap.ptr, indexesMap.ptr};
 
 	// write initial full screen quad
 	plan.pushAll(_spans, writeTarget);
 
-	if (fhandle.isPersistentMapping()) {
-		_vertexes->unmap(vertexesMap, true);
-		_indexes->unmap(indexesMap, true);
-		_transforms->unmap(transformMap, true);
+	if (!fhandle.isPersistentMapping()) {
+		_vertexes->flushMappedRegion();
+		_indexes->flushMappedRegion();
+		_transforms->flushMappedRegion();
 	} else {
 		_vertexes->setData(vertexData);
 		_indexes->setData(indexData);
@@ -666,6 +627,9 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	_drawStat.vertexInputTime = platform::clock() - t;
 
 	commands->director->pushDrawStat(_drawStat);
+
+	addBufferView(_vertexes);
+	addBufferView(_transforms);
 
 	_commands = commands;
 	return true;

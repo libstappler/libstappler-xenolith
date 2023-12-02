@@ -1024,6 +1024,11 @@ bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	}
 
 	NodeFlags flags = processParentFlags(info, parentFlags);
+
+	if (!_running || !_visible) {
+		return false;
+	}
+
 	auto order = getLocalZOrder();
 
 	info.modelTransformStack.push_back(_modelViewTransform);
@@ -1031,7 +1036,8 @@ bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 		info.zPath.push_back(order);
 	}
 
-	for (auto &it : _children) {
+	auto c = _children;
+	for (auto &it : c) {
 		it->visitGeometry(info, flags);
 	}
 
@@ -1059,6 +1065,11 @@ bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	}
 
 	NodeFlags flags = processParentFlags(info, parentFlags);
+
+	if (!_running || !_visible) {
+		return false;
+	}
+
 	auto order = getLocalZOrder();
 
 	bool visibleByCamera = true;
@@ -1084,9 +1095,12 @@ bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 	if (!_children.empty()) {
 		sortAllChildren();
+
+		auto c = _children;
+
 		// draw children zOrder < 0
-		for (; i < _children.size(); i++) {
-			auto node = _children.at(i);
+		for (; i < c.size(); i++) {
+			auto node = c.at(i);
 
 			if (node && node->_zOrder < ZOrder(0))
 				node->visitDraw(info, flags);
@@ -1096,7 +1110,7 @@ bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 		visitSelf(info, flags, visibleByCamera);
 
-		for (auto it = _children.cbegin() + i; it != _children.cend(); ++it) {
+		for (auto it = c.cbegin() + i; it != c.cend(); ++it) {
 			(*it)->visitDraw(info, flags);
 		}
 	} else {

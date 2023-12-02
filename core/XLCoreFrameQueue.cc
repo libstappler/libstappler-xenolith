@@ -103,8 +103,12 @@ bool FrameQueue::setup() {
 			}
 		}
 
-		auto &last = it.first->passes.back();
-		it.second.final = last->dependency.requiredRenderPassState;
+		if (!it.first->passes.empty()) {
+			auto &last = it.first->passes.back();
+			it.second.final = last->dependency.requiredRenderPassState;
+		} else {
+			log::error("FrameQueue", "Attachment ", it.first->key, " not attached to any pass");
+		}
 	}
 
 	for (auto &passIt : _renderPasses) {
@@ -388,7 +392,12 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 	if (attachment.handle->getAttachment()->getData()->type == AttachmentType::Image) {
 		auto img = static_cast<ImageAttachment *>(attachment.handle->getAttachment().get());
 
-		attachment.image = _frame->getRenderTarget(attachment.handle->getAttachment());
+		if (img->isStatic()) {
+			attachment.image = img->getStaticImageStorage();
+		} else {
+			attachment.image = _frame->getRenderTarget(attachment.handle->getAttachment());
+		}
+
 		if (!attachment.image && attachment.handle->isAvailable(*this)) {
 			if (auto spec = _frame->getImageSpecialization(img)) {
 				attachment.info = *spec;
@@ -400,6 +409,10 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 			}
 
 			attachment.image->setFrameIndex(_frame->getOrder());
+		}
+
+		if (attachment.image) {
+			attachment.info = attachment.image->getInfo();
 
 			_autorelease.emplace_front(attachment.image);
 			if (attachment.image->getSignalSem()) {
@@ -408,10 +421,6 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 			if (attachment.image->getWaitSem()) {
 				_autorelease.emplace_front(attachment.image->getWaitSem());
 			}
-		}
-
-		if (attachment.image) {
-			attachment.info = attachment.image->getInfo();
 		}
 
 		if (isResourcePending(attachment)) {
@@ -595,6 +604,9 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 		return;
 	}
 
+	// fill required imageViews for framebuffer
+	// only images, that attached to subpasses, merged into framebuffer
+	// all framebuffer images must have same extent
 	Vector<Rc<ImageView>> imageViews;
 	bool attachmentsAcquired = true;
 	bool _invalidate = false;

@@ -32,12 +32,12 @@ namespace stappler::xenolith::vk {
 
 Semaphore::~Semaphore() { }
 
-static void Semaphore_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr) {
+static void Semaphore_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
 	auto d = ((Device *)dev);
 	d->getTable()->vkDestroySemaphore(d->getDevice(), (VkSemaphore)ptr.get(), nullptr);
 }
 
-static void Fence_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr) {
+static void Fence_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
 	auto d = ((Device *)dev);
 	d->getTable()->vkDestroyFence(d->getDevice(), (VkFence)ptr.get(), nullptr);
 }

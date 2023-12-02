@@ -1,0 +1,26 @@
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+precision highp float;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set=0, binding=0, rgba8) readonly uniform mediump image2D uInput;
+layout(set=0, binding=1, rgba32f) writeonly uniform mediump image3D uOutput;
+
+struct NormData {
+	vec4 mean;
+	vec4 norm;
+};
+
+layout (push_constant) uniform pcb {
+	NormData normData;
+};
+
+void main() {
+	ivec3 pos = ivec3(gl_GlobalInvocationID.xyz);
+	ivec3 outSize = imageSize(uOutput);
+	if (all(lessThan(pos, outSize))) {
+		imageStore(uOutput, pos, (imageLoad(uInput, pos.xy) + normData.mean) * normData.norm);
+    }
+}

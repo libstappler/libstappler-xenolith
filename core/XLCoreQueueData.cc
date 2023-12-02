@@ -144,10 +144,10 @@ void ProgramData::inspect(SpanView<uint32_t> data) {
 	spvReflectDestroyShaderModule(&shader);
 }
 
-SpecializationInfo::SpecializationInfo(const ProgramData *data) : data(data) { }
+SpecializationInfo::SpecializationInfo(const ProgramData *d) : data(d) { }
 
-SpecializationInfo::SpecializationInfo(const ProgramData *data, SpanView<PredefinedConstant> c)
-: data(data), constants(c.vec<memory::PoolInterface>()) { }
+SpecializationInfo::SpecializationInfo(const ProgramData *d, SpanView<SpecializationConstant> c)
+: data(d), constants(c.vec<memory::PoolInterface>()) { }
 
 bool GraphicPipelineInfo::isSolid() const {
 	if (material.getDepthInfo().writeEnabled || !material.getBlendInfo().enabled) {

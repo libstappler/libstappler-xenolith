@@ -54,9 +54,13 @@ public:
 	virtual float getMenuWidth(Node *root);
 	virtual float getMenuHeight(Node *root, float width);
 
+	virtual void setReady(bool);
+	virtual bool isReady() const;
+
 protected:
 	virtual void onCapturedTap();
 
+	bool _ready = false;
 	Menu *_root = nullptr;
 	CloseCallback _closeCallback = nullptr;
 };

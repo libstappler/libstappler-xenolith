@@ -142,7 +142,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		_surface = surface;
 		_surfaceInfo = info;
 
-		return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG

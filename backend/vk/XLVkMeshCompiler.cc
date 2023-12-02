@@ -23,7 +23,6 @@
 #include "XLVkMeshCompiler.h"
 
 #include "XLCoreMesh.h"
-#include "XLVkBuffer.h"
 #include "XLVkAllocator.h"
 #include "XLVkTransferQueue.h"
 #include "XLCoreFrameRequest.h"
@@ -348,19 +347,16 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 	auto vertexBuffer = allocator->spawnPersistent(AllocationUsage::DeviceLocal, vertexBufferInfo);
 	auto indexBuffer = allocator->spawnPersistent(AllocationUsage::DeviceLocal, indexBufferInfo);
 
-	auto loadBuffer = [] (const core::BufferData *bufferData, DeviceBuffer *buf) {
+	auto loadBuffer = [] (const core::BufferData *bufferData, Buffer *buf) {
 		if (!bufferData->data.empty()) {
 			buf->setData(bufferData->data);
 		} else if (bufferData->callback) {
-			auto region = buf->map(VkDeviceSize(0), maxOf<VkDeviceSize>(), false);
-			bufferData->callback(region.ptr, region.size, [&] (BytesView data) {
-				buf->unmap(region, false);
-				region.ptr = nullptr;
-				buf->setData(data);
+			buf->map([&] (uint8_t *ptr, VkDeviceSize size) {
+				bufferData->callback(ptr, size, [&] (BytesView data) {
+					// TODO fix this logic
+					buf->setData(data);
+				});
 			});
-			if (region.ptr) {
-				buf->unmap(region, true);
-			}
 		}
 		return buf;
 	};

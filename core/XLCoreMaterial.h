@@ -174,8 +174,6 @@ public:
 	virtual Rc<MaterialSet> allocateSet(const Device &) const;
 	virtual Rc<MaterialSet> cloneSet(const Rc<MaterialSet> &) const;
 
-	virtual void sortDescriptors(RenderQueue &queue, Device &dev) override;
-
 	virtual void addDynamicTracker(MaterialId, const Rc<DynamicImage> &) const;
 	virtual void removeDynamicTracker(MaterialId, const Rc<DynamicImage> &) const;
 

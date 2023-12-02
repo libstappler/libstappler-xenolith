@@ -1,0 +1,67 @@
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+precision highp float;
+
+layout(local_size_x = WG_X, local_size_y = WG_Y, local_size_z = WG_Z) in;
+
+layout(set=0, binding=0, rgba32f) writeonly uniform highp image3D uOutput;
+
+struct NoiseData {
+	uvec3 seed;
+	uint hashMax;
+	float limitsMin;
+	float limitsMax;
+};
+
+layout (push_constant) uniform pcb {
+	NoiseData noiseData;
+};
+
+uvec3 pcg3d(uvec3 v) {
+    v = v * 1664525u + 1013904223u;
+
+    v.x += v.y*v.z;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+
+    v ^= v >> 16u;
+
+    v.x += v.y*v.z;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+
+    return v;
+}
+
+uvec4 pcg4d(uvec4 v) {
+    v = v * 1664525u + 1013904223u;
+    
+    v.x += v.y*v.w;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+    v.w += v.y*v.z;
+    
+    v ^= v >> 16u;
+    
+    v.x += v.y*v.w;
+    v.y += v.z*v.x;
+    v.z += v.x*v.y;
+    v.w += v.y*v.z;
+    
+    return v;
+}
+
+uvec4 hash(uvec3 v) {
+	return pcg4d(uvec4(v, (v.x + v.y) ^ v.z));
+}
+
+vec4 toFloat(uvec4 v) {
+	return noiseData.limitsMin + (vec4(v % noiseData.hashMax) / float(noiseData.hashMax)) * (noiseData.limitsMax - noiseData.limitsMin);
+}
+
+void main() {
+	uvec3 pos = gl_GlobalInvocationID;
+	uvec4 hash = hash(pos + noiseData.seed);
+	imageStore(uOutput, ivec3(gl_GlobalInvocationID), toFloat(hash));
+}

@@ -54,7 +54,14 @@ PassType QueuePass::getType() const {
 }
 
 Rc<QueuePassHandle> QueuePass::makeFrameHandle(const FrameQueue &handle) {
+	if (_frameHandleCallback) {
+		return _frameHandleCallback(*this, handle);
+	}
 	return Rc<QueuePassHandle>::create(*this, handle);
+}
+
+void QueuePass::setFrameHandleCallback(FrameHandleCallback &&cb) {
+	_frameHandleCallback = move(cb);
 }
 
 bool QueuePass::acquireForFrame(FrameQueue &frame, Function<void(bool)> &&onAcquired) {
@@ -108,6 +115,10 @@ bool QueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
 
 void QueuePassHandle::setQueueData(FramePassData &data) {
 	_queueData = &data;
+}
+
+const FramePassData *QueuePassHandle::getQueueData() const {
+	return _queueData;
 }
 
 StringView QueuePassHandle::getName() const {

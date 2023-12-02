@@ -24,7 +24,6 @@
 #include "XLVkQueuePass.h"
 
 #include "XLVkAllocator.h"
-#include "XLVkBuffer.h"
 #include "XLVkAttachment.h"
 #include "XLVkDevice.h"
 #include "XLVkDeviceQueue.h"
@@ -58,10 +57,6 @@ bool QueuePass::init(QueuePassBuilder &passBuilder) {
 }
 
 void QueuePass::invalidate() { }
-
-auto QueuePass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHandle> {
-	return Rc<QueuePassHandle>::create(*this, handle);
-}
 
 VkRect2D QueuePassHandle::rotateScissor(const core::FrameContraints &constraints, const URect &scissor) {
 	VkRect2D scissorRect{
@@ -355,20 +350,186 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), bufferInfo.size));
 	ret.targetBuffer = pool->spawnPersistent(AllocationUsage::DeviceLocal, bufferInfo);
 
-	auto mapped = ret.stagingBuffer->map();
+	ret.stagingBuffer->map([&] (uint8_t *mapped, VkDeviceSize) {
+		uint32_t idx = 0;
+		ret.ordering.reserve(data->getMaterials().size());
 
-	uint32_t idx = 0;
-	ret.ordering.reserve(data->getMaterials().size());
+		uint8_t *target = mapped;
+		for (auto &it : data->getMaterials()) {
+			data->encode(target, it.second.get());
+	 		target += data->getObjectSize();
+	 		ret.ordering.emplace(it.first, idx);
+	 		++ idx;
+		}
+	});
+	return ret;
+}
 
-	uint8_t *target = mapped.ptr;
-	for (auto &it : data->getMaterials()) {
-		data->encode(target, it.second.get());
- 		target += data->getObjectSize();
- 		ret.ordering.emplace(it.first, idx);
- 		++ idx;
+QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBarrier(Device *dev, Image *image, ImageAttachmentHandle &handle) const {
+	ImageInputOutputBarrier ret;
+
+	auto attachmentData = handle.getAttachment()->getData();
+	auto passData = _queuePass->getData();
+
+	size_t passIdx = 0;
+	core::AttachmentPassData *prev = nullptr;
+	core::AttachmentPassData *current = nullptr;
+	core::AttachmentPassData *next = nullptr;
+
+	for (auto &it : attachmentData->passes) {
+		if (it->pass == passData) {
+			current = it;
+			break;
+		}
+		++ passIdx;
 	}
 
-	ret.stagingBuffer->unmap(mapped);
+	if (passIdx > 0) {
+		prev = attachmentData->passes[passIdx - 1];
+	}
+	if (passIdx + 1 < attachmentData->passes.size()) {
+		next = attachmentData->passes[passIdx + 1];
+	}
+
+	if (prev) {
+		bool hasLayoutTransition = current->initialLayout != prev->finalLayout && current->initialLayout != core::AttachmentLayout::Ignored;
+		bool hasReadWriteTransition = false;
+		if (core::hasReadAccess(current->dependency.initialAccessMask) && core::hasWriteAccess(prev->dependency.finalAccessMask)) {
+			hasReadWriteTransition = true;
+		}
+
+		bool hasOwnershipTransfer = false;
+		if (current->pass->type != prev->pass->type) {
+			auto prevQueue = dev->getQueueFamily(prev->pass->type);
+			auto currentQueue = dev->getQueueFamily(current->pass->type);
+			if (prevQueue != currentQueue) {
+				hasOwnershipTransfer = true;
+				ret.input.familyTransfer = QueueFamilyTransfer{prevQueue->index, currentQueue->index};
+			}
+		}
+
+		if (hasOwnershipTransfer || hasLayoutTransition || hasReadWriteTransition) {
+			ret.input.image = image;
+			ret.input.oldLayout = VkImageLayout(prev->finalLayout);
+			ret.input.newLayout = VkImageLayout(current->initialLayout);
+			ret.input.srcAccessMask = VkAccessFlags(prev->dependency.finalAccessMask);
+			ret.input.dstAccessMask = VkAccessFlags(current->dependency.initialAccessMask);
+			ret.input.subresourceRange = VkImageSubresourceRange{
+				image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
+			};
+			ret.inputFrom = prev->dependency.finalUsageStage;
+			ret.inputTo = current->dependency.initialUsageStage;
+		}
+	} else {
+		// initial image transition
+		if (current->initialLayout != core::AttachmentLayout::Undefined) {
+			ret.input.image = image;
+			ret.input.oldLayout = VkImageLayout(core::AttachmentLayout::Undefined);
+			ret.input.newLayout = VkImageLayout(current->initialLayout);
+			ret.input.srcAccessMask = 0;
+			ret.input.dstAccessMask = VkAccessFlags(current->dependency.initialAccessMask);
+			ret.input.subresourceRange = VkImageSubresourceRange{
+				image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
+			};
+			ret.inputFrom = core::PipelineStage::AllCommands;
+			ret.inputTo = current->dependency.initialUsageStage;
+		}
+	}
+
+	if (next) {
+		if (current->pass->type != next->pass->type) {
+			auto nextQueue = dev->getQueueFamily(next->pass->type);
+			auto currentQueue = dev->getQueueFamily(current->pass->type);
+			if (nextQueue != currentQueue) {
+				ret.output.familyTransfer = QueueFamilyTransfer{currentQueue->index, nextQueue->index};
+				ret.output.image = image;
+				ret.output.oldLayout = VkImageLayout(current->finalLayout);
+				ret.output.newLayout = VkImageLayout(next->initialLayout);
+				ret.output.srcAccessMask = VkAccessFlags(current->dependency.finalAccessMask);
+				ret.output.dstAccessMask = VkAccessFlags(next->dependency.initialAccessMask);
+				ret.output.subresourceRange = VkImageSubresourceRange{
+					image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
+				};
+				ret.outputFrom = current->dependency.finalUsageStage;
+				ret.outputTo = next->dependency.initialUsageStage;
+			}
+		}
+	}
+
+	return ret;
+}
+
+QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputBarrier(Device *dev, Buffer *buffer, BufferAttachmentHandle &handle,
+		VkDeviceSize offset, VkDeviceSize size) const {
+	BufferInputOutputBarrier ret;
+
+	auto attachmentData = handle.getAttachment()->getData();
+	auto passData = _queuePass->getData();
+
+	size_t passIdx = 0;
+	core::AttachmentPassData *prev = nullptr;
+	core::AttachmentPassData *current = nullptr;
+	core::AttachmentPassData *next = nullptr;
+
+	for (auto &it : attachmentData->passes) {
+		if (it->pass == passData) {
+			current = it;
+			break;
+		}
+		++ passIdx;
+	}
+
+	if (passIdx > 0) {
+		prev = attachmentData->passes[passIdx - 1];
+	}
+	if (passIdx + 1 < attachmentData->passes.size()) {
+		next = attachmentData->passes[passIdx - 1];
+	}
+
+	if (prev) {
+		bool hasReadWriteTransition = false;
+		if (core::hasReadAccess(current->dependency.initialAccessMask) && core::hasWriteAccess(prev->dependency.finalAccessMask)) {
+			hasReadWriteTransition = true;
+		}
+
+		bool hasOwnershipTransfer = false;
+		if (current->pass->type != prev->pass->type) {
+			auto prevQueue = dev->getQueueFamily(prev->pass->type);
+			auto currentQueue = dev->getQueueFamily(current->pass->type);
+			if (prevQueue != currentQueue) {
+				hasOwnershipTransfer = true;
+				ret.input.familyTransfer = QueueFamilyTransfer{prevQueue->index, currentQueue->index};
+			}
+		}
+
+		if (hasOwnershipTransfer || hasReadWriteTransition) {
+			ret.input.buffer = buffer;
+			ret.input.srcAccessMask = VkAccessFlags(prev->dependency.finalAccessMask);
+			ret.input.dstAccessMask = VkAccessFlags(current->dependency.initialAccessMask);
+			ret.input.offset = offset;
+			ret.input.size = size;
+			ret.inputFrom = prev->dependency.finalUsageStage;
+			ret.inputTo = current->dependency.initialUsageStage;
+		}
+	}
+
+	if (next) {
+		if (current->pass->type != next->pass->type) {
+			auto nextQueue = dev->getQueueFamily(next->pass->type);
+			auto currentQueue = dev->getQueueFamily(current->pass->type);
+			if (nextQueue != currentQueue) {
+				ret.output.familyTransfer = QueueFamilyTransfer{currentQueue->index, nextQueue->index};
+				ret.output.buffer = buffer;
+				ret.output.srcAccessMask = VkAccessFlags(current->dependency.finalAccessMask);
+				ret.output.dstAccessMask = VkAccessFlags(next->dependency.initialAccessMask);
+				ret.output.offset = offset;
+				ret.output.size = size;
+				ret.outputFrom = current->dependency.finalUsageStage;
+				ret.outputTo = next->dependency.initialUsageStage;
+			}
+		}
+	}
+
 	return ret;
 }
 

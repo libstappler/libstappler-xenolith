@@ -109,6 +109,7 @@ struct BufferData : BufferInfo {
 	Rc<BufferObject> buffer; // GL implementation-dependent object
 	Rc<DataAtlas> atlas;
 	const Resource *resource = nullptr; // owning resource;
+	core::AccessType targetAccess = core::AccessType::ShaderRead;
 };
 
 
@@ -147,9 +148,18 @@ struct ImageInfo : NamedMem, ImageInfoData {
 		define(std::forward<Args>(args)...);
 	}
 
-	void setup(Extent1 value) { extent = Extent3(value.get(), 1, 1); }
-	void setup(Extent2 value) { extent = Extent3(value.width, value.height, 1); }
-	void setup(Extent3 value) { extent = value; }
+	void setup(Extent1 value) {
+		extent = Extent3(value.get(), 1, 1);
+	}
+	void setup(Extent2 value) {
+		extent = Extent3(value.width, value.height, 1);
+	}
+	void setup(Extent3 value) {
+		extent = value;
+		if (extent.depth > 1 && imageType != ImageType::Image3D) {
+			imageType = ImageType::Image3D;
+		}
+	}
 	void setup(ImageFlags value) { flags |= value; }
 	void setup(ForceImageFlags value) { flags = value.get(); }
 	void setup(ImageType value) { imageType = value; }
@@ -189,6 +199,10 @@ struct ImageData : ImageInfo {
 	Rc<ImageObject> image; // GL implementation-dependent object
 	Rc<DataAtlas> atlas;
 	const Resource *resource = nullptr; // owning resource;
+	core::AccessType targetAccess = core::AccessType::ShaderRead;
+	core::AttachmentLayout targetLayout = core::AttachmentLayout::ShaderReadOnlyOptimal;
+
+	size_t writeData(uint8_t *mem, size_t expected) const;
 };
 
 
@@ -368,6 +382,9 @@ size_t getFormatBlockSize(ImageFormat format);
 PixelFormat getImagePixelFormat(ImageFormat format);
 bool isStencilFormat(ImageFormat format);
 bool isDepthFormat(ImageFormat format);
+
+bool hasReadAccess(AccessType);
+bool hasWriteAccess(AccessType);
 
 std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value);
 

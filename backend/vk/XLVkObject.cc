@@ -25,24 +25,155 @@
 
 namespace stappler::xenolith::vk {
 
-bool DeviceMemory::init(Device &dev, VkDeviceMemory memory) {
+bool DeviceMemory::init(Allocator *a, DeviceMemoryInfo info, VkDeviceMemory memory, AllocationUsage usage) {
+	_allocator = a;
 	_memory = memory;
+	_info = info;
+	_usage = usage;
 
-	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
-		auto d = ((Device *)dev);
-		d->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
-			table.vkFreeMemory(device, (VkDeviceMemory)ptr.get(), nullptr);
-		});
-	}, core::ObjectType::DeviceMemory, ObjectHandle(_memory));
+	if (memory) {
+		return core::Object::init(*_allocator->getDevice(), [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
+			auto d = ((Device *)dev);
+			d->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+				table.vkFreeMemory(device, (VkDeviceMemory)ptr.get(), nullptr);
+			});
+		}, core::ObjectType::DeviceMemory, ObjectHandle(_memory));
+	} else {
+		return core::Object::init(*_allocator->getDevice(), [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) { },
+			core::ObjectType::DeviceMemory, ObjectHandle(_memory));
+	}
+}
+
+bool DeviceMemory::init(DeviceMemoryPool *p, Allocator::MemBlock &&block, AllocationUsage usage) {
+	_allocator = p->getAllocator();
+	_pool = p;
+	_info = DeviceMemoryInfo{block.size, 1, block.type, false};
+	_memBlock = move(block);
+	_memory = _memBlock.mem;
+	_usage = usage;
+
+	if (_memBlock.ptr) {
+		// persistent mapping
+		_mappedOffset = 0;
+		_mappedSize = _info.size;
+	}
+
+	return core::Object::init(*_allocator->getDevice(), [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
+		auto mem = static_cast<DeviceMemory *>(thiz);
+		mem->_pool->free(move(mem->_memBlock));
+	}, core::ObjectType::DeviceMemory, ObjectHandle::zero(), this);
+}
+
+bool DeviceMemory::isPersistentMapped() const {
+	return _memBlock.ptr != nullptr;
+}
+
+uint8_t *DeviceMemory::getPersistentMappedRegion() const {
+	return static_cast<uint8_t *>(_memBlock.ptr) + _memBlock.offset;
+}
+
+bool DeviceMemory::map(const Callback<void(uint8_t *, VkDeviceSize)> &cb, VkDeviceSize offset, VkDeviceSize size, DeviceMemoryAccess access) {
+	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	if (!t->isHostVisible()) {
+		return false;
+	}
+
+	bool hostCoherent = t->isHostCoherent();
+	auto range = calculateMappedMemoryRange(offset, size);
+
+	uint8_t *mapped = nullptr;
+	if (_memBlock.ptr) {
+		mapped = static_cast<uint8_t *>(_memBlock.ptr) + _memBlock.offset + offset;
+	} else {
+		if (_allocator->getDevice()->getTable()->vkMapMemory(_allocator->getDevice()->getDevice(),
+				_memory, range.offset, range.size, 0, (void **)&mapped) != VK_SUCCESS) {
+			return false;
+		}
+		mapped += (_memBlock.offset + offset - range.offset);
+
+		_mappedOffset = range.offset;
+		_mappedSize = range.size;
+	}
+
+	if (!hostCoherent && (access & DeviceMemoryAccess::Invalidate) != DeviceMemoryAccess::None) {
+		_pool->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+	}
+
+	cb(static_cast<uint8_t *>(mapped), std::min(_info.size - offset, size));
+
+	if (!hostCoherent && (access & DeviceMemoryAccess::Flush) != DeviceMemoryAccess::None) {
+		_pool->getDevice()->getTable()->vkFlushMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+	}
+
+	if (!_memBlock.ptr) {
+		_mappedOffset = 0;
+		_mappedSize = 0;
+
+		_pool->getDevice()->getTable()->vkUnmapMemory(_pool->getDevice()->getDevice(), _memory);
+	}
+
+	return true;
+}
+
+void DeviceMemory::invalidateMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
+	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	if (!t->isHostVisible() || t->isHostCoherent()) {
+		return;
+	}
+
+	size = std::min(_info.size, size);
+	offset += _memBlock.offset;
+
+	offset = std::max(_mappedOffset, offset);
+	size = std::min(_mappedSize, size);
+
+	auto range = calculateMappedMemoryRange(offset, size);
+
+	_pool->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+}
+
+void DeviceMemory::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
+	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	if (!t->isHostVisible() || t->isHostCoherent()) {
+		return;
+	}
+
+	size = std::min(_info.size, size);
+	offset += _memBlock.offset;
+
+	offset = std::max(_mappedOffset, offset);
+	size = std::min(_mappedSize, size);
+
+	auto range = calculateMappedMemoryRange(offset, size);
+
+	_pool->getDevice()->getTable()->vkFlushMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+}
+
+VkMappedMemoryRange DeviceMemory::calculateMappedMemoryRange(VkDeviceSize offset, VkDeviceSize size) const {
+	auto t = _pool->getAllocator()->getType(_info.memoryType);
+
+	size = std::min(_info.size, size);
+	offset += _memBlock.offset;
+
+	VkDeviceSize atomSize = t->isHostCoherent() ? 1 : _pool->getAllocator()->getNonCoherentAtomSize();
+
+	VkMappedMemoryRange range;
+	range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	range.pNext = nullptr;
+	range.memory = _memory;
+	range.offset = math::align<VkDeviceSize>(offset - atomSize + 1, atomSize);
+	range.size = std::min(_info.size - range.offset, math::align<VkDeviceSize>(size + (offset - range.offset), atomSize));
+	return range;
 }
 
 bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, uint32_t idx) {
 	_info = info;
 	_image = image;
 
-	auto ret = core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	auto ret = core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		// do nothing
-	}, core::ObjectType::Image, ObjectHandle(_image));
+		static_cast<Image *>(thiz)->_memory = nullptr;
+	}, core::ObjectType::Image, ObjectHandle(_image), this);
 	if (ret) {
 		_index = idx;
 	}
@@ -55,10 +186,11 @@ bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, Rc<Devic
 	_atlas = atlas;
 	_memory = move(mem);
 
-	return core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyImage(d->getDevice(), (VkImage)ptr.get(), nullptr);
-	}, core::ObjectType::Image, ObjectHandle(_image));
+		static_cast<Image *>(thiz)->_memory = nullptr;
+	}, core::ObjectType::Image, ObjectHandle(_image), this);
 }
 
 bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfoData &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
@@ -67,10 +199,11 @@ bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfoData &
 	_atlas = atlas;
 	_memory = move(mem);
 
-	return core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::ImageObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyImage(d->getDevice(), (VkImage)ptr.get(), nullptr);
-	}, core::ObjectType::Image, ObjectHandle(_image), idx);
+		static_cast<Image *>(thiz)->_memory = nullptr;
+	}, core::ObjectType::Image, ObjectHandle(_image), this, idx);
 }
 
 void Image::setPendingBarrier(const ImageMemoryBarrier &barrier) {
@@ -100,21 +233,26 @@ VkImageAspectFlags Image::getAspectMask() const {
 	return VK_IMAGE_ASPECT_NONE_KHR;
 }
 
-void Image::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
+bool Image::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
 	auto dev = (Device *)_device;
-	dev->getTable()->vkBindImageMemory(dev->getDevice(), _image, mem->getMemory(), offset);
-	_memory = move(mem);
+	if (dev->getTable()->vkBindImageMemory(dev->getDevice(), _image, mem->getMemory(), offset + mem->getBlockOffset()) == VK_SUCCESS) {
+		_memory = move(mem);
+		return true;
+	}
+	return false;
 }
 
-bool Buffer::init(Device &dev, VkBuffer buffer, const BufferInfo &info, Rc<DeviceMemory> &&mem) {
+bool Buffer::init(Device &dev, VkBuffer buffer, const BufferInfo &info, Rc<DeviceMemory> &&mem, VkDeviceSize memoryOffset) {
 	_info = info;
 	_buffer = buffer;
 	_memory = move(mem);
+	_memoryOffset = memoryOffset;
 
-	return core::BufferObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::BufferObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyBuffer(d->getDevice(), (VkBuffer)ptr.get(), nullptr);
-	}, core::ObjectType::Buffer, ObjectHandle(_buffer));
+		static_cast<Buffer *>(thiz)->_memory = nullptr;
+	}, core::ObjectType::Buffer, ObjectHandle(_buffer), this);
 }
 
 void Buffer::setPendingBarrier(const BufferMemoryBarrier &barrier) {
@@ -134,10 +272,74 @@ void Buffer::dropPendingBarrier() {
 	_barrier.reset();
 }
 
-void Buffer::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
+bool Buffer::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
 	auto dev = (Device *)_device;
-	dev->getTable()->vkBindBufferMemory(dev->getDevice(), _buffer, mem->getMemory(), offset);
-	_memory = move(mem);
+	if (dev->getTable()->vkBindBufferMemory(dev->getDevice(), _buffer, mem->getMemory(), offset + mem->getBlockOffset()) == VK_SUCCESS) {
+		_memoryOffset = offset;
+		_memory = move(mem);
+		return true;
+	}
+	return false;
+}
+
+bool Buffer::map(const Callback<void(uint8_t *, VkDeviceSize)> &cb, VkDeviceSize offset, VkDeviceSize size, DeviceMemoryAccess access) {
+	size = std::min(_info.size - offset, size);
+	offset += _memoryOffset;
+	return _memory->map(cb, offset, size, access);
+}
+
+uint8_t *Buffer::getPersistentMappedRegion(bool invalidate) {
+	if (_memory->isPersistentMapped()) {
+		if (invalidate) {
+			invalidateMappedRegion();
+		}
+		return _memory->getPersistentMappedRegion() + _memoryOffset;
+	}
+	return nullptr;
+}
+
+void Buffer::invalidateMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
+	offset += _memoryOffset;
+	size = std::min(size, _info.size);
+
+	_memory->invalidateMappedRegion(offset, size);
+}
+
+void Buffer::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
+	offset += _memoryOffset;
+	size = std::min(size, _info.size);
+
+	_memory->flushMappedRegion(offset, size);
+}
+
+bool Buffer::setData(BytesView data, VkDeviceSize offset) {
+	auto size = std::min(size_t(_info.size - offset), data.size());
+
+	return _memory->map([&] (uint8_t *ptr, VkDeviceSize size) {
+		::memcpy(ptr, data.data(), size);
+	}, _memoryOffset + offset, size, DeviceMemoryAccess::Flush);
+}
+
+Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset) {
+	size = std::min(_info.size - offset, size);
+
+	Bytes ret;
+
+	_memory->map([&] (uint8_t *ptr, VkDeviceSize size) {
+		ret.resize(size);
+		::memcpy(ret.data(), ptr, size);
+	}, _memoryOffset + offset, size, DeviceMemoryAccess::Invalidate);
+
+	return ret;
+}
+
+uint64_t Buffer::reserveBlock(uint64_t blockSize, uint64_t alignment) {
+	auto alignedSize = math::align(uint64_t(blockSize), alignment);
+	auto ret = _targetOffset.fetch_add(alignedSize);
+	if (ret + blockSize > _info.size) {
+		return maxOf<uint64_t>();
+	}
+	return ret;
 }
 
 bool ImageView::init(Device &dev, VkImage image, VkFormat format) {
@@ -157,10 +359,16 @@ bool ImageView::init(Device &dev, VkImage image, VkFormat format) {
 	createInfo.subresourceRange.layerCount = 1;
 
 	if (dev.getTable()->vkCreateImageView(dev.getDevice(), &createInfo, nullptr, &_imageView) == VK_SUCCESS) {
-		return core::ImageView::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::ImageView::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyImageView(d->getDevice(), (VkImageView)ptr.get(), nullptr);
-		}, core::ObjectType::ImageView, ObjectHandle(_imageView));
+
+			auto obj = static_cast<ImageView *>(thiz);
+			if (obj->_releaseCallback) {
+				obj->_releaseCallback();
+				obj->_releaseCallback = nullptr;
+			}
+		}, core::ObjectType::ImageView, ObjectHandle(_imageView), this);
 	}
 	return false;
 }
@@ -275,10 +483,16 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		_info.layerCount = core::ArrayLayers(createInfo.subresourceRange.layerCount);
 
 		_image = image;
-		return core::ImageView::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::ImageView::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyImageView(d->getDevice(), (VkImageView)ptr.get(), nullptr);
-		}, core::ObjectType::ImageView, ObjectHandle(_imageView));
+
+			auto obj = static_cast<ImageView *>(thiz);
+			if (obj->_releaseCallback) {
+				obj->_releaseCallback();
+				obj->_releaseCallback = nullptr;
+			}
+		}, core::ObjectType::ImageView, ObjectHandle(_imageView), this);
 	}
 	return false;
 }
@@ -306,7 +520,7 @@ bool Sampler::init(Device &dev, const SamplerInfo &info) {
 
 	if (dev.getTable()->vkCreateSampler(dev.getDevice(), &createInfo, nullptr, &_sampler) == VK_SUCCESS) {
 		_info = info;
-		return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroySampler(d->getDevice(), (VkSampler)ptr.get(), nullptr);
 		}, core::ObjectType::Sampler, ObjectHandle(_sampler));

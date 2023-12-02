@@ -678,13 +678,6 @@ Rc<MaterialSet> MaterialAttachment::cloneSet(const Rc<MaterialSet> &other) const
 	return Rc<MaterialSet>::create(other);
 }
 
-void MaterialAttachment::sortDescriptors(RenderQueue &queue, Device &dev) {
-	BufferAttachment::sortDescriptors(queue, dev);
-	if (!_data) {
-		_data = allocateSet(dev);
-	}
-}
-
 void MaterialAttachment::addDynamicTracker(MaterialId id, const Rc<DynamicImage> &image) const {
 	std::unique_lock<Mutex> lock(_dynamicMutex);
 	auto it = _dynamicTrackers.find(image);

@@ -25,12 +25,13 @@ THE SOFTWARE.
 #define XENOLITH_BACKEND_VK_XLVKALLOCATOR_H_
 
 #include "XLVkInfo.h"
-#include "XLVkObject.h"
 
 namespace stappler::xenolith::vk {
 
 class Device;
-class DeviceBuffer;
+class DeviceMemory;
+class Image;
+class Buffer;
 
 enum class AllocationUsage {
 	DeviceLocal, // device local only
@@ -190,7 +191,9 @@ public:
 
 	bool init(const Rc<Allocator> &, bool persistentMapping = false);
 
-	Rc<DeviceBuffer> spawn(AllocationUsage type, const BufferInfo &);
+	Rc<Buffer> spawn(AllocationUsage type, const BufferInfo &);
+	Rc<Image> spawn(AllocationUsage type, const ImageInfoData &);
+
 	Rc<Buffer> spawnPersistent(AllocationUsage, const BufferInfo &);
 
 	Device *getDevice() const;
@@ -198,18 +201,18 @@ public:
 
 	Mutex &getMutex() { return _mutex; }
 
-protected:
-	friend class DeviceBuffer;
-
 	Allocator::MemBlock alloc(MemData *, VkDeviceSize size, VkDeviceSize alignment, AllocationType allocType, AllocationUsage type);
 	void free(Allocator::MemBlock &&);
+
+protected:
 	void clear(MemData *);
 
 	Mutex _mutex;
 	bool _persistentMapping = false;
 	Rc<Allocator> _allocator;
 	Map<int64_t, MemData> _heaps;
-	std::forward_list<Rc<DeviceBuffer>> _buffers;
+	std::forward_list<Rc<Buffer>> _buffers;
+	std::forward_list<Rc<Image>> _images;
 };
 
 }

@@ -88,6 +88,7 @@ public:
 	virtual StringView getLayoutName() const;
 
 	virtual DecorationStatus getDecorationStatus() const { return DecorationStatus::DontCare; }
+	virtual SceneContent2d *getSceneContent() const { return _sceneContent; }
 
 protected:
 	DecorationMask _decorationMask = DecorationMask::None;

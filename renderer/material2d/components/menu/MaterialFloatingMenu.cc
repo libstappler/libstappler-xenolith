@@ -39,6 +39,8 @@ public:
 	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
 	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace) override;
 
+	virtual Rc<Transition> makeExitTransition(SceneContent2d *) const override;
+
 protected:
 	void emplaceMenu(const Vec2 &o, FloatingMenu::Binding b);
 
@@ -47,6 +49,7 @@ protected:
 	StyleContainer *_styleContainer = nullptr;
 	Vec2 _globalOrigin;
 	Size2 _fullSize;
+	Size2 _initSize;
 	FloatingMenu::Binding _binding = FloatingMenu::Binding::Anchor;
 };
 
@@ -66,6 +69,13 @@ bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, Floa
 	_binding = b;
 
 	auto l = addInputListener(Rc<InputListener>::create());
+	l->setSwallowEvents(InputListener::makeEventMask({InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
+	l->setTouchFilter([this] (const InputEvent &ev, const InputListener::DefaultEventFilter &def) {
+		if (!_menu->isTouched(ev.currentLocation)) {
+			return def(ev);
+		}
+		return false;
+	});
 	l->addTapRecognizer([this] (const GestureTap &tap) {
 		if (!_menu->isTouched(tap.location())) {
 			if (_sceneContent) {
@@ -85,7 +95,13 @@ void FloatingMenuLayout::onContentSizeDirty() {
 		_layer->setPosition(_contentSize / 2.0f);
 	}
 
-	//_menu->setPosition(_contentSize / 2.0f);
+	if (_initSize != Size2::ZERO) {
+		if (_sceneContent) {
+			_sceneContent->popOverlay(this);
+		}
+	} else {
+		_initSize = _contentSize;
+	}
 }
 
 void FloatingMenuLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) {
@@ -101,6 +117,17 @@ void FloatingMenuLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) 
 
 void FloatingMenuLayout::onPopTransitionBegan(SceneContent2d *l, bool replace) {
 	SceneLayout2d::onPopTransitionBegan(l, replace);
+	_menu->setReady(false);
+}
+
+Rc<FloatingMenuLayout::Transition> FloatingMenuLayout::makeExitTransition(SceneContent2d *) const {
+	return Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(0.2f, [this] (float p) {
+		_menu->setContentSize(progress(_fullSize, Size2(_fullSize.width, 1), p));
+	})), [this] {
+		if (auto &cb = _menu->getCloseCallback()) {
+			cb();
+		}
+	});
 }
 
 void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b) {
@@ -121,7 +148,6 @@ void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b
 			_menu->setPositionX(origin.x);
 			_menu->setAnchorPoint(Vec2(rel, 1.0f));
 		}
-		_menu->setContentSize(Size2(1, 1));
 		break;
 	case FloatingMenu::Binding::OriginLeft:
 		_menu->setPositionY(origin.y);
@@ -132,7 +158,6 @@ void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b
 			_menu->setAnchorPoint(Vec2(1, 1.0f));
 			_menu->setPositionX(origin.x);
 		}
-		_menu->setContentSize(Size2(_fullSize.width, 1));
 		break;
 	case FloatingMenu::Binding::OriginRight:
 		_menu->setPositionY(origin.y);
@@ -143,7 +168,6 @@ void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b
 			_menu->setAnchorPoint(Vec2(0, 1.0f));
 			_menu->setPositionX(origin.x);
 		}
-		_menu->setContentSize(Size2(_fullSize.width, 1));
 		break;
 	case FloatingMenu::Binding::Anchor:
 		_menu->setPosition(origin);
@@ -173,14 +197,10 @@ void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b
 		_menu->setPositionY(size.height - incr / 4);
 	}
 
-	//f->pushNode(this, std::bind(&FloatingMenu::close, this));
-
-	//auto a = Rc<ResizeTo>::create(0.2f, _fullSize);
-	//_menu->runAction(Rc<Sequence>::create(a, [this] {
-		//_scroll->setVisible(true);
-	//}));
-
-	_menu->setContentSize(_fullSize);
+	_menu->setContentSize(Size2(_fullSize.width, 1));
+	_menu->runAction(Rc<Sequence>::create(material2d::makeEasing(Rc<ResizeTo>::create(0.2f, _fullSize)), [this] {
+		_menu->setReady(true);
+	}));
 }
 
 void FloatingMenu::push(SceneContent2d *content, MenuSource *source, const Vec2 &globalOrigin, Binding b, Menu *root) {
@@ -200,6 +220,8 @@ bool FloatingMenu::init(MenuSource *source, Menu *root) {
 
 	setElevation(Elevation(toInt(_root->getStyleOrigin().elevation) + 1));
 
+	_scroll->setIndicatorVisible(_ready);
+
 	return true;
 }
 
@@ -211,32 +233,25 @@ const FloatingMenu::CloseCallback & FloatingMenu::getCloseCallback() const {
 }
 
 void FloatingMenu::close() {
+	if (!_running) {
+		return;
+	}
+
 	stopAllActions();
-	/*_scroll->setVisible(false);
-	auto a = Rc<ResizeTo>::create(0.2f, (_binding == Binding::Relative?Size(1, 1):Size(_fullSize.width, 1)));
-	runAction(action::sequence(a, [this] {
-		if (_closeCallback) {
-			_closeCallback();
+	if (auto l = dynamic_cast<FloatingMenuLayout *>(_parent)) {
+		if (auto c = l->getSceneContent()) {
+			c->popOverlay(l);
 		}
-		Scene::getRunningScene()->popForegroundNode(this);
-	}));*/
+	}
 }
 
 void FloatingMenu::closeRecursive() {
 	if (_root) {
-		stopAllActions();
-		/*_scroll->setVisible(false);
-		auto a = Rc<ResizeTo>::create(0.15f, (_binding == Binding::Relative?Size(1, 1):Size(_fullSize.width, 1)));
-		runAction(action::sequence(a, [this] {
-			auto r = _root;
-			Scene::getRunningScene()->popForegroundNode(this);
-			if (r) {
-				r->closeRecursive();
-			}
-		}));*/
-	} else {
-		close();
+		if (auto r = dynamic_cast<FloatingMenu *>(_root)) {
+			r->close();
+		}
 	}
+	close();
 }
 
 void FloatingMenu::onCapturedTap() {
@@ -297,10 +312,21 @@ float FloatingMenu::getMenuHeight(Node *root, float width) {
 	return height;
 }
 
+void FloatingMenu::setReady(bool value) {
+	if (value != _ready) {
+		_ready = value;
+		_scroll->setIndicatorVisible(_ready);
+	}
+}
+
+bool FloatingMenu::isReady() const {
+	return _ready;
+}
+
 void FloatingMenu::onMenuButton(MenuButton *btn) {
 	if (!btn->getMenuSourceButton()->getNextMenu()) {
 		setEnabled(false);
-		runAction(Rc<Sequence>::create(0.3f, std::bind(&FloatingMenu::closeRecursive, this)));
+		runAction(Rc<Sequence>::create(0.15f, std::bind(&FloatingMenu::closeRecursive, this)));
 	}
 }
 

@@ -24,7 +24,6 @@ THE SOFTWARE.
 #include "XLVkAllocator.h"
 #include "XLVkInstance.h"
 #include "XLVkDevice.h"
-#include "XLVkBuffer.h"
 
 namespace stappler::xenolith::vk {
 
@@ -607,7 +606,7 @@ Rc<Buffer> Allocator::preallocate(const BufferInfo &info, BytesView view) {
 		return nullptr;
 	}
 
-	return Rc<Buffer>::create(*_device, target, info, nullptr);
+	return Rc<Buffer>::create(*_device, target, info, nullptr, 0);
 }
 
 Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized, uint64_t forceId) {
@@ -756,7 +755,9 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Rc<Im
 		}
 	}
 
-	auto memory = Rc<DeviceMemory>::create(*_device, memObject);
+	auto memory = Rc<DeviceMemory>::create(this, DeviceMemoryInfo{
+		requiredMemory, 1, allocMemType->idx, false
+	}, memObject, usage);
 
 	// bind memory
 	if (nonLinearObjects > 0) {
@@ -846,7 +847,9 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Buffer *target) {
 		}
 	}
 
-	target->bindMemory(Rc<DeviceMemory>::create(*_device, memory));
+	target->bindMemory(Rc<DeviceMemory>::create(this, DeviceMemoryInfo{
+		req.requirements.size, req.requirements.alignment, type->idx, true
+	}, memory, usage));
 	return true;
 }
 
@@ -897,16 +900,22 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Image *target) {
 		}
 	}
 
-	target->bindMemory(Rc<DeviceMemory>::create(*_device, memory));
+	target->bindMemory(Rc<DeviceMemory>::create(this, DeviceMemoryInfo{
+		req.requirements.size, req.requirements.alignment, type->idx, true
+	}, memory, usage));
 	return true;
 }
 
 DeviceMemoryPool::~DeviceMemoryPool() {
 	if (_allocator) {
 		for (auto &it : _buffers) {
-			it->invalidate(*_allocator->getDevice());
+			it->invalidate();
 		}
 		_buffers.clear();
+		for (auto &it : _images) {
+			it->invalidate();
+		}
+		_images.clear();
 		for (auto &it : _heaps) {
 			clear(&it.second);
 		}
@@ -919,22 +928,9 @@ bool DeviceMemoryPool::init(const Rc<Allocator> &alloc, bool persistentMapping) 
 	return true;
 }
 
-Rc<DeviceBuffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info) {
-	VkBufferCreateInfo bufferInfo { };
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = info.size;
-	bufferInfo.flags = VkBufferCreateFlags(info.flags);
-	bufferInfo.usage = VkBufferUsageFlags(info.usage);
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	VkBuffer target = VK_NULL_HANDLE;
-	auto dev = _allocator->getDevice();
-	if (dev->getTable()->vkCreateBuffer(dev->getDevice(), &bufferInfo, nullptr, &target) != VK_SUCCESS) {
-		log::error("DeviceMemoryPool", "Fail to create buffer");
-		return nullptr;
-	}
-
-	auto requirements = _allocator->getBufferMemoryRequirements(target);
+Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info) {
+	auto buffer = _allocator->preallocate(info);
+	auto requirements = _allocator->getBufferMemoryRequirements(buffer->getBuffer());
 
 	if (requirements.requiresDedicated) {
 		// TODO: deal with dedicated allocations
@@ -942,7 +938,6 @@ Rc<DeviceBuffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo 
 	} else {
 		auto memType = _allocator->findMemoryType(requirements.requirements.memoryTypeBits, type);
 		if (!memType) {
-			dev->getTable()->vkDestroyBuffer(dev->getDevice(), target, nullptr);
 			return nullptr;
 		}
 
@@ -957,20 +952,55 @@ Rc<DeviceBuffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo 
 
 		if (auto mem = alloc(pool, requirements.requirements.size,
 				requirements.requirements.alignment, AllocationType::Linear, type)) {
-			if (dev->getTable()->vkBindBufferMemory(dev->getDevice(), target, mem.mem, mem.offset) == VK_SUCCESS) {
-				auto ret = Rc<DeviceBuffer>::create(this, target, move(mem), type, info);
-				_buffers.emplace_front(ret);
-				return ret;
+			if (buffer->bindMemory(Rc<DeviceMemory>::create(this, move(mem), type))) {
+				_buffers.emplace_front(buffer);
+				return buffer;
 			} else {
-				log::error("DeviceMemoryPool", "Fail to bind memory for buffer");
-				return nullptr;
+				log::error("DeviceMemoryPool", "Fail to bind memory for buffer: ", type);
 			}
 		} else {
 			log::error("DeviceMemoryPool", "Fail to allocate memory for buffer: ", type);
 		}
 	}
+	return nullptr;
+}
 
-	dev->getTable()->vkDestroyBuffer(dev->getDevice(), target, nullptr);
+Rc<Image> DeviceMemoryPool::spawn(AllocationUsage type, const ImageInfoData &data) {
+	auto image = _allocator->preallocate(data, false);
+	auto requirements = _allocator->getImageMemoryRequirements(image->getImage());
+
+	if (requirements.requiresDedicated) {
+		// TODO: deal with dedicated allocations
+		log::error("DeviceMemoryPool", "Dedicated allocation required");
+	} else {
+		auto memType = _allocator->findMemoryType(requirements.requirements.memoryTypeBits, type);
+		if (!memType) {
+			return nullptr;
+		}
+
+		std::unique_lock<Mutex> lock(_mutex);
+		MemData *pool = nullptr;
+		auto it = _heaps.find(memType->idx);
+		if (it == _heaps.end()) {
+			pool = &_heaps.emplace(memType->idx, MemData{memType}).first->second;
+		} else {
+			pool = &it->second;
+		}
+
+		if (auto mem = alloc(pool, requirements.requirements.size, requirements.requirements.alignment,
+				(data.tiling == core::ImageTiling::Optimal) ? AllocationType::Optimal : AllocationType::Linear,
+				type)) {
+			if (image->bindMemory(Rc<DeviceMemory>::create(this, move(mem), type))) {
+				_images.emplace_front(image);
+				return image;
+			} else {
+				log::error("DeviceMemoryPool", "Fail to bind memory for image");
+			}
+		} else {
+			log::error("DeviceMemoryPool", "Fail to allocate memory for image: ", type);
+		}
+	}
+
 	return nullptr;
 }
 

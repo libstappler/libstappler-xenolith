@@ -28,8 +28,68 @@
 
 namespace stappler::xenolith::vk {
 
-auto ImageAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<AttachmentHandle> {
-	return Rc<ImageAttachmentHandle>::create(this, handle);
+BufferAttachmentHandle::~BufferAttachmentHandle() { }
+
+bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
+	if (info.index < _buffers.size()) {
+		auto &v = _buffers[info.index];
+		info.buffer = v.buffer;
+		info.offset = v.offset;
+		info.range = v.size;
+		return true;
+	}
+	return false;
+}
+
+bool BufferAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t idx, bool isExternal) const {
+	if (idx < _buffers.size()) {
+		return _buffers[idx].dirty;
+	}
+	return false;
+}
+
+void BufferAttachmentHandle::clearBufferViews() {
+	_buffers.clear();
+}
+void BufferAttachmentHandle::addBufferView(Buffer *buffer, VkDeviceSize offset, VkDeviceSize size, bool dirty) {
+	addBufferView(Rc<Buffer>(buffer), offset, size, dirty);
+}
+void BufferAttachmentHandle::addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset, VkDeviceSize size, bool dirty) {
+	auto s = buffer->getSize();
+	_buffers.emplace_back(BufferView{move(buffer), offset, min(VkDeviceSize(s - offset), size), dirty});
+}
+
+
+auto BufferAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentHandle> {
+	if (_frameHandleCallback) {
+		auto ret = _frameHandleCallback(*this, queue);
+		if (isStatic()) {
+			if (auto b = dynamic_cast<BufferAttachmentHandle *>(ret.get())) {
+				auto statics = getStaticBuffers();
+				for (auto &it : statics) {
+					b->addBufferView(static_cast<Buffer *>(it));
+				}
+			}
+		}
+		return ret;
+	} else {
+		auto ret = Rc<BufferAttachmentHandle>::create(this, queue);
+		if (isStatic()) {
+			auto statics = getStaticBuffers();
+			for (auto &it : statics) {
+				ret->addBufferView(static_cast<Buffer *>(it));
+			}
+		}
+		return ret;
+	}
+}
+
+auto ImageAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentHandle> {
+	if (_frameHandleCallback) {
+		return _frameHandleCallback(*this, queue);
+	} else {
+		return Rc<ImageAttachmentHandle>::create(this, queue);
+	}
 }
 
 const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const {

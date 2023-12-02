@@ -33,6 +33,7 @@ public:
 
 	virtual bool init(Rc<ImageObject> &&);
 
+	bool isStatic() const;
 	bool isCacheable() const;
 	bool isSwapchainImage() const;
 
@@ -42,7 +43,7 @@ public:
 
 	void invalidate();
 
-	bool isReady() const { return _ready && !_invalid; }
+	bool isReady() const { return isStatic() || (_ready && !_invalid); }
 	void setReady(bool);
 	void waitReady(Function<void(bool)> &&);
 

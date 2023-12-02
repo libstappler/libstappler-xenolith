@@ -41,7 +41,7 @@ bool ActionManager::init() {
 }
 
 void ActionManager::addAction(Action *action, Node *target, bool paused) {
-	if (_current) {
+	if (_inUpdate) {
 		_pending.emplace_back(PendingAction{action, target, paused});
 		return;
 	}
@@ -61,17 +61,13 @@ void ActionManager::addAction(Action *action, Node *target, bool paused) {
 }
 
 void ActionManager::removeAllActions() {
-	if (_current) {
+	if (_inUpdate) {
 		auto it = _actions.begin();
 		while (it != _actions.end()) {
-			if (&(*it) == _current) {
-				_current->foreach([&] (Action *a) {
-					a->invalidate();
-					return true;
-				});
-			} else {
-				it = _actions.erase(it);
-			}
+			it->foreach([&] (Action *a) {
+				a->invalidate();
+				return true;
+			});
 		}
 	} else {
 		_actions.clear();
@@ -89,7 +85,17 @@ void ActionManager::removeAllActionsFromTarget(Node *target) {
 			return true;
 		});
 	} else {
-		_actions.erase(target);
+		auto it = _actions.find(target);
+		if (it != _actions.end()) {
+			if (_inUpdate) {
+				it->foreach([&] (Action *a) {
+					a->invalidate();
+					return true;
+				});
+			} else {
+				_actions.erase(it);
+			}
+		}
 	}
 
 	auto it = _pending.begin();
@@ -248,6 +254,7 @@ void ActionManager::resumeTargets(const Vector<Node*> &targetsToResume) {
 /** Main loop of ActionManager. */
 void ActionManager::update(const UpdateTime &time) {
 	float dt = float(time.delta) / 1'000'000.0f;
+	_inUpdate = true;
 	auto it = _actions.begin();
 	while (it != _actions.end()) {
 		_current = &(*it);
@@ -259,8 +266,19 @@ void ActionManager::update(const UpdateTime &time) {
 			return true;
 		});
 		_current = nullptr;
+		++ it;
+	}
+	_inUpdate = false;
+
+	it = _actions.begin();
+	while (it != _actions.end()) {
 		if (it->cleanup()) {
-			it = _actions.erase(it);
+			auto iit = _actions.find(it->target);
+			if (iit != _actions.end()) {
+				it = _actions.erase(it);
+			} else {
+				log::debug("ActionManager", "update: ", time.app, " erase: ", (void *)it->target.get());
+			}
 		} else {
 			++ it;
 		}

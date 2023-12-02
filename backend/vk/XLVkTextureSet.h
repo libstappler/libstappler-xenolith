@@ -31,7 +31,6 @@ namespace stappler::xenolith::vk {
 
 class TextureSet;
 class Loop;
-class DeviceBuffer;
 
 // persistent object, part of Device
 class TextureSetLayout : public Ref {
@@ -69,7 +68,7 @@ protected:
 	void writeDefaults(CommandBuffer &buf);
 	void writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t, const Rc<Buffer> &, const Rc<Image> &);
 	void writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &,
-			AttachmentLayout, const Rc<DeviceBuffer> &);
+			AttachmentLayout, const Rc<Buffer> &);
 
 	bool _partiallyBound = false;
 	uint32_t _imageCount = 0;

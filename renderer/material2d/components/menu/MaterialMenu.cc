@@ -43,6 +43,7 @@ bool Menu::init() {
 
 	_scroll = addChild(Rc<ScrollView>::create(ScrollView::Vertical), ZOrder(1));
 	_scroll->setAnchorPoint(Vec2(0, 1));
+	_scroll->enableScissor(Padding(-2.0f));
 
 	_controller = _scroll->setController(Rc<ScrollController>::create());
 

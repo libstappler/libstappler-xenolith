@@ -24,16 +24,16 @@
 
 namespace stappler::xenolith::basic2d::shaders {
 
-#include "xl_2d_material.frag"
-#include "xl_2d_material.vert"
-#include "xl_sdf_triangles.comp"
-#include "xl_sdf_circles.comp"
-#include "xl_sdf_rects.comp"
-#include "xl_sdf_rounded_rects.comp"
-#include "xl_sdf_polygons.comp"
-#include "xl_sdf_shadows.frag"
-#include "xl_sdf_shadows.vert"
-#include "xl_sdf_image.comp"
+#include "xl_2d_material.frag.h"
+#include "xl_2d_material.vert.h"
+#include "xl_sdf_triangles.comp.h"
+#include "xl_sdf_circles.comp.h"
+#include "xl_sdf_rects.comp.h"
+#include "xl_sdf_rounded_rects.comp.h"
+#include "xl_sdf_polygons.comp.h"
+#include "xl_sdf_shadows.frag.h"
+#include "xl_sdf_shadows.vert.h"
+#include "xl_sdf_image.comp.h"
 
 SpanView<uint32_t> MaterialFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_frag), xl_2d_material_frag_len / sizeof(uint32_t));
 SpanView<uint32_t> MaterialVert(reinterpret_cast<const uint32_t *>(xl_2d_material_vert), xl_2d_material_vert_len / sizeof(uint32_t));

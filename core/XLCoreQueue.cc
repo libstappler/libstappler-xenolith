@@ -311,14 +311,20 @@ static void Queue_buildLoadStore(QueueData *data) {
 		auto img = (ImageAttachment *)attachment->attachment.get();
 		AttachmentLayout layout = img->getInitialLayout();
 		for (auto &desc : attachment->passes) {
-			if (layout == AttachmentLayout::Ignored) {
-				desc->initialLayout = desc->subpasses.front()->layout;
-			} else {
-				desc->initialLayout = layout;
+			if (desc->initialLayout == AttachmentLayout::Ignored) {
+				if (layout == AttachmentLayout::Ignored && !desc->subpasses.empty()) {
+					desc->initialLayout = desc->subpasses.front()->layout;
+				} else {
+					desc->initialLayout = layout;
+				}
 			}
-			if (!desc->subpasses.empty()) {
-				layout = desc->subpasses.back()->layout;
-				desc->finalLayout = layout;
+			if (desc->finalLayout == AttachmentLayout::Ignored) {
+				if (!desc->subpasses.empty()) {
+					layout = desc->subpasses.back()->layout;
+					desc->finalLayout = layout;
+				} else {
+					desc->finalLayout = desc->initialLayout;
+				}
 			}
 		}
 		if (img->getFinalLayout() != AttachmentLayout::Ignored) {
@@ -657,6 +663,10 @@ Queue::~Queue() {
 }
 
 bool Queue::init(Builder && buf) {
+	Rc<Resource> res;
+	if (!buf._internalResource.empty()) {
+		res = Rc<Resource>::create(move(buf._internalResource));
+	}
 	if (buf._data) {
 		_data = buf._data;
 		_data->queue = this;
@@ -666,7 +676,8 @@ bool Queue::init(Builder && buf) {
 			it->pass->_data = it;
 		}
 
-		if (_data->resource) {
+		if (res) {
+			_data->resource = res;
 			_data->resource->setOwner(this);
 		}
 
@@ -679,8 +690,13 @@ bool Queue::isCompiled() const {
 	return _data->compiled;
 }
 
-void Queue::setCompiled(bool value, Function<void()> &&cb) {
-	_data->compiled = value;
+void Queue::setCompiled(Device &dev, Function<void()> &&cb) {
+	_data->compiled = true;
+
+	for (auto &attachment : _data->attachments) {
+		attachment->attachment->setCompiled(dev);
+	}
+
 	_data->releaseCallback = move(cb);
 }
 
@@ -1206,7 +1222,7 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 
 QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 
-Queue::Builder::Builder(StringView name) {
+Queue::Builder::Builder(StringView name) : _internalResource(toString(name, "_resource")) {
 	auto p = memory::pool::create((memory::pool_t *)nullptr);
 	memory::pool::push(p);
 	_data = new (p) QueueData;
@@ -1351,7 +1367,7 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 	return nullptr;
 }
 
-void Queue::Builder::setInternalResource(Rc<Resource> &&res) {
+/*void Queue::Builder::setInternalResource(Rc<Resource> &&res) {
 	if (!_data) {
 		log::error("Resource", "Fail to set internal resource: ", res->getName(), ", not initialized");
 		return;
@@ -1365,7 +1381,7 @@ void Queue::Builder::setInternalResource(Rc<Resource> &&res) {
 		return;
 	}
 	_data->resource = move(res);
-}
+}*/
 
 void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 	if (!_data) {
@@ -1389,6 +1405,37 @@ void Queue::Builder::setBeginCallback(Function<void(FrameRequest &)> &&cb) {
 
 void Queue::Builder::setEndCallback(Function<void(FrameRequest &)> &&cb) {
 	_data->endCallback = move(cb);
+}
+
+const BufferData * Queue::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
+	return _internalResource.addBufferByRef(key, move(info), data, move(atlas), access);
+}
+
+const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, FilePath data, Rc<DataAtlas> &&atlas, AccessType access) {
+	return _internalResource.addBuffer(key, move(info), data, move(atlas), access);
+}
+
+const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
+	return _internalResource.addBuffer(key, move(info), data, move(atlas), access);
+}
+
+const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info,
+		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas, AccessType access) {
+	return _internalResource.addBuffer(key, move(info), cb, move(atlas), access);
+}
+
+const ImageData * Queue::Builder::addImageByRef(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addImageByRef(key, move(info), data, layout, access);
+}
+const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, FilePath data, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addImage(key, move(info), data, layout, access);
+}
+const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addImage(key, move(info), data, layout, access);
+}
+const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info,
+		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addImage(key, move(info), cb, layout, access);
 }
 
 memory::pool_t *Queue::Builder::getPool() const {

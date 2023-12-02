@@ -33,6 +33,8 @@ namespace stappler::xenolith::vk {
 class BufferAttachment : public core::BufferAttachment {
 public:
 	virtual ~BufferAttachment() { }
+
+	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
 class ImageAttachment : public core::ImageAttachment {
@@ -45,9 +47,26 @@ public:
 
 class BufferAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~BufferAttachmentHandle() { }
+	struct BufferView {
+		Rc<Buffer> buffer;
+		VkDeviceSize offset = 0;
+		VkDeviceSize size = VK_WHOLE_SIZE;
+		bool dirty = true;
+	};
 
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) { return false; }
+	virtual ~BufferAttachmentHandle();
+
+	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &);
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const override;
+
+	void clearBufferViews();
+	void addBufferView(Buffer *buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE, bool dirty = true);
+	void addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE, bool dirty = true);
+
+	SpanView<BufferView> getBuffers() const { return _buffers; }
+
+protected:
+	Vector<BufferView> _buffers; // assign this to use default binding
 };
 
 class ImageAttachmentHandle : public core::AttachmentHandle {
@@ -57,7 +76,7 @@ public:
 	const Rc<core::ImageStorage> &getImage() const;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorImageInfo &);
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const;
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const override;
 };
 
 class TexelAttachmentHandle : public core::AttachmentHandle {

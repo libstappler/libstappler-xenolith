@@ -52,14 +52,9 @@ public:
 
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
 
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-			uint32_t, bool isExternal) const override;
-
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
-
 	const Vector<VertexSpan> &getVertexData() const { return _spans; }
-	const Rc<DeviceBuffer> &getVertexes() const { return _vertexes; }
-	const Rc<DeviceBuffer> &getIndexes() const { return _indexes; }
+	const Rc<Buffer> &getVertexes() const { return _vertexes; }
+	const Rc<Buffer> &getIndexes() const { return _indexes; }
 
 	Rc<FrameContextHandle2d> popCommands() const;
 
@@ -70,9 +65,9 @@ protected:
 
 	virtual bool isGpuTransform() const { return false; }
 
-	Rc<DeviceBuffer> _indexes;
-	Rc<DeviceBuffer> _vertexes;
-	Rc<DeviceBuffer> _transforms;
+	Rc<Buffer> _indexes;
+	Rc<Buffer> _vertexes;
+	Rc<Buffer> _transforms;
 	Vector<VertexSpan> _spans;
 
 	Rc<core::MaterialSet> _materialSet;

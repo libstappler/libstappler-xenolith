@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define XENOLITH_BACKEND_VK_XLVKDEVICEQUEUE_H_
 
 #include "XLVkInstance.h"
+#include "XLVkLoop.h"
 #include "XLCoreDevice.h"
 #include "XLCoreLoop.h"
 #include "XLCoreFrameHandle.h"
@@ -143,6 +144,12 @@ struct ImageMemoryBarrier {
 			VkImageLayout old, VkImageLayout _new, QueueFamilyTransfer, VkImageSubresourceRange);
 	ImageMemoryBarrier(const VkImageMemoryBarrier &);
 
+	operator bool() const {
+		return srcAccessMask != 0 || dstAccessMask != 0
+			|| oldLayout != VK_IMAGE_LAYOUT_UNDEFINED || newLayout != VK_IMAGE_LAYOUT_UNDEFINED
+			|| image != nullptr;
+	}
+
 	VkAccessFlags srcAccessMask = 0;
 	VkAccessFlags dstAccessMask = 0;
 	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -160,6 +167,10 @@ struct BufferMemoryBarrier {
 	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst,
 			QueueFamilyTransfer, VkDeviceSize, VkDeviceSize);
 	BufferMemoryBarrier(const VkBufferMemoryBarrier &);
+
+	operator bool() const {
+		return srcAccessMask != 0 || dstAccessMask != 0 || buffer != nullptr;
+	}
 
 	VkAccessFlags srcAccessMask = 0;
 	VkAccessFlags dstAccessMask = 0;
@@ -179,8 +190,8 @@ struct DescriptorInfo {
 };
 
 struct DescriptorImageInfo : public DescriptorInfo {
-	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-	: DescriptorInfo(desc, index, external) { }
+	~DescriptorImageInfo();
+	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
 	Rc<ImageView> imageView;
 	VkSampler sampler = VK_NULL_HANDLE;
@@ -188,8 +199,8 @@ struct DescriptorImageInfo : public DescriptorInfo {
 };
 
 struct DescriptorBufferInfo : public DescriptorInfo {
-	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-	: DescriptorInfo(desc, index, external) { }
+	~DescriptorBufferInfo();
+	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
 	Rc<Buffer> buffer;
 	VkDeviceSize offset = 0;
@@ -197,8 +208,8 @@ struct DescriptorBufferInfo : public DescriptorInfo {
 };
 
 struct DescriptorBufferViewInfo : public DescriptorInfo {
-	DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-	: DescriptorInfo(desc, index, external) { }
+	~DescriptorBufferViewInfo();
+	DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
 	Rc<Buffer> buffer;
 	VkBufferView target = VK_NULL_HANDLE;

@@ -23,8 +23,8 @@
 #ifndef XENOLITH_CORE_XLCOREQUEUEPASS_H_
 #define XENOLITH_CORE_XLCOREQUEUEPASS_H_
 
-#include "XLCoreQueueData.h"
 #include "XLCoreObject.h"
+#include "XLCoreFrameQueue.h"
 
 namespace stappler::xenolith::core {
 
@@ -38,6 +38,8 @@ public:
 	using PassType = core::PassType;
 	using AttachmentData = core::AttachmentData;
 
+	using FrameHandleCallback = Function<Rc<QueuePassHandle>(QueuePass &, const FrameQueue &)>;
+
 	virtual ~QueuePass();
 
 	virtual bool init(QueuePassBuilder &);
@@ -49,6 +51,8 @@ public:
 	virtual PassType getType() const;
 
 	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &);
+
+	void setFrameHandleCallback(FrameHandleCallback &&);
 
 	const Rc<FrameQueue> &getOwner() const { return _owner; }
 	bool acquireForFrame(FrameQueue &, Function<void(bool)> &&onAcquired);
@@ -70,6 +74,7 @@ protected:
 	Rc<FrameQueue> _owner;
 	FrameQueueWaiter _next;
 	Function<Extent2(const FrameQueue &)> _frameSizeCallback;
+	FrameHandleCallback _frameHandleCallback;
 	const QueuePassData *_data = nullptr;
 };
 
@@ -85,6 +90,7 @@ public:
 
 	virtual bool init(QueuePass &, const FrameQueue &);
 	virtual void setQueueData(FramePassData &);
+	virtual const FramePassData *getQueueData() const;
 
 	virtual StringView getName() const override;
 

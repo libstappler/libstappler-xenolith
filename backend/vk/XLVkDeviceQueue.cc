@@ -271,6 +271,22 @@ BufferMemoryBarrier::BufferMemoryBarrier(const VkBufferMemoryBarrier &barrier)
 , familyTransfer(QueueFamilyTransfer{barrier.srcQueueFamilyIndex, barrier.dstQueueFamilyIndex})
 , buffer(nullptr), offset(barrier.offset), size(barrier.size) { }
 
+
+DescriptorImageInfo::~DescriptorImageInfo() { }
+
+DescriptorImageInfo::DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
+: DescriptorInfo(desc, index, external) { }
+
+DescriptorBufferInfo::~DescriptorBufferInfo() { }
+
+DescriptorBufferInfo::DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
+: DescriptorInfo(desc, index, external) { }
+
+DescriptorBufferViewInfo::~DescriptorBufferViewInfo() { }
+
+DescriptorBufferViewInfo::DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
+: DescriptorInfo(desc, index, external) { }
+
 CommandBuffer::~CommandBuffer() {
 	invalidate();
 }

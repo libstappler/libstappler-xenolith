@@ -41,7 +41,6 @@ public:
 		Application *target = nullptr;
 		Extent2 extent;
 		Flags flags = Flags::None;
-		Function<void(core::Resource::Builder &)> resourceCallback;
 	};
 
 	struct PassCreateInfo {

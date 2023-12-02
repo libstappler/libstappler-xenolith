@@ -35,10 +35,11 @@ class Device;
 class Loop;
 class Fence;
 class CommandPool;
-class DeviceBuffer;
+class ImageAttachmentHandle;
+class BufferAttachmentHandle;
 
 struct MaterialBuffers {
-	Rc<DeviceBuffer> stagingBuffer;
+	Rc<Buffer> stagingBuffer;
 	Rc<Buffer> targetBuffer;
 	HashMap<core::MaterialId, uint32_t> ordering;
 };
@@ -52,8 +53,6 @@ public:
 
 	QueueOperations getQueueOps() const { return _queueOps; }
 
-	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
-
 protected:
 	QueueOperations _queueOps = QueueOperations::Graphics;
 };
@@ -61,6 +60,24 @@ protected:
 class QueuePassHandle : public core::QueuePassHandle {
 public:
 	static VkRect2D rotateScissor(const core::FrameContraints &constraints, const URect &scissor);
+
+	struct ImageInputOutputBarrier {
+		vk::ImageMemoryBarrier input;
+		vk::ImageMemoryBarrier output;
+		core::PipelineStage inputFrom;
+		core::PipelineStage inputTo;
+		core::PipelineStage outputFrom;
+		core::PipelineStage outputTo;
+	};
+
+	struct BufferInputOutputBarrier {
+		vk::BufferMemoryBarrier input;
+		vk::BufferMemoryBarrier output;
+		core::PipelineStage inputFrom;
+		core::PipelineStage inputTo;
+		core::PipelineStage outputFrom;
+		core::PipelineStage outputTo;
+	};
 
 	virtual ~QueuePassHandle();
 	void invalidate();
@@ -70,6 +87,9 @@ public:
 	virtual void finalize(FrameQueue &, bool) override;
 
 	virtual QueueOperations getQueueOps() const;
+
+	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, ImageAttachmentHandle &) const;
+	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *, BufferAttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
 
 protected:
 	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &);

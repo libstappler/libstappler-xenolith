@@ -33,6 +33,7 @@ namespace stappler::xenolith::vk {
 
 class Device;
 class RenderPass;
+class QueuePassHandle;
 
 struct DescriptorData {
 	core::ObjectHandle object;
@@ -99,9 +100,9 @@ public:
 
 	// if async is true - update descriptors with updateAfterBind flag
 	// 			   false - without updateAfterBindFlag
-	virtual bool writeDescriptors(const core::QueuePassHandle &, uint32_t layoutIndex, bool async) const;
+	virtual bool writeDescriptors(const QueuePassHandle &, uint32_t layoutIndex, bool async) const;
 
-	virtual void perform(const core::QueuePassHandle &, CommandBuffer &buf, const Callback<void()> &);
+	virtual void perform(const QueuePassHandle &, CommandBuffer &buf, const Callback<void()> &, bool writeBarriers = false);
 
 protected:
 	using core::RenderPass::init;

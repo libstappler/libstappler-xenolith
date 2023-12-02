@@ -22,7 +22,6 @@
 
 #include "XLVkMaterialCompiler.h"
 #include "XLVkObject.h"
-#include "XLVkBuffer.h"
 #include "XLVkQueuePass.h"
 #include "XLVkDeviceQueue.h"
 #include "XLCoreFrameRequest.h"

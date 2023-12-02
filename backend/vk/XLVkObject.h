@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define XENOLITH_BACKEND_VK_XLVKOBJECT_H_
 
 #include "XLVkDevice.h"
+#include "XLVkAllocator.h"
 #include "XLCoreObject.h"
 #include "XLCoreImageStorage.h"
 
@@ -33,18 +34,61 @@ namespace stappler::xenolith::vk {
 class Surface;
 class SwapchainImage;
 
+struct DeviceMemoryInfo {
+	VkDeviceSize size;
+	VkDeviceSize alignment;
+	uint32_t memoryType;
+	bool dedicated;
+};
+
+enum class DeviceMemoryAccess {
+	None = 0,
+	Invalidate = 1 << 0,
+	Flush = 1 << 1,
+	Full = Invalidate | Flush
+};
+
+SP_DEFINE_ENUM_AS_MASK(DeviceMemoryAccess)
+
 class DeviceMemory : public core::Object {
 public:
 	virtual ~DeviceMemory() { }
 
-	bool init(Device &dev, VkDeviceMemory);
+	bool init(Allocator *, DeviceMemoryInfo, VkDeviceMemory, AllocationUsage);
+	bool init(DeviceMemoryPool *, Allocator::MemBlock &&, AllocationUsage);
 
+	bool isPersistentMapped() const;
+
+	uint8_t *getPersistentMappedRegion() const;
+
+	const DeviceMemoryInfo &getInfo() const { return _info; }
 	VkDeviceMemory getMemory() const { return _memory; }
+	AllocationUsage getUsage() const { return _usage; }
+
+	VkDeviceSize getBlockOffset() const { return _memBlock.offset; }
+
+	bool isMappable() const { return _usage != AllocationUsage::DeviceLocal && _usage != AllocationUsage::DeviceLocalLazilyAllocated; }
+
+	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>(),
+			DeviceMemoryAccess = DeviceMemoryAccess::Full);
+
+	void invalidateMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
+	void flushMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
 
 protected:
 	using core::Object::init;
 
+	VkMappedMemoryRange calculateMappedMemoryRange(VkDeviceSize offset, VkDeviceSize size) const;
+
+	DeviceMemoryInfo _info;
+	DeviceMemoryPool *_pool = nullptr;
 	VkDeviceMemory _memory = VK_NULL_HANDLE;
+	AllocationUsage _usage = AllocationUsage::DeviceLocal;
+	Allocator::MemBlock _memBlock;
+	Rc<Allocator> _allocator;
+
+	VkDeviceSize _mappedOffset = 0;
+	VkDeviceSize _mappedSize = 0;
 };
 
 class Image : public core::ImageObject {
@@ -67,7 +111,7 @@ public:
 
 	VkImageAspectFlags getAspectMask() const;
 
-	void bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
+	bool bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
 
 protected:
 	using core::ImageObject::init;
@@ -81,7 +125,7 @@ class Buffer : public core::BufferObject {
 public:
 	virtual ~Buffer() { }
 
-	bool init(Device &dev, VkBuffer, const BufferInfo &, Rc<DeviceMemory> &&);
+	bool init(Device &dev, VkBuffer, const BufferInfo &, Rc<DeviceMemory> &&, VkDeviceSize memoryOffset);
 
 	VkBuffer getBuffer() const { return _buffer; }
 	DeviceMemoryPool *getPool() const { return _pool; }
@@ -91,16 +135,34 @@ public:
 	const BufferMemoryBarrier *getPendingBarrier() const;
 	void dropPendingBarrier();
 
-	void bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
+	bool bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
+
+	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>(),
+			DeviceMemoryAccess = DeviceMemoryAccess::Full);
+
+	uint8_t *getPersistentMappedRegion(bool invalidate = true);
+
+	void invalidateMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
+	void flushMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
+
+	bool setData(BytesView, VkDeviceSize offset = 0);
+	Bytes getData(VkDeviceSize size = maxOf<VkDeviceSize>(), VkDeviceSize offset = 0);
+
+	// returns maxOf<uint64_t>() on overflow
+	uint64_t reserveBlock(uint64_t blockSize, uint64_t alignment);
+	uint64_t getReservedSize() const { return _targetOffset.load(); }
 
 protected:
 	using core::BufferObject::init;
 
 	Rc<DeviceMemory> _memory;
+	VkDeviceSize _memoryOffset = 0;
 	VkBuffer _buffer = VK_NULL_HANDLE;
 	std::optional<BufferMemoryBarrier> _barrier;
 
 	DeviceMemoryPool *_pool = nullptr;
+
+	std::atomic<uint64_t> _targetOffset = 0;
 };
 
 class ImageView : public core::ImageView {

@@ -23,9 +23,9 @@
 
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
+#include "XLVkQueuePass.h"
 #include "XLVkAttachment.h"
 #include "XLVkTextureSet.h"
-#include "XLVkBuffer.h"
 #include "XLCoreAttachment.h"
 #include "XLCoreFrameQueue.h"
 #include <forward_list>
@@ -89,7 +89,7 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 	if (dev.getTable()->vkCreateFramebuffer(dev.getDevice(), &framebufferInfo, nullptr, &_framebuffer) == VK_SUCCESS) {
 		_extent = Extent2(extent.width, extent.height);
 		_layerCount = extent.depth;
-		return core::Framebuffer::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::Framebuffer::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyFramebuffer(d->getDevice(), (VkFramebuffer)ptr.get(), nullptr);
 		}, core::ObjectType::Framebuffer, ObjectHandle(_framebuffer));
@@ -155,7 +155,7 @@ VkRenderPass RenderPass::getRenderPass(bool alt) const {
 	return _data->renderPass;
 }
 
-bool RenderPass::writeDescriptors(const core::QueuePassHandle &handle, uint32_t layoutIndex, bool async) const {
+bool RenderPass::writeDescriptors(const QueuePassHandle &handle, uint32_t layoutIndex, bool async) const {
 	auto dev = (Device *)_device;
 	auto table = dev->getTable();
 	auto data = handle.getData();
@@ -333,7 +333,7 @@ bool RenderPass::writeDescriptors(const core::QueuePassHandle &handle, uint32_t 
 	return true;
 }
 
-void RenderPass::perform(const core::QueuePassHandle &handle, CommandBuffer &buf, const Callback<void()> &cb) {
+void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, const Callback<void()> &cb, bool writeBarriers) {
 	bool useAlternative = false;
 	for (auto &it : _variableAttachments) {
 		if (auto aHandle = handle.getAttachmentHandle(it->attachment)) {
@@ -341,6 +341,71 @@ void RenderPass::perform(const core::QueuePassHandle &handle, CommandBuffer &buf
 				useAlternative = true;
 				break;
 			}
+		}
+	}
+
+	Vector<QueuePassHandle::ImageInputOutputBarrier> imageBarriersData;
+	Vector<QueuePassHandle::BufferInputOutputBarrier> bufferBarriersData;
+
+	Vector<vk::ImageMemoryBarrier> imageBarriers;
+	Vector<vk::BufferMemoryBarrier> bufferBarriers;
+
+	core::PipelineStage fromStage = core::PipelineStage::None;
+	core::PipelineStage toStage = core::PipelineStage::None;
+
+	if (writeBarriers) {
+		for (auto &it : handle.getQueueData()->attachments) {
+			switch (it.first->attachment->type) {
+			case core::AttachmentType::Image:
+				if (auto h = dynamic_cast<ImageAttachmentHandle *>(it.second->handle.get())) {
+					if (auto img = static_cast<Image *>(it.second->image->getImage().get())) {
+						auto b = handle.getImageInputOutputBarrier(static_cast<Device *>(_device), img, *h);
+						if (auto pending = img->getPendingBarrier()) {
+							b.input = *pending;
+							img->dropPendingBarrier();
+						}
+						if (b.input || b.output) {
+							imageBarriersData.emplace_back(move(b));
+						}
+					}
+				}
+				break;
+			case core::AttachmentType::Buffer:
+				if (auto h = dynamic_cast<BufferAttachmentHandle *>(it.second->handle.get())) {
+					for (auto &it : h->getBuffers()) {
+						auto b = handle.getBufferInputOutputBarrier(static_cast<Device *>(_device), it.buffer, *h, it.offset, it.size);
+						if (auto pending = it.buffer->getPendingBarrier()) {
+							b.input = *pending;
+							it.buffer->dropPendingBarrier();
+						}
+						if (b.input || b.output) {
+							bufferBarriersData.emplace_back(move(b));
+						}
+					}
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		for (auto &it : imageBarriersData) {
+			if (it.input) {
+				fromStage |= it.inputFrom;
+				toStage |= it.inputTo;
+				imageBarriers.emplace_back(move(it.input));
+			}
+		}
+		for (auto &it : bufferBarriersData) {
+			if (it.input) {
+				fromStage |= it.inputFrom;
+				toStage |= it.inputTo;
+				bufferBarriers.emplace_back(move(it.input));
+			}
+		}
+
+		if (!imageBarriersData.empty() || !bufferBarriersData.empty()) {
+			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage), 0, bufferBarriers, imageBarriers);
 		}
 	}
 
@@ -352,6 +417,33 @@ void RenderPass::perform(const core::QueuePassHandle &handle, CommandBuffer &buf
 		buf.cmdEndRenderPass();
 	} else {
 		cb();
+	}
+
+	if (writeBarriers) {
+		fromStage = core::PipelineStage::None;
+		toStage = core::PipelineStage::None;
+
+		imageBarriersData.clear();
+		bufferBarriersData.clear();
+
+		for (auto &it : imageBarriersData) {
+			if (it.output) {
+				fromStage |= it.outputFrom;
+				toStage |= it.outputTo;
+				imageBarriers.emplace_back(move(it.output));
+			}
+		}
+		for (auto &it : bufferBarriersData) {
+			if (it.output) {
+				fromStage |= it.outputFrom;
+				toStage |= it.outputTo;
+				bufferBarriers.emplace_back(move(it.output));
+			}
+		}
+
+		if (!imageBarriersData.empty() || !bufferBarriersData.empty()) {
+			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage), 0, bufferBarriers, imageBarriers);
+		}
 	}
 }
 
@@ -601,12 +693,12 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 	if (initDescriptors(dev, data, pass)) {
 		auto l = new Data(move(pass));
 		_data = l;
-		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 			auto d = ((Device *)dev);
-			auto l = (Data *)ptr.get();
+			auto l = (Data *)ptr;
 			l->cleanup(*d);
 			delete l;
-		}, core::ObjectType::RenderPass, ObjectHandle(ObjectHandle::Type(uintptr_t(l))));
+		}, core::ObjectType::RenderPass, ObjectHandle(_data->renderPass), l);
 	}
 
 	return pass.cleanup(dev);
@@ -617,12 +709,12 @@ bool RenderPass::initComputePass(Device &dev, QueuePassData &data) {
 	if (initDescriptors(dev, data, pass)) {
 		auto l = new Data(move(pass));
 		_data = l;
-		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 			auto d = ((Device *)dev);
-			auto l = (Data *)ptr.get();
+			auto l = (Data *)ptr;
 			l->cleanup(*d);
 			delete l;
-		}, core::ObjectType::RenderPass, ObjectHandle(ObjectHandle::Type(uintptr_t(l))));
+		}, core::ObjectType::RenderPass, ObjectHandle(_data->renderPass), l);
 	}
 
 	return pass.cleanup(dev);
@@ -632,24 +724,24 @@ bool RenderPass::initTransferPass(Device &dev, QueuePassData &) {
 	// init nothing - no descriptors or render pass implementation needed
 	auto l = new Data();
 	_data = l;
-	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 		auto d = ((Device *)dev);
-		auto l = (Data *)ptr.get();
+		auto l = (Data *)ptr;
 		l->cleanup(*d);
 		delete l;
-	}, core::ObjectType::RenderPass, ObjectHandle(ObjectHandle::Type(uintptr_t(l))));
+	}, core::ObjectType::RenderPass, ObjectHandle(_data->renderPass), l);
 }
 
 bool RenderPass::initGenericPass(Device &dev, QueuePassData &) {
 	// init nothing - no descriptors or render pass implementation needed
 	auto l = new Data();
 	_data = l;
-	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr) {
+	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 		auto d = ((Device *)dev);
-		auto l = (Data *)ptr.get();
+		auto l = (Data *)ptr;
 		l->cleanup(*d);
 		delete l;
-	}, core::ObjectType::RenderPass, ObjectHandle(ObjectHandle::Type(uintptr_t(l))));
+	}, core::ObjectType::RenderPass, ObjectHandle(_data->renderPass), l);
 }
 
 bool RenderPass::initDescriptors(Device &dev, const QueuePassData &data, Data &pass) {

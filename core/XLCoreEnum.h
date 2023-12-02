@@ -240,6 +240,26 @@ enum class PredefinedConstant {
 	CurrentSamplerIdx,
 };
 
+struct SpecializationConstant {
+	enum Type {
+		Int,
+		Float,
+		Predefined
+	};
+
+	Type type = Int;
+	union {
+		int intValue;
+		float floatValue;
+		PredefinedConstant predefinedValue;
+	};
+
+	SpecializationConstant(int val) : type(Int), intValue(val) { }
+	SpecializationConstant(uint32_t val) : type(Int), intValue(val) { }
+	SpecializationConstant(float val) : type(Float), floatValue(val) { }
+	SpecializationConstant(PredefinedConstant val) : type(Predefined), predefinedValue(val) { }
+};
+
 enum class DynamicState {
 	None,
 	Viewport = 1,
@@ -670,6 +690,8 @@ enum class ImageHints {
 	Opaque = 1 << 0,
 	FixedSize = 1 << 1,
 	DoNotCache = 1 << 2,
+	ReadOnly = 1 << 3,
+	Static = FixedSize | DoNotCache | ReadOnly
 };
 
 SP_DEFINE_ENUM_AS_MASK(ImageHints);

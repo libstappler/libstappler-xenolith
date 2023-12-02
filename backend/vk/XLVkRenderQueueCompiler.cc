@@ -26,7 +26,6 @@
 #include "XLVkRenderQueueCompiler.h"
 #include "XLVkTransferQueue.h"
 #include "XLVkMaterialCompiler.h"
-#include "XLVkBuffer.h"
 #include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
@@ -427,7 +426,7 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 		}
 	}
 
-	_attachment->getRenderQueue()->setCompiled(true, [loop = Rc<core::Loop>(frame.getLoop()),
+	_attachment->getRenderQueue()->setCompiled(*_device, [loop = Rc<core::Loop>(frame.getLoop()),
 			passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
 		loop->performOnGlThread([loop, passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
 			auto &cache = loop->getFrameCache();

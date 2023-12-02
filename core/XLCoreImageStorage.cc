@@ -38,6 +38,10 @@ bool ImageStorage::init(Rc<ImageObject> &&image) {
 	return true;
 }
 
+bool ImageStorage::isStatic() const {
+	return _image && (_image->getInfo().hints & core::ImageHints::Static) == core::ImageHints::Static;
+}
+
 bool ImageStorage::isCacheable() const {
 	return !_isSwapchainImage && (!_image || (_image->getInfo().hints & core::ImageHints::DoNotCache) == core::ImageHints::None);
 }
@@ -61,6 +65,10 @@ uint32_t ImageStorage::getImageIndex() const {
 }
 
 void ImageStorage::rearmSemaphores(Loop &loop) {
+	if (isStatic()) {
+		return; // no need for sync
+	}
+
 	if (_waitSem && _waitSem->isWaited()) {
 		// general case
 		// successfully waited on this sem
@@ -119,7 +127,7 @@ void ImageStorage::invalidate() {
 }
 
 void ImageStorage::waitReady(Function<void(bool)> &&cb) {
-	if (_invalid) {
+	if (_invalid || isStatic()) {
 		cb(false);
 	}
 	if (!_ready) {

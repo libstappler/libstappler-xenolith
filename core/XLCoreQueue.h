@@ -61,7 +61,9 @@ public:
 	virtual bool init(Builder &&);
 
 	bool isCompiled() const;
-	void setCompiled(bool, Function<void()> &&);
+
+	// mark queue as compiled for device with specific finalization
+	void setCompiled(Device &, Function<void()> &&);
 
 	bool isCompatible(const ImageInfo &) const;
 
@@ -273,14 +275,31 @@ public:
 	const ProgramData * addProgram(StringView key, const memory::function<void(const ProgramData::DataCallback &)> &,
 			const ProgramInfo * = nullptr);
 
-	// resources, that will be compiled with RenderQueue
-	void setInternalResource(Rc<Resource> &&);
-
 	// external resources, that should be compiled when added
 	void addLinkedResource(const Rc<Resource> &);
 
 	void setBeginCallback(Function<void(FrameRequest &)> &&);
 	void setEndCallback(Function<void(FrameRequest &)> &&);
+
+	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+	const BufferData * addBuffer(StringView key, BufferInfo &&, FilePath data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+	const BufferData * addBuffer(StringView key, BufferInfo &&,
+			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+
+	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img, FilePath data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img,
+			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 
 protected:
 	memory::pool_t *getPool() const;
@@ -291,6 +310,7 @@ protected:
 	friend class Queue;
 
 	QueueData *_data = nullptr;
+	Resource::Builder _internalResource;
 };
 
 

@@ -52,13 +52,6 @@ bool ShadowPass::makeDefaultRenderQueue(Queue::Builder &builder, RenderQueueInfo
 		});
 	});
 
-	// define internal resources (images and buffers)
-	Resource::Builder resourceBuilder("LoaderResources");
-	if (info.resourceCallback) {
-		info.resourceCallback(resourceBuilder);
-		builder.setInternalResource(Rc<core::Resource>::create(move(resourceBuilder)));
-	}
-
 	return true;
 }
 
@@ -150,13 +143,13 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 
 		auto shaderSpecInfo = Vector<SpecializationInfo>({
 			// no specialization required for vertex shader
-			core::SpecializationInfo(materialVert, Vector<PredefinedConstant>{
-				PredefinedConstant::BuffersArraySize
+			core::SpecializationInfo(materialVert, Vector<SpecializationConstant>{
+				SpecializationConstant(PredefinedConstant::BuffersArraySize)
 			}),
 			// specialization for fragment shader - use platform-dependent array sizes
-			core::SpecializationInfo(materialFrag, Vector<PredefinedConstant>{
-				PredefinedConstant::SamplersArraySize,
-				PredefinedConstant::TexturesArraySize
+			core::SpecializationInfo(materialFrag, Vector<SpecializationConstant>{
+				SpecializationConstant(PredefinedConstant::SamplersArraySize),
+				SpecializationConstant(PredefinedConstant::TexturesArraySize)
 			})
 		});
 
@@ -227,8 +220,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			// no specialization required for vertex shader
 			shadowVert,
 			// specialization for fragment shader - use platform-dependent array sizes
-			SpecializationInfo(shadowFrag, Vector<PredefinedConstant>{
-				PredefinedConstant::SamplersArraySize,
+			SpecializationInfo(shadowFrag, Vector<SpecializationConstant>{
+				SpecializationConstant(PredefinedConstant::SamplersArraySize),
 			})
 		}), PipelineMaterialInfo({
 			BlendInfo(BlendFactor::Zero, BlendFactor::SrcColor, BlendOp::Add,

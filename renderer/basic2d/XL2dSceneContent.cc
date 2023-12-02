@@ -316,6 +316,10 @@ SceneLayout2d *SceneContent2d::getPrevLayout() {
 }
 
 bool SceneContent2d::popTopLayout() {
+	if (!_overlays.empty()) {
+		popOverlay(_overlays.back());
+		return true;
+	}
 	if (_layouts.size() > 1) {
 		popLayout(_layouts.back());
 		return true;
@@ -331,6 +335,17 @@ bool SceneContent2d::onBackButton() {
 	if (_layouts.empty()) {
 		return false;
 	} else {
+		if (!_overlays.empty()) {
+			if (!_overlays.back()->onBackButton()) {
+				if (!popTopLayout()) {
+					return false;
+				} else {
+					return true;
+				}
+			} else {
+				return true;
+			}
+		}
 		if (!_layouts.back()->onBackButton()) {
 			if (!popTopLayout()) {
 				return false;

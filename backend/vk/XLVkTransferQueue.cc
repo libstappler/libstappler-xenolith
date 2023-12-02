@@ -391,13 +391,17 @@ bool TransferResource::upload() {
 bool TransferResource::compile() {
 	Rc<DeviceMemory> mem;
 	if (_memory) {
-		mem = Rc<DeviceMemory>::create(*_alloc->getDevice(), _memory);
+		mem = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
+			_requiredMemory, 1, _memType->idx, false
+		}, _memory, _targetUsage);
 	}
 
 	for (auto &it : _images) {
 		Rc<Image> img;
 		if (it.dedicated) {
-			auto dedicated = Rc<DeviceMemory>::create(*_alloc->getDevice(), it.dedicated);
+			auto dedicated = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
+				it.req.requirements.size, it.req.requirements.alignment, it.dedicatedMemType, true
+			}, it.dedicated, _targetUsage);
 			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, move(dedicated), Rc<core::DataAtlas>(it.data->atlas));
 			it.dedicated = VK_NULL_HANDLE;
 		} else {
@@ -413,11 +417,13 @@ bool TransferResource::compile() {
 	for (auto &it : _buffers) {
 		Rc<Buffer> buf;
 		if (it.dedicated) {
-			auto dedicated = Rc<DeviceMemory>::create(*_alloc->getDevice(), it.dedicated);
-			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, move(dedicated));
+			auto dedicated = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
+				it.req.requirements.size, it.req.requirements.alignment, it.dedicatedMemType, true
+			}, it.dedicated, _targetUsage);
+			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, move(dedicated), 0);
 			it.dedicated = VK_NULL_HANDLE;
 		} else {
-			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, Rc<DeviceMemory>(mem));
+			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, Rc<DeviceMemory>(mem), it.offset);
 		}
 		if (it.barrier) {
 			buf->setPendingBarrier(it.barrier.value());
@@ -529,8 +535,8 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 
 				auto &ref = outputImageBarriers.emplace_back(VkImageMemoryBarrier({
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VkAccessFlags(it.targetImage->data->targetAccess),
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageLayout(it.targetImage->data->targetLayout),
 					srcQueueFamilyIndex, dstQueueFamilyIndex,
 					it.targetImage->image, VkImageSubresourceRange({
 						VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
@@ -554,7 +560,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 
 				auto &ref = outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
 					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VkAccessFlags(it.targetBuffer->data->targetAccess),
 					srcQueueFamilyIndex, dstQueueFamilyIndex,
 					it.targetBuffer->buffer, 0, VK_WHOLE_SIZE
 				}));
@@ -686,26 +692,7 @@ size_t TransferResource::writeData(uint8_t *mem, BufferAllocInfo &info) {
 
 size_t TransferResource::writeData(uint8_t *mem, ImageAllocInfo &info) {
 	uint64_t expectedSize = getFormatBlockSize(info.data->format) * info.data->extent.width * info.data->extent.height * info.data->extent.depth;
-	if (!info.data->data.empty()) {
-		auto size = info.data->data.size();
-		memcpy(mem, info.data->data.data(), size);
-		return size;
-	} else if (info.data->memCallback) {
-		size_t size = expectedSize;
-		info.data->memCallback(mem, expectedSize, [&] (BytesView data) {
-			size = data.size();
-			memcpy(mem, data.data(), size);
-		});
-		return size;
-	} else if (info.data->stdCallback) {
-		size_t size = expectedSize;
-		info.data->stdCallback(mem, expectedSize, [&] (BytesView data) {
-			size = data.size();
-			memcpy(mem, data.data(), size);
-		});
-		return size;
-	}
-	return 0;
+	return info.data->writeData(mem, expectedSize);
 }
 
 size_t TransferResource::preTransferData() {

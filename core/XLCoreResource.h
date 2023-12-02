@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define XENOLITH_CORE_XLCORERESOURCE_H_
 
 #include "XLCoreInfo.h"
+#include "XLCoreObject.h"
 
 namespace stappler::xenolith::core {
 
@@ -71,17 +72,27 @@ public:
 	Builder(StringView);
 	~Builder();
 
-	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data, Rc<DataAtlas> &&atlas = Rc<DataAtlas>());
-	const BufferData * addBuffer(StringView key, BufferInfo &&, FilePath data, Rc<DataAtlas> &&atlas = Rc<DataAtlas>());
-	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data, Rc<DataAtlas> &&atlas = Rc<DataAtlas>());
+	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+	const BufferData * addBuffer(StringView key, BufferInfo &&, FilePath data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
+	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 	const BufferData * addBuffer(StringView key, BufferInfo &&,
-			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas = Rc<DataAtlas>());
+			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
+			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 
-	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data);
-	const ImageData * addImage(StringView key, ImageInfo &&img, FilePath data);
-	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data);
+	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img, FilePath data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 	const ImageData * addImage(StringView key, ImageInfo &&img,
-			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb);
+			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+
+	bool empty() const;
 
 protected:
 	friend class Resource;
