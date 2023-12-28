@@ -69,6 +69,8 @@ public:
 
 	virtual StringView getName() const override;
 
+	FrameRenderPassState getDefaultSyncPassState() const;
+
 	const HashTable<ProgramData *> &getPrograms() const;
 	const HashTable<QueuePassData *> &getPasses() const;
 	const HashTable<GraphicPipelineData *> &getGraphicPipelines() const;
@@ -118,7 +120,9 @@ public:
 	void setType(AttachmentType type);
 
 	void defineAsInput(AttachmentOps ops = AttachmentOps::WritesColor | AttachmentOps::WritesStencil);
-	void defineAsOutput(AttachmentOps ops = AttachmentOps::ReadColor | AttachmentOps::ReadStencil);
+	void defineAsOutput(AttachmentOps ops = AttachmentOps::ReadColor | AttachmentOps::ReadStencil,
+			FrameRenderPassState pass = FrameRenderPassState::Submitted);
+	void defineAsOutput(FrameRenderPassState pass);
 
 	const AttachmentData *getAttachmentData() const { return _data; }
 
@@ -154,7 +158,14 @@ protected:
 
 class DescriptorSetBuilder final {
 public:
+	// add single descriptor
+	// compiler CAN inspect shaders to modify descriptors count, if descriptor is actually an array
+	// if descriptor array size defined by spec constant - use addDescriptorArray instead
 	bool addDescriptor(const AttachmentPassData *, DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
+
+	// add descriptor array with predefined descriptors count
+	// compiler can not modify size of this array
+	bool addDescriptorArray(const AttachmentPassData *, uint32_t count, DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
 
 protected:
 	friend class PipelineLayoutBuilder;
@@ -204,6 +215,9 @@ public:
 
 	const ComputePipelineData *addComputePipeline(StringView key, const PipelineLayoutData *layout, SpecializationInfo &&);
 
+	void setPrepareCallback(memory::function<void(const SubpassData &, FrameQueue &)> &&);
+	void setCommandsCallback(memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> &&);
+
 protected:
 	friend class QueuePassBuilder;
 
@@ -243,7 +257,13 @@ public:
 			const SubpassData *dst, PipelineStage dstStage, AccessType dstAccess, bool byRegion = true);
 
 	const AttachmentPassData *addAttachment(const AttachmentData *);
+	const AttachmentPassData *addAttachment(const AttachmentData *, const AttachmentDependencyInfo &);
 	const AttachmentPassData *addAttachment(const AttachmentData *, const Callback<void(AttachmentPassBuilder &)> &);
+
+	StringView getName() const;
+
+	void addSubmittedCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&);
+	void addCompleteCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&);
 
 protected:
 	friend class Queue::Builder;
@@ -260,6 +280,8 @@ class Queue::Builder final {
 public:
 	Builder(StringView);
 	~Builder();
+
+	void setDefaultSyncPassState(FrameRenderPassState);
 
 	const AttachmentData *addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &);
 

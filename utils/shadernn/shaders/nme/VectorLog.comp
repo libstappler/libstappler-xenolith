@@ -1,0 +1,63 @@
+/* Copyright © 2017-2020 ABBYY Production LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+--------------------------------------------------------------------------------------------------------------*/
+
+#version 450
+
+precision highp float;
+
+#define ID_X	(int(gl_GlobalInvocationID.x))
+#define ID_Y	(int(gl_GlobalInvocationID.y))
+#define MAX_X (int(gl_WorkGroupSize.x) * int(gl_NumWorkGroups.x))
+#define ID_VEC (ID_Y * MAX_X + ID_X)
+
+#define FLT_MIN_LOG	-87.33654474f
+#define FLT_MAX_LOG	88.f
+#define FLT_MAX		3.402823466e+38f
+#define FLT_MIN		1.175494351e-38F        // min normalized positive value
+
+// The basic loop for vector operations
+#define VECTOR_LOOP(indexName, baseVector)								\
+	int _posStart = ID_VEC * 4;											\
+	int _posEnd = min(_posStart + 4, int(baseVector.length()));			\
+	for(int indexName = _posStart; indexName < _posEnd; ++indexName)
+
+#define XL_Out buffers[OUTPUT_BUFFER_INDEX].data 
+#define XL_In buffers[INPUT_BUFFER_INDEX].data 
+
+layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 16;
+layout (constant_id = 1) const int OUTPUT_BUFFER_INDEX = 0;
+layout (constant_id = 2) const int INPUT_BUFFER_INDEX = 1;
+
+layout (set = 0, binding = 0) buffer Buffers {
+	float data[];
+} buffers[BUFFERS_ARRAY_SIZE];
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct Data {
+	int isNeg;
+};
+
+layout (push_constant) uniform pcb {
+	Data P;
+};
+
+void main()
+{
+	VECTOR_LOOP(i, XL_Out) {
+		float res = log(min(max(XL_In[i], FLT_MIN), FLT_MAX));
+		XL_Out[i] = (P.isNeg != 0) ? -res : res;
+	}
+}

@@ -248,6 +248,18 @@ Extent3 ImageView::getFramebufferExtent() const {
 	return Extent3(_image->getInfo().extent.width, _image->getInfo().extent.height, getLayerCount());
 }
 
+void CommandBuffer::bindImage(ImageObject *image) {
+	_images.emplace(image);
+}
+
+void CommandBuffer::bindBuffer(BufferObject *buffer) {
+	_buffers.emplace(buffer);
+}
+
+void CommandBuffer::bindFramebuffer(Framebuffer *fb) {
+	_framebuffers.emplace(fb);
+}
+
 void TextureSet::write(const MaterialLayout &set) {
 	_layoutIndexes.clear();
 	for (uint32_t i = 0; i < set.usedImageSlots; ++ i) {

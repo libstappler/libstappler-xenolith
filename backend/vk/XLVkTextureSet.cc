@@ -281,6 +281,88 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 	}, task, true);
 }
 
+void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf, Function<void(const BufferInfo &, BytesView)> &&cb) {
+	if (!buf) {
+		log::error("vk::TextureSetLayout", "Buffer is null");
+		return;
+	}
+
+	struct ReadBufferTask : public Ref {
+		Function<void(const BufferInfo &, BytesView)> callback;
+		Rc<Buffer> buffer;
+		Rc<Loop> loop;
+		Device *device;
+
+		Rc<Buffer> transferBuffer;
+		Rc<CommandPool> pool;
+		Rc<DeviceQueue> queue;
+		Rc<Fence> fence;
+		Rc<DeviceMemoryPool> mempool;
+	};
+
+	auto task = new ReadBufferTask();
+	task->callback = move(cb);
+	task->buffer = buf;
+	task->loop = &loop;
+	task->device = &dev;
+	task->mempool = buf->getMemory()->getPool();
+
+	task->loop->performOnGlThread([this, task] {
+		task->device->acquireQueue(getQueueOperations(task->buffer->getInfo().type), *task->loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
+			task->fence = loop.acquireFence(0);
+			task->pool = task->device->acquireCommandPool(getQueueOperations(task->buffer->getInfo().type));
+			task->queue = move(queue);
+			if (!task->mempool) {
+				task->mempool = Rc<DeviceMemoryPool>::create(task->device->getAllocator(), true);
+			}
+
+			auto &info = task->buffer->getInfo();
+
+			task->transferBuffer = task->mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
+				core::ForceBufferUsage(core::BufferUsage::TransferDst),
+				size_t(info.size),
+				info.type
+			));
+
+			auto refId = task->retain();
+			task->fence->addRelease([task, refId] (bool) {
+				task->device->releaseCommandPool(*task->loop, move(task->pool));
+
+				task->transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+					task->callback(task->buffer->getInfo(), BytesView(buf, size));
+				});
+
+				task->release(refId);
+			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
+
+			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
+				auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+					writeBufferRead(*task->device, buf, task->pool->getFamilyIdx(), task->buffer, task->transferBuffer);
+					return true;
+				});
+
+				if (task->queue->submit(*task->fence, buf)) {
+					return true;
+				}
+				return false;
+			}, [task] (const thread::Task &, bool success) {
+				if (task->queue) {
+					task->device->releaseQueue(move(task->queue));
+				}
+				if (!success) {
+					task->callback(BufferInfo(), BytesView());
+				}
+				task->fence->schedule(*task->loop);
+				task->fence = nullptr;
+				task->release(0);
+			}));
+		}, [task] (Loop &) {
+			task->callback(BufferInfo(), BytesView());
+			task->release(0);
+		});
+	}, task, true);
+}
+
 void TextureSetLayout::writeDefaults(CommandBuffer &buf) {
 	std::array<ImageMemoryBarrier, 2> inImageBarriers;
 	// define input barrier/transition (Undefined -> TransferDst)
@@ -329,6 +411,11 @@ void TextureSetLayout::writeImageRead(Device &dev, CommandBuffer &buf, uint32_t 
 	BufferMemoryBarrier bufferOutBarrier(target, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT);
 
 	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
+}
+
+void TextureSetLayout::writeBufferRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &source,
+		const Rc<Buffer> &target) {
+	buf.cmdCopyBuffer(source, target);
 }
 
 bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {

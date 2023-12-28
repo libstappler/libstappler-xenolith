@@ -47,7 +47,7 @@ SHADER_WORK_GROUP_Y = 8
 SHADER_WORK_GROUP_Z = 4
 
 LOCAL_SHADERS_RULES := -DWG_X=${SHADER_WORK_GROUP_X} -DWG_Y=${SHADER_WORK_GROUP_Y} -DWG_Z=${SHADER_WORK_GROUP_Z}
-LOCAL_SHADERS_DIR := shaders/f16 shaders/f32
+LOCAL_SHADERS_DIR := shaders/f16 shaders/f32 shaders/nme shaders/stat
 
 # Android config
 LOCAL_ANDROID_MK := proj.android/app/Android.mk # path to root Android.mk

@@ -31,25 +31,24 @@ namespace stappler::xenolith::core {
 struct FramePassData;
 struct FrameAttachmentData;
 
-struct FramePassDataRequired {
-	FramePassData *data = nullptr;
-	FrameRenderPassState requiredState = FrameRenderPassState::Initial;
-	FrameRenderPassState lockedState = FrameRenderPassState::Initial;
-
-	FramePassDataRequired() = default;
-	FramePassDataRequired(FramePassData *data, FrameRenderPassState required, FrameRenderPassState locked)
-	: data(data), requiredState(required), lockedState(locked) { }
+struct FrameSyncAttachment {
+	const AttachmentHandle *attachment;
+	Rc<Semaphore> semaphore;
+	ImageStorage *image = nullptr;
+	PipelineStage stages = PipelineStage::None;
 };
 
 struct FramePassData {
 	FrameRenderPassState state = FrameRenderPassState::Initial;
 	Rc<QueuePassHandle> handle;
+	const QueuePassData *data = nullptr;
 
 	Vector<Pair<const AttachmentPassData *, FrameAttachmentData *>> attachments;
 	HashMap<const AttachmentData *, FrameAttachmentData *> attachmentMap;
 
-	Vector<FramePassDataRequired> required;
 	HashMap<FrameRenderPassState, Vector<FramePassData *>> waiters;
+
+	mutable Vector<FrameSyncAttachment> waitSync;
 
 	Rc<Framebuffer> framebuffer;
 	bool waitForResult = false;
@@ -69,13 +68,6 @@ struct FrameAttachmentData {
 
 	Rc<ImageStorage> image;
 	bool waitForResult = false;
-};
-
-struct FrameSyncAttachment {
-	const AttachmentHandle *attachment;
-	Rc<Semaphore> semaphore;
-	ImageStorage *image = nullptr;
-	PipelineStage stages = PipelineStage::None;
 };
 
 struct FrameSyncImage {
@@ -115,9 +107,6 @@ public:
 	const FramePassData *getRenderPass(const QueuePassData *) const;
 
 protected:
-	void addRequiredPass(FramePassData &, const FramePassData &required,
-			const FrameAttachmentData &attachment, const AttachmentPassData &);
-
 	bool isResourcePending(const FrameAttachmentData &);
 	void waitForResource(const FrameAttachmentData &, Function<void(bool)> &&);
 

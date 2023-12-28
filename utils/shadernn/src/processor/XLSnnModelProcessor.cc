@@ -24,6 +24,9 @@
 #include "XLSnnInputLayer.h"
 #include "XLSnnConvLayer.h"
 #include "XLSnnSubpixelLayer.h"
+#include "XLSnnStatPercentLayer.h"
+#include "XLSnnMatrixMulLayer.h"
+#include "XLSnnLossLayer.h"
 
 namespace stappler::xenolith::shadernn {
 
@@ -32,12 +35,36 @@ bool ModelProcessor::init() {
 		return Rc<InputLayer>::create(m, tag, idx, data);
 	});
 
+	_layers.emplace("inputbufferlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<InputBufferLayer>::create(m, tag, idx, data);
+	});
+
+	_layers.emplace("inputcsvintlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<InputCsvIntLayer>::create(m, tag, idx, data);
+	});
+
 	_layers.emplace("conv2d", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<Conv2DLayer>::create(m, tag, idx, data);
 	});
 
 	_layers.emplace("subpixel", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<SubpixelLayer>::create(m, tag, idx, data);
+	});
+
+	_layers.emplace("statpercentlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<StatPercentLayer>::create(m, tag, idx, data);
+	});
+
+	_layers.emplace("statanalysislayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<StatAnalysisLayer>::create(m, tag, idx, data);
+	});
+
+	_layers.emplace("matrixmullayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<MatrixMulLayer>::create(m, tag, idx, data);
+	});
+
+	_layers.emplace("crossentropylosslayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+		return Rc<CrossEntropyLossLayer>::create(m, tag, idx, data);
 	});
 
 	return true;
@@ -99,12 +126,12 @@ ModelSpecialization ModelProcessor::specializeModel(Model *model, Map<const Laye
 		}
 	}
 
-	for (auto &it : model->getSortedLayers()) {
+	/*for (auto &it : model->getSortedLayers()) {
 		auto iit = ret.attachments.find(it->getOutput());
 		if (iit != ret.attachments.end()) {
 			std::cout << "Specialization: Layer " << it->getName() << " (" << it->getTag() << ") " << iit->second << "\n";
 		}
-	}
+	}*/
 
 	return ret;
 }
@@ -155,7 +182,7 @@ Rc<Layer> ModelProcessor::makeLayer(Model *m, StringView tag, size_t idx, Value 
 		layerType = "Subpixel";
 	}
 
-	string::tolower(layerType);
+	layerType = string::tolower<Interface>(layerType);
 
 	auto it = _layers.find(layerType);
 	if (it != _layers.end()) {

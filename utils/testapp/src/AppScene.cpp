@@ -42,17 +42,15 @@ namespace stappler::xenolith::app {
 bool AppScene::init(Application *app, const core::FrameContraints &constraints) {
 	// build presentation RenderQueue
 	core::Queue::Builder builder("Loader");
+	builder.addImage("xenolith-1-480.png",
+			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
+			FilePath("resources/xenolith-1-480.png"));
+	builder.addImage("xenolith-2-480.png",
+			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
+			FilePath("resources/xenolith-2-480.png"));
 
 	basic2d::vk::ShadowPass::RenderQueueInfo info{
-		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None,
-		[&] (core::Resource::Builder &resourceBuilder) {
-			resourceBuilder.addImage("xenolith-1-480.png",
-					core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
-					FilePath("resources/xenolith-1-480.png"));
-			resourceBuilder.addImage("xenolith-2-480.png",
-					core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
-					FilePath("resources/xenolith-2-480.png"));
-		}
+		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
 	};
 
 	basic2d::vk::ShadowPass::makeDefaultRenderQueue(builder, info);

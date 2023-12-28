@@ -162,6 +162,7 @@ private:
 	Vector<DeviceQueueFamily> _families;
 
 	bool _finished = false;
+	bool _updateAfterBindEnabled = true;
 
 	Vector<VkSampler> _immutableSamplers;
 	Vector<Rc<Sampler>> _samplers;

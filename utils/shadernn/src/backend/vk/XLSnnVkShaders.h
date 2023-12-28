@@ -62,11 +62,41 @@ enum class LayerShader {
 	Unary,
 	Upsampling2dBilinear,
 	Upsampling2dNearest,
+
+	BufferNorm,
+	MultiplyMatrixByMatrix,
+	MultiplyMatrixByMatrixBorder,
+	MultiplyMatrixByTransposedMatrix,
+	MultiplyMatrixByTransposedMatrixBorder,
+	MultiplyTransposedMatrixByMatrix,
+	MultiplyTransposedMatrixByMatrixBorder,
+	AddVectorToMatrixRows,
+	MatrixSoftmaxByRows,
+	VectorAddFloat1,
+	VectorAddFloat4,
+	VectorReLU,
+	VectorReLU4,
+	VectorReLUDiff,
+	VectorLog,
+	VectorDotProduct,
+	VectorEltwiseMultiply,
+	VectorMultiplyAndAdd,
+	VectorSub,
+	SumMatrixColumns,
+	SumMatrixRows,
+	MultiplyDiagMatrixByMatrix,
+
+	StatNorm,
+	StatClassMap,
+	StatClassPercent,
+	StatAnalysis,
 };
 
 Precision getAttachmentPrecision(const core::AttachmentData *);
 
 SpanView<uint32_t> getShader(LayerShader, Precision);
+
+void FillFloatBuffer(uint8_t *buf, uint64_t size, float val);
 
 }
 

@@ -43,6 +43,8 @@ public:
 
 	StringView getName() const { return _name; }
 
+	Layer *getOutputBy() const { return _outputBy; }
+
 protected:
 	String _name;
 	uint32_t _id = 0;

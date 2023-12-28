@@ -91,6 +91,8 @@ public:
 	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, ImageAttachmentHandle &) const;
 	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *, BufferAttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
 
+	void setQueueIdleMode(DeviceQueue::IdleMode);
+
 protected:
 	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &);
 	virtual bool doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited);
@@ -106,6 +108,13 @@ protected:
 	virtual MaterialBuffers updateMaterials(FrameHandle &iframe, const Rc<core::MaterialSet> &data,
 			const Vector<Rc<core::Material>> &materials, SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove);
 
+	vk::ComputePipeline *getComputePipelineByName(uint32_t subpass, StringView) const;
+	vk::ComputePipeline *getComputePipelineBySubName(uint32_t subpass, StringView) const;
+
+	vk::GraphicPipeline *getGraphicPipelineByName(uint32_t subpass, StringView) const;
+	vk::GraphicPipeline *getGraphicPipelineBySubName(uint32_t subpass, StringView) const;
+
+	DeviceQueue::IdleMode _queueIdleMode = DeviceQueue::IdleMode::None;
 	Function<void(bool)> _onPrepared;
 	bool _valid = true;
 	bool _commandsReady = false;

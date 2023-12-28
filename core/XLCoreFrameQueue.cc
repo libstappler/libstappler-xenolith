@@ -58,7 +58,8 @@ bool FrameQueue::setup() {
 		if (pass->isAvailable(*this)) {
 			auto v = _renderPasses.emplace(it, FramePassData{
 				FrameRenderPassState::Initial,
-				pass
+				pass,
+				pass->getData()
 			}).first;
 			pass->setQueueData(v->second);
 			_renderPassesInitial.emplace(&v->second);
@@ -135,31 +136,20 @@ bool FrameQueue::setup() {
 		}
 
 		for (auto &a : passIt.second.attachments) {
-			auto &desc = a.first->attachment->passes;
-			auto it = desc.begin();
-			while (it != desc.end() && (*it)->pass != passIt.second.handle->getData()) {
-				auto iit = _renderPasses.find((*it)->pass);
-				if (iit != _renderPasses.end()) {
-					addRequiredPass(passIt.second, iit->second, *a.second, **it);
-					++ it;
-				} else {
-					XL_FRAME_QUEUE_LOG("RenderPass '", (*it)->pass->key, "' is not available on frame");
-					valid = false;
-					break;
-				}
-			}
-
 			passIt.second.attachmentMap.emplace(a.first->attachment, a.second);
 		}
 	}
 
 	for (auto &passIt : _renderPasses) {
-		for (auto &it : passIt.second.required) {
-			auto wIt = it.data->waiters.find(it.requiredState);
-			if (wIt == it.data->waiters.end()) {
-				wIt = it.data->waiters.emplace(it.requiredState, Vector<FramePassData *>()).first;
+		FramePassData &passData = passIt.second;
+		for (auto &it : passData.data->required) {
+			if (auto targetPassData = const_cast<FramePassData *>(getRenderPass(it.data))) {
+				auto wIt = targetPassData->waiters.find(it.requiredState);
+				if (wIt == targetPassData->waiters.end()) {
+					wIt = targetPassData->waiters.emplace(it.requiredState, Vector<FramePassData *>()).first;
+				}
+				wIt->second.emplace_back(&passIt.second);
 			}
-			wIt->second.emplace_back(&passIt.second);
 		}
 	}
 
@@ -275,28 +265,6 @@ const FramePassData *FrameQueue::getRenderPass(const QueuePassData *p) const {
 		return &it->second;
 	}
 	return nullptr;
-}
-
-void FrameQueue::addRequiredPass(FramePassData &pass, const FramePassData &required,
-		const FrameAttachmentData &attachment, const AttachmentPassData &desc) {
-	auto requiredState = (desc.dependency.requiredRenderPassState == FrameRenderPassState::Initial) ? FrameRenderPassState::Submitted : desc.dependency.requiredRenderPassState;
-	auto lockedState = desc.dependency.lockedRenderPassState;
-	if (requiredState == FrameRenderPassState::Initial) {
-		return;
-	}
-
-	auto lb = std::lower_bound(pass.required.begin(), pass.required.end(), &required,
-			[&] (const FramePassDataRequired &l, const FramePassData *r) {
-		return l.data < r;
-	});
-	if (lb == pass.required.end()) {
-		pass.required.emplace_back((FramePassData *)&required, requiredState, lockedState);
-	} else if (lb->data != &required) {
-		pass.required.emplace(lb, (FramePassData *)&required, requiredState, lockedState);
-	} else {
-		lb->requiredState = FrameRenderPassState(std::max(toInt(lb->requiredState), toInt(requiredState)));
-		lb->lockedState = FrameRenderPassState(std::min(toInt(lb->lockedState), toInt(lockedState)));
-	}
 }
 
 bool FrameQueue::isResourcePending(const FrameAttachmentData &image) {
@@ -472,9 +440,9 @@ bool FrameQueue::isRenderPassReady(const FramePassData &data) const {
 }
 
 bool FrameQueue::isRenderPassReadyForState(const FramePassData &data, FrameRenderPassState state) const {
-	for (auto &it : data.required) {
-		if (toInt(it.data->state) < toInt(it.requiredState)) {
-			if (state >= it.lockedState) {
+	for (auto &it : data.data->required) {
+		if (auto d = getRenderPass(it.data)) {
+			if (toInt(d->state) < toInt(it.requiredState) && state >= it.lockedState) {
 				return false;
 			}
 		}
@@ -485,6 +453,7 @@ bool FrameQueue::isRenderPassReadyForState(const FramePassData &data, FrameRende
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -812,7 +781,9 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 	}
 
 	for (auto &it : data.attachments) {
-		if (it.second->handle->isOutput() && it.first->attachment->attachment->getLastRenderPass() == data.handle->getData()) {
+		if (it.second->handle->isOutput()
+				&& it.second->handle->getAttachment()->getData()->outputState == FrameRenderPassState::Submitted
+				&& it.first->attachment->attachment->getLastRenderPass() == data.handle->getData()) {
 			_frame->onOutputAttachment(*it.second);
 		}
 	}
@@ -824,12 +795,20 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 }
 
 void FrameQueue::onRenderPassComplete(FramePassData &data) {
-	auto t = platform::clock(ClockType::Monotonic) - data.submitTime;;
+	auto t = platform::clock(ClockType::Monotonic) - data.submitTime;
 
 	_submissionTime += t;
 	if (_finalized) {
 		invalidate(data);
 		return;
+	}
+
+	for (auto &it : data.attachments) {
+		if (it.second->handle->isOutput()
+				&& it.second->handle->getAttachment()->getData()->outputState == FrameRenderPassState::Complete
+				&& it.first->attachment->attachment->getLastRenderPass() == data.handle->getData()) {
+			_frame->onOutputAttachment(*it.second);
+		}
 	}
 
 	++ _renderPassCompleted;
@@ -841,19 +820,38 @@ void FrameQueue::onRenderPassComplete(FramePassData &data) {
 Rc<FrameSync> FrameQueue::makeRenderPassSync(FramePassData &data) const {
 	auto ret = Rc<FrameSync>::alloc();
 
+	for (auto &it : data.data->sourceQueueDependencies) {
+		//auto handle = getAttachment(it->attachments.front());
+		auto target = getRenderPass(it->target);
+
+		auto sem = _loop->makeSemaphore();
+
+		ret->signalAttachments.emplace_back(FrameSyncAttachment{nullptr, sem, nullptr});
+
+		target->waitSync.emplace_back(FrameSyncAttachment{nullptr, sem, nullptr, it->stageFlags});
+	}
+
+	for (auto &it : data.waitSync) {
+		ret->waitAttachments.emplace_back(move(it));
+	}
+
 	for (auto &it : data.attachments) {
+		// insert wait sem when image first-time used
 		if (it.first->attachment->attachment->getFirstRenderPass() == data.handle->getData()) {
 			if (it.second->image && it.second->image->getWaitSem()) {
 				ret->waitAttachments.emplace_back(FrameSyncAttachment{it.second->handle, it.second->image->getWaitSem(),
 					it.second->image.get(), getWaitStageForAttachment(data, it.second->handle)});
 			}
 		}
+
+		// insert signal sem when image last-time used
 		if (it.second->handle->getAttachment()->getLastRenderPass() == data.handle->getData()) {
 			if (it.second->image && it.second->image->getSignalSem()) {
 				ret->signalAttachments.emplace_back(FrameSyncAttachment{it.second->handle, it.second->image->getSignalSem(),
 					it.second->image.get()});
 			}
 		}
+
 		if (it.second->image) {
 			auto layout = it.first->finalLayout;
 			if (layout == AttachmentLayout::PresentSrc && !it.second->image->isSwapchainImage()) {

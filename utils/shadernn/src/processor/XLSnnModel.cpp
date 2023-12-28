@@ -22,6 +22,7 @@
 
 #include "XLCommon.h"
 
+#include "XLSnnRandom.cc"
 #include "XLSnnModel.cc"
 #include "XLSnnModelProcessor.cc"
 #include "XLSnnAttachment.cc"

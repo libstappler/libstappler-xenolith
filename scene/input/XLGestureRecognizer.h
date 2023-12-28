@@ -288,7 +288,7 @@ protected:
 	virtual bool renewEvent(const InputEvent &, float density) override;
 
 	Time _lastTime;
-	math::MovingAverage<3> _velocityX, _velocityY;
+	math::MovingAverage<4> _velocityX, _velocityY;
 
 	bool _swipeBegin = false;
 	uint32_t _currentTouch = maxOf<uint32_t>();

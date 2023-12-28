@@ -105,11 +105,14 @@ struct BufferData : BufferInfo {
 	using DataCallback = memory::callback<void(BytesView)>;
 
 	BytesView data;
-	memory::function<void(uint8_t *, uint64_t, const DataCallback &)> callback = nullptr;
+	memory::function<void(uint8_t *, uint64_t, const DataCallback &)> memCallback = nullptr;
+	std::function<void(uint8_t *, uint64_t, const DataCallback &)> stdCallback = nullptr;
 	Rc<BufferObject> buffer; // GL implementation-dependent object
 	Rc<DataAtlas> atlas;
 	const Resource *resource = nullptr; // owning resource;
 	core::AccessType targetAccess = core::AccessType::ShaderRead;
+
+	size_t writeData(uint8_t *mem, size_t expected) const;
 };
 
 

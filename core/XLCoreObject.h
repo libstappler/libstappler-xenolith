@@ -311,6 +311,24 @@ protected:
 	SamplerInfo _info;
 };
 
+class CommandBuffer : public Ref {
+public:
+	virtual ~CommandBuffer() = default;
+
+	virtual void bindImage(ImageObject *);
+	virtual void bindBuffer(BufferObject *);
+	virtual void bindFramebuffer(Framebuffer *);
+
+protected:
+	uint32_t _currentSubpass = 0;
+	uint32_t _boundLayoutIndex = 0;
+	bool _withinRenderpass = false;
+
+	Set<Rc<ImageObject>> _images;
+	Set<Rc<BufferObject>> _buffers;
+	Set<Rc<Framebuffer>> _framebuffers;
+};
+
 struct MaterialImageSlot {
 	Rc<ImageView> image;
 	uint32_t refCount = 0;

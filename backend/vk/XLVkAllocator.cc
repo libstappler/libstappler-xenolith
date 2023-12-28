@@ -907,6 +907,10 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Image *target) {
 }
 
 DeviceMemoryPool::~DeviceMemoryPool() {
+	for (auto &it : _mappingProtection) {
+		delete it.second;
+	}
+
 	if (_allocator) {
 		for (auto &it : _buffers) {
 			it->invalidate();
@@ -1045,13 +1049,14 @@ Allocator::MemBlock DeviceMemoryPool::alloc(MemData *mem, VkDeviceSize in_size, 
 		auto b = _allocator->alloc(mem->type, reqSize, (type == AllocationUsage::DeviceLocal) ? false : _persistentMapping);
 		mem->mem.emplace_back(b);
 		node = &mem->mem.back();
+		node->mappingProtection = _mappingProtection.emplace(node->mem, new Mutex()).first->second;
 		alignedOffset = 0;
 	}
 
 	if (node && node->mem) {
 		node->offset = alignedOffset + size;
 		node->lastAllocation = allocType;
-		return Allocator::MemBlock({node->mem, alignedOffset, size, mem->type->idx, node->ptr});
+		return Allocator::MemBlock({node->mem, alignedOffset, size, mem->type->idx, node->ptr, node->mappingProtection});
 	}
 
 	return Allocator::MemBlock();

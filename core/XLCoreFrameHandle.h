@@ -63,6 +63,7 @@ public:
 	const Vector<Rc<DependencyEvent>> &getSignalDependencies() const;
 
 	const Vector<Rc<FrameQueue>> &getFrameQueues() const { return _queues; }
+	FrameQueue *getFrameQueue(Queue *) const;
 
 	// spinners within frame should not spin directly on loop to preserve FrameHandle object
 	virtual void schedule(Function<bool(FrameHandle &)> &&, StringView tag);

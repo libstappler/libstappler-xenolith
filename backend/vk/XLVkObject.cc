@@ -73,13 +73,15 @@ uint8_t *DeviceMemory::getPersistentMappedRegion() const {
 }
 
 bool DeviceMemory::map(const Callback<void(uint8_t *, VkDeviceSize)> &cb, VkDeviceSize offset, VkDeviceSize size, DeviceMemoryAccess access) {
-	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	auto t = _allocator->getType(_info.memoryType);
 	if (!t->isHostVisible()) {
 		return false;
 	}
 
 	bool hostCoherent = t->isHostCoherent();
 	auto range = calculateMappedMemoryRange(offset, size);
+
+	std::unique_lock<Mutex> lock(_memBlock.mappingProtection ? *_memBlock.mappingProtection : _mappingProtectionMutex);
 
 	uint8_t *mapped = nullptr;
 	if (_memBlock.ptr) {
@@ -96,27 +98,26 @@ bool DeviceMemory::map(const Callback<void(uint8_t *, VkDeviceSize)> &cb, VkDevi
 	}
 
 	if (!hostCoherent && (access & DeviceMemoryAccess::Invalidate) != DeviceMemoryAccess::None) {
-		_pool->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+		_allocator->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_allocator->getDevice()->getDevice(), 1, &range);
 	}
 
 	cb(static_cast<uint8_t *>(mapped), std::min(_info.size - offset, size));
 
 	if (!hostCoherent && (access & DeviceMemoryAccess::Flush) != DeviceMemoryAccess::None) {
-		_pool->getDevice()->getTable()->vkFlushMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+		_allocator->getDevice()->getTable()->vkFlushMappedMemoryRanges(_allocator->getDevice()->getDevice(), 1, &range);
 	}
 
 	if (!_memBlock.ptr) {
 		_mappedOffset = 0;
 		_mappedSize = 0;
 
-		_pool->getDevice()->getTable()->vkUnmapMemory(_pool->getDevice()->getDevice(), _memory);
+		_allocator->getDevice()->getTable()->vkUnmapMemory(_allocator->getDevice()->getDevice(), _memory);
 	}
-
 	return true;
 }
 
 void DeviceMemory::invalidateMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
-	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	auto t = _allocator->getType(_info.memoryType);
 	if (!t->isHostVisible() || t->isHostCoherent()) {
 		return;
 	}
@@ -129,11 +130,11 @@ void DeviceMemory::invalidateMappedRegion(VkDeviceSize offset, VkDeviceSize size
 
 	auto range = calculateMappedMemoryRange(offset, size);
 
-	_pool->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+	_allocator->getDevice()->getTable()->vkInvalidateMappedMemoryRanges(_allocator->getDevice()->getDevice(), 1, &range);
 }
 
 void DeviceMemory::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
-	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	auto t = _allocator->getType(_info.memoryType);
 	if (!t->isHostVisible() || t->isHostCoherent()) {
 		return;
 	}
@@ -146,16 +147,16 @@ void DeviceMemory::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
 
 	auto range = calculateMappedMemoryRange(offset, size);
 
-	_pool->getDevice()->getTable()->vkFlushMappedMemoryRanges(_pool->getDevice()->getDevice(), 1, &range);
+	_allocator->getDevice()->getTable()->vkFlushMappedMemoryRanges(_allocator->getDevice()->getDevice(), 1, &range);
 }
 
 VkMappedMemoryRange DeviceMemory::calculateMappedMemoryRange(VkDeviceSize offset, VkDeviceSize size) const {
-	auto t = _pool->getAllocator()->getType(_info.memoryType);
+	auto t = _allocator->getType(_info.memoryType);
 
 	size = std::min(_info.size, size);
 	offset += _memBlock.offset;
 
-	VkDeviceSize atomSize = t->isHostCoherent() ? 1 : _pool->getAllocator()->getNonCoherentAtomSize();
+	VkDeviceSize atomSize = t->isHostCoherent() ? 1 : _allocator->getNonCoherentAtomSize();
 
 	VkMappedMemoryRange range;
 	range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;

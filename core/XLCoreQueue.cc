@@ -416,6 +416,75 @@ static void Queue_buildDescriptors(QueueData *data, Device &dev) {
 	}
 }
 
+static void Queue_addRequiredPass(QueuePassData &pass, const QueuePassData &required,
+		const AttachmentData &attachment, const AttachmentPassData &desc, FrameRenderPassState defaultSync) {
+	auto requiredState = (desc.dependency.requiredRenderPassState == FrameRenderPassState::Initial) ?
+			defaultSync : desc.dependency.requiredRenderPassState;
+	auto lockedState = desc.dependency.lockedRenderPassState;
+	if (requiredState == FrameRenderPassState::Initial) {
+		return;
+	}
+
+	auto lb = std::lower_bound(pass.required.begin(), pass.required.end(), &required,
+			[&] (const QueuePassRequirements &l, const QueuePassData *r) {
+		return l.data < r;
+	});
+	if (lb == pass.required.end()) {
+		pass.required.emplace_back(QueuePassRequirements(required, requiredState, lockedState));
+	} else if (lb->data != &required) {
+		pass.required.emplace(lb, QueuePassRequirements(required, requiredState, lockedState));
+	} else {
+		lb->requiredState = FrameRenderPassState(std::max(toInt(lb->requiredState), toInt(requiredState)));
+		lb->lockedState = FrameRenderPassState(std::min(toInt(lb->lockedState), toInt(lockedState)));
+	}
+}
+
+static void Queue_addDirectDependency(QueueData *data, const AttachmentPassData &source, const AttachmentPassData &target) {
+	if (target.dependency.initialUsageStage == PipelineStage::None) {
+		// no pipeline stage specified for synchronization
+		return;
+	}
+
+	for (auto &it : data->passDependencies) {
+		if (it.source == source.pass && it.target == target.pass) {
+			it.attachments.emplace_back(source.attachment);
+			if (target.dependency.initialUsageStage != PipelineStage::None) {
+				it.stageFlags |= target.dependency.initialUsageStage;
+			}
+			return;
+		}
+	}
+
+	auto &it = data->passDependencies.emplace_back(QueuePassDependency{
+		source.pass,
+		target.pass,
+		memory::vector<const AttachmentData *>{ source.attachment },
+		target.dependency.initialUsageStage
+	});
+
+	const_cast<QueuePassData *>(it.source)->sourceQueueDependencies.emplace_back(&it);
+	const_cast<QueuePassData *>(it.target)->targetQueueDependencies.emplace_back(&it);
+}
+
+static void Queue_buildRequirements(QueueData *data, Device &dev) {
+	for (auto &passIt : data->passes) {
+		for (auto &a : passIt->attachments) {
+			auto &desc = a->attachment->passes;
+			auto it = desc.begin();
+			while (it != desc.end() && (*it)->pass != passIt) {
+				Queue_addRequiredPass(*passIt, *(*it)->pass, *a->attachment, **it, data->defaultSyncPassState);
+
+				if ((*(it + 1))->pass == passIt) {
+					// direct dependency
+					Queue_addDirectDependency(data, *(*it), **(it + 1));
+				}
+
+				++ it;
+			}
+		}
+	}
+}
+
 static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 	if (attachemnt->pass->attachment->type != AttachmentType::Image) {
 		return;
@@ -626,7 +695,14 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 						getDescriptorTypeName(binding.type));
 				}
 				d->stages |= info->stage;
-				d->count = std::max(binding.count, d->count);
+				if (!d->countIsPredefined) {
+					if (binding.count < maxOf<uint32_t>()) {
+						d->count = std::max(binding.count, d->count);
+					}
+				} else if (binding.count < maxOf<uint32_t>() && binding.count > d->count) {
+					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
+							"] descriptor requires ", binding.count, " objects, but only ", d->count, "defined with addDescriptorArray");
+				}
 			} else {
 				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
 						"] descriptor target not found");
@@ -712,6 +788,10 @@ bool Queue::isCompatible(const ImageInfo &info) const {
 
 StringView Queue::getName() const {
 	return _data->key;
+}
+
+FrameRenderPassState Queue::getDefaultSyncPassState() const {
+	return _data->defaultSyncPassState;
 }
 
 const HashTable<ProgramData *> &Queue::getPrograms() const {
@@ -859,6 +939,8 @@ bool Queue::prepare(Device &dev) {
 		it->pass->prepare(dev);
 	}
 
+	Queue_buildRequirements(_data, dev);
+
 	return true;
 }
 
@@ -885,11 +967,16 @@ void AttachmentBuilder::defineAsInput(AttachmentOps ops) {
 	((QueueData *)_data->queue)->input.emplace_back(_data);
 }
 
-void AttachmentBuilder::defineAsOutput(AttachmentOps ops) {
+void AttachmentBuilder::defineAsOutput(AttachmentOps ops, FrameRenderPassState pass) {
 	_data->usage |= AttachmentUsage::Output;
 	_data->ops |= ops;
+	_data->outputState = pass;
 
 	((QueueData *)_data->queue)->output.emplace_back(_data);
+}
+
+void AttachmentBuilder::defineAsOutput(FrameRenderPassState pass) {
+	defineAsOutput(AttachmentOps::ReadColor | AttachmentOps::ReadStencil, pass);
 }
 
 AttachmentBuilder::AttachmentBuilder(AttachmentData *data) : _data(data) { }
@@ -942,7 +1029,28 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, D
 	p->attachment = attachment;
 	p->type = type;
 	p->layout = layout;
+	p->count = 1;
 	p->index = _data->descriptors.size();
+
+	_data->descriptors.emplace_back(p);
+	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
+
+	return true;
+}
+
+bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count, DescriptorType type, AttachmentLayout layout) {
+	auto pool = _data->layout->pass->queue->pool;
+	memory::pool::context ctx(pool);
+
+	auto p = new (pool) PipelineDescriptor;
+	p->key = attachment->key;
+	p->set = _data;
+	p->attachment = attachment;
+	p->type = type;
+	p->layout = layout;
+	p->count = count;
+	p->index = _data->descriptors.size();
+	p->countIsPredefined = true;
 
 	_data->descriptors.emplace_back(p);
 	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
@@ -1091,6 +1199,14 @@ const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key, co
 	return pipeline;
 }
 
+void SubpassBuilder::setPrepareCallback(memory::function<void(const SubpassData &, FrameQueue &)> &&cb) {
+	_data->prepareCallback = move(cb);
+}
+
+void SubpassBuilder::setCommandsCallback(memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> &&cb) {
+	_data->commandsCallback = move(cb);
+}
+
 GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key, const PipelineLayoutData *layout) {
 	auto it = _data->graphicPipelines.find(key);
 	if (it != _data->graphicPipelines.end()) {
@@ -1195,6 +1311,12 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 	return addAttachment(data, [] (AttachmentPassBuilder &builder) { });
 }
 
+const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data, const AttachmentDependencyInfo &deps) {
+	return addAttachment(data, [&] (AttachmentPassBuilder &builder) {
+		builder.setDependency(deps);
+	});
+}
+
 const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data, const Callback<void(AttachmentPassBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
@@ -1220,6 +1342,18 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 	return a;
 }
 
+StringView QueuePassBuilder::getName() const {
+	return _data->key;
+}
+
+void QueuePassBuilder::addSubmittedCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&cb) {
+	_data->submittedCallbacks.emplace_back(move(cb));
+}
+
+void QueuePassBuilder::addCompleteCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&cb) {
+	_data->submittedCallbacks.emplace_back(move(cb));
+}
+
 QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 
 Queue::Builder::Builder(StringView name) : _internalResource(toString(name, "_resource")) {
@@ -1240,6 +1374,10 @@ Queue::Builder::~Builder() {
 }
 
 static std::atomic<uint64_t> s_AttachmentCurrentIndex = 1;
+
+void Queue::Builder::setDefaultSyncPassState(FrameRenderPassState val) {
+	_data->defaultSyncPassState = val;
+}
 
 const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &cb) {
 	auto it = _data->attachments.find(name);

@@ -57,9 +57,10 @@ bool DeviceFrameHandle::init(Loop &loop, Device &device, Rc<FrameRequest> &&req,
 
 const Rc<DeviceMemoryPool> &DeviceFrameHandle::getMemPool(void *key) {
 	std::unique_lock<Mutex> lock(_mutex);
-	auto v = _memPools.find(key);
+	// experimental: multiple pools feature is disabled, advanced memory mapping protection can replace it completely
+	auto v = _memPools.find((void *)nullptr);
 	if (v == _memPools.end()) {
-		v = _memPools.emplace(key, Rc<DeviceMemoryPool>::create(_allocator, _request->isPersistentMapping())).first;
+		v = _memPools.emplace((void *)nullptr, Rc<DeviceMemoryPool>::create(_allocator, _request->isPersistentMapping())).first;
 	}
 	return v->second;
 }
@@ -398,6 +399,8 @@ void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
 			handle = move(family->waiters.front().handle);
 			family->waiters.erase(family->waiters.begin());
 
+			lock.unlock();
+
 			if (handle && handle->isValid()) {
 				if (cb) {
 					queue->setOwner(*handle);
@@ -421,6 +424,8 @@ void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
 			ref = move(family->waiters.front().ref);
 			loop = move(family->waiters.front().loop);
 			family->waiters.erase(family->waiters.begin());
+
+			lock.unlock();
 
 			if (loop && loop->isRunning()) {
 				if (cb) {
@@ -552,6 +557,9 @@ BytesView Device::emplaceConstant(core::PredefinedConstant c, Bytes &data) const
 }
 
 bool Device::supportsUpdateAfterBind(DescriptorType type) const {
+	if (!_updateAfterBindEnabled) {
+		return false;
+	}
 	switch (type) {
 	case DescriptorType::Sampler:
 		return true; // Samplers are immutable engine-wide

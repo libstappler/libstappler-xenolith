@@ -76,19 +76,21 @@ public:
 		VkDeviceSize offset = 0;  // current usage offset
 		AllocationType lastAllocation = AllocationType::Unknown; // last allocation type (for bufferImageGranularity)
 		void *ptr = nullptr;
+		Mutex *mappingProtection = nullptr;
 
 		operator bool () const { return mem != VK_NULL_HANDLE; }
 
 		size_t getFreeSpace() const { return size - offset; }
 	};
 
-	// Memory block, allocated from node for suballocation
+	// Memory block, allocated from node as suballocation
 	struct MemBlock {
 		VkDeviceMemory mem = VK_NULL_HANDLE; // device mem block
-		VkDeviceSize offset = 0; // offset in block
+		VkDeviceSize offset = 0; // offset in node
 		VkDeviceSize size = 0; // reserved size after offset
 		uint32_t type = 0; // memory type index
 		void *ptr = nullptr;
+		Mutex *mappingProtection = nullptr;
 
 		operator bool () const { return mem != VK_NULL_HANDLE; }
 	};
@@ -137,6 +139,8 @@ public:
 	VkDeviceSize getBufferImageGranularity() const { return _bufferImageGranularity; }
 	VkDeviceSize getNonCoherentAtomSize() const { return _nonCoherentAtomSize; }
 
+	Mutex &getMutex() const { return _mutex; }
+
 	const MemType *getType(uint32_t) const;
 
 	MemType * findMemoryType(uint32_t typeFilter, AllocationUsage) const;
@@ -164,7 +168,7 @@ protected:
 	bool allocateDedicated(AllocationUsage usage, Buffer *);
 	bool allocateDedicated(AllocationUsage usage, Image *);
 
-	Mutex _mutex;
+	mutable Mutex _mutex;
 	VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
 	Device *_device = nullptr;
 	VkPhysicalDeviceMemoryBudgetPropertiesEXT _memBudget = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
@@ -211,6 +215,7 @@ protected:
 	bool _persistentMapping = false;
 	Rc<Allocator> _allocator;
 	Map<int64_t, MemData> _heaps;
+	Map<VkDeviceMemory, Mutex *> _mappingProtection;
 	std::forward_list<Rc<Buffer>> _buffers;
 	std::forward_list<Rc<Image>> _images;
 };

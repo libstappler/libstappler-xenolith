@@ -26,3 +26,6 @@
 #include "XLSnnInputLayer.cc"
 #include "XLSnnConvLayer.cc"
 #include "XLSnnSubpixelLayer.cc"
+#include "XLSnnMatrixMulLayer.cc"
+#include "XLSnnStatPercentLayer.cc"
+#include "XLSnnLossLayer.cc"

@@ -477,6 +477,34 @@ String BufferInfo::description() const {
 	return stream.str();
 }
 
+size_t BufferData::writeData(uint8_t *mem, size_t expected) const {
+	if (size > expected) {
+		log::error("core::BufferData", "Not enoudh space for buffer: ", size, " required, ", expected, " allocated");
+		return 0;
+	}
+
+	if (!data.empty()) {
+		auto outsize = data.size();
+		memcpy(mem, data.data(), size);
+		return outsize;
+	} else if (memCallback) {
+		size_t outsize = size;
+		memCallback(mem, expected, [&] (BytesView data) {
+			outsize = data.size();
+			memcpy(mem, data.data(), size);
+		});
+		return outsize;
+	} else if (stdCallback) {
+		size_t outsize = size;
+		stdCallback(mem, expected, [&] (BytesView data) {
+			outsize = data.size();
+			memcpy(mem, data.data(), size);
+		});
+		return outsize;
+	}
+	return 0;
+}
+
 ImageViewInfo ImageInfoData::getViewInfo(const ImageViewInfo &info) const {
 	ImageViewInfo ret(info);
 	if (ret.format == ImageFormat::Undefined) {

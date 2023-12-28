@@ -83,6 +83,10 @@ public:
 		return LayerTransformInfo::identity();
 	}
 
+	virtual bool isTrainable() const { return false; }
+
+	const Model * getModel() { return _model; }
+
 	uint32_t getInputIndex() const { return _inputIndex; }
 
 	bool isInput() const { return _isInputLayer; }
@@ -98,6 +102,14 @@ public:
 	virtual const core::QueuePassData *prepare(core::Queue::Builder &builder,
 			Map<Layer *, const core::AttachmentData *> inputs,
 			Map<Attachment *, const core::AttachmentData *> attachments) {
+		return nullptr;
+	}
+
+	virtual const core::AttachmentData *makeInputAttachment(core::Queue::Builder &builder) {
+		return nullptr;
+	}
+
+	virtual const core::AttachmentData *makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
 		return nullptr;
 	}
 

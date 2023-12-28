@@ -119,53 +119,44 @@ void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Face face
 	FT_MM_Var *masters = nullptr;
 	FT_Get_MM_Var(face, &masters);
 
+	_variations.weight = params.fontWeight;
+	_variations.stretch = params.fontStretch;
+	_variations.opticalSize = uint32_t(0);
+	_variations.italic = uint32_t(params.fontStyle == FontStyle::Italic ? 1 : 0);
+	_variations.slant = params.fontStyle;
+	_variations.grade = params.fontGrade;
+
 	if (masters) {
 		for (FT_UInt i = 0; i < masters->num_axis; ++ i) {
 			auto tag = masters->axis[i].tag;
 			if (tag == getAxisTag("wght")) {
-				_variableAxis |= FontVariableAxis::Weight;
-				_weightMin = FontWeight(masters->axis[i].minimum >> 16);
-				_weightMax = FontWeight(masters->axis[i].maximum >> 16);
+				_variations.axisMask |= FontVariableAxis::Weight;
+				_variations.weight.min = FontWeight(masters->axis[i].minimum >> 16);
+				_variations.weight.max = FontWeight(masters->axis[i].maximum >> 16);
 			} else if (tag == getAxisTag("wdth")) {
-				_variableAxis |= FontVariableAxis::Width;
-				_stretchMin = FontStretch(masters->axis[i].minimum >> 15);
-				_stretchMax = FontStretch(masters->axis[i].maximum >> 15);
+				_variations.axisMask |= FontVariableAxis::Width;
+				_variations.stretch.min = FontStretch(masters->axis[i].minimum >> 15);
+				_variations.stretch.max = FontStretch(masters->axis[i].maximum >> 15);
 			} else if (tag == getAxisTag("ital")) {
-				_variableAxis |= FontVariableAxis::Italic;
-				_italicMin = masters->axis[i].minimum;
-				_italicMax = masters->axis[i].maximum;
+				_variations.axisMask |= FontVariableAxis::Italic;
+				_variations.italic.min = masters->axis[i].minimum;
+				_variations.italic.max = masters->axis[i].maximum;
 			} else if (tag == getAxisTag("slnt")) {
-				_variableAxis |= FontVariableAxis::Slant;
-				_slantMin = FontStyle(masters->axis[i].minimum >> 10);
-				_slantMax = FontStyle(masters->axis[i].maximum >> 10);
+				_variations.axisMask |= FontVariableAxis::Slant;
+				_variations.slant.min = FontStyle(masters->axis[i].minimum >> 10);
+				_variations.slant.max = FontStyle(masters->axis[i].maximum >> 10);
 			} else if (tag == getAxisTag("opsz")) {
-				_variableAxis |= FontVariableAxis::OpticalSize;
-				_opticalSizeMin = masters->axis[i].minimum;
-				_opticalSizeMax = masters->axis[i].maximum;
+				_variations.axisMask |= FontVariableAxis::OpticalSize;
+				_variations.opticalSize.min = masters->axis[i].minimum;
+				_variations.opticalSize.max = masters->axis[i].maximum;
 			} else if (tag == getAxisTag("GRAD")) {
-				_variableAxis |= FontVariableAxis::Grade;
-				_gradeMin = FontGrade(masters->axis[i].minimum >> 16);
-				_gradeMax = FontGrade(masters->axis[i].maximum >> 16);
+				_variations.axisMask |= FontVariableAxis::Grade;
+				_variations.grade.min = FontGrade(masters->axis[i].minimum >> 16);
+				_variations.grade.max = FontGrade(masters->axis[i].maximum >> 16);
 			}
 			/* std::cout << "Variable axis: [" << masters->axis[i].tag << "] "
 					<< (masters->axis[i].minimum >> 16) << " - " << (masters->axis[i].maximum >> 16)
 					<< " def: "<< (masters->axis[i].def >> 16) << "\n"; */
-		}
-	}
-
-	// apply static params
-	if ((_variableAxis & FontVariableAxis::Weight) == FontVariableAxis::None) {
-		_weightMin = _weightMax = params.fontWeight;
-	}
-	if ((_variableAxis & FontVariableAxis::Width) == FontVariableAxis::None) {
-		_stretchMin = _stretchMax = params.fontStretch;
-	}
-	if ((_variableAxis & FontVariableAxis::Italic) == FontVariableAxis::None &&
-			(_variableAxis & FontVariableAxis::Slant) == FontVariableAxis::None) {
-		switch (params.fontStyle.get()) {
-		case FontStyle::Normal.get(): break;
-		case FontStyle::Italic.get(): _italicMin = _italicMax = 1; break;
-		default: _slantMin = _slantMax = FontStyle::Oblique; break;
 		}
 	}
 
@@ -177,54 +168,7 @@ BytesView FontFaceData::getView() const {
 }
 
 FontSpecializationVector FontFaceData::getSpecialization(const FontSpecializationVector &vec) const {
-	FontSpecializationVector ret = vec;
-	ret.fontStyle = _params.fontStyle;
-	ret.fontStretch = _params.fontStretch;
-	ret.fontWeight = _params.fontWeight;
-	if ((_variableAxis & FontVariableAxis::Weight) != FontVariableAxis::None) {
-		ret.fontWeight = math::clamp(vec.fontWeight, _weightMin, _weightMax);
-	}
-	if ((_variableAxis & FontVariableAxis::Stretch) != FontVariableAxis::None) {
-		ret.fontStretch = math::clamp(vec.fontStretch, _stretchMin, _stretchMax);
-	}
-	if ((_variableAxis & FontVariableAxis::Grade) != FontVariableAxis::None) {
-		ret.fontGrade = math::clamp(vec.fontGrade, _gradeMin, _gradeMax);
-	}
-
-	if (ret.fontStyle != vec.fontStyle) {
-		switch (vec.fontStyle.get()) {
-		case FontStyle::Normal.get():
-			if (_params.fontStyle == FontStyle::Italic
-					&& (_variableAxis & FontVariableAxis::Italic) != FontVariableAxis::None
-					&& _italicMin != _italicMax) {
-				// we can disable italic
-				ret.fontStyle = FontStyle::Normal;
-			} else if (_params.fontStyle == FontStyle::Oblique
-					&& (_variableAxis & FontVariableAxis::Slant) != FontVariableAxis::None
-					&& _slantMin <= FontStyle::Normal && _slantMax >= FontStyle::Normal) {
-				//  we can remove slant
-				ret.fontStyle = math::clamp(FontStyle::Normal, _slantMin, _slantMax);
-			}
-			break;
-		case FontStyle::Italic.get():
-			// try true italic or slant emulation
-			if ((_variableAxis & FontVariableAxis::Italic) != FontVariableAxis::None && _italicMin != _italicMax) {
-				ret.fontStyle = FontStyle::Italic;
-			} else if ((_variableAxis & FontVariableAxis::Slant) != FontVariableAxis::None) {
-				ret.fontStyle = math::clamp(FontStyle::Oblique, _slantMin, _slantMax);
-			}
-			break;
-		default:
-			if ((_variableAxis & FontVariableAxis::Slant) != FontVariableAxis::None) {
-				ret.fontStyle = math::clamp(vec.fontStyle, _slantMin, _slantMax);
-			} else if ((_variableAxis & FontVariableAxis::Italic) != FontVariableAxis::None && _italicMin != _italicMax) {
-				ret.fontStyle = FontStyle::Italic;
-			}
-			break;
-		}
-	}
-
-	return ret;
+	return _variations.getSpecialization(vec);
 }
 
 FontFaceObject::~FontFaceObject() { }
@@ -235,7 +179,8 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face
 		return false;
 	}
 
-	if (data->getVariableAxis() != FontVariableAxis::None) {
+	auto &var = data->getVariations();
+	if (var.axisMask != FontVariableAxis::None) {
 		Vector<FT_Fixed> vector;
 
 		FT_MM_Var *masters;
@@ -245,18 +190,18 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face
 			for (FT_UInt i = 0; i < masters->num_axis; ++ i) {
 				auto tag = masters->axis[i].tag;
 				if (tag == getAxisTag("wght")) {
-					vector.emplace_back(math::clamp(spec.fontWeight, data->getWeightMin(), data->getWeightMax()).get() << 16);
+					vector.emplace_back(var.weight.clamp(spec.fontWeight).get() << 16);
 				} else if (tag == getAxisTag("wdth")) {
-					vector.emplace_back(math::clamp(spec.fontStretch, data->getStretchMin(), data->getStretchMax()).get() << 15);
+					vector.emplace_back(var.stretch.clamp(spec.fontStretch).get() << 15);
 				} else if (tag == getAxisTag("ital")) {
 					switch (spec.fontStyle.get()) {
-					case FontStyle::Normal.get(): vector.emplace_back(data->getItalicMin()); break;
-					case FontStyle::Italic.get(): vector.emplace_back(data->getItalicMax()); break;
+					case FontStyle::Normal.get(): vector.emplace_back(var.italic.min); break;
+					case FontStyle::Italic.get(): vector.emplace_back(var.italic.max); break;
 					default:
-						if ((data->getVariableAxis() & FontVariableAxis::Slant) != FontVariableAxis::None) {
-							vector.emplace_back(data->getItalicMin()); // has true oblique
+						if ((var.axisMask & FontVariableAxis::Slant) != FontVariableAxis::None) {
+							vector.emplace_back(var.italic.min); // has true oblique
 						} else {
-							vector.emplace_back(data->getItalicMax());
+							vector.emplace_back(var.italic.max);
 						}
 						break;
 					}
@@ -264,21 +209,21 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face
 					switch (spec.fontStyle.get()) {
 					case FontStyle::Normal.get(): vector.emplace_back(0); break;
 					case FontStyle::Italic.get():
-						if ((data->getVariableAxis() & FontVariableAxis::Italic) != FontVariableAxis::None) {
+						if ((var.axisMask & FontVariableAxis::Italic) != FontVariableAxis::None) {
 							vector.emplace_back(masters->axis[i].def);
 						} else {
-							vector.emplace_back(math::clamp(FontStyle::Oblique, data->getSlantMin(), data->getSlantMax()).get() << 10);
+							vector.emplace_back(var.slant.clamp(FontStyle::Oblique).get() << 10);
 						}
 						break;
 					default:
-						vector.emplace_back(math::clamp(spec.fontStyle, data->getSlantMin(), data->getSlantMax()).get() << 10);
+						vector.emplace_back(var.slant.clamp(spec.fontStyle).get() << 10);
 						break;
 					}
 				} else if (tag == getAxisTag("opsz")) {
 					auto opticalSize = uint32_t(floorf(spec.fontSize.get() / spec.density)) << 16;
-					vector.emplace_back(math::clamp(opticalSize, data->getOpticalSizeMin(), data->getOpticalSizeMax()));
+					vector.emplace_back(var.opticalSize.clamp(opticalSize));
 				} else if (tag == getAxisTag("GRAD")) {
-					vector.emplace_back(math::clamp(spec.fontGrade, data->getGradeMin(), data->getGradeMax()).get() << 16);
+					vector.emplace_back(var.grade.clamp(spec.fontGrade).get() << 16);
 				} else {
 					vector.emplace_back(masters->axis[i].def);
 				}

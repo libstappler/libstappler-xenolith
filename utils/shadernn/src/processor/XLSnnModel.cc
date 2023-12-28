@@ -21,10 +21,57 @@
  **/
 
 #include "XLSnnModel.h"
-#include "XLSnnLayer.h"
+#include "XLSnnLossLayer.h"
 #include "XLSnnAttachment.h"
 
 namespace stappler::xenolith::shadernn {
+
+void Model::saveBlob(const char *path, const uint8_t *buf, size_t size) {
+	::unlink(path);
+
+	auto f = fopen(path, "w");
+	::fwrite(&size, sizeof(size), 1, f);
+	::fwrite(buf, size, 1, f);
+	::fclose(f);
+}
+
+void Model::loadBlob(const char *path, const std::function<void(const uint8_t *, size_t)> &cb) {
+	auto f = fopen(path, "r");
+	if (!f) {
+		return;
+	}
+
+	size_t size = 0;
+	::fread(&size, sizeof(size), 1, f);
+
+	auto buf = new uint8_t[size];
+	if (size > 0) {
+		::fread(buf, size, 1, f);
+
+		cb(buf, size);
+	}
+
+	::fclose(f);
+	delete[] buf;
+}
+
+bool Model::compareBlob(const uint8_t *a, size_t na, const uint8_t *b, size_t nb, float v) {
+	return compareBlob((const float *)a, na / sizeof(float), (const float *)b, nb / sizeof(float), v);
+}
+
+bool Model::compareBlob(const float *a, size_t na, const float *b, size_t nb, float v) {
+	if (na != nb) {
+		return false;
+	}
+
+	while (na > 0) {
+		if (std::abs(*a - *b) > v) {
+			return false;
+		}
+		++ a; ++ b; -- na;
+	}
+	return true;
+}
 
 Model::~Model() { }
 
@@ -37,6 +84,12 @@ bool Model::init(ModelFlags f, const Value &val, uint32_t numLayers, StringView 
 		if (!_dataFile) {
 			log::error("snn::Model", "Fail to open model data file: ", dataFilePath);
 			return false;
+		}
+	}
+
+	if (val.isBool("trainable")) {
+		if (val.getBool("trainable")) {
+			_flags |= ModelFlags::Trainable;
 		}
 	}
 
@@ -105,6 +158,13 @@ float Model::readFloatData() {
 	return value;
 }
 
+float Model::getLastLoss() const {
+	if (auto l = dynamic_cast<LossLayer *>(_sortedLayers.back())) {
+		return l->getParameter(LossLayer::P_Loss);
+	}
+	return 0.0f;
+}
+
 Vector<Layer *> Model::getInputs() const {
 	Vector<Layer *> ret;
 	for (auto &it : _sortedLayers) {
@@ -137,8 +197,7 @@ void Model::linkInput(Vector<Layer *> &layers, Layer *inputLayer, Attachment *at
 }
 
 Activation getActivationValue(StringView istr) {
-	auto str = istr.str<Interface>();
-	string::toupper(str);
+	auto str = string::toupper<Interface>(istr);
 
 	if (str == "RELU") {
 		return Activation::RELU;

@@ -241,19 +241,6 @@ enum class QueueOperations : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(QueueOperations)
 
-enum class PresentationEvent {
-	Update, // force-update
-	SwapChainDeprecated, // swapchain was deprecated by view
-	SwapChainRecreated, // swapchain was recreated by view
-	SwapChainForceRecreate, // force engine to recreate swapchain with best params
-	FrameImageAcquired, // image from swapchain successfully acquired
-	FramePresentReady, // frame ready for presentation
-	FrameTimeoutPassed, // framerate heartbeat
-	UpdateFrameInterval, // view wants us to update frame interval
-	CompileResource, // new GL resource requested
-	Exit,
-};
-
 QueueOperations getQueueOperations(VkQueueFlags, bool present);
 QueueOperations getQueueOperations(core::PassType);
 String getQueueOperationsDesc(QueueOperations);

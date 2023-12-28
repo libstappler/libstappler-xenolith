@@ -114,6 +114,7 @@ public:
 	virtual void waitIdle() = 0;
 
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
+	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<BufferObject> &) = 0;
 
 protected:
 #if SP_REF_DEBUG

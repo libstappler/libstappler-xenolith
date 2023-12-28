@@ -534,7 +534,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	auto t = platform::clock();
 
 	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
-	//plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
+	plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
 
 	auto shadowExtent = commands->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
 	auto shadowSize = commands->lights.getShadowSize( fhandle.getFrameConstraints().getScreenSize());

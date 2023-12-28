@@ -350,12 +350,9 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 	auto loadBuffer = [] (const core::BufferData *bufferData, Buffer *buf) {
 		if (!bufferData->data.empty()) {
 			buf->setData(bufferData->data);
-		} else if (bufferData->callback) {
+		} else {
 			buf->map([&] (uint8_t *ptr, VkDeviceSize size) {
-				bufferData->callback(ptr, size, [&] (BytesView data) {
-					// TODO fix this logic
-					buf->setData(data);
-				});
+				bufferData->writeData(ptr, size);
 			});
 		}
 		return buf;

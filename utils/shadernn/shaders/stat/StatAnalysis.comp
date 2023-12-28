@@ -1,0 +1,67 @@
+#version 450
+#extension GL_ARB_gpu_shader_int64 : enable
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct ClassData {
+	vec4 data;
+	uvec4 count;
+};
+
+struct ResultData {
+	int diff;
+	uint mark;
+	float percent;
+	float classDiff;
+};
+
+layout(set=0, binding=0) writeonly buffer Result { ResultData result[]; };
+layout(set=0, binding=1) readonly buffer Input { uint64_t inputData[]; };
+layout(set=0, binding=2) readonly buffer Classes { ClassData classData[]; };
+
+struct InputInfo {
+	int size;
+	int fields;
+	int classField;
+	int classMin;
+	int classMax;
+	int fieldSource;
+	int fieldTarget;
+	int classCount;
+	float threshold;
+};
+
+layout (push_constant) uniform pcb {
+	InputInfo inputInfo;
+};
+
+void main() {
+	if (gl_GlobalInvocationID.x < inputInfo.size) {
+		ResultData data;
+		data.mark = 0;
+		uint classId = uint(inputData[gl_GlobalInvocationID.x * inputInfo.fields + inputInfo.classField]);
+		uint64_t source = inputData[gl_GlobalInvocationID.x * inputInfo.fields + inputInfo.fieldSource];
+		uint64_t target = inputData[gl_GlobalInvocationID.x * inputInfo.fields + inputInfo.fieldTarget];
+		if (classId >= inputInfo.classMin && classId <= inputInfo.classMax) {
+			ClassData cl = classData[classId - inputInfo.classMin];
+			data.diff = int(int64_t(target) - int64_t(source));
+			data.percent = float(int64_t(target) - int64_t(source)) / float(source);
+			if (data.percent > 0.0) {
+				data.classDiff = data.percent - cl.data.y;
+				if (data.classDiff > inputInfo.threshold) {
+					data.mark = 1;
+				}
+			} else {
+				data.classDiff = data.percent - cl.data.z;
+				if (data.classDiff < -inputInfo.threshold) {
+					data.mark = 2;
+				}
+			}
+		} else {
+			data.diff = 0;
+			data.percent = 0.0;
+			data.classDiff = 0.0;
+		}
+		result[gl_GlobalInvocationID.x] = data;
+    }
+}

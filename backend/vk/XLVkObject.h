@@ -64,6 +64,7 @@ public:
 	const DeviceMemoryInfo &getInfo() const { return _info; }
 	VkDeviceMemory getMemory() const { return _memory; }
 	AllocationUsage getUsage() const { return _usage; }
+	DeviceMemoryPool *getPool() const { return _pool; }
 
 	VkDeviceSize getBlockOffset() const { return _memBlock.offset; }
 
@@ -89,6 +90,8 @@ protected:
 
 	VkDeviceSize _mappedOffset = 0;
 	VkDeviceSize _mappedSize = 0;
+
+	Mutex _mappingProtectionMutex;
 };
 
 class Image : public core::ImageObject {
@@ -128,7 +131,6 @@ public:
 	bool init(Device &dev, VkBuffer, const BufferInfo &, Rc<DeviceMemory> &&, VkDeviceSize memoryOffset);
 
 	VkBuffer getBuffer() const { return _buffer; }
-	DeviceMemoryPool *getPool() const { return _pool; }
 	DeviceMemory *getMemory() const { return _memory; }
 
 	void setPendingBarrier(const BufferMemoryBarrier &);
@@ -159,8 +161,6 @@ protected:
 	VkDeviceSize _memoryOffset = 0;
 	VkBuffer _buffer = VK_NULL_HANDLE;
 	std::optional<BufferMemoryBarrier> _barrier;
-
-	DeviceMemoryPool *_pool = nullptr;
 
 	std::atomic<uint64_t> _targetOffset = 0;
 };

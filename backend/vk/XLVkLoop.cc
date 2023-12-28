@@ -752,4 +752,14 @@ void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)
 	}, this, true);
 }
 
+void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<core::BufferObject> &buf) {
+	if ((buf->getInfo().usage & core::BufferUsage::TransferSrc) != core::BufferUsage::TransferSrc) {
+		log::error("vk::Loop::captureBuffer", "Buffer '", buf->getName(), "' has no BufferUsage::TransferSrc flag to being captured");
+	}
+
+	performOnGlThread([this, cb = move(cb), buf] () mutable {
+		_internal->device->getTextureSetLayout()->readBuffer(*_internal->device, *this, buf.cast<Buffer>(), move(cb));
+	}, this, true);
+}
+
 }

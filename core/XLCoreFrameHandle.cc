@@ -165,6 +165,15 @@ const Vector<Rc<DependencyEvent>> &FrameHandle::getSignalDependencies() const {
 	return _request->getSignalDependencies();
 }
 
+FrameQueue *FrameHandle::getFrameQueue(Queue *queue) const {
+	for (auto &it : _queues) {
+		if (it->getQueue() == queue) {
+			return it;
+		}
+	}
+	return nullptr;
+}
+
 void FrameHandle::schedule(Function<bool(FrameHandle &)> &&cb, StringView tag) {
 	auto linkId = retain();
 	_loop->schedule([this, cb = move(cb), linkId] (Loop &ctx) {

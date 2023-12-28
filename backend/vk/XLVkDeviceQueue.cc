@@ -42,7 +42,7 @@ bool DeviceQueue::init(Device &device, VkQueue queue, uint32_t index, QueueOpera
 	return true;
 }
 
-bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &commandPool, SpanView<const CommandBuffer *> buffers) {
+bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &commandPool, SpanView<const CommandBuffer *> buffers, IdleMode idle) {
 	Vector<VkSemaphore> waitSem;
 	Vector<VkPipelineStageFlags> waitStages;
 	Vector<VkSemaphore> signalSem;
@@ -95,6 +95,16 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 #endif
 
 	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+		switch (idle) {
+		case IdleMode::Queue:
+			table.vkQueueWaitIdle(_queue);
+			break;
+		case IdleMode::Device:
+			table.vkDeviceWaitIdle(_device->getDevice());
+			break;
+		case IdleMode::None:
+			break;
+		}
 #if XL_VKAPI_DEBUG
 		auto t = platform::clock(core::ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
@@ -146,11 +156,11 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	return false;
 }
 
-bool DeviceQueue::submit(Fence &fence, const CommandBuffer *buffer) {
-	return submit(fence, makeSpanView(&buffer, 1));
+bool DeviceQueue::submit(Fence &fence, const CommandBuffer *buffer, IdleMode idle) {
+	return submit(fence, makeSpanView(&buffer, 1), idle);
 }
 
-bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers) {
+bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, IdleMode idle) {
 	Vector<VkCommandBuffer> vkBuffers; vkBuffers.reserve(buffers.size());
 
 	for (auto &it : buffers) {
@@ -180,6 +190,16 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers) 
 #endif
 
 	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+		switch (idle) {
+		case IdleMode::Queue:
+			table.vkQueueWaitIdle(_queue);
+			break;
+		case IdleMode::Device:
+			table.vkDeviceWaitIdle(_device->getDevice());
+			break;
+		case IdleMode::None:
+			break;
+		}
 #if XL_VKAPI_DEBUG
 		auto t = platform::clock(core::ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
@@ -313,7 +333,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
 			it.image->getImage(), it.subresourceRange
 		});
-		addImage(it.image);
+		bindImage(it.image);
 	}
 
 	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, 0, nullptr, images.size(), images.data());
@@ -329,7 +349,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
 			it.buffer->getBuffer(), it.offset, it.size
 		});
-		addBuffer(it.buffer);
+		bindBuffer(it.buffer);
 	}
 
 	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, buffers.size(), buffers.data(), 0, nullptr);
@@ -346,7 +366,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
 			it.buffer->getBuffer(), it.offset, it.size
 		});
-		addBuffer(it.buffer);
+		bindBuffer(it.buffer);
 	}
 
 	Vector<VkImageMemoryBarrier> images; images.reserve(imageBarriers.size());
@@ -358,7 +378,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
 			it.image->getImage(), it.subresourceRange
 		});
-		addImage(it.image);
+		bindImage(it.image);
 	}
 
 	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr,
@@ -376,8 +396,8 @@ void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, VkDeviceSize srcOffs
 }
 
 void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, SpanView<VkBufferCopy> copy) {
-	addBuffer(src);
-	addBuffer(dst);
+	bindBuffer(src);
+	bindBuffer(dst);
 
 	_table->vkCmdCopyBuffer(_buffer, src->getBuffer(), dst->getBuffer(), copy.size(), copy.data());
 }
@@ -411,15 +431,15 @@ void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst
 }
 
 void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, const VkImageCopy &copy) {
-	addImage(src);
-	addImage(dst);
+	bindImage(src);
+	bindImage(dst);
 
 	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, 1, &copy);
 }
 
 void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, SpanView<VkImageCopy> copy) {
-	addImage(src);
-	addImage(dst);
+	bindImage(src);
+	bindImage(dst);
 
 	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, copy.size(), copy.data());
 }
@@ -435,8 +455,8 @@ void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout 
 }
 
 void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout, SpanView<VkBufferImageCopy> copy) {
-	addBuffer(buf);
-	addImage(img);
+	bindBuffer(buf);
+	bindImage(img);
 
 	_table->vkCmdCopyBufferToImage(_buffer, buf->getBuffer(), img->getImage(), layout, copy.size(), copy.data());
 }
@@ -452,8 +472,8 @@ void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffe
 }
 
 void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf, SpanView<VkBufferImageCopy> copy) {
-	addBuffer(buf);
-	addImage(img);
+	bindBuffer(buf);
+	bindImage(img);
 
 	_table->vkCmdCopyImageToBuffer(_buffer, img->getImage(), layout, buf->getBuffer(), copy.size(), copy.data());
 }
@@ -467,7 +487,7 @@ void CommandBuffer::cmdClearColorImage(Image *image, VkImageLayout layout, const
 
 	VkImageSubresourceRange range{ image->getAspectMask(), 0, image->getInfo().mipLevels.get(), 0, image->getInfo().arrayLayers.get() };
 
-	addImage(image);
+	bindImage(image);
 	_table->vkCmdClearColorImage(_buffer, image->getImage(), layout,
 			&clearColorEmpty, 1, &range);
 }
@@ -488,15 +508,17 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass *pass, Framebuffer *fb, VkSubp
 	renderPassInfo.clearValueCount = clearValues.size();
 	renderPassInfo.pClearValues = clearValues.data();
 
-	_framebuffers.emplace(fb);
+	bindFramebuffer(fb);
 	_table->vkCmdBeginRenderPass(_buffer, &renderPassInfo, subpass);
 
 	_currentSubpass = 0;
+	_withinRenderpass = true;
 }
 
 void CommandBuffer::cmdEndRenderPass() {
 	_table->vkCmdEndRenderPass(_buffer);
 
+	_withinRenderpass = false;
 	_currentSubpass = 0;
 }
 
@@ -576,7 +598,7 @@ void CommandBuffer::cmdFillBuffer(Buffer *buffer, uint32_t data) {
 }
 
 void CommandBuffer::cmdFillBuffer(Buffer *buffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data) {
-	addBuffer(buffer);
+	bindBuffer(buffer);
 	_table->vkCmdFillBuffer(_buffer, buffer->getBuffer(), dstOffset, size, data);
 }
 
@@ -584,10 +606,20 @@ void CommandBuffer::cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint
 	_table->vkCmdDispatch(_buffer, groupCountX, groupCountY, groupCountZ);
 }
 
+void CommandBuffer::cmdDispatchPipeline(ComputePipeline *pipeline, uint32_t countX, uint32_t countY, uint32_t countZ) {
+	cmdBindPipeline(pipeline);
+	cmdDispatch((countX - 1) / pipeline->getLocalX() + 1,
+			(countY - 1) / pipeline->getLocalY() + 1,
+			(countZ - 1) / pipeline->getLocalZ() + 1);
+}
+
 uint32_t CommandBuffer::cmdNextSubpass() {
-	_table->vkCmdNextSubpass(_buffer, VK_SUBPASS_CONTENTS_INLINE);
-	++ _currentSubpass;
-	return _currentSubpass;
+	if (_withinRenderpass) {
+		_table->vkCmdNextSubpass(_buffer, VK_SUBPASS_CONTENTS_INLINE);
+		++ _currentSubpass;
+		return _currentSubpass;
+	}
+	return 0;
 }
 
 void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &buffer, const Rc<Image> &image) {
@@ -619,13 +651,9 @@ void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFam
 	}
 }
 
-void CommandBuffer::addImage(Image *image) {
-	_images.emplace(image);
-}
-
-void CommandBuffer::addBuffer(Buffer *buffer) {
-	_buffers.emplace(buffer);
-	if (auto pool = buffer->getPool()) {
+void CommandBuffer::bindBuffer(core::BufferObject *buffer) {
+	core::CommandBuffer::bindBuffer(buffer);
+	if (auto pool = static_cast<Buffer *>(buffer)->getMemory()->getPool()) {
 		_memPool.emplace(pool);
 	}
 }

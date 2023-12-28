@@ -162,4 +162,271 @@ Vector<const vk::CommandBuffer *> InputLayer::LayerHandle::doPrepareCommands(Fra
 	return Vector<const vk::CommandBuffer *>{buf};
 }
 
+InputBufferLayer::~InputBufferLayer() { }
+
+bool InputBufferLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builder, Front *front, const AttachmentData *input, const AttachmentData *output) {
+	using namespace core;
+
+	auto dataBuffer = queueBuilder.addAttachemnt(toString(front->getName(), "_buffer"), [] (AttachmentBuilder &builder) -> Rc<core::Attachment> {
+		builder.defineAsInput();
+		auto a = Rc<BufferAttachment>::create(builder, BufferInfo(PassType::Compute, BufferUsage::StorageBuffer, BufferUsage::TransferDst));
+		a->setValidateInputCallback([] (const Attachment &, const Rc<AttachmentInputData> &data) {
+			return dynamic_cast<InputBufferDataInput *>(data.get()) != nullptr;
+		});
+		a->setFrameHandleCallback([] (Attachment &a, const FrameQueue &q) {
+			auto h = Rc<BufferAttachmentHandle>::create(a, q);
+			h->setInputCallback([] (AttachmentHandle &handle, FrameQueue &queue, AttachmentInputData *input, Function<void(bool)> &&cb) {
+				cb(true);
+			});
+			return h;
+		});
+		return a;
+	});
+
+	builder.addAttachment(input);
+	builder.addAttachment(output);
+	auto passBuffers = builder.addAttachment(dataBuffer);
+
+	auto layout = builder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
+			setBuilder.addDescriptorArray(passBuffers, 2, DescriptorType::StorageBuffer);
+		});
+	});
+
+	builder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
+		subpassBuilder.addComputePipeline(toString(front->getName(), "_pipeline"), layout,
+			SpecializationInfo(
+				queueBuilder.addProgram(toString(front->getName(), "_program"),getShader(LayerShader::BufferNorm, Precision::Unknown)),
+				Vector<SpecializationConstant>{
+					SpecializationConstant(2), // nbuffers
+					SpecializationConstant(0), // output
+					SpecializationConstant(1) // input
+				}));
+	});
+
+	_inputAttachment = input;
+	_outputAttachment = output;
+	_dataAttachment = dataBuffer;
+	_front = front;
+
+	_frameHandleCallback = [] (core::QueuePass &pass, const FrameQueue &q) {
+		return Rc<LayerHandle>::create(pass, q);
+	};
+
+	return QueuePass::init(builder);
+}
+
+bool InputBufferLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
+	auto pass = (InputBufferLayer *)_queuePass.get();
+
+	if (auto inputAttachment = q.getAttachment(pass->getInputAttachment())) {
+		_inputBuffer = (vk::BufferAttachmentHandle *)inputAttachment->handle.get();
+	}
+
+	if (auto outputAttachment = q.getAttachment(pass->getOutputAttachment())) {
+		_outputBuffer = (vk::BufferAttachmentHandle *)outputAttachment->handle.get();
+	}
+
+	if (auto bufferAttachment = q.getAttachment(pass->getDataAttachment())) {
+		_dataHandle = (vk::BufferAttachmentHandle *)bufferAttachment->handle.get();
+	}
+
+	_front = pass->getFront();
+
+	bool isOutput = _outputBuffer->isOutput();
+	auto input = static_cast<InputBufferDataInput *>(_dataHandle->getInput());
+	auto handle = static_cast<DeviceFrameHandle *>(q.getFrame().get());
+	auto &pool = handle->getMemPool(nullptr);
+
+	auto bufSize = _front->getBufferSize() * sizeof(float);
+
+	// alloc staging buffer
+	auto staging = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+			BufferInfo(core::BufferUsage::TransferSrc | core::BufferUsage::StorageBuffer,
+			size_t(bufSize)));
+	Rc<Buffer> dest;
+	if (isOutput) {
+		dest = pool->spawnPersistent(AllocationUsage::DeviceLocalHostVisible,
+				BufferInfo(core::BufferUsage::TransferSrc | core::BufferUsage::StorageBuffer,
+				size_t(bufSize)));
+	} else {
+		dest = pool->spawn(AllocationUsage::DeviceLocal,
+				BufferInfo(core::BufferUsage::TransferSrc | core::BufferUsage::StorageBuffer,
+				size_t(bufSize)));
+	}
+
+	staging->map([&] (uint8_t *buf, VkDeviceSize size) {
+		input->buffer.writeData(buf, size);
+	});
+
+	_inputBuffer->addBufferView(staging);
+	_outputBuffer->addBufferView(dest);
+
+	_dataHandle->addBufferView(dest); // output
+	_dataHandle->addBufferView(staging); // input
+
+	return vk::QueuePassHandle::prepare(q, move(cb));
+}
+
+Vector<const vk::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+		auto pass = _data->impl.cast<vk::RenderPass>().get();
+		pass->perform(*this, buf, [&] {
+			struct NormBufferData {
+				int32_t size;
+				float mean;
+				float norm;
+			};
+
+			NormBufferData pcb{int32_t(_front->getBufferSize()), _front->getMean(), _front->getNorm()};
+
+			buf.cmdBindDescriptorSets(pass, 0);
+			buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&pcb), sizeof(NormBufferData)));
+
+			auto pipeline = static_cast<vk::ComputePipeline *>((*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
+
+			auto nbatches = (_front->getBufferSize() - 1) / pipeline->getLocalX() + 1;
+
+			buf.cmdBindPipeline(pipeline);
+			buf.cmdDispatch(nbatches, 1, 1);
+
+			BufferMemoryBarrier barrier(_outputBuffer->getBuffers().front().buffer, VkAccessFlags(core::AccessType::ShaderWrite | core::AccessType::ShaderRead),
+					VkAccessFlags(core::AccessType::ShaderWrite | core::AccessType::ShaderRead));
+			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, makeSpanView(&barrier, 1));
+		}, true);
+		return true;
+	});
+	return Vector<const vk::CommandBuffer *>{buf};
+}
+
+InputCsvIntLayer::~InputCsvIntLayer() { }
+
+bool InputCsvIntLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builder, Front *front,
+		const AttachmentData *input, const AttachmentData *output) {
+	using namespace core;
+
+	auto normBuffer = queueBuilder.addBufferByRef(toString(front->getName(), "_normBuffer"),
+			BufferInfo(BufferUsage::StorageBuffer, BufferPersistent(true), PassType::Compute),
+			front->getNormDataBuffer(), nullptr, AccessType::ShaderRead);
+
+	auto dataBuffer = queueBuilder.addAttachemnt("InputCsvIntLayerBuffer", [&] (AttachmentBuilder &builder) -> Rc<core::Attachment> {
+		builder.defineAsInput();
+		auto a = Rc<BufferAttachment>::create(builder, normBuffer);
+		a->setValidateInputCallback([] (const Attachment &, const Rc<AttachmentInputData> &data) {
+			return dynamic_cast<InputCsvInput *>(data.get()) != nullptr;
+		});
+		a->setFrameHandleCallback([] (Attachment &a, const FrameQueue &q) {
+			auto h = Rc<BufferAttachmentHandle>::create(a, q);
+			h->setInputCallback([] (AttachmentHandle &handle, FrameQueue &queue, AttachmentInputData *input, Function<void(bool)> &&cb) {
+				cb(true);
+			});
+			return h;
+		});
+		return a;
+	});
+
+	auto passInput = builder.addAttachment(input);
+	auto passOutput = builder.addAttachment(output);
+	auto passData = builder.addAttachment(dataBuffer);
+
+	auto layout = builder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
+			setBuilder.addDescriptor(passOutput, DescriptorType::StorageBuffer);
+			setBuilder.addDescriptor(passInput, DescriptorType::StorageBuffer);
+			setBuilder.addDescriptor(passData, DescriptorType::StorageBuffer);
+		});
+	});
+
+	builder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
+		subpassBuilder.addComputePipeline("InputCsvIntPipeline", layout,
+				queueBuilder.addProgramByRef("InputCsvIntPProgram", getShader(LayerShader::StatNorm, Precision::Unknown)));
+	});
+
+	_inputAttachment = input;
+	_outputAttachment = output;
+	_dataAttachment = dataBuffer;
+	_front = front;
+
+	_frameHandleCallback = [] (core::QueuePass &pass, const FrameQueue &q) {
+		return Rc<LayerHandle>::create(pass, q);
+	};
+
+	return QueuePass::init(builder);
+}
+
+bool InputCsvIntLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
+	auto pass = (InputCsvIntLayer *)_queuePass.get();
+
+	if (auto inputAttachment = q.getAttachment(pass->getInputAttachment())) {
+		_inputBuffer = (vk::BufferAttachmentHandle *)inputAttachment->handle.get();
+	}
+
+	if (auto outputAttachment = q.getAttachment(pass->getOutputAttachment())) {
+		_outputBuffer = (vk::BufferAttachmentHandle *)outputAttachment->handle.get();
+	}
+
+	if (auto bufferAttachment = q.getAttachment(pass->getDataAttachment())) {
+		_dataHandle = (vk::BufferAttachmentHandle *)bufferAttachment->handle.get();
+	}
+
+	_front = pass->getFront();
+
+	auto input = static_cast<InputCsvInput *>(_dataHandle->getInput());
+	auto handle = static_cast<DeviceFrameHandle *>(q.getFrame().get());
+	auto &pool = handle->getMemPool(nullptr);
+
+	auto bufferSize = sizeof(uint64_t) * _front->getFields().size() * input->data.size();
+
+	// alloc staging buffer
+	auto staging = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+			BufferInfo(core::BufferUsage::TransferSrc | core::BufferUsage::StorageBuffer,
+			size_t(bufferSize)));
+	auto dest = pool->spawn(AllocationUsage::DeviceLocal,
+			BufferInfo(core::BufferUsage::TransferSrc | core::BufferUsage::StorageBuffer,
+			size_t(bufferSize)));
+
+	staging->map([&] (uint8_t *buf, VkDeviceSize size) {
+		auto target = (uint64_t *)buf;
+
+		for (auto &it : input->data) {
+			for (auto &f : _front->getFields()) {
+				*target = it.getInteger(f);
+				++ target;
+			}
+		}
+	});
+
+	_inputBuffer->addBufferView(staging);
+	_outputBuffer->addBufferView(dest);
+
+	return vk::QueuePassHandle::prepare(q, move(cb));
+}
+
+Vector<const vk::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+		auto pass = _data->impl.cast<vk::RenderPass>().get();
+		pass->perform(*this, buf, [&] {
+			struct InputInfo {
+				int size;
+				int fields;
+			};
+
+			auto input = static_cast<InputCsvInput *>(_dataHandle->getInput());
+			InputInfo pcb{int(input->data.size()), int(_front->getFields().size())};
+
+			buf.cmdBindDescriptorSets(pass, 0);
+			buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&pcb), sizeof(InputInfo)));
+
+			auto pipeline = static_cast<vk::ComputePipeline *>((*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
+
+			auto nbatches = (pcb.size - 1) / pipeline->getLocalY() + 1;
+
+			buf.cmdBindPipeline(pipeline);
+			buf.cmdDispatch(pcb.fields, nbatches, 1);
+		}, true);
+		return true;
+	});
+	return Vector<const vk::CommandBuffer *>{buf};
+}
+
 }

@@ -145,6 +145,7 @@ struct PipelineDescriptor : NamedMem {
 	uint32_t count = 1;
 	uint32_t index = maxOf<uint32_t>();
 	bool updateAfterBind = false;
+	bool countIsPredefined = false;
 	mutable uint64_t boundGeneration = 0;
 };
 
@@ -183,6 +184,10 @@ struct AttachmentDependencyInfo {
 
 	// FrameRenderPassState that can be processed before attachment is acquired
 	FrameRenderPassState lockedRenderPassState = FrameRenderPassState::Initial;
+
+	static AttachmentDependencyInfo make(PipelineStage stage, AccessType type) {
+		return AttachmentDependencyInfo{stage, type, stage, type};
+	}
 };
 
 struct AttachmentSubpassData : NamedMem {
@@ -230,6 +235,7 @@ struct AttachmentData : NamedMem {
 	AttachmentOps ops = AttachmentOps::Undefined;
 	AttachmentType type = AttachmentType::Image;
 	AttachmentUsage usage = AttachmentUsage::None;
+	FrameRenderPassState outputState = FrameRenderPassState::Submitted;
 	memory::vector<AttachmentPassData *> passes;
 	Rc<Attachment> attachment;
 	bool transient = false;
@@ -269,6 +275,9 @@ struct SubpassData : NamedMem {
 	memory::vector<const AttachmentSubpassData *> resolveImages;
 	const AttachmentSubpassData *depthStencil = nullptr;
 	mutable memory::vector<uint32_t> preserve;
+
+	memory::function<void(const SubpassData &, FrameQueue &)> prepareCallback = nullptr;
+	memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> commandsCallback = nullptr;
 };
 
 /** RenderOrdering defines order of execution for render passes between interdependent passes
@@ -278,6 +287,23 @@ using RenderOrdering = ValueWrapper<uint32_t, class RenderOrderingFlag>;
 
 static constexpr RenderOrdering RenderOrderingLowest = RenderOrdering::min();
 static constexpr RenderOrdering RenderOrderingHighest = RenderOrdering::max();
+
+struct QueuePassRequirements {
+	const QueuePassData *data = nullptr;
+	FrameRenderPassState requiredState = FrameRenderPassState::Initial;
+	FrameRenderPassState lockedState = FrameRenderPassState::Initial;
+
+	QueuePassRequirements() = default;
+	QueuePassRequirements(const QueuePassData &d, FrameRenderPassState required, FrameRenderPassState locked)
+	: data(&d), requiredState(required), lockedState(locked) { }
+};
+
+struct QueuePassDependency {
+	const QueuePassData *source = nullptr;
+	const QueuePassData *target = nullptr;
+	memory::vector<const AttachmentData *> attachments;
+	PipelineStage stageFlags = PipelineStage::None;
+};
 
 struct QueuePassData : NamedMem {
 	QueuePassData() = default;
@@ -293,12 +319,20 @@ struct QueuePassData : NamedMem {
 	memory::vector<const PipelineLayoutData *> pipelineLayouts;
 	memory::vector<SubpassDependency> dependencies;
 
+	memory::vector<QueuePassDependency *> sourceQueueDependencies;
+	memory::vector<QueuePassDependency *> targetQueueDependencies;
+
+	memory::vector<QueuePassRequirements> required;
+
 	PassType type = PassType::Graphics;
 	RenderOrdering ordering = RenderOrderingLowest;
 	bool hasUpdateAfterBind = false;
 
 	Rc<QueuePass> pass;
 	Rc<RenderPass> impl;
+
+	memory::vector<memory::function<void(const QueuePassData &, FrameQueue &, bool)>> submittedCallbacks;
+	memory::vector<memory::function<void(const QueuePassData &, FrameQueue &, bool)>> completeCallbacks;
 };
 
 struct QueueData : NamedMem {
@@ -318,9 +352,12 @@ struct QueueData : NamedMem {
 	bool compiled = false;
 	uint64_t order = 0;
 	Queue *queue = nullptr;
+	FrameRenderPassState defaultSyncPassState = FrameRenderPassState::Submitted;
 
 	memory::map<std::type_index, Attachment *> typedInput;
 	memory::map<std::type_index, Attachment *> typedOutput;
+
+	memory::vector<QueuePassDependency> passDependencies;
 
 	void clear();
 };

@@ -39,6 +39,7 @@ static constexpr size_t MaxFastLocaleChars = size_t(127);
 namespace stappler::xenolith::font {
 
 using FontLayoutParameters = geom::FontLayoutParameters;
+using FontVariations = geom::FontVariations;
 using FontSpecializationVector = geom::FontSpecializationVector;
 using FontParameters = geom::FontParameters;
 using FontVariableAxis = geom::FontVariableAxis;

@@ -675,19 +675,7 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, ImageAllocI
 }
 
 size_t TransferResource::writeData(uint8_t *mem, BufferAllocInfo &info) {
-	if (!info.data->data.empty()) {
-		auto size = std::min(size_t(info.data->data.size()), size_t(info.data->size));
-		memcpy(mem, info.data->data.data(), size);
-		return size;
-	} else if (info.data->callback) {
-		size_t size = mem ? info.data->size : 0;
-		info.data->callback(mem, info.data->size, [&] (BytesView data) {
-			size = std::min(size_t(data.size()), size_t(info.data->size));
-			memcpy(mem, data.data(), size);
-		});
-		return size;
-	}
-	return 0;
+	return info.data->writeData(mem, info.data->size);
 }
 
 size_t TransferResource::writeData(uint8_t *mem, ImageAllocInfo &info) {

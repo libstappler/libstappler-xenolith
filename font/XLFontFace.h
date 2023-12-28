@@ -110,20 +110,7 @@ public:
 	StringView getName() const { return _name; }
 	BytesView getView() const;
 
-	FontVariableAxis getVariableAxis() const { return _variableAxis; }
-
-	FontWeight getWeightMin() const { return _weightMin; }
-	FontWeight getWeightMax() const { return _weightMax; }
-	FontStretch getStretchMin() const { return _stretchMin; }
-	FontStretch getStretchMax() const { return _stretchMax; }
-	FontStyle getSlantMin() const { return _slantMin; }
-	FontStyle getSlantMax() const { return _slantMax; }
-	FontGrade getGradeMin() const { return _gradeMin; }
-	FontGrade getGradeMax() const { return _gradeMax; }
-	uint32_t getOpticalSizeMin() const { return _opticalSizeMin; }
-	uint32_t getOpticalSizeMax() const { return _opticalSizeMax; }
-	uint32_t getItalicMin() const { return _italicMin; }
-	uint32_t getItalicMax() const { return _italicMax; }
+	const FontVariations &getVariations() const { return _variations; }
 
 	FontSpecializationVector getSpecialization(const FontSpecializationVector &) const;
 
@@ -132,19 +119,7 @@ protected:
 	String _name;
 	BytesView _view;
 	Bytes _data;
-	FontVariableAxis _variableAxis = FontVariableAxis::None;
-	FontWeight _weightMin;
-	FontWeight _weightMax;
-	FontStretch _stretchMin;
-	FontStretch _stretchMax;
-	FontStyle _slantMin;
-	FontStyle _slantMax;
-	uint32_t _opticalSizeMin = 0;
-	uint32_t _opticalSizeMax = 0;
-	uint32_t _italicMin = 0;
-	uint32_t _italicMax = 0;
-	FontGrade _gradeMin;
-	FontGrade _gradeMax;
+	FontVariations _variations;
 	FontLayoutParameters _params;
 };
 

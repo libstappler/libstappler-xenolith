@@ -29,6 +29,11 @@
 
 #include "XLPlatformAndroidKeyCodes.cc"
 
+namespace stappler::platform::i18n {
+	void loadJava(JavaVM *vm, int32_t sdk);
+	void finalizeJava();
+}
+
 namespace stappler::xenolith::platform {
 
 class EngineMainThread : public thread::ThreadInterface<Interface> {
@@ -130,6 +135,7 @@ Activity::~Activity() {
 
 	_thread = nullptr;
 
+	stappler::platform::i18n::finalizeJava();
 	filesystem::platform::Android_terminateFilesystem();
 
 	if (_looper) {
@@ -162,6 +168,8 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	_config = AConfiguration_new();
 	AConfiguration_fromAssetManager(_config, _activity->assetManager);
 	_sdkVersion = AConfiguration_getSdkVersion(_config);
+
+	stappler::platform::i18n::loadJava(activity->vm, _sdkVersion);
 
 	if (_sdkVersion >= 29) {
 		// check for available surface formats
@@ -1144,7 +1152,7 @@ ActivityInfo Activity::getActivityInfo(AConfiguration *config) {
 	String language = "en-us";
 	AConfiguration_getLanguage(config, language.data());
 	AConfiguration_getCountry(config, language.data() + 3);
-	string::tolower(language);
+	language = string::tolower<Interface>(language);
 	activityInfo.locale = language;
 
 	if (isnan(density)) {

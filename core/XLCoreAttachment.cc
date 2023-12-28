@@ -266,6 +266,7 @@ ImageViewInfo ImageAttachment::getImageViewInfo(const ImageInfoData &info, const
 	}
 
 	if ((usage & AttachmentUsage::Input) != AttachmentUsage::None
+			|| (usage & AttachmentUsage::Output) != AttachmentUsage::None
 			|| (usage & AttachmentUsage::Resolve) != AttachmentUsage::None
 			|| (usage & AttachmentUsage::DepthStencil) != AttachmentUsage::None) {
 		allowSwizzle = false;

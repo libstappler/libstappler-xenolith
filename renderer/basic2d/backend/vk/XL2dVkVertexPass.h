@@ -95,7 +95,6 @@ protected:
 	const AttachmentData *_output = nullptr;
 	const AttachmentData *_shadow = nullptr;
 	const AttachmentData *_depth2d = nullptr;
-	const AttachmentData *_depth3d = nullptr;
 
 	const AttachmentData *_vertexes = nullptr;
 	const AttachmentData *_materials = nullptr;

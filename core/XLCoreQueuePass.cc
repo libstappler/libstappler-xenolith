@@ -145,7 +145,8 @@ bool QueuePassHandle::isFramebufferRequired() const {
 	return _queuePass->getType() == PassType::Graphics;
 }
 
-bool QueuePassHandle::prepare(FrameQueue &, Function<void(bool)> &&) {
+bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
+	prepareSubpasses(q);
 	return true;
 }
 
@@ -181,6 +182,14 @@ const AttachmentPassData *QueuePassHandle::getAttachemntData(const AttachmentDat
 		}
 	}
 	return nullptr;
+}
+
+void QueuePassHandle::prepareSubpasses(FrameQueue &q) {
+	for (auto &subpass : _queuePass->getData()->subpasses) {
+		if (subpass->prepareCallback) {
+			subpass->prepareCallback(*subpass, q);
+		}
+	}
 }
 
 }

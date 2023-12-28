@@ -1,0 +1,85 @@
+/* Copyright © 2017-2020 ABBYY Production LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+--------------------------------------------------------------------------------------------------------------*/
+
+#version 450
+
+precision highp float;
+
+#define ID_X	(int(gl_GlobalInvocationID.x))
+#define ID_Y	(int(gl_GlobalInvocationID.y))
+
+#define LOCAL_ID_X	(int(gl_LocalInvocationID.x))
+#define LOCAL_ID_Y	(int(gl_LocalInvocationID.y))
+#define LOCAL_ID_Z	(int(gl_LocalInvocationID.z))
+#define LOCAL_MAX_X (int(gl_WorkGroupSize.x))
+#define LOCAL_MAX_Y (int(gl_WorkGroupSize.y))
+#define LOCAL_MAX_Z (int(gl_WorkGroupSize.z))
+
+#define LOCAL_ID_POS ((LOCAL_ID_Z * LOCAL_MAX_Y + LOCAL_ID_Y) * LOCAL_MAX_X + LOCAL_ID_X)
+
+#define XL_Out buffers[OUTPUT_BUFFER_INDEX].data 
+#define XL_In buffers[INPUT_BUFFER_INDEX].data 
+
+layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 16;
+layout (constant_id = 1) const int OUTPUT_BUFFER_INDEX = 0;
+layout (constant_id = 2) const int INPUT_BUFFER_INDEX = 1;
+
+layout (set = 0, binding = 0) buffer Buffers {
+	float data[];
+} buffers[BUFFERS_ARRAY_SIZE];
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct Data {
+	int width;
+	int height;
+};
+
+layout (push_constant) uniform pcb {
+	Data P;
+};
+
+shared float partial[LOCAL_MAX_X * LOCAL_MAX_Y * LOCAL_MAX_Z];
+
+void main()
+{
+	if(ID_X >= P.height) {
+		return;
+	}
+
+	int yStart = ID_Y;
+	int matPos = ID_X * P.width + yStart;
+
+	int yStep = LOCAL_MAX_Y;
+
+	float sum = 0;
+
+	for(int y = yStart; y < P.width; y += yStep) {
+		sum += XL_In[matPos];
+		matPos += yStep;
+	}
+
+	partial[LOCAL_ID_POS] = sum;
+
+	barrier();
+
+	if(LOCAL_ID_Y == 0) {
+		for(int y = 1; y < LOCAL_MAX_Y; ++y) {
+			sum += partial[(LOCAL_ID_Z * LOCAL_MAX_Y + y) * LOCAL_MAX_X + LOCAL_ID_X];
+		}
+
+		XL_Out[ID_X] = sum;
+	}
+}

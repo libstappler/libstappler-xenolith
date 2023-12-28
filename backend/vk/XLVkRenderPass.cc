@@ -354,6 +354,8 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 	core::PipelineStage toStage = core::PipelineStage::None;
 
 	if (writeBarriers) {
+		bool hasPendings = false;
+
 		for (auto &it : handle.getQueueData()->attachments) {
 			switch (it.first->attachment->type) {
 			case core::AttachmentType::Image:
@@ -363,6 +365,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 						if (auto pending = img->getPendingBarrier()) {
 							b.input = *pending;
 							img->dropPendingBarrier();
+							hasPendings = true;
 						}
 						if (b.input || b.output) {
 							imageBarriersData.emplace_back(move(b));
@@ -377,6 +380,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 						if (auto pending = it.buffer->getPendingBarrier()) {
 							b.input = *pending;
 							it.buffer->dropPendingBarrier();
+							hasPendings = true;
 						}
 						if (b.input || b.output) {
 							bufferBarriersData.emplace_back(move(b));
@@ -404,7 +408,17 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 			}
 		}
 
-		if (!imageBarriersData.empty() || !bufferBarriersData.empty()) {
+		if (hasPendings) {
+			if (fromStage == core::PipelineStage::None) {
+				fromStage = core::PipelineStage::AllCommands;
+			}
+			if (toStage == core::PipelineStage::None) {
+				toStage = core::PipelineStage::AllCommands;
+			}
+		}
+
+		if ((!imageBarriersData.empty() || !bufferBarriersData.empty())
+				&& (fromStage != core::PipelineStage::None) && (toStage != core::PipelineStage::None)) {
 			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage), 0, bufferBarriers, imageBarriers);
 		}
 	}

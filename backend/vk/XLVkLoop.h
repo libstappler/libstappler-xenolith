@@ -98,6 +98,8 @@ public:
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 			const Rc<core::ImageObject> &image, core::AttachmentLayout l) override;
 
+	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<core::BufferObject> &) override;
+
 protected:
 	using core::Loop::init;
 

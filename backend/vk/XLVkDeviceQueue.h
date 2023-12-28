@@ -85,6 +85,12 @@ struct DeviceQueueFamily {
 
 class DeviceQueue final : public Ref {
 public:
+	enum class IdleMode {
+		None,
+		Queue,
+		Device
+	};
+
 	using FrameSync = core::FrameSync;
 	using FrameHandle = core::FrameHandle;
 
@@ -92,9 +98,9 @@ public:
 
 	virtual bool init(Device &, VkQueue, uint32_t, QueueOperations);
 
-	bool submit(const FrameSync &, Fence &, CommandPool &, SpanView<const CommandBuffer *>);
-	bool submit(Fence &, const CommandBuffer *);
-	bool submit(Fence &, SpanView<const CommandBuffer *>);
+	bool submit(const FrameSync &, Fence &, CommandPool &, SpanView<const CommandBuffer *>, IdleMode = IdleMode::None);
+	bool submit(Fence &, const CommandBuffer *, IdleMode = IdleMode::None);
+	bool submit(Fence &, SpanView<const CommandBuffer *>, IdleMode = IdleMode::None);
 
 	void waitIdle();
 
@@ -215,7 +221,7 @@ struct DescriptorBufferViewInfo : public DescriptorInfo {
 	VkBufferView target = VK_NULL_HANDLE;
 };
 
-class CommandBuffer : public Ref {
+class CommandBuffer : public core::CommandBuffer {
 public:
 	virtual ~CommandBuffer();
 
@@ -272,7 +278,11 @@ public:
 	void cmdFillBuffer(Buffer *, uint32_t data);
 	void cmdFillBuffer(Buffer *, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data);
 
+	// count in group blocks
 	void cmdDispatch(uint32_t groupCountX, uint32_t groupCountY = 1, uint32_t groupCountZ = 1);
+
+	// count in individual elements, not in blocks
+	void cmdDispatchPipeline(ComputePipeline *, uint32_t countX, uint32_t countY = 1, uint32_t countZ = 1);
 
 	uint32_t cmdNextSubpass();
 
@@ -284,21 +294,15 @@ public:
 
 	void writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &, const Rc<Image> &);
 
-protected:
-	void addImage(Image *);
-	void addBuffer(Buffer *);
+	virtual void bindBuffer(core::BufferObject *) override;
 
-	uint32_t _currentSubpass = 0;
-	uint32_t _boundLayoutIndex = 0;
+protected:
 	VkPipelineLayout _boundLayout = VK_NULL_HANDLE;
 
 	const CommandPool *_pool = nullptr;
 	const DeviceTable *_table = nullptr;
 	VkCommandBuffer _buffer = VK_NULL_HANDLE;
 
-	Set<Rc<Buffer>> _buffers;
-	Set<Rc<Image>> _images;
-	Set<Rc<Framebuffer>> _framebuffers;
 	Set<Rc<DescriptorSet>> _descriptorSets;
 	Set<Rc<DeviceMemoryPool>> _memPool;
 };

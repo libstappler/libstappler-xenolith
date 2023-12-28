@@ -26,6 +26,7 @@
 #include "XLVkRenderPass.h"
 #include "XLVkQueuePass.h"
 #include "XLVkAttachment.h"
+#include "XLSnnInputLayer.h"
 
 namespace stappler::xenolith::vk::shadernn {
 
@@ -39,6 +40,13 @@ struct InputDataInput : core::AttachmentInputData {
 	core::ImageData image;
 };
 
+struct InputBufferDataInput : core::AttachmentInputData {
+	core::BufferData buffer;
+};
+
+struct InputCsvInput : core::AttachmentInputData {
+	SpanView<Value> data;
+};
 class InputLayer : public vk::QueuePass {
 public:
 	virtual ~InputLayer();
@@ -71,6 +79,86 @@ protected:
 	const AttachmentData *_inputAttachment = nullptr;
 	const AttachmentData *_outputAttachment = nullptr;
 	const AttachmentData *_dataAttachment = nullptr;
+};
+
+class InputBufferLayer : public vk::QueuePass {
+public:
+	using Front = xenolith::shadernn::InputBufferLayer;
+
+	virtual ~InputBufferLayer();
+
+	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &, Front *,
+			const AttachmentData *input, const AttachmentData *output);
+
+	const AttachmentData *getInputAttachment() const { return _inputAttachment; }
+	const AttachmentData *getOutputAttachment() const { return _outputAttachment; }
+	const AttachmentData *getDataAttachment() const { return _dataAttachment; }
+
+	const Front *getFront() const { return _front; }
+
+	class LayerHandle : public vk::QueuePassHandle {
+	public:
+		virtual ~LayerHandle() = default;
+
+		virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
+
+	protected:
+		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+
+		vk::BufferAttachmentHandle *_inputBuffer = nullptr;
+		vk::BufferAttachmentHandle *_outputBuffer = nullptr;
+		vk::BufferAttachmentHandle *_dataHandle = nullptr;
+		const Front *_front = nullptr;
+	};
+
+protected:
+	using QueuePass::init;
+
+	const AttachmentData *_inputAttachment = nullptr;
+	const AttachmentData *_outputAttachment = nullptr;
+	const AttachmentData *_dataAttachment = nullptr;
+
+	Rc<Front> _front;
+};
+
+class InputCsvIntLayer : public vk::QueuePass {
+public:
+	using Front = xenolith::shadernn::InputCsvIntLayer;
+
+	virtual ~InputCsvIntLayer();
+
+	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &, Front *,
+			const AttachmentData *input, const AttachmentData *output);
+
+	const AttachmentData *getInputAttachment() const { return _inputAttachment; }
+	const AttachmentData *getOutputAttachment() const { return _outputAttachment; }
+	const AttachmentData *getDataAttachment() const { return _dataAttachment; }
+
+	const Front *getFront() const { return _front; }
+
+	class LayerHandle : public vk::QueuePassHandle {
+	public:
+		virtual ~LayerHandle() = default;
+
+		virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
+
+	protected:
+		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+
+		vk::BufferAttachmentHandle *_inputBuffer = nullptr;
+		vk::BufferAttachmentHandle *_outputBuffer = nullptr;
+		vk::BufferAttachmentHandle *_dataHandle = nullptr;
+		const Front *_front = nullptr;
+	};
+
+protected:
+	using QueuePass::init;
+
+	const AttachmentData *_inputAttachment = nullptr;
+	const AttachmentData *_outputAttachment = nullptr;
+	const AttachmentData *_dataAttachment = nullptr;
+
+	Rc<Front> _front;
 };
 
 }

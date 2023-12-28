@@ -23,7 +23,7 @@
 #ifndef SRC_PROCESSOR_XLSNNMODEL_H_
 #define SRC_PROCESSOR_XLSNNMODEL_H_
 
-#include "XLCommon.h"
+#include "XLSnnRandom.h"
 
 namespace stappler::xenolith::shadernn {
 
@@ -47,6 +47,7 @@ enum class ModelFlags {
 	None = 0,
 	HalfPrecision = 1 << 0,
 	Range01 = 1 << 1,
+	Trainable = 1 << 2,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ModelFlags)
@@ -56,6 +57,12 @@ class Attachment;
 
 class Model : public Ref {
 public:
+	static void saveBlob(const char *, const uint8_t *, size_t);
+	static void loadBlob(const char *, const std::function<void(const uint8_t *, size_t)> &);
+	static bool compareBlob(const uint8_t *, size_t, const uint8_t *, size_t, float = std::numeric_limits<float>::epsilon());
+	static bool compareBlob(const float *, size_t, const float *, size_t, float = std::numeric_limits<float>::epsilon());
+
+
 	virtual ~Model();
 
 	virtual bool init(ModelFlags, const Value &val, uint32_t numLayers, StringView dataFilePath);
@@ -65,6 +72,7 @@ public:
 	virtual bool link();
 
 	bool isHalfPrecision() const { return (_flags & ModelFlags::HalfPrecision) != ModelFlags::None; }
+	bool isTrainable() const { return (_flags & ModelFlags::Trainable) != ModelFlags::None; }
 	bool usesDataFile() const { return _dataFile; }
 
 	float readFloatData();
@@ -72,6 +80,10 @@ public:
 	const Vector<Layer *> &getSortedLayers() const { return _sortedLayers; }
 
 	Vector<Layer *> getInputs() const;
+
+	float getLastLoss() const;
+
+	Random &getRand() { return _rand; }
 
 protected:
 	void linkInput(Vector<Layer *> &, Layer *, Attachment *);
@@ -89,6 +101,8 @@ protected:
 	Map<uint32_t, Rc<Layer>> _layers;
 	Vector<Layer *> _sortedLayers;
 	Vector<Rc<Attachment>> _attachments;
+
+	Random _rand = Random( 451 );
 };
 
 Activation getActivationValue(StringView);

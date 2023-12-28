@@ -1,0 +1,35 @@
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+precision highp float;
+
+#define ID_X	(int(gl_GlobalInvocationID.x))
+#define XL_Out buffers[OUTPUT_BUFFER_INDEX].data 
+#define XL_In buffers[INPUT_BUFFER_INDEX].data 
+
+layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 16;
+layout (constant_id = 1) const int OUTPUT_BUFFER_INDEX = 0;
+layout (constant_id = 2) const int INPUT_BUFFER_INDEX = 1;
+
+layout (set = 0, binding = 0) buffer Buffers {
+	float data[];
+} buffers[BUFFERS_ARRAY_SIZE];
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct NormData {
+	int size;
+	float mean;
+	float norm;
+};
+
+layout (push_constant) uniform pcb {
+	NormData normData;
+};
+
+void main() {
+	int pos = ID_X;
+	if (pos < normData.size) {
+		XL_Out[pos] = (XL_In[pos] +  + normData.mean) * normData.norm;
+    }
+}

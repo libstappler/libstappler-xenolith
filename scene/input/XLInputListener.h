@@ -123,7 +123,6 @@ public:
 	void setPointerEnterCallback(Function<bool(bool)> &&);
 	void setBackgroudCallback(Function<bool(bool)> &&);
 	void setFocusCallback(Function<bool(bool)> &&);
-	void setMouseOverCallback(Function<bool(bool)> &&);
 
 	void clear();
 

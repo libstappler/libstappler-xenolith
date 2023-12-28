@@ -1,0 +1,94 @@
+/* Copyright © 2017-2020 ABBYY Production LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+--------------------------------------------------------------------------------------------------------------*/
+
+#version 450
+
+precision highp float;
+
+#define ID_X	(int(gl_GlobalInvocationID.x))
+#define ID_Y	(int(gl_GlobalInvocationID.y))
+#define ID_Z	(int(gl_GlobalInvocationID.z))
+
+#define XL_Out buffers[OUTPUT_BUFFER_INDEX].data 
+#define XL_InA buffers[INPUT_BUFFER_A_INDEX].data 
+#define XL_InB buffers[INPUT_BUFFER_B_INDEX].data 
+
+layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 16;
+layout (constant_id = 1) const int OUTPUT_BUFFER_INDEX = 0;
+layout (constant_id = 2) const int INPUT_BUFFER_A_INDEX = 1;
+layout (constant_id = 3) const int INPUT_BUFFER_B_INDEX = 2;
+layout (constant_id = 4) const int RENDER_PASS_INDEX = 0;
+
+layout (set = 0, binding = 0) buffer Buffers {
+	float data[];
+} buffers[BUFFERS_ARRAY_SIZE];
+
+layout (local_size_x = 8) in;
+layout (local_size_y = 8) in;
+layout (local_size_z = 1) in;
+
+struct Data {
+	int batchSize;
+	int firstHeight;
+	int firstWidth;
+	int firstRowSize;
+	int secondHeight;
+	int secondRowSize;
+	int resultRowSize;
+	int leftOffset;
+	int topOffset;
+	int toAdd;
+};
+
+layout(push_constant) uniform pcb {
+	Data P;
+};
+
+void main() {
+    if( ID_Y >= P.batchSize ) {
+    	return;
+    }
+    int batch = ID_Y;
+    int x, y;
+
+    const int rightBorderWidth = P.secondHeight - P.leftOffset;
+    const int bottomBorderWidth = P.secondHeight - rightBorderWidth;
+    
+    if( ID_X < rightBorderWidth * P.firstHeight ) {
+        y = ID_X / rightBorderWidth;
+        x = P.leftOffset + ID_X % rightBorderWidth;
+    } else if( ID_X < rightBorderWidth * P.firstHeight + bottomBorderWidth * ( P.firstHeight - P.topOffset ) ) {
+        const int index = ID_X - rightBorderWidth * P.firstHeight;
+        y = P.topOffset + index / bottomBorderWidth;
+        x = index % bottomBorderWidth;
+    } else {
+        return;
+    }
+
+    int resultIndex = batch * P.firstHeight * P.resultRowSize + y * P.resultRowSize + x;
+    float res = 0;
+    if( P.toAdd == 1 ) {
+    	res = XL_Out[resultIndex];
+    }
+
+    int aOffset = batch * P.firstRowSize * P.firstHeight + y * P.firstRowSize;
+    int bOffset = batch * P.secondHeight * P.secondRowSize + x * P.secondRowSize;
+    for( int i = 0; i < P.firstWidth; i++ ) {
+        res += XL_InA[aOffset] * XL_InB[bOffset];
+        aOffset += 1;
+        bOffset += 1;
+    }
+    XL_Out[resultIndex] = res;
+}

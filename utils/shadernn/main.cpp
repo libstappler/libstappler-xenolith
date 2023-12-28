@@ -115,6 +115,7 @@ SP_EXTERN_C int _spMain(argc, argv) {
 
 				auto queue = Rc<ModelQueue>::create(modelPath, ModelFlags::None, inputPath);
 				if (queue) {
+					queue->retain();
 					app.getGlLoop()->compileQueue(queue, [app = &app, queue] (bool success) {
 						Application::getInstance()->performOnMainThread([app, queue] {
 							queue->run(const_cast<Application *>(app));

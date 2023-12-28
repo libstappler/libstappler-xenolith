@@ -24,16 +24,35 @@
 
 #if ANDROID
 
+#include <dlfcn.h>
+
 namespace stappler::xenolith::vk::platform {
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
-	FunctionTable table(vkGetInstanceProcAddr);
-
-	if (!table) {
+	auto handle = ::dlopen("libvulkan.so", RTLD_LAZY | RTLD_LOCAL);
+	if (!handle) {
+		log::error("Vk", "Fail to open libvulkan.so");
 		return nullptr;
 	}
 
-	return table.createInstance(cb, [] { });
+	auto getInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(handle, "vkGetInstanceProcAddr"));
+	if (!getInstanceProcAddr) {
+		return nullptr;
+	}
+
+	FunctionTable table(getInstanceProcAddr);
+
+	if (!table) {
+		::dlclose(handle);
+		return nullptr;
+	}
+
+	if (auto instance = table.createInstance(cb, [handle] { ::dlclose(handle); })) {
+		return instance;
+	}
+
+	::dlclose(handle);
+	return nullptr;
 }
 
 }

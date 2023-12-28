@@ -126,6 +126,8 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		return false;
 	}
 
+	prepareSubpasses(q);
+
 	// If updateAfterBind feature supported for all renderpass bindings
 	// - we can use separate thread to update them
 	// (ordering of bind|update is not defined in this case)
@@ -232,21 +234,21 @@ QueueOperations QueuePassHandle::getQueueOps() const {
 	return (static_cast<vk::QueuePass *>(_queuePass.get()))->getQueueOps();
 }
 
-Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &) {
+Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
-		_data->impl.cast<RenderPass>()->perform(*this, buf, [&] {
-			auto currentExtent = getFramebuffer()->getExtent();
-
-			VkViewport viewport{ 0.0f, 0.0f, float(currentExtent.width), float(currentExtent.height), 0.0f, 1.0f };
-			buf.cmdSetViewport(0, makeSpanView(&viewport, 1));
-
-			VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
-			buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-
-			auto pipeline = _data->subpasses[0]->graphicPipelines.get(StringView("Default"));
-
-			buf.cmdBindPipeline(static_cast<GraphicPipeline *>(pipeline->pipeline.get()));
-			buf.cmdDraw(3, 1, 0, 0);
+		auto pass = _data->impl.cast<vk::RenderPass>().get();
+		auto queue = handle.getFrameQueue(_data->queue->queue);
+		pass->perform(*this, buf, [&] {
+			size_t i = 0;
+			for (auto &it : _data->subpasses) {
+				if (it->commandsCallback) {
+					it->commandsCallback(*it, *queue, buf);
+				}
+				if (i + 2 < _data->subpasses.size()) {
+					buf.cmdNextSubpass();
+				}
+				++ i;
+			}
 		});
 		return true;
 	});
@@ -254,7 +256,7 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &) 
 }
 
 bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited) {
-	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers);
+	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers, _queueIdleMode);
 	_pool = nullptr;
 	frame.performOnGlThread([this, success, onSubmited = move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
 		_queueData->submitTime = armedTime;
@@ -276,13 +278,22 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 	return success;
 }
 
-void QueuePassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+	auto queue = handle.getFrameQueue(_data->queue->queue);
+	for (auto &it : _data->submittedCallbacks) {
+		it(*_data, *queue, success);
+	}
+
 	func(success);
 
 	fence->schedule(*_loop);
 }
 
-void QueuePassHandle::doComplete(FrameQueue &, Function<void(bool)> &&func, bool success) {
+void QueuePassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+	for (auto &it : _data->completeCallbacks) {
+		it(*_data, queue, success);
+	}
+
 	func(success);
 }
 
@@ -363,6 +374,46 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 		}
 	});
 	return ret;
+}
+
+vk::ComputePipeline *QueuePassHandle::getComputePipelineByName(uint32_t subpass, StringView name) const {
+	if (_data->subpasses.size() > subpass) {
+		auto pipelineIt = _data->subpasses[subpass]->computePipelines.find(name);
+		if (pipelineIt != _data->subpasses[subpass]->computePipelines.end()) {
+			return static_cast<vk::ComputePipeline *>((*pipelineIt)->pipeline.get());
+		}
+	}
+	return nullptr;
+}
+
+vk::ComputePipeline *QueuePassHandle::getComputePipelineBySubName(uint32_t subpass, StringView subname) const {
+	if (_data->subpasses.size() > subpass) {
+		auto pipelineIt = _data->subpasses[subpass]->computePipelines.find(toString(_data->key, "_", subname));
+		if (pipelineIt != _data->subpasses[subpass]->computePipelines.end()) {
+			return static_cast<vk::ComputePipeline *>((*pipelineIt)->pipeline.get());
+		}
+	}
+	return nullptr;
+}
+
+vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineByName(uint32_t subpass, StringView name) const {
+	if (_data->subpasses.size() > subpass) {
+		auto pipelineIt = _data->subpasses[subpass]->graphicPipelines.find(name);
+		if (pipelineIt != _data->subpasses[subpass]->graphicPipelines.end()) {
+			return static_cast<vk::GraphicPipeline *>((*pipelineIt)->pipeline.get());
+		}
+	}
+	return nullptr;
+}
+
+vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineBySubName(uint32_t subpass, StringView subname) const {
+	if (_data->subpasses.size() > subpass) {
+		auto pipelineIt = _data->subpasses[subpass]->graphicPipelines.find(toString(_data->key, "_", subname));
+		if (pipelineIt != _data->subpasses[subpass]->graphicPipelines.end()) {
+			return static_cast<vk::GraphicPipeline *>((*pipelineIt)->pipeline.get());
+		}
+	}
+	return nullptr;
 }
 
 QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBarrier(Device *dev, Image *image, ImageAttachmentHandle &handle) const {
@@ -483,7 +534,7 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 		prev = attachmentData->passes[passIdx - 1];
 	}
 	if (passIdx + 1 < attachmentData->passes.size()) {
-		next = attachmentData->passes[passIdx - 1];
+		next = attachmentData->passes[passIdx + 1];
 	}
 
 	if (prev) {
@@ -531,6 +582,10 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 	}
 
 	return ret;
+}
+
+void QueuePassHandle::setQueueIdleMode(DeviceQueue::IdleMode mode) {
+	_queueIdleMode = mode;
 }
 
 }

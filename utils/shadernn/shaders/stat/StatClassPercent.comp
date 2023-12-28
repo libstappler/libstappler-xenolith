@@ -1,0 +1,95 @@
+#version 450
+#extension GL_ARB_gpu_shader_int64 : enable
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 2) readonly buffer ClassSizeBuffer {
+	uint classes[];
+} classSizeBuffer[2];
+
+layout(set = 0, binding = 2) readonly buffer ClassIndexesBuffer {
+	uint index[];
+} classIndexBuffer[2];
+
+struct ResultData {
+	vec4 data;
+	uvec4 count;
+};
+
+layout(set=0, binding=0) writeonly buffer Result { ResultData result[]; };
+layout(set=0, binding=1) readonly buffer Data { uint64_t data[]; };
+
+struct InputInfo {
+	int size;
+	int fields;
+	int classField;
+	int classMin;
+	int classMax;
+	int fieldSource;
+	int fieldTarget;
+	int classCount;
+};
+
+layout (push_constant) uniform pcb {
+	InputInfo inputInfo;
+};
+
+void main() {
+	if (gl_GlobalInvocationID.x < inputInfo.classCount) {
+		ResultData res;
+		res.count = uvec4(0, 0, 0, 0);
+		res.data = vec4(0.0, 0.0, 0.0, 0.0);
+		uint64_t accSource = 0;
+		uint64_t accTarget = 0;
+		uint idx;
+		uint count = classSizeBuffer[0].classes[gl_GlobalInvocationID.x];
+		uint64_t source;
+		uint64_t target;
+		double diff;
+
+		dvec4 accum = dvec4(0.0, 0.0, 0.0, 0.0);
+		
+		for (uint i = 0; i < count; ++ i) {
+			idx = classIndexBuffer[1].index[gl_GlobalInvocationID.x * inputInfo.size + i];
+			source = data[idx * inputInfo.fields + inputInfo.fieldSource];
+			target = data[idx * inputInfo.fields + inputInfo.fieldTarget];
+			
+			accSource += source;
+			accTarget += target;
+			
+			++ res.count.x;
+			diff = double(int64_t(target) - int64_t(source)) / double(source);
+			if (abs(diff) < 20.0) {
+				accum.x += diff;
+
+				if (diff > 0.0) {
+					++ res.count.y;
+					accum.y += diff;
+				} else if (diff < 0.0) {
+					++ res.count.z;
+					accum.z += diff;
+				}
+			}
+		}
+		
+		if (res.count.x > 0) {
+			res.data.x = float(accum.x / double(res.count.x));
+			res.data.w = float(double(accTarget) / double(accSource));
+		} else {
+			res.data.x = 0.0;
+			res.data.w = 1.0;
+		}
+		if (res.count.y > 0) {
+			res.data.y = float(accum.y / double(res.count.y));
+		} else {
+			res.data.y = 0.0;
+		}
+		if (res.count.z > 0) {
+			res.data.z = float(accum.z / double(res.count.z));
+		} else {
+			res.data.z = 0.0;
+		}
+		
+		result[gl_GlobalInvocationID.x] = res;
+    }
+}

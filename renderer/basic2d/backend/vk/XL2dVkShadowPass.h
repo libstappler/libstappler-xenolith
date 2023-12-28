@@ -34,7 +34,6 @@ public:
 
 	enum class Flags {
 		None = 0,
-		Render3D = 1 << 0,
 	};
 
 	struct RenderQueueInfo {

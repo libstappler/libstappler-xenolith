@@ -426,7 +426,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		auto buf = new (_data->pool) BufferData;
 		static_cast<BufferInfo &>(*buf) = move(info);
 		buf->key = key.pdup(_data->pool);
-		buf->callback = [fpath] (uint8_t *ptr, uint64_t size, const BufferData::DataCallback &dcb) {
+		buf->memCallback = [fpath] (uint8_t *ptr, uint64_t size, const BufferData::DataCallback &dcb) {
 			Resource_loadFileData(ptr, size, fpath, dcb);
 		};
 		filesystem::Stat stat;
@@ -477,7 +477,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		auto buf = new (_data->pool) BufferData;
 		static_cast<BufferInfo &>(*buf) = move(info);
 		buf->key = key.pdup(_data->pool);
-		buf->callback = cb;
+		buf->memCallback = cb;
 		buf->atlas = move(atlas);
 		buf->targetAccess = access;
 		return buf;

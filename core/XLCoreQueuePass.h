@@ -129,6 +129,8 @@ public:
 	const AttachmentPassData *getAttachemntData(const AttachmentData *) const;
 
 protected:
+	virtual void prepareSubpasses(FrameQueue &);
+
 	bool _isAsync = false; // async passes can be submitted before previous frame submits all passes
 	Rc<QueuePass> _queuePass;
 	const QueuePassData *_data = nullptr;

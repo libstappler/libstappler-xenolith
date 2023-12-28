@@ -1,0 +1,48 @@
+{
+    "numLayers": {
+        "count": 1
+    },
+    "Layer_0": {
+        "name": "input",
+        "type": "InputCsvIntLayer",
+        "fields": [0, 1, 2, 3, 4],
+        "inputCount": 1024,
+        "norm": [
+        	[0, 1],
+        	[1290211200000000, 604800000000],
+        	[0, 1],
+        	[1290211200000000, 604800000000],
+        	[0, 1]
+        ]
+    },
+    "Layer_1": {
+        "name": "Diff",
+        "type": "StatPercentLayer",
+        "fieldSource": 2,
+        "fieldTarget": 4,
+        "fieldClass": 1,
+        "classMin": 10,
+        "classCount": 660,
+        "inbounds": [
+            "input"
+        ],
+        "numInputs": 1,
+        "inputId": [
+            0
+        ],
+    },
+    "Layer_2": {
+        "name": "Analysis",
+        "type": "StatAnalysisLayer",
+        "threshold": 1.0,
+        "inbounds": [
+            "input",
+            "Diff"
+        ],
+        "numInputs": 2,
+        "inputId": [
+            0,
+            1
+        ],
+    },
+}
