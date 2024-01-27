@@ -95,8 +95,8 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 }
 
 Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-		Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled, Rc<Ref> &&userdata)
-: core::Instance(move(terminate), move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
+		Vector<StringView> &&optionals, Dso &&vulkanModule, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled, Rc<Ref> &&userdata)
+: core::Instance(move(vulkanModule), move(terminate), move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
 , _version(targetVersion)
 , _optionals(move(optionals))
 , _checkPresentSupport(move(present)) {

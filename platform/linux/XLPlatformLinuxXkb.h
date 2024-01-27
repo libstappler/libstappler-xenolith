@@ -24,6 +24,7 @@
 #define XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXXKB_H_
 
 #include "XLCommon.h"
+#include "SPDso.h"
 
 #if LINUX
 
@@ -92,11 +93,11 @@ public:
 			xcb_connection_t *connection, int32_t device_id) = nullptr;
 
 protected:
-	bool open(void *);
+	bool open(Dso &);
 	void openAux();
 
-	void *_handle = nullptr;
-	void *_x11 = nullptr;
+	Dso _handle;
+	Dso _x11;
 	struct xkb_context *_context = nullptr;
 };
 

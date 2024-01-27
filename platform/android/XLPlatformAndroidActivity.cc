@@ -21,13 +21,13 @@
  **/
 
 #include "XLPlatformAndroidActivity.h"
-
-#include <unistd.h>
-#include <sys/timerfd.h>
-#include <sys/eventfd.h>
-#include <dlfcn.h>
+#include "SPPlatformUnistd.h"
+#include "SPDso.h"
 
 #include "XLPlatformAndroidKeyCodes.cc"
+
+#include <sys/timerfd.h>
+#include <sys/eventfd.h>
 
 namespace stappler::platform::i18n {
 	void loadJava(JavaVM *vm, int32_t sdk);
@@ -173,11 +173,10 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 
 	if (_sdkVersion >= 29) {
 		// check for available surface formats
-		auto handle = ::dlopen(nullptr, RTLD_LAZY);
+		auto handle = Dso(StringView(), DsoFlags::Self);
 		if (handle) {
-			auto fn_AHardwareBuffer_isSupported = ::dlsym(handle, "AHardwareBuffer_isSupported");
-			if (fn_AHardwareBuffer_isSupported) {
-				auto _AHardwareBuffer_isSupported = reinterpret_cast<int (*) (const AHardwareBuffer_Desc *)>(fn_AHardwareBuffer_isSupported);
+			auto _AHardwareBuffer_isSupported = handle.sym<int (*) (const AHardwareBuffer_Desc *)>("AHardwareBuffer_isSupported");
+			if (_AHardwareBuffer_isSupported) {
 
 				// check for common buffer formats
 				auto checkSupported = [&] (int format) -> bool {

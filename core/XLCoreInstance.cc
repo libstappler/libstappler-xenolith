@@ -33,8 +33,8 @@
 
 namespace stappler::xenolith::core {
 
-Instance::Instance(TerminateCallback &&terminate, Rc<Ref> &&userdata)
-: _terminate(move(terminate)), _userdata(userdata) { }
+Instance::Instance(Dso &&dso, TerminateCallback &&terminate, Rc<Ref> &&userdata)
+: _dsoModule(move(dso)), _terminate(move(terminate)), _userdata(userdata) { }
 
 Instance::~Instance() {
 	if (_terminate) {

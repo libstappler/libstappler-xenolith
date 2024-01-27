@@ -22,14 +22,11 @@
 
 #include "XLPlatformLinuxDbus.h"
 #include "SPThread.h"
+#include "SPDso.h"
 
-#include <dlfcn.h>
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
-/*#include <dbus-1.0/dbus/dbus.h>
-#include <dbus-1.0/dbus/dbus-errors.h>
-#include <dbus-1.0/dbus/dbus-connection.h>*/
 
 #define NM_DBUS_INTERFACE_NAME "org.freedesktop.NetworkManager"
 #define NM_DBUS_SIGNAL_STATE_CHANGED "StateChanged"
@@ -254,9 +251,9 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	DBusMessage *getSettingSync(Connection &c, const char *key, const char *value, Error &err);
 	bool parseType(DBusMessage *const reply, const int type, void *value);
 
-	operator bool () const { return handle != nullptr; }
+	operator bool () const { return handle != false; }
 
-	bool openHandle(void *d);
+	bool openHandle(Dso &d);
 
 	bool startThread();
 
@@ -364,7 +361,7 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	dbus_bool_t (*dbus_timeout_handle) (DBusTimeout *timeout) = nullptr;
 	dbus_bool_t (*dbus_timeout_get_enabled) (DBusTimeout *timeout) = nullptr;
 
-	void *handle = nullptr;
+	Dso handle;
 	Connection *sessionConnection = nullptr;
 	Connection *systemConnection = nullptr;
 
@@ -694,10 +691,10 @@ void DBusInterface::EventStruct::handle(uint32_t ev) {
 DBusInterface::DBusInterface() {
 	epollEventFd.data.fd = -1;
 
-	auto d = dlopen("libdbus-1.so", RTLD_LAZY);
+	auto d = Dso("libdbus-1.so");
 	if (d) {
 		if (openHandle(d)) {
-			handle = d;
+			handle = move(d);
 			sessionConnection = new Connection(this, DBUS_BUS_SESSION);
 			if (sessionConnection->connection == nullptr) {
 				delete sessionConnection;
@@ -709,8 +706,6 @@ DBusInterface::DBusInterface() {
 				delete systemConnection;
 				systemConnection = nullptr;
 			}
-		} else {
-			dlclose(d);
 		}
 	}
 
@@ -719,7 +714,6 @@ DBusInterface::DBusInterface() {
 	} else if (handle) {
 		delete sessionConnection;
 		delete systemConnection;
-		dlclose(d);
 	}
 }
 
@@ -735,117 +729,113 @@ DBusInterface::~DBusInterface() {
 		delete systemConnection;
 		systemConnection = nullptr;
 	}
-	if (handle) {
-		dlclose(handle);
-		handle = nullptr;
-	}
 }
 
-bool DBusInterface::openHandle(void *d) {
+bool DBusInterface::openHandle(Dso &d) {
 	this->dbus_error_init =
-			reinterpret_cast<decltype(this->dbus_error_init)>(dlsym(d, "dbus_error_init"));
+			d.sym<decltype(this->dbus_error_init)>("dbus_error_init");
 	this->dbus_error_free =
-			reinterpret_cast<decltype(this->dbus_error_free)>(dlsym(d, "dbus_error_free"));
+			d.sym<decltype(this->dbus_error_free)>("dbus_error_free");
 	this->dbus_message_new_method_call =
-			reinterpret_cast<decltype(this->dbus_message_new_method_call)>(dlsym(d, "dbus_message_new_method_call"));
+			d.sym<decltype(this->dbus_message_new_method_call)>("dbus_message_new_method_call");
 	this->dbus_message_append_args =
-			reinterpret_cast<decltype(this->dbus_message_append_args)>(dlsym(d, "dbus_message_append_args"));
+			d.sym<decltype(this->dbus_message_append_args)>("dbus_message_append_args");
 	this->dbus_message_is_signal =
-			reinterpret_cast<decltype(this->dbus_message_is_signal)>(dlsym(d, "dbus_message_is_signal"));
+			d.sym<decltype(this->dbus_message_is_signal)>("dbus_message_is_signal");
 	this->dbus_message_is_error =
-			reinterpret_cast<decltype(this->dbus_message_is_error)>(dlsym(d, "dbus_message_is_error"));
+			d.sym<decltype(this->dbus_message_is_error)>("dbus_message_is_error");
 	this->dbus_message_unref =
-			reinterpret_cast<decltype(this->dbus_message_unref)>(dlsym(d, "dbus_message_unref"));
+			d.sym<decltype(this->dbus_message_unref)>("dbus_message_unref");
 	this->dbus_message_iter_init =
-			reinterpret_cast<decltype(this->dbus_message_iter_init)>(dlsym(d, "dbus_message_iter_init"));
+			d.sym<decltype(this->dbus_message_iter_init)>("dbus_message_iter_init");
 	this->dbus_message_iter_next =
-			reinterpret_cast<decltype(this->dbus_message_iter_next)>(dlsym(d, "dbus_message_iter_next"));
+			d.sym<decltype(this->dbus_message_iter_next)>("dbus_message_iter_next");
 	this->dbus_message_iter_recurse =
-			reinterpret_cast<decltype(this->dbus_message_iter_recurse)>(dlsym(d, "dbus_message_iter_recurse"));
+			d.sym<decltype(this->dbus_message_iter_recurse)>("dbus_message_iter_recurse");
 	this->dbus_message_iter_get_arg_type =
-			reinterpret_cast<decltype(this->dbus_message_iter_get_arg_type)>(dlsym(d, "dbus_message_iter_get_arg_type"));
+			d.sym<decltype(this->dbus_message_iter_get_arg_type)>("dbus_message_iter_get_arg_type");
 	this->dbus_message_iter_get_basic =
-			reinterpret_cast<decltype(this->dbus_message_iter_get_basic)>(dlsym(d, "dbus_message_iter_get_basic"));
+			d.sym<decltype(this->dbus_message_iter_get_basic)>("dbus_message_iter_get_basic");
 	this->dbus_message_get_type =
-			reinterpret_cast<decltype(this->dbus_message_get_type)>(dlsym(d, "dbus_message_get_type"));
+			d.sym<decltype(this->dbus_message_get_type)>("dbus_message_get_type");
 	this->dbus_message_get_path =
-			reinterpret_cast<decltype(this->dbus_message_get_path)>(dlsym(d, "dbus_message_get_path"));
+			d.sym<decltype(this->dbus_message_get_path)>("dbus_message_get_path");
 	this->dbus_message_get_interface =
-			reinterpret_cast<decltype(this->dbus_message_get_interface)>(dlsym(d, "dbus_message_get_interface"));
+			d.sym<decltype(this->dbus_message_get_interface)>("dbus_message_get_interface");
 	this->dbus_message_get_member =
-			reinterpret_cast<decltype(this->dbus_message_get_member)>(dlsym(d, "dbus_message_get_member"));
+			d.sym<decltype(this->dbus_message_get_member)>("dbus_message_get_member");
 	this->dbus_message_get_error_name =
-			reinterpret_cast<decltype(this->dbus_message_get_error_name)>(dlsym(d, "dbus_message_get_error_name"));
+			d.sym<decltype(this->dbus_message_get_error_name)>("dbus_message_get_error_name");
 	this->dbus_message_get_destination =
-			reinterpret_cast<decltype(this->dbus_message_get_destination)>(dlsym(d, "dbus_message_get_destination"));
+			d.sym<decltype(this->dbus_message_get_destination)>("dbus_message_get_destination");
 	this->dbus_message_get_sender =
-			reinterpret_cast<decltype(this->dbus_message_get_sender)>(dlsym(d, "dbus_message_get_sender"));
+			d.sym<decltype(this->dbus_message_get_sender)>("dbus_message_get_sender");
 	this->dbus_message_get_signature =
-			reinterpret_cast<decltype(this->dbus_message_get_signature)>(dlsym(d, "dbus_message_get_signature"));
+			d.sym<decltype(this->dbus_message_get_signature)>("dbus_message_get_signature");
 	this->dbus_connection_send_with_reply_and_block =
-			reinterpret_cast<decltype(this->dbus_connection_send_with_reply_and_block)>(dlsym(d, "dbus_connection_send_with_reply_and_block"));
+			d.sym<decltype(this->dbus_connection_send_with_reply_and_block)>("dbus_connection_send_with_reply_and_block");
 	this->dbus_connection_send_with_reply =
-			reinterpret_cast<decltype(this->dbus_connection_send_with_reply)>(dlsym(d, "dbus_connection_send_with_reply"));
+			d.sym<decltype(this->dbus_connection_send_with_reply)>("dbus_connection_send_with_reply");
 	this->dbus_connection_set_watch_functions =
-			reinterpret_cast<decltype(this->dbus_connection_set_watch_functions)>(dlsym(d, "dbus_connection_set_watch_functions"));
+			d.sym<decltype(this->dbus_connection_set_watch_functions)>("dbus_connection_set_watch_functions");
 	this->dbus_connection_set_timeout_functions =
-			reinterpret_cast<decltype(this->dbus_connection_set_timeout_functions)>(dlsym(d, "dbus_connection_set_timeout_functions"));
+			d.sym<decltype(this->dbus_connection_set_timeout_functions)>("dbus_connection_set_timeout_functions");
 	this->dbus_connection_set_wakeup_main_function =
-			reinterpret_cast<decltype(this->dbus_connection_set_wakeup_main_function)>(dlsym(d, "dbus_connection_set_wakeup_main_function"));
+			d.sym<decltype(this->dbus_connection_set_wakeup_main_function)>("dbus_connection_set_wakeup_main_function");
 	this->dbus_connection_set_dispatch_status_function =
-			reinterpret_cast<decltype(this->dbus_connection_set_dispatch_status_function)>(dlsym(d, "dbus_connection_set_dispatch_status_function"));
+			d.sym<decltype(this->dbus_connection_set_dispatch_status_function)>("dbus_connection_set_dispatch_status_function");
 	this->dbus_connection_add_filter =
-			reinterpret_cast<decltype(this->dbus_connection_add_filter)>(dlsym(d, "dbus_connection_add_filter"));
+			d.sym<decltype(this->dbus_connection_add_filter)>("dbus_connection_add_filter");
 	this->dbus_connection_close =
-			reinterpret_cast<decltype(this->dbus_connection_close)>(dlsym(d, "dbus_connection_close"));
+			d.sym<decltype(this->dbus_connection_close)>("dbus_connection_close");
 	this->dbus_connection_unref =
-			reinterpret_cast<decltype(this->dbus_connection_unref)>(dlsym(d, "dbus_connection_unref"));
+			d.sym<decltype(this->dbus_connection_unref)>("dbus_connection_unref");
 	this->dbus_connection_flush =
-			reinterpret_cast<decltype(this->dbus_connection_flush)>(dlsym(d, "dbus_connection_flush"));
+			d.sym<decltype(this->dbus_connection_flush)>("dbus_connection_flush");
 	this->dbus_connection_dispatch =
-			reinterpret_cast<decltype(this->dbus_connection_dispatch)>(dlsym(d, "dbus_connection_dispatch"));
+			d.sym<decltype(this->dbus_connection_dispatch)>("dbus_connection_dispatch");
 	this->dbus_error_is_set =
-			reinterpret_cast<decltype(this->dbus_error_is_set)>(dlsym(d, "dbus_error_is_set"));
+			d.sym<decltype(this->dbus_error_is_set)>("dbus_error_is_set");
 	this->dbus_bus_get =
-			reinterpret_cast<decltype(this->dbus_bus_get)>(dlsym(d, "dbus_bus_get"));
+			d.sym<decltype(this->dbus_bus_get)>("dbus_bus_get");
 	this->dbus_bus_get_private =
-			reinterpret_cast<decltype(this->dbus_bus_get_private)>(dlsym(d, "dbus_bus_get_private"));
+			d.sym<decltype(this->dbus_bus_get_private)>("dbus_bus_get_private");
 	this->dbus_bus_add_match =
-			reinterpret_cast<decltype(this->dbus_bus_add_match)>(dlsym(d, "dbus_bus_add_match"));
+			d.sym<decltype(this->dbus_bus_add_match)>("dbus_bus_add_match");
 	this->dbus_pending_call_ref =
-			reinterpret_cast<decltype(this->dbus_pending_call_ref)>(dlsym(d, "dbus_pending_call_ref"));
+			d.sym<decltype(this->dbus_pending_call_ref)>("dbus_pending_call_ref");
 	this->dbus_pending_call_unref =
-			reinterpret_cast<decltype(this->dbus_pending_call_unref)>(dlsym(d, "dbus_pending_call_unref"));
+			d.sym<decltype(this->dbus_pending_call_unref)>("dbus_pending_call_unref");
 	this->dbus_pending_call_set_notify =
-			reinterpret_cast<decltype(this->dbus_pending_call_set_notify)>(dlsym(d, "dbus_pending_call_set_notify"));
+			d.sym<decltype(this->dbus_pending_call_set_notify)>("dbus_pending_call_set_notify");
 	this->dbus_pending_call_get_completed =
-			reinterpret_cast<decltype(this->dbus_pending_call_get_completed)>(dlsym(d, "dbus_pending_call_get_completed"));
+			d.sym<decltype(this->dbus_pending_call_get_completed)>("dbus_pending_call_get_completed");
 	this->dbus_pending_call_steal_reply =
-			reinterpret_cast<decltype(this->dbus_pending_call_steal_reply)>(dlsym(d, "dbus_pending_call_steal_reply"));
+			d.sym<decltype(this->dbus_pending_call_steal_reply)>("dbus_pending_call_steal_reply");
 	this->dbus_pending_call_block =
-			reinterpret_cast<decltype(this->dbus_pending_call_block)>(dlsym(d, "dbus_pending_call_block"));
+			d.sym<decltype(this->dbus_pending_call_block)>("dbus_pending_call_block");
 	this->dbus_watch_get_unix_fd =
-			reinterpret_cast<decltype(this->dbus_watch_get_unix_fd)>(dlsym(d, "dbus_watch_get_unix_fd"));
+			d.sym<decltype(this->dbus_watch_get_unix_fd)>("dbus_watch_get_unix_fd");
 	this->dbus_watch_get_flags =
-			reinterpret_cast<decltype(this->dbus_watch_get_flags)>(dlsym(d, "dbus_watch_get_flags"));
+			d.sym<decltype(this->dbus_watch_get_flags)>("dbus_watch_get_flags");
 	this->dbus_watch_get_data =
-			reinterpret_cast<decltype(this->dbus_watch_get_data)>(dlsym(d, "dbus_watch_get_data"));
+			d.sym<decltype(this->dbus_watch_get_data)>("dbus_watch_get_data");
 	this->dbus_watch_set_data =
-			reinterpret_cast<decltype(this->dbus_watch_set_data)>(dlsym(d, "dbus_watch_set_data"));
+			d.sym<decltype(this->dbus_watch_set_data)>("dbus_watch_set_data");
 	this->dbus_watch_handle =
-			reinterpret_cast<decltype(this->dbus_watch_handle)>(dlsym(d, "dbus_watch_handle"));
+			d.sym<decltype(this->dbus_watch_handle)>("dbus_watch_handle");
 	this->dbus_watch_get_enabled =
-			reinterpret_cast<decltype(this->dbus_watch_get_enabled)>(dlsym(d, "dbus_watch_get_enabled"));
+			d.sym<decltype(this->dbus_watch_get_enabled)>("dbus_watch_get_enabled");
 	this->dbus_timeout_get_interval =
-			reinterpret_cast<decltype(this->dbus_timeout_get_interval)>(dlsym(d, "dbus_timeout_get_interval"));
+			d.sym<decltype(this->dbus_timeout_get_interval)>("dbus_timeout_get_interval");
 	this->dbus_timeout_get_data =
-			reinterpret_cast<decltype(this->dbus_timeout_get_data)>(dlsym(d, "dbus_timeout_get_data"));
+			d.sym<decltype(this->dbus_timeout_get_data)>("dbus_timeout_get_data");
 	this->dbus_timeout_set_data =
-			reinterpret_cast<decltype(this->dbus_timeout_set_data)>(dlsym(d, "dbus_timeout_set_data"));
+			d.sym<decltype(this->dbus_timeout_set_data)>("dbus_timeout_set_data");
 	this->dbus_timeout_handle =
-			reinterpret_cast<decltype(this->dbus_timeout_handle)>(dlsym(d, "dbus_timeout_handle"));
+			d.sym<decltype(this->dbus_timeout_handle)>("dbus_timeout_handle");
 	this->dbus_timeout_get_enabled =
-			reinterpret_cast<decltype(this->dbus_timeout_get_enabled)>(dlsym(d, "dbus_timeout_get_enabled"));
+			d.sym<decltype(this->dbus_timeout_get_enabled)>("dbus_timeout_get_enabled");
 
 	return this->dbus_error_init
 		&& this->dbus_error_free

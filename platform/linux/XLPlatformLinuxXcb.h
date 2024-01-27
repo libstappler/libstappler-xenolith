@@ -24,6 +24,7 @@
 #define XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXXCB_H_
 
 #include "XLCommon.h"
+#include "SPDso.h"
 
 #if LINUX
 
@@ -59,7 +60,7 @@ public:
 
 	bool init();
 
-	bool open(void *handle);
+	bool open(Dso &handle);
 	void close();
 
 	bool hasRandr() const { return _randr; }
@@ -210,10 +211,10 @@ protected:
 	void openAux();
 	void openConnection(ConnectionData &data);
 
-	void *_handle = nullptr;
-	void *_randr = nullptr;
-	void *_keysyms = nullptr;
-	void *_xkb = nullptr;
+	Dso _handle;
+	Dso _randr;
+	Dso _keysyms;
+	Dso _xkb;
 
 	ConnectionData _pending;
 	ConnectionData _current;

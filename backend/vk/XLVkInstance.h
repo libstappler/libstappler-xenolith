@@ -46,7 +46,7 @@ public:
 	using PresentSupportCallback = Function<uint32_t(const Instance *, VkPhysicalDevice device, uint32_t familyIdx)>;
 
 	Instance(VkInstance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-			Vector<StringView> &&optionals, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled, Rc<Ref> &&);
+			Vector<StringView> &&optionals, Dso &&vulkanModule, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled, Rc<Ref> &&);
 	virtual ~Instance();
 
 	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const override;

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,12 +25,10 @@
 #include "XLApplication.h"
 #include "SPValid.h"
 #include "SPThread.h"
-#include "STSqlDriver.h"
+#include "SPSqlDriver.h"
 #include <typeindex>
 
 namespace stappler::xenolith::storage {
-
-static thread_local Server::ServerData *tl_currentServer = nullptr;
 
 struct ServerComponentData : public db::AllocBase {
 	db::pool_t *pool;
@@ -65,7 +63,8 @@ protected:
 	ServerComponentData *_components = nullptr;
 };
 
-struct Server::ServerData : public thread::ThreadInterface<Interface> {
+
+struct Server::ServerData : public thread::ThreadInterface<Interface>, public db::ApplicationInterface {
 	struct TaskCallback {
 		Function<bool(const Server &, const db::Transaction &)> callback;
 		Rc<Ref> ref;
@@ -84,6 +83,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface> {
 	db::Map<StringView, const db::Scheme *> predefinedSchemes;
 	db::Map<ComponentContainer *, ServerComponentData *> components;
 
+	db::String documentRoot;
 	StringView serverName;
 	std::thread thread;
 	std::condition_variable condition;
@@ -95,7 +95,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface> {
 	db::sql::Driver::Handle handle;
 	Server *server = nullptr;
 
-	db::Vector<db::Function<void(const db::Transaction &)>> *asyncTasks = nullptr;
+	mutable db::Vector<db::Function<void(const db::Transaction &)>> *asyncTasks = nullptr;
 
 	db::BackendInterface::Config interfaceConfig;
 
@@ -116,14 +116,28 @@ struct Server::ServerData : public thread::ThreadInterface<Interface> {
 
 	void handleStorageTransaction(db::Transaction &);
 
-	void addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb);
+	void addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const;
 
 	bool addComponent(ComponentContainer *, const db::Transaction &);
 	void removeComponent(ComponentContainer *, const db::Transaction &t);
+
+	virtual void scheduleAyncDbTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const override;
+
+	virtual db::StringView getDocuemntRoot() const override;
+
+	virtual const db::Scheme *getFileScheme() const override;
+	virtual const db::Scheme *getUserScheme() const override;
+
+	virtual void pushErrorMessage(db::Value &&) const override;
+	virtual void pushDebugMessage(db::Value &&) const override;
+
+	virtual void initTransaction(db::Transaction &) const override;
 };
 
-Server::~Server() {
-}
+
+XL_DECLARE_EVENT_CLASS(Server, onBroadcast)
+
+Server::~Server() { }
 
 bool Server::init(Application *app, const Value &params) {
 	auto pool = memory::pool::create();
@@ -153,7 +167,7 @@ bool Server::init(Application *app, const Value &params) {
 		driver = StringView("sqlite");
 	}
 
-	_data->driver = db::sql::Driver::open(pool, driver);
+	_data->driver = db::sql::Driver::open(pool, _data, driver);
 	if (!_data->driver) {
 		return false;
 	}
@@ -743,6 +757,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias,
 Server::ServerData::ServerData() {
 	queue.setQueueLocking(mutexQueue);
 	queue.setFreeLocking(mutexFree);
+	documentRoot = filesystem::writablePath<db::Interface>();
 }
 
 Server::ServerData::~ServerData() {
@@ -798,7 +813,7 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 }
 
 void Server::ServerData::threadInit() {
-	tl_currentServer = this;
+	//db::setStorageRoot(this);
 
 	memory::pool::initialize();
 	memory::pool::push(serverPool);
@@ -830,7 +845,7 @@ void Server::ServerData::threadInit() {
 		thread::ThreadInfo::setThreadInfo(serverName);
 	}
 
-	tl_currentServer = nullptr;
+	//db::setStorageRoot(nullptr);
 }
 
 bool Server::ServerData::worker() {
@@ -908,14 +923,9 @@ void Server::ServerData::threadDispose() {
 }
 
 void Server::ServerData::handleStorageTransaction(db::Transaction &t) {
-	for (auto &it : components) {
-		for (auto &iit : it.second->components) {
-			iit.second->handleStorageTransaction(t);
-		}
-	}
 }
 
-void Server::ServerData::addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) {
+void Server::ServerData::addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const {
 	if (!asyncTasks) {
 		asyncTasks = new (threadPool) db::Vector<db::Function<void(const db::Transaction &)>>;
 	}
@@ -950,6 +960,38 @@ void Server::ServerData::removeComponent(ComponentContainer *comp, const db::Tra
 
 	memory::pool::destroy(cmpIt->second->pool);
 	components.erase(cmpIt);
+}
+
+void Server::ServerData::scheduleAyncDbTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const {
+	addAsyncTask(setupCb);
+}
+
+db::StringView Server::ServerData::getDocuemntRoot() const {
+	return documentRoot;
+}
+
+const db::Scheme *Server::ServerData::getFileScheme() const {
+	return nullptr;
+}
+
+const db::Scheme *Server::ServerData::getUserScheme() const {
+	return nullptr;
+}
+
+void Server::ServerData::pushErrorMessage(db::Value &&val) const {
+	log::error("xenolith::Server", data::EncodeFormat::Pretty, val);
+}
+
+void Server::ServerData::pushDebugMessage(db::Value &&val) const {
+	log::debug("xenolith::Server", data::EncodeFormat::Pretty, val);
+}
+
+void Server::ServerData::initTransaction(db::Transaction &t) const {
+	for (auto &it : components) {
+		for (auto &iit : it.second->components) {
+			iit.second->handleStorageTransaction(t);
+		}
+	}
 }
 
 ServerComponentLoader::~ServerComponentLoader() {
@@ -993,36 +1035,6 @@ bool ServerComponentLoader::run(ComponentContainer *comp) {
 	_pool = nullptr;
 	_components = nullptr;
 	return true;
-}
-
-XL_DECLARE_EVENT_CLASS(StorageRoot, onBroadcast)
-
-void StorageRoot::scheduleAyncDbTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) {
-	if (tl_currentServer) {
-		tl_currentServer->addAsyncTask(setupCb);
-	}
-}
-
-db::String StorageRoot::getDocuemntRoot() const {
-	return StringView(filesystem::writablePath<db::Interface>()).str<db::Interface>();
-}
-
-const db::Scheme *StorageRoot::getFileScheme() const {
-	return nullptr;
-}
-
-const db::Scheme *StorageRoot::getUserScheme() const {
-	return nullptr;
-}
-
-void StorageRoot::onLocalBroadcast(const db::Value &val) {
-	onBroadcast(nullptr, Value(val));
-}
-
-void StorageRoot::onStorageTransaction(db::Transaction &t) {
-	if (tl_currentServer) {
-		tl_currentServer->handleStorageTransaction(t);
-	}
 }
 
 }

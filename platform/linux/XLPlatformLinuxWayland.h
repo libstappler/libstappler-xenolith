@@ -25,6 +25,7 @@
 
 #include "XLCommon.h"
 #include "XLCoreInput.h"
+#include "SPDso.h"
 
 #if LINUX
 
@@ -569,16 +570,16 @@ public:
 	ConnectionData acquireConnection();
 	ConnectionData getActiveConnection() const;
 
-	bool hasWaylandCursor() const { return _cursor != nullptr; }
+	bool hasWaylandCursor() const { return _cursor != false; }
 
 protected:
-	bool open(void *);
-	bool openWaylandCursor(void *d);
+	bool open(Dso &);
+	bool openWaylandCursor(Dso &);
 
 	void openConnection(ConnectionData &data);
 
-	void *_handle = nullptr;
-	void *_cursor = nullptr;
+	Dso _handle;
+	Dso _cursor;
 
 	ConnectionData _pending;
 	ConnectionData _current;

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "XLApplication.h"
 #include "XLEventHeader.h"
-#include "STStorageScheme.h"
+#include "SPDbScheme.h"
 
 namespace stappler::xenolith::storage {
 
@@ -43,6 +43,8 @@ public:
 	struct ServerData;
 
 	using Scheme = db::Scheme;
+
+	static EventHeader onBroadcast;
 
 	virtual ~Server();
 
@@ -130,19 +132,6 @@ protected:
 			Vector<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
 
 	ServerData *_data = nullptr;
-};
-
-class StorageRoot : public db::StorageRoot {
-public:
-	static EventHeader onBroadcast;
-
-	virtual void scheduleAyncDbTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) override;
-	virtual db::String getDocuemntRoot() const override;
-	virtual const db::Scheme *getFileScheme() const override;
-	virtual const db::Scheme *getUserScheme() const override;
-
-	virtual void onLocalBroadcast(const db::Value &) override;
-	virtual void onStorageTransaction(db::Transaction &) override;
 };
 
 }

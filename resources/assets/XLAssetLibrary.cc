@@ -26,7 +26,7 @@
 #include "XLStorageComponent.h"
 #include "XLStorageServer.h"
 #include "XLNetworkController.h"
-#include "STSqlHandle.h"
+#include "SPSqlHandle.h"
 
 namespace stappler::xenolith::storage {
 
@@ -134,7 +134,7 @@ void AssetComponent::handleChildInit(const Server &serv, const db::Transaction &
 
 void AssetComponent::cleanup(const db::Transaction &t) {
 	Time time = Time::now();
-	if (auto iface = dynamic_cast<db::sql::SqlHandle *>(t.getAdapter().interface())) {
+	if (auto iface = dynamic_cast<db::sql::SqlHandle *>(t.getAdapter().getBackendInterface())) {
 		iface->performSimpleSelect(toString("SELECT __oid, url FROM ", _assets.getName(),
 				" WHERE download == 0 AND ttl != 0 AND (touch + ttl) < ",
 				time, ";"), [&] (db::Result &res) {

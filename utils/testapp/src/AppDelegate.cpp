@@ -52,8 +52,6 @@ bool AppDelegate::init(ViewCommandLineData &&data, void *native) {
 }
 
 void AppDelegate::run(Function<void()> &&initCb) {
-	db::setStorageRoot(&_storageRoot);
-
 	if (_storageParams.getString("driver") == "sqlite") {
 		auto path = _storageParams.getString("dbname");
 		filesystem::mkdir(filepath::root(filepath::root(path)));

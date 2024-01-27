@@ -29,13 +29,13 @@
 namespace stappler::xenolith::vk::platform {
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
-	auto handle = ::dlopen("libvulkan.so", RTLD_LAZY | RTLD_LOCAL);
+	auto handle = Dso("libvulkan.so.1");
 	if (!handle) {
 		log::error("Vk", "Fail to open libvulkan.so");
 		return nullptr;
 	}
 
-	auto getInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(handle, "vkGetInstanceProcAddr"));
+	auto getInstanceProcAddr = handle.sym<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
 	if (!getInstanceProcAddr) {
 		return nullptr;
 	}
@@ -43,15 +43,13 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 	FunctionTable table(getInstanceProcAddr);
 
 	if (!table) {
-		::dlclose(handle);
 		return nullptr;
 	}
 
-	if (auto instance = table.createInstance(cb, [handle] { ::dlclose(handle); })) {
+	if (auto instance = table.createInstance(cb, move(handle), nullptr)) {
 		return instance;
 	}
 
-	::dlclose(handle);
 	return nullptr;
 }
 

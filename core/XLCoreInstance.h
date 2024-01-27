@@ -24,6 +24,7 @@
 #define XENOLITH_CORE_XLCOREINSTANCE_H_
 
 #include "XLCore.h"
+#include "SPDso.h"
 
 #if MODULE_XENOLITH_SCENE
 
@@ -58,7 +59,7 @@ public:
 
 	static constexpr uint32_t DefaultDevice = maxOf<uint32_t>();
 
-	Instance(TerminateCallback &&, Rc<Ref> &&);
+	Instance(Dso &&, TerminateCallback &&, Rc<Ref> &&);
 	virtual ~Instance();
 
 	const Vector<DeviceProperties> &getAvailableDevices() const { return _availableDevices; }
@@ -76,6 +77,7 @@ public:
 #endif
 
 protected:
+	Dso _dsoModule;
 	TerminateCallback _terminate;
 	Rc<Ref> _userdata;
 	Vector<DeviceProperties> _availableDevices;

@@ -651,12 +651,12 @@ void MatrixMulLayer::initPropagationSubpass(core::Queue::Builder &builder, core:
 	});
 
 	queueBuilder.addCompleteCallback([this] (const core::QueuePassData &, FrameQueue &q, bool success) {
-		vk::BufferAttachmentHandle *propagationBuffer = nullptr;
+		/*vk::BufferAttachmentHandle *propagationBuffer = nullptr;
 		if (auto bufferAttachment = q.getAttachment(getPropagationAttachment())) {
 			propagationBuffer = (vk::BufferAttachmentHandle *)bufferAttachment->handle.get();
 		}
 
-		/*q.getFrame()->getLoop()->captureBuffer([front = _front] (const BufferInfo &info, BytesView view) {
+		q.getFrame()->getLoop()->captureBuffer([front = _front] (const BufferInfo &info, BytesView view) {
 			xenolith::shadernn::Model::saveBlob(
 					filesystem::currentDir<Interface>(toString(front->getName(),".", front->getInputIndex(), ".weightsDiff.bin")).data(),
 					view.data(), view.size());

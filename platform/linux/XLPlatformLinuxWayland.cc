@@ -401,13 +401,12 @@ WaylandLibrary::WaylandLibrary() {
 }
 
 bool WaylandLibrary::init() {
-	if (auto d = dlopen("libwayland-client.so", RTLD_LAZY)) {
+	if (auto d = Dso("libwayland-client.so")) {
 		if (open(d)) {
 			s_WaylandLibrary = this;
 			openConnection(_pending);
 			return _pending.display != nullptr;
 		}
-		dlclose(d);
 	}
 	return false;
 }
@@ -418,11 +417,6 @@ void WaylandLibrary::close() {
 		_pending.display = nullptr;
 	}
 
-	if (_cursor) {
-		dlclose(_cursor);
-		_cursor = nullptr;
-	}
-
 	if (xdg) {
 		delete xdg;
 		xdg = nullptr;
@@ -430,11 +424,6 @@ void WaylandLibrary::close() {
 
 	if (s_WaylandLibrary == this) {
 		s_WaylandLibrary = nullptr;
-	}
-
-	if (_handle) {
-		dlclose(_handle);
-		_handle = nullptr;
 	}
 }
 
@@ -470,40 +459,40 @@ bool WaylandLibrary::ownsProxy(wl_surface *surface) {
 	return ownsProxy((struct wl_proxy *) surface);
 }
 
-bool WaylandLibrary::open(void *handle) {
-	this->wl_registry_interface = reinterpret_cast<decltype(this->wl_registry_interface)>(dlsym(handle, "wl_registry_interface"));
-	this->wl_compositor_interface = reinterpret_cast<decltype(this->wl_compositor_interface)>(dlsym(handle, "wl_compositor_interface"));
-	this->wl_output_interface = reinterpret_cast<decltype(this->wl_output_interface)>(dlsym(handle, "wl_output_interface"));
-	this->wl_seat_interface = reinterpret_cast<decltype(this->wl_seat_interface)>(dlsym(handle, "wl_seat_interface"));
-	this->wl_surface_interface = reinterpret_cast<decltype(this->wl_surface_interface)>(dlsym(handle, "wl_surface_interface"));
-	this->wl_region_interface = reinterpret_cast<decltype(this->wl_region_interface)>(dlsym(handle, "wl_region_interface"));
-	this->wl_callback_interface = reinterpret_cast<decltype(this->wl_callback_interface)>(dlsym(handle, "wl_callback_interface"));
-	this->wl_pointer_interface = reinterpret_cast<decltype(this->wl_callback_interface)>(dlsym(handle, "wl_pointer_interface"));
-	this->wl_keyboard_interface = reinterpret_cast<decltype(this->wl_keyboard_interface)>(dlsym(handle, "wl_keyboard_interface"));
-	this->wl_touch_interface = reinterpret_cast<decltype(this->wl_touch_interface)>(dlsym(handle, "wl_touch_interface"));
-	this->wl_shm_interface = reinterpret_cast<decltype(this->wl_shm_interface)>(dlsym(handle, "wl_shm_interface"));
-	this->wl_subcompositor_interface = reinterpret_cast<decltype(this->wl_subcompositor_interface)>(dlsym(handle, "wl_subcompositor_interface"));
-	this->wl_subsurface_interface = reinterpret_cast<decltype(this->wl_subsurface_interface)>(dlsym(handle, "wl_subsurface_interface"));
-	this->wl_shm_pool_interface = reinterpret_cast<decltype(this->wl_shm_pool_interface)>(dlsym(handle, "wl_shm_pool_interface"));
-	this->wl_buffer_interface = reinterpret_cast<decltype(this->wl_buffer_interface)>(dlsym(handle, "wl_buffer_interface"));
+bool WaylandLibrary::open(Dso &handle) {
+	this->wl_registry_interface = handle.sym<decltype(this->wl_registry_interface)>("wl_registry_interface");
+	this->wl_compositor_interface = handle.sym<decltype(this->wl_compositor_interface)>("wl_compositor_interface");
+	this->wl_output_interface = handle.sym<decltype(this->wl_output_interface)>("wl_output_interface");
+	this->wl_seat_interface = handle.sym<decltype(this->wl_seat_interface)>("wl_seat_interface");
+	this->wl_surface_interface = handle.sym<decltype(this->wl_surface_interface)>("wl_surface_interface");
+	this->wl_region_interface = handle.sym<decltype(this->wl_region_interface)>("wl_region_interface");
+	this->wl_callback_interface = handle.sym<decltype(this->wl_callback_interface)>("wl_callback_interface");
+	this->wl_pointer_interface = handle.sym<decltype(this->wl_callback_interface)>("wl_pointer_interface");
+	this->wl_keyboard_interface = handle.sym<decltype(this->wl_keyboard_interface)>("wl_keyboard_interface");
+	this->wl_touch_interface = handle.sym<decltype(this->wl_touch_interface)>("wl_touch_interface");
+	this->wl_shm_interface = handle.sym<decltype(this->wl_shm_interface)>("wl_shm_interface");
+	this->wl_subcompositor_interface = handle.sym<decltype(this->wl_subcompositor_interface)>("wl_subcompositor_interface");
+	this->wl_subsurface_interface = handle.sym<decltype(this->wl_subsurface_interface)>("wl_subsurface_interface");
+	this->wl_shm_pool_interface = handle.sym<decltype(this->wl_shm_pool_interface)>("wl_shm_pool_interface");
+	this->wl_buffer_interface = handle.sym<decltype(this->wl_buffer_interface)>("wl_buffer_interface");
 
-	this->wl_display_connect = reinterpret_cast<decltype(this->wl_display_connect)>(dlsym(handle, "wl_display_connect"));
-	this->wl_display_get_fd = reinterpret_cast<decltype(this->wl_display_get_fd)>(dlsym(handle, "wl_display_get_fd"));
-	this->wl_display_dispatch = reinterpret_cast<decltype(this->wl_display_dispatch)>(dlsym(handle, "wl_display_dispatch"));
-	this->wl_display_dispatch_pending = reinterpret_cast<decltype(this->wl_display_dispatch_pending)>(dlsym(handle, "wl_display_dispatch_pending"));
-	this->wl_display_prepare_read = reinterpret_cast<decltype(this->wl_display_prepare_read)>(dlsym(handle, "wl_display_prepare_read"));
-	this->wl_display_flush = reinterpret_cast<decltype(this->wl_display_flush)>(dlsym(handle, "wl_display_flush"));
-	this->wl_display_read_events = reinterpret_cast<decltype(this->wl_display_read_events)>(dlsym(handle, "wl_display_read_events"));
-	this->wl_display_disconnect = reinterpret_cast<decltype(this->wl_display_disconnect)>(dlsym(handle, "wl_display_disconnect"));
-	this->wl_proxy_marshal_flags = reinterpret_cast<decltype(this->wl_proxy_marshal_flags)>(dlsym(handle, "wl_proxy_marshal_flags"));
-	this->wl_proxy_get_version = reinterpret_cast<decltype(this->wl_proxy_get_version)>(dlsym(handle, "wl_proxy_get_version"));
-	this->wl_proxy_add_listener = reinterpret_cast<decltype(this->wl_proxy_add_listener)>(dlsym(handle, "wl_proxy_add_listener"));
-	this->wl_proxy_set_user_data = reinterpret_cast<decltype(this->wl_proxy_set_user_data)>(dlsym(handle, "wl_proxy_set_user_data"));
-	this->wl_proxy_get_user_data = reinterpret_cast<decltype(this->wl_proxy_get_user_data)>(dlsym(handle, "wl_proxy_get_user_data"));
-	this->wl_proxy_set_tag = reinterpret_cast<decltype(this->wl_proxy_set_tag)>(dlsym(handle, "wl_proxy_set_tag"));
-	this->wl_proxy_get_tag = reinterpret_cast<decltype(this->wl_proxy_get_tag)>(dlsym(handle, "wl_proxy_get_tag"));
-	this->wl_proxy_destroy = reinterpret_cast<decltype(this->wl_proxy_destroy)>(dlsym(handle, "wl_proxy_destroy"));
-	this->wl_display_roundtrip = reinterpret_cast<decltype(this->wl_display_roundtrip)>(dlsym(handle, "wl_display_roundtrip"));
+	this->wl_display_connect = handle.sym<decltype(this->wl_display_connect)>("wl_display_connect");
+	this->wl_display_get_fd = handle.sym<decltype(this->wl_display_get_fd)>("wl_display_get_fd");
+	this->wl_display_dispatch = handle.sym<decltype(this->wl_display_dispatch)>("wl_display_dispatch");
+	this->wl_display_dispatch_pending = handle.sym<decltype(this->wl_display_dispatch_pending)>("wl_display_dispatch_pending");
+	this->wl_display_prepare_read = handle.sym<decltype(this->wl_display_prepare_read)>("wl_display_prepare_read");
+	this->wl_display_flush = handle.sym<decltype(this->wl_display_flush)>("wl_display_flush");
+	this->wl_display_read_events = handle.sym<decltype(this->wl_display_read_events)>("wl_display_read_events");
+	this->wl_display_disconnect = handle.sym<decltype(this->wl_display_disconnect)>("wl_display_disconnect");
+	this->wl_proxy_marshal_flags = handle.sym<decltype(this->wl_proxy_marshal_flags)>("wl_proxy_marshal_flags");
+	this->wl_proxy_get_version = handle.sym<decltype(this->wl_proxy_get_version)>("wl_proxy_get_version");
+	this->wl_proxy_add_listener = handle.sym<decltype(this->wl_proxy_add_listener)>("wl_proxy_add_listener");
+	this->wl_proxy_set_user_data = handle.sym<decltype(this->wl_proxy_set_user_data)>("wl_proxy_set_user_data");
+	this->wl_proxy_get_user_data = handle.sym<decltype(this->wl_proxy_get_user_data)>("wl_proxy_get_user_data");
+	this->wl_proxy_set_tag = handle.sym<decltype(this->wl_proxy_set_tag)>("wl_proxy_set_tag");
+	this->wl_proxy_get_tag = handle.sym<decltype(this->wl_proxy_get_tag)>("wl_proxy_get_tag");
+	this->wl_proxy_destroy = handle.sym<decltype(this->wl_proxy_destroy)>("wl_proxy_destroy");
+	this->wl_display_roundtrip = handle.sym<decltype(this->wl_display_roundtrip)>("wl_display_roundtrip");
 
 	if (this->wl_registry_interface
 			&& this->wl_compositor_interface
@@ -546,25 +535,23 @@ bool WaylandLibrary::open(void *handle) {
 		xdg_toplevel_interface = &xdg->xdg_toplevel_interface;
 		xdg_popup_interface = &xdg->xdg_popup_interface;
 
-		if (auto d = dlopen("libwayland-cursor.so", RTLD_LAZY)) {
+		if (auto d = Dso("libwayland-cursor.so")) {
 			if (openWaylandCursor(d)) {
-				_cursor = d;
-			} else {
-				dlclose(d);
+				_cursor = move(d);
 			}
 		}
 
-		_handle = handle;
+		_handle = move(handle);
 		return true;
 	}
 	return false;
 }
 
-bool WaylandLibrary::openWaylandCursor(void *d) {
-	this->wl_cursor_theme_load = reinterpret_cast<decltype(this->wl_cursor_theme_load)>(dlsym(d, "wl_cursor_theme_load"));
-	this->wl_cursor_theme_destroy = reinterpret_cast<decltype(this->wl_cursor_theme_destroy)>(dlsym(d, "wl_cursor_theme_destroy"));
-	this->wl_cursor_theme_get_cursor = reinterpret_cast<decltype(this->wl_cursor_theme_get_cursor)>(dlsym(d, "wl_cursor_theme_get_cursor"));
-	this->wl_cursor_image_get_buffer = reinterpret_cast<decltype(this->wl_cursor_image_get_buffer)>(dlsym(d, "wl_cursor_image_get_buffer"));
+bool WaylandLibrary::openWaylandCursor(Dso &handle) {
+	this->wl_cursor_theme_load = handle.sym<decltype(this->wl_cursor_theme_load)>("wl_cursor_theme_load");
+	this->wl_cursor_theme_destroy = handle.sym<decltype(this->wl_cursor_theme_destroy)>("wl_cursor_theme_destroy");
+	this->wl_cursor_theme_get_cursor = handle.sym<decltype(this->wl_cursor_theme_get_cursor)>("wl_cursor_theme_get_cursor");
+	this->wl_cursor_image_get_buffer = handle.sym<decltype(this->wl_cursor_image_get_buffer)>("wl_cursor_image_get_buffer");
 
 	return this->wl_cursor_theme_load
 		&& this->wl_cursor_theme_destroy

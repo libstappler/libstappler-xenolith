@@ -24,6 +24,7 @@
 #define XENOLITH_BACKEND_VK_XLVKPLATFORM_H_
 
 #include "XLVkInstance.h"
+#include "SPDso.h"
 
 namespace stappler::xenolith::vk::platform {
 
@@ -47,7 +48,7 @@ class FunctionTable final : public vk::LoaderTable {
 public:
 	using LoaderTable::LoaderTable;
 
-	Rc<Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &, Instance::TerminateCallback &&) const;
+	Rc<Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 
 	operator bool () const {
 		return vkGetInstanceProcAddr != nullptr
@@ -61,7 +62,7 @@ private:
 	bool prepareData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
 	bool validateData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
 
-	Rc<Instance> doCreateInstance(VulkanInstanceData &, Instance::TerminateCallback &&) const;
+	Rc<Instance> doCreateInstance(VulkanInstanceData &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 };
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);

@@ -35,7 +35,7 @@ static uint32_t s_InstanceVersion = 0;
 static Vector<VkLayerProperties> s_InstanceAvailableLayers;
 static Vector<VkExtensionProperties> s_InstanceAvailableExtensions;
 
-Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb, Instance::TerminateCallback &&termCb) const {
+Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb, Dso &&vulkanModule, Instance::TerminateCallback &&termCb) const {
 	VulkanInstanceInfo info = loadInfo();
 	VulkanInstanceData data;
 
@@ -52,7 +52,7 @@ Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceDat
 		return nullptr;
 	}
 
-	return doCreateInstance(data, move(termCb));
+	return doCreateInstance(data, move(vulkanModule), move(termCb));
 }
 
 VulkanInstanceInfo FunctionTable::loadInfo() const {
@@ -190,7 +190,7 @@ bool FunctionTable::validateData(VulkanInstanceData &data, const VulkanInstanceI
 	return true;
 }
 
-Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Instance::TerminateCallback &&cb) const {
+Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vulkanModule, Instance::TerminateCallback &&cb) const {
 	Vector<StringView> enabledOptionals;
 	for (auto &opt : s_optionalExtension) {
 		if (!opt) {
@@ -269,7 +269,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Instance:
 	}
 
 	auto vkInstance = Rc<vk::Instance>::alloc(instance, vkGetInstanceProcAddr, data.targetVulkanVersion, move(enabledOptionals),
-			move(cb), move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
+			move(vulkanModule), move(cb), move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;
