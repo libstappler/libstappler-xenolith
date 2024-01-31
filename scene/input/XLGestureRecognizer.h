@@ -28,7 +28,7 @@
 #include "XLInput.h"
 #include "SPMovingAverage.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 static constexpr float TapDistanceAllowed = 16.0f;
 static constexpr float TapDistanceAllowedMulti = 32.0f;

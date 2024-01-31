@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 // offset for vertex-based antialiasing in vector images
 static constexpr float VGAntialiasFactor = 0.5f;

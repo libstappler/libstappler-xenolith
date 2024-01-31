@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "XLCoreObject.h"
 #include "XLCoreImageStorage.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Surface;
 class SwapchainImage;

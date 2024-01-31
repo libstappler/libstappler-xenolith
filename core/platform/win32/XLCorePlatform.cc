@@ -26,7 +26,7 @@
 
 #include "SPPlatformUnistd.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // based on https://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
 

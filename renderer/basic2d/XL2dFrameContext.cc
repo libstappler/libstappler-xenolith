@@ -28,7 +28,7 @@
 #include "XLDirector.h"
 #include "SPBitmap.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool ShadowLightInput::addAmbientLight(const Vec4 &pos, const Color4F &color, bool softShadow) {
 	if (ambientLightCount >= config::MaxAmbientLights) {

@@ -28,7 +28,7 @@
 #include "XLVkPlatform.h"
 #include "XLView.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class GuiApplication : public Application {
 public:

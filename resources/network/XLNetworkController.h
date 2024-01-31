@@ -29,7 +29,7 @@
 #include "SPThreadTaskQueue.h"
 #include "SPThread.h"
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 class Request;
 

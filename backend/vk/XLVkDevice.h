@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "XLVkDeviceQueue.h"
 #include "XLVkLoop.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Fence;
 class Allocator;

@@ -25,7 +25,7 @@
 
 #include "XLActionEase.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 enum class EasingType {
 	Standard,

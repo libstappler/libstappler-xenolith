@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "XLCoreQueuePass.h"
 #include "XLCoreObject.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 class RenderPass;

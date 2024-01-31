@@ -27,7 +27,7 @@
 #include "XLDynamicStateNode.h"
 #include "XL2dActionAcceleratedMove.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class ScrollController;
 class ActionAcceleratedMove;

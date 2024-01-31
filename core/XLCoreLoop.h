@@ -31,7 +31,7 @@
 #include "SPThread.h"
 #include "SPThreadTaskQueue.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
 class Device;

@@ -27,7 +27,7 @@
 #include "SPNetworkHandle.h"
 #include "SPHtmlParser.h"
 
-namespace stappler::headergen {
+namespace STAPPLER_VERSIONIZED stappler::headergen {
 
 static constexpr auto FILE_HEADER_STRING(
 R"HeaderString(/**
@@ -823,7 +823,7 @@ void RegistryData::write() {
 	std::ofstream headerFile(headerPath.data());
 	headerFile << FILE_HEADER_STRING
 		<< "\n#ifndef XENOLITH_BACKEND_VK_XLVKTABLE_H_\n#define XENOLITH_BACKEND_VK_XLVKTABLE_H_\n\n"
-				"namespace stappler::xenolith::vk {\n\n"
+				"namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {\n\n"
 		<< "struct LoaderTable {\n"
 				"\tLoaderTable(PFN_vkGetInstanceProcAddr addr);\n\n" << loaderHeader.weak() << "};\n\n"
 		<< "struct InstanceTable {\n"
@@ -841,7 +841,7 @@ void RegistryData::write() {
 
 	std::ofstream sourceFile(sourcePath.data());
 	sourceFile << FILE_HEADER_STRING
-		<< "\nnamespace stappler::xenolith::vk {\n" << SOURCE_PREDEFINED_FUNCTIONS << "\n\n"
+		<< "\nnamespace STAPPLER_VERSIONIZED stappler::xenolith::vk {\n" << SOURCE_PREDEFINED_FUNCTIONS << "\n\n"
 		<< "LoaderTable::LoaderTable(PFN_vkGetInstanceProcAddr addr)\n" << loaderConstructor.weak() << "{ }\n\n"
 		<< "InstanceTable::InstanceTable(PFN_vkGetInstanceProcAddr addr, VkInstance instance)\n" << instanceConstructor.weak() << "{ }\n\n"
 		<< "DeviceTable::DeviceTable(PFN_vkGetDeviceProcAddr addr, VkDevice device)\n" << deviceConstructor.weak() << "{ }\n\n"

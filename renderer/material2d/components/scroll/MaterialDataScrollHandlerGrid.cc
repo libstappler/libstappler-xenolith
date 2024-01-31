@@ -22,7 +22,7 @@
 
 #include "MaterialDataScrollHandlerGrid.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool DataScrollHandlerGrid::init(DataScroll *s) {
 	if (!Handler::init(s)) {

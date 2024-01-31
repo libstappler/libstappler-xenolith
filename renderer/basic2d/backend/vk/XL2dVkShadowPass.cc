@@ -33,7 +33,7 @@
 #include "XL2dFrameContext.h"
 #include "glsl/XL2dShaders.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 bool ShadowPass::makeDefaultRenderQueue(Queue::Builder &builder, RenderQueueInfo &info) {
 	using namespace core;

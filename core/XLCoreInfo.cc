@@ -24,7 +24,7 @@
 #include "XLCoreObject.h"
 #include "XLCoreInput.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 const ColorMode ColorMode::SolidColor = ColorMode();
 const ColorMode ColorMode::IntensityChannel(core::ComponentMapping::R, core::ComponentMapping::One);
@@ -1933,14 +1933,14 @@ String getInputModifiersNames(InputModifier mod) {
 
 namespace std {
 
-std::ostream &operator<<(std::ostream &stream, stappler::xenolith::core::InputKeyCode code) {
-	stream << "InputKeyCode(" << stappler::toInt(code) << ", "
+std::ostream &operator<<(std::ostream &stream, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode code) {
+	stream << "InputKeyCode(" << STAPPLER_VERSIONIZED_NAMESPACE::toInt(code) << ", "
 			<< getInputKeyCodeName(code) << ", " << getInputKeyCodeKeyName(code) << ")";
 	return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, stappler::xenolith::core::InputEventName name) {
-	stream << "InputEventName(" << stappler::xenolith::core::getInputEventName(name) << ")";
+std::ostream &operator<<(std::ostream &stream, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName name) {
+	stream << "InputEventName(" << STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::getInputEventName(name) << ")";
 	return stream;
 }
 

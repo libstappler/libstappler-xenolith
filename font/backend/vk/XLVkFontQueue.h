@@ -29,7 +29,7 @@
 
 #include "XLVkQueuePass.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class FontAttachment;
 

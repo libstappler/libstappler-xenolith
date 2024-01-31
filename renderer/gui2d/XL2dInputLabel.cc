@@ -25,7 +25,7 @@
 #include "XLDirector.h"
 #include "XLAction.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 InputLabelDelegate::~InputLabelDelegate() { }
 bool InputLabelDelegate::handleInputChar(char16_t) { return true; }

@@ -24,7 +24,7 @@
 #include "XLDirector.h"
 #include "XLView.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool DecoratedLayout::init(ColorRole role) {
 	if (!SceneLayout2d::init()) {

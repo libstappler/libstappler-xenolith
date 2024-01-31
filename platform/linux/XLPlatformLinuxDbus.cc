@@ -173,7 +173,7 @@ enum NMDeviceType {
 
 static constexpr auto DBUS_TIMEOUT_USE_DEFAULT = int(-1);
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct DBusInterface : public thread::ThreadInterface<Interface> {
 	struct Error {

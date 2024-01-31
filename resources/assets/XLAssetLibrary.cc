@@ -28,7 +28,7 @@
 #include "XLNetworkController.h"
 #include "SPSqlHandle.h"
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class AssetComponent : public Component {
 public:

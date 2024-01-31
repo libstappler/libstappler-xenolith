@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct ViewCommandLineData {
 	String bundleName = "org.stappler.xenolith.test";

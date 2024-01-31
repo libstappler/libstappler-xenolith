@@ -22,7 +22,7 @@
 
 #include "MaterialEasing.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 Rc<ActionEase> makeEasing(Rc<ActionInterval> &&action, EasingType type) {
 	switch (type) {

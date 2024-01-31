@@ -73,10 +73,10 @@
 
 #endif
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 // Import std memory model as default
-using namespace stappler::mem_std;
+using namespace mem_std;
 
 using Vec2 = geom::Vec2;
 using Vec3 = geom::Vec3;
@@ -160,7 +160,7 @@ protected:
 
 }
 
-namespace stappler::xenolith::profiling {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::profiling {
 
 struct ProfileData {
 	uint64_t timestamp;

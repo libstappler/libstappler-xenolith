@@ -29,8 +29,9 @@
 #include "XLDirector.h"
 #include "XLInputListener.h"
 #include "XLSceneContent.h"
+#include "XLFrameInfo.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class Scene2d::FpsDisplay : public Layer {
 public:

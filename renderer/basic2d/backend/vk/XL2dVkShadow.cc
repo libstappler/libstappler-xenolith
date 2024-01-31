@@ -26,7 +26,7 @@
 #include "XLCoreFrameCache.h"
 #include "XLCoreFrameRequest.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 ShadowLightDataAttachmentHandle::~ShadowLightDataAttachmentHandle() { }
 

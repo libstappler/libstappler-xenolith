@@ -26,7 +26,7 @@
 #include "XLDynamicStateNode.h"
 #include "XLAction.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class SceneContent2d;
 

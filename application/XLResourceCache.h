@@ -28,7 +28,7 @@
 #include "XLCoreResource.h"
 #include "XLCoreLoop.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class TemporaryResource;
 class Texture;

@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 /* Minimal safe interval offset for frame timeout scheduling, to ensure, that actual timeout is less then nominal */
 static constexpr uint64_t FrameIntervalSafeOffset = 200;

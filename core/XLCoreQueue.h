@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLCoreQueueData.h"
 #include "XLCoreInfo.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 /* RenderQueue/RenderGraph implementation notes:
  *

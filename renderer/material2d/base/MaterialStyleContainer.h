@@ -27,7 +27,7 @@
 #include "XLComponent.h"
 #include "XLEventHeader.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class StyleContainer : public Component {
 public:

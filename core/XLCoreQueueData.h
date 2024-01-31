@@ -26,7 +26,7 @@
 #include "XLCorePipelineInfo.h"
 #include "XLCoreResource.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Instance;
 class Queue;

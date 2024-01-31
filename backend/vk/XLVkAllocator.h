@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "XLVkInfo.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 class DeviceMemory;
@@ -224,13 +224,13 @@ protected:
 
 namespace std {
 
-inline std::ostream &operator<<(std::ostream &stream, stappler::xenolith::vk::AllocationUsage usage) {
+inline std::ostream &operator<<(std::ostream &stream, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage usage) {
 	switch (usage) {
-	case stappler::xenolith::vk::AllocationUsage::DeviceLocal: stream << "DeviceLocal"; break;
-	case stappler::xenolith::vk::AllocationUsage::DeviceLocalHostVisible: stream << "DeviceLocalHostVisible"; break;
-	case stappler::xenolith::vk::AllocationUsage::DeviceLocalLazilyAllocated: stream << "DeviceLocalLazilyAllocated"; break;
-	case stappler::xenolith::vk::AllocationUsage::HostTransitionSource: stream << "HostTransitionSource"; break;
-	case stappler::xenolith::vk::AllocationUsage::HostTransitionDestination: stream << "HostTransitionDestination"; break;
+	case STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage::DeviceLocal: stream << "DeviceLocal"; break;
+	case STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage::DeviceLocalHostVisible: stream << "DeviceLocalHostVisible"; break;
+	case STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage::DeviceLocalLazilyAllocated: stream << "DeviceLocalLazilyAllocated"; break;
+	case STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage::HostTransitionSource: stream << "HostTransitionSource"; break;
+	case STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::AllocationUsage::HostTransitionDestination: stream << "HostTransitionDestination"; break;
 	}
 	return stream;
 }

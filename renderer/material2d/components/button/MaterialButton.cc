@@ -24,7 +24,7 @@
 #include "MaterialLabel.h"
 #include "XLInputListener.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 static SurfaceStyle Button_getSurfaceStyle(NodeStyle style, ColorRole role, uint32_t schemeTag) {
 	return SurfaceStyle(style, Elevation::Level1, ShapeStyle::Full, role, schemeTag);

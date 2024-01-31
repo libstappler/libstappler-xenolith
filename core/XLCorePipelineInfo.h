@@ -26,7 +26,7 @@
 #include "XLCore.h"
 #include "XLCoreEnum.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 static constexpr auto EmptyTextureName = "org.xenolith.EmptyImage";
 static constexpr auto SolidTextureName = "org.xenolith.SolidImage";

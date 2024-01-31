@@ -29,7 +29,7 @@
 #include "XL2dFrameContext.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool Surface::init(const SurfaceStyle &style) {
 	if (!VectorSprite::init(Size2(8.0f, 8.0f))) {

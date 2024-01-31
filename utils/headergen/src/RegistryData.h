@@ -26,9 +26,9 @@
 #include "SPString.h"
 #include "SPMemory.h"
 
-namespace stappler::headergen {
+namespace STAPPLER_VERSIONIZED stappler::headergen {
 
-using namespace stappler::mem_std;
+using namespace mem_std;
 
 struct VkRegistryCommandProto {
 	Vector<StringView> strings;

@@ -22,7 +22,7 @@
 
 #include "XL2dScrollItemHandle.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 ScrollItemHandle::~ScrollItemHandle() { }
 

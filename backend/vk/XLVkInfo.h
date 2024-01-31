@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "XLVk.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 struct DeviceInfo {
 	struct Features {

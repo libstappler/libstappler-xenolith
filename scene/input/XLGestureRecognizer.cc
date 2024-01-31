@@ -27,7 +27,7 @@
 #include "XLDirector.h"
 #include "XLInputDispatcher.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 const Vec2 &GestureScroll::location() const {
 	return pos;

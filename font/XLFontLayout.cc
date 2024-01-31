@@ -23,7 +23,7 @@
 #include "XLFontLayout.h"
 #include "XLFontLibrary.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 String FontLayout::constructName(StringView family, const FontSpecializationVector &vec) {
 	return FontParameters::getFontConfigName<Interface>(family, vec.fontSize, vec.fontStyle, vec.fontWeight, vec.fontStretch, vec.fontGrade, FontVariant::Normal, false);

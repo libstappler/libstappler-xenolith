@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "XLVkInfo.h"
 #include "XLVkInstance.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DeviceInfo::Features DeviceInfo::Features::getRequired() {
 	Features ret;
@@ -1359,9 +1359,9 @@ VkPresentModeKHR getVkPresentMode(core::PresentMode presentMode) {
 	return VkPresentModeKHR(0);
 }
 
+std::ostream &operator<< (std::ostream &stream, VkResult res) {
+	stream << STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::getVkResultName(res);
+	return stream;
 }
 
-std::ostream &operator<< (std::ostream &stream, VkResult res) {
-	stream << stappler::xenolith::vk::getVkResultName(res);
-	return stream;
 }

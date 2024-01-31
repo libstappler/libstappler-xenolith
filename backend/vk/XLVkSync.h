@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLVk.h"
 #include "XLCoreObject.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 class DeviceQueue;

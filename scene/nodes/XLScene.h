@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "XLCoreMaterial.h"
 #include "XLDynamicStateNode.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Application;
 class SceneContent;

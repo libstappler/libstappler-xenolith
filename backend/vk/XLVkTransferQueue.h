@@ -29,7 +29,7 @@
 #include "XLVkAttachment.h"
 #include "XLCoreResource.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class DeviceQueue;
 class CommandPool;

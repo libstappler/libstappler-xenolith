@@ -26,7 +26,7 @@
 #include "XLCorePlatform.h"
 #include "XLCoreObject.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(TemporaryResource, onLoaded);
 

@@ -32,7 +32,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static struct wl_surface_listener s_WaylandSurfaceListener{
 	[] (void *data, wl_surface *surface, wl_output *output) {

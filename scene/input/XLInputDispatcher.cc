@@ -24,7 +24,7 @@
 #include "XLInputDispatcher.h"
 #include "XLInputListener.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 InputListenerStorage::~InputListenerStorage() {
 	clear();

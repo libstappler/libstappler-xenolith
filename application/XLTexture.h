@@ -27,7 +27,7 @@
 #include "XLCoreDynamicImage.h"
 #include "XLCoreMaterial.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Texture : public ResourceObject {
 public:

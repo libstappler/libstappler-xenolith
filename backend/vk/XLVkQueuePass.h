@@ -28,7 +28,7 @@
 #include "XLVkObject.h"
 #include "XLCoreQueuePass.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class CommandBuffer;
 class Device;

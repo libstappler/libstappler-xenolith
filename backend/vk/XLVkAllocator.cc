@@ -24,8 +24,9 @@ THE SOFTWARE.
 #include "XLVkAllocator.h"
 #include "XLVkInstance.h"
 #include "XLVkDevice.h"
+#include "XLVkObject.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 static uint32_t Allocator_getTypeScoreInternal(const Allocator::MemHeap &heap, const Allocator::MemType &type, AllocationUsage usage) {
 	switch (usage) {

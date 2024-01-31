@@ -29,7 +29,7 @@
 #include FT_SFNT_NAMES_H
 #include FT_ADVANCES_H
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 static constexpr uint32_t getAxisTag(char c1, char c2, char c3, char c4) {
 	return uint32_t(c1 & 0xFF) << 24 | uint32_t(c2 & 0xFF) << 16 | uint32_t(c3 & 0xFF) << 8 | uint32_t(c4 & 0xFF);

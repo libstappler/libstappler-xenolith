@@ -27,7 +27,7 @@
 #include "MaterialInputTextContainer.h"
 #include "MaterialIconSprite.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 enum class InputFieldStyle {
 	Filled,

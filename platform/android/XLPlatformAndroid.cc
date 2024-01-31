@@ -24,7 +24,7 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static std::mutex s_dataMutex;
 

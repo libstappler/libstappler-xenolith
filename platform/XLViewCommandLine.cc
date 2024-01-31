@@ -22,7 +22,7 @@
 
 #include "XLViewCommandLine.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Value ViewCommandLineData::encode() const {
 	Value ret;

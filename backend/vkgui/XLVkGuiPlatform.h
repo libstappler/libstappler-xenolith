@@ -26,7 +26,7 @@
 #include "XLVkView.h"
 #include "XLVkPlatform.h"
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 Rc<vk::View> createView(Application &, const core::Device &, ViewInfo &&);
 

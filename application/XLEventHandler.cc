@@ -24,7 +24,7 @@
 #include "XLEventHandler.h"
 #include "XLApplication.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 EventHandler::EventHandler() { }
 

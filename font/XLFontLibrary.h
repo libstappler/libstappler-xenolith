@@ -26,7 +26,7 @@
 #include "XLFontController.h"
 #include "XLCoreAttachment.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct RenderFontInput : public core::AttachmentInputData {
 	Rc<thread::TaskQueue> queue;

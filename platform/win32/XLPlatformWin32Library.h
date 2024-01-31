@@ -29,7 +29,7 @@
 
 #include "SPPlatformUnistd.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct Win32Display {
 	WideString name;

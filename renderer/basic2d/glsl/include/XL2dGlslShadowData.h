@@ -26,7 +26,7 @@
 #include "SPGlsl.h"
 
 #ifndef SP_GLSL
-namespace stappler::glsl {
+namespace STAPPLER_VERSIONIZED stappler::glsl {
 #endif
 
 struct AmbientLightData {

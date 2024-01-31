@@ -22,7 +22,7 @@
 
 #include "XLFontLocale.h"
 
-namespace stappler::xenolith::locale {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
 class LocaleManager {
 public:

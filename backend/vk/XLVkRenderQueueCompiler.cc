@@ -31,7 +31,7 @@
 #include "XLCoreFrameCache.h"
 #include "XLCoreFrameRequest.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class RenderQueueAttachment : public core::GenericAttachment {
 public:

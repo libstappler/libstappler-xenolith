@@ -26,7 +26,7 @@
 #include "XLCoreQueue.h"
 #include "XLCoreAttachment.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class FrameHandle : public Ref {
 public:

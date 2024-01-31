@@ -27,7 +27,7 @@
 #include "XLStorageServer.h"
 #include "SPSubscription.h"
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class AssetLibrary;
 struct AssetDownloadData;

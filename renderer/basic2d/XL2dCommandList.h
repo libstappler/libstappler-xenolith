@@ -27,7 +27,7 @@
 #include "XLNodeInfo.h"
 #include "XLFrameContext.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 enum class CommandType : uint16_t {
 	CommandGroup,

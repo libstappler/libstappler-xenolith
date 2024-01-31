@@ -23,7 +23,7 @@
 
 #include "XLVkObject.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 bool DeviceMemory::init(Allocator *a, DeviceMemoryInfo info, VkDeviceMemory memory, AllocationUsage usage) {
 	_allocator = a;

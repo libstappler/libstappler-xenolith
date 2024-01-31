@@ -23,7 +23,7 @@
 #include "MaterialCam16.h"
 #include "MaterialColorHCT.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 struct Cam16Vec3 {
 	Cam16Float a;

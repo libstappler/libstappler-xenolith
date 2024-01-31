@@ -27,7 +27,7 @@
 #include "XLFontLibrary.h"
 #include "XLFontLayout.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 XL_DECLARE_EVENT_CLASS(FontController, onLoaded)
 XL_DECLARE_EVENT_CLASS(FontController, onFontSourceUpdated)

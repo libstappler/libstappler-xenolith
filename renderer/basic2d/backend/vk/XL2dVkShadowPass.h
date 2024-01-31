@@ -26,7 +26,7 @@
 #include "XL2dVkVertexPass.h"
 #include "XL2dVkShadow.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class ShadowPass : public VertexPass {
 public:

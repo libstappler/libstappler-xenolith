@@ -25,7 +25,7 @@
 #include "XLInputListener.h"
 #include "XLAction.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	if (!Surface::init(style)) {

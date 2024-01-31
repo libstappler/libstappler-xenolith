@@ -25,7 +25,7 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 static int flag_SYSTEM_UI_FLAG_LAYOUT_STABLE;
 static int flag_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;

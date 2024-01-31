@@ -28,7 +28,7 @@
 #include "XLCoreResource.h"
 #include "XLResourceCache.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class ResourceObject;
 class Texture;

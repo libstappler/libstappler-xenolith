@@ -26,7 +26,7 @@
 #include "XLFrameContext.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class FrameContext2d : public FrameContext {
 public:

@@ -28,7 +28,7 @@
 #include "XL2dLayer.h"
 #include "XLSubscriptionListener.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class MenuSeparator : public Node, public MenuItemInterface {
 public:

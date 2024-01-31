@@ -35,7 +35,7 @@
 #include FT_SFNT_NAMES_H
 #include FT_ADVANCES_H
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 #include "XLFont-RobotoMono-Italic-VariableFont_wght.ttf.cc"
 #include "XLFont-RobotoMono-VariableFont_wght.ttf.cc"

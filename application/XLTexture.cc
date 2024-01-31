@@ -23,7 +23,7 @@
 #include "XLTexture.h"
 #include "XLTemporaryResource.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Texture::~Texture() { }
 

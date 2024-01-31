@@ -26,7 +26,7 @@
 #include "XL2dSprite.h"
 #include "XL2dVectorCanvas.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class VectorSprite : public Sprite {
 public:

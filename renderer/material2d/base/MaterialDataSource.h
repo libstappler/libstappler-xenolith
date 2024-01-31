@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "SPSubscription.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class DataSource : public Subscription {
 public:

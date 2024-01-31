@@ -26,7 +26,7 @@
 #include "MaterialSurfaceInterior.h"
 #include "XLFrameInfo.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 struct TypescalePersistentStyle {
 	font::FontSize size;

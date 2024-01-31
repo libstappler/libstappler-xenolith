@@ -27,7 +27,7 @@
 #define M_PI_X_2 ((float)M_PI * 2.0f)
 #endif
 
-namespace stappler::xenolith::interpolation {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::interpolation {
 
 float tweenTo(float time, Type type, float *easingParam) {
 	float delta = 0;
@@ -415,7 +415,7 @@ float bezieratFunction(float t, float x1, float y1, float x2, float y2) {
 
 }
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 ActionEase::~ActionEase() { }
 

@@ -22,8 +22,9 @@
 
 #include "MaterialMenuButton.h"
 #include "MaterialFloatingMenu.h"
+#include "MaterialLabel.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 float MenuButton::getMaxWidthForButton(MenuSourceButton *btn, font::FontController *c, float density) {
 	float widthFront = 12.0f;

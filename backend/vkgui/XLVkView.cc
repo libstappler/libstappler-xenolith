@@ -46,7 +46,7 @@ THE SOFTWARE.
 #define XL_VKVIEW_LOG(...)
 #endif
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 View::~View() {
 

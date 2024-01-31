@@ -39,7 +39,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 struct InstanceSurfaceData : Ref {
 	virtual ~InstanceSurfaceData() { }

@@ -26,7 +26,7 @@
 
 #include "XLVkTable.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 #if VK_HOOK_DEBUG
 

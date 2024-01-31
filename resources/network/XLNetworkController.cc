@@ -24,7 +24,7 @@
 #include "SPNetworkContext.h"
 #include "XLNetworkRequest.h"
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 struct ControllerHandle {
 	using Context = stappler::network::Context<Interface>;

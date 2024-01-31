@@ -27,7 +27,7 @@
 #include "SPVectorImage.h"
 #include <future>
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 using VectorImageData = vg::VectorImageData;
 using VectorImage = vg::VectorImage;

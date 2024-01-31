@@ -28,7 +28,7 @@
 #include "MaterialMenuSource.h"
 #include "XLSubscriptionListener.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class TypescaleLabel;
 class MenuSource;

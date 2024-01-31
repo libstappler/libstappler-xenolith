@@ -26,13 +26,13 @@
 #include "XLIcons.h"
 #include "SPSubscription.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 
 }
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class Button;
 class MenuSourceButton;

@@ -25,7 +25,7 @@
 
 #include "XLResourceObject.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class MeshIndex : public ResourceObject {
 public:

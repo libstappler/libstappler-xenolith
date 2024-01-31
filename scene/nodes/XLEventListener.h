@@ -27,7 +27,7 @@
 #include "XLEventHandler.h"
 #include "XLComponent.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class EventListener : public Component, public EventHandler {
 public:

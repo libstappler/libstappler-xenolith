@@ -21,9 +21,10 @@
  **/
 
 #include "XL2dLayer.h"
+#include "XL2dFrameContext.h"
 #include "XLTexture.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 const Vec2 SimpleGradient::Horizontal(0.0f, 1.0f);
 const Vec2 SimpleGradient::Vertical(-1.0f, 0.0f);

@@ -26,7 +26,7 @@
 #include "XLComponent.h"
 #include "XL2dScrollController.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class ScrollController;
 

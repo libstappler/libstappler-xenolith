@@ -27,7 +27,7 @@
 #include "XLFrameInfo.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool LayerSurface::init(const SurfaceStyle &style) {
 	if (!Layer::init(Color::White)) {

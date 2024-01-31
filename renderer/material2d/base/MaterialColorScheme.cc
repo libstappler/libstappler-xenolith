@@ -22,7 +22,7 @@
 
 #include "MaterialColorScheme.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 CorePalette::CorePalette(const Color4F &color, bool isContentColor)
 : CorePalette(Cam16::create(color), isContentColor) { }

@@ -26,7 +26,7 @@
 #include "XLApplicationInfo.h"
 #include "XLSceneConfig.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 using RenderingLevel = core::RenderingLevel;
 

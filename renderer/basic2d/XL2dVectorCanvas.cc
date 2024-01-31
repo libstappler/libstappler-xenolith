@@ -22,7 +22,7 @@
 
 #include "XL2dVectorCanvas.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 struct VectorCanvasPathOutput {
 	Color4F color;

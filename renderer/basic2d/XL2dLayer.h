@@ -25,7 +25,7 @@
 
 #include "XL2dSprite.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 struct SimpleGradient {
 	using Color = Color4B;
@@ -82,7 +82,7 @@ protected:
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <> inline
 xenolith::basic2d::SimpleGradient progress<xenolith::basic2d::SimpleGradient>(const xenolith::basic2d::SimpleGradient &a,

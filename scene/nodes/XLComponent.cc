@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "XLComponent.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 uint64_t Component::GetNextComponentId() {
 	static std::atomic<uint64_t> s_value = 1;

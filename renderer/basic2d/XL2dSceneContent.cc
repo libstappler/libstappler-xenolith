@@ -29,7 +29,7 @@
 #include "XLView.h"
 #include "XLFrameInfo.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 SceneContent2d::~SceneContent2d() { }
 

@@ -34,7 +34,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 #if (XL_USE_64_BIT_PTR_DEFINES == 1)
 using ObjectHandle = ValueWrapper<void *, class ObjectHandleFlag>;

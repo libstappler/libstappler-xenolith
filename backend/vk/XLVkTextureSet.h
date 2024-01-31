@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLVkDevice.h"
 #include "XLVkObject.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class TextureSet;
 class Loop;

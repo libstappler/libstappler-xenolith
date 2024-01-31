@@ -30,7 +30,7 @@
 #include "XLCoreFrameQueue.h"
 #include <forward_list>
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DescriptorBinding::~DescriptorBinding() {
 	data.clear();

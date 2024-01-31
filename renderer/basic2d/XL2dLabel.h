@@ -27,13 +27,13 @@
 #include "XLFontLabelBase.h"
 #include <future>
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class EventListener;
 
 }
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 struct LabelResult : Ref {
 	TransformVertexData data;

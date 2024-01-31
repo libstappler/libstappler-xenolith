@@ -32,7 +32,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static core::InputModifier getKeyMods(void) {
 	core::InputModifier mods = core::InputModifier::None;

@@ -31,7 +31,7 @@
 #endif
 
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 Instance::Instance(Dso &&dso, TerminateCallback &&terminate, Rc<Ref> &&userdata)
 : _dsoModule(move(dso)), _terminate(move(terminate)), _userdata(userdata) { }

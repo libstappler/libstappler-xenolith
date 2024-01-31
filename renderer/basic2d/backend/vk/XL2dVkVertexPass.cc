@@ -29,7 +29,7 @@
 #include "XLVkTextureSet.h"
 #include "XLVkPipeline.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 VertexAttachment::~VertexAttachment() { }
 

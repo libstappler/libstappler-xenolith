@@ -25,7 +25,7 @@
 #include "XLScheduler.h"
 #include "XLScene.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 bool SubscriptionListener::init(DirtyCallback &&cb) {
 	if (!Component::init()) {

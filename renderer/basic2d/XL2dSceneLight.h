@@ -25,13 +25,13 @@
 
 #include "XL2d.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Scene;
 
 }
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 enum class SceneLightType {
 	Ambient,

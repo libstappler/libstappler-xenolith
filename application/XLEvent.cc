@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "XLEvent.h"
 #include "XLApplication.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Event::dispatch() const {
 	Application::getInstance()->dispatchEvent(*this);

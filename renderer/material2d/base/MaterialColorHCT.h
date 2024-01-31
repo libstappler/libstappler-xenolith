@@ -25,7 +25,7 @@
 
 #include "MaterialCam16.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 struct alignas(16) ColorHCT {
 	struct alignas(16) Values {
@@ -83,7 +83,7 @@ std::ostream & operator<<(std::ostream & stream, const ColorHCT & obj);
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <> inline
 xenolith::material2d::ColorHCT progress<xenolith::material2d::ColorHCT>(const xenolith::material2d::ColorHCT &a, const xenolith::material2d::ColorHCT &b, float p) {

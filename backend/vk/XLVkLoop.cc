@@ -35,7 +35,7 @@
 
 #define XL_VK_DEPS_DEBUG 0
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 struct DependencyRequest : public Ref {
 	Vector<Rc<core::DependencyEvent>> events;

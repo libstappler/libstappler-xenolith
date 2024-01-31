@@ -27,7 +27,7 @@
 #include "SPPlatformUnistd.h"
 #include <libloaderapi.h>
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
 	FunctionTable table(vkGetInstanceProcAddr);

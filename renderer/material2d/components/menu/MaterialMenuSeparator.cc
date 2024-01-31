@@ -21,8 +21,9 @@
  **/
 
 #include "MaterialMenuSeparator.h"
+#include "MaterialStyleMonitor.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 MenuSeparator::~MenuSeparator() { }
 

@@ -25,7 +25,7 @@
 
 #include "XLDynamicStateNode.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class SceneContent : public DynamicStateNode {
 public:

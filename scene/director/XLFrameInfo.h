@@ -27,7 +27,7 @@
 #include "XLFrameContext.h"
 #include "XLComponent.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class InputListenerStorage;
 class Director;

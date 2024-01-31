@@ -25,7 +25,7 @@
 
 #include "XLCoreQueueData.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 struct FrameCacheFramebuffer final {
 	Vector<Rc<Framebuffer>> framebuffers;

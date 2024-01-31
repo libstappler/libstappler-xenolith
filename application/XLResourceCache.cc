@@ -26,7 +26,7 @@
 #include "XLCoreLoop.h"
 #include "XLApplication.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 ResourceCache::~ResourceCache() { }
 

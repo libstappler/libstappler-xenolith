@@ -26,7 +26,7 @@
 #include "MaterialSurfaceStyle.h"
 #include "XL2dLayer.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class SurfaceInterior;
 class StyleContainer;

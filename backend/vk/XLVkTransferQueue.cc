@@ -28,7 +28,7 @@
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameRequest.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class TransferAttachment : public core::GenericAttachment {
 public:

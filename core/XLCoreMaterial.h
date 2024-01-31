@@ -28,7 +28,7 @@
 #include "XLCoreAttachment.h"
 #include "XLCoreDynamicImage.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Material;
 class MaterialSet;

@@ -25,7 +25,7 @@
 
 #include "MaterialColorScheme.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class StyleContainer;
 class SurfaceInterior;
@@ -143,7 +143,7 @@ struct SurfaceStyleData {
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 inline auto progress(const xenolith::material2d::SurfaceStyleData &l, const xenolith::material2d::SurfaceStyleData &r, float p) {
 	return xenolith::material2d::SurfaceStyleData::progress(l, r, p);

@@ -26,7 +26,7 @@
 #include "XL2dGui.h"
 #include "XL2dVectorSprite.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class LayerRounded : public VectorSprite {
 public:

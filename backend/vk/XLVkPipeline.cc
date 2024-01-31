@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 static BytesView Shader_emplaceConstant(Bytes &data, BytesView constant) {
 	auto originalSize = data.size();

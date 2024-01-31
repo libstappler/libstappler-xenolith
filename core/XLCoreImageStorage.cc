@@ -23,7 +23,7 @@
 #include "XLCoreImageStorage.h"
 #include "XLCoreLoop.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 ImageStorage::~ImageStorage() {
 	for (auto &it : _views) {

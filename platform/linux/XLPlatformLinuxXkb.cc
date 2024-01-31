@@ -22,7 +22,7 @@
 
 #include "XLPlatformLinuxXkb.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 XkbLibrary *XkbLibrary::getInstance() {
 	static Mutex s_mutex;

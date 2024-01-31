@@ -28,12 +28,12 @@
 #include "SPData.h"
 
 #define XL_DECLARE_EVENT_CLASS(class, event) \
-	stappler::xenolith::EventHeader class::event(#class, #class "." #event);
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(#class, #class "." #event);
 
 #define XL_DECLARE_EVENT(class, catName, event) \
-	stappler::xenolith::EventHeader class::event(catName, catName "." #event);
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(catName, catName "." #event);
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Event;
 

@@ -25,7 +25,7 @@
 #include "XLDirector.h"
 #include "XLView.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 SceneContent::~SceneContent() { }
 

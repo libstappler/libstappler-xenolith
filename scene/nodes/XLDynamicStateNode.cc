@@ -24,7 +24,7 @@
 #include "XLDynamicStateNode.h"
 #include "XLFrameInfo.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 bool DynamicStateNode::init() {
 	return Node::init();

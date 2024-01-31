@@ -27,7 +27,7 @@
 #include "XLFontConfig.h"
 #include "SPMetastring.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -68,7 +68,7 @@ inline constexpr auto localeIndex() {
 
 }
 
-namespace stappler::xenolith::locale {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
 using LocaleInitList = std::initializer_list<Pair<StringView, StringView>>;
 using LocaleIndexList = std::initializer_list<Pair<size_t, StringView>>;

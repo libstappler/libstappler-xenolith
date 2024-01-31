@@ -23,7 +23,7 @@
 #include "XLEventListener.h"
 #include "XLEventHandler.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 EventListener::~EventListener() { }
 

@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "XLVkSync.h"
 #include "XLCoreLoop.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 class View;

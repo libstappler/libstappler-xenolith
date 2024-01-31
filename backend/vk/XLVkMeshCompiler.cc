@@ -29,7 +29,7 @@
 #include "XLCoreFrameQueue.h"
 #include "XLCoreQueue.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class MeshCompilerAttachment : public core::GenericAttachment {
 public:

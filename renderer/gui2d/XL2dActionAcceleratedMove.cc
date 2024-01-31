@@ -26,7 +26,7 @@
 #define XL_ACCELERATED_LOG(...)
 //#define XL_ACCELERATED_LOG(...) stappler::log::format("ActionAcceleratedMove", __VA_ARGS__)
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 from, Vec2 to, Vec2 velocity,
 		float bounceAcceleration, Function<void(Node *)> &&callback) {

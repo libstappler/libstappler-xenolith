@@ -28,7 +28,7 @@
 #include "XLInputListener.h"
 #include "XLTextInputManager.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class InputListenerStorage : public PoolRef {
 public:

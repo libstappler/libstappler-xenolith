@@ -23,7 +23,7 @@
 #include "XLCoreLoop.h"
 #include "XLCoreInstance.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 Loop::~Loop() {
 	log::debug("core::Loop", "~Loop");

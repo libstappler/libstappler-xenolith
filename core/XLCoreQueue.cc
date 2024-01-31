@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLCoreDevice.h"
 #include "XLCoreQueuePass.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 template <typename T>
 static T * Resource_conditionalInsert(HashTable<T *> &vec, StringView key, const Callback<T *()> &cb, memory::pool_t *pool);

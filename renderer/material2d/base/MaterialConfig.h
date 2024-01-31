@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "XL2dGui.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 using namespace gui2d;
 

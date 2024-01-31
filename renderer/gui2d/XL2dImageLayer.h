@@ -26,7 +26,7 @@
 #include "XL2dGui.h"
 #include "XL2dSprite.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class ImageLayer : public Node {
 public:

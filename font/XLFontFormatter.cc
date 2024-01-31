@@ -25,7 +25,7 @@
 #include "XLFontLayout.h"
 #include "hyphen/hyphen.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 Formatter::Formatter() : _output(nullptr) { }
 

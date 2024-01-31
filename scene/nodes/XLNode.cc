@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include "XLActionManager.h"
 #include "XLFrameInfo.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 String MaterialInfo::description() const {
 	StringStream stream;

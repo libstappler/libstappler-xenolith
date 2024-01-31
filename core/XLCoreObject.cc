@@ -25,7 +25,7 @@
 #include "XLCoreDevice.h"
 #include "SPIRV-Reflect/spirv_reflect.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 Object::~Object() {
 	invalidate();

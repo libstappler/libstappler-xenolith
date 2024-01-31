@@ -29,7 +29,7 @@
 
 #include <android/native_activity.h>
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct ClassLoader : Ref {
 	struct NativePaths {

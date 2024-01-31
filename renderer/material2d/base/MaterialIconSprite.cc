@@ -21,10 +21,11 @@
  **/
 
 #include "MaterialIconSprite.h"
+#include "MaterialStyleContainer.h"
 #include "XLFrameInfo.h"
 #include "XLAction.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool IconSprite::init(IconName icon) {
 	if (!VectorSprite::init(Size2(24.0f, 24.0f))) {

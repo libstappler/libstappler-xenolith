@@ -26,7 +26,7 @@
 #include "XLCoreLoop.h"
 #include "XLCoreDevice.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 MaterialSet::~MaterialSet() {
 	clear();

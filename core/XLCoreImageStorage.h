@@ -25,7 +25,7 @@
 
 #include "XLCoreObject.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class ImageStorage : public Ref {
 public:

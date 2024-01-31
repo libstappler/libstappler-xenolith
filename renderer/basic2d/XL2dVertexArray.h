@@ -26,7 +26,7 @@
 #include "XL2d.h"
 #include "XLFontConfig.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class VertexArray : public Ref {
 public:

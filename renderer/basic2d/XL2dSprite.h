@@ -28,7 +28,7 @@
 #include "XLDynamicStateNode.h"
 #include "XL2dVertexArray.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class Sprite : public DynamicStateNode {
 public:

@@ -26,7 +26,7 @@
 #include "MaterialDecoratedLayout.h"
 #include "XL2dScrollView.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class FlexibleLayout : public DecoratedLayout {
 public:

@@ -27,7 +27,7 @@
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class MaterialCompilationAttachment : public core::GenericAttachment {
 public:

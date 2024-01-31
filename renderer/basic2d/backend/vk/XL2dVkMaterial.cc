@@ -22,7 +22,7 @@
 
 #include "XL2dVkMaterial.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 MaterialAttachment::~MaterialAttachment() { }
 

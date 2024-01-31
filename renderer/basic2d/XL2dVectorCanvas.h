@@ -25,7 +25,7 @@
 
 #include "XL2dVectorResult.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 using VectorPath = stappler::vg::VectorPath;
 

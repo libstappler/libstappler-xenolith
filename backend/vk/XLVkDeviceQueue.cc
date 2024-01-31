@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "XLVkPipeline.h"
 #include "XLVkRenderPass.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DeviceQueue::~DeviceQueue() { }
 

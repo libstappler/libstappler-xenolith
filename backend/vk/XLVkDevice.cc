@@ -34,7 +34,7 @@ THE SOFTWARE.
 #define XL_VKDEVICE_LOG(...)
 #endif
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DeviceFrameHandle::~DeviceFrameHandle() {
 	if (!_valid) {

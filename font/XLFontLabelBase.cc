@@ -23,7 +23,7 @@
 #include "XLFontLabelBase.h"
 #include "XLFontLocale.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 LabelBase::DescriptionStyle::DescriptionStyle() {
 	font.fontFamily = StringView("default");

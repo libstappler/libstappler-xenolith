@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 enum class IconName : uint16_t {
 	None = 0,

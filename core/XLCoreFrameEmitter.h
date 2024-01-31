@@ -27,7 +27,7 @@
 #include "XLCoreFrameHandle.h"
 #include "SPMovingAverage.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 // Frame emitter is an interface, that continuously spawns frames, and can control validity of a frame
 class FrameEmitter : public Ref {

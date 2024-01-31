@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 enum class NetworkCapabilities {
 	None,

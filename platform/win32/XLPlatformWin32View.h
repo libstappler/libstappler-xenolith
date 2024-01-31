@@ -29,7 +29,7 @@
 
 #if WIN32
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct Win32ViewInfo {
 	StringView bundleId;

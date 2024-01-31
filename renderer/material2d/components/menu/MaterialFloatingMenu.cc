@@ -25,8 +25,10 @@
 #include "XL2dSceneLayout.h"
 #include "XLApplication.h"
 #include "XLFontController.h"
+#include "XL2dLayer.h"
+#include "XLInputListener.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class FloatingMenuLayout : public SceneLayout2d {
 public:

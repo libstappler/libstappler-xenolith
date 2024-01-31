@@ -27,7 +27,7 @@
 #include "MaterialLayerSurface.h"
 #include "XLFrameInfo.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 uint64_t SurfaceInterior::ComponentFrameTag = Component::GetNextComponentId();
 

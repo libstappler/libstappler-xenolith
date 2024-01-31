@@ -29,7 +29,7 @@
 #include "XLGestureRecognizer.h"
 #include <bitset>
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 class Scene;

@@ -28,7 +28,7 @@
 #include "XLCoreAttachment.h"
 #include "XLVkDeviceQueue.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class BufferAttachment : public core::BufferAttachment {
 public:

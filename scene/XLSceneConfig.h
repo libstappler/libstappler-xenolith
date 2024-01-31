@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 static constexpr size_t NodePreallocateChilds = 4;
 

@@ -28,7 +28,7 @@
 
 #if MODULE_XENOLITH_SCENE
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct ViewInfo;
 class View;
@@ -38,7 +38,7 @@ class Application;
 
 #endif
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
 class Queue;

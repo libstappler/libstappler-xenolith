@@ -27,7 +27,7 @@
 #include "XLAction.h"
 #include "MaterialEasing.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 void FlexibleLayout::NodeParams::setPosition(float x, float y) {
 	setPosition(Vec2(x, y));

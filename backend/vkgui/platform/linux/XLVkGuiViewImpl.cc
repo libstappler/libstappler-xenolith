@@ -32,7 +32,7 @@
 #include <sys/eventfd.h>
 #include <poll.h>
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 ViewImpl::ViewImpl() { }
 

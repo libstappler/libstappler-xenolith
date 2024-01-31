@@ -28,7 +28,7 @@
 #include "XLScheduler.h"
 #include "XLScene.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 InputListener::EventMask InputListener::EventMaskTouch = InputListener::makeEventMask({
 	InputEventName::Begin,

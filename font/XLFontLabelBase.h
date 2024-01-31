@@ -28,7 +28,7 @@
 #include "SPMetastring.h"
 #include "XLFontFormatter.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class LabelBase {
 public:

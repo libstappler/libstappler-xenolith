@@ -26,7 +26,7 @@
 #include "XLComponent.h"
 #include "XL2dGui.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class ScrollItemHandle;
 class ScrollViewBase;

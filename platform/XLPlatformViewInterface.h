@@ -26,7 +26,7 @@
 #include "XLCoreInput.h"
 #include "XLCoreInfo.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class ViewInterface {
 public:

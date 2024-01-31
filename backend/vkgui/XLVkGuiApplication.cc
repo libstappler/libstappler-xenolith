@@ -25,7 +25,7 @@
 #include "platform/linux/XLVkGuiViewImpl.h"
 #include "XLVkGuiApplication.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 GuiApplication::~GuiApplication() { }
 

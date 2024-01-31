@@ -28,7 +28,7 @@
 #include "XLSubscriptionListener.h"
 #include "XL2dScrollView.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class Menu;
 class MenuButton;

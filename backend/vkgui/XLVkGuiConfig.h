@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 /* forced view update interval for on-demand frame mode */
 static constexpr uint64_t OnDemandFrameInterval = 1'000'000;

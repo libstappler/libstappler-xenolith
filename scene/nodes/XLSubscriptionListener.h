@@ -26,7 +26,7 @@
 #include "XLComponent.h"
 #include "SPSubscription.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Scheduler;
 

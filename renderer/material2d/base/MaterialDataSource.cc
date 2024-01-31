@@ -22,7 +22,7 @@
 
 #include "MaterialDataSource.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 DataSource::Id DataSource::Self(DataSource::Id::max());
 

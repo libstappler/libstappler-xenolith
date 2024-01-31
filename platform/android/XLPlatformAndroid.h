@@ -31,7 +31,7 @@
 
 #include <jni.h>
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct NetworkConnectivity;
 struct ClassLoader;

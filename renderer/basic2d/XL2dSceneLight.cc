@@ -23,7 +23,7 @@
 #include "XL2dSceneLight.h"
 #include "XL2dScene.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool SceneLight::init(SceneLightType type, const Vec4 &normal, const Color4F &color, const Vec4 &data) {
 	_type = type;

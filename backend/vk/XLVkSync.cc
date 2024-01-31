@@ -28,7 +28,7 @@ THE SOFTWARE.
 #define XL_VKAPI_LOG(...)
 #endif
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 Semaphore::~Semaphore() { }
 

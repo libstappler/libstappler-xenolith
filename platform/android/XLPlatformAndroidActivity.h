@@ -35,7 +35,7 @@
 #include <android/native_activity.h>
 #include <android/configuration.h>
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 enum class ActivityFlags {
 	None = 0,

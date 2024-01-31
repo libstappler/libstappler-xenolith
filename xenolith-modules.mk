@@ -21,6 +21,9 @@
 # current dir
 XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
+XENOLITH_VERSION_NUMBER := 1
+XENOLITH_VERSION_BUILD := 1
+
 include $(XENOLITH_MODULE_DIR)/core/core.mk
 include $(XENOLITH_MODULE_DIR)/application/application.mk
 include $(XENOLITH_MODULE_DIR)/scene/scene.mk

@@ -25,7 +25,7 @@
 #include "XLDirector.h"
 #include "XLScene.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 FrameContext::~FrameContext() { }
 

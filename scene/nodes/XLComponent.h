@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "XLNodeInfo.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct FrameInfo;
 class Node;

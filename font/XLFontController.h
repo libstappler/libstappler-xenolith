@@ -29,7 +29,7 @@
 #include "XLApplicationExtension.h"
 #include <shared_mutex>
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class FontFaceObject;
 class FontFaceData;

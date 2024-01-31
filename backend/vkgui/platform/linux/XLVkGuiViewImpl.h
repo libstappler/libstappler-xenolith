@@ -28,7 +28,7 @@
 
 #if LINUX
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 enum class SurfaceType : uint32_t {
 	None,

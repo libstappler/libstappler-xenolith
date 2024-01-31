@@ -28,7 +28,7 @@
 #include "XLEventHeader.h"
 #include "SPDbScheme.h"
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class ComponentContainer;
 

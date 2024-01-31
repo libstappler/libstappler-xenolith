@@ -27,7 +27,7 @@
 #include "XLNodeInfo.h"
 #include "XLCoreInput.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 using InputFlags = core::InputFlags;
 using InputMouseButton = core::InputMouseButton;
@@ -70,8 +70,8 @@ constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
 namespace std {
 
 template <>
-struct hash<stappler::xenolith::InputEventData> {
-	size_t operator() (const stappler::xenolith::InputEventData &ev) const {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData> {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData &ev) const {
 		return std::hash<uint32_t>{}(ev.id);
 	}
 };

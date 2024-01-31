@@ -25,7 +25,7 @@
 
 #include "MaterialConfig.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 struct ViewingConditions {
 	static const ViewingConditions DEFAULT;

@@ -28,7 +28,7 @@
 #include "XLCoreMaterial.h"
 #include "XLNodeInfo.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct FrameInfo;
 struct FrameContextHandle;

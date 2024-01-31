@@ -25,7 +25,7 @@
 #include "XLCoreFrameHandle.h"
 #include "XLCoreDevice.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 uint32_t DependencyEvent::GetNextId() {
 	static std::atomic<uint32_t> s_eventId = 1;

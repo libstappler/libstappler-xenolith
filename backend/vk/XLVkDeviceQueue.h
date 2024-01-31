@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "XLCoreLoop.h"
 #include "XLCoreFrameHandle.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 class DeviceQueue;

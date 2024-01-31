@@ -31,7 +31,7 @@
 #include "XLDirector.h"
 #include "SPThread.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class View;
 class Director;

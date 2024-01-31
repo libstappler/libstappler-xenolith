@@ -31,7 +31,7 @@
 #undef interface
 #endif
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 AssetLock::~AssetLock() {
 	if (_releaseFunction) {

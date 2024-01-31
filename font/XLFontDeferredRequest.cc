@@ -22,7 +22,7 @@
 
 #include "XLFontDeferredRequest.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontLibrary> &lib,
 		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {

@@ -27,7 +27,7 @@
 #include "XLVkQueuePass.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class ShadowLightDataAttachment : public BufferAttachment {
 public:

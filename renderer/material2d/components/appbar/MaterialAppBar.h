@@ -29,7 +29,7 @@
 #include "XLSubscriptionListener.h"
 #include "XLIcons.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 enum class AppBarLayout {
 	CenterAligned,

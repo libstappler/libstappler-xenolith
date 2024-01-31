@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "XLPlatformNetwork.h"
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 using NetworkCapabilities = platform::NetworkCapabilities;
 

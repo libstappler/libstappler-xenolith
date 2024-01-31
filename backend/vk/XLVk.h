@@ -51,7 +51,7 @@ THE SOFTWARE.
 #define VK_BUFFER_USAGE_RAY_TRACING_BIT_NV VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR
 #endif
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 #define XL_VK_MIN_LOADER_MESSAGE_SEVERITY VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
 #define XL_VK_MIN_MESSAGE_SEVERITY VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -81,7 +81,7 @@ SPUNUSED static  const char * const s_validationLayers[] = {
 #include "XLVkConfig.h"
 #include "XLVkTable.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 using BufferInfo = core::BufferInfo;
 using ImageInfo = core::ImageInfo;
@@ -266,9 +266,9 @@ void sanitizeVkStruct(T &t) {
 	::memset(&t, 0, sizeof(T));
 }
 
-}
-
 std::ostream &operator<< (std::ostream &stream, VkResult res);
+
+}
 
 #if WIN32
 #undef interface

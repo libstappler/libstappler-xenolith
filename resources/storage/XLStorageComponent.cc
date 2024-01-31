@@ -23,7 +23,7 @@
 #include "XLStorageComponent.h"
 #include "XLStorageServer.h"
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 Component::Component(ComponentLoader &loader, StringView name)
 : _name(name.str<db::Interface>()) {

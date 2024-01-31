@@ -26,7 +26,7 @@
 #include "MaterialSurfaceStyle.h"
 #include "XLComponent.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class StyleMonitor : public Component {
 public:

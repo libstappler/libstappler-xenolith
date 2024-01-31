@@ -34,7 +34,7 @@ Options:
     -v (--verbose)
     -h (--help))HelpString");
 
-namespace stappler::headergen {
+namespace STAPPLER_VERSIONIZED stappler::headergen {
 
 using namespace mem_std;
 
@@ -139,7 +139,7 @@ R"Text(
 #include "XLCommon.h"
 #include "XLIcons.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 )Text";
 
@@ -211,7 +211,7 @@ R"Text(
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 enum class IconName : uint16_t {
 	None = 0,

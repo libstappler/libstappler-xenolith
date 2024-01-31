@@ -27,7 +27,7 @@
 #include "XLCommon.h"
 #include "SPRefContainer.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 

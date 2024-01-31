@@ -28,7 +28,7 @@
 
 typedef struct _HyphenDict HyphenDict;
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class FontController;
 class FontLayout;

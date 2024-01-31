@@ -26,7 +26,7 @@
 #include "XLCoreObject.h"
 #include "XLCoreFrameQueue.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class QueuePass : public NamedRef {
 public:

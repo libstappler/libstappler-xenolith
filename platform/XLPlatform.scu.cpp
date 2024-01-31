@@ -34,7 +34,7 @@
 #include "linux/XLPlatformLinuxXcb.cc"
 #include "linux/XLPlatformLinuxXcbView.cc"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 core::ImageFormat getCommonFormat() {
 	return core::ImageFormat::B8G8R8A8_UNORM;
@@ -46,7 +46,7 @@ core::ImageFormat getCommonFormat() {
 
 #if WIN32
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 core::ImageFormat getCommonFormat() {
 	return core::ImageFormat::B8G8R8A8_UNORM;

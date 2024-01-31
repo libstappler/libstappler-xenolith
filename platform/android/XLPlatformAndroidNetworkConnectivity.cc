@@ -26,7 +26,7 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static int flag_NET_CAPABILITY_INTERNET = 0;
 static int flag_NET_CAPABILITY_NOT_CONGESTED = 0;

@@ -24,7 +24,7 @@
 #include "XLCoreQueuePass.h"
 #include "SPIRV-Reflect/spirv_reflect.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 void QueueData::clear() {
 	for (auto &it : programs) {

@@ -22,7 +22,7 @@
 
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 void CmdSdfGroup2D::addCircle2D(Vec2 origin, float r) {
 	auto p = data.get_allocator().getPool();

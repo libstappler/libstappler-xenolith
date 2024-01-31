@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "SPDbScheme.h"
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class ComponentLoader;
 class Server;

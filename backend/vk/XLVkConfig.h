@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #include <stdint.h>
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 #if ANDROID
 

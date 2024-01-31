@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 enum class FrameRenderPassState {
 	Initial,

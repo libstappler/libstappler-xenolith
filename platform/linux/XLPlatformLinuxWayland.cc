@@ -37,7 +37,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static const char *s_XenolithWaylandTag = "org.stappler.xenolith.wayland";
 

@@ -24,7 +24,7 @@
 #include "XLCoreDevice.h"
 #include "XLCoreLoop.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 FrameCache::~FrameCache() { }
 

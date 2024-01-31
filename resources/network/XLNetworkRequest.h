@@ -26,14 +26,14 @@
 #include "XLApplication.h"
 #include "SPNetworkHandle.h"
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 struct Context;
 
 }
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 class Controller;
 class Request;

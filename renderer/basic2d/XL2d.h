@@ -33,7 +33,7 @@
 #include "glsl/include/XL2dGlslShadowData.h"
 #include "glsl/include/XL2dGlslSdfData.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 using Vertex = glsl::Vertex;
 using MaterialData = glsl::MaterialData;

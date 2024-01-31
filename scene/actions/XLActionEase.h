@@ -26,7 +26,7 @@
 
 #include "XLAction.h"
 
-namespace stappler::xenolith::interpolation {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::interpolation {
 
 enum Type {
 	Linear,
@@ -134,7 +134,7 @@ float customEase(float time, float *easingParam);
 
 }
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class ActionEase : public ActionInterval {
 public:

@@ -24,7 +24,7 @@
 #include "XLAction.h"
 #include "XLNode.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Action::~Action() { }
 

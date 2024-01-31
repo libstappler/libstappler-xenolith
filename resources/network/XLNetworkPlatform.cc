@@ -34,7 +34,7 @@
 #include "win32/XLPlatformWin32Library.h"
 #endif
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 #if LINUX
 
@@ -45,50 +45,50 @@ SPUNUSED static void registerNetworkCallback(Application *, void *key, Function<
 		NetworkCapabilities caps = NetworkCapabilities::None;
 
 		switch (state.connectivity) {
-		case NM_CONNECTIVITY_UNKNOWN:
-		case NM_CONNECTIVITY_NONE:
+		case platform::NM_CONNECTIVITY_UNKNOWN:
+		case platform::NM_CONNECTIVITY_NONE:
 			break;
-		case NM_CONNECTIVITY_PORTAL:
+		case platform::NM_CONNECTIVITY_PORTAL:
 			caps |= NetworkCapabilities::Internet | NetworkCapabilities::CaptivePortal | defaultFlags;
 			break;
-		case NM_CONNECTIVITY_LIMITED:
+		case platform::NM_CONNECTIVITY_LIMITED:
 			caps |= NetworkCapabilities::Internet | defaultFlags;
 			break;
-		case NM_CONNECTIVITY_FULL:
+		case platform::NM_CONNECTIVITY_FULL:
 			caps |= NetworkCapabilities::Internet | NetworkCapabilities::Validated | NetworkCapabilities::NotRestricted | defaultFlags;
 			break;
 		}
 
 		switch (state.state) {
-		case NM_STATE_UNKNOWN:
+		case platform::NM_STATE_UNKNOWN:
 			break;
-		case NM_STATE_ASLEEP:
+		case platform::NM_STATE_ASLEEP:
 			break;
-		case NM_STATE_DISCONNECTED:
+		case platform::NM_STATE_DISCONNECTED:
 			break;
-		case NM_STATE_DISCONNECTING:
+		case platform::NM_STATE_DISCONNECTING:
 			break;
-		case NM_STATE_CONNECTING:
+		case platform::NM_STATE_CONNECTING:
 			break;
-		case NM_STATE_CONNECTED_LOCAL:
+		case platform::NM_STATE_CONNECTED_LOCAL:
 			caps |= NetworkCapabilities::NotSuspended;
 			break;
-		case NM_STATE_CONNECTED_SITE:
+		case platform::NM_STATE_CONNECTED_SITE:
 			caps |= NetworkCapabilities::NotSuspended;
 			break;
-		case NM_STATE_CONNECTED_GLOBAL:
+		case platform::NM_STATE_CONNECTED_GLOBAL:
 			caps |= NetworkCapabilities::NotRestricted | NetworkCapabilities::NotSuspended;
 			break;
 		}
 
 		switch (state.metered) {
-		case NM_METERED_UNKNOWN:
+		case platform::NM_METERED_UNKNOWN:
 			break;
-		case NM_METERED_YES:
-		case NM_METERED_GUESS_YES:
+		case platform::NM_METERED_YES:
+		case platform::NM_METERED_GUESS_YES:
 			break;
-		case NM_METERED_NO:
-		case NM_METERED_GUESS_NO:
+		case platform::NM_METERED_NO:
+		case platform::NM_METERED_GUESS_NO:
 			caps |= NetworkCapabilities::NotMetered;
 			break;
 		}

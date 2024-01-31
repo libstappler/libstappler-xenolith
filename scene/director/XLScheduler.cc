@@ -23,7 +23,7 @@
 
 #include "XLScheduler.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Scheduler::Scheduler() { }
 

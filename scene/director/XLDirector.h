@@ -30,7 +30,7 @@
 #include "XLInput.h"
 #include "SPMovingAverage.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Scene;
 class Scheduler;

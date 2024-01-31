@@ -26,7 +26,7 @@
 #include "XLResourceOwner.h"
 #include "XLCoreResource.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class TemporaryResource;
 

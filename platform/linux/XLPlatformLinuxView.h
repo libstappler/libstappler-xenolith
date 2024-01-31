@@ -25,7 +25,7 @@
 
 #include "XLPlatformViewInterface.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class LinuxViewInterface : public Ref {
 public:

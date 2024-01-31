@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "XLVkLoop.h"
 #include <forward_list>
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 bool TextureSetLayout::init(Device &dev, uint32_t imageLimit, uint32_t bufferLimit) {
 	_imageCount = imageLimit;

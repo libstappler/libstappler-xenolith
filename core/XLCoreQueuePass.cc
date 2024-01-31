@@ -24,7 +24,7 @@
 #include "XLCoreQueue.h"
 #include "XLCoreFrameQueue.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 QueuePass::~QueuePass() { }
 

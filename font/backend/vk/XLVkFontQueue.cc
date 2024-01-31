@@ -29,7 +29,7 @@
 
 #include "XLVkAllocator.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 struct RenderFontCharTextureData {
 	int16_t x = 0;

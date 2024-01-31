@@ -26,7 +26,7 @@
 #include "XLCoreQueue.h"
 #include "XLCoreLoop.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 FrameOutputBinding::FrameOutputBinding(const AttachmentData *a, CompleteCallback &&cb, Rc<Ref> &&ref)
 : attachment(a), callback(move(cb)), handle(move(ref)) { }

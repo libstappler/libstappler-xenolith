@@ -31,7 +31,7 @@
 #endif
 #endif
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 enum class InputFlags {
 	None,
@@ -496,8 +496,8 @@ String getInputModifiersNames(InputModifier);
 
 namespace std {
 
-std::ostream &operator<<(std::ostream &, stappler::xenolith::core::InputKeyCode);
-std::ostream &operator<<(std::ostream &, stappler::xenolith::core::InputEventName);
+std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode);
+std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName);
 
 }
 

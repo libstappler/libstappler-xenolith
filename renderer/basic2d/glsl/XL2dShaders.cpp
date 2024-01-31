@@ -22,7 +22,7 @@
 
 #include "XL2dShaders.h"
 
-namespace stappler::xenolith::basic2d::shaders {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 
 #include "xl_2d_material.frag.h"
 #include "xl_2d_material.vert.h"

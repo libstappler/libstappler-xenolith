@@ -23,7 +23,7 @@
 #include "XLResourceObject.h"
 #include "XLTemporaryResource.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 ResourceObject::~ResourceObject() { }
 

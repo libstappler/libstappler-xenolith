@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLCoreInstance.h"
 #include "XLVkInfo.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 

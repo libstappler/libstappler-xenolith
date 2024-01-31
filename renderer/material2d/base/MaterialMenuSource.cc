@@ -23,7 +23,7 @@
 #include "MaterialMenuSource.h"
 #include "XLNode.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool MenuSourceItem::init() {
 	return true;

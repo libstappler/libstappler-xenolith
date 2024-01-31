@@ -26,7 +26,7 @@
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 static constexpr ClockType FrameClockType = ClockType::Monotonic;
 

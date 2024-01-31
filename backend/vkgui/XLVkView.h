@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "XLView.h"
 #include "XLVkSwapchain.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class View : public xenolith::View {
 public:

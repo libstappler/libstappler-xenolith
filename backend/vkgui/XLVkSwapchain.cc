@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "XLVkSwapchain.h"
 #include "XLVkGuiConfig.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 Surface::~Surface() {
 	if (_surface) {

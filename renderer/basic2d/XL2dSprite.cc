@@ -30,7 +30,7 @@
 #include "XLFrameContext.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 Sprite::Sprite() {
 	_blendInfo = core::BlendInfo(core::BlendFactor::SrcAlpha, core::BlendFactor::OneMinusSrcAlpha, core::BlendOp::Add,

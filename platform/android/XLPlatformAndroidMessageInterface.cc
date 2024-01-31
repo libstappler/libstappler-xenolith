@@ -24,7 +24,7 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 thread_local MessagingActivityAdapter *tl_adapter = nullptr;
 

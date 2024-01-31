@@ -29,12 +29,12 @@
 #include <sys/timerfd.h>
 #include <sys/eventfd.h>
 
-namespace stappler::platform::i18n {
+namespace STAPPLER_VERSIONIZED stappler::platform::i18n {
 	void loadJava(JavaVM *vm, int32_t sdk);
 	void finalizeJava();
 }
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class EngineMainThread : public thread::ThreadInterface<Interface> {
 public:

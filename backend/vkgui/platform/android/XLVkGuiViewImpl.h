@@ -28,7 +28,7 @@
 
 #if ANDROID
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 class ViewImpl : public vk::View {
 public:

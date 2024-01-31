@@ -27,7 +27,7 @@
 #include "XLFrameInfo.h"
 #include "XLDirector.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 VectorSprite::VectorSprite() { }
 

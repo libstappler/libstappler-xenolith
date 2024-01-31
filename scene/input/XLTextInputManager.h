@@ -27,7 +27,7 @@
 #include "XLEventHandler.h"
 #include "XLInput.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class TextInputManager;
 

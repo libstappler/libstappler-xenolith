@@ -32,7 +32,7 @@
 #define XL_FRAME_EMITTER_LOG(...)
 #endif
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 FrameEmitter::~FrameEmitter() { }
 

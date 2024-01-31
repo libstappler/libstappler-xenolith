@@ -22,7 +22,7 @@
 
 #include "XLPlatformLinuxXcb.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static XcbLibrary *s_XcbLibrary = nullptr;
 

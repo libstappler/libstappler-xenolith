@@ -26,7 +26,7 @@
 
 #include "XLEventHeader.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class EventHandlerNode;
 

@@ -29,7 +29,7 @@
 
 #if LINUX
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class XcbView : public LinuxViewInterface {
 public:

@@ -26,7 +26,7 @@
 #include "XLCommon.h"
 #include "SPFontStyle.h"
 
-namespace stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 // preload char layouts for whole group when char from this group is met
 static constexpr bool FontPreloadGroups = false;
@@ -36,7 +36,7 @@ static constexpr size_t MaxFastLocaleChars = size_t(127);
 
 }
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 using FontLayoutParameters = geom::FontLayoutParameters;
 using FontVariations = geom::FontVariations;

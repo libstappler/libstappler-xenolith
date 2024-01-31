@@ -306,7 +306,7 @@ private:
 
 }
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct Win32Library::Data {
 	std::mutex _mutex;

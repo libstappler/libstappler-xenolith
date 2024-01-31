@@ -27,7 +27,7 @@
 #include "XL2dVectorSprite.h"
 #include "MaterialSurfaceInterior.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class IconSprite : public VectorSprite {
 public:

@@ -29,7 +29,7 @@
 typedef struct FT_LibraryRec_ * FT_Library;
 typedef struct FT_FaceRec_ * FT_Face;
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct FontCharString final {
 	void addChar(char16_t);

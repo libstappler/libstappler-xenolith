@@ -23,7 +23,7 @@
 #include "XLMeshIndex.h"
 #include "XLTemporaryResource.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 MeshIndex::~MeshIndex() { }
 

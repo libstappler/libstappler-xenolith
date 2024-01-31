@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLNodeInfo.h"
 #include "XLComponent.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Component;
 class Scene;

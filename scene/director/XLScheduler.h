@@ -27,7 +27,7 @@
 #include "XLNodeInfo.h"
 #include "SPPriorityList.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 using SchedulerFunc = Function<void(const UpdateTime &)>;
 

@@ -27,7 +27,7 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKTABLE_H_
 #define XENOLITH_BACKEND_VK_XLVKTABLE_H_
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 struct LoaderTable {
 	LoaderTable(PFN_vkGetInstanceProcAddr addr);

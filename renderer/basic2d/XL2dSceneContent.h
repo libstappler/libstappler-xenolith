@@ -28,7 +28,7 @@
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneLight.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class SceneContent2d : public SceneContent {
 public:

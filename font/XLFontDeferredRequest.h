@@ -25,7 +25,7 @@
 
 #include "XLFontLibrary.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct DeferredRequest : Ref {
 	static void runFontRenderer(

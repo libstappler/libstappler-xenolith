@@ -24,7 +24,7 @@
 #include "MaterialStyleContainer.h"
 #include "XLScene.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 XL_DECLARE_EVENT_CLASS(StyleContainer, onColorSchemeUpdate)
 

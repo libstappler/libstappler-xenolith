@@ -22,7 +22,7 @@
 
 #include "XL2dVertexArray.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 VertexArray::Quad & VertexArray::Quad::setTextureRect(const Rect &texRect,
 		float texWidth, float texHeight, bool flippedX, bool flippedY, bool rotated) {

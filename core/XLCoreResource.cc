@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "XLCoreResource.h"
 #include "SPBitmap.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 struct Resource::ResourceData : memory::AllocPool {
 	HashTable<BufferData *> buffers;

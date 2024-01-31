@@ -25,7 +25,7 @@
 
 #include "XLCoreFrameEmitter.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 struct FrameOutputBinding : public Ref {
 	using CompleteCallback = Function<bool(FrameAttachmentData &data, bool success, Ref *)>;

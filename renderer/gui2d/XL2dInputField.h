@@ -25,7 +25,7 @@
 
 #include "XL2dInputLabel.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 class InputField : public Node, protected InputLabelDelegate {
 public:

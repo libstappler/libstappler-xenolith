@@ -23,7 +23,7 @@
 #include "XL2dRoundedProgress.h"
 #include "XLAction.h"
 
-namespace stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
 
 RoundedProgress::~RoundedProgress() { }
 

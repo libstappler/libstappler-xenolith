@@ -25,7 +25,7 @@
 
 #include "XL2d.h"
 
-namespace stappler::xenolith::basic2d::shaders {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 
 extern SpanView<uint32_t> MaterialFrag;
 extern SpanView<uint32_t> MaterialVert;

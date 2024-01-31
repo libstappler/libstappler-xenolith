@@ -26,7 +26,7 @@
 #include "XLPlatformAndroid.h"
 #include "XLPlatformNetwork.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct NetworkConnectivity : public Ref {
 	jclass clazz = nullptr;

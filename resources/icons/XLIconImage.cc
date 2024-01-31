@@ -22,7 +22,7 @@
 
 #include "XLIcons.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 static void drawIcon_Dynamic_Loader(vg::VectorImage &image, float pr) {
 	float p = pr;

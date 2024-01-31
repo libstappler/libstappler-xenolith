@@ -24,7 +24,7 @@
 #include "SPNetworkContext.h"
 #include "XLNetworkRequest.h"
 
-namespace stappler::xenolith::network {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 bool Handle::init(StringView url) {
 	return NetworkHandle::init(Method::Get, url);

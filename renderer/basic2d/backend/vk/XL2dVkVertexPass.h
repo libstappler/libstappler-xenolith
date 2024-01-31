@@ -26,7 +26,7 @@
 #include "XL2dVkMaterial.h"
 #include "XL2dCommandList.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class VertexAttachment : public BufferAttachment {
 public:

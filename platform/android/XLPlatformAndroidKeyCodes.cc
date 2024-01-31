@@ -26,7 +26,7 @@
 
 #include <android/keycodes.h>
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 /* AKEYCODE_BACK mapped to ESC
  * AKEYCODE_FORWARD - ENTER

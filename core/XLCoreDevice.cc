@@ -22,7 +22,7 @@
 
 #include "XLCoreDevice.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 Device::Device() { }
 

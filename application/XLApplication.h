@@ -42,7 +42,7 @@
 #endif
 
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Event;
 class EventHandlerNode;

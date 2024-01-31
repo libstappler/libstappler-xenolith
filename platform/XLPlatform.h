@@ -25,7 +25,7 @@
 
 #include "XLCommon.h"
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // should be commonly supported format,
 // R8G8B8A8_UNORM on Android, B8G8R8A8_UNORM on others

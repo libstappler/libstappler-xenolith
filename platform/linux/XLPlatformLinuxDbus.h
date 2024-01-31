@@ -23,9 +23,12 @@
 #ifndef XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXDBUS_H_
 #define XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXDBUS_H_
 
+#include "SPCore.h"
 #include "XLCommon.h"
 
 #if LINUX
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 enum NMState {
 	NM_STATE_UNKNOWN = 0, // networking state is unknown
@@ -53,8 +56,6 @@ enum NMMetered {
 	NM_METERED_GUESS_YES = 3, // Metered, the value was guessed
 	NM_METERED_GUESS_NO = 4, // Not metered, the value was guessed
 };
-
-namespace stappler::xenolith::platform {
 
 struct DBusInterface;
 

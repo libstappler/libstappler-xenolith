@@ -25,7 +25,7 @@
 
 #include "MaterialDataScroll.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class DataScrollHandlerGrid : public DataScroll::Handler {
 public:

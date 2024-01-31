@@ -26,7 +26,7 @@
 
 #include <unistd.h>
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static uint64_t getStaticMinFrameTime() {
 	return 1000'000 / 60;

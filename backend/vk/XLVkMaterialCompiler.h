@@ -28,7 +28,7 @@
 #include "XLCoreAttachment.h"
 #include "XLCoreMaterial.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class MaterialCompiler : public core::Queue {
 public:

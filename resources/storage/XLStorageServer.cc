@@ -28,7 +28,7 @@
 #include "SPSqlDriver.h"
 #include <typeindex>
 
-namespace stappler::xenolith::storage {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 struct ServerComponentData : public db::AllocBase {
 	db::pool_t *pool;

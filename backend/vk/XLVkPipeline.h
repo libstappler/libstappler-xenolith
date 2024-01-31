@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "XLVk.h"
 #include "XLVkDevice.h"
 
-namespace stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Shader : public core::Shader {
 public:

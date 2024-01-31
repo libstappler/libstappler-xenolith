@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "XLSceneContent.h"
 #include "XLCoreFrameRequest.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Scene::~Scene() {
 	_queue = nullptr;

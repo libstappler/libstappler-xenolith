@@ -25,7 +25,7 @@
 
 uint32_t _glfwKeySym2Unicode(unsigned int keysym);
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 #if XL_X11_DEBUG
 #define XL_X11_LOG(...) log::debug("Wayland", __VA_ARGS__)

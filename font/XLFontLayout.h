@@ -25,7 +25,7 @@
 
 #include "XLFontFace.h"
 
-namespace stappler::xenolith::font {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class FontLibrary;
 

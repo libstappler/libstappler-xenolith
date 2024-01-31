@@ -26,7 +26,7 @@
 
 #include "android/XLPlatformAndroidActivity.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Application::nativeInit() {
 	auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
@@ -70,7 +70,7 @@ void Application::openUrl(StringView url) const {
 
 #include <stdlib.h>
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Application::nativeInit() { }
 
@@ -90,7 +90,7 @@ void Application::openUrl(StringView url) const {
 #include "SPPlatformUnistd.h"
 #include <shellapi.h>
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Application::nativeInit() {
 	platform::clock(core::ClockType::Monotonic);

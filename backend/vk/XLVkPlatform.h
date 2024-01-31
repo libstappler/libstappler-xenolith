@@ -26,7 +26,7 @@
 #include "XLVkInstance.h"
 #include "SPDso.h"
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 struct VulkanInstanceInfo {
 	uint32_t targetVersion;

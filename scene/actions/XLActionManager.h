@@ -29,7 +29,7 @@
 #include "SPHashTable.h"
 #include "SPRefContainer.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 
@@ -62,7 +62,7 @@ struct HashTraitActionContainer {
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <>
 struct HashTraitDiscovery<xenolith::ActionContainer> {
@@ -71,7 +71,7 @@ struct HashTraitDiscovery<xenolith::ActionContainer> {
 
 }
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class ActionManager : public Ref {
 public:

@@ -27,7 +27,7 @@
 #include "XL2dScrollController.h"
 #include "XLIcons.h"
 
-namespace stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool DataScroll::Loader::init(const Function<void()> &cb) {
 	if (!Node::init()) {

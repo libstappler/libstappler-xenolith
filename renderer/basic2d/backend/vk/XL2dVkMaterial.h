@@ -27,9 +27,9 @@
 #include "XLVkAttachment.h"
 #include "XLVkQueuePass.h"
 
-namespace stappler::xenolith::basic2d::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-using namespace stappler::xenolith::vk;
+using namespace xenolith::vk;
 
 class MaterialAttachment : public core::MaterialAttachment {
 public:

@@ -38,7 +38,7 @@
 
 #define XL_X11_DEBUG 0
 
-namespace stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class XcbLibrary : public Ref {
 public:

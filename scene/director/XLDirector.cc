@@ -33,7 +33,7 @@
 #include "XLCoreFrameRequest.h"
 #include "XLView.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Director::Director() {
 	memset(&_drawStat, 0, sizeof(DrawStat));

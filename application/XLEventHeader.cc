@@ -24,7 +24,7 @@
 #include "XLEventHeader.h"
 #include "XLEvent.h"
 
-namespace stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct EventList {
 	static EventList *getInstance() {

@@ -26,7 +26,7 @@
 #include "XLCoreObject.h"
 #include "XLCoreAttachment.h"
 
-namespace stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
 class DynamicImage;

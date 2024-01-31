@@ -26,7 +26,7 @@
 
 #include <dlfcn.h>
 
-namespace stappler::xenolith::vk::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
 	auto handle = Dso("libvulkan.so.1");

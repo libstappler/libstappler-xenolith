@@ -23,7 +23,7 @@
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneContent.h"
 
-namespace stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 SceneLayout2d::~SceneLayout2d() { }
 
