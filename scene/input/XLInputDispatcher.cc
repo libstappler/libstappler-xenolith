@@ -31,7 +31,7 @@ InputListenerStorage::~InputListenerStorage() {
 }
 
 InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
-	perform([&] {
+	perform([&, this] {
 		_preSceneEvents = new (_pool) memory::vector<InputListener *>;
 		_sceneEvents = new (_pool) memory::vector<InputListener *>;
 		_postSceneEvents = new (_pool) memory::vector<InputListener *>;

@@ -194,30 +194,28 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face
 				} else if (tag == getAxisTag("wdth")) {
 					vector.emplace_back(var.stretch.clamp(spec.fontStretch).get() << 15);
 				} else if (tag == getAxisTag("ital")) {
-					switch (spec.fontStyle.get()) {
-					case FontStyle::Normal.get(): vector.emplace_back(var.italic.min); break;
-					case FontStyle::Italic.get(): vector.emplace_back(var.italic.max); break;
-					default:
+					if (spec.fontStyle.get() == FontStyle::Normal.get()) {
+						vector.emplace_back(var.italic.min);
+					} else if (spec.fontStyle.get() == FontStyle::Italic.get()) {
+						vector.emplace_back(var.italic.max);
+					} else {
 						if ((var.axisMask & FontVariableAxis::Slant) != FontVariableAxis::None) {
 							vector.emplace_back(var.italic.min); // has true oblique
 						} else {
 							vector.emplace_back(var.italic.max);
 						}
-						break;
 					}
 				} else if (tag == getAxisTag("slnt")) {
-					switch (spec.fontStyle.get()) {
-					case FontStyle::Normal.get(): vector.emplace_back(0); break;
-					case FontStyle::Italic.get():
+					if (spec.fontStyle.get() == FontStyle::Normal.get()) {
+						vector.emplace_back(0);
+					} else if (spec.fontStyle.get() == FontStyle::Italic.get()) {
 						if ((var.axisMask & FontVariableAxis::Italic) != FontVariableAxis::None) {
 							vector.emplace_back(masters->axis[i].def);
 						} else {
 							vector.emplace_back(var.slant.clamp(FontStyle::Oblique).get() << 10);
 						}
-						break;
-					default:
+					} else {
 						vector.emplace_back(var.slant.clamp(spec.fontStyle).get() << 10);
-						break;
 					}
 				} else if (tag == getAxisTag("opsz")) {
 					auto opticalSize = uint32_t(floorf(spec.fontSize.get() / spec.density)) << 16;
@@ -329,7 +327,7 @@ bool FontFaceObject::addChars(const Vector<char16_t> &chars, bool expand, Vector
 bool FontFaceObject::addCharGroup(CharGroupId g, Vector<char16_t> *failed) {
 	bool updated = false;
 	using namespace chars;
-	auto f = [&] (char16_t c) {
+	auto f = [&, this] (char16_t c) {
 		if (!addChar(c, updated) && failed) {
 			mem_std::emplace_ordered(*failed, c);
 		}
@@ -435,7 +433,7 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 	}
 
 	if (FT_HAS_KERNING(_face)) {
-		_chars.foreach([&] (const CharLayout & it) {
+		_chars.foreach([&, this] (const CharLayout & it) {
 			if (it.charID == 0 || it.charID == char16_t(0xFFFF)) {
 				return;
 			}

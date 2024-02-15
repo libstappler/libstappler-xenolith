@@ -384,7 +384,7 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&] () -> BufferData * {
+	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&, this] () -> BufferData * {
 		auto buf = new (_data->pool) BufferData();
 		static_cast<BufferInfo &>(*buf) = move(info);
 		buf->key = key.pdup(_data->pool);
@@ -421,7 +421,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&] () -> BufferData * {
+	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&, this] () -> BufferData * {
 		auto fpath = StringView(npath).pdup(_data->pool);
 		auto buf = new (_data->pool) BufferData;
 		static_cast<BufferInfo &>(*buf) = move(info);
@@ -450,7 +450,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&] () -> BufferData * {
+	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&, this] () -> BufferData * {
 		auto buf = new (_data->pool) BufferData();
 		static_cast<BufferInfo &>(*buf) = move(info);
 		buf->key = key.pdup(_data->pool);
@@ -473,7 +473,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&] () -> BufferData * {
+	auto p = Resource_conditionalInsert<BufferData>(_data->buffers, key, [&, this] () -> BufferData * {
 		auto buf = new (_data->pool) BufferData;
 		static_cast<BufferInfo &>(*buf) = move(info);
 		buf->key = key.pdup(_data->pool);
@@ -495,7 +495,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&] () -> ImageData * {
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this] () -> ImageData * {
 		auto buf = new (_data->pool) ImageData;
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
@@ -537,7 +537,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&] () -> ImageData * {
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this] () -> ImageData * {
 		auto fpath = StringView(npath).pdup(_data->pool);
 		auto buf = new (_data->pool) ImageData;
 		static_cast<ImageInfo &>(*buf) = move(img);
@@ -562,7 +562,7 @@ const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&im
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&] () -> ImageData * {
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this] () -> ImageData * {
 		auto buf = new (_data->pool) ImageData;
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
@@ -584,7 +584,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return nullptr;
 	}
 
-	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&] () -> ImageData * {
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this] () -> ImageData * {
 		auto buf = new (_data->pool) ImageData;
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);

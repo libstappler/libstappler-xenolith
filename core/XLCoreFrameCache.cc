@@ -82,7 +82,7 @@ void FrameCache::releaseFramebuffer(Rc<Framebuffer> &&fb) {
 }
 
 Rc<ImageStorage> FrameCache::acquireImage(uint64_t attachment, const ImageInfoData &info, SpanView<ImageViewInfo> v) {
-	auto makeImage = [&] {
+	auto makeImage = [&, this] {
 		auto ret = _device->makeImage(info);
 		ret->rearmSemaphores(*_loop);
 		makeViews(ret, v);

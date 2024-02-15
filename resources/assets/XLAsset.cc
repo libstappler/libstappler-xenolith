@@ -247,7 +247,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 		}
 	}
 
-	filesystem::ftw(_path, [&] (StringView path, bool isFile) {
+	filesystem::ftw(_path, [&, this] (StringView path, bool isFile) {
 		if (!isFile && path != _cache && path != _path) {
 			auto it = paths.find(path);
 			if (it == paths.end()) {
@@ -302,7 +302,7 @@ struct AssetDownloadData : Ref {
 bool Asset::startNewDownload(Time ctime, StringView etag) {
 	auto data = Rc<AssetDownloadData>::alloc(this);
 
-	auto req = Rc<network::Request>::create([&] (network::Handle &handle) {
+	auto req = Rc<network::Request>::create([&, this] (network::Handle &handle) {
 		handle.init(network::Method::Get, _url);
 
 		handle.setMTime(ctime.toMicros());
@@ -382,7 +382,7 @@ bool Asset::resumeDownload(VersionData &d) {
 
 	auto data = Rc<AssetDownloadData>::alloc(this, d);
 
-	auto req = Rc<network::Request>::create([&] (network::Handle &handle) {
+	auto req = Rc<network::Request>::create([&, this] (network::Handle &handle) {
 		handle.init(network::Method::Get, _url);
 
 		handle.setResumeOffset(stat.size);

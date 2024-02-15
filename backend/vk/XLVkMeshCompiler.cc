@@ -387,7 +387,7 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 		return 0;
 	};
 
-	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 		uint64_t targetIndexOffset = 0;
 		uint64_t targetVertexOffset = 0;
 

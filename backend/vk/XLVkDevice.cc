@@ -94,7 +94,7 @@ Device::~Device() {
 bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &features, const Vector<StringView> &extensions) {
 	Set<uint32_t> uniqueQueueFamilies = { info.graphicsFamily.index, info.presentFamily.index, info.transferFamily.index, info.computeFamily.index };
 
-	auto emplaceQueueFamily = [&] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, QueueOperations preferred) {
+	auto emplaceQueueFamily = [&, this] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, QueueOperations preferred) {
 		for (auto &it : _families) {
 			if (it.index == info.index) {
 				it.preferred |= preferred;
@@ -159,7 +159,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	do {
 		VkFormatProperties properties;
 
-		auto addDepthFormat = [&] (VkFormat fmt) {
+		auto addDepthFormat = [&, this] (VkFormat fmt) {
 			_vkInstance->vkGetPhysicalDeviceFormatProperties(_info.device, fmt, &properties);
 			_formats.emplace(fmt, properties);
 			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
@@ -167,7 +167,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 			}
 		};
 
-		auto addColorFormat = [&] (VkFormat fmt) {
+		auto addColorFormat = [&, this] (VkFormat fmt) {
 			_vkInstance->vkGetPhysicalDeviceFormatProperties(_info.device, fmt, &properties);
 			_formats.emplace(fmt, properties);
 			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0 && (properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0) {
@@ -692,7 +692,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 				}, this, "TextureSetLayout::compileImage transferBuffer->dropPendingBarrier");
 
 				loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-					auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+					auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
 						auto f = getQueueFamily(task->resultImage->getInfo().type);
 						buf.writeImageTransfer(task->pool->getFamilyIdx(), f ? f->index : VK_QUEUE_FAMILY_IGNORED,
 								task->transferBuffer, task->resultImage);

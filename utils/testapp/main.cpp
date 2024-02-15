@@ -33,7 +33,7 @@ Options are one of:
 	-v (--verbose)
 	-h (--help))HelpString");
 
-SP_EXTERN_C int _spMain(argc, argv) {
+SP_EXTERN_C int main(int argc, const char *argv[]) {
 	ViewCommandLineData data;
 	Vector<String> args;
 

@@ -154,7 +154,7 @@ void DynamicStateNode::disableScissor() {
 }
 
 DrawStateValues DynamicStateNode::updateDynamicState(const DrawStateValues &values) const {
-	auto getViewRect = [&] {
+	auto getViewRect = [&, this] {
 	    Vec2 bottomLeft = convertToWorldSpace(Vec2(-_scissorOutline.left, -_scissorOutline.bottom));
 		Vec2 topRight = convertToWorldSpace(Vec2(_contentSize.width + _scissorOutline.right, _contentSize.height + _scissorOutline.top));
 

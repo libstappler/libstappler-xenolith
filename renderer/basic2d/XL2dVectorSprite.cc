@@ -393,7 +393,7 @@ void VectorSprite::updateVertexes() {
 
 	_targetTransform *= scaleTransform;
 
-	auto isSolidImage = [&] {
+	auto isSolidImage = [&, this] {
 		for (auto &it : _image->getPaths()) {
 			if (it.second->isAntialiased()) {
 				return false;

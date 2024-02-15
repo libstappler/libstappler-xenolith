@@ -71,7 +71,7 @@ void DeferredRequest::runThread() {
 			threadFaces[v.first] = library->makeThreadHandle(faces[v.first]);
 		}
 
-		threadFaces[v.first]->acquireTexture(v.second, [&] (const font::CharTexture &tex) {
+		threadFaces[v.first]->acquireTexture(v.second, [&, this] (const font::CharTexture &tex) {
 			onTexture(v.first, tex);
 		});
 		c = complete.fetch_add(1);

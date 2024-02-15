@@ -174,7 +174,7 @@ bool CommandList::init(const Rc<PoolRef> &pool) {
 
 void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, SpanView<ZOrder> zPath,
 		core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::VertexArray, flags);
 		auto cmdData = reinterpret_cast<CmdVertexArray *>(cmd->data);
 
@@ -202,7 +202,7 @@ void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, SpanView
 
 void CommandList::pushVertexArray(SpanView<TransformVertexData> data, SpanView<ZOrder> zPath,
 		core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::VertexArray, flags);
 		auto cmdData = reinterpret_cast<CmdVertexArray *>(cmd->data);
 
@@ -224,7 +224,7 @@ void CommandList::pushVertexArray(SpanView<TransformVertexData> data, SpanView<Z
 
 void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, const Mat4 &viewT, const Mat4 &modelT, bool normalized,
 		SpanView<ZOrder> zPath, core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::Deferred, flags);
 		auto cmdData = reinterpret_cast<CmdDeferred *>(cmd->data);
 
@@ -248,7 +248,7 @@ void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, 
 }
 
 void CommandList::pushShadowArray(Rc<VertexData> &&vert, const Mat4 &t, StateId state, float value) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::ShadowArray, CommandFlags::None);
 		auto cmdData = reinterpret_cast<CmdShadowArray *>(cmd->data);
 
@@ -267,7 +267,7 @@ void CommandList::pushShadowArray(Rc<VertexData> &&vert, const Mat4 &t, StateId 
 }
 
 void CommandList::pushShadowArray(SpanView<TransformVertexData> data, StateId state, float value) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::ShadowArray, CommandFlags::None);
 		auto cmdData = reinterpret_cast<CmdShadowArray *>(cmd->data);
 
@@ -280,7 +280,7 @@ void CommandList::pushShadowArray(SpanView<TransformVertexData> data, StateId st
 }
 
 void CommandList::pushDeferredShadow(const Rc<DeferredVertexResult> &res, const Mat4 &viewT, const Mat4 &modelT, StateId state, bool normalized, float value) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::ShadowDeferred, CommandFlags::None);
 		auto cmdData = reinterpret_cast<CmdShadowDeferred *>(cmd->data);
 
@@ -296,7 +296,7 @@ void CommandList::pushDeferredShadow(const Rc<DeferredVertexResult> &res, const 
 }
 
 void CommandList::pushSdfGroup(const Mat4 &modelT, StateId state, float value, const Callback<void(CmdSdfGroup2D &)> &cb) {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::SdfGroup2D, CommandFlags::None);
 		auto cmdData = reinterpret_cast<CmdSdfGroup2D *>(cmd->data);
 

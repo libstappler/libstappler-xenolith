@@ -21,6 +21,7 @@
  **/
 
 #include "XLPlatformLinuxDbus.h"
+#include "SPPlatformUnistd.h"
 #include "SPThread.h"
 #include "SPDso.h"
 
@@ -1062,7 +1063,7 @@ DBusHandlerResult DBusInterface::handleNetworkStateChanged(DBusMessage *message)
 DBusPendingCall *DBusInterface::readInterfaceTheme(Function<void(InterfaceThemeInfo &&)> &&cb) {
 	return callMethod(*sessionConnection, "org.freedesktop.portal.Desktop",
 			"/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "ReadAll",
-			[&] (DBusMessage *message) {
+			[&, this] (DBusMessage *message) {
 		const char * array[] = { "org.gnome.desktop.interface" };
 		const char **v_ARRAY = array;
 
@@ -1223,7 +1224,7 @@ void DBusInterface::parseServiceList(Set<String> &services, DBusMessage *reply) 
 NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 	NetworkState ret;
 
-	auto readEntry = [&] (DBusMessageIter *entry) {
+	auto readEntry = [&, this] (DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {
@@ -1306,7 +1307,7 @@ NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply) {
 	InterfaceThemeInfo ret;
 
-	auto readEntry = [&] (DBusMessageIter *entry) {
+	auto readEntry = [&, this] (DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {
@@ -1327,7 +1328,7 @@ InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply
 		}
 	};
 
-	auto readNamespaceEntry = [&] (DBusMessageIter *entry) {
+	auto readNamespaceEntry = [&, this] (DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {

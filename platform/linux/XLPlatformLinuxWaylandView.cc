@@ -228,7 +228,7 @@ void WaylandView::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t wi
 		}
 	}
 
-	auto checkVisible = [&] (WaylandDecorationName name) {
+	auto checkVisible = [&, this] (WaylandDecorationName name) {
 		switch (name) {
 		case WaylandDecorationName::RightSide:
 			if (_state.test(XDG_TOPLEVEL_STATE_MAXIMIZED)) { return false; }
@@ -725,7 +725,7 @@ void WaylandView::handleKeyModifiers(uint32_t depressed, uint32_t latched, uint3
 
 void WaylandView::handleKeyRepeat() {
 	Vector<core::InputEventData> events;
-	auto spawnRepeatEvent = [&] (const KeyData &it) {
+	auto spawnRepeatEvent = [&, this] (const KeyData &it) {
 		core::InputEventData event({
 			uint32_t(events.size() + 1),
 			core::InputEventName::KeyRepeated,
@@ -771,7 +771,7 @@ void WaylandView::handleKeyRepeat() {
 }
 
 void WaylandView::handleDecorationPress(WaylandDecoration *decor, uint32_t serial, bool released) {
-	auto switchMaximized = [&] {
+	auto switchMaximized = [&, this] {
 		if (!_state.test(XDG_TOPLEVEL_STATE_MAXIMIZED)) {
 			_display->wayland->xdg_toplevel_set_maximized(_toplevel);
 			_iconMaximized->setAlternative(true);

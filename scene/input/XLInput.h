@@ -63,7 +63,11 @@ public:
 	virtual void cancelTextInput() = 0;
 };
 
+#ifndef __LCC__
+
 constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
+
+#endif
 
 }
 

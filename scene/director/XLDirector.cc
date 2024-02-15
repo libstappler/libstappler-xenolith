@@ -45,7 +45,7 @@ bool Director::init(Application *main, const core::FrameContraints &constraints,
 	_mainLoop = main;
 	_view = view;
 	_pool = Rc<PoolRef>::alloc();
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		_scheduler = Rc<Scheduler>::create();
 		_actionManager = Rc<ActionManager>::create();
 		_inputDispatcher = Rc<InputDispatcher>::create(_pool, view);
@@ -92,7 +92,7 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 	}
 
 	_mainLoop->performOnMainThread([this, req] {
-		req->getPool()->perform([&] {
+		req->getPool()->perform([&, this] {
 			_scene->renderRequest(req);
 
 			if (hasActiveInteractions()) {

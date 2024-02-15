@@ -575,4 +575,17 @@ std::ostream & operator<<(std::ostream & stream, const ColorHCT & obj) {
 	return stream;
 }
 
+#ifdef __LCC__
+
+const ViewingConditions ViewingConditions::DEFAULT = {
+	11.725676537, 50.000000000, 2.000000000,
+	false,
+	0.184186503, 29.981000900, 1.016919255, 1.016919255, 0.689999998,
+	1.000000000, 0.388481468, 0.789482653, 1.909169555,
+	{ 95.047, 100.0, 108.883 },
+	{ 1.021177769, 0.986307740, 0.933960497 }
+};
+
+#endif
+
 }

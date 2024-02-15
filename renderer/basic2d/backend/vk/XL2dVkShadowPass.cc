@@ -111,7 +111,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		return Rc<vk::MaterialAttachment>::create(builder, BufferInfo(core::BufferUsage::StorageBuffer));
 	});
 
-	_vertexes = queueBuilder.addAttachemnt(FrameContext2d::VertexAttachmentName, [&] (AttachmentBuilder &builder) -> Rc<Attachment> {
+	_vertexes = queueBuilder.addAttachemnt(FrameContext2d::VertexAttachmentName, [&, this] (AttachmentBuilder &builder) -> Rc<Attachment> {
 		builder.defineAsInput();
 		return Rc<VertexAttachment>::create(builder, BufferInfo(core::BufferUsage::StorageBuffer), _materials);
 	});
@@ -124,9 +124,9 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 	auto sdfAttachment = passBuilder.addAttachment(_sdf);
 	auto depth2dAttachment = passBuilder.addAttachment(_depth2d);
 
-	auto layout2d = passBuilder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
+	auto layout2d = passBuilder.addDescriptorLayout([&, this] (PipelineLayoutBuilder &layoutBuilder) {
 		// Vertex input attachment - per-frame vertex list
-		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
+		layoutBuilder.addSet([&, this] (DescriptorSetBuilder &setBuilder) {
 			setBuilder.addDescriptor(passBuilder.addAttachment(_vertexes));
 			setBuilder.addDescriptor(passBuilder.addAttachment(_materials));
 			setBuilder.addDescriptor(passBuilder.addAttachment(_lightsData));
@@ -136,7 +136,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		});
 	});
 
-	auto subpass2d = passBuilder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
+	auto subpass2d = passBuilder.addSubpass([&, this] (SubpassBuilder &subpassBuilder) {
 		// load shaders by ref - do not copy data into engine
 		auto materialVert = queueBuilder.addProgramByRef("Loader_MaterialVert", shaders::MaterialVert);
 		auto materialFrag = queueBuilder.addProgramByRef("Loader_MaterialFrag", shaders::MaterialFrag);
@@ -362,8 +362,8 @@ bool ComputeShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &pas
 		return Rc<ShadowSdfImageAttachment>::create(builder, defaultExtent);
 	});
 
-	auto layout = passBuilder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
-		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
+	auto layout = passBuilder.addDescriptorLayout([&, this] (PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&, this] (DescriptorSetBuilder &setBuilder) {
 			setBuilder.addDescriptor(passBuilder.addAttachment(_lights));
 			setBuilder.addDescriptor(passBuilder.addAttachment(_vertexes));
 			setBuilder.addDescriptor(passBuilder.addAttachment(_primitives));
@@ -571,10 +571,10 @@ void ComputeShadowPassHandle::writeShadowCommands(RenderPass *pass, CommandBuffe
 }
 
 Vector<const CommandBuffer *> ComputeShadowPassHandle::doPrepareCommands(FrameHandle &h) {
-	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 		auto pass = static_cast<RenderPass *>(_data->impl.get());
 
-		pass->perform(*this, buf, [&] {
+		pass->perform(*this, buf, [&, this] {
 			writeShadowCommands(pass, buf);
 		});
 		return true;

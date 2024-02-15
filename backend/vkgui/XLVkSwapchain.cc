@@ -96,7 +96,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 	}
 
 	VkResult result = VK_ERROR_UNKNOWN;
-	dev.makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	dev.makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = xenolith::platform::clock(core::ClockType::Monotonic);
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &_swapchain);
@@ -184,7 +184,7 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<Fence> &fence) -> Rc<Swapc
 	Rc<Semaphore> sem = acquireSemaphore();
 	uint32_t imageIndex = maxOf<uint32_t>();
 	VkResult ret = VK_ERROR_UNKNOWN;
-	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = xenolith::platform::clock(core::ClockType::Monotonic);
 		ret = table.vkAcquireNextImageKHR(device, _swapchain, timeout,

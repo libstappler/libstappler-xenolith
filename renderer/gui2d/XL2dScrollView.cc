@@ -59,7 +59,7 @@ void ScrollView::Overscroll::onContentSizeDirty() {
 
 void ScrollView::Overscroll::update(const UpdateTime &time) {
 	VectorSprite::update(time);
-	if (time.global - _delayStart > TimeInterval::microseconds(250000)) {
+	if (TimeInterval(time.global - _delayStart) > TimeInterval::microseconds(250000)) {
 		decrementProgress(time.dt);
 	}
 }

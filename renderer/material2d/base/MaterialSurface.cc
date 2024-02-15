@@ -306,7 +306,7 @@ RenderingLevel Surface::getRealRenderingLevel() const {
 void Surface::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
 	if (_realCornerRadius > 0.0f) {
 		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&, this] (CmdSdfGroup2D &cmd) {
 			switch (_realShapeFamily) {
 			case ShapeFamily::RoundedCorners:
 				cmd.addRoundedRect2D(Rect(Vec2(0, 0), _contentSize), _realCornerRadius);
@@ -329,7 +329,7 @@ void Surface::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &
 		});
 	} else {
 		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&] (CmdSdfGroup2D &cmd) {
+		handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&, this] (CmdSdfGroup2D &cmd) {
 			cmd.addRect2D(Rect(Vec2(0, 0), _contentSize));
 		});
 	}

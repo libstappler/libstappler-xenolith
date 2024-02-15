@@ -173,10 +173,9 @@ bool Fence::check(Loop &loop, bool lockfree) {
 	auto dev = ((Device *)_device);
 	enum VkResult status;
 
-	dev->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 		if (lockfree) {
 			status = table.vkGetFenceStatus(device, _fence);
-			//status = table.vkWaitForFences(device, 1, &_fence, VK_TRUE, 0);
 		} else {
 			status = table.vkWaitForFences(device, 1, &_fence, VK_TRUE, UINT64_MAX);
 		}

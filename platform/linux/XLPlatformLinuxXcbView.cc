@@ -213,7 +213,7 @@ bool XcbView::poll(bool frameReady) {
 
 	Vector<core::InputEventData> inputEvents;
 
-	auto dispatchEvents = [&] {
+	auto dispatchEvents = [&, this] {
 		if (!inputEvents.empty()) {
 			_view->handleInputEvents(move(inputEvents));
 		}

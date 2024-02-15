@@ -59,7 +59,7 @@ void Scheduler::schedulePerFrame(SchedulerFunc &&callback, void *target, int32_t
 void Scheduler::update(const UpdateTime &time) {
 	_locked = true;
 
-	_list.foreach([&] (void *target, int64_t priority, SchedulerCallback &cb) {
+	_list.foreach([&, this] (void *target, int64_t priority, SchedulerCallback &cb) {
 		_currentTarget = target;
 		_currentNode = &cb;
 		if (!cb.paused && cb.callback) {

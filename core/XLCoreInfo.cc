@@ -489,14 +489,14 @@ size_t BufferData::writeData(uint8_t *mem, size_t expected) const {
 		return outsize;
 	} else if (memCallback) {
 		size_t outsize = size;
-		memCallback(mem, expected, [&] (BytesView data) {
+		memCallback(mem, expected, [&, this] (BytesView data) {
 			outsize = data.size();
 			memcpy(mem, data.data(), size);
 		});
 		return outsize;
 	} else if (stdCallback) {
 		size_t outsize = size;
-		stdCallback(mem, expected, [&] (BytesView data) {
+		stdCallback(mem, expected, [&, this] (BytesView data) {
 			outsize = data.size();
 			memcpy(mem, data.data(), size);
 		});
@@ -1929,6 +1929,11 @@ String getInputModifiersNames(InputModifier mod) {
 	return out.str();
 }
 
+#ifdef __LCC__
+
+const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
+
+#endif
 }
 
 namespace std {

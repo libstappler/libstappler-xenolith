@@ -647,7 +647,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		stageAtlasData->setData(atlas->getData());
 	}
 
-	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 		Vector<BufferMemoryBarrier> persistentBarriers;
 		for (auto &it : copyFromPersistent) {
 			if (auto b = it.first->getPendingBarrier()) {
@@ -789,7 +789,7 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 				Rc<Ref>(_fontAttachment->getUserdata()), sig);
 
 		if (input->output) {
-			_outBuffer->map([&] (uint8_t *ptr, VkDeviceSize size) {
+			_outBuffer->map([&, this] (uint8_t *ptr, VkDeviceSize size) {
 				input->output(_targetImage->getInfo(), BytesView(ptr, size));
 			});
 		}

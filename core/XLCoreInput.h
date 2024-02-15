@@ -387,35 +387,68 @@ struct InputEventData {
 		return false;
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711
-	std::partial_ordering operator<=>(const InputEventData &r) {
+	bool operator==(const InputEventData &r) const {
+		if (id != r.id || event != r.event || button != r.button || modifiers != r.modifiers || x != r.x || y != r.y) {
+			return false;
+		}
+		switch (event) {
+		case InputEventName::Begin:
+		case InputEventName::Move:
+		case InputEventName::End:
+		case InputEventName::Cancel:
+		case InputEventName::MouseMove:
+		case InputEventName::Scroll:
+			// pointer event
+			if (point.valueX != r.point.valueX || point.valueY != r.point.valueY || point.density != r.point.density) {
+				return false;
+			}
+			break;
+		case InputEventName::KeyPressed:
+		case InputEventName::KeyRepeated:
+		case InputEventName::KeyReleased:
+			// key event
+			if (key.keycode != r.key.keycode || key.compose != r.key.compose || key.keysym != r.key.keysym || key.keychar != r.key.keychar) {
+				return false;
+			}
+			break;
+		default:
+			// bool event
+			break;
+		}
+		return true;
+	}
+
+	bool operator!=(const InputEventData &r) const {
+		return !(*this == r);
+	}
+
+	bool operator<(const InputEventData &r) const {
 		if (id < r.id) {
-			return std::partial_ordering::less;
+			return true;
 		} else if (id > r.id) {
-			return std::partial_ordering::greater;
+			return false;
 		}
 
 		if (toInt(event) < toInt(r.event)) {
-			return std::partial_ordering::less;
+			return true;
 		} else if (toInt(event) > toInt(r.event)) {
-			return std::partial_ordering::greater;
+			return false;
 		}
 
 		if (toInt(button) < toInt(r.button)) {
-			return std::partial_ordering::less;
+			return true;
 		} else if (toInt(button) > toInt(r.button)) {
-			return std::partial_ordering::greater;
+			return false;
 		}
 
 		if (toInt(modifiers) < toInt(r.modifiers)) {
-			return std::partial_ordering::less;
+			return true;
 		} else if (toInt(modifiers) > toInt(r.modifiers)) {
-			return std::partial_ordering::greater;
+			return false;
 		}
 
-		return std::partial_ordering::equivalent;
+		return false;
 	}
-#endif
 };
 
 enum class TextInputType {

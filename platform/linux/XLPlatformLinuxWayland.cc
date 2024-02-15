@@ -22,6 +22,7 @@
 
 #include "XLPlatformLinuxWayland.h"
 #include "XLPlatformLinuxDbus.h"
+#include "SPPlatformUnistd.h"
 
 #include <sys/mman.h>
 #include <dlfcn.h>

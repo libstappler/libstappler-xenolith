@@ -252,7 +252,7 @@ void FrameContext::submitMaterials(const FrameInfo &info) {
 }
 
 void FrameContext::revokeImages(SpanView<uint64_t> vec) {
-	auto shouldRevoke = [&] (const ContextMaterialInfo &iit) {
+	auto shouldRevoke = [&, this] (const ContextMaterialInfo &iit) {
 		for (auto &id : vec) {
 			if (iit.info.hasImage(id)) {
 				emplace_ordered(_pendingMaterialsToRemove, iit.id);

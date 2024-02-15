@@ -220,7 +220,7 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 		_data->applyTransform(t);
 	}
 
-	_data->image->draw([&] (const VectorPath &path, StringView cacheId, const Mat4 &pos) {
+	_data->image->draw([&, this] (const VectorPath &path, StringView cacheId, const Mat4 &pos) {
 		if (pos.isIdentity()) {
 			_data->draw(path, cacheId);
 		} else {

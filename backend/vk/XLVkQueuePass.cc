@@ -235,10 +235,10 @@ QueueOperations QueuePassHandle::getQueueOps() const {
 }
 
 Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		auto queue = handle.getFrameQueue(_data->queue->queue);
-		pass->perform(*this, buf, [&] {
+		pass->perform(*this, buf, [&, this] {
 			size_t i = 0;
 			for (auto &it : _data->subpasses) {
 				if (it->commandsCallback) {
@@ -336,7 +336,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 	auto &layout = _device->getTextureSetLayout();
 
 	// update list of materials in set
-	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove, [&] (const core::MaterialImage &image) -> Rc<core::ImageView> {
+	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove, [&, this] (const core::MaterialImage &image) -> Rc<core::ImageView> {
 		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()), image.info);
 	});
 	if (updated.empty()) {

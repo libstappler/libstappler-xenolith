@@ -345,7 +345,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 		}
 
 		frame.getFrame()->performInQueue([this, hasMaterials] (FrameHandle &frame) {
-			auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+			auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 				Vector<VkImageMemoryBarrier> outputImageBarriers;
 				Vector<VkBufferMemoryBarrier> outputBufferBarriers;
 

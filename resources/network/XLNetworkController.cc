@@ -126,7 +126,7 @@ bool Controller::Data::worker() {
 	}
 
 	do {
-		if (!_pending.pop_direct([&] (memory::PriorityQueue<Rc<Handle>>::PriorityType type, Rc<Request> &&it) {
+		if (!_pending.pop_direct([&, this] (memory::PriorityQueue<Rc<Handle>>::PriorityType type, Rc<Request> &&it) {
 			auto h = curl_easy_init();
 			auto networkHandle = const_cast<Handle *>(&it->getHandle());
 			auto i = _handles.emplace(h, ControllerHandle{move(it), networkHandle}).first;

@@ -344,7 +344,7 @@ void FrameHandle::setCompleteCallback(Function<void(FrameHandle &)> &&cb) {
 }
 
 bool FrameHandle::setup() {
-	_pool->perform([&] {
+	_pool->perform([&, this] {
 		auto q = Rc<FrameQueue>::create(_pool, _request->getQueue(), *this);
 		q->setup();
 

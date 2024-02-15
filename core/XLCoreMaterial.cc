@@ -339,7 +339,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		}
 	}
 
-	auto emplaceMaterial = [&] (uint32_t setIdx, MaterialLayout &set, Vector<uint32_t> &imageLocations, Vector<uint32_t> &bufferLocations) {
+	auto emplaceMaterial = [&, this] (uint32_t setIdx, MaterialLayout &set, Vector<uint32_t> &imageLocations, Vector<uint32_t> &bufferLocations) {
 		if (imageLocations.empty()) {
 			for (uint32_t imageIdx = 0; imageIdx < uniqueImages.size(); ++ imageIdx) {
 				imageLocations.emplace_back(imageIdx);

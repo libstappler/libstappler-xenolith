@@ -171,7 +171,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 		}, this, "TextureSetLayout::initDefault releaseCommandPool");
 
 		loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-			auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+			auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
 				writeDefaults(buf);
 				return true;
 			});
@@ -254,7 +254,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
 			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+				auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
 					writeImageRead(*task->device, buf, task->pool->getFamilyIdx(), task->image, task->layout, task->transferBuffer);
 					return true;
 				});
@@ -336,7 +336,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
 			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, [&] (CommandBuffer &buf) {
+				auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
 					writeBufferRead(*task->device, buf, task->pool->getFamilyIdx(), task->buffer, task->transferBuffer);
 					return true;
 				});
@@ -513,7 +513,7 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 		_layoutIndexes.resize(set.imageSlots.size(), 0);
 	}
 
-	auto pushWritten = [&] {
+	auto pushWritten = [&, this] {
 		imageWriteData.descriptorCount = localImages->size();
 		imageWriteData.pImageInfo = localImages->data();
 		writes.emplace_back(move(imageWriteData));
@@ -609,7 +609,7 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 		_layoutBuffers.resize(set.bufferSlots.size(), nullptr);
 	}
 
-	auto pushWritten = [&] {
+	auto pushWritten = [&, this] {
 		bufferWriteData.descriptorCount = localBuffers->size();
 		bufferWriteData.pBufferInfo = localBuffers->data();
 		writes.emplace_back(move(bufferWriteData));

@@ -783,8 +783,8 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 
 	memory::pool::push(threadPool);
 
-	driver->performWithStorage(handle, [&] (const db::Adapter &adapter) {
-		adapter.performWithTransaction([&] (const db::Transaction &t) {
+	driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+		adapter.performWithTransaction([&, this] (const db::Transaction &t) {
 			currentTransaction = &t;
 			auto ret = task.callback(*server, t);
 			currentTransaction = nullptr;
@@ -796,8 +796,8 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 		auto tmp = asyncTasks;
 		asyncTasks = nullptr;
 
-		driver->performWithStorage(handle, [&] (const db::Adapter &adapter) {
-			adapter.performWithTransaction([&] (const db::Transaction &t) {
+		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+			adapter.performWithTransaction([&, this] (const db::Transaction &t) {
 				currentTransaction = &t;
 				for (auto &it : *tmp) {
 					it(t);
@@ -832,7 +832,7 @@ void Server::ServerData::threadInit() {
 
 	driver->init(handle, db::Vector<db::StringView>());
 
-	driver->performWithStorage(handle, [&] (const db::Adapter &adapter) {
+	driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
 		db::Scheme::initSchemes(predefinedSchemes);
 		interfaceConfig.name = adapter.getDatabaseName();
 		adapter.init(interfaceConfig, predefinedSchemes);
@@ -894,10 +894,10 @@ void Server::ServerData::threadDispose() {
 	}
 
 	if (driver->isValid(handle)) {
-		driver->performWithStorage(handle, [&] (const db::Adapter &adapter) {
+		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
 			auto it = components.begin();
 			while (it != components.end()) {
-				adapter.performWithTransaction([&] (const db::Transaction &t) {
+				adapter.performWithTransaction([&, this] (const db::Transaction &t) {
 					do {
 						memory::pool::context ctx(it->second->pool);
 						for (auto &iit : it->second->components) {

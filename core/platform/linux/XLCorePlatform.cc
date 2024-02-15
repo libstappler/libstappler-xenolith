@@ -24,6 +24,8 @@
 
 #if LINUX
 
+#include "SPPlatformUnistd.h"
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static uint64_t getStaticMinFrameTime() {

@@ -28,6 +28,7 @@
 #include "linux/XLPlatformLinuxXcbView.h"
 #include "XLTextInputManager.h"
 #include "XLVkPlatform.h"
+#include "SPPlatformUnistd.h"
 
 #include <sys/eventfd.h>
 #include <poll.h>
@@ -233,7 +234,7 @@ void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, T
 void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
 	performOnThread([this] {
 		_inputEnabled = true;
-		_mainLoop->performOnMainThread([&] () {
+		_mainLoop->performOnMainThread([this] () {
 			_director->getTextInputManager()->setInputEnabled(true);
 		}, this);
 	}, this);
@@ -242,7 +243,7 @@ void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, Text
 void ViewImpl::cancelTextInput() {
 	performOnThread([this] {
 		_inputEnabled = false;
-		_mainLoop->performOnMainThread([&] () {
+		_mainLoop->performOnMainThread([this] () {
 			_director->getTextInputManager()->setInputEnabled(false);
 		}, this);
 	}, this);

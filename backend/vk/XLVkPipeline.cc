@@ -51,7 +51,7 @@ bool Shader::init(Device &dev, const ProgramData &data) {
 		return setup(dev, data, data.data);
 	} else if (data.callback) {
 		bool ret = false;
-		data.callback([&] (SpanView<uint32_t> shaderData) {
+		data.callback([&, this] (SpanView<uint32_t> shaderData) {
 			ret = setup(dev, data, shaderData);
 		});
 		return ret;

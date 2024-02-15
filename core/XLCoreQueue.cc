@@ -1430,7 +1430,7 @@ const ProgramData * Queue::Builder::addProgram(StringView key, SpanView<uint32_t
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->data = data.pdup(_data->pool);
@@ -1456,7 +1456,7 @@ const ProgramData * Queue::Builder::addProgramByRef(StringView key, SpanView<uin
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->data = data;
@@ -1483,7 +1483,7 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->callback = cb;

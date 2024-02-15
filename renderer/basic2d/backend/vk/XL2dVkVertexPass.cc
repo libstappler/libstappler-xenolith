@@ -682,7 +682,7 @@ bool VertexPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 }
 
 Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
 		auto materials = _materialBuffer->getSet().get();
 
 		Vector<ImageMemoryBarrier> outputImageBarriers;
@@ -698,7 +698,7 @@ Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &h
 
 		prepareRenderPass(buf);
 
-		_data->impl.cast<RenderPass>()->perform(*this, buf, [&] {
+		_data->impl.cast<RenderPass>()->perform(*this, buf, [&, this] {
 			prepareMaterialCommands(materials, buf);
 		});
 
@@ -742,7 +742,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 	//log::verbose("VertexPassHandle", (void *)this, " init");
 
-	auto enableState = [&] (uint32_t stateId) {
+	auto enableState = [&, this] (uint32_t stateId) {
 		if (stateId == dynamicStateId) {
 			return;
 		}

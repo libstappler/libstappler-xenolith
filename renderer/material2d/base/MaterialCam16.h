@@ -108,6 +108,8 @@ struct ViewingConditions {
 	Float rgb_d[3] = { 0.0, 0.0, 0.0 };
 };
 
+#ifndef __LCC__
+
 constexpr ViewingConditions ViewingConditions::DEFAULT = {
 	11.725676537, 50.000000000, 2.000000000,
 	false,
@@ -116,6 +118,8 @@ constexpr ViewingConditions ViewingConditions::DEFAULT = {
 	{ 95.047, 100.0, 108.883 },
 	{ 1.021177769, 0.986307740, 0.933960497 }
 };
+
+#endif
 
 struct Cam16 {
 	using Float = ViewingConditions::Float;

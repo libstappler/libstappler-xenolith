@@ -75,7 +75,7 @@ bool ShadowLightDataAttachmentHandle::writeDescriptor(const core::QueuePassHandl
 }
 
 void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridSize) {
-	_data->map([&] (uint8_t *buf, VkDeviceSize size) {
+	_data->map([&, this] (uint8_t *buf, VkDeviceSize size) {
 		ShadowData *data = reinterpret_cast<ShadowData *>(buf);
 
 		if (isnan(_input->lights.luminosity)) {
@@ -405,7 +405,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 	uint32_t materialIndexes = 0;
 	uint32_t transformIdx = 1;
 
-	auto pushVertexes = [&] (const CmdShadow *cmd, const TransformData &transform, VertexData *vertexes) {
+	auto pushVertexes = [&, this] (const CmdShadow *cmd, const TransformData &transform, VertexData *vertexes) {
 		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region) + vertexOffset;
 
 		memcpy(transformMap.region + sizeof(TransformData) * transformIdx, &transform, sizeof(TransformData));
@@ -444,7 +444,7 @@ bool ShadowVertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<F
 		}
 	}
 
-	auto pushSdf = [&] (const CmdSdfGroup2D *cmd, uint32_t triangles, uint32_t objects) {
+	auto pushSdf = [&, this] (const CmdSdfGroup2D *cmd, uint32_t triangles, uint32_t objects) {
 		auto target = reinterpret_cast<Vec4 *>(vertexesMap.region) + vertexOffset;
 
 		uint32_t transformTriangles = 0;

@@ -94,7 +94,7 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
-	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 		switch (idle) {
 		case IdleMode::Queue:
 			table.vkQueueWaitIdle(_queue);
@@ -189,7 +189,7 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
-	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 		switch (idle) {
 		case IdleMode::Queue:
 			table.vkQueueWaitIdle(_queue);
@@ -218,7 +218,7 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 }
 
 void DeviceQueue::waitIdle() {
-	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 		table.vkQueueWaitIdle(_queue);
 	});
 }

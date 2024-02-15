@@ -325,7 +325,7 @@ public:
 							auto numToken = token;
 							++ numToken;
 							if (numToken.is<WideStringView::CharGroup<CharGroupId::Numbers>>()) {
-								numToken.readInteger().unwrap([&] (int64_t id) {
+								numToken.readInteger().unwrap([&, this] (int64_t id) {
 									if (numToken.empty()) {
 										replacement = string(size_t(id));
 									}
@@ -349,7 +349,7 @@ public:
 								validate.skipChars<WideStringView::CharGroup<CharGroupId::Numbers>>();
 								if (validate.empty()) {
 									WideStringView vtoken(token.data(), token.size() - num.size() - 1);
-									num.readInteger().unwrap([&] (int64_t id) {
+									num.readInteger().unwrap([&, this] (int64_t id) {
 										replacement = numeric(vtoken, id);
 									});
 								}

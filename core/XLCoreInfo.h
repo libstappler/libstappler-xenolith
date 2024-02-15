@@ -53,8 +53,6 @@ struct SamplerInfo {
 	float minLod = 0.0;
 	float maxLod = 0.0;
 
-	bool operator==(const SamplerInfo &) const = default;
-	bool operator!=(const SamplerInfo &) const = default;
 	SP_THREE_WAY_COMPARISON_TYPE(SamplerInfo)
 };
 
@@ -138,9 +136,52 @@ struct ImageInfoData {
 
 	ImageViewInfo getViewInfo(const ImageViewInfo &info) const;
 
-	bool operator==(const ImageInfoData &) const = default;
-	bool operator!=(const ImageInfoData &) const = default;
+#if SP_HAVE_THREE_WAY_COMPARISON
 	SP_THREE_WAY_COMPARISON_TYPE(ImageInfoData)
+#else
+	constexpr bool operator==(const ImageInfoData &other) const {
+		return format == other.format
+			&& flags == other.flags
+			&& imageType == other.imageType
+			&& extent == other.extent
+			&& mipLevels == other.mipLevels
+			&& arrayLayers == other.arrayLayers
+			&& samples == other.samples
+			&& tiling == other.tiling
+			&& usage == other.usage
+			&& type == other.type
+			&& hints == other.hints
+			;
+	}
+	constexpr bool operator!=(const ImageInfoData &other) const {
+		return format != other.format
+			|| flags != other.flags
+			|| imageType != other.imageType
+			|| extent != other.extent
+			|| mipLevels != other.mipLevels
+			|| arrayLayers != other.arrayLayers
+			|| samples != other.samples
+			|| tiling != other.tiling
+			|| usage != other.usage
+			|| type != other.type
+			|| hints != other.hints
+			;
+	}
+	constexpr bool operator<(const ImageInfoData &other) const {
+		if (format < other.format) { return true; } else if (format > other.format) { return false; }
+		if (flags < other.flags) { return true; } else if (flags > other.flags) { return false; }
+		if (imageType < other.imageType) { return true; } else if (imageType > other.imageType) { return false; }
+		if (extent < other.extent) { return true; } else if (extent > other.extent) { return false; }
+		if (mipLevels < other.mipLevels) { return true; } else if (mipLevels > other.mipLevels) { return false; }
+		if (arrayLayers < other.arrayLayers) { return true; } else if (arrayLayers > other.arrayLayers) { return false; }
+		if (samples < other.samples) { return true; } else if (samples > other.samples) { return false; }
+		if (tiling < other.tiling) { return true; } else if (tiling > other.tiling) { return false; }
+		if (usage < other.usage) { return true; } else if (usage > other.usage) { return false; }
+		if (type < other.type) { return true; } else if (type > other.type) { return false; }
+		if (hints < other.hints) { return true; } else if (hints > other.hints) { return false; }
+		return false;
+	}
+#endif
 };
 
 struct ImageInfo : NamedMem, ImageInfoData {
@@ -264,9 +305,29 @@ struct ImageViewInfo {
 	bool isCompatible(const ImageInfo &) const;
 	String description() const;
 
-	bool operator==(const ImageViewInfo &) const = default;
-	bool operator!=(const ImageViewInfo &) const = default;
+#if SP_HAVE_THREE_WAY_COMPARISON
 	SP_THREE_WAY_COMPARISON_TYPE(ImageViewInfo)
+#else
+	constexpr bool operator==(const ImageViewInfo &other) const {
+		return format == other.format && type == other.type && r == other.r && g == other.g && b == other.b && a == other.a
+				&& baseArrayLayer == other.baseArrayLayer && layerCount == other.layerCount;
+	}
+	constexpr bool operator!=(const ImageViewInfo &other) const {
+		return format != other.format || type != other.type || r != other.r || g != other.g || b != other.b || a != other.a
+				|| baseArrayLayer != other.baseArrayLayer || layerCount != other.layerCount;
+	}
+	constexpr bool operator<(const ImageViewInfo &other) const {
+		if (format < other.format) { return true; } else if (format > other.format) { return false; }
+		if (type < other.type) { return true; } else if (type > other.type) { return false; }
+		if (r < other.r) { return true; } else if (r > other.r) { return false; }
+		if (g < other.g) { return true; } else if (g > other.g) { return false; }
+		if (b < other.b) { return true; } else if (b > other.b) { return false; }
+		if (a < other.a) { return true; } else if (a > other.a) { return false; }
+		if (baseArrayLayer < other.baseArrayLayer) { return true; } else if (baseArrayLayer > other.baseArrayLayer) { return false; }
+		if (layerCount < other.layerCount) { return true; } else if (layerCount > other.layerCount) { return false; }
+		return false;
+	}
+#endif
 };
 
 struct FrameContraints {
@@ -329,7 +390,8 @@ struct FrameContraints {
 		return out;
 	}
 
-	bool operator==(const FrameContraints &) const = default;
+	constexpr bool operator==(const FrameContraints &) const = default;
+	constexpr bool operator!=(const FrameContraints &) const = default;
 };
 
 struct SwapchainConfig {
@@ -345,6 +407,9 @@ struct SwapchainConfig {
 	bool transfer = true;
 
 	String description() const;
+
+	constexpr bool operator==(const SwapchainConfig &) const = default;
+	constexpr bool operator!=(const SwapchainConfig &) const = default;
 };
 
 struct SurfaceInfo {
