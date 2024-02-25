@@ -150,7 +150,7 @@ struct ImageMemoryBarrier {
 			VkImageLayout old, VkImageLayout _new, QueueFamilyTransfer, VkImageSubresourceRange);
 	ImageMemoryBarrier(const VkImageMemoryBarrier &);
 
-	operator bool() const {
+	explicit operator bool() const {
 		return srcAccessMask != 0 || dstAccessMask != 0
 			|| oldLayout != VK_IMAGE_LAYOUT_UNDEFINED || newLayout != VK_IMAGE_LAYOUT_UNDEFINED
 			|| image != nullptr;
@@ -174,7 +174,7 @@ struct BufferMemoryBarrier {
 			QueueFamilyTransfer, VkDeviceSize, VkDeviceSize);
 	BufferMemoryBarrier(const VkBufferMemoryBarrier &);
 
-	operator bool() const {
+	explicit operator bool() const {
 		return srcAccessMask != 0 || dstAccessMask != 0 || buffer != nullptr;
 	}
 

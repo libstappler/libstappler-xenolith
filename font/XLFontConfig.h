@@ -25,11 +25,9 @@
 
 #include "XLCommon.h"
 #include "SPFontStyle.h"
+#include "SPFontFace.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
-
-// preload char layouts for whole group when char from this group is met
-static constexpr bool FontPreloadGroups = false;
 
 // max chars count, used by locale::hasLocaleTagsFast
 static constexpr size_t MaxFastLocaleChars = size_t(127);
@@ -38,28 +36,8 @@ static constexpr size_t MaxFastLocaleChars = size_t(127);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-using FontLayoutParameters = geom::FontLayoutParameters;
-using FontVariations = geom::FontVariations;
-using FontSpecializationVector = geom::FontSpecializationVector;
-using FontParameters = geom::FontParameters;
-using FontVariableAxis = geom::FontVariableAxis;
-using FontWeight = geom::FontWeight;
-using FontStretch = geom::FontStretch;
-using FontGrade = geom::FontGrade;
-using FontStyle = geom::FontStyle;
-using FontVariant = geom::FontVariant;
-using FontSize = geom::FontSize;
-using CharTexture = geom::CharTexture;
-using CharLayout = geom::CharLayout;
-using CharSpec = geom::CharSpec;
-using Metrics = geom::FontMetrics;
-using TextDecoration = geom::TextDecoration;
-using TextAlign = geom::TextAlign;
-using TextParameters = geom::TextParameters;
-using TextTransform = geom::TextTransform;
-using VerticalAlign = geom::VerticalAlign;
-using WhiteSpace = geom::WhiteSpace;
-using Hyphens = geom::Hyphens;
+using namespace stappler::font;
 
 }
+
 #endif /* XENOLITH_FONT_XLFONTCONFIG_H_ */

@@ -78,7 +78,7 @@ public:
 		void *ptr = nullptr;
 		Mutex *mappingProtection = nullptr;
 
-		operator bool () const { return mem != VK_NULL_HANDLE; }
+		explicit operator bool () const { return mem != VK_NULL_HANDLE; }
 
 		size_t getFreeSpace() const { return size - offset; }
 	};
@@ -92,7 +92,7 @@ public:
 		void *ptr = nullptr;
 		Mutex *mappingProtection = nullptr;
 
-		operator bool () const { return mem != VK_NULL_HANDLE; }
+		explicit operator bool () const { return mem != VK_NULL_HANDLE; }
 	};
 
 	struct MemType {

@@ -211,7 +211,7 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 
 		DBusHandlerResult handleMessage(DBusMessage *);
 
-		operator bool() const { return connection != nullptr; }
+		explicit operator bool() const { return connection != nullptr; }
 
 		void flush();
 		DBusDispatchStatus dispatch();
@@ -252,7 +252,7 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	DBusMessage *getSettingSync(Connection &c, const char *key, const char *value, Error &err);
 	bool parseType(DBusMessage *const reply, const int type, void *value);
 
-	operator bool () const { return handle != false; }
+	explicit operator bool () const { return handle ? true : false; }
 
 	bool openHandle(Dso &d);
 

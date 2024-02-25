@@ -406,18 +406,18 @@ struct VertexMaterialDrawPlan {
 	#if DEBUG
 						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
 	#endif
-						auto anchor = geom::CharLayout::getAnchorForObject(t.object);
+						auto anchor = font::CharId::getAnchorForChar(t.object);
 						switch (anchor) {
-						case geom::SpriteAnchor::BottomLeft:
+						case font::CharAnchor::BottomLeft:
 							t.tex = Vec2(1.0f - atlasScaleX, 0.0f);
 							break;
-						case geom::SpriteAnchor::TopLeft:
+						case font::CharAnchor::TopLeft:
 							t.tex = Vec2(1.0f - atlasScaleX, 0.0f + atlasScaleY);
 							break;
-						case geom::SpriteAnchor::TopRight:
+						case font::CharAnchor::TopRight:
 							t.tex = Vec2(1.0f, 0.0f + atlasScaleY);
 							break;
-						case geom::SpriteAnchor::BottomRight:
+						case font::CharAnchor::BottomRight:
 							t.tex = Vec2(1.0f, 0.0f);
 							break;
 						}

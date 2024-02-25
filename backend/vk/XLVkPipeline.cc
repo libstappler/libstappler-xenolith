@@ -49,7 +49,7 @@ bool Shader::init(Device &dev, const ProgramData &data) {
 
 	if (!data.data.empty()) {
 		return setup(dev, data, data.data);
-	} else if (data.callback) {
+	} else if (data.callback != nullptr) {
 		bool ret = false;
 		data.callback([&, this] (SpanView<uint32_t> shaderData) {
 			ret = setup(dev, data, shaderData);

@@ -239,34 +239,40 @@ void Surface::updateBackgroundImage(VectorImage *img, const SurfaceStyleData &st
 	if (radius > 0.0f) {
 		switch (style.shapeFamily) {
 		case ShapeFamily::RoundedCorners:
-			path->moveTo(0.0f, radius)
-				.arcTo(radius, radius, 0.0f, false, true, radius, 0.0f)
-				.lineTo(_contentSize.width - radius, 0.0f)
-				.arcTo(radius, radius, 0.0f, false, true, _contentSize.width, radius)
-				.lineTo(_contentSize.width, _contentSize.height - radius)
-				.arcTo(radius, radius, 0.0f, false, true, _contentSize.width - radius, _contentSize.height)
-				.lineTo(radius, _contentSize.height)
-				.arcTo(radius, radius, 0.0f, false, true, 0.0f, _contentSize.height - radius)
-				.closePath();
+			path->openForWriting([&] (vg::PathWriter &writer) {
+				writer.moveTo(0.0f, radius)
+					.arcTo(radius, radius, 0.0f, false, true, radius, 0.0f)
+					.lineTo(_contentSize.width - radius, 0.0f)
+					.arcTo(radius, radius, 0.0f, false, true, _contentSize.width, radius)
+					.lineTo(_contentSize.width, _contentSize.height - radius)
+					.arcTo(radius, radius, 0.0f, false, true, _contentSize.width - radius, _contentSize.height)
+					.lineTo(radius, _contentSize.height)
+					.arcTo(radius, radius, 0.0f, false, true, 0.0f, _contentSize.height - radius)
+					.closePath();
+			});
 			break;
 		case ShapeFamily::CutCorners:
-			path->moveTo(0.0f, radius)
-				.lineTo(radius, 0.0f)
-				.lineTo(_contentSize.width - radius, 0.0f)
-				.lineTo(_contentSize.width, radius)
-				.lineTo(_contentSize.width, _contentSize.height - radius)
-				.lineTo(_contentSize.width - radius, _contentSize.height)
-				.lineTo(radius, _contentSize.height)
-				.lineTo(0.0f, _contentSize.height - radius)
-				.closePath();
+			path->openForWriting([&] (vg::PathWriter &writer) {
+				writer.moveTo(0.0f, radius)
+					.lineTo(radius, 0.0f)
+					.lineTo(_contentSize.width - radius, 0.0f)
+					.lineTo(_contentSize.width, radius)
+					.lineTo(_contentSize.width, _contentSize.height - radius)
+					.lineTo(_contentSize.width - radius, _contentSize.height)
+					.lineTo(radius, _contentSize.height)
+					.lineTo(0.0f, _contentSize.height - radius)
+					.closePath();
+			});
 			break;
 		}
 	} else {
-		path->moveTo(0.0f, 0.0f)
-			.lineTo(_contentSize.width, 0.0f)
-			.lineTo(_contentSize.width, _contentSize.height)
-			.lineTo(0.0f, _contentSize.height)
-			.closePath();
+		path->openForWriting([&] (vg::PathWriter &writer) {
+			writer.moveTo(0.0f, 0.0f)
+				.lineTo(_contentSize.width, 0.0f)
+				.lineTo(_contentSize.width, _contentSize.height)
+				.lineTo(0.0f, _contentSize.height)
+				.closePath();
+		});
 	}
 
 	path->setAntialiased(false)

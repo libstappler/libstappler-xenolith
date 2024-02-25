@@ -24,8 +24,7 @@
 
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
-#include "XLFontLibrary.h"
-#include "XLFontLayout.h"
+#include "XLFontExtension.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
@@ -227,8 +226,8 @@ FontController::~FontController() {
 	invalidate(nullptr);
 }
 
-bool FontController::init(const Rc<FontLibrary> &lib) {
-	_library = lib;
+bool FontController::init(const Rc<FontExtension> &ext) {
+	_ext = ext;
 	return true;
 }
 
@@ -316,10 +315,10 @@ bool FontController::addAlias(StringView newAlias, StringView familyName) {
 	}
 }
 
-Rc<FontLayout> FontController::getLayout(FontParameters style) {
-	Rc<FontLayout> ret;
+Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
+	Rc<FontFaceSet> ret;
 
-	FontLayout *face = nullptr;
+	FontFaceSet *face = nullptr;
 
 	style.fontSize = style.fontSize * style.density;
 
@@ -344,7 +343,7 @@ Rc<FontLayout> FontController::getLayout(FontParameters style) {
 	}
 
 	// search for exact match
-	auto cfgName = FontLayout::constructName(style.fontFamily, style);
+	auto cfgName = FontFaceSet::constructName(style.fontFamily, style);
 	auto it = _layouts.find(cfgName);
 	if (it != _layouts.end()) {
 		face = it->second.get();
@@ -354,7 +353,7 @@ Rc<FontLayout> FontController::getLayout(FontParameters style) {
 	if (!face) {
 		// find best possible config
 		spec = findSpecialization(familyIt->second, style, nullptr);
-		cfgName = FontLayout::constructName(style.fontFamily, spec);
+		cfgName = FontFaceSet::constructName(style.fontFamily, spec);
 		auto layoutIt = _layouts.find(cfgName);
 		if (layoutIt != _layouts.end()) {
 			face = layoutIt->second.get();
@@ -374,7 +373,7 @@ Rc<FontLayout> FontController::getLayout(FontParameters style) {
 
 	// update best match (if fonts was updated)
 	spec = findSpecialization(familyIt->second, style, &data);
-	cfgName = FontLayout::constructName(style.fontFamily, spec);
+	cfgName = FontFaceSet::constructName(style.fontFamily, spec);
 
 	// check if somebody already created layout for us in another thread
 	it = _layouts.find(cfgName);
@@ -384,15 +383,15 @@ Rc<FontLayout> FontController::getLayout(FontParameters style) {
 	}
 
 	// create layout
-	ret = Rc<FontLayout>::create(move(cfgName), style.fontFamily, move(spec), move(data), _library);
+	ret = Rc<FontFaceSet>::create(move(cfgName), style.fontFamily, move(spec), move(data), _ext->getLibrary());
 	_layouts.emplace(ret->getName(), ret);
 	ret->touch(_clock, style.persistent);
 	return ret;
 }
 
-Rc<FontLayout> FontController::getLayoutForString(const FontParameters &f, const FontCharString &str) {
+Rc<FontFaceSet> FontController::getLayoutForString(const FontParameters &f, const CharVector &str) {
 	if (auto l = getLayout(f)) {
-		Vector<char16_t> failed;
+		Vector<char32_t> failed;
 		if (f.persistent) {
 			l->addString(str, failed);
 		} else {
@@ -403,11 +402,11 @@ Rc<FontLayout> FontController::getLayoutForString(const FontParameters &f, const
 	return nullptr;
 }
 
-Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontLayout> &l, SpanView<CharSpec> chars) {
+Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> &l, SpanView<CharLayoutData> chars) {
 	if (l->addTextureChars(chars)) {
 		if (!_dependency) {
 			_dependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
-				_library->getQueue()
+				_ext->getQueue()
 			});
 		}
 		_dirty = true;
@@ -463,7 +462,7 @@ void FontController::update(Application *, const UpdateTime &clock) {
 			}
 		}
 		if (!objects.empty()) {
-			_library->updateImage(_image, move(objects), move(_dependency));
+			_ext->updateImage(_image, move(objects), move(_dependency));
 			_dependency = nullptr;
 		}
 		_dirty = false;

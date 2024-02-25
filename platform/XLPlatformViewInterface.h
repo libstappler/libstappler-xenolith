@@ -100,7 +100,7 @@ public:
 	ViewInterface *get() const { return ref; }
 
 	inline operator ViewInterface * () const { return get(); }
-	inline operator bool () const { return ref != nullptr; }
+	inline explicit operator bool () const { return ref != nullptr; }
 	inline ViewInterface * operator->() const { return get(); }
 
 private:

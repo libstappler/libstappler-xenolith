@@ -39,6 +39,7 @@
 #include "SPMat4.h"
 #include "SPPadding.h"
 #include "SPColor.h"
+#include "SPColorHCT.h"
 #include "SPFontStyle.h"
 
 #include <typeindex>
@@ -78,26 +79,27 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 // Import std memory model as default
 using namespace mem_std;
 
-using Vec2 = geom::Vec2;
-using Vec3 = geom::Vec3;
-using Vec4 = geom::Vec4;
-using Mat4 = geom::Mat4;
-using Size2 = geom::Size2;
-using Size3 = geom::Size3;
-using Extent2 = geom::Extent2;
-using Extent3 = geom::Extent3;
-using Rect = geom::Rect;
-using URect = geom::URect;
-using UVec2 = geom::UVec2;
-using UVec3 = geom::UVec3;
-using UVec4 = geom::UVec4;
-using Quaternion = geom::Quaternion;
-using Color = geom::Color;
-using Color3B = geom::Color3B;
-using Color4B = geom::Color4B;
-using Color4F = geom::Color4F;
-using ColorMask = geom::ColorMask;
-using Padding = geom::Padding;
+using geom::Vec2;
+using geom::Vec3;
+using geom::Vec4;
+using geom::Mat4;
+using geom::Size2;
+using geom::Size3;
+using geom::Extent2;
+using geom::Extent3;
+using geom::Rect;
+using geom::URect;
+using geom::UVec2;
+using geom::UVec3;
+using geom::UVec4;
+using geom::Quaternion;
+using geom::Color;
+using geom::Color3B;
+using geom::Color4B;
+using geom::Color4F;
+using geom::ColorHCT;
+using geom::ColorMask;
+using geom::Padding;
 namespace Anchor = geom::Anchor;
 
 inline uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {

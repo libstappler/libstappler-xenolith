@@ -50,7 +50,7 @@ public:
 
 	Rc<Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 
-	operator bool () const {
+	explicit operator bool () const {
 		return vkGetInstanceProcAddr != nullptr
 			&& vkCreateInstance != nullptr
 			&& vkEnumerateInstanceExtensionProperties != nullptr

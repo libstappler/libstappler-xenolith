@@ -46,7 +46,7 @@ public:
 	bool init();
 	void close();
 
-	bool hasX11() const { return _x11; }
+	bool hasX11() const { return _x11 ? true : false; }
 
 	struct xkb_context *getContext() const { return _context; }
 

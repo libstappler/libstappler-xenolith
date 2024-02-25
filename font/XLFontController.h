@@ -23,7 +23,7 @@
 #ifndef XENOLITH_FONT_XLFONTCONTROLLER_H_
 #define XENOLITH_FONT_XLFONTCONTROLLER_H_
 
-#include "XLFontFace.h"
+#include "XLFontConfig.h"
 #include "XLEventHeader.h"
 #include "XLResourceCache.h"
 #include "XLApplicationExtension.h"
@@ -31,14 +31,11 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-class FontFaceObject;
-class FontFaceData;
-class FontLibrary;
-class FontLayout;
+class FontExtension;
 
 struct FontUpdateRequest {
-	Rc<font::FontFaceObject> object;
-	Vector<char16_t> chars;
+	Rc<FontFaceObject> object;
+	Vector<char32_t> chars;
 	bool persistent = false;
 };
 
@@ -109,7 +106,7 @@ public:
 
 	virtual ~FontController();
 
-	bool init(const Rc<FontLibrary> &);
+	bool init(const Rc<FontExtension> &);
 	virtual void initialize(Application *) override;
 	virtual void invalidate(Application *) override;
 
@@ -123,10 +120,10 @@ public:
 	const Rc<core::DynamicImage> &getImage() const { return _image; }
 	const Rc<Texture> &getTexture() const { return _texture; }
 
-	Rc<FontLayout> getLayout(FontParameters f);
-	Rc<FontLayout> getLayoutForString(const FontParameters &f, const FontCharString &);
+	Rc<FontFaceSet> getLayout(FontParameters f);
+	Rc<FontFaceSet> getLayoutForString(const FontParameters &f, const CharVector &);
 
-	Rc<core::DependencyEvent> addTextureChars(const Rc<FontLayout> &, SpanView<CharSpec>);
+	Rc<core::DependencyEvent> addTextureChars(const Rc<FontFaceSet> &, SpanView<CharLayoutData>);
 
 	uint32_t getFamilyIndex(StringView) const;
 	StringView getFamilyName(uint32_t idx) const;
@@ -134,7 +131,7 @@ public:
 	virtual void update(Application *, const UpdateTime &clock) override;
 
 protected:
-	friend class FontLibrary;
+	friend class FontExtension;
 
 	void setImage(Rc<core::DynamicImage> &&);
 	void setLoaded(bool);
@@ -152,12 +149,12 @@ protected:
 	String _defaultFontFamily = "default";
 	Rc<Texture> _texture;
 	Rc<core::DynamicImage> _image;
-	Rc<FontLibrary> _library;
+	Rc<FontExtension> _ext;
 
 	Map<String, String> _aliases;
 	Vector<StringView> _familiesNames;
 	Map<String, FamilySpec> _families;
-	HashMap<StringView, Rc<FontLayout>> _layouts;
+	HashMap<StringView, Rc<FontFaceSet>> _layouts;
 	Rc<core::DependencyEvent> _dependency;
 
 	bool _dirty = false;

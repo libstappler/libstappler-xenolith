@@ -225,7 +225,7 @@ bool InputTextContainer::handleLongPress(const Vec2 &pt, uint32_t tickCount) {
 
 		auto pos = _label->convertToNodeSpace(pt);
 
-		auto chIdx = _label->getCharIndex(pos, font::FormatSpec::Center);
+		auto chIdx = _label->getCharIndex(pos, font::CharSelectMode::Center);
 		if (chIdx.first != maxOf<uint32_t>()) {
 			auto word = _label->selectWord(chIdx.first);
 			setCursor(word);
@@ -283,14 +283,14 @@ bool InputTextContainer::handleSwipe(const Vec2 &pt, const Vec2 &delta) {
 				}
 			}
 		} else if (_selectedPointer == _selectionPointerStart) {
-			auto charNumber = _label->getCharIndex(locInLabel, font::FormatSpec::Prefix).first;
+			auto charNumber = _label->getCharIndex(locInLabel, font::CharSelectMode::Prefix).first;
 			if (charNumber != maxOf<uint32_t>()) {
 				if (charNumber != _cursor.start && charNumber < _cursor.start + _cursor.length) {
 					setCursor(TextCursor(charNumber, (_cursor.start + _cursor.length) - charNumber));
 				}
 			}
 		} else if (_selectedPointer == _selectionPointerEnd) {
-			auto charNumber = _label->getCharIndex(locInLabel, font::FormatSpec::Suffix).first;
+			auto charNumber = _label->getCharIndex(locInLabel, font::CharSelectMode::Suffix).first;
 			if (charNumber != maxOf<uint32_t>()) {
 				if (charNumber != _cursor.start + _cursor.length - 1 && charNumber >= _cursor.start) {
 					setCursor(TextCursor(_cursor.start, charNumber - _cursor.start + 1));

@@ -241,7 +241,7 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &ha
 		pass->perform(*this, buf, [&, this] {
 			size_t i = 0;
 			for (auto &it : _data->subpasses) {
-				if (it->commandsCallback) {
+				if (it->commandsCallback != nullptr) {
 					it->commandsCallback(*it, *queue, buf);
 				}
 				if (i + 2 < _data->subpasses.size()) {

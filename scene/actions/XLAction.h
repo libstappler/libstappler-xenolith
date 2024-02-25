@@ -238,6 +238,7 @@ protected:
 	bool reserve(size_t);
 	bool addAction(Function<void()> &&); // add callback action
 	bool addAction(float); // add timeout action
+	bool addAction(TimeInterval); // add timeout action
 
 	template <typename T>
 	bool addAction(const Rc<T> &t) {

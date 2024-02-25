@@ -21,9 +21,10 @@
  **/
 
 #include "XLVkFontQueue.h"
-#include "XLFontLibrary.h"
+#include "XLFontExtension.h"
 #include "XLCoreFrameQueue.h"
 #include "XLFontDeferredRequest.h"
+#include "SPFontEmplace.h"
 
 #if MODULE_XENOLITH_BACKEND_VK
 
@@ -211,7 +212,7 @@ static Extent2 FontAttachmentHandle_buildTextureData(Vector<SpanView<VkBufferIma
 		}
 	}
 
-	geom::EmplaceCharInterface iface({
+	font::EmplaceCharInterface iface({
 		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.x; }, // x
 		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.y; }, // y
 		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageExtent.width; }, // width
@@ -223,7 +224,7 @@ static Extent2 FontAttachmentHandle_buildTextureData(Vector<SpanView<VkBufferIma
 
 	auto span = makeSpanView(reinterpret_cast<void **>(layoutData.data()), layoutData.size());
 
-	return geom::emplaceChars(iface, span, totalSquare);
+	return font::emplaceChars(iface, span, totalSquare);
 }
 
 void FontAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
@@ -275,7 +276,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 			}
 		}
 
-		if (addPersistentCopy(font::CharLayout::SourceMax, 0)) {
+		if (addPersistentCopy(font::CharId::SourceMax, 0)) {
 			underlinePersistent = true;
 		}
 	} else {
@@ -331,7 +332,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		}
 	}
 
-	font::DeferredRequest::runFontRenderer(*_input->queue, _input->library, _input->requests, [this] (uint32_t reqIdx, const font::CharTexture &texData) {
+	font::DeferredRequest::runFontRenderer(*_input->queue, _input->ext, _input->requests, [this] (uint32_t reqIdx, const font::CharTexture &texData) {
 		pushCopyTexture(reqIdx, texData);
 	}, [this, handle = Rc<FrameHandle>(&handle), underlinePersistent] {
 		writeAtlasData(*handle, underlinePersistent);
@@ -347,7 +348,7 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 		if (offset + 1 <= Allocator::PageSize * 2) {
 			uint8_t whiteColor = 255;
 			_frontBuffer->setData(BytesView(&whiteColor, 1), offset);
-			auto objectId = font::CharLayout::getObjectId(font::CharLayout::SourceMax, char16_t(0), geom::SpriteAnchor::BottomLeft);
+			auto objectId = font::CharId::getCharId(font::CharId::SourceMax, char16_t(0), font::CharAnchor::BottomLeft);
 			auto texOffset = _textureTargetOffset.fetch_add(1);
 			_copyFromTmpBufferData[_copyFromTmpBufferData.size() - 1] = VkBufferImageCopy({
 				VkDeviceSize(offset),
@@ -424,7 +425,7 @@ uint32_t FontAttachmentHandle::nextPersistentTransferOffset(size_t blockSize) {
 }
 
 bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char16_t c) {
-	auto objId = font::CharLayout::getObjectId(fontId, c, geom::SpriteAnchor::BottomLeft);
+	auto objId = font::CharId::getCharId(fontId, c, font::CharAnchor::BottomLeft);
 	auto it = _userdata->chars.find(objId);
 	if (it != _userdata->chars.end()) {
 		auto &buf = _userdata->buffers[it->second.bufferIdx];
@@ -471,7 +472,7 @@ void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharText
 		}
 	}
 
-	auto objectId = font::CharLayout::getObjectId(texData.fontID, texData.charID, geom::SpriteAnchor::BottomLeft);
+	auto objectId = font::CharId::getCharId(texData.fontID, texData.charID, font::CharAnchor::BottomLeft);
 	auto texOffset = _textureTargetOffset.fetch_add(1);
 	_copyFromTmpBufferData[_copyFromTmpOffset.fetch_add(1)] = VkBufferImageCopy({
 		VkDeviceSize(offset),
@@ -487,7 +488,7 @@ void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharText
 		auto targetIdx = _copyToPersistentOffset.fetch_add(1);
 		auto targetOffset = _persistentTargetBuffer->reserveBlock(size, _optimalTextureAlignment);
 		_copyToPersistentBufferData[targetIdx] = VkBufferCopy({
-			offset, targetOffset, size
+			offset, targetOffset, VkDeviceSize(size)
 		});
 		_copyPersistentCharData[targetIdx] = RenderFontCharPersistentData{
 			RenderFontCharTextureData{texData.x, texData.y, texData.width, texData.height},
@@ -523,10 +524,10 @@ void FontAttachmentHandle::pushAtlasTexture(core::DataAtlas *atlas, VkBufferImag
 	data[3].pos = Vec2(tex.x + tex.width, -tex.y);
 	data[3].tex = Vec2((x + w) / _imageExtent.width, y / _imageExtent.height);
 
-	atlas->addObject(font::CharLayout::getObjectId(id, geom::SpriteAnchor::BottomLeft), &data[0]);
-	atlas->addObject(font::CharLayout::getObjectId(id, geom::SpriteAnchor::TopLeft), &data[1]);
-	atlas->addObject(font::CharLayout::getObjectId(id, geom::SpriteAnchor::TopRight), &data[2]);
-	atlas->addObject(font::CharLayout::getObjectId(id, geom::SpriteAnchor::BottomRight), &data[3]);
+	atlas->addObject(font::CharId::rebindCharId(id, font::CharAnchor::BottomLeft), &data[0]);
+	atlas->addObject(font::CharId::rebindCharId(id, font::CharAnchor::TopLeft), &data[1]);
+	atlas->addObject(font::CharId::rebindCharId(id, font::CharAnchor::TopRight), &data[2]);
+	atlas->addObject(font::CharId::rebindCharId(id, font::CharAnchor::BottomRight), &data[3]);
 }
 
 FontRenderPass::~FontRenderPass() { }

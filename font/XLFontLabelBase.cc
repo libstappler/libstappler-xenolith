@@ -25,6 +25,90 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
+TextLayout::~TextLayout() { }
+
+TextLayout::TextLayout(FontController *h, size_t nchars, size_t nranges)
+: _handle(h) {
+	if (nchars) {
+		_data.chars.reserve(nchars);
+		_data.lines.reserve(nchars / 60);
+	}
+	if (nranges) {
+		_data.ranges.reserve(nranges);
+	}
+}
+
+void TextLayout::reserve(size_t nchars, size_t nranges) {
+	_data.reserve(nchars, nranges);
+}
+
+void TextLayout::clear() {
+	_data.chars.clear();
+	_data.lines.clear();
+	_data.ranges.clear();
+	_data.overflow = false;
+}
+
+RangeLineIterator TextLayout::begin() const {
+	return _data.begin();
+}
+
+RangeLineIterator TextLayout::end() const {
+	return _data.end();
+}
+
+auto TextLayout::str(bool filter) const -> WideString {
+	WideString ret; ret.reserve(_data.chars.size());
+	_data.str([&] (char16_t ch) {
+		ret.push_back(ch);
+	}, filter);
+	return ret;
+}
+
+auto TextLayout::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis, bool filter) const -> WideString {
+	WideString ret; ret.reserve(s_end - s_start + 2);
+	_data.str([&] (char16_t ch) {
+		ret.push_back(ch);
+	}, s_start, s_end, maxWords, ellipsis, filter);
+	return ret;
+}
+
+Pair<uint32_t, CharSelectMode> TextLayout::getChar(int32_t x, int32_t y, CharSelectMode m) const {
+	return _data.getChar(x, y, m);
+}
+
+const LineLayoutData *TextLayout::getLine(uint32_t charIndex) const {
+	return _data.getLine(charIndex);
+}
+
+uint32_t TextLayout::getLineForChar(uint32_t charIndex) const {
+	return _data.getLineForChar(charIndex);
+}
+
+Pair<uint32_t, uint32_t> TextLayout::selectWord(uint32_t origin) const {
+	return _data.selectWord(origin);
+}
+
+geom::Rect TextLayout::getLineRect(uint32_t lineId, float density, const geom::Vec2 &origin) const {
+	return _data.getLineRect(lineId, density, origin);
+}
+
+geom::Rect TextLayout::getLineRect(const LineLayoutData &line, float density, const geom::Vec2 &origin) const {
+	return _data.getLineRect(line, density, origin);
+}
+
+auto TextLayout::getLabelRects(uint32_t firstCharId, uint32_t lastCharId, float density, const geom::Vec2 &origin, const geom::Padding &p) const -> Vector<geom::Rect> {
+	Vector<geom::Rect> ret;
+	getLabelRects(ret, firstCharId, lastCharId, density, origin, p);
+	return ret;
+}
+
+void TextLayout::getLabelRects(Vector<geom::Rect> &ret, uint32_t firstCharId, uint32_t lastCharId, float density, const geom::Vec2 &origin, const geom::Padding &p) const {
+	_data.getLabelRects([&] (const geom::Rect &rect) {
+		ret.push_back(rect);
+	}, firstCharId, lastCharId, density, origin, p);
+}
+
 LabelBase::DescriptionStyle::DescriptionStyle() {
 	font.fontFamily = StringView("default");
 	font.fontSize = FontSize(14);
@@ -100,8 +184,8 @@ bool LabelBase::ExternalFormatter::init(font::FontController *s, float w, float 
 	}
 
 	_density = density;
-	_spec.setSource(s);
-	_formatter.init(&_spec);
+	_spec = Rc<TextLayout>::alloc(s);
+	_formatter.reset(_spec->getData());
 	if (w > 0.0f) {
 		_formatter.setWidth(static_cast<uint16_t>(roundf(w * _density)));
 	}
@@ -117,7 +201,9 @@ void LabelBase::ExternalFormatter::setLineHeightRelative(float value) {
 }
 
 void LabelBase::ExternalFormatter::reserve(size_t chars, size_t ranges) {
-	_spec.reserve(chars, ranges);
+	if (_spec) {
+		_spec->reserve(chars, ranges);
+	}
 }
 
 void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style, const StringView &str, bool localized) {
@@ -137,8 +223,11 @@ void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style, cons
 }
 
 Size2 LabelBase::ExternalFormatter::finalize() {
-	_formatter.finalize();
-	return Size2(_spec.width / _density, _spec.height / _density);
+	if (_spec) {
+		_formatter.finalize();
+		return Size2(_spec->getWidth() / _density, _spec->getHeight() / _density);
+	}
+	return Size2();
 }
 
 WideString LabelBase::getLocalizedString(const StringView &s) {
@@ -162,9 +251,11 @@ float LabelBase::getStringWidth(font::FontController *source, const DescriptionS
 		return 0.0f;
 	}
 
-	font::FormatSpec spec;
-	spec.setSource(source);
-	font::Formatter fmt(&spec);
+	TextLayoutData<Interface> spec;
+
+	font::Formatter fmt([source = Rc<font::FontController>(source)] (const FontParameters &f) {
+		return source->getLayout(f);
+	}, &spec);
 	fmt.begin(0, 0);
 
 	if (localized && locale::hasLocaleTags(str)) {
@@ -195,9 +286,11 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 		return Size2(0.0f, 0.0f);
 	}
 
-	font::FormatSpec spec;
-	spec.setSource(source);
-	font::Formatter fmt(&spec);
+	TextLayoutData<Interface> spec;
+
+	font::Formatter fmt([source = Rc<font::FontController>(source)] (const FontParameters &f) {
+		return source->getLayout(f);
+	}, &spec);
 	fmt.setWidth(static_cast<uint16_t>(roundf(w * style.font.density)));
 	fmt.begin(0, 0);
 
@@ -211,7 +304,7 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 	}
 
 	fmt.finalize();
-	return Size2(spec.maxLineX / style.font.density, spec.height / style.font.density);
+	return Size2(spec.maxAdvance / style.font.density, spec.height / style.font.density);
 }
 
 void LabelBase::setAlignment(TextAlign alignment) {
@@ -582,7 +675,7 @@ void LabelBase::setStyles(const StyleVec &vec) {
 	setLabelDirty();
 }
 
-bool LabelBase::updateFormatSpec(FormatSpec *format, const StyleVec &compiledStyles, float density, uint8_t _adjustValue) {
+bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledStyles, float density, uint8_t _adjustValue) {
 	bool success = true;
 	uint16_t adjustValue = maxOf<uint16_t>();
 
@@ -595,7 +688,9 @@ bool LabelBase::updateFormatSpec(FormatSpec *format, const StyleVec &compiledSty
 
 		format->clear();
 
-		font::Formatter formatter(format);
+		font::Formatter formatter([format] (const FontParameters &f) {
+			return format->getHandle()->getLayout(f);
+		}, format->getData());
 		formatter.setWidth(static_cast<uint16_t>(roundf(_width * density)));
 		formatter.setTextAlignment(_alignment);
 		formatter.setMaxWidth(static_cast<uint16_t>(roundf(_maxWidth * density)));
@@ -616,7 +711,7 @@ bool LabelBase::updateFormatSpec(FormatSpec *format, const StyleVec &compiledSty
 
 		size_t drawedChars = 0;
 		for (auto &it : compiledStyles) {
-			DescriptionStyle params = _style.merge(format->source.cast<font::FontController>(), it.style);
+			DescriptionStyle params = _style.merge(dynamic_cast<font::FontController *>(format->getHandle()), it.style);
 			specializeStyle(params, density);
 			if (adjustValue > 0) {
 				params.font.fontSize -= FontSize(adjustValue);
@@ -650,13 +745,13 @@ bool LabelBase::updateFormatSpec(FormatSpec *format, const StyleVec &compiledSty
 				}
 			}
 
-			if (!format->ranges.empty()) {
-				format->ranges.back().colorDirty = params.colorDirty;
-				format->ranges.back().opacityDirty = params.opacityDirty;
+			if (!format->getData()->ranges.empty()) {
+				format->getData()->ranges.back().colorDirty = params.colorDirty;
+				format->getData()->ranges.back().opacityDirty = params.opacityDirty;
 			}
 		}
 		formatter.finalize();
-	} while (format->overflow && adjustValue < _adjustValue);
+	} while (format->isOverflow() && adjustValue < _adjustValue);
 
 	return success;
 }

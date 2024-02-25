@@ -141,7 +141,7 @@ bool MaterialColorPickerTest::init() {
 		return false;
 	}
 
-	_colorHct = material2d::ColorHCT(Color::Purple_500);
+	_colorHct = ColorHCT(Color::Purple_500);
 
 	_style = addComponent(Rc<material2d::StyleContainer>::create());
 	_style->setPrimaryScheme(material2d::ThemeType::LightTheme, _colorHct, false);
@@ -159,32 +159,32 @@ bool MaterialColorPickerTest::init() {
 		} else {
 			_themeType = material2d::ThemeType::LightTheme;
 		}
-		updateColor(material2d::ColorHCT(_colorHct));
+		updateColor(ColorHCT(_colorHct));
 	}));
 	_lightCheckbox->setAnchorPoint(Anchor::TopLeft);
 	_lightCheckbox->setContentSize(Size2(24.0f, 24.0f));
 
 	_contentCheckbox = addChild(Rc<CheckboxWithLabel>::create("Content theme", false, [this] (bool value) {
 		_isContentColor = value;
-		updateColor(material2d::ColorHCT(_colorHct));
+		updateColor(ColorHCT(_colorHct));
 	}));
 	_contentCheckbox->setAnchorPoint(Anchor::TopLeft);
 	_contentCheckbox->setContentSize(Size2(24.0f, 24.0f));
 
 	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue,_colorHct, [this] (float val) {
-		updateColor(material2d::ColorHCT(val, _colorHct.data.chroma, _colorHct.data.tone, 1.0f));
+		updateColor(ColorHCT(val, _colorHct.data.chroma, _colorHct.data.tone, 1.0f));
 	}));
 	_huePicker->setAnchorPoint(Anchor::TopLeft);
 	_huePicker->setContentSize(Size2(240.0f, 24.0f));
 
 	_chromaPicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Chroma,_colorHct, [this] (float val) {
-		updateColor(material2d::ColorHCT(_colorHct.data.hue, val, _colorHct.data.tone, 1.0f));
+		updateColor(ColorHCT(_colorHct.data.hue, val, _colorHct.data.tone, 1.0f));
 	}));
 	_chromaPicker->setAnchorPoint(Anchor::TopLeft);
 	_chromaPicker->setContentSize(Size2(240.0f, 24.0f));
 
 	_tonePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Tone,_colorHct, [this] (float val) {
-		updateColor(material2d::ColorHCT(_colorHct.data.hue, _colorHct.data.chroma, val, 1.0f));
+		updateColor(ColorHCT(_colorHct.data.hue, _colorHct.data.chroma, val, 1.0f));
 	}));
 	_tonePicker->setAnchorPoint(Anchor::TopLeft);
 	_tonePicker->setContentSize(Size2(240.0f, 24.0f));
@@ -199,7 +199,7 @@ bool MaterialColorPickerTest::init() {
 		_nodes[i] = v;
 	}
 
-	updateColor(material2d::ColorHCT(_colorHct));
+	updateColor(ColorHCT(_colorHct));
 
 	return true;
 }
@@ -245,7 +245,7 @@ void MaterialColorPickerTest::onContentSizeDirty() {
 	}
 }
 
-void MaterialColorPickerTest::updateColor(material2d::ColorHCT &&color) {
+void MaterialColorPickerTest::updateColor(ColorHCT &&color) {
 	_colorHct = move(color);
 	_spriteLayer->setColor(_colorHct);
 	_huePicker->setTargetColor(_colorHct);

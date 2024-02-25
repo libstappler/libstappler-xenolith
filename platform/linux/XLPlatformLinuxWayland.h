@@ -570,7 +570,7 @@ public:
 	ConnectionData acquireConnection();
 	ConnectionData getActiveConnection() const;
 
-	bool hasWaylandCursor() const { return _cursor != false; }
+	bool hasWaylandCursor() const { return _cursor ? true : false; }
 
 protected:
 	bool open(Dso &);

@@ -137,7 +137,7 @@ void AssetComponent::cleanup(const db::Transaction &t) {
 	if (auto iface = dynamic_cast<db::sql::SqlHandle *>(t.getAdapter().getBackendInterface())) {
 		iface->performSimpleSelect(toString("SELECT __oid, url FROM ", _assets.getName(),
 				" WHERE download == 0 AND ttl != 0 AND (touch + ttl) < ",
-				time, ";"), [&] (db::Result &res) {
+				time.toMicros(), ";"), [&] (db::Result &res) {
 			for (auto it : res) {
 				auto path = AssetLibrary::getAssetPath(it.toInteger(0));
 				filesystem::remove(path, true, true);
@@ -146,7 +146,7 @@ void AssetComponent::cleanup(const db::Transaction &t) {
 
 		iface->performSimpleQuery(toString("DELETE FROM ", _assets.getName(),
 				" WHERE download == 0 AND ttl != 0 AND touch + ttl * 2 < ",
-				+ time, ";"));
+				time.toMicros(), ";"));
 	}
 }
 

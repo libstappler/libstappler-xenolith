@@ -24,9 +24,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontLibrary> &lib,
+void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontExtension> &ext,
 		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {
-	auto data = Rc<DeferredRequest>::alloc(lib, req);
+	auto data = Rc<DeferredRequest>::alloc(ext, req);
 	data->onTexture = move(onTex);
 	data->onComplete = move(onComp);
 
@@ -39,8 +39,8 @@ void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontLib
 
 DeferredRequest::~DeferredRequest() { }
 
-DeferredRequest::DeferredRequest(const Rc<FontLibrary> &lib, const Vector<FontUpdateRequest> &req)
-: library(lib) {
+DeferredRequest::DeferredRequest(const Rc<FontExtension> &ext, const Vector<FontUpdateRequest> &req)
+: ext(ext) {
 	for (auto &it : req) {
 		nrequests += it.chars.size();
 	}
@@ -68,7 +68,7 @@ void DeferredRequest::runThread() {
 		}
 
 		if (!threadFaces[v.first]) {
-			threadFaces[v.first] = library->makeThreadHandle(faces[v.first]);
+			threadFaces[v.first] = ext->getLibrary()->makeThreadHandle(faces[v.first]);
 		}
 
 		threadFaces[v.first]->acquireTexture(v.second, [&, this] (const font::CharTexture &tex) {

@@ -22,7 +22,6 @@
 
 #include "XLCommon.h"
 
-#include "base/MaterialCam16.cc"
 #include "base/MaterialColorScheme.cc"
 #include "base/MaterialDataSource.cc"
 #include "base/MaterialStyleContainer.cc"

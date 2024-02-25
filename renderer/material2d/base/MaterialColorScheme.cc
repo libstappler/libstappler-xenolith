@@ -25,17 +25,17 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 CorePalette::CorePalette(const Color4F &color, bool isContentColor)
-: CorePalette(Cam16::create(color), isContentColor) { }
+: CorePalette(geom::Cam16::create(color), isContentColor) { }
 
-CorePalette::CorePalette(const Cam16 &cam, bool isContentColor)
+CorePalette::CorePalette(const geom::Cam16 &cam, bool isContentColor)
 : CorePalette(cam.hue, cam.chroma, isContentColor) { }
 
-CorePalette::CorePalette(Cam16Float hue, Cam16Float chroma, bool is_content)
-: primary(hue, is_content ? chroma : std::fmax(chroma, Cam16Float(48)))
+CorePalette::CorePalette(geom::Cam16Float hue, geom::Cam16Float chroma, bool is_content)
+: primary(hue, is_content ? chroma : std::fmax(chroma, geom::Cam16Float(48)))
 , secondary(hue, is_content ? chroma / 3 : 16)
 , tertiary(hue + 60, is_content ? chroma / 2 : 24)
-, neutral(hue, is_content ? std::fmin(chroma / Cam16Float(12), Cam16Float(4)) : 4)
-, neutralVariant(hue, is_content ? std::fmin(chroma / Cam16Float(6), Cam16Float(8)) : 8)
+, neutral(hue, is_content ? std::fmin(chroma / geom::Cam16Float(12), geom::Cam16Float(4)) : 4)
+, neutralVariant(hue, is_content ? std::fmin(chroma / geom::Cam16Float(6), geom::Cam16Float(8)) : 8)
 , error(25, 84) { }
 
 ColorRole ColorScheme::getColorRoleOn(ColorRole role, ThemeType type) {

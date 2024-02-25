@@ -49,7 +49,7 @@ public:
 		Quad & setColor(SpanView<Color4F>); // tl bl tr br
 		Quad & setColor(std::initializer_list<Color4F> &&); // tl bl tr br
 
-		Quad & drawChar(const font::Metrics &m, const font::CharLayout &l, int16_t charX, int16_t charY,
+		Quad & drawChar(const font::Metrics &m, char16_t l, int16_t charX, int16_t charY,
 				const Color4B &color, font::TextDecoration, uint16_t face);
 		Quad & drawUnderlineRect(int16_t charX, int16_t charY, uint16_t width, uint16_t height, const Color4B &color);
 	};

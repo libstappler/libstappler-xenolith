@@ -389,12 +389,12 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	auto d = path->getPoints().data();
 	for (auto &it : path->getCommands()) {
 		switch (it) {
-		case VectorPath::Command::MoveTo: line.drawBegin(d[0].p.x, d[0].p.y); ++ d; break;
-		case VectorPath::Command::LineTo: line.drawLine(d[0].p.x, d[0].p.y); ++ d; break;
-		case VectorPath::Command::QuadTo: line.drawQuadBezier(d[0].p.x, d[0].p.y, d[1].p.x, d[1].p.y); d += 2; break;
-		case VectorPath::Command::CubicTo: line.drawCubicBezier(d[0].p.x, d[0].p.y, d[1].p.x, d[1].p.y, d[2].p.x, d[2].p.y); d += 3; break;
-		case VectorPath::Command::ArcTo: line.drawArc(d[0].p.x, d[0].p.y, d[2].f.v, d[2].f.a, d[2].f.b, d[1].p.x, d[1].p.y); d += 3; break;
-		case VectorPath::Command::ClosePath: line.drawClose(true); break;
+		case vg::Command::MoveTo: line.drawBegin(d[0].p.x, d[0].p.y); ++ d; break;
+		case vg::Command::LineTo: line.drawLine(d[0].p.x, d[0].p.y); ++ d; break;
+		case vg::Command::QuadTo: line.drawQuadBezier(d[0].p.x, d[0].p.y, d[1].p.x, d[1].p.y); d += 2; break;
+		case vg::Command::CubicTo: line.drawCubicBezier(d[0].p.x, d[0].p.y, d[1].p.x, d[1].p.y, d[2].p.x, d[2].p.y); d += 3; break;
+		case vg::Command::ArcTo: line.drawArc(d[0].p.x, d[0].p.y, d[2].f.v, d[2].f.a, d[2].f.b, d[1].p.x, d[1].p.y); d += 3; break;
+		case vg::Command::ClosePath: line.drawClose(true); break;
 		default: break;
 		}
 	}

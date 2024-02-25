@@ -37,7 +37,7 @@
 
 #if MODULE_XENOLITH_FONT
 
-#include "XLFontLibrary.h"
+#include "XLFontExtension.h"
 
 #endif
 
@@ -132,7 +132,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	_glWaitCallback.clear();
 
 #if MODULE_XENOLITH_FONT
-	auto lib = Rc<font::FontLibrary>::create(this, _instance->makeFontQueue());
+	auto lib = Rc<font::FontExtension>::create(this, _instance->makeFontQueue());
 
 	auto builder = lib->makeDefaultControllerBuilder("ApplicationFontController");
 

@@ -63,9 +63,9 @@ public:
 	bool open(Dso &handle);
 	void close();
 
-	bool hasRandr() const { return _randr; }
-	bool hasKeysyms() const { return _keysyms; }
-	bool hasXkb() const { return _xkb; }
+	bool hasRandr() const { return _randr ? true : false; }
+	bool hasKeysyms() const { return _keysyms ? true : false; }
+	bool hasXkb() const { return _xkb ? true : false; }
 
 	xcb_connection_t * (* xcb_connect) (const char *displayname, int *screenp) = nullptr;
 	const struct xcb_setup_t * (* xcb_get_setup) (xcb_connection_t *c) = nullptr;

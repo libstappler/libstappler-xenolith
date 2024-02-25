@@ -25,78 +25,32 @@
 
 #include "XLFontController.h"
 #include "XLCoreAttachment.h"
+#include "SPFontLibrary.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
+
+class FontExtension;
 
 struct RenderFontInput : public core::AttachmentInputData {
 	Rc<thread::TaskQueue> queue;
 	Rc<core::DynamicImage> image;
-	Rc<font::FontLibrary> library;
+	Rc<FontExtension> ext;
 	Vector<FontUpdateRequest> requests;
 	Function<void(const core::ImageInfoData &, BytesView)> output;
 };
 
-class FontFaceObjectHandle : public Ref {
+class FontExtension : public ApplicationExtension {
 public:
-	virtual ~FontFaceObjectHandle();
+	using DefaultFontName = FontLibrary::DefaultFontName;
 
-	bool init(const Rc<FontLibrary> &, Rc<FontFaceObject> &&, Function<void(const FontFaceObjectHandle *)> &&onDestroy);
-
-	FT_Face getFace() const { return _face->getFace(); }
-
-	bool acquireTexture(char16_t, const Callback<void(const CharTexture &)> &);
-
-protected:
-	Rc<FontLibrary> _library;
-	Rc<FontFaceObject> _face;
-	Function<void(const FontFaceObjectHandle *)> _onDestroy;
-};
-
-class FontLibrary : public ApplicationExtension {
-public:
-	enum class DefaultFontName {
-		None,
-		RobotoFlex_VariableFont,
-		RobotoMono_VariableFont,
-		RobotoMono_Italic_VariableFont,
-	};
-
-	struct FontData {
-		bool persistent;
-		BytesView view;
-		Bytes bytes;
-		Function<Bytes()> callback;
-
-		FontData(BytesView v, bool p) : persistent(p) {
-			if (persistent) {
-				view = v;
-			} else {
-				bytes = v.bytes<Interface>();
-				view = bytes;
-			}
-		}
-		FontData(Bytes &&b) : persistent(false), bytes(move(b)) {
-			view = bytes;
-		}
-		FontData(Function<Bytes()> &&cb) : persistent(true), callback(move(cb)) { }
-	};
-
-	static BytesView getFont(DefaultFontName);
-	static StringView getFontName(DefaultFontName);
-
-	FontLibrary();
-	virtual ~FontLibrary();
+	virtual ~FontExtension();
 
 	bool init(Rc<Application> &&, Rc<core::Queue> &&);
 
 	Application *getMainLoop() const { return _mainLoop; }
 	const core::Loop *getGlLoop() const { return _glLoop; }
 	const Rc<core::Queue> &getQueue() const { return _queue; }
-
-	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params, const Callback<FontData()> & = nullptr);
-
-	Rc<FontFaceObject> openFontFace(StringView, const FontSpecializationVector &, const Callback<FontData()> &);
-	Rc<FontFaceObject> openFontFace(const Rc<FontFaceData> &, const FontSpecializationVector &);
+	FontLibrary *getLibrary() const { return _library; }
 
 	virtual void initialize(Application *) override;
 	virtual void invalidate(Application *) override;
@@ -109,15 +63,7 @@ public:
 	void updateImage(const Rc<core::DynamicImage> &, Vector<FontUpdateRequest> &&,
 			Rc<core::DependencyEvent> &&);
 
-	uint16_t getNextId();
-	void releaseId(uint16_t);
-
-	Rc<FontFaceObjectHandle> makeThreadHandle(const Rc<FontFaceObject> &);
-
 protected:
-	FT_Face newFontFace(BytesView);
-	void doneFontFace(FT_Face);
-
 	void onActivated();
 
 	struct ImageQuery {
@@ -127,19 +73,11 @@ protected:
 	};
 
 	bool _active = false;
-
-	Mutex _mutex;
-	std::shared_mutex _sharedMutex;
-	Map<StringView, Rc<FontFaceObject>> _faces;
-	Map<StringView, Rc<FontFaceData>> _data;
-	Map<FontFaceObject *, Map<std::thread::id, Rc<FontFaceObjectHandle>>> _threads;
-	FT_Library _library = nullptr;
-
+	Rc<FontLibrary> _library;
 	Rc<Application> _mainLoop;
 	Rc<core::Loop> _glLoop;
 	Rc<core::Queue> _queue;
 	Vector<ImageQuery> _pendingImageQueries;
-	std::bitset<1024 * 16> _fontIds;
 };
 
 }

@@ -30,13 +30,13 @@ bool MaterialToolbarTest::init() {
 		return false;
 	}
 
-	_colorHct = material2d::ColorHCT(Color::Red_500);
+	_colorHct = ColorHCT(Color::Red_500);
 
 	_style = addComponent(Rc<material2d::StyleContainer>::create());
 	_style->setPrimaryScheme(material2d::ThemeType::LightTheme, _colorHct, false);
 
 	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue,_colorHct, [this] (float val) {
-		auto newColor = material2d::ColorHCT(val, _colorHct.data.chroma, _colorHct.data.tone, 1.0f);
+		auto newColor = ColorHCT(val, _colorHct.data.chroma, _colorHct.data.tone, 1.0f);
 		_colorHct = move(newColor);
 		_style->setPrimaryScheme(_themeType, _colorHct, false);
 	}));

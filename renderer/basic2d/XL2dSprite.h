@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class Sprite : public DynamicStateNode {
 public:
-	using Autofit = geom::Autofit;
+	using Autofit = font::Autofit;
 
 	static constexpr uint16_t SamplerIndexDefaultFilterNearest = 0;
 	static constexpr uint16_t SamplerIndexDefaultFilterLinear = 1;

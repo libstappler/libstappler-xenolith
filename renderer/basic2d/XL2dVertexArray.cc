@@ -161,7 +161,7 @@ VertexArray::Quad & VertexArray::Quad::setColor(std::initializer_list<Color4F> &
 	return setColor(SpanView<Color4F>(colors.begin(), colors.size()));
 }
 
-VertexArray::Quad & VertexArray::Quad::drawChar(const font::Metrics &m, const font::CharLayout &l, int16_t charX, int16_t charY,
+VertexArray::Quad & VertexArray::Quad::drawChar(const font::Metrics &m, char16_t charID, int16_t charX, int16_t charY,
 		const Color4B &color, font::TextDecoration, uint16_t face) {
 
 	setGeometry(Vec4(charX, charY - m.descender, 0.0f, 1.0f), Size2(0, 0)); // char placing based on atlas data
@@ -179,10 +179,10 @@ VertexArray::Quad & VertexArray::Quad::drawChar(const font::Metrics &m, const fo
 	data[2].tex = Vec2(texRight, texTop);
 	data[3].tex = Vec2(texRight, texBottom);
 
-	data[0].object = font::CharLayout::getObjectId(face, l.charID, geom::SpriteAnchor::BottomLeft);
-	data[1].object = font::CharLayout::getObjectId(face, l.charID, geom::SpriteAnchor::TopLeft);
-	data[2].object = font::CharLayout::getObjectId(face, l.charID, geom::SpriteAnchor::BottomRight);
-	data[3].object = font::CharLayout::getObjectId(face, l.charID, geom::SpriteAnchor::TopRight);
+	data[0].object = font::CharId::getCharId(face, charID, font::CharAnchor::BottomLeft);
+	data[1].object = font::CharId::getCharId(face, charID, font::CharAnchor::TopLeft);
+	data[2].object = font::CharId::getCharId(face, charID, font::CharAnchor::BottomRight);
+	data[3].object = font::CharId::getCharId(face, charID, font::CharAnchor::TopRight);
 
 	return *this;
 }
@@ -203,10 +203,10 @@ VertexArray::Quad & VertexArray::Quad::drawUnderlineRect(int16_t charX, int16_t 
 	data[2].tex = Vec2(texRight, texTop);
 	data[3].tex = Vec2(texRight, texBottom);
 
-	data[0].object = font::CharLayout::getObjectId(font::CharLayout::SourceMax, 0, geom::SpriteAnchor::BottomLeft);
-	data[1].object = font::CharLayout::getObjectId(font::CharLayout::SourceMax, 0, geom::SpriteAnchor::TopLeft);
-	data[2].object = font::CharLayout::getObjectId(font::CharLayout::SourceMax, 0, geom::SpriteAnchor::BottomRight);
-	data[3].object = font::CharLayout::getObjectId(font::CharLayout::SourceMax, 0, geom::SpriteAnchor::TopRight);
+	data[0].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomLeft);
+	data[1].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::TopLeft);
+	data[2].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomRight);
+	data[3].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::TopRight);
 
 	return *this;
 }

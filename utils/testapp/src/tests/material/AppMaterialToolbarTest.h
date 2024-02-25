@@ -41,7 +41,7 @@ public:
 
 protected:
 	material2d::ThemeType _themeType = material2d::ThemeType::LightTheme;
-	material2d::ColorHCT _colorHct;
+	ColorHCT _colorHct;
 	material2d::StyleContainer *_style = nullptr;
 
 	MaterialColorPicker *_huePicker = nullptr;

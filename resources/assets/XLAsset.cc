@@ -220,7 +220,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 			} else if (it.first == "mtime") {
 				data.mtime = Time(it.second.getInteger());
 			} else if (it.first == "size") {
-				data.size = Time(it.second.getInteger());
+				data.size = it.second.getInteger();
 			} else if (it.first == "type") {
 				data.contentType = StringView(it.second.getString()).str<Interface>();
 			} else if (it.first == "complete") {

@@ -358,6 +358,11 @@ bool Sequence::addAction(float time) {
 	return addAction(a.get());
 }
 
+bool Sequence::addAction(TimeInterval ival) {
+	auto a = Rc<DelayTime>::create(ival.toFloatSeconds());
+	return addAction(a.get());
+}
+
 bool Sequence::addAction(Action *a) {
 	_duration += a->getDuration();
 	_actions.emplace_back(ActionData{a});

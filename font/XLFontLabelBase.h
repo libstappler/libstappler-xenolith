@@ -24,11 +24,60 @@
 #define XENOLITH_FONT_XLFONTLABELBASE_H_
 
 #include "XLApplicationInfo.h"
-#include "XLFontLibrary.h"
+#include "XLFontExtension.h"
 #include "SPMetastring.h"
-#include "XLFontFormatter.h"
+#include "SPFontFormatter.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
+
+class TextLayout : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
+public:
+	virtual ~TextLayout();
+	TextLayout(FontController *h, size_t = 0, size_t = 0);
+
+	void reserve(size_t, size_t = 1);
+	void clear();
+
+	bool empty() const { return _data.chars.empty(); }
+
+	TextLayoutData<Interface> *getData() { return &_data; }
+	const TextLayoutData<Interface> *getData() const { return &_data; }
+
+	uint16_t getWidth() const { return _data.width; }
+	uint16_t getHeight() const { return _data.height; }
+	uint16_t getMaxAdvance() const { return _data.maxAdvance; }
+	bool isOverflow() const { return _data.overflow; }
+
+	FontController *getHandle() const { return _handle; }
+
+	RangeLineIterator begin() const;
+	RangeLineIterator end() const;
+
+	WideString str(bool filterAlign = true) const;
+	WideString str(uint32_t, uint32_t, size_t maxWords = maxOf<size_t>(), bool ellipsis = true, bool filterAlign = true) const;
+
+	// on error maxOf<uint32_t> returned
+	Pair<uint32_t, CharSelectMode> getChar(int32_t x, int32_t y, CharSelectMode = CharSelectMode::Center) const;
+	const LineLayoutData *getLine(uint32_t charIndex) const;
+	uint32_t getLineForChar(uint32_t charIndex) const;
+
+	Pair<uint32_t, uint32_t> selectWord(uint32_t originChar) const;
+
+	geom::Rect getLineRect(uint32_t lineId, float density, const geom::Vec2 & = geom::Vec2()) const;
+	geom::Rect getLineRect(const LineLayoutData &, float density, const geom::Vec2 & = geom::Vec2()) const;
+
+	uint16_t getLineForCharId(uint32_t id) const;
+
+	Vector<geom::Rect> getLabelRects(uint32_t first, uint32_t last, float density,
+			const geom::Vec2 & = geom::Vec2(), const geom::Padding &p = geom::Padding()) const;
+
+	void getLabelRects(Vector<geom::Rect> &, uint32_t first, uint32_t last, float density,
+			const geom::Vec2 & = geom::Vec2(), const geom::Padding &p = geom::Padding()) const;
+
+protected:
+	TextLayoutData<memory::StandartInterface> _data;
+	Rc<FontController> _handle;
+};
 
 class LabelBase {
 public:
@@ -185,7 +234,7 @@ public:
 
 	protected:
 		bool begin = false;
-		font::FormatSpec _spec;
+		Rc<font::TextLayout> _spec;
 		font::Formatter _formatter;
 		float _density = 1.0f;
 	};
@@ -247,7 +296,7 @@ public:
 	virtual void setStyles(StyleVec &&);
 	virtual void setStyles(const StyleVec &);
 
-	virtual bool updateFormatSpec(FormatSpec *, const StyleVec &, float density, uint8_t adjustValue);
+	virtual bool updateFormatSpec(TextLayout *, const StyleVec &, float density, uint8_t adjustValue);
 
 	virtual bool empty() const { return _string16.empty(); }
 

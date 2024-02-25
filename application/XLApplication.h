@@ -30,7 +30,7 @@
 
 #if MODULE_XENOLITH_FONT
 
-#include "XLFontLibrary.h"
+#include "XLFontExtension.h"
 
 #endif
 

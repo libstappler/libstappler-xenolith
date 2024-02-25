@@ -24,6 +24,7 @@
 #define XENOLITH_RENDERER_BASIC2D_XL2DLABEL_H_
 
 #include "XL2dSprite.h"
+#include "XLCoreInput.h"
 #include "XLFontLabelBase.h"
 #include <future>
 
@@ -62,8 +63,8 @@ protected:
 
 class Label : public Sprite, public font::LabelBase {
 public:
-	using FormatSpec = font::FormatSpec;
-	using LineSpec = font::LineSpec;
+	using TextLayout = font::TextLayout;
+	using LineLayout = font::LineLayoutData;
 	using TextAlign = font::TextAlign;
 
 	using ColorMapVec = Vector<Vector<bool>>;
@@ -85,8 +86,8 @@ public:
 		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
 	};
 
-	static void writeQuads(VertexArray &vertexes, FormatSpec *format, Vector<ColorMask> &colorMap);
-	static Rc<LabelResult> writeResult(FormatSpec *format, const Color4F &);
+	static void writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMask> &colorMap);
+	static Rc<LabelResult> writeResult(TextLayout *format, const Color4F &);
 
 	virtual ~Label();
 
@@ -114,7 +115,7 @@ public:
 
 	virtual size_t getCharsCount() const;
 	virtual size_t getLinesCount() const;
-	virtual LineSpec getLine(uint32_t num) const;
+	virtual LineLayout getLine(uint32_t num) const;
 
 	virtual uint16_t getFontHeight() const;
 
@@ -124,7 +125,7 @@ public:
 	// returns character index in FormatSpec for position in label or maxOf<uint32_t>()
 	// pair.second - true if index match suffix or false if index match prefix
 	// use convertToNodeSpace to get position
-	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &, FormatSpec::SelectMode = FormatSpec::Best) const;
+	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &, font::CharSelectMode = font::CharSelectMode::Best) const;
 
 	virtual core::TextCursor selectWord(uint32_t) const;
 
@@ -148,7 +149,7 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual Rc<LabelDeferredResult> runDeferred(thread::TaskQueue &, FormatSpec *format, const Color4F &color);
+	virtual Rc<LabelDeferredResult> runDeferred(thread::TaskQueue &, TextLayout *format, const Color4F &color);
 	virtual void updateLabel();
 	virtual void onFontSourceUpdated();
 	virtual void onFontSourceLoaded();
@@ -157,7 +158,7 @@ protected:
 	virtual void updateVertexes() override;
 	virtual void updateVertexesColor() override;
 
-	virtual void updateQuadsForeground(font::FontController *, FormatSpec *, Vector<ColorMask> &);
+	virtual void updateQuadsForeground(font::FontController *, TextLayout *, Vector<ColorMask> &);
 
 	virtual bool checkVertexDirty() const override;
 
@@ -170,7 +171,7 @@ protected:
 	EventListener *_listener = nullptr;
 	Time _quadRequestTime;
 	Rc<font::FontController> _source;
-	Rc<FormatSpec> _format;
+	Rc<TextLayout> _format;
 	Vector<ColorMask> _colorMap;
 
 	bool _deferred = true;

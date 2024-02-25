@@ -292,7 +292,9 @@ void Scene2d::addContentNodes(SceneContent *root) {
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->addCircle(12, 12, 12);
+			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+				writer.addCircle(12, 12, 12);
+			});
 
 			_pointerReal = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerReal->setAnchorPoint(Anchor::Middle);
@@ -303,7 +305,9 @@ void Scene2d::addContentNodes(SceneContent *root) {
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->addCircle(12, 12, 12);
+			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+				writer.addCircle(12, 12, 12);
+			});
 
 			_pointerVirtual = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerVirtual->setAnchorPoint(Anchor::Middle);
@@ -314,7 +318,9 @@ void Scene2d::addContentNodes(SceneContent *root) {
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->addCircle(12, 12, 12);
+			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+				writer.addCircle(12, 12, 12);
+			});
 
 			_pointerCenter = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerCenter->setAnchorPoint(Anchor::Middle);

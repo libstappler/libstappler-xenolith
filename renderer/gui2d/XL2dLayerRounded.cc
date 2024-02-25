@@ -49,7 +49,8 @@ void LayerRounded::onContentSizeDirty() {
 
 		auto img = Rc<VectorImage>::create(_contentSize);
 		auto path = img->addPath();
-		path->moveTo(0.0f, radius)
+		path->openForWriting([&] (vg::PathWriter &writer) {
+			writer.moveTo(0.0f, radius)
 				.arcTo(radius, radius, 0.0f, false, true, radius, 0.0f)
 				.lineTo(_contentSize.width - radius, 0.0f)
 				.arcTo(radius, radius, 0.0f, false, true, _contentSize.width, radius)
@@ -57,10 +58,11 @@ void LayerRounded::onContentSizeDirty() {
 				.arcTo(radius, radius, 0.0f, false, true, _contentSize.width - radius, _contentSize.height)
 				.lineTo(radius, _contentSize.height)
 				.arcTo(radius, radius, 0.0f, false, true, 0.0f, _contentSize.height - radius)
-				.closePath()
-				.setAntialiased(false)
-				.setFillColor(_pathColor)
-				.setStyle(vg::DrawStyle::Fill);
+				.closePath();
+		})
+			.setAntialiased(false)
+			.setFillColor(_pathColor)
+			.setStyle(vg::DrawStyle::Fill);
 
 		setImage(move(img));
 

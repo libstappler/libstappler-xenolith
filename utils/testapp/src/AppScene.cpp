@@ -28,7 +28,6 @@
 #include "XLApplication.h"
 
 #include "XLVkAttachment.h"
-#include "XLFontLibrary.h"
 #include "XL2dSceneContent.h"
 
 #include "AppRootLayout.h"

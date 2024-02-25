@@ -30,9 +30,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 using namespace gui2d;
 
-// Использовать float или double для расчётов Cam16
-using Cam16Float = float;
-
 }
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALCONFIG_H_ */

@@ -61,11 +61,11 @@ void GeneralUpdateTest::onContentSizeDirty() {
 void GeneralUpdateTest::update(const UpdateTime &time) {
 	LayoutTest::update(time);
 
-	auto t = time.app % 5_sec;
+	auto t = time.app % (5_sec).toMicros();
 
 	if (_background) {
 		_background->setGradient(SimpleGradient(Color::Red_500, Color::Green_500,
-				Vec2::forAngle(M_PI * 2.0 * (float(t) / 5_sec))));
+				Vec2::forAngle(M_PI * 2.0 * (float(t) / (5_sec).toMicros()))));
 	}
 }
 

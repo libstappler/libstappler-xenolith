@@ -33,8 +33,8 @@ bool MaterialBackground::init() {
 		return false;
 	}
 
-	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, material2d::ColorHCT(), [this] (float val) {
-		auto color = material2d::ColorHCT(val, 100.0f, 50.0f, 1.0f);
+	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, ColorHCT(), [this] (float val) {
+		auto color = ColorHCT(val, 100.0f, 50.0f, 1.0f);
 		_styleContainer->setPrimaryScheme(_lightCheckbox->getValue() ? material2d::ThemeType::DarkTheme : material2d::ThemeType::LightTheme, color, false);
 
 		if (_sceneStyleContainer) {
