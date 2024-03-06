@@ -23,8 +23,8 @@
 #ifndef SRC_APPDELEGATE_H_
 #define SRC_APPDELEGATE_H_
 
-#include "XLViewCommandLine.h"
 #include "XLVkGuiApplication.h"
+#include "XLViewCommandLine.h"
 #include "XLStorageServer.h"
 #include "XLNetworkController.h"
 #include "XLAssetLibrary.h"

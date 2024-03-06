@@ -43,7 +43,7 @@ enum class CommandType : uint16_t {
 struct CmdGeneral {
 	SpanView<ZOrder> zPath;
 	core::MaterialId material = 0;
-	StateId state = maxOf<StateId>();
+	StateId state = StateIdNone;
 	RenderingLevel renderingLevel = RenderingLevel::Solid;
 	float depthValue = 0.0f;
 };

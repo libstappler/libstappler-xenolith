@@ -26,7 +26,12 @@
 #include "XLApplication.h"
 #include "XLVkGuiConfig.h"
 #include "XLVkPlatform.h"
-#include "XLView.h"
+#include "XLVkView.h"
+
+#include "XLViewCommandLine.h"
+#include "XLStorageServer.h"
+#include "XLNetworkController.h"
+#include "XLAssetLibrary.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -44,6 +49,59 @@ public:
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
 	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
+};
+
+class BootstrapApplication : public GuiApplication {
+public:
+	static EventHeader onSwapchainConfig;
+
+	virtual ~BootstrapApplication() = default;
+
+	virtual bool init(ViewCommandLineData &&, void *native = nullptr);
+
+	virtual void run(Function<void()> &&initCb = nullptr);
+
+	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
+	const core::SwapchainConfig &getSwapchainConfig() const { return _swapchainConfig; }
+
+	void setPreferredPresentMode(core::PresentMode);
+
+protected:
+	virtual Rc<Scene> createSceneForView(vk::View &view, const core::FrameContraints &constraints);
+	virtual void finalizeView(vk::View &view);
+
+	virtual core::SwapchainConfig selectConfig(vk::View &, const core::SurfaceInfo &info);
+
+	Value _storageParams;
+
+	ViewCommandLineData _data;
+
+	Mutex _configMutex;
+	core::PresentMode _preferredPresentMode = core::PresentMode::Unsupported;
+
+	core::SurfaceInfo _surfaceInfo;
+	core::SwapchainConfig _swapchainConfig;
+
+#if MODULE_XENOLITH_RESOURCES_NETWORK
+public:
+	xenolith::network::Controller *getNetworkController() const { return _networkController; }
+protected:
+	Rc<xenolith::network::Controller> _networkController;
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_STORAGE
+public:
+	xenolith::storage::Server *getStorageServer() const { return _storageServer; }
+protected:
+	Rc<xenolith::storage::Server> _storageServer;
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_STORAGE
+public:
+	xenolith::storage::AssetLibrary *getAssetLibrary() const { return _assetLibrary; }
+protected:
+	Rc<xenolith::storage::AssetLibrary> _assetLibrary;
+#endif
 };
 
 }

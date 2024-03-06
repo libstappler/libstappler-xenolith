@@ -44,10 +44,8 @@ StringView AssetLock::getCachePath() const {
 	return _asset->getCachePath();
 }
 
-AssetLock::AssetLock(Rc<Asset> &&asset, const VersionData &data, Function<void(const VersionData &)> &&cb)
-: _lockedVersion(data), _releaseFunction(move(cb)), _asset(move(asset)) {
-
-}
+AssetLock::AssetLock(Rc<Asset> &&asset, const AssetVersionData &data, Function<void(const AssetVersionData &)> &&cb, Ref *owner)
+: _lockedVersion(data), _releaseFunction(move(cb)), _asset(move(asset)), _owner(owner) { }
 
 Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
 	bool resumeDownload = false;
@@ -91,22 +89,14 @@ Asset::~Asset() {
 	_library->removeAsset(this);
 }
 
-const AssetVersionData * Asset::getReadableVersion() const {
-	for (auto &it : _versions) {
-		if (it.complete && filesystem::exists(it.path)) {
-			return &it;
-		}
-	}
-	return nullptr;
-}
-
-Rc<AssetLock> Asset::lockVersion(int64_t id) {
+Rc<AssetLock> Asset::lockVersion(int64_t id, Ref *owner) {
+	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == id && it.complete) {
 			++ it.locked;
 			auto ret = new AssetLock(this, it, [this] (const VersionData &data) {
 				releaseLock(data);
-			});
+			}, owner);
 			auto ref = Rc<AssetLock>(ret);
 			ret->release(0);
 			return ref;
@@ -115,7 +105,38 @@ Rc<AssetLock> Asset::lockVersion(int64_t id) {
 	return nullptr;
 }
 
+Rc<AssetLock> Asset::lockReadableVersion(Ref *owner) {
+	std::unique_lock ctx(_mutex);
+	for (auto &it : _versions) {
+		if (it.complete && filesystem::exists(it.path)) {
+			++ it.locked;
+			auto ret = new AssetLock(this, it, [this] (const VersionData &data) {
+				releaseLock(data);
+			}, owner);
+			auto ref = Rc<AssetLock>(ret);
+			ret->release(0);
+			return ref;
+		}
+	}
+	return nullptr;
+}
+
+StringView Asset::getContentType() const {
+	std::unique_lock ctx(_mutex);
+	if (auto ver = getReadableVersion()) {
+		return ver->contentType;
+	} else {
+		for (auto &it : _versions) {
+			if (!it.contentType.empty()) {
+				return it.contentType;
+			}
+		}
+	}
+	return StringView();
+}
+
 bool Asset::download() {
+	std::unique_lock ctx(_mutex);
 	if (_download) {
 		return true;
 	}
@@ -156,11 +177,13 @@ bool Asset::download() {
 }
 
 void Asset::touch(Time t) {
+	std::unique_lock ctx(_mutex);
 	_touch = t;
 	_dirty = true;
 }
 
 void Asset::clear() {
+	std::unique_lock ctx(_mutex);
 	auto it = _versions.begin();
 	while (it != _versions.end()) {
 		if (it->complete) {
@@ -173,11 +196,18 @@ void Asset::clear() {
 	setDirty(Flags(CacheDataUpdated | DownloadFailed));
 }
 
+bool Asset::isDownloadAvailable() const {
+	std::unique_lock ctx(_mutex);
+	return !_versions.empty() && !_versions.back().download && !_versions.back().complete;
+}
+
 bool Asset::isDownloadInProgress() const {
+	std::unique_lock ctx(_mutex);
 	return _download;
 }
 
 float Asset::getProgress() const {
+	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == _downloadId) {
 			return it.progress;
@@ -186,17 +216,28 @@ float Asset::getProgress() const {
 	return _versions.empty() ? 0.0f : (_versions.front().complete ? 1.0f : 0.0f);
 }
 
+int64_t Asset::getReadableVersionId() const {
+	std::unique_lock ctx(_mutex);
+	if (auto v = getReadableVersion()) {
+		return v->id;
+	}
+	return 0;
+}
+
 void Asset::setData(const Value &d) {
+	std::unique_lock ctx(_mutex);
 	_data = d;
 	_dirty = true;
 }
 
 void Asset::setData(Value &&d) {
+	std::unique_lock ctx(_mutex);
 	_data = std::move(d);
 	_dirty = true;
 }
 
 Value Asset::encode() const {
+	std::unique_lock ctx(_mutex);
 	return Value({
 		pair("ttl", Value(_ttl.toMicros())),
 		pair("touch", Value(_touch.toMicros())),
@@ -204,7 +245,18 @@ Value Asset::encode() const {
 	});
 }
 
+const AssetVersionData * Asset::getReadableVersion() const {
+	for (auto &it : _versions) {
+		if (it.complete && filesystem::exists(it.path)) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
+
 void Asset::parseVersions(const db::Value &downloads) {
+	std::unique_lock ctx(_mutex);
+
 	Set<String> paths;
 	Set<String> pathsToRemove;
 
@@ -435,6 +487,7 @@ bool Asset::resumeDownload(VersionData &d) {
 }
 
 void Asset::setDownloadProgress(int64_t id, float progress) {
+	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == id) {
 			it.progress = progress;
@@ -444,6 +497,7 @@ void Asset::setDownloadProgress(int64_t id, float progress) {
 }
 
 void Asset::setDownloadComplete(VersionData &data, bool success) {
+	std::unique_lock ctx(_mutex);
 	data.complete = success;
 
 	_download = false;
@@ -475,6 +529,7 @@ void Asset::setDownloadComplete(VersionData &data, bool success) {
 }
 
 void Asset::setFileValidated(bool success) {
+	std::unique_lock ctx(_mutex);
 	_download = false;
 	_library->setAssetDownload(_id, _download);
 	_downloadId = 0;
@@ -483,6 +538,7 @@ void Asset::setFileValidated(bool success) {
 }
 
 void Asset::replaceVersion(VersionData &data) {
+	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id != data.id) {
 			dropVersion(it);
@@ -498,6 +554,7 @@ void Asset::addVersion(AssetDownloadData *data) {
 	_library->perform([this, data] (const Server &, const db::Transaction &t) {
 		auto id = _library->addVersion(t, _id, data->data);
 		_library->getApplication()->performOnMainThread([this, id, data] {
+			std::unique_lock ctx(_mutex);
 			_downloadId = data->data.id = id;
 			_versions.emplace_back(data->data);
 			setDirty(Flags(Update::DownloadStarted));
@@ -514,6 +571,7 @@ void Asset::dropVersion(const VersionData &data) {
 }
 
 void Asset::releaseLock(const VersionData &data) {
+	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == data.id) {
 			-- it.locked;

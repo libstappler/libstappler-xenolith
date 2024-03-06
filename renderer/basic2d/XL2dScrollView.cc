@@ -24,7 +24,7 @@
 #include "XL2dLayerRounded.h"
 #include "XLActionEase.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool ScrollView::Overscroll::init() {
 	if (!VectorSprite::init(Size2(8.0f, 8.0f))) {

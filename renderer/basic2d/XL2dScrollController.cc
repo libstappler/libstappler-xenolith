@@ -24,7 +24,7 @@
 #include "XL2dScrollViewBase.h"
 #include "XL2dScrollItemHandle.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 ScrollController::Item::Item(NodeFunction &&f, Vec2 pos, Size2 size, ZOrder z, StringView name)
 : nodeFunction(move(f)), size(size), pos(pos), zIndex(z), name(name.str<Interface>()) { }

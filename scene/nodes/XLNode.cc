@@ -663,6 +663,7 @@ void Node::onExit() {
 
 	if (_scheduled) {
 		_scheduler->unschedule(this);
+		_scheduled = true; // -re-enable after restart;
 	}
 
 	for (auto &child : _children) {

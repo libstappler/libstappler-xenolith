@@ -20,14 +20,14 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_GUI2D_XL2DSCROLLVIEWBASE_H_
-#define XENOLITH_RENDERER_GUI2D_XL2DSCROLLVIEWBASE_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_
+#define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_
 
-#include "XL2dGui.h"
+#include "XL2d.h"
 #include "XLDynamicStateNode.h"
 #include "XL2dActionAcceleratedMove.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class ScrollController;
 class ActionAcceleratedMove;
@@ -209,4 +209,4 @@ protected:
 
 }
 
-#endif /* XENOLITH_RENDERER_GUI2D_XL2DSCROLLVIEWBASE_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_ */

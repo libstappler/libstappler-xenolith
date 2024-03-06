@@ -49,6 +49,14 @@ void TextLayout::clear() {
 	_data.overflow = false;
 }
 
+Rc<FontFaceSet> TextLayout::getLayout(const FontParameters &f) {
+	auto font = _handle->getLayout(f);
+	if (font) {
+		_fonts.emplace(font);
+	}
+	return font;
+}
+
 RangeLineIterator TextLayout::begin() const {
 	return _data.begin();
 }
@@ -689,7 +697,7 @@ bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledSty
 		format->clear();
 
 		font::Formatter formatter([format] (const FontParameters &f) {
-			return format->getHandle()->getLayout(f);
+			return format->getLayout(f);
 		}, format->getData());
 		formatter.setWidth(static_cast<uint16_t>(roundf(_width * density)));
 		formatter.setTextAlignment(_alignment);
@@ -711,7 +719,7 @@ bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledSty
 
 		size_t drawedChars = 0;
 		for (auto &it : compiledStyles) {
-			DescriptionStyle params = _style.merge(dynamic_cast<font::FontController *>(format->getHandle()), it.style);
+			DescriptionStyle params = _style.merge(dynamic_cast<font::FontController *>(format->getController()), it.style);
 			specializeStyle(params, density);
 			if (adjustValue > 0) {
 				params.font.fontSize -= FontSize(adjustValue);

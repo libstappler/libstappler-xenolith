@@ -94,8 +94,11 @@ Rc<FrameContextHandle2d> VertexAttachmentHandle::popCommands() const {
 
 struct VertexMaterialDrawPlan {
 	struct PlanCommandInfo {
-		const CmdGeneral *cmd;
+		const CmdGeneral *cmd = nullptr;
 		SpanView<TransformVertexData> vertexes;
+		Mat4 transform;
+		const LinearGradientData *gradient = nullptr;
+		uint32_t gradientVertexOffset = 0;
 	};
 
 	struct MaterialWritePlan {
@@ -151,6 +154,8 @@ struct VertexMaterialDrawPlan {
 
 	bool hasGpuSideAtlases = false;
 
+	FrameContextHandle2d *handle = nullptr;
+
 	VertexMaterialDrawPlan(const core::FrameContraints &constraints)
 	: surfaceExtent{constraints.extent}, transform(constraints.transform) { }
 
@@ -188,7 +193,21 @@ struct VertexMaterialDrawPlan {
 				iit = it->second.states.emplace(cmd->state, std::forward_list<PlanCommandInfo>()).first;
 			}
 
-			iit->second.emplace_front(PlanCommandInfo{cmd, vertexes});
+			auto &plan = iit->second.emplace_front(PlanCommandInfo{cmd, vertexes});
+
+			if (cmd->state != StateIdNone) {
+				auto state = handle->getState(cmd->state);
+				if (state) {
+					auto stateData = dynamic_cast<StateData *>(state->data.get());
+
+					if (stateData && stateData->gradient) {
+						plan.transform = stateData->transform;
+						plan.gradient = stateData->gradient.get();
+						plan.gradientVertexOffset = globalWritePlan.vertexes;
+						globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
+					}
+				}
+			}
 		}
 
 		auto pathsIt = paths.find(cmd->zPath);
@@ -479,6 +498,9 @@ struct VertexMaterialDrawPlan {
 				materialVertexes = 0;
 				materialIndexes = 0;
 
+				uint32_t gradientStart = 0;
+				uint32_t gradientCount = 0;
+
 				for (auto &cmd : state.second) {
 					for (auto &iit : cmd.vertexes) {
 						TransformData val(iit.transform);
@@ -496,9 +518,55 @@ struct VertexMaterialDrawPlan {
 
 						pushVertexes(writeTarget, it->first, it->second, cmd.cmd, val, iit.data.get());
 					}
+
+					if (cmd.gradient) {
+						auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
+
+						Vec2 start = cmd.transform * cmd.gradient->start;
+						Vec2 end = cmd.transform * cmd.gradient->end;
+
+						start.y = surfaceExtent.height - start.y;
+						end.y = surfaceExtent.height - end.y;
+
+						Vec2 norm = end - start;
+
+						float d = norm.y * norm.y / (norm.x * norm.x + norm.y * norm.y);
+
+						Vec2 axisAngle;
+						if (std::abs(norm.y) > std::abs(norm.x)) {
+							axisAngle.x = std::copysign(norm.length(), norm.y);
+							//axisAngle.y = (norm.x * surfaceExtent.width) / (norm.y * surfaceExtent.height);
+							axisAngle.y = d;
+						} else {
+							axisAngle.x = std::copysign(norm.length(), norm.x);
+							//axisAngle.y = (norm.y * surfaceExtent.height) / (norm.x * surfaceExtent.width);
+							axisAngle.y = d;
+						}
+
+						target->pos = Vec4(start, 0.0f, 0.0f);
+						target->tex = axisAngle;
+						++ target;
+
+						target->pos = Vec4(end, 1.0f, 0.0f);
+						target->tex = axisAngle;
+						++ target;
+
+						for (auto &it : cmd.gradient->steps) {
+							target->pos = Vec4(math::lerp(start, end, it.value), it.value, it.factor);
+							target->tex = axisAngle;
+							target->color = Vec4(it.color.r, it.color.g, it.color.b, it.color.a);
+							++ target;
+						}
+
+						gradientStart = vertexOffset;
+						gradientCount = cmd.gradient->steps.size();
+
+						vertexOffset += cmd.gradient->steps.size() + 2;
+					}
 				}
 
-				spans.emplace_back(VertexSpan({ it->first, materialIndexes, 1, indexOffset - materialIndexes, state.first}));
+				spans.emplace_back(VertexSpan({ it->first, materialIndexes, 1, indexOffset - materialIndexes, state.first,
+					gradientStart, gradientCount}));
 			}
 		}
 	}
@@ -535,6 +603,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 
 	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
 	plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
+	plan.handle = commands;
 
 	auto shadowExtent = commands->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
 	auto shadowSize = commands->lights.getShadowSize( fhandle.getFrameConstraints().getScreenSize());
@@ -601,7 +670,6 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 		writeTarget.indexes = indexData.data();
 		writeTarget.transform = transformData.data();
 	}
-
 
 	// write initial full screen quad
 	plan.pushAll(_spans, writeTarget);
@@ -789,9 +857,11 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	size_t max = (ctrl ++) % 12;*/
 
 	struct MaterialData {
-		uint32_t materialIdx;
-		uint32_t imageIdx;
-		uint32_t samplerIdx;
+		uint32_t materialIdx = 0;
+		uint32_t imageIdx = 0;
+		uint32_t samplerIdx = 0;
+		uint32_t gradientOffset = 0;
+		uint32_t gradientCount = 0;
 	};
 
 	MaterialData data;
@@ -813,6 +883,8 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		}
 		data.imageIdx = material->getImages().front().descriptor;
 		data.samplerIdx = material->getImages().front().sampler;
+		data.gradientOffset = materialVertexSpan.gradientOffset;
+		data.gradientCount = materialVertexSpan.gradientCount;
 
 		auto pipeline = material->getPipeline()->pipeline;
 		auto textureSetIndex =  material->getLayoutIndex();

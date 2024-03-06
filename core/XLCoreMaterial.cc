@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -525,7 +525,7 @@ Material::~Material() {
 	}
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<MaterialImage> &&images, Bytes &&data) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<MaterialImage> &&images, Rc<Ref> &&data) {
 	_id = id;
 	_pipeline = pipeline;
 	_images = move(images);
@@ -533,7 +533,7 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<Material
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const Rc<DynamicImageInstance> &image, Bytes &&data) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, const Rc<DynamicImageInstance> &image, Rc<Ref> &&data) {
 	_id = id;
 	_pipeline = pipeline;
 	_images = Vector<MaterialImage>({
@@ -542,12 +542,12 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, const Rc<Dynami
 			.dynamic = image
 		}
 	});
-	_atlas = image->data.atlas;
 	_data = move(data);
+	_atlas = image->data.atlas;
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, Bytes &&data, bool ownedData) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, Rc<Ref> &&data, bool ownedData) {
 	_id = id;
 	_pipeline = pipeline;
 	_images = Vector<MaterialImage>({
@@ -556,14 +556,14 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData
 		})
 	});
 	_atlas = image->atlas;
-	_data = move(data);
 	if (ownedData) {
 		_ownedData = image;
 	}
+	_data = move(data);
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, ColorMode mode, Bytes &&data, bool ownedData) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, ColorMode mode, Rc<Ref> &&data, bool ownedData) {
 	_id = id;
 	_pipeline = pipeline;
 
@@ -578,17 +578,16 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData
 		move(img)
 	});
 	_atlas = image->atlas;
-	_data = move(data);
 	if (ownedData) {
 		_ownedData = image;
 	}
+	_data = move(data);
 	return true;
 }
 
-bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtlas> &&atlas, Bytes &&data) {
+bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtlas> &&atlas, Rc<Ref> &&data) {
 	_id = master->getId();
 	_pipeline = master->getPipeline();
-	_data = move(data);
 
 	auto otherData = master->getOwnedData();
 	if (!otherData) {
@@ -609,13 +608,13 @@ bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtla
 			_ownedData
 		})
 	});
+	_data = move(data);
 	return true;
 }
 
 bool Material::init(const Material *master, Vector<MaterialImage> &&images) {
 	_id = master->getId();
 	_pipeline = master->getPipeline();
-	_data = master->getData().bytes<Interface>();
 	_images = move(images);
 	for (auto &it : _images) {
 		if (it.image->atlas) {
@@ -623,7 +622,7 @@ bool Material::init(const Material *master, Vector<MaterialImage> &&images) {
 			break;
 		}
 	}
-
+	_data = master->_data;
 	return true;
 }
 

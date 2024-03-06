@@ -158,4 +158,16 @@ bool FrameContext2d::initWithQueue(core::Queue *queue) {
 			&& _shadowVertexAttachmentData && _sdfImageAttachmentData;
 }
 
+bool StateData::init() {
+	return true;
+}
+
+bool StateData::init(StateData *data) {
+	if (data) {
+		transform = data->transform;
+		gradient = data->gradient;
+	}
+	return true;
+}
+
 }

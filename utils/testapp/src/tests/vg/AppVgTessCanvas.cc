@@ -54,35 +54,40 @@ void VgTessCursor::updateState(VectorImage &image, State state) {
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Point")
 			->setFillColor(Color::White)
-			.addOval(Rect(16, 16, 32, 32))
-			.setAntialiased(false);
+			.openForWriting([] (vg::PathWriter &writer) {
+				writer.addOval(Rect(16, 16, 32, 32));
+			}).setAntialiased(false);
 		break;
 	case Capture:
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Capture")
 			->setFillColor(Color::White)
-			.moveTo(0, 24) .lineTo(4, 24) .lineTo(4, 4) .lineTo(24, 4) .lineTo(24, 0) .lineTo(0, 0)
-			.moveTo(0, 40) .lineTo(0, 64) .lineTo(24, 64) .lineTo(24, 60) .lineTo(4, 60) .lineTo(4, 40)
-			.moveTo(40, 64) .lineTo(64, 64) .lineTo(64, 40) .lineTo(60, 40) .lineTo(60, 60) .lineTo(40, 60)
-			.moveTo(40, 0) .lineTo(64, 0) .lineTo(64, 24) .lineTo(60, 24) .lineTo(60, 4) .lineTo(40, 4)
+			.openForWriting([] (vg::PathWriter &writer) {
+				writer.moveTo(0, 24) .lineTo(4, 24) .lineTo(4, 4) .lineTo(24, 4) .lineTo(24, 0) .lineTo(0, 0)
+					.moveTo(0, 40) .lineTo(0, 64) .lineTo(24, 64) .lineTo(24, 60) .lineTo(4, 60) .lineTo(4, 40)
+					.moveTo(40, 64) .lineTo(64, 64) .lineTo(64, 40) .lineTo(60, 40) .lineTo(60, 60) .lineTo(40, 60)
+					.moveTo(40, 0) .lineTo(64, 0) .lineTo(64, 24) .lineTo(60, 24) .lineTo(60, 4) .lineTo(40, 4);
+			})
 			.setAntialiased(false);
 		break;
 	case Target:
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Target")
 			->setFillColor(Color::White)
-			.moveTo(0.0f, 30.0f)
-			.lineTo(0.0f, 34.0f)
-			.lineTo(30.0f, 34.0f)
-			.lineTo(30.0f, 64.0f)
-			.lineTo(34.0f, 64.0f)
-			.lineTo(34.0f, 34.0f)
-			.lineTo(64.0f, 34.0f)
-			.lineTo(64.0f, 30.0f)
-			.lineTo(34.0f, 30.0f)
-			.lineTo(34.0f, 0.0f)
-			.lineTo(30.0f, 0.0f)
-			.lineTo(30.0f, 30.0f)
+			.openForWriting([] (vg::PathWriter &writer) {
+				writer.moveTo(0.0f, 30.0f)
+					.lineTo(0.0f, 34.0f)
+					.lineTo(30.0f, 34.0f)
+					.lineTo(30.0f, 64.0f)
+					.lineTo(34.0f, 64.0f)
+					.lineTo(34.0f, 34.0f)
+					.lineTo(64.0f, 34.0f)
+					.lineTo(64.0f, 30.0f)
+					.lineTo(34.0f, 30.0f)
+					.lineTo(34.0f, 0.0f)
+					.lineTo(30.0f, 0.0f)
+					.lineTo(30.0f, 30.0f);
+			})
 			.setAntialiased(false);
 		break;
 	}
@@ -92,8 +97,9 @@ bool VgTessPoint::init(const Vec2 &p, uint32_t index) {
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath("", "org.stappler.xenolith.tess.TessPoint")
 		->setFillColor(Color::White)
-		.addOval(Rect(0, 0, 10, 10))
-		.setAntialiased(false);
+		.openForWriting([] (vg::PathWriter &writer) {
+			writer.addOval(Rect(0, 0, 10, 10));
+		}).setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
 		return false;
@@ -443,14 +449,21 @@ void VgTessCanvas::updatePoints() {
 	for (const ContourData &contour : _contours) {
 		if (contour.points.size() > 2) {
 			for (auto &it : contour.points) {
-				pathFill->lineTo(it->getPoint());
-				pathLines->lineTo(it->getPoint());
+				pathFill->openForWriting([&] (vg::PathWriter &writer) {
+					writer.lineTo(it->getPoint());
+				});
+				pathLines->openForWriting([&] (vg::PathWriter &writer) {
+					writer.lineTo(it->getPoint());
+				});
 				it->setColor(getColorForIndex(contour.index));
 			}
 
-			pathFill->closePath();
-			pathLines->closePath();
-
+			pathFill->openForWriting([&] (vg::PathWriter &writer) {
+				writer.closePath();
+			});
+			pathLines->openForWriting([&] (vg::PathWriter &writer) {
+				writer.closePath();
+			});
 			++ nContours;
 		}
 	}

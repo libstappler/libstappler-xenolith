@@ -32,6 +32,8 @@ using RenderingLevel = core::RenderingLevel;
 
 using StateId = uint32_t;
 
+static constexpr StateId StateIdNone = maxOf<StateId>();
+
 static constexpr uint64_t InvalidTag = maxOf<uint64_t>();
 
 enum class NodeFlags {
@@ -104,6 +106,9 @@ struct DrawStateValues {
 	core::DynamicState enabled = core::DynamicState::None;
 	URect viewport;
 	URect scissor;
+
+	// used to extend state
+	Rc<Ref> data;
 
 	bool operator==(const DrawStateValues &) const = default;
 

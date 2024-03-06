@@ -61,6 +61,8 @@ public:
 
 		uint32_t applicationVersionCode = 0;
 		void *nativeHandle = nullptr;
+
+		int dpi = 92;
 	};
 
 	struct CallbackInfo {
@@ -132,6 +134,7 @@ public:
 	template <typename T>
 	T *getExtension();
 
+	StringView getMessageToken() const { return _messageToken; }
 	const CommonInfo &getInfo() const { return _info; }
 
 	void openUrl(StringView) const;

@@ -33,7 +33,6 @@ include $(XENOLITH_MODULE_DIR)/backend/vk/vk.mk
 include $(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk
 
 include $(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk
-include $(XENOLITH_MODULE_DIR)/renderer/gui2d/gui2d.mk
 include $(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk
 
 include $(XENOLITH_MODULE_DIR)/resources/icons/icons.mk

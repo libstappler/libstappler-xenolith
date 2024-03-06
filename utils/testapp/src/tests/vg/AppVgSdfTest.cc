@@ -85,7 +85,7 @@ bool VgSdfTestCircle::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->addCircle(8, 8, 8);
+	_image->addPath()->openForWriting([] (vg::PathWriter &writer) { writer.addCircle(8, 8, 8); });
 
 	setDepthIndex(4.0f);
 	setColor(Color::Grey_100);
@@ -114,9 +114,9 @@ bool VgSdfTestRect::init(bool value, float radius) {
 	_radius = radius;
 
 	if (_radius > 0.0f) {
-		_image->addPath()->addRect(Rect(0, 0, 16, 8), radius);
+		_image->addPath()->openForWriting([&] (vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8), radius, radius); });
 	} else {
-		_image->addPath()->addRect(Rect(0, 0, 16, 8));
+		_image->addPath()->openForWriting([&] (vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8)); });
 	}
 
 	setDepthIndex(4.0f);
@@ -147,7 +147,9 @@ bool VgSdfTestPolygon::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->moveTo(0.0f, 0.0f).lineTo(16, 20).lineTo(0, 20).lineTo(16, 0).closePath().setAntialiased(false);
+	_image->addPath()->openForWriting([&] (vg::PathWriter &writer) {
+		writer.moveTo(0.0f, 0.0f).lineTo(16, 20).lineTo(0, 20).lineTo(16, 0).closePath();
+	}).setAntialiased(false);
 
 	setDepthIndex(4.0f);
 	setColor(Color::Grey_100);
@@ -179,7 +181,9 @@ bool VgSdfTestTriangle::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->moveTo(0.0f, 0.0f).lineTo(8.0f, 16.0f).lineTo(16.0f, 0.0f).closePath().setAntialiased(false);
+	_image->addPath()->openForWriting([&] (vg::PathWriter &writer) {
+		writer.moveTo(0.0f, 0.0f).lineTo(8.0f, 16.0f).lineTo(16.0f, 0.0f).closePath();
+	}).setAntialiased(false);
 
 	setDepthIndex(4.0f);
 	setColor(Color::Grey_100);

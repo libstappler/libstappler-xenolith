@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,39 +20,29 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#ifndef XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENE_H_
+#define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENE_H_
 
-#include "XL2dCommandList.cc"
-#include "XL2dVertexArray.cc"
-#include "XL2dFrameContext.cc"
+#include "MaterialSurfaceInterior.h"
+#include "MaterialStyleContainer.h"
+#include "XL2dScene.h"
 
-#include "XL2dSprite.cc"
-#include "XL2dLayer.cc"
-#include "XL2dLabel.cc"
-#include "XL2dScene.cc"
-#include "XL2dSceneContent.cc"
-#include "XL2dSceneLayout.cc"
-#include "XL2dSceneLight.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-#include "XL2dVectorCanvas.cc"
-#include "XL2dVectorSprite.cc"
+class Scene : public Scene2d {
+public:
+	virtual ~Scene() = default;
 
-#include "XL2dActionAcceleratedMove.cc"
-#include "XL2dImageLayer.cc"
-#include "XL2dLayerRounded.cc"
-#include "XL2dLinearProgress.cc"
-#include "XL2dRoundedProgress.cc"
+	material2d::StyleContainer *getStyleContainer() const { return _styleContainer; }
+	material2d::SurfaceInterior *getSurfaceInterior() const { return _surfaceInterior; }
 
-#include "XL2dScrollController.cc"
-#include "XL2dScrollItemHandle.cc"
-#include "XL2dScrollViewBase.cc"
-#include "XL2dScrollView.cc"
+protected:
+	virtual void addContentNodes(SceneContent *);
 
-#include "XL2dLinearGradient.cc"
+	material2d::StyleContainer *_styleContainer = nullptr;
+	material2d::SurfaceInterior *_surfaceInterior = nullptr;
+};
 
-#ifdef MODULE_XENOLITH_BACKEND_VK
-#include "backend/vk/XL2dVkMaterial.cc"
-#include "backend/vk/XL2dVkVertexPass.cc"
-#include "backend/vk/XL2dVkShadow.cc"
-#include "backend/vk/XL2dVkShadowPass.cc"
-#endif
+}
+
+#endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENE_H_ */

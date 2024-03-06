@@ -222,6 +222,10 @@ Rc<TemporaryResource> ResourceCache::addTemporaryResource(Rc<core::Resource> &&r
 		_temporaries.erase(it);
 	}
 	it = _temporaries.emplace(tmp->getName(), move(tmp)).first;
+
+	if ((flags & TemporaryResourceFlags::CompileWhenAdded) != TemporaryResourceFlags::None) {
+		compileResource(it->second);
+	}
 	return it->second;
 }
 

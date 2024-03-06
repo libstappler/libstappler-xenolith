@@ -90,12 +90,15 @@ bool InputKeyboardOnScreenKey::init(Function<void(bool)> &&cb) {
 	// so, if icon defined after background, it will be filtered by depth test
 
 	// icon:
-	image->addPath()->moveTo(10, 30).lineTo(20, 40).lineTo(30, 30).setStrokeWidth(4.0f)
+	image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+		writer.moveTo(10, 30).lineTo(20, 40).lineTo(30, 30);
+	}).setStrokeWidth(4.0f)
 			.setStyle(vg::DrawStyle::Stroke).setStrokeColor(Color::Black).setAntialiased(false);
 
 	// background
-	image->addPath()->moveTo(20, 0).lineTo(0, 20).lineTo(0, 50).lineTo(40, 50).lineTo(40, 20)
-			.setFillColor(Color::Grey_200).setAntialiased(false);
+	image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+		writer.moveTo(20, 0).lineTo(0, 20).lineTo(0, 50).lineTo(40, 50).lineTo(40, 20);
+	}).setFillColor(Color::Grey_200).setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
 		return false;

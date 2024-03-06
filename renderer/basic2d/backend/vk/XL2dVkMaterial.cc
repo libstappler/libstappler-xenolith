@@ -38,16 +38,16 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 			material.atlasIdx = 0;
 			if (image.image->atlas) {
 				if (auto &index = image.image->atlas->getIndexBuffer()) {
-					material.flags |= 1;
+					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX;
 					material.atlasIdx |= index->getDescriptor();
 
 					auto indexSize = image.image->atlas->getIndexData().size() / sizeof(DataAtlasIndex);
 					auto pow2index = std::countr_zero(indexSize);
 
-					material.flags |= (pow2index << 24);
+					material.flags |= (pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
 				}
 				if (auto &data = image.image->atlas->getDataBuffer()) {
-					material.flags |= 2;
+					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_DATA;
 					material.atlasIdx |= (data->getDescriptor() << 16);
 				}
 			}

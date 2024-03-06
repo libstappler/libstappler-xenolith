@@ -56,7 +56,8 @@ void Label::Selection::updateVertexes() {
 	//_vertexes.clear();
 }
 
-static size_t Label_getQuadsCount(const font::TextLayout *format) {
+template <typename Interface>
+static size_t Label_getQuadsCount(const font::TextLayoutData<Interface> *format) {
 	size_t ret = 0;
 
 	const font::RangeLayoutData *targetRange = nullptr;
@@ -69,7 +70,7 @@ static size_t Label_getQuadsCount(const font::TextLayout *format) {
 		const auto start = it.start();
 		auto end = start + it.count();
 		if (it.line->start + it.line->count == end) {
-			const font::CharLayoutData &c = format->getData()->chars[end - 1];
+			const font::CharLayoutData &c = format->chars[end - 1];
 			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A)) {
 				++ ret;
 			}
@@ -77,7 +78,7 @@ static size_t Label_getQuadsCount(const font::TextLayout *format) {
 		}
 
 		for (auto charIdx = start; charIdx < end; ++ charIdx) {
-			const font::CharLayoutData &c = format->getData()->chars[charIdx];
+			const font::CharLayoutData &c = format->chars[charIdx];
 			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
 				++ ret;
 			}
@@ -113,7 +114,8 @@ static void Label_writeTextureQuad(float height, const font::Metrics &m, const f
 	}
 }
 
-void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMask> &colorMap) {
+template <typename Interface>
+static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<Interface> *format, Vector<ColorMask> &colorMap) {
 	auto quadsCount = Label_getQuadsCount(format);
 	colorMap.clear();
 	colorMap.reserve(quadsCount);
@@ -122,8 +124,6 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 	font::Metrics metrics;
 
 	vertexes.clear();
-
-	auto data = format->getData();
 
 	for (auto it = format->begin(); it != format->end(); ++ it) {
 		if (it.count() == 0) {
@@ -139,7 +139,7 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 		auto end = start + it.count();
 
 		for (auto charIdx = start; charIdx < end; ++ charIdx) {
-			const font::CharLayoutData &c = data->chars[charIdx];
+			const font::CharLayoutData &c = format->chars[charIdx];
 			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A) && c.charID != char16_t(0x00AD)) {
 
 				uint16_t face = 0;
@@ -148,13 +148,13 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 				if (ch.charID == c.charID) {
 					auto quad = vertexes.addQuad();
 					Label_pushColorMap(*it.range, colorMap);
-					Label_writeTextureQuad(data->height, metrics, c, ch, *it.range, *it.line, quad);
+					Label_writeTextureQuad(format->height, metrics, c, ch, *it.range, *it.line, quad);
 				}
 			}
 		}
 
 		if (it.line->start + it.line->count == end) {
-			const font::CharLayoutData &c = data->chars[end - 1];
+			const font::CharLayoutData &c = format->chars[end - 1];
 			if (c.charID == char16_t(0x00AD)) {
 				uint16_t face = 0;
 				auto ch = targetRange->layout->getChar(c.charID, face);
@@ -162,15 +162,15 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 				if (ch.charID == c.charID) {
 					auto quad = vertexes.addQuad();
 					Label_pushColorMap(*it.range, colorMap);
-					Label_writeTextureQuad(data->height, metrics, c, ch, *it.range, *it.line, quad);
+					Label_writeTextureQuad(format->height, metrics, c, ch, *it.range, *it.line, quad);
 				}
 			}
 			end -= 1;
 		}
 
 		if (it.count() > 0 && it.range->decoration != font::TextDecoration::None) {
-			const font::CharLayoutData &firstChar = data->chars[it.start()];
-			const font::CharLayoutData &lastChar = data->chars[it.start() + it.count() - 1];
+			const font::CharLayoutData &firstChar = format->chars[it.start()];
+			const font::CharLayoutData &lastChar = format->chars[it.start() + it.count() - 1];
 
 			auto color = it.range->color;
 			color.a = uint8_t(0.75f * color.a);
@@ -197,7 +197,7 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 			const auto underlineBase = uint16_t(base);
 			const auto underlineX = firstChar.pos;
 			const auto underlineWidth = lastChar.pos + lastChar.advance - firstChar.pos;
-			const auto underlineY = data->height - it.line->pos + offset - underlineBase / 2;
+			const auto underlineY = format->height - it.line->pos + offset - underlineBase / 2;
 			const auto underlineHeight = underlineBase;
 
 			auto quad = vertexes.addQuad();
@@ -214,12 +214,20 @@ void Label::writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMa
 	}
 }
 
+void Label::writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::StandartInterface> *format, Vector<ColorMask> &colorMap) {
+	Label_writeQuads(vertexes, format, colorMap);
+}
+
+void Label::writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::PoolInterface> *format, Vector<ColorMask> &colorMap) {
+	Label_writeQuads(vertexes, format, colorMap);
+}
+
 Rc<LabelResult> Label::writeResult(TextLayout *format, const Color4F &color) {
 	auto result = Rc<LabelResult>::alloc();
 	VertexArray array;
 	array.init(format->getData()->chars.size() * 4, format->getData()->chars.size() * 6);
 
-	writeQuads(array, format, result->colorMap);
+	writeQuads(array, format->getData(), result->colorMap);
 	result->data.transform = Mat4::IDENTITY;
 	result->data.data = array.pop();
 	return result;
@@ -417,7 +425,7 @@ void Label::updateVertexesColor() {
 }
 
 void Label::updateQuadsForeground(font::FontController *controller, TextLayout *format, Vector<ColorMask> &colorMap) {
-	writeQuads(_vertexes, format, colorMap);
+	writeQuads(_vertexes, format->getData(), colorMap);
 }
 
 bool Label::checkVertexDirty() const {

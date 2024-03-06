@@ -46,15 +46,24 @@ void Component::onRemoved() {
 	_owner = nullptr;
 }
 
-void Component::onEnter(Scene *) {
+void Component::onEnter(Scene *sc) {
 	_running = true;
+	if (_scheduled) {
+		sc->getScheduler()->scheduleUpdate(this, 0, false);
+	}
 }
 
 void Component::onExit() {
+	if (_scheduled) {
+		unscheduleUpdate();
+		_scheduled = true; // -re-enable after restart;
+	}
 	_running = false;
 }
 
 void Component::visit(FrameInfo &, NodeFlags parentFlags) { }
+
+void Component::update(const UpdateTime &time) { }
 
 void Component::onContentSizeDirty() { }
 void Component::onTransformDirty(const Mat4 &) { }
@@ -70,6 +79,24 @@ bool Component::isEnabled() const {
 
 void Component::setEnabled(bool b) {
 	_enabled = b;
+}
+
+void Component::scheduleUpdate() {
+	if (!_scheduled) {
+		_scheduled = true;
+		if (_running) {
+			_owner->getScheduler()->scheduleUpdate(this, 0, false);
+		}
+	}
+}
+
+void Component::unscheduleUpdate() {
+	if (_scheduled) {
+		if (_running) {
+			_owner->getScheduler()->unschedule(this);
+		}
+		_scheduled = false;
+	}
 }
 
 void Component::setFrameTag(uint64_t tag) {

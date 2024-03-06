@@ -49,7 +49,7 @@ public:
 	virtual void submitHandle(FrameInfo &, FrameContextHandle *);
 
 	virtual uint64_t getMaterial(const MaterialInfo &) const;
-	virtual uint64_t acquireMaterial(const MaterialInfo &, Vector<core::MaterialImage> &&images, bool revokable);
+	virtual uint64_t acquireMaterial(const MaterialInfo &, Vector<core::MaterialImage> &&images, Ref *data, bool revokable);
 
 	virtual void revokeImages(SpanView<uint64_t>);
 
@@ -73,7 +73,6 @@ protected:
 	String listMaterials() const;
 
 	virtual core::ImageViewInfo getImageViewForMaterial(const MaterialInfo &, uint32_t idx, const core::ImageData *) const;
-	virtual Bytes getDataForMaterial(const MaterialInfo &) const;
 
 	virtual const core::GraphicPipelineData *getPipelineForMaterial(const MaterialInfo &) const;
 	virtual bool isPipelineMatch(const core::GraphicPipelineData *, const MaterialInfo &) const;

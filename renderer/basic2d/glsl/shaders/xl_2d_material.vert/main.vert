@@ -4,12 +4,14 @@
 
 #include "XL2dGlslVertexData.h"
 
-layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 16;
+layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 8;
 
 layout (push_constant) uniform pcb {
 	uint materialIdx;
 	uint padding0;
 	uint padding1;
+	uint padding2;
+	uint padding3;
 } pushConstants;
 
 layout (set = 0, binding = 0) readonly buffer Vertices {
@@ -35,6 +37,7 @@ layout (set = 1, binding = 2) readonly buffer DataAtlasValueBuffer {
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec2 fragTexCoord;
 layout (location = 2) out vec4 shadowColor;
+layout (location = 3) out vec2 fragPosition;
 
 uint hash(uint k, uint capacity) {
 	k ^= k >> 16;
@@ -55,8 +58,8 @@ void main() {
 	vec4 color = vertex.color;
 	vec2 tex = vertex.tex;
 
-	if (vertex.object != 0 && (mat.flags & 3) != 0) {
-		uint size = 1 << (mat.flags >> 24);
+	if (vertex.object != 0 && (mat.flags & XL_GLSL_MATERIAL_FLAG_HAS_ATLAS) != 0) {
+		uint size = 1 << (mat.flags >> XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
 		uint slot = hash(vertex.object, size);
 		uint dataAtlasIndex = mat.atlasIdx & 0xFFFF;
 		uint dataAtlasValue = mat.atlasIdx >> 16;
@@ -82,6 +85,7 @@ void main() {
 	}
 
 	gl_Position = transform.transform * pos * transform.mask + transform.offset;
+	fragPosition = gl_Position.xy;
 	fragColor = color;
 	fragTexCoord = tex;
 	shadowColor = transform.shadow;

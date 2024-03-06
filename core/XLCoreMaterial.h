@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -124,17 +124,16 @@ public:
 	virtual ~Material();
 
 	// view for image must be empty
-	bool init(MaterialId, const PipelineData *, Vector<MaterialImage> &&, Bytes && = Bytes());
-	bool init(MaterialId, const PipelineData *, const Rc<DynamicImageInstance> &, Bytes && = Bytes());
-	bool init(MaterialId, const PipelineData *, const ImageData *, Bytes && = Bytes(), bool ownedData = false);
-	bool init(MaterialId, const PipelineData *, const ImageData *, ColorMode, Bytes && = Bytes(), bool ownedData = false);
-	bool init(const Material *, Rc<ImageObject> &&, Rc<DataAtlas> &&, Bytes && = Bytes());
+	bool init(MaterialId, const PipelineData *, Vector<MaterialImage> &&, Rc<Ref> && = Rc<Ref>());
+	bool init(MaterialId, const PipelineData *, const Rc<DynamicImageInstance> &, Rc<Ref> && = Rc<Ref>());
+	bool init(MaterialId, const PipelineData *, const ImageData *, Rc<Ref> && = Rc<Ref>(), bool ownedData = false);
+	bool init(MaterialId, const PipelineData *, const ImageData *, ColorMode, Rc<Ref> && = Rc<Ref>(), bool ownedData = false);
+	bool init(const Material *, Rc<ImageObject> &&, Rc<DataAtlas> &&, Rc<Ref> && = Rc<Ref>());
 	bool init(const Material *, Vector<MaterialImage> &&);
 
 	MaterialId getId() const { return _id; }
 	const PipelineData * getPipeline() const { return _pipeline; }
 	const Vector<MaterialImage> &getImages() const { return _images; }
-	BytesView getData() const { return _data; }
 
 	uint32_t getLayoutIndex() const { return _layoutIndex; }
 	void setLayoutIndex(uint32_t);
@@ -152,7 +151,7 @@ protected:
 	const PipelineData *_pipeline;
 	Vector<MaterialImage> _images;
 	Rc<DataAtlas> _atlas;
-	Bytes _data;
+	Rc<Ref> _data;
 	const ImageData *_ownedData = nullptr;
 };
 

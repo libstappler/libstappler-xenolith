@@ -22,7 +22,7 @@
 
 #include "XL2dLayerRounded.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool LayerRounded::init(const Color4F &color, float borderRadius) {
 	if (!VectorSprite::init(Size2(8.0f, 8.0f))) {

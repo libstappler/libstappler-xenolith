@@ -273,7 +273,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;
-		out << "\n\tLayers:\n";
+		out << "\n\tVulkan: " << getVersionDescription(s_InstanceVersion) << "\n\tLayers:\n";
 		for (const auto &layerProperties : s_InstanceAvailableLayers) {
 			out << "\t\t" << layerProperties.layerName << " ("
 					<< getVersionDescription(layerProperties.specVersion) << "/"

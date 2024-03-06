@@ -207,8 +207,9 @@ bool VgContourSwitcherButton::init(uint32_t idx, Function<void()> &&cb) {
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath("", "org.stappler.xenolith.tess.TessPoint")
 		->setFillColor(Color::White)
-		.addOval(Rect(0, 0, 10, 10))
-		.setAntialiased(false);
+		.openForWriting([] (vg::PathWriter &writer) {
+			writer.addOval(Rect(0, 0, 10, 10));
+		}).setAntialiased(false);
 
 	_indicator = addChild(Rc<VectorSprite>::create(move(image)), ZOrder(1));
 	_indicator->setColor(VgTessCanvas::getColorForIndex(_index));

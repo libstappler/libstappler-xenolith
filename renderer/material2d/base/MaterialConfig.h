@@ -24,11 +24,11 @@
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALCONFIG_H_
 
 #include "XLCommon.h"
-#include "XL2dGui.h"
+#include "XL2d.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-using namespace gui2d;
+using namespace basic2d;
 
 }
 

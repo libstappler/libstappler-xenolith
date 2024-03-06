@@ -108,6 +108,7 @@ void AppDelegate::run(Function<void()> &&initCb) {
 
 	GuiApplication::run(callbacks);
 
+	_assetLibrary = nullptr;
 	_storageServer = nullptr;
 	_networkController = nullptr;
 }

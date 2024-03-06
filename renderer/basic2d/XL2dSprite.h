@@ -27,6 +27,7 @@
 #include "XLResourceCache.h"
 #include "XLDynamicStateNode.h"
 #include "XL2dVertexArray.h"
+#include "XL2dLinearGradient.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -47,6 +48,9 @@ public:
 	virtual void setTexture(StringView);
 	virtual void setTexture(Rc<Texture> &&);
 	const Rc<Texture> &getTexture() const;
+
+	virtual void setLinearGradient(Rc<LinearGradient> &&);
+	const Rc<LinearGradient> &getLinearGradient() const;
 
 	// texture rect should be normalized
 	virtual void setTextureRect(const Rect &);
@@ -163,6 +167,8 @@ protected:
 
 	Vector<Rc<core::DependencyEvent>> _pendingDependencies;
 	Function<void()> _textureLoadedCallback;
+
+	Rc<LinearGradient> _linearGradient;
 };
 
 }

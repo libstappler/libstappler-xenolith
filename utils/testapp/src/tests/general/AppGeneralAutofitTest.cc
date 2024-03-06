@@ -118,7 +118,8 @@ bool GeneralAutofitTestResize::init() {
 
 	getIconData(IconName::Navigation_unfold_more_solid, [&] (BytesView view) {
 		image->addPath("", "org.stappler.xenolith.test.GeneralAutofitTestResize.Resize")->setPath(view)
-				.addOval(Rect(0, 0, 24, 24)).setWindingRule(vg::Winding::EvenOdd).setFillColor(Color::White);
+				.openForWriting([] (vg::PathWriter &writer) { writer.addOval(Rect(0, 0, 24, 24)); })
+				.setWindingRule(vg::Winding::EvenOdd).setFillColor(Color::White);
 	});
 
 	return VectorSprite::init(move(image));

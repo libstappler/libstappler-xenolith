@@ -48,6 +48,8 @@ public:
 
 	virtual void visit(FrameInfo &, NodeFlags parentFlags);
 
+	virtual void update(const UpdateTime &time);
+
 	virtual void onContentSizeDirty();
 	virtual void onTransformDirty(const Mat4 &);
 	virtual void onReorderChildDirty();
@@ -56,6 +58,9 @@ public:
 
 	virtual bool isEnabled() const;
 	virtual void setEnabled(bool b);
+
+	void scheduleUpdate();
+	void unscheduleUpdate();
 
 	Node* getOwner() const { return _owner; }
 
@@ -66,6 +71,7 @@ protected:
 	Node *_owner = nullptr;
 	bool _enabled = true;
 	bool _running = false;
+	bool _scheduled = false;
 	uint64_t _frameTag = InvalidTag;
 };
 

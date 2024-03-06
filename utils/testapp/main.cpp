@@ -21,7 +21,6 @@
  **/
 
 #include "XLCommon.h"
-#include "XLCore.h"
 #include "SPData.h"
 #include "AppDelegate.h"
 

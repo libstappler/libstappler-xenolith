@@ -38,6 +38,62 @@
 #endif
 #endif
 
+#if XL_LINK
+extern "C" {
+
+extern const struct wl_interface wl_registry_interface;
+extern const struct wl_interface wl_compositor_interface;
+extern const struct wl_interface wl_output_interface;
+extern const struct wl_interface wl_seat_interface;
+extern const struct wl_interface wl_surface_interface;
+extern const struct wl_interface wl_region_interface;
+extern const struct wl_interface wl_callback_interface;
+extern const struct wl_interface wl_pointer_interface;
+extern const struct wl_interface wl_keyboard_interface;
+extern const struct wl_interface wl_touch_interface;
+extern const struct wl_interface wl_shm_interface;
+extern const struct wl_interface wl_subcompositor_interface;
+extern const struct wl_interface wl_subsurface_interface;
+extern const struct wl_interface wl_shm_pool_interface;
+extern const struct wl_interface wl_buffer_interface;
+
+extern const struct wl_interface wp_viewporter_interface;
+extern const struct wl_interface wp_viewport_interface;
+
+extern const struct wl_interface xdg_wm_base_interface;
+extern const struct wl_interface xdg_positioner_interface;
+extern const struct wl_interface xdg_surface_interface;
+extern const struct wl_interface xdg_toplevel_interface;
+extern const struct wl_interface xdg_popup_interface;
+
+struct wl_display * wl_display_connect(const char *name);
+int wl_display_get_fd (struct wl_display *display);
+int wl_display_dispatch (struct wl_display *display);
+int wl_display_dispatch_pending (struct wl_display *display);
+int wl_display_prepare_read (struct wl_display *display);
+int wl_display_flush (struct wl_display *display);
+int wl_display_read_events (struct wl_display *display);
+void wl_display_disconnect (struct wl_display *display);
+
+struct wl_proxy* wl_proxy_marshal_flags (struct wl_proxy *proxy, uint32_t opcode,
+		const struct wl_interface *interface, uint32_t version, uint32_t flags, ...);
+uint32_t wl_proxy_get_version (struct wl_proxy *proxy);
+int wl_proxy_add_listener (struct wl_proxy *proxy, void (**implementation)(void), void *data);
+void wl_proxy_set_user_data (struct wl_proxy *proxy, void *user_data);
+void *wl_proxy_get_user_data (struct wl_proxy *proxy);
+void wl_proxy_set_tag (struct wl_proxy *proxy, const char * const *tag);
+const char * const *wl_proxy_get_tag (struct wl_proxy *proxy);
+void wl_proxy_destroy (struct wl_proxy *proxy);
+int wl_display_roundtrip (struct wl_display *display);
+
+wl_cursor_theme * wl_cursor_theme_load(const char *name, int size, struct wl_shm *shm);
+void wl_cursor_theme_destroy(wl_cursor_theme *theme);
+wl_cursor * wl_cursor_theme_get_cursor(wl_cursor_theme *theme, const char *name);
+wl_buffer * wl_cursor_image_get_buffer(wl_cursor_image *image);
+
+}
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static const char *s_XenolithWaylandTag = "org.stappler.xenolith.wayland";
@@ -402,12 +458,18 @@ WaylandLibrary::WaylandLibrary() {
 }
 
 bool WaylandLibrary::init() {
-	if (auto d = Dso("libwayland-client.so")) {
-		if (open(d)) {
-			s_WaylandLibrary = this;
-			openConnection(_pending);
-			return _pending.display != nullptr;
-		}
+#ifndef XL_LINK
+	_handle = Dso("libwayland-client.so");
+	if (!_handle) {
+		return false;
+	}
+#endif
+	if (open(_handle)) {
+		s_WaylandLibrary = this;
+		openConnection(_pending);
+		return _pending.display != nullptr;
+	} else {
+		_handle = Dso();
 	}
 	return false;
 }
@@ -461,6 +523,41 @@ bool WaylandLibrary::ownsProxy(wl_surface *surface) {
 }
 
 bool WaylandLibrary::open(Dso &handle) {
+#if XL_LINK
+	this->wl_registry_interface = &::wl_registry_interface;
+	this->wl_compositor_interface = &::wl_compositor_interface;
+	this->wl_output_interface = &::wl_output_interface;
+	this->wl_seat_interface = &::wl_seat_interface;
+	this->wl_surface_interface = &::wl_surface_interface;
+	this->wl_region_interface = &::wl_region_interface;
+	this->wl_callback_interface = &::wl_callback_interface;
+	this->wl_pointer_interface = &::wl_pointer_interface;
+	this->wl_keyboard_interface = &::wl_keyboard_interface;
+	this->wl_touch_interface = &::wl_touch_interface;
+	this->wl_shm_interface = &::wl_shm_interface;
+	this->wl_subcompositor_interface = &::wl_subcompositor_interface;
+	this->wl_subsurface_interface = &::wl_subsurface_interface;
+	this->wl_shm_pool_interface = &::wl_shm_pool_interface;
+	this->wl_buffer_interface = &::wl_buffer_interface;
+
+	this->wl_display_connect = &::wl_display_connect;
+	this->wl_display_get_fd = &::wl_display_get_fd;
+	this->wl_display_dispatch = &::wl_display_dispatch;
+	this->wl_display_dispatch_pending = &::wl_display_dispatch_pending;
+	this->wl_display_prepare_read = &::wl_display_prepare_read;
+	this->wl_display_flush = &::wl_display_flush;
+	this->wl_display_read_events = &::wl_display_read_events;
+	this->wl_display_disconnect = &::wl_display_disconnect;
+	this->wl_proxy_marshal_flags = &::wl_proxy_marshal_flags;
+	this->wl_proxy_get_version = &::wl_proxy_get_version;
+	this->wl_proxy_add_listener = &::wl_proxy_add_listener;
+	this->wl_proxy_set_user_data = &::wl_proxy_set_user_data;
+	this->wl_proxy_get_user_data = &::wl_proxy_get_user_data;
+	this->wl_proxy_set_tag = &::wl_proxy_set_tag;
+	this->wl_proxy_get_tag = &::wl_proxy_get_tag;
+	this->wl_proxy_destroy = &::wl_proxy_destroy;
+	this->wl_display_roundtrip = &::wl_display_roundtrip;
+#else
 	this->wl_registry_interface = handle.sym<decltype(this->wl_registry_interface)>("wl_registry_interface");
 	this->wl_compositor_interface = handle.sym<decltype(this->wl_compositor_interface)>("wl_compositor_interface");
 	this->wl_output_interface = handle.sym<decltype(this->wl_output_interface)>("wl_output_interface");
@@ -494,6 +591,7 @@ bool WaylandLibrary::open(Dso &handle) {
 	this->wl_proxy_get_tag = handle.sym<decltype(this->wl_proxy_get_tag)>("wl_proxy_get_tag");
 	this->wl_proxy_destroy = handle.sym<decltype(this->wl_proxy_destroy)>("wl_proxy_destroy");
 	this->wl_display_roundtrip = handle.sym<decltype(this->wl_display_roundtrip)>("wl_display_roundtrip");
+#endif
 
 	if (this->wl_registry_interface
 			&& this->wl_compositor_interface
@@ -536,24 +634,33 @@ bool WaylandLibrary::open(Dso &handle) {
 		xdg_toplevel_interface = &xdg->xdg_toplevel_interface;
 		xdg_popup_interface = &xdg->xdg_popup_interface;
 
-		if (auto d = Dso("libwayland-cursor.so")) {
-			if (openWaylandCursor(d)) {
-				_cursor = move(d);
-			}
+#ifndef XL_LINK
+		_cursor = Dso("libwayland-cursor.so");
+#endif
+		if (!openWaylandCursor(_cursor)) {
+			_cursor = Dso();
 		}
-
-		_handle = move(handle);
 		return true;
 	}
 	return false;
 }
 
 bool WaylandLibrary::openWaylandCursor(Dso &handle) {
+#if XL_LINK
+	this->wl_cursor_theme_load = &::wl_cursor_theme_load;
+	this->wl_cursor_theme_destroy = &::wl_cursor_theme_destroy;
+	this->wl_cursor_theme_get_cursor = &::wl_cursor_theme_get_cursor;
+	this->wl_cursor_image_get_buffer = &::wl_cursor_image_get_buffer;
+#else
+	if (!handle) {
+		return false;
+	}
+
 	this->wl_cursor_theme_load = handle.sym<decltype(this->wl_cursor_theme_load)>("wl_cursor_theme_load");
 	this->wl_cursor_theme_destroy = handle.sym<decltype(this->wl_cursor_theme_destroy)>("wl_cursor_theme_destroy");
 	this->wl_cursor_theme_get_cursor = handle.sym<decltype(this->wl_cursor_theme_get_cursor)>("wl_cursor_theme_get_cursor");
 	this->wl_cursor_image_get_buffer = handle.sym<decltype(this->wl_cursor_image_get_buffer)>("wl_cursor_image_get_buffer");
-
+#endif
 	return this->wl_cursor_theme_load
 		&& this->wl_cursor_theme_destroy
 		&& this->wl_cursor_theme_get_cursor

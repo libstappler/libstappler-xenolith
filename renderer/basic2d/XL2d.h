@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,12 +52,6 @@ using Rect2DIndex = glsl::Rect2DIndex;
 using RoundedRect2DIndex = glsl::RoundedRect2DIndex;
 using Polygon2DIndex = glsl::Polygon2DIndex;
 
-//using Circle2DData = glsl::Circle2DData;
-//using Triangle2DData = glsl::Triangle2DData;
-//using Rect2DData = glsl::Rect2DData;
-//using RoundedRect2DData = glsl::RoundedRect2DData;
-//using Polygon2DData = glsl::Polygon2DData;
-
 struct Triangle {
 	Vertex a;
 	Vertex b;
@@ -72,11 +66,13 @@ struct Quad {
 };
 
 struct VertexSpan {
-	core::MaterialId material;
-	uint32_t indexCount;
-	uint32_t instanceCount;
-	uint32_t firstIndex;
-	StateId state;
+	core::MaterialId material = 0;
+	uint32_t indexCount = 0;
+	uint32_t instanceCount = 0;
+	uint32_t firstIndex = 0;
+	StateId state = 0;
+	uint32_t gradientOffset = 0;
+	uint32_t gradientCount = 0;
 };
 
 struct alignas(16) VertexData : public Ref {

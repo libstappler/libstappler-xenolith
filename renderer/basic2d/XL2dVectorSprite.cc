@@ -100,6 +100,7 @@ bool VectorSprite::init(FilePath path) {
 
 	_image = Rc<VectorImage>::create(path);
 	_contentSize = _image->getImageSize();
+
 	return _image != nullptr;
 }
 

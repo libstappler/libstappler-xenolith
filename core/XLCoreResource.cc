@@ -115,7 +115,7 @@ static void Resource_loadImageConverted(StringView path, uint8_t *glBuffer, Byte
 		}
 		break;
 	default:
-		log::error("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
+		log::error("Resource", "loadImageConverted: ", path, ": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
 }
@@ -147,7 +147,7 @@ static void Resource_loadImageDefault(StringView path, BytesView encodedImageDat
 		break;
 	default:
 		availableFormat = false;
-		log::error("Resource", "loadImageFileData: ", path, ": Invalid image format: ", getImageFormatName(fmt));
+		log::error("Resource", "loadImageDefault: ", path, ": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
 
@@ -155,6 +155,75 @@ static void Resource_loadImageDefault(StringView path, BytesView encodedImageDat
 		dcb(BytesView(bmp.dataPtr(), bmp.data().size()));
 	} else {
 		dcb(BytesView());
+	}
+}
+
+void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb) {
+	bitmap::ImageInfo info;
+	if (!bitmap::getImageInfo(data, info)) {
+		log::error("Resource", "loadImageMmmoryData: fail to read image info");
+	} else {
+		if (ptr) {
+			// check if we can load directly into GL memory
+			switch (info.color) {
+			case bitmap::PixelFormat::RGBA8888:
+				switch (fmt) {
+				case ImageFormat::R8G8B8A8_SRGB:
+				case ImageFormat::R8G8B8A8_UNORM:
+				case ImageFormat::R8G8B8A8_UINT:
+					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					break;
+				default:
+					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					break;
+				}
+				break;
+			case bitmap::PixelFormat::RGB888:
+				switch (fmt) {
+				case ImageFormat::R8G8B8_SRGB:
+				case ImageFormat::R8G8B8_UNORM:
+				case ImageFormat::R8G8B8_UINT:
+					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					break;
+				default:
+					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					break;
+				}
+				break;
+			case bitmap::PixelFormat::IA88:
+				switch (fmt) {
+				case ImageFormat::R8G8_SRGB:
+				case ImageFormat::R8G8_UNORM:
+				case ImageFormat::R8G8_UINT:
+					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					break;
+				default:
+					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					break;
+				}
+				break;
+			case bitmap::PixelFormat::I8:
+			case bitmap::PixelFormat::A8:
+				switch (fmt) {
+				case ImageFormat::R8_SRGB:
+				case ImageFormat::R8_UNORM:
+				case ImageFormat::R8_UINT:
+					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					break;
+				default:
+					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					break;
+				}
+				break;
+			default:
+				log::error("Resource", "loadImageMemoryData: Unknown format");
+				dcb(BytesView());
+				break;
+			}
+		} else {
+			// use data callback
+			Resource_loadImageDefault(StringView(), data, fmt, dcb);
+		}
 	}
 }
 
@@ -169,72 +238,7 @@ void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView
 		f.read(mem, fsize);
 		f.close();
 
-		bitmap::ImageInfo info;
-		if (!bitmap::getImageInfo(BytesView(mem, fsize), info)) {
-			log::error("Resource", "loadImageFileData: ", path, ": fail to read image info");
-		} else {
-			if (ptr) {
-				// check if we can load directly into GL memory
-				switch (info.color) {
-				case bitmap::PixelFormat::RGBA8888:
-					switch (fmt) {
-					case ImageFormat::R8G8B8A8_SRGB:
-					case ImageFormat::R8G8B8A8_UNORM:
-					case ImageFormat::R8G8B8A8_UINT:
-						Resource_loadImageDirect(ptr, expectedSize, BytesView(mem, fsize), info);
-						break;
-					default:
-						Resource_loadImageConverted(path, ptr, BytesView(mem, fsize), info, fmt);
-						break;
-					}
-					break;
-				case bitmap::PixelFormat::RGB888:
-					switch (fmt) {
-					case ImageFormat::R8G8B8_SRGB:
-					case ImageFormat::R8G8B8_UNORM:
-					case ImageFormat::R8G8B8_UINT:
-						Resource_loadImageDirect(ptr, expectedSize, BytesView(mem, fsize), info);
-						break;
-					default:
-						Resource_loadImageConverted(path, ptr, BytesView(mem, fsize), info, fmt);
-						break;
-					}
-					break;
-				case bitmap::PixelFormat::IA88:
-					switch (fmt) {
-					case ImageFormat::R8G8_SRGB:
-					case ImageFormat::R8G8_UNORM:
-					case ImageFormat::R8G8_UINT:
-						Resource_loadImageDirect(ptr, expectedSize, BytesView(mem, fsize), info);
-						break;
-					default:
-						Resource_loadImageConverted(path, ptr, BytesView(mem, fsize), info, fmt);
-						break;
-					}
-					break;
-				case bitmap::PixelFormat::I8:
-				case bitmap::PixelFormat::A8:
-					switch (fmt) {
-					case ImageFormat::R8_SRGB:
-					case ImageFormat::R8_UNORM:
-					case ImageFormat::R8_UINT:
-						Resource_loadImageDirect(ptr, expectedSize, BytesView(mem, fsize), info);
-						break;
-					default:
-						Resource_loadImageConverted(path, ptr, BytesView(mem, fsize), info, fmt);
-						break;
-					}
-					break;
-				default:
-					log::error("Resource", "loadImageFileData: ", path, ": Unknown format");
-					dcb(BytesView());
-					break;
-				}
-			} else {
-				// use data callback
-				Resource_loadImageDefault(path, BytesView(mem, fsize), fmt, dcb);
-			}
-		}
+		loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
 	} else {
 		log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
 		dcb(BytesView());

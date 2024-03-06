@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,45 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_GUI2D_XL2DGUI_H_
-#define XENOLITH_RENDERER_GUI2D_XL2DGUI_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
+#define XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
 
 #include "XL2d.h"
+#include "XL2dLayer.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class VectorSprite;
+class LinearProgress : public Node {
+public:
+	virtual bool init() override;
+	virtual void onContentSizeDirty() override;
+
+	virtual void onEnter(Scene *) override;
+	virtual void onExit() override;
+
+	virtual void setAnimated(bool value);
+	virtual bool isAnimated() const;
+
+	virtual void setProgress(float value);
+	virtual float getProgress() const;
+
+	virtual void setLineColor(const Color &);
+	virtual void setLineOpacity(uint8_t);
+
+	virtual void setBarColor(const Color &);
+	virtual void setBarOpacity(uint8_t);
+
+protected:
+	virtual void layoutSubviews();
+	virtual void updateAnimations();
+
+	bool _animated = false;
+	float _progress = 0.0f;
+
+	Layer *_line = nullptr;
+	Layer *_bar = nullptr;
+};
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
-
-using namespace basic2d;
-
-}
-
-#endif /* XENOLITH_RENDERER_GUI2D_XL2DGUI_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_ */

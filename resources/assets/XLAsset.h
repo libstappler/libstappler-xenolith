@@ -29,6 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
+class Asset;
 class AssetLibrary;
 struct AssetDownloadData;
 
@@ -47,12 +48,8 @@ struct AssetVersionData {
 	String etag;
 };
 
-class Asset;
-
 class AssetLock : public Ref {
 public:
-	using VersionData = AssetVersionData;
-
 	virtual ~AssetLock();
 
 	int64_t getId() const { return _lockedVersion.id; }
@@ -67,14 +64,17 @@ public:
 
 	const Rc<Asset> &getAsset() const { return _asset; }
 
+	Ref *getOwner() const { return _owner; }
+
 protected:
 	friend class Asset;
 
-	AssetLock(Rc<Asset> &&, const VersionData &, Function<void(const VersionData &)> &&);
+	AssetLock(Rc<Asset> &&, const AssetVersionData &, Function<void(const AssetVersionData &)> &&, Ref *owner);
 
-	VersionData _lockedVersion;
-	Function<void(const VersionData &)> _releaseFunction;
+	AssetVersionData _lockedVersion;
+	Function<void(const AssetVersionData &)> _releaseFunction;
 	Rc<Asset> _asset;
+	Rc<Ref> _owner;
 };
 
 class Asset : public Subscription {
@@ -93,9 +93,8 @@ public:
 	Asset(AssetLibrary *, const db::Value &);
 	virtual ~Asset();
 
-	const VersionData *getReadableVersion() const;
-
-	Rc<AssetLock> lockVersion(int64_t);
+	Rc<AssetLock> lockVersion(int64_t, Ref *owner = nullptr);
+	Rc<AssetLock> lockReadableVersion(Ref *owner = nullptr);
 
 	int64_t getId() const { return _id; }
 	StringView getUrl() const { return _url; }
@@ -103,12 +102,18 @@ public:
 	Time getTouch() const { return _touch; }
 	TimeInterval getTtl() const { return _ttl; }
 
+	StringView getContentType() const;
+
 	bool download();
 	void touch(Time t = Time::now());
 	void clear();
 
+	bool isDownloadAvailable() const;
 	bool isDownloadInProgress() const;
 	float getProgress() const;
+
+	// or 0 if none
+	int64_t getReadableVersionId() const;
 
 	bool isStorageDirty() const { return _dirty; }
 	void setStorageDirty(bool value) { _dirty = value; }
@@ -122,7 +127,7 @@ public:
 protected:
 	friend class AssetLibrary;
 
-	void update(Update);
+	const VersionData *getReadableVersion() const;
 
 	void parseVersions(const db::Value &);
 	bool startNewDownload(Time ctime, StringView etag);
@@ -154,6 +159,8 @@ protected:
 	AssetLibrary *_library = nullptr;
 	bool _download = false;
 	bool _dirty = true;
+
+	mutable Mutex _mutex;
 };
 
 }

@@ -63,9 +63,9 @@ public:
 	bool open(Dso &handle);
 	void close();
 
-	bool hasRandr() const { return _randr ? true : false; }
-	bool hasKeysyms() const { return _keysyms ? true : false; }
-	bool hasXkb() const { return _xkb ? true : false; }
+	bool hasRandr() const;
+	bool hasKeysyms() const;
+	bool hasXkb() const;
 
 	xcb_connection_t * (* xcb_connect) (const char *displayname, int *screenp) = nullptr;
 	const struct xcb_setup_t * (* xcb_get_setup) (xcb_connection_t *c) = nullptr;
@@ -126,7 +126,7 @@ public:
 	int (* xcb_randr_get_screen_info_rates_length) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
 	xcb_randr_refresh_rates_iterator_t (* xcb_randr_get_screen_info_rates_iterator) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
 	void (* xcb_randr_refresh_rates_next) (xcb_randr_refresh_rates_iterator_t *) = nullptr;
-	xcb_generic_iterator_t (* xcb_randr_refresh_rates_end) (xcb_randr_refresh_rates_iterator_t *) = nullptr;
+	xcb_generic_iterator_t (* xcb_randr_refresh_rates_end) (xcb_randr_refresh_rates_iterator_t) = nullptr;
 	uint16_t * (* xcb_randr_refresh_rates_rates) (const xcb_randr_refresh_rates_t *) = nullptr;
 	int (* xcb_randr_refresh_rates_rates_length) (const xcb_randr_refresh_rates_t *) = nullptr;
 

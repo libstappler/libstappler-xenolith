@@ -27,7 +27,7 @@
 
 namespace stappler::xenolith::app {
 
-using namespace stappler::xenolith::gui2d;
+using namespace stappler::xenolith::basic2d;
 
 }
 

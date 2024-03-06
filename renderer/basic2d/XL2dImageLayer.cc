@@ -25,7 +25,7 @@
 #include "XL2dImageLayer.h"
 #include "XLTexture.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 Rect ImageLayer::getCorrectRect(Size2 containerSize) {
 	Size2 parentSize = getContentSize();

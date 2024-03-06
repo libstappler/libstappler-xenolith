@@ -35,6 +35,7 @@ class Resource : public NamedRef {
 public:
 	class Builder;
 
+	static void loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb);
 	static void loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb);
 
 	Resource();

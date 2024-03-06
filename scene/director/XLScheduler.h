@@ -26,6 +26,7 @@
 
 #include "XLNodeInfo.h"
 #include "SPPriorityList.h"
+#include "SPSubscription.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -79,6 +80,55 @@ protected:
 	Vector<ScheduledTemporary> _tmp;
 };
 
+template <class T = Subscription>
+class SchedulerListener {
+public:
+	using Callback = Function<void(Subscription::Flags)>;
+
+	SchedulerListener(Scheduler *s = nullptr, const Callback &cb = nullptr, T *sub = nullptr);
+	~SchedulerListener();
+
+	SchedulerListener(const SchedulerListener<T> &);
+	SchedulerListener &operator= (const SchedulerListener<T> &);
+
+	SchedulerListener(SchedulerListener<T> &&);
+	SchedulerListener &operator= (SchedulerListener<T> &&);
+
+	SchedulerListener &operator= (T *);
+
+	inline operator T * () { return get(); }
+	inline operator T * () const { return get(); }
+	inline operator bool () const { return _binding; }
+
+	inline T * operator->() { return get(); }
+	inline const T * operator->() const { return get(); }
+
+	void set(T *sub);
+	T *get() const;
+
+	void setScheduler(Scheduler *);
+	Scheduler *getScheduler() const;
+
+	void setCallback(const Callback &cb);
+	const Callback &getCallback() const;
+
+	void setDirty();
+	void update(const UpdateTime &time);
+
+	void check();
+
+protected:
+	void updateScheduler();
+	void schedule();
+	void unschedule();
+
+	Scheduler *_scheduler = nullptr;
+	Binding<T> _binding;
+	Callback _callback;
+	bool _dirty = false;
+	bool _scheduled = false;
+};
+
 template <typename T, typename Enable = void>
 class SchedulerUpdate {
 public:
@@ -104,6 +154,134 @@ public:
 template <typename T>
 void Scheduler::scheduleUpdate(T *target, int32_t p, bool paused) {
 	SchedulerUpdate<T>::scheduleUpdate(this, target, p, paused);
+}
+
+
+template <class T>
+SchedulerListener<T>::SchedulerListener(Scheduler *s, const Callback &cb, T *sub)
+: _scheduler(s), _binding(sub), _callback(cb) {
+	static_assert(std::is_convertible<T *, Subscription *>::value, "Invalid Type for DataListener<T>!");
+	updateScheduler();
+}
+
+template <class T>
+SchedulerListener<T>::~SchedulerListener() {
+	unschedule();
+}
+
+template <class T>
+SchedulerListener<T>::SchedulerListener(const SchedulerListener<T> &other) : _binding(other._binding), _callback(other._callback) {
+	updateScheduler();
+}
+
+template <class T>
+SchedulerListener<T> &SchedulerListener<T>::operator= (const SchedulerListener<T> &other) {
+	_binding = other._binding;
+	_callback = other._callback;
+	updateScheduler();
+	return *this;
+}
+
+template <class T>
+SchedulerListener<T>::SchedulerListener(SchedulerListener<T> &&other) : _binding(std::move(other._binding)), _callback(std::move(other._callback)) {
+	other.updateScheduler();
+	updateScheduler();
+}
+
+template <class T>
+SchedulerListener<T> &SchedulerListener<T>::operator= (SchedulerListener<T> &&other) {
+	_binding = std::move(other._binding);
+	_callback = std::move(other._callback);
+	other.updateScheduler();
+	updateScheduler();
+	return *this;
+}
+
+template <class T>
+void SchedulerListener<T>::set(T *sub) {
+	if (_binding != sub) {
+		_binding = Binding<T>(sub);
+		updateScheduler();
+	}
+}
+
+template <class T>
+SchedulerListener<T> &SchedulerListener<T>::operator= (T *sub) {
+	set(sub);
+	return *this;
+}
+
+template <class T>
+T *SchedulerListener<T>::get() const {
+	return _binding;
+}
+
+template <class T>
+void SchedulerListener<T>::setScheduler(Scheduler *s) {
+	unschedule();
+	_scheduler = s;
+	updateScheduler();
+}
+
+template <class T>
+Scheduler *SchedulerListener<T>::getScheduler() const {
+	return _scheduler;
+}
+
+template <class T>
+void SchedulerListener<T>::setCallback(const Callback &cb) {
+	_callback = cb;
+}
+
+template <class T>
+const Function<void(Subscription::Flags)> &SchedulerListener<T>::getCallback() const {
+	return _callback;
+}
+
+template <class T>
+void SchedulerListener<T>::setDirty() {
+	_dirty = true;
+}
+
+template <class T>
+void SchedulerListener<T>::update(const UpdateTime &time) {
+	if (_callback && _binding) {
+		auto val = _binding.check();
+		if (!val.empty() || _dirty) {
+			_dirty = false;
+			_callback(val);
+		}
+	}
+}
+
+template <class T>
+void SchedulerListener<T>::check() {
+	update(UpdateTime());
+}
+
+template <class T>
+void SchedulerListener<T>::updateScheduler() {
+	if (_binding && !_scheduled) {
+		schedule();
+	} else if (!_binding && _scheduled) {
+		unschedule();
+	}
+}
+
+template <class T>
+void SchedulerListener<T>::schedule() {
+	if (_scheduler && _binding && !_scheduled) {
+		_scheduler->scheduleUpdate(this, 0, false);
+		_scheduled = true;
+	}
+}
+
+template <class T>
+void SchedulerListener<T>::unschedule() {
+	if (_scheduled) {
+		_scheduler->unschedule(this);
+		_scheduled = false;
+	}
 }
 
 }

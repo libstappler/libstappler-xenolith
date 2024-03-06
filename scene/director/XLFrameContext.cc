@@ -68,7 +68,7 @@ uint64_t FrameContext::getMaterial(const MaterialInfo &info) const {
 	return 0;
 }
 
-uint64_t FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, bool revokable) {
+uint64_t FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
 	auto pipeline = getPipelineForMaterial(info);
 	if (!pipeline) {
 		return 0;
@@ -95,7 +95,7 @@ uint64_t FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::Ma
 		newId = _materialAttachment->getNextMaterialId();
 	}
 
-	if (auto m = Rc<core::Material>::create(newId, pipeline, move(images), getDataForMaterial(info))) {
+	if (auto m = Rc<core::Material>::create(newId, pipeline, move(images), data)) {
 		auto id = m->getId();
 		addPendingMaterial(move(m));
 		addMaterial(info, id, revokable);
@@ -194,10 +194,6 @@ String FrameContext::listMaterials() const {
 
 core::ImageViewInfo FrameContext::getImageViewForMaterial(const MaterialInfo &info, uint32_t idx, const core::ImageData *image) const {
 	return core::ImageViewInfo(image->format, info.colorModes[idx]);
-}
-
-Bytes FrameContext::getDataForMaterial(const MaterialInfo &) const {
-	return Bytes();
 }
 
 auto FrameContext::getPipelineForMaterial(const MaterialInfo &info) const -> const core::GraphicPipelineData * {

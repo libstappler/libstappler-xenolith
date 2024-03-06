@@ -86,7 +86,8 @@ public:
 		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
 	};
 
-	static void writeQuads(VertexArray &vertexes, TextLayout *format, Vector<ColorMask> &colorMap);
+	static void writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::StandartInterface> *format, Vector<ColorMask> &colorMap);
+	static void writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::PoolInterface> *format, Vector<ColorMask> &colorMap);
 	static Rc<LabelResult> writeResult(TextLayout *format, const Color4F &);
 
 	virtual ~Label();
@@ -183,10 +184,6 @@ protected:
 	Selection *_marked = nullptr;
 
 	Rc<LabelDeferredResult> _deferredResult;
-
-	/*Map<String, Vector<char16_t>> _standaloneChars;
-	Vector<Rc<cocos2d::Texture2D>> _standaloneTextures;
-	FontTextureMap _standaloneMap;*/
 };
 
 }

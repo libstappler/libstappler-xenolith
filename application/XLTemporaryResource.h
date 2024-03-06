@@ -27,6 +27,8 @@
 #include "XLResourceOwner.h"
 #include "XLCoreResource.h"
 #include "XLResourceCache.h"
+#include "XLTexture.h"
+#include "XLMeshIndex.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

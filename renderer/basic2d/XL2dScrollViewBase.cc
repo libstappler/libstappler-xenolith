@@ -24,7 +24,7 @@
 #include "XLInputListener.h"
 #include "XL2dScrollController.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool ScrollViewBase::init(Layout layout) {
 	if (!DynamicStateNode::init()) {

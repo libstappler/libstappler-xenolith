@@ -36,6 +36,12 @@ public:
 
 	virtual ~Scene2d() { }
 
+	// create with default render queue
+	virtual bool init(Application *, const core::FrameContraints &);
+
+	// create with default render queue, resources can be added via callback
+	virtual bool init(Application *, const Callback<void(Queue::Builder &)> &, const core::FrameContraints &);
+
 	virtual bool init(Queue::Builder &&, const core::FrameContraints &) override;
 
 	virtual void update(const UpdateTime &time) override;
@@ -48,8 +54,8 @@ public:
 	virtual void setContent(SceneContent *) override;
 
 protected:
-	void initialize();
-	void addContentNodes(SceneContent *);
+	virtual void initialize();
+	virtual void addContentNodes(SceneContent *);
 
 	void updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 pos, uint32_t id);
 

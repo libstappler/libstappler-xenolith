@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -173,6 +173,74 @@ enum NMDeviceType {
 };
 
 static constexpr auto DBUS_TIMEOUT_USE_DEFAULT = int(-1);
+
+#if XL_LINK
+extern "C" {
+void dbus_error_init (DBusError *error);
+void dbus_error_free (DBusError *error);
+DBusMessage* dbus_message_new_method_call(const char *bus_name, const char *path, const char *iface, const char *method);
+dbus_bool_t dbus_message_append_args(DBusMessage *message, int first_arg_type, ...);
+dbus_bool_t dbus_message_is_signal(DBusMessage *message, const char *iface, const char *signal_name);
+dbus_bool_t dbus_message_is_error(DBusMessage *message, const char *error_name);
+void dbus_message_unref(DBusMessage *message);
+dbus_bool_t dbus_message_iter_init(DBusMessage *message, DBusMessageIter *iter);
+void dbus_message_iter_recurse(DBusMessageIter *iter, DBusMessageIter *sub);
+void dbus_message_iter_next(DBusMessageIter *iter);
+int dbus_message_iter_get_arg_type(DBusMessageIter *iter);
+void dbus_message_iter_get_basic(DBusMessageIter *iter, void *value);
+int dbus_message_get_type(DBusMessage *message);
+const char* dbus_message_get_path(DBusMessage *message);
+const char* dbus_message_get_interface(DBusMessage *message);
+const char* dbus_message_get_member(DBusMessage *message);
+const char* dbus_message_get_error_name(DBusMessage *message);
+const char* dbus_message_get_destination(DBusMessage *message);
+const char* dbus_message_get_sender(DBusMessage *message);
+const char* dbus_message_get_signature(DBusMessage *message);
+DBusMessage* dbus_connection_send_with_reply_and_block(DBusConnection *connection,
+		DBusMessage *message, int timeout_milliseconds, DBusError *error);
+dbus_bool_t dbus_connection_send_with_reply(DBusConnection *connection,
+		DBusMessage *message, DBusPendingCall **pending_return, int timeout_milliseconds);
+dbus_bool_t dbus_connection_set_watch_functions(DBusConnection *connection, DBusAddWatchFunction add_function,
+		DBusRemoveWatchFunction remove_function, DBusWatchToggledFunction toggled_function,
+		void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_connection_set_timeout_functions(DBusConnection *connection, DBusAddTimeoutFunction add_function,
+		DBusRemoveTimeoutFunction remove_function, DBusTimeoutToggledFunction toggled_function,
+		void *data, DBusFreeFunction free_data_function);
+void dbus_connection_set_wakeup_main_function(DBusConnection *connection, DBusWakeupMainFunction wakeup_main_function,
+		void *data, DBusFreeFunction free_data_function);
+void dbus_connection_set_dispatch_status_function(DBusConnection *connection, DBusDispatchStatusFunction function,
+		void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_connection_add_filter(DBusConnection *connection, DBusHandleMessageFunction function,
+		void *user_data, DBusFreeFunction free_data_function);
+void dbus_connection_close(DBusConnection *connection);
+void dbus_connection_unref(DBusConnection *connection);
+void dbus_connection_flush(DBusConnection *connection);
+DBusDispatchStatus dbus_connection_dispatch(DBusConnection *connection);
+dbus_bool_t dbus_error_is_set(const DBusError *error);
+DBusConnection* dbus_bus_get(DBusBusType type, DBusError *error);
+DBusConnection* dbus_bus_get_private(DBusBusType type, DBusError *error);
+void dbus_bus_add_match(DBusConnection *connection, const char *rule, DBusError *error);
+DBusPendingCall* dbus_pending_call_ref(DBusPendingCall *pending);
+void dbus_pending_call_unref(DBusPendingCall *pending);
+dbus_bool_t dbus_pending_call_set_notify(DBusPendingCall *pending, DBusPendingCallNotifyFunction function,
+		void *user_data, DBusFreeFunction free_user_data);
+dbus_bool_t dbus_pending_call_get_completed(DBusPendingCall *pending);
+DBusMessage* dbus_pending_call_steal_reply(DBusPendingCall *pending);
+void dbus_pending_call_block(DBusPendingCall *pending);
+int dbus_watch_get_unix_fd(DBusWatch *watch);
+unsigned int dbus_watch_get_flags(DBusWatch *watch);
+void* dbus_watch_get_data(DBusWatch *watch);
+void dbus_watch_set_data(DBusWatch *watch, void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_watch_handle(DBusWatch *watch, unsigned int flags);
+dbus_bool_t dbus_watch_get_enabled(DBusWatch *watch);
+int dbus_timeout_get_interval(DBusTimeout *timeout);
+void* dbus_timeout_get_data(DBusTimeout *timeout);
+void dbus_timeout_set_data(DBusTimeout *timeout, void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_timeout_handle(DBusTimeout *timeout);
+dbus_bool_t dbus_timeout_get_enabled(DBusTimeout *timeout);
+}
+#endif
+
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -692,22 +760,27 @@ void DBusInterface::EventStruct::handle(uint32_t ev) {
 DBusInterface::DBusInterface() {
 	epollEventFd.data.fd = -1;
 
-	auto d = Dso("libdbus-1.so");
-	if (d) {
-		if (openHandle(d)) {
-			handle = move(d);
-			sessionConnection = new Connection(this, DBUS_BUS_SESSION);
-			if (sessionConnection->connection == nullptr) {
-				delete sessionConnection;
-				sessionConnection = nullptr;
-			}
+#ifndef XL_LINK
+	handle = Dso("libdbus-1.so");
+	if (!handle) {
+		return;
+	}
+#endif
 
-			systemConnection = new Connection(this, DBUS_BUS_SYSTEM);
-			if (systemConnection->connection == nullptr) {
-				delete systemConnection;
-				systemConnection = nullptr;
-			}
+	if (openHandle(handle)) {
+		sessionConnection = new Connection(this, DBUS_BUS_SESSION);
+		if (sessionConnection->connection == nullptr) {
+			delete sessionConnection;
+			sessionConnection = nullptr;
 		}
+
+		systemConnection = new Connection(this, DBUS_BUS_SYSTEM);
+		if (systemConnection->connection == nullptr) {
+			delete systemConnection;
+			systemConnection = nullptr;
+		}
+	} else {
+		handle = Dso();
 	}
 
 	if (sessionConnection && systemConnection) {
@@ -733,6 +806,60 @@ DBusInterface::~DBusInterface() {
 }
 
 bool DBusInterface::openHandle(Dso &d) {
+#if XL_LINK
+	this->dbus_error_init = &::dbus_error_init;
+	this->dbus_error_free = &::dbus_error_free;
+	this->dbus_message_new_method_call = &::dbus_message_new_method_call;
+	this->dbus_message_append_args = &::dbus_message_append_args;
+	this->dbus_message_is_signal = &::dbus_message_is_signal;
+	this->dbus_message_is_error = &::dbus_message_is_error;
+	this->dbus_message_unref = &::dbus_message_unref;
+	this->dbus_message_iter_init = &::dbus_message_iter_init;
+	this->dbus_message_iter_next = &::dbus_message_iter_next;
+	this->dbus_message_iter_recurse = &::dbus_message_iter_recurse;
+	this->dbus_message_iter_get_arg_type = &::dbus_message_iter_get_arg_type;
+	this->dbus_message_iter_get_basic = &::dbus_message_iter_get_basic;
+	this->dbus_message_get_type = &::dbus_message_get_type;
+	this->dbus_message_get_path = &::dbus_message_get_path;
+	this->dbus_message_get_interface = &::dbus_message_get_interface;
+	this->dbus_message_get_member = &::dbus_message_get_member;
+	this->dbus_message_get_error_name = &::dbus_message_get_error_name;
+	this->dbus_message_get_destination = &::dbus_message_get_destination;
+	this->dbus_message_get_sender = &::dbus_message_get_sender;
+	this->dbus_message_get_signature = &::dbus_message_get_signature;
+	this->dbus_connection_send_with_reply_and_block = &::dbus_connection_send_with_reply_and_block;
+	this->dbus_connection_send_with_reply = &::dbus_connection_send_with_reply;
+	this->dbus_connection_set_watch_functions = &::dbus_connection_set_watch_functions;
+	this->dbus_connection_set_timeout_functions = &::dbus_connection_set_timeout_functions;
+	this->dbus_connection_set_wakeup_main_function = &::dbus_connection_set_wakeup_main_function;
+	this->dbus_connection_set_dispatch_status_function = &::dbus_connection_set_dispatch_status_function;
+	this->dbus_connection_add_filter = &::dbus_connection_add_filter;
+	this->dbus_connection_close = &::dbus_connection_close;
+	this->dbus_connection_unref = &::dbus_connection_unref;
+	this->dbus_connection_flush = &::dbus_connection_flush;
+	this->dbus_connection_dispatch = &::dbus_connection_dispatch;
+	this->dbus_error_is_set = &::dbus_error_is_set;
+	this->dbus_bus_get = &::dbus_bus_get;
+	this->dbus_bus_get_private = &::dbus_bus_get_private;
+	this->dbus_bus_add_match = &::dbus_bus_add_match;
+	this->dbus_pending_call_ref = &::dbus_pending_call_ref;
+	this->dbus_pending_call_unref = &::dbus_pending_call_unref;
+	this->dbus_pending_call_set_notify = &::dbus_pending_call_set_notify;
+	this->dbus_pending_call_get_completed = &::dbus_pending_call_get_completed;
+	this->dbus_pending_call_steal_reply = &::dbus_pending_call_steal_reply;
+	this->dbus_pending_call_block = &::dbus_pending_call_block;
+	this->dbus_watch_get_unix_fd = &::dbus_watch_get_unix_fd;
+	this->dbus_watch_get_flags = &::dbus_watch_get_flags;
+	this->dbus_watch_get_data = &::dbus_watch_get_data;
+	this->dbus_watch_set_data = &::dbus_watch_set_data;
+	this->dbus_watch_handle = &::dbus_watch_handle;
+	this->dbus_watch_get_enabled = &::dbus_watch_get_enabled;
+	this->dbus_timeout_get_interval = &::dbus_timeout_get_interval;
+	this->dbus_timeout_get_data = &::dbus_timeout_get_data;
+	this->dbus_timeout_set_data = &::dbus_timeout_set_data;
+	this->dbus_timeout_handle = &::dbus_timeout_handle;
+	this->dbus_timeout_get_enabled = &::dbus_timeout_get_enabled;
+#else
 	this->dbus_error_init =
 			d.sym<decltype(this->dbus_error_init)>("dbus_error_init");
 	this->dbus_error_free =
@@ -837,6 +964,7 @@ bool DBusInterface::openHandle(Dso &d) {
 			d.sym<decltype(this->dbus_timeout_handle)>("dbus_timeout_handle");
 	this->dbus_timeout_get_enabled =
 			d.sym<decltype(this->dbus_timeout_get_enabled)>("dbus_timeout_get_enabled");
+#endif
 
 	return this->dbus_error_init
 		&& this->dbus_error_free

@@ -30,6 +30,7 @@
 #include "XLInputListener.h"
 #include "XLSceneContent.h"
 #include "XLFrameInfo.h"
+#include "backend/vk/XL2dVkShadowPass.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -145,6 +146,28 @@ void Scene2d::FpsDisplay::incrementMode() {
 	}
 
 	setVisible(_mode != Disabled);
+}
+
+bool Scene2d::init(Application *app, const core::FrameContraints &constraints) {
+	return init(app, [] (Queue::Builder &) { }, constraints);
+}
+
+bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb, const core::FrameContraints &constraints) {
+	core::Queue::Builder builder("Loader");
+
+	basic2d::vk::ShadowPass::RenderQueueInfo info{
+		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
+	};
+
+	basic2d::vk::ShadowPass::makeDefaultRenderQueue(builder, info);
+
+	cb(builder);
+
+	if (!init(move(builder), constraints)) {
+		return false;
+	}
+
+	return true;
 }
 
 bool Scene2d::init(Queue::Builder &&builder, const core::FrameContraints &constraints) {

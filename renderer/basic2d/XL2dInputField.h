@@ -20,12 +20,12 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_GUI2D_XL2DINPUTFIELD_H_
-#define XENOLITH_RENDERER_GUI2D_XL2DINPUTFIELD_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_XL2DINPUTFIELD_H_
+#define XENOLITH_RENDERER_BASIC2D_XL2DINPUTFIELD_H_
 
 #include "XL2dInputLabel.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::gui2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class InputField : public Node, protected InputLabelDelegate {
 public:
@@ -132,4 +132,4 @@ protected:
 
 }
 
-#endif /* XENOLITH_RENDERER_GUI2D_XL2DINPUTFIELD_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_XL2DINPUTFIELD_H_ */

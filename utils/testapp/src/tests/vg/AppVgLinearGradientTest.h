@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,41 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#ifndef SRC_TESTS_VG_APPVGLINEARGRADIENTTEST_H_
+#define SRC_TESTS_VG_APPVGLINEARGRADIENTTEST_H_
 
-#include "XL2dActionAcceleratedMove.cc"
-#include "XL2dImageLayer.cc"
-#include "XL2dLayerRounded.cc"
-#include "XL2dRoundedProgress.cc"
+#include "AppLayoutTest.h"
+#include "XLIcons.h"
+#include "XL2dVectorSprite.h"
+#include "XL2dLayerRounded.h"
+#include "AppCheckbox.h"
+#include "AppSlider.h"
 
-#include "XL2dScrollController.cc"
-#include "XL2dScrollItemHandle.cc"
-#include "XL2dScrollViewBase.cc"
-#include "XL2dScrollView.cc"
+namespace stappler::xenolith::app {
+
+class VgLinearGradientTest : public LayoutTest {
+public:
+	virtual ~VgLinearGradientTest() { }
+
+	virtual bool init() override;
+
+	virtual void onContentSizeDirty() override;
+
+protected:
+	using LayoutTest::init;
+
+	void updateAngle(float val);
+
+	float _angle = 0.0f;
+	IconName _currentName = IconName::Action_text_rotate_vertical_solid;
+
+	Label *_label = nullptr;
+	Label *_info = nullptr;
+	Sprite *_sprite = nullptr;
+
+	SliderWithLabel *_sliderAngle = nullptr;
+};
+
+}
+
+#endif /* SRC_TESTS_VG_APPVGLINEARGRADIENTTEST_H_ */

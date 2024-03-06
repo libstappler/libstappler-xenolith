@@ -48,7 +48,9 @@ public:
 	uint16_t getMaxAdvance() const { return _data.maxAdvance; }
 	bool isOverflow() const { return _data.overflow; }
 
-	FontController *getHandle() const { return _handle; }
+	FontController *getController() const { return _handle; }
+
+	Rc<FontFaceSet> getLayout(const FontParameters &f);
 
 	RangeLineIterator begin() const;
 	RangeLineIterator end() const;
@@ -77,6 +79,7 @@ public:
 protected:
 	TextLayoutData<memory::StandartInterface> _data;
 	Rc<FontController> _handle;
+	Set<Rc<FontFaceSet>> _fonts;
 };
 
 class LabelBase {

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -141,6 +141,14 @@ const Rc<Texture> &Sprite::getTexture() const {
 	return _texture;
 }
 
+void Sprite::setLinearGradient(Rc<LinearGradient> &&g) {
+	_linearGradient = move(g);
+}
+
+const Rc<LinearGradient> &Sprite::getLinearGradient() const {
+	return _linearGradient;
+}
+
 void Sprite::setTextureRect(const Rect &rect) {
 	if (!_textureRect.equals(rect)) {
 		_textureRect = rect;
@@ -188,7 +196,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		auto info = getMaterialInfo();
 		_materialId = frame.currentContext->context->getMaterial(info);
 		if (_materialId == 0) {
-			_materialId = frame.currentContext->context->acquireMaterial(info, getMaterialImages(), isMaterialRevokable());
+			_materialId = frame.currentContext->context->acquireMaterial(info, getMaterialImages(), nullptr, isMaterialRevokable());
 			if (_materialId == 0) {
 				log::warn("Sprite", "Material for sprite with texture '", _texture->getName(), "' not found");
 			}
@@ -200,7 +208,35 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		emplace_ordered(frame.currentContext->waitDependencies, move(it));
 	}
 
+	if (_linearGradient) {
+		auto context = frame.contextStack.back();
+
+		DrawStateValues state;
+		// copy current state
+		auto stateId = context->getCurrentState();
+		if (stateId != StateIdNone) {
+			state = *context->getState(stateId);
+		}
+
+		auto newData = Rc<StateData>::create(dynamic_cast<StateData *>(state.data.get()));
+		auto transform = frame.modelTransformStack.back();
+		transform.scale(_contentSize.width, _contentSize.height, 1.0f);
+
+		newData->transform = transform;
+		newData->gradient = _linearGradient->pop();
+		state.data = newData;
+
+		auto newStateId = context->addState(state);
+
+		context->stateStack.push_back(newStateId);
+	}
+
 	pushCommands(frame, flags);
+
+	if (_linearGradient) {
+		frame.contextStack.back()->stateStack.pop_back();
+	}
+
 	_pendingDependencies.clear();
 }
 
@@ -323,9 +359,6 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		newMV.m[12] = floorf(modelTransform.m[12]) + 0.5f;
 		newMV.m[13] = floorf(modelTransform.m[13]) + 0.5f;
 		newMV.m[14] = floorf(modelTransform.m[14]) + 0.5f;
-
-		//auto tmp = Mat4::ROTATION_Z_90 * newMV;
-		//log::info("Sprite", tmp.m[12], " ", tmp.m[13], " ", tmp.m[14]);
 	} else {
 		newMV = frame.modelTransformStack.back();
 	}

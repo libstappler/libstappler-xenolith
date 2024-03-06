@@ -36,8 +36,9 @@ class MeshIndex;
 
 enum class TemporaryResourceFlags {
 	None = 0,
-	Loaded = 1 << 0,
-	RemoveOnClear = 1 << 1,
+	Loaded = 1 << 0, // Resource is a wrapper around already loaded data (usually, when data created by GPU)
+	RemoveOnClear = 1 << 1, // Remove whole resource from cache, when no one uses it
+	CompileWhenAdded = 1 << 2, // Run resource compilation immediately after addTemporaryResource
 };
 
 SP_DEFINE_ENUM_AS_MASK(TemporaryResourceFlags)

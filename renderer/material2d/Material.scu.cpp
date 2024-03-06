@@ -53,5 +53,6 @@
 
 #include "layout/MaterialDecoratedLayout.cc"
 #include "layout/MaterialFlexibleLayout.cc"
+#include "layout/MaterialScene.cc"
 
 

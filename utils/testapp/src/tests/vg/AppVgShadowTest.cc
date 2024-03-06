@@ -64,7 +64,7 @@ bool LightNormalSelectorPoint::init() {
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath("", "org.stappler.xenolith.tess.TessPoint")
 		->setFillColor(Color::White)
-		.addOval(Rect(0, 0, 10, 10))
+		.openForWriting([&] (vg::PathWriter &writer) { writer.addOval(Rect(0, 0, 10, 10)); })
 		.setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
@@ -77,7 +77,9 @@ bool LightNormalSelectorPoint::init() {
 bool VgShadowTest::LightNormalSelector::init() {
 	auto image = Rc<VectorImage>::create(Size2(16.0f, 16.0f));
 	image->addPath(VectorPath()
-			.addCircle(8.0f, 8.0f, 7.0f)
+			.openForWriting([] (vg::PathWriter &writer) {
+				writer.addCircle(8.0f, 8.0f, 7.0f);
+			})
 			.setStyle(VectorPath::DrawStyle::Stroke)
 			.setStrokeWidth(1.0f)
 			.setStrokeColor(Color::Grey_500));

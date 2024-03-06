@@ -90,7 +90,7 @@ struct VectorCanvas::Data : memory::AllocPool {
 
 	VectorCanvasPathDrawer pathDrawer;
 
-	Mat4 transform;
+	Mat4 transform = Mat4::IDENTITY;
 	Vector<Mat4> states;
 
 	TimeInterval subAccum;

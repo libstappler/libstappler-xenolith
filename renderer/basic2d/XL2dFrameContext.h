@@ -25,6 +25,7 @@
 
 #include "XLFrameContext.h"
 #include "XL2dCommandList.h"
+#include "XL2dLinearGradient.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -54,6 +55,16 @@ protected:
 	const core::AttachmentData *_sdfImageAttachmentData = nullptr;
 
 	bool _init = false;
+};
+
+struct StateData : public Ref {
+	virtual ~StateData() = default;
+
+	virtual bool init();
+	virtual bool init(StateData *);
+
+	Mat4 transform;
+	Rc<LinearGradientData> gradient;
 };
 
 }
