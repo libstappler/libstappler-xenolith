@@ -259,8 +259,12 @@ void ActionManager::update(const UpdateTime &time) {
 	while (it != _actions.end()) {
 		_current = &(*it);
 		_current->foreach([&] (Action *a) {
-			a->step(dt);
-			if (a->isDone()) {
+			if (a->getTarget()) {
+				a->step(dt);
+				if (a->isDone()) {
+					a->stop();
+				}
+			} else {
 				a->stop();
 			}
 			return true;

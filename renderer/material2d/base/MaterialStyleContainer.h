@@ -42,11 +42,13 @@ public:
 	virtual void onEnter(Scene *) override;
 	virtual void onExit() override;
 
+	void setPrimaryScheme(ColorScheme &&);
 	void setPrimaryScheme(ThemeType, const CorePalette &);
 	void setPrimaryScheme(ThemeType, const Color4F &, bool isContent);
 	void setPrimaryScheme(ThemeType, const ColorHCT &, bool isContent);
 	const ColorScheme &getPrimaryScheme() const;
 
+	const ColorScheme *setScheme(uint32_t tag, ColorScheme &&);
 	const ColorScheme *setScheme(uint32_t tag, ThemeType, const CorePalette &);
 	const ColorScheme *setScheme(uint32_t tag, ThemeType, const Color4F &, bool isContent);
 	const ColorScheme *setScheme(uint32_t tag, ThemeType, const ColorHCT &, bool isContent);

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +24,12 @@
 #define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALFLEXIBLELAYOUT_H_
 
 #include "MaterialDecoratedLayout.h"
+#include "MaterialSurface.h"
 #include "XL2dScrollView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
+
+class AppBar;
 
 class FlexibleLayout : public DecoratedLayout {
 public:
@@ -73,7 +76,7 @@ public:
 	}
 
 	virtual void setBaseNode(ScrollView *node, ZOrder zOrder = ZOrder(2));
-	virtual void setFlexibleNode(Node *, ZOrder zOrder = ZOrder(3));
+	virtual void setFlexibleNode(Surface *, ZOrder zOrder = ZOrder(3));
 
 	virtual void setFlexibleAutoComplete(bool value);
 
@@ -112,6 +115,8 @@ public:
 
 	virtual DecorationStatus getDecorationStatus() const override;
 
+	AppBar *getAppBar() const { return _appBar; }
+
 protected:
 	virtual void updateFlexParams();
 	virtual void onScroll(float delta, bool finished);
@@ -126,16 +131,21 @@ protected:
 	bool _safeTrigger = true;
 
 	float _flexibleLevel = 1.0f;
-	float _flexibleMinHeight = 0.0f;
-	float _flexibleMaxHeight = 0.0f;
 	float _baseNodePadding = 4.0f;
 
 	float _flexibleExtraSpace = 0.0f;
 
+	float _targetFlexibleMinHeight = 0.0f;
+	float _targetFlexibleMaxHeight = 0.0f;
+
+	float _realFlexibleMinHeight = 0.0f;
+	float _realFlexibleMaxHeight = 0.0f;
+
 	HeightFunction _flexibleHeightFunction = nullptr;
 
-	Node *_flexibleNode = nullptr;
+	Surface *_flexibleNode = nullptr;
 	ScrollView *_baseNode = nullptr;
+	AppBar *_appBar = nullptr;
 };
 
 }

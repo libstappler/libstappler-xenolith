@@ -28,6 +28,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DeviceInfo::Features DeviceInfo::Features::getRequired() {
 	Features ret;
+	ret.device10.features.independentBlend = VK_TRUE;
 	return ret;
 }
 

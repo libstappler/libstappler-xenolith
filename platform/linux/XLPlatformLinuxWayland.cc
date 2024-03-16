@@ -480,6 +480,11 @@ void WaylandLibrary::close() {
 		_pending.display = nullptr;
 	}
 
+	if (viewporter) {
+		delete viewporter;
+		viewporter = nullptr;
+	}
+
 	if (xdg) {
 		delete xdg;
 		xdg = nullptr;

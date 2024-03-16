@@ -88,7 +88,7 @@ public:
 	virtual T *getSubscription() const { return _binding.get(); }
 
 	virtual void update(UpdateTime dt) override {
-		if (_callback && _binding) {
+		if (_callback && _binding && _running) {
 			auto val = _binding.check();
 			if (!val.empty() || _dirty) {
 				_dirty = false;

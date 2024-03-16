@@ -60,13 +60,13 @@ public:
 	bool removeComponentContainer(const Rc<ComponentContainer> &);
 
 	// get value for key
-	bool get(CoderSource, DataCallback &&);
+	bool get(CoderSource, DataCallback &&) const;
 
 	// set value for key, optionally returns previous
-	bool set(CoderSource, Value &&, DataCallback && = nullptr);
+	bool set(CoderSource, Value &&, DataCallback && = nullptr) const;
 
 	// remove value for key, optionally returns previous
-	bool clear(CoderSource, DataCallback && = nullptr);
+	bool clear(CoderSource, DataCallback && = nullptr) const;
 
 	bool get(const Scheme &, DataCallback &&, uint64_t oid, db::UpdateFlags = db::UpdateFlags::None) const;
 	bool get(const Scheme &, DataCallback &&, StringView alias, db::UpdateFlags = db::UpdateFlags::None) const;

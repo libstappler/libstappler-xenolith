@@ -190,8 +190,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		subpassBuilder.addColor(shadowAttachment, AttachmentDependencyInfo{
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
-			FrameRenderPassState::Submitted,
-		});
+			FrameRenderPassState::Submitted
+		}, BlendInfo(BlendFactor::One, core::BlendFactor::One, core::BlendOp::Max));
 
 		subpassBuilder.setDepthStencil(depth2dAttachment, AttachmentDependencyInfo{
 			PipelineStage::EarlyFragmentTest, AccessType::DepthStencilAttachmentRead | AccessType::DepthStencilAttachmentWrite,

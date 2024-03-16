@@ -342,6 +342,10 @@ void InputDispatcher::setListenerExclusiveForKey(const InputListener *l, InputKe
 	}
 }
 
+bool InputDispatcher::hasActiveInput() const {
+	return !_activeEvents.empty() || !_activeKeys.empty();
+}
+
 InputEvent InputDispatcher::getEventInfo(const InputEventData &event) const {
 	auto loc = Vec2(event.x, event.y);
 	return InputEvent{event, loc, loc, loc, _currentTime, _currentTime, _currentTime, event.modifiers, event.modifiers};

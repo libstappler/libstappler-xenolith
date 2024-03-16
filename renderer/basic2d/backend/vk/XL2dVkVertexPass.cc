@@ -247,7 +247,6 @@ struct VertexMaterialDrawPlan {
 		}
 
 		auto &vertexes = deferredTmp.emplace_front(cmd->deferred->getData().vec<Interface>());
-		//auto vertexes = cmd->deferred->getData().pdup(handle->getPool()->getPool());
 
 		// apply transforms;
 		if (cmd->normalized) {

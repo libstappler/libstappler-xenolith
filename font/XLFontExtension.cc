@@ -100,19 +100,20 @@ FontController::Builder FontExtension::makeDefaultControllerBuilder(StringView k
 	auto res_RobotoMono_Variable = makeResourceFontQuery(ret, DefaultFontName::RobotoMono_VariableFont);
 	auto res_RobotoMono_Italic_Variable = makeResourceFontQuery(ret, DefaultFontName::RobotoMono_Italic_VariableFont, FontLayoutParameters{
 		FontStyle::Italic, FontWeight::Normal, FontStretch::Normal});
+	auto res_DejaVuSans = ret.addFontSource( getResourceFontName(DefaultFontName::DejaVuSans), FontLibrary::getFont(DefaultFontName::DejaVuSans));
 
 	ret.addFontFaceQuery("sans", res_RobotoFlex);
+	ret.addFontFaceQuery("sans", res_DejaVuSans);
 	ret.addFontFaceQuery("monospace", res_RobotoMono_Variable);
 	ret.addFontFaceQuery("monospace", res_RobotoMono_Italic_Variable);
 
-	ret.addAlias("default", "monospace");
+	ret.addAlias("default", "sans");
+	ret.addAlias("system", "sans");
 
 	return ret;
 }
 
 Rc<FontController> FontExtension::acquireController(FontController::Builder &&b) {
-	Rc<FontController> ret = Rc<FontController>::create(this);
-
 	struct ControllerBuilder : Ref {
 		FontController::Builder builder;
 		Rc<FontController> controller;
@@ -123,7 +124,11 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		FontExtension *ext = nullptr;
 
 		ControllerBuilder(FontController::Builder &&b)
-		: builder(move(b)) { }
+		: builder(move(b)) {
+			if (auto c = builder.getTarget()) {
+				controller = c;
+			}
+		}
 
 		void invalidate() {
 			controller = nullptr;
@@ -135,24 +140,21 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 				return;
 			}
 
-			ext->getMainLoop()->perform([this] (const thread::Task &) -> bool {
-				for (auto &it : builder.getFamilyQueries()) {
+			ext->getMainLoop()->performOnMainThread([this] () {
+				for (const Pair<const String, FontController::FamilyQuery> &it : builder.getFamilyQueries()) {
 					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
 					for (auto &iit : it.second.sources) {
 						d.emplace_back(move(iit->data));
 					}
+					controller->addFont(it.second.family, move(d), it.second.addInFront);
+				}
 
-					controller->addFont(it.second.family, move(d));
-				}
-				for (auto &it : builder.getFamilyQueries()) {
-					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
-					for (auto &iit : it.second.sources) {
-						d.emplace_back(move(iit->data));
+				if (builder.getTarget()) {
+					for (auto &it : builder.getAliases()) {
+						controller->addAlias(it.first, it.second);
 					}
-				}
-				return true;
-			}, [this] (const thread::Task &, bool success) {
-				if (success) {
+					controller->sendFontUpdatedEvent();
+				} else {
 					controller->setAliases(Map<String, String>(builder.getAliases()));
 					controller->setLoaded(true);
 				}
@@ -188,15 +190,19 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		}
 	};
 
+	bool hasController = (b.getTarget() != nullptr);
 	auto builder = Rc<ControllerBuilder>::alloc(move(b));
 	builder->ext = this;
-	builder->controller = ret;
-
-	builder->pendingData = builder->builder.getDataQueries().size() + 1;
+	if (!hasController) {
+		builder->controller = Rc<FontController>::create(this);
+		builder->pendingData = builder->builder.getDataQueries().size() + 1;
+	} else {
+		builder->pendingData = builder->builder.getDataQueries().size();
+	}
 
 	for (auto &it : builder->builder.getDataQueries()) {
 		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) mutable -> bool {
-			sourcePtr->data = _library->openFontData(name, sourcePtr->params, [&] () -> FontLibrary::FontData {
+			sourcePtr->data = _library->openFontData(name, sourcePtr->params, sourcePtr->preconfiguredParams, [&] () -> FontLibrary::FontData {
 				if (sourcePtr->fontCallback) {
 					return FontLibrary::FontData(move(sourcePtr->fontCallback));
 				} else if (!sourcePtr->fontExternalData.empty()) {
@@ -220,42 +226,44 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		});
 	}
 
-	builder->dynamicImage = Rc<core::DynamicImage>::create([name = builder->builder.getName()] (core::DynamicImage::Builder &builder) {
-		builder.setImage(name,
-			core::ImageInfo(
-					Extent2(2, 2),
-					core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
-					core::PassType::Graphics,
-					core::ImageFormat::R8_UNORM
-			), [] (uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
-				if (ptr) {
-					ptr[0] = 0;
-					ptr[1] = 255;
-					ptr[2] = 255;
-					ptr[3] = 0;
+	if (!hasController) {
+		builder->dynamicImage = Rc<core::DynamicImage>::create([name = builder->builder.getName()] (core::DynamicImage::Builder &builder) {
+			builder.setImage(name,
+				core::ImageInfo(
+						Extent2(2, 2),
+						core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
+						core::PassType::Graphics,
+						core::ImageFormat::R8_UNORM
+				), [] (uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
+					if (ptr) {
+						ptr[0] = 0;
+						ptr[1] = 255;
+						ptr[2] = 255;
+						ptr[3] = 0;
+					} else {
+						Bytes bytes; bytes.reserve(4);
+						bytes.emplace_back(0);
+						bytes.emplace_back(255);
+						bytes.emplace_back(255);
+						bytes.emplace_back(0);
+						cb(bytes);
+					}
+				}, nullptr);
+			return true;
+		});
+
+		_glLoop->compileImage(builder->dynamicImage, [this, builder] (bool success) {
+			_mainLoop->performOnMainThread([success, builder] {
+				if (success) {
+					builder->onImageLoaded(move(builder->dynamicImage));
 				} else {
-					Bytes bytes; bytes.reserve(4);
-					bytes.emplace_back(0);
-					bytes.emplace_back(255);
-					bytes.emplace_back(255);
-					bytes.emplace_back(0);
-					cb(bytes);
+					builder->onImageLoaded(nullptr);
 				}
-			}, nullptr);
-		return true;
-	});
+			}, this);
+		});
+	}
 
-	_glLoop->compileImage(builder->dynamicImage, [this, builder] (bool success) {
-		_mainLoop->performOnMainThread([success, builder] {
-			if (success) {
-				builder->onImageLoaded(move(builder->dynamicImage));
-			} else {
-				builder->onImageLoaded(nullptr);
-			}
-		}, this);
-	});
-
-	return ret;
+	return builder->controller;
 }
 
 void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font::FontUpdateRequest> &&data,

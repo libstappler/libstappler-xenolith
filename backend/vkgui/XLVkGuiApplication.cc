@@ -214,6 +214,7 @@ void BootstrapApplication::run(Function<void()> &&initCb) {
 				.name = _data.applicationName,
 				.bundleId = _data.bundleName,
 				.rect = URect(UVec2{0, 0}, _data.screenSize),
+				.decoration = _data.viewDecoration,
 				.density = _data.density,
 				.selectConfig = [this] (xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
 					return selectConfig(static_cast<View &>(view), info);

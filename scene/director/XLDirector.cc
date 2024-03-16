@@ -92,6 +92,10 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 	}
 
 	_mainLoop->performOnMainThread([this, req] {
+		if (!_scene) {
+			return;
+		}
+
 		req->getPool()->perform([&, this] {
 			_scene->renderRequest(req);
 
@@ -267,7 +271,7 @@ void Director::updateGeneralTransform() {
 }
 
 bool Director::hasActiveInteractions() {
-	return !_actionManager->empty();
+	return !_actionManager->empty() || _inputDispatcher->hasActiveInput();
 }
 
 }

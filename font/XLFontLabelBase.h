@@ -223,6 +223,8 @@ public:
 
 	class ExternalFormatter : public Ref {
 	public:
+		virtual ~ExternalFormatter();
+
 		bool init(font::FontController *, float w = 0.0f, float density = 0.0f);
 
 		void setLineHeightAbsolute(float value);
@@ -277,19 +279,19 @@ public:
 	virtual void erase16(size_t start = 0, size_t len = WideString::npos);
 	virtual void erase8(size_t start = 0, size_t len = String::npos);
 
-	virtual void append(const String& value);
-	virtual void append(const WideString& value);
+	virtual void append(const StringView &value);
+	virtual void append(const WideStringView &value);
 
-	virtual void prepend(const String& value);
-	virtual void prepend(const WideString& value);
+	virtual void prepend(const StringView &value);
+	virtual void prepend(const WideStringView &value);
 
 	virtual void setTextRangeStyle(size_t start, size_t length, Style &&);
 
-	virtual void appendTextWithStyle(const String &, Style &&);
-	virtual void appendTextWithStyle(const WideString &, Style &&);
+	virtual void appendTextWithStyle(const StringView &, Style &&);
+	virtual void appendTextWithStyle(const WideStringView &, Style &&);
 
-	virtual void prependTextWithStyle(const String &, Style &&);
-	virtual void prependTextWithStyle(const WideString &, Style &&);
+	virtual void prependTextWithStyle(const StringView &, Style &&);
+	virtual void prependTextWithStyle(const WideStringView &, Style &&);
 
 	virtual void clearStyles();
 

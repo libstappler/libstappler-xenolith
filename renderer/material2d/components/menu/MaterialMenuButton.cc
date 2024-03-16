@@ -23,6 +23,7 @@
 #include "MaterialMenuButton.h"
 #include "MaterialFloatingMenu.h"
 #include "MaterialLabel.h"
+#include "MaterialScene.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

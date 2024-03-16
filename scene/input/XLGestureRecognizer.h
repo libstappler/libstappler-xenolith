@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-static constexpr float TapDistanceAllowed = 16.0f;
+static constexpr float TapDistanceAllowed = 12.0f;
 static constexpr float TapDistanceAllowedMulti = 32.0f;
 static constexpr TimeInterval TapIntervalAllowed = TimeInterval::microseconds(300000ULL);
 

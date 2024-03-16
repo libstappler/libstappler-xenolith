@@ -34,6 +34,51 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+void ActionStorage::addAction(Rc<Action> &&a) {
+	actionToStart.emplace_back(move(a));
+}
+
+void ActionStorage::removeAction(Action *a) {
+	auto it = std::find(actionToStart.begin(), actionToStart.end(), a);
+	if (it != actionToStart.end()) {
+		actionToStart.erase(it);
+	}
+}
+
+void ActionStorage::removeAllActions() {
+	actionToStart.clear();
+}
+
+void ActionStorage::removeActionByTag(uint32_t tag) {
+	auto it = actionToStart.begin();
+	while (it != actionToStart.end()) {
+		if (it->get()->getTag() == tag) {
+			actionToStart.erase(it);
+			return;
+		}
+		++ it;
+	}
+}
+
+void ActionStorage::removeAllActionsByTag(uint32_t tag) {
+	auto it = actionToStart.begin();
+	while (it != actionToStart.end()) {
+		if (it->get()->getTag() == tag) {
+			it = actionToStart.erase(it);
+		}
+		++ it;
+	}
+}
+
+Action *ActionStorage::getActionByTag(uint32_t tag) {
+	for (auto &it : actionToStart) {
+		if (it->getTag() == tag) {
+			return it;
+		}
+	}
+	return nullptr;
+}
+
 String MaterialInfo::description() const {
 	StringStream stream;
 
@@ -434,8 +479,16 @@ void Node::sortAllChildren() {
 
 void Node::runActionObject(Action *action) {
 	XLASSERT( action != nullptr, "Argument must be non-nil");
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	_actionManager->addAction(action, this, !_running);
+
+	if (_actionManager) {
+		_actionManager->addAction(action, this, !_running);
+	} else {
+		if (!_actionStorage) {
+			_actionStorage = Rc<ActionStorage>::alloc();
+		}
+
+		_actionStorage->addAction(action);
+	}
 }
 
 void Node::runActionObject(Action *action, uint32_t tag) {
@@ -446,38 +499,57 @@ void Node::runActionObject(Action *action, uint32_t tag) {
 }
 
 void Node::stopAllActions() {
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	_actionManager->removeAllActionsFromTarget(this);
+	if (_actionManager) {
+		_actionManager->removeAllActionsFromTarget(this);
+	} else if (_actionStorage) {
+		_actionStorage->removeAllActions();
+	}
 }
 
 void Node::stopAction(Action *action) {
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	_actionManager->removeAction(action);
+	if (_actionManager) {
+		_actionManager->removeAction(action);
+	} else if (_actionStorage) {
+		_actionStorage->removeAction(action);
+	}
 }
 
 void Node::stopActionByTag(uint32_t tag) {
 	XLASSERT(tag != Action::INVALID_TAG, "Invalid tag");
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	_actionManager->removeActionByTag(tag, this);
+	if (_actionManager) {
+		_actionManager->removeActionByTag(tag, this);
+	} else if (_actionStorage) {
+		_actionStorage->removeActionByTag(tag);
+	}
 }
 
 void Node::stopAllActionsByTag(uint32_t tag) {
 	XLASSERT(tag != Action::INVALID_TAG, "Invalid tag");
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	_actionManager->removeAllActionsByTag(tag, this);
+	if (_actionManager) {
+		_actionManager->removeAllActionsByTag(tag, this);
+	} else if (_actionStorage) {
+		_actionStorage->removeAllActionsByTag(tag);
+	}
 }
 
 Action* Node::getActionByTag(uint32_t tag) {
 	XLASSERT(tag != Action::INVALID_TAG, "Invalid tag");
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	return _actionManager->getActionByTag(tag, this);
+	if (_actionManager) {
+		return _actionManager->getActionByTag(tag, this);
+	} else if (_actionStorage) {
+		return _actionStorage->getActionByTag(tag);
+	}
+	return nullptr;
 }
 
 size_t Node::getNumberOfRunningActions() const {
-	XLASSERT(_actionManager, "Action manager should be defined (node should be on scene");
-	return _actionManager->getNumberOfRunningActionsInTarget(this);
+	if (_actionManager) {
+		return _actionManager->getNumberOfRunningActionsInTarget(this);
+	} else if (_actionStorage) {
+		return _actionStorage->actionToStart.size();
+	}
+	return 0;
 }
-
 
 void Node::setTag(uint64_t tag) {
 	_tag = tag;
@@ -629,6 +701,13 @@ void Node::onEnter(Scene *scene) {
 			_actionManager->removeAllActionsFromTarget(this);
 		}
 		_actionManager = _director->getActionManager();
+
+		if (_actionStorage) {
+			for (auto &it : _actionStorage->actionToStart) {
+				runActionObject(it);
+			}
+			_actionStorage = nullptr;
+		}
 	}
 
 	if (_onEnterCallback) {
@@ -1020,122 +1099,42 @@ void Node::draw(FrameInfo &info, NodeFlags flags) {
 }
 
 bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
-	if (!_visible) {
-		return false;
-	}
-
-	NodeFlags flags = processParentFlags(info, parentFlags);
-
-	if (!_running || !_visible) {
-		return false;
-	}
-
-	auto order = getLocalZOrder();
-
-	info.modelTransformStack.push_back(_modelViewTransform);
-	if (order != ZOrderTransparent) {
-		info.zPath.push_back(order);
-	}
-
-	auto c = _children;
-	for (auto &it : c) {
-		it->visitGeometry(info, flags);
-	}
-
-	if (order != ZOrderTransparent) {
-		info.zPath.pop_back();
-	}
-	info.modelTransformStack.pop_back();
-
-	// on overload, we can update node's geometry after it's childrens
-
-	return true;
+	return wrapVisit(info, parentFlags, [&] (NodeFlags flags, bool visibleByCamera) {
+		auto c = _children;
+		for (auto &it : c) {
+			it->visitGeometry(info, flags);
+		}
+	}, false);
 }
 
 bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
-	if (!_visible) {
-		return false;
-	}
+	return wrapVisit(info, parentFlags, [&] (NodeFlags flags, bool visibleByCamera) {
+		size_t i = 0;
 
-	bool hasFrameContext = false;
-	if (_frameContext) {
-		if (_parent && _parent->getFrameContext() != _frameContext) {
-			info.pushContext(_frameContext);
-			hasFrameContext = true;
+		if (!_children.empty()) {
+			sortAllChildren();
+
+			auto c = _children;
+
+			// draw children zOrder < 0
+			for (; i < c.size(); i++) {
+				auto node = c.at(i);
+
+				if (node && node->_zOrder < ZOrder(0))
+					node->visitDraw(info, flags);
+				else
+					break;
+			}
+
+			visitSelf(info, flags, visibleByCamera);
+
+			for (auto it = c.cbegin() + i; it != c.cend(); ++it) {
+				(*it)->visitDraw(info, flags);
+			}
+		} else {
+			visitSelf(info, flags, visibleByCamera);
 		}
-	}
-
-	NodeFlags flags = processParentFlags(info, parentFlags);
-
-	if (!_running || !_visible) {
-		return false;
-	}
-
-	auto order = getLocalZOrder();
-
-	bool visibleByCamera = true;
-
-	info.modelTransformStack.push_back(_modelViewTransform);
-	if (order != ZOrderTransparent) {
-		info.zPath.push_back(order);
-	}
-
-	if (_depthIndex > 0.0f) {
-		info.depthStack.push_back(std::max(info.depthStack.back(), _depthIndex));
-	}
-
-	memory::vector< memory::vector<Rc<Component>> * > components;
-
-	for (auto &it : _components) {
-		if (it->isEnabled() && it->getFrameTag() != InvalidTag) {
-			components.emplace_back(info.pushComponent(it));
-		}
-	}
-
-	size_t i = 0;
-
-	if (!_children.empty()) {
-		sortAllChildren();
-
-		auto c = _children;
-
-		// draw children zOrder < 0
-		for (; i < c.size(); i++) {
-			auto node = c.at(i);
-
-			if (node && node->_zOrder < ZOrder(0))
-				node->visitDraw(info, flags);
-			else
-				break;
-		}
-
-		visitSelf(info, flags, visibleByCamera);
-
-		for (auto it = c.cbegin() + i; it != c.cend(); ++it) {
-			(*it)->visitDraw(info, flags);
-		}
-	} else {
-		visitSelf(info, flags, visibleByCamera);
-	}
-
-	for (auto &it : components) {
-		info.popComponent(it);
-	}
-
-	if (_depthIndex > 0.0f) {
-		info.depthStack.pop_back();
-	}
-
-	if (order != ZOrderTransparent) {
-		info.zPath.pop_back();
-	}
-	info.modelTransformStack.pop_back();
-
-	if (hasFrameContext) {
-		info.popContext();
-	}
-
-	return true;
+	}, true);
 }
 
 void Node::scheduleUpdate() {
@@ -1242,6 +1241,81 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 	if (visibleByCamera) {
 		this->draw(info, flags);
 	}
+}
+
+bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const Callback<void(NodeFlags, bool visible)> &cb, bool useContext) {
+	if (!_visible) {
+		return false;
+	}
+
+	bool hasFrameContext = false;
+	if (useContext && _frameContext) {
+		if (_parent && _parent->getFrameContext() != _frameContext) {
+			info.pushContext(_frameContext);
+			hasFrameContext = true;
+		}
+	}
+
+	NodeFlags flags = processParentFlags(info, parentFlags);
+
+	if (!_running || !_visible) {
+		if (hasFrameContext) {
+			info.popContext();
+		}
+		return false;
+	}
+
+	auto order = getLocalZOrder();
+
+	bool visibleByCamera = true;
+
+	info.modelTransformStack.push_back(_modelViewTransform);
+	if (order != ZOrderTransparent) {
+		info.zPath.push_back(order);
+	}
+
+	if (_depthIndex > 0.0f) {
+		info.depthStack.push_back(std::max(info.depthStack.back(), _depthIndex));
+	}
+
+	memory::vector< memory::vector<Rc<Component>> * > components;
+
+	for (auto &it : _components) {
+		if (it->isEnabled() && it->getFrameTag() != InvalidTag) {
+			components.emplace_back(info.pushComponent(it));
+		}
+	}
+
+	cb(flags, visibleByCamera);
+
+	for (auto &it : components) {
+		info.popComponent(it);
+	}
+
+	if (_depthIndex > 0.0f) {
+		info.depthStack.pop_back();
+	}
+
+	if (order != ZOrderTransparent) {
+		info.zPath.pop_back();
+	}
+	info.modelTransformStack.pop_back();
+
+	if (hasFrameContext) {
+		info.popContext();
+	}
+
+	return true;
+}
+
+float Node::getMaxDepthIndex() const {
+	float val = _depthIndex;
+	for (auto &it : _children) {
+		if (it->isVisible()) {
+			val = std::max(it->getMaxDepthIndex(), val);
+		}
+	}
+	return val;
 }
 
 }

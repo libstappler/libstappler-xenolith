@@ -97,6 +97,10 @@ struct SurfaceStyle {
 	constexpr void setup(ActivityState value) { activityState = value; }
 
 	template <typename T>
+	constexpr void setup(const T &) { static_assert("Invalid type"); }
+
+
+	template <typename T>
 	constexpr void define(T && t) {
 		setup(std::forward<T>(t));
 	}

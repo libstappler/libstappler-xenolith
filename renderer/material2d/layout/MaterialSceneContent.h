@@ -20,45 +20,45 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
+#ifndef XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
+#define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
 
-#include "XL2d.h"
-#include "XL2dLayer.h"
+#include "MaterialSurface.h"
+#include "MaterialSnackbarData.h"
+#include "XL2dSceneContent.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class LinearProgress : public Node {
+class Snackbar;
+class MenuSource;
+class NavigationDrawer;
+
+class SceneContent : public SceneContent2d {
 public:
+	virtual ~SceneContent();
+
 	virtual bool init() override;
+
 	virtual void onContentSizeDirty() override;
+	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void showSnackbar(SnackbarData &&);
+	virtual const String &getSnackbarString() const;
+	virtual void clearSnackbar();
 
-	virtual void setAnimated(bool value);
-	virtual bool isAnimated() const;
+	virtual bool isNavigationAvailable() const;
+	virtual void setNavigationMenuSource(MenuSource *);
+	virtual void setNavigationStyle(const SurfaceStyle &);
+	virtual void openNavigation();
+	virtual void closeNavigation();
 
-	virtual void setProgress(float value);
-	virtual float getProgress() const;
-
-	virtual void setLineColor(const Color &);
-	virtual void setLineOpacity(float);
-
-	virtual void setBarColor(const Color &);
-	virtual void setBarOpacity(float);
+	virtual float getMaxDepthIndex() const override;
 
 protected:
-	virtual void layoutSubviews();
-	virtual void updateAnimations();
-
-	bool _animated = false;
-	float _progress = 0.0f;
-
-	Layer *_line = nullptr;
-	Layer *_bar = nullptr;
+	Snackbar *_snackbar = nullptr;
+	NavigationDrawer *_navigation = nullptr;
 };
 
 }
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_ */
+#endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_ */

@@ -75,6 +75,8 @@ public:
 	bool hasFocus() const { return _hasFocus; }
 	bool isPointerWithinWindow() const { return _pointerInWindow; }
 
+	bool hasActiveInput() const;
+
 protected:
 	InputEvent getEventInfo(const InputEventData &) const;
 	void updateEventInfo(InputEvent &, const InputEventData &) const;

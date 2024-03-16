@@ -197,6 +197,7 @@ struct AttachmentSubpassData : NamedMem {
 	AttachmentUsage usage = AttachmentUsage::None;
 	AttachmentOps ops = AttachmentOps::Undefined;
 	AttachmentDependencyInfo dependency;
+	BlendInfo blendInfo;
 };
 
 struct AttachmentPassData : NamedMem {

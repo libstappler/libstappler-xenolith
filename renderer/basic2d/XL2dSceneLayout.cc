@@ -43,6 +43,10 @@ void SceneLayout2d::setDecorationPadding(Padding padding) {
 	}
 }
 
+void SceneLayout2d::setTargetContentSize(const Size2 &size) {
+	_targetContentSize = size;
+}
+
 bool SceneLayout2d::onBackButton() {
 	if (_backButtonCallback) {
 		return _backButtonCallback();

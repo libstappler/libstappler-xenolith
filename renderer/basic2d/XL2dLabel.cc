@@ -305,6 +305,9 @@ bool Label::init(const DescriptionStyle &style, StringView str, float w, TextAli
 }
 
 void Label::tryUpdateLabel() {
+	if (_parent) {
+		updateLabelScale(_parent->getNodeToWorldTransform());
+	}
 	if (_labelDirty) {
 		updateLabel();
 	}
@@ -549,6 +552,7 @@ void Label::updateVertexes() {
 }
 
 void Label::onFontSourceUpdated() {
+	setLabelDirty();
 	_vertexesDirty = true;
 }
 

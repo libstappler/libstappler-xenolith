@@ -566,6 +566,10 @@ bool GestureSwipeRecognizer::renewEvent(const InputEvent &event, float density) 
 					cancel();
 					return false;
 				}
+
+				if (_includeThreshold) {
+					_gesture.delta = current - event.previousLocation;
+				}
 			}
 
 			if (_swipeBegin /* && _gesture.delta.length() > 0.01f */) {

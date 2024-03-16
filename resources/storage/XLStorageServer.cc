@@ -252,7 +252,7 @@ bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
 	return true;
 }
 
-bool Server::get(CoderSource key, DataCallback &&cb) {
+bool Server::get(CoderSource key, DataCallback &&cb) const {
 	if (!cb) {
 		return false;
 	}
@@ -268,7 +268,7 @@ bool Server::get(CoderSource key, DataCallback &&cb) {
 	});
 }
 
-bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) {
+bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) const {
 	if (cb) {
 		auto p = new DataCallback(move(cb));
 		return perform([this, p, key = key.view().bytes<Interface>(), data = move(data)] (const Server &serv, const db::Transaction &t) {
@@ -288,7 +288,7 @@ bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) {
 	}
 }
 
-bool Server::clear(CoderSource key, DataCallback &&cb) {
+bool Server::clear(CoderSource key, DataCallback &&cb) const {
 	if (cb) {
 		auto p = new DataCallback(move(cb));
 		return perform([this, p, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {

@@ -152,6 +152,11 @@ bool ActionInterval::init(float duration) {
 	return true;
 }
 
+void ActionInterval::stop() {
+	_elapsed = _duration;
+	Action::stop();
+}
+
 bool ActionInterval::isDone() const {
 	return _elapsed >= _duration;
 }

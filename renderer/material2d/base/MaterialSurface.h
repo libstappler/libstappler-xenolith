@@ -59,6 +59,10 @@ public:
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
+	virtual Pair<float, float> getHeightLimits(bool flex) const;
+
+	virtual void setHeightLimits(float min, float max);
+
 protected:
 	virtual void applyStyle(const SurfaceStyleData &);
 	virtual void updateBackgroundImage(VectorImage *img, const SurfaceStyleData &style, float radius);
@@ -88,6 +92,9 @@ protected:
 	float _realCornerRadius = nan();
 	bool _styleDirty = true;
 	bool _inTransition = false;
+
+	float _minHeight = nan();
+	float _maxHeight = nan();
 };
 
 class BackgroundSurface : public Surface {

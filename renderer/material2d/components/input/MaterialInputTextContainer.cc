@@ -52,19 +52,19 @@ bool InputTextContainer::init() {
 	_cursorPointer = addChild(Rc<IconSprite>::create(IconName::Stappler_CursorIcon), ZOrder(1));
 	_cursorPointer->setContentSize(Size2(24.0f, 24.0f));
 	_cursorPointer->setAnchorPoint(Vec2(0.5f, _cursorAnchor));
-	_cursorPointer->setColorRole(ColorRole::Primary);
+	_cursorPointer->setBlendColor(ColorRole::Primary, 1.0f);
 	_cursorPointer->setVisible(false);
 
 	_selectionPointerStart = addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinStartIcon), ZOrder(1));
 	_selectionPointerStart->setContentSize(Size2(24.0f, 24.0f));
 	_selectionPointerStart->setAnchorPoint(Vec2(1.0f, _cursorAnchor));
-	_selectionPointerStart->setColorRole(ColorRole::Primary);
+	_selectionPointerStart->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerStart->setVisible(false);
 
 	_selectionPointerEnd = addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinEndIcon), ZOrder(1));
 	_selectionPointerEnd->setContentSize(Size2(24.0f, 24.0f));
 	_selectionPointerEnd->setAnchorPoint(Vec2(0.0f, _cursorAnchor));
-	_selectionPointerEnd->setColorRole(ColorRole::Primary);
+	_selectionPointerEnd->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerEnd->setVisible(false);
 
 	setStateApplyMode(StateApplyMode::ApplyForNodesBelow);

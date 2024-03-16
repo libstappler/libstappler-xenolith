@@ -42,6 +42,9 @@ public:
 	virtual StateApplyMode getStateApplyMode() const { return _applyMode; }
 	virtual void setStateApplyMode(StateApplyMode value);
 
+	virtual bool isIgnoreParentState() const { return _ignoreParentState; }
+	virtual void setIgnoreParentState(bool);
+
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void enableScissor(Padding outline = Padding());
@@ -58,6 +61,7 @@ protected:
 
 	StateApplyMode _applyMode = ApplyForAll;
 
+	bool _ignoreParentState = false;
 	bool _scissorEnabled = false;
 	Padding _scissorOutline;
 };

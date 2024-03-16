@@ -135,7 +135,7 @@ void LinearProgress::setLineColor(const Color &c) {
 	_line->setColor(c);
 }
 
-void LinearProgress::setLineOpacity(uint8_t op) {
+void LinearProgress::setLineOpacity(float op) {
 	_line->setOpacity(op);
 }
 
@@ -143,7 +143,7 @@ void LinearProgress::setBarColor(const Color &c) {
 	_bar->setColor(c);
 }
 
-void LinearProgress::setBarOpacity(uint8_t op) {
+void LinearProgress::setBarOpacity(float op) {
 	_bar->setOpacity(op);
 }
 

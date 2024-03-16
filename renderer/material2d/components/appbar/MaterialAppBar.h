@@ -35,7 +35,8 @@ enum class AppBarLayout {
 	CenterAligned,
 	Small,
 	Medium,
-	Large
+	Large,
+	Minified
 };
 
 class AppBar : public Surface {
@@ -53,7 +54,7 @@ public:
 	virtual void setTitle(StringView);
 	virtual StringView getTitle() const;
 
-	virtual void setNavButtonIcon(IconName);
+	virtual void setNavButtonIcon(IconName, float progress = 0.0f);
 	virtual IconName getNavButtonIcon() const;
 
 	virtual void setMaxActionIcons(size_t value);
@@ -83,7 +84,11 @@ protected:
 	virtual void updateProgress();
 	virtual float updateMenu(Node *composer, MenuSource *source, size_t maxIcons);
 	virtual void layoutSubviews();
+
 	virtual float getBaseLine() const;
+	virtual float getRealHeight() const;
+
+	virtual void updateDefaultHeight();
 
 	AppBarLayout _layout = AppBarLayout::Small;
 	TypescaleLabel *_label = nullptr;
@@ -100,7 +105,8 @@ protected:
 	Function<void()> _barCallback = nullptr;
 
 	float _replaceProgress = 1.0f;
-	float _basicHeight = 56.0f;
+	float _defaultHeight = 56.0f;
+	float _basicHeight = nan();
 	float _iconWidth = 0.0f;
 
 	InputListener *_inputListener = nullptr;

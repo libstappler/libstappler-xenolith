@@ -66,6 +66,7 @@ void MaterialColorSchemeNode::setSchemeColor(material2d::ThemeType type, Color4F
 void MaterialColorSchemeNode::updateLabels() {
 	switch (_type) {
 	case material2d::ThemeType::LightTheme:
+	case material2d::ThemeType::Custom:
 		switch (_name) {
 		case material2d::ColorRole::Primary: _labelName->setString("Primary"); _labelDesc->setString("Primary40"); break;
 		case material2d::ColorRole::OnPrimary: _labelName->setString("On Primary"); _labelDesc->setString("Primary100"); break;
@@ -96,6 +97,7 @@ void MaterialColorSchemeNode::updateLabels() {
 		case material2d::ColorRole::InverseSurface: _labelName->setString("Inverse Surface"); _labelDesc->setString(""); break;
 		case material2d::ColorRole::InverseOnSurface: _labelName->setString("Inverse On Surface"); _labelDesc->setString(""); break;
 		case material2d::ColorRole::InversePrimary: _labelName->setString("Inverse Primary"); _labelDesc->setString(""); break;
+		case material2d::ColorRole::Undefined: break;
 		case material2d::ColorRole::Max: break;
 		}
 		break;
@@ -130,6 +132,7 @@ void MaterialColorSchemeNode::updateLabels() {
 		case material2d::ColorRole::InverseSurface: _labelName->setString("Inverse Surface"); _labelDesc->setString(""); break;
 		case material2d::ColorRole::InverseOnSurface: _labelName->setString("Inverse On Surface"); _labelDesc->setString(""); break;
 		case material2d::ColorRole::InversePrimary: _labelName->setString("Inverse Primary"); _labelDesc->setString(""); break;
+		case material2d::ColorRole::Undefined: break;
 		case material2d::ColorRole::Max: break;
 		}
 		break;
@@ -261,6 +264,7 @@ void MaterialColorPickerTest::updateColor(ColorHCT &&color) {
 
 	switch (_themeType) {
 	case material2d::ThemeType::LightTheme:
+	case material2d::ThemeType::Custom:
 		_huePicker->setLabelColor(Color::Black);
 		_chromaPicker->setLabelColor(Color::Black);
 		_tonePicker->setLabelColor(Color::Black);

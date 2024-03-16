@@ -33,6 +33,7 @@ XL_DECLARE_EVENT_CLASS(FontController, onFontSourceUpdated)
 
 struct FontController::Builder::Data {
 	String name;
+	Rc<FontController> target;
 	Map<String, FontSource> dataQueries;
 	Map<String, FamilyQuery> familyQueries;
 	Map<String, String> aliases;
@@ -48,6 +49,11 @@ FontController::Builder::~Builder() {
 FontController::Builder::Builder(StringView name) {
 	_data = new Data();
 	_data->name = name.str<Interface>();
+}
+
+FontController::Builder::Builder(FontController *target) {
+	_data = new Data();
+	_data->target = target;
 }
 
 FontController::Builder::Builder(Builder &&other) {
@@ -69,6 +75,61 @@ FontController::Builder &FontController::Builder::operator=(Builder &&other) {
 StringView FontController::Builder::getName() const {
 	return _data->name;
 }
+FontController *FontController::Builder::getTarget() const {
+	return _data->target;
+}
+
+const FontController::FontSource * FontController::Builder::addFontSource(StringView name, BytesView data) {
+	auto it = _data->dataQueries.find(name);
+	if (it == _data->dataQueries.end()) {
+		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
+		it->second.fontExternalData = data;
+		it->second.preconfiguredParams = false;
+		return &it->second;
+	}
+
+	log::warn("FontController", "Duplicate font source: ", name);
+	return nullptr;
+}
+
+const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Bytes && data) {
+	auto it = _data->dataQueries.find(name);
+	if (it == _data->dataQueries.end()) {
+		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
+		it->second.fontMemoryData = move(data);
+		it->second.preconfiguredParams = false;
+		return &it->second;
+	}
+
+	log::warn("FontController", "Duplicate font source: ", name);
+	return nullptr;
+}
+
+const FontController::FontSource * FontController::Builder::addFontSource(StringView name, FilePath data) {
+	auto it = _data->dataQueries.find(name);
+	if (it == _data->dataQueries.end()) {
+		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
+		it->second.fontFilePath = data.get().str<Interface>();
+		it->second.preconfiguredParams = false;
+		return &it->second;
+	}
+
+	log::warn("FontController", "Duplicate font source: ", name);
+	return nullptr;
+}
+
+const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Function<Bytes()> &&cb) {
+	auto it = _data->dataQueries.find(name);
+	if (it == _data->dataQueries.end()) {
+		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
+		it->second.fontCallback = move(cb);
+		it->second.preconfiguredParams = false;
+		return &it->second;
+	}
+
+	log::warn("FontController", "Duplicate font source: ", name);
+	return nullptr;
+}
 
 const FontController::FontSource * FontController::Builder::addFontSource(StringView name, BytesView data, FontLayoutParameters params) {
 	auto it = _data->dataQueries.find(name);
@@ -76,6 +137,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
 		it->second.fontExternalData = data;
 		it->second.params = params;
+		it->second.preconfiguredParams = true;
 		return &it->second;
 	}
 
@@ -89,6 +151,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
 		it->second.fontMemoryData = move(data);
 		it->second.params = params;
+		it->second.preconfiguredParams = true;
 		return &it->second;
 	}
 
@@ -102,6 +165,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
 		it->second.fontFilePath = data.get().str<Interface>();
 		it->second.params = params;
+		it->second.preconfiguredParams = true;
 		return &it->second;
 	}
 
@@ -115,6 +179,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
 		it->second.fontCallback = move(cb);
 		it->second.params = params;
+		it->second.preconfiguredParams = true;
 		return &it->second;
 	}
 
@@ -220,6 +285,7 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 			}
 		}
 	}
+	query->addInFront = front;
 }
 
 FontController::~FontController() {
@@ -229,6 +295,13 @@ FontController::~FontController() {
 bool FontController::init(const Rc<FontExtension> &ext) {
 	_ext = ext;
 	return true;
+}
+
+void FontController::extend(const Callback<bool(FontController::Builder &)> &cb) {
+	Builder builder(this);
+	if (cb(builder)) {
+		_ext->acquireController(move(builder));
+	}
 }
 
 void FontController::initialize(Application *) {
@@ -259,10 +332,6 @@ void FontController::addFont(StringView family, Rc<FontFaceData> &&data, bool fr
 
 	_dirty = true;
 	lock.unlock();
-
-	if (_loaded) {
-		onFontSourceUpdated(this);
-	}
 }
 
 void FontController::addFont(StringView family, Vector<Rc<FontFaceData>> &&data, bool front) {
@@ -289,10 +358,6 @@ void FontController::addFont(StringView family, Vector<Rc<FontFaceData>> &&data,
 
 	_dirty = true;
 	lock.unlock();
-
-	if (_loaded) {
-		onFontSourceUpdated(this);
-	}
 }
 
 bool FontController::addAlias(StringView newAlias, StringView familyName) {
@@ -484,6 +549,10 @@ void FontController::setLoaded(bool value) {
 	}
 }
 
+void FontController::sendFontUpdatedEvent() {
+	onFontSourceUpdated(this);
+}
+
 void FontController::setAliases(Map<String, String> &&aliases) {
 	if (_aliases.empty()) {
 		_aliases = move(aliases);
@@ -582,8 +651,11 @@ void FontController::removeUnusedLayouts() {
 		}
 
 		if (/*_clock - it->second->getAccessTime() > _unusedInterval.toMicros() &&*/ it->second->getReferenceCount() == 1) {
+			auto c = it->second->getTexturesCount();
 			it = _layouts.erase(it);
-			_dirty = true;
+			if (c > 0) {
+				_dirty = true;
+			}
 		} else {
 			++ it;
 		}

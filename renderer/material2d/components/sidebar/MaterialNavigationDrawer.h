@@ -20,45 +20,41 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_
+#ifndef XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_SIDEBAR_MATERIALNAVIGATIONDRAWER_H_
+#define XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_SIDEBAR_MATERIALNAVIGATIONDRAWER_H_
 
-#include "XL2d.h"
-#include "XL2dLayer.h"
+#include "MaterialSidebar.h"
+#include "MaterialMenu.h"
+#include "XLEventHeader.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class LinearProgress : public Node {
+class NavigationDrawer : public Sidebar {
 public:
+	static EventHeader onNavigation;
+
+	virtual ~NavigationDrawer();
+
 	virtual bool init() override;
 	virtual void onContentSizeDirty() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual Menu *getNavigationMenu() const;
 
-	virtual void setAnimated(bool value);
-	virtual bool isAnimated() const;
+	virtual MenuSource *getMenuSource() const;
+	virtual void setMenuSource(MenuSource *);
 
-	virtual void setProgress(float value);
-	virtual float getProgress() const;
+	virtual void setStyle(const SurfaceStyle &);
 
-	virtual void setLineColor(const Color &);
-	virtual void setLineOpacity(float);
-
-	virtual void setBarColor(const Color &);
-	virtual void setBarOpacity(float);
+	virtual void setStatusBarColor(const Color &);
 
 protected:
-	virtual void layoutSubviews();
-	virtual void updateAnimations();
+	virtual void onNodeEnabled(bool value) override;
+	virtual void onNodeVisible(bool value) override;
 
-	bool _animated = false;
-	float _progress = 0.0f;
-
-	Layer *_line = nullptr;
-	Layer *_bar = nullptr;
+	Layer *_statusBarLayer = nullptr;
+	Menu *_navigation = nullptr;
 };
 
 }
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DLINEARPROGRESS_H_ */
+#endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_SIDEBAR_MATERIALNAVIGATIONDRAWER_H_ */

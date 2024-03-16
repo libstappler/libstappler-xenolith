@@ -68,25 +68,46 @@ public:
 	virtual void setIconSize(float);
 	virtual float getIconSize() const;
 
-	virtual void setLeadingIconName(IconName);
+	virtual void setLeadingIconName(IconName, float progress = 0.0f);
 	virtual IconName getLeadingIconName() const;
+
+	virtual void setLeadingIconProgress(float progress, float animation = 0.0f);
+	virtual float getLeadingIconProgress() const;
 
 	virtual void setTrailingIconName(IconName);
 	virtual IconName getTrailingIconName() const;
 
+	virtual void setTrailingIconProgress(float progress, float animation = 0.0f);
+	virtual float getTrailingIconProgress() const;
+
 	virtual void setTapCallback(Function<void()> &&);
+	virtual const Function<void()> &getTapCallback() const { return _callbackTap; }
+
 	virtual void setLongPressCallback(Function<void()> &&);
+	virtual const Function<void()> &getLongPressCallback() const { return _callbackLongPress; }
+
 	virtual void setDoubleTapCallback(Function<void()> &&);
+	virtual const Function<void()> &getDoubleTapCallback() const { return _callbackDoubleTap; }
 
 	virtual void setMenuSourceButton(Rc<MenuSourceButton> &&);
 	virtual MenuSourceButton *getMenuSourceButton() const;
+
+	virtual void setBlendColor(ColorRole, float value);
+	virtual void setBlendColor(const Color4F &, float value);
+
+	virtual ColorRole getBlendColorRule() const;
+	virtual const Color4F &getBlendColor() const;
+	virtual float getBlendColorValue() const;
 
 	virtual TypescaleLabel *getLabelTextNode() const { return _labelText; }
 	virtual TypescaleLabel *getLabelValueNode() const { return _labelValue; }
 	virtual IconSprite *getLeadingIconNode() const { return _leadingIcon; }
 	virtual IconSprite *getTrailingIconNode() const { return _trailingIcon; }
 
+	virtual InputListener *getInputListener() const { return _inputListener; }
+
 protected:
+	virtual bool hasContent() const;
 	virtual void updateSizeFromContent();
 	virtual void updateActivityState();
 

@@ -187,6 +187,7 @@ protected:
 
 	float _maxVelocity = nan();
 	float _scrollSpaceLimit = nan();
+	float _scrollSpacePadding = 0.0f;
 
 	Vec2 _globalScale; // values to scale input gestures
 

@@ -235,6 +235,9 @@ void ScrollController::onNextObject(Item &h, float pos, float size) {
 				}
 			}
 
+			h.node = node;
+			addScrollNode(h);
+
 			if (auto handle = node->getComponentByType<ScrollItemHandle>()) {
 				h.handle = handle;
 				_scroll->updateScrollNode(node, h.pos, h.size, h.zIndex, h.name);
@@ -245,8 +248,6 @@ void ScrollController::onNextObject(Item &h, float pos, float size) {
 					resizeItem(&h, nodeSize, forward);
 				}
 			}
-			h.node = node;
-			addScrollNode(h);
 		}
 	} else if (h.node) {
 		h.node->setVisible(true);

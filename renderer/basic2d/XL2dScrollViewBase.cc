@@ -61,7 +61,7 @@ bool ScrollViewBase::init(Layout layout) {
 			break;
 		}
 		return false;
-	});
+	}, TapDistanceAllowed, true);
 
 	_inputListener->addScrollRecognizer([this] (const GestureScroll &w) -> bool {
 		auto pos = getScrollPosition();
@@ -117,16 +117,16 @@ void ScrollViewBase::onContentSizeDirty() {
 	if (!isnan(_scrollSpaceLimit)) {
 		auto padding = _paddingGlobal;
 		if (isVertical()) {
-			if (_contentSize.width > _scrollSpaceLimit) {
+			if (_contentSize.width > _scrollSpaceLimit + _scrollSpacePadding * 2.0f) {
 				padding.left = padding.right = (_contentSize.width - _scrollSpaceLimit) / 2.0f;
 			} else {
-				padding.left = padding.right = 0.0f;
+				padding.left = padding.right = _scrollSpacePadding;
 			}
 		} else {
-			if (_contentSize.height > _scrollSpaceLimit) {
+			if (_contentSize.height > _scrollSpaceLimit + _scrollSpacePadding * 2.0f) {
 				padding.top = padding.bottom = (_contentSize.height - _scrollSpaceLimit) / 2.0f;
 			} else {
-				padding.top = padding.bottom = 0.0f;
+				padding.top = padding.bottom = _scrollSpacePadding;
 			}
 		}
 		_paddingGlobal = padding;
@@ -556,7 +556,19 @@ void ScrollViewBase::onOverscrollPerformed(float velocity, float pos, float boun
 }
 
 bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 &delta, const Vec2 &velocity) {
-	_inputListener->setExclusiveForTouch(id);
+	if (_layout == Layout::Vertical) {
+		if (std::abs(delta.x) < std::abs(delta.y)) {
+			_inputListener->setExclusiveForTouch(id);
+		} else {
+			return false;
+		}
+	} else {
+		if (std::abs(delta.x) > std::abs(delta.y)) {
+			_inputListener->setExclusiveForTouch(id);
+		} else {
+			return false;
+		}
+	}
 
 	auto cs = (_layout == Vertical)?(_contentSize.height):(_contentSize.width);
 	auto length = getScrollLength();
@@ -564,22 +576,17 @@ bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 
 		return false;
 	}
 
-	if (_layout == Vertical && fabsf(delta.y * 2.0f) <= fabsf(delta.x)) {
-		return false;
-	} else if (_layout == Horizontal && fabsf(delta.x * 2.0f) <= fabsf(delta.y)) {
-		return false;
-	}
-
 	onSwipeBegin();
 
-	if (_layout == Vertical) {
+	/*if (_layout == Vertical) {
 		return onSwipe(delta.y / _globalScale.y, velocity.y / _globalScale.y, false);
 	} else {
 		return onSwipe(- delta.x / _globalScale.x, - velocity.x / _globalScale.x, false);
-	}
+	}*/
 
 	return true;
 }
+
 bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delta, const Vec2 &velocity) {
 	if (_layout == Vertical) {
 		return onSwipe(delta.y / _globalScale.y, velocity.y / _globalScale.y, false);
@@ -587,6 +594,7 @@ bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delt
 		return onSwipe(- delta.x / _globalScale.x, - velocity.x / _globalScale.x, false);
 	}
 }
+
 bool ScrollViewBase::onSwipeEventEnd(uint32_t id, const Vec2 &loc, const Vec2 &d, const Vec2 &velocity) {
 	_movement = Movement::None;
 	if (_layout == Vertical) {

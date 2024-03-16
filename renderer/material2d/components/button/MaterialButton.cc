@@ -112,6 +112,10 @@ bool Button::init(const SurfaceStyle &style) {
 void Button::onContentSizeDirty() {
 	Surface::onContentSizeDirty();
 
+	if (_followContentSize && hasContent()) {
+		updateSizeFromContent();
+	}
+
 	layoutContent();
 }
 
@@ -196,15 +200,28 @@ float Button::getIconSize() const {
 	return _leadingIcon->getContentSize().width;
 }
 
-void Button::setLeadingIconName(IconName name) {
+void Button::setLeadingIconName(IconName name, float progress) {
 	if (name != getLeadingIconName()) {
 		_leadingIcon->setIconName(name);
+		_leadingIcon->setProgress(progress);
 		updateSizeFromContent();
 	}
 }
 
 IconName Button::getLeadingIconName() const {
 	return _leadingIcon->getIconName();
+}
+
+void Button::setLeadingIconProgress(float progress, float animation) {
+	if (animation > 0.0f) {
+		_leadingIcon->animate(progress, animation);
+	} else {
+		_leadingIcon->setProgress(progress);
+	}
+}
+
+float Button::getLeadingIconProgress() const {
+	return _leadingIcon->getProgress();
 }
 
 void Button::setTrailingIconName(IconName name) {
@@ -216,6 +233,18 @@ void Button::setTrailingIconName(IconName name) {
 
 IconName Button::getTrailingIconName() const {
 	return _trailingIcon->getIconName();
+}
+
+void Button::setTrailingIconProgress(float progress, float animation) {
+	if (animation > 0.0f) {
+		_trailingIcon->animate(progress, animation);
+	} else {
+		_trailingIcon->setProgress(progress);
+	}
+}
+
+float Button::getTrailingIconProgress() const {
+	return _trailingIcon->getProgress();
 }
 
 void Button::setTapCallback(Function<void()> &&cb) {
@@ -247,8 +276,40 @@ MenuSourceButton *Button::getMenuSourceButton() const {
 	return _menuButtonListener->getSubscription();
 }
 
+void Button::setBlendColor(ColorRole rule, float value) {
+	_labelText->setBlendColor(rule, value);
+	_labelValue->setBlendColor(rule, value);
+	_leadingIcon->setBlendColor(rule, value);
+	_trailingIcon->setBlendColor(rule, value);
+}
+
+void Button::setBlendColor(const Color4F &color, float value) {
+	_labelText->setBlendColor(color, value);
+	_labelValue->setBlendColor(color, value);
+	_leadingIcon->setBlendColor(color, value);
+	_trailingIcon->setBlendColor(color, value);
+}
+
+ColorRole Button::getBlendColorRule() const {
+	return _labelText->getBlendColorRule();
+}
+
+const Color4F &Button::getBlendColor() const {
+	return _labelText->getBlendColor();
+}
+
+float Button::getBlendColorValue() const {
+	return _labelText->getBlendColorValue();
+}
+
+bool Button::hasContent() const {
+	return !_labelText->empty() || !_labelValue->empty()
+			|| _leadingIcon->getIconName() != IconName::None
+			|| _trailingIcon->getIconName() != IconName::None;
+}
+
 void Button::updateSizeFromContent() {
-	if (!_followContentSize) {
+	if (!_followContentSize || !hasContent()) {
 		_contentSizeDirty = true;
 		return;
 	}
@@ -322,7 +383,7 @@ float Button::getWidthForContent() const {
 	}
 
 	if (!_labelValue->empty()) {
-		contentWidth += _labelText->getContentSize().width + 8.0f;
+		contentWidth += _labelValue->getContentSize().width + 8.0f;
 	}
 
 	if (getLeadingIconName() != IconName::None) {
@@ -357,7 +418,7 @@ void Button::updateMenuButtonSource() {
 }
 
 void Button::layoutContent() {
-	if (getLeadingIconName() != IconName::None && getTrailingIconName() == IconName::None && _labelText->getString().empty() && _labelValue->getString().empty()) {
+	if (getLeadingIconName() != IconName::None && getTrailingIconName() == IconName::None && _labelText->empty() && _labelValue->empty()) {
 		_leadingIcon->setAnchorPoint(Anchor::Middle);
 		_leadingIcon->setPosition(_contentSize / 2.0f);
 	} else {
@@ -371,7 +432,7 @@ void Button::layoutContent() {
 		if (getLeadingIconName() != IconName::None) {
 			_leadingIcon->setPosition(target);
 			target.x += 8.0f + _leadingIcon->getContentSize().width;
-		} else {
+		} else if (_styleTarget.nodeStyle != NodeStyle::Text) {
 			target.x += 8.0f;
 		}
 

@@ -34,8 +34,12 @@ void DynamicStateNode::setStateApplyMode(StateApplyMode value) {
 	_applyMode = value;
 }
 
+void DynamicStateNode::setIgnoreParentState(bool val) {
+	_ignoreParentState = val;
+}
+
 bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
-	if (_applyMode == DoNotApply) {
+	if (_applyMode == DoNotApply || info.contextStack.empty()) {
 		return Node::visitDraw(info, parentFlags);
 	}
 
@@ -43,12 +47,7 @@ bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 		return false;
 	}
 
-	if (info.contextStack.empty()) {
-		return Node::visitDraw(info, parentFlags);
-	}
-
 	auto &ctx = info.contextStack.back();
-
 	auto prevStateId = ctx->getCurrentState();
 	auto currentState = ctx->getState(prevStateId);
 	/*if (!currentState) {
@@ -58,88 +57,78 @@ bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 	auto newState = updateDynamicState(currentState ? *currentState : DrawStateValues());
 
+	StateId stateId = maxOf<StateId>();
+
 	if (newState.enabled == core::DynamicState::None) {
 		// no need to enable anything, drop to 0
 		if (prevStateId == maxOf<StateId>()) {
 			return Node::visitDraw(info, parentFlags);
-		} else {
-			ctx->stateStack.push_back(maxOf<StateId>());
-			auto ret = Node::visitDraw(info, parentFlags);
-			ctx->stateStack.pop_back();
-			return ret;
 		}
-	}
-
-	StateId stateId = ctx->addState(newState);
-
-	NodeFlags flags = processParentFlags(info, parentFlags);
-
-	bool visibleByCamera = true;
-
-	info.modelTransformStack.push_back(_modelViewTransform);
-	info.zPath.push_back(getLocalZOrder());
-
-	if (!_children.empty()) {
-		sortAllChildren();
-
-		switch (_applyMode) {
-		case ApplyForAll:
-		case ApplyForNodesBelow:
-			ctx->stateStack.push_back(stateId);
-			break;
-		default: break;
-		}
-
-		size_t i = 0;
-
-		// draw children zOrder < 0
-		for (; i < _children.size(); i++) {
-			auto node = _children.at(i);
-
-			if (node && node->getLocalZOrder() < ZOrder(0))
-				node->visitDraw(info, flags);
-			else
-				break;
-		}
-
-		switch (_applyMode) {
-		case ApplyForNodesAbove:
-			ctx->stateStack.push_back(stateId);
-			break;
-		default: break;
-		}
-
-		visitSelf(info, flags, visibleByCamera);
-
-		switch (_applyMode) {
-		case ApplyForNodesBelow:
-			ctx->stateStack.pop_back();
-			break;
-		default: break;
-		}
-
-		for (auto it = _children.cbegin() + i; it != _children.cend(); ++it) {
-			(*it)->visitDraw(info, flags);
-		}
-
-		switch (_applyMode) {
-		case ApplyForAll:
-		case ApplyForNodesAbove:
-			ctx->stateStack.pop_back();
-			break;
-		default: break;
-		}
-
+		// perform with default id
 	} else {
-		ctx->stateStack.push_back(stateId);
-
-		visitSelf(info, flags, visibleByCamera);
-
-		ctx->stateStack.pop_back();
+		stateId = ctx->addState(newState);
 	}
 
-	info.zPath.pop_back();
-	info.modelTransformStack.pop_back();
+	return wrapVisit(info, parentFlags, [&] (NodeFlags flags, bool visibleByCamera) {
+		if (!_children.empty()) {
+			sortAllChildren();
+
+			switch (_applyMode) {
+			case ApplyForAll:
+			case ApplyForNodesBelow:
+				ctx->stateStack.push_back(stateId);
+				break;
+			default: break;
+			}
+
+			size_t i = 0;
+
+			// draw children zOrder < 0
+			for (; i < _children.size(); i++) {
+				auto node = _children.at(i);
+
+				if (node && node->getLocalZOrder() < ZOrder(0))
+					node->visitDraw(info, flags);
+				else
+					break;
+			}
+
+			switch (_applyMode) {
+			case ApplyForNodesAbove:
+				ctx->stateStack.push_back(stateId);
+				break;
+			default: break;
+			}
+
+			visitSelf(info, flags, visibleByCamera);
+
+			switch (_applyMode) {
+			case ApplyForNodesBelow:
+				ctx->stateStack.pop_back();
+				break;
+			default: break;
+			}
+
+			for (auto it = _children.cbegin() + i; it != _children.cend(); ++it) {
+				(*it)->visitDraw(info, flags);
+			}
+
+			switch (_applyMode) {
+			case ApplyForAll:
+			case ApplyForNodesAbove:
+				ctx->stateStack.pop_back();
+				break;
+			default: break;
+			}
+
+		} else {
+			ctx->stateStack.push_back(stateId);
+
+			visitSelf(info, flags, visibleByCamera);
+
+			ctx->stateStack.pop_back();
+		}
+	}, true);
 
 	return true;
 }
@@ -174,7 +163,8 @@ DrawStateValues DynamicStateNode::updateDynamicState(const DrawStateValues &valu
 			uint32_t(roundf(topRight.x - bottomLeft.x)), uint32_t(roundf(topRight.y - bottomLeft.y))};
 	};
 
-	DrawStateValues ret(values);
+
+	DrawStateValues ret(_ignoreParentState ? DrawStateValues() : values);
 	if (_scissorEnabled) {
 		auto viewRect = getViewRect();
 		if ((ret.enabled & core::DynamicState::Scissor) == core::DynamicState::None) {

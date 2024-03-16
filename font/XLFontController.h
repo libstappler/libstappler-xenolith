@@ -51,11 +51,13 @@ public:
 		Function<Bytes()> fontCallback;
 		Rc<FontFaceData> data;
 		FontLayoutParameters params;
+		bool preconfiguredParams = true;
 	};
 
 	struct FamilyQuery {
 		String family;
 		Vector<const FontSource *> sources;
+		bool addInFront = false;
 	};
 
 	struct FamilySpec {
@@ -69,6 +71,7 @@ public:
 		~Builder();
 
 		Builder(StringView);
+		Builder(FontController *);
 
 		Builder(Builder &&);
 		Builder &operator=(Builder &&);
@@ -77,11 +80,17 @@ public:
 		Builder &operator=(const Builder &) = delete;
 
 		StringView getName() const;
+		FontController *getTarget() const;
 
-		const FontSource * addFontSource(StringView name, BytesView data, FontLayoutParameters = FontLayoutParameters());
-		const FontSource * addFontSource(StringView name, Bytes && data, FontLayoutParameters = FontLayoutParameters());
-		const FontSource * addFontSource(StringView name, FilePath data, FontLayoutParameters = FontLayoutParameters());
-		const FontSource * addFontSource(StringView name, Function<Bytes()> &&cb, FontLayoutParameters = FontLayoutParameters());
+		const FontSource * addFontSource(StringView name, BytesView data);
+		const FontSource * addFontSource(StringView name, Bytes && data);
+		const FontSource * addFontSource(StringView name, FilePath data);
+		const FontSource * addFontSource(StringView name, Function<Bytes()> &&cb);
+
+		const FontSource * addFontSource(StringView name, BytesView data, FontLayoutParameters);
+		const FontSource * addFontSource(StringView name, Bytes && data, FontLayoutParameters);
+		const FontSource * addFontSource(StringView name, FilePath data, FontLayoutParameters);
+		const FontSource * addFontSource(StringView name, Function<Bytes()> &&cb, FontLayoutParameters);
 
 		const FontSource *getFontSource(StringView) const;
 
@@ -107,14 +116,11 @@ public:
 	virtual ~FontController();
 
 	bool init(const Rc<FontExtension> &);
+
+	void extend(const Callback<bool(FontController::Builder &)> &);
+
 	virtual void initialize(Application *) override;
 	virtual void invalidate(Application *) override;
-
-	void addFont(StringView family, Rc<FontFaceData> &&, bool front = false);
-	void addFont(StringView family, Vector<Rc<FontFaceData>> &&, bool front = false);
-
-	// replaces previous alias
-	bool addAlias(StringView newAlias, StringView familyName);
 
 	bool isLoaded() const { return _loaded; }
 	const Rc<core::DynamicImage> &getImage() const { return _image; }
@@ -133,8 +139,16 @@ public:
 protected:
 	friend class FontExtension;
 
+	void addFont(StringView family, Rc<FontFaceData> &&, bool front = false);
+	void addFont(StringView family, Vector<Rc<FontFaceData>> &&, bool front = false);
+
+	// replaces previous alias
+	bool addAlias(StringView newAlias, StringView familyName);
+
 	void setImage(Rc<core::DynamicImage> &&);
 	void setLoaded(bool);
+
+	void sendFontUpdatedEvent();
 
 	// FontLayout * getFontLayout(const FontParameters &style);
 

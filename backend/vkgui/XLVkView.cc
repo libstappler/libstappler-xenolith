@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "XLCoreFrameCache.h"
 #include "SPBitmap.h"
 
-//#define XL_VKVIEW_DEBUG 1
+#define XL_VKVIEW_DEBUG 0
 
 #ifndef XL_VKAPI_LOG
 #define XL_VKAPI_LOG(...)
@@ -704,9 +704,12 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 
 	// make new frame request immediately
 	_mainLoop->performOnMainThread([this, req = move(newFrameRequest), swapchainImage] () mutable {
+		XL_VKVIEW_LOG("scheduleSwapchainImage: _director->acquireFrame");
 		if (_director->acquireFrame(req)) {
+			XL_VKVIEW_LOG("scheduleSwapchainImage: frame acquired");
 			_glLoop->performOnGlThread([this, req = move(req), swapchainImage = move(swapchainImage)] () mutable {
 				if (_glLoop->isRunning() && _swapchain) {
+					XL_VKVIEW_LOG("scheduleSwapchainImage: setup frame request");
 					auto &queue = req->getQueue();
 					auto a = queue->getPresentImageOutput();
 					if (!a) {
@@ -721,6 +724,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					req->autorelease(_swapchain);
 					req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
 					req->setOutput(a, [this, swapchain = _swapchain.get()] (core::FrameAttachmentData &data, bool success, Ref *) {
+						XL_VKVIEW_LOG("scheduleSwapchainImage: output on frame");
 						if (data.image) {
 							if (success) {
 								return present(move(data.image));
@@ -733,6 +737,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 						}
 						return true;
 					}, this);
+					XL_VKVIEW_LOG("scheduleSwapchainImage: submit frame");
 					auto order = _frameEmitter->submitNextFrame(move(req))->getOrder();
 					swapchainImage->setFrameIndex(order);
 

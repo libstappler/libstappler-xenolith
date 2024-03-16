@@ -62,6 +62,9 @@ public:
 	virtual void setDecorationPadding(Padding);
 	virtual Padding getDecorationPadding() const { return _decorationPadding; }
 
+	virtual void setTargetContentSize(const Size2 &);
+	virtual Size2 getTargetContentSize() const { return _targetContentSize; }
+
 	virtual bool onBackButton();
 
 	virtual void setBackButtonCallback(const BackButtonCallback &);
@@ -97,6 +100,7 @@ protected:
 	BackButtonCallback _backButtonCallback;
 	SceneContent2d *_sceneContent = nullptr;
 	String _name;
+	Size2 _targetContentSize;
 };
 
 }

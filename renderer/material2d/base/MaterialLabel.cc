@@ -138,6 +138,12 @@ void TypescaleLabel::setBlendColor(ColorRole rule, float value) {
 	}
 }
 
+void TypescaleLabel::setBlendColor(const Color4F &c, float value) {
+	setBlendColor(ColorRole::Undefined, 0.0f);
+	_blendColor = c;
+	_blendValue = value;
+}
+
 void TypescaleLabel::setPreserveOpacity(bool value) {
 	_preserveOpacity = value;
 }
@@ -147,7 +153,7 @@ bool TypescaleLabel::isPreserveOpacity() const {
 }
 
 bool TypescaleLabel::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
-	if (!_visible) {
+	if (!_visible || empty()) {
 		return false;
 	}
 
@@ -158,14 +164,13 @@ bool TypescaleLabel::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 
 		if (styleContainer) {
 			if (auto scheme = styleContainer->getScheme(s.schemeTag)) {
-				if (_blendValue > 0.0f) {
+				if (_blendValue > 0.0f && _blendColorRule != ColorRole::Undefined) {
 					auto c = scheme->get(_blendColorRule);
 					if (c != _blendColor) {
 						_blendColor = c;
 					}
 				}
 
-				setSelectionColor(scheme->get(material2d::ColorRole::Primary));
 				setSelectionColor(scheme->get(material2d::ColorRole::Secondary));
 			}
 		}

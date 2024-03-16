@@ -429,6 +429,11 @@ void SceneContent2d::updateLayoutNode(SceneLayout2d *node) {
 	Size2 size = _contentSize;
 	Padding effectiveDecorations;
 
+	if (node->getTargetContentSize() != Size2::ZERO) {
+		size.width = std::min(size.width, node->getTargetContentSize().width);
+		size.height = std::min(size.height, node->getTargetContentSize().height);
+	}
+
 	if ((mask & DecorationMask::Top) != DecorationMask::None) {
 		size.height += _decorationPadding.top;
 		effectiveDecorations.top = _decorationPadding.top;

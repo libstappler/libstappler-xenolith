@@ -61,7 +61,9 @@ public:
 	virtual void setRole(TypescaleRole);
 
 	virtual void setBlendColor(ColorRole, float value);
+	virtual void setBlendColor(const Color4F &, float value);
 	virtual ColorRole getBlendColorRule() const { return _blendColorRule; }
+	virtual const Color4F &getBlendColor() const { return _blendColor; }
 	virtual float getBlendColorValue() const { return _blendValue; }
 
 	virtual void setPreserveOpacity(bool);
@@ -77,7 +79,7 @@ protected:
 	bool _preserveOpacity = false;
 	float _blendValue = 0.0f;
 	Color4F _blendColor = Color4F::WHITE;
-	ColorRole _blendColorRule = ColorRole::Primary;
+	ColorRole _blendColorRule = ColorRole::Undefined;
 
 	TypescaleRole _role = TypescaleRole::Unknown;
 	ThemeType _themeType = ThemeType::LightTheme;

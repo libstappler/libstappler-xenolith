@@ -54,7 +54,7 @@ void StyleMonitor::setDirty(bool value) {
 void StyleMonitor::visit(FrameInfo &frame, NodeFlags parentFlags) {
 	auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
 	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
-	if (_dirty || style->getStyle() != _interiorData) {
+	if (style && (_dirty || style->getStyle() != _interiorData)) {
 		_interiorData = style->getStyle();
 
 		auto scheme = container ? container->getScheme(_interiorData.schemeTag) : nullptr;

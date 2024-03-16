@@ -178,6 +178,7 @@ public:
 
 	float getElapsed() { return _elapsed; }
 
+	virtual void stop() override;
 	virtual bool isDone(void) const override;
 	virtual void step(float dt) override;
 	virtual void setDuration(float duration) override;

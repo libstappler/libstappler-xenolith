@@ -105,7 +105,7 @@ void UtilsAssetTest::handleAssetUpdate(SubscriptionFlags flags) {
 			_runButton->setText("In progress");
 			_progress->setValue(a->getProgress());
 		} else {
-			if (a->getReadableVersion()) {
+			if (a->lockReadableVersion()) {
 				_runButton->setText("Available");
 			} else {
 				_runButton->setText("Run");

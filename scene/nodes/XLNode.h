@@ -38,6 +38,17 @@ class ActionManager;
 class Director;
 class FrameContext;
 
+struct ActionStorage : public Ref {
+	Vector<Rc<Action>> actionToStart;
+
+	void addAction(Rc<Action> &&a);
+	void removeAction(Action *a);
+	void removeAllActions();
+	void removeActionByTag(uint32_t);
+	void removeAllActionsByTag(uint32_t);
+	Action *getActionByTag(uint32_t);
+};
+
 class Node : public Ref {
 public:
 	/* Nodes with transparent zOrder will not be added into zPath */
@@ -329,6 +340,8 @@ public:
 	ActionManager *getActionManager() const { return _actionManager; }
 	FrameContext *getFrameContext() const { return _frameContext; }
 
+	virtual float getMaxDepthIndex() const;
+
 protected:
 	virtual void updateCascadeOpacity();
 	virtual void disableCascadeOpacity();
@@ -339,7 +352,9 @@ protected:
 	Mat4 transform(const Mat4 &parentTransform);
 	virtual NodeFlags processParentFlags(FrameInfo &info, NodeFlags parentFlags);
 
-	void visitSelf(FrameInfo &, NodeFlags flags, bool visibleByCamera);
+	virtual void visitSelf(FrameInfo &, NodeFlags flags, bool visibleByCamera);
+
+	virtual bool wrapVisit(FrameInfo &, NodeFlags flags, const Callback<void(NodeFlags, bool visible)> &, bool useContext);
 
 	bool _is3d = false;
 	bool _running = false;
@@ -399,6 +414,8 @@ protected:
 	Scheduler *_scheduler = nullptr;
 	ActionManager *_actionManager = nullptr;
 	FrameContext *_frameContext = nullptr;
+
+	Rc<ActionStorage> _actionStorage;
 };
 
 

@@ -69,11 +69,14 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_iconsComposer->setAnchorPoint(Anchor::BottomLeft);
 	_iconsComposer->setCascadeOpacityEnabled(true);
 
+	updateDefaultHeight();
+
 	return true;
 }
 
 void AppBar::onContentSizeDirty() {
 	Surface::onContentSizeDirty();
+	updateDefaultHeight();
 	layoutSubviews();
 }
 
@@ -92,8 +95,8 @@ StringView AppBar::getTitle() const {
 	return _label->getString8();
 }
 
-void AppBar::setNavButtonIcon(IconName name) {
-	_navButton->setLeadingIconName(name);
+void AppBar::setNavButtonIcon(IconName name, float progress) {
+	_navButton->setLeadingIconName(name, progress);
 	_contentSizeDirty = true;
 }
 
@@ -164,9 +167,14 @@ MenuSource * AppBar::getActionMenuSource() const {
 }
 
 void AppBar::setBasicHeight(float value) {
-	if (_basicHeight != value) {
+	if (isnan(value)) {
 		_basicHeight = value;
 		_contentSizeDirty = true;
+	} else {
+		if (_basicHeight != value) {
+			_basicHeight = value;
+			_contentSizeDirty = true;
+		}
 	}
 }
 
@@ -224,6 +232,7 @@ void AppBar::updateProgress() {
 	}
 	if (_prevComposer) {
 		_prevComposer->setPositionY(progress(0.0f, -_prevComposer->getContentSize().height, _replaceProgress));
+		_prevComposer->setOpacity(1.0f - _replaceProgress);
 	}
 }
 
@@ -275,13 +284,13 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 		}
 		auto pos = composer->getContentSize().width - 56 * (icons.size() - 1) - (hasExtMenu?8:36);
 		for (auto &it : icons) {
-			it->setContentSize(Size2(48, std::min(48.0f, _basicHeight)));
+			it->setContentSize(Size2(48, std::min(48.0f, getRealHeight())));
 			it->setAnchorPoint(Vec2(0.5, 0.5));
 			it->setPosition(Vec2(pos, baseline));
 			pos += 56;
 		}
 		if (hasExtMenu) {
-			icons.back()->setContentSize(Size2(24, std::min(48.0f, _basicHeight)));
+			icons.back()->setContentSize(Size2(24, std::min(48.0f, getRealHeight())));
 			icons.back()->setPosition(Vec2(composer->getContentSize().width - 24, baseline));
 		}
 	}
@@ -331,17 +340,52 @@ void AppBar::layoutSubviews() {
 		_label->setAlignment(Label::TextAlign::Left);
 		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline) : Vec2(64.0f, baseline));
 		break;
+	case AppBarLayout::Minified:
+		_label->setRole(TypescaleRole::TitleMedium);
+		_label->setAnchorPoint(Anchor::MiddleLeft);
+		_label->setAlignment(Label::TextAlign::Left);
+		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline) : Vec2(64.0f, baseline));
+		break;
 	default:
 		break;
 	}
 }
 
 float AppBar::getBaseLine() const {
-	if (_contentSize.height > _basicHeight) {
-		return _contentSize.height - _basicHeight / 2;
-	} else {
-		return _basicHeight / 2;
+	auto v = _defaultHeight;
+	if (!isnan(_basicHeight)) {
+		v = std::max(v, _basicHeight);
 	}
+	if (_contentSize.height > _basicHeight) {
+		return _contentSize.height - v / 2;
+	} else {
+		return v / 2;
+	}
+}
+
+float AppBar::getRealHeight() const {
+	auto v = _defaultHeight;
+	if (!isnan(_basicHeight)) {
+		v = std::max(v, _basicHeight);
+	}
+	return v;
+}
+
+void AppBar::updateDefaultHeight() {
+	switch (_layout) {
+	case AppBarLayout::CenterAligned:
+	case AppBarLayout::Small:
+	case AppBarLayout::Medium:
+	case AppBarLayout::Large:
+		_defaultHeight = 56.0f;
+		break;
+	case AppBarLayout::Minified:
+		_defaultHeight = 32.0f;
+		break;
+	}
+
+	_minHeight = 0.0f;
+	_maxHeight = getRealHeight();
 }
 
 }

@@ -41,9 +41,14 @@ public:
 	virtual void setProgress(float);
 	virtual float getProgress() const;
 
-	// ColorRole::Max for default behavior
-	virtual void setColorRole(ColorRole);
-	virtual ColorRole getColorRole() const { return _colorRole; }
+	virtual void setBlendColor(ColorRole, float value);
+	virtual void setBlendColor(const Color4F &, float value);
+	virtual ColorRole getBlendColorRule() const { return _blendColorRule; }
+	virtual const Color4F &getBlendColor() const { return _blendColor; }
+	virtual float getBlendColorValue() const { return _blendValue; }
+
+	virtual void setPreserveOpacity(bool);
+	virtual bool isPreserveOpacity() const;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
@@ -55,7 +60,11 @@ protected:
 
 	virtual void updateIcon();
 
-	ColorRole _colorRole = ColorRole::Max;
+	bool _preserveOpacity = false;
+	float _blendValue = 0.0f;
+	Color4F _blendColor = Color4F::WHITE;
+	ColorRole _blendColorRule = ColorRole::Undefined;
+
 	IconName _iconName = IconName::None;
 	float _progress = 0.0f;
 };

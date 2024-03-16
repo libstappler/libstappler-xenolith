@@ -191,7 +191,8 @@ protected:
 class SubpassBuilder final {
 public:
 	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
-			AttachmentOps = AttachmentOps::Undefined);
+			AttachmentOps = AttachmentOps::Undefined, BlendInfo = BlendInfo());
+	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo, BlendInfo);
 	bool addInput(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
 			AttachmentOps = AttachmentOps::Undefined);
 

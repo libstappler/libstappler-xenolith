@@ -69,6 +69,7 @@ ColorRole ColorScheme::getColorRoleOn(ColorRole role, ThemeType type) {
 	case ColorRole::InverseSurface: return ColorRole::InverseOnSurface; break;
 	case ColorRole::InverseOnSurface: return ColorRole::InverseSurface; break;
 	case ColorRole::InversePrimary: return ColorRole::OnBackground; break;
+	case ColorRole::Undefined: break;
 	case ColorRole::Max: break;
 	}
 	return role;
@@ -88,6 +89,7 @@ void ColorScheme::set(ThemeType t, const CorePalette &p) {
 	type = t;
 	switch (type) {
 	case ThemeType::LightTheme:
+	case ThemeType::Custom:
 		colors[toInt(ColorRole::Primary)] = Color4F(p.primary.get(40));
 		colors[toInt(ColorRole::OnPrimary)] = Color4F(p.primary.get(100));
 		colors[toInt(ColorRole::PrimaryContainer)] = Color4F(p.primary.get(90));
@@ -195,6 +197,7 @@ ColorHCT ColorScheme::hct(ColorRole name, float alpha) const {
 		case ColorRole::InverseSurface: return palette.neutral.hct(20, alpha); break;
 		case ColorRole::InverseOnSurface: return palette.neutral.hct(95, alpha); break;
 		case ColorRole::InversePrimary: return palette.primary.hct(80, alpha); break;
+		case ColorRole::Undefined: break;
 		case ColorRole::Max: break;
 		}
 		break;
@@ -229,8 +232,12 @@ ColorHCT ColorScheme::hct(ColorRole name, float alpha) const {
 		case ColorRole::InverseSurface: return palette.neutral.hct(90, alpha); break;
 		case ColorRole::InverseOnSurface: return palette.neutral.hct(20, alpha); break;
 		case ColorRole::InversePrimary: return palette.primary.hct(40, alpha); break;
+		case ColorRole::Undefined: break;
 		case ColorRole::Max: break;
 		}
+		break;
+	case ThemeType::Custom:
+		return ColorHCT(colors[toInt(name)], alpha);
 		break;
 	}
 	return ColorHCT();
@@ -269,6 +276,7 @@ ColorHCT::Values ColorScheme::values(ColorRole name, float alpha) const {
 		case ColorRole::InverseSurface: return palette.neutral.values(20, alpha); break;
 		case ColorRole::InverseOnSurface: return palette.neutral.values(95, alpha); break;
 		case ColorRole::InversePrimary: return palette.primary.values(80, alpha); break;
+		case ColorRole::Undefined: break;
 		case ColorRole::Max: break;
 		}
 		break;
@@ -303,11 +311,15 @@ ColorHCT::Values ColorScheme::values(ColorRole name, float alpha) const {
 		case ColorRole::InverseSurface: return palette.neutral.values(90, alpha); break;
 		case ColorRole::InverseOnSurface: return palette.neutral.values(20, alpha); break;
 		case ColorRole::InversePrimary: return palette.primary.values(40, alpha); break;
+		case ColorRole::Undefined: break;
 		case ColorRole::Max: break;
 		}
 		break;
+	case ThemeType::Custom:
+		return ColorHCT(colors[toInt(name)], alpha).data;
+		break;
 	}
-	return ColorHCT::Values{0.0f, 50.0f, 0.0f, 1.0f};
+	return ColorHCT::Values{0.0f, 50.0f, 0.0f, alpha};
 }
 
 }

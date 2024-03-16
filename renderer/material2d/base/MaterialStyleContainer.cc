@@ -52,6 +52,10 @@ void StyleContainer::onExit() {
 	Component::onExit();
 }
 
+void StyleContainer::setPrimaryScheme(ColorScheme &&scheme) {
+	setScheme(PrimarySchemeTag, move(scheme));
+}
+
 void StyleContainer::setPrimaryScheme(ThemeType type, const CorePalette &palette) {
 	setScheme(PrimarySchemeTag, type, palette);
 }
@@ -66,6 +70,19 @@ void StyleContainer::setPrimaryScheme(ThemeType type, const ColorHCT &color, boo
 
 const ColorScheme &StyleContainer::getPrimaryScheme() const {
 	return *getScheme(PrimarySchemeTag);
+}
+
+const ColorScheme *StyleContainer::setScheme(uint32_t tag, ColorScheme &&scheme) {
+	auto it = _schemes.find(tag);
+	if (it != _schemes.end()) {
+		it->second = move(scheme);
+	} else {
+		it = _schemes.emplace(tag, move(scheme)).first;
+	}
+	if (_running) {
+		onColorSchemeUpdate(this, int64_t(tag));
+	}
+	return &it->second;
 }
 
 const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const CorePalette &palette) {

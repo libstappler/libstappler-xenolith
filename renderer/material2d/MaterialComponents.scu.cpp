@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,21 @@
 
 #include "XLCommon.h"
 
-#include "base/MaterialColorScheme.cc"
-#include "base/MaterialDataSource.cc"
-#include "base/MaterialStyleContainer.cc"
-#include "base/MaterialStyleMonitor.cc"
-#include "base/MaterialEasing.cc"
-#include "base/MaterialSurface.cc"
-#include "base/MaterialLabel.cc"
-#include "base/MaterialIconSprite.cc"
-#include "base/MaterialLayerSurface.cc"
-#include "base/MaterialSurfaceInterior.cc"
-#include "base/MaterialSurfaceStyle.cc"
-#include "base/MaterialMenuSource.cc"
+#include "components/appbar/MaterialAppBar.cc"
+#include "components/button/MaterialButton.cc"
 
-#include "layout/MaterialDecoratedLayout.cc"
-#include "layout/MaterialFlexibleLayout.cc"
-#include "layout/MaterialMultiViewLayout.cc"
-#include "layout/MaterialScene.cc"
-#include "layout/MaterialSceneContent.cc"
+#include "components/input/MaterialInputTextContainer.cc"
+#include "components/input/MaterialInputField.cc"
 
+#include "components/scroll/MaterialDataScroll.cc"
+#include "components/scroll/MaterialDataScrollHandlerFixed.cc"
+#include "components/scroll/MaterialDataScrollHandlerSlice.cc"
+#include "components/scroll/MaterialDataScrollHandlerGrid.cc"
 
+#include "components/menu/MaterialMenu.cc"
+#include "components/menu/MaterialMenuButton.cc"
+#include "components/menu/MaterialMenuSeparator.cc"
+#include "components/menu/MaterialFloatingMenu.cc"
+
+#include "components/sidebar/MaterialNavigationDrawer.cc"
+#include "components/sidebar/MaterialSidebar.cc"

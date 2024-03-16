@@ -356,9 +356,9 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	Mat4 newMV;
 	if (_normalized) {
 		auto &modelTransform = frame.modelTransformStack.back();
-		newMV.m[12] = floorf(modelTransform.m[12]) + 0.5f;
-		newMV.m[13] = floorf(modelTransform.m[13]) + 0.5f;
-		newMV.m[14] = floorf(modelTransform.m[14]) + 0.5f;
+		newMV.m[12] = floorf(modelTransform.m[12]);
+		newMV.m[13] = floorf(modelTransform.m[13]);
+		newMV.m[14] = floorf(modelTransform.m[14]);
 	} else {
 		newMV = frame.modelTransformStack.back();
 	}
@@ -370,7 +370,7 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		pushShadowCommands(frame, flags, newMV, makeSpanView(&transformData, 1));
 	}
 	handle->commands->pushVertexArray(data.get(), frame.viewProjectionStack.back() * newMV,
-			frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+			frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back() * _displayedColor.a, _commandFlags);
 }
 
 MaterialInfo Sprite::getMaterialInfo() const {
@@ -509,6 +509,16 @@ void Sprite::updateBlendAndDepth() {
 RenderingLevel Sprite::getRealRenderingLevel() const {
 	auto level = _renderingLevel;
 	if (level == RenderingLevel::Default) {
+		RenderingLevel parentLevel = RenderingLevel::Default;
+		auto p = _parent;
+		while (p) {
+			if (auto s = dynamic_cast<Sprite *>(p)) {
+				if (s->getRenderingLevel() != RenderingLevel::Default) {
+					parentLevel = std::max(s->getRenderingLevel(), parentLevel);
+				}
+			}
+			p = p->getParent();
+		}
 		if (_displayedColor.a < 1.0f || !_texture || _materialInfo.getLineWidth() != 0.0f) {
 			level = RenderingLevel::Transparent;
 		} else if (_colorMode.getMode() == core::ColorMode::Solid) {
@@ -538,6 +548,7 @@ RenderingLevel Sprite::getRealRenderingLevel() const {
 				break;
 			}
 		}
+		level = std::max(level, parentLevel);
 	}
 	return level;
 }

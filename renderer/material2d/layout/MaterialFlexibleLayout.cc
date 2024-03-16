@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,11 +21,13 @@
  **/
 
 #include "MaterialFlexibleLayout.h"
+#include "MaterialEasing.h"
+#include "MaterialAppBar.h"
+#include "MaterialButton.h"
 #include "XL2dSceneContent.h"
 #include "XLDirector.h"
 #include "XLView.h"
 #include "XLAction.h"
-#include "MaterialEasing.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -80,11 +82,29 @@ bool FlexibleLayout::init() {
 
 void FlexibleLayout::onContentSizeDirty() {
 	DecoratedLayout::onContentSizeDirty();
+
+	float realFlexMin = _targetFlexibleMinHeight;
+	float realFlexMax = _targetFlexibleMaxHeight;
+
+	if (_flexibleNode) {
+		auto heightLimit = _flexibleNode->getHeightLimits(true);
+		if (!isnan(heightLimit.first)) {
+			realFlexMin = std::max(heightLimit.first, realFlexMin);
+		}
+
+		if (!isnan(heightLimit.second)) {
+			realFlexMax = std::max(heightLimit.second, realFlexMax);
+		}
+	}
+
 	if (_flexibleHeightFunction) {
 		auto ret = _flexibleHeightFunction();
-		_flexibleMinHeight = ret.first;
-		_flexibleMaxHeight = ret.second;
+		realFlexMin = std::max(ret.first, realFlexMin);
+		realFlexMax = std::min(ret.second, realFlexMax);
 	}
+
+	_realFlexibleMinHeight = realFlexMin;
+	_realFlexibleMaxHeight = realFlexMax;
 
 	_flexibleExtraSpace = 0.0f;
 	updateFlexParams();
@@ -111,14 +131,18 @@ void FlexibleLayout::setBaseNode(ScrollView *node, ZOrder zOrder) {
 	}
 }
 
-void FlexibleLayout::setFlexibleNode(Node *node, ZOrder zOrder) {
+void FlexibleLayout::setFlexibleNode(Surface *node, ZOrder zOrder) {
 	if (node != _flexibleNode) {
 		if (_flexibleNode) {
 			_flexibleNode->removeFromParent();
 			_flexibleNode = nullptr;
 		}
 		_flexibleNode = node;
+		_appBar = nullptr;
 		if (_flexibleNode) {
+			if (auto bar = dynamic_cast<AppBar *>(_flexibleNode)) {
+				_appBar = bar;
+			}
 			addChild(_flexibleNode, zOrder);
 		}
 		_contentSizeDirty = true;
@@ -132,25 +156,25 @@ void FlexibleLayout::setFlexibleAutoComplete(bool value) {
 }
 
 void FlexibleLayout::setFlexibleMinHeight(float height) {
-	if (_flexibleMinHeight != height) {
-		_flexibleMinHeight = height;
+	if (_targetFlexibleMinHeight != height) {
+		_targetFlexibleMinHeight = height;
 		_contentSizeDirty = true;
 	}
 }
 
 void FlexibleLayout::setFlexibleMaxHeight(float height) {
-	if (_flexibleMaxHeight != height) {
-		_flexibleMaxHeight = height;
+	if (_targetFlexibleMaxHeight != height) {
+		_targetFlexibleMaxHeight = height;
 		_contentSizeDirty = true;
 	}
 }
 
 float FlexibleLayout::getFlexibleMinHeight() const {
-	return _flexibleMinHeight;
+	return _targetFlexibleMinHeight;
 }
 
 float FlexibleLayout::getFlexibleMaxHeight() const {
-	return _flexibleMaxHeight;
+	return _targetFlexibleMaxHeight;
 }
 
 void FlexibleLayout::setFlexibleBaseNode(bool val) {
@@ -167,9 +191,6 @@ bool FlexibleLayout::isFlexibleBaseNode() const {
 void FlexibleLayout::setFlexibleHeightFunction(const HeightFunction &cb) {
 	_flexibleHeightFunction = cb;
 	if (cb) {
-		auto ret = cb();
-		_flexibleMinHeight = ret.first;
-		_flexibleMaxHeight = ret.second;
 		_contentSizeDirty = true;
 		_flexibleLevel = 1.0f;
 	}
@@ -186,13 +207,13 @@ void FlexibleLayout::updateFlexParams() {
 	auto size = _contentSize;
 	size.height -= _decorationPadding.bottom;
 	float decor = _viewDecorationTracked ? _decorationPadding.top : 0.0f;
-	float flexSize = _flexibleMinHeight + (_flexibleMaxHeight + decor - _flexibleMinHeight) * _flexibleLevel;
+	float flexSize = _realFlexibleMinHeight + (_realFlexibleMaxHeight + decor - _realFlexibleMinHeight) * _flexibleLevel;
 
-	if (flexSize >= _flexibleMaxHeight && _viewDecorationTracked) {
-		float tmpDecor = (flexSize - _flexibleMaxHeight);
+	if (flexSize >= _realFlexibleMaxHeight && _viewDecorationTracked) {
+		float tmpDecor = (flexSize - _realFlexibleMaxHeight);
 		decorParams.setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(), tmpDecor));
 		size.height -= tmpDecor;
-		flexSize = _flexibleMaxHeight;
+		flexSize = _realFlexibleMaxHeight;
 		decorParams.setPosition(Vec2(_decorationPadding.left, _contentSize.height));
 		decorParams.setVisible(true);
 	} else if (_viewDecorationTracked) {
@@ -252,7 +273,7 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 	clearFlexibleExpand(0.25f);
 	if (!finished && delta != 0.0f) {
 		const auto distanceFromStart = _baseNode->getDistanceFromStart();
-		const auto trigger = _safeTrigger ? ( _flexibleMaxHeight - _flexibleMinHeight) : 8.0f;
+		const auto trigger = _safeTrigger ? ( _realFlexibleMaxHeight - _realFlexibleMinHeight) : 8.0f;
 		if (isnan(distanceFromStart) || distanceFromStart > trigger || delta < 0) {
 			stopActionByTag(FlexibleLayout::AutoCompleteTag());
 			float height = getCurrentFlexibleHeight();
@@ -264,8 +285,8 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 					newHeight = max;
 				}
 			} else {
-				if (newHeight < _flexibleMinHeight) {
-					newHeight = _flexibleMinHeight;
+				if (newHeight < _realFlexibleMinHeight) {
+					newHeight = _realFlexibleMinHeight;
 				}
 			}
 			setFlexibleHeight(newHeight);
@@ -274,7 +295,7 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 		if (_flexibleAutoComplete) {
 			if (_flexibleLevel < 1.0f && _flexibleLevel > 0.0f) {
 				auto distanceFromStart = _baseNode->getDistanceFromStart();
-				bool open =  (_flexibleLevel > 0.5) || (!isnan(distanceFromStart) && distanceFromStart < (_flexibleMaxHeight - _flexibleMinHeight));
+				bool open =  (_flexibleLevel > 0.5) || (!isnan(distanceFromStart) && distanceFromStart < (_realFlexibleMaxHeight - _realFlexibleMinHeight));
 				auto a = Rc<ActionProgress>::create(progress(0.0f, 0.3f, open?_flexibleLevel:(1.0f - _flexibleLevel)), open?1.0f:0.0f,
 						[this] (float p) {
 					setFlexibleLevel(p);
@@ -315,22 +336,24 @@ void FlexibleLayout::setFlexibleLevelAnimated(float value, float duration) {
 	if (duration <= 0.0f) {
 		setFlexibleLevel(value);
 	} else {
-		auto a = Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(
-				duration, _flexibleLevel, value,
-				[this] (float progress) {
-			setFlexibleLevel(progress);
-		}), EasingType::Emphasized), [this, value] {
-			setFlexibleLevel(value);
-		});
-		a->setTag("FlexibleLevel"_tag);
-		runAction(a);
+		if (_flexibleLevel != value) {
+			auto a = Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(
+					duration, _flexibleLevel, value,
+					[this] (float progress) {
+				setFlexibleLevel(progress);
+			}), EasingType::Emphasized), [this, value] {
+				setFlexibleLevel(value);
+			});
+			a->setTag("FlexibleLevel"_tag);
+			runAction(a);
+		}
 	}
 }
 
 void FlexibleLayout::setFlexibleHeight(float height) {
-	float size = getCurrentFlexibleMax() - _flexibleMinHeight;
+	float size = getCurrentFlexibleMax() - _realFlexibleMinHeight;
 	if (size > 0.0f) {
-		float value = (height - _flexibleMinHeight) / (getCurrentFlexibleMax() - _flexibleMinHeight);
+		float value = (height - _realFlexibleMinHeight) / (getCurrentFlexibleMax() - _realFlexibleMinHeight);
 		setFlexibleLevel(value);
 	} else {
 		setFlexibleLevel(1.0f);
@@ -348,18 +371,68 @@ float FlexibleLayout::getBaseNodePadding() const {
 }
 
 float FlexibleLayout::getCurrentFlexibleHeight() const {
-	return (getCurrentFlexibleMax() - _flexibleMinHeight) * _flexibleLevel + _flexibleMinHeight;
+	return (getCurrentFlexibleMax() - _realFlexibleMinHeight) * _flexibleLevel + _realFlexibleMinHeight;
 }
 
 float FlexibleLayout::getCurrentFlexibleMax() const {
-	return _flexibleMaxHeight + (_viewDecorationTracked?_decorationPadding.top:0);
+	return _realFlexibleMaxHeight + (_viewDecorationTracked?_decorationPadding.top:0);
 }
 
 void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 	DecoratedLayout::onPush(l, replace);
+
+	if (_appBar) {
+		if (auto prev = l->getPrevLayout()) {
+			auto nav = _appBar->getNavNode();
+
+			if (auto prevL = dynamic_cast<FlexibleLayout *>(prev)) {
+				if (auto prevBar = prevL->getAppBar()) {
+					if (prevBar->getNavButtonIcon() == IconName::Dynamic_Nav && _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
+						auto p = prevBar->getNavNode()->getLeadingIconProgress();
+						if (p >= 1.0f) {
+							nav->setLeadingIconProgress(1.0f);
+						} else if (p < 1.0f) {
+							nav->setLeadingIconProgress(1.0f, 0.25f);
+						}
+						if (!_appBar->getNavCallback()) {
+							_appBar->setNavCallback([this] {
+								onBackButton();
+							});
+						}
+					}
+					return;
+				}
+			}
+
+			if (_appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
+				_appBar->getNavNode()->setLeadingIconProgress(1.0f, 0.25f);
+				if (!_appBar->getNavCallback()) {
+					_appBar->setNavCallback([this] {
+						onBackButton();
+					});
+				}
+			}
+		}
+	}
 }
+
 void FlexibleLayout::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
 	DecoratedLayout::onForegroundTransitionBegan(l, overlay);
+
+	if (_appBar) {
+		if (auto overlayL = dynamic_cast<FlexibleLayout *>(overlay)) {
+			if (auto overlayBar = overlayL->getAppBar()) {
+				if (overlayBar->getNavButtonIcon() == IconName::Dynamic_Nav && _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
+					auto p = overlayBar->getNavNode()->getLeadingIconProgress();
+					if (l->getPrevLayout() == nullptr) {
+						auto nav = _appBar->getNavNode();
+						nav->setLeadingIconProgress(p);
+						nav->setLeadingIconProgress(0.0f, 0.25f);
+					}
+				}
+			}
+		}
+	}
 }
 
 void FlexibleLayout::onDecorNode(const NodeParams &p) {

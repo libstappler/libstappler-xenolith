@@ -200,6 +200,15 @@ bool Surface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	return VectorSprite::visitDraw(frame, parentFlags);
 }
 
+Pair<float, float> Surface::getHeightLimits(bool flex) const {
+	return pair(_minHeight, _maxHeight);
+}
+
+void Surface::setHeightLimits(float min, float max) {
+	_minHeight = min;
+	_maxHeight = max;
+}
+
 void Surface::applyStyle(const SurfaceStyleData &style) {
 	if (style.colorElevation.a == 0.0f && style.outlineValue == 0.0f) {
 		setImage(nullptr);

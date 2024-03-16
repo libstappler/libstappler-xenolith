@@ -74,8 +74,14 @@ void main() {
 	vec2 sdfValue = texture(sampler2D(sdfImage, immutableSamplers[pushConstants.samplerIdx]), fragTexCoord).xw;
 
 	//outColor = float(int(sdfValue.x) % 20).xxxx / 20.0f;
-	//outColor.r = sdfValue.y;
-	//return;
+	//outColor = subpassLoad(inputDepth);
+	/*if (depth > 0) {
+		outColor = 1.0.xxxx;
+	} else {
+		outColor = 0.0.xxxx;
+	}
+	outColor.a = 1.0;
+	return;*/
 
 	if (sdfValue.y < depth + 0.1) {
 		outColor = shadowData.discardColor;

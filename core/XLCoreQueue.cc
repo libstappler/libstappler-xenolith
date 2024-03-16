@@ -1086,7 +1086,7 @@ PipelineLayoutBuilder::PipelineLayoutBuilder(PipelineLayoutData *data)
 : _data(data) { }
 
 bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency,
-		AttachmentLayout layout, AttachmentOps ops) {
+		AttachmentLayout layout, AttachmentOps ops, BlendInfo blendInfo) {
 	auto pool = _data->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1098,6 +1098,25 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDe
 	a->dependency = dependency;
 	a->usage = AttachmentUsage::Output;
 	a->ops = ops;
+	a->blendInfo = blendInfo;
+
+	_data->outputImages.emplace_back(a);
+	((AttachmentPassData *)attachment)->subpasses.emplace_back(a);
+
+	return true;
+}
+
+bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency, BlendInfo blendInfo) {
+	auto pool = _data->pass->queue->pool;
+	memory::pool::context ctx(pool);
+
+	auto a = new (pool) AttachmentSubpassData;
+	a->key = attachment->key;
+	a->pass = attachment;
+	a->subpass = _data;
+	a->dependency = dependency;
+	a->usage = AttachmentUsage::Output;
+	a->blendInfo = blendInfo;
 
 	_data->outputImages.emplace_back(a);
 	((AttachmentPassData *)attachment)->subpasses.emplace_back(a);

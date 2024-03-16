@@ -186,6 +186,8 @@ void LabelBase::Style::clear() {
 	params.clear();
 }
 
+LabelBase::ExternalFormatter::~ExternalFormatter() { }
+
 bool LabelBase::ExternalFormatter::init(font::FontController *s, float w, float density) {
 	if (!s) {
 		return false;
@@ -193,6 +195,9 @@ bool LabelBase::ExternalFormatter::init(font::FontController *s, float w, float 
 
 	_density = density;
 	_spec = Rc<TextLayout>::alloc(s);
+	_formatter.setFontCallback([this] (const FontParameters &f) {
+		return _spec->getLayout(f);
+	});
 	_formatter.reset(_spec->getData());
 	if (w > 0.0f) {
 		_formatter.setWidth(static_cast<uint16_t>(roundf(w * _density)));
@@ -610,24 +615,24 @@ void LabelBase::erase8(size_t start, size_t len) {
 	setLabelDirty();
 }
 
-void LabelBase::append(const String& value) {
-	_string8.append(value);
+void LabelBase::append(const StringView &value) {
+	_string8.append(value.str<Interface>());
 	_string16 = string::toUtf16<Interface>(_string8);
 	setLabelDirty();
 }
-void LabelBase::append(const WideString& value) {
-	_string16.append(value);
+void LabelBase::append(const WideStringView &value) {
+	_string16.append(value.str<Interface>());
 	_string8 = string::toUtf8<Interface>(_string16);
 	setLabelDirty();
 }
 
-void LabelBase::prepend(const String& value) {
-	_string8 = value + _string8;
+void LabelBase::prepend(const StringView &value) {
+	_string8 = toString(value, _string8);
 	_string16 = string::toUtf16<Interface>(_string8);
 	setLabelDirty();
 }
-void LabelBase::prepend(const WideString& value) {
-	_string16 = value + _string16;
+void LabelBase::prepend(const WideStringView &value) {
+	_string16 = value.str<Interface>() + _string16;
 	_string8 = string::toUtf8<Interface>(_string16);
 	setLabelDirty();
 }
@@ -639,26 +644,26 @@ void LabelBase::setTextRangeStyle(size_t start, size_t length, Style &&style) {
 	}
 }
 
-void LabelBase::appendTextWithStyle(const String &str, Style &&style) {
+void LabelBase::appendTextWithStyle(const StringView &str, Style &&style) {
 	auto start = _string16.length();
 	append(str);
 	setTextRangeStyle(start, _string16.length() - start, std::move(style));
 }
 
-void LabelBase::appendTextWithStyle(const WideString &str, Style &&style) {
+void LabelBase::appendTextWithStyle(const WideStringView &str, Style &&style) {
 	auto start = _string16.length();
 	append(str);
-	setTextRangeStyle(start, str.length(), std::move(style));
+	setTextRangeStyle(start, str.size(), std::move(style));
 }
 
-void LabelBase::prependTextWithStyle(const String &str, Style &&style) {
+void LabelBase::prependTextWithStyle(const StringView &str, Style &&style) {
 	auto len = _string16.length();
 	prepend(str);
 	setTextRangeStyle(0, _string16.length() - len, std::move(style));
 }
-void LabelBase::prependTextWithStyle(const WideString &str, Style &&style) {
+void LabelBase::prependTextWithStyle(const WideStringView &str, Style &&style) {
 	prepend(str);
-	setTextRangeStyle(0, str.length(), std::move(style));
+	setTextRangeStyle(0, str.size(), std::move(style));
 }
 
 void LabelBase::clearStyles() {

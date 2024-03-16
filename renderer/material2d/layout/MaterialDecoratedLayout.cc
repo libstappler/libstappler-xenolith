@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,26 +33,33 @@ bool DecoratedLayout::init(ColorRole role) {
 
 	_decorationMask = DecorationMask::All;
 
-	_decorationTop = addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)), ZOrderMax);
+	_decorationRoot = addChild(Rc<Node>::create(), ZOrderMax);
+
+	_decorationTop = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationTop->setAnchorPoint(Anchor::TopLeft);
 	_decorationTop->setVisible(false);
 	_decorationTop->setStyleDirtyCallback([this] (const SurfaceStyleData &style) {
 		updateStatusBar(style);
 	});
 
-	_decorationBottom = addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)), ZOrderMax);
+	_decorationBottom = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationBottom->setAnchorPoint(Anchor::BottomLeft);
 	_decorationBottom->setVisible(false);
 
-	_decorationLeft = addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)), ZOrderMax);
+	_decorationLeft = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationLeft->setAnchorPoint(Anchor::BottomLeft);
 	_decorationLeft->setVisible(false);
 
-	_decorationRight = addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)), ZOrderMax);
+	_decorationRight = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationRight->setAnchorPoint(Anchor::BottomRight);
 	_decorationRight->setVisible(false);
 
 	_background = addChild(Rc<LayerSurface>::create(SurfaceStyle(ColorRole::Background, NodeStyle::SurfaceTonal)), ZOrderMin);
+	_background->setStyleDirtyCallback([this] (const SurfaceStyleData &data) {
+		if (data.shadowValue > 0.0f) {
+			setDepthIndex(data.shadowValue);
+		}
+	});
 	_background->setAnchorPoint(Anchor::Middle);
 
 	return true;
@@ -60,6 +67,9 @@ bool DecoratedLayout::init(ColorRole role) {
 
 void DecoratedLayout::onContentSizeDirty() {
 	SceneLayout2d::onContentSizeDirty();
+
+	_decorationRoot->setContentSize(_contentSize);
+	_decorationRoot->setDepthIndex(20.0f);
 
 	if (_decorationPadding.left > 0.0f) {
 		_decorationLeft->setPosition(Vec2::ZERO);
@@ -99,28 +109,45 @@ void DecoratedLayout::onContentSizeDirty() {
 	updateStatusBar(_decorationTop->getStyleCurrent());
 }
 
+bool DecoratedLayout::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
+	if (!_visible) {
+		return false;
+	}
+
+	auto maxDepth = getMaxDepthIndex();
+	_decorationRoot->setDepthIndex(maxDepth);
+
+	return SceneLayout2d::visitDraw(info, parentFlags);
+}
+
 void DecoratedLayout::setDecorationColorRole(ColorRole role) {
 	SurfaceStyle tmp;
 
 	tmp = _decorationLeft->getStyleOrigin();
 	tmp.colorRole = role;
 	_decorationLeft->setStyle(tmp);
-
-	tmp = _decorationRight->getStyleOrigin();
-	tmp.colorRole = role;
 	_decorationRight->setStyle(tmp);
-
-	tmp = _decorationTop->getStyleOrigin();
-	tmp.colorRole = role;
 	_decorationTop->setStyle(tmp);
-
-	tmp = _decorationBottom->getStyleOrigin();
-	tmp.colorRole = role;
 	_decorationBottom->setStyle(tmp);
 }
 
 ColorRole DecoratedLayout::getDecorationColorRole() const {
 	return _decorationLeft->getStyleTarget().colorRole;
+}
+
+void DecoratedLayout::setDecorationElevation(Elevation e) {
+	SurfaceStyle tmp;
+
+	tmp = _decorationLeft->getStyleOrigin();
+	tmp.elevation = e;
+	_decorationLeft->setStyle(tmp);
+	_decorationRight->setStyle(tmp);
+	_decorationTop->setStyle(tmp);
+	_decorationBottom->setStyle(tmp);
+}
+
+Elevation DecoratedLayout::getDecorationElevation() const {
+	return _decorationLeft->getStyleTarget().elevation;
 }
 
 void DecoratedLayout::setViewDecorationTracked(bool value) {
@@ -141,6 +168,16 @@ void DecoratedLayout::updateStatusBar(const SurfaceStyleData &style) {
 	if (_director && _decorationStyleTracked) {
 		_director->getView()->setDecorationTone(style.colorOn.data.tone / 50.0f);
 	}
+}
+
+float DecoratedLayout::getMaxDepthIndex() const {
+	float maxIndex = _depthIndex;
+	for (auto &it : _children) {
+		if (it != _background && it != _decorationRoot) {
+			maxIndex = std::max(it->getMaxDepthIndex(), maxIndex);
+		}
+	}
+	return maxIndex;
 }
 
 }

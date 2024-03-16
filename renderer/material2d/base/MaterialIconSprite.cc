@@ -61,8 +61,25 @@ float IconSprite::getProgress() const {
 	return _progress;
 }
 
-void IconSprite::setColorRole(ColorRole role) {
-	_colorRole = role;
+void IconSprite::setBlendColor(ColorRole rule, float value) {
+	if (_blendColorRule != rule || _blendValue != value) {
+		_blendColorRule = rule;
+		_blendValue = value;
+	}
+}
+
+void IconSprite::setBlendColor(const Color4F &c, float value) {
+	setBlendColor(ColorRole::Undefined, 0.0f);
+	_blendColor = c;
+	_blendValue = value;
+}
+
+void IconSprite::setPreserveOpacity(bool value) {
+	_preserveOpacity = value;
+}
+
+bool IconSprite::isPreserveOpacity() const {
+	return _preserveOpacity;
 }
 
 bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
@@ -71,21 +88,28 @@ bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	}
 
 	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
+	auto styleContainer = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
 	if (style) {
-		if (_colorRole != ColorRole::Max) {
-			auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
-			if (auto s = container->getScheme(style->getStyle().schemeTag)) {
-				auto c = s->get(_colorRole);
-				if (c.getColor() != getColor().getColor()) {
-					setColor(c, false);
+		auto &s = style->getStyle();
+
+		if (styleContainer) {
+			if (auto scheme = styleContainer->getScheme(s.schemeTag)) {
+				if (_blendValue > 0.0f && _blendColorRule != ColorRole::Undefined) {
+					auto c = scheme->get(_blendColorRule);
+					if (c != _blendColor) {
+						_blendColor = c;
+					}
 				}
 			}
-		} else {
-			auto &s = style->getStyle();
-			auto color = s.colorOn.asColor4F();
-			if (color.getColor() != getColor().getColor()) {
-				setColor(color, false);
-			}
+		}
+
+		auto color = s.colorOn.asColor4F();
+		if (_blendValue > 0.0f) {
+			color = color * (1.0f - _blendValue) + _blendColor * _blendValue;
+		}
+
+		if (color != getColor()) {
+			setColor(color, !_preserveOpacity);
 		}
 	}
 

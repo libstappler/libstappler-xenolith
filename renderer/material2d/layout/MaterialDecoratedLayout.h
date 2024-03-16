@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,9 +35,13 @@ public:
 
 	virtual bool init(ColorRole decorationColorRole = ColorRole::PrimaryContainer);
 	virtual void onContentSizeDirty() override;
+	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void setDecorationColorRole(ColorRole);
 	virtual ColorRole getDecorationColorRole() const;
+
+	virtual void setDecorationElevation(Elevation);
+	virtual Elevation getDecorationElevation() const;
 
 	virtual void setViewDecorationTracked(bool value);
 	virtual bool isViewDecorationTracked() const;
@@ -46,9 +50,12 @@ public:
 
 	LayerSurface *getBackground() const { return _background; }
 
+	virtual float getMaxDepthIndex() const override;
+
 protected:
 	virtual void updateStatusBar(const SurfaceStyleData &style);
 
+	Node *_decorationRoot = nullptr;
 	LayerSurface *_decorationLeft = nullptr;
 	LayerSurface *_decorationRight = nullptr;
 	LayerSurface *_decorationTop = nullptr;

@@ -31,6 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 enum class ThemeType {
 	LightTheme,
 	DarkTheme,
+	Custom
 };
 
 enum class ColorRole {
@@ -63,6 +64,7 @@ enum class ColorRole {
 	InverseSurface,
 	InverseOnSurface,
 	InversePrimary,
+	Undefined,
 	Max
 };
 
