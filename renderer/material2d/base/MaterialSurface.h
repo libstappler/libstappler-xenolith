@@ -64,7 +64,7 @@ public:
 	virtual void setHeightLimits(float min, float max);
 
 protected:
-	virtual void applyStyle(const SurfaceStyleData &);
+	virtual void applyStyle(StyleContainer *, const SurfaceStyleData &);
 	virtual void updateBackgroundImage(VectorImage *img, const SurfaceStyleData &style, float radius);
 
 	virtual StyleContainer *getStyleContainerForFrame(FrameInfo &) const;

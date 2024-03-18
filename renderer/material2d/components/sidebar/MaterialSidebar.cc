@@ -128,7 +128,7 @@ void Sidebar::onContentSizeDirty() {
 	setProgress(0.0f);
 }
 
-void Sidebar::setBaseNode(Surface *n, ZOrder zOrder) {
+void Sidebar::setBaseNode(Node *n, ZOrder zOrder) {
 	if (_node) {
 		_node->removeFromParent();
 		_node = nullptr;
@@ -141,7 +141,7 @@ void Sidebar::setBaseNode(Surface *n, ZOrder zOrder) {
 	_contentSizeDirty = true;
 }
 
-Surface *Sidebar::getNode() const {
+Node *Sidebar::getNode() const {
 	return _node;
 }
 

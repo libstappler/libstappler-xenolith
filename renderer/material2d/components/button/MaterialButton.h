@@ -36,6 +36,17 @@ class MenuSourceButton;
 
 class Button : public Surface {
 public:
+	enum NodeMask {
+		None = 0,
+		LabelText = 1 << 0,
+		LabelValue = 1 << 1,
+		LeadingIcon = 1 << 2,
+		TrailingIcon = 1 << 3,
+		Labels = LabelText | LabelValue,
+		Icons = LeadingIcon | TrailingIcon,
+		All = LabelText | LabelValue | LeadingIcon | TrailingIcon
+	};
+
 	static constexpr TimeInterval LongPressInterval = TimeInterval::milliseconds(350);
 
 	virtual ~Button() { }
@@ -55,6 +66,9 @@ public:
 	virtual void setEnabled(bool);
 	virtual bool isEnabled() const { return _enabled; }
 	virtual bool isMenuSourceButtonEnabled() const;
+
+	virtual void setNodeMask(NodeMask);
+	virtual NodeMask getNodeMask() const { return _nodeMask; }
 
 	virtual void setSelected(bool);
 	virtual bool isSelected() const;
@@ -134,6 +148,8 @@ protected:
 	Function<void()> _callbackDoubleTap;
 	float _activityAnimationDuration = 0.25f;
 
+	NodeMask _nodeMask = All;
+
 	bool _followContentSize = true;
 	bool _mouseOver = false;
 	bool _enabled = true;
@@ -142,6 +158,8 @@ protected:
 	bool _selected = false;
 	bool _longPressInit = false;
 };
+
+SP_DEFINE_ENUM_AS_MASK(Button::NodeMask)
 
 }
 

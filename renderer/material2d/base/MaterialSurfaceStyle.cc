@@ -314,6 +314,20 @@ bool SurfaceStyle::apply(SurfaceStyleData &data, const Size2 &contentSize, const
 		break;
 	}
 
+	switch (activityState) {
+	case ActivityState::Focused:
+	case ActivityState::Hovered:
+	case ActivityState::Pressed:
+		targetColorOn.alpha = 1.0f;
+		break;
+	case ActivityState::Disabled:
+		targetColorOn.alpha = 0.34f;
+		break;
+	default:
+		targetColorOn.alpha = 0.85f;
+		break;
+	}
+
 	if (targetColorHCT != data.colorHCT.data) {
 		data.colorHCT = targetColorHCT;
 		data.colorScheme = data.colorHCT.asColor4F();

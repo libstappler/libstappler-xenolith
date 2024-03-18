@@ -160,7 +160,7 @@ public:
 	virtual bool init();
 
 	virtual bool canHandleEvent(const InputEvent &event) const;
-	virtual bool handleInputEvent(const InputEvent &, float density);
+	virtual InputEventState handleInputEvent(const InputEvent &, float density);
 
 	virtual void onEnter(InputListener *);
 	virtual void onExit();
@@ -178,9 +178,10 @@ public:
 	virtual size_t getMaxEvents() const { return _maxEvents; }
 
 protected:
-	virtual bool addEvent(const InputEvent &, float density);
-	virtual bool removeEvent(const InputEvent &, bool success, float density);
-	virtual bool renewEvent(const InputEvent &, float density);
+	virtual bool canAddEvent(const InputEvent &) const;
+	virtual InputEventState addEvent(const InputEvent &, float density);
+	virtual InputEventState removeEvent(const InputEvent &, bool success, float density);
+	virtual InputEventState renewEvent(const InputEvent &, float density);
 
 	virtual InputEvent *getTouchById(uint32_t id, uint32_t *index);
 
@@ -207,9 +208,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool successful, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool successful, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	GestureData _event = GestureData{GestureEvent::Cancelled, nullptr};
 	InputCallback _callback;
@@ -230,9 +231,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool successful, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool successful, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	virtual void registerTap();
 
@@ -256,9 +257,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool successful, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool successful, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	Time _lastTime = Time::now();
 	bool _notified = false;
@@ -283,9 +284,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool successful, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool successful, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	Time _lastTime;
 	math::MovingAverage<4> _velocityX, _velocityY;
@@ -313,9 +314,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool successful, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool successful, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	Time _lastTime;
 	math::MovingAverage<3> _velocity;
@@ -332,7 +333,7 @@ public:
 
 	virtual bool init(InputCallback &&);
 
-	virtual bool handleInputEvent(const InputEvent &, float density) override;
+	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
 protected:
 	using GestureRecognizer::init;
@@ -350,7 +351,7 @@ public:
 	virtual bool init(InputCallback &&, bool withinNode);
 
 	virtual bool canHandleEvent(const InputEvent &event) const override;
-	virtual bool handleInputEvent(const InputEvent &, float density) override;
+	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
 	virtual void onEnter(InputListener *) override;
 	virtual void onExit() override;
@@ -380,9 +381,9 @@ public:
 protected:
 	using GestureRecognizer::init;
 
-	virtual bool addEvent(const InputEvent &, float density) override;
-	virtual bool removeEvent(const InputEvent &, bool success, float density) override;
-	virtual bool renewEvent(const InputEvent &, float density) override;
+	virtual InputEventState addEvent(const InputEvent &, float density) override;
+	virtual InputEventState removeEvent(const InputEvent &, bool success, float density) override;
+	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
 	KeyMask _keyMask;
 	KeyMask _pressedKeys;
@@ -397,7 +398,7 @@ public:
 
 	virtual bool init(InputCallback &&, float padding = 0.0f);
 
-	virtual bool handleInputEvent(const InputEvent &, float density) override;
+	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
 	virtual void onEnter(InputListener *) override;
 	virtual void onExit() override;

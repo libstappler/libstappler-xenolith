@@ -51,6 +51,8 @@ struct FrameInfo {
 	memory::map<uint64_t, memory::vector<Rc<Component>>> componentsStack;
 	memory::set<const core::AttachmentData *> resolvedInputs;
 
+	uint32_t focusValue = 0;
+
 	FrameContextHandle *currentContext = nullptr;
 
 	memory::vector<Rc<Component>> * pushComponent(const Rc<Component> &comp) {

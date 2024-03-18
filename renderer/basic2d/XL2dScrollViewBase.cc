@@ -885,6 +885,7 @@ bool ScrollViewBase::onPressBegin(const Vec2 &) {
 	onAnimationFinished();
 	return false;
 }
+
 bool ScrollViewBase::onLongPress(const Vec2 &, const TimeInterval &time, int count) {
 	return true;
 }

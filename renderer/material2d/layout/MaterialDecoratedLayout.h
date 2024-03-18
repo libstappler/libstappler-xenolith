@@ -62,7 +62,6 @@ protected:
 	LayerSurface *_decorationBottom = nullptr;
 	LayerSurface *_background = nullptr;
 	bool _viewDecorationTracked = false;
-	bool _decorationStyleTracked = true;
 };
 
 }

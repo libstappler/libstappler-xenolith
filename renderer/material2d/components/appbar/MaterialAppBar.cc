@@ -55,6 +55,8 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_navButton->setTapCallback(std::bind(&AppBar::handleNavTapped, this));
 	_navButton->setLeadingIconName(IconName::Navigation_menu_solid);
 	_navButton->setIconSize(24.0f);
+	_navButton->setNodeMask(Button::LeadingIcon);
+	_navButton->setFollowContentSize(false);
 	_navButton->setSwallowEvents(true);
 
 	_label = addChild(Rc<TypescaleLabel>::create(TypescaleRole::TitleLarge));
@@ -70,6 +72,9 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_iconsComposer->setCascadeOpacityEnabled(true);
 
 	updateDefaultHeight();
+
+	setStateApplyMode(StateApplyMode::ApplyForAll);
+	enableScissor();
 
 	return true;
 }
@@ -256,7 +261,9 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 						auto btn = composer->addChild(Rc<Button>::create(NodeStyle::Text), ZOrder(0), iconsCount);
 						btn->setMenuSourceButton(btnSrc);
 						btn->setIconSize(24.0f);
+						btn->setFollowContentSize(false);
 						btn->setSwallowEvents(true);
+						btn->setNodeMask(Button::LeadingIcon);
 						icons.push_back(btn);
 						iconsCount ++;
 					} else {
@@ -269,8 +276,11 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 
 	if (extMenuSource->count() > 0) {
 		auto btn = Rc<Button>::create();
-		auto source = Rc<MenuSourceButton>::create("more", IconName::Navigation_more_vert_solid, move(extMenuSource));
+		auto source = Rc<MenuSourceButton>::create(StringView(), IconName::Navigation_more_vert_solid, move(extMenuSource));
 		btn->setMenuSourceButton(move(source));
+		btn->setFollowContentSize(false);
+		btn->setSwallowEvents(true);
+		btn->setNodeMask(Button::LeadingIcon);
 		icons.push_back(btn);
 		composer->addChild(move(btn), ZOrder(0), iconsCount);
 		hasExtMenu = true;

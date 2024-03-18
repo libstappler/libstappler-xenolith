@@ -45,12 +45,13 @@ static void drawIcon_Dynamic_Loader(vg::VectorImage &image, float pr) {
 static void drawIcon_Dynamic_Nav(vg::VectorImage &image, float pr) {
 	auto t = Mat4::IDENTITY;
 	t.translate(12, 12, 0);
-	t.rotateZ(pr * numbers::pi);
-	t.translate(-12, -12, 0);
 
 	float p = pr;
 
 	if (p <= 1.0f) {
+		t.rotateZ(pr * numbers::pi);
+		t.translate(-12, -12, 0);
+
 		image.addPath("")->openForWriting([&] (vg::PathWriter &writer) {
 			writer.moveTo( progress(2.0f, 13.0f, p),						progress(5.0f, 3.0f, p) )
 					.lineTo( progress(2.0f, 13.0f - float(M_SQRT2), p),		progress(7.0f, 3.0f + float(M_SQRT2), p) )
@@ -74,20 +75,11 @@ static void drawIcon_Dynamic_Nav(vg::VectorImage &image, float pr) {
 					.lineTo( progress(2.0f, 13.0f, p),						progress(19.0f, 21.0f, p) )
 				.closePath();
 		}).setTransform(t);
-
-		/*float rotation = _owner->getRotation();
-
-		if (pr == 0.0f) {
-			_owner->setRotation(0);
-		} else if (pr == 1.0f) {
-			_owner->setRotation(180);
-		} else if ((diff < 0 && fabsf(rotation) == 180) || rotation < 0) {
-			_owner->setRotation(progress(0, -180, pr));
-		} else if ((diff > 0 && rotation == 0) || rotation > 0) {
-			_owner->setRotation(progress(0, 180, pr));
-		}*/
 	} else {
 		p = p - 1.0f;
+
+		t.rotateZ((1.0f + 0.25f * p) * numbers::pi);
+		t.translate(-12, -12, 0);
 
 		image.addPath("")->openForWriting([&] (vg::PathWriter &writer) {
 			writer.moveTo( 13.0f, progress(3.0f, 4.0f, p) )
@@ -112,14 +104,6 @@ static void drawIcon_Dynamic_Nav(vg::VectorImage &image, float pr) {
 				.lineTo( 13.0f, progress(21.0f, 20.0f, p) )
 				.closePath();
 		}).setTransform(t);
-
-		/*if (p == 0.0f) {
-			_owner->setRotation(180);
-		} else if (p == 1.0f) {
-			_owner->setRotation(45);
-		} else {
-			_owner->setRotation(progress(180, 45, p));
-		}*/
 	}
 }
 

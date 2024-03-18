@@ -104,7 +104,7 @@ public:
 
 	bool shouldSwallowEvent(const InputEvent &) const;
 	bool canHandleEvent(const InputEvent &event) const;
-	bool handleEvent(const InputEvent &event);
+	InputEventState handleEvent(const InputEvent &event);
 
 	GestureRecognizer *addTouchRecognizer(InputCallback<GestureData> &&, ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
 	GestureRecognizer *addTapRecognizer(InputCallback<GestureTap> &&, ButtonMask && = makeButtonMask({InputMouseButton::Touch}),

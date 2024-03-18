@@ -1233,7 +1233,7 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 
 	for (auto &it : _inputEvents) {
 		if (it->isEnabled()) {
-			info.input->addListener(it);
+			info.input->addListener(it, info.focusValue);
 		}
 	}
 
@@ -1264,6 +1264,9 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const Callback<void
 		}
 		return false;
 	}
+
+	auto focus = _focus;
+	info.focusValue += focus;
 
 	auto order = getLocalZOrder();
 
@@ -1305,6 +1308,8 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const Callback<void
 		info.popContext();
 	}
 
+	info.focusValue -= focus;
+
 	return true;
 }
 
@@ -1316,6 +1321,20 @@ float Node::getMaxDepthIndex() const {
 		}
 	}
 	return val;
+}
+
+void Node::retainFocus() {
+	++ _focus;
+}
+
+void Node::releaseFocus() {
+	if (_focus > 0) {
+		-- _focus;
+	}
+}
+
+void Node::clearFocus() {
+	_focus = 0;
 }
 
 }

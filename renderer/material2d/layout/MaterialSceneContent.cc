@@ -109,7 +109,7 @@ void Snackbar::setSnackbarData(SnackbarData &&data) {
 	if (!_data.buttonText.empty() && _data.buttonCallback) {
 		_button->setVisible(true);
 		_button->setLeadingIconName(_data.buttonIcon);
-		_button->setText(_data.buttonText);
+		_button->setText(string::toupper<Interface>(_data.buttonText));
 		_button->setBlendColor(_data.buttonColor, _data.buttonBlendValue);
 		_label->setWidth(_contentSize.width - 48.0f - _button->getContentSize().width);
 	} else {
@@ -235,6 +235,10 @@ void SceneContent::clearSnackbar() {
 
 bool SceneContent::isNavigationAvailable() const {
 	return _navigation->isEnabled();
+}
+
+void SceneContent::setNavigationEnabled(bool value) {
+	_navigation->setEnabled(value);
 }
 
 void SceneContent::setNavigationMenuSource(MenuSource *source) {

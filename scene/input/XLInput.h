@@ -41,6 +41,12 @@ using TextCursor = core::TextCursor;
 using TextCursorPosition = core::TextCursorPosition;
 using TextCursorLength = core::TextCursorLength;
 
+enum class InputEventState {
+	Declined, // Получатель не заинтересован в этой цепочке событий
+	Processed, // Получатель заинтересован в цепочке событий, но не требует эксклюзивности
+	Captured, // Получатель запрашивает цепочку событий в эксклюзивную обработку
+};
+
 struct InputEvent {
 	InputEventData data;
 	Vec2 originalLocation;

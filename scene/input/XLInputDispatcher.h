@@ -32,6 +32,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class InputListenerStorage : public PoolRef {
 public:
+	struct Rec {
+		InputListener *listener;
+		uint32_t focus;
+	};
+
 	virtual ~InputListenerStorage();
 
 	InputListenerStorage(PoolRef *);
@@ -39,15 +44,16 @@ public:
 	void clear();
 	void reserve(const InputListenerStorage *);
 
-	void addListener(InputListener *);
+	void addListener(InputListener *, uint32_t focusValue);
 
 	template <typename Callback>
-	bool foreach(const Callback &);
+	bool foreach(const Callback &, bool focusOnly);
 
 protected:
-	memory::vector<InputListener *> *_preSceneEvents;
-	memory::vector<InputListener *> *_sceneEvents; // in reverse order
-	memory::vector<InputListener *> *_postSceneEvents;
+	memory::vector<Rec> *_preSceneEvents;
+	memory::vector<Rec> *_sceneEvents; // in reverse order
+	memory::vector<Rec> *_postSceneEvents;
+	uint32_t _maxFocusValue = 0;
 };
 
 class InputDispatcher : public Ref {
@@ -86,6 +92,7 @@ protected:
 		Vector<Rc<InputListener>> listeners;
 		Rc<InputListener> exclusive;
 		Vector<const InputListener *> processed;
+		bool isKeyEvent = false;
 
 		void handle(bool removeOnFail);
 		void clear(bool cancel);
@@ -117,14 +124,16 @@ protected:
 };
 
 template <typename Callback>
-bool InputListenerStorage::foreach(const Callback &cb) {
-	memory::vector<InputListener *>::reverse_iterator it, end;
+bool InputListenerStorage::foreach(const Callback &cb, bool focusOnly) {
+	memory::vector<Rec>::reverse_iterator it, end;
 	it = _preSceneEvents->rbegin();
 	end = _preSceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!cb(*it)) {
-			return false;
+		if (!focusOnly || it->focus == _maxFocusValue) {
+			if (!cb(*it)) {
+				return false;
+			}
 		}
 	}
 
@@ -132,8 +141,10 @@ bool InputListenerStorage::foreach(const Callback &cb) {
 	end = _sceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!cb(*it)) {
-			return false;
+		if (!focusOnly || it->focus == _maxFocusValue) {
+			if (!cb(*it)) {
+				return false;
+			}
 		}
 	}
 
@@ -141,8 +152,10 @@ bool InputListenerStorage::foreach(const Callback &cb) {
 	end = _postSceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!cb(*it)) {
-			return false;
+		if (!focusOnly || it->focus == _maxFocusValue) {
+			if (!cb(*it)) {
+				return false;
+			}
 		}
 	}
 

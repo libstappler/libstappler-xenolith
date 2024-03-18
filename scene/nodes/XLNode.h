@@ -342,6 +342,12 @@ public:
 
 	virtual float getMaxDepthIndex() const;
 
+	virtual void retainFocus();
+	virtual void releaseFocus();
+	virtual void clearFocus();
+
+	virtual uint32_t getFocus() const { return _focus; }
+
 protected:
 	virtual void updateCascadeOpacity();
 	virtual void disableCascadeOpacity();
@@ -376,6 +382,7 @@ protected:
 
 	uint64_t _tag = InvalidTag;
 	ZOrder _zOrder = ZOrder(0);
+	uint32_t _focus = 0;
 
 	Vec2 _skew;
 	Vec2 _anchorPoint;

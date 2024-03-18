@@ -49,8 +49,8 @@ public:
 		return ptr.get();
 	}
 
-	virtual void setBaseNode(Surface *m, ZOrder zOrder = ZOrder(0));
-	virtual Surface *getNode() const;
+	virtual void setBaseNode(Node *m, ZOrder zOrder = ZOrder(0));
+	virtual Node *getNode() const;
 
 	virtual void setNodeWidth(float);
 	virtual float getNodeWidth() const;
@@ -104,7 +104,7 @@ protected:
 	InputListener *_listener = nullptr;
 
 	Layer *_background = nullptr;
-	Surface *_node = nullptr;
+	Node *_node = nullptr;
 
 	BoolCallback _visibleCallback = nullptr;
 	BoolCallback _enabledCallback = nullptr;

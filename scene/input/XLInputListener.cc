@@ -213,22 +213,18 @@ bool InputListener::canHandleEvent(const InputEvent &event) const {
 	return false;
 }
 
-bool InputListener::handleEvent(const InputEvent &event) {
-	bool ret = false;
+InputEventState InputListener::handleEvent(const InputEvent &event) {
+	InputEventState ret = InputEventState::Declined;
 	auto it = _callbacks.find(event.data.event);
 	if (it != _callbacks.end()) {
-		if (it->second(event.data.getValue())) {
-			ret = true;
-		}
+		ret = std::max(it->second(event.data.getValue()) ? InputEventState::Processed : InputEventState::Declined, ret);
 	}
 	for (auto &it : _recognizers) {
 		if (!_running || !_owner) {
 			break;
 		}
 
-		if (it->handleInputEvent(event, _density)) {
-			ret = true;
-		}
+		ret = std::max(it->handleInputEvent(event, _density), ret);
 	}
 	return ret;
 }

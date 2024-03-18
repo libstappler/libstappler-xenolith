@@ -60,6 +60,7 @@
 #include "material/AppMaterialInputFieldTest.cc"
 #include "material/AppMaterialToolbarTest.cc"
 #include "material/AppMaterialMenuTest.cc"
+#include "material/AppMaterialTabBarTest.cc"
 #include "config/AppConfigMenu.cc"
 #include "config/AppConfigPresentModeSwitcher.cc"
 
@@ -126,6 +127,7 @@ static Vector<MenuData> s_layouts {
 			LayoutName::MaterialInputFieldTest,
 			LayoutName::MaterialToolbarTest,
 			LayoutName::MaterialMenuTest,
+			LayoutName::MaterialTabBarTest,
 		}); }},
 
 	MenuData{LayoutName::Config, LayoutName::Root, "org.stappler.xenolith.test.Config", "Config",
@@ -201,6 +203,8 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<MaterialToolbarTest>::create(); }},
 	MenuData{LayoutName::MaterialMenuTest, LayoutName::MaterialTests, "org.stappler.xenolith.test.MaterialMenuTest", "Menu test",
 		[] (LayoutName name) { return Rc<MaterialMenuTest>::create(); }},
+	MenuData{LayoutName::MaterialTabBarTest, LayoutName::MaterialTests, "org.stappler.xenolith.test.MaterialTabBarTest", "Tab bar test",
+		[] (LayoutName name) { return Rc<MaterialTabBarTest>::create(); }},
 };
 
 LayoutName getRootLayoutForLayout(LayoutName name) {

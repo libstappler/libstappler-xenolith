@@ -267,7 +267,7 @@ public:
 
 	template <char ... Chars>
 	void setString(metastring::metastring<Chars ...> &&str) {
-		setString(str.to_string());
+		setString(str.to_std_string());
 	}
 
 	virtual void setString(const StringView &);

@@ -70,6 +70,8 @@ bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, Floa
 	_globalOrigin = globalOrigin;
 	_binding = b;
 
+	retainFocus();
+
 	auto l = addInputListener(Rc<InputListener>::create());
 	l->setSwallowEvents(InputListener::makeEventMask({InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
 	l->setTouchFilter([this] (const InputEvent &ev, const InputListener::DefaultEventFilter &def) {
@@ -220,7 +222,11 @@ bool FloatingMenu::init(MenuSource *source, Menu *root) {
 
 	_root = root;
 
-	setElevation(Elevation(toInt(_root->getStyleOrigin().elevation) + 1));
+	if (_root) {
+		setElevation(Elevation(toInt(_root->getStyleOrigin().elevation) + 1));
+	} else {
+		setElevation(Elevation::Level3);
+	}
 
 	_scroll->setIndicatorVisible(_ready);
 

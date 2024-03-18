@@ -37,6 +37,7 @@
 #include "components/menu/MaterialMenuButton.cc"
 #include "components/menu/MaterialMenuSeparator.cc"
 #include "components/menu/MaterialFloatingMenu.cc"
+#include "components/menu/MaterialTabBar.cc"
 
 #include "components/sidebar/MaterialNavigationDrawer.cc"
 #include "components/sidebar/MaterialSidebar.cc"

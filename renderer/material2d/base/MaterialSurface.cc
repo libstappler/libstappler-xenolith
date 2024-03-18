@@ -193,7 +193,7 @@ bool Surface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 		} else {
 			_styleDataCurrent = _styleDataOrigin;
 		}
-		applyStyle(_styleDataCurrent);
+		applyStyle(style, _styleDataCurrent);
 		_interior->setStyle(SurfaceStyleData(_styleDataCurrent));
 	}
 
@@ -209,7 +209,7 @@ void Surface::setHeightLimits(float min, float max) {
 	_maxHeight = max;
 }
 
-void Surface::applyStyle(const SurfaceStyleData &style) {
+void Surface::applyStyle(StyleContainer *, const SurfaceStyleData &style) {
 	if (style.colorElevation.a == 0.0f && style.outlineValue == 0.0f) {
 		setImage(nullptr);
 		setColor(style.colorElevation, false);

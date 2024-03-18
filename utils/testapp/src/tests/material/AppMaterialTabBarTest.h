@@ -20,46 +20,30 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
-#define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
+#ifndef SRC_TESTS_MATERIAL_APPMATERIALTABBARTEST_H_
+#define SRC_TESTS_MATERIAL_APPMATERIALTABBARTEST_H_
 
-#include "MaterialSurface.h"
-#include "MaterialSnackbarData.h"
-#include "XL2dSceneContent.h"
+#include "AppLayoutTest.h"
+#include "AppMaterialBackground.h"
+#include "MaterialTabBar.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
+namespace stappler::xenolith::app {
 
-class Snackbar;
-class MenuSource;
-class NavigationDrawer;
-
-class SceneContent : public SceneContent2d {
+class MaterialTabBarTest : public LayoutTest {
 public:
-	virtual ~SceneContent();
+	virtual ~MaterialTabBarTest() { }
 
 	virtual bool init() override;
 
 	virtual void onContentSizeDirty() override;
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
-
-	virtual void showSnackbar(SnackbarData &&);
-	virtual const String &getSnackbarString() const;
-	virtual void clearSnackbar();
-
-	virtual bool isNavigationAvailable() const;
-	virtual void setNavigationEnabled(bool);
-	virtual void setNavigationMenuSource(MenuSource *);
-	virtual void setNavigationStyle(const SurfaceStyle &);
-	virtual void openNavigation();
-	virtual void closeNavigation();
-
-	virtual float getMaxDepthIndex() const override;
 
 protected:
-	Snackbar *_snackbar = nullptr;
-	NavigationDrawer *_navigation = nullptr;
+	using LayoutTest::init;
+
+	MaterialBackground *_background = nullptr;
+	material2d::TabBar *_tabBar = nullptr;
 };
 
 }
 
-#endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_ */
+#endif /* SRC_TESTS_MATERIAL_APPMATERIALTABBARTEST_H_ */

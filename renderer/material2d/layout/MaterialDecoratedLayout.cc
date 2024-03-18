@@ -165,7 +165,7 @@ void DecoratedLayout::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
 }
 
 void DecoratedLayout::updateStatusBar(const SurfaceStyleData &style) {
-	if (_director && _decorationStyleTracked) {
+	if (_director && _viewDecorationTracked) {
 		_director->getView()->setDecorationTone(style.colorOn.data.tone / 50.0f);
 	}
 }

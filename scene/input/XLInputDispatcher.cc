@@ -32,9 +32,9 @@ InputListenerStorage::~InputListenerStorage() {
 
 InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
 	perform([&, this] {
-		_preSceneEvents = new (_pool) memory::vector<InputListener *>;
-		_sceneEvents = new (_pool) memory::vector<InputListener *>;
-		_postSceneEvents = new (_pool) memory::vector<InputListener *>;
+		_preSceneEvents = new (_pool) memory::vector<Rec>;
+		_sceneEvents = new (_pool) memory::vector<Rec>;
+		_postSceneEvents = new (_pool) memory::vector<Rec>;
 
 		_sceneEvents->reserve(256);
 	});
@@ -42,18 +42,19 @@ InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
 
 void InputListenerStorage::clear() {
 	for (auto &it : *_preSceneEvents) {
-		it->release(0);
+		it.listener->release(0);
 	}
 	for (auto &it : *_sceneEvents) {
-		it->release(0);
+		it.listener->release(0);
 	}
 	for (auto &it : *_postSceneEvents) {
-		it->release(0);
+		it.listener->release(0);
 	}
 
 	_preSceneEvents->clear();
 	_sceneEvents->clear();
 	_postSceneEvents->clear();
+	_maxFocusValue = 0;
 }
 
 void InputListenerStorage::reserve(const InputListenerStorage *st) {
@@ -62,34 +63,35 @@ void InputListenerStorage::reserve(const InputListenerStorage *st) {
 	_postSceneEvents->reserve(st->_postSceneEvents->size());
 }
 
-void InputListenerStorage::addListener(InputListener *input) {
+void InputListenerStorage::addListener(InputListener *input, uint32_t focus) {
 	input->retain();
 	auto p = input->getPriority();
 	if (p == 0) {
-		_sceneEvents->emplace_back(input);
+		_sceneEvents->emplace_back(Rec{input, focus});
 	} else if (p < 0) {
-		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(), input,
-				[] (InputListener *l, InputListener *r) {
-			return l->getPriority() < r->getPriority();
+		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(), Rec{input, focus},
+				[] (const Rec &l, const Rec &r) {
+			return l.listener->getPriority() < r.listener->getPriority();
 		});
 
 		if (lb == _postSceneEvents->end()) {
-			_postSceneEvents->emplace_back(input);
+			_postSceneEvents->emplace_back(Rec{input, focus});
 		} else {
-			_postSceneEvents->emplace(lb, input);
+			_postSceneEvents->emplace(lb, Rec{input, focus});
 		}
 	} else {
-		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(), input,
-				[] (InputListener *l, InputListener *r) {
-			return l->getPriority() < r->getPriority();
+		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(), Rec{input, focus},
+				[] (const Rec &l, const Rec &r) {
+			return l.listener->getPriority() < r.listener->getPriority();
 		});
 
 		if (lb == _preSceneEvents->end()) {
-			_preSceneEvents->emplace_back(input);
+			_preSceneEvents->emplace_back(Rec{input, focus});
 		} else {
-			_preSceneEvents->emplace(lb, input);
+			_preSceneEvents->emplace(lb, Rec{input, focus});
 		}
 	}
+	_maxFocusValue = max(focus, _maxFocusValue);
 }
 
 bool InputDispatcher::init(PoolRef *pool, TextInputViewInterface *view) {
@@ -145,12 +147,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 			v->second.event = getEventInfo(event);
 		}
 
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(v->second.event)) {
-				v->second.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(v->second.event)) {
+				v->second.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, true);
 
 		v->second.handle(true);
 		break;
@@ -178,12 +180,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_pointerLocation = Vec2(event.x, event.y);
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, false);
 
 		handlers.handle(false);
 
@@ -200,12 +202,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 	}
 	case InputEventName::Scroll: {
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, false);
 		handlers.handle(false);
 		break;
 	}
@@ -213,12 +215,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_inBackground = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, false);
 		handlers.handle(false);
 
 		if (handlers.event.data.getValue()) {
@@ -231,12 +233,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_hasFocus = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, false);
 		handlers.handle(false);
 
 		if (!handlers.event.data.getValue()) {
@@ -249,12 +251,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_pointerInWindow = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, false);
 
 		handlers.handle(false);
 
@@ -275,12 +277,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 
 		auto v = resetKey(event);
 
-		_events->foreach([&] (InputListener *l) {
-			if (l->canHandleEvent(v->event)) {
-				v->listeners.emplace_back(l);
+		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(v->event)) {
+				v->listeners.emplace_back(l.listener);
 			}
 			return true;
-		});
+		}, true);
 		v->handle(true);
 		break;
 	}
@@ -381,25 +383,31 @@ void InputDispatcher::EventHandlersInfo::handle(bool removeOnFail) {
 	processed.clear();
 	if (exclusive) {
 		processed.emplace_back(exclusive.get());
-		exclusive->handleEvent(event);
+		auto res = exclusive->handleEvent(event);
+		if (res == InputEventState::Declined) {
+			exclusive = nullptr;
+		}
 	} else {
 		Vector<Rc<InputListener>> listenerToRemove;
 		auto vec = listeners;
 		for (auto &it : vec) {
 			processed.emplace_back(it.get());
 			auto res = it->handleEvent(event);
-			if (res && !exclusive && it->shouldSwallowEvent(event)) {
+			if (res == InputEventState::Captured && !exclusive && it->shouldSwallowEvent(event)) {
 				setExclusive(it);
 			}
 
 			if (exclusive) {
 				if (std::find(processed.begin(), processed.end(), exclusive.get()) == processed.end()) {
-					exclusive->handleEvent(event);
+					auto res = exclusive->handleEvent(event);
+					if (res == InputEventState::Declined) {
+						exclusive = nullptr;
+					}
 				}
 				break;
 			}
 
-			if (removeOnFail && !res) {
+			if (removeOnFail && res == InputEventState::Declined) {
 				listenerToRemove.emplace_back(it);
 			}
 		}
@@ -416,7 +424,7 @@ void InputDispatcher::EventHandlersInfo::handle(bool removeOnFail) {
 
 void InputDispatcher::EventHandlersInfo::clear(bool cancel) {
 	if (cancel) {
-		event.data.event = InputEventName::Cancel;
+		event.data.event = isKeyEvent ? InputEventName::KeyCanceled : InputEventName::Cancel;
 		handle(false);
 	}
 
@@ -434,7 +442,7 @@ void InputDispatcher::EventHandlersInfo::setExclusive(const InputListener *l) {
 		exclusive = *v;
 
 		auto event = this->event;
-		event.data.event = InputEventName::Cancel;
+		event.data.event = isKeyEvent ? InputEventName::KeyCanceled : InputEventName::Cancel;
 		for (auto &iit : listeners) {
 			if (iit.get() != l) {
 				iit->handleEvent(event);
@@ -473,6 +481,7 @@ InputDispatcher::EventHandlersInfo *InputDispatcher::resetKey(const InputEventDa
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
 		}
+		v->second.isKeyEvent = true;
 		return &v->second;
 	} else {
 		auto v = _activeKeys.find(event.key.keycode);
@@ -482,6 +491,7 @@ InputDispatcher::EventHandlersInfo *InputDispatcher::resetKey(const InputEventDa
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
 		}
+		v->second.isKeyEvent = true;
 		return &v->second;
 	}
 }

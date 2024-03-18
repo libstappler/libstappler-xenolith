@@ -78,6 +78,7 @@ enum class LayoutName {
 	MaterialInputFieldTest,
 	MaterialToolbarTest,
 	MaterialMenuTest,
+	MaterialTabBarTest,
 };
 
 struct MenuData {

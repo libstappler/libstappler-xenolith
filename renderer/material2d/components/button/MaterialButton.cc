@@ -22,6 +22,9 @@
 
 #include "MaterialButton.h"
 #include "MaterialLabel.h"
+#include "XLScene.h"
+#include "MaterialSceneContent.h"
+#include "MaterialFloatingMenu.h"
 #include "XLInputListener.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
@@ -41,12 +44,14 @@ bool Button::init(const SurfaceStyle &style) {
 
 	_labelText = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelText->setAnchorPoint(Anchor::MiddleLeft);
+	_labelText->setLocaleEnabled(true);
 	_labelText->setOnContentSizeDirtyCallback([this] {
 		updateSizeFromContent();
 	});
 
 	_labelValue = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelValue->setAnchorPoint(Anchor::MiddleLeft);
+	_labelValue->setLocaleEnabled(true);
 	_labelValue->setOnContentSizeDirtyCallback([this] {
 		updateSizeFromContent();
 	});
@@ -76,13 +81,14 @@ bool Button::init(const SurfaceStyle &style) {
 			updateActivityState();
 		} else if (press.event == GestureEvent::Activated) {
 			_longPressInit = true;
+			handleLongPress();
+			_inputListener->setExclusiveForTouch(press.getId());
 		} else if (press.event == GestureEvent::Ended || press.event == GestureEvent::Cancelled) {
 			_pressed = false;
 			updateActivityState();
 			if (press.event == GestureEvent::Ended) {
 				_inputListener->setExclusiveForTouch(press.getId());
 				if (_longPressInit) {
-					handleLongPress();
 				} else {
 					handleTap();
 				}
@@ -154,8 +160,10 @@ void Button::setEnabled(bool value) {
 }
 
 void Button::setSelected(bool val) {
-	_selected = val;
-	updateActivityState();
+	if (val != _selected) {
+		_selected = val;
+		updateActivityState();
+	}
 }
 
 bool Button::isSelected() const {
@@ -170,8 +178,17 @@ bool Button::isMenuSourceButtonEnabled() const {
 	return _menuButtonListener->getSubscription()->getCallback() != nullptr || _menuButtonListener->getSubscription()->getNextMenu();
 }
 
+void Button::setNodeMask(NodeMask mask) {
+	if (_nodeMask != mask) {
+		_nodeMask = mask;
+		updateSizeFromContent();
+		_contentSizeDirty = true;
+	}
+}
+
 void Button::setText(StringView text) {
 	_labelText->setString(text);
+	updateSizeFromContent();
 	_contentSizeDirty = true;
 }
 
@@ -181,6 +198,7 @@ StringView Button::getText() const {
 
 void Button::setTextValue(StringView text) {
 	_labelValue->setString(text);
+	updateSizeFromContent();
 	_contentSizeDirty = true;
 }
 
@@ -315,7 +333,7 @@ void Button::updateSizeFromContent() {
 	}
 
 	Size2 targetSize;
-	if (!_labelText->empty()) {
+	if (!_labelText->empty() && (_nodeMask & NodeMask::LabelText) != NodeMask::None) {
 		targetSize = _labelText->getContentSize();
 	} else {
 		targetSize.height = getIconSize();
@@ -351,6 +369,13 @@ void Button::handleTap() {
 		auto &cb = btn->getCallback();
 		if (cb) {
 			cb(this, btn);
+		} else if (_floatingMenuSource) {
+			if (auto content = dynamic_cast<SceneContent2d *>(_scene->getContent())) {
+				auto posRight = content->convertToNodeSpace(convertToWorldSpace(Vec2(_contentSize.width, _contentSize.height)));
+
+				FloatingMenu::push(content, _floatingMenuSource, posRight,
+					FloatingMenu::Binding::OriginRight, nullptr);
+			}
 		}
 	}
 }
@@ -373,7 +398,7 @@ void Button::handleDoubleTap() {
 
 float Button::getWidthForContent() const {
 	float contentWidth = 0.0f;
-	if (!_labelText->empty()) {
+	if (!_labelText->empty() && (_nodeMask & NodeMask::LabelText) != NodeMask::None) {
 		contentWidth = ((_styleTarget.nodeStyle == NodeStyle::Text) ? 24.0f : 48.0f) + _labelText->getContentSize().width;
 		if (_styleTarget.nodeStyle == NodeStyle::Text && (getLeadingIconName() != IconName::None || getTrailingIconName() != IconName::None)) {
 			contentWidth += 16.0f;
@@ -382,14 +407,14 @@ float Button::getWidthForContent() const {
 		contentWidth = 24.0f;
 	}
 
-	if (!_labelValue->empty()) {
+	if (!_labelValue->empty() && (_nodeMask & NodeMask::LabelValue) != NodeMask::None) {
 		contentWidth += _labelValue->getContentSize().width + 8.0f;
 	}
 
-	if (getLeadingIconName() != IconName::None) {
+	if (getLeadingIconName() != IconName::None && (_nodeMask & NodeMask::LeadingIcon) != NodeMask::None) {
 		contentWidth += _leadingIcon->getContentSize().width;
 	}
-	if (getTrailingIconName() != IconName::None) {
+	if (getTrailingIconName() != IconName::None && (_nodeMask & NodeMask::TrailingIcon) != NodeMask::None) {
 		contentWidth += _trailingIcon->getContentSize().width;
 	}
 	return contentWidth;
@@ -418,7 +443,33 @@ void Button::updateMenuButtonSource() {
 }
 
 void Button::layoutContent() {
-	if (getLeadingIconName() != IconName::None && getTrailingIconName() == IconName::None && _labelText->empty() && _labelValue->empty()) {
+	auto leadingIconName = getLeadingIconName();
+	auto trailingIconName = getTrailingIconName();
+	auto hasLabelText = !_labelText->empty();
+	auto hasLabelValue = !_labelValue->empty();
+
+	_labelText->setVisible((_nodeMask & NodeMask::LabelText) != NodeMask::None);
+	_labelValue->setVisible((_nodeMask & NodeMask::LabelValue) != NodeMask::None);
+	_leadingIcon->setVisible((_nodeMask & NodeMask::LeadingIcon) != NodeMask::None);
+	_trailingIcon->setVisible((_nodeMask & NodeMask::TrailingIcon) != NodeMask::None);
+
+	if ((_nodeMask & NodeMask::LabelText) == NodeMask::None) {
+		hasLabelText = false;
+	}
+
+	if ((_nodeMask & NodeMask::LabelValue) == NodeMask::None) {
+		hasLabelValue = false;
+	}
+
+	if ((_nodeMask & NodeMask::LeadingIcon) == NodeMask::None) {
+		leadingIconName = IconName::None;
+	}
+
+	if ((_nodeMask & NodeMask::TrailingIcon) == NodeMask::None) {
+		trailingIconName = IconName::None;
+	}
+
+	if (leadingIconName != IconName::None && trailingIconName == IconName::None && !hasLabelText && !hasLabelValue) {
 		_leadingIcon->setAnchorPoint(Anchor::Middle);
 		_leadingIcon->setPosition(_contentSize / 2.0f);
 	} else {
@@ -429,7 +480,7 @@ void Button::layoutContent() {
 
 		Vec2 target(offset + (_styleTarget.nodeStyle == NodeStyle::Text ? 12.0f : 16.0f), _contentSize.height / 2.0f);
 
-		if (getLeadingIconName() != IconName::None) {
+		if (leadingIconName != IconName::None) {
 			_leadingIcon->setPosition(target);
 			target.x += 8.0f + _leadingIcon->getContentSize().width;
 		} else if (_styleTarget.nodeStyle != NodeStyle::Text) {
@@ -439,7 +490,7 @@ void Button::layoutContent() {
 		_labelText->setPosition(target);
 		target.x += _labelText->getContentSize().width + 8.0f;
 
-		if (!_labelValue->getString().empty()) {
+		if (hasLabelValue) {
 			_labelValue->setPosition(target);
 			target.x += _labelValue->getContentSize().width + 8.0f;
 		}
