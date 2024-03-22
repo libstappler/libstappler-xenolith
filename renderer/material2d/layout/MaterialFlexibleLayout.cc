@@ -381,7 +381,7 @@ float FlexibleLayout::getCurrentFlexibleMax() const {
 void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 	DecoratedLayout::onPush(l, replace);
 
-	if (_appBar) {
+	if (_appBar && !replace) {
 		if (auto prev = l->getPrevLayout()) {
 			auto nav = _appBar->getNavNode();
 

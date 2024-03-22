@@ -78,6 +78,8 @@ public:
 	int (*xcb_flush) (xcb_connection_t *c) = nullptr;
 	void (* xcb_disconnect) (xcb_connection_t *c) = nullptr;
 	xcb_generic_event_t * (* xcb_poll_for_event) (xcb_connection_t *c) = nullptr;
+	xcb_void_cookie_t (*xcb_send_event) (xcb_connection_t *c, uint8_t propagate,
+			xcb_window_t destination, uint32_t event_mask, const char *event) = nullptr;
 
 	const struct xcb_query_extension_reply_t *(* xcb_get_extension_data) (xcb_connection_t *c, xcb_extension_t *ext) = nullptr;
 
@@ -96,12 +98,28 @@ public:
 	xcb_intern_atom_reply_t * (* xcb_intern_atom_reply) (xcb_connection_t *c, xcb_intern_atom_cookie_t cookie,
 			xcb_generic_error_t **e) = nullptr;
 
+	xcb_get_property_reply_t* (* xcb_get_property_reply) (xcb_connection_t *c, xcb_get_property_cookie_t cookie,
+			xcb_generic_error_t **e) = nullptr;
+	xcb_get_property_cookie_t (*xcb_get_property) (xcb_connection_t *c, uint8_t _delete, xcb_window_t window,
+			xcb_atom_t property, xcb_atom_t type, uint32_t long_offset, uint32_t long_length) = nullptr;
+	void * (* xcb_get_property_value) (const xcb_get_property_reply_t *R) = nullptr;
+	int (* xcb_get_property_value_length) (const xcb_get_property_reply_t *R) = nullptr;
+
 	void * (* xcb_wait_for_reply) (xcb_connection_t *c, unsigned int request, xcb_generic_error_t **e) = nullptr;
 
 	xcb_get_modifier_mapping_cookie_t (* xcb_get_modifier_mapping_unchecked) (xcb_connection_t *c) = nullptr;
 	xcb_get_modifier_mapping_reply_t * (* xcb_get_modifier_mapping_reply) (xcb_connection_t *c,
 			xcb_get_modifier_mapping_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
 	xcb_keycode_t * (* xcb_get_modifier_mapping_keycodes) (const xcb_get_modifier_mapping_reply_t *) = nullptr;
+
+	xcb_void_cookie_t (* xcb_convert_selection) (xcb_connection_t *c, xcb_window_t requestor,
+			xcb_atom_t selection, xcb_atom_t target, xcb_atom_t property, xcb_timestamp_t time) = nullptr;
+	xcb_void_cookie_t (* xcb_set_selection_owner) (xcb_connection_t *c, xcb_window_t owner,
+			xcb_atom_t selection, xcb_timestamp_t time) = nullptr;
+	xcb_get_selection_owner_cookie_t (* xcb_get_selection_owner) (xcb_connection_t *c,
+			xcb_atom_t selection) = nullptr;
+	xcb_get_selection_owner_reply_t* (* xcb_get_selection_owner_reply) (xcb_connection_t *c,
+			xcb_get_selection_owner_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
 
 	xcb_get_keyboard_mapping_cookie_t (*xcb_get_keyboard_mapping)(xcb_connection_t *c,
 			xcb_keycode_t first_keycode, uint8_t count) = nullptr;
@@ -220,6 +238,21 @@ protected:
 	ConnectionData _current;
 };
 
+enum class XcbAtomIndex {
+	WM_PROTOCOLS,
+	WM_DELETE_WINDOW,
+	WM_NAME,
+	WM_ICON_NAME,
+	SAVE_TARGETS,
+	CLIPBOARD,
+	PRIMARY,
+	TARGETS,
+	MULTIPLE,
+	STRING,
+	XNULL,
+	XENOLITH_CLIPBOARD
+};
+
 struct XcbAtomRequest {
 	StringView name;
 	bool onlyIfExists;
@@ -230,6 +263,14 @@ static XcbAtomRequest s_atomRequests[] = {
 	{ "WM_DELETE_WINDOW", false },
 	{ "WM_NAME", false },
 	{ "WM_ICON_NAME", false },
+	{ "SAVE_TARGETS", false },
+	{ "CLIPBOARD", false },
+	{ "PRIMARY", false },
+	{ "TARGETS", false },
+	{ "MULTIPLE", false },
+	{ "UTF8_STRING", false },
+	{ "NULL", false },
+	{ "XENOLITH_CLIPBOARD", false },
 };
 
 }

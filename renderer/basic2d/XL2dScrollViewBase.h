@@ -88,8 +88,9 @@ public:
 	virtual void setPadding(const Padding &);
 	virtual const Padding &getPadding() const;
 
-	virtual void setSpaceLimit(float);
+	virtual void setSpaceLimit(float, float padding = 0.0f);
 	virtual float getSpaceLimit() const;
+	virtual float getSpacePadding() const;
 
 	virtual float getScrollableAreaOffset() const; // NaN by default
 	virtual float getScrollableAreaSize() const; // NaN by default

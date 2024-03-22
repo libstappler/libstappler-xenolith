@@ -24,6 +24,7 @@
 #define XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_MENU_MATERIALFLOATINGMENU_H_
 
 #include "MaterialMenu.h"
+#include "MaterialOverlayLayout.h"
 #include "XL2dSceneContent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
@@ -31,13 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 class FloatingMenu : public Menu {
 public:
 	using CloseCallback = Function<void ()>;
-
-	enum class Binding {
-		Relative,
-		OriginLeft,
-		OriginRight,
-		Anchor,
-	};
+	using Binding = OverlayLayout::Binding;
 
 	static void push(SceneContent2d *, MenuSource *source, const Vec2 &, Binding = Binding::Relative, Menu *root = nullptr);
 

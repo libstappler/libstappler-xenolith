@@ -335,6 +335,7 @@ public:
 
 	float getInputDensity() const { return _inputDensity; }
 
+	Scene *getScene() const { return _scene; }
 	Director *getDirector() const { return _director; }
 	Scheduler *getScheduler() const { return _scheduler; }
 	ActionManager *getActionManager() const { return _actionManager; }

@@ -39,7 +39,9 @@ bool VectorSprite::init(Rc<VectorImage> &&img) {
 	}
 
 	_image = img;
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return true;
 }
 
@@ -49,7 +51,9 @@ bool VectorSprite::init(Size2 size, StringView data) {
 	}
 
 	_image = Rc<VectorImage>::create(size, data);
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 
@@ -59,7 +63,9 @@ bool VectorSprite::init(Size2 size, VectorPath &&path) {
 	}
 
 	_image = Rc<VectorImage>::create(size, move(path));
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 
@@ -69,7 +75,9 @@ bool VectorSprite::init(Size2 size) {
 	}
 
 	_image = Rc<VectorImage>::create(size);
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 
@@ -79,7 +87,9 @@ bool VectorSprite::init(StringView data) {
 	}
 
 	_image = Rc<VectorImage>::create(data);
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 
@@ -89,7 +99,9 @@ bool VectorSprite::init(BytesView data) {
 	}
 
 	_image = Rc<VectorImage>::create(data);
-	_contentSize = _image->getImageSize();
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 
@@ -99,8 +111,9 @@ bool VectorSprite::init(FilePath path) {
 	}
 
 	_image = Rc<VectorImage>::create(path);
-	_contentSize = _image->getImageSize();
-
+	if (_image) {
+		_contentSize = _image->getImageSize();
+	}
 	return _image != nullptr;
 }
 

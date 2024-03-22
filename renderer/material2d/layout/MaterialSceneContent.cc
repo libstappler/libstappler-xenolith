@@ -265,7 +265,14 @@ float SceneContent::getMaxDepthIndex() const {
 		}
 	}
 	return maxIndex;
+}
 
+bool SceneContent::onBackButton() {
+	if (_navigation->isNodeVisible()) {
+		_navigation->hide();
+		return true;
+	}
+	return SceneContent2d::onBackButton();
 }
 
 }

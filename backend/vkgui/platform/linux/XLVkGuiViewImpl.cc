@@ -276,6 +276,22 @@ void ViewImpl::mapWindow() {
 	View::mapWindow();
 }
 
+void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
+	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
+		_view->readFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
+			_mainLoop->performOnMainThread([this, cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+				cb(view, ct);
+			}, this);
+		}, ref);
+	}, this);
+}
+
+void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
+	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
+		_view->writeToClipboard(data, contentType);
+	}, this);
+}
+
 void ViewImpl::finalize() {
 	_view = nullptr;
 	View::finalize();

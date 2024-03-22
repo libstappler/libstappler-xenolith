@@ -143,6 +143,8 @@ public:
 	virtual void runTextInput(Rc<ActivityTextInputWrapper> &&, WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
 	virtual void cancelTextInput();
 
+	jobject getClipboardService() const { return _clipboardServce; }
+
 protected:
 	struct InputLooperData {
 		Activity *activity;
@@ -203,6 +205,8 @@ protected:
 	jmethodID _updateInputMethod;
 	jmethodID _updateCursorMethod;
 	jmethodID _cancelInputMethod;
+
+	jobject _clipboardServce;
 
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;

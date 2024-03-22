@@ -53,6 +53,7 @@ bool MaterialToolbarTest::init() {
 			((AppScene *)_scene)->runLayout(_layoutRoot, makeLayoutNode(_layoutRoot));
 		}
 	});
+	_appBar->setMaxActionIcons(4);
 
 	auto actionMenu = Rc<material2d::MenuSource>::create();
 	actionMenu->addButton("", IconName::Editor_format_align_center_solid, [this] (material2d::Button *, material2d::MenuSourceButton *) {
@@ -72,6 +73,14 @@ bool MaterialToolbarTest::init() {
 				content->showSnackbar(material2d::SnackbarData("updated shackbar", Color::Red_500, 1.0f));
 			}, Color::Green_500, 1.0f)));
 		}
+	});
+	actionMenu->addButton("", IconName::Content_file_copy_solid, [this] (material2d::Button *, material2d::MenuSourceButton *) {
+		auto view = _director->getView();
+		view->readFromClipboard([this] (BytesView view) {
+			if (auto content = dynamic_cast<material2d::SceneContent *>(_scene->getContent())) {
+				content->showSnackbar(material2d::SnackbarData(view.readString(view.size())));
+			}
+		}, this);
 	});
 	_appBar->setActionMenuSource(move(actionMenu));
 

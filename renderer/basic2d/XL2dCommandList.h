@@ -128,12 +128,15 @@ public:
 
 	bool empty() const { return _first == nullptr; }
 
+	size_t size() const { return _size; }
+
 protected:
 	void addCommand(Command *);
 
 	Rc<PoolRef> _pool;
 	Command *_first = nullptr;
 	Command *_last = nullptr;
+	size_t _size = 0;
 };
 
 struct FrameContextHandle2d : public FrameContextHandle {

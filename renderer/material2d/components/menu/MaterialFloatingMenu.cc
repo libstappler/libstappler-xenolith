@@ -21,6 +21,7 @@
  **/
 
 #include "MaterialFloatingMenu.h"
+#include "MaterialOverlayLayout.h"
 #include "MaterialMenuButton.h"
 #include "XL2dSceneLayout.h"
 #include "XLApplication.h"
@@ -30,181 +31,47 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class FloatingMenuLayout : public SceneLayout2d {
+class FloatingMenuLayout : public OverlayLayout {
 public:
 	virtual ~FloatingMenuLayout() { }
 
-	virtual bool init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b, Menu *root);
-
-	virtual void onContentSizeDirty() override;
+	virtual bool init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b, Menu *root);;
 
 	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
-	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace) override;
-
-	virtual Rc<Transition> makeExitTransition(SceneContent2d *) const override;
 
 protected:
-	void emplaceMenu(const Vec2 &o, FloatingMenu::Binding b);
-
-	Layer *_layer = nullptr;
 	FloatingMenu *_menu = nullptr;
-	StyleContainer *_styleContainer = nullptr;
-	Vec2 _globalOrigin;
-	Size2 _fullSize;
-	Size2 _initSize;
-	FloatingMenu::Binding _binding = FloatingMenu::Binding::Anchor;
 };
 
 bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b, Menu *root) {
-	if (!SceneLayout2d::init()) {
+	auto menu = Rc<FloatingMenu>::create(source, root);
+
+	if (!OverlayLayout::init(globalOrigin, b, menu, Size2())) {
 		return false;
 	}
 
-	//_layer = addChild(Rc<Layer>::create(Color::Green_500));
-	//_layer->setContentSize(Size2(100.0f, 100.0f));
-	//_layer->setAnchorPoint(Anchor::MiddleBottom);
+	_menu = menu;
 
-	_menu = addChild(Rc<FloatingMenu>::create(source, root));
-	_menu->setAnchorPoint(Anchor::MiddleTop);
+	_readyCallback = [this] (bool ready) {
+		_menu->setReady(ready);
+	};
 
-	_globalOrigin = globalOrigin;
-	_binding = b;
-
-	retainFocus();
-
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->setSwallowEvents(InputListener::makeEventMask({InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
-	l->setTouchFilter([this] (const InputEvent &ev, const InputListener::DefaultEventFilter &def) {
-		if (!_menu->isTouched(ev.currentLocation)) {
-			return def(ev);
+	_closeCallback = [this] () {
+		if (auto &cb = _menu->getCloseCallback()) {
+			cb();
 		}
-		return false;
-	});
-	l->addTapRecognizer([this] (const GestureTap &tap) {
-		if (!_menu->isTouched(tap.location())) {
-			if (_sceneContent) {
-				_sceneContent->popOverlay(this);
-			}
-		}
-		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+	};
 
 	return true;
 }
 
-void FloatingMenuLayout::onContentSizeDirty() {
-	SceneLayout2d::onContentSizeDirty();
-
-	if (_layer) {
-		_layer->setPosition(_contentSize / 2.0f);
-	}
-
-	if (_initSize != Size2::ZERO) {
-		if (_sceneContent) {
-			_sceneContent->popOverlay(this);
-		}
-	} else {
-		_initSize = _contentSize;
-	}
-}
-
 void FloatingMenuLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) {
-	SceneLayout2d::onPushTransitionEnded(l, replace);
-
 	float w = _menu->getMenuWidth(this);
 	float h = _menu->getMenuHeight(this, w);
 
 	_fullSize = Size2(w, h);
 
-	emplaceMenu(_globalOrigin, _binding);
-}
-
-void FloatingMenuLayout::onPopTransitionBegan(SceneContent2d *l, bool replace) {
-	SceneLayout2d::onPopTransitionBegan(l, replace);
-	_menu->setReady(false);
-}
-
-Rc<FloatingMenuLayout::Transition> FloatingMenuLayout::makeExitTransition(SceneContent2d *) const {
-	return Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(0.2f, [this] (float p) {
-		_menu->setContentSize(progress(_fullSize, Size2(_fullSize.width, 1), p));
-	})), [this] {
-		if (auto &cb = _menu->getCloseCallback()) {
-			cb();
-		}
-	});
-}
-
-void FloatingMenuLayout::emplaceMenu(const Vec2 &origin, FloatingMenu::Binding b) {
-	const float incr = Menu::MenuHorizontalIncrement;
-	auto size = _sceneContent->getContentSize();
-
-	switch (b) {
-	case FloatingMenu::Binding::Relative:
-		_menu->setPositionY(origin.y);
-		if (origin.x < incr / 4) {
-			_menu->setPositionX(incr / 4);
-			_menu->setAnchorPoint(Vec2(0, 1.0f));
-		} else if (origin.x > size.width - incr / 4) {
-			_menu->setPositionX(size.width - incr / 4);
-			_menu->setAnchorPoint(Vec2(1, 1.0f));
-		} else {
-			float rel = (origin.x - incr / 4) / (size.width - incr / 2);
-			_menu->setPositionX(origin.x);
-			_menu->setAnchorPoint(Vec2(rel, 1.0f));
-		}
-		break;
-	case FloatingMenu::Binding::OriginLeft:
-		_menu->setPositionY(origin.y);
-		if (origin.x - incr / 4 < _fullSize.width) {
-			_menu->setAnchorPoint(Vec2(0, 1.0f));
-			_menu->setPositionX(incr / 4);
-		} else {
-			_menu->setAnchorPoint(Vec2(1, 1.0f));
-			_menu->setPositionX(origin.x);
-		}
-		break;
-	case FloatingMenu::Binding::OriginRight:
-		_menu->setPositionY(origin.y);
-		if (size.width - origin.x - incr / 4 < _fullSize.width) {
-			_menu->setAnchorPoint(Vec2(1, 1.0f));
-			_menu->setPositionX(size.width - incr / 4);
-		} else {
-			_menu->setAnchorPoint(Vec2(0, 1.0f));
-			_menu->setPositionX(origin.x);
-		}
-		break;
-	case FloatingMenu::Binding::Anchor:
-		_menu->setPosition(origin);
-
-		break;
-	}
-
-	if (b != FloatingMenu::Binding::Anchor && b != FloatingMenu::Binding::Relative) {
-		if (_fullSize.height > origin.y - incr / 4) {
-			if (origin.y - incr / 4 < incr * 4) {
-				if (_fullSize.height > incr * 4) {
-					_fullSize.height = incr * 4;
-				}
-
-				_menu->setPositionY(_fullSize.height + incr / 4);
-			} else {
-				_fullSize.height = origin.y - incr / 4;
-			}
-		}
-	} else if (b == FloatingMenu::Binding::Relative) {
-		if (_fullSize.height > origin.y - incr / 4) {
-			_menu->setAnchorPoint(Vec2(getAnchorPoint().x, (origin.y - incr / 4) / _fullSize.height));
-		}
-	}
-
-	if (origin.y > size.height - incr / 4) {
-		_menu->setPositionY(size.height - incr / 4);
-	}
-
-	_menu->setContentSize(Size2(_fullSize.width, 1));
-	_menu->runAction(Rc<Sequence>::create(material2d::makeEasing(Rc<ResizeTo>::create(0.2f, _fullSize)), [this] {
-		_menu->setReady(true);
-	}));
+	OverlayLayout::onPushTransitionEnded(l, replace);
 }
 
 void FloatingMenu::push(SceneContent2d *content, MenuSource *source, const Vec2 &globalOrigin, Binding b, Menu *root) {

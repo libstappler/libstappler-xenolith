@@ -119,6 +119,7 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 				_textureLoadedCallback();
 			}
 			_textureName = _texture->getName().str<Interface>();
+			updateBlendAndDepth();
 			_materialDirty = true;
 		}
 	} else {
@@ -132,6 +133,7 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 				_textureLoadedCallback();
 			}
 			_textureName = _texture->getName().str<Interface>();
+			updateBlendAndDepth();
 			_materialDirty = true;
 		}
 	}
@@ -247,6 +249,9 @@ void Sprite::onEnter(Scene *scene) {
 		if (!_texture || _texture->getName() != _textureName) {
 			if (auto &cache = _director->getResourceCache()) {
 				_texture = cache->acquireTexture(_textureName);
+				if (_texture) {
+					updateBlendAndDepth();
+				}
 				_materialDirty = true;
 			}
 		}

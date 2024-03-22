@@ -46,6 +46,7 @@ public:
 	virtual Vec2 getTexturePosition() const;
 
 	virtual void setScaleDisabled(bool);
+	virtual void setImageSize(Size2);
 
 	virtual bool handleTap(Vec2 point, int count);
 
@@ -54,6 +55,8 @@ public:
 	virtual bool handleSwipeEnd(Vec2 velocity);
 
 	virtual bool handlePinch(Vec2 point, float scale, float velocity, bool isEnded);
+
+	Node *getRoot() const { return _root; }
 
 protected:
 	Rect getCorrectRect(Size2 containerSize);
@@ -67,6 +70,7 @@ protected:
 	Node *_root = nullptr;
 	Sprite *_image = nullptr;
 
+	Size2 _imageSize;
 	Size2 _prevContentSize;
     Vec2 _globalScale; // values to scale input gestures
 
@@ -74,6 +78,7 @@ protected:
 	float _maxScale = 0.0f;
 
 	float _scaleSource;
+	bool _imageSizePredefined = false;
 	bool _scaleDisabled = false;
 	bool _hasPinch = false;
 	bool _textureDirty = false;

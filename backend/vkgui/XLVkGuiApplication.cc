@@ -40,7 +40,7 @@ class BootstrapScene : public basic2d::Scene2d {
 public:
 	virtual ~BootstrapScene() = default;
 
-	virtual bool init(Application *, const core::FrameContraints &constraints);
+	virtual bool init(Application *, const core::FrameContraints &constraints) override;
 
 	virtual void onContentSizeDirty() override;
 

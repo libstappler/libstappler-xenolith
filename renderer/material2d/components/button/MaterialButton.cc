@@ -76,6 +76,7 @@ bool Button::init(const SurfaceStyle &style) {
 		}
 
 		if (press.event == GestureEvent::Began) {
+			_touchLocation = press.location();
 			_longPressInit = false;
 			_pressed = true;
 			updateActivityState();

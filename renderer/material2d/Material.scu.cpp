@@ -38,6 +38,7 @@
 #include "layout/MaterialDecoratedLayout.cc"
 #include "layout/MaterialFlexibleLayout.cc"
 #include "layout/MaterialMultiViewLayout.cc"
+#include "layout/MaterialOverlayLayout.cc"
 #include "layout/MaterialScene.cc"
 #include "layout/MaterialSceneContent.cc"
 

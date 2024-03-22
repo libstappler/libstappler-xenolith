@@ -120,6 +120,9 @@ public:
 
 	virtual InputListener *getInputListener() const { return _inputListener; }
 
+	// in input coordinates
+	Vec2 getTouchLocation() const { return _touchLocation; }
+
 protected:
 	virtual bool hasContent() const;
 	virtual void updateSizeFromContent();
@@ -146,6 +149,9 @@ protected:
 	Function<void()> _callbackTap;
 	Function<void()> _callbackLongPress;
 	Function<void()> _callbackDoubleTap;
+
+	Vec2 _touchLocation;
+
 	float _activityAnimationDuration = 0.25f;
 
 	NodeMask _nodeMask = All;

@@ -66,6 +66,9 @@ public:
 	virtual void linkWithNativeWindow(void *) override;
 	virtual void stopNativeWindow() override;
 
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
+	virtual void writeToClipboard(BytesView, StringView contentType) override;
+
 protected:
 	using vk::View::init;
 
@@ -75,6 +78,9 @@ protected:
 	void doSetDecorationTone(float);
     void doSetDecorationVisible(bool);
 	void updateDecorations();
+
+	void doReadFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
+	void doWriteToClipboard(BytesView, StringView contentType);
 
 	bool _started = false;
 	ANativeWindow *_nativeWindow = nullptr;

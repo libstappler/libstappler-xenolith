@@ -42,6 +42,9 @@ public:
 	virtual void onSurfaceInfo(core::SurfaceInfo &) const { }
 
 	virtual void commit(uint32_t width, uint32_t height) { }
+
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) = 0;
+	virtual void writeToClipboard(BytesView, StringView contentType) = 0;
 };
 
 }

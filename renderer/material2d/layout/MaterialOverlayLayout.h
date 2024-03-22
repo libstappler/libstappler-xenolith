@@ -20,48 +20,51 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
-#define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_
+#ifndef XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALOVERLAYLAYOUT_H_
+#define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALOVERLAYLAYOUT_H_
 
 #include "MaterialSurface.h"
-#include "MaterialSnackbarData.h"
-#include "XL2dSceneContent.h"
+#include "XL2dSceneLayout.h"
+#include "XL2dScrollView.h"
+#include "XL2dLayer.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class Snackbar;
-class MenuSource;
-class NavigationDrawer;
-
-class SceneContent : public SceneContent2d {
+class OverlayLayout : public SceneLayout2d {
 public:
-	virtual ~SceneContent();
+	enum class Binding {
+		Relative,
+		OriginLeft,
+		OriginRight,
+		Anchor,
+	};
 
-	virtual bool init() override;
+	virtual ~OverlayLayout();
+
+	virtual bool init(const Vec2 &globalOrigin, Binding b, Surface *root, Size2 targetSize);
 
 	virtual void onContentSizeDirty() override;
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
-	virtual void showSnackbar(SnackbarData &&);
-	virtual const String &getSnackbarString() const;
-	virtual void clearSnackbar();
+	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
+	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace) override;
 
-	virtual bool isNavigationAvailable() const;
-	virtual void setNavigationEnabled(bool);
-	virtual void setNavigationMenuSource(MenuSource *);
-	virtual void setNavigationStyle(const SurfaceStyle &);
-	virtual void openNavigation();
-	virtual void closeNavigation();
+	virtual Rc<Transition> makeExitTransition(SceneContent2d *) const override;
 
-	virtual float getMaxDepthIndex() const override;
-
-	virtual bool onBackButton() override;
+	virtual void setReadyCallback(Function<void(bool)> &&);
+	virtual void setCloseCallback(Function<void()> &&);
 
 protected:
-	Snackbar *_snackbar = nullptr;
-	NavigationDrawer *_navigation = nullptr;
+	void emplaceNode(const Vec2 &o, Binding b);
+
+	Surface *_surface = nullptr;
+	Vec2 _globalOrigin;
+	Size2 _fullSize;
+	Size2 _initSize;
+	Binding _binding = Binding::Anchor;
+	Function<void(bool)> _readyCallback;
+	Function<void()> _closeCallback;
 };
 
 }
 
-#endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_ */
+#endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALOVERLAYLAYOUT_H_ */

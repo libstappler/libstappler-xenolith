@@ -157,9 +157,9 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 			const font::CharLayoutData &c = format->chars[end - 1];
 			if (c.charID == char16_t(0x00AD)) {
 				uint16_t face = 0;
-				auto ch = targetRange->layout->getChar(c.charID, face);
+				auto ch = targetRange->layout->getChar('-', face);
 
-				if (ch.charID == c.charID) {
+				if (ch.charID == '-') {
 					auto quad = vertexes.addQuad();
 					Label_pushColorMap(*it.range, colorMap);
 					Label_writeTextureQuad(format->height, metrics, c, ch, *it.range, *it.line, quad);

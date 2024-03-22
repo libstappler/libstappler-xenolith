@@ -225,6 +225,33 @@ bool XcbView::poll(bool frameReady) {
 	while ((e = _xcb->xcb_poll_for_event(_connection))) {
 		auto et = e->response_type & 0x7f;
 		switch (et) {
+		case XCB_PROPERTY_NOTIFY: {
+			/* Ignore */
+			//xcb_property_notify_event_t *ev = (xcb_property_notify_event_t*) e;
+			//printf("XCB_PROPERTY_NOTIFY: %d of property %d\n", ev->window, ev->atom);
+			break;
+		}
+		case XCB_SELECTION_NOTIFY: {
+			xcb_get_property_reply_t *reply;
+			xcb_selection_notify_event_t *sel_event = (xcb_selection_notify_event_t*) e;
+
+			/* Since we have only a single 'thing' we request, we do not
+			 * have to inspect the values of the event.
+			 */
+			if (sel_event->property == _atoms[toInt(XcbAtomIndex::XENOLITH_CLIPBOARD)]) {
+				reply = _xcb->xcb_get_property_reply(_connection,
+						_xcb->xcb_get_property(_connection, 1, _window,
+								_atoms[toInt(XcbAtomIndex::XENOLITH_CLIPBOARD)],
+								_atoms[toInt(XcbAtomIndex::STRING)], 0, 300), NULL);
+				notifyClipboard(BytesView((const uint8_t *)_xcb->xcb_get_property_value(reply), _xcb->xcb_get_property_value_length(reply)));
+				free(reply);
+			}
+			break;
+		}
+		case XCB_SELECTION_REQUEST: {
+			handleSelectionRequest((xcb_selection_request_event_t *) e);
+			break;
+		}
 		case XCB_EXPOSE: {
 			// xcb_expose_event_t *ev = (xcb_expose_event_t*) e;
 			// printf("XCB_EXPOSE: Window %d exposed. Region to be redrawn at location (%d,%d), with dimension (%d,%d)\n",
@@ -517,11 +544,6 @@ bool XcbView::poll(bool frameReady) {
 			}
 			break;
 		}
-		case XCB_PROPERTY_NOTIFY: {
-			// xcb_property_notify_event_t *ev = (xcb_property_notify_event_t*) e;
-			// printf("XCB_PROPERTY_NOTIFY: %d of property %d\n", ev->window, ev->atom);
-			break;
-		}
 		case XCB_MAPPING_NOTIFY: {
 			xcb_mapping_notify_event_t *ev = (xcb_mapping_notify_event_t*) e;
 			if (_keysyms) {
@@ -586,6 +608,41 @@ uint64_t XcbView::getScreenFrameInterval() const {
 void XcbView::mapWindow() {
 	_xcb->xcb_map_window(_connection, _window);
 	_xcb->xcb_flush(_connection);
+}
+
+void XcbView::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
+	auto cookie = _xcb->xcb_get_selection_owner(_connection, _atoms[toInt(XcbAtomIndex::CLIPBOARD)]);
+	auto reply = _xcb->xcb_get_selection_owner_reply(_connection, cookie, nullptr);
+
+	if (reply->owner == _window) {
+		cb(_clipboardSelection, StringView("text/plain"));
+	} else {
+		_xcb->xcb_convert_selection(_connection, _window,
+	    		_atoms[toInt(XcbAtomIndex::CLIPBOARD)],
+				_atoms[toInt(XcbAtomIndex::STRING)],
+				_atoms[toInt(XcbAtomIndex::XENOLITH_CLIPBOARD)], XCB_CURRENT_TIME);
+		_xcb->xcb_flush(_connection);
+
+		if (_clipboardCallback) {
+			_clipboardCallback(BytesView(), StringView());
+		}
+
+		_clipboardCallback = move(cb);
+		_clipboardTarget = ref;
+	}
+}
+
+void XcbView::writeToClipboard(BytesView data, StringView contentType) {
+	_clipboardSelection = data.bytes<Interface>();
+
+	_xcb->xcb_set_selection_owner(_connection, _window, _atoms[toInt(XcbAtomIndex::CLIPBOARD)], XCB_CURRENT_TIME);
+
+	auto cookie = _xcb->xcb_get_selection_owner(_connection, _atoms[toInt(XcbAtomIndex::CLIPBOARD)]);
+	auto reply = _xcb->xcb_get_selection_owner_reply(_connection, cookie, nullptr);
+	if (reply->owner != _window) {
+		log::error("XcbView", "Fail to set selection owner");
+	}
+	::free(reply);
 }
 
 XcbView::ScreenInfoData XcbView::getScreenInfo() const {
@@ -1392,6 +1449,88 @@ core::InputKeyCode XcbView::getKeysymCode(xcb_keysym_t sym) const {
 	default: break;
 	}
 	return core::InputKeyCode::Unknown;
+}
+
+void XcbView::notifyClipboard(BytesView data) {
+	if (_clipboardCallback) {
+		_clipboardCallback(data, "text/plain");
+	}
+	_clipboardCallback = nullptr;
+	_clipboardTarget = nullptr;
+}
+
+xcb_atom_t XcbView::writeTargetToProperty(xcb_selection_request_event_t *request) {
+	if (request->property == 0) {
+		// The requester is a legacy client (ICCCM section 2.2)
+		// We don't support legacy clients, so fail here
+		return 0;
+	}
+
+	if (request->target == _atoms[toInt(XcbAtomIndex::TARGETS)]) {
+		// The list of supported targets was requested
+
+		const xcb_atom_t targets[] = { _atoms[toInt(XcbAtomIndex::TARGETS)], _atoms[toInt(XcbAtomIndex::STRING)] };
+
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, request->requestor, request->property, XCB_ATOM_ATOM, 8*sizeof(xcb_atom_t),
+				sizeof(targets) / sizeof(targets[0]), (unsigned char*) targets);
+		return request->property;
+	}
+
+	if (request->target == _atoms[toInt(XcbAtomIndex::SAVE_TARGETS)]) {
+		// The request is a check whether we support SAVE_TARGETS
+		// It should be handled as a no-op side effect target
+
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, request->requestor, request->property,
+				_atoms[toInt(XcbAtomIndex::XNULL)], 32, 0, nullptr);
+		return request->property;
+	}
+
+	// Conversion to a data target was requested
+
+	if (request->target == _atoms[toInt(XcbAtomIndex::STRING)]) {
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, request->requestor, request->property, request->target, 8,
+				_clipboardSelection.size(), _clipboardSelection.data());
+		return request->property;
+	}
+
+	// The requested target is not supported
+
+	return 0;
+}
+
+void XcbView::handleSelectionRequest(xcb_selection_request_event_t *event) {
+	if (event->target == _atoms[toInt(XcbAtomIndex::TARGETS)]) {
+		// The list of supported targets was requested
+
+		const xcb_atom_t targets[] = { _atoms[toInt(XcbAtomIndex::TARGETS)], _atoms[toInt(XcbAtomIndex::STRING)] };
+
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, event->requestor, event->property, XCB_ATOM_ATOM, 8*sizeof(xcb_atom_t),
+				sizeof(targets) / sizeof(targets[0]), (unsigned char*) targets);
+	}
+
+	if (event->target == _atoms[toInt(XcbAtomIndex::SAVE_TARGETS)]) {
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, event->requestor, event->property,
+				_atoms[toInt(XcbAtomIndex::XNULL)], 32, 0, nullptr);
+	}
+
+	if (event->target == _atoms[toInt(XcbAtomIndex::STRING)]) {
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, event->requestor, event->property, event->target, 8,
+				_clipboardSelection.size(), _clipboardSelection.data());
+	}
+
+	xcb_selection_notify_event_t notify;
+	notify.response_type = XCB_SELECTION_NOTIFY;
+	notify.pad0          = 0;
+	notify.sequence      = 0;
+	notify.time          = event->time;
+	notify.requestor     = event->requestor;
+	notify.selection     = event->selection;
+	notify.target        = event->target;
+	notify.property      = event->property;
+
+	_xcb->xcb_send_event(_connection, false, event->requestor, XCB_EVENT_MASK_NO_EVENT, // SelectionNotify events go without mask
+			(const char*) &notify);
+	_xcb->xcb_flush(_connection);
 }
 
 }

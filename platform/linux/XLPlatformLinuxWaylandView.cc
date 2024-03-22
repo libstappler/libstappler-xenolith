@@ -959,4 +959,12 @@ void WaylandView::commit(uint32_t width, uint32_t height) {
 	XL_WAYLAND_LOG(stream.str());
 }
 
+void WaylandView::readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) {
+
+}
+
+void WaylandView::writeToClipboard(BytesView, StringView contentType) {
+
+}
+
 }

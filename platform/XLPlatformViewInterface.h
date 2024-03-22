@@ -55,6 +55,9 @@ public:
 	virtual void setContentPadding(const Padding &) = 0;
 
 	virtual uint64_t getBackButtonCounter() const = 0;
+
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) = 0;
+	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) = 0;
 };
 
 class ViewInterfaceRef final {

@@ -359,12 +359,13 @@ InputEventState GestureTapRecognizer::removeEvent(const InputEvent &ev, bool suc
 }
 
 InputEventState GestureTapRecognizer::renewEvent(const InputEvent &ev, float density) {
-	if (GestureRecognizer::renewEvent(ev, density) != InputEventState::Declined) {
+	auto ret = GestureRecognizer::renewEvent(ev, density);
+	if (ret != InputEventState::Declined) {
 		if (_gesture.pos.distance(ev.currentLocation) > TapDistanceAllowed * density) {
 			return removeEvent(ev, false, density);
 		}
 	}
-	return InputEventState::Declined;
+	return ret;
 }
 
 void GestureTapRecognizer::registerTap() {

@@ -133,6 +133,9 @@ public:
 
 	virtual void commit(uint32_t width, uint32_t height) override;
 
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
+	virtual void writeToClipboard(BytesView, StringView contentType) override;
+
 protected:
 	void createDecorations();
 

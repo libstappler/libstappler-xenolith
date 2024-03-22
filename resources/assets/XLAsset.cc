@@ -198,7 +198,7 @@ void Asset::clear() {
 
 bool Asset::isDownloadAvailable() const {
 	std::unique_lock ctx(_mutex);
-	return !_versions.empty() && !_versions.back().download && !_versions.back().complete;
+	return _versions.empty() || (!_versions.empty() && !_versions.back().complete);
 }
 
 bool Asset::isDownloadInProgress() const {
@@ -507,7 +507,7 @@ void Asset::setDownloadComplete(VersionData &data, bool success) {
 		for (auto &it : _versions) {
 			if (it.id == data.id) {
 				replaceVersion(data);
-				setDirty(Flags(Update::DownloadCompleted | Update::DownloadSuccessful));
+				setDirty(Flags(Update::DownloadCompleted | Update::DownloadSuccessful | Update::CacheDataUpdated));
 				_library->setVersionComplete(data.id, true);
 				return;
 			}
@@ -538,7 +538,6 @@ void Asset::setFileValidated(bool success) {
 }
 
 void Asset::replaceVersion(VersionData &data) {
-	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id != data.id) {
 			dropVersion(it);

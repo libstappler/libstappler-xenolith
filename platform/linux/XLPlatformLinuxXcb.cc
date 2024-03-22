@@ -211,6 +211,7 @@ bool XcbLibrary::open(Dso &handle) {
 	this->xcb_flush = &::xcb_flush;
 	this->xcb_disconnect = &::xcb_disconnect;
 	this->xcb_poll_for_event = &::xcb_poll_for_event;
+	this->xcb_send_event = &::xcb_send_event;
 	this->xcb_get_extension_data = &::xcb_get_extension_data;
 	this->xcb_map_window = &::xcb_map_window;
 	this->xcb_create_window = &::xcb_create_window;
@@ -223,6 +224,14 @@ bool XcbLibrary::open(Dso &handle) {
 	this->xcb_get_modifier_mapping_keycodes = &::xcb_get_modifier_mapping_keycodes;
 	this->xcb_get_keyboard_mapping = &::xcb_get_keyboard_mapping;
 	this->xcb_get_keyboard_mapping_reply = &::xcb_get_keyboard_mapping_reply;
+	this->xcb_convert_selection = &::xcb_convert_selection;
+	this->xcb_set_selection_owner = &::xcb_set_selection_owner;
+	this->xcb_get_selection_owner = &::xcb_get_selection_owner;
+	this->xcb_get_selection_owner_reply = &::xcb_get_selection_owner_reply;
+	this->xcb_get_property_reply = &::xcb_get_property_reply;
+	this->xcb_get_property = &::xcb_get_property;
+	this->xcb_get_property_value = &::xcb_get_property_value;
+	this->xcb_get_property_value_length = &::xcb_get_property_value_length;
 #else
 	this->xcb_connect = handle.sym<decltype(this->xcb_connect)>("xcb_connect");
 	this->xcb_get_setup = handle.sym<decltype(this->xcb_get_setup)>("xcb_get_setup");
@@ -238,6 +247,7 @@ bool XcbLibrary::open(Dso &handle) {
 	this->xcb_flush = handle.sym<decltype(this->xcb_flush)>("xcb_flush");
 	this->xcb_disconnect = handle.sym<decltype(this->xcb_disconnect)>("xcb_disconnect");
 	this->xcb_poll_for_event = handle.sym<decltype(this->xcb_poll_for_event)>("xcb_poll_for_event");
+	this->xcb_send_event = handle.sym<decltype(this->xcb_send_event)>("xcb_send_event");
 	this->xcb_get_extension_data = handle.sym<decltype(this->xcb_get_extension_data)>("xcb_get_extension_data");
 	this->xcb_map_window = handle.sym<decltype(this->xcb_map_window)>("xcb_map_window");
 	this->xcb_create_window = handle.sym<decltype(this->xcb_create_window)>("xcb_create_window");
@@ -251,11 +261,30 @@ bool XcbLibrary::open(Dso &handle) {
 			handle.sym<decltype(this->xcb_get_modifier_mapping_reply)>("xcb_get_modifier_mapping_reply");
 	this->xcb_get_modifier_mapping_keycodes =
 			handle.sym<decltype(this->xcb_get_modifier_mapping_keycodes)>("xcb_get_modifier_mapping_keycodes");
-
+	this->xcb_convert_selection =
+			handle.sym<decltype(this->xcb_convert_selection)>("xcb_convert_selection");
+	this->xcb_set_selection_owner =
+			handle.sym<decltype(this->xcb_set_selection_owner)>("xcb_set_selection_owner");
+	this->xcb_get_selection_owner =
+			handle.sym<decltype(this->xcb_get_selection_owner)>("xcb_get_selection_owner");
+	this->xcb_get_selection_owner_reply =
+			handle.sym<decltype(this->xcb_get_selection_owner_reply)>("xcb_get_selection_owner_reply");
+	this->xcb_get_property_value =
+			handle.sym<decltype(this->xcb_get_property_value)>("xcb_get_property_value");
+	this->xcb_get_property_value_length =
+			handle.sym<decltype(this->xcb_get_property_value_length)>("xcb_get_property_value_length");
 	this->xcb_get_keyboard_mapping =
 			handle.sym<decltype(this->xcb_get_keyboard_mapping)>("xcb_get_keyboard_mapping");
 	this->xcb_get_keyboard_mapping_reply =
 			handle.sym<decltype(this->xcb_get_keyboard_mapping_reply)>("xcb_get_keyboard_mapping_reply");
+	this->xcb_get_property_reply =
+			handle.sym<decltype(this->xcb_get_property_reply)>("xcb_get_property_reply");
+	this->xcb_get_property =
+			handle.sym<decltype(this->xcb_get_property)>("xcb_get_property");
+	this->xcb_get_property_value =
+			handle.sym<decltype(this->xcb_get_property_value)>("xcb_get_property_value");
+	this->xcb_get_property_value_length =
+			handle.sym<decltype(this->xcb_get_property_value_length)>("xcb_get_property_value_length");
 #endif
 	if (this->xcb_connect
 			&& this->xcb_get_setup
@@ -267,6 +296,7 @@ bool XcbLibrary::open(Dso &handle) {
 			&& this->xcb_flush
 			&& this->xcb_disconnect
 			&& this->xcb_poll_for_event
+			&& this->xcb_send_event
 			&& this->xcb_get_extension_data
 			&& this->xcb_map_window
 			&& this->xcb_create_window
@@ -277,8 +307,16 @@ bool XcbLibrary::open(Dso &handle) {
 			&& this->xcb_get_modifier_mapping_unchecked
 			&& this->xcb_get_modifier_mapping_reply
 			&& this->xcb_get_modifier_mapping_keycodes
+			&& this->xcb_convert_selection
+			&& this->xcb_set_selection_owner
+			&& this->xcb_get_selection_owner
+			&& this->xcb_get_selection_owner_reply
 			&& this->xcb_get_keyboard_mapping
-			&& this->xcb_get_keyboard_mapping_reply) {
+			&& this->xcb_get_keyboard_mapping_reply
+			&& this->xcb_get_property_reply
+			&& this->xcb_get_property
+			&& this->xcb_get_property_value
+			&& this->xcb_get_property_value_length) {
 		openAux();
 		return true;
 	}

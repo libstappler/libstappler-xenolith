@@ -475,6 +475,132 @@ void ViewImpl::updateDecorations() {
 	env->DeleteLocalRef(decorViewObj);
 }
 
+void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
+	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
+		doReadFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
+			_mainLoop->performOnMainThread([this, cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+				cb(view, ct);
+			}, this);
+		}, ref);
+	}, this);
+}
+
+void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
+	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
+		doWriteToClipboard(data, contentType);
+	}, this);
+}
+
+void ViewImpl::doReadFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
+	auto a = _activity->getNativeActivity();
+	auto clipboard = _activity->getClipboardService();
+	jclass clipboardClass = a->env->FindClass("android/content/ClipboardManager");
+	jclass clipDataClass = a->env->FindClass("android/content/ClipData");
+	jclass clipDescriptionClass = a->env->FindClass("android/content/ClipDescription");
+	jclass clipItemClass = a->env->FindClass("android/content/ClipData$Item");
+	jclass charSequenceClass = a->env->FindClass("java/lang/CharSequence");
+
+	auto getPrimaryClipFn = a->env->GetMethodID(clipboardClass, "getPrimaryClip", "()Landroid/content/ClipData;");
+	auto getClipDescriptionFn = a->env->GetMethodID(clipDataClass, "getDescription", "()Landroid/content/ClipDescription;");
+	auto getItemCountFn = a->env->GetMethodID(clipDataClass, "getItemCount", "()I");
+	auto getItemAtFn = a->env->GetMethodID(clipDataClass, "getItemAt", "(I)Landroid/content/ClipData$Item;");
+	auto getMimeTypeFn = a->env->GetMethodID(clipDescriptionClass, "getMimeType", "(I)Ljava/lang/String;");
+	auto coerceToTextFn = a->env->GetMethodID(clipItemClass, "coerceToText", "(Landroid/content/Context;)Ljava/lang/CharSequence;");
+	auto coerceToHtmlTextFn = a->env->GetMethodID(clipItemClass, "coerceToHtmlText", "(Landroid/content/Context;)Ljava/lang/String;");
+	auto toStringFn = a->env->GetMethodID(charSequenceClass, "toString", "()Ljava/lang/String;");
+
+	auto primClip = a->env->CallObjectMethod(clipboard, getPrimaryClipFn);
+	if (primClip) {
+		auto count = a->env->CallIntMethod(primClip, getItemCountFn);
+		if (count > 0) {
+			auto desc = a->env->CallObjectMethod(primClip, getClipDescriptionFn);
+			auto mime = (jstring)a->env->CallObjectMethod(desc, getMimeTypeFn);
+			if (mime) {
+				auto item = a->env->CallObjectMethod(primClip, getItemAtFn, 0);
+				auto chars = a->env->GetStringChars(mime, nullptr);
+				auto len = a->env->GetStringLength(mime);
+
+				WideStringView mimeStr((const char16_t *)chars, len);
+				auto mimeCh = string::toUtf8<memory::StandartInterface>(mimeStr);
+				if (mimeStr.equals(u"text/html")) {
+					auto str = (jstring)a->env->CallObjectMethod(item, coerceToHtmlTextFn);
+					if (str) {
+						auto clipChars = a->env->GetStringUTFChars(str, nullptr);
+						auto clipLen = a->env->GetStringUTFLength(str);
+
+						cb(BytesView((const uint8_t *)clipChars, clipLen), mimeCh);
+
+						a->env->ReleaseStringUTFChars(str, clipChars);
+						a->env->DeleteLocalRef(str);
+					} else {
+						cb(BytesView(), StringView());
+					}
+				} else {
+					auto seq = a->env->CallObjectMethod(item, coerceToTextFn);
+					auto str = (jstring)a->env->CallObjectMethod(seq, toStringFn);
+					if (str) {
+						auto clipChars = a->env->GetStringUTFChars(str, nullptr);
+						auto clipLen = a->env->GetStringUTFLength(str);
+
+						cb(BytesView((const uint8_t *)clipChars, clipLen), mimeCh);
+
+						a->env->ReleaseStringUTFChars(str, clipChars);
+						a->env->DeleteLocalRef(str);
+					} else {
+						cb(BytesView(), StringView());
+					}
+
+					a->env->DeleteLocalRef(seq);
+				}
+
+				a->env->ReleaseStringChars(mime, chars);
+				a->env->DeleteLocalRef(mime);
+				a->env->DeleteLocalRef(item);
+			} else {
+				cb(BytesView(), StringView());
+			}
+
+			a->env->DeleteLocalRef(desc);
+		} else {
+			cb(BytesView(), StringView());
+		}
+		a->env->DeleteLocalRef(primClip);
+	} else {
+		cb(BytesView(), StringView());
+	}
+
+	a->env->DeleteLocalRef(clipboardClass);
+	a->env->DeleteLocalRef(clipDataClass);
+	a->env->DeleteLocalRef(clipDescriptionClass);
+	a->env->DeleteLocalRef(clipItemClass);
+	a->env->DeleteLocalRef(charSequenceClass);
+}
+
+void ViewImpl::doWriteToClipboard(BytesView data, StringView contentType) {
+	auto a = _activity->getNativeActivity();
+	auto clipboard = _activity->getClipboardService();
+	jclass clipboardClass = a->env->FindClass("android/content/ClipboardManager");
+	jclass clipDataClass = a->env->FindClass("android/content/ClipData");
+
+	auto newPlainTextFn = a->env->GetStaticMethodID(clipDataClass, "newPlainText", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;");
+	auto setPrimaryClipFn = a->env->GetMethodID(clipboardClass, "setPrimaryClip", "(Landroid/content/ClipData;)V");
+
+	auto label = a->env->NewStringUTF(contentType.str<Interface>().data());
+	auto content = a->env->NewStringUTF(data.readString().str<Interface>().data());
+
+	auto clip = a->env->CallStaticObjectMethod(clipDataClass, newPlainTextFn, label, content);
+	if (clip) {
+		a->env->CallVoidMethod(clipboard, setPrimaryClipFn, clip);
+		a->env->DeleteLocalRef(clip);
+	}
+
+	a->env->DeleteLocalRef(label);
+	a->env->DeleteLocalRef(content);
+
+	a->env->DeleteLocalRef(clipboardClass);
+	a->env->DeleteLocalRef(clipDataClass);
+}
+
 Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&info) {
 	return Rc<ViewImpl>::create(loop, const_cast<core::Device &>(dev), move(info));
 }

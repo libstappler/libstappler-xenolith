@@ -119,6 +119,10 @@ core::ImageFormat getCommonFormat() {
 Activity::Activity() { }
 
 Activity::~Activity() {
+	if (_clipboardServce) {
+		_activity->env->DeleteGlobalRef(_clipboardServce);
+		_clipboardServce = nullptr;
+	}
 	if (_rootView) {
 		_rootView = nullptr;
 	}
@@ -316,12 +320,23 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 
 	auto intentClass = _activity->env->FindClass("android/content/Intent");
 	auto uriClass = _activity->env->FindClass("android/net/Uri");
+	auto contextClass = _activity->env->FindClass("android/content/Context");
 
 	_intentInitMethod = _activity->env->GetMethodID(intentClass, "<init>", "(Ljava/lang/String;Landroid/net/Uri;)V");
 	_intentAddFlagsMethod = _activity->env->GetMethodID(intentClass, "addFlags", "(I)Landroid/content/Intent;");
 	_intentActionView = _activity->env->GetStaticFieldID(intentClass, "ACTION_VIEW", "Ljava/lang/String;");
 	_uriParseMethod = _activity->env->GetStaticMethodID(uriClass, "parse", "(Ljava/lang/String;)Landroid/net/Uri;");
 
+	auto getServiceMethod = _activity->env->GetMethodID(contextClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+	auto clipboardNameFieldID = _activity->env->GetStaticFieldID(contextClass, "CLIPBOARD_SERVICE", "Ljava/lang/String;");
+	auto clipboardNameField = (jstring)_activity->env->GetStaticObjectField(contextClass, clipboardNameFieldID);
+
+	auto clipboardService = _activity->env->CallObjectMethod(_activity->clazz, getServiceMethod, clipboardNameField);
+	if (clipboardService) {
+		_clipboardServce = _activity->env->NewGlobalRef(clipboardService);
+	}
+
+	_activity->env->DeleteLocalRef(clipboardNameField);
 	_activity->env->DeleteLocalRef(uriClass);
 	_activity->env->DeleteLocalRef(intentClass);
 

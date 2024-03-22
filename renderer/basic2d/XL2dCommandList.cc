@@ -317,6 +317,7 @@ void CommandList::addCommand(Command *cmd) {
 		_last->next = cmd;
 	}
 	_last = cmd;
+	++ _size;
 }
 
 }

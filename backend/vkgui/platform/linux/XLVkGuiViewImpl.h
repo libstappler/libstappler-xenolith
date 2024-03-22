@@ -71,6 +71,9 @@ public:
 	virtual void linkWithNativeWindow(void *) override { }
 	virtual void stopNativeWindow() override { }
 
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
+	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) override;
+
 protected:
 	virtual bool pollInput(bool frameReady) override;
 

@@ -211,14 +211,18 @@ const Padding &ScrollViewBase::getPadding() const {
 	return _paddingGlobal;
 }
 
-void ScrollViewBase::setSpaceLimit(float value) {
-	if (_scrollSpaceLimit != value) {
+void ScrollViewBase::setSpaceLimit(float value, float padding) {
+	if (_scrollSpaceLimit != value || _scrollSpacePadding != padding) {
 		_scrollSpaceLimit = value;
+		_scrollSpacePadding = padding;
 		_contentSizeDirty = true;
 	}
 }
 float ScrollViewBase::getSpaceLimit() const {
 	return _scrollSpaceLimit;
+}
+float ScrollViewBase::getSpacePadding() const {
+	return _scrollSpacePadding;
 }
 
 float ScrollViewBase::getScrollableAreaOffset() const {

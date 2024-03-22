@@ -31,8 +31,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
 	auto handle = Dso("libvulkan.so.1");
 	if (!handle) {
-		log::error("Vk", "Fail to open libvulkan.so");
-		return nullptr;
+		handle = Dso("libvulkan.so");
+		if (!handle) {
+			log::error("Vk", "Fail to open libvulkan.so");
+			return nullptr;
+		}
 	}
 
 	auto getInstanceProcAddr = handle.sym<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");

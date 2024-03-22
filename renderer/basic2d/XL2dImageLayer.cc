@@ -150,8 +150,11 @@ bool ImageLayer::init() {
 void ImageLayer::onContentSizeDirty() {
 	Node::onContentSizeDirty();
 
-	Size2 imageSize = _image->getBoundingBox().size;
-	_root->setContentSize(imageSize);
+	auto imageSize = _image->getTexture()->getExtent();
+	if (_imageSizePredefined) {
+		imageSize = Extent3(_imageSize.width, _imageSize.height, 1);
+	}
+	_root->setContentSize(Size2(imageSize.width, imageSize.height));
 
 	if (!_scaleDisabled) {
 		_minScale = std::min(
@@ -207,15 +210,18 @@ void ImageLayer::onTransformDirty(const Mat4 &parentTransform) {
 }
 
 void ImageLayer::setTexture(Rc<Texture> &&tex) {
+	_imageSizePredefined = false;
+
 	auto extent = tex->getExtent();
 	_image->setTexture(move(tex));
-	_image->setTextureRect(Rect(Vec2(0, 0), Size2(extent.width, extent.height)));
+	_image->setContentSize(Size2(extent.width, extent.height));
 
 	if (_contentSize.width == 0.0f || _contentSize.height == 0.0f) {
 		_minScale = 1.0f;
 		_maxScale = 1.0f;
 		_root->setScale(1.0f);
 		_contentSizeDirty = true;
+		_textureDirty = true;
 		return;
 	}
 
@@ -280,6 +286,13 @@ void ImageLayer::setScaleDisabled(bool value) {
 		_scaleDisabled = value;
 		_contentSizeDirty = true;
 	}
+}
+
+void ImageLayer::setImageSize(Size2 size) {
+	_imageSize = size;
+	_imageSizePredefined = true;
+	_contentSizeDirty = true;
+	_textureDirty = true;
 }
 
 bool ImageLayer::handleTap(Vec2 point, int count) {

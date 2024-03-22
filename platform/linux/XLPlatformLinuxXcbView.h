@@ -101,6 +101,9 @@ public:
 	xcb_connection_t *getConnection() const { return _connection; }
 	uint32_t getWindow() const { return _window; }
 
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
+	virtual void writeToClipboard(BytesView, StringView contentType) override;
+
 protected:
 	ScreenInfoData getScreenInfo() const;
 
@@ -118,6 +121,11 @@ protected:
 
 	// map keysym to InputKeyCode
 	core::InputKeyCode getKeysymCode(xcb_keysym_t sym) const;
+
+	void notifyClipboard(BytesView);
+
+	xcb_atom_t writeTargetToProperty(xcb_selection_request_event_t *request);
+	void handleSelectionRequest(xcb_selection_request_event_t *e);
 
 	Rc<XcbLibrary> _xcb;
 	Rc<XkbLibrary> _xkb;
@@ -153,6 +161,10 @@ protected:
 
 	String _wmClass;
 	ScreenInfoData _screenInfo;
+
+	Function<void(BytesView, StringView)> _clipboardCallback;
+	Rc<Ref> _clipboardTarget;
+	Bytes _clipboardSelection;
 };
 
 }
