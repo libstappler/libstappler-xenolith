@@ -473,6 +473,10 @@ void DeviceInfo::Features::clear() {
 	doClear(SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features));
 #endif
 
+#if VK_VERSION_1_3
+	doClear(SP_VK_BOOL_ARRAY(device13, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan13Features));
+#endif
+
 	doClear(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR));
 	doClear(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR));
 	doClear(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
@@ -956,7 +960,9 @@ StringView getVkResultName(VkResult res) {
 	case VK_ERROR_INVALID_EXTERNAL_HANDLE: return "VK_ERROR_INVALID_EXTERNAL_HANDLE"; break;
 	case VK_ERROR_FRAGMENTATION: return "VK_ERROR_FRAGMENTATION"; break;
 	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: return "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS"; break;
+#if VK_VERSION_1_3
 	case VK_PIPELINE_COMPILE_REQUIRED: return "VK_PIPELINE_COMPILE_REQUIRED"; break;
+#endif
 	case VK_ERROR_SURFACE_LOST_KHR: return "VK_ERROR_SURFACE_LOST_KHR"; break;
 	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR"; break;
 	case VK_SUBOPTIMAL_KHR: return "VK_SUBOPTIMAL_KHR"; break;
@@ -965,7 +971,9 @@ StringView getVkResultName(VkResult res) {
 	case VK_ERROR_VALIDATION_FAILED_EXT: return "VK_ERROR_VALIDATION_FAILED_EXT"; break;
 	case VK_ERROR_INVALID_SHADER_NV: return "VK_ERROR_INVALID_SHADER_NV"; break;
 	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; break;
+#if VK_VERSION_1_3
 	case VK_ERROR_NOT_PERMITTED_KHR: return "VK_ERROR_NOT_PERMITTED_KHR"; break;
+#endif
 	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT"; break;
 	case VK_THREAD_IDLE_KHR: return "VK_THREAD_IDLE_KHR"; break;
 	case VK_THREAD_DONE_KHR: return "VK_THREAD_DONE_KHR"; break;
@@ -1027,6 +1035,7 @@ bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vect
 		return false;
 	}
 
+#if VK_VERSION_1_3
 	if (apiVersion >= VK_API_VERSION_1_3) {
 		for (auto &it : s_promotedVk13Extensions) {
 			if (it) {
@@ -1038,6 +1047,7 @@ bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vect
 			}
 		}
 	}
+#endif
 	if (apiVersion >= VK_API_VERSION_1_2) {
 		for (auto &it : s_promotedVk12Extensions) {
 			if (it) {

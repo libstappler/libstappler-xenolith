@@ -790,13 +790,16 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 		next = &features.devicePortability;
 	}
 #endif
+#if VK_VERSION_1_3
 	if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_3) {
 		_enabledFeatures.device13.pNext = next;
 		_enabledFeatures.device12.pNext = &_enabledFeatures.device13;
 		_enabledFeatures.device11.pNext = &_enabledFeatures.device12;
 		_enabledFeatures.device10.pNext = &_enabledFeatures.device11;
 		deviceCreateInfo.pNext = &_enabledFeatures.device11;
-	} else if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_2) {
+	} else
+#endif
+	if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_2) {
 		_enabledFeatures.device12.pNext = next;
 		_enabledFeatures.device11.pNext = &_enabledFeatures.device12;
 		_enabledFeatures.device10.pNext = &_enabledFeatures.device11;

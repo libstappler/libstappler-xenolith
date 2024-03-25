@@ -426,6 +426,7 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 	}
 #endif
 	features.flags = flags;
+#if VK_VERSION_1_3
 	if (api >= VK_API_VERSION_1_3) {
 		features.device13.pNext = next;
 		features.device12.pNext = &features.device13;
@@ -441,7 +442,9 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 		}
 
 		features.updateFrom13();
-	} else if (api >= VK_API_VERSION_1_2) {
+	} else
+#endif
+	if (api >= VK_API_VERSION_1_2) {
 		features.device12.pNext = next;
 		features.device11.pNext = &features.device12;
 		features.device10.pNext = &features.device11;

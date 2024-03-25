@@ -76,7 +76,7 @@ bool MaterialToolbarTest::init() {
 	});
 	actionMenu->addButton("", IconName::Content_file_copy_solid, [this] (material2d::Button *, material2d::MenuSourceButton *) {
 		auto view = _director->getView();
-		view->readFromClipboard([this] (BytesView view) {
+		view->readFromClipboard([this] (BytesView view, StringView ct) {
 			if (auto content = dynamic_cast<material2d::SceneContent *>(_scene->getContent())) {
 				content->showSnackbar(material2d::SnackbarData(view.readString(view.size())));
 			}

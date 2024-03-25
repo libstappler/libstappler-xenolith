@@ -42,7 +42,9 @@ struct DeviceInfo {
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT deviceDescriptorIndexing = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
 		VkPhysicalDeviceBufferDeviceAddressFeaturesKHR deviceBufferDeviceAddress = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR, nullptr };
 
+#if VK_VERSION_1_3
 		VkPhysicalDeviceVulkan12Features device13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES, nullptr };
+#endif
 		VkPhysicalDeviceVulkan12Features device12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, nullptr };
 		VkPhysicalDeviceVulkan11Features device11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, nullptr };
 		VkPhysicalDeviceFeatures2KHR device10 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR, nullptr };
