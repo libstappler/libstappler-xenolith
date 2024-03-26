@@ -9,7 +9,7 @@ layout (local_size_x = 8, local_size_y = 8) in;
 
 #include "XL2dGlslSdfDescriptors.h"
 
-layout(set = 0, binding = 3, r16) uniform writeonly image2D sdfImage;
+layout(set = 0, binding = 3, rgba16) uniform writeonly image2D sdfImage;
 
 float polygon3d(in vec3 pt, uint origin, uint count, float value) {
 	const float height = abs(value - pt.z);

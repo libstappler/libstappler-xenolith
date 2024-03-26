@@ -232,6 +232,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 
 	passBuilder.addSubpassDependency(subpass2d, PipelineStage::LateFragmentTest, AccessType::DepthStencilAttachmentWrite,
 			subpassShadows, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
+	passBuilder.addSubpassDependency(subpass2d, PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
+			subpassShadows, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
 
 	if (!VertexPass::init(passBuilder)) {
 		return false;
@@ -312,11 +314,13 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	auto currentExtent = fb->getExtent();
 
 	auto subpassIdx = buf.cmdNextSubpass();
+	auto pass = static_cast<RenderPass *>(_data->impl.get());
 
 	if (_shadowData->getLightsCount() && _shadowData->getBuffer() && _shadowData->getObjectsCount()) {
 		auto pipeline = static_cast<GraphicPipeline *>(_data->subpasses[subpassIdx]->graphicPipelines
 				.get(StringView(ShadowPass::ShadowPipeline))->pipeline.get());
 
+		buf.cmdBindDescriptorSets(pass, 0);
 		buf.cmdBindPipeline(pipeline);
 
 		auto viewport = VkViewport{ 0.0f, 0.0f, float(currentExtent.width), float(currentExtent.height), 0.0f, 1.0f };

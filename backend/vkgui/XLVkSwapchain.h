@@ -116,7 +116,7 @@ protected:
 
 	Mutex _resourceMutex;
 	Vector<Rc<Semaphore>> _semaphores;
-	Rc<Semaphore> _presentSemaphore;
+	Vector<Rc<Semaphore>> _presentSemaphores;
 	Rc<Surface> _surface;
 };
 

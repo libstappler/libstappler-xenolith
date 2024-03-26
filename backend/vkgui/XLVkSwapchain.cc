@@ -111,8 +111,8 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 			std::unique_lock<Mutex> lock(_resourceMutex);
 			std::unique_lock<Mutex> lock2(old->_resourceMutex);
 			_semaphores = move(old->_semaphores);
-			if (old->_presentSemaphore) {
-				releaseSemaphore(move(old->_presentSemaphore));
+			for (auto &it : old->_presentSemaphores) {
+				releaseSemaphore(move(it));
 			}
 		}
 
@@ -124,6 +124,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		dev.getTable()->vkGetSwapchainImagesKHR(dev.getDevice(), _swapchain, &imageCount, swapchainImages.data());
 
 		_images.reserve(imageCount);
+		_presentSemaphores.resize(imageCount);
 
 		auto swapchainImageViewInfo = getSwapchainImageViewInfo(swapchainImageInfo);
 
@@ -139,6 +140,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		_rebuildMode = _presentMode = presentMode;
 		_imageInfo = move(swapchainImageInfo);
 		_config = move(cfg);
+		_config.imageCount = imageCount;
 		_surface = surface;
 		_surfaceInfo = info;
 
@@ -266,11 +268,11 @@ VkResult SwapchainHandle::present(DeviceQueue &queue, const Rc<ImageStorage> &im
 	} while (0);
 
 	if (result == VK_SUCCESS) {
-		if (_presentSemaphore) {
-			_presentSemaphore->setWaited(true);
-			releaseSemaphore(move(_presentSemaphore));
+		if (_presentSemaphores[imageIndex]) {
+			_presentSemaphores[imageIndex]->setWaited(true);
+			releaseSemaphore(move(_presentSemaphores[imageIndex]));
 		}
-		_presentSemaphore = (Semaphore *)image->getSignalSem().get();
+		_presentSemaphores[imageIndex] = (Semaphore *)image->getSignalSem().get();
 
 		++ _presentedFrames;
 		if (_presentedFrames == config::MaxSuboptimalFrames && _presentMode == _config.presentModeFast
@@ -442,3 +444,4 @@ void SwapchainImage::invalidateSwapchain() {
 }
 
 }
+

@@ -673,7 +673,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	// write initial full screen quad
 	plan.pushAll(_spans, writeTarget);
 
-	if (!fhandle.isPersistentMapping()) {
+	if (fhandle.isPersistentMapping()) {
 		_vertexes->flushMappedRegion();
 		_indexes->flushMappedRegion();
 		_transforms->flushMappedRegion();
