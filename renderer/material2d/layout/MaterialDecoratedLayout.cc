@@ -150,14 +150,14 @@ Elevation DecoratedLayout::getDecorationElevation() const {
 	return _decorationLeft->getStyleTarget().elevation;
 }
 
-void DecoratedLayout::setViewDecorationTracked(bool value) {
-	if (_viewDecorationTracked != value) {
-		_viewDecorationTracked = value;
+void DecoratedLayout::setViewDecorationFlags(ViewDecorationFlags value) {
+	if (_viewDecoration != value) {
+		_viewDecoration = value;
 	}
 }
 
-bool DecoratedLayout::isViewDecorationTracked() const {
-	return _viewDecorationTracked;
+ViewDecorationFlags DecoratedLayout::getViewDecorationFlags() const {
+	return _viewDecoration;
 }
 
 void DecoratedLayout::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
@@ -165,7 +165,7 @@ void DecoratedLayout::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
 }
 
 void DecoratedLayout::updateStatusBar(const SurfaceStyleData &style) {
-	if (_director && _viewDecorationTracked) {
+	if (_director && (_viewDecoration & ViewDecorationFlags::Visible) != ViewDecorationFlags::None) {
 		_director->getView()->setDecorationTone(style.colorOn.data.tone / 50.0f);
 	}
 }

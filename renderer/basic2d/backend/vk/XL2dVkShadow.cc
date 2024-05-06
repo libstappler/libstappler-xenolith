@@ -675,7 +675,7 @@ bool ShadowSdfImageAttachment::init(AttachmentBuilder &builder, Extent2 extent) 
 		extent,
 		core::ForceImageUsage(core::ImageUsage::Storage | core::ImageUsage::Sampled | core::ImageUsage::TransferDst | core::ImageUsage::TransferSrc),
 		core::PassType::Compute,
-		core::ImageFormat::R16G16B16A16_SFLOAT),
+		core::ImageFormat::R16G16_SFLOAT),
 	ImageAttachment::AttachmentInfo{
 		.initialLayout = core::AttachmentLayout::Undefined,
 		.finalLayout = core::AttachmentLayout::ShaderReadOnlyOptimal,

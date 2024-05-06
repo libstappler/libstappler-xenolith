@@ -205,6 +205,11 @@ uint64_t View::getAvgFenceTime() const {
 	return _frameEmitter->getAvgFenceTime();
 }
 
+SP_COVERAGE_TRIVIAL
+Extent2 View::getExtent() const {
+	return Extent2(_constraints.extent.width, _constraints.extent.height);
+}
+
 uint64_t View::getFrameInterval() const {
 	std::unique_lock<Mutex> lock(_frameIntervalMutex);
 	return _info.frameInterval;
@@ -219,14 +224,17 @@ void View::setFrameInterval(uint64_t value) {
 	}, this, true);
 }
 
+SP_COVERAGE_TRIVIAL
 void View::setReadyForNextFrame() {
 
 }
 
+SP_COVERAGE_TRIVIAL
 void View::setRenderOnDemand(bool value) {
 
 }
 
+SP_COVERAGE_TRIVIAL
 bool View::isRenderOnDemand() const {
 	return true;
 }
@@ -241,6 +249,10 @@ void View::releaseBackButton() {
 	performOnThread([this] {
 		-- _backButtonCounter;
 	}, this, true);
+}
+
+uint64_t View::getBackButtonCounter() const {
+	return _backButtonCounter;
 }
 
 void View::setDecorationTone(float) {
@@ -259,6 +271,7 @@ void View::releaseView(uint64_t id) {
 	release(id);
 }
 
+SP_COVERAGE_TRIVIAL
 void View::setContentPadding(const Padding &padding) {
 	_constraints.contentPadding = padding;
 	setReadyForNextFrame();

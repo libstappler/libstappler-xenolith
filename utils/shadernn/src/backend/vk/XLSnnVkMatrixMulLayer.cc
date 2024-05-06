@@ -306,13 +306,13 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 			xenolith::shadernn::Model::saveBlob(
 					filesystem::currentDir<Interface>(toString(getName(),".", _front->getInputIndex(), ".input.bin")).data(),
 					view.data(), view.size());
-		}, weightsBuffer->getBuffers()[_inputBufferIndex].buffer.get());*/
+		}, weightsBuffer->getBuffers()[_inputBufferIndex].buffer.get());
 
-		q.getFrame()->getLoop()->captureBuffer([this, sec] (const BufferInfo &info, BytesView view) {
+		q.getFrame()->getLoop()->captureBuffer([this, weightsBuffer] (const BufferInfo &info, BytesView view) {
 			xenolith::shadernn::Model::saveBlob(
 					filesystem::currentDir<Interface>(toString(getName(),".", _front->getInputIndex(), ".output.bin")).data(),
 					view.data(), view.size());
-		}, weightsBuffer->getBuffers()[_outputBufferIndex].buffer.get());
+		}, weightsBuffer->getBuffers()[_outputBufferIndex].buffer.get());*/
 	});
 
 	_inputAttachment = input;

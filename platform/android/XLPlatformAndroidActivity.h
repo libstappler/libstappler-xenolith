@@ -89,6 +89,18 @@ public:
 	virtual bool handleActivityResult(Activity *a, int request_code, int result_code, jobject data) { return false; }
 };
 
+struct AppEnv {
+	static AppEnv *getInerface();
+
+	~AppEnv();
+
+	void init(JavaVM *v, JNIEnv *e, bool a);
+
+	bool attached = false;
+	JavaVM *vm = nullptr;
+	JNIEnv *env = nullptr;
+};
+
 class Activity : public Ref {
 public:
 	static constexpr StringView NetworkConnectivityClassName = "org.stappler.xenolith.appsupport.NetworkConnectivity";
@@ -144,6 +156,8 @@ public:
 	virtual void cancelTextInput();
 
 	jobject getClipboardService() const { return _clipboardServce; }
+
+	int32_t getSdkVersion() const { return _sdkVersion; }
 
 protected:
 	struct InputLooperData {
@@ -232,6 +246,7 @@ protected:
 	Size2 _windowSize;
 	Vec2 _hoverLocation;
 	NativeBufferFormatSupport _formatSupport;
+	bool _recreateSwapchain = false;
 	bool isEmulator = false;
 
 	ActivityInfo _info;

@@ -59,6 +59,16 @@ struct QueuePassData;
 struct SubpassData;
 struct PipelineDescriptor;
 
+struct ObjectData {
+	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
+
+	ObjectType type;
+	Device *device = nullptr;
+	ClearCallback callback = nullptr;
+	ObjectHandle handle;
+	void *ptr = nullptr;
+};
+
 class Object : public NamedRef {
 public:
 	using ObjectHandle = core::ObjectHandle;
@@ -69,18 +79,13 @@ public:
 	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void * = nullptr);
 	void invalidate();
 
-	ObjectType getType() const { return _type; }
-	ObjectHandle getObject() const { return _handle; }
+	const ObjectData &getObjectData() const { return _object; }
 
 	virtual void setName(StringView str) { _name = str.str<Interface>(); }
 	virtual StringView getName() const override { return _name; }
 
 protected:
-	ObjectType _type;
-	Device *_device = nullptr;
-	ClearCallback _callback = nullptr;
-	ObjectHandle _handle;
-	void *_ptr = nullptr;
+	ObjectData _object;
 	String _name;
 };
 

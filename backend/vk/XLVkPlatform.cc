@@ -92,9 +92,9 @@ VulkanInstanceInfo FunctionTable::loadInfo() const {
 bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceInfo &info) const {
 	data.targetVulkanVersion = info.targetVersion;
 
+	bool layerFound = false;
 	if constexpr (vk::s_enableValidationLayers) {
 		for (const char *layerName : vk::s_validationLayers) {
-			bool layerFound = false;
 
 			for (const auto &layerProperties : s_InstanceAvailableLayers) {
 				if (strcmp(layerName, layerProperties.layerName) == 0) {
@@ -123,7 +123,7 @@ bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceIn
 	}
 
 	if constexpr (vk::s_enableValidationLayers) {
-		if (!debugExt) {
+		if (!debugExt && layerFound) {
 			for (const auto &layerName : vk::s_validationLayers) {
 				uint32_t layer_ext_count;
 				vkEnumerateInstanceExtensionProperties(layerName, &layer_ext_count, nullptr);

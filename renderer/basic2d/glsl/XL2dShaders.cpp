@@ -20,6 +20,9 @@
  THE SOFTWARE.
  **/
 
+// Excluded from documentation/codegen tool
+///@ SP_EXCLUDE
+
 #include "XL2dShaders.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {

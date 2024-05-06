@@ -32,26 +32,28 @@ Object::~Object() {
 }
 
 bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle handle, void *extra) {
-	_device = &dev;
-	_callback = cb;
-	_type = type;
-	_handle = handle;
-	_ptr = extra;
-	if (_handle.get()) {
-		_device->addObject(this);
+	_object.device = &dev;
+	_object.callback = cb;
+	_object.type = type;
+	_object.handle = handle;
+	_object.ptr = extra;
+	if (_object.handle.get()) {
+		_object.device->addObject(this);
 	}
 	return true;
 }
 
 void Object::invalidate() {
-	if (_callback) {
-		_callback(_device, _type, _handle, _ptr);
-		if (_handle.get()) {
-			_device->removeObject(this);
+	if (_object.callback) {
+		if (_object.handle.get()) {
+			_object.device->removeObject(this);
 		}
-		_callback = nullptr;
-		_device = nullptr;
-		_handle = ObjectHandle::zero();
+		if (_object.callback) {
+			_object.callback(_object.device, _object.type, _object.handle, _object.ptr);
+		}
+		_object.callback = nullptr;
+		_object.device = nullptr;
+		_object.handle = ObjectHandle::zero();
 	}
 }
 

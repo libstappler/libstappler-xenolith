@@ -49,7 +49,7 @@ public:
 
 	using HandlerCallback = Function<Rc<Handler> (DataScroll *)>;
 	using ItemCallback = Function<Rc<Surface> (Item *)>;
-	using LoaderCallback = Function<Loader *(Request, const Function<void()> &)>;
+	using LoaderCallback = Function<Rc<Loader>(Request, const Function<void()> &)>;
 
 	virtual ~DataScroll() { }
 
@@ -160,7 +160,7 @@ public:
 	virtual bool init(const Function<void()> &);
 	virtual void onContentSizeDirty() override;
 
-	virtual void onEnter(Scene *) override;
+	virtual void onEnter(xenolith::Scene *) override;
 	virtual void onExit() override;
 
 protected:

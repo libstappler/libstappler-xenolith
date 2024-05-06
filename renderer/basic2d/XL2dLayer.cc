@@ -23,6 +23,7 @@
 #include "XL2dLayer.h"
 #include "XL2dFrameContext.h"
 #include "XLTexture.h"
+#include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 

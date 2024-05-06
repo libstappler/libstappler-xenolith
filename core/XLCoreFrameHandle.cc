@@ -91,7 +91,10 @@ FrameHandle::~FrameHandle() {
 	s_activeFrames.erase(this);
 	s_frameMutex.unlock();
 
-	_request = nullptr;
+	if (_request) {
+		_request->detachFrame();
+		_request = nullptr;
+	}
 	_pool = nullptr;
 }
 
@@ -355,6 +358,10 @@ bool FrameHandle::setup() {
 		for (auto &it : _queues) {
 			it->invalidate();
 		}
+	}
+
+	if (_request) {
+		_request->attachFrame(this);
 	}
 
 	return true;

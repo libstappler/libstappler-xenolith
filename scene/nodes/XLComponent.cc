@@ -22,6 +22,8 @@ THE SOFTWARE.
 **/
 
 #include "XLComponent.h"
+#include "XLScene.h"
+#include "XLScheduler.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

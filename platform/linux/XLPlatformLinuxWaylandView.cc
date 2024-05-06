@@ -22,6 +22,8 @@
 
 #include "XLPlatformLinuxWaylandView.h"
 
+#if XL_ENABLE_WAYLAND
+
 #include <linux/input.h>
 
 #ifndef XL_WAYLAND_LOG
@@ -968,3 +970,5 @@ void WaylandView::writeToClipboard(BytesView, StringView contentType) {
 }
 
 }
+
+#endif

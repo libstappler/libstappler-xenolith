@@ -29,6 +29,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
+enum class ViewDecorationFlags {
+	None,
+	Visible = 1 << 0,
+	Tracked = 1 << 1
+};
+
+SP_DEFINE_ENUM_AS_MASK(ViewDecorationFlags)
+
 class DecoratedLayout : public SceneLayout2d {
 public:
 	virtual ~DecoratedLayout() { }
@@ -43,8 +51,8 @@ public:
 	virtual void setDecorationElevation(Elevation);
 	virtual Elevation getDecorationElevation() const;
 
-	virtual void setViewDecorationTracked(bool value);
-	virtual bool isViewDecorationTracked() const;
+	virtual void setViewDecorationFlags(ViewDecorationFlags value);
+	virtual ViewDecorationFlags getViewDecorationFlags() const;
 
 	virtual void onForeground(SceneContent2d *l, SceneLayout2d *overlay) override;
 
@@ -61,7 +69,7 @@ protected:
 	LayerSurface *_decorationTop = nullptr;
 	LayerSurface *_decorationBottom = nullptr;
 	LayerSurface *_background = nullptr;
-	bool _viewDecorationTracked = false;
+	ViewDecorationFlags _viewDecoration = ViewDecorationFlags::None;
 };
 
 }

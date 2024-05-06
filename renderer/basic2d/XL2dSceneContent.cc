@@ -290,12 +290,10 @@ void SceneContent2d::updateBackButtonStatus() {
 			}
 		}
 	} else {
-		if (_retainBackButton) {
-			if (_director && _backButtonRetained) {
-				_director->getView()->releaseBackButton();
-				_backButtonRetained = false;
-			}
-			_retainBackButton = false;
+		_retainBackButton = false;
+		if (_director && _backButtonRetained) {
+			_director->getView()->releaseBackButton();
+			_backButtonRetained = false;
 		}
 	}
 }

@@ -191,7 +191,9 @@ bool SceneContent::init() {
 		return false;
 	}
 
-	_snackbar = addChild(Rc<Snackbar>::create(), ZOrderMax - ZOrder(2));
+	_snackbarRoot = addChild(Rc<Node>::create());
+
+	_snackbar = _snackbarRoot->addChild(Rc<Snackbar>::create(), ZOrderMax - ZOrder(2));
 	_snackbar->setVisible(false);
 
 	_navigation = addChild(Rc<NavigationDrawer>::create(), ZOrderMax - ZOrder(3));
@@ -201,6 +203,9 @@ bool SceneContent::init() {
 
 void SceneContent::onContentSizeDirty() {
 	SceneContent2d::onContentSizeDirty();
+
+	_snackbarRoot->setPosition(Vec2::ZERO);
+	_snackbarRoot->setContentSize(_contentSize);
 
 	_snackbar->onHidden();
 	_snackbar->setContentSize(Size2(std::min(_contentSize.width, 536.0f), 48.0f));
@@ -273,6 +278,20 @@ bool SceneContent::onBackButton() {
 		return true;
 	}
 	return SceneContent2d::onBackButton();
+}
+
+void SceneContent::updateNodesVisibility() {
+	SceneContent2d::updateNodesVisibility();
+
+	if (!_layouts.empty()) {
+		_snackbarRoot->setLocalZOrder(_layouts.back()->getLocalZOrder());
+	}
+}
+
+void SceneContent::handleBackgroundTransition(bool value) {
+	SceneContent2d::handleBackgroundTransition(value);
+
+	_contentSizeDirty = true;
 }
 
 }

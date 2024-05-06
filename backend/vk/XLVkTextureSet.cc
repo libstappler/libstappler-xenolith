@@ -473,8 +473,8 @@ bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
 }
 
 void TextureSet::write(const core::MaterialLayout &set) {
-	auto table = ((Device *)_device)->getTable();
-	auto dev = ((Device *)_device)->getDevice();
+	auto table = ((Device *)_object.device)->getTable();
+	auto dev = ((Device *)_object.device)->getDevice();
 
 	std::forward_list<Vector<VkDescriptorImageInfo>> imagesList;
 	std::forward_list<Vector<VkDescriptorBufferInfo>> buffersList;
@@ -491,7 +491,7 @@ void TextureSet::dropPendingBarriers() {
 }
 
 Device *TextureSet::getDevice() const {
-	return (Device *)_device;
+	return (Device *)_object.device;
 }
 
 void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::MaterialLayout &set,

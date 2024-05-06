@@ -45,6 +45,7 @@ void Scheduler::unschedule(const void *ptr) {
 
 void Scheduler::unscheduleAll() {
 	_list.clear();
+	_tmp.clear();
 }
 
 void Scheduler::schedulePerFrame(SchedulerFunc &&callback, void *target, int32_t priority, bool paused) {

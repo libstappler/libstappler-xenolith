@@ -119,7 +119,7 @@ public:
 	uint64_t getAvgFenceTime() const;
 
 	const core::FrameContraints & getFrameContraints() const { return _constraints; }
-	virtual Extent2 getExtent() const override { return Extent2(_constraints.extent.width, _constraints.extent.height); }
+	virtual Extent2 getExtent() const override;
 
 	bool hasFocus() const { return _hasFocus; }
 	bool isInBackground() const { return _inBackground; }
@@ -135,7 +135,7 @@ public:
 
 	virtual void retainBackButton();
 	virtual void releaseBackButton();
-	virtual uint64_t getBackButtonCounter() const override { return _backButtonCounter; }
+	virtual uint64_t getBackButtonCounter() const override;
 
 	virtual void setDecorationTone(float); // 0.0 - 1.0
 	virtual void setDecorationVisible(bool);

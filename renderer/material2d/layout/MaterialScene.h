@@ -37,7 +37,7 @@ public:
 	material2d::SurfaceInterior *getSurfaceInterior() const { return _surfaceInterior; }
 
 protected:
-	virtual void addContentNodes(SceneContent *);
+	virtual void addContentNodes(xenolith::SceneContent *) override;
 
 	material2d::StyleContainer *_styleContainer = nullptr;
 	material2d::SurfaceInterior *_surfaceInterior = nullptr;

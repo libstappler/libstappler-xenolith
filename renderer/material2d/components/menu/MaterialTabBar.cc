@@ -21,6 +21,7 @@
  **/
 
 #include "MaterialTabBar.h"
+#include "MaterialStyleContainer.h"
 #include "XLFontLocale.h"
 #include "XLInputListener.h"
 #include "XLFontLocale.h"

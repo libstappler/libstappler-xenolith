@@ -170,7 +170,7 @@ bool Fence::check(Loop &loop, bool lockfree) {
 		return true;
 	}
 
-	auto dev = ((Device *)_device);
+	auto dev = ((Device *)_object.device);
 	enum VkResult status;
 
 	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
@@ -220,7 +220,7 @@ void Fence::autorelease(Rc<Ref> &&ref) {
 void Fence::scheduleReset(Loop &loop) {
 	if (_releaseFn) {
 		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
-			auto dev = ((Device *)_device);
+			auto dev = ((Device *)_object.device);
 			dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 			return true;
 		}, [this] (const thread::Task &, bool success) {
@@ -229,7 +229,7 @@ void Fence::scheduleReset(Loop &loop) {
 			releaseFn();
 		}, this));
 	} else {
-		auto dev = ((Device *)_device);
+		auto dev = ((Device *)_object.device);
 		dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 	}
 }
@@ -237,7 +237,7 @@ void Fence::scheduleReset(Loop &loop) {
 void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 	if (_releaseFn) {
 		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
-			auto dev = ((Device *)_device);
+			auto dev = ((Device *)_object.device);
 			dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 			return true;
 		}, [this, s] (const thread::Task &, bool success) {
@@ -248,7 +248,7 @@ void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 			releaseFn();
 		}, this));
 	} else {
-		auto dev = ((Device *)_device);
+		auto dev = ((Device *)_object.device);
 		dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 		doRelease(s);
 	}

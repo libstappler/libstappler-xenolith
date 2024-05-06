@@ -348,6 +348,8 @@ struct QueueData : NamedMem {
 	HashTable<Rc<Resource>> linked;
 	Function<void(FrameRequest &)> beginCallback;
 	Function<void(FrameRequest &)> endCallback;
+	Function<void(const FrameHandle *)> attachCallback;
+	Function<void(const FrameHandle *)> detachCallback;
 	Function<void()> releaseCallback;
 	Rc<Resource> resource;
 	bool compiled = false;

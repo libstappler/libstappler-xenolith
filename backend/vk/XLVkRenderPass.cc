@@ -156,7 +156,7 @@ VkRenderPass RenderPass::getRenderPass(bool alt) const {
 }
 
 bool RenderPass::writeDescriptors(const QueuePassHandle &handle, uint32_t layoutIndex, bool async) const {
-	auto dev = (Device *)_device;
+	auto dev = (Device *)_object.device;
 	auto table = dev->getTable();
 	auto data = handle.getData();
 
@@ -361,7 +361,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 			case core::AttachmentType::Image:
 				if (auto h = dynamic_cast<ImageAttachmentHandle *>(it.second->handle.get())) {
 					if (auto img = static_cast<Image *>(it.second->image->getImage().get())) {
-						auto b = handle.getImageInputOutputBarrier(static_cast<Device *>(_device), img, *h);
+						auto b = handle.getImageInputOutputBarrier(static_cast<Device *>(_object.device), img, *h);
 						if (auto pending = img->getPendingBarrier()) {
 							b.input = *pending;
 							img->dropPendingBarrier();
@@ -376,7 +376,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 			case core::AttachmentType::Buffer:
 				if (auto h = dynamic_cast<BufferAttachmentHandle *>(it.second->handle.get())) {
 					for (auto &it : h->getBuffers()) {
-						auto b = handle.getBufferInputOutputBarrier(static_cast<Device *>(_device), it.buffer, *h, it.offset, it.size);
+						auto b = handle.getBufferInputOutputBarrier(static_cast<Device *>(_object.device), it.buffer, *h, it.offset, it.size);
 						if (auto pending = it.buffer->getPendingBarrier()) {
 							b.input = *pending;
 							it.buffer->dropPendingBarrier();

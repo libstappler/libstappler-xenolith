@@ -90,6 +90,7 @@ protected:
 	float _decorationTone = 0.0f;
 	bool _decorationVisible = true;
 	bool _usePreRotation = true;
+	bool _decorationShown = true;
 
 	std::mutex _windowMutex;
 	std::condition_variable _windowCond;

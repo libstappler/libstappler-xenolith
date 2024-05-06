@@ -55,6 +55,8 @@ protected:
 
 	virtual void updateBackButtonStatus();
 
+	virtual void handleBackgroundTransition(bool value);
+
 	Padding _decorationPadding;
 	InputListener *_inputListener = nullptr;
 

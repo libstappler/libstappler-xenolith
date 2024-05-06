@@ -42,7 +42,7 @@ bool FrameOutputBinding::handleReady(FrameAttachmentData &data, bool success) {
 
 FrameRequest::~FrameRequest() {
 	if (_queue) {
-		_queue->endFrame(*this);
+		setQueue(nullptr);
 	}
 	_renderTargets.clear();
 	_pool = nullptr;
@@ -58,8 +58,7 @@ bool FrameRequest::init(const Rc<FrameEmitter> &emitter, const FrameContraints &
 
 bool FrameRequest::init(const Rc<Queue> &q) {
 	_pool = Rc<PoolRef>::alloc();
-	_queue = q;
-	_queue->beginFrame(*this);
+	setQueue(q);
 	return true;
 }
 
@@ -160,6 +159,20 @@ void FrameRequest::setOutput(const Attachment *a, CompleteCallback &&cb, Rc<Ref>
 
 void FrameRequest::setRenderTarget(const AttachmentData *a, Rc<ImageStorage> &&img) {
 	_renderTargets.emplace(a, move(img));
+}
+
+void FrameRequest::attachFrame(FrameHandle *h) {
+	_frame = h;
+	if (_queue) {
+		_queue->attachFrame(_frame);
+	}
+}
+
+void FrameRequest::detachFrame() {
+	if (_queue) {
+		_queue->detachFrame(_frame);
+	}
+	_frame = nullptr;
 }
 
 bool FrameRequest::onOutputReady(Loop &loop, FrameAttachmentData &data) {

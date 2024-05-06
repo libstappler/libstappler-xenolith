@@ -559,9 +559,14 @@ void ModelQueue::onComplete(Application *app, BytesView data) {
 		_loadOffset = 0;
 		++ _epoch;
 
-		app->performOnMainThread([this, app] {
-			run(app);
-		});
+		if (_epoch < _endEpoch) {
+			app->performOnMainThread([this, app] {
+				run(app);
+			});
+		} else {
+			release(0);
+			app->end();
+		}
 	}
 }
 

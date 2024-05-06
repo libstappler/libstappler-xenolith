@@ -67,6 +67,9 @@ public:
 	virtual void onFrameStarted(FrameRequest &);
 	virtual void onFrameEnded(FrameRequest &);
 
+	virtual void onFrameAttached(const FrameHandle *);
+	virtual void onFrameDetached(const FrameHandle *);
+
 	virtual void setFrameConstraints(const core::FrameContraints &);
 	const core::FrameContraints & getFrameConstraints() const { return _constraints; }
 
@@ -82,6 +85,12 @@ protected:
 	virtual Rc<Queue> makeQueue(Queue::Builder &&);
 
 	virtual void updateContentNode(SceneContent *);
+
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const override {
+		return true;
+	}
+#endif
 
 	Director *_director = nullptr;
 	SceneContent *_content = nullptr;

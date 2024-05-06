@@ -956,6 +956,18 @@ void Queue::endFrame(FrameRequest &frame) {
 	}
 }
 
+void Queue::attachFrame(FrameHandle *frame) {
+	if (_data->attachCallback) {
+		_data->attachCallback(frame);
+	}
+}
+
+void Queue::detachFrame(FrameHandle *frame) {
+	if (_data->detachCallback) {
+		_data->detachCallback(frame);
+	}
+}
+
 void AttachmentBuilder::setType(AttachmentType type) {
 	_data->type = type;
 }
@@ -1562,6 +1574,14 @@ void Queue::Builder::setBeginCallback(Function<void(FrameRequest &)> &&cb) {
 
 void Queue::Builder::setEndCallback(Function<void(FrameRequest &)> &&cb) {
 	_data->endCallback = move(cb);
+}
+
+void Queue::Builder::setAttachCallback(Function<void(const FrameHandle *)> &&cb) {
+	_data->attachCallback = move(cb);
+}
+
+void Queue::Builder::setDetachCallback(Function<void(const FrameHandle *)> &&cb) {
+	_data->detachCallback = move(cb);
 }
 
 const BufferData * Queue::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {

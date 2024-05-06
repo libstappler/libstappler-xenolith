@@ -73,7 +73,7 @@ public:
 
 	bool isHalfPrecision() const { return (_flags & ModelFlags::HalfPrecision) != ModelFlags::None; }
 	bool isTrainable() const { return (_flags & ModelFlags::Trainable) != ModelFlags::None; }
-	bool usesDataFile() const { return _dataFile; }
+	bool usesDataFile() const { return _dataFile ? true : false; }
 
 	float readFloatData();
 

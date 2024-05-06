@@ -257,6 +257,8 @@ void ViewImpl::stopWindow() {
 		ANativeWindow_release(_nativeWindow);
 		_nativeWindow = nullptr;
 	}
+
+	_framesInProgress = 0;
 }
 
 void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
@@ -310,6 +312,8 @@ void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
 	env->CallVoidMethod(windowObj, clearFlags, flag_FLAG_TRANSLUCENT_NAVIGATION | flag_FLAG_TRANSLUCENT_STATUS);
 	env->CallVoidMethod(windowObj, addFlags, flag_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
 		| flag_FLAG_LAYOUT_INSET_DECOR | flag_FLAG_LAYOUT_IN_SCREEN);
+
+	updateDecorations();
 }
 
 bool ViewImpl::pollInput(bool frameReady) {
@@ -429,28 +433,21 @@ void ViewImpl::updateDecorations() {
 	jclass windowClass = env->FindClass("android/view/Window");
 	jclass viewClass = env->FindClass("android/view/View");
 	jmethodID getWindow = env->GetMethodID(activityClass, "getWindow", "()Landroid/view/Window;");
-	jmethodID getDecorView = env->GetMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
-	jmethodID setSystemUiVisibility = env->GetMethodID(viewClass, "setSystemUiVisibility", "(I)V");
-	jmethodID getSystemUiVisibility = env->GetMethodID(viewClass, "getSystemUiVisibility", "()I");
 	jmethodID setNavigationBarColor = env->GetMethodID(windowClass, "setNavigationBarColor", "(I)V");
 	jmethodID setStatusBarColor = env->GetMethodID(windowClass, "setStatusBarColor", "(I)V");
 	jmethodID clearFlags = env->GetMethodID(windowClass, "clearFlags", "(I)V");
 	jmethodID addFlags = env->GetMethodID(windowClass, "addFlags", "(I)V");
+	jmethodID getDecorView = env->GetMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
+	jmethodID setSystemUiVisibility = env->GetMethodID(viewClass, "setSystemUiVisibility", "(I)V");
+	jmethodID getSystemUiVisibility = env->GetMethodID(viewClass, "getSystemUiVisibility", "()I");
 
 	jobject windowObj = env->CallObjectMethod(jactivity, getWindow);
 	jobject decorViewObj = env->CallObjectMethod(windowObj, getDecorView);
 
-	// Get current immersiveness
 	const int currentVisibility = env->CallIntMethod(decorViewObj, getSystemUiVisibility);
 	int updatedVisibility = currentVisibility;
 	updatedVisibility |= flag_SYSTEM_UI_FLAG_LAYOUT_STABLE;
-	if (_decorationVisible) {
-		updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_FULLSCREEN;
-		env->CallVoidMethod(windowObj, clearFlags, flag_FLAG_FULLSCREEN);
-	} else {
-		updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_FULLSCREEN;
-		//env->CallVoidMethod(windowObj, addFlags, flag_FLAG_FULLSCREEN);
-	}
+
 	if (_decorationTone < 0.5f) {
 		env->CallVoidMethod(windowObj, setNavigationBarColor, jint(0xFFFFFFFF));
 		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFFFFFFFF));
@@ -461,6 +458,70 @@ void ViewImpl::updateDecorations() {
 		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFF000000));
 		updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
 		updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+	}
+
+	if (_activity->getSdkVersion() < 30) {
+		// Get current immersiveness
+		if (_decorationVisible) {
+			updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_FULLSCREEN;
+			env->CallVoidMethod(windowObj, clearFlags, flag_FLAG_FULLSCREEN);
+		} else {
+			updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_FULLSCREEN;
+			//env->CallVoidMethod(windowObj, addFlags, flag_FLAG_FULLSCREEN);
+		}
+
+		if (_decorationTone < 0.5f) {
+			updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+			updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+		} else {
+			updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+			updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+		}
+	} else {
+		static int APPEARANCE_LIGHT_STATUS_BARS = 8;
+		static int APPEARANCE_LIGHT_NAVIGATION_BARS = 16;
+
+		jclass controllerClass = env->FindClass("android/view/WindowInsetsController");
+		jclass typeClass = env->FindClass("android/view/WindowInsets$Type");
+
+		jmethodID getInsetsController = env->GetMethodID(windowClass, "getInsetsController", "()Landroid/view/WindowInsetsController;");
+		jmethodID show = env->GetMethodID(controllerClass, "show", "(I)V");
+		jmethodID hide = env->GetMethodID(controllerClass, "hide", "(I)V");
+		jmethodID setSystemBarsAppearance = env->GetMethodID(controllerClass, "setSystemBarsAppearance", "(II)V");
+		jmethodID statusBars = env->GetStaticMethodID(typeClass, "statusBars", "()I");
+		jmethodID navBars = env->GetStaticMethodID(typeClass, "navigationBars", "()I");
+
+		jobject windowObj = env->CallObjectMethod(jactivity, getWindow);
+		jobject insetsControllerObj = env->CallObjectMethod(windowObj, getInsetsController);
+
+		auto bars = env->CallStaticIntMethod(typeClass, statusBars);
+		auto navs = env->CallStaticIntMethod(typeClass, navBars);
+
+		env->CallVoidMethod(windowObj, clearFlags, flag_FLAG_FULLSCREEN);
+
+		if (_decorationTone < 0.5f) {
+			env->CallVoidMethod(insetsControllerObj, setSystemBarsAppearance,
+				APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS,
+				APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
+		} else {
+			env->CallVoidMethod(insetsControllerObj, setSystemBarsAppearance,
+								0,
+								APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
+		}
+
+		if (_decorationVisible) {
+			if (!_decorationShown) {
+				env->CallVoidMethod(insetsControllerObj, show, bars);
+				_decorationShown = true;
+			}
+		} else {
+			if (_decorationShown) {
+				env->CallVoidMethod(insetsControllerObj, hide, bars);
+				_decorationShown = false;
+			}
+		}
+
+		env->CallVoidMethod(insetsControllerObj, show, navs);
 	}
 
 	// log::debug("ViewImpl", "setDecorationVisible ", _decorationVisible);

@@ -472,6 +472,7 @@ InputEventState GesturePressRecognizer::renewEvent(const InputEvent &event, floa
 		if (event.originalLocation.distance(event.currentLocation) > TapDistanceAllowed * density) {
 			return removeEvent(event, false, density);
 		}
+		return InputEventState::Processed;
 	}
 	return InputEventState::Declined;
 }
@@ -843,7 +844,7 @@ InputEventState GestureMoveRecognizer::handleInputEvent(const InputEvent &event,
 	}
 	_event.input = nullptr;
 	_event.event = GestureEvent::Cancelled;
-	return InputEventState::Captured;
+	return InputEventState::Processed;
 }
 
 void GestureMoveRecognizer::onEnter(InputListener *l) {

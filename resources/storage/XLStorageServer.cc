@@ -123,7 +123,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 
 	virtual void scheduleAyncDbTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const override;
 
-	virtual db::StringView getDocuemntRoot() const override;
+	virtual db::StringView getDocumentRoot() const override;
 
 	virtual const db::Scheme *getFileScheme() const override;
 	virtual const db::Scheme *getUserScheme() const override;
@@ -966,7 +966,7 @@ void Server::ServerData::scheduleAyncDbTask(const db::Callback<db::Function<void
 	addAsyncTask(setupCb);
 }
 
-db::StringView Server::ServerData::getDocuemntRoot() const {
+db::StringView Server::ServerData::getDocumentRoot() const {
 	return documentRoot;
 }
 

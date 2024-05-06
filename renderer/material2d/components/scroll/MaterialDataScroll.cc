@@ -454,41 +454,39 @@ void DataScroll::onSliceData(DataMap &val, Time time, Request type) {
 
 	auto itemPtr = new ItemMap();
 	auto dataPtr = new DataMap(std::move(val));
-	auto handlerPtr = new Rc<Handler>(onHandler());
+	auto handler = onHandler();
 
 	auto deferred = _director->getApplication();
 
-	deferred->perform(Rc<thread::Task>::create([handlerPtr, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
-		(*itemPtr) = (*handlerPtr)->run(type, std::move(*dataPtr));
+	deferred->perform(Rc<thread::Task>::create([handler, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
+		(*itemPtr) = handler->run(type, std::move(*dataPtr));
 		for (auto &it : (*itemPtr)) {
 			it.second->setId(it.first.get());
 		}
 		return true;
-	}, [this, handlerPtr, itemPtr, dataPtr, time, type] (const thread::Task &, bool) {
+	}, [this, handler, itemPtr, dataPtr, time, type] (const thread::Task &, bool) {
 		onSliceItems(std::move(*itemPtr), time, type);
 
 		auto interval = Time::now() - time;
 		if (interval < _minLoadTime && type != Request::Update) {
-			auto a = Rc<Sequence>::create(_minLoadTime - interval, [guard = Rc<DataScroll>(this), handlerPtr, itemPtr, dataPtr] {
+			auto a = Rc<Sequence>::create(_minLoadTime - interval, [guard = Rc<DataScroll>(this), handler, itemPtr, dataPtr] {
 				if (guard->isRunning()) {
-					const auto & cb = handlerPtr->get()->getCompleteCallback();
+					const auto & cb = handler->getCompleteCallback();
 					if (cb) {
 						cb();
 					}
 				}
 
-				delete handlerPtr;
 				delete itemPtr;
 				delete dataPtr;
 			});
 			runAction(a);
 		} else {
-			const auto & cb = handlerPtr->get()->getCompleteCallback();
+			const auto & cb = handler->getCompleteCallback();
 			if (cb) {
 				cb();
 			}
 
-			delete handlerPtr;
 			delete itemPtr;
 			delete dataPtr;
 		}
@@ -620,7 +618,7 @@ Rc<DataScroll::Loader> DataScroll::onLoaderRequest(Request type) {
 		}
 	} else {
 		if (_loaderCallback) {
-			_loaderCallback(type, nullptr);
+			return _loaderCallback(type, nullptr);
 		} else {
 			return Rc<Loader>::create(nullptr);
 		}

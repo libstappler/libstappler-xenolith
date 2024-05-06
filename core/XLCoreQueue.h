@@ -111,6 +111,9 @@ public:
 	void beginFrame(FrameRequest &);
 	void endFrame(FrameRequest &);
 
+	void attachFrame(FrameHandle *);
+	void detachFrame(FrameHandle *);
+
 protected:
 	QueueData *_data = nullptr;
 };
@@ -303,6 +306,9 @@ public:
 
 	void setBeginCallback(Function<void(FrameRequest &)> &&);
 	void setEndCallback(Function<void(FrameRequest &)> &&);
+
+	void setAttachCallback(Function<void(const FrameHandle *)> &&);
+	void setDetachCallback(Function<void(const FrameHandle *)> &&);
 
 	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);

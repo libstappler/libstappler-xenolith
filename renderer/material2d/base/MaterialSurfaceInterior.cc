@@ -36,7 +36,7 @@ bool SurfaceInterior::init() {
 		return false;
 	}
 
-	_frameTag = ComponentFrameTag;
+	setFrameTag(ComponentFrameTag);
 	return true;
 }
 
@@ -45,7 +45,7 @@ bool SurfaceInterior::init(SurfaceStyle &&style) {
 		return false;
 	}
 
-	_frameTag = ComponentFrameTag;
+	setFrameTag(ComponentFrameTag);
 	_assignedStyle = move(style);
 	return true;
 }

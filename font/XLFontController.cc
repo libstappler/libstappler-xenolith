@@ -76,7 +76,7 @@ StringView FontController::Builder::getName() const {
 	return _data->name;
 }
 FontController *FontController::Builder::getTarget() const {
-	return _data->target;
+	return _data->target ? _data->target.get() : nullptr;
 }
 
 const FontController::FontSource * FontController::Builder::addFontSource(StringView name, BytesView data) {

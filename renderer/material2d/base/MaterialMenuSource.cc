@@ -180,7 +180,7 @@ void MenuSourceButton::setNextMenu(MenuSource *menu) {
 	}
 }
 MenuSource * MenuSourceButton::getNextMenu() const {
-	return _nextMenu;
+	return _nextMenu ? _nextMenu.get() : nullptr;
 }
 
 void MenuSourceButton::setSelected(bool value) {

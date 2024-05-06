@@ -112,6 +112,8 @@ protected:
 	virtual void applyView(ScrollView *current);
 	virtual void applyViewProgress(ScrollView *current, ScrollView *n, float progress);
 
+	virtual void onBaseNode(const NodeParams &, const Padding &, float offset) override;
+
 	float _currentPos = 0.0f;
 	float _swipeProgress = 0.0f;
 

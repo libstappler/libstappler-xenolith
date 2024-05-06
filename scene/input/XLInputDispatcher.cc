@@ -91,7 +91,10 @@ void InputListenerStorage::addListener(InputListener *input, uint32_t focus) {
 			_preSceneEvents->emplace(lb, Rec{input, focus});
 		}
 	}
-	_maxFocusValue = max(focus, _maxFocusValue);
+}
+
+void InputListenerStorage::updateFocus(uint32_t focusValue) {
+	_maxFocusValue = max(focusValue, _maxFocusValue);
 }
 
 bool InputDispatcher::init(PoolRef *pool, TextInputViewInterface *view) {

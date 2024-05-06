@@ -28,6 +28,8 @@
 #include "XLVkRenderPass.h"
 #include "XLVkTextureSet.h"
 #include "XLVkPipeline.h"
+#include "XL2dLinearGradient.h"
+#include "XL2dFrameContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
@@ -198,7 +200,7 @@ struct VertexMaterialDrawPlan {
 			if (cmd->state != StateIdNone) {
 				auto state = handle->getState(cmd->state);
 				if (state) {
-					auto stateData = dynamic_cast<StateData *>(state->data.get());
+					auto stateData = dynamic_cast<StateData *>(state->data ? state->data.get() : nullptr);
 
 					if (stateData && stateData->gradient) {
 						plan.transform = stateData->transform;

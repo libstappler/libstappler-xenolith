@@ -235,7 +235,7 @@ VkImageAspectFlags Image::getAspectMask() const {
 }
 
 bool Image::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
-	auto dev = (Device *)_device;
+	auto dev = (Device *)_object.device;
 	if (dev->getTable()->vkBindImageMemory(dev->getDevice(), _image, mem->getMemory(), offset + mem->getBlockOffset()) == VK_SUCCESS) {
 		_memory = move(mem);
 		return true;
@@ -274,7 +274,7 @@ void Buffer::dropPendingBarrier() {
 }
 
 bool Buffer::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
-	auto dev = (Device *)_device;
+	auto dev = (Device *)_object.device;
 	if (dev->getTable()->vkBindBufferMemory(dev->getDevice(), _buffer, mem->getMemory(), offset + mem->getBlockOffset()) == VK_SUCCESS) {
 		_memoryOffset = offset;
 		_memory = move(mem);

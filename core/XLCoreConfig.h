@@ -23,7 +23,7 @@
 #ifndef XENOLITH_CORE_XLCORECONFIG_H_
 #define XENOLITH_CORE_XLCORECONFIG_H_
 
-#include <stdint.h>
+#include "SPCore.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 

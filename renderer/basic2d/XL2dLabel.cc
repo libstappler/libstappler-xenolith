@@ -169,8 +169,18 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 		}
 
 		if (it.count() > 0 && it.range->decoration != font::TextDecoration::None) {
-			const font::CharLayoutData &firstChar = format->chars[it.start()];
-			const font::CharLayoutData &lastChar = format->chars[it.start() + it.count() - 1];
+			auto chstart = it.start();
+			auto chend = it.end();
+			while (chstart < chend && chars::isspace(format->chars[chstart].charID)) {
+				++ chstart;
+			}
+
+			if (chstart == chend) {
+				return;
+			}
+
+			const font::CharLayoutData &firstChar = format->chars[chstart];
+			const font::CharLayoutData &lastChar = format->chars[chend - 1];
 
 			auto color = it.range->color;
 			color.a = uint8_t(0.75f * color.a);
@@ -644,7 +654,7 @@ void Label::setDeferred(bool val) {
 void Label::setSelectionCursor(core::TextCursor c) {
 	_selection->clear();
 	_selection->setVisible(c != core::TextCursor::InvalidCursor && c.length > 0);
-	if (c != core::TextCursor::InvalidCursor && c.length > 0) {
+	if (_format && c != core::TextCursor::InvalidCursor && c.length > 0) {
 		auto rects = _format->getLabelRects(c.start, c.start + c.length - 1, _labelDensity);
 		for (auto &rect: rects) {
 			_selection->emplaceRect(rect);

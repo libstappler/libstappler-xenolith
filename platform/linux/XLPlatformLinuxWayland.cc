@@ -24,6 +24,8 @@
 #include "XLPlatformLinuxDbus.h"
 #include "SPPlatformUnistd.h"
 
+#if XL_ENABLE_WAYLAND
+
 #include <sys/mman.h>
 #include <dlfcn.h>
 #include <poll.h>
@@ -2039,3 +2041,5 @@ bool WaylandDecoration::isTouchable() const {
 }
 
 }
+
+#endif

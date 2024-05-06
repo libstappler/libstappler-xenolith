@@ -27,7 +27,7 @@
 #include "XLTexture.h"
 #include "XLDirector.h"
 #include "XLFrameInfo.h"
-#include "XLFrameContext.h"
+#include "XL2dFrameContext.h"
 #include "XL2dCommandList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -220,7 +220,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 			state = *context->getState(stateId);
 		}
 
-		auto newData = Rc<StateData>::create(dynamic_cast<StateData *>(state.data.get()));
+		auto newData = Rc<StateData>::create(dynamic_cast<StateData *>(state.data ? state.data.get() : nullptr));
 		auto transform = frame.modelTransformStack.back();
 		transform.scale(_contentSize.width, _contentSize.height, 1.0f);
 

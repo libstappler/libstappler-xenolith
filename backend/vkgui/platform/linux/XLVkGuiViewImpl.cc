@@ -279,7 +279,7 @@ void ViewImpl::mapWindow() {
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
 	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
 		_view->readFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([this, cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+			_mainLoop->performOnMainThread([cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);
@@ -305,7 +305,9 @@ struct InstanceSurfaceData : Ref {
 	virtual ~InstanceSurfaceData() { }
 
 	SurfaceType surfaceType = SurfaceType::None;
+#if XL_ENABLE_WAYLAND
 	Rc<xenolith::platform::WaylandLibrary> wayland;
+#endif
 	Rc<xenolith::platform::XcbLibrary> xcb;
 };
 
@@ -314,6 +316,7 @@ uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice
 
 	uint32_t ret = 0;
 	if ((instanceData->surfaceType & SurfaceType::Wayland) != SurfaceType::None) {
+#if XL_ENABLE_WAYLAND
 		auto display = xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
 		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on " << (void *)display << ": ";
 		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx, display);
@@ -323,6 +326,7 @@ uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice
 		} else {
 			std::cout << "no\n";
 		}
+#endif
 	}
 	if ((instanceData->surfaceType & SurfaceType::XCB) != SurfaceType::None) {
 		auto conn = xenolith::platform::XcbLibrary::getInstance()->getActiveConnection();
@@ -343,10 +347,12 @@ bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::Vu
 		osSurfaceType |= SurfaceType::XCB;
 	}
 
+#if XL_ENABLE_WAYLAND
 	instanceData->wayland = Rc<xenolith::platform::WaylandLibrary>::create();
 	if (instanceData->wayland) {
 		osSurfaceType |= SurfaceType::Wayland;
 	}
+#endif
 
 	const char *surfaceExt = nullptr;
 	for (auto &extension : info.availableExtensions) {

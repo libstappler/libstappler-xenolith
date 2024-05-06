@@ -27,6 +27,7 @@
 #include "XLPlatformLinuxView.h"
 
 #if LINUX
+#if XL_ENABLE_WAYLAND
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -182,6 +183,7 @@ protected:
 
 }
 
+#endif
 #endif
 
 #endif /* XENOLITH_PLATFORM_XLPLATFROMLINUXWAYLANDVIEW_H_ */

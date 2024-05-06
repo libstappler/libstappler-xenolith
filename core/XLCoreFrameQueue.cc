@@ -238,6 +238,7 @@ void FrameQueue::invalidate() {
 	if (!_finalized) {
 		XL_FRAME_QUEUE_LOG("invalidate");
 		_success = false;
+		_invalidated = true;
 		auto f = _frame;
 		onFinalized();
 		if (f) {
@@ -470,7 +471,7 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 		return;
 	}
 
-	if (!isRenderPassReadyForState(data, FrameRenderPassState(toInt(state) + 1))) {
+	if (!isRenderPassReadyForState(data, FrameRenderPassState(toInt(state) + 1)) && !_invalidated) {
 		_awaitPasses.emplace_back(&data, state);
 		return;
 	}
@@ -913,7 +914,7 @@ void FrameQueue::invalidate(FrameAttachmentData &data) {
 		return;
 	}
 
-	if (!data.waitForResult) {
+	if (!data.waitForResult || _invalidated) {
 		finalizeAttachment(data);
 	}
 }
@@ -940,7 +941,7 @@ void FrameQueue::invalidate(FramePassData &data) {
 		data.framebuffer = nullptr;
 	}
 
-	if (!data.waitForResult) {
+	if (!data.waitForResult || _invalidated) {
 		updateRenderPassState(data, FrameRenderPassState::Finalized);
 	}
 }

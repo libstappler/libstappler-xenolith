@@ -93,7 +93,7 @@ Rc<DataScroll::Item> DataScrollHandlerGrid::onItem(Value &&data, DataSource::Id 
 	DataSource::Id::Type row = id.get() / _currentCols;
 	DataSource::Id::Type col = id.get() % _currentCols;
 
-	Vec2 pos(col * _currentCellSize.width /*+ _widthPadding*/, row * _currentCellSize.height);
+	Vec2 pos(col * _currentCellSize.width + _widthPadding, row * _currentCellSize.height);
 
 	return Rc<DataScroll::Item>::create(std::move(data), pos, _currentCellSize);
 }

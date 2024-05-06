@@ -77,14 +77,7 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 
 	auto t = _mainLoop->getClock();
 
-	if (_constraints != req->getFrameConstraints()) {
-		_constraints = req->getFrameConstraints();
-		if (_scene) {
-			_scene->setFrameConstraints(_constraints);
-		}
-
-		updateGeneralTransform();
-	}
+	setFrameConstraints(req->getFrameConstraints());
 
 	update(t);
 	if (_scene) {
@@ -148,17 +141,61 @@ void Director::update(uint64_t t) {
 }
 
 void Director::end() {
+#if SP_REF_DEBUG
+	if (_scene) {
+		_scene->onFinished(this);
+	}
+	_autorelease.clear();
+
+	if (_scene) {
+		if (_scene->getReferenceCount() > 1) {
+			auto scene = _scene.get();
+			_scene = nullptr;
+
+			scene->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+				StringStream stream;
+				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
+				for (auto &it : vec) {
+					stream << "\t" << it << "\n";
+				}
+				log::debug("Director", stream.str());
+			});
+		} else {
+			_scene = nullptr;
+		}
+	}
+
+	if (core::FrameHandle::GetActiveFramesCount()) {
+		core::FrameHandle::DescribeActiveFrames();
+	}
+#else
 	if (_scene) {
 		_scene->onFinished(this);
 		_scene = nullptr;
-		_nextScene = nullptr;
 	}
 
+	if (!_scheduler->empty()) {
+		_scheduler->unscheduleAll();
+	}
+
+	_nextScene = nullptr;
 	_autorelease.clear();
+#endif
 }
 
 core::Loop *Director::getGlLoop() const {
 	return _mainLoop->getGlLoop();
+}
+
+void Director::setFrameConstraints(const core::FrameContraints &c) {
+	if (_constraints != c) {
+		_constraints = c;
+		if (_scene) {
+			_scene->setFrameConstraints(_constraints);
+		}
+
+		updateGeneralTransform();
+	}
 }
 
 void Director::runScene(Rc<Scene> &&scene) {

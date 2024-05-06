@@ -113,7 +113,7 @@ protected:
 
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override {
-		return true;
+		return false;
 	}
 #endif
 

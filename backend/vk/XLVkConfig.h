@@ -23,7 +23,7 @@ THE SOFTWARE.
 #ifndef XENOLITH_BACKEND_VK_XLVKCONFIG_H_
 #define XENOLITH_BACKEND_VK_XLVKCONFIG_H_
 
-#include <stdint.h>
+#include "SPCore.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 

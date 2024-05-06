@@ -36,7 +36,7 @@ bool MaterialTest::init(LayoutName layout, StringView text) {
 	_layout = layout;
 	_layoutRoot = getRootLayoutForLayout(layout);
 
-	setViewDecorationTracked(true);
+	setViewDecorationFlags(material2d::ViewDecorationFlags::Visible);
 
 	if (_layoutRoot != _layout) {
 		_backButtonCallback = [this] {

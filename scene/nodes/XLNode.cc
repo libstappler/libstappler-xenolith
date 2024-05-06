@@ -1233,8 +1233,13 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 
 	for (auto &it : _inputEvents) {
 		if (it->isEnabled()) {
-			info.input->addListener(it, info.focusValue);
+			auto dedicated = it->getDedicatedFocus();
+			info.input->addListener(it, dedicated == 0 ? info.focusValue : dedicated);
 		}
+	}
+
+	if (!_inputEvents.empty()) {
+		info.input->updateFocus(info.focusValue);
 	}
 
 	// self draw

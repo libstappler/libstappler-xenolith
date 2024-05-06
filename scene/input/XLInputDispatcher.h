@@ -46,6 +46,8 @@ public:
 
 	void addListener(InputListener *, uint32_t focusValue);
 
+	void updateFocus(uint32_t focusValue);
+
 	template <typename Callback>
 	bool foreach(const Callback &, bool focusOnly);
 
@@ -130,7 +132,7 @@ bool InputListenerStorage::foreach(const Callback &cb, bool focusOnly) {
 	end = _preSceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!focusOnly || it->focus == _maxFocusValue) {
+		if (!focusOnly || it->focus >= _maxFocusValue) {
 			if (!cb(*it)) {
 				return false;
 			}
@@ -141,7 +143,7 @@ bool InputListenerStorage::foreach(const Callback &cb, bool focusOnly) {
 	end = _sceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!focusOnly || it->focus == _maxFocusValue) {
+		if (!focusOnly || it->focus >= _maxFocusValue) {
 			if (!cb(*it)) {
 				return false;
 			}
@@ -152,7 +154,7 @@ bool InputListenerStorage::foreach(const Callback &cb, bool focusOnly) {
 	end = _postSceneEvents->rend();
 
 	for (;it != end; ++ it) {
-		if (!focusOnly || it->focus == _maxFocusValue) {
+		if (!focusOnly || it->focus >= _maxFocusValue) {
 			if (!cb(*it)) {
 				return false;
 			}

@@ -474,7 +474,7 @@ void DeviceInfo::Features::clear() {
 #endif
 
 #if VK_VERSION_1_3
-	doClear(SP_VK_BOOL_ARRAY(device13, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan13Features));
+	doClear(SP_VK_BOOL_ARRAY(device13, robustImageAccess, VkPhysicalDeviceVulkan13Features));
 #endif
 
 	doClear(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR));

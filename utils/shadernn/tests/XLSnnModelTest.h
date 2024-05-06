@@ -103,6 +103,7 @@ protected:
 	Rc<Model> _model;
 	Rc<ModelProcessor> _processor;
 
+	size_t _endEpoch = 2;
 	size_t _epoch = 0;
 	size_t _loadOffset = 0;
 	float _epochLoss = 0.0f;

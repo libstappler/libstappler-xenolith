@@ -43,6 +43,22 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	l->setTouchFilter([] (const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});
+
+
+	/*l->addMouseOverRecognizer([this] (const GestureData &ev) {
+		switch (ev.event) {
+		case GestureEvent::Began:
+			handleMouseEnter();
+			return true;
+			break;
+		default:
+			handleMouseLeave();
+			return true;
+			break;
+		}
+		return true;
+	}, false);*/
+
 	l->addMoveRecognizer([this] (const GestureData &ev) {
 		bool touched = isTouched(ev.input->currentLocation);
 		if (touched != _focus) {
@@ -56,19 +72,21 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 		return true;
 	}, false);
 	l->addPressRecognizer([this] (const GesturePress &press) {
-		switch (press.event) {
-		case GestureEvent::Began:
-			return isTouched(press.pos);
-			break;
-		case GestureEvent::Activated:
-			return true;
-			break;
-		case GestureEvent::Ended:
-			return handlePress();
-			break;
-		case GestureEvent::Cancelled:
-			return true;
-			break;
+		if (isTouched(press.pos)) {
+			switch (press.event) {
+			case GestureEvent::Began:
+				return true;
+				break;
+			case GestureEvent::Activated:
+				return true;
+				break;
+			case GestureEvent::Ended:
+				return handlePress();
+				break;
+			case GestureEvent::Cancelled:
+				return true;
+				break;
+			}
 		}
 		return false;
 	});

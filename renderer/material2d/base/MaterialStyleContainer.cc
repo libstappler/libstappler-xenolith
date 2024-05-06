@@ -35,7 +35,7 @@ bool StyleContainer::init() {
 		return false;
 	}
 
-	_frameTag = ComponentFrameTag;
+	setFrameTag(ComponentFrameTag);
 
 	_schemes.emplace(PrimarySchemeTag, ColorScheme(ThemeType::LightTheme, ColorHCT(292, 100, 50, 1.0f), false));
 

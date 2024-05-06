@@ -150,6 +150,7 @@ protected:
 	uint64_t _order = 0;
 	bool _finalized = false;
 	bool _success = false;
+	bool _invalidated = false;
 
 	HashMap<const QueuePassData *, FramePassData> _renderPasses;
 	HashMap<const AttachmentData *, FrameAttachmentData> _attachments;

@@ -69,6 +69,9 @@ public:
 
 	void setRenderTarget(const AttachmentData *, Rc<ImageStorage> &&);
 
+	void attachFrame(FrameHandle *);
+	void detachFrame();
+
 	bool onOutputReady(Loop &, FrameAttachmentData &);
 	void onOutputInvalidated(Loop &, FrameAttachmentData &);
 
@@ -133,6 +136,7 @@ protected:
 	};
 
 	Map<const AttachmentData *, WaitInputData> _waitForInputs;
+	FrameHandle *_frame = nullptr;
 	std::forward_list<Rc<Ref>> _autorelease;
 };
 

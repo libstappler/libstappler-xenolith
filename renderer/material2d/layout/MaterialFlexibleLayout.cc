@@ -203,20 +203,21 @@ const FlexibleLayout::HeightFunction &FlexibleLayout::getFlexibleHeightFunction(
 void FlexibleLayout::updateFlexParams() {
 	NodeParams decorParams, flexibleNodeParams, baseNodeParams;
 
+	bool tracked = (_viewDecoration & ViewDecorationFlags::Tracked) != ViewDecorationFlags::None;
 	bool hasTopDecor = (_decorationMask & DecorationMask::Top) != DecorationMask::None;
 	auto size = _contentSize;
 	size.height -= _decorationPadding.bottom;
-	float decor = _viewDecorationTracked ? _decorationPadding.top : 0.0f;
+	float decor = tracked ? _decorationPadding.top : 0.0f;
 	float flexSize = _realFlexibleMinHeight + (_realFlexibleMaxHeight + decor - _realFlexibleMinHeight) * _flexibleLevel;
 
-	if (flexSize >= _realFlexibleMaxHeight && _viewDecorationTracked) {
+	if (flexSize >= _realFlexibleMaxHeight && tracked) {
 		float tmpDecor = (flexSize - _realFlexibleMaxHeight);
 		decorParams.setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(), tmpDecor));
 		size.height -= tmpDecor;
 		flexSize = _realFlexibleMaxHeight;
 		decorParams.setPosition(Vec2(_decorationPadding.left, _contentSize.height));
 		decorParams.setVisible(true);
-	} else if (_viewDecorationTracked) {
+	} else if (tracked) {
 		decorParams.setVisible(false);
 	} else {
 		decorParams.setVisible(hasTopDecor);
@@ -230,7 +231,7 @@ void FlexibleLayout::updateFlexParams() {
 	flexibleNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(), flexSize + _flexibleExtraSpace));
 	flexibleNodeParams.setVisible(flexSize > 0.0f);
 
-	if (_viewDecorationTracked && _sceneContent) {
+	if (tracked && _sceneContent) {
 		if (_flexibleLevel == 1.0f) {
 			_sceneContent->showViewDecoration();
 		} else {
@@ -375,7 +376,7 @@ float FlexibleLayout::getCurrentFlexibleHeight() const {
 }
 
 float FlexibleLayout::getCurrentFlexibleMax() const {
-	return _realFlexibleMaxHeight + (_viewDecorationTracked?_decorationPadding.top:0);
+	return _realFlexibleMaxHeight + (((_viewDecoration & ViewDecorationFlags::Tracked) != ViewDecorationFlags::None)?_decorationPadding.top:0);
 }
 
 void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
@@ -513,8 +514,11 @@ void FlexibleLayout::clearFlexibleExpand(float duration) {
 }
 
 DecorationStatus FlexibleLayout::getDecorationStatus() const {
-	if (_viewDecorationTracked) {
-		return (_flexibleLevel == 1.0f) ? DecorationStatus::Visible : DecorationStatus::Hidden;
+	if ((_viewDecoration & ViewDecorationFlags::Visible) != ViewDecorationFlags::None) {
+		if ((_viewDecoration & ViewDecorationFlags::Tracked) != ViewDecorationFlags::None) {
+			return (_flexibleLevel == 1.0f) ? DecorationStatus::Visible : DecorationStatus::Hidden;
+		}
+		return DecorationStatus::Visible;
 	} else {
 		return DecorationStatus::DontCare;
 	}

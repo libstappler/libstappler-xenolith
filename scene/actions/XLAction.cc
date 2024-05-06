@@ -288,7 +288,7 @@ void Sequence::update(float t) {
 		auto timeFromActionStart = t - front->minThreshold;
 		auto actionRelativeTime = timeFromActionStart / front->threshold;
 
-		if (actionRelativeTime >= 1.0f - std::numeric_limits<float>::epsilon()) {
+		if (actionRelativeTime >= 1.0f - std::numeric_limits<float>::epsilon() || t == 1.0f) {
 			front->action->update(1.0f);
 			dt = t - front->maxThreshold;
 			front->action->stop();

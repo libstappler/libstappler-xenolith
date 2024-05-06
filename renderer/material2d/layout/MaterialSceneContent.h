@@ -58,6 +58,10 @@ public:
 	virtual bool onBackButton() override;
 
 protected:
+	virtual void updateNodesVisibility() override;
+	virtual void handleBackgroundTransition(bool value) override;
+
+	Node *_snackbarRoot = nullptr;
 	Snackbar *_snackbar = nullptr;
 	NavigationDrawer *_navigation = nullptr;
 };

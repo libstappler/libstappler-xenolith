@@ -28,6 +28,7 @@
 #include "SPDso.h"
 
 #if LINUX
+#if XL_ENABLE_WAYLAND
 
 #include "linux/thirdparty/wayland-protocols/xdg-shell-client-protocol.h"
 #include "linux/thirdparty/wayland-protocols/viewporter-client-protocol.h"
@@ -918,6 +919,7 @@ protected:
 
 }
 
+#endif
 #endif
 
 #endif /* XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXWAYLAND_H_ */

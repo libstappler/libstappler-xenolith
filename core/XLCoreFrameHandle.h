@@ -114,6 +114,12 @@ protected:
 	virtual void tryComplete();
 	virtual void onComplete();
 
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const override {
+		return false;
+	}
+#endif
+
 	Loop *_loop = nullptr; // loop can not die until frames are performed
 	Device *_device = nullptr;
 	Rc<PoolRef> _pool;

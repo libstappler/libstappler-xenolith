@@ -118,6 +118,10 @@ void InputListener::setPriority(int32_t p) {
 	_priority = p;
 }
 
+void InputListener::setDedicatedFocus(uint32_t v) {
+	_dedicatedFocus = v;
+}
+
 void InputListener::setExclusive() {
 	if (_scene) {
 		_scene->getDirector()->getInputDispatcher()->setListenerExclusive(this);

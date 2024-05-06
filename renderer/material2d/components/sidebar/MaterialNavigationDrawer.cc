@@ -23,6 +23,8 @@
 #include "MaterialNavigationDrawer.h"
 #include "MaterialMenuSource.h"
 #include "MaterialMenu.h"
+#include "MaterialMenuButton.h"
+#include "MaterialStyleContainer.h"
 #include "MaterialScene.h"
 #include "XLEventListener.h"
 #include "XLInputListener.h"
@@ -57,7 +59,7 @@ bool NavigationDrawer::init() {
 	_navigation->setEnabled(false);
 	_listener->setEnabled(false);
 
-	setNodeWidthCallback([this] (const Size2 &size) {
+	setNodeWidthCallback([] (const Size2 &size) {
 		return std::min(size.width - 56, 64.0f * 5.0f);
 	});
 
@@ -67,31 +69,9 @@ bool NavigationDrawer::init() {
 void NavigationDrawer::onContentSizeDirty() {
 	Sidebar::onContentSizeDirty();
 
-	if (_scene->getContent() == _parent) {
-
-	} else {
-
-	}
-
 	if (auto source = _navigation->getMenuSource()) {
 		source->setDirty();
 	}
-
-	/*auto statusBar = stappler::screen::statusBarHeight();
-	if (!stappler::Screen::getInstance()->isStatusBarEnabled()) {
-		statusBar = 0.0f;
-	}
-	if (_statusBarLayer) {
-		if (statusBar == 0.0f) {
-			_statusBarLayer->setVisible(false);
-		} else {
-			_statusBarLayer->setVisible(true);
-			_statusBarLayer->setContentSize(Size2(_nodeWidth, statusBar));
-			_statusBarLayer->setPosition(Vec2(0, _contentSize.height));
-		}
-	}*/
-
-	//_navigation->getScroll()->setPadding(Padding().setTop(statusBar));
 }
 
 Menu *NavigationDrawer::getNavigationMenu() const {

@@ -49,6 +49,8 @@ public:
 
 	bool init(Application *, const core::FrameContraints &, View *view);
 
+	void setFrameConstraints(const core::FrameContraints &);
+
 	void runScene(Rc<Scene> &&);
 
 	bool acquireFrame(const Rc<FrameRequest> &);

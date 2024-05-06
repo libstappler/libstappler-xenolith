@@ -118,9 +118,10 @@ void Device::clearShaders() {
 }
 
 void Device::invalidateObjects() {
-	auto objs = std::move(_objects);
-	_objects.clear();
-	for (auto &it : objs) {
+	Vector<ObjectData> data;
+
+	std::unique_lock<Mutex> lock(_objectMutex);
+	for (auto &it : _objects) {
 		if (auto img = dynamic_cast<ImageObject *>(it)) {
 			log::warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((", typeid(*it).name(),
 					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
@@ -149,8 +150,22 @@ void Device::invalidateObjects() {
 		});
 #endif
 
-		it->invalidate();
+		auto d = (ObjectData *)&it->getObjectData();
+
+		data.emplace_back(*d);
+
+		d->callback = nullptr;
 	}
+	_objects.clear();
+	lock.unlock();
+
+	for (auto &_object : data) {
+		if (_object.callback) {
+			_object.callback(_object.device, _object.type, _object.handle, _object.ptr);
+		}
+	}
+
+	data.clear();
 }
 
 }

@@ -64,11 +64,48 @@ protected:
 	std::thread::id _threadId;
 };
 
+static thread_local AppEnv tl_interface;
+static JavaVM *s_vm = nullptr;
+
+static JNIEnv *getEnv() {
+	void *ret = nullptr;
+
+	s_vm->GetEnv(&ret, JNI_VERSION_1_6);
+	return reinterpret_cast<JNIEnv*>(ret);
+}
+
+AppEnv *AppEnv::getInerface() {
+	if (!tl_interface.env) {
+		auto env = getEnv();
+		if (env) {
+			tl_interface.init(s_vm, env, false);
+		} else {
+			s_vm->AttachCurrentThread(&env, nullptr);
+			if (env) {
+				tl_interface.init(s_vm, env, true);
+			}
+		}
+	}
+	return &tl_interface;
+};
+
+AppEnv::~AppEnv() {
+	if (attached) {
+		vm->DetachCurrentThread();
+	}
+}
+
+void AppEnv::init(JavaVM *v, JNIEnv *e, bool a) {
+	vm = v;
+	env = e;
+	attached = a;
+}
+
 EngineMainThread::~EngineMainThread() { }
 
 bool EngineMainThread::init(Activity *a, EngineThreadCallback &&cb) {
 	_activity = a;
-	_callback = move(cb);
+	_callback = std::move(cb);
 	_thread = std::thread(EngineMainThread::workerThread, this, nullptr);
 	return true;
 }
@@ -167,6 +204,7 @@ Activity::~Activity() {
 }
 
 bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
+	s_vm = activity->vm;
 	_flags = flags;
 	_activity = activity;
 	_config = AConfiguration_new();
@@ -500,8 +538,6 @@ void Activity::handleContentRectChanged(const ARect *r) {
 
 	if (auto view = waitForView()) {
 		auto verticalSpace = _windowSize.height - r->top;
-		auto top = r->top - (r->bottom - verticalSpace);
-		auto bottom = r->bottom - verticalSpace;
 		view->setContentPadding(Padding(r->top, _windowSize.width - r->right, _windowSize.height - r->bottom, r->left));
 	}
 }
@@ -549,12 +585,14 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 	}
 
 	_windowSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+	_recreateSwapchain = true;
 }
 
 void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
 	log::format(log::Info, "NativeActivity", "NativeWindowDestroyed: %p -- %p", _activity, window);
 	if (_rootView) {
 		_rootView->stopNativeWindow();
+		_recreateSwapchain = true;
 	}
 }
 
@@ -570,8 +608,10 @@ void Activity::handleNativeWindowResized(ANativeWindow *window) {
 	log::format(log::Info, "NativeActivity", "NativeWindowResized: %p -- %p -- %d x %d", _activity, window,
 			ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
-	_windowSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
-	if (_rootView) {
+	auto newSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+	if (_rootView && (_windowSize != newSize || _recreateSwapchain)) {
+		_recreateSwapchain = false;
+		_windowSize = newSize;
 		_rootView->deprecateSwapchain(false);
 	}
 }
@@ -1227,22 +1267,23 @@ platform::ViewInterface *Activity::waitForView() {
 }
 
 void Activity::openUrl(StringView url) {
-	auto intentClass = _activity->env->FindClass("android/content/Intent");
-	auto uriClass = _activity->env->FindClass("android/net/Uri");
+	auto env = AppEnv::getInerface();
+	auto intentClass = env->env->FindClass("android/content/Intent");
+	auto uriClass = env->env->FindClass("android/net/Uri");
 
-	auto j_str = _activity->env->NewStringUTF(url.data());
-	auto j_uri = _activity->env->CallStaticObjectMethod(uriClass, _uriParseMethod, j_str);
-	auto j_ACTION_VIEW = _activity->env->GetStaticObjectField(intentClass, _intentActionView);
+	auto j_str = env->env->NewStringUTF(url.data());
+	auto j_uri = env->env->CallStaticObjectMethod(uriClass, _uriParseMethod, j_str);
+	auto j_ACTION_VIEW = env->env->GetStaticObjectField(intentClass, _intentActionView);
 
-	auto j_intent = _activity->env->NewObject(intentClass, _intentInitMethod, j_ACTION_VIEW, j_uri);
-	_activity->env->CallObjectMethod(j_intent, _intentAddFlagsMethod, FLAG_ACTIVITY_NEW_TASK);
-	_activity->env->CallVoidMethod(_activity->clazz, _startActivityMethod, j_intent);
+	auto j_intent = env->env->NewObject(intentClass, _intentInitMethod, j_ACTION_VIEW, j_uri);
+	env->env->CallObjectMethod(j_intent, _intentAddFlagsMethod, FLAG_ACTIVITY_NEW_TASK);
+	env->env->CallVoidMethod(_activity->clazz, _startActivityMethod, j_intent);
 
-	_activity->env->DeleteLocalRef(j_intent);
-	_activity->env->DeleteLocalRef(j_ACTION_VIEW);
-	_activity->env->DeleteLocalRef(j_str);
-	_activity->env->DeleteLocalRef(uriClass);
-	_activity->env->DeleteLocalRef(intentClass);
+	env->env->DeleteLocalRef(j_intent);
+	env->env->DeleteLocalRef(j_ACTION_VIEW);
+	env->env->DeleteLocalRef(j_str);
+	env->env->DeleteLocalRef(uriClass);
+	env->env->DeleteLocalRef(intentClass);
 }
 
 void Activity::updateTextCursor(uint32_t pos, uint32_t len) {
@@ -1286,7 +1327,8 @@ void Activity::updateView() {
 }
 
 bool Activity::handleBackButton() {
-	if (_rootView->getBackButtonCounter() != 0) {
+	auto counter = _rootView->getBackButtonCounter();
+	if (counter != 0) {
 		return false;
 	}
 	return true;

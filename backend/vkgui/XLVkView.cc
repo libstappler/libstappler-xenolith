@@ -703,12 +703,12 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 	newFrameRequest = _frameEmitter->makeRequest(constraints);
 
 	// make new frame request immediately
-	_mainLoop->performOnMainThread([this, req = move(newFrameRequest), swapchainImage] () mutable {
+	_mainLoop->performOnMainThread([this, req = move(newFrameRequest), swapchainImage, swapchain = _swapchain] () mutable {
 		XL_VKVIEW_LOG("scheduleSwapchainImage: _director->acquireFrame");
 		if (_director->acquireFrame(req)) {
 			XL_VKVIEW_LOG("scheduleSwapchainImage: frame acquired");
-			_glLoop->performOnGlThread([this, req = move(req), swapchainImage = move(swapchainImage)] () mutable {
-				if (_glLoop->isRunning() && _swapchain) {
+			_glLoop->performOnGlThread([this, req = move(req), swapchainImage = move(swapchainImage), swapchain] () mutable {
+				if (_glLoop->isRunning() && swapchain) {
 					XL_VKVIEW_LOG("scheduleSwapchainImage: setup frame request");
 					auto &queue = req->getQueue();
 					auto a = queue->getPresentImageOutput();
@@ -721,9 +721,9 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 						return;
 					}
 
-					req->autorelease(_swapchain);
+					req->autorelease(swapchain);
 					req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
-					req->setOutput(a, [this, swapchain = _swapchain.get()] (core::FrameAttachmentData &data, bool success, Ref *) {
+					req->setOutput(a, [this, swapchain] (core::FrameAttachmentData &data, bool success, Ref *) {
 						XL_VKVIEW_LOG("scheduleSwapchainImage: output on frame");
 						if (data.image) {
 							if (success) {
@@ -738,12 +738,15 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 						return true;
 					}, this);
 					XL_VKVIEW_LOG("scheduleSwapchainImage: submit frame");
-					auto order = _frameEmitter->submitNextFrame(move(req))->getOrder();
-					swapchainImage->setFrameIndex(order);
+					auto nextFrame = _frameEmitter->submitNextFrame(move(req));
+					if (nextFrame) {
+						auto order = nextFrame->getOrder();
+						swapchainImage->setFrameIndex(order);
 
-					performOnThread([this, order] {
-						_frameOrder = order;
-					}, this);
+						performOnThread([this, order] {
+							_frameOrder = order;
+						}, this);
+					}
 				}
 			}, this);
 		}
@@ -917,7 +920,7 @@ bool View::recreateSwapchain(core::PresentMode mode) {
 		for (auto &it : data->scheduledImages) {
 			it->invalidate();
 		}
-		// data->frameEmitter->dropFrames();
+		 data->frameEmitter->dropFrames();
 	}, this);
 
 	_fenceImages.clear();

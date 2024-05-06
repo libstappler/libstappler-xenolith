@@ -36,12 +36,18 @@ bool SceneContent::init() {
 
 	_inputListener = addInputListener(Rc<InputListener>::create());
 	_inputListener->setPriority(-1);
+	_inputListener->setDedicatedFocus(maxOf<uint32_t>());
 	_inputListener->addKeyRecognizer([this] (GestureData data) {
 		if (data.event == GestureEvent::Ended) {
 			return onBackButton();
 		}
 		return data.event == GestureEvent::Began;
 	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
+
+	_inputListener->setBackgroudCallback([this] (bool val) -> bool {
+		handleBackgroundTransition(val);
+		return true;
+	});
 
 	return true;
 }
@@ -78,6 +84,8 @@ void SceneContent::onContentSizeDirty() {
 
 void SceneContent::updateBackButtonStatus() { }
 
+void SceneContent::handleBackgroundTransition(bool val) { }
+
 bool SceneContent::onBackButton() {
 	return false;
 }
@@ -94,17 +102,21 @@ void SceneContent::setHandlesViewDecoration(bool value) {
 }
 
 void SceneContent::showViewDecoration() {
-	if (_running && _handlesViewDecoration) {
-		_director->getView()->setDecorationVisible(true);
+	if (_decorationVisible != true) {
+		if (_running && _handlesViewDecoration) {
+			_director->getView()->setDecorationVisible(true);
+		}
+		_decorationVisible = true;
 	}
-	_decorationVisible = true;
 }
 
 void SceneContent::hideViewDecoration() {
-	if (_running && _handlesViewDecoration) {
-		_director->getView()->setDecorationVisible(false);
+	if (_decorationVisible != false) {
+		if (_running && _handlesViewDecoration) {
+			_director->getView()->setDecorationVisible(false);
+		}
+		_decorationVisible = false;
 	}
-	_decorationVisible = false;
 }
 
 void SceneContent::setDecorationPadding(Padding padding) {

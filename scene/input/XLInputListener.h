@@ -75,6 +75,9 @@ public:
 	void setPriority(int32_t);
 	int32_t getPriority() const { return _priority; }
 
+	void setDedicatedFocus(uint32_t);
+	uint32_t getDedicatedFocus() const { return _dedicatedFocus; }
+
 	void setOpacityFilter(float value) { _opacityFilter = value; }
 	float getOpacityFilter() const { return _opacityFilter; }
 
@@ -135,6 +138,7 @@ protected:
 	GestureRecognizer *addRecognizer(GestureRecognizer *);
 
 	int32_t _priority = 0; // 0 - scene graph
+	uint32_t _dedicatedFocus = 0; // 0 - unused
 	bool _enabled = true;
 	bool _running = false;
 	Node *_owner = nullptr;

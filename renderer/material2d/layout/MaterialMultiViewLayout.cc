@@ -478,4 +478,12 @@ void MultiViewLayout::applyViewProgress(ScrollView *current, ScrollView *n, floa
 	_generator->onApplyProgress(current, n, p);
 }
 
+void MultiViewLayout::onBaseNode(const NodeParams &params, const Padding &padding, float offset) {
+	FlexibleLayout::onBaseNode(params, padding, offset);
+
+	if (_swipeProgress != 0.0f)  {
+		_currentView->setPositionX(_swipeProgress);
+	}
+}
+
 }

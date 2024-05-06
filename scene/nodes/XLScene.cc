@@ -164,6 +164,14 @@ void Scene::onFrameEnded(FrameRequest &req) {
 	release(req.getSceneId());
 }
 
+void Scene::onFrameAttached(const FrameHandle *frame) {
+
+}
+
+void Scene::onFrameDetached(const FrameHandle *frame) {
+
+}
+
 void Scene::setFrameConstraints(const core::FrameContraints &constraints) {
 	if (_constraints != constraints) {
 		auto size = constraints.getScreenSize();
@@ -206,6 +214,12 @@ auto Scene::makeQueue(Queue::Builder &&builder) -> Rc<Queue> {
 	});
 	builder.setEndCallback([this] (FrameRequest &frame) {
 		onFrameEnded(frame);
+	});
+	builder.setAttachCallback([this] (const FrameHandle *frame) {
+		onFrameAttached(frame);
+	});
+	builder.setDetachCallback([this] (const FrameHandle *frame) {
+		onFrameDetached(frame);
 	});
 
 	return Rc<Queue>::create(move(builder));

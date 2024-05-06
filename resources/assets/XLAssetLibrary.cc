@@ -395,18 +395,18 @@ void AssetLibrary::eraseVersion(int64_t id) {
 }
 
 void AssetLibrary::setAssetDownload(int64_t id, bool value) {
-	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) {
+	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) -> bool {
 		return _container->getComponent()->getAssets().update(t, id, db::Value({
 			pair("download", db::Value(value))
-		}));
+		})) ? true : false;
 	});
 }
 
 void AssetLibrary::setVersionComplete(int64_t id, bool value) {
-	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) {
+	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) -> bool {
 		return _container->getComponent()->getVersions().update(t, id, db::Value({
 			pair("complete", db::Value(value))
-		}));
+		})) ? true : false;
 	});
 }
 

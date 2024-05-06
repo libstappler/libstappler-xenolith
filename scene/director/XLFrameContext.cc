@@ -43,6 +43,7 @@ void FrameContext::onExit() {
 	_scene = nullptr;
 }
 
+SP_COVERAGE_TRIVIAL
 Rc<FrameContextHandle> FrameContext::makeHandle(FrameInfo &) {
 	return nullptr;
 }
@@ -248,6 +249,9 @@ void FrameContext::submitMaterials(const FrameInfo &info) {
 }
 
 void FrameContext::revokeImages(SpanView<uint64_t> vec) {
+#ifdef COVERAGE
+	listMaterials();
+#endif
 	auto shouldRevoke = [&, this] (const ContextMaterialInfo &iit) {
 		for (auto &id : vec) {
 			if (iit.info.hasImage(id)) {

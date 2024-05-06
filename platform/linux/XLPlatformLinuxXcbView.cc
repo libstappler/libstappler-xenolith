@@ -457,7 +457,7 @@ bool XcbView::poll(bool frameReady) {
 			inputEvents.emplace_back(event);
 
 			String str;
-			string::utf8Encode(str, event.key.keychar);
+			unicode::utf8Encode(str, event.key.keychar);
 			XL_X11_LOG("Key pressed in window ", ev->event, " (", (int)ev->time, ") ", event.key.keysym,
 					" '", str, "' ", uint32_t(event.key.keychar));
 			break;
@@ -505,7 +505,7 @@ bool XcbView::poll(bool frameReady) {
 			inputEvents.emplace_back(event);
 
 			String str;
-			string::utf8Encode(str, event.key.keychar);
+			unicode::utf8Encode(str, event.key.keychar);
 			XL_X11_LOG("Key released in window ", ev->event, " (", (int)ev->time, ") ", event.key.keysym,
 					" '", str, "' ", uint32_t(event.key.keychar));
 			break;
