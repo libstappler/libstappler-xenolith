@@ -38,6 +38,39 @@ void GestureScroll::cleanup() {
 	amount = Vec2::ZERO;
 }
 
+
+void GestureTap::cleanup() {
+	id = maxOf<uint32_t>();
+	time.clear();
+	count = 0;
+}
+
+void GesturePress::cleanup() {
+	id = maxOf<uint32_t>();
+	limit.clear();
+	time.clear();
+	tickCount = 0;
+}
+
+void GestureSwipe::cleanup() {
+	firstTouch = Vec2::ZERO;
+	secondTouch = Vec2::ZERO;
+	midpoint = Vec2::ZERO;
+	delta = Vec2::ZERO;
+	velocity = Vec2::ZERO;
+}
+
+void GesturePinch::cleanup() {
+	first = Vec2::ZERO;
+	second = Vec2::ZERO;
+	center = Vec2::ZERO;
+	startDistance = 0.0f;
+	prevDistance = 0.0f;
+	distance = 0.0f;
+	scale = 0.0f;
+	velocity = 0.0f;
+}
+
 bool GestureRecognizer::init() {
 	return true;
 }

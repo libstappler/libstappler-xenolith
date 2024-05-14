@@ -151,6 +151,9 @@ protected:
 	using Sprite::init;
 
 	virtual Rc<LabelDeferredResult> runDeferred(thread::TaskQueue &, TextLayout *format, const Color4F &color);
+
+	virtual void applyLayout(TextLayout *);
+
 	virtual void updateLabel();
 	virtual void onFontSourceUpdated();
 	virtual void onFontSourceLoaded();

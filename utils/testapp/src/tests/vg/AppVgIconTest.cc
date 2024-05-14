@@ -30,7 +30,7 @@ bool VgIconTest::init() {
 	}
 
 	float initialQuality = 2.0f;
-	float initialScale = 1.0f;
+	float initialScale = 2.0f;
 
 	do {
 		auto image = Rc<VectorImage>::create(Size2(24, 24));
@@ -62,6 +62,7 @@ bool VgIconTest::init() {
 	_spriteLayer->setContentSize(Size2(256, 256));
 	_spriteLayer->setAnchorPoint(Anchor::Middle);
 	_spriteLayer->setDepthIndex(1.0);
+	_spriteLayer->setVisible(false);
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(32);
@@ -186,6 +187,26 @@ void VgIconTest::updateIcon(IconName name) {
 	_currentName = name;
 	_label->setString(toString(getIconName(_currentName), " ", toInt(_currentName), "/", toInt(IconName::Toggle_toggle_on_solid)));
 
+	StringView imageData =
+R"svg(
+<svg height='20pt' version='1.1' width='20pt' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+<path transform="translate(0 12)" d='
+m1.44 -3.578181
+v-0.261818c0 -2.759999 1.352727 -3.152726 1.90909 -3.152726
+c0.261818 0 0.72 0.065455 0.96 0.436364
+c-0.163636 0 -0.6 0 -0.6 0.490909
+c0 0.338182 0.261818 0.501818 0.501818 0.501818
+c0.174545 0 0.501818 -0.098182 0.501818 -0.523636
+c0 -0.654545 -0.48 -1.178181 -1.385454 -1.178181
+c-1.396363 0 -2.86909 1.407272 -2.86909 3.818181
+c0 2.912726 1.265454 3.687272 2.279999 3.687272
+c1.210909 0 2.247272 -1.025454 2.247272 -2.465454
+c0 -1.385454 -0.970909 -2.432727 -2.181818 -2.432727
+c-0.741818 0 -1.145454 0.556363 -1.363636 1.08
+z'/>
+</svg>
+)svg";
+
 	[[maybe_unused]] StringView pathData(
 			//"M 10,8 L 21,8 L 21,5 C 21,3.9000000953674316 20.100000381469727,3 19,3 L 10,3 L 10,8 Z "
 //"M 3,8 L 8,8 L 8,3 L 5,3 C 3.9000000953674316,3 3,3.9000000953674316 3,5 L 3,8 Z "
@@ -197,7 +218,9 @@ void VgIconTest::updateIcon(IconName name) {
 
 	do {
 		_sprite->clear();
-		auto path = _sprite->addPath();
+		_sprite->setAutofit(Sprite::Autofit::Contain);
+		_sprite->setImage(Rc<vg::VectorImage>::create(imageData));
+		/*auto path = _sprite->addPath();
 		//path->getPath()->init(pathData);
 		getIconData(_currentName, [&] (BytesView bytes) {
 			path->getPath()->init(bytes);
@@ -207,12 +230,12 @@ void VgIconTest::updateIcon(IconName name) {
 		auto t = Mat4::IDENTITY;
 		t.scale(1, -1, 1);
 		t.translate(0, -24, 0);
-		path->setTransform(t);
+		path->setTransform(t);*/
 	} while (0);
 
 	do {
 		_triangles->clear();
-		auto path = _triangles->addPath();
+		/*auto path = _triangles->addPath();
 		//path->getPath()->init(pathData);
 		getIconData(_currentName, [&] (BytesView bytes) {
 			path->getPath()->init(bytes);
@@ -222,7 +245,7 @@ void VgIconTest::updateIcon(IconName name) {
 		auto t = Mat4::IDENTITY;
 		t.scale(1, -1, 1);
 		t.translate(0, -24, 0);
-		path->setTransform(t);
+		path->setTransform(t);*/
 	} while (0);
 
 	LayoutTest::setDataValue(Value({

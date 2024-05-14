@@ -29,11 +29,16 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::interpolation {
 
-float tweenTo(float time, Type type, float *easingParam) {
+float interpolateTo(float time, Type type, float *easingParam) {
 	float delta = 0;
 
 	switch (type) {
 	case Linear: delta = linear(time); break;
+
+	case EaseIn: delta = easeIn(time, easingParam ? easingParam[0] : 0.5f); break;
+	case EaseOut: delta = easeOut(time, easingParam ? easingParam[0] : 0.5f); break;
+	case EaseInOut: delta = easeInOut(time, easingParam ? easingParam[0] : 0.5f); break;
+
 	case Sine_EaseIn: delta = sineEaseIn(time); break;
 	case Sine_EaseOut: delta = sineEaseOut(time); break;
 	case Sine_EaseInOut: delta = sineEaseInOut(time); break;

@@ -78,6 +78,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 
 	memory::pool_t *serverPool = nullptr;
 	memory::pool_t *threadPool = nullptr;
+	memory::pool_t *asyncPool = nullptr;
 	Application *application = nullptr;
 	db::Map<StringView, StringView> params;
 	db::Map<StringView, const db::Scheme *> predefinedSchemes;
@@ -94,6 +95,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 	db::sql::Driver *driver = nullptr;
 	db::sql::Driver::Handle handle;
 	Server *server = nullptr;
+	uint64_t now = 0;
 
 	mutable db::Vector<db::Function<void(const db::Transaction &)>> *asyncTasks = nullptr;
 
@@ -109,12 +111,13 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 
 	bool init();
 	bool execute(const TaskCallback &);
+	void runAsync();
 
 	virtual void threadInit() override;
 	virtual bool worker() override;
 	virtual void threadDispose() override;
 
-	void handleStorageTransaction(db::Transaction &);
+	void handleHeartbeat();
 
 	void addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const;
 
@@ -260,7 +263,7 @@ bool Server::get(CoderSource key, DataCallback &&cb) const {
 	auto p = new DataCallback(move(cb));
 	return perform([this, p, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
 		auto d = t.getAdapter().get(key);
-		_data->application->performOnMainThread([p, ret = Value(d)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -274,7 +277,7 @@ bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) const {
 		return perform([this, p, key = key.view().bytes<Interface>(), data = move(data)] (const Server &serv, const db::Transaction &t) {
 			auto d = t.getAdapter().get(key);
 			t.getAdapter().set(key, data);
-			_data->application->performOnMainThread([p, ret = Value(d)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -294,7 +297,7 @@ bool Server::clear(CoderSource key, DataCallback &&cb) const {
 		return perform([this, p, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
 			auto d = t.getAdapter().get(key);
 			t.getAdapter().clear(key);
-			_data->application->performOnMainThread([p, ret = Value(d)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -316,7 +319,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid, db::Upda
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, oid, flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -331,7 +334,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias, db::
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -366,7 +369,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid, StringVi
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, oid, field = field.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, field, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -382,7 +385,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias, Stri
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), field = field.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, field, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -540,7 +543,7 @@ bool Server::select(const Scheme &scheme, DataCallback &&cb, QueryCallback &&qcb
 			(*q)(query);
 			delete q;
 			auto ret = scheme->select(t, query, flags);
-			_data->application->performOnMainThread([p, ret = move(ret)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -550,7 +553,7 @@ bool Server::select(const Scheme &scheme, DataCallback &&cb, QueryCallback &&qcb
 		auto p = new DataCallback(move(cb));
 		return perform([this, scheme = &scheme, p, flags] (const Server &serv, const db::Transaction &t) {
 			auto ret = scheme->select(t, db::Query(), flags);
-			_data->application->performOnMainThread([p, ret = move(ret)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -572,7 +575,7 @@ bool Server::create(const Scheme &scheme, Value &&data, DataCallback &&cb, db::U
 		auto p = new DataCallback(move(cb));
 		return perform([this, scheme = &scheme, data = move(data), flags, conflict, p] (const Server &serv, const db::Transaction &t) {
 			auto ret = scheme->create(t, data, flags | db::UpdateFlags::NoReturn, conflict);
-			_data->application->performOnMainThread([p, ret = move(ret)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -592,7 +595,7 @@ bool Server::update(const Scheme &scheme, uint64_t oid, Value &&data, DataCallba
 		return perform([this, scheme = &scheme, oid, data = move(data), flags, p] (const Server &serv, const db::Transaction &t) {
 			db::Value patch(data);
 			auto ret = scheme->update(t, oid, patch, flags);
-			_data->application->performOnMainThread([p, ret = move(ret)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -614,7 +617,7 @@ bool Server::update(const Scheme &scheme, const Value & obj, Value &&data, DataC
 			db::Value value(obj);
 			db::Value patch(data);
 			auto ret = scheme->update(t, value, patch, flags);
-			_data->application->performOnMainThread([p, ret = move(ret)] {
+			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -707,6 +710,10 @@ bool Server::touch(const Scheme &scheme, const Value & obj) const {
 }
 
 bool Server::perform(Function<bool(const Server &, const db::Transaction &)> &&cb, Ref *ref) const {
+	if (!_data) {
+		return false;
+	}
+
 	if (std::this_thread::get_id() == _data->thread.get_id()) {
 		_data->execute(ServerData::TaskCallback(move(cb), ref));
 	} else {
@@ -729,7 +736,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid,
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, oid, flags, p, fields = move(fields)] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, fields, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -746,7 +753,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias,
 	auto p = new DataCallback(move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), flags, p, fields = move(fields)] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, fields, flags);
-		_data->application->performOnMainThread([p, ret = move(ret)] {
+		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -792,24 +799,36 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 		});
 	});
 
+	memory::pool::pop();
+	memory::pool::clear(threadPool);
+
+	runAsync();
+
+	return ret;
+}
+
+void Server::ServerData::runAsync() {
+	memory::pool::push(asyncPool);
+
 	while (asyncTasks && driver->isValid(handle)) {
 		auto tmp = asyncTasks;
 		asyncTasks = nullptr;
 
 		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
 			adapter.performWithTransaction([&, this] (const db::Transaction &t) {
+				auto &vec = *tmp;
 				currentTransaction = &t;
-				for (auto &it : *tmp) {
+				for (auto &it : vec) {
 					it(t);
 				}
+				currentTransaction = nullptr;
 				return true;
 			});
 		});
 	}
 
 	memory::pool::pop();
-	memory::pool::clear(threadPool);
-	return ret;
+	memory::pool::clear(asyncPool);
 }
 
 void Server::ServerData::threadInit() {
@@ -827,6 +846,8 @@ void Server::ServerData::threadInit() {
 	}
 	memory::pool::pop();
 
+	asyncPool = memory::pool::create();
+
 	threadPool = memory::pool::create();
 	memory::pool::push(threadPool);
 
@@ -841,16 +862,24 @@ void Server::ServerData::threadInit() {
 	memory::pool::pop();
 	memory::pool::clear(threadPool);
 
+	runAsync();
+
 	if (!serverName.empty()) {
 		thread::ThreadInfo::setThreadInfo(serverName);
 	}
 
-	//db::setStorageRoot(nullptr);
+	now = platform::clock(core::ClockType::Monotonic);
 }
 
 bool Server::ServerData::worker() {
 	if (!shouldQuit.test_and_set()) {
 		return false;
+	}
+
+	auto t = platform::clock(core::ClockType::Monotonic);
+	if (t - now > TimeInterval::seconds(1).toMicros()) {
+		now = t;
+		handleHeartbeat();
 	}
 
 	TaskCallback task;
@@ -865,7 +894,7 @@ bool Server::ServerData::worker() {
 		if (!queue.empty(lock)) {
 			return true;
 		}
-		condition.wait(lock);
+		condition.wait_for(lock, std::chrono::seconds(1));
 		return true;
 	}
 
@@ -883,7 +912,7 @@ void Server::ServerData::threadDispose() {
 	while (!queue.empty()) {
 		TaskCallback task;
 		do {
-			queue.pop_direct([&] (memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb) {
+			queue.pop_direct([&] (memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb) SP_COVERAGE_TRIVIAL {
 				task = move(cb);
 			});
 		} while (0);
@@ -919,17 +948,25 @@ void Server::ServerData::threadDispose() {
 	memory::pool::pop();
 
 	memory::pool::destroy(threadPool);
+	memory::pool::destroy(asyncPool);
 	memory::pool::terminate();
 }
 
-void Server::ServerData::handleStorageTransaction(db::Transaction &t) {
+void Server::ServerData::handleHeartbeat() {
+	for (auto &it : components) {
+		for (auto &iit : it.second->components) {
+			iit.second->handleHeartbeat(*server);
+		}
+	}
 }
 
 void Server::ServerData::addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const {
+	memory::pool::push(asyncPool);
 	if (!asyncTasks) {
-		asyncTasks = new (threadPool) db::Vector<db::Function<void(const db::Transaction &)>>;
+		asyncTasks = new (asyncPool) db::Vector<db::Function<void(const db::Transaction &)>>;
 	}
-	asyncTasks->emplace_back(setupCb(threadPool));
+	asyncTasks->emplace_back(setupCb(asyncPool));
+	memory::pool::pop();
 }
 
 bool Server::ServerData::addComponent(ComponentContainer *comp, const db::Transaction &t) {

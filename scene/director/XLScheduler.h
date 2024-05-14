@@ -60,6 +60,7 @@ public:
 
 	void update(const UpdateTime &);
 
+	bool isPaused(void *) const;
 	void resume(void *);
 	void pause(void *);
 
@@ -144,8 +145,9 @@ class SchedulerUpdate<T, typename std::enable_if<std::is_base_of<Ref, T>::value>
 public:
 	static void scheduleUpdate(Scheduler *scheduler, T *t, int32_t p, bool paused) {
 		auto ref = static_cast<Ref *>(t);
+		auto target = Rc<Ref>(ref);
 
-		scheduler->schedulePerFrame([target = Rc<Ref>(ref)] (const UpdateTime &time) {
+		scheduler->schedulePerFrame([target = move(target)] (const UpdateTime &time) {
 			((T *)target.get())->update(time);
 		}, t, p, paused);
 	}

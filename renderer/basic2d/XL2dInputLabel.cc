@@ -103,6 +103,7 @@ bool InputLabel::init(font::FontController *controller, const DescriptionStyle &
 	_cursorPointer->setAnchorPoint(Vec2(0.5f, _cursorAnchor));
 	_cursorPointer->setOpacity(OpacityValue(222));
 	_cursorPointer->setVisible(false);
+	_cursorPointer->setIgnoreParentState(true);
 
 	_cursorStart = addChild(Rc<VectorSprite>::create(Size2(48, 48)));
 	_cursorStart->addPath(VectorPath()
@@ -115,6 +116,7 @@ bool InputLabel::init(font::FontController *controller, const DescriptionStyle &
 	_cursorStart->setColor(_selectionColor);
 	_cursorStart->setOpacity(Opacity(192));
 	_cursorStart->setVisible(false);
+	_cursorStart->setIgnoreParentState(true);
 
 	_cursorEnd = addChild(Rc<VectorSprite>::create(Size2(48, 48)));
 	_cursorEnd->addPath(VectorPath()
@@ -127,6 +129,7 @@ bool InputLabel::init(font::FontController *controller, const DescriptionStyle &
 	_cursorEnd->setColor(_selectionColor);
 	_cursorEnd->setOpacity(192);
 	_cursorEnd->setVisible(false);
+	_cursorEnd->setIgnoreParentState(true);
 
 	_cursorSelection = addChild(Rc<Selection>::create());
 	_cursorSelection->setAnchorPoint(Vec2(0.0f, 0.0f));

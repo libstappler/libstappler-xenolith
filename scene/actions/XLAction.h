@@ -80,8 +80,8 @@ public:
 protected:
 	friend class ActionManager;
 
-	void setContainer(Node *container) { _container = container; }
-	void setTarget(Node *target) { _target = target; }
+	void setContainer(Node *container);
+	void setTarget(Node *target);
 
 	Node *_container = nullptr;
 	/**
@@ -201,13 +201,13 @@ public:
 
 	Speed();
 
-	bool init(ActionInterval *action, float speed);
+	bool init(Rc<ActionInterval> &&action, float speed);
 
 	float getSpeed(void) const { return _speed; }
 	void setSpeed(float speed) { _speed = speed; }
 
 	ActionInterval* getInnerAction() const { return _innerAction; }
-	void setInnerAction(ActionInterval *action);
+	void setInnerAction(Rc<ActionInterval> &&action);
 
 	virtual void stop() override;
 	virtual void step(float dt) override;
@@ -333,13 +333,9 @@ class Repeat: public ActionInterval {
 public:
 	virtual ~Repeat();
 
-	virtual bool init(ActionInterval *, uint32_t times);
+	virtual bool init(Rc<ActionInterval> &&, uint32_t times);
 
-	void setInnerAction(ActionInterval *action) {
-		if (_innerAction != action) {
-			_innerAction = action;
-		}
-	}
+	void setInnerAction(Rc<ActionInterval> &&);
 
 	ActionInterval* getInnerAction() const {
 		return _innerAction;

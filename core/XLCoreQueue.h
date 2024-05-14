@@ -331,11 +331,6 @@ public:
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 
 protected:
-	memory::pool_t *getPool() const;
-
-	const QueuePassData *getPassData(const Rc<QueuePass> &) const;
-	const SubpassData *getSubpassData(const Rc<QueuePass> &, uint32_t) const;
-
 	friend class Queue;
 
 	QueueData *_data = nullptr;

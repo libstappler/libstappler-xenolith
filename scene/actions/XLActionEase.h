@@ -31,6 +31,10 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::interpolation {
 enum Type {
 	Linear,
 
+	EaseIn,
+	EaseOut,
+	EaseInOut,
+
 	Sine_EaseIn,
 	Sine_EaseOut,
 	Sine_EaseInOut,
@@ -172,6 +176,7 @@ protected:
  */
 class EaseIn : public EaseRateAction {
 public:
+	SP_COVERAGE_TRIVIAL
 	virtual ~EaseIn() { }
 
 	virtual void update(float time) override;
@@ -186,6 +191,7 @@ public:
  */
 class EaseOut: public EaseRateAction {
 public:
+	SP_COVERAGE_TRIVIAL
 	virtual ~EaseOut() { }
 
 	virtual void update(float time) override;
@@ -202,6 +208,7 @@ public:
  */
 class EaseInOut: public EaseRateAction {
 public:
+	SP_COVERAGE_TRIVIAL
 	virtual ~EaseInOut() { }
 
 	virtual void update(float time) override;
@@ -301,6 +308,7 @@ public:
  */
 class EaseElastic : public ActionEase {
 public:
+	SP_COVERAGE_TRIVIAL
 	virtual ~EaseElastic() { }
 
 	bool init(ActionInterval *action, float period = 0.3f);

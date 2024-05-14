@@ -63,8 +63,11 @@ void ActionStorage::removeActionByTag(uint32_t tag) {
 void ActionStorage::removeAllActionsByTag(uint32_t tag) {
 	auto it = actionToStart.begin();
 	while (it != actionToStart.end()) {
-		if (it->get()->getTag() == tag) {
-			it = actionToStart.erase(it);
+		if (it->get()) {
+			if (it->get()->getTag() == tag) {
+				it = actionToStart.erase(it);
+				continue;
+			}
 		}
 		++ it;
 	}
@@ -623,17 +626,6 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 			++ iter;
 		}
 	}
-	for (; iter != _components.end(); ++iter) {
-		if ((*iter)->getFrameTag() == tag) {
-			auto com = (*iter);
-			if (this->isRunning()) {
-				com->onExit();
-			}
-			com->onRemoved();
-			_components.erase(iter);
-			return true;
-		}
-	}
 	return false;
 }
 
@@ -871,13 +863,6 @@ void Node::pause() {
 
 void Node::update(const UpdateTime &time) {
 
-}
-
-void Node::updateChildrenTransform() {
-	// Recursively iterate over children
-	for (auto &child: _children) {
-		child->updateChildrenTransform();
-	}
 }
 
 const Mat4& Node::getNodeToParentTransform() const {

@@ -115,7 +115,7 @@ inline uint32_t XL_MAKE_API_VERSION(StringView version) {
 	uint32_t i = 0;
 	version.split<StringView::Chars<'.'>>([&] (StringView str) {
 		if (i < 4) {
-			ver[i] = str.readInteger(10).get(0);
+			ver[i++] = str.readInteger(10).get(0);
 		}
 	});
 
@@ -126,7 +126,6 @@ inline uint32_t XL_MAKE_API_VERSION(StringView version) {
 	case 2: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], 0); break;
 	case 3: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], ver[2]); break;
 	case 4: verCode = XL_MAKE_API_VERSION(ver[0], ver[1], ver[2], ver[3]); break;
-	default: break;
 	}
 	return verCode;
 }

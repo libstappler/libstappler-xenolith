@@ -101,7 +101,7 @@ public:
 			InitList<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
 
 	// returns Array with zero or more Dictionaries with object data or Null value
-	bool select(const Scheme &, DataCallback &&, QueryCallback &&, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool select(const Scheme &, DataCallback &&, QueryCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;
 
 	// returns Dictionary with single object data or Null value
 	bool create(const Scheme &, Value &&, DataCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;

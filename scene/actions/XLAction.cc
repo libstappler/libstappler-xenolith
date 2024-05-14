@@ -26,6 +26,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+SP_COVERAGE_TRIVIAL
 Action::~Action() { }
 
 Action::Action() { }
@@ -44,10 +45,12 @@ bool Action::isDone() const {
 	return _target == nullptr;
 }
 
+SP_COVERAGE_TRIVIAL
 void Action::step(float dt) {
 	log::warn("Action", "[step]: override me");
 }
 
+SP_COVERAGE_TRIVIAL
 void Action::update(float time) {
 	log::warn("Action", "[update]: override me");
 }
@@ -56,6 +59,15 @@ void Action::startWithTarget(Node *aTarget) {
 	_target = aTarget;
 }
 
+void Action::setContainer(Node *container) {
+	_container = container;
+}
+
+void Action::setTarget(Node *target) {
+	_target = target;
+}
+
+SP_COVERAGE_TRIVIAL
 ActionInstant::~ActionInstant() { }
 
 bool ActionInstant::init(bool runOnce) {
@@ -134,6 +146,7 @@ void CallFunc::update(float time) {
 	_callback();
 }
 
+SP_COVERAGE_TRIVIAL
 ActionInterval::~ActionInterval() { }
 
 bool ActionInterval::init(float duration) {
@@ -186,14 +199,14 @@ Speed::~Speed() { }
 
 Speed::Speed() { }
 
-bool Speed::init(ActionInterval *action, float speed) {
+bool Speed::init(Rc<ActionInterval> &&action, float speed) {
 	XLASSERT(action != nullptr, "action must not be NULL");
-	_innerAction = action;
+	setInnerAction(move(action));
 	_speed = speed;
 	return true;
 }
 
-void Speed::setInnerAction(ActionInterval *action) {
+void Speed::setInnerAction(Rc<ActionInterval> &&action) {
 	if (_innerAction != action) {
 		_innerAction = action;
 	}
@@ -202,6 +215,7 @@ void Speed::setInnerAction(ActionInterval *action) {
 void Speed::startWithTarget(Node *target) {
 	Action::startWithTarget(target);
 	_innerAction->startWithTarget(target);
+	setDuration(_innerAction->getDuration() * _speed);
 }
 
 void Speed::stop() {
@@ -220,7 +234,7 @@ bool Speed::isDone() const {
 Sequence::~Sequence() { }
 
 void Sequence::stop(void) {
-	if (_prevTime < 1.0f) {
+	if (_prevTime < 1.0f && _currentIdx < _actions.size()) {
 		bool finalizeInstants = false;
 		auto front = _actions.begin() + _currentIdx;
 		auto end = _actions.end();
@@ -432,17 +446,18 @@ bool Spawn::addAction(Action *a) {
 	return true;
 }
 
+SP_COVERAGE_TRIVIAL
 Repeat::~Repeat() {
 	_innerAction = nullptr;
 }
 
-bool Repeat::init(ActionInterval *action, uint32_t times) {
+bool Repeat::init(Rc<ActionInterval> &&action, uint32_t times) {
     float d = action->getDuration() * times;
 
 	if (ActionInterval::init(d)) {
 		_times = times;
-		_innerAction = action;
-		_actionInstant = dynamic_cast<ActionInstant *>(action) ? true : false;
+		setInnerAction(move(action));
+		_actionInstant = dynamic_cast<ActionInstant *>(action.get()) ? true : false;
 		if (_actionInstant) {
 			_times -= 1;
 		}
@@ -451,6 +466,12 @@ bool Repeat::init(ActionInterval *action, uint32_t times) {
 	}
 
 	return false;
+}
+
+void Repeat::setInnerAction(Rc<ActionInterval> &&action) {
+	if (_innerAction != action) {
+		_innerAction = move(action);
+	}
 }
 
 void Repeat::stop() {
@@ -498,6 +519,7 @@ bool Repeat::isDone() const {
 	return _total == _times;
 }
 
+SP_COVERAGE_TRIVIAL
 RepeatForever::~RepeatForever() {
 	_innerAction = nullptr;
 }

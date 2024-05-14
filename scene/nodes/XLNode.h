@@ -277,7 +277,6 @@ public:
 
 	virtual void update(const UpdateTime &time);
 
-	virtual void updateChildrenTransform();
 	virtual const Mat4& getNodeToParentTransform() const;
 
 	virtual void setNodeToParentTransform(const Mat4& transform);

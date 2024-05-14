@@ -25,6 +25,11 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
+SP_COVERAGE_TRIVIAL
+Component::~Component() {
+
+}
+
 Component::Component(ComponentLoader &loader, StringView name)
 : _name(name.str<db::Interface>()) {
 	loader.exportComponent(this);
@@ -42,6 +47,16 @@ void Component::handleStorageTransaction(db::Transaction &) { }
 
 void Component::handleHeartbeat(const Server &) { }
 
+
+SP_COVERAGE_TRIVIAL
+ComponentLoader::~ComponentLoader() {
+
+}
+
+SP_COVERAGE_TRIVIAL
+ComponentContainer::~ComponentContainer() {
+
+}
 
 bool ComponentContainer::init(StringView str) {
 	_name = str.str<Interface>();

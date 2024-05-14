@@ -77,6 +77,13 @@ void Scheduler::update(const UpdateTime &time) {
 	}
 }
 
+bool Scheduler::isPaused(void *ptr) const {
+	if (auto v = _list.find(ptr)) {
+		return v->paused;
+	}
+	return false;
+}
+
 void Scheduler::resume(void *ptr) {
 	if (auto v = _list.find(ptr)) {
 		v->paused = false;

@@ -137,6 +137,16 @@ const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
 	return nullptr;
 }
 
+const uint8_t *DataAtlas::getObjectByName(StringView str) const {
+	auto it = _stringNames.find(str.str<Interface>());
+	if (it != _stringNames.end()) {
+		if (it->second < _data.size() / _objectSize) {
+			return _data.data() + _objectSize * it->second;
+		}
+	}
+	return nullptr;
+}
+
 const uint8_t *DataAtlas::getObjectByOrder(uint32_t order) const {
 	if (order < _data.size() / _objectSize) {
 		return _data.data() + _objectSize * order;

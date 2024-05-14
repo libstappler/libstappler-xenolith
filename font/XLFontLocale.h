@@ -71,8 +71,8 @@ inline constexpr auto localeIndex() {
 namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
 using LocaleInitList = std::initializer_list<Pair<StringView, StringView>>;
-using LocaleIndexList = std::initializer_list<Pair<size_t, StringView>>;
-using NumRule = Function<uint8_t(int64_t)>;
+using LocaleIndexList = std::initializer_list<Pair<uint32_t, StringView>>;
+using NumRule = Function<uint8_t(uint32_t)>;
 
 enum class TimeTokens {
 	Today = 0,
@@ -94,10 +94,6 @@ enum class TimeTokens {
 
 extern EventHeader onLocale;
 
-struct Initializer {
-	Initializer(const String &locale, LocaleInitList &&);
-};
-
 void define(const StringView &locale, LocaleInitList &&);
 void define(const StringView &locale, LocaleIndexList &&);
 void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &);
@@ -108,22 +104,35 @@ const String &getDefault();
 void setLocale(const String &);
 const String &getLocale();
 
-void setNumRule(const String &, const NumRule &);
+void setNumRule(const String &, NumRule &&);
 
 WideStringView string(const WideStringView &);
 WideStringView string(size_t);
-WideStringView numeric(const WideStringView &, size_t);
+
+template <char ... Chars>
+WideStringView string(const metastring::metastring<Chars...> &str) {
+	return string(WideStringView(str.to_std_ustring()));
+}
+
+WideStringView numeric(const WideStringView &, uint32_t);
+
+template <char ... Chars>
+WideStringView numeric(const metastring::metastring<Chars...> &str, uint32_t n) {
+	return numeric(WideStringView(str.to_std_ustring()), n);
+}
 
 bool hasLocaleTagsFast(const WideStringView &);
 bool hasLocaleTags(const WideStringView &);
 WideString resolveLocaleTags(const WideStringView &);
 
-String language(const String &locale);
+String language(const StringView &locale);
 
 // convert locale name to common form ('en-us', 'ru-ru', 'fr-fr')
-String common(const String &locale);
+String common(const StringView &locale);
 
 StringView timeToken(TimeTokens);
+
+const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTable();
 
 String localDate(Time);
 String localDate(const std::array<StringView, toInt(TimeTokens::Max)> &, Time);

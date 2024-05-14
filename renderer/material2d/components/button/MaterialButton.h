@@ -120,6 +120,8 @@ public:
 
 	virtual InputListener *getInputListener() const { return _inputListener; }
 
+	virtual DataListener<MenuSourceButton> *getMenuButtonListener() const { return _menuButtonListener; }
+
 	// in input coordinates
 	Vec2 getTouchLocation() const { return _touchLocation; }
 

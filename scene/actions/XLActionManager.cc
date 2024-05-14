@@ -68,6 +68,7 @@ void ActionManager::removeAllActions() {
 				a->invalidate();
 				return true;
 			});
+			++ it;
 		}
 	} else {
 		_actions.clear();

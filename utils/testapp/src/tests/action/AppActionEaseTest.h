@@ -45,7 +45,7 @@ public:
 protected:
 	using Node::init;
 
-	float _time = 1.0f;
+	float _time = 0.1f;
 	Layer *_layer = nullptr;
 	Label *_label = nullptr;
 	Function<Rc<ActionInterval>(Rc<ActionInterval> &&)> _callback;

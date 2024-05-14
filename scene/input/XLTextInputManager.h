@@ -62,9 +62,6 @@ struct TextInputHandler {
 	TextCursor getMarked() const;
 
 	bool isInputEnabled() const;
-	bool isKeyboardVisible() const;
-	const Rect &getKeyboardRect() const;
-
 	bool isActive() const;
 };
 
@@ -85,14 +82,6 @@ public:
 	void textChanged(WideStringView text, TextCursor, TextCursor);
 	void cursorChanged(TextCursor);
 	void markedChanged(TextCursor);
-
-    // called from device when keyboard is attached to application
-    // if keyboard is screen keyboard, it's intersection rect with application window defined in rect, otherwise - Rect::ZERO
-    // if screen keyboard state changes is animated, it's time defined in duration, or 0.0f otherwise
-	void onKeyboardEnabled(const Rect &rect, float duration);
-
-    // called from device when keyboard is detached from application
-	void onKeyboardDisabled(float duration);
 
 	void setInputEnabled(bool enabled);
 
@@ -118,10 +107,7 @@ public:
 	void cancel();
 
 	bool isRunning() const { return _running; }
-	bool isKeyboardVisible() const { return _isKeyboardVisible; }
 	bool isInputEnabled() const { return _isInputEnabled; }
-	float getKeyboardDuration() const { return _keyboardDuration; }
-	const Rect &getKeyboardRect() const { return _keyboardRect; }
 
 	TextInputHandler *getHandler() const { return _handler; }
 
@@ -133,10 +119,7 @@ protected:
 
 	TextInputViewInterface *_view = nullptr;
 	TextInputHandler *_handler = nullptr;
-	Rect _keyboardRect;
-	float _keyboardDuration = 0.0f;
 	bool _isInputEnabled = false;
-	bool _isKeyboardVisible = false;
 	bool _running = false;
 
 	TextInputType _type = TextInputType::Empty;

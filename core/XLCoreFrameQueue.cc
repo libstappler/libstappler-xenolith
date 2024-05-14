@@ -599,7 +599,6 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 		}
 	};
 
-	data.waitForResult = true;
 	for (auto &it : data.attachments) {
 		if (it.second->handle->isOutput()) {
 			auto out = _frame->getOutputBinding(it.second->handle->getAttachment());
@@ -661,6 +660,7 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 			}
 			if (isResourcePending(data)) {
 				XL_FRAME_QUEUE_LOG("[RenderPass:", data.handle->getName(), "] waitForResource (pending): ", data.handle->getName());
+				data.waitForResult = true;
 				waitForResource(data, [this, data = &data] {
 					data->waitForResult = false;
 					updateRenderPassState(*data, FrameRenderPassState::ResourcesAcquired);
@@ -914,7 +914,7 @@ void FrameQueue::invalidate(FrameAttachmentData &data) {
 		return;
 	}
 
-	if (!data.waitForResult || _invalidated) {
+	if (!data.waitForResult) {
 		finalizeAttachment(data);
 	}
 }
@@ -941,7 +941,7 @@ void FrameQueue::invalidate(FramePassData &data) {
 		data.framebuffer = nullptr;
 	}
 
-	if (!data.waitForResult || _invalidated) {
+	if (!data.waitForResult) {
 		updateRenderPassState(data, FrameRenderPassState::Finalized);
 	}
 }

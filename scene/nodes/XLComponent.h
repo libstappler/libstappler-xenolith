@@ -59,6 +59,7 @@ public:
 	virtual bool isEnabled() const;
 	virtual void setEnabled(bool b);
 
+	bool isScheduled() const;
 	void scheduleUpdate();
 	void unscheduleUpdate();
 

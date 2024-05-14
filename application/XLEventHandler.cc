@@ -43,12 +43,13 @@ void EventHandler::addHandlerNode(EventHandlerNode *handler) {
 }
 void EventHandler::removeHandlerNode(EventHandlerNode *handler) {
 	auto linkId = handler->retain();
-	_handlers.erase(handler);
-	handler->setSupport(nullptr);
-	Application::getInstance()->performOnMainThread([handler, linkId] {
-		Application::getInstance()->removeEventListner(handler);
-		handler->release(linkId);
-	}, nullptr);
+	if (_handlers.erase(handler) > 0) {
+		handler->setSupport(nullptr);
+		Application::getInstance()->performOnMainThread([handler, linkId] {
+			Application::getInstance()->removeEventListner(handler);
+			handler->release(linkId);
+		}, nullptr);
+	}
 }
 
 EventHandlerNode * EventHandler::setEventHandler(const EventHeader &h, Callback && callback, bool destroyAfterEvent) {
@@ -106,6 +107,8 @@ bool EventHandlerNode::shouldRecieveEventWithObject(EventHeader::EventID eventID
 EventHeader::EventID EventHandlerNode::getEventID() const { return _eventID; }
 
 void EventHandlerNode::onEventRecieved(const Event &event) const {
+	auto self = (Ref *)this;
+	auto id = self->retain();
 	auto s = _support.load();
 	if (s) {
 		Rc<Ref> iface(s->getInterface());
@@ -114,6 +117,7 @@ void EventHandlerNode::onEventRecieved(const Event &event) const {
 			s->removeHandlerNode(const_cast<EventHandlerNode *>(this));
 		}
 	}
+	self->release(id);
 }
 
 }

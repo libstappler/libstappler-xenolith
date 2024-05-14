@@ -31,6 +31,16 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+static void Scene_findUnresolvedInputs(const memory::vector<core::AttachmentData *> &queue,
+		const memory::set<const core::AttachmentData *> &resolved) {
+	for (auto &it : queue) {
+		auto iit = resolved.find(it);
+		if (iit == resolved.end()) {
+			log::warn("Scene", "No input defined for attachment: ", it->key);
+		}
+	}
+}
+
 Scene::~Scene() {
 	_queue = nullptr;
 }
@@ -63,12 +73,7 @@ void Scene::renderRequest(const Rc<FrameRequest> &req) {
 	render(info);
 
 	if (info.resolvedInputs.size() != _queue->getInputAttachments().size()) {
-		for (auto &it : _queue->getInputAttachments()) {
-			auto iit = info.resolvedInputs.find(it);
-			if (iit == info.resolvedInputs.end()) {
-				log::warn("Scene", "No input defined for attachment: ", it->key);
-			}
-		}
+		Scene_findUnresolvedInputs(_queue->getInputAttachments(), info.resolvedInputs);
 	}
 }
 

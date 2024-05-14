@@ -82,10 +82,12 @@ void SceneContent::onContentSizeDirty() {
 	Node::onContentSizeDirty();
 }
 
+SP_COVERAGE_TRIVIAL
 void SceneContent::updateBackButtonStatus() { }
 
 void SceneContent::handleBackgroundTransition(bool val) { }
 
+SP_COVERAGE_TRIVIAL
 bool SceneContent::onBackButton() {
 	return false;
 }

@@ -51,7 +51,7 @@ void Component::onRemoved() {
 void Component::onEnter(Scene *sc) {
 	_running = true;
 	if (_scheduled) {
-		sc->getScheduler()->scheduleUpdate(this, 0, false);
+		sc->getDirector()->getScheduler()->scheduleUpdate(this, 0, false);
 	}
 }
 
@@ -81,6 +81,10 @@ bool Component::isEnabled() const {
 
 void Component::setEnabled(bool b) {
 	_enabled = b;
+}
+
+bool Component::isScheduled() const {
+	return _scheduled;
 }
 
 void Component::scheduleUpdate() {

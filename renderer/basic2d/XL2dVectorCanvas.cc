@@ -289,7 +289,7 @@ void VectorCanvas::Data::draw(const VectorPath &path, StringView cache, const Ma
 
 	if (hasTransform) {
 		save();
-		applyTransform(path.getTransform());
+		applyTransform(matTransform);
 	}
 
 	doDraw(path, cache);

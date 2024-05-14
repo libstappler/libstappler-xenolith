@@ -1615,27 +1615,4 @@ const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info,
 	return _internalResource.addImage(key, move(info), cb, layout, access);
 }
 
-memory::pool_t *Queue::Builder::getPool() const {
-	return _data->pool;
-}
-
-const QueuePassData *Queue::Builder::getPassData(const Rc<QueuePass> &pass) const {
-	auto it = _data->passes.find(pass->getName());
-	if (it != _data->passes.end()) {
-		if ((*it)->pass == pass) {
-			return *it;
-		}
-	}
-	return nullptr;
-}
-
-const SubpassData *Queue::Builder::getSubpassData(const Rc<QueuePass> &pass, uint32_t subpass) const {
-	if (auto p = getPassData(pass)) {
-		if (subpass < p->subpasses.size()) {
-			return p->subpasses[subpass];
-		}
-	}
-	return nullptr;
-}
-
 }

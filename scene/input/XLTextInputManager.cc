@@ -82,12 +82,6 @@ TextCursor TextInputHandler::getMarked() const {
 bool TextInputHandler::isInputEnabled() const {
 	return this->manager->isInputEnabled();
 }
-bool TextInputHandler::isKeyboardVisible() const {
-	return this->manager->isKeyboardVisible();
-}
-const Rect &TextInputHandler::getKeyboardRect() const {
-	return this->manager->getKeyboardRect();
-}
 
 bool TextInputHandler::isActive() const {
 	return this->manager && this->manager->getHandler() == this;
@@ -224,28 +218,6 @@ void TextInputManager::deleteForward() {
 
 void TextInputManager::unmarkText() {
 	markedChanged(TextCursor::InvalidCursor);
-}
-
-void TextInputManager::onKeyboardEnabled(const Rect &rect, float duration) {
-	_keyboardRect = rect;
-	_keyboardDuration = duration;
-	if (!_keyboardRect.equals(Rect::ZERO)) {
-		_isKeyboardVisible = true;
-		if (_handler) {
-			_handler->onKeyboard(true, rect, duration);
-		}
-	}
-}
-
-void TextInputManager::onKeyboardDisabled(float duration) {
-	_keyboardDuration = duration;
-	if (!_keyboardRect.equals(Rect::ZERO)) {
-		_isKeyboardVisible = false;
-		if (_handler && _handler->onKeyboard) {
-			_handler->onKeyboard(false, Rect::ZERO, duration);
-		}
-	}
-	_keyboardRect = Rect::ZERO;
 }
 
 void TextInputManager::setInputEnabled(bool enabled) {

@@ -125,7 +125,9 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 
 	vertexes.clear();
 
-	for (auto it = format->begin(); it != format->end(); ++ it) {
+	auto fbegin = format->begin();
+	auto fend = format->end();
+	for (auto it = fbegin; it != fend; ++ it) {
 		if (it.count() == 0) {
 			continue;
 		}
@@ -176,7 +178,7 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 			}
 
 			if (chstart == chend) {
-				return;
+				continue;
 			}
 
 			const font::CharLayoutData &firstChar = format->chars[chstart];
@@ -350,14 +352,34 @@ Rc<LabelDeferredResult> Label::runDeferred(thread::TaskQueue &queue, TextLayout 
 	return ret;
 }
 
+void Label::applyLayout(TextLayout *layout) {
+	_format = layout;
+
+	if (_format) {
+		if (_format->empty()) {
+			setContentSize(Size2(0.0f, getFontHeight() / _labelDensity));
+		} else {
+			setContentSize(Size2(_format->getWidth() / _labelDensity, _format->getHeight() / _labelDensity));
+		}
+
+		setSelectionCursor(getSelectionCursor());
+		setMarkedCursor(getMarkedCursor());
+
+		_labelDirty = false;
+		_vertexColorDirty = false;
+		_vertexesDirty = true;
+	} else {
+		_vertexesDirty = true;
+	}
+}
+
 void Label::updateLabel() {
 	if (!_source) {
 		return;
 	}
 
 	if (_string16.empty()) {
-		_format = nullptr;
-		_vertexesDirty = true;
+		applyLayout(nullptr);
 		setContentSize(Size2(0.0f, getFontHeight() / _labelDensity));
 		return;
 	}
@@ -373,22 +395,7 @@ void Label::updateLabel() {
 		return;
 	}
 
-	_format = spec;
-
-	if (_format) {
-		if (_format->empty()) {
-			setContentSize(Size2(0.0f, getFontHeight() / _labelDensity));
-		} else {
-			setContentSize(Size2(_format->getWidth() / _labelDensity, _format->getHeight() / _labelDensity));
-		}
-
-		setSelectionCursor(getSelectionCursor());
-		setMarkedCursor(getMarkedCursor());
-
-		_labelDirty = false;
-		_vertexColorDirty = false;
-		_vertexesDirty = true;
-	}
+	applyLayout(spec);
 }
 
 void Label::onContentSizeDirty() {

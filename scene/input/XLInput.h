@@ -61,6 +61,7 @@ struct InputEvent {
 
 class TextInputViewInterface {
 public:
+	SP_COVERAGE_TRIVIAL
 	virtual ~TextInputViewInterface() { }
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) = 0;

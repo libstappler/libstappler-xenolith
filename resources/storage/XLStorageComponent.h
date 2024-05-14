@@ -33,7 +33,7 @@ class Server;
 
 class Component : public db::AllocBase {
 public:
-	virtual ~Component() { }
+	virtual ~Component();
 
 	Component(ComponentLoader &, StringView name);
 
@@ -51,7 +51,7 @@ protected:
 
 class ComponentLoader {
 public:
-	virtual ~ComponentLoader() { }
+	virtual ~ComponentLoader();
 
 	virtual db::pool_t *getPool() const = 0;
 	virtual const Server &getServer() const = 0;
@@ -72,7 +72,7 @@ class ComponentContainer : public Ref {
 public:
 	using TaskCallback = Function<bool(const Server &, const db::Transaction &)>;
 
-	virtual ~ComponentContainer() { }
+	virtual ~ComponentContainer();
 
 	virtual bool init(StringView);
 

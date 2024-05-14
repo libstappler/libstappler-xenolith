@@ -646,6 +646,7 @@ void ImageViewInfo::setup(ColorMode value, bool allowSwizzle) {
 }
 
 void ImageViewInfo::setup(ImageType t, ArrayLayers layers) {
+	layerCount = layers;
 	switch (t) {
 	case ImageType::Image1D:
 		if (layerCount.get() > 1 && layerCount != ArrayLayers::max()) {

@@ -68,7 +68,7 @@ static void Resource_loadImageDirect(uint8_t *glBuffer, uint64_t expectedSize, B
 	};
 	w.resize = [] (void *ptr, uint32_t size) {
 		auto writeData = ((WriteData *)ptr);
-		if (size != writeData->expectedSize) {
+		if (size > writeData->expectedSize) {
 			abort();
 		}
 	};

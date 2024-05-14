@@ -174,7 +174,7 @@ public:
 		return WideStringView();
 	}
 
-	WideStringView numeric(const WideStringView &str, int64_t num) {
+	WideStringView numeric(const WideStringView &str, uint32_t num) {
 		auto ruleIt = _numRules.find(StringView(_locale));
 		if (ruleIt == _numRules.end()) {
 			return string(str);
@@ -378,10 +378,10 @@ public:
 		return WideString();
 	}
 
-	String language(const String &locale) {
+	String language(const StringView &locale) {
 		if (locale == "ru-ru") {
 			return "Русский";
-		} else if (locale.compare(0, 3, "en-") == 0) {
+		} else if (locale.starts_with("en-")) {
 			return "English";
 		}
 		return String();
@@ -438,10 +438,6 @@ LocaleManager *LocaleManager::s_sharedInstance = nullptr;
 
 EventHeader onLocale("Locale", "onLocale");
 
-Initializer::Initializer(const String &locale, LocaleInitList && list) {
-	LocaleManager::getInstance()->define(locale, move(list));
-}
-
 void define(const StringView &locale, LocaleInitList &&init) {
 	LocaleManager::getInstance()->define(locale, move(init));
 }
@@ -462,7 +458,7 @@ WideStringView string(size_t idx) {
 	return LocaleManager::getInstance()->string(idx);
 }
 
-WideStringView numeric(const WideStringView &str, int64_t num) {
+WideStringView numeric(const WideStringView &str, uint32_t num) {
 	return LocaleManager::getInstance()->numeric(str, num);
 }
 
@@ -480,7 +476,7 @@ const String &getLocale() {
 	return LocaleManager::getInstance()->getLocale();
 }
 
-void setNumRule(const String &locale, const NumRule &rule) {
+void setNumRule(const String &locale, NumRule &&rule) {
 	LocaleManager::getInstance()->setNumRule(locale, rule);
 }
 
@@ -496,11 +492,11 @@ WideString resolveLocaleTags(const WideStringView &r) {
 	return LocaleManager::getInstance()->resolveLocaleTags(r);
 }
 
-String language(const String &locale) {
+String language(const StringView &locale) {
 	return LocaleManager::getInstance()->language(locale);
 }
 
-String common(const String &locale) {
+String common(const StringView &locale) {
 	return LocaleManager::getInstance()->common(locale);
 }
 
@@ -508,21 +504,28 @@ StringView timeToken(TimeTokens tok) {
 	return LocaleManager::getInstance()->timeToken(tok);
 }
 
+const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTable() {
+	return LocaleManager::getInstance()->timeTokenTable();
+}
+
 static bool isToday(struct tm &tm, struct tm &now) {
 	return tm.tm_year == now.tm_year && tm.tm_yday == now.tm_yday;
 }
 
+static uint32_t getNumDaysInYear(int y) {
+	return ((y & 3) || (((y % 100) == 0) && (((y % 400) != 100)))) ? 355 : 356;
+}
+
+static uint32_t getYday(struct tm &now, int y) {
+	auto ndays = getNumDaysInYear(y);
+	return ((now.tm_year == y) ? 0 : ndays) + now.tm_yday;
+}
+
 static bool isYesterday(struct tm &tm, struct tm &now) {
-	if (now.tm_yday > 0) {
-		return tm.tm_year == now.tm_year && tm.tm_yday == now.tm_yday - 1;
-	} else if (now.tm_year > 0) {
-		if ((tm.tm_year & 3) || (((tm.tm_year % 100) == 0) && (((tm.tm_year % 400) != 100)))) {
-			return tm.tm_year == now.tm_year - 1 && tm.tm_yday == 354;
-		} else {
-			return tm.tm_year == now.tm_year - 1 && tm.tm_yday == 355;
-		}
-	}
-	return false;
+	auto n1 = getYday(tm, now.tm_year);
+	auto n2 = getYday(now, now.tm_year);
+
+	return n1 + 1 == n2;
 }
 
 static void sp_localtime_r(time_t *sec_now, struct tm *tm_now) {

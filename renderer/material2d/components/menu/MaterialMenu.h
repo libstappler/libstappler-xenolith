@@ -76,6 +76,8 @@ public:
 
 	virtual ScrollView *getScroll() const;
 
+	virtual DataListener<MenuSource> *getDataListener() const { return _menuListener; }
+
 protected:
 	virtual void rebuildMenu();
 	virtual Rc<MenuButton> createButton(Menu *m, MenuSourceButton *btn);
