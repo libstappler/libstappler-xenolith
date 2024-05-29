@@ -29,9 +29,18 @@
 #include "XLVkView.h"
 
 #include "XLViewCommandLine.h"
+
+#if MODULE_XENOLITH_RESOURCES_STORAGE
 #include "XLStorageServer.h"
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_NETWORK
 #include "XLNetworkController.h"
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_ASSETS
 #include "XLAssetLibrary.h"
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -96,7 +105,7 @@ protected:
 	Rc<xenolith::storage::Server> _storageServer;
 #endif
 
-#if MODULE_XENOLITH_RESOURCES_STORAGE
+#if MODULE_XENOLITH_RESOURCES_ASSETS
 public:
 	xenolith::storage::AssetLibrary *getAssetLibrary() const { return _assetLibrary; }
 protected:

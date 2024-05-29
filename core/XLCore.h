@@ -105,7 +105,7 @@ using geom::ColorMask;
 using geom::Padding;
 namespace Anchor = geom::Anchor;
 
-inline uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
+inline constexpr uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
    return (uint32_t(variant) << 29) | (uint32_t(major) << 22) | (uint32_t(minor) << 12) | uint32_t(patch);
 }
 
