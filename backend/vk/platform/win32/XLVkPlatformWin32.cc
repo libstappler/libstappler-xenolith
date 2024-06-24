@@ -36,7 +36,7 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		return nullptr;
 	}
 
-	if (auto instance = table.createInstance(cb, [] { })) {
+	if (auto instance = table.createInstance(cb, Dso(), [] { })) {
 		return instance;
 	}
 

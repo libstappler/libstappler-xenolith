@@ -455,6 +455,102 @@ void Win32View::handleMouseWheel(float x, float y) {
 	_view->handleInputEvent(event);
 }
 
+void Win32View::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
+	// based on GLFW
+
+	int tries = 0;
+	// NOTE: Retry clipboard opening a few times as some other application may have it
+	//       open and also the Windows Clipboard History reads it after each update
+	while (!::OpenClipboard(_window)) {
+		Sleep(1);
+		tries++;
+
+		if (tries == 3) {
+			log::error("Win32", "Failed to open clipboard");
+			cb(BytesView(), StringView());
+			return;
+		}
+	}
+
+	Set<UINT> formats;
+
+	UINT format = 0;
+	do {
+		format = EnumClipboardFormats(format);
+		if (format) {
+			formats.emplace(format);
+		}
+	} while (format);
+
+	// more processing for other types can be added later
+
+	if (formats.find(CF_UNICODETEXT) != formats.end()) {
+		HANDLE object;
+		WCHAR* buffer;
+
+		object = ::GetClipboardData(CF_UNICODETEXT);
+		if (!object) {
+			log::error("Win32", "Failed to convert clipboard to string");
+			cb(BytesView(), StringView());
+		} else {
+			buffer = (WCHAR*)::GlobalLock(object);
+			if (!buffer) {
+				log::error("Win32", "Failed to lock global handle");
+				cb(BytesView(), StringView());
+			} else {
+				auto clipboardString = string::toUtf8<Interface>((char16_t *)buffer);
+
+				cb(BytesView((const uint8_t *)clipboardString.data(), clipboardString.size()), StringView("text/plain"));
+
+				GlobalUnlock(object);
+			}
+		}
+	} else {
+		cb(BytesView(), StringView());
+	}
+	CloseClipboard();
+}
+
+void Win32View::writeToClipboard(BytesView data, StringView contentType) {
+    int tries = 0;
+    HANDLE object;
+
+	if (contentType == "text/plain") {
+		auto str = string::toUtf16<Interface>(data.toStringView());
+		object = ::GlobalAlloc(GMEM_MOVEABLE, str.size() * sizeof(WCHAR));
+	    if (!object) {
+	    	log::error("Win32", "Failed to allocate global handle for clipboard");
+	        return;
+	    }
+
+	    WCHAR* buffer = (WCHAR*)GlobalLock(object);
+	    if (!buffer) {
+	    	log::error("Win32", "Failed to lock global handle");
+	        GlobalFree(object);
+	        return;
+	    }
+	    ::memcpy(buffer, str.data(), str.size() *  sizeof(wchar_t));
+	    GlobalUnlock(object);
+	}
+
+    // NOTE: Retry clipboard opening a few times as some other application may have it
+    //       open and also the Windows Clipboard History reads it after each update
+    while (!OpenClipboard(_window)) {
+        Sleep(1);
+        tries++;
+
+        if (tries == 3) {
+        	log::error("Win32", "Failed to open clipboard");
+            GlobalFree(object);
+            return;
+        }
+    }
+
+    EmptyClipboard();
+    SetClipboardData(CF_UNICODETEXT, object);
+    CloseClipboard();
+}
+
 char32_t Win32View::makeKeyChar(char32_t c) {
 	if (c >= 0xd800 && c <= 0xdbff) {
 		_highSurrogate = c;
@@ -480,12 +576,12 @@ char32_t Win32View::makeKeyChar(char32_t c) {
 LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	auto view = (Win32View *)GetPropW(hwnd, L"Xenolith");
 	if (!view) {
-    	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
 
 	switch (uMsg) {
 	case WM_MOVE:
-    	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_SIZE: {
 		XL_WIN32_LOG("WM_SIZE");
@@ -495,7 +591,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		bool minimized = (wParam == SIZE_MINIMIZED);
 
 		if (!view->handleSize(width, height, maximized, minimized)) {
-	    	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	    	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		}
 
 		break;
@@ -511,7 +607,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_CLOSE:
 		XL_WIN32_LOG("WM_CLOSE");
 		if (!view->handleClose()) {
-			return DefWindowProc(hwnd, uMsg, wParam, lParam);
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		}
 		break;
 	case WM_DESTROY:
@@ -524,7 +620,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		break;
 	case WM_SETCURSOR:
 		//XL_WIN32_LOG("WM_SETCURSOR");
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_SIZING:
 		XL_WIN32_LOG("WM_SIZING");
@@ -533,24 +629,24 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_ENTERSIZEMOVE:
 		XL_WIN32_LOG("WM_ENTERSIZEMOVE");
 		view->handleEnterSizeMove();
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_EXITSIZEMOVE:
 		XL_WIN32_LOG("WM_EXITSIZEMOVE");
 		view->handleExitSizeMove();
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_WINDOWPOSCHANGING:
 		XL_WIN32_LOG("WM_WINDOWPOSCHANGING");
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_WINDOWPOSCHANGED:
 		XL_WIN32_LOG("WM_WINDOWPOSCHANGED");
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_PAINT:
 		view->handlePaint();
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_SYSCOMMAND:
 	case WM_GETMINMAXINFO:
@@ -566,7 +662,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_IME_NOTIFY:
 	case WM_ACTIVATE:
 	case WM_ACTIVATEAPP:
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	case WM_MOUSEMOVE:
 		view->handleMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
@@ -676,7 +772,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 				}
 			}
 		}
-    	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	}
     case WM_SETFOCUS:
@@ -753,7 +849,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 	default:
 		XL_WIN32_LOG("Event: ", uMsg);
-    	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		break;
 	}
 

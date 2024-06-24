@@ -67,6 +67,9 @@ public:
 
 	void handlePaint();
 
+	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
+	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) override;
+
 protected:
 	virtual void wakeup(std::unique_lock<Mutex> &) override;
 

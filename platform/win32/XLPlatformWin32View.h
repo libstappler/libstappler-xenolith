@@ -96,6 +96,9 @@ public:
 	void handleMouseEvent(core::InputMouseButton, core::InputEventName);
 	void handleMouseWheel(float x, float y);
 
+	void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
+	void writeToClipboard(BytesView, StringView contentType = StringView());
+
 protected:
 	char32_t makeKeyChar(char32_t);
 

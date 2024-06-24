@@ -308,7 +308,7 @@ bool VgSdfTest::init() {
 	_sliderShadow->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderRotation = addChild(Rc<SliderWithLabel>::create(toString("Rotation: ", initialRotation),
-			initialRotation / (numbers::pi * 2.0f), [this, maxShadow] (float val) {
+			initialRotation / (numbers::pi * 2.0f), [this] (float val) {
 		_circleSprite->setRotation(val * numbers::pi * 2.0f);
 		_circleTestSprite->setRotation(val * numbers::pi * 2.0f);
 		_rectSprite->setRotation(val * numbers::pi * 2.0f);

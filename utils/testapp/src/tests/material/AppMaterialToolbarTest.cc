@@ -69,7 +69,7 @@ bool MaterialToolbarTest::init() {
 	});
 	actionMenu->addButton("", IconName::Notification_do_disturb_on_outline, [this] (material2d::Button *, material2d::MenuSourceButton *) {
 		if (auto content = dynamic_cast<material2d::SceneContent *>(_scene->getContent())) {
-			content->showSnackbar(move(material2d::SnackbarData("test shackbar").withButton("Button", IconName::Action_accessibility_solid, [this, content] () {
+			content->showSnackbar(move(material2d::SnackbarData("test shackbar").withButton("Button", IconName::Action_accessibility_solid, [content] () {
 				content->showSnackbar(material2d::SnackbarData("updated shackbar", Color::Red_500, 1.0f));
 			}, Color::Green_500, 1.0f)));
 		}
