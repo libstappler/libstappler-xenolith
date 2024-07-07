@@ -271,15 +271,17 @@ bool Controller::Data::onComplete(Handle *handle, bool success) {
 
 void Controller::Data::sign(NetworkHandle &handle, Context &ctx) const {
 	String date = Time::now().toHttp<Interface>();
-	StringStream message;
 
-	message << handle.getUrl() << "\r\n";
-	message << "X-ApplicationName: " << _application->getInfo().bundleName << "\r\n";
-	message << "X-ApplicationVersion: " << _application->getInfo().applicationVersionCode << "\r\n";
-	message << "X-ClientDate: " << date << "\r\n";
-	message << "User-Agent: " << _application->getInfo().userAgent << "\r\n";
+	auto &appInfo = _application->getInfo();
 
-	auto msg = message.str();
+	auto msg = toString(
+		handle.getUrl(), "\r\n",
+		"X-ApplicationName: ", appInfo.bundleName, "\r\n",
+		"X-ApplicationVersion: ", appInfo.applicationVersion, "\r\n",
+		"X-ClientDate: ", date, "\r\n",
+		"User-Agent: ", _application->getInfo().userAgent, "\r\n"
+		);
+
 	auto sig = string::Sha512::hmac(msg, _signKey);
 
 	ctx.headers = curl_slist_append(ctx.headers, toString("X-ClientDate: ", date).data());
@@ -349,7 +351,7 @@ void Controller::run(Rc<Request> &&handle) {
 }
 
 void Controller::setSignKey(Bytes &&value) {
-
+	_data->_signKey = move(value);
 }
 
 bool Controller::isNetworkOnline() const {

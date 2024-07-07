@@ -46,6 +46,8 @@ bool Handle::init(Method method, StringView url) {
 }
 
 bool Handle::prepare(Context *ctx) {
+	auto &appInfo = _controller->getApplication()->getInfo();
+
 	if (_mtime > 0) {
 		auto httpTime = Time::microseconds(_mtime).toHttp<Interface>();
 		ctx->headers = curl_slist_append(ctx->headers, toString("If-Modified-Since: ", httpTime).data());
@@ -55,12 +57,15 @@ bool Handle::prepare(Context *ctx) {
 		ctx->headers = curl_slist_append(ctx->headers, toString("If-None-Match: ", _etag).data());
 	}
 
+	ctx->headers = curl_slist_append(ctx->headers, toString("X-ApplicationName: ", appInfo.bundleName).data());
+	ctx->headers = curl_slist_append(ctx->headers, toString("X-ApplicationVersion: ", appInfo.applicationVersion).data());
+
 	if (!_sharegroup.empty() && ctx->share) {
 		setCookieFile(filesystem::writablePath<Interface>(toString("network.", _controller->getName(), ".", _sharegroup, ".cookies")));
 	}
 
 	if (!_controller->getApplication()->getInfo().userAgent.empty()) {
-		setUserAgent(_controller->getApplication()->getInfo().userAgent);
+		setUserAgent(appInfo.userAgent);
 	}
 
 	return true;
