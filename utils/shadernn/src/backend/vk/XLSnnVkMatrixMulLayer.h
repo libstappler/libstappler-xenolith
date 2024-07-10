@@ -41,7 +41,7 @@ public:
 	virtual void initPropagationSubpass(core::Queue::Builder &builder, core::QueuePassBuilder &, core::SubpassBuilder &subpass,
 			 const core::PipelineLayoutData *layout) override;
 
-	virtual Vector<const core::BufferData *> getTrainableGradients(Queue::Builder &queueBuilder) const;
+	virtual Vector<const core::BufferData *> getTrainableGradients(Queue::Builder &queueBuilder) const override;
 
 	const Front *getFront() const { return _front; }
 

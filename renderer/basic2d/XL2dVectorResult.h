@@ -53,6 +53,7 @@ public:
 	virtual SpanView<TransformVertexData> getData() override;
 
 	virtual void handleReady(Rc<VectorCanvasResult> &&);
+	virtual void handleReady() override { DeferredVertexResult::handleReady(); }
 
 	void updateColor(const Color4F &);
 

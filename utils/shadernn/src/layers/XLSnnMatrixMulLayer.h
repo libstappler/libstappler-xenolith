@@ -33,7 +33,7 @@ public:
 
 	virtual bool init(Model *, StringView tag, size_t idx, const Value&) override;
 
-	virtual bool isTrainable() const { return _model->isTrainable(); }
+	virtual bool isTrainable() const override { return _model->isTrainable(); }
 
 	virtual Extent3 getOutputExtent() const override {
 		return Extent3(_kernelSize, 1, _batchSize);

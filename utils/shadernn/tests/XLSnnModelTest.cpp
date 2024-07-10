@@ -31,8 +31,6 @@
 #include "SPBitmap.h"
 #include "SPValid.h"
 
-#include <byteswap.h>
-
 namespace stappler::xenolith::shadernn {
 
 void MnistTrainData::loadVectors(StringView ipath) {
@@ -45,8 +43,8 @@ void MnistTrainData::loadVectors(StringView ipath) {
 
 		::fread(&vectorsHeader, sizeof(VectorsHeader), 1, vectors);
 
-		vectorsHeader.magic = bswap_32(vectorsHeader.magic);
-		vectorsHeader.items = bswap_32(vectorsHeader.items);
+		vectorsHeader.magic = byteorder::bswap32(vectorsHeader.magic);
+		vectorsHeader.items = byteorder::bswap32(vectorsHeader.items);
 
 		auto dataSize = fsize - sizeof(ImagesHeader);
 
@@ -79,10 +77,10 @@ void MnistTrainData::loadImages(StringView ipath) {
 
 		::fread(&imagesHeader, sizeof(ImagesHeader), 1, images);
 
-		imagesHeader.magic = bswap_32(imagesHeader.magic);
-		imagesHeader.images = bswap_32(imagesHeader.images);
-		imagesHeader.rows = bswap_32(imagesHeader.rows);
-		imagesHeader.columns = bswap_32(imagesHeader.columns);
+		imagesHeader.magic = byteorder::bswap32(imagesHeader.magic);
+		imagesHeader.images = byteorder::bswap32(imagesHeader.images);
+		imagesHeader.rows = byteorder::bswap32(imagesHeader.rows);
+		imagesHeader.columns = byteorder::bswap32(imagesHeader.columns);
 
 		auto dataSize = fsize - sizeof(ImagesHeader);
 
@@ -232,7 +230,6 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 	auto readHeader = [&] (StringView &r) {
 		while (!r.empty() && !r.is('\n') && !r.is("\r")) {
 			r.skipChars<StringView::WhiteSpace>();
-			StringView tmp(r);
 			if (r.is('"')) {
 				++ r;
 				ret->fields.emplace_back(readQuoted(r).str<Interface>());
@@ -270,7 +267,6 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 		Value ret;
 		while (!r.empty() && !r.is('\n') && !r.is("\r")) {
 			r.skipChars<StringView::WhiteSpace>();
-			StringView tmp(r);
 			if (r.is('"')) {
 				++ r;
 				auto data = readQuoted(r);

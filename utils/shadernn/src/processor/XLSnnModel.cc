@@ -24,6 +24,8 @@
 #include "XLSnnLossLayer.h"
 #include "XLSnnAttachment.h"
 
+#include "SPPlatformUnistd.h"
+
 namespace stappler::xenolith::shadernn {
 
 void Model::saveBlob(const char *path, const uint8_t *buf, size_t size) {

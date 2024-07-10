@@ -140,7 +140,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 					SpecializationConstant(_outputBufferIndex), // output
 				}));
 
-		subpassBuilder.setPrepareCallback([this] (const SubpassData &subpass, FrameQueue &q) {
+		subpassBuilder.setPrepareCallback([] (const SubpassData &subpass, FrameQueue &q) {
 			// log::debug("MatrixMulLayer", getName(), ": prepare");
 			auto layer = (MatrixMulLayer *)subpass.pass->pass.get();
 
@@ -184,7 +184,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 		});
 
 		subpassBuilder.setCommandsCallback(
-				[this, outputBufferIndex = _outputBufferIndex, matMul, matMulBorders, addVec, relu4, relu]
+				[matMul, matMulBorders, addVec, relu4, relu]
 				 	 (const SubpassData &subpass, FrameQueue &q, core::CommandBuffer &b) {
 			// log::debug("MatrixMulLayer", getName(), ": commands");
 			auto &buf = static_cast<CommandBuffer &>(b);
@@ -266,7 +266,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 		});
 	});
 
-	builder.addCompleteCallback([this] (const QueuePassData &, FrameQueue &q, bool success) {
+	builder.addCompleteCallback([] (const QueuePassData &, FrameQueue &q, bool success) {
 		// log::debug("MatrixMulLayer", getName(), ": submitted");
 		/*vk::BufferAttachmentHandle *weightsBuffer = nullptr;
 		vk::BufferAttachmentHandle *outputBuffer = nullptr;
@@ -348,7 +348,7 @@ void MatrixMulLayer::initPropagationSubpass(core::Queue::Builder &builder, core:
 	const core::ComputePipelineData *matMulBorders = nullptr;
 	const core::ComputePipelineData *reluDiff = nullptr;
 
-	subpass.setPrepareCallback([this, backwardNeeded, sourceWeights = _weightsBufferIndex, sourceTerms = _freeTermBufferIndex]
+	subpass.setPrepareCallback([this, sourceWeights = _weightsBufferIndex, sourceTerms = _freeTermBufferIndex]
 								(const core::SubpassData &subpass, FrameQueue &q) {
 		auto handle = static_cast<DeviceFrameHandle *>(q.getFrame().get());
 		auto &pool = handle->getMemPool(nullptr);
@@ -650,7 +650,7 @@ void MatrixMulLayer::initPropagationSubpass(core::Queue::Builder &builder, core:
 				propagationBuffer->getBuffers()[_propTermsIndex].buffer);
 	});
 
-	queueBuilder.addCompleteCallback([this] (const core::QueuePassData &, FrameQueue &q, bool success) {
+	queueBuilder.addCompleteCallback([] (const core::QueuePassData &, FrameQueue &q, bool success) {
 		/*vk::BufferAttachmentHandle *propagationBuffer = nullptr;
 		if (auto bufferAttachment = q.getAttachment(getPropagationAttachment())) {
 			propagationBuffer = (vk::BufferAttachmentHandle *)bufferAttachment->handle.get();

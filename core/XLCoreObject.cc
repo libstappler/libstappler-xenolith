@@ -179,7 +179,7 @@ void DataAtlas::setDataBuffer(Rc<BufferObject> &&data) {
 }
 
 void DataAtlas::makeHashIndex() {
-	auto size = math::npot(_intNames.size());
+	auto size = math::npot(uint32_t(_intNames.size()));
 	Bytes dataStorage; dataStorage.resize(size * sizeof(HashTableKeyValue), uint8_t(0xFFU));
 	auto data = (HashTableKeyValue *)dataStorage.data();
 

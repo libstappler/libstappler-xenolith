@@ -327,7 +327,7 @@ bool CrossEntropyLossLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder 
 		});
 	});
 
-	builder.addCompleteCallback([this, front = _front] (const QueuePassData &pass, FrameQueue &q, bool success) {
+	builder.addCompleteCallback([front = _front] (const QueuePassData &pass, FrameQueue &q, bool success) {
 		auto layer = (CrossEntropyLossLayer *)pass.pass.get();
 
 		vk::BufferAttachmentHandle *weightsBuffer = nullptr;
