@@ -608,7 +608,7 @@ String DeviceInfo::description() const {
 			<< "\n";
 
 	stream << "\t\t[Limits: Resources]"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorInputAttachments
+			" PerStage: " << properties.device10.properties.limits.maxPerStageResources
 			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageUpdateAfterBindResources << ");"
 			"\n";
 	stream << "\t\t[Limits: Allocations] " << properties.device10.properties.limits.maxMemoryAllocationCount << " blocks, "

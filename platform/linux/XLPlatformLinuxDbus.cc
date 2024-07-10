@@ -434,6 +434,7 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	Connection *sessionConnection = nullptr;
 	Connection *systemConnection = nullptr;
 
+	bool dbusThreadStarted = false;
 	std::thread dbusThread;
 	std::atomic_flag shouldExit;
 
@@ -794,7 +795,9 @@ DBusInterface::DBusInterface() {
 DBusInterface::~DBusInterface() {
 	shouldExit.clear();
 	wakeup();
-	dbusThread.join();
+	if (dbusThreadStarted) {
+		dbusThread.join();
+	}
 	if (sessionConnection) {
 		delete sessionConnection;
 		sessionConnection = nullptr;
@@ -1018,6 +1021,7 @@ bool DBusInterface::openHandle(Dso &d) {
 }
 
 bool DBusInterface::startThread() {
+	dbusThreadStarted = true;
 	shouldExit.test_and_set();
 	dbusThread = std::thread(DBusInterface::workerThread, this, nullptr);
 	return true;

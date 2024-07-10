@@ -51,6 +51,8 @@ public:
 	virtual bool init(QueuePassBuilder &passBuilder) override;
 	virtual void invalidate() override;
 
+	virtual Rc<core::QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
+
 	QueueOperations getQueueOps() const { return _queueOps; }
 
 protected:

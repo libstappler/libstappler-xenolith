@@ -27,8 +27,7 @@ MODULE_XENOLITH_CORE_DEPENDS_ON := \
 	stappler_bitmap \
 	stappler_threads \
 	stappler_geom \
-	stappler_font \
-	stappler_backtrace
+	stappler_font
 
 ifdef VULKAN_SDK_PREFIX
 MODULE_XENOLITH_CORE_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)

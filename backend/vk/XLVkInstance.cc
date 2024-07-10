@@ -132,6 +132,8 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 				it.supportsPresentation()
 			});
 		}
+	} else {
+		log::info("Vk", "No devices available on this instance");
 	}
 }
 
@@ -230,16 +232,19 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	if (info.deviceIdx == DefaultDevice) {
 		for (auto &it : _devices) {
 			if (!isDeviceSupported(it)) {
+				log::warn("vk::Instance", "Device rejected: device is not supported");
 				continue;
 			}
 
 			auto requiredExtensions = getDeviceExtensions(it);
 			if (!isExtensionsSupported(it, requiredExtensions)) {
+				log::warn("vk::Instance", "Device rejected: required extensions is not available");
 				continue;
 			}
 
 			DeviceInfo::Features targetFeatures;
 			if (!buildFeaturesList(it, targetFeatures)) {
+				log::warn("vk::Instance", "Device rejected: required features is not available");
 				continue;
 			}
 
@@ -250,16 +255,19 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	} else if (info.deviceIdx < _devices.size()) {
 		auto &dev = _devices[info.deviceIdx];
 		if (!isDeviceSupported(dev)) {
+			log::error("vk::Instance", "Fail to create device: device is not supported");
 			return nullptr;
 		}
 
 		auto requiredExtensions = getDeviceExtensions(dev);
 		if (!isExtensionsSupported(dev, requiredExtensions)) {
+			log::error("vk::Instance", "Fail to create device: required extensions is not available");
 			return nullptr;
 		}
 
 		DeviceInfo::Features targetFeatures;
 		if (!buildFeaturesList(dev, targetFeatures)) {
+			log::error("vk::Instance", "Fail to create device: required features is not available");
 			return nullptr;
 		}
 
@@ -267,6 +275,8 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 			return Rc<vk::Device>::create(this, DeviceInfo(dev), targetFeatures, requiredExtensions);
 		}
 	}
+
+	log::error("vk::Instance", "Fail to create device: no acceptable devices found");
 	return nullptr;
 }
 
@@ -579,6 +589,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 		for (auto &it : queueInfo) {
 			if (it.index != graphicsFamily && it.index != computeFamily && ((it.ops & QueueOperations::Transfer) != QueueOperations::None)) {
 				transferFamily = it.index;
+				break;
 			}
 		}
 		if (transferFamily == computeFamily || transferFamily == graphicsFamily) {
