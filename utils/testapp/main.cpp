@@ -29,6 +29,14 @@ namespace stappler::xenolith::app {
 static constexpr auto HELP_STRING(
 R"HelpString(testapp <options>
 Options are one of:
+	--w=<initial screen width in pixels>
+	--h=<initial screen height in pixels>
+	--d=<pixel density>
+	--l=<application locale code>
+	--bundle=<application bundle name>
+	--renderdoc - try to connect with renderdoc capture layers
+	--novalidation - force-disable vulkan validation
+	--decor=<left,top,right,bottom> - view decoration padding in pixels
 	-v (--verbose)
 	-h (--help))HelpString");
 

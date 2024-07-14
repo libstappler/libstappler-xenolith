@@ -73,7 +73,9 @@ void runApplication(Function<void(const Application &)> &&cb) {
 }
 
 static constexpr auto HELP_STRING(
-R"HelpString(testapp <options>
+R"HelpString(testapp <options> model <path-to-model-json> <path-to-input> - run model
+testapp <options> gen - test random generation layer
+testapp <options> input <path-to-input> - test input filter+normalizer
 Options are one of:
 	-v (--verbose)
 	-h (--help))HelpString");
