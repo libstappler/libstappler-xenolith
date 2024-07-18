@@ -65,6 +65,14 @@ Application::~Application() {
 	}
 }
 
+
+Application::Application()
+: TaskQueue("Application", [this] () {
+	nativeWakeup();
+}) {
+
+}
+
 bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 	if (instance == nullptr) {
 		return false;
@@ -103,9 +111,11 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		}
 	};
 
+	nativeInit();
+
 	auto loop = _instance->makeLoop(move(loopInfo));
 
-	if (!spawnWorkers(thread::TaskQueue::Flags::Waitable, 0, threadsCount, _name)) {
+	if (!spawnWorkers(0, threadsCount, _name)) {
 		log::error("MainLoop", "Fail to spawn worker threads");
 		return;
 	}
@@ -117,8 +127,6 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	for (auto &it : _extensions) {
 		it.second->initialize(this);
 	}
-
-	nativeInit();
 
 	loop->waitRinning();
 
@@ -140,45 +148,16 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	addExtension(move(lib));
 #endif
 
-	uint32_t count = 0;
-	uint64_t clock = platform::clock(core::ClockType::Monotonic);
-	uint64_t lastUpdate = clock;
-	uint64_t startTime = clock;
-
 	_time.delta = 0;
-	_time.global = clock;
+	_time.global = platform::clock(core::ClockType::Monotonic);
 	_time.app = 0;
 	_time.dt = 0.0f;
 
-	update(cb, _time);
+	performAppUpdate(cb, _time);
 
-	log::debug("Application", "started");
+	_updateInterval = iv;
 
-	do {
-		count = 0;
-		if (!_immediateUpdate) {
-			wait(iv - TimeInterval::microseconds(clock - lastUpdate), &count);
-		}
-		if (count > 0) {
-			memory::pool::push(_updatePool);
-			TaskQueue::update();
-			memory::pool::pop();
-			memory::pool::clear(_updatePool);
-		}
-		clock = platform::clock(core::ClockType::Monotonic);
-
-		auto dt = TimeInterval::microseconds(clock - lastUpdate);
-		if (dt >= iv || _immediateUpdate) {
-			_time.delta = dt.toMicros();
-			_time.global = clock;
-			_time.app = startTime - clock;
-			_time.dt = float(_time.delta) / 1'000'000;
-
-			update(cb, _time);
-			lastUpdate = clock;
-			_immediateUpdate = false;
-		}
-	} while (_shouldQuit.test_and_set());
+	nativeRunMainLoop(cb);
 
 	if (cb.finalizeCallback) {
 		cb.finalizeCallback(*this);
@@ -225,6 +204,8 @@ void Application::end()  {
 	_shouldQuit.clear();
 	if (!isOnMainThread()) {
 		wakeup();
+	} else {
+		nativeStop();
 	}
 }
 
@@ -337,20 +318,6 @@ thread::TaskQueue *Application::getQueue() {
 	return this;
 }
 
-void Application::update(const CallbackInfo &cb, const UpdateTime &t) {
-	memory::pool::push(_updatePool);
-	if (cb.updateCallback) {
-		cb.updateCallback(*this, t);
-	}
-
-	for (auto &it : _extensions) {
-		it.second->update(this, t);
-	}
-
-	memory::pool::pop();
-	memory::pool::clear(_updatePool);
-}
-
 void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
 	log::debug("Application", "handleDeviceStarted");
 
@@ -388,6 +355,36 @@ void Application::handleMessageToken(String &&str) {
 
 void Application::handleRemoteNotification(Value &&val) {
 	onRemoteNotification(this, move(val));
+}
+
+void Application::performAppUpdate(const CallbackInfo &cb, const UpdateTime &t) {
+	memory::pool::push(_updatePool);
+	if (cb.updateCallback) {
+		cb.updateCallback(*this, t);
+	}
+
+	for (auto &it : _extensions) {
+		it.second->update(this, t);
+	}
+
+	memory::pool::pop();
+	memory::pool::clear(_updatePool);
+}
+
+void Application::performTimersUpdate(const CallbackInfo &cb, bool forced) {
+	_clock = platform::clock(core::ClockType::Monotonic);
+
+	auto dt = TimeInterval::microseconds(_clock - _lastUpdate);
+	if (dt >= _updateInterval || forced) {
+		_time.delta = dt.toMicros();
+		_time.global = _clock;
+		_time.app = _startTime - _clock;
+		_time.dt = float(_time.delta) / 1'000'000;
+
+		performAppUpdate(cb, _time);
+		_lastUpdate = _clock;
+		_immediateUpdate = false;
+	}
 }
 
 #if MODULE_XENOLITH_SCENE

@@ -94,6 +94,9 @@ class Instance;
 
 static const char * const s_requiredExtension[] = {
 	VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+#if MACOS
+	VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+#endif
 	nullptr
 };
 
@@ -103,6 +106,9 @@ static const char * const s_optionalExtension[] = {
 
 static const char * const s_requiredDeviceExtensions[] = {
 	VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME,
+#if MACOS
+	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+#endif
 	nullptr
 };
 

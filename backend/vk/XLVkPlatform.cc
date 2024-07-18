@@ -241,7 +241,11 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 	VkInstanceCreateInfo createInfo{}; vk::sanitizeVkStruct(createInfo);
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pNext = nullptr;
-	createInfo.flags = 0;
+#if MACOS
+	createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#else
+	createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 	createInfo.pApplicationInfo = &appInfo;
 
 	createInfo.enabledExtensionCount = data.extensionsToEnable.size();

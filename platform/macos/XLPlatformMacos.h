@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,37 +20,21 @@
  THE SOFTWARE.
  **/
 
+#ifndef XENOLITH_PLATFORM_MACOS_XLPLATFORMMACOS_H_
+#define XENOLITH_PLATFORM_MACOS_XLPLATFORMMACOS_H_
+
 #include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
-
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
-
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
-
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
-
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
-
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
-
-#if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
-#endif
 
 #if MACOS
-#include "platform/macos/XLVkGuiViewImpl.cc"
+
+namespace stappler::xenolith::platform {
+
+void *initMacApplication();
+bool runMacApplication();
+void stopMacApplication();
+
+}
+
 #endif
+
+#endif /* XENOLITH_PLATFORM_MACOS_XLPLATFORMMACOS_H_ */

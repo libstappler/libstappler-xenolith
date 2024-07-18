@@ -85,5 +85,6 @@
 #include "platform/android/XLCorePlatform.cc"
 #include "platform/linux/XLCorePlatform.cc"
 #include "platform/win32/XLCorePlatform.cc"
+#include "platform/mac/XLCorePlatform.cc"
 
 #endif /* XENOLITH_CORE_XLCORE_CPP_ */

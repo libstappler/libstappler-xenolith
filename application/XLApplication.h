@@ -80,6 +80,8 @@ public:
 
 	virtual ~Application();
 
+	Application();
+
 	virtual bool init(CommonInfo &&info, Rc<core::Instance> &&instance);
 
 	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount, TimeInterval);
@@ -140,18 +142,26 @@ public:
 	void openUrl(StringView) const;
 
 protected:
-	void update(const CallbackInfo &, const UpdateTime &);
-
 	virtual void handleDeviceStarted(const core::Loop &loop, const core::Device &dev);
 	virtual void handleDeviceFinalized(const core::Loop &loop, const core::Device &dev);
 
 	virtual void handleMessageToken(String &&);
 	virtual void handleRemoteNotification(Value &&);
 
+	virtual void performAppUpdate(const CallbackInfo &, const UpdateTime &);
+	virtual void performTimersUpdate(const CallbackInfo &cb, bool forced);
+
 	void nativeInit();
 	void nativeDispose();
+	void nativeRunMainLoop(const CallbackInfo &cb);
+	void nativeWakeup();
+	void nativeStop();
 
 	UpdateTime _time;
+	uint64_t _clock = 0;
+	uint64_t _startTime = 0;
+	uint64_t _lastUpdate = 0;
+	TimeInterval _updateInterval;
 	std::thread::id _threadId;
 	memory::pool_t *_updatePool = nullptr;
 	bool _started = false;

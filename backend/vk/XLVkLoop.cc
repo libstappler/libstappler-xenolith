@@ -328,8 +328,7 @@ void Loop::threadInit() {
 	};
 
 	_internal->queue = Rc<thread::TaskQueue>::alloc("Vk::Loop::Queue");
-	_internal->queue->spawnWorkers(thread::TaskQueue::Flags::Cancelable | thread::TaskQueue::Flags::Waitable, LoopThreadId,
-			_internal->info->threadsCount);
+	_internal->queue->spawnWorkers(LoopThreadId, _internal->info->threadsCount);
 
 	if (auto dev = _vkInstance->makeDevice(_info)) {
 		_internal->setDevice(move(dev));

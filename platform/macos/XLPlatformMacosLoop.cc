@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,37 +20,23 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
+#include "XLPlatformMacos.h"
+#include "SPThreadTaskQueue.h"
 
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
+#include <CoreFoundation/CFRunLoop.h>
 
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
+namespace stappler::xenolith::platform {
 
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
+void runMacMainLoop(thread::TaskQueue *q, void *appLoop) {
+	CFRunLoopRef loop = (CFRunLoopRef)appLoop;
 
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
 
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
+	CFRunLoopRun();
 
-#if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
-#endif
+	CFRunLoopRemoveSource(loop, updateSource, kCFRunLoopDefaultMode);
+}
 
-#if MACOS
-#include "platform/macos/XLVkGuiViewImpl.cc"
-#endif
+}
+
+
+

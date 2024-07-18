@@ -20,37 +20,41 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
-#include "XLVk.h"
-#include "XLPlatformViewInterface.h"
-
-// Enable to log key API calls and timings
-#ifndef XL_VKAPI_DEBUG
-#define XL_VKAPI_DEBUG 0
-#endif
-
-#if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
-#else
-#define XL_VKAPI_LOG(...)
-#endif
-
-#include "XLVkGuiApplication.cc"
-#include "XLVkSwapchain.cc"
-#include "XLVkView.cc"
-
-#if LINUX
-#include "platform/linux/XLVkGuiViewImpl.cc"
-#endif
-
-#if ANDROID
-#include "platform/android/XLVkGuiViewImpl.cc"
-#endif
-
-#if WIN32
-#include "platform/win32/XLVkGuiViewImpl.cc"
-#endif
+#include "XLVkView.h"
+#include "XLVkPlatform.h"
 
 #if MACOS
-#include "platform/macos/XLVkGuiViewImpl.cc"
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
+
+Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&info) {
+	return nullptr;
+}
+
+bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
+	const char *surfaceExt = nullptr;
+	const char *androidExt = nullptr;
+	for (auto &extension : info.availableExtensions) {
+		if (strcmp(VK_KHR_SURFACE_EXTENSION_NAME, extension.extensionName) == 0) {
+			surfaceExt = extension.extensionName;
+			data.extensionsToEnable.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+		} else if (strcmp(VK_EXT_METAL_SURFACE_EXTENSION_NAME, extension.extensionName) == 0) {
+			androidExt = extension.extensionName;
+			data.extensionsToEnable.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
+		}
+	}
+
+	if (surfaceExt && androidExt) {
+		return true;
+	}
+
+	return false;
+}
+
+uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
+	return 1;
+}
+
+}
+
 #endif

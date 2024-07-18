@@ -66,3 +66,14 @@ core::ImageFormat getCommonFormat() {
 #include "android/XLPlatformAndroidMessageInterface.cc"
 #include "android/XLPlatformAndroidNetworkConnectivity.cc"
 #endif
+
+#if MACOS
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+core::ImageFormat getCommonFormat() {
+	return core::ImageFormat::B8G8R8A8_UNORM;
+}
+
+}
+
+#endif

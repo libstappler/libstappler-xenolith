@@ -137,4 +137,17 @@ SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
 
 #endif
 
+#if MACOS
+
+SPUNUSED static void registerNetworkCallback(Application *, void *key, Function<void(NetworkCapabilities)> &&cb) {
+
+}
+
+SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
+
+
+}
+
+#endif
+
 }
