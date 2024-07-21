@@ -211,7 +211,7 @@ void BootstrapApplication::run(Function<void()> &&initCb) {
 	GuiApplication::CallbackInfo callbacks({
 		.initCallback = [&] (const Application &) {
 			GuiApplication::addView(ViewInfo{
-				.name = _data.applicationName,
+				.title = _data.applicationName,
 				.bundleId = _data.bundleName,
 				.rect = URect(UVec2{0, 0}, _data.screenSize),
 				.decoration = _data.viewDecoration,

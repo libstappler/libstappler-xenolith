@@ -43,6 +43,8 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		return nullptr;
 	}
 
+	//::setenv("MVK_CONFIG_DEBUG", "1", 1);
+
 	::setenv("VK_LAYER_PATH", filepath::merge<Interface>(filepath::root(pathBuf), "vulkan", "explicit_layer.d").data(), 1);
 
 	Dso handle(loaderPath);

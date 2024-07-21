@@ -32,7 +32,13 @@ layout (set = 0, binding = 0) uniform ShadowDataBuffer {
 #define INPUT_BUFFER_LAYOUT_SIZE 7
 #define OUTPUT_BUFFER_LAYOUT_SIZE 3
 
-layout (set = 0, binding = 1) readonly buffer TriangleIndexes {
+#if SP_MVK
+#define SP_READONLY_OVERLAP
+#else
+#define SP_READONLY_OVERLAP readonly
+#endif
+
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer TriangleIndexes {
 	Triangle2DIndex indexes[];
 } indexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
@@ -40,23 +46,23 @@ layout (set = 0, binding = 1) buffer Vertices {
 	vec4 vertices[];
 } vertexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
-layout (set = 0, binding = 1) readonly buffer TransformObjects {
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer TransformObjects {
 	TransformData transforms[];
 } transformObjectBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
-layout (set = 0, binding = 1) readonly buffer CircleIndexes {
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer CircleIndexes {
 	Circle2DIndex circles[];
 } circleIndexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
-layout (set = 0, binding = 1) readonly buffer RectIndexes {
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer RectIndexes {
 	Rect2DIndex rects[];
 } rectIndexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
-layout (set = 0, binding = 1) readonly buffer RoundedRectIndexes {
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer RoundedRectIndexes {
 	RoundedRect2DIndex rects[];
 } roundedRectIndexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
-layout (set = 0, binding = 1) readonly buffer PolygonIndexes {
+layout (set = 0, binding = 1) SP_READONLY_OVERLAP buffer PolygonIndexes {
 	Polygon2DIndex polygons[];
 } polygonIndexBuffer[INPUT_BUFFER_LAYOUT_SIZE];
 
@@ -72,17 +78,17 @@ layout(set = 0, binding = 2) buffer ObjectsBuffer {
 	Sdf2DObjectData objects[];
 } objectsBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
-layout(set = 0, binding = 2) buffer GridSizeBuffer {
-	uint grid[];
-} gridSizeBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
+layout(set = 0, binding = 2) buffer GridDataBuffer {
+	uint data[];
+} gridDataBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
-layout(set = 0, binding = 2) buffer GridIndexesBuffer {
+/*layout(set = 0, binding = 2) buffer GridIndexesBuffer {
 	uint index[];
-} gridIndexBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
+} gridIndexBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];*/
 
 #define OBJECTS_DATA_BUFFER objectsBuffer[0].objects
-#define GRID_SIZE_BUFFER gridSizeBuffer[1].grid
-#define GRID_INDEX_BUFFER gridIndexBuffer[2].index
+#define GRID_SIZE_BUFFER gridDataBuffer[1].data
+#define GRID_INDEX_BUFFER gridDataBuffer[2].data
 
 void emplaceIntoGrid(const in int i, const in int j, const in uint gID) {
 	if (i >= 0 && i < shadowData.gridWidth && j >= 0 && j < shadowData.gridHeight) {

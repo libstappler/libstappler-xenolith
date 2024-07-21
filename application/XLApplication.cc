@@ -111,8 +111,6 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		}
 	};
 
-	nativeInit();
-
 	auto loop = _instance->makeLoop(move(loopInfo));
 
 	if (!spawnWorkers(0, threadsCount, _name)) {
@@ -123,6 +121,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	if (cb.initCallback) {
 		cb.initCallback(*this);
 	}
+
+	nativeInit();
 
 	for (auto &it : _extensions) {
 		it.second->initialize(this);
@@ -389,6 +389,7 @@ void Application::performTimersUpdate(const CallbackInfo &cb, bool forced) {
 
 #if MODULE_XENOLITH_SCENE
 bool Application::addView(ViewInfo &&info) {
+	_hasViews = true;
 	performOnGlThread([this, info = move(info)] () mutable {
 		if (_device) {
 			if (info.onClosed) {

@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "XLCoreFrameCache.h"
 #include "SPBitmap.h"
 
-#define XL_VKVIEW_DEBUG 0
+#define XL_VKVIEW_DEBUG 1
 
 #ifndef XL_VKAPI_LOG
 #define XL_VKAPI_LOG(...)
@@ -57,7 +57,7 @@ bool View::init(Application &loop, const Device &dev, ViewInfo &&info) {
 		return false;
 	}
 
-	_threadName = toString("View:", info.name);
+	_threadName = toString("View:", info.title);
 	_instance = static_cast<Instance *>(loop.getGlLoop()->getGlInstance().get());
 	_device = const_cast<Device *>(static_cast<const Device *>(&dev));
 	_director = Rc<Director>::create(_mainLoop, _constraints, this);

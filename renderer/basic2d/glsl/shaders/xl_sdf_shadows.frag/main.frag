@@ -24,13 +24,9 @@ layout(set = 0, binding = 3) buffer ObjectsBuffer {
 	Sdf2DObjectData objects[];
 } objectsBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
-layout(set = 0, binding = 3) buffer GridSizeBuffer {
-	uint grid[];
-} gridSizeBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
-
-layout(set = 0, binding = 3) buffer GridIndexesBuffer {
-	uint index[];
-} gridIndexBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
+layout(set = 0, binding = 3) buffer GridDataBuffer {
+	uint data[];
+} gridDataBuffer[OUTPUT_BUFFER_LAYOUT_SIZE];
 
 layout(input_attachment_index = 0, set = 0, binding = 4) uniform subpassInput inputDepth;
 
@@ -49,10 +45,10 @@ uint s_cellIdx;
 uint hit(in vec2 p, float h) {
 	uint idx;
 	uint targetOffset = s_cellIdx * shadowData.objectsCount;
-	uint cellSize = gridSizeBuffer[1].grid[s_cellIdx];
+	uint cellSize = gridDataBuffer[1].data[s_cellIdx];
 
 	for (uint i = 0; i < cellSize; ++ i) {
-		idx = gridIndexBuffer[2].index[targetOffset + i];
+		idx = gridDataBuffer[2].data[targetOffset + i];
 		// value кодируется как f32, а h как f16, без коррекции точности будет мерцать
 		if (objectsBuffer[0].objects[idx].value > h + 0.1) {
 			if (all(greaterThan(p, objectsBuffer[0].objects[idx].bbMin)) && all(lessThan(p, objectsBuffer[0].objects[idx].bbMax))) {

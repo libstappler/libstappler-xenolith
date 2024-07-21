@@ -76,4 +76,6 @@ core::ImageFormat getCommonFormat() {
 
 }
 
+#include "macos/XLPlatformMacosUtils.cc"
+
 #endif

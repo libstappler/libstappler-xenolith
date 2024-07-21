@@ -166,6 +166,7 @@ protected:
 	memory::pool_t *_updatePool = nullptr;
 	bool _started = false;
 	bool _immediateUpdate = false;
+	bool _hasViews = false;
 	mutable std::atomic_flag _shouldQuit;
 	HashMap<EventHeader::EventID, HashSet<const EventHandlerNode *>> _eventListeners;
 	Rc<ResourceCache> _resourceCache;

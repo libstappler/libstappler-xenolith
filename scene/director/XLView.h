@@ -37,7 +37,7 @@ class View;
 class Director;
 
 struct ViewInfo {
-	String name;
+	String title;
 	String bundleId;
 	URect rect = URect(0, 0, 1024, 768);
 	Padding decoration;

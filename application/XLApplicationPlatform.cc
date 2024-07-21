@@ -138,7 +138,7 @@ struct MacosApplicationData {
 void Application::nativeInit() {
 	platform::clock(core::ClockType::Monotonic);
 
-	platform::initMacApplication();
+	platform::initMacApplication(_hasViews ? platform::ApplicationFlags::GuiApplication : platform::ApplicationFlags::None);
 
 	auto data = new MacosApplicationData;
 	data->updatePool = _updatePool;
