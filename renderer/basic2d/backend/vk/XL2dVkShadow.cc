@@ -74,7 +74,8 @@ bool ShadowLightDataAttachmentHandle::writeDescriptor(const core::QueuePassHandl
 	return false;
 }
 
-void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridSize) {
+void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, const ShadowVertexAttachmentHandle *vertexes,
+		uint32_t gridSize, float maxValue) {
 	_data->map([&, this] (uint8_t *buf, VkDeviceSize size) {
 		ShadowData *data = reinterpret_cast<ShadowData *>(buf);
 
@@ -113,30 +114,39 @@ void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame
 		discardColor.a = 1.0f;
 		_shadowData.discardColor = data->discardColor = discardColor;
 
-		_shadowData.gridSize = data->gridSize = ceilf(gridSize / fullDensity);
-		_shadowData.gridWidth = data->gridWidth = (scaledExtent.width - 1) / data->gridSize + 1;
-		_shadowData.gridHeight = data->gridHeight = (scaledExtent.height - 1) / data->gridSize + 1;
-		_shadowData.objectsCount = data->objectsCount = vertexes->getTrianglesCount() + vertexes->getCirclesCount()
-				+ vertexes->getRectsCount() + vertexes->getRoundedRectsCount() + vertexes->getPolygonsCount();
+		if (gridSize) {
+			_shadowData.gridSize = data->gridSize = ceilf(gridSize / fullDensity);
+			_shadowData.gridWidth = data->gridWidth = (scaledExtent.width - 1) / data->gridSize + 1;
+			_shadowData.gridHeight = data->gridHeight = (scaledExtent.height - 1) / data->gridSize + 1;
+		}
 
-		_shadowData.trianglesFirst = data->trianglesFirst = 0;
-		_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
+		if (vertexes) {
+			_shadowData.objectsCount = data->objectsCount = vertexes->getTrianglesCount() + vertexes->getCirclesCount()
+					+ vertexes->getRectsCount() + vertexes->getRoundedRectsCount() + vertexes->getPolygonsCount();
 
-		_shadowData.circlesFirst = data->circlesFirst = _shadowData.trianglesFirst + _shadowData.trianglesCount;
-		_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
+			_shadowData.trianglesFirst = data->trianglesFirst = 0;
+			_shadowData.trianglesCount = data->trianglesCount = vertexes->getTrianglesCount();
 
-		_shadowData.rectsFirst = data->rectsFirst = _shadowData.circlesFirst + _shadowData.circlesCount;
-		_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
+			_shadowData.circlesFirst = data->circlesFirst = _shadowData.trianglesFirst + _shadowData.trianglesCount;
+			_shadowData.circlesCount = data->circlesCount = vertexes->getCirclesCount();
 
-		_shadowData.roundedRectsFirst = data->roundedRectsFirst = _shadowData.rectsFirst + _shadowData.rectsCount;
-		_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
+			_shadowData.rectsFirst = data->rectsFirst = _shadowData.circlesFirst + _shadowData.circlesCount;
+			_shadowData.rectsCount = data->rectsCount = vertexes->getRectsCount();
 
-		_shadowData.polygonsFirst = data->polygonsFirst = _shadowData.roundedRectsFirst + _shadowData.roundedRectsCount;
-		_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
+			_shadowData.roundedRectsFirst = data->roundedRectsFirst = _shadowData.rectsFirst + _shadowData.rectsCount;
+			_shadowData.roundedRectsCount = data->roundedRectsCount = vertexes->getRoundedRectsCount();
+
+			_shadowData.polygonsFirst = data->polygonsFirst = _shadowData.roundedRectsFirst + _shadowData.roundedRectsCount;
+			_shadowData.polygonsCount = data->polygonsCount = vertexes->getPolygonsCount();
+
+			_shadowData.maxValue = data->maxValue = vertexes->getMaxValue();
+		} else {
+			_shadowData.maxValue = data->maxValue = maxValue;
+		}
 
 		_shadowData.ambientLightCount = data->ambientLightCount = _input->lights.ambientLightCount;
 		_shadowData.directLightCount = data->directLightCount = _input->lights.directLightCount;
-		_shadowData.maxValue = data->maxValue = vertexes->getMaxValue();
+
 		_shadowData.bbOffset = data->bbOffset = getBoxOffset(_shadowData.maxValue);
 		_shadowData.density = data->density = _input->lights.sceneDensity;
 		_shadowData.shadowSdfDensity = data->shadowSdfDensity = 1.0f / _input->lights.shadowDensity;

@@ -88,10 +88,8 @@ bool VertexAttachmentHandle::empty() const {
 	return !_indexes || !_vertexes || !_transforms;
 }
 
-Rc<FrameContextHandle2d> VertexAttachmentHandle::popCommands() const {
-	auto ret = move(_commands);
-	_commands = nullptr;
-	return ret;
+const Rc<FrameContextHandle2d> &VertexAttachmentHandle::getCommands() const {
+	return _commands;
 }
 
 struct VertexMaterialDrawPlan {
@@ -100,17 +98,30 @@ struct VertexMaterialDrawPlan {
 		SpanView<TransformVertexData> vertexes;
 		Mat4 transform;
 		const LinearGradientData *gradient = nullptr;
-		uint32_t gradientVertexOffset = 0;
+		uint32_t vertexOffset = 0;
+		uint32_t vertexCount = 0;
+		uint32_t gradientStart = 0;
+		uint32_t gradientCount = 0;
 	};
 
-	struct MaterialWritePlan {
+	struct PlanShadowInfo {
+		const CmdShadow *cmd = nullptr;
+		SpanView<TransformVertexData> vertexes;
+		Mat4 transform;
+	};
+
+	template <typename T>
+	struct WritePlanData {
 		const core::Material *material = nullptr;
 		Rc<core::DataAtlas> atlas;
 		uint32_t vertexes = 0;
 		uint32_t indexes = 0;
 		uint32_t transforms = 0;
-		Map<StateId, std::forward_list<PlanCommandInfo>> states;
+		Map<StateId, std::forward_list<T>> states;
 	};
+
+	using MaterialWritePlan = WritePlanData<PlanCommandInfo>;
+	using ShadowWritePlan = WritePlanData<PlanShadowInfo>;
 
 	struct WriteTarget {
 		uint8_t *transform;
@@ -144,22 +155,57 @@ struct VertexMaterialDrawPlan {
 	uint32_t indexOffset = 0;
 	uint32_t transtormOffset = 0;
 
-	uint32_t materialVertexes = 0;
-	uint32_t materialIndexes = 0;
 	uint32_t transformIdx = 0;
 
 	uint32_t solidCmds = 0;
 	uint32_t surfaceCmds = 0;
 	uint32_t transparentCmds = 0;
+	uint32_t shadowsCmds = 0;
 
 	Vec2 shadowSize = Vec2(1.0f, 1.0f);
 
 	bool hasGpuSideAtlases = false;
 
+	float maxShadowValue = 0.0f;
+
 	FrameContextHandle2d *handle = nullptr;
+
+	Vector<VertexSpan> materialSpans;
+	Vector<VertexSpan> shadowSolidSpans;
+	Vector<VertexSpan> shadowSdfSpans;
 
 	VertexMaterialDrawPlan(const core::FrameContraints &constraints)
 	: surfaceExtent{constraints.extent}, transform(constraints.transform) { }
+
+	template <typename PlanData, typename Cmd>
+	auto emplaceWritePlanData(WritePlanData<PlanData> &writePlan, const Command *c, const Cmd *cmd, SpanView<TransformVertexData> vertexes) -> PlanData & {
+		for (auto &iit : vertexes) {
+			globalWritePlan.vertexes += iit.data->data.size();
+			globalWritePlan.indexes += iit.data->indexes.size();
+
+			if (iit.sdfIndexes > 0) {
+				globalWritePlan.indexes += (iit.sdfIndexes + iit.fillIndexes);
+			}
+
+			++ globalWritePlan.transforms;
+
+			writePlan.vertexes += iit.data->data.size();
+			writePlan.indexes += iit.data->indexes.size();
+			++ writePlan.transforms;
+
+			if ((c->flags & CommandFlags::DoNotCount) != CommandFlags::None) {
+				excludeVertexes = iit.data->data.size();
+				excludeIndexes = iit.data->indexes.size();
+			}
+		}
+
+		auto iit = writePlan.states.find(cmd->state);
+		if (iit == writePlan.states.end()) {
+			iit = writePlan.states.emplace(cmd->state, std::forward_list<PlanData>()).first;
+		}
+
+		return iit->second.emplace_front(PlanData{cmd, vertexes});
+	}
 
 	void emplaceWritePlan(const core::Material *material, HashMap<core::MaterialId, MaterialWritePlan> &writePlan,
 				const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes) {
@@ -175,27 +221,7 @@ struct VertexMaterialDrawPlan {
 		}
 
 		if (it != writePlan.end() && it->second.material) {
-			for (auto &iit : vertexes) {
-				globalWritePlan.vertexes += iit.data->data.size();
-				globalWritePlan.indexes += iit.data->indexes.size();
-				++ globalWritePlan.transforms;
-
-				it->second.vertexes += iit.data->data.size();
-				it->second.indexes += iit.data->indexes.size();
-				++ it->second.transforms;
-
-				if ((c->flags & CommandFlags::DoNotCount) != CommandFlags::None) {
-					excludeVertexes = iit.data->data.size();
-					excludeIndexes = iit.data->indexes.size();
-				}
-			}
-
-			auto iit = it->second.states.find(cmd->state);
-			if (iit == it->second.states.end()) {
-				iit = it->second.states.emplace(cmd->state, std::forward_list<PlanCommandInfo>()).first;
-			}
-
-			auto &plan = iit->second.emplace_front(PlanCommandInfo{cmd, vertexes});
+			auto &plan = emplaceWritePlanData(it->second, c, cmd, vertexes);
 
 			if (cmd->state != StateIdNone) {
 				auto state = handle->getState(cmd->state);
@@ -205,7 +231,6 @@ struct VertexMaterialDrawPlan {
 					if (stateData && stateData->gradient) {
 						plan.transform = stateData->transform;
 						plan.gradient = stateData->gradient.get();
-						plan.gradientVertexOffset = globalWritePlan.vertexes;
 						globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
 					}
 				}
@@ -236,20 +261,8 @@ struct VertexMaterialDrawPlan {
 		}
 	};
 
-	void pushDeferred(core::MaterialSet *materialSet, const Command *c, const CmdDeferred *cmd) {
-		auto material = materialSet->getMaterialById(cmd->material);
-		if (!material) {
-			return;
-		}
-
-		if (!cmd->deferred->isWaitOnReady()) {
-			if (!cmd->deferred->isReady()) {
-				return;
-			}
-		}
-
-		auto &vertexes = deferredTmp.emplace_front(cmd->deferred->getData().vec<Interface>());
-
+	template <typename Cmd>
+	void applyNormalized(Vector<TransformVertexData> &vertexes, const Cmd *cmd) {
 		// apply transforms;
 		if (cmd->normalized) {
 			for (auto &it : vertexes) {
@@ -267,6 +280,23 @@ struct VertexMaterialDrawPlan {
 				const_cast<TransformVertexData &>(it).transform = cmd->viewTransform * cmd->modelTransform * it.transform;
 			}
 		}
+	}
+
+	void pushDeferred(core::MaterialSet *materialSet, const Command *c, const CmdDeferred *cmd) {
+		auto material = materialSet->getMaterialById(cmd->material);
+		if (!material) {
+			return;
+		}
+
+		if (!cmd->deferred->isWaitOnReady()) {
+			if (!cmd->deferred->isReady()) {
+				return;
+			}
+		}
+
+		auto &vertexes = deferredTmp.emplace_front(cmd->deferred->getData().vec<Interface>());
+
+		applyNormalized(vertexes, cmd);
 
 		if (cmd->renderingLevel == RenderingLevel::Solid) {
 			emplaceWritePlan(material, solidWritePlan, c, cmd, vertexes);
@@ -400,124 +430,81 @@ struct VertexMaterialDrawPlan {
 		return vec;
 	}
 
-	void pushVertexes(WriteTarget &writeTarget, const core::MaterialId &materialId, const MaterialWritePlan &plan,
-				const CmdGeneral *cmd, const TransformData &transform, VertexData *vertexes) {
-		auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
-		memcpy(target, vertexes->data.data(), vertexes->data.size() * sizeof(Vertex));
+	void pushPlanVertexes(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
+		auto pushVertexes = [&] (core::MaterialId materialId, const MaterialWritePlan &plan, const TransformData &transform, const TransformVertexData &vertexes) {
+			auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
+			memcpy(target, vertexes.data->data.data(), vertexes.data->data.size() * sizeof(Vertex));
+			memcpy(writeTarget.transform + transtormOffset, &transform, sizeof(TransformData));
 
-		memcpy(writeTarget.transform + transtormOffset, &transform, sizeof(TransformData));
+			maxShadowValue = std::max(transform.shadow.x, maxShadowValue);
 
-		size_t idx = 0;
-		if (plan.atlas) {
-			auto ext = plan.atlas->getImageExtent();
-			float atlasScaleX = 1.0f / ext.width;
-			float atlasScaleY =  1.0f / ext.height;
+			size_t idx = 0;
+			if (plan.atlas) {
+				auto ext = plan.atlas->getImageExtent();
+				float atlasScaleX = 1.0f / ext.width;
+				float atlasScaleY =  1.0f / ext.height;
 
-			for (; idx < vertexes->data.size(); ++ idx) {
-				auto &t = target[idx];
-				t.material = transformIdx | transformIdx << 16;
+				for (; idx < vertexes.data->data.size(); ++ idx) {
+					auto &t = target[idx];
+					t.material = materialId | transformIdx << 16;
 
-				if (!hasGpuSideAtlases) {
-					if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
-						t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
-						t.tex = d->tex;
-						t.object = 0;
-					} else {
-	#if DEBUG
-						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
-	#endif
-						auto anchor = font::CharId::getAnchorForChar(t.object);
-						switch (anchor) {
-						case font::CharAnchor::BottomLeft:
-							t.tex = Vec2(1.0f - atlasScaleX, 0.0f);
-							break;
-						case font::CharAnchor::TopLeft:
-							t.tex = Vec2(1.0f - atlasScaleX, 0.0f + atlasScaleY);
-							break;
-						case font::CharAnchor::TopRight:
-							t.tex = Vec2(1.0f, 0.0f + atlasScaleY);
-							break;
-						case font::CharAnchor::BottomRight:
-							t.tex = Vec2(1.0f, 0.0f);
-							break;
+					if (!hasGpuSideAtlases) {
+						if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
+							t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
+							t.tex = d->tex;
+							t.object = 0;
+						} else {
+#if DEBUG
+							log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
+#endif
+							auto anchor = font::CharId::getAnchorForChar(t.object);
+							switch (anchor) {
+							case font::CharAnchor::BottomLeft:
+								t.tex = Vec2(1.0f - atlasScaleX, 0.0f);
+								break;
+							case font::CharAnchor::TopLeft:
+								t.tex = Vec2(1.0f - atlasScaleX, 0.0f + atlasScaleY);
+								break;
+							case font::CharAnchor::TopRight:
+								t.tex = Vec2(1.0f, 0.0f + atlasScaleY);
+								break;
+							case font::CharAnchor::BottomRight:
+								t.tex = Vec2(1.0f, 0.0f);
+								break;
+							}
 						}
 					}
 				}
-			}
-		} else {
-			for (; idx < vertexes->data.size(); ++ idx) {
-				auto &t = target[idx];
-				t.material = transformIdx | transformIdx << 16;
-			}
-		}
-
-		auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
-
-		for (auto &it : vertexes->indexes) {
-			*(indexTarget++) = it + vertexOffset;
-		}
-
-		vertexOffset += vertexes->data.size();
-		indexOffset += vertexes->indexes.size();
-		transtormOffset += sizeof(TransformData);
-		++ transformIdx;
-
-		materialVertexes += vertexes->data.size();
-		materialIndexes += vertexes->indexes.size();
-	}
-
-	void drawWritePlan(Vector<VertexSpan> &spans, WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
-		// optimize draw order, minimize switching pipeline, textureSet and descriptors
-		Vector<const Pair<const core::MaterialId, MaterialWritePlan> *> drawOrder;
-
-		for (auto &it : writePlan) {
-			if (drawOrder.empty()) {
-				drawOrder.emplace_back(&it);
 			} else {
-				auto lb = std::lower_bound(drawOrder.begin(), drawOrder.end(), &it,
-						[] (const Pair<const core::MaterialId, MaterialWritePlan> *l, const Pair<const core::MaterialId, MaterialWritePlan> *r) {
-					if (l->second.material->getPipeline() != l->second.material->getPipeline()) {
-						return GraphicPipeline::comparePipelineOrdering(*l->second.material->getPipeline(), *r->second.material->getPipeline());
-					} else if (l->second.material->getLayoutIndex() != r->second.material->getLayoutIndex()) {
-						return l->second.material->getLayoutIndex() < r->second.material->getLayoutIndex();
-					} else {
-						return l->first < r->first;
-					}
-				});
-				if (lb == drawOrder.end()) {
-					drawOrder.emplace_back(&it);
-				} else {
-					drawOrder.emplace(lb, &it);
+				for (; idx < vertexes.data->data.size(); ++ idx) {
+					target[idx].material = materialId | transformIdx << 16;
 				}
 			}
-		}
 
-		for (auto &it : drawOrder) {
-			// split order on states
+			vertexOffset += vertexes.data->data.size();
+			transtormOffset += sizeof(TransformData);
+			++ transformIdx;
+		};
 
-			for (auto &state : it->second.states) {
-				materialVertexes = 0;
-				materialIndexes = 0;
-
-				uint32_t gradientStart = 0;
-				uint32_t gradientCount = 0;
-
+		for (auto &plan : writePlan) {
+			for (auto &state : plan.second.states) {
 				for (auto &cmd : state.second) {
+					cmd.vertexOffset = vertexOffset;
 					for (auto &iit : cmd.vertexes) {
-						TransformData val(iit.transform);
+						TransformData transformData(iit.transform);
 
 						auto pathIt = paths.find(cmd.cmd->zPath);
 						if (pathIt != paths.end()) {
-							val.offset.z = pathIt->second;
+							transformData.offset.z = pathIt->second;
 						}
 
 						if (cmd.cmd->depthValue > 0.0f) {
 							auto f16 = halffloat::encode(cmd.cmd->depthValue);
 							auto value = halffloat::decode(f16);
-							val.shadow = Vec4(value, value, value, 1.0);
+							transformData.shadow = Vec4(value, value, value, 1.0);
 						}
 
-						pushVertexes(writeTarget, it->first, it->second, cmd.cmd, val, iit.data.get());
+						pushVertexes(plan.first, plan.second, transformData, iit);
 					}
 
 					if (cmd.gradient) {
@@ -559,38 +546,169 @@ struct VertexMaterialDrawPlan {
 							++ target;
 						}
 
-						gradientStart = vertexOffset;
-						gradientCount = cmd.gradient->steps.size();
+						cmd.gradientStart = vertexOffset;
+						cmd.gradientCount = cmd.gradient->steps.size();
 
 						vertexOffset += cmd.gradient->steps.size() + 2;
 					}
-				}
 
-				spans.emplace_back(VertexSpan({ it->first, materialIndexes, 1, indexOffset - materialIndexes, state.first,
-					gradientStart, gradientCount}));
+					cmd.vertexCount = vertexOffset - cmd.vertexOffset;
+				}
 			}
 		}
 	}
 
-	void pushAll(Vector<VertexSpan> &spans, WriteTarget &writeTarget) {
-		pushInitial(writeTarget);
+	void drawWritePlan(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
+		// optimize draw order, minimize switching pipeline, textureSet and descriptors
+		Vector<const Pair<const core::MaterialId, MaterialWritePlan> *> drawOrder;
 
-		uint32_t counter = 0;
-		drawWritePlan(spans, writeTarget, solidWritePlan);
-
-		solidCmds = spans.size() - counter;
-		counter = spans.size();
-
-		drawWritePlan(spans, writeTarget, surfaceWritePlan);
-
-		surfaceCmds = spans.size() - counter;
-		counter = spans.size();
-
-		for (auto &it : transparentWritePlan) {
-			drawWritePlan(spans, writeTarget, it.second);
+		for (auto &it : writePlan) {
+			if (drawOrder.empty()) {
+				drawOrder.emplace_back(&it);
+			} else {
+				auto lb = std::lower_bound(drawOrder.begin(), drawOrder.end(), &it,
+						[] (const Pair<const core::MaterialId, MaterialWritePlan> *l, const Pair<const core::MaterialId, MaterialWritePlan> *r) {
+					if (l->second.material->getPipeline() != l->second.material->getPipeline()) {
+						return GraphicPipeline::comparePipelineOrdering(*l->second.material->getPipeline(), *r->second.material->getPipeline());
+					} else if (l->second.material->getLayoutIndex() != r->second.material->getLayoutIndex()) {
+						return l->second.material->getLayoutIndex() < r->second.material->getLayoutIndex();
+					} else {
+						return l->first < r->first;
+					}
+				});
+				if (lb == drawOrder.end()) {
+					drawOrder.emplace_back(&it);
+				} else {
+					drawOrder.emplace(lb, &it);
+				}
+			}
 		}
 
-		transparentCmds = spans.size() - counter;
+		for (auto &it : drawOrder) {
+			for (auto &state : it->second.states) {
+				auto materialIndexes = indexOffset;
+				uint32_t gradientStart = 0;
+				uint32_t gradientCount = 0;
+
+				for (auto &cmd : state.second) {
+					for (auto &vertexes : cmd.vertexes) {
+						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
+
+						if (vertexes.sdfIndexes > 0) {
+							auto indexSource = vertexes.data->indexes.data();
+							auto indexCount = vertexes.data->indexes.size() - vertexes.sdfIndexes;
+							for (size_t i = 0; i < indexCount; ++ i) {
+								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
+							}
+
+							indexOffset += indexCount;
+						} else {
+							for (auto &it : vertexes.data->indexes) {
+								*(indexTarget++) = it + cmd.vertexOffset;
+							}
+
+							indexOffset += vertexes.data->indexes.size();
+						}
+					}
+
+					if (cmd.gradient) {
+						if (gradientCount != 0) {
+							materialSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
+								gradientStart, gradientCount}));
+							materialIndexes = indexOffset;
+						} else {
+							gradientStart = cmd.gradientStart;
+							gradientStart = cmd.gradientCount;
+						}
+					}
+				}
+
+				if (indexOffset > materialIndexes) {
+					materialSpans.emplace_back(VertexSpan({ it->first, indexOffset - materialIndexes, 1, materialIndexes, state.first,
+						gradientStart, gradientCount}));
+				}
+			}
+		}
+
+		for (auto &it : drawOrder) {
+			for (auto &state : it->second.states) {
+				auto materialIndexes = indexOffset;
+
+				for (auto &cmd : state.second) {
+					for (auto &vertexes : cmd.vertexes) {
+						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
+
+						if (vertexes.sdfIndexes > 0 && vertexes.fillIndexes > 0) {
+							auto indexSource = vertexes.data->indexes.data();
+							auto indexCount = vertexes.fillIndexes;
+							for (size_t i = 0; i < indexCount; ++ i) {
+								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
+							}
+
+							indexOffset += indexCount;
+						}
+					}
+				}
+
+				if (indexOffset > materialIndexes) {
+					shadowSolidSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
+						0, 0}));
+				}
+			}
+		}
+
+		for (auto &it : drawOrder) {
+			for (auto &state : it->second.states) {
+				auto materialIndexes = indexOffset;
+
+				for (auto &cmd : state.second) {
+					for (auto &vertexes : cmd.vertexes) {
+						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
+
+						if (vertexes.sdfIndexes > 0) {
+							auto indexSource = vertexes.data->indexes.data() + vertexes.fillIndexes + vertexes.strokeIndexes;
+							auto indexCount = vertexes.sdfIndexes;
+							for (size_t i = 0; i < indexCount; ++ i) {
+								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
+							}
+
+							indexOffset += indexCount;
+						}
+					}
+				}
+
+				if (indexOffset > materialIndexes) {
+					shadowSdfSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
+						0, 0}));
+				}
+			}
+		}
+	}
+
+	void pushAll(WriteTarget &writeTarget) {
+		pushInitial(writeTarget);
+		pushPlanVertexes(writeTarget, solidWritePlan);
+		pushPlanVertexes(writeTarget, surfaceWritePlan);
+		for (auto &it : transparentWritePlan) {
+			pushPlanVertexes(writeTarget, it.second);
+		}
+
+		uint32_t counter = 0;
+		drawWritePlan(writeTarget, solidWritePlan);
+
+		solidCmds = materialSpans.size() - counter;
+		counter = materialSpans.size();
+
+		drawWritePlan(writeTarget, surfaceWritePlan);
+
+		surfaceCmds = materialSpans.size() - counter;
+		counter = materialSpans.size();
+
+		for (auto &it : transparentWritePlan) {
+			drawWritePlan(writeTarget, it.second);
+		}
+
+		transparentCmds = materialSpans.size() - counter;
 	}
 };
 
@@ -603,7 +721,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	auto t = platform::clock();
 
 	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
-	//plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
+	plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
 	plan.handle = commands;
 
 	auto shadowExtent = commands->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
@@ -673,7 +791,11 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	}
 
 	// write initial full screen quad
-	plan.pushAll(_spans, writeTarget);
+	plan.pushAll(writeTarget);
+
+	_spans = move(plan.materialSpans);
+	_shadowSolidSpans = move(plan.shadowSolidSpans);
+	_shadowSdfSpans = move(plan.shadowSdfSpans);
 
 	if (fhandle.isPersistentMapping()) {
 		_vertexes->flushMappedRegion();
@@ -693,6 +815,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	_drawStat.solidCmds = plan.solidCmds;
 	_drawStat.surfaceCmds = plan.surfaceCmds;
 	_drawStat.transparentCmds = plan.transparentCmds;
+	_drawStat.shadowsCmds = plan.shadowsCmds;
 	_drawStat.vertexInputTime = platform::clock() - t;
 
 	commands->director->pushDrawStat(_drawStat);
@@ -701,6 +824,7 @@ bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameCo
 	addBufferView(_transforms);
 
 	_commands = commands;
+	_maxShadowValue = plan.maxShadowValue;
 	return true;
 }
 
@@ -781,81 +905,27 @@ Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &h
 void VertexPassHandle::prepareRenderPass(CommandBuffer &) { }
 
 void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, CommandBuffer &buf) {
-	auto &fb = getFramebuffer();
-	auto currentExtent = fb->getExtent();
-	auto commands = _vertexBuffer->popCommands();
+	auto commands = _vertexBuffer->getCommands();
 	auto pass = static_cast<RenderPass *>(_data->impl.get());
 
 	if (_vertexBuffer->empty() || !_vertexBuffer->getIndexes() || !_vertexBuffer->getVertexes()) {
 		return;
 	}
 
-	VkViewport viewport{ 0.0f, 0.0f, float(currentExtent.width), float(currentExtent.height), 0.0f, 1.0f };
-	buf.cmdSetViewport(0, makeSpanView(&viewport, 1));
-
-	VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
-	buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-
-	// bind primary descriptors
-	// default texture set comes with other sets
-	buf.cmdBindDescriptorSets(pass, 0);
-
 	// bind global indexes
 	buf.cmdBindIndexBuffer(_vertexBuffer->getIndexes(), 0, VK_INDEX_TYPE_UINT32);
 
-	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
-	core::GraphicPipeline *boundPipeline = nullptr;
+	clearDynamicState(buf);
 
-	StateId dynamicStateId = maxOf<StateId>();
-	DrawStateValues dynamicState;
-
-	//log::verbose("VertexPassHandle", (void *)this, " init");
-
-	auto enableState = [&, this] (uint32_t stateId) {
-		if (stateId == dynamicStateId) {
-			return;
-		}
-
-		auto state = commands->getState(stateId);
-		//log::verbose("VertexPassHandle", (void *)this, " enable state: ", stateId, " ", (void *)state);
-		if (!state) {
-			if (dynamicState.isScissorEnabled()) {
-				dynamicState.enabled &= ~(core::DynamicState::Scissor);
-				VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
-				buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-			}
-		} else {
-			if (state->isScissorEnabled()) {
-				if (dynamicState.isScissorEnabled()) {
-					if (dynamicState.scissor != state->scissor) {
-						auto scissorRect = rotateScissor(_constraints, state->scissor);
-						buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-						dynamicState.scissor = state->scissor;
-					}
-				} else {
-					dynamicState.enabled |= core::DynamicState::Scissor;
-					auto scissorRect = rotateScissor(_constraints, state->scissor);
-					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-					dynamicState.scissor = state->scissor;
-				}
-			} else {
-				if (dynamicState.isScissorEnabled()) {
-					dynamicState.enabled &= ~(core::DynamicState::Scissor);
-					VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
-					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-				}
-			}
-		}
-
-
-		dynamicStateId = stateId;
-	};
+	// Use commented code to debug drawing command-by-command
 
 	/*static size_t ctrl = 0;
 
 	size_t i = 0;
 	size_t min = 0;
 	size_t max = (ctrl ++) % 12;*/
+
+	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
 
 	struct MaterialData {
 		uint32_t materialIdx = 0;
@@ -887,13 +957,10 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		data.gradientOffset = materialVertexSpan.gradientOffset;
 		data.gradientCount = materialVertexSpan.gradientCount;
 
-		auto pipeline = material->getPipeline()->pipeline;
+		auto pipeline = material->getPipeline();
 		auto textureSetIndex =  material->getLayoutIndex();
 
-		if (pipeline != boundPipeline) {
-			buf.cmdBindPipeline(static_cast<GraphicPipeline *>(pipeline.get()));
-			boundPipeline = pipeline;
-		}
+		buf.cmdBindPipelineWithDescriptors(pipeline);
 
 		if (textureSetIndex != boundTextureSetIndex) {
 			auto l = materials->getLayout(textureSetIndex);
@@ -902,7 +969,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 				auto set = s->getSet();
 
 				// rebind texture set at last index
-				buf.cmdBindDescriptorSets(static_cast<RenderPass *>(_data->impl.get()), 0, makeSpanView(&set, 1), 1);
+				buf.cmdBindDescriptorSets(static_cast<RenderPass *>(_data->impl.get()), makeSpanView(&set, 1), 1);
 				boundTextureSetIndex = textureSetIndex;
 			} else {
 				stappler::log::error("MaterialRenderPassHandle", "Invalid textureSetlayout: ", textureSetIndex);
@@ -910,7 +977,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 			}
 		}
 
-		enableState(materialVertexSpan.state);
+		applyDynamicState(commands, buf, materialVertexSpan.state);
 
 		buf.cmdPushConstants(pass->getPipelineLayout(0),
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
@@ -927,5 +994,58 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 }
 
 void VertexPassHandle::finalizeRenderPass(CommandBuffer &) { }
+
+void VertexPassHandle::clearDynamicState(CommandBuffer &buf) {
+	auto currentExtent = getFramebuffer()->getExtent();
+
+	VkViewport viewport{ 0.0f, 0.0f, float(currentExtent.width), float(currentExtent.height), 0.0f, 1.0f };
+	buf.cmdSetViewport(0, makeSpanView(&viewport, 1));
+
+	VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
+	buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+
+	_dynamicStateId = maxOf<StateId>();
+	_dynamicState = DrawStateValues();
+}
+
+void VertexPassHandle::applyDynamicState(const FrameContextHandle2d *commands, CommandBuffer &buf, uint32_t stateId) {
+	if (stateId == _dynamicStateId) {
+		return;
+	}
+
+	auto currentExtent = getFramebuffer()->getExtent();
+	auto state = commands->getState(stateId);
+	//log::verbose("VertexPassHandle", (void *)this, " enable state: ", stateId, " ", (void *)state);
+	if (!state) {
+		if (_dynamicState.isScissorEnabled()) {
+			_dynamicState.enabled &= ~(core::DynamicState::Scissor);
+			VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
+			buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+		}
+	} else {
+		if (state->isScissorEnabled()) {
+			if (_dynamicState.isScissorEnabled()) {
+				if (_dynamicState.scissor != state->scissor) {
+					auto scissorRect = rotateScissor(_constraints, state->scissor);
+					buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+					_dynamicState.scissor = state->scissor;
+				}
+			} else {
+				_dynamicState.enabled |= core::DynamicState::Scissor;
+				auto scissorRect = rotateScissor(_constraints, state->scissor);
+				buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+				_dynamicState.scissor = state->scissor;
+			}
+		} else {
+			if (_dynamicState.isScissorEnabled()) {
+				_dynamicState.enabled &= ~(core::DynamicState::Scissor);
+				VkRect2D scissorRect{ { 0, 0}, { currentExtent.width, currentExtent.height } };
+				buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
+			}
+		}
+	}
+
+	_dynamicStateId = stateId;
+}
 
 }

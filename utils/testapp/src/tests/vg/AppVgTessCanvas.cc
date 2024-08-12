@@ -295,6 +295,17 @@ void VgTessCanvas::addContour() {
 	}
 }
 
+void VgTessCanvas::setStrokeWidth(float val) {
+	if (_strokeWidth != val) {
+		_strokeWidth = val;
+		updatePoints();
+	}
+}
+
+float VgTessCanvas::getStrokeWidth() const {
+	return _strokeWidth;
+}
+
 void VgTessCanvas::onTouch(const InputEvent &ev) {
 	switch (ev.data.event) {
 	case InputEventName::Begin:
@@ -436,13 +447,13 @@ void VgTessCanvas::updatePoints() {
 
 	pathFill->setWindingRule(_winding);
 	pathFill->setStyle(_drawStyle);
-	pathFill->setStrokeWidth(25.0f);
+	pathFill->setStrokeWidth(_strokeWidth);
 	pathFill->setStrokeColor(Color::Red_200);
 	pathFill->setAntialiased(false);
 
 	pathLines->setWindingRule(_winding);
 	pathLines->setStyle(_drawStyle);
-	pathLines->setStrokeWidth(25.0f);
+	pathLines->setStrokeWidth(_strokeWidth);
 	pathLines->setStrokeColor(Color::Red_200);
 	pathLines->setAntialiased(false);
 

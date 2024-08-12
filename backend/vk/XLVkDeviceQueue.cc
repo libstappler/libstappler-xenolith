@@ -533,11 +533,27 @@ void CommandBuffer::cmdSetScissor(uint32_t firstScissor, SpanView<VkRect2D> scis
 }
 
 void CommandBuffer::cmdBindPipeline(GraphicPipeline *pipeline) {
-	_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipeline());
+	if (pipeline != _boundGraphicPipeline) {
+		_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipeline());
+		_boundGraphicPipeline = pipeline;
+	}
 }
 
 void CommandBuffer::cmdBindPipeline(ComputePipeline *pipeline) {
-	_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->getPipeline());
+	if (pipeline != _boundComputePipeline) {
+		_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->getPipeline());
+		_boundComputePipeline = pipeline;
+	}
+}
+
+void CommandBuffer::cmdBindPipelineWithDescriptors(const core::GraphicPipelineData *data, uint32_t firstSet) {
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), data->layout->index, firstSet);
+	cmdBindPipeline(static_cast<GraphicPipeline *>(data->pipeline.get()));
+}
+
+void CommandBuffer::cmdBindPipelineWithDescriptors(const core::ComputePipelineData *data, uint32_t firstSet) {
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), data->layout->index, firstSet);
+	cmdBindPipeline(static_cast<ComputePipeline *>(data->pipeline.get()));
 }
 
 void CommandBuffer::cmdBindIndexBuffer(Buffer *buf, VkDeviceSize offset, VkIndexType indexType) {
@@ -545,25 +561,40 @@ void CommandBuffer::cmdBindIndexBuffer(Buffer *buf, VkDeviceSize offset, VkIndex
 }
 
 void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex, uint32_t firstSet) {
+	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
 	auto &sets = pass->getDescriptorSets(layoutIndex);
+
+	auto targetLayout = pass->getPipelineLayout(layoutIndex);
 
 	Vector<VkDescriptorSet> bindSets; bindSets.reserve(sets.size());
 	for (auto &it : sets) {
 		bindSets.emplace_back(it->set);
-		_descriptorSets.emplace(it);
 	}
 
-	cmdBindDescriptorSets(pass, layoutIndex, bindSets, firstSet);
+	if (targetLayout != _boundLayout || !updateBoundSets(bindSets, firstSet)) {
+		for (auto &it : sets) {
+			_descriptorSets.emplace(it);
+		}
+
+		_boundLayoutIndex = layoutIndex;
+		_boundLayout = targetLayout;
+
+		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
+				bindSets.size(), bindSets.data(), 0, nullptr);
+	}
 }
 
-void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
+void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-	_boundLayoutIndex = layoutIndex;
-	_boundLayout = pass->getPipelineLayout(layoutIndex);
+	if (!_boundLayout) {
+		log::error("vk::CommandBuffer", "Try to rebind sets when no layout is bound");
+	}
 
-	_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
-			sets.size(), sets.data(), 0, nullptr);
+	if (!updateBoundSets(sets, firstSet)) {
+		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
+				sets.size(), sets.data(), 0, nullptr);
+	}
 }
 
 void CommandBuffer::cmdBindGraphicDescriptorSets(VkPipelineLayout layout, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
@@ -656,6 +687,19 @@ void CommandBuffer::bindBuffer(core::BufferObject *buffer) {
 	if (auto pool = static_cast<Buffer *>(buffer)->getMemory()->getPool()) {
 		_memPool.emplace(pool);
 	}
+}
+
+bool CommandBuffer::updateBoundSets(SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
+	auto size = sets.size() + firstSet;
+	if (size <= _boundSets.size()) {
+		if (memcmp(_boundSets.data() + firstSet, sets.data(), sizeof(VkDescriptorSet) * sets.size()) == 0) {
+			return true;
+		}
+	}
+
+	_boundSets.reserve(size);
+	memcpy(_boundSets.data() + firstSet, sets.data(), sizeof(VkDescriptorSet) * sets.size());
+	return false;
 }
 
 CommandPool::~CommandPool() {

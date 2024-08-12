@@ -183,7 +183,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 	}
 
 	if (checkVertexDirty()) {
-		updateVertexes();
+		updateVertexes(frame);
 		_vertexesDirty = false;
 	}
 
@@ -418,7 +418,7 @@ void Sprite::initVertexes() {
 	_vertexesDirty = true;
 }
 
-void Sprite::updateVertexes() {
+void Sprite::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 
 	auto texExtent = _texture->getExtent();

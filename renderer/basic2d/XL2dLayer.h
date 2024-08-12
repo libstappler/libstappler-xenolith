@@ -69,7 +69,7 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual void updateVertexes() override;
+	virtual void updateVertexes(FrameInfo &frame) override;
 	virtual void updateVertexesColor() override;
 
 	virtual RenderingLevel getRealRenderingLevel() const override;

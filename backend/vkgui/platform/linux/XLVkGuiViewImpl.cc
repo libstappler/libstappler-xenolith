@@ -132,7 +132,7 @@ void ViewImpl::threadInit() {
 		// try X11
 		if (auto xcb = xenolith::platform::XcbLibrary::getInstance()) {
 			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
-				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb, this, _info.name, _info.bundleId, _info.rect);
+				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb, this, _info.title, _info.bundleId, _info.rect);
 				if (!view) {
 					log::error("VkView", "Fail to initialize xcb window");
 					return;

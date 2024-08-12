@@ -55,6 +55,7 @@ protected:
 	const core::AttachmentData *_sdfImageAttachmentData = nullptr;
 
 	bool _init = false;
+	bool _hasFullSdf = false;
 };
 
 struct StateData : public Ref {

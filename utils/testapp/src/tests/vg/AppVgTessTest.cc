@@ -185,6 +185,7 @@ void VgDrawStyleSwitcher::updateStyle() {
 	case vg::DrawStyle::Fill: _label->setString("DrawStyle: Fill"); break;
 	case vg::DrawStyle::Stroke: _label->setString("DrawStyle: Stroke"); break;
 	case vg::DrawStyle::FillAndStroke: _label->setString("DrawStyle: FillAndStroke"); break;
+	case vg::DrawStyle::PseudoSdf: _label->setString("DrawStyle: PseudoSdf"); break;
 	case vg::DrawStyle::None: break;
 	}
 }
@@ -353,6 +354,19 @@ bool VgTessTest::init() {
 		_canvas->setSelectedContour(n);
 	});
 
+	float minWidth = 10.0f;
+	float defaultWidth = 25.0f;
+	float maxWidth = 150.0f;
+
+	_sliderWidth = addChild(Rc<SliderWithLabel>::create(toString("Width: ", defaultWidth),
+			(defaultWidth - minWidth) / (maxWidth - minWidth), [this, minWidth, maxWidth, defaultWidth] (float val) {
+		auto value = minWidth + val * (maxWidth - minWidth);
+		_canvas->setStrokeWidth(value);
+		_sliderWidth->setString(toString("Width: ", value));
+	}));
+	_sliderWidth->setAnchorPoint(Anchor::TopLeft);
+	_sliderWidth->setContentSize(Size2(128.0f, 32.0f));
+
 	return true;
 }
 
@@ -372,6 +386,10 @@ void VgTessTest::onContentSizeDirty() {
 
 	if (_drawStyleSwitcher) {
 		_drawStyleSwitcher->setPosition(Vec2(0.0f, _contentSize.height - 40.0f));
+	}
+
+	if (_sliderWidth) {
+		_sliderWidth->setPosition(Vec2(16.0f, _contentSize.height - 80.0f));
 	}
 
 	if (_contourSwitcher) {

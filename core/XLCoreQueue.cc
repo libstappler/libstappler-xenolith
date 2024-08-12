@@ -1300,6 +1300,22 @@ bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f, const PipelineMat
 
 SubpassBuilder::SubpassBuilder(SubpassData *data) : _data(data) { }
 
+const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(StringView str, const Callback<void(PipelineLayoutBuilder &)> &cb) {
+	auto pool = _data->queue->pool;
+	memory::pool::context ctx(pool);
+
+	auto layout = new (pool) PipelineLayoutData;
+	layout->key = str.pdup(_data->queue->pool);
+	layout->pass = _data;
+	layout->index = _data->pipelineLayouts.size();
+
+	PipelineLayoutBuilder builder(layout);
+	cb(builder);
+
+	_data->pipelineLayouts.emplace_back(layout);
+	return layout;
+}
+
 const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
@@ -1307,7 +1323,7 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<
 	auto layout = new (pool) PipelineLayoutData;
 	layout->key = _data->key;
 	layout->pass = _data;
-	layout->index = _data->subpasses.size();
+	layout->index = _data->pipelineLayouts.size();
 
 	PipelineLayoutBuilder builder(layout);
 	cb(builder);

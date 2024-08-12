@@ -56,7 +56,7 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 		path->getPath()->init(bytes);
 	});
 	path->setWindingRule(vg::Winding::EvenOdd);
-	path->setAntialiased(false);
+	path->setAntialiased(true);
 	auto t = Mat4::IDENTITY;
 	t.scale(1, -1, 1);
 	t.translate(0, -24, 0);

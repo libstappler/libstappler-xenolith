@@ -119,7 +119,7 @@ protected:
 	virtual void updateColor() override;
 	virtual void updateVertexesColor();
 	virtual void initVertexes();
-	virtual void updateVertexes();
+	virtual void updateVertexes(FrameInfo &frame);
 
 	virtual void updateBlendAndDepth();
 

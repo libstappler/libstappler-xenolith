@@ -31,22 +31,24 @@ struct VectorCanvasPathOutput {
 	uint32_t objects = 0;
 };
 
-struct VectorCanvasPathDrawer {
+struct VectorCanvasPathDrawer : VectorCanvasConfig {
 	const VectorPath *path = nullptr;
 
-	bool verbose = false;
-	float quality = 0.5f; // approximation level (more is better)
-	Color4F originalColor;
-	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
-
-	uint32_t draw(memory::pool_t *pool, const VectorPath &p, const Mat4 &transform, VertexData *, bool cache);
+	uint32_t draw(memory::pool_t *pool, const VectorPath &p, const Mat4 &transform, VertexData *,
+			bool cache, uint32_t &fillIndexes, uint32_t &strokeIndexes, uint32_t &sdfIndexes);
 };
 
 struct VectorCanvasCacheData {
 	Rc<VertexData> data;
+	uint32_t fillIndexes = 0;
+	uint32_t strokeIndexes = 0;
+	uint32_t sdfIndexes = 0;
+
 	String name;
+
 	float quality = 1.0f;
 	float scale = 1.0f;
+	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
 	vg::DrawStyle style = vg::DrawStyle::Fill;
 
 	bool operator< (const VectorCanvasCacheData &other) const {
@@ -56,6 +58,8 @@ struct VectorCanvasCacheData {
 			return name < other.name;
 		} else if (quality != other.quality) {
 			return quality < other.quality;
+		} else if (relocateRule != other.relocateRule) {
+			return toInt(relocateRule) < toInt(other.relocateRule);
 		} else {
 			return scale < other.scale;
 		}
@@ -113,10 +117,10 @@ struct VectorCanvas::Data : memory::AllocPool {
 
 	void doDraw(const VectorPath &, StringView cache);
 
-	void writeCacheData(const VectorPath &p, VertexData *out, const VertexData &source);
+	void writeCacheData(const VectorPath &p, TransformVertexData *out, const VectorCanvasCacheData &source);
 };
 
-static void VectorCanvasPathDrawer_pushVertex(void *ptr, uint32_t idx, const Vec2 &pt, float vertexValue) {
+static void VectorCanvasPathDrawer_pushVertex(void *ptr, uint32_t idx, const Vec2 &pt, float vertexValue, const Vec2 &norm) {
 	auto out = reinterpret_cast<VectorCanvasPathOutput *>(ptr);
 	if (size_t(idx) >= out->vertexes->data.size()) {
 		out->vertexes->data.resize(idx + 1);
@@ -126,6 +130,19 @@ static void VectorCanvasPathDrawer_pushVertex(void *ptr, uint32_t idx, const Vec
 		Vec4(pt, 0.0f, 1.0f),
 		Vec4(out->color.r, out->color.g, out->color.b, out->color.a * vertexValue),
 		Vec2(0.0f, 0.0f), out->material, 0
+	};
+}
+
+static void VectorCanvasPathDrawer_pushSdf(void *ptr, uint32_t idx, const Vec2 &pt, float vertexValue, const Vec2 &norm) {
+	auto out = reinterpret_cast<VectorCanvasPathOutput *>(ptr);
+	if (size_t(idx) >= out->vertexes->data.size()) {
+		out->vertexes->data.resize(idx + 1);
+	}
+
+	out->vertexes->data[idx] = Vertex{
+		Vec4(pt, 0.0f, 1.0f),
+		Vec4(out->color.r * vertexValue, out->color.g * vertexValue, out->color.b * vertexValue, out->color.a),
+		norm, out->material, 0
 	};
 }
 
@@ -154,44 +171,22 @@ VectorCanvas::~VectorCanvas() {
 	}
 }
 
-bool VectorCanvas::init(bool deferred, float quality, Color4F color) {
+bool VectorCanvas::init(bool deferred) {
 	auto p = memory::pool::createTagged("xenolith::VectorCanvas");
 	memory::pool::context ctx(p);
 	_data = new (p) Data(p, deferred);
 	if (_data) {
-		_data->pathDrawer.quality = quality;
-		_data->pathDrawer.originalColor = color;
 		return true;
 	}
 	return false;
 }
 
-void VectorCanvas::setColor(Color4F color) {
-	_data->pathDrawer.originalColor = color;
+void VectorCanvas::setConfig(const VectorCanvasConfig &config) {
+	static_cast<VectorCanvasConfig &>(_data->pathDrawer) = config;
 }
 
-Color4F VectorCanvas::getColor() const {
-	return _data->pathDrawer.originalColor;
-}
-
-void VectorCanvas::setQuality(float value) {
-	_data->pathDrawer.quality = value;
-}
-
-float VectorCanvas::getQuality() const {
-	return _data->pathDrawer.quality;
-}
-
-void VectorCanvas::setRelocateRule(geom::Tesselator::RelocateRule rule) {
-	_data->pathDrawer.relocateRule = rule;
-}
-
-geom::Tesselator::RelocateRule VectorCanvas::getRelocateRule() const {
-	return _data->pathDrawer.relocateRule;
-}
-
-void VectorCanvas::setVerbose(bool val) {
-	_data->pathDrawer.verbose = val;
+const VectorCanvasConfig &VectorCanvas::getConfig() const {
+	return _data->pathDrawer;
 }
 
 Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 targetSize) {
@@ -199,7 +194,7 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 	_data->out = &ret->data;
 	_data->image = move(image);
 	ret->targetSize = _data->targetSize = targetSize;
-	ret->targetColor = getColor();
+	ret->config = static_cast<const VectorCanvasConfig &>(_data->pathDrawer);
 
 	auto imageSize = _data->image->getImageSize();
 
@@ -238,7 +233,7 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 
 	_data->out = nullptr;
 	_data->image = nullptr;
-	ret->updateColor(ret->targetColor);
+	ret->updateColor(ret->config.color);
 	return ret;
 }
 
@@ -300,12 +295,12 @@ void VectorCanvas::Data::draw(const VectorPath &path, StringView cache, const Ma
 }
 
 void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
-	VertexData *outData = nullptr;
+	TransformVertexData *outData = nullptr;
 	if (out->empty() || !out->back().data->data.empty()) {
 		out->emplace_back(TransformVertexData{transform, Rc<VertexData>::alloc()});
 	}
 
-	outData = out->back().data.get();
+	outData = &out->back();
 	memory::pool::push(transactionPool);
 
 	do {
@@ -316,32 +311,34 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 			Vec3 scaleVec; transform.getScale(&scaleVec);
 			float scale = std::max(scaleVec.x, scaleVec.y);
 
-			VectorCanvasCacheData data{nullptr, cache.str<Interface>(), quality, scale, style};
+			VectorCanvasCacheData data{nullptr, 0, 0, 0, cache.str<Interface>(), quality, scale, pathDrawer.relocateRule, style};
 
 			if (auto it = VectorCanvasCache::getCacheData(data)) {
 				if (!it->data->indexes.empty()) {
-					writeCacheData(path, outData, *it->data);
+					writeCacheData(path, outData, *it);
 				}
 				break;
 			}
 
 			data.data = Rc<VertexData>::alloc();
 
-			auto ret = pathDrawer.draw(transactionPool, path, transform, data.data, true);
+			auto ret = pathDrawer.draw(transactionPool, path, transform, data.data, true,
+					data.fillIndexes, data.strokeIndexes, data.sdfIndexes);
 			if (ret != 0) {
 				if (auto it = VectorCanvasCache::setCacheData(move(data))) {
-					writeCacheData(path, outData, *it->data);
+					writeCacheData(path, outData, *it);
 				}
 			} else {
-				outData->data.clear();
-				outData->indexes.clear();
+				outData->data->data.clear();
+				outData->data->indexes.clear();
 				out->back().transform = transform;
 			}
 		} else {
-			auto ret = pathDrawer.draw(transactionPool, path, transform, outData, false);
+			auto ret = pathDrawer.draw(transactionPool, path, transform, outData->data, false,
+					outData->fillIndexes, outData->strokeIndexes, outData->sdfIndexes);
 			if (ret == 0) {
-				outData->data.clear();
-				outData->indexes.clear();
+				outData->data->data.clear();
+				outData->data->indexes.clear();
 				out->back().transform = transform;
 			}
 		}
@@ -351,42 +348,59 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 	memory::pool::clear(transactionPool);
 }
 
-void VectorCanvas::Data::writeCacheData(const VectorPath &p, VertexData *out, const VertexData &source) {
+void VectorCanvas::Data::writeCacheData(const VectorPath &p, TransformVertexData *out, const VectorCanvasCacheData &source) {
 	auto fillColor = Color4F(p.getFillColor());
 	auto strokeColor = Color4F(p.getStrokeColor());
 
 	Vec4 fillVec = fillColor;
 	Vec4 strokeVec = strokeColor;
 
-	out->indexes = source.indexes;
-	out->data = source.data;
-	for (auto &it : out->data) {
-		if (it.material == 0) {
+	out->data->indexes = source.data->indexes;
+	out->data->data = source.data->data;
+	for (auto &it : out->data->data) {
+		if (it.material == pathDrawer.fillMaterial) {
 			it.color = it.color * fillVec;
-		} else if (it.material == 1) {
+		} else if (it.material == pathDrawer.strokeMaterial) {
 			it.color = it.color * strokeVec;
 		}
 	}
+	out->fillIndexes = source.fillIndexes;
+	out->strokeIndexes = source.strokeIndexes;
 }
 
 uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p, const Mat4 &transform,
-		VertexData *out, bool cache) {
+		VertexData *out, bool cache, uint32_t &fillIndexes, uint32_t &strokeIndexes, uint32_t &sdfIndexes) {
 	bool success = true;
 	path = &p;
 
 	float approxScale = 1.0f;
 	auto style = path->getStyle();
 
-	Rc<geom::Tesselator> strokeTess = ((style & geom::DrawStyle::Stroke) != geom::DrawStyle::None) ? Rc<geom::Tesselator>::create(pool) : nullptr;
-	Rc<geom::Tesselator> fillTess = ((style & geom::DrawStyle::Fill) != geom::DrawStyle::None) ? Rc<geom::Tesselator>::create(pool) : nullptr;
+	Rc<geom::Tesselator> fillTess =
+			((style & geom::DrawStyle::Fill) != geom::DrawStyle::None)
+			? Rc<geom::Tesselator>::create(pool)
+			: nullptr;
+	Rc<geom::Tesselator> strokeTess =
+			((style & geom::DrawStyle::Stroke) != geom::DrawStyle::None)
+			? Rc<geom::Tesselator>::create(pool)
+			: nullptr;
+	Rc<geom::Tesselator> sdfTess =
+			(fillTess && ((style & geom::DrawStyle::PseudoSdf) != geom::DrawStyle::None || forcePseudoSdf))
+			? Rc<geom::Tesselator>::create(pool)
+			: nullptr;
 
 	Vec3 scale; transform.getScale(&scale);
 	approxScale = std::max(scale.x, scale.y);
 
-	geom::LineDrawer line(approxScale * quality, Rc<geom::Tesselator>(fillTess), Rc<geom::Tesselator>(strokeTess),
-			path->getStrokeWidth());
+	geom::LineDrawer line(
+		approxScale * quality,
+		Rc<geom::Tesselator>(fillTess),
+		Rc<geom::Tesselator>(strokeTess),
+		Rc<geom::Tesselator>(sdfTess),
+		path->getStrokeWidth());
 
 	auto d = path->getPoints().data();
+
 	for (auto &it : path->getCommands()) {
 		switch (it) {
 		case vg::Command::MoveTo: line.drawBegin(d[0].p.x, d[0].p.y); ++ d; break;
@@ -398,7 +412,6 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 		default: break;
 		}
 	}
-
 	line.drawClose(false);
 
 	VectorCanvasPathOutput target { Color4F::WHITE, out };
@@ -411,9 +424,10 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 		// draw antialias outline only if stroke is transparent enough
 		// for cached image, always draw antialias, because user can change color and opacity
 		if (path->isAntialiased() && (path->getStyle() == vg::DrawStyle::Fill || path->getStrokeOpacity() < 96 || cache)) {
-			fillTess->setAntialiasValue(config::VGAntialiasFactor / approxScale);
+			fillTess->setBoundariesTransform(boundaryInset / approxScale, boundaryOffset / approxScale);
 			fillTess->setRelocateRule(relocateRule);
 		}
+		fillTess->setContentScale(approxScale);
 		fillTess->setWindingRule(path->getWindingRule());
 		if (!fillTess->prepare(result)) {
 			success = false;
@@ -422,11 +436,23 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 
 	if (strokeTess) {
 		if (path->isAntialiased()) {
-			strokeTess->setAntialiasValue(config::VGAntialiasFactor / approxScale);
+			strokeTess->setBoundariesTransform(boundaryInset / approxScale, boundaryOffset / approxScale);
 		}
 
+		strokeTess->setRelocateRule(relocateRule);
+		strokeTess->setContentScale(approxScale);
 		strokeTess->setWindingRule(vg::Winding::NonZero);
 		if (!strokeTess->prepare(result)) {
+			success = false;
+		}
+	}
+
+	if (sdfTess) {
+		sdfTess->setBoundariesTransform(sdfBoundaryInset / approxScale, sdfBoundaryOffset / approxScale);
+		sdfTess->setRelocateRule(geom::Tesselator::RelocateRule::DistanceField);
+		sdfTess->setContentScale(approxScale);
+		sdfTess->setWindingRule(path->getWindingRule());
+		if (!sdfTess->prepare(result)) {
 			success = false;
 		}
 	}
@@ -434,24 +460,40 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	out->data.resize(result.nvertexes);
 	out->indexes.reserve(result.nfaces * 3);
 
+	auto objects = target.objects;
+
 	if (fillTess) {
-		target.material = 0;
+		target.material = fillMaterial;
 		if (cache) {
 			target.color = Color4F::WHITE;
 		} else {
 			target.color = Color4F(path->getFillColor());
 		}
 		fillTess->write(result);
+		fillIndexes = (target.objects - objects) * 3;
 	}
 
+	objects = target.objects;
+
 	if (strokeTess) {
-		target.material = 1;
+		target.material = strokeMaterial;
 		if (cache) {
 			target.color = Color4F::WHITE;
 		} else {
 			target.color = Color4F(path->getStrokeColor());
 		}
 		strokeTess->write(result);
+		strokeIndexes = (target.objects - objects) * 3;
+	}
+
+	objects = target.objects;
+
+	if (sdfTess) {
+		result.pushVertex = VectorCanvasPathDrawer_pushSdf;
+		target.material = sdfMaterial;
+		target.color = Color4F::WHITE;
+		sdfTess->write(result);
+		sdfIndexes = (target.objects - objects) * 3;
 	}
 
 	if (!success) {
@@ -519,10 +561,19 @@ VectorCanvasCache::VectorCanvasCache() {
 	if (filesystem::exists(path)) {
 		auto val = data::readFile<Interface>(path);
 		for (auto &it : val.asArray()) {
+			if (it.getInteger("version") != 2) {
+				continue;
+			}
+
 			VectorCanvasCacheData data;
 			data.name = it.getString("name");
 			data.quality = it.getDouble("quality");
 			data.scale = it.getDouble("scale");
+			data.relocateRule = geom::Tesselator::RelocateRule(it.getInteger("rule"));
+			data.style = geom::DrawStyle(it.getInteger("style"));
+			data.fillIndexes = it.getInteger("fill");
+			data.strokeIndexes = it.getInteger("stroke");
+			data.sdfIndexes = it.getInteger("sdf");
 
 			auto &vertexes = it.getBytes("vertexes");
 			auto &indexes = it.getBytes("indexes");
@@ -549,6 +600,12 @@ VectorCanvasCache::~VectorCanvasCache() {
 		data.setString(it.name, "name");
 		data.setDouble(it.quality, "quality");
 		data.setDouble(it.scale, "scale");
+		data.setInteger(toInt(it.relocateRule), "rule");
+		data.setInteger(toInt(it.style), "style");
+		data.setInteger(it.fillIndexes, "fill");
+		data.setInteger(it.strokeIndexes, "stroke");
+		data.setInteger(it.sdfIndexes, "sdf");
+		data.setInteger(2, "version");
 
 		data.setBytes(BytesView(reinterpret_cast<uint8_t *>(it.data->data.data()), it.data->data.size() * sizeof(Vertex)), "vertexes");
 		data.setBytes(BytesView(reinterpret_cast<uint8_t *>(it.data->indexes.data()), it.data->indexes.size() * sizeof(uint32_t)), "indexes");
@@ -561,7 +618,7 @@ VectorCanvasCache::~VectorCanvasCache() {
 		filesystem::mkdir(filepath::root(path));
 
 		filesystem::remove(path);
-		data::save(val, path, data::EncodeFormat::Cbor);
+		data::save(val, path, data::EncodeFormat::CborCompressed);
 	}
 }
 
@@ -578,13 +635,14 @@ void VectorCanvasResult::updateColor(const Color4F &color) {
 	mut.clear();
 	mut.reserve(data.size());
 	for (auto &it : data) {
-		auto &iit = mut.emplace_back(TransformVertexData{it.transform, copyData(it.data)});
+		auto &iit = mut.emplace_back(TransformVertexData{it.transform, copyData(it.data),
+			it.fillIndexes, it.strokeIndexes, it.sdfIndexes});
 		for (auto &vertex : iit.data->data) {
 			vertex.color = vertex.color * color;
 		}
 	}
 
-	targetColor = color;
+	config.color = color;
 }
 
 VectorCanvasDeferredResult::~VectorCanvasDeferredResult() {

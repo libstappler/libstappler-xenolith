@@ -253,6 +253,7 @@ protected:
 
 class QueuePassBuilder final {
 public:
+	const PipelineLayoutData * addDescriptorLayout(StringView, const Callback<void(PipelineLayoutBuilder &)> &);
 	const PipelineLayoutData * addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &);
 
 	const SubpassData * addSubpass(const Callback<void(SubpassBuilder &)> &);

@@ -35,18 +35,10 @@ public:
 
 	virtual ~VectorCanvas();
 
-	bool init(bool deferred, float quality = 0.75f, Color4F color = Color4F::WHITE);
+	bool init(bool deferred);
 
-	void setColor(Color4F);
-	Color4F getColor() const;
-
-	void setQuality(float);
-	float getQuality() const;
-
-	void setRelocateRule(geom::Tesselator::RelocateRule);
-	geom::Tesselator::RelocateRule getRelocateRule() const;
-
-	void setVerbose(bool val);
+	void setConfig(const VectorCanvasConfig &config);
+	const VectorCanvasConfig &getConfig() const;
 
 	Rc<VectorCanvasResult> draw(Rc<VectorImageData> &&, Size2 targetSize);
 

@@ -95,6 +95,9 @@ public:
 
 	void addContour();
 
+	void setStrokeWidth(float);
+	float getStrokeWidth() const;
+
 protected:
 	using Node::init;
 
@@ -117,6 +120,7 @@ protected:
 
 	Function<void()> _onContourUpdated;
 
+	float _strokeWidth = 25.0f;
 	bool _pointerInWindow = false;
 	Vec2 _currentLocation;
 	VgTessCursor *_cursor = nullptr;

@@ -156,7 +156,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 		_textureLayoutImagesCount = imageLimit = 1;
 	}
 
-	_textureLayoutBuffersCount = bufferLimit = std::min(bufferLimit, config::MaxBufferArrayObjects) - 4;
+	_textureLayoutBuffersCount = bufferLimit = std::min(bufferLimit - 4, config::MaxBufferArrayObjects);
 	_textureSetLayout = Rc<TextureSetLayout>::create(*this, imageLimit, bufferLimit);
 
 	do {

@@ -151,7 +151,7 @@ const SimpleGradient &Layer::getGradient() const {
 	return _gradient;
 }
 
-void Layer::updateVertexes() {
+void Layer::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 	auto quad = _vertexes.addQuad()
 		.setGeometry(Vec4::ZERO, _contentSize)

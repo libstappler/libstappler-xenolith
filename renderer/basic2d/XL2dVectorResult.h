@@ -34,10 +34,25 @@ using VectorImage = vg::VectorImage;
 using VectorPathRef = vg::VectorPathRef;
 using PathWriter = vg::PathWriter;
 
+struct VectorCanvasConfig {
+	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
+	float quality = 1.0f;
+	float boundaryOffset = config::VGAntialiasFactor;
+	float boundaryInset = config::VGAntialiasFactor;
+	float sdfBoundaryOffset = config::VGPseudoSdfOffset;
+	float sdfBoundaryInset = config::VGPseudoSdfInset;
+	Color4F color = Color4F::WHITE;
+	uint32_t fillMaterial = 0;
+	uint32_t strokeMaterial = 1;
+	uint32_t sdfMaterial = config::VGPseudoSdfMaterial;
+	bool forcePseudoSdf = false;
+	bool verbose = false;
+};
+
 struct VectorCanvasResult : public Ref {
 	Vector<TransformVertexData> data;
 	Vector<TransformVertexData> mut;
-	Color4F targetColor;
+	VectorCanvasConfig config;
 	Size2 targetSize;
 	Mat4 targetTransform;
 

@@ -130,6 +130,7 @@ struct DrawStat {
 	uint32_t solidCmds;
 	uint32_t surfaceCmds;
 	uint32_t transparentCmds;
+	uint32_t shadowsCmds;
 
 	uint32_t vertexInputTime;
 };

@@ -24,6 +24,7 @@
 #define TEST_SRC_TESTS_VG_APPVGTESSTEST_H_
 
 #include "AppLayoutTest.h"
+#include "AppSlider.h"
 #include "AppVgTessCanvas.h"
 #include "XL2dScrollView.h"
 
@@ -50,6 +51,7 @@ protected:
 	VgWindingSwitcher *_windingSwitcher = nullptr;
 	VgDrawStyleSwitcher *_drawStyleSwitcher = nullptr;
 	VgContourSwitcher *_contourSwitcher = nullptr;
+	SliderWithLabel *_sliderWidth = nullptr;
 };
 
 }

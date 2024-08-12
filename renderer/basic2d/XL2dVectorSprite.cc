@@ -29,6 +29,24 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
+static Rc<VectorCanvasDeferredResult> runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
+		Size2 targetSize, const VectorCanvasConfig &config, bool waitOnReady) {
+	auto result = new std::promise<Rc<VectorCanvasResult>>;
+	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
+	queue.perform([queue = Rc<thread::TaskQueue>(&queue), image = move(image), targetSize, config, ret, result] () mutable {
+		auto canvas = VectorCanvas::getInstance();
+		canvas->setConfig(config);
+		auto res = canvas->draw(move(image), targetSize);
+		result->set_value(res);
+
+		queue->onMainThread([ret = move(ret), res = move(res), result] () mutable {
+			ret->handleReady(move(res));
+			delete result;
+		}, queue);
+	}, ret);
+	return ret;
+}
+
 VectorSprite::VectorSprite() { }
 
 bool VectorSprite::init(Rc<VectorImage> &&img) {
@@ -226,18 +244,20 @@ void VectorSprite::setDeferred(bool val) {
 
 void VectorSprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &transform, SpanView<TransformVertexData> data) {
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	if (_deferredResult) {
-		handle->shadows->pushDeferredShadow(_deferredResult, frame.viewProjectionStack.back(), transform * _targetTransform,
-				handle->getCurrentState(), _normalized, frame.depthStack.back());
-	} else if (!data.empty()) {
-		auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
-		for (auto &it : data) {
-			p->transform = it.transform;
-			p->data = it.data;
-			++ p;
-		}
+	if (handle->shadows) {
+		if (_deferredResult) {
+			handle->shadows->pushDeferredShadow(_deferredResult, frame.viewProjectionStack.back(), transform * _targetTransform,
+					handle->getCurrentState(), _normalized, frame.depthStack.back());
+		} else if (!data.empty()) {
+			auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
+			for (auto &it : data) {
+				p->transform = it.transform;
+				p->data = it.data;
+				++ p;
+			}
 
-		handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
+			handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
+		}
 	}
 }
 
@@ -308,26 +328,7 @@ void VectorSprite::initVertexes() {
 	// prevent to do anything
 }
 
-static Rc<VectorCanvasDeferredResult> runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
-		Size2 targetSize, Color4F color, float quality, bool waitOnReady) {
-	auto result = new std::promise<Rc<VectorCanvasResult>>;
-	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
-	queue.perform([queue = Rc<thread::TaskQueue>(&queue), image = move(image), targetSize, color, quality, ret, result] () mutable {
-		auto canvas = VectorCanvas::getInstance();
-		canvas->setColor(color);
-		canvas->setQuality(quality);
-		auto res = canvas->draw(move(image), targetSize);
-		result->set_value(res);
-
-		queue->onMainThread([ret = move(ret), res = move(res), result] () mutable {
-			ret->handleReady(move(res));
-			delete result;
-		}, queue);
-	}, ret);
-	return ret;
-}
-
-void VectorSprite::updateVertexes() {
+void VectorSprite::updateVertexes(FrameInfo &frame) {
 	if (!_image || !_director) {
 		return;
 	}
@@ -381,22 +382,42 @@ void VectorSprite::updateVertexes() {
 		_targetSize = targetViewSpaceSize;
 	}
 
+	if (_savedVectorDepthValue != (_depthIndex > 0)) {
+		isDirty = true;
+		_savedVectorDepthValue = (_depthIndex > 0);
+	}
+
 	_targetTransform = targetTransform;
+
 	if (isDirty || _image->isDirty()) {
 		_image->clearDirty();
+		_result = nullptr;
+		_deferredResult = nullptr;
 
 		auto imageData = _image->popData();
+		VectorCanvasConfig config;
+		config.color = _displayedColor;
+		config.quality = _quality;
+
+		// Canvas uses pixel-wide extents, but for sdf we need dp-wide
+		config.sdfBoundaryInset *= frame.request->getFrameConstraints().density;
+		config.sdfBoundaryOffset *= frame.request->getFrameConstraints().density;
+
+		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
+		if (handle && handle->shadows) {
+			config.forcePseudoSdf = false;
+		} else if (_depthIndex > 0.0f) {
+			config.forcePseudoSdf = true;
+		}
 
 		if (_deferred) {
 			_deferredResult = runDeferredVectorCavas(*_director->getApplication()->getQueue(),
-					move(imageData), targetViewSpaceSize, _displayedColor, _quality, _waitDeferred);
+					move(imageData), _targetSize, config, _waitDeferred);
 			_result = nullptr;
 		} else {
 			auto canvas = VectorCanvas::getInstance();
-			canvas->setColor(_displayedColor);
-			canvas->setQuality(_quality);
-			_result = canvas->draw(move(imageData), targetViewSpaceSize);
-			_deferredResult = nullptr;
+			canvas->setConfig(config);
+			_result = canvas->draw(move(imageData), _targetSize);
 		}
 		_vertexColorDirty = false; // color will be already applied
 	}
@@ -493,6 +514,10 @@ RenderingLevel VectorSprite::getRealRenderingLevel() const {
 		}
 	}
 	return level;
+}
+
+bool VectorSprite::checkVertexDirty() const {
+	return Sprite::checkVertexDirty() || _savedVectorDepthValue != (_depthIndex > 0);
 }
 
 }

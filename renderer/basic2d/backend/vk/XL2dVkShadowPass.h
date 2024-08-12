@@ -31,9 +31,13 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 class ShadowPass : public VertexPass {
 public:
 	static constexpr StringView ShadowPipeline = "ShadowPipeline";
+	static constexpr StringView PseudoSdfPipeline = "PseudoSdfPipeline";
+	static constexpr StringView PseudoSdfSolidPipeline = "PseudoSdfSolidPipeline";
+	static constexpr StringView PseudoSdfBackreadPipeline = "PseudoSdfBackreadPipeline";
 
 	enum class Flags {
 		None = 0,
+		UsePseudoSdf = 1 << 0,
 	};
 
 	struct RenderQueueInfo {
@@ -53,6 +57,7 @@ public:
 	};
 
 	static bool makeDefaultRenderQueue(Queue::Builder &, RenderQueueInfo &);
+	static bool makeSimpleRenderQueue(Queue::Builder &, RenderQueueInfo &);
 
 	virtual ~ShadowPass() { }
 
@@ -62,12 +67,22 @@ public:
 	const AttachmentData *getShadowPrimitives() const { return _shadowPrimitives; }
 	const AttachmentData *getSdf() const { return _sdf; }
 
+	Flags getFlags() const { return _flags; }
+
 	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
 
 protected:
 	using QueuePass::init;
 
 	Flags _flags = Flags::None;
+
+	virtual bool initAsFullSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
+	virtual bool initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
+
+	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, core::SubpassBuilder &subpassBuilder,
+			const core::PipelineLayoutData *layout2d, ResourceCache *cache,
+			const core::AttachmentPassData *colorAttachment, const core::AttachmentPassData *shadowAttachment,
+			const core::AttachmentPassData *depth2dAttachment);
 
 	// shadows
 	const AttachmentData *_lightsData = nullptr;
@@ -91,6 +106,7 @@ protected:
 	const ShadowLightDataAttachmentHandle *_shadowData = nullptr;
 	const ShadowPrimitivesAttachmentHandle *_shadowPrimitives = nullptr;
 	const ImageAttachmentHandle *_sdfImage = nullptr;
+	bool _usesPseudoSdf = false;
 };
 
 class ComputeShadowPass : public QueuePass {

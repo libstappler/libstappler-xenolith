@@ -62,7 +62,10 @@ void FrameContext2d::onEnter(Scene *scene) {
 	FrameContext::onEnter(scene);
 	if (!_init || _queue) {
 		if (!initWithQueue(_queue)) {
-			log::error("FrameContext2d", "Fail to initialize with queue:", _queue->getName());
+			log::error("FrameContext2d", "Fail to initialize with queue: ", _queue->getName());
+		}
+		if (_shadowVertexAttachmentData && _sdfImageAttachmentData) {
+			_hasFullSdf = true;
 		}
 	}
 }
@@ -75,7 +78,9 @@ Rc<FrameContextHandle> FrameContext2d::makeHandle(FrameInfo &frame) {
 	auto h = Rc<FrameContextHandle2d>::alloc();
 	h->director = frame.director;
 	h->context = this;
-	h->shadows = Rc<CommandList>::create(frame.pool);
+	if (_hasFullSdf) {
+		h->shadows = Rc<CommandList>::create(frame.pool);
+	}
 	h->commands = Rc<CommandList>::create(frame.pool);
 	return h;
 }
@@ -85,8 +90,11 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 
 	frame.resolvedInputs.emplace(_vertexAttachmentData);
 	frame.resolvedInputs.emplace(_lightAttachmentData);
-	frame.resolvedInputs.emplace(_shadowVertexAttachmentData);
-	frame.resolvedInputs.emplace(_sdfImageAttachmentData);
+
+	if (_hasFullSdf) {
+		frame.resolvedInputs.emplace(_shadowVertexAttachmentData);
+		frame.resolvedInputs.emplace(_sdfImageAttachmentData);
+	}
 
 	if (_materialDependency) {
 		handle->waitDependencies.emplace_back(_materialDependency);
@@ -98,35 +106,38 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 
 		req->addInput(_vertexAttachmentData, Rc<FrameContextHandle2d>(h));
 		req->addInput(_lightAttachmentData, Rc<FrameContextHandle2d>(h));
-		req->addInput(_shadowVertexAttachmentData, Rc<FrameContextHandle2d>(h));
-		req->addInput(_sdfImageAttachmentData, Rc<FrameContextHandle2d>(h));
 
-		req->setOutput(_sdfImageAttachmentData, [loop = dir->getGlLoop()] (core::FrameAttachmentData &data, bool success, Rc<Ref> &&ref) {
-			loop->captureImage([] (const core::ImageInfoData &info, BytesView view) {
-				Bitmap bmpSdf;
-				bmpSdf.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
+		if (_hasFullSdf) {
+			req->addInput(_shadowVertexAttachmentData, Rc<FrameContextHandle2d>(h));
+			req->addInput(_sdfImageAttachmentData, Rc<FrameContextHandle2d>(h));
 
-				Bitmap bmpHeight;
-				bmpHeight.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
+			req->setOutput(_sdfImageAttachmentData, [loop = dir->getGlLoop()] (core::FrameAttachmentData &data, bool success, Rc<Ref> &&ref) {
+				loop->captureImage([] (const core::ImageInfoData &info, BytesView view) {
+					Bitmap bmpSdf;
+					bmpSdf.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
 
-				auto dSdf = bmpSdf.dataPtr();
-				auto dHgt = bmpHeight.dataPtr();
+					Bitmap bmpHeight;
+					bmpHeight.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
 
-				while (!view.empty()) {
-					auto value = view.readFloat16() / 16.0f;
+					auto dSdf = bmpSdf.dataPtr();
+					auto dHgt = bmpHeight.dataPtr();
 
-					*dSdf = uint8_t(value * 255.0f);
-					++ dSdf;
+					while (!view.empty()) {
+						auto value = view.readFloat16() / 16.0f;
 
-					*dHgt = uint8_t((view.readFloat16() / 50.0f) * 255.0f);
-					++ dHgt;
-				}
+						*dSdf = uint8_t(value * 255.0f);
+						++ dSdf;
 
-				bmpSdf.save(toString("sdf-image-", Time::now().toMicros(), ".png"));
-				bmpHeight.save(toString("sdf-height-", Time::now().toMicros(), ".png"));
-			}, data.image->getImage(), data.image->getLayout());
-			return true;
-		});
+						*dHgt = uint8_t((view.readFloat16() / 50.0f) * 255.0f);
+						++ dHgt;
+					}
+
+					bmpSdf.save(toString("sdf-image-", Time::now().toMicros(), ".png"));
+					bmpHeight.save(toString("sdf-height-", Time::now().toMicros(), ".png"));
+				}, data.image->getImage(), data.image->getLayout());
+				return true;
+			});
+		}
 	}, this);
 
 	FrameContext::submitHandle(frame, handle);
@@ -154,8 +165,7 @@ bool FrameContext2d::initWithQueue(core::Queue *queue) {
 		}
 	}
 
-	return _materialAttachmentData && _vertexAttachmentData && _lightAttachmentData
-			&& _shadowVertexAttachmentData && _sdfImageAttachmentData;
+	return _materialAttachmentData && _vertexAttachmentData && _lightAttachmentData;
 }
 
 bool StateData::init() {

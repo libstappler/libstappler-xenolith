@@ -53,7 +53,7 @@ public:
 protected:
 	virtual void updateVertexesColor() override;
 	virtual void initVertexes() override;
-	virtual void updateVertexes() override;
+	virtual void updateVertexes(FrameInfo &) override;
 
 	String makeString();
 	void updateValue();

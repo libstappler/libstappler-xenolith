@@ -109,6 +109,15 @@ public:
 	using Queue = core::Queue;
 
 	virtual ~ComputePipeline() { }
+
+	uint32_t getLocalX() const { return _localX; }
+	uint32_t getLocalY() const { return _localY; }
+	uint32_t getLocalZ() const { return _localZ; }
+
+protected:
+	uint32_t _localX = 0;
+	uint32_t _localY = 0;
+	uint32_t _localZ = 0;
 };
 
 

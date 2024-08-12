@@ -53,10 +53,14 @@ public:
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
 
 	const Vector<VertexSpan> &getVertexData() const { return _spans; }
+	const Vector<VertexSpan> &getShadowSolidData() const { return _shadowSolidSpans; }
+	const Vector<VertexSpan> &getShadowSdfData() const { return _shadowSdfSpans; }
 	const Rc<Buffer> &getVertexes() const { return _vertexes; }
 	const Rc<Buffer> &getIndexes() const { return _indexes; }
 
-	Rc<FrameContextHandle2d> popCommands() const;
+	float getMaxShadowValue() const { return _maxShadowValue; }
+
+	const Rc<FrameContextHandle2d> &getCommands() const;
 
 	bool empty() const;
 
@@ -69,11 +73,14 @@ protected:
 	Rc<Buffer> _vertexes;
 	Rc<Buffer> _transforms;
 	Vector<VertexSpan> _spans;
+	Vector<VertexSpan> _shadowSolidSpans;
+	Vector<VertexSpan> _shadowSdfSpans;
 
 	Rc<core::MaterialSet> _materialSet;
 	const MaterialAttachmentHandle *_materials = nullptr;
 	mutable Rc<FrameContextHandle2d> _commands;
 	DrawStat _drawStat;
+	float _maxShadowValue = 0.0f;
 };
 
 class VertexPass : public QueuePass {
@@ -95,6 +102,7 @@ protected:
 	const AttachmentData *_output = nullptr;
 	const AttachmentData *_shadow = nullptr;
 	const AttachmentData *_depth2d = nullptr;
+	const AttachmentData *_depthSdf = nullptr;
 
 	const AttachmentData *_vertexes = nullptr;
 	const AttachmentData *_materials = nullptr;
@@ -113,8 +121,14 @@ protected:
 	virtual void prepareMaterialCommands(core::MaterialSet * materials, CommandBuffer &);
 	virtual void finalizeRenderPass(CommandBuffer &);
 
+	void clearDynamicState(CommandBuffer &buf);
+	void applyDynamicState(const FrameContextHandle2d *commands, CommandBuffer &buf, uint32_t stateId);
+
 	const VertexAttachmentHandle *_vertexBuffer = nullptr;
 	const MaterialAttachmentHandle *_materialBuffer = nullptr;
+
+	StateId _dynamicStateId = maxOf<StateId>();
+	DrawStateValues _dynamicState;
 };
 
 }

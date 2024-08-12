@@ -209,6 +209,8 @@ void Application::nativeWakeup() {
 
 void Application::nativeRunMainLoop(const CallbackInfo &cb) {
 	auto data = (MacosApplicationData *)_info.nativeHandle;
+
+	_startTime = _lastUpdate = _clock = _time.global;
 	data->startTime = data->lastUpdate = data->clock = _time.global;
 	data->cb = &cb;
 
@@ -255,20 +257,16 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Application::nativeWakeup() { }
 
-void Application::nativeWait(TimeInterval iv, uint32_t *count) {
-	wait(iv, count);
-}
+void Application::nativeStop() { }
 
-void Application::nativeRunMainLoop(const CallbackInfo &cb, TimeInterval iv) {
+void Application::nativeRunMainLoop(const CallbackInfo &cb) {
 	uint32_t count = 0;
-	uint64_t clock = _time.global;
-	uint64_t lastUpdate = clock;
-	uint64_t startTime = clock;
+	_startTime = _lastUpdate = _clock = _time.global;
 
 	do {
 		count = 0;
 		if (!_immediateUpdate) {
-			wait(iv - TimeInterval::microseconds(clock - lastUpdate), &count);
+			wait(_updateInterval - TimeInterval::microseconds(_clock - _lastUpdate), &count);
 		}
 		if (count > 0) {
 			memory::pool::push(_updatePool);

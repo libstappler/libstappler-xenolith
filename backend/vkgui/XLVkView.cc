@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "XLCoreFrameCache.h"
 #include "SPBitmap.h"
 
-#define XL_VKVIEW_DEBUG 1
+#define XL_VKVIEW_DEBUG 0
 
 #ifndef XL_VKAPI_LOG
 #define XL_VKAPI_LOG(...)
@@ -211,8 +211,6 @@ void View::runWithQueue(const Rc<RenderQueue> &queue) {
 		log::error("vk::View", "Fail to run view with queue '", queue->getName(),  "': no usable output attachments found");
 		return;
 	}
-
-	log::verbose("View", "View::runWithQueue");
 
 	auto req = Rc<FrameRequest>::create(queue, _frameEmitter, _constraints);
 	req->setOutput(a, [this] (core::FrameAttachmentData &attachment, bool success, Ref *data) {

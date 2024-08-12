@@ -86,10 +86,12 @@ protected:
 	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
 
 	virtual void initVertexes() override;
-	virtual void updateVertexes() override;
+	virtual void updateVertexes(FrameInfo &frame) override;
 	virtual void updateVertexesColor() override;
 
 	virtual RenderingLevel getRealRenderingLevel() const override;
+
+	virtual bool checkVertexDirty() const override;
 
 	bool _deferred = true;
 	bool _waitDeferred = true;
@@ -99,6 +101,7 @@ protected:
 	Mat4 _targetTransform;
 	Rc<VectorImage> _image;
 	float _quality = QualityNormal;
+	bool _savedVectorDepthValue = false;
 	Rc<VectorCanvasResult> _result;
 	Rc<VectorCanvasDeferredResult> _deferredResult;
 };

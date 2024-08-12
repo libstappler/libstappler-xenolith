@@ -83,6 +83,9 @@ struct alignas(16) VertexData : public Ref {
 struct alignas(16) TransformVertexData {
 	Mat4 transform;
 	Rc<VertexData> data;
+	uint32_t fillIndexes = 0;
+	uint32_t strokeIndexes = 0;
+	uint32_t sdfIndexes = 0;
 };
 
 enum class SdfShape {

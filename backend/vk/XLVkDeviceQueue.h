@@ -260,10 +260,13 @@ public:
 	void cmdBindPipeline(GraphicPipeline *);
 	void cmdBindPipeline(ComputePipeline *);
 
+	void cmdBindPipelineWithDescriptors(const core::GraphicPipelineData *, uint32_t firstSet = 0);
+	void cmdBindPipelineWithDescriptors(const core::ComputePipelineData *, uint32_t firstSet = 0);
+
 	void cmdBindIndexBuffer(Buffer *, VkDeviceSize offset, VkIndexType indexType);
 
 	void cmdBindDescriptorSets(RenderPass *, uint32_t layoutIndex, uint32_t firstSet = 0);
-	void cmdBindDescriptorSets(RenderPass *, uint32_t layoutIndex, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
+	void cmdBindDescriptorSets(RenderPass *, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
 
 	void cmdBindGraphicDescriptorSets(VkPipelineLayout, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
 	void cmdBindComputeDescriptorSets(VkPipelineLayout, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
@@ -297,6 +300,8 @@ public:
 	virtual void bindBuffer(core::BufferObject *) override;
 
 protected:
+	bool updateBoundSets(SpanView<VkDescriptorSet>, uint32_t firstSet);
+
 	VkPipelineLayout _boundLayout = VK_NULL_HANDLE;
 
 	const CommandPool *_pool = nullptr;
@@ -305,6 +310,10 @@ protected:
 
 	Set<Rc<DescriptorSet>> _descriptorSets;
 	Set<Rc<DeviceMemoryPool>> _memPool;
+	Vector<VkDescriptorSet> _boundSets;
+
+	const GraphicPipeline *_boundGraphicPipeline = nullptr;
+	const ComputePipeline *_boundComputePipeline = nullptr;
 };
 
 class CommandPool : public Ref {

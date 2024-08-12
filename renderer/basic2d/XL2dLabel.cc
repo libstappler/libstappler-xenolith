@@ -52,7 +52,7 @@ void Label::Selection::updateColor() {
 	Sprite::updateColor();
 }
 
-void Label::Selection::updateVertexes() {
+void Label::Selection::updateVertexes(FrameInfo &frame) {
 	//_vertexes.clear();
 }
 
@@ -534,7 +534,7 @@ uint16_t Label::getFontHeight() const {
 	return 0;
 }
 
-void Label::updateVertexes() {
+void Label::updateVertexes(FrameInfo &frame) {
 	if (!_source) {
 		return;
 	}

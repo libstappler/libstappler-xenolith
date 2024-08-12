@@ -127,7 +127,7 @@ public:
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
-	void allocateBuffer(DeviceFrameHandle *, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridCells);
+	void allocateBuffer(DeviceFrameHandle *, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridCells, float maxValue = nan());
 
 	float getBoxOffset(float value) const;
 

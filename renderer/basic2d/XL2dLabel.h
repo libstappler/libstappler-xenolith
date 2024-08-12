@@ -81,7 +81,7 @@ public:
 		virtual void setTextCursor(core::TextCursor c) { _cursor = c; }
 
 	protected:
-		virtual void updateVertexes() override;
+		virtual void updateVertexes(FrameInfo &frame) override;
 
 		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
 	};
@@ -159,7 +159,7 @@ protected:
 	virtual void onFontSourceLoaded();
 	virtual void onLayoutUpdated();
 	virtual void updateColor() override;
-	virtual void updateVertexes() override;
+	virtual void updateVertexes(FrameInfo &frame) override;
 	virtual void updateVertexesColor() override;
 
 	virtual void updateQuadsForeground(font::FontController *, TextLayout *, Vector<ColorMask> &);

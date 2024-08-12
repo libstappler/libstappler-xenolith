@@ -69,16 +69,9 @@ public:
 
 	VkPipeline getPipeline() const { return _pipeline; }
 
-	uint32_t getLocalX() const { return _localX; }
-	uint32_t getLocalY() const { return _localY; }
-	uint32_t getLocalZ() const { return _localZ; }
-
 protected:
 	using core::ComputePipeline::init;
 
-	uint32_t _localX = 0;
-	uint32_t _localY = 0;
-	uint32_t _localZ = 0;
 	VkPipeline _pipeline = VK_NULL_HANDLE;
 };
 
