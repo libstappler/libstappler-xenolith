@@ -60,15 +60,21 @@ public:
 
 	float getMaxShadowValue() const { return _maxShadowValue; }
 
+	const core::MaterialSet *getMaterialSet() const { return _materialSet; }
+
 	const Rc<FrameContextHandle2d> &getCommands() const;
 
 	bool empty() const;
 
-protected:
-	virtual bool loadVertexes(FrameHandle &, const Rc<FrameContextHandle2d> &);
+	void loadData(Rc<FrameContextHandle2d> &&data,
+			Rc<Buffer> && indexes, Rc<Buffer> &&vertexes, Rc<Buffer> &&transforms,
+			Vector<VertexSpan> &&spans, Vector<VertexSpan> &&shadowSolidSpans, Vector<VertexSpan> &&shadowSdfSpans,
+			float maxShadowValue);
 
+protected:
 	virtual bool isGpuTransform() const { return false; }
 
+	Rc<FrameContextHandle2d> _commands;
 	Rc<Buffer> _indexes;
 	Rc<Buffer> _vertexes;
 	Rc<Buffer> _transforms;
@@ -78,8 +84,6 @@ protected:
 
 	Rc<core::MaterialSet> _materialSet;
 	const MaterialAttachmentHandle *_materials = nullptr;
-	mutable Rc<FrameContextHandle2d> _commands;
-	DrawStat _drawStat;
 	float _maxShadowValue = 0.0f;
 };
 

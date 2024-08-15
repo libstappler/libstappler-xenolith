@@ -61,10 +61,12 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 #define XL_VKAPI_DEBUG 0
 #define VK_HOOK_DEBUG 0 // enable engine hooks for Vulkan calls
 static constexpr bool s_enableValidationLayers = true;
+static constexpr bool s_enableValidateSynchronization = false;
 static constexpr bool s_printVkInfo = true;
 #else
 #define VK_HOOK_DEBUG 0 // enable engine hooks for Vulkan calls
 static constexpr bool s_enableValidationLayers = false;
+static constexpr bool s_enableValidateSynchronization = false;
 static constexpr bool s_printVkInfo = true;
 #endif
 

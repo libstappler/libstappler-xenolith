@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-static uint32_t Allocator_getTypeScoreInternal(const Allocator::MemHeap &heap, const Allocator::MemType &type, AllocationUsage usage) {
+static uint32_t Allocator_getTypeScoreInternal(const Allocator::MemHeap &heap, const Allocator::MemType &type, AllocationUsage usage, VkPhysicalDeviceType devType) {
 	switch (usage) {
 	case AllocationUsage::DeviceLocal:
 	case AllocationUsage::DeviceLocalLazilyAllocated:
@@ -65,8 +65,14 @@ static uint32_t Allocator_getTypeScoreInternal(const Allocator::MemHeap &heap, c
 		case Allocator::MemHeapType::DeviceLocalHostVisible:
 			if (type.isDeviceLocal() && type.isHostVisible()) {
 				uint32_t ret = 32;
-				if (type.isHostCoherent()) { ret -= 3; }
-				if (type.isHostCached()) { ret -= 4; }
+				if (devType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+					if (type.isHostCoherent() && type.isHostCoherent()) { ret -= 2; }
+					else if (type.isHostCoherent()) { ret -= 3; }
+					else if (type.isHostCached()) { ret -= 4; }
+				} else {
+					if (type.isHostCoherent()) { ret -= 3; }
+					if (type.isHostCached()) { ret -= 4; }
+				}
 				return ret;
 			}
 			return 0;
@@ -491,7 +497,7 @@ Allocator::MemType * Allocator::findMemoryType(uint32_t typeFilter, AllocationUs
 	uint32_t idx = maxOf<uint32_t>();
 	for (auto &it : _memTypes) {
 		if ((typeFilter & (1 << it->idx))) {
-			auto s = Allocator_getTypeScoreInternal(_memHeaps[it->type.heapIndex], *it, type);
+			auto s = Allocator_getTypeScoreInternal(_memHeaps[it->type.heapIndex], *it, type, _device->getInfo().properties.device10.properties.deviceType);
 			if (s && s > score) {
 				score = s;
 				idx = it->idx;

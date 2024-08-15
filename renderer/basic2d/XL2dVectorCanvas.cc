@@ -29,6 +29,7 @@ struct VectorCanvasPathOutput {
 	VertexData *vertexes = nullptr;
 	uint32_t material = 0;
 	uint32_t objects = 0;
+	const VectorCanvasConfig *config = nullptr;
 };
 
 struct VectorCanvasPathDrawer : VectorCanvasConfig {
@@ -141,8 +142,8 @@ static void VectorCanvasPathDrawer_pushSdf(void *ptr, uint32_t idx, const Vec2 &
 
 	out->vertexes->data[idx] = Vertex{
 		Vec4(pt, 0.0f, 1.0f),
-		Vec4(out->color.r * vertexValue, out->color.g * vertexValue, out->color.b * vertexValue, out->color.a),
-		norm, out->material, 0
+		Vec4(out->color.r, norm.x, norm.y, vertexValue),
+		Vec2(out->config->sdfBoundaryInset, out->config->sdfBoundaryOffset), out->material, 0
 	};
 }
 
@@ -415,6 +416,8 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	line.drawClose(false);
 
 	VectorCanvasPathOutput target { Color4F::WHITE, out };
+	target.config = this;
+
 	geom::TessResult result;
 	result.target = &target;
 	result.pushVertex = VectorCanvasPathDrawer_pushVertex;
@@ -637,8 +640,19 @@ void VectorCanvasResult::updateColor(const Color4F &color) {
 	for (auto &it : data) {
 		auto &iit = mut.emplace_back(TransformVertexData{it.transform, copyData(it.data),
 			it.fillIndexes, it.strokeIndexes, it.sdfIndexes});
-		for (auto &vertex : iit.data->data) {
-			vertex.color = vertex.color * color;
+		if (iit.sdfIndexes > 0) {
+			for (auto &vertex : iit.data->data) {
+				if (vertex.material != config::VGPseudoSdfMaterial) {
+					if (vertex.color.z > 1.0f) {
+						log::error("VectorCanvasResult", "vertex transform error");
+					}
+					vertex.color = vertex.color * color;
+				}
+			}
+		} else {
+			for (auto &vertex : iit.data->data) {
+				vertex.color = vertex.color * color;
+			}
 		}
 	}
 

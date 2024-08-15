@@ -99,8 +99,11 @@ public:
 
 	virtual void write(const core::MaterialLayout &) override;
 
-	const Vector<ImageMemoryBarrier> &getPendingImageBarriers() const { return _pendingImageBarriers; }
-	const Vector<BufferMemoryBarrier> &getPendingBufferBarriers() const { return _pendingBufferBarriers; }
+	Vector<const ImageMemoryBarrier *> getPendingImageBarriers() const;
+	Vector<const BufferMemoryBarrier *> getPendingBufferBarriers() const;
+
+	void foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &) const;
+	void foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &) const;
 
 	void dropPendingBarriers();
 
@@ -120,8 +123,8 @@ protected:
 	uint32_t _bufferCount = 0;
 	VkDescriptorSet _set = VK_NULL_HANDLE;
 	VkDescriptorPool _pool = VK_NULL_HANDLE;
-	Vector<ImageMemoryBarrier> _pendingImageBarriers;
-	Vector<BufferMemoryBarrier> _pendingBufferBarriers;
+	Vector<Image *> _pendingImageBarriers;
+	Vector<Buffer *> _pendingBufferBarriers;
 };
 
 }

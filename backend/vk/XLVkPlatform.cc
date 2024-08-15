@@ -265,6 +265,23 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 
 	createInfo.enabledLayerCount = data.layersToEnable.size();
 	createInfo.ppEnabledLayerNames = data.layersToEnable.data();
+
+	if constexpr (s_enableValidateSynchronization) {
+		VkValidationFeaturesEXT validationExt;
+		validationExt.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+		validationExt.pNext = createInfo.pNext;
+
+		VkValidationFeatureEnableEXT feature = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+
+		validationExt.enabledValidationFeatureCount = 1;
+		validationExt.pEnabledValidationFeatures = &feature;
+
+		validationExt.disabledValidationFeatureCount = 0;
+		validationExt.pDisabledValidationFeatures = nullptr;
+
+		createInfo.pNext = &validationExt;
+	}
+
 	ret = vkCreateInstance(&createInfo, nullptr, &instance);
 
 	if (ret != VK_SUCCESS) {

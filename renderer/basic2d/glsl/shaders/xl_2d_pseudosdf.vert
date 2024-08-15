@@ -42,9 +42,12 @@ void main() {
 	gl_Position = transform.transform * pos * transform.mask + transform.offset;
 	gl_Position.z = transform.shadow.x / shadowData.maxValue;
 
+	const float pseudoSdfInset = vertex.tex.x;
+	const float pseudoSdfOffset = vertex.tex.y;
+
 	if (PSEUDOSDF_MODE != PSEUDOSDF_MODE_SOLID) {
-		const float sdfValue = (1.0 - vertex.color.x);
-		const float pseudoSdfScale = pushConstants.pseudoSdfInset + pushConstants.pseudoSdfOffset;
+		const float sdfValue = (1.0 - vertex.color.a);
+		const float pseudoSdfScale = (pseudoSdfInset + pseudoSdfOffset) / shadowData.density;
 		const float height = shadowData.maxValue - transform.shadow.x;
 
 		float preudoSdfValue = sdfValue * pseudoSdfScale;
@@ -56,7 +59,7 @@ void main() {
 			//preudoSdfValue = preudoSdfValue + height;
 		}
 
-		fragColor = vec4(preudoSdfValue, vertex.tex.x, vertex.tex.y, transform.shadow.x);
+		fragColor = vec4(preudoSdfValue, vertex.color.g, vertex.color.b, transform.shadow.x);
 	} else {
 		fragColor = vec4(pushConstants.pseudoSdfMax, 0.0, 0.0, 1.0);
 	}

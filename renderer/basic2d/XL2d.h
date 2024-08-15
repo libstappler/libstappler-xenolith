@@ -70,6 +70,7 @@ struct VertexSpan {
 	uint32_t indexCount = 0;
 	uint32_t instanceCount = 0;
 	uint32_t firstIndex = 0;
+	uint32_t vertexOffset = 0;
 	StateId state = 0;
 	uint32_t gradientOffset = 0;
 	uint32_t gradientCount = 0;

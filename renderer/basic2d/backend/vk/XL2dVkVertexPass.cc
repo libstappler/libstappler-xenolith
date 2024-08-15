@@ -33,6 +33,833 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
+struct VertexMaterialVertexProcessor : public Ref {
+	struct PlanCommandInfo {
+		const CmdGeneral *cmd = nullptr;
+		SpanView<TransformVertexData> vertexes;
+		Mat4 transform;
+		const LinearGradientData *gradient = nullptr;
+		uint32_t vertexOffset = 0;
+		uint32_t vertexCount = 0;
+		uint32_t gradientStart = 0;
+		uint32_t gradientCount = 0;
+	};
+
+	struct MaterialWritePlan {
+		const core::Material *material = nullptr;
+		Rc<core::DataAtlas> atlas;
+		uint32_t vertexes = 0;
+		uint32_t indexes = 0;
+		uint32_t transforms = 0;
+		Map<StateId, std::forward_list<PlanCommandInfo>> states;
+	};
+
+	struct WriteTarget {
+		uint8_t *transform;
+		uint8_t *vertexes;
+		uint8_t *indexes;
+
+		uint32_t vertexOffset = 0;
+		uint32_t indexOffset = 0;
+		uint32_t transtormOffset = 0;
+		uint32_t transformIdx = 0;
+	};
+
+	Extent3 surfaceExtent;
+	core::SurfaceTransformFlags transform = core::SurfaceTransformFlags::Identity;
+
+	uint32_t excludeVertexes = 0;
+	uint32_t excludeIndexes = 0;
+
+	Map<SpanView<ZOrder>, float, ZOrderLess> paths;
+
+	// fill write plan
+	MaterialWritePlan globalWritePlan;
+
+	// write plan for objects, that do depth-write and can be drawn out of order
+	HashMap<core::MaterialId, MaterialWritePlan> solidWritePlan;
+
+	// write plan for objects without depth-write, that can be drawn out of order
+	HashMap<core::MaterialId, MaterialWritePlan> surfaceWritePlan;
+
+	// write plan for transparent objects, that should be drawn in order
+	Map<SpanView<ZOrder>, HashMap<core::MaterialId, MaterialWritePlan>, ZOrderLess> transparentWritePlan;
+
+	std::forward_list<Vector<TransformVertexData>> deferredTmp;
+
+	uint32_t solidCmds = 0;
+	uint32_t surfaceCmds = 0;
+	uint32_t transparentCmds = 0;
+	uint32_t shadowsCmds = 0;
+
+	Vec2 shadowSize = Vec2(1.0f, 1.0f);
+
+	bool hasGpuSideAtlases = false;
+	bool useSpanForCommand = false;
+
+	float maxShadowValue = 0.0f;
+
+	Vector<VertexSpan> materialSpans;
+	Vector<VertexSpan> shadowSolidSpans;
+	Vector<VertexSpan> shadowSdfSpans;
+
+	uint64_t _time = 0;
+
+	Rc<Buffer> _indexes;
+	Rc<Buffer> _vertexes;
+	Rc<Buffer> _transforms;
+
+	VertexAttachmentHandle *_attachment = nullptr;
+	Rc<FrameContextHandle2d> _input;
+	Function<void(bool)> _callback;
+	DrawStat _drawStat;
+
+	VertexMaterialVertexProcessor(VertexAttachmentHandle *, Rc<FrameContextHandle2d> &&, Function<void(bool)> &&cb);
+
+	void run(core::FrameHandle &frame);
+
+	bool loadVertexes(core::FrameHandle &frame);
+
+	auto emplaceWritePlanData(MaterialWritePlan &writePlan,
+			const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes) -> PlanCommandInfo &;
+	void emplaceWritePlan(const core::Material *material, HashMap<core::MaterialId, MaterialWritePlan> &writePlan,
+			const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes);
+	void pushVertexData(const Command *c, const CmdVertexArray *cmd);
+	void applyNormalized(Vector<TransformVertexData> &vertexes, const CmdDeferred *cmd);
+	void pushDeferred(const Command *c, const CmdDeferred *cmd);
+	void updatePathsDepth();
+
+	void pushInitial(WriteTarget &writeTarget);
+	uint32_t rotateObject(uint32_t obj, uint32_t idx);
+	Vec2 rotateVec(const Vec2 &vec);
+	void pushPlanVertexes(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan);
+	void drawWritePlan(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan);
+	void pushAll(WriteTarget &writeTarget);
+
+	void finalize();
+};
+
+VertexMaterialVertexProcessor::VertexMaterialVertexProcessor(VertexAttachmentHandle *a, Rc<FrameContextHandle2d> &&input, Function<void(bool)> &&cb)
+: _attachment(a), _input(move(input)), _callback(move(cb)) {
+	_time = platform::clock();
+}
+
+void VertexMaterialVertexProcessor::run(core::FrameHandle &frame) {
+	frame.performInQueue([this] (core::FrameHandle &handle) {
+		if (!loadVertexes(handle)) {
+			_callback(false);
+		}
+	}, this, "VertexMaterialAttachmentHandle::submitInput");
+}
+
+bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
+	auto handle = dynamic_cast<DeviceFrameHandle *>(&fhandle);
+	if (!handle) {
+		return false;
+	}
+
+	auto &cache = handle->getLoop()->getFrameCache();
+
+	_drawStat.cachedFramebuffers = cache->getFramebuffersCount();
+	_drawStat.cachedImages = cache->getImagesCount();
+	_drawStat.cachedImageViews = cache->getImageViewsCount();
+	_drawStat.materials = _attachment->getMaterialSet()->getMaterials().size();
+
+	surfaceExtent = fhandle.getFrameConstraints().extent;
+	transform = fhandle.getFrameConstraints().transform;
+	hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
+
+	auto shadowExtent = _input->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
+	auto shadowSize = _input->lights.getShadowSize( fhandle.getFrameConstraints().getScreenSize());
+
+	shadowSize = Vec2(shadowSize.width / float(shadowExtent.width), shadowSize.height / float(shadowExtent.height));
+
+	auto cmd = _input->commands->getFirst();
+	while (cmd) {
+		switch (cmd->type) {
+		case CommandType::CommandGroup:
+			break;
+		case CommandType::VertexArray:
+			pushVertexData(cmd, reinterpret_cast<const CmdVertexArray *>(cmd->data));
+			break;
+		case CommandType::Deferred:
+			pushDeferred(cmd, reinterpret_cast<const CmdDeferred *>(cmd->data));
+			break;
+		case CommandType::ShadowArray:
+		case CommandType::ShadowDeferred:
+		case CommandType::SdfGroup2D:
+			break;
+		}
+		cmd = cmd->next;
+	}
+
+	if (globalWritePlan.vertexes == 0 || globalWritePlan.indexes == 0) {
+		_callback(true);
+		return true;
+	}
+
+	updatePathsDepth();
+
+	auto devFrame = static_cast<DeviceFrameHandle *>(handle);
+
+	auto &pool = devFrame->getMemPool(this);
+
+	// create buffers
+	_indexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+			BufferInfo(core::BufferUsage::IndexBuffer, (globalWritePlan.indexes + 12) * sizeof(uint32_t)));
+
+	_vertexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+			BufferInfo(core::BufferUsage::StorageBuffer, (globalWritePlan.vertexes + 8) * sizeof(Vertex)));
+
+	_transforms = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+			BufferInfo(core::BufferUsage::StorageBuffer, (globalWritePlan.transforms + 1) * sizeof(TransformData)));
+
+	if (!_vertexes || !_indexes || !_transforms) {
+		return false;
+	}
+
+	Bytes vertexData, indexData, transformData;
+
+	WriteTarget writeTarget;
+
+	if (fhandle.isPersistentMapping()) {
+		// do not invalidate regions
+		writeTarget.vertexes = _vertexes->getPersistentMappedRegion(false);
+		writeTarget.indexes = _indexes->getPersistentMappedRegion(false);
+		writeTarget.transform = _transforms->getPersistentMappedRegion(false);
+	} else {
+		vertexData.resize(_vertexes->getSize());
+		indexData.resize(_indexes->getSize());
+		transformData.resize(_transforms->getSize());
+
+		writeTarget.vertexes = vertexData.data();
+		writeTarget.indexes = indexData.data();
+		writeTarget.transform = transformData.data();
+	}
+
+	// write initial full screen quad
+	pushAll(writeTarget);
+
+	if (fhandle.isPersistentMapping()) {
+		_vertexes->flushMappedRegion();
+		_indexes->flushMappedRegion();
+		_transforms->flushMappedRegion();
+	} else {
+		_vertexes->setData(vertexData);
+		_indexes->setData(indexData);
+		_transforms->setData(transformData);
+	}
+
+	finalize();
+	return true;
+}
+
+auto VertexMaterialVertexProcessor::emplaceWritePlanData(MaterialWritePlan &writePlan,
+		const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes) -> PlanCommandInfo & {
+	for (auto &iit : vertexes) {
+		globalWritePlan.vertexes += iit.data->data.size();
+		globalWritePlan.indexes += iit.data->indexes.size();
+
+		if (iit.sdfIndexes > 0) {
+			globalWritePlan.indexes += (iit.sdfIndexes + iit.fillIndexes);
+		}
+
+		++ globalWritePlan.transforms;
+
+		writePlan.vertexes += iit.data->data.size();
+		writePlan.indexes += iit.data->indexes.size();
+		++ writePlan.transforms;
+
+		if ((c->flags & CommandFlags::DoNotCount) != CommandFlags::None) {
+			excludeVertexes = iit.data->data.size();
+			excludeIndexes = iit.data->indexes.size();
+		}
+
+		maxShadowValue = std::max(maxShadowValue, cmd->depthValue);
+	}
+
+	auto iit = writePlan.states.find(cmd->state);
+	if (iit == writePlan.states.end()) {
+		iit = writePlan.states.emplace(cmd->state, std::forward_list<PlanCommandInfo>()).first;
+	}
+
+	return iit->second.emplace_front(PlanCommandInfo{cmd, vertexes});
+}
+
+void VertexMaterialVertexProcessor::emplaceWritePlan(const core::Material *material, HashMap<core::MaterialId, MaterialWritePlan> &writePlan,
+			const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes) {
+	auto it = writePlan.find(cmd->material);
+	if (it == writePlan.end()) {
+		if (material) {
+			it = writePlan.emplace(cmd->material, MaterialWritePlan()).first;
+			it->second.material = material;
+			if (auto atlas = it->second.material->getAtlas()) {
+				it->second.atlas = atlas;
+			}
+		}
+	}
+
+	if (it != writePlan.end() && it->second.material) {
+		auto &plan = emplaceWritePlanData(it->second, c, cmd, vertexes);
+
+		if (cmd->state != StateIdNone) {
+			auto state = _input->getState(cmd->state);
+			if (state) {
+				auto stateData = dynamic_cast<StateData *>(state->data ? state->data.get() : nullptr);
+
+				if (stateData && stateData->gradient) {
+					plan.transform = stateData->transform;
+					plan.gradient = stateData->gradient.get();
+					globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
+				}
+			}
+		}
+	}
+
+	auto pathsIt = paths.find(cmd->zPath);
+	if (pathsIt == paths.end()) {
+		paths.emplace(cmd->zPath, 0.0f);
+	}
+}
+
+void VertexMaterialVertexProcessor::pushVertexData(const Command *c, const CmdVertexArray *cmd) {
+	auto material = _attachment->getMaterialSet()->getMaterialById(cmd->material);
+	if (!material) {
+		return;
+	}
+	if (material->getPipeline()->isSolid()) {
+		emplaceWritePlan(material, solidWritePlan, c, cmd, cmd->vertexes);
+	} else if (cmd->renderingLevel == RenderingLevel::Surface) {
+		emplaceWritePlan(material, surfaceWritePlan, c, cmd, cmd->vertexes);
+	} else {
+		auto v = transparentWritePlan.find(cmd->zPath);
+		if (v == transparentWritePlan.end()) {
+			v = transparentWritePlan.emplace(cmd->zPath, HashMap<core::MaterialId, MaterialWritePlan>()).first;
+		}
+		emplaceWritePlan(material, v->second, c, cmd, cmd->vertexes);
+	}
+};
+
+void VertexMaterialVertexProcessor::applyNormalized(Vector<TransformVertexData> &vertexes, const CmdDeferred *cmd) {
+	// apply transforms;
+	if (cmd->normalized) {
+		for (auto &it : vertexes) {
+			auto modelTransform = cmd->modelTransform * it.transform;
+
+			Mat4 newMV;
+			newMV.m[12] = std::floor(modelTransform.m[12]);
+			newMV.m[13] = std::floor(modelTransform.m[13]);
+			newMV.m[14] = std::floor(modelTransform.m[14]);
+
+			const_cast<TransformVertexData &>(it).transform = cmd->viewTransform * newMV;
+		}
+	} else {
+		for (auto &it : vertexes) {
+			const_cast<TransformVertexData &>(it).transform = cmd->viewTransform * cmd->modelTransform * it.transform;
+		}
+	}
+}
+
+void VertexMaterialVertexProcessor::pushDeferred(const Command *c, const CmdDeferred *cmd) {
+	auto material = _attachment->getMaterialSet()->getMaterialById(cmd->material);
+	if (!material) {
+		return;
+	}
+
+	if (!cmd->deferred->isWaitOnReady()) {
+		if (!cmd->deferred->isReady()) {
+			return;
+		}
+	}
+
+	auto &vertexes = deferredTmp.emplace_front(cmd->deferred->getData().vec<Interface>());
+
+	applyNormalized(vertexes, cmd);
+
+	if (cmd->renderingLevel == RenderingLevel::Solid) {
+		emplaceWritePlan(material, solidWritePlan, c, cmd, vertexes);
+	} else if (cmd->renderingLevel == RenderingLevel::Surface) {
+		emplaceWritePlan(material, surfaceWritePlan, c, cmd, vertexes);
+	} else {
+		auto v = transparentWritePlan.find(cmd->zPath);
+		if (v == transparentWritePlan.end()) {
+			v = transparentWritePlan.emplace(cmd->zPath, HashMap<core::MaterialId, MaterialWritePlan>()).first;
+		}
+		emplaceWritePlan(material, v->second, c, cmd, vertexes);
+	}
+}
+
+void VertexMaterialVertexProcessor::updatePathsDepth() {
+	float depthScale = 1.0f / float(paths.size() + 1);
+	float depthOffset = 1.0f - depthScale;
+	for (auto &it : paths) {
+		it.second = depthOffset;
+		depthOffset -= depthScale;
+	}
+}
+
+void VertexMaterialVertexProcessor::pushInitial(WriteTarget &writeTarget) {
+	TransformData val;
+	memcpy(writeTarget.transform, &val, sizeof(TransformData));
+	writeTarget.transtormOffset += sizeof(TransformData); ++ writeTarget.transformIdx;
+
+	Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6 };
+
+	Vector<Vertex> vertexes {
+		// full screen quad data
+		Vertex{
+			Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2::ZERO, 0, 0
+		},
+		Vertex{
+			Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2::UNIT_Y, 0, 0
+		},
+		Vertex{
+			Vec4(1.0f, 1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2::ONE, 0, 0
+		},
+		Vertex{
+			Vec4(1.0f, -1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2::UNIT_X, 0, 0
+		},
+
+		// shadow quad data
+		Vertex{
+			Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2(0.0f, 1.0f - shadowSize.y), 0, 0
+		},
+		Vertex{
+			Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2(0.0f, 1.0f), 0, 0
+		},
+		Vertex{
+			Vec4(1.0f, 1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2(shadowSize.x, 1.0f), 0, 0
+		},
+		Vertex{
+			Vec4(1.0f, -1.0f, 0.0f, 1.0f),
+			Vec4::ONE, Vec2(shadowSize.x, 1.0f - shadowSize.y), 0, 0
+		}
+	};
+
+	switch (core::getPureTransform(transform)) {
+	case core::SurfaceTransformFlags::Rotate90:
+		vertexes[0].tex = Vec2::UNIT_Y;
+		vertexes[1].tex = Vec2::ONE;
+		vertexes[2].tex = Vec2::UNIT_X;
+		vertexes[3].tex = Vec2::ZERO;
+		vertexes[4].tex = Vec2(0.0f, shadowSize.y);
+		vertexes[5].tex = shadowSize;
+		vertexes[6].tex = Vec2(shadowSize.x, 0.0f);
+		vertexes[7].tex = Vec2::ZERO;
+		break;
+	case core::SurfaceTransformFlags::Rotate180:
+		vertexes[0].tex = Vec2::ONE;
+		vertexes[1].tex = Vec2::UNIT_X;
+		vertexes[2].tex = Vec2::ZERO;
+		vertexes[3].tex = Vec2::UNIT_Y;
+		vertexes[4].tex = shadowSize;
+		vertexes[5].tex = Vec2(shadowSize.x, 0.0f);
+		vertexes[6].tex = Vec2::ZERO;
+		vertexes[7].tex = Vec2(0.0f, shadowSize.y);
+		break;
+	case core::SurfaceTransformFlags::Rotate270:
+		vertexes[0].tex = Vec2::UNIT_X;
+		vertexes[1].tex = Vec2::ZERO;
+		vertexes[2].tex = Vec2::UNIT_Y;
+		vertexes[3].tex = Vec2::ONE;
+		vertexes[4].tex = Vec2(shadowSize.x, 0.0f);
+		vertexes[5].tex = Vec2::ZERO;
+		vertexes[6].tex = Vec2(0.0f, shadowSize.y);
+		vertexes[7].tex = shadowSize;
+		break;
+	default:
+		break;
+	}
+
+	memcpy(writeTarget.vertexes, vertexes.data(), vertexes.size() * sizeof(Vertex));
+	memcpy(writeTarget.indexes, indexes.data(), indexes.size() * sizeof(uint32_t));
+
+	writeTarget.vertexOffset += vertexes.size();
+	writeTarget.indexOffset += indexes.size();
+}
+
+uint32_t VertexMaterialVertexProcessor::rotateObject(uint32_t obj, uint32_t idx) {
+	auto anchor = (obj >> 16) & 0x3;
+	return (obj & ~0x30000) | (((anchor + idx) % 4) << 16);
+}
+
+Vec2 VertexMaterialVertexProcessor::rotateVec(const Vec2 &vec) {
+	switch (core::getPureTransform(transform)) {
+		case core::SurfaceTransformFlags::Rotate90:
+			return Vec2(-vec.y, vec.x);
+			break;
+		case core::SurfaceTransformFlags::Rotate180:
+			return Vec2(-vec.x, -vec.y);
+			break;
+		case core::SurfaceTransformFlags::Rotate270:
+			return Vec2(vec.y, -vec.x);
+			break;
+		default:
+			break;
+	}
+	return vec;
+}
+
+void VertexMaterialVertexProcessor::pushPlanVertexes(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
+	auto pushVertexes = [&] (core::MaterialId materialId, const MaterialWritePlan &plan, const TransformData &transform, const TransformVertexData &vertexes) {
+		auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + writeTarget.vertexOffset;
+		memcpy(target, vertexes.data->data.data(), vertexes.data->data.size() * sizeof(Vertex));
+		memcpy(writeTarget.transform + writeTarget.transtormOffset, &transform, sizeof(TransformData));
+
+		size_t idx = 0;
+		if (plan.atlas) {
+			auto ext = plan.atlas->getImageExtent();
+			float atlasScaleX = 1.0f / ext.width;
+			float atlasScaleY =  1.0f / ext.height;
+
+			for (; idx < vertexes.data->data.size(); ++ idx) {
+				auto &t = target[idx];
+				t.material = materialId | writeTarget.transformIdx << 16;
+
+				if (!hasGpuSideAtlases) {
+					if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
+						t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
+						t.tex = d->tex;
+						t.object = 0;
+					} else {
+#if DEBUG
+						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
+#endif
+						auto anchor = font::CharId::getAnchorForChar(t.object);
+						switch (anchor) {
+						case font::CharAnchor::BottomLeft:
+							t.tex = Vec2(1.0f - atlasScaleX, 0.0f);
+							break;
+						case font::CharAnchor::TopLeft:
+							t.tex = Vec2(1.0f - atlasScaleX, 0.0f + atlasScaleY);
+							break;
+						case font::CharAnchor::TopRight:
+							t.tex = Vec2(1.0f, 0.0f + atlasScaleY);
+							break;
+						case font::CharAnchor::BottomRight:
+							t.tex = Vec2(1.0f, 0.0f);
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			for (; idx < vertexes.data->data.size(); ++ idx) {
+				//target[idx].pos = transform.transform * target[idx].pos * transform.mask + transform.offset;
+				target[idx].material = materialId | writeTarget.transformIdx << 16;
+			}
+		}
+
+		writeTarget.vertexOffset += vertexes.data->data.size();
+		writeTarget.transtormOffset += sizeof(TransformData);
+		++ writeTarget.transformIdx;
+	};
+
+	for (auto &plan : writePlan) {
+		for (auto &state : plan.second.states) {
+			for (auto &cmd : state.second) {
+				cmd.vertexOffset = writeTarget.vertexOffset;
+				for (auto &iit : cmd.vertexes) {
+					TransformData transformData(iit.transform);
+
+					auto pathIt = paths.find(cmd.cmd->zPath);
+					if (pathIt != paths.end()) {
+						transformData.offset.z = pathIt->second;
+					}
+
+					if (cmd.cmd->depthValue > 0.0f) {
+						auto f16 = halffloat::encode(cmd.cmd->depthValue);
+						auto value = halffloat::decode(f16);
+						transformData.shadow = Vec4(value, value, value, 1.0);
+					}
+
+					pushVertexes(plan.first, plan.second, transformData, iit);
+				}
+
+				if (cmd.gradient) {
+					auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + writeTarget.vertexOffset;
+
+					Vec2 start = cmd.transform * cmd.gradient->start;
+					Vec2 end = cmd.transform * cmd.gradient->end;
+
+					start.y = surfaceExtent.height - start.y;
+					end.y = surfaceExtent.height - end.y;
+
+					Vec2 norm = end - start;
+
+					float d = norm.y * norm.y / (norm.x * norm.x + norm.y * norm.y);
+
+					Vec2 axisAngle;
+					if (std::abs(norm.y) > std::abs(norm.x)) {
+						axisAngle.x = std::copysign(norm.length(), norm.y);
+						axisAngle.y = d;
+					} else {
+						axisAngle.x = std::copysign(norm.length(), norm.x);
+						axisAngle.y = d;
+					}
+
+					target->pos = Vec4(start, 0.0f, 0.0f);
+					target->tex = axisAngle;
+					++ target;
+
+					target->pos = Vec4(end, 1.0f, 0.0f);
+					target->tex = axisAngle;
+					++ target;
+
+					for (auto &it : cmd.gradient->steps) {
+						target->pos = Vec4(math::lerp(start, end, it.value), it.value, it.factor);
+						target->tex = axisAngle;
+						target->color = Vec4(it.color.r, it.color.g, it.color.b, it.color.a);
+						++ target;
+					}
+
+					cmd.gradientStart = writeTarget.vertexOffset;
+					cmd.gradientCount = cmd.gradient->steps.size();
+
+					writeTarget.vertexOffset += cmd.gradient->steps.size() + 2;
+				}
+
+				cmd.vertexCount = writeTarget.vertexOffset - cmd.vertexOffset;
+			}
+		}
+	}
+}
+
+void VertexMaterialVertexProcessor::drawWritePlan(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
+	// optimize draw order, minimize switching pipeline, textureSet and descriptors
+	Vector<const Pair<const core::MaterialId, MaterialWritePlan> *> drawOrder;
+
+	for (auto &it : writePlan) {
+		if (drawOrder.empty()) {
+			drawOrder.emplace_back(&it);
+		} else {
+			auto lb = std::lower_bound(drawOrder.begin(), drawOrder.end(), &it,
+					[] (const Pair<const core::MaterialId, MaterialWritePlan> *l, const Pair<const core::MaterialId, MaterialWritePlan> *r) {
+				if (l->second.material->getPipeline() != l->second.material->getPipeline()) {
+					return GraphicPipeline::comparePipelineOrdering(*l->second.material->getPipeline(), *r->second.material->getPipeline());
+				} else if (l->second.material->getLayoutIndex() != r->second.material->getLayoutIndex()) {
+					return l->second.material->getLayoutIndex() < r->second.material->getLayoutIndex();
+				} else {
+					return l->first < r->first;
+				}
+			});
+			if (lb == drawOrder.end()) {
+				drawOrder.emplace_back(&it);
+			} else {
+				drawOrder.emplace(lb, &it);
+			}
+		}
+	}
+
+	auto writeIndexes = [] (uint32_t *indexTarget, const uint32_t *indexSource, uint32_t indexCount, uint32_t vertexOffset) {
+		if (vertexOffset == 0) {
+			memcpy(indexTarget, indexSource, indexCount * sizeof(uint32_t));
+		} else {
+			for (size_t i = 0; i < indexCount; ++ i) {
+				*(indexTarget++) = *(indexSource++) + vertexOffset;
+			}
+		}
+		return indexCount;
+	};
+
+	for (auto &it : drawOrder) {
+		for (auto &state : it->second.states) {
+			auto materialIndexes = writeTarget.indexOffset;
+			uint32_t gradientStart = 0;
+			uint32_t gradientCount = 0;
+
+			// This weird logic used to bypass driver bug on Mali GPU with minimal overhead.
+			// Vertex offset param for DrawIndexed should be positive number
+			// AND first vertex after offset should be drawn
+			uint32_t vertexOffset = maxOf<uint32_t>();
+			for (auto &cmd : state.second) {
+				vertexOffset = std::min(vertexOffset, cmd.vertexOffset);
+			}
+
+			for (auto &cmd : state.second) {
+				size_t localVertexOffset = 0;
+
+				for (auto &vertexes : cmd.vertexes) {
+					writeTarget.indexOffset += writeIndexes(
+							reinterpret_cast<uint32_t *>(writeTarget.indexes) + writeTarget.indexOffset,
+							vertexes.data->indexes.data(),
+							vertexes.data->indexes.size() - vertexes.sdfIndexes,
+							useSpanForCommand ? localVertexOffset : (cmd.vertexOffset - vertexOffset + localVertexOffset));
+
+					localVertexOffset += vertexes.data->data.size();
+				}
+
+				if (useSpanForCommand) {
+					if (writeTarget.indexOffset > materialIndexes) {
+						materialSpans.emplace_back(VertexSpan({ it->first, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+							cmd.vertexOffset, state.first, cmd.gradientStart, cmd.gradientCount}));
+						materialIndexes = writeTarget.indexOffset;
+					}
+				} else if (cmd.gradient) {
+					if (gradientCount != 0) {
+						materialSpans.emplace_back(VertexSpan({ it->first, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+							vertexOffset, state.first, gradientStart, gradientCount}));
+						materialIndexes = writeTarget.indexOffset;
+					} else {
+						gradientStart = cmd.gradientStart;
+						gradientCount = cmd.gradientCount;
+					}
+				}
+			}
+
+			if (writeTarget.indexOffset > materialIndexes && !useSpanForCommand) {
+				materialSpans.emplace_back(VertexSpan({ it->first, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+					vertexOffset, state.first, gradientStart, gradientCount}));
+			}
+		}
+	}
+
+	for (auto &it : drawOrder) {
+		for (auto &state : it->second.states) {
+			auto materialIndexes = writeTarget.indexOffset;
+
+			// This weird logic used to bypass driver bug on Mali GPU with minimal overhead.
+			// Vertex offset param for DrawIndexed should be positive number
+			// AND first vertex after offset should be drawn
+			uint32_t vertexOffset = maxOf<uint32_t>();
+			for (auto &cmd : state.second) {
+				for (auto &vertexes : cmd.vertexes) {
+					if (vertexes.sdfIndexes > 0 && vertexes.fillIndexes > 0) {
+						vertexOffset = std::min(vertexOffset, cmd.vertexOffset);
+						break;
+					}
+				}
+			}
+
+			for (auto &cmd : state.second) {
+				size_t localVertexOffset = 0;
+
+				for (auto &vertexes : cmd.vertexes) {
+					if (vertexes.sdfIndexes > 0 && vertexes.fillIndexes > 0) {
+						writeTarget.indexOffset += writeIndexes(
+								reinterpret_cast<uint32_t *>(writeTarget.indexes) + writeTarget.indexOffset,
+								vertexes.data->indexes.data(),
+								vertexes.fillIndexes,
+								useSpanForCommand ? localVertexOffset : (cmd.vertexOffset - vertexOffset + localVertexOffset));
+					}
+
+					localVertexOffset += vertexes.data->data.size();
+				}
+
+				if (writeTarget.indexOffset > materialIndexes && useSpanForCommand) {
+					shadowSolidSpans.emplace_back(VertexSpan({ 0, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+						cmd.vertexOffset, state.first, 0, 0}));
+					materialIndexes = writeTarget.indexOffset;
+				}
+			}
+
+			if (writeTarget.indexOffset > materialIndexes && !useSpanForCommand) {
+				shadowSolidSpans.emplace_back(VertexSpan({ 0, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+					vertexOffset, state.first, 0, 0}));
+			}
+		}
+	}
+
+	for (auto &it : drawOrder) {
+		for (auto &state : it->second.states) {
+			auto materialIndexes = writeTarget.indexOffset;
+
+			// This weird logic used to bypass driver bug on Mali GPU with minimal overhead.
+			// Vertex offset param for DrawIndexed should be positive number
+			// AND first vertex after offset should be drawn
+			uint32_t vertexOffset = maxOf<uint32_t>();
+			for (auto &cmd : state.second) {
+				for (auto &vertexes : cmd.vertexes) {
+					if (vertexes.sdfIndexes > 0) {
+						vertexOffset = std::min(vertexOffset, cmd.vertexOffset);
+						break;
+					}
+				}
+			}
+
+			for (auto &cmd : state.second) {
+				size_t localVertexOffset = 0;
+
+				for (auto &vertexes : cmd.vertexes) {
+					if (vertexes.sdfIndexes > 0) {
+						writeTarget.indexOffset += writeIndexes(
+								reinterpret_cast<uint32_t *>(writeTarget.indexes) + writeTarget.indexOffset,
+								 vertexes.data->indexes.data() + vertexes.fillIndexes + vertexes.strokeIndexes,
+								vertexes.sdfIndexes,
+								useSpanForCommand ? localVertexOffset : (cmd.vertexOffset - vertexOffset + localVertexOffset));
+					}
+
+					localVertexOffset += vertexes.data->data.size();
+				}
+
+				if (writeTarget.indexOffset > materialIndexes && useSpanForCommand) {
+					shadowSdfSpans.emplace_back(VertexSpan({ 0, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+						cmd.vertexOffset, state.first, 0, 0}));
+					materialIndexes = writeTarget.indexOffset;
+				}
+			}
+
+			if (writeTarget.indexOffset > materialIndexes && !useSpanForCommand) {
+				shadowSdfSpans.emplace_back(VertexSpan({ 0, writeTarget.indexOffset - materialIndexes, 1, materialIndexes,
+					vertexOffset, state.first, 0, 0}));
+			}
+		}
+	}
+}
+
+void VertexMaterialVertexProcessor::pushAll(WriteTarget &writeTarget) {
+	pushInitial(writeTarget);
+	pushPlanVertexes(writeTarget, solidWritePlan);
+	pushPlanVertexes(writeTarget, surfaceWritePlan);
+	for (auto &it : transparentWritePlan) {
+		pushPlanVertexes(writeTarget, it.second);
+	}
+
+	uint32_t counter = 0;
+	drawWritePlan(writeTarget, solidWritePlan);
+
+	solidCmds = materialSpans.size() - counter;
+	counter = materialSpans.size();
+
+	drawWritePlan(writeTarget, surfaceWritePlan);
+
+	surfaceCmds = materialSpans.size() - counter;
+	counter = materialSpans.size();
+
+	for (auto &it : transparentWritePlan) {
+		drawWritePlan(writeTarget, it.second);
+	}
+
+	transparentCmds = materialSpans.size() - counter;
+}
+
+void VertexMaterialVertexProcessor::finalize() {
+	_drawStat.vertexes = globalWritePlan.vertexes - excludeVertexes;
+	_drawStat.triangles = (globalWritePlan.indexes - excludeIndexes) / 3;
+	_drawStat.zPaths = paths.size();
+	_drawStat.drawCalls = materialSpans.size();
+	_drawStat.solidCmds = solidCmds;
+	_drawStat.surfaceCmds = surfaceCmds;
+	_drawStat.transparentCmds = transparentCmds;
+	_drawStat.shadowsCmds = shadowsCmds;
+	_drawStat.vertexInputTime = platform::clock() - _time;
+	_input->director->pushDrawStat(_drawStat);
+
+	_attachment->loadData(move(_input),
+			move(_indexes), move(_vertexes), move(_transforms),
+			move(materialSpans), move(shadowSolidSpans), move(shadowSdfSpans),
+			maxShadowValue);
+
+	_callback(true);
+}
+
 VertexAttachment::~VertexAttachment() { }
 
 bool VertexAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, const AttachmentData *m) {
@@ -63,24 +890,17 @@ void VertexAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInput
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) mutable {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
 		}
 
-		auto &cache = handle.getLoop()->getFrameCache();
-
 		_materialSet = _materials->getSet();
-		_drawStat.cachedFramebuffers = cache->getFramebuffersCount();
-		_drawStat.cachedImages = cache->getImagesCount();
-		_drawStat.cachedImageViews = cache->getImageViewsCount();
 
-		handle.performInQueue([this, d = move(d)] (FrameHandle &handle) {
-			return loadVertexes(handle, d);
-		}, [cb = move(cb)] (FrameHandle &handle, bool success) {
-			cb(success);
-		}, this, "VertexMaterialAttachmentHandle::submitInput");
+		auto proc = Rc<VertexMaterialVertexProcessor>::alloc(this, move(d), move(cb));
+
+		proc->run(handle);
 	});
 }
 
@@ -88,744 +908,26 @@ bool VertexAttachmentHandle::empty() const {
 	return !_indexes || !_vertexes || !_transforms;
 }
 
-const Rc<FrameContextHandle2d> &VertexAttachmentHandle::getCommands() const {
-	return _commands;
-}
-
-struct VertexMaterialDrawPlan {
-	struct PlanCommandInfo {
-		const CmdGeneral *cmd = nullptr;
-		SpanView<TransformVertexData> vertexes;
-		Mat4 transform;
-		const LinearGradientData *gradient = nullptr;
-		uint32_t vertexOffset = 0;
-		uint32_t vertexCount = 0;
-		uint32_t gradientStart = 0;
-		uint32_t gradientCount = 0;
-	};
-
-	struct PlanShadowInfo {
-		const CmdShadow *cmd = nullptr;
-		SpanView<TransformVertexData> vertexes;
-		Mat4 transform;
-	};
-
-	template <typename T>
-	struct WritePlanData {
-		const core::Material *material = nullptr;
-		Rc<core::DataAtlas> atlas;
-		uint32_t vertexes = 0;
-		uint32_t indexes = 0;
-		uint32_t transforms = 0;
-		Map<StateId, std::forward_list<T>> states;
-	};
-
-	using MaterialWritePlan = WritePlanData<PlanCommandInfo>;
-	using ShadowWritePlan = WritePlanData<PlanShadowInfo>;
-
-	struct WriteTarget {
-		uint8_t *transform;
-		uint8_t *vertexes;
-		uint8_t *indexes;
-	};
-
-	Extent3 surfaceExtent;
-	core::SurfaceTransformFlags transform = core::SurfaceTransformFlags::Identity;
-
-	uint32_t excludeVertexes = 0;
-	uint32_t excludeIndexes = 0;
-
-	Map<SpanView<ZOrder>, float, ZOrderLess> paths;
-
-	// fill write plan
-	MaterialWritePlan globalWritePlan;
-
-	// write plan for objects, that do depth-write and can be drawn out of order
-	HashMap<core::MaterialId, MaterialWritePlan> solidWritePlan;
-
-	// write plan for objects without depth-write, that can be drawn out of order
-	HashMap<core::MaterialId, MaterialWritePlan> surfaceWritePlan;
-
-	// write plan for transparent objects, that should be drawn in order
-	Map<SpanView<ZOrder>, HashMap<core::MaterialId, MaterialWritePlan>, ZOrderLess> transparentWritePlan;
-
-	std::forward_list<Vector<TransformVertexData>> deferredTmp;
-
-	uint32_t vertexOffset = 0;
-	uint32_t indexOffset = 0;
-	uint32_t transtormOffset = 0;
-
-	uint32_t transformIdx = 0;
-
-	uint32_t solidCmds = 0;
-	uint32_t surfaceCmds = 0;
-	uint32_t transparentCmds = 0;
-	uint32_t shadowsCmds = 0;
-
-	Vec2 shadowSize = Vec2(1.0f, 1.0f);
-
-	bool hasGpuSideAtlases = false;
-
-	float maxShadowValue = 0.0f;
-
-	FrameContextHandle2d *handle = nullptr;
-
-	Vector<VertexSpan> materialSpans;
-	Vector<VertexSpan> shadowSolidSpans;
-	Vector<VertexSpan> shadowSdfSpans;
-
-	VertexMaterialDrawPlan(const core::FrameContraints &constraints)
-	: surfaceExtent{constraints.extent}, transform(constraints.transform) { }
-
-	template <typename PlanData, typename Cmd>
-	auto emplaceWritePlanData(WritePlanData<PlanData> &writePlan, const Command *c, const Cmd *cmd, SpanView<TransformVertexData> vertexes) -> PlanData & {
-		for (auto &iit : vertexes) {
-			globalWritePlan.vertexes += iit.data->data.size();
-			globalWritePlan.indexes += iit.data->indexes.size();
-
-			if (iit.sdfIndexes > 0) {
-				globalWritePlan.indexes += (iit.sdfIndexes + iit.fillIndexes);
-			}
-
-			++ globalWritePlan.transforms;
-
-			writePlan.vertexes += iit.data->data.size();
-			writePlan.indexes += iit.data->indexes.size();
-			++ writePlan.transforms;
-
-			if ((c->flags & CommandFlags::DoNotCount) != CommandFlags::None) {
-				excludeVertexes = iit.data->data.size();
-				excludeIndexes = iit.data->indexes.size();
-			}
-		}
-
-		auto iit = writePlan.states.find(cmd->state);
-		if (iit == writePlan.states.end()) {
-			iit = writePlan.states.emplace(cmd->state, std::forward_list<PlanData>()).first;
-		}
-
-		return iit->second.emplace_front(PlanData{cmd, vertexes});
-	}
-
-	void emplaceWritePlan(const core::Material *material, HashMap<core::MaterialId, MaterialWritePlan> &writePlan,
-				const Command *c, const CmdGeneral *cmd, SpanView<TransformVertexData> vertexes) {
-		auto it = writePlan.find(cmd->material);
-		if (it == writePlan.end()) {
-			if (material) {
-				it = writePlan.emplace(cmd->material, MaterialWritePlan()).first;
-				it->second.material = material;
-				if (auto atlas = it->second.material->getAtlas()) {
-					it->second.atlas = atlas;
-				}
-			}
-		}
-
-		if (it != writePlan.end() && it->second.material) {
-			auto &plan = emplaceWritePlanData(it->second, c, cmd, vertexes);
-
-			if (cmd->state != StateIdNone) {
-				auto state = handle->getState(cmd->state);
-				if (state) {
-					auto stateData = dynamic_cast<StateData *>(state->data ? state->data.get() : nullptr);
-
-					if (stateData && stateData->gradient) {
-						plan.transform = stateData->transform;
-						plan.gradient = stateData->gradient.get();
-						globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
-					}
-				}
-			}
-		}
-
-		auto pathsIt = paths.find(cmd->zPath);
-		if (pathsIt == paths.end()) {
-			paths.emplace(cmd->zPath, 0.0f);
-		}
-	}
-
-	void pushVertexData(core::MaterialSet *materialSet, const Command *c, const CmdVertexArray *cmd) {
-		auto material = materialSet->getMaterialById(cmd->material);
-		if (!material) {
-			return;
-		}
-		if (material->getPipeline()->isSolid()) {
-			emplaceWritePlan(material, solidWritePlan, c, cmd, cmd->vertexes);
-		} else if (cmd->renderingLevel == RenderingLevel::Surface) {
-			emplaceWritePlan(material, surfaceWritePlan, c, cmd, cmd->vertexes);
-		} else {
-			auto v = transparentWritePlan.find(cmd->zPath);
-			if (v == transparentWritePlan.end()) {
-				v = transparentWritePlan.emplace(cmd->zPath, HashMap<core::MaterialId, MaterialWritePlan>()).first;
-			}
-			emplaceWritePlan(material, v->second, c, cmd, cmd->vertexes);
-		}
-	};
-
-	template <typename Cmd>
-	void applyNormalized(Vector<TransformVertexData> &vertexes, const Cmd *cmd) {
-		// apply transforms;
-		if (cmd->normalized) {
-			for (auto &it : vertexes) {
-				auto modelTransform = cmd->modelTransform * it.transform;
-
-				Mat4 newMV;
-				newMV.m[12] = std::floor(modelTransform.m[12]);
-				newMV.m[13] = std::floor(modelTransform.m[13]);
-				newMV.m[14] = std::floor(modelTransform.m[14]);
-
-				const_cast<TransformVertexData &>(it).transform = cmd->viewTransform * newMV;
-			}
-		} else {
-			for (auto &it : vertexes) {
-				const_cast<TransformVertexData &>(it).transform = cmd->viewTransform * cmd->modelTransform * it.transform;
-			}
-		}
-	}
-
-	void pushDeferred(core::MaterialSet *materialSet, const Command *c, const CmdDeferred *cmd) {
-		auto material = materialSet->getMaterialById(cmd->material);
-		if (!material) {
-			return;
-		}
-
-		if (!cmd->deferred->isWaitOnReady()) {
-			if (!cmd->deferred->isReady()) {
-				return;
-			}
-		}
-
-		auto &vertexes = deferredTmp.emplace_front(cmd->deferred->getData().vec<Interface>());
-
-		applyNormalized(vertexes, cmd);
-
-		if (cmd->renderingLevel == RenderingLevel::Solid) {
-			emplaceWritePlan(material, solidWritePlan, c, cmd, vertexes);
-		} else if (cmd->renderingLevel == RenderingLevel::Surface) {
-			emplaceWritePlan(material, surfaceWritePlan, c, cmd, vertexes);
-		} else {
-			auto v = transparentWritePlan.find(cmd->zPath);
-			if (v == transparentWritePlan.end()) {
-				v = transparentWritePlan.emplace(cmd->zPath, HashMap<core::MaterialId, MaterialWritePlan>()).first;
-			}
-			emplaceWritePlan(material, v->second, c, cmd, vertexes);
-		}
-	}
-
-	void updatePathsDepth() {
-		float depthScale = 1.0f / float(paths.size() + 1);
-		float depthOffset = 1.0f - depthScale;
-		for (auto &it : paths) {
-			it.second = depthOffset;
-			depthOffset -= depthScale;
-		}
-	}
-
-	void pushInitial(WriteTarget &writeTarget) {
-		TransformData val;
-		memcpy(writeTarget.transform, &val, sizeof(TransformData));
-		transtormOffset += sizeof(TransformData); ++ transformIdx;
-
-		Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6 };
-
-		Vector<Vertex> vertexes {
-			// full screen quad data
-			Vertex{
-				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2::ZERO, 0, 0
-			},
-			Vertex{
-				Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2::UNIT_Y, 0, 0
-			},
-			Vertex{
-				Vec4(1.0f, 1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2::ONE, 0, 0
-			},
-			Vertex{
-				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2::UNIT_X, 0, 0
-			},
-
-			// shadow quad data
-			Vertex{
-				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2(0.0f, 1.0f - shadowSize.y), 0, 0
-			},
-			Vertex{
-				Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2(0.0f, 1.0f), 0, 0
-			},
-			Vertex{
-				Vec4(1.0f, 1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2(shadowSize.x, 1.0f), 0, 0
-			},
-			Vertex{
-				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
-				Vec4::ONE, Vec2(shadowSize.x, 1.0f - shadowSize.y), 0, 0
-			}
-		};
-
-		switch (core::getPureTransform(transform)) {
-		case core::SurfaceTransformFlags::Rotate90:
-			vertexes[0].tex = Vec2::UNIT_Y;
-			vertexes[1].tex = Vec2::ONE;
-			vertexes[2].tex = Vec2::UNIT_X;
-			vertexes[3].tex = Vec2::ZERO;
-			vertexes[4].tex = Vec2(0.0f, shadowSize.y);
-			vertexes[5].tex = shadowSize;
-			vertexes[6].tex = Vec2(shadowSize.x, 0.0f);
-			vertexes[7].tex = Vec2::ZERO;
-			break;
-		case core::SurfaceTransformFlags::Rotate180:
-			vertexes[0].tex = Vec2::ONE;
-			vertexes[1].tex = Vec2::UNIT_X;
-			vertexes[2].tex = Vec2::ZERO;
-			vertexes[3].tex = Vec2::UNIT_Y;
-			vertexes[4].tex = shadowSize;
-			vertexes[5].tex = Vec2(shadowSize.x, 0.0f);
-			vertexes[6].tex = Vec2::ZERO;
-			vertexes[7].tex = Vec2(0.0f, shadowSize.y);
-			break;
-		case core::SurfaceTransformFlags::Rotate270:
-			vertexes[0].tex = Vec2::UNIT_X;
-			vertexes[1].tex = Vec2::ZERO;
-			vertexes[2].tex = Vec2::UNIT_Y;
-			vertexes[3].tex = Vec2::ONE;
-			vertexes[4].tex = Vec2(shadowSize.x, 0.0f);
-			vertexes[5].tex = Vec2::ZERO;
-			vertexes[6].tex = Vec2(0.0f, shadowSize.y);
-			vertexes[7].tex = shadowSize;
-			break;
-		default:
-			break;
-		}
-
-		auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
-		memcpy(target, vertexes.data(), vertexes.size() * sizeof(Vertex));
-		memcpy(writeTarget.indexes, indexes.data(), indexes.size() * sizeof(uint32_t));
-
-		vertexOffset += vertexes.size();
-		indexOffset += indexes.size();
-	}
-
-	uint32_t rotateObject(uint32_t obj, uint32_t idx) {
-		auto anchor = (obj >> 16) & 0x3;
-		return (obj & ~0x30000) | (((anchor + idx) % 4) << 16);
-	}
-
-	Vec2 rotateVec(const Vec2 &vec) {
-		switch (core::getPureTransform(transform)) {
-			case core::SurfaceTransformFlags::Rotate90:
-				return Vec2(-vec.y, vec.x);
-				break;
-			case core::SurfaceTransformFlags::Rotate180:
-				return Vec2(-vec.x, -vec.y);
-				break;
-			case core::SurfaceTransformFlags::Rotate270:
-				return Vec2(vec.y, -vec.x);
-				break;
-			default:
-				break;
-		}
-		return vec;
-	}
-
-	void pushPlanVertexes(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
-		auto pushVertexes = [&] (core::MaterialId materialId, const MaterialWritePlan &plan, const TransformData &transform, const TransformVertexData &vertexes) {
-			auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
-			memcpy(target, vertexes.data->data.data(), vertexes.data->data.size() * sizeof(Vertex));
-			memcpy(writeTarget.transform + transtormOffset, &transform, sizeof(TransformData));
-
-			maxShadowValue = std::max(transform.shadow.x, maxShadowValue);
-
-			size_t idx = 0;
-			if (plan.atlas) {
-				auto ext = plan.atlas->getImageExtent();
-				float atlasScaleX = 1.0f / ext.width;
-				float atlasScaleY =  1.0f / ext.height;
-
-				for (; idx < vertexes.data->data.size(); ++ idx) {
-					auto &t = target[idx];
-					t.material = materialId | transformIdx << 16;
-
-					if (!hasGpuSideAtlases) {
-						if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
-							t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
-							t.tex = d->tex;
-							t.object = 0;
-						} else {
-#if DEBUG
-							log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ", string::toUtf8<Interface>(char16_t(t.object)));
-#endif
-							auto anchor = font::CharId::getAnchorForChar(t.object);
-							switch (anchor) {
-							case font::CharAnchor::BottomLeft:
-								t.tex = Vec2(1.0f - atlasScaleX, 0.0f);
-								break;
-							case font::CharAnchor::TopLeft:
-								t.tex = Vec2(1.0f - atlasScaleX, 0.0f + atlasScaleY);
-								break;
-							case font::CharAnchor::TopRight:
-								t.tex = Vec2(1.0f, 0.0f + atlasScaleY);
-								break;
-							case font::CharAnchor::BottomRight:
-								t.tex = Vec2(1.0f, 0.0f);
-								break;
-							}
-						}
-					}
-				}
-			} else {
-				for (; idx < vertexes.data->data.size(); ++ idx) {
-					target[idx].material = materialId | transformIdx << 16;
-				}
-			}
-
-			vertexOffset += vertexes.data->data.size();
-			transtormOffset += sizeof(TransformData);
-			++ transformIdx;
-		};
-
-		for (auto &plan : writePlan) {
-			for (auto &state : plan.second.states) {
-				for (auto &cmd : state.second) {
-					cmd.vertexOffset = vertexOffset;
-					for (auto &iit : cmd.vertexes) {
-						TransformData transformData(iit.transform);
-
-						auto pathIt = paths.find(cmd.cmd->zPath);
-						if (pathIt != paths.end()) {
-							transformData.offset.z = pathIt->second;
-						}
-
-						if (cmd.cmd->depthValue > 0.0f) {
-							auto f16 = halffloat::encode(cmd.cmd->depthValue);
-							auto value = halffloat::decode(f16);
-							transformData.shadow = Vec4(value, value, value, 1.0);
-						}
-
-						pushVertexes(plan.first, plan.second, transformData, iit);
-					}
-
-					if (cmd.gradient) {
-						auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + vertexOffset;
-
-						Vec2 start = cmd.transform * cmd.gradient->start;
-						Vec2 end = cmd.transform * cmd.gradient->end;
-
-						start.y = surfaceExtent.height - start.y;
-						end.y = surfaceExtent.height - end.y;
-
-						Vec2 norm = end - start;
-
-						float d = norm.y * norm.y / (norm.x * norm.x + norm.y * norm.y);
-
-						Vec2 axisAngle;
-						if (std::abs(norm.y) > std::abs(norm.x)) {
-							axisAngle.x = std::copysign(norm.length(), norm.y);
-							//axisAngle.y = (norm.x * surfaceExtent.width) / (norm.y * surfaceExtent.height);
-							axisAngle.y = d;
-						} else {
-							axisAngle.x = std::copysign(norm.length(), norm.x);
-							//axisAngle.y = (norm.y * surfaceExtent.height) / (norm.x * surfaceExtent.width);
-							axisAngle.y = d;
-						}
-
-						target->pos = Vec4(start, 0.0f, 0.0f);
-						target->tex = axisAngle;
-						++ target;
-
-						target->pos = Vec4(end, 1.0f, 0.0f);
-						target->tex = axisAngle;
-						++ target;
-
-						for (auto &it : cmd.gradient->steps) {
-							target->pos = Vec4(math::lerp(start, end, it.value), it.value, it.factor);
-							target->tex = axisAngle;
-							target->color = Vec4(it.color.r, it.color.g, it.color.b, it.color.a);
-							++ target;
-						}
-
-						cmd.gradientStart = vertexOffset;
-						cmd.gradientCount = cmd.gradient->steps.size();
-
-						vertexOffset += cmd.gradient->steps.size() + 2;
-					}
-
-					cmd.vertexCount = vertexOffset - cmd.vertexOffset;
-				}
-			}
-		}
-	}
-
-	void drawWritePlan(WriteTarget &writeTarget, HashMap<core::MaterialId, MaterialWritePlan> &writePlan) {
-		// optimize draw order, minimize switching pipeline, textureSet and descriptors
-		Vector<const Pair<const core::MaterialId, MaterialWritePlan> *> drawOrder;
-
-		for (auto &it : writePlan) {
-			if (drawOrder.empty()) {
-				drawOrder.emplace_back(&it);
-			} else {
-				auto lb = std::lower_bound(drawOrder.begin(), drawOrder.end(), &it,
-						[] (const Pair<const core::MaterialId, MaterialWritePlan> *l, const Pair<const core::MaterialId, MaterialWritePlan> *r) {
-					if (l->second.material->getPipeline() != l->second.material->getPipeline()) {
-						return GraphicPipeline::comparePipelineOrdering(*l->second.material->getPipeline(), *r->second.material->getPipeline());
-					} else if (l->second.material->getLayoutIndex() != r->second.material->getLayoutIndex()) {
-						return l->second.material->getLayoutIndex() < r->second.material->getLayoutIndex();
-					} else {
-						return l->first < r->first;
-					}
-				});
-				if (lb == drawOrder.end()) {
-					drawOrder.emplace_back(&it);
-				} else {
-					drawOrder.emplace(lb, &it);
-				}
-			}
-		}
-
-		for (auto &it : drawOrder) {
-			for (auto &state : it->second.states) {
-				auto materialIndexes = indexOffset;
-				uint32_t gradientStart = 0;
-				uint32_t gradientCount = 0;
-
-				for (auto &cmd : state.second) {
-					for (auto &vertexes : cmd.vertexes) {
-						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
-
-						if (vertexes.sdfIndexes > 0) {
-							auto indexSource = vertexes.data->indexes.data();
-							auto indexCount = vertexes.data->indexes.size() - vertexes.sdfIndexes;
-							for (size_t i = 0; i < indexCount; ++ i) {
-								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
-							}
-
-							indexOffset += indexCount;
-						} else {
-							for (auto &it : vertexes.data->indexes) {
-								*(indexTarget++) = it + cmd.vertexOffset;
-							}
-
-							indexOffset += vertexes.data->indexes.size();
-						}
-					}
-
-					if (cmd.gradient) {
-						if (gradientCount != 0) {
-							materialSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
-								gradientStart, gradientCount}));
-							materialIndexes = indexOffset;
-						} else {
-							gradientStart = cmd.gradientStart;
-							gradientStart = cmd.gradientCount;
-						}
-					}
-				}
-
-				if (indexOffset > materialIndexes) {
-					materialSpans.emplace_back(VertexSpan({ it->first, indexOffset - materialIndexes, 1, materialIndexes, state.first,
-						gradientStart, gradientCount}));
-				}
-			}
-		}
-
-		for (auto &it : drawOrder) {
-			for (auto &state : it->second.states) {
-				auto materialIndexes = indexOffset;
-
-				for (auto &cmd : state.second) {
-					for (auto &vertexes : cmd.vertexes) {
-						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
-
-						if (vertexes.sdfIndexes > 0 && vertexes.fillIndexes > 0) {
-							auto indexSource = vertexes.data->indexes.data();
-							auto indexCount = vertexes.fillIndexes;
-							for (size_t i = 0; i < indexCount; ++ i) {
-								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
-							}
-
-							indexOffset += indexCount;
-						}
-					}
-				}
-
-				if (indexOffset > materialIndexes) {
-					shadowSolidSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
-						0, 0}));
-				}
-			}
-		}
-
-		for (auto &it : drawOrder) {
-			for (auto &state : it->second.states) {
-				auto materialIndexes = indexOffset;
-
-				for (auto &cmd : state.second) {
-					for (auto &vertexes : cmd.vertexes) {
-						auto indexTarget = reinterpret_cast<uint32_t *>(writeTarget.indexes) + indexOffset;
-
-						if (vertexes.sdfIndexes > 0) {
-							auto indexSource = vertexes.data->indexes.data() + vertexes.fillIndexes + vertexes.strokeIndexes;
-							auto indexCount = vertexes.sdfIndexes;
-							for (size_t i = 0; i < indexCount; ++ i) {
-								*(indexTarget++) = indexSource[i] + cmd.vertexOffset;
-							}
-
-							indexOffset += indexCount;
-						}
-					}
-				}
-
-				if (indexOffset > materialIndexes) {
-					shadowSdfSpans.emplace_back(VertexSpan({ 0, indexOffset - materialIndexes, 1, materialIndexes, state.first,
-						0, 0}));
-				}
-			}
-		}
-	}
-
-	void pushAll(WriteTarget &writeTarget) {
-		pushInitial(writeTarget);
-		pushPlanVertexes(writeTarget, solidWritePlan);
-		pushPlanVertexes(writeTarget, surfaceWritePlan);
-		for (auto &it : transparentWritePlan) {
-			pushPlanVertexes(writeTarget, it.second);
-		}
-
-		uint32_t counter = 0;
-		drawWritePlan(writeTarget, solidWritePlan);
-
-		solidCmds = materialSpans.size() - counter;
-		counter = materialSpans.size();
-
-		drawWritePlan(writeTarget, surfaceWritePlan);
-
-		surfaceCmds = materialSpans.size() - counter;
-		counter = materialSpans.size();
-
-		for (auto &it : transparentWritePlan) {
-			drawWritePlan(writeTarget, it.second);
-		}
-
-		transparentCmds = materialSpans.size() - counter;
-	}
-};
-
-bool VertexAttachmentHandle::loadVertexes(FrameHandle &fhandle, const Rc<FrameContextHandle2d> &commands) {
-	auto handle = dynamic_cast<DeviceFrameHandle *>(&fhandle);
-	if (!handle) {
-		return false;
-	}
-
-	auto t = platform::clock();
-
-	VertexMaterialDrawPlan plan(fhandle.getFrameConstraints());
-	plan.hasGpuSideAtlases = handle->getAllocator()->getDevice()->hasDynamicIndexedBuffers();
-	plan.handle = commands;
-
-	auto shadowExtent = commands->lights.getShadowExtent( fhandle.getFrameConstraints().getScreenSize());
-	auto shadowSize = commands->lights.getShadowSize( fhandle.getFrameConstraints().getScreenSize());
-
-	plan.shadowSize = Vec2(shadowSize.width / float(shadowExtent.width), shadowSize.height / float(shadowExtent.height));
-
-	auto cmd = commands->commands->getFirst();
-	while (cmd) {
-		switch (cmd->type) {
-		case CommandType::CommandGroup:
-			break;
-		case CommandType::VertexArray:
-			plan.pushVertexData(_materialSet.get(), cmd, reinterpret_cast<const CmdVertexArray *>(cmd->data));
-			break;
-		case CommandType::Deferred:
-			plan.pushDeferred(_materialSet.get(), cmd, reinterpret_cast<const CmdDeferred *>(cmd->data));
-			break;
-		case CommandType::ShadowArray:
-		case CommandType::ShadowDeferred:
-		case CommandType::SdfGroup2D:
-			break;
-		}
-		cmd = cmd->next;
-	}
-
-	if (plan.globalWritePlan.vertexes == 0 || plan.globalWritePlan.indexes == 0) {
-		return true;
-	}
-
-	plan.updatePathsDepth();
-
-	auto devFrame = static_cast<DeviceFrameHandle *>(handle);
-
-	auto &pool = devFrame->getMemPool(this);
-
-	// create buffers
-	_indexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::BufferUsage::IndexBuffer, (plan.globalWritePlan.indexes + 12) * sizeof(uint32_t)));
-
-	_vertexes = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::BufferUsage::StorageBuffer, (plan.globalWritePlan.vertexes + 8) * sizeof(Vertex)));
-
-	_transforms = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::BufferUsage::StorageBuffer, (plan.globalWritePlan.transforms + 1) * sizeof(TransformData)));
-
-	if (!_vertexes || !_indexes || !_transforms) {
-		return false;
-	}
-
-	Bytes vertexData, indexData, transformData;
-
-	VertexMaterialDrawPlan::WriteTarget writeTarget;
-
-	if (fhandle.isPersistentMapping()) {
-		writeTarget.vertexes = _vertexes->getPersistentMappedRegion();
-		writeTarget.indexes = _indexes->getPersistentMappedRegion();
-		writeTarget.transform = _transforms->getPersistentMappedRegion();
-	} else {
-		vertexData.resize(_vertexes->getSize());
-		indexData.resize(_indexes->getSize());
-		transformData.resize(_transforms->getSize());
-
-		writeTarget.vertexes = vertexData.data();
-		writeTarget.indexes = indexData.data();
-		writeTarget.transform = transformData.data();
-	}
-
-	// write initial full screen quad
-	plan.pushAll(writeTarget);
-
-	_spans = move(plan.materialSpans);
-	_shadowSolidSpans = move(plan.shadowSolidSpans);
-	_shadowSdfSpans = move(plan.shadowSdfSpans);
-
-	if (fhandle.isPersistentMapping()) {
-		_vertexes->flushMappedRegion();
-		_indexes->flushMappedRegion();
-		_transforms->flushMappedRegion();
-	} else {
-		_vertexes->setData(vertexData);
-		_indexes->setData(indexData);
-		_transforms->setData(transformData);
-	}
-
-	_drawStat.vertexes = plan.globalWritePlan.vertexes - plan.excludeVertexes;
-	_drawStat.triangles = (plan.globalWritePlan.indexes - plan.excludeIndexes) / 3;
-	_drawStat.zPaths = plan.paths.size();
-	_drawStat.drawCalls = _spans.size();
-	_drawStat.materials = _materialSet->getMaterials().size();
-	_drawStat.solidCmds = plan.solidCmds;
-	_drawStat.surfaceCmds = plan.surfaceCmds;
-	_drawStat.transparentCmds = plan.transparentCmds;
-	_drawStat.shadowsCmds = plan.shadowsCmds;
-	_drawStat.vertexInputTime = platform::clock() - t;
-
-	commands->director->pushDrawStat(_drawStat);
+void VertexAttachmentHandle::loadData(Rc<FrameContextHandle2d> &&data,
+		Rc<Buffer> && indexes, Rc<Buffer> &&vertexes, Rc<Buffer> &&transforms,
+		Vector<VertexSpan> &&spans, Vector<VertexSpan> &&shadowSolidSpans, Vector<VertexSpan> &&shadowSdfSpans,
+		float maxShadowValue) {
+	_commands = move(data);
+	_indexes = move(indexes);
+	_vertexes = move(vertexes);
+	_transforms = move(transforms);
+	_spans = move(spans);
+	_shadowSolidSpans = move(shadowSolidSpans);
+	_shadowSdfSpans = move(shadowSdfSpans);
+
+	_maxShadowValue = maxShadowValue;
 
 	addBufferView(_vertexes);
 	addBufferView(_transforms);
+}
 
-	_commands = commands;
-	_maxShadowValue = plan.maxShadowValue;
-	return true;
+const Rc<FrameContextHandle2d> &VertexAttachmentHandle::getCommands() const {
+	return _commands;
 }
 
 core::ImageFormat VertexPass::selectDepthFormat(SpanView<core::ImageFormat> formats) {
@@ -917,14 +1019,6 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 	clearDynamicState(buf);
 
-	// Use commented code to debug drawing command-by-command
-
-	/*static size_t ctrl = 0;
-
-	size_t i = 0;
-	size_t min = 0;
-	size_t max = (ctrl ++) % 12;*/
-
 	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
 
 	struct MaterialData {
@@ -937,29 +1031,42 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 	MaterialData data;
 
-	for (auto &materialVertexSpan : _vertexBuffer->getVertexData()) {
-		/*if (i < min) {
-			++ i;
-			continue;
-		}
-		if (i >= max) {
-			break;
-		}*/
+	auto &spans = _vertexBuffer->getVertexData();
+
+	// Use commented code to debug drawing command-by-command
+	//static size_t ctrl = 0;
+
+	//size_t i = 0;
+	//size_t min = 0;
+	//size_t max = (ctrl ++) % (spans.size());
+
+	auto drawSpan = [&] (const VertexSpan &materialVertexSpan) {
+		//++ i;
+		//if (i != max) {
+		//	continue;
+		//}
+		//if (i < min) {
+			//
+			//continue;
+		//}
+		//if (i >= max) {
+		//	break;
+		//}
 
 		//++ i;
 		data.materialIdx = materials->getMaterialOrder(materialVertexSpan.material);
 		const core::Material * material = materials->getMaterialById(materialVertexSpan.material);
 		if (!material) {
-			continue;
+			return;
 		}
 		data.imageIdx = material->getImages().front().descriptor;
 		data.samplerIdx = material->getImages().front().sampler;
 		data.gradientOffset = materialVertexSpan.gradientOffset;
 		data.gradientCount = materialVertexSpan.gradientCount;
 
-		auto pipeline = material->getPipeline();
 		auto textureSetIndex =  material->getLayoutIndex();
 
+		auto pipeline = material->getPipeline();
 		buf.cmdBindPipelineWithDescriptors(pipeline);
 
 		if (textureSetIndex != boundTextureSetIndex) {
@@ -987,9 +1094,13 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 			materialVertexSpan.indexCount, // indexCount
 			materialVertexSpan.instanceCount, // instanceCount
 			materialVertexSpan.firstIndex, // firstIndex
-			0, // int32_t   vertexOffset
+			materialVertexSpan.vertexOffset, // vertexOffset
 			0  // uint32_t  firstInstance
 		);
+	};
+
+	for (auto &materialVertexSpan : spans) {
+		drawSpan(materialVertexSpan);
 	}
 }
 

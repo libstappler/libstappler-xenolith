@@ -389,13 +389,13 @@ bool ShadowPass::initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder 
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 			FrameRenderPassState::Submitted,
-		});
+		}, AttachmentLayout::ColorAttachmentOptimal);
 
 		subpassBuilder.addInput(shadowAttachment, AttachmentDependencyInfo{
 			PipelineStage::FragmentShader, AccessType::ShaderRead,
 			PipelineStage::FragmentShader, AccessType::ShaderRead,
 			FrameRenderPassState::Submitted,
-		});
+		}, AttachmentLayout::ShaderReadOnlyOptimal);
 
 		subpassBuilder.addInput(sdfAttachment, AttachmentDependencyInfo{
 			PipelineStage::FragmentShader, AccessType::ShaderRead,
@@ -424,14 +424,18 @@ bool ShadowPass::initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder 
 			subpassShadows, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
 
 	passBuilder.addSubpassDependency(subpass2d, PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
-			subpassShadows, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
+			subpassShadows, PipelineStage::FragmentShader | PipelineStage::ColorAttachmentOutput, AccessType::InputAttachmantRead | AccessType::ShaderRead | AccessType::ColorAttachmentWrite, true);
 
 	passBuilder.addSubpassDependency(subpassSdf, PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
-			subpassShadows, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
+			subpassShadows, PipelineStage::FragmentShader | PipelineStage::ColorAttachmentOutput, AccessType::InputAttachmantRead | AccessType::ShaderRead | AccessType::ColorAttachmentWrite, true);
 
 	// self-dependency to read from color output
-	passBuilder.addSubpassDependency(subpassSdf, PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
-			subpassSdf, PipelineStage::FragmentShader, AccessType::ShaderRead, true);
+	passBuilder.addSubpassDependency(subpassSdf,
+			PipelineStage::ColorAttachmentOutput,
+			AccessType::ColorAttachmentWrite,
+			subpassSdf,
+			PipelineStage::ColorAttachmentOutput | PipelineStage::FragmentShader,
+			AccessType::ColorAttachmentWrite | AccessType::InputAttachmantRead, true);
 
 	if (!VertexPass::init(passBuilder)) {
 		return false;
@@ -494,7 +498,7 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 		PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 		PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 		FrameRenderPassState::Submitted,
-	});
+	}, AttachmentLayout::ColorAttachmentOptimal);
 
 	subpassBuilder.addColor(shadowAttachment, AttachmentDependencyInfo{
 		PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
@@ -614,90 +618,96 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	VertexPassHandle::prepareMaterialCommands(materials, buf);
 
 	if (_usesPseudoSdf) {
-		// sdf drawing pipeline
-		auto subpassIdx = buf.cmdNextSubpass();
-		auto commands = _vertexBuffer->getCommands();
-		auto solidPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfSolidPipeline));
-		auto sdfPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfPipeline));
-		auto backreadPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfBackreadPipeline));
-
-		struct PseudoSdfPcb {
-			float inset = config::VGPseudoSdfInset;
-			float offset = config::VGPseudoSdfOffset;
-			float max = config::VGPseudoSdfMax;
-		} pcb;
-
-		buf.cmdBindPipelineWithDescriptors(solidPipeline);
-
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
-
-		clearDynamicState(buf);
-
-		for (auto &materialVertexSpan : _vertexBuffer->getShadowSolidData()) {
-			applyDynamicState(commands, buf, materialVertexSpan.state);
-
-			buf.cmdDrawIndexed(
-				materialVertexSpan.indexCount, // indexCount
-				materialVertexSpan.instanceCount, // instanceCount
-				materialVertexSpan.firstIndex, // firstIndex
-				0, // int32_t   vertexOffset
-				0  // uint32_t  firstInstance
-			);
-		}
-
-		buf.cmdBindPipelineWithDescriptors(sdfPipeline);
-
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
-
-		clearDynamicState(buf);
-
-		for (auto &materialVertexSpan : _vertexBuffer->getShadowSdfData()) {
-			applyDynamicState(commands, buf, materialVertexSpan.state);
-
-			buf.cmdDrawIndexed(
-				materialVertexSpan.indexCount, // indexCount
-				materialVertexSpan.instanceCount, // instanceCount
-				materialVertexSpan.firstIndex, // firstIndex
-				0, // int32_t   vertexOffset
-				0  // uint32_t  firstInstance
-			);
-		}
-
-		ImageMemoryBarrier inImageBarriers[] = {
-			ImageMemoryBarrier(static_cast<Image *>(_sdfImage->getImage()->getImage().get()),
-					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL)
-		};
-
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT, inImageBarriers);
-
-		buf.cmdBindPipelineWithDescriptors(backreadPipeline);
-
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
-
-		clearDynamicState(buf);
-
-		for (auto &materialVertexSpan : _vertexBuffer->getShadowSdfData()) {
-			applyDynamicState(commands, buf, materialVertexSpan.state);
-
-			buf.cmdDrawIndexed(
-				materialVertexSpan.indexCount, // indexCount
-				materialVertexSpan.instanceCount, // instanceCount
-				materialVertexSpan.firstIndex, // firstIndex
-				0, // int32_t   vertexOffset
-				0  // uint32_t  firstInstance
-			);
-		}
-
-		subpassIdx = buf.cmdNextSubpass();
-
 		if (_shadowData->getLightsCount()) {
+			// sdf drawing pipeline
+			auto subpassIdx = buf.cmdNextSubpass();
+			auto commands = _vertexBuffer->getCommands();
+			auto solidPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfSolidPipeline));
+			auto sdfPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfPipeline));
+			auto backreadPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::PseudoSdfBackreadPipeline));
+
+			struct PseudoSdfPcb {
+				float inset = config::VGPseudoSdfInset;
+				float offset = config::VGPseudoSdfOffset;
+				float max = config::VGPseudoSdfMax;
+			} pcb;
+
+			buf.cmdBindPipelineWithDescriptors(solidPipeline);
+
+			buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
+					BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
+
+			clearDynamicState(buf);
+
+			for (auto &materialVertexSpan : _vertexBuffer->getShadowSolidData()) {
+				applyDynamicState(commands, buf, materialVertexSpan.state);
+
+				buf.cmdDrawIndexed(
+					materialVertexSpan.indexCount, // indexCount
+					materialVertexSpan.instanceCount, // instanceCount
+					materialVertexSpan.firstIndex, // firstIndex
+					materialVertexSpan.vertexOffset, // int32_t   vertexOffset
+					0  // uint32_t  firstInstance
+				);
+			}
+
+			buf.cmdBindPipelineWithDescriptors(sdfPipeline);
+
+			buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
+					BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
+
+			clearDynamicState(buf);
+
+			for (auto &materialVertexSpan : _vertexBuffer->getShadowSdfData()) {
+				applyDynamicState(commands, buf, materialVertexSpan.state);
+
+				buf.cmdDrawIndexed(
+					materialVertexSpan.indexCount, // indexCount
+					materialVertexSpan.instanceCount, // instanceCount
+					materialVertexSpan.firstIndex, // firstIndex
+					materialVertexSpan.vertexOffset, // int32_t   vertexOffset
+					0  // uint32_t  firstInstance
+				);
+			}
+
+			ImageMemoryBarrier inImageBarriers[] = {
+				ImageMemoryBarrier(static_cast<Image *>(_sdfImage->getImage()->getImage().get()),
+						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+						VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL)
+			};
+
+			buf.cmdPipelineBarrier(
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT, inImageBarriers);
+
+			buf.cmdBindPipelineWithDescriptors(backreadPipeline);
+
+			buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
+					BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
+
+			clearDynamicState(buf);
+
+			for (auto &materialVertexSpan : _vertexBuffer->getShadowSdfData()) {
+				applyDynamicState(commands, buf, materialVertexSpan.state);
+
+				buf.cmdDrawIndexed(
+					materialVertexSpan.indexCount, // indexCount
+					materialVertexSpan.instanceCount, // instanceCount
+					materialVertexSpan.firstIndex, // firstIndex
+					materialVertexSpan.vertexOffset, // int32_t   vertexOffset
+					0  // uint32_t  firstInstance
+				);
+			}
+
+			subpassIdx = buf.cmdNextSubpass();
+
 			// shadow drawing pipeline
 			auto pipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(StringView(ShadowPass::ShadowPipeline));
 			drawFullscreen(pipeline);
+		} else {
+			buf.cmdNextSubpass();
+			buf.cmdNextSubpass();
 		}
 	} else {
 		auto subpassIdx = buf.cmdNextSubpass();

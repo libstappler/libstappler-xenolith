@@ -49,9 +49,8 @@ uint hash(uint k, uint capacity) {
 }
 
 void main() {
-	const uint transformIdx = vertexBuffer[0].vertices[gl_VertexIndex].material >> 16;
-	const TransformData transform = transformObjectBuffer[1].objects[transformIdx];
 	const Vertex vertex = vertexBuffer[0].vertices[gl_VertexIndex];
+	const TransformData transform = transformObjectBuffer[1].objects[vertex.material >> 16];
 	const MaterialData mat = materials[pushConstants.materialIdx];
 
 	vec4 pos = vertex.pos;

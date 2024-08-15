@@ -326,14 +326,12 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 
 	for (auto &it : materials->getLayouts()) {
 		if (it.set) {
-			auto &pendingImageBarriers = (static_cast<TextureSet *>(it.set.get()))->getPendingImageBarriers();
-			for (auto &barrier : pendingImageBarriers) {
-				outputImageBarriers.emplace_back(barrier);
-			}
-			auto &pendingBufferBarriers = (static_cast<TextureSet *>(it.set.get()))->getPendingBufferBarriers();
-			for (auto &barrier : pendingBufferBarriers) {
-				outputBufferBarriers.emplace_back(barrier);
-			}
+			(static_cast<TextureSet *>(it.set.get()))->foreachPendingImageBarriers([&] (const ImageMemoryBarrier &b) {
+				outputImageBarriers.emplace_back(b);
+			});
+			(static_cast<TextureSet *>(it.set.get()))->foreachPendingBufferBarriers([&] (const BufferMemoryBarrier &b) {
+				outputBufferBarriers.emplace_back(b);
+			});
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
 			log::error("MaterialRenderPassHandle", "No set for material layout");

@@ -571,7 +571,7 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex
 		bindSets.emplace_back(it->set);
 	}
 
-	if (targetLayout != _boundLayout || !updateBoundSets(bindSets, firstSet)) {
+	auto doBindSets = [&] {
 		for (auto &it : sets) {
 			_descriptorSets.emplace(it);
 		}
@@ -581,6 +581,13 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex
 
 		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
 				bindSets.size(), bindSets.data(), 0, nullptr);
+	};
+
+	if (targetLayout != _boundLayout) {
+		updateBoundSets(bindSets, firstSet);
+		doBindSets();
+	} else if (!updateBoundSets(bindSets, firstSet)) {
+		doBindSets();
 	}
 }
 
@@ -697,7 +704,7 @@ bool CommandBuffer::updateBoundSets(SpanView<VkDescriptorSet> sets, uint32_t fir
 		}
 	}
 
-	_boundSets.reserve(size);
+	_boundSets.resize(size);
 	memcpy(_boundSets.data() + firstSet, sets.data(), sizeof(VkDescriptorSet) * sets.size());
 	return false;
 }

@@ -486,8 +486,51 @@ void TextureSet::write(const core::MaterialLayout &set) {
 	table->vkUpdateDescriptorSets(dev, writes.size(), writes.data(), 0, nullptr);
 }
 
+Vector<const ImageMemoryBarrier *> TextureSet::getPendingImageBarriers() const {
+	Vector<const ImageMemoryBarrier *> ret;
+	for (auto &it : _pendingImageBarriers) {
+		if (auto b = it->getPendingBarrier()) {
+			ret.emplace_back(b);
+		}
+	}
+	return ret;
+}
+
+Vector<const BufferMemoryBarrier *> TextureSet::getPendingBufferBarriers() const {
+	Vector<const BufferMemoryBarrier *> ret;
+	for (auto &it : _pendingBufferBarriers) {
+		if (auto b = it->getPendingBarrier()) {
+			ret.emplace_back(b);
+		}
+	}
+	return ret;
+}
+
+void TextureSet::foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &cb) const {
+	for (auto &it : _pendingImageBarriers) {
+		if (auto b = it->getPendingBarrier()) {
+			cb(*b);
+		}
+	}
+}
+
+void TextureSet::foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &cb) const {
+	for (auto &it : _pendingBufferBarriers) {
+		if (auto b = it->getPendingBarrier()) {
+			cb(*b);
+		}
+	}
+}
+
 void TextureSet::dropPendingBarriers() {
+	for (auto &it : _pendingImageBarriers) {
+		it->dropPendingBarrier();
+	}
+	for (auto &it : _pendingBufferBarriers) {
+		it->dropPendingBarrier();
+	}
 	_pendingImageBarriers.clear();
+	_pendingBufferBarriers.clear();
 }
 
 Device *TextureSet::getDevice() const {
@@ -537,9 +580,8 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 				VK_NULL_HANDLE, ((ImageView *)set.imageSlots[i].image.get())->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			}));
 			auto image = (Image *)set.imageSlots[i].image->getImage().get();
-			if (auto b = image->getPendingBarrier()) {
-				_pendingImageBarriers.emplace_back(*b);
-				image->dropPendingBarrier();
+			if (image->getPendingBarrier()) {
+				_pendingImageBarriers.emplace_back(image);
 			}
 			_layoutIndexes[i] = set.imageSlots[i].image->getIndex();
 			++ imageWriteData.descriptorCount;
@@ -636,9 +678,8 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 			auto buffer = (Buffer *)set.bufferSlots[i].buffer.get();
 
 			// propagate barrier, if any
-			if (auto b = buffer->getPendingBarrier()) {
-				_pendingBufferBarriers.emplace_back(*b);
-				buffer->dropPendingBarrier();
+			if (buffer->getPendingBarrier()) {
+				_pendingBufferBarriers.emplace_back(buffer);
 			}
 			_layoutBuffers[i] = set.bufferSlots[i].buffer;
 			++ bufferWriteData.descriptorCount;

@@ -101,7 +101,7 @@ protected:
 	Mat4 _targetTransform;
 	Rc<VectorImage> _image;
 	float _quality = QualityNormal;
-	bool _savedVectorDepthValue = false;
+	float _savedSdfValue = nan();
 	Rc<VectorCanvasResult> _result;
 	Rc<VectorCanvasDeferredResult> _deferredResult;
 };

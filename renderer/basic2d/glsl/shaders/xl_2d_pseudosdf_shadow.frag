@@ -71,21 +71,24 @@ void main() {
 		const float v = sdfSource.x;
 
 		// Значение SDF в плоскости объекта
-		const float d = v * mix( 0.2, 1.5, clamp( dh / 40.0f, 0.0, 1.0)) * mix( 0.35, 1.0, clamp( dh / 4.0f, 0.0, 1.0))
-			+ 0.25 + 0.4 * clamp(1.0 - dh / 3.0f, 0.0, 0.5) + offset;
+		const float d = v * mix( 0.8, 1.0, clamp( dh / 40.0f, 0.0, 1.0))
+			* mix( 0.2, 1.0, clamp( dh / 4.0f, 0.0, 1.0))
+			+ 0.25
+			// + 0.4 * clamp(1.0 - dh / 3.0f, 0.0, 0.5)
+			+ offset;
 
-		float k = shadowData.ambientLights[i].normal.w;
+		const float k = shadowData.ambientLights[i].normal.w;
 
 		// Радиус конуса выбора цвета для плоскости объекта
-		float R = dh * k;
+		const float R = dh * k;
 
 		if (d < R) {
 			// Полуугол незасвеченного сектора
 			const float alpha = 2.0 * acos(d / R);
-			
+
 			// Отноление площади незасвеченного сектора к площади сечения конуса
 			// Для реальных данных коэффициент будет 0.5, параметры распределения подобраны эмпирически
-			const float S = 1.0 - (alpha - sin(alpha)) * M_1_PI * mix(1.0, 0.85, clamp(k / 2.0, 0.0, 1.0));
+			const float S = 1.0 - (alpha - sin(alpha)) * M_1_PI * mix(0.85, 0.7, clamp(k / 2.0, 0.0, 1.0));
 
 			textureColor += shadowData.ambientLights[i].color
 				* (shadowData.ambientLights[i].color.a

@@ -59,7 +59,7 @@ void XcbView::ReportError(int error) {
 	}
 }
 
-XcbView::XcbView(XcbLibrary *lib, ViewInterface *view, StringView name, StringView bundleId, URect rect) {
+XcbView::XcbView(XcbLibrary *lib, ViewInterface *view, StringView title, StringView bundleId, URect rect) {
 	_xcb = lib;
 	_xkb = XkbLibrary::getInstance();
 	_view = view;
@@ -145,12 +145,12 @@ XcbView::XcbView(XcbLibrary *lib, ViewInterface *view, StringView name, StringVi
 		++i;
 	}
 
-	_wmClass.resize(name.size() + bundleId.size() + 1, char(0));
-	memcpy(_wmClass.data(), name.data(), name.size());
-	memcpy(_wmClass.data() + name.size() + 1, bundleId.data(), bundleId.size());
+	_wmClass.resize(title.size() + bundleId.size() + 1, char(0));
+	memcpy(_wmClass.data(), title.data(), title.size());
+	memcpy(_wmClass.data() + title.size() + 1, bundleId.data(), bundleId.size());
 
-	_xcb->xcb_change_property( _connection, XCB_PROP_MODE_REPLACE, _window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, name.size(), name.data());
-	_xcb->xcb_change_property( _connection, XCB_PROP_MODE_REPLACE, _window, XCB_ATOM_WM_ICON_NAME, XCB_ATOM_STRING, 8, name.size(), name.data());
+	_xcb->xcb_change_property( _connection, XCB_PROP_MODE_REPLACE, _window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, title.size(), title.data());
+	_xcb->xcb_change_property( _connection, XCB_PROP_MODE_REPLACE, _window, XCB_ATOM_WM_ICON_NAME, XCB_ATOM_STRING, 8, title.size(), title.data());
 	if (_atoms[0]) {
 		_xcb->xcb_change_property( _connection, XCB_PROP_MODE_REPLACE, _window, _atoms[0], 4, 32, 1, &_atoms[1] );
 	}

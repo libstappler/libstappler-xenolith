@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-static Rc<VectorCanvasDeferredResult> runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
+static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
 		Size2 targetSize, const VectorCanvasConfig &config, bool waitOnReady) {
 	auto result = new std::promise<Rc<VectorCanvasResult>>;
 	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
@@ -45,6 +45,19 @@ static Rc<VectorCanvasDeferredResult> runDeferredVectorCavas(thread::TaskQueue &
 		}, queue);
 	}, ret);
 	return ret;
+}
+
+static float VectorSprite_getPseudoSdfOffset(float value) {
+	const float prefixSdf = 15.0f;
+	const float prefixDepth = 3.0f;
+
+	if (value <= 0.0) {
+		return 0.0f;
+	} else if (value < prefixDepth) {
+		return prefixSdf;
+	} else {
+		return prefixSdf + (std::floor(value) - prefixDepth) / (40.0f - prefixDepth) * (config::VGPseudoSdfOffset - prefixSdf);
+	}
 }
 
 VectorSprite::VectorSprite() { }
@@ -382,9 +395,10 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		_targetSize = targetViewSpaceSize;
 	}
 
-	if (_savedVectorDepthValue != (_depthIndex > 0)) {
+	auto targetDepth = VectorSprite_getPseudoSdfOffset(_depthIndex);
+	if (_savedSdfValue != targetDepth) {
 		isDirty = true;
-		_savedVectorDepthValue = (_depthIndex > 0);
+		_savedSdfValue = targetDepth;
 	}
 
 	_targetTransform = targetTransform;
@@ -401,7 +415,8 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 
 		// Canvas uses pixel-wide extents, but for sdf we need dp-wide
 		config.sdfBoundaryInset *= frame.request->getFrameConstraints().density;
-		config.sdfBoundaryOffset *= frame.request->getFrameConstraints().density;
+		//config.sdfBoundaryOffset *= frame.request->getFrameConstraints().density;
+		config.sdfBoundaryOffset = _savedSdfValue * frame.request->getFrameConstraints().density;
 
 		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 		if (handle && handle->shadows) {
@@ -411,7 +426,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		}
 
 		if (_deferred) {
-			_deferredResult = runDeferredVectorCavas(*_director->getApplication()->getQueue(),
+			_deferredResult = VectorSprite_runDeferredVectorCavas(*_director->getApplication()->getQueue(),
 					move(imageData), _targetSize, config, _waitDeferred);
 			_result = nullptr;
 		} else {
@@ -517,7 +532,8 @@ RenderingLevel VectorSprite::getRealRenderingLevel() const {
 }
 
 bool VectorSprite::checkVertexDirty() const {
-	return Sprite::checkVertexDirty() || _savedVectorDepthValue != (_depthIndex > 0);
+	auto targetDepth = VectorSprite_getPseudoSdfOffset(_depthIndex);
+	return Sprite::checkVertexDirty() || _savedSdfValue != targetDepth;
 }
 
 }
