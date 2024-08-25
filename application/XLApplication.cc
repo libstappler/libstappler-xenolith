@@ -38,6 +38,7 @@
 #if MODULE_XENOLITH_FONT
 
 #include "XLFontExtension.h"
+#include "XLFontLocale.h"
 
 #endif
 
@@ -146,6 +147,8 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 
 	addExtension(lib->acquireController(move(builder)));
 	addExtension(move(lib));
+
+	locale::setLocale(_info.locale);
 #endif
 
 	_time.delta = 0;

@@ -24,18 +24,17 @@ XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 XENOLITH_VERSION_NUMBER := 1
 XENOLITH_VERSION_BUILD := 2
 
-include $(XENOLITH_MODULE_DIR)/core/core.mk
-include $(XENOLITH_MODULE_DIR)/application/application.mk
-include $(XENOLITH_MODULE_DIR)/scene/scene.mk
-include $(XENOLITH_MODULE_DIR)/font/font.mk
-include $(XENOLITH_MODULE_DIR)/platform/platform.mk
-include $(XENOLITH_MODULE_DIR)/backend/vk/vk.mk
-include $(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk
-
-include $(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk
-include $(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk
-
-include $(XENOLITH_MODULE_DIR)/resources/icons/icons.mk
-include $(XENOLITH_MODULE_DIR)/resources/storage/storage.mk
-include $(XENOLITH_MODULE_DIR)/resources/network/network.mk
-include $(XENOLITH_MODULE_DIR)/resources/assets/assets.mk
+TOOLKIT_MODULE_LIST += \
+	$(XENOLITH_MODULE_DIR)/core/core.mk \
+	$(XENOLITH_MODULE_DIR)/application/application.mk \
+	$(XENOLITH_MODULE_DIR)/scene/scene.mk \
+	$(XENOLITH_MODULE_DIR)/font/font.mk \
+	$(XENOLITH_MODULE_DIR)/platform/platform.mk \
+	$(XENOLITH_MODULE_DIR)/backend/vk/vk.mk \
+	$(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk \
+	$(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk \
+	$(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk \
+	$(XENOLITH_MODULE_DIR)/resources/icons/icons.mk \
+	$(XENOLITH_MODULE_DIR)/resources/storage/storage.mk \
+	$(XENOLITH_MODULE_DIR)/resources/network/network.mk \
+	$(XENOLITH_MODULE_DIR)/resources/assets/assets.mk
