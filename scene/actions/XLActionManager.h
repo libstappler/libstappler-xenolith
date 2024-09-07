@@ -33,7 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 
-struct ActionContainer : RefContainer<Action> {
+struct SP_PUBLIC ActionContainer : RefContainer<Action> {
 	Rc<Node> target;
 	bool paused = false;
 
@@ -41,7 +41,7 @@ struct ActionContainer : RefContainer<Action> {
 	ActionContainer(Node *);
 };
 
-struct HashTraitActionContainer {
+struct SP_PUBLIC HashTraitActionContainer {
 	static uint32_t hash(uint32_t salt, const ActionContainer &value) {
 		auto target = value.target.get();
 		return hash::hash32((const char *)&target, sizeof(Node *), salt);
@@ -73,7 +73,7 @@ struct HashTraitDiscovery<xenolith::ActionContainer> {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class ActionManager : public Ref {
+class SP_PUBLIC ActionManager : public Ref {
 public:
 	virtual ~ActionManager();
 

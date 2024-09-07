@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class RoundedProgress : public LayerRounded {
+class SP_PUBLIC RoundedProgress : public LayerRounded {
 public:
 	enum Layout {
 		Auto,

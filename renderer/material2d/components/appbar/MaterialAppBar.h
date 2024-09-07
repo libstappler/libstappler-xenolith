@@ -39,7 +39,7 @@ enum class AppBarLayout {
 	Minified
 };
 
-class AppBar : public Surface {
+class SP_PUBLIC AppBar : public Surface {
 public:
 	static constexpr SurfaceStyle DefaultAppBarStyle = SurfaceStyle(NodeStyle::SurfaceTonal, ColorRole::Primary, Elevation::Level0);
 

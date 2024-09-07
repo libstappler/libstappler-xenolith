@@ -35,12 +35,12 @@ class Device;
 class RenderPass;
 class QueuePassHandle;
 
-struct DescriptorData {
+struct SP_PUBLIC DescriptorData {
 	core::ObjectHandle object;
 	Rc<Ref> data;
 };
 
-struct DescriptorBinding {
+struct SP_PUBLIC DescriptorBinding {
 	VkDescriptorType type;
 	Vector<DescriptorData> data;
 
@@ -53,12 +53,12 @@ struct DescriptorBinding {
 	Rc<Ref> write(uint32_t, DescriptorBufferViewInfo &&);
 };
 
-struct DescriptorSet : public Ref {
+struct SP_PUBLIC DescriptorSet : public Ref {
 	VkDescriptorSet set;
 	Vector<DescriptorBinding> bindings;
 };
 
-class Framebuffer : public core::Framebuffer {
+class SP_PUBLIC Framebuffer : public core::Framebuffer {
 public:
 	virtual ~Framebuffer() { }
 
@@ -72,7 +72,7 @@ protected:
 	VkFramebuffer _framebuffer = VK_NULL_HANDLE;
 };
 
-class RenderPass : public core::RenderPass {
+class SP_PUBLIC RenderPass : public core::RenderPass {
 public:
 	struct LayoutData {
 		VkPipelineLayout layout = VK_NULL_HANDLE;

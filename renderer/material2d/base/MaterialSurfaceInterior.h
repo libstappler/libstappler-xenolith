@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class SurfaceInterior : public Component {
+class SP_PUBLIC SurfaceInterior : public Component {
 public:
 	static uint64_t ComponentFrameTag;
 

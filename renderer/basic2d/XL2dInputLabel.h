@@ -39,7 +39,7 @@ enum class InputLabelError {
 	InvalidChar,
 };
 
-class InputLabelDelegate {
+class SP_PUBLIC InputLabelDelegate {
 public:
 	using Error = InputLabelError;
 	using Handler = TextInputHandler;
@@ -58,7 +58,7 @@ public:
 	virtual void handlePointer(bool);
 };
 
-class InputLabelContainer : public DynamicStateNode {
+class SP_PUBLIC InputLabelContainer : public DynamicStateNode {
 public:
 	template <typename T, typename ... Args>
 	auto setLabel(const Rc<T> &ptr, Args && ... args) {
@@ -96,7 +96,7 @@ protected:
 	bool _swipeCaptured = false;
 };
 
-class InputLabel : public Label {
+class SP_PUBLIC InputLabel : public Label {
 public:
 	enum class PasswordMode {
 		NotPassword,

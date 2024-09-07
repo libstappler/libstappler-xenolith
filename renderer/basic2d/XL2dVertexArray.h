@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class VertexArray : public Ref {
+class SP_PUBLIC VertexArray : public Ref {
 public:
 	struct Quad {
 		// 0 - 2

@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class AppBar;
 
-class FlexibleLayout : public DecoratedLayout {
+class SP_PUBLIC FlexibleLayout : public DecoratedLayout {
 public:
 	struct NodeParams {
 		enum Mask {

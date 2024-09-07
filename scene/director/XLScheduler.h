@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 using SchedulerFunc = Function<void(const UpdateTime &)>;
 
-struct SchedulerCallback {
+struct SP_PUBLIC SchedulerCallback {
 	SchedulerFunc callback = nullptr;
     bool paused = false;
     bool removed = false;
@@ -43,7 +43,7 @@ struct SchedulerCallback {
     : callback(move(fn)), paused(p) { }
 };
 
-class Scheduler : public Ref {
+class SP_PUBLIC Scheduler : public Ref {
 public:
 	Scheduler();
 	virtual ~Scheduler();
@@ -82,7 +82,7 @@ protected:
 };
 
 template <class T = Subscription>
-class SchedulerListener {
+class SP_PUBLIC SchedulerListener {
 public:
 	using Callback = Function<void(Subscription::Flags)>;
 
@@ -131,7 +131,7 @@ protected:
 };
 
 template <typename T, typename Enable = void>
-class SchedulerUpdate {
+class SP_PUBLIC SchedulerUpdate {
 public:
 	static void scheduleUpdate(Scheduler *scheduler, T *target, int32_t p, bool paused) {
 		scheduler->schedulePerFrame([target] (const UpdateTime &time) {
@@ -141,7 +141,7 @@ public:
 };
 
 template<class T>
-class SchedulerUpdate<T, typename std::enable_if<std::is_base_of<Ref, T>::value>::type> {
+class SP_PUBLIC SchedulerUpdate<T, typename std::enable_if<std::is_base_of<Ref, T>::value>::type> {
 public:
 	static void scheduleUpdate(Scheduler *scheduler, T *t, int32_t p, bool paused) {
 		auto ref = static_cast<Ref *>(t);

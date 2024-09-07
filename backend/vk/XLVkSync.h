@@ -43,7 +43,7 @@ class Loop;
  * - push Semaphore back into storage
  */
 
-class Semaphore : public core::Semaphore {
+class SP_PUBLIC Semaphore : public core::Semaphore {
 public:
 	virtual ~Semaphore();
 
@@ -71,7 +71,7 @@ protected:
  * - storage should reset() Fence on push
  */
 
-class Fence : public core::Object {
+class SP_PUBLIC Fence : public core::Object {
 public:
 	enum State {
 		Disabled,

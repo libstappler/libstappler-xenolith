@@ -28,26 +28,12 @@
 #include "SPThreadTaskQueue.h"
 #include "XLApplicationExtension.h"
 
-#if MODULE_XENOLITH_FONT
-
-#include "XLFontExtension.h"
-
-#endif
-
-
-#if MODULE_XENOLITH_SCENE
-
-#include "XLView.h"
-
-#endif
-
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Event;
 class EventHandlerNode;
 
-class Application : protected thread::TaskQueue {
+class SP_PUBLIC Application : protected thread::TaskQueue {
 public:
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
@@ -186,15 +172,6 @@ protected:
 	};
 
 	mutable Vector<WaitCallbackInfo> _glWaitCallback;
-
-#if MODULE_XENOLITH_SCENE
-public:
-	virtual bool addView(ViewInfo &&);
-
-protected:
-	Vector<ViewInfo> _tmpViews;
-	Set<Rc<xenolith::View>> _activeViews;
-#endif
 };
 
 template <typename T>
@@ -202,7 +179,7 @@ bool Application::addExtension(Rc<T> &&t) {
 	auto it = _extensions.find(std::type_index(typeid(T)));
 	if (it == _extensions.end()) {
 		auto ref = t.get();
-		_extensions.emplace(std::type_index(typeid(T)), move(t));
+		_extensions.emplace(std::type_index(typeid(*t.get())), move(t));
 		if (_started) {
 			ref->initialize(this);
 		}

@@ -40,7 +40,7 @@ enum class CommandType : uint16_t {
 	SdfGroup2D
 };
 
-struct CmdGeneral {
+struct SP_PUBLIC CmdGeneral {
 	SpanView<ZOrder> zPath;
 	core::MaterialId material = 0;
 	StateId state = StateIdNone;
@@ -48,34 +48,34 @@ struct CmdGeneral {
 	float depthValue = 0.0f;
 };
 
-struct CmdVertexArray : CmdGeneral {
+struct SP_PUBLIC CmdVertexArray : CmdGeneral {
 	SpanView<TransformVertexData> vertexes;
 };
 
-struct CmdDeferred : CmdGeneral {
+struct SP_PUBLIC CmdDeferred : CmdGeneral {
 	Rc<DeferredVertexResult> deferred;
 	Mat4 viewTransform;
 	Mat4 modelTransform;
 	bool normalized = false;
 };
 
-struct CmdShadow {
+struct SP_PUBLIC CmdShadow {
 	StateId state = 0;
 	float value = 0.0f;
 };
 
-struct CmdShadowArray : CmdShadow {
+struct SP_PUBLIC CmdShadowArray : CmdShadow {
 	SpanView<TransformVertexData> vertexes;
 };
 
-struct CmdShadowDeferred : CmdShadow {
+struct SP_PUBLIC CmdShadowDeferred : CmdShadow {
 	Rc<DeferredVertexResult> deferred;
 	Mat4 viewTransform;
 	Mat4 modelTransform;
 	bool normalized = false;
 };
 
-struct CmdSdfGroup2D {
+struct SP_PUBLIC CmdSdfGroup2D {
 	Mat4 modelTransform;
 	StateId state = 0;
 	float value = 0.0f;
@@ -91,7 +91,7 @@ struct CmdSdfGroup2D {
 	void addPolygon2D(SpanView<Vec2>);
 };
 
-struct Command {
+struct SP_PUBLIC Command {
 	static Command *create(memory::pool_t *, CommandType t, CommandFlags = CommandFlags::None);
 
 	void release();
@@ -102,7 +102,7 @@ struct Command {
 	void *data;
 };
 
-class CommandList : public Ref {
+class SP_PUBLIC CommandList : public Ref {
 public:
 	virtual ~CommandList();
 	bool init(const Rc<PoolRef> &);
@@ -139,7 +139,7 @@ protected:
 	size_t _size = 0;
 };
 
-struct FrameContextHandle2d : public FrameContextHandle {
+struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
 	ShadowLightInput lights;
 	Rc<CommandList> commands;
 	Rc<CommandList> shadows;

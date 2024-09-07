@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Scheduler;
 
-class SubscriptionListener : public Component {
+class SP_PUBLIC SubscriptionListener : public Component {
 public:
 	using DirtyCallback = Function<void(SubscriptionFlags)>;
 
@@ -62,7 +62,7 @@ protected:
 };
 
 template <typename T = Subscription>
-class DataListener : public SubscriptionListener {
+class SP_PUBLIC DataListener : public SubscriptionListener {
 public:
 	virtual ~DataListener() { }
 

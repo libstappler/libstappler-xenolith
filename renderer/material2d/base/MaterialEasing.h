@@ -36,7 +36,7 @@ enum class EasingType {
 	EmphasizedDecelerate,
 };
 
-Rc<ActionEase> makeEasing(Rc<ActionInterval> &&, EasingType = EasingType::Standard);
+SP_PUBLIC Rc<ActionEase> makeEasing(Rc<ActionInterval> &&, EasingType = EasingType::Standard);
 
 }
 

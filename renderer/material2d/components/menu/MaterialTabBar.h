@@ -32,7 +32,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class TabBar : public Surface {
+class SP_PUBLIC TabBar : public Surface {
 public:
 	enum class ButtonStyle {
 		Title,
@@ -102,7 +102,7 @@ protected:
 	Vector<Pair<float, float>> _positions;
 };
 
-class TabBarButton : public Button {
+class SP_PUBLIC TabBarButton : public Button {
 public:
 	using TabButtonCallback = Function<void(Button *, MenuSourceButton *)>;
 

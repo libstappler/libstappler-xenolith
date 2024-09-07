@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class InputListenerStorage : public PoolRef {
+class SP_PUBLIC InputListenerStorage : public PoolRef {
 public:
 	struct Rec {
 		InputListener *listener;
@@ -58,7 +58,7 @@ protected:
 	uint32_t _maxFocusValue = 0;
 };
 
-class InputDispatcher : public Ref {
+class SP_PUBLIC InputDispatcher : public Ref {
 public:
 	virtual ~InputDispatcher() { }
 

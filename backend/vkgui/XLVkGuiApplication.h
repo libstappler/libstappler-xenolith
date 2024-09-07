@@ -23,28 +23,16 @@
 #ifndef XENOLITH_BACKEND_VKGUI_XLVKGUIAPPLICATION_H_
 #define XENOLITH_BACKEND_VKGUI_XLVKGUIAPPLICATION_H_
 
-#include "XLApplication.h"
+#include "XLViewApplication.h"
 #include "XLVkGuiConfig.h"
 #include "XLVkPlatform.h"
 #include "XLVkView.h"
 
 #include "XLViewCommandLine.h"
 
-#if MODULE_XENOLITH_RESOURCES_STORAGE
-#include "XLStorageServer.h"
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_NETWORK
-#include "XLNetworkController.h"
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_ASSETS
-#include "XLAssetLibrary.h"
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class GuiApplication : public Application {
+class SP_PUBLIC GuiApplication : public ViewApplication {
 public:
 	using VulkanInstanceData = platform::VulkanInstanceData;
 	using VulkanInstanceInfo = platform::VulkanInstanceInfo;
@@ -58,59 +46,6 @@ public:
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
 	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
-};
-
-class BootstrapApplication : public GuiApplication {
-public:
-	static EventHeader onSwapchainConfig;
-
-	virtual ~BootstrapApplication() = default;
-
-	virtual bool init(ViewCommandLineData &&, void *native = nullptr);
-
-	virtual void run(Function<void()> &&initCb = nullptr);
-
-	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
-	const core::SwapchainConfig &getSwapchainConfig() const { return _swapchainConfig; }
-
-	void setPreferredPresentMode(core::PresentMode);
-
-protected:
-	virtual Rc<Scene> createSceneForView(vk::View &view, const core::FrameContraints &constraints);
-	virtual void finalizeView(vk::View &view);
-
-	virtual core::SwapchainConfig selectConfig(vk::View &, const core::SurfaceInfo &info);
-
-	Value _storageParams;
-
-	ViewCommandLineData _data;
-
-	Mutex _configMutex;
-	core::PresentMode _preferredPresentMode = core::PresentMode::Unsupported;
-
-	core::SurfaceInfo _surfaceInfo;
-	core::SwapchainConfig _swapchainConfig;
-
-#if MODULE_XENOLITH_RESOURCES_NETWORK
-public:
-	xenolith::network::Controller *getNetworkController() const { return _networkController; }
-protected:
-	Rc<xenolith::network::Controller> _networkController;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_STORAGE
-public:
-	xenolith::storage::Server *getStorageServer() const { return _storageServer; }
-protected:
-	Rc<xenolith::storage::Server> _storageServer;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_ASSETS
-public:
-	xenolith::storage::AssetLibrary *getAssetLibrary() const { return _assetLibrary; }
-protected:
-	Rc<xenolith::storage::AssetLibrary> _assetLibrary;
-#endif
 };
 
 }

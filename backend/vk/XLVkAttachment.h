@@ -30,14 +30,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class BufferAttachment : public core::BufferAttachment {
+class SP_PUBLIC BufferAttachment : public core::BufferAttachment {
 public:
 	virtual ~BufferAttachment() { }
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
-class ImageAttachment : public core::ImageAttachment {
+class SP_PUBLIC ImageAttachment : public core::ImageAttachment {
 public:
 	virtual ~ImageAttachment() { }
 
@@ -45,7 +45,7 @@ public:
 };
 
 
-class BufferAttachmentHandle : public core::AttachmentHandle {
+class SP_PUBLIC BufferAttachmentHandle : public core::AttachmentHandle {
 public:
 	struct BufferView {
 		Rc<Buffer> buffer;
@@ -69,7 +69,7 @@ protected:
 	Vector<BufferView> _buffers; // assign this to use default binding
 };
 
-class ImageAttachmentHandle : public core::AttachmentHandle {
+class SP_PUBLIC ImageAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~ImageAttachmentHandle() { }
 
@@ -79,7 +79,7 @@ public:
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const override;
 };
 
-class TexelAttachmentHandle : public core::AttachmentHandle {
+class SP_PUBLIC TexelAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~TexelAttachmentHandle();
 

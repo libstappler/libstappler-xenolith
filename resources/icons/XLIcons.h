@@ -2877,10 +2877,10 @@ enum class IconName : uint16_t {
 	Max
 };
 
-StringView getIconName(IconName);
-bool getIconData(IconName, const Callback<void(BytesView)> &);
+SP_PUBLIC StringView getIconName(IconName);
+SP_PUBLIC bool getIconData(IconName, const Callback<void(BytesView)> &);
 
-void drawIcon(vg::VectorImage &, IconName, float progress);
+SP_PUBLIC void drawIcon(vg::VectorImage &, IconName, float progress);
 
 }
 

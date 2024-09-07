@@ -39,7 +39,7 @@ static constexpr auto SolidTextureName = "org.xenolith.SolidImage";
  *
  * (see ComponentMapping)
  */
-struct ColorMode {
+struct SP_PUBLIC ColorMode {
 	static const ColorMode SolidColor;
 	static const ColorMode IntensityChannel;
 	static const ColorMode AlphaChannel;
@@ -81,7 +81,7 @@ struct ColorMode {
 };
 
 // uint32_t-sized blend description
-struct BlendInfo {
+struct SP_PUBLIC BlendInfo {
 	uint32_t enabled : 4;
 	uint32_t srcColor : 4;
 	uint32_t dstColor : 4;
@@ -115,7 +115,7 @@ struct BlendInfo {
 	}
 };
 
-struct DepthInfo {
+struct SP_PUBLIC DepthInfo {
 	uint32_t writeEnabled : 4;
 	uint32_t testEnabled : 4;
 	uint32_t compare : 24; // gl::CompareOp
@@ -129,7 +129,7 @@ struct DepthInfo {
 	bool operator!=(const DepthInfo &other) const = default;
 };
 
-struct DepthBounds {
+struct SP_PUBLIC DepthBounds {
 	bool enabled = false;
 	float min = 0.0f;
 	float max = 0.0f;
@@ -138,7 +138,7 @@ struct DepthBounds {
 	bool operator!=(const DepthBounds &other) const = default;
 };
 
-struct StencilInfo {
+struct SP_PUBLIC StencilInfo {
 	StencilOp fail = StencilOp::Keep;
 	StencilOp pass = StencilOp::Keep;
 	StencilOp depthFail = StencilOp::Keep;
@@ -153,7 +153,7 @@ struct StencilInfo {
 
 using LineWidth = ValueWrapper<float, class LineWidthFlag>;
 
-class PipelineMaterialInfo {
+class SP_PUBLIC PipelineMaterialInfo {
 public:
 	PipelineMaterialInfo();
 	PipelineMaterialInfo(const PipelineMaterialInfo &) = default;

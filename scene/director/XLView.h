@@ -36,7 +36,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class View;
 class Director;
 
-struct ViewInfo {
+struct SP_PUBLIC ViewInfo {
 	String title;
 	String bundleId;
 	URect rect = URect(0, 0, 1024, 768);
@@ -48,7 +48,7 @@ struct ViewInfo {
 	Function<void(View &)> onClosed;
 };
 
-class View : public thread::ThreadInterface<Interface>, public TextInputViewInterface, public platform::ViewInterface {
+class SP_PUBLIC View : public thread::ThreadInterface<Interface>, public TextInputViewInterface, public platform::ViewInterface {
 public:
 	static constexpr size_t FrameAverageCount = 20;
 

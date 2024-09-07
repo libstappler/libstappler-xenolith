@@ -27,5 +27,6 @@
 #include "XLFontLocale.cc"
 #include "XLFontLabelBase.cc"
 #include "XLFontDeferredRequest.cc"
+#include "XLFontShared.cc"
 
 #include "backend/vk/XLVkFontQueue.cc"

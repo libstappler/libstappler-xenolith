@@ -36,7 +36,7 @@ class MaterialAttachment;
 
 using MaterialId = uint32_t;
 
-struct MaterialInputData : AttachmentInputData {
+struct SP_PUBLIC MaterialInputData : AttachmentInputData {
 	const MaterialAttachment * attachment;
 	Vector<Rc<Material>> materialsToAddOrUpdate;
 	Vector<MaterialId> materialsToRemove;
@@ -44,7 +44,7 @@ struct MaterialInputData : AttachmentInputData {
 	Function<void()> callback;
 };
 
-struct MaterialImage {
+struct SP_PUBLIC MaterialImage {
 	const ImageData *image;
 	Rc<DynamicImageInstance> dynamic;
 	ImageViewInfo info;
@@ -56,7 +56,7 @@ struct MaterialImage {
 	bool canAlias(const MaterialImage &) const;
 };
 
-class MaterialSet final : public Ref {
+class SP_PUBLIC MaterialSet final : public Ref {
 public:
 	using ImageSlot = MaterialImageSlot;
 	using EncodeCallback = Function<bool(uint8_t *, const Material *)>;
@@ -114,7 +114,7 @@ protected:
 	const MaterialAttachment *_owner = nullptr;
 };
 
-class Material final : public Ref {
+class SP_PUBLIC Material final : public Ref {
 public:
 	// Использовать только для определения встроенных в аттачмент материалов
 	static constexpr auto MaterialIdInitial = maxOf<uint32_t>();
@@ -156,7 +156,7 @@ protected:
 };
 
 // this attachment should provide material data buffer for rendering
-class MaterialAttachment : public BufferAttachment {
+class SP_PUBLIC MaterialAttachment : public BufferAttachment {
 public:
 	virtual ~MaterialAttachment();
 

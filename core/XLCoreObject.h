@@ -59,7 +59,7 @@ struct QueuePassData;
 struct SubpassData;
 struct PipelineDescriptor;
 
-struct ObjectData {
+struct SP_PUBLIC ObjectData {
 	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
 
 	ObjectType type;
@@ -69,7 +69,7 @@ struct ObjectData {
 	void *ptr = nullptr;
 };
 
-class Object : public NamedRef {
+class SP_PUBLIC Object : public NamedRef {
 public:
 	using ObjectHandle = core::ObjectHandle;
 	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
@@ -90,7 +90,7 @@ protected:
 };
 
 
-class GraphicPipeline : public Object {
+class SP_PUBLIC GraphicPipeline : public Object {
 public:
 	using PipelineInfo = core::GraphicPipelineInfo;
 	using PipelineData = core::GraphicPipelineData;
@@ -101,7 +101,7 @@ public:
 };
 
 
-class ComputePipeline : public Object {
+class SP_PUBLIC ComputePipeline : public Object {
 public:
 	using PipelineInfo = core::ComputePipelineInfo;
 	using PipelineData = core::ComputePipelineData;
@@ -121,7 +121,7 @@ protected:
 };
 
 
-class Shader : public Object {
+class SP_PUBLIC Shader : public Object {
 public:
 	using ProgramData = core::ProgramData;
 	using DescriptorType = core::DescriptorType;
@@ -139,7 +139,7 @@ protected:
 };
 
 
-class RenderPass : public Object {
+class SP_PUBLIC RenderPass : public Object {
 public:
 	using QueuePassData = core::QueuePassData;
 	using Attachment = core::Attachment;
@@ -158,7 +158,7 @@ protected:
 	PassType _type = PassType::Generic;
 };
 
-class Framebuffer : public Object {
+class SP_PUBLIC Framebuffer : public Object {
 public:
 	static uint64_t getViewHash(SpanView<Rc<ImageView>>);
 	static uint64_t getViewHash(SpanView<uint64_t>);
@@ -181,7 +181,7 @@ protected:
 	Vector<Rc<ImageView>> _imageViews;
 };
 
-class DataAtlas : public Ref {
+class SP_PUBLIC DataAtlas : public Ref {
 public:
 	enum Type {
 		ImageAtlas,
@@ -230,7 +230,7 @@ protected:
 	Rc<BufferObject> _dataBuffer;
 };
 
-class ImageObject : public Object {
+class SP_PUBLIC ImageObject : public Object {
 public:
 	virtual ~ImageObject();
 
@@ -250,7 +250,7 @@ protected:
 	uint64_t _index = 1; // 0 stays as special value
 };
 
-class ImageView : public Object {
+class SP_PUBLIC ImageView : public Object {
 public:
 	virtual ~ImageView();
 
@@ -288,7 +288,7 @@ protected:
 	Function<void()> _releaseCallback;
 };
 
-class BufferObject : public Object {
+class SP_PUBLIC BufferObject : public Object {
 public:
 	virtual ~BufferObject() { }
 
@@ -311,7 +311,7 @@ protected:
 };
 
 
-class Sampler : public Object {
+class SP_PUBLIC Sampler : public Object {
 public:
 	virtual ~Sampler() { }
 
@@ -325,7 +325,7 @@ protected:
 	SamplerInfo _info;
 };
 
-class CommandBuffer : public Ref {
+class SP_PUBLIC CommandBuffer : public Ref {
 public:
 	virtual ~CommandBuffer() = default;
 
@@ -343,17 +343,17 @@ protected:
 	Set<Rc<Framebuffer>> _framebuffers;
 };
 
-struct MaterialImageSlot {
+struct SP_PUBLIC MaterialImageSlot {
 	Rc<ImageView> image;
 	uint32_t refCount = 0;
 };
 
-struct MaterialBufferSlot {
+struct SP_PUBLIC MaterialBufferSlot {
 	Rc<BufferObject> buffer;
 	uint32_t refCount = 0;
 };
 
-struct MaterialLayout {
+struct SP_PUBLIC MaterialLayout {
 	Vector<MaterialImageSlot> imageSlots;
 	uint32_t usedImageSlots = 0;
 
@@ -363,7 +363,7 @@ struct MaterialLayout {
 	Rc<TextureSet> set;
 };
 
-class TextureSet : public Object {
+class SP_PUBLIC TextureSet : public Object {
 public:
 	virtual ~TextureSet() { }
 
@@ -375,7 +375,7 @@ protected:
 	Vector<BufferObject *> _layoutBuffers;
 };
 
-class Semaphore : public Object {
+class SP_PUBLIC Semaphore : public Object {
 public:
 	virtual ~Semaphore() { }
 

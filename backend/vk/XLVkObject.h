@@ -34,7 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 class Surface;
 class SwapchainImage;
 
-struct DeviceMemoryInfo {
+struct SP_PUBLIC DeviceMemoryInfo {
 	VkDeviceSize size;
 	VkDeviceSize alignment;
 	uint32_t memoryType;
@@ -50,7 +50,7 @@ enum class DeviceMemoryAccess {
 
 SP_DEFINE_ENUM_AS_MASK(DeviceMemoryAccess)
 
-class DeviceMemory : public core::Object {
+class SP_PUBLIC DeviceMemory : public core::Object {
 public:
 	virtual ~DeviceMemory() { }
 
@@ -94,7 +94,7 @@ protected:
 	Mutex _mappingProtectionMutex;
 };
 
-class Image : public core::ImageObject {
+class SP_PUBLIC Image : public core::ImageObject {
 public:
 	virtual ~Image() { }
 
@@ -124,7 +124,7 @@ protected:
 	std::optional<ImageMemoryBarrier> _barrier;
 };
 
-class Buffer : public core::BufferObject {
+class SP_PUBLIC Buffer : public core::BufferObject {
 public:
 	virtual ~Buffer() { }
 
@@ -165,7 +165,7 @@ protected:
 	std::atomic<uint64_t> _targetOffset = 0;
 };
 
-class ImageView : public core::ImageView {
+class SP_PUBLIC ImageView : public core::ImageView {
 public:
 	virtual ~ImageView() { }
 
@@ -180,7 +180,7 @@ protected:
 	VkImageView _imageView = VK_NULL_HANDLE;
 };
 
-class Sampler : public core::Sampler {
+class SP_PUBLIC Sampler : public core::Sampler {
 public:
 	virtual ~Sampler() { }
 

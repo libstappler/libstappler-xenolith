@@ -66,19 +66,19 @@ struct FrameAttachmentData;
 struct FrameSync;
 struct FrameOutputBinding;
 
-struct ProgramDescriptorBinding {
+struct SP_PUBLIC ProgramDescriptorBinding {
 	uint32_t set = 0;
 	uint32_t descriptor = 0;
 	DescriptorType type = DescriptorType::Unknown;
 	uint32_t count = 0;
 };
 
-struct ProgramPushConstantBlock {
+struct SP_PUBLIC ProgramPushConstantBlock {
 	uint32_t offset = 0;
 	uint32_t size = 0;
 };
 
-struct ProgramEntryPointBlock {
+struct SP_PUBLIC ProgramEntryPointBlock {
 	uint32_t id;
 	memory::string name;
 	uint32_t localX;
@@ -86,14 +86,14 @@ struct ProgramEntryPointBlock {
 	uint32_t localZ;
 };
 
-struct ProgramInfo : NamedMem {
+struct SP_PUBLIC ProgramInfo : NamedMem {
 	ProgramStage stage;
 	memory::vector<ProgramDescriptorBinding> bindings;
 	memory::vector<ProgramPushConstantBlock> constants;
 	memory::vector<ProgramEntryPointBlock> entryPoints;
 };
 
-struct ProgramData : ProgramInfo {
+struct SP_PUBLIC ProgramData : ProgramInfo {
 	using DataCallback = memory::callback<void(SpanView<uint32_t>)>;
 
 	SpanView<uint32_t> data;
@@ -103,7 +103,7 @@ struct ProgramData : ProgramInfo {
 	void inspect(SpanView<uint32_t>);
 };
 
-struct SpecializationInfo {
+struct SP_PUBLIC SpecializationInfo {
 	const ProgramData *data = nullptr;
 	memory::vector<SpecializationConstant> constants;
 
@@ -112,7 +112,7 @@ struct SpecializationInfo {
 	SpecializationInfo(const ProgramData *, SpanView<SpecializationConstant>);
 };
 
-struct GraphicPipelineInfo : NamedMem {
+struct SP_PUBLIC GraphicPipelineInfo : NamedMem {
 	memory::vector<SpecializationInfo> shaders;
 	DynamicState dynamicState = DynamicState::Default;
 	PipelineMaterialInfo material;
@@ -120,23 +120,23 @@ struct GraphicPipelineInfo : NamedMem {
 	bool isSolid() const;
 };
 
-struct GraphicPipelineData : GraphicPipelineInfo {
+struct SP_PUBLIC GraphicPipelineData : GraphicPipelineInfo {
 	const SubpassData *subpass = nullptr;
 	const PipelineLayoutData *layout = nullptr;
 	Rc<GraphicPipeline> pipeline; // GL implementation-dependent object
 };
 
-struct ComputePipelineInfo : NamedMem {
+struct SP_PUBLIC ComputePipelineInfo : NamedMem {
 	SpecializationInfo shader;
 };
 
-struct ComputePipelineData : ComputePipelineInfo {
+struct SP_PUBLIC ComputePipelineData : ComputePipelineInfo {
 	const SubpassData *subpass = nullptr;
 	const PipelineLayoutData *layout = nullptr;
 	Rc<ComputePipeline> pipeline; // GL implementation-dependent object
 };
 
-struct PipelineDescriptor : NamedMem {
+struct SP_PUBLIC PipelineDescriptor : NamedMem {
 	const DescriptorSetData *set = nullptr;
 	const AttachmentPassData *attachment = nullptr;
 	DescriptorType type = DescriptorType::Unknown;
@@ -149,7 +149,7 @@ struct PipelineDescriptor : NamedMem {
 	mutable uint64_t boundGeneration = 0;
 };
 
-struct SubpassDependency {
+struct SP_PUBLIC SubpassDependency {
 	static constexpr uint32_t External = maxOf<uint32_t>();
 
 	uint32_t srcSubpass;
@@ -169,7 +169,7 @@ inline bool operator < (const SubpassDependency &l, const SubpassDependency &r) 
 inline bool operator == (const SubpassDependency &l, const SubpassDependency &r) { return l.value() == r.value(); }
 inline bool operator != (const SubpassDependency &l, const SubpassDependency &r) { return l.value() != r.value(); }
 
-struct AttachmentDependencyInfo {
+struct SP_PUBLIC AttachmentDependencyInfo {
 	// when and how within renderpass/subpass attachment will be used for a first time
 	PipelineStage initialUsageStage = PipelineStage::None;
 	AccessType initialAccessMask = AccessType::None;
@@ -190,7 +190,7 @@ struct AttachmentDependencyInfo {
 	}
 };
 
-struct AttachmentSubpassData : NamedMem {
+struct SP_PUBLIC AttachmentSubpassData : NamedMem {
 	const AttachmentPassData *pass = nullptr;
 	const SubpassData *subpass = nullptr;
 	AttachmentLayout layout = AttachmentLayout::Ignored;
@@ -200,7 +200,7 @@ struct AttachmentSubpassData : NamedMem {
 	BlendInfo blendInfo;
 };
 
-struct AttachmentPassData : NamedMem {
+struct SP_PUBLIC AttachmentPassData : NamedMem {
 	const AttachmentData *attachment = nullptr;
 	const QueuePassData *pass = nullptr;
 
@@ -230,7 +230,7 @@ struct AttachmentPassData : NamedMem {
 	memory::vector<AttachmentSubpassData *> subpasses;
 };
 
-struct AttachmentData : NamedMem {
+struct SP_PUBLIC AttachmentData : NamedMem {
 	const QueueData *queue = nullptr;
 	uint64_t id = 0;
 	AttachmentOps ops = AttachmentOps::Undefined;
@@ -242,13 +242,13 @@ struct AttachmentData : NamedMem {
 	bool transient = false;
 };
 
-struct DescriptorSetData : NamedMem {
+struct SP_PUBLIC DescriptorSetData : NamedMem {
 	const PipelineLayoutData *layout = nullptr;
 	uint32_t index = 0;
 	memory::vector<PipelineDescriptor *> descriptors;
 };
 
-struct PipelineLayoutData : NamedMem {
+struct SP_PUBLIC PipelineLayoutData : NamedMem {
 	const QueuePassData *pass = nullptr;
 	uint32_t index = 0;
 	bool usesTextureSet = false;
@@ -257,7 +257,7 @@ struct PipelineLayoutData : NamedMem {
 	memory::vector<const ComputePipelineData *> computePipelines;
 };
 
-struct SubpassData : NamedMem {
+struct SP_PUBLIC SubpassData : NamedMem {
 	SubpassData() = default;
 	SubpassData(const SubpassData &) = default;
 	SubpassData(SubpassData &&) = default;
@@ -289,7 +289,7 @@ using RenderOrdering = ValueWrapper<uint32_t, class RenderOrderingFlag>;
 static constexpr RenderOrdering RenderOrderingLowest = RenderOrdering::min();
 static constexpr RenderOrdering RenderOrderingHighest = RenderOrdering::max();
 
-struct QueuePassRequirements {
+struct SP_PUBLIC QueuePassRequirements {
 	const QueuePassData *data = nullptr;
 	FrameRenderPassState requiredState = FrameRenderPassState::Initial;
 	FrameRenderPassState lockedState = FrameRenderPassState::Initial;
@@ -299,14 +299,14 @@ struct QueuePassRequirements {
 	: data(&d), requiredState(required), lockedState(locked) { }
 };
 
-struct QueuePassDependency {
+struct SP_PUBLIC QueuePassDependency {
 	const QueuePassData *source = nullptr;
 	const QueuePassData *target = nullptr;
 	memory::vector<const AttachmentData *> attachments;
 	PipelineStage stageFlags = PipelineStage::None;
 };
 
-struct QueuePassData : NamedMem {
+struct SP_PUBLIC QueuePassData : NamedMem {
 	QueuePassData() = default;
 	QueuePassData(const QueuePassData &) = default;
 	QueuePassData(QueuePassData &&) = default;
@@ -336,7 +336,7 @@ struct QueuePassData : NamedMem {
 	memory::vector<memory::function<void(const QueuePassData &, FrameQueue &, bool)>> completeCallbacks;
 };
 
-struct QueueData : NamedMem {
+struct SP_PUBLIC QueueData : NamedMem {
 	memory::pool_t *pool = nullptr;
 	memory::vector<AttachmentData *> input;
 	memory::vector<AttachmentData *> output;
@@ -365,8 +365,8 @@ struct QueueData : NamedMem {
 	void clear();
 };
 
-StringView getDescriptorTypeName(DescriptorType);
-String getProgramStageDescription(ProgramStage fmt);
+SP_PUBLIC StringView getDescriptorTypeName(DescriptorType);
+SP_PUBLIC String getProgramStageDescription(ProgramStage fmt);
 
 }
 

@@ -27,6 +27,7 @@
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
 #include "XLApplication.h"
+#include "XLVkFontQueue.h"
 #include "ft2build.h"
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
@@ -37,6 +38,19 @@
 #include "SPFontFace.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
+
+Rc<core::Queue> FontExtension::createFontQueue(core::Instance *instance, StringView name) {
+	return Rc<vk::FontQueue>::create(name);
+}
+
+Rc<ApplicationExtension> FontExtension::createFontExtension(Rc<Application> &&app, Rc<core::Queue> &&loop) {
+	return Rc<FontExtension>::create(move(app), move(loop));
+}
+
+Rc<ApplicationExtension> FontExtension::createDefaultController(FontExtension *ext, StringView name) {
+	auto builder = ext->makeDefaultControllerBuilder(name);
+	return ext->acquireController(move(builder));
+}
 
 FontExtension::~FontExtension() {
 	_queue = nullptr;

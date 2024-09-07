@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class FrameContext2d : public FrameContext {
+class SP_PUBLIC FrameContext2d : public FrameContext {
 public:
 	static constexpr StringView MaterialAttachmentName = "MaterialInput2d";
 	static constexpr StringView VertexAttachmentName = "VertexInput2d";
@@ -58,7 +58,7 @@ protected:
 	bool _hasFullSdf = false;
 };
 
-struct StateData : public Ref {
+struct SP_PUBLIC StateData : public Ref {
 	virtual ~StateData() = default;
 
 	virtual bool init();

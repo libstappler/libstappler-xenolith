@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-struct SimpleGradient {
+struct SP_PUBLIC SimpleGradient {
 	using Color = Color4B;
 	using ColorRef = const Color &;
 
@@ -53,7 +53,7 @@ struct SimpleGradient {
 /**
  *  Layer is a simple layout sprite, colored with solid color or simple linear gradient
  */
-class Layer : public Sprite {
+class SP_PUBLIC Layer : public Sprite {
 public:
 	virtual ~Layer() { }
 

@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class MenuButton : public Button, public MenuItemInterface {
+class SP_PUBLIC MenuButton : public Button, public MenuItemInterface {
 public:
 	static float getMaxWidthForButton(MenuSourceButton *, font::FontController *, float density);
 

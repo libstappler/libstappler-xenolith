@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-class DependencyEvent final : public Ref {
+class SP_PUBLIC DependencyEvent final : public Ref {
 public:
 	using QueueSet = std::multiset<Rc<Queue>, std::less<Rc<Queue>>, std::allocator<Rc<Queue>>>;
 
@@ -59,13 +59,13 @@ protected:
 };
 
 // dummy class for attachment input
-struct AttachmentInputData : public Ref {
+struct SP_PUBLIC AttachmentInputData : public Ref {
 	virtual ~AttachmentInputData() { }
 
 	Vector<Rc<DependencyEvent>> waitDependencies;
 };
 
-class Attachment : public NamedRef {
+class SP_PUBLIC Attachment : public NamedRef {
 public:
 	using FrameQueue = core::FrameQueue;
 	using RenderQueue = core::Queue;
@@ -123,7 +123,7 @@ protected:
 	ValidateInputCallback _validateInputCallback;
 };
 
-class BufferAttachment : public Attachment {
+class SP_PUBLIC BufferAttachment : public Attachment {
 public:
 	virtual ~BufferAttachment() { }
 
@@ -150,7 +150,7 @@ protected:
 	Vector<const BufferData *> _staticBuffers;
 };
 
-class ImageAttachment : public Attachment {
+class SP_PUBLIC ImageAttachment : public Attachment {
 public:
 	virtual ~ImageAttachment() { }
 
@@ -200,7 +200,7 @@ protected:
 	Rc<ImageStorage> _staticImageStorage;
 };
 
-class GenericAttachment : public Attachment {
+class SP_PUBLIC GenericAttachment : public Attachment {
 public:
 	virtual ~GenericAttachment() { }
 
@@ -210,7 +210,7 @@ protected:
 	using Attachment::init;
 };
 
-class AttachmentHandle : public Ref {
+class SP_PUBLIC AttachmentHandle : public Ref {
 public:
 	using PassHandle = core::QueuePassHandle;
 	using FrameQueue = core::FrameQueue;

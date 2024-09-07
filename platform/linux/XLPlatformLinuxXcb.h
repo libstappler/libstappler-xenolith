@@ -40,7 +40,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class XcbLibrary : public Ref {
+class SP_PUBLIC XcbLibrary : public Ref {
 public:
 	static constexpr int RANDR_MAJOR_VERSION = XCB_RANDR_MAJOR_VERSION;
 	static constexpr int RANDR_MINOR_VERSION = XCB_RANDR_MINOR_VERSION;
@@ -67,160 +67,104 @@ public:
 	bool hasKeysyms() const;
 	bool hasXkb() const;
 
-	xcb_connection_t * (* xcb_connect) (const char *displayname, int *screenp) = nullptr;
-	const struct xcb_setup_t * (* xcb_get_setup) (xcb_connection_t *c) = nullptr;
-	xcb_screen_iterator_t (* xcb_setup_roots_iterator) (const xcb_setup_t *R) = nullptr;
-	void (* xcb_screen_next) (xcb_screen_iterator_t *i) = nullptr;
-
-	int (* xcb_connection_has_error) (xcb_connection_t *c) = nullptr;
-	int (* xcb_get_file_descriptor) (xcb_connection_t *c) = nullptr;
-	uint32_t (* xcb_generate_id) (xcb_connection_t *c) = nullptr;
-	int (*xcb_flush) (xcb_connection_t *c) = nullptr;
-	void (* xcb_disconnect) (xcb_connection_t *c) = nullptr;
-	xcb_generic_event_t * (* xcb_poll_for_event) (xcb_connection_t *c) = nullptr;
-	xcb_void_cookie_t (*xcb_send_event) (xcb_connection_t *c, uint8_t propagate,
-			xcb_window_t destination, uint32_t event_mask, const char *event) = nullptr;
-
-	const struct xcb_query_extension_reply_t *(* xcb_get_extension_data) (xcb_connection_t *c, xcb_extension_t *ext) = nullptr;
-
-	xcb_void_cookie_t (* xcb_map_window) (xcb_connection_t *c, xcb_window_t window) = nullptr;
-
-	xcb_void_cookie_t (* xcb_create_window) (xcb_connection_t *c, uint8_t depth, xcb_window_t wid,
-		xcb_window_t parent, int16_t x, int16_t y, uint16_t width, uint16_t height, uint16_t border_width,
-		uint16_t _class, xcb_visualid_t visual, uint32_t value_mask, const void *value_list) = nullptr;
-
-	xcb_void_cookie_t (* xcb_change_property) (xcb_connection_t *c, uint8_t mode, xcb_window_t window,
-			xcb_atom_t property, xcb_atom_t type, uint8_t format, uint32_t data_len, const void *data) = nullptr;
-
-	xcb_intern_atom_cookie_t (* xcb_intern_atom) (xcb_connection_t *c, uint8_t only_if_exists,
-			uint16_t name_len,const char *name) = nullptr;
-
-	xcb_intern_atom_reply_t * (* xcb_intern_atom_reply) (xcb_connection_t *c, xcb_intern_atom_cookie_t cookie,
-			xcb_generic_error_t **e) = nullptr;
-
-	xcb_get_property_reply_t* (* xcb_get_property_reply) (xcb_connection_t *c, xcb_get_property_cookie_t cookie,
-			xcb_generic_error_t **e) = nullptr;
-	xcb_get_property_cookie_t (*xcb_get_property) (xcb_connection_t *c, uint8_t _delete, xcb_window_t window,
-			xcb_atom_t property, xcb_atom_t type, uint32_t long_offset, uint32_t long_length) = nullptr;
-	void * (* xcb_get_property_value) (const xcb_get_property_reply_t *R) = nullptr;
-	int (* xcb_get_property_value_length) (const xcb_get_property_reply_t *R) = nullptr;
+	decltype(&::xcb_connect) xcb_connect = nullptr;
+	decltype(&::xcb_get_setup) xcb_get_setup = nullptr;
+	decltype(&::xcb_setup_roots_iterator) xcb_setup_roots_iterator = nullptr;
+	decltype(&::xcb_screen_next) xcb_screen_next = nullptr;
+	decltype(&::xcb_connection_has_error) xcb_connection_has_error = nullptr;
+	decltype(&::xcb_get_file_descriptor) xcb_get_file_descriptor = nullptr;
+	decltype(&::xcb_generate_id) xcb_generate_id = nullptr;
+	decltype(&::xcb_flush) xcb_flush = nullptr;
+	decltype(&::xcb_disconnect) xcb_disconnect = nullptr;
+	decltype(&::xcb_poll_for_event) xcb_poll_for_event = nullptr;
+	decltype(&::xcb_send_event) xcb_send_event = nullptr;
+	decltype(&::xcb_get_extension_data) xcb_get_extension_data = nullptr;
+	decltype(&::xcb_map_window) xcb_map_window = nullptr;
+	decltype(&::xcb_create_window) xcb_create_window = nullptr;
+	decltype(&::xcb_change_property) xcb_change_property = nullptr;
+	decltype(&::xcb_intern_atom) xcb_intern_atom = nullptr;
+	decltype(&::xcb_intern_atom_reply) xcb_intern_atom_reply = nullptr;
+	decltype(&::xcb_get_property_reply) xcb_get_property_reply = nullptr;
+	decltype(&::xcb_get_property) xcb_get_property = nullptr;
+	decltype(&::xcb_get_property_value) xcb_get_property_value = nullptr;
+	decltype(&::xcb_get_property_value_length) xcb_get_property_value_length = nullptr;
 
 	void * (* xcb_wait_for_reply) (xcb_connection_t *c, unsigned int request, xcb_generic_error_t **e) = nullptr;
 
-	xcb_get_modifier_mapping_cookie_t (* xcb_get_modifier_mapping_unchecked) (xcb_connection_t *c) = nullptr;
-	xcb_get_modifier_mapping_reply_t * (* xcb_get_modifier_mapping_reply) (xcb_connection_t *c,
-			xcb_get_modifier_mapping_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-	xcb_keycode_t * (* xcb_get_modifier_mapping_keycodes) (const xcb_get_modifier_mapping_reply_t *) = nullptr;
-
-	xcb_void_cookie_t (* xcb_convert_selection) (xcb_connection_t *c, xcb_window_t requestor,
-			xcb_atom_t selection, xcb_atom_t target, xcb_atom_t property, xcb_timestamp_t time) = nullptr;
-	xcb_void_cookie_t (* xcb_set_selection_owner) (xcb_connection_t *c, xcb_window_t owner,
-			xcb_atom_t selection, xcb_timestamp_t time) = nullptr;
-	xcb_get_selection_owner_cookie_t (* xcb_get_selection_owner) (xcb_connection_t *c,
-			xcb_atom_t selection) = nullptr;
-	xcb_get_selection_owner_reply_t* (* xcb_get_selection_owner_reply) (xcb_connection_t *c,
-			xcb_get_selection_owner_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-
-	xcb_get_keyboard_mapping_cookie_t (*xcb_get_keyboard_mapping)(xcb_connection_t *c,
-			xcb_keycode_t first_keycode, uint8_t count) = nullptr;
-	xcb_get_keyboard_mapping_reply_t * (* xcb_get_keyboard_mapping_reply) (xcb_connection_t *c,
-			xcb_get_keyboard_mapping_cookie_t cookie /**< */, xcb_generic_error_t **e) = nullptr;
-
-	xcb_extension_t *xcb_randr_id = nullptr;
-
-	xcb_randr_query_version_cookie_t (* xcb_randr_query_version) (xcb_connection_t *c,
-			uint32_t major_version, uint32_t minor_version) = nullptr;
-	xcb_randr_query_version_reply_t * (* xcb_randr_query_version_reply) (xcb_connection_t *c,
-			xcb_randr_query_version_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-	xcb_randr_get_screen_info_cookie_t (* xcb_randr_get_screen_info_unchecked) (xcb_connection_t *c,
-			xcb_window_t window) = nullptr;
-	xcb_randr_get_screen_info_reply_t * (* xcb_randr_get_screen_info_reply) (xcb_connection_t *c,
-			xcb_randr_get_screen_info_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-
-	xcb_randr_screen_size_t * (* xcb_randr_get_screen_info_sizes) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_screen_info_sizes_length) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
-	xcb_randr_screen_size_iterator_t (* xcb_randr_get_screen_info_sizes_iterator) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
-
-	int (* xcb_randr_get_screen_info_rates_length) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
-	xcb_randr_refresh_rates_iterator_t (* xcb_randr_get_screen_info_rates_iterator) (const xcb_randr_get_screen_info_reply_t *) = nullptr;
-	void (* xcb_randr_refresh_rates_next) (xcb_randr_refresh_rates_iterator_t *) = nullptr;
-	xcb_generic_iterator_t (* xcb_randr_refresh_rates_end) (xcb_randr_refresh_rates_iterator_t) = nullptr;
-	uint16_t * (* xcb_randr_refresh_rates_rates) (const xcb_randr_refresh_rates_t *) = nullptr;
-	int (* xcb_randr_refresh_rates_rates_length) (const xcb_randr_refresh_rates_t *) = nullptr;
-
-	xcb_randr_get_screen_resources_cookie_t (* xcb_randr_get_screen_resources) (
-			xcb_connection_t *c, xcb_window_t window) = nullptr;
-	xcb_randr_get_screen_resources_cookie_t (* xcb_randr_get_screen_resources_unchecked) (
-			xcb_connection_t *c, xcb_window_t window) = nullptr;
-	xcb_randr_get_screen_resources_reply_t * (* xcb_randr_get_screen_resources_reply) (
-			xcb_connection_t *c, xcb_randr_get_screen_resources_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-	xcb_randr_mode_info_t * (* xcb_randr_get_screen_resources_modes) (const xcb_randr_get_screen_resources_reply_t *R) = nullptr;
-	int (* xcb_randr_get_screen_resources_modes_length) (const xcb_randr_get_screen_resources_reply_t *R) = nullptr;
-
-	xcb_randr_get_screen_resources_current_cookie_t (* xcb_randr_get_screen_resources_current) (
-			xcb_connection_t *c, xcb_window_t window) = nullptr;
-	xcb_randr_get_screen_resources_current_cookie_t (* xcb_randr_get_screen_resources_current_unchecked) (
-			xcb_connection_t *c, xcb_window_t window) = nullptr;
-	xcb_randr_get_screen_resources_current_reply_t * (* xcb_randr_get_screen_resources_current_reply) (
-			xcb_connection_t *c, xcb_randr_get_screen_resources_current_cookie_t cookie, xcb_generic_error_t **e) = nullptr;
-	xcb_randr_output_t* (* xcb_randr_get_screen_resources_current_outputs) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	int (* xcb_randr_get_screen_resources_current_outputs_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	xcb_randr_mode_info_t * (* xcb_randr_get_screen_resources_current_modes) (
-			const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	int (* xcb_randr_get_screen_resources_current_modes_length) (
-			const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	uint8_t* (* xcb_randr_get_screen_resources_current_names) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	int (* xcb_randr_get_screen_resources_current_names_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	xcb_randr_crtc_t* (* xcb_randr_get_screen_resources_current_crtcs) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-	int (* xcb_randr_get_screen_resources_current_crtcs_length) (const xcb_randr_get_screen_resources_current_reply_t *) = nullptr;
-
-	xcb_randr_get_output_primary_cookie_t (* xcb_randr_get_output_primary) (xcb_connection_t *, xcb_window_t) = nullptr;
-	xcb_randr_get_output_primary_cookie_t (* xcb_randr_get_output_primary_unchecked) (xcb_connection_t *, xcb_window_t) = nullptr;
-	xcb_randr_get_output_primary_reply_t * (* xcb_randr_get_output_primary_reply) (xcb_connection_t *,
-			xcb_randr_get_output_primary_cookie_t, xcb_generic_error_t **) = nullptr;
-
-	xcb_randr_get_output_info_cookie_t (* xcb_randr_get_output_info) (xcb_connection_t *,
-			xcb_randr_output_t, xcb_timestamp_t) = nullptr;
-	xcb_randr_get_output_info_cookie_t (* xcb_randr_get_output_info_unchecked) (xcb_connection_t *,
-			xcb_randr_output_t, xcb_timestamp_t) = nullptr;
-	xcb_randr_get_output_info_reply_t* (* xcb_randr_get_output_info_reply) (xcb_connection_t *,
-			xcb_randr_get_output_info_cookie_t, xcb_generic_error_t **) = nullptr;
-	xcb_randr_crtc_t * (* xcb_randr_get_output_info_crtcs) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_output_info_crtcs_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	xcb_generic_iterator_t (* xcb_randr_get_output_info_crtcs_end) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	xcb_randr_mode_t * (* xcb_randr_get_output_info_modes) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_output_info_modes_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	uint8_t * (* xcb_randr_get_output_info_name) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_output_info_name_length) (const xcb_randr_get_output_info_reply_t *) = nullptr;
-
-	xcb_randr_get_crtc_info_cookie_t (* xcb_randr_get_crtc_info) (xcb_connection_t *, xcb_randr_crtc_t, xcb_timestamp_t) = nullptr;
-	xcb_randr_get_crtc_info_cookie_t (* xcb_randr_get_crtc_info_unchecked) (xcb_connection_t *, xcb_randr_crtc_t, xcb_timestamp_t) = nullptr;
-	xcb_randr_get_crtc_info_reply_t* (* xcb_randr_get_crtc_info_reply) (xcb_connection_t *,
-			xcb_randr_get_crtc_info_cookie_t, xcb_generic_error_t **) = nullptr;
-	xcb_randr_output_t* (* xcb_randr_get_crtc_info_outputs) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_crtc_info_outputs_length) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
-	xcb_randr_output_t* (* xcb_randr_get_crtc_info_possible) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
-	int (* xcb_randr_get_crtc_info_possible_length) (const xcb_randr_get_crtc_info_reply_t *) = nullptr;
-
-	xcb_key_symbols_t * (* xcb_key_symbols_alloc) (xcb_connection_t *c) = nullptr;
-	void (* xcb_key_symbols_free) (xcb_key_symbols_t *syms) = nullptr;
-
-	xcb_keysym_t (* xcb_key_symbols_get_keysym) (xcb_key_symbols_t *syms, xcb_keycode_t keycode, int col) = nullptr;
-	xcb_keycode_t * (* xcb_key_symbols_get_keycode) (xcb_key_symbols_t *syms, xcb_keysym_t keysym) = nullptr;
-	xcb_keysym_t (* xcb_key_press_lookup_keysym) (xcb_key_symbols_t *syms, xcb_key_press_event_t *event, int col) = nullptr;
-	xcb_keysym_t (* xcb_key_release_lookup_keysym) (xcb_key_symbols_t *syms, xcb_key_release_event_t *event, int col) = nullptr;
-	int (* xcb_refresh_keyboard_mapping) (xcb_key_symbols_t *syms, xcb_mapping_notify_event_t *event) = nullptr;
-
-	int (* xcb_is_keypad_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_private_keypad_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_cursor_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_pf_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_function_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_misc_function_key) (xcb_keysym_t keysym) = nullptr;
-	int (* xcb_is_modifier_key) (xcb_keysym_t keysym) = nullptr;
-
-	xcb_void_cookie_t (* xcb_xkb_select_events) (xcb_connection_t *c, xcb_xkb_device_spec_t deviceSpec,
-			uint16_t affectWhich, uint16_t clear, uint16_t selectAll, uint16_t affectMap, uint16_t map, const void *details) = nullptr;
+	decltype(&::xcb_get_modifier_mapping_unchecked) xcb_get_modifier_mapping_unchecked = nullptr;
+	decltype(&::xcb_get_modifier_mapping_reply) xcb_get_modifier_mapping_reply = nullptr;
+	decltype(&::xcb_get_modifier_mapping_keycodes) xcb_get_modifier_mapping_keycodes = nullptr;
+	decltype(&::xcb_convert_selection) xcb_convert_selection = nullptr;
+	decltype(&::xcb_set_selection_owner) xcb_set_selection_owner = nullptr;
+	decltype(&::xcb_get_selection_owner) xcb_get_selection_owner = nullptr;
+	decltype(&::xcb_get_selection_owner_reply) xcb_get_selection_owner_reply = nullptr;
+	decltype(&::xcb_get_keyboard_mapping) xcb_get_keyboard_mapping = nullptr;
+	decltype(&::xcb_get_keyboard_mapping_reply) xcb_get_keyboard_mapping_reply = nullptr;
+	decltype(&::xcb_randr_id) xcb_randr_id = nullptr;
+	decltype(&::xcb_randr_query_version) xcb_randr_query_version = nullptr;
+	decltype(&::xcb_randr_query_version_reply) xcb_randr_query_version_reply = nullptr;
+	decltype(&::xcb_randr_get_screen_info_unchecked) xcb_randr_get_screen_info_unchecked = nullptr;
+	decltype(&::xcb_randr_get_screen_info_reply) xcb_randr_get_screen_info_reply = nullptr;
+	decltype(&::xcb_randr_get_screen_info_sizes) xcb_randr_get_screen_info_sizes = nullptr;
+	decltype(&::xcb_randr_get_screen_info_sizes_length) xcb_randr_get_screen_info_sizes_length = nullptr;
+	decltype(&::xcb_randr_get_screen_info_sizes_iterator) xcb_randr_get_screen_info_sizes_iterator = nullptr;
+	decltype(&::xcb_randr_get_screen_info_rates_length) xcb_randr_get_screen_info_rates_length = nullptr;
+	decltype(&::xcb_randr_get_screen_info_rates_iterator) xcb_randr_get_screen_info_rates_iterator = nullptr;
+	decltype(&::xcb_randr_refresh_rates_next) xcb_randr_refresh_rates_next = nullptr;
+	decltype(&::xcb_randr_refresh_rates_end) xcb_randr_refresh_rates_end = nullptr;
+	decltype(&::xcb_randr_refresh_rates_rates) xcb_randr_refresh_rates_rates = nullptr;
+	decltype(&::xcb_randr_refresh_rates_rates_length) xcb_randr_refresh_rates_rates_length = nullptr;
+	decltype(&::xcb_randr_get_screen_resources) xcb_randr_get_screen_resources = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_unchecked) xcb_randr_get_screen_resources_unchecked = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_reply) xcb_randr_get_screen_resources_reply = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_modes) xcb_randr_get_screen_resources_modes = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_modes_length) xcb_randr_get_screen_resources_modes_length = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current) xcb_randr_get_screen_resources_current = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_unchecked) xcb_randr_get_screen_resources_current_unchecked = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_reply) xcb_randr_get_screen_resources_current_reply = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_outputs) xcb_randr_get_screen_resources_current_outputs = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_outputs_length) xcb_randr_get_screen_resources_current_outputs_length = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_modes) xcb_randr_get_screen_resources_current_modes = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_modes_length) xcb_randr_get_screen_resources_current_modes_length = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_names) xcb_randr_get_screen_resources_current_names = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_names_length) xcb_randr_get_screen_resources_current_names_length = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_crtcs) xcb_randr_get_screen_resources_current_crtcs = nullptr;
+	decltype(&::xcb_randr_get_screen_resources_current_crtcs_length) xcb_randr_get_screen_resources_current_crtcs_length = nullptr;
+	decltype(&::xcb_randr_get_output_primary) xcb_randr_get_output_primary = nullptr;
+	decltype(&::xcb_randr_get_output_primary_unchecked) xcb_randr_get_output_primary_unchecked = nullptr;
+	decltype(&::xcb_randr_get_output_primary_reply) xcb_randr_get_output_primary_reply = nullptr;
+	decltype(&::xcb_randr_get_output_info) xcb_randr_get_output_info = nullptr;
+	decltype(&::xcb_randr_get_output_info_unchecked) xcb_randr_get_output_info_unchecked = nullptr;
+	decltype(&::xcb_randr_get_output_info_reply) xcb_randr_get_output_info_reply = nullptr;
+	decltype(&::xcb_randr_get_output_info_crtcs) xcb_randr_get_output_info_crtcs = nullptr;
+	decltype(&::xcb_randr_get_output_info_crtcs_length) xcb_randr_get_output_info_crtcs_length = nullptr;
+	decltype(&::xcb_randr_get_output_info_crtcs_end) xcb_randr_get_output_info_crtcs_end = nullptr;
+	decltype(&::xcb_randr_get_output_info_modes) xcb_randr_get_output_info_modes = nullptr;
+	decltype(&::xcb_randr_get_output_info_modes_length) xcb_randr_get_output_info_modes_length = nullptr;
+	decltype(&::xcb_randr_get_output_info_name) xcb_randr_get_output_info_name = nullptr;
+	decltype(&::xcb_randr_get_output_info_name_length) xcb_randr_get_output_info_name_length = nullptr;
+	decltype(&::xcb_randr_get_crtc_info) xcb_randr_get_crtc_info = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_unchecked) xcb_randr_get_crtc_info_unchecked = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_reply) xcb_randr_get_crtc_info_reply = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_outputs) xcb_randr_get_crtc_info_outputs = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_outputs_length) xcb_randr_get_crtc_info_outputs_length = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_possible) xcb_randr_get_crtc_info_possible = nullptr;
+	decltype(&::xcb_randr_get_crtc_info_possible_length) xcb_randr_get_crtc_info_possible_length = nullptr;
+	decltype(&::xcb_key_symbols_alloc) xcb_key_symbols_alloc = nullptr;
+	decltype(&::xcb_key_symbols_free) xcb_key_symbols_free = nullptr;
+	decltype(&::xcb_key_symbols_get_keysym) xcb_key_symbols_get_keysym = nullptr;
+	decltype(&::xcb_key_symbols_get_keycode) xcb_key_symbols_get_keycode = nullptr;
+	decltype(&::xcb_key_press_lookup_keysym) xcb_key_press_lookup_keysym = nullptr;
+	decltype(&::xcb_key_release_lookup_keysym) xcb_key_release_lookup_keysym = nullptr;
+	decltype(&::xcb_refresh_keyboard_mapping) xcb_refresh_keyboard_mapping = nullptr;
+	decltype(&::xcb_is_keypad_key) xcb_is_keypad_key = nullptr;
+	decltype(&::xcb_is_private_keypad_key) xcb_is_private_keypad_key = nullptr;
+	decltype(&::xcb_is_cursor_key) xcb_is_cursor_key = nullptr;
+	decltype(&::xcb_is_pf_key) xcb_is_pf_key = nullptr;
+	decltype(&::xcb_is_function_key) xcb_is_function_key = nullptr;
+	decltype(&::xcb_is_misc_function_key) xcb_is_misc_function_key = nullptr;
+	decltype(&::xcb_is_modifier_key) xcb_is_modifier_key = nullptr;
+	decltype(&::xcb_xkb_select_events) xcb_xkb_select_events = nullptr;
 
 	ConnectionData acquireConnection();
 	ConnectionData getActiveConnection() const;

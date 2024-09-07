@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class Scene : public Scene2d {
+class SP_PUBLIC Scene : public Scene2d {
 public:
 	virtual ~Scene() = default;
 

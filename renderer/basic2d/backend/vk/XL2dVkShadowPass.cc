@@ -98,7 +98,7 @@ bool ShadowPass::initAsFullSdf(Queue::Builder &queueBuilder, QueuePassBuilder &p
 			ImageInfo(
 				info.extent,
 				core::ForceImageUsage(core::ImageUsage::ColorAttachment),
-				platform::getCommonFormat()),
+				xenolith::platform::getCommonFormat()),
 			core::ImageAttachment::AttachmentInfo{
 				.initialLayout = AttachmentLayout::Undefined,
 				.finalLayout = AttachmentLayout::PresentSrc,
@@ -227,7 +227,7 @@ bool ShadowPass::initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder 
 			ImageInfo(
 				info.extent,
 				core::ForceImageUsage(core::ImageUsage::ColorAttachment),
-				platform::getCommonFormat()),
+				xenolith::platform::getCommonFormat()),
 			core::ImageAttachment::AttachmentInfo{
 				.initialLayout = AttachmentLayout::Undefined,
 				.finalLayout = AttachmentLayout::PresentSrc,

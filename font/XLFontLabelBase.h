@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-class TextLayout : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
+class SP_PUBLIC TextLayout : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
 public:
 	virtual ~TextLayout();
 	TextLayout(FontController *h, size_t = 0, size_t = 0);
@@ -82,7 +82,7 @@ protected:
 	Set<Rc<FontFaceSet>> _fonts;
 };
 
-class LabelBase {
+class SP_PUBLIC LabelBase {
 public:
 	using FontFamily = ValueWrapper<uint32_t, class FontFamilyTag>;
 	using Opacity = OpacityValue;

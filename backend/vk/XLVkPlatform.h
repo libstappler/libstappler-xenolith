@@ -28,13 +28,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-struct VulkanInstanceInfo {
+struct SP_PUBLIC VulkanInstanceInfo {
 	uint32_t targetVersion;
 	SpanView<VkLayerProperties> availableLayers;
 	SpanView<VkExtensionProperties> availableExtensions;
 };
 
-struct VulkanInstanceData {
+struct SP_PUBLIC VulkanInstanceData {
 	uint32_t targetVulkanVersion;
 	StringView applicationVersion;
 	StringView applicationName;
@@ -44,7 +44,7 @@ struct VulkanInstanceData {
 	Rc<Ref> userdata;
 };
 
-class FunctionTable final : public vk::LoaderTable {
+class SP_PUBLIC FunctionTable final : public vk::LoaderTable {
 public:
 	using LoaderTable::LoaderTable;
 
@@ -65,7 +65,7 @@ private:
 	Rc<Instance> doCreateInstance(VulkanInstanceData &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 };
 
-Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
+SP_PUBLIC Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
 
 }
 

@@ -32,7 +32,7 @@ class Loop;
 class DynamicImage;
 class MaterialAttachment;
 
-struct DynamicImageInstance : public Ref {
+struct SP_PUBLIC DynamicImageInstance : public Ref {
 	virtual ~DynamicImageInstance() { }
 
 	ImageData data;
@@ -41,7 +41,7 @@ struct DynamicImageInstance : public Ref {
 	uint32_t gen = 0;
 };
 
-class DynamicImage : public Ref {
+class SP_PUBLIC DynamicImage : public Ref {
 public:
 	class Builder;
 
@@ -76,7 +76,7 @@ protected:
 	Set<const MaterialAttachment *> _materialTrackers;
 };
 
-class DynamicImage::Builder {
+class SP_PUBLIC DynamicImage::Builder {
 public:
 	const ImageData * setImageByRef(StringView key, ImageInfo &&, BytesView data, Rc<DataAtlas> && = nullptr);
 	const ImageData * setImage(StringView key, ImageInfo &&, FilePath data, Rc<DataAtlas> && = nullptr);

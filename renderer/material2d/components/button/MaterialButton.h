@@ -34,7 +34,7 @@ class TypescaleLabel;
 class MenuSource;
 class MenuSourceButton;
 
-class Button : public Surface {
+class SP_PUBLIC Button : public Surface {
 public:
 	enum NodeMask {
 		None = 0,

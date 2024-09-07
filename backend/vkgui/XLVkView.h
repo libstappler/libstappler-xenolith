@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class View : public xenolith::View {
+class SP_PUBLIC View : public xenolith::View {
 public:
 	struct EngineOptions {
 		// on some systems, we can not acquire next image until queue operations on previous image is finished

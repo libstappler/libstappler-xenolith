@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class Texture : public ResourceObject {
+class SP_PUBLIC Texture : public ResourceObject {
 public:
 	virtual ~Texture();
 

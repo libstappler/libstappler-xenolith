@@ -31,7 +31,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class WaylandView : public LinuxViewInterface, public WaylandViewInterface {
+class SP_PUBLIC WaylandView : public LinuxViewInterface, public WaylandViewInterface {
 public:
 	static constexpr auto DecorWidth = 20;
 	static constexpr auto DecorInset = 16;

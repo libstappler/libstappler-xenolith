@@ -36,12 +36,12 @@ class EventListener;
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-struct LabelResult : Ref {
+struct SP_PUBLIC LabelResult : Ref {
 	TransformVertexData data;
 	Vector<ColorMask> colorMap;
 };
 
-class LabelDeferredResult : public DeferredVertexResult {
+class SP_PUBLIC LabelDeferredResult : public DeferredVertexResult {
 public:
 	virtual ~LabelDeferredResult();
 
@@ -61,7 +61,7 @@ protected:
 	std::future<Rc<LabelResult>> *_future = nullptr;
 };
 
-class Label : public Sprite, public font::LabelBase {
+class SP_PUBLIC Label : public Sprite, public font::LabelBase {
 public:
 	using TextLayout = font::TextLayout;
 	using LineLayout = font::LineLayoutData;

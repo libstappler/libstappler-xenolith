@@ -37,7 +37,7 @@ class Sampler;
 class Loop;
 class DeviceMemoryPool;
 
-class DeviceFrameHandle : public core::FrameHandle {
+class SP_PUBLIC DeviceFrameHandle : public core::FrameHandle {
 public:
 	virtual ~DeviceFrameHandle();
 
@@ -52,7 +52,7 @@ protected:
 	Map<void *, Rc<DeviceMemoryPool>>  _memPools;
 };
 
-class Device : public core::Device {
+class SP_PUBLIC Device : public core::Device {
 public:
 	using Features = DeviceInfo::Features;
 	using Properties = DeviceInfo::Properties;

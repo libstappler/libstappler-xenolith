@@ -47,7 +47,7 @@ enum class InputFieldError {
 	InvalidChar,
 };
 
-class InputField : public Surface {
+class SP_PUBLIC InputField : public Surface {
 public:
 	static constexpr uint32_t InputEnabledActionTag = maxOf<uint32_t>() - 2;
 	static constexpr uint32_t InputEnabledLabelActionTag = maxOf<uint32_t>() - 3;

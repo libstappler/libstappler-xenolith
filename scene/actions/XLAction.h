@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 
-class Action : public Ref {
+class SP_PUBLIC Action : public Ref {
 public:
 	/** Default tag used for all the actions. */
 	static const uint32_t INVALID_TAG = std::numeric_limits<uint32_t>::max();
@@ -98,7 +98,7 @@ protected:
 	float _duration = std::numeric_limits<float>::quiet_NaN();
 };
 
-class ActionInstant : public Action {
+class SP_PUBLIC ActionInstant : public Action {
 public:
 	virtual ~ActionInstant();
 
@@ -110,28 +110,28 @@ protected:
 	bool _performed = false;
 };
 
-class Show : public ActionInstant {
+class SP_PUBLIC Show : public ActionInstant {
 public:
 	virtual ~Show();
 
 	virtual void update(float time) override;
 };
 
-class Hide : public ActionInstant {
+class SP_PUBLIC Hide : public ActionInstant {
 public:
 	virtual ~Hide();
 
 	virtual void update(float time) override;
 };
 
-class ToggleVisibility : public ActionInstant {
+class SP_PUBLIC ToggleVisibility : public ActionInstant {
 public:
 	virtual ~ToggleVisibility();
 
 	virtual void update(float time) override;
 };
 
-class RemoveSelf : public ActionInstant {
+class SP_PUBLIC RemoveSelf : public ActionInstant {
 public:
 	virtual ~RemoveSelf();
 
@@ -144,7 +144,7 @@ protected:
 	bool _isNeedCleanUp;
 };
 
-class Place : public ActionInstant {
+class SP_PUBLIC Place : public ActionInstant {
 public:
 	virtual ~Place();
 
@@ -157,7 +157,7 @@ protected:
 	Vec2 _position;
 };
 
-class CallFunc : public ActionInstant {
+class SP_PUBLIC CallFunc : public ActionInstant {
 public:
 	virtual ~CallFunc();
 
@@ -170,7 +170,7 @@ protected:
 	Function<void()> _callback;
 };
 
-class ActionInterval : public Action {
+class SP_PUBLIC ActionInterval : public Action {
 public:
 	virtual ~ActionInterval();
 
@@ -195,7 +195,7 @@ protected:
  * Useful to simulate 'slow motion' or 'fast forward' effect.
  * @warning This action can't be Sequenceable because it is not an IntervalAction.
  */
-class Speed : public Action {
+class SP_PUBLIC Speed : public Action {
 public:
 	virtual ~Speed();
 
@@ -220,7 +220,7 @@ protected:
 	Rc<ActionInterval> _innerAction;
 };
 
-class Sequence : public ActionInterval {
+class SP_PUBLIC Sequence : public ActionInterval {
 public:
 	virtual ~Sequence();
 
@@ -276,7 +276,7 @@ protected:
 	uint32_t _currentIdx = 0;
 };
 
-class Spawn : public ActionInterval {
+class SP_PUBLIC Spawn : public ActionInterval {
 public:
 	virtual ~Spawn();
 
@@ -329,7 +329,7 @@ protected:
 	uint32_t _currentIdx = 0;
 };
 
-class Repeat: public ActionInterval {
+class SP_PUBLIC Repeat : public ActionInterval {
 public:
 	virtual ~Repeat();
 
@@ -354,7 +354,7 @@ protected:
 	Rc<ActionInterval> _innerAction;
 };
 
-class RepeatForever : public ActionInterval {
+class SP_PUBLIC RepeatForever : public ActionInterval {
 public:
 	virtual ~RepeatForever();
 
@@ -382,14 +382,14 @@ protected:
 /** @class DelayTime
  * @brief Delays the action a certain amount of seconds.
  */
-class DelayTime : public ActionInterval {
+class SP_PUBLIC DelayTime : public ActionInterval {
 public:
 	virtual ~DelayTime();
 
 	virtual void update(float time) override;
 };
 
-class TintTo : public ActionInterval {
+class SP_PUBLIC TintTo : public ActionInterval {
 public:
 	virtual ~TintTo();
 
@@ -405,7 +405,7 @@ protected:
 	Color4F _from;
 };
 
-class ActionProgress : public ActionInterval {
+class SP_PUBLIC ActionProgress : public ActionInterval {
 public:
 	using StartCallback = Function<void()>;
 	using UpdateCallback = Function<void(float progress)>;
@@ -446,7 +446,7 @@ protected:
     StopCallback _onStop;
 };
 
-class MoveTo : public ActionInterval {
+class SP_PUBLIC MoveTo : public ActionInterval {
 public:
 	virtual ~MoveTo() { }
 
@@ -460,7 +460,7 @@ protected:
 	Vec3 _endPosition;
 };
 
-class ScaleTo : public ActionInterval {
+class SP_PUBLIC ScaleTo : public ActionInterval {
 public:
 	virtual ~ScaleTo() { }
 
@@ -474,7 +474,7 @@ protected:
 	Vec3 _endScale;
 };
 
-class ResizeTo : public ActionInterval {
+class SP_PUBLIC ResizeTo : public ActionInterval {
 public:
 	virtual ~ResizeTo() { }
 
@@ -487,7 +487,7 @@ protected:
 	Size2 _endSize;
 };
 
-class FadeTo : public ActionInterval {
+class SP_PUBLIC FadeTo : public ActionInterval {
 public:
 	virtual ~FadeTo() { }
 
@@ -500,7 +500,7 @@ protected:
 	float _endOpacity = 1.0f;
 };
 
-class RenderContinuously : public ActionInterval {
+class SP_PUBLIC RenderContinuously : public ActionInterval {
 public:
 	virtual ~RenderContinuously() { }
 

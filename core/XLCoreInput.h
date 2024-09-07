@@ -296,7 +296,7 @@ enum class InputEventName : uint32_t {
 	Max,
 };
 
-struct InputEventData {
+struct SP_PUBLIC InputEventData {
 	static InputEventData BoolEvent(InputEventName event, bool value) {
 		return InputEventData{maxOf<uint32_t>(), event, InputMouseButton::None,
 			value ? InputModifier::ValueTrue : InputModifier::None};
@@ -499,7 +499,7 @@ SP_DEFINE_ENUM_AS_MASK(TextInputType);
 using TextCursorPosition = ValueWrapper<uint32_t, class TextCursorPositionFlag>;
 using TextCursorLength = ValueWrapper<uint32_t, class TextCursorStartFlag>;
 
-struct TextCursor {
+struct SP_PUBLIC TextCursor {
 	static const TextCursor InvalidCursor;
 
 	uint32_t start;
@@ -517,20 +517,20 @@ struct TextCursor {
 	constexpr bool operator==(const TextCursor &) const = default;
 };
 
-StringView getInputKeyCodeName(InputKeyCode);
-StringView getInputKeyCodeKeyName(InputKeyCode);
-StringView getInputEventName(InputEventName);
+SP_PUBLIC StringView getInputKeyCodeName(InputKeyCode);
+SP_PUBLIC StringView getInputKeyCodeKeyName(InputKeyCode);
+SP_PUBLIC StringView getInputEventName(InputEventName);
 
-StringView getInputButtonName(InputMouseButton);
+SP_PUBLIC StringView getInputButtonName(InputMouseButton);
 
-String getInputModifiersNames(InputModifier);
+SP_PUBLIC String getInputModifiersNames(InputModifier);
 
 }
 
 namespace std {
 
-std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode);
-std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName);
 
 }
 

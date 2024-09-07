@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class MaterialCompiler : public core::Queue {
+class SP_PUBLIC MaterialCompiler : public core::Queue {
 public:
 	using MaterialAttachment = core::MaterialAttachment;
 	using MaterialInputData = core::MaterialInputData;

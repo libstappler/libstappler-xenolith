@@ -33,7 +33,7 @@ class TextureSet;
 class Loop;
 
 // persistent object, part of Device
-class TextureSetLayout : public Ref {
+class SP_PUBLIC TextureSetLayout : public Ref {
 public:
 	using AttachmentLayout = core::AttachmentLayout;
 
@@ -89,7 +89,7 @@ protected:
 	Vector<Rc<TextureSet>> _sets;
 };
 
-class TextureSet : public core::TextureSet {
+class SP_PUBLIC TextureSet : public core::TextureSet {
 public:
 	virtual ~TextureSet() { }
 

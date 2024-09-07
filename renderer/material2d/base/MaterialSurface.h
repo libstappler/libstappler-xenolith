@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 class SurfaceInterior;
 class StyleContainer;
 
-class Surface : public VectorSprite {
+class SP_PUBLIC Surface : public VectorSprite {
 public:
 	static constexpr uint32_t TransitionActionTag = maxOf<uint32_t>() - 1;
 
@@ -97,7 +97,7 @@ protected:
 	float _maxHeight = nan();
 };
 
-class BackgroundSurface : public Surface {
+class SP_PUBLIC BackgroundSurface : public Surface {
 public:
 	virtual ~BackgroundSurface() { }
 

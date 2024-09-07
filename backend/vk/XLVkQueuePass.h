@@ -38,13 +38,13 @@ class CommandPool;
 class ImageAttachmentHandle;
 class BufferAttachmentHandle;
 
-struct MaterialBuffers {
+struct SP_PUBLIC MaterialBuffers {
 	Rc<Buffer> stagingBuffer;
 	Rc<Buffer> targetBuffer;
 	HashMap<core::MaterialId, uint32_t> ordering;
 };
 
-class QueuePass : public core::QueuePass {
+class SP_PUBLIC QueuePass : public core::QueuePass {
 public:
 	virtual ~QueuePass();
 
@@ -59,7 +59,7 @@ protected:
 	QueueOperations _queueOps = QueueOperations::Graphics;
 };
 
-class QueuePassHandle : public core::QueuePassHandle {
+class SP_PUBLIC QueuePassHandle : public core::QueuePassHandle {
 public:
 	static VkRect2D rotateScissor(const core::FrameContraints &constraints, const URect &scissor);
 

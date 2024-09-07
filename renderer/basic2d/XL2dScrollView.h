@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class LayerRounded;
 
-class ScrollView : public ScrollViewBase {
+class SP_PUBLIC ScrollView : public ScrollViewBase {
 public:
 	using TapCallback = Function<void(int count, const Vec2 &loc)>;
 	using AnimationCallback = Function<void()>;

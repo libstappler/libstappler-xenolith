@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class VectorSprite;
 
-class Scene2d : public Scene {
+class SP_PUBLIC Scene2d : public Scene {
 public:
 	class FpsDisplay;
 

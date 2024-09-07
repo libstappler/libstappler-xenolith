@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 class ScrollController;
 class ActionAcceleratedMove;
 
-class ScrollViewBase : public DynamicStateNode {
+class SP_PUBLIC ScrollViewBase : public DynamicStateNode {
 public:
 	using ScrollFilterCallback = std::function<float (float delta)>;
 	using ScrollCallback = std::function<void (float delta, bool finished)>;

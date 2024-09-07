@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-class QueuePass : public NamedRef {
+class SP_PUBLIC QueuePass : public NamedRef {
 public:
 	using Queue = core::Queue;
 	using FrameQueue = core::FrameQueue;
@@ -78,7 +78,7 @@ protected:
 	const QueuePassData *_data = nullptr;
 };
 
-class QueuePassHandle : public NamedRef {
+class SP_PUBLIC QueuePassHandle : public NamedRef {
 public:
 	using QueuePass = core::QueuePass;
 	using FrameHandle = core::FrameHandle;

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-struct DeviceInfo {
+struct SP_PUBLIC DeviceInfo {
 	struct Features {
 		static Features getRequired();
 		static Features getOptional();

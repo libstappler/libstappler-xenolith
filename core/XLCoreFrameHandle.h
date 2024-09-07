@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-class FrameHandle : public Ref {
+class SP_PUBLIC FrameHandle : public Ref {
 public:
 	using FrameRequest = core::FrameRequest;
 

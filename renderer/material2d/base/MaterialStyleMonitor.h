@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class StyleMonitor : public Component {
+class SP_PUBLIC StyleMonitor : public Component {
 public:
 	using StyleCallback = Function<void(const ColorScheme *, const SurfaceStyleData &)>;
 

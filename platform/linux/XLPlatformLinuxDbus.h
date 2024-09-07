@@ -59,7 +59,7 @@ enum NMMetered {
 
 struct DBusInterface;
 
-struct InterfaceThemeInfo {
+struct SP_PUBLIC InterfaceThemeInfo {
 	static constexpr auto DefaultCursorTheme = "Yaru";
 	static constexpr uint16_t DefaultCursorSize = 24;
 
@@ -70,7 +70,7 @@ struct InterfaceThemeInfo {
 	bool operator!=(const InterfaceThemeInfo &) const = default;
 };
 
-struct NetworkState {
+struct SP_PUBLIC NetworkState {
 	bool networkingEnabled = false;
 	bool wirelessEnabled = false;
 	bool wwanEnabled = false;
@@ -87,7 +87,7 @@ struct NetworkState {
 	String description() const;
 };
 
-class DBusLibrary {
+class SP_PUBLIC DBusLibrary {
 public:
 	static DBusLibrary get();
 

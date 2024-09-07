@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class Shader : public core::Shader {
+class SP_PUBLIC Shader : public core::Shader {
 public:
 	virtual ~Shader() { }
 
@@ -45,7 +45,7 @@ protected:
 	VkShaderModule _shaderModule = VK_NULL_HANDLE;
 };
 
-class GraphicPipeline : public core::GraphicPipeline {
+class SP_PUBLIC GraphicPipeline : public core::GraphicPipeline {
 public:
 	static bool comparePipelineOrdering(const PipelineInfo &l, const PipelineInfo &r);
 
@@ -61,7 +61,7 @@ protected:
 	VkPipeline _pipeline = VK_NULL_HANDLE;
 };
 
-class ComputePipeline : public core::ComputePipeline {
+class SP_PUBLIC ComputePipeline : public core::ComputePipeline {
 public:
 	virtual ~ComputePipeline() { }
 

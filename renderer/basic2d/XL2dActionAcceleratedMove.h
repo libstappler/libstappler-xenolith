@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class ActionAcceleratedMove : public ActionInterval {
+class SP_PUBLIC ActionAcceleratedMove : public ActionInterval {
 public:
 	/** Движение от начальной точки до указанной, действие завершается по достижении конечной точки */
 	static Rc<ActionInterval> createBounce(float acceleration, Vec2 from, Vec2 to, Vec2 velocity = Vec2::ZERO,

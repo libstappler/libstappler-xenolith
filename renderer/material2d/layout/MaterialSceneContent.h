@@ -33,7 +33,7 @@ class Snackbar;
 class MenuSource;
 class NavigationDrawer;
 
-class SceneContent : public SceneContent2d {
+class SP_PUBLIC SceneContent : public SceneContent2d {
 public:
 	virtual ~SceneContent();
 

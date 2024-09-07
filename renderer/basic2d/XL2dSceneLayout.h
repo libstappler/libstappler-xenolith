@@ -49,7 +49,7 @@ enum class DecorationStatus {
 	Hidden
 };
 
-class SceneLayout2d : public DynamicStateNode {
+class SP_PUBLIC SceneLayout2d : public DynamicStateNode {
 public:
 	using BackButtonCallback = Function<bool()>;
 	using Transition = ActionInterval;

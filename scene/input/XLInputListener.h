@@ -35,7 +35,7 @@ class Node;
 class Scene;
 class GestureRecognizer;
 
-class InputListener : public Ref {
+class SP_PUBLIC InputListener : public Ref {
 public:
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;

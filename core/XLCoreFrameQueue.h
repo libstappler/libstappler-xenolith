@@ -31,14 +31,14 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 struct FramePassData;
 struct FrameAttachmentData;
 
-struct FrameSyncAttachment {
+struct SP_PUBLIC FrameSyncAttachment {
 	const AttachmentHandle *attachment;
 	Rc<Semaphore> semaphore;
 	ImageStorage *image = nullptr;
 	PipelineStage stages = PipelineStage::None;
 };
 
-struct FramePassData {
+struct SP_PUBLIC FramePassData {
 	FrameRenderPassState state = FrameRenderPassState::Initial;
 	Rc<QueuePassHandle> handle;
 	const QueuePassData *data = nullptr;
@@ -56,7 +56,7 @@ struct FramePassData {
 	uint64_t submitTime = 0;
 };
 
-struct FrameAttachmentData {
+struct SP_PUBLIC FrameAttachmentData {
 	FrameAttachmentState state = FrameAttachmentState::Initial;
 	Rc<AttachmentHandle> handle;
 	ImageInfoData info;
@@ -70,19 +70,19 @@ struct FrameAttachmentData {
 	bool waitForResult = false;
 };
 
-struct FrameSyncImage {
+struct SP_PUBLIC FrameSyncImage {
 	const AttachmentHandle *attachment;
 	ImageStorage *image = nullptr;
 	AttachmentLayout newLayout = AttachmentLayout::Undefined;
 };
 
-struct FrameSync : public Ref {
+struct SP_PUBLIC FrameSync : public Ref {
 	Vector<FrameSyncAttachment> waitAttachments;
 	Vector<FrameSyncAttachment> signalAttachments;
 	Vector<FrameSyncImage> images;
 };
 
-class FrameQueue final : public Ref {
+class SP_PUBLIC FrameQueue final : public Ref {
 public:
 	virtual ~FrameQueue();
 

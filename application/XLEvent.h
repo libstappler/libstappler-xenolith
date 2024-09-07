@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
  Event::send(eventHeader, sourceObject)
  */
 
-class Event {
+class SP_PUBLIC Event {
 protected:
 	enum class Type {
 		Int,

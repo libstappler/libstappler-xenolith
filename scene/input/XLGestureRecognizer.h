@@ -66,7 +66,7 @@ enum class GestureEvent {
 	Cancelled,
 };
 
-struct GestureData {
+struct SP_PUBLIC GestureData {
 	GestureEvent event = GestureEvent::Began;
 	const InputEvent *input = nullptr;
 
@@ -74,7 +74,7 @@ struct GestureData {
 	uint32_t getId() const { return input->data.id; }
 };
 
-struct GestureScroll : GestureData {
+struct SP_PUBLIC GestureScroll : GestureData {
 	Vec2 pos;
 	Vec2 amount;
 
@@ -82,7 +82,7 @@ struct GestureScroll : GestureData {
 	void cleanup();
 };
 
-struct GestureTap : GestureData {
+struct SP_PUBLIC GestureTap : GestureData {
 	Vec2 pos;
 	uint32_t id = maxOf<uint32_t>();
 	uint32_t count = 0;
@@ -91,7 +91,7 @@ struct GestureTap : GestureData {
 	void cleanup();
 };
 
-struct GesturePress : GestureData {
+struct SP_PUBLIC GesturePress : GestureData {
 	Vec2 pos;
 	uint32_t id = maxOf<uint32_t>();
 	TimeInterval limit;
@@ -101,7 +101,7 @@ struct GesturePress : GestureData {
     void cleanup();
 };
 
-struct GestureSwipe : GestureData {
+struct SP_PUBLIC GestureSwipe : GestureData {
 	Vec2 firstTouch;
 	Vec2 secondTouch;
 	Vec2 midpoint;
@@ -112,7 +112,7 @@ struct GestureSwipe : GestureData {
     void cleanup();
 };
 
-struct GesturePinch : GestureData {
+struct SP_PUBLIC GesturePinch : GestureData {
 	Vec2 first;
 	Vec2 second;
 	Vec2 center;
@@ -126,7 +126,7 @@ struct GesturePinch : GestureData {
     void cleanup();
 };
 
-class GestureRecognizer : public Ref {
+class SP_PUBLIC GestureRecognizer : public Ref {
 public:
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
@@ -168,7 +168,7 @@ protected:
 	float _density = 1.0f;
 };
 
-class GestureTouchRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureTouchRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
@@ -192,7 +192,7 @@ protected:
 	InputCallback _callback;
 };
 
-class GestureTapRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureTapRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<void(const GestureTap &)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
@@ -219,7 +219,7 @@ protected:
 	InputEvent _tmpEvent;
 };
 
-class GesturePressRecognizer : public GestureRecognizer {
+class SP_PUBLIC GesturePressRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GesturePress &)>;
 
@@ -247,7 +247,7 @@ protected:
 	bool _continuous = false;
 };
 
-class GestureSwipeRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureSwipeRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureSwipe &)>;
 
@@ -277,7 +277,7 @@ protected:
 	bool _includeThreshold = true;
 };
 
-class GesturePinchRecognizer : public GestureRecognizer {
+class SP_PUBLIC GesturePinchRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<void(const GesturePinch &)>;
 
@@ -301,7 +301,7 @@ protected:
 	InputCallback _callback;
 };
 
-class GestureScrollRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureScrollRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureScroll &)>;
 
@@ -318,7 +318,7 @@ protected:
 	InputCallback _callback;
 };
 
-class GestureMoveRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureMoveRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
@@ -341,7 +341,7 @@ protected:
 	bool _onlyWithinNode = true;
 };
 
-class GestureKeyRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureKeyRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 	using KeyMask = std::bitset<toInt(InputKeyCode::Max)>;
@@ -366,7 +366,7 @@ protected:
 	InputCallback _callback;
 };
 
-class GestureMouseOverRecognizer : public GestureRecognizer {
+class SP_PUBLIC GestureMouseOverRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
@@ -394,7 +394,7 @@ protected:
 	InputListener *_listener = nullptr;
 };
 
-std::ostream &operator<<(std::ostream &, GestureEvent);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, GestureEvent);
 
 }
 

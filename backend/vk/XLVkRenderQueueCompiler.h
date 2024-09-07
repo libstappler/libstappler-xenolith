@@ -31,11 +31,11 @@ class TransferQueue;
 class MaterialCompiler;
 class RenderQueueAttachment;
 
-struct RenderQueueInput : public core::AttachmentInputData {
+struct SP_PUBLIC RenderQueueInput : public core::AttachmentInputData {
 	Rc<core::Queue> queue;
 };
 
-class RenderQueueCompiler : public core::Queue {
+class SP_PUBLIC RenderQueueCompiler : public core::Queue {
 public:
 	virtual ~RenderQueueCompiler();
 

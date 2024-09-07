@@ -36,7 +36,7 @@ struct FrameContextHandle;
 class Scene;
 class Director;
 
-class FrameContext : public ResourceOwner {
+class SP_PUBLIC FrameContext : public ResourceOwner {
 public:
 	virtual ~FrameContext();
 
@@ -96,7 +96,7 @@ protected:
 	Vector<core::MaterialId> _revokedIds;
 };
 
-struct FrameContextHandle : public core::AttachmentInputData {
+struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 	Rc<Director> director; // allow to access director from rendering pipeline (to send stats)
 	FrameContext *context = nullptr;
 

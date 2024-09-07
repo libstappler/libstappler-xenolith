@@ -45,7 +45,7 @@ class EventHandlerNode;
  destroyAfterEvent - should be set to true if we need only one-time event handling
  */
 
-class EventHandler {
+class SP_PUBLIC EventHandler {
 public:
 	using Callback = Function<void(const Event &)>;
 
@@ -66,7 +66,7 @@ private:
 	Set<Rc<EventHandlerNode>> _handlers;
 };
 
-class EventHandlerNode : public Ref {
+class SP_PUBLIC EventHandlerNode : public Ref {
 public:
 	using Callback = Function<void(const Event &)>;
 

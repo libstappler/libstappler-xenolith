@@ -38,7 +38,7 @@ using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
 using Extent1 = ValueWrapper<uint32_t, class Extent1Flag>;
 using BaseArrayLayer = ValueWrapper<uint32_t, class BaseArrayLayerFlag>;
 
-struct SamplerInfo {
+struct SP_PUBLIC SamplerInfo {
 	Filter magFilter = Filter::Nearest;
 	Filter minFilter = Filter::Nearest;
 	SamplerMipmapMode mipmapMode = SamplerMipmapMode::Nearest;
@@ -60,7 +60,7 @@ using ForceBufferFlags = ValueWrapper<BufferFlags, class ForceBufferFlagsFlag>;
 using ForceBufferUsage = ValueWrapper<BufferUsage, class ForceBufferUsageFlag>;
 using BufferPersistent = ValueWrapper<bool, class BufferPersistentFlag>;
 
-struct BufferInfo : NamedMem {
+struct SP_PUBLIC BufferInfo : NamedMem {
 	BufferFlags flags = BufferFlags::None;
 	BufferUsage usage = BufferUsage::TransferDst;
 
@@ -99,7 +99,7 @@ struct BufferInfo : NamedMem {
 	String description() const;
 };
 
-struct BufferData : BufferInfo {
+struct SP_PUBLIC BufferData : BufferInfo {
 	using DataCallback = memory::callback<void(BytesView)>;
 
 	BytesView data;
@@ -119,7 +119,7 @@ using ForceImageUsage = ValueWrapper<ImageUsage, class ForceImageUsageFlag>;
 
 struct ImageViewInfo;
 
-struct ImageInfoData {
+struct SP_PUBLIC ImageInfoData {
 	ImageFormat format = ImageFormat::Undefined;
 	ImageFlags flags = ImageFlags::None;
 	ImageType imageType = ImageType::Image2D;
@@ -184,7 +184,7 @@ struct ImageInfoData {
 #endif
 };
 
-struct ImageInfo : NamedMem, ImageInfoData {
+struct SP_PUBLIC ImageInfo : NamedMem, ImageInfoData {
 	ImageInfo() = default;
 
 	template<typename ... Args>
@@ -234,7 +234,7 @@ struct ImageInfo : NamedMem, ImageInfoData {
 	String description() const;
 };
 
-struct ImageData : ImageInfo {
+struct SP_PUBLIC ImageData : ImageInfo {
 	using DataCallback = memory::callback<void(BytesView)>;
 
 	BytesView data;
@@ -255,7 +255,7 @@ using ComponentMappingG = ValueWrapper<ComponentMapping, class ComponentMappingG
 using ComponentMappingB = ValueWrapper<ComponentMapping, class ComponentMappingBFlag>;
 using ComponentMappingA = ValueWrapper<ComponentMapping, class ComponentMappingAFlag>;
 
-struct ImageViewInfo {
+struct SP_PUBLIC ImageViewInfo {
 	ImageFormat format = ImageFormat::Undefined; // inherited from Image if undefined
 	ImageViewType type = ImageViewType::ImageView2D;
 	ComponentMapping r = ComponentMapping::Identity;
@@ -330,7 +330,7 @@ struct ImageViewInfo {
 #endif
 };
 
-struct FrameContraints {
+struct SP_PUBLIC FrameContraints {
 	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
@@ -394,7 +394,7 @@ struct FrameContraints {
 	constexpr bool operator!=(const FrameContraints &) const = default;
 };
 
-struct SwapchainConfig {
+struct SP_PUBLIC SwapchainConfig {
 	PresentMode presentMode = PresentMode::Mailbox;
 	PresentMode presentModeFast = PresentMode::Unsupported;
 	ImageFormat imageFormat = ImageFormat::R8G8B8A8_UNORM;
@@ -412,7 +412,7 @@ struct SwapchainConfig {
 	constexpr bool operator!=(const SwapchainConfig &) const = default;
 };
 
-struct SurfaceInfo {
+struct SP_PUBLIC SurfaceInfo {
 	uint32_t minImageCount;
 	uint32_t maxImageCount;
 	Extent2 currentExtent;
@@ -432,29 +432,29 @@ struct SurfaceInfo {
 	String description() const;
 };
 
-String getBufferFlagsDescription(BufferFlags fmt);
-String getBufferUsageDescription(BufferUsage fmt);
-String getImageFlagsDescription(ImageFlags fmt);
-String getSampleCountDescription(SampleCount fmt);
-StringView getImageTypeName(ImageType type);
-StringView getImageViewTypeName(ImageViewType type);
-StringView getImageFormatName(ImageFormat fmt);
-StringView getImageTilingName(ImageTiling type);
-StringView getComponentMappingName(ComponentMapping);
-StringView getPresentModeName(PresentMode);
-StringView getColorSpaceName(ColorSpace);
-String getCompositeAlphaFlagsDescription(CompositeAlphaFlags);
-String getSurfaceTransformFlagsDescription(SurfaceTransformFlags);
-String getImageUsageDescription(ImageUsage fmt);
-size_t getFormatBlockSize(ImageFormat format);
-PixelFormat getImagePixelFormat(ImageFormat format);
-bool isStencilFormat(ImageFormat format);
-bool isDepthFormat(ImageFormat format);
+SP_PUBLIC String getBufferFlagsDescription(BufferFlags fmt);
+SP_PUBLIC String getBufferUsageDescription(BufferUsage fmt);
+SP_PUBLIC String getImageFlagsDescription(ImageFlags fmt);
+SP_PUBLIC String getSampleCountDescription(SampleCount fmt);
+SP_PUBLIC StringView getImageTypeName(ImageType type);
+SP_PUBLIC StringView getImageViewTypeName(ImageViewType type);
+SP_PUBLIC StringView getImageFormatName(ImageFormat fmt);
+SP_PUBLIC StringView getImageTilingName(ImageTiling type);
+SP_PUBLIC StringView getComponentMappingName(ComponentMapping);
+SP_PUBLIC StringView getPresentModeName(PresentMode);
+SP_PUBLIC StringView getColorSpaceName(ColorSpace);
+SP_PUBLIC String getCompositeAlphaFlagsDescription(CompositeAlphaFlags);
+SP_PUBLIC String getSurfaceTransformFlagsDescription(SurfaceTransformFlags);
+SP_PUBLIC String getImageUsageDescription(ImageUsage fmt);
+SP_PUBLIC size_t getFormatBlockSize(ImageFormat format);
+SP_PUBLIC PixelFormat getImagePixelFormat(ImageFormat format);
+SP_PUBLIC bool isStencilFormat(ImageFormat format);
+SP_PUBLIC bool isDepthFormat(ImageFormat format);
 
-bool hasReadAccess(AccessType);
-bool hasWriteAccess(AccessType);
+SP_PUBLIC bool hasReadAccess(AccessType);
+SP_PUBLIC bool hasWriteAccess(AccessType);
 
-std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value);
+SP_PUBLIC std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value);
 
 }
 

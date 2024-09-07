@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-struct LoaderTable {
+struct SP_PUBLIC LoaderTable {
 	LoaderTable(PFN_vkGetInstanceProcAddr addr);
 
 #if defined(VK_VERSION_1_0)
@@ -43,7 +43,7 @@ struct LoaderTable {
 #endif /* defined(VK_VERSION_1_1) */
 };
 
-struct InstanceTable {
+struct SP_PUBLIC InstanceTable {
 #if VK_HOOK_DEBUG
 	static InstanceTable makeHooks();
 #endif /* VK_HOOK_DEBUG */
@@ -269,7 +269,7 @@ struct InstanceTable {
 #endif /* defined(VK_KHR_cooperative_matrix) */
 };
 
-struct DeviceTable {
+struct SP_PUBLIC DeviceTable {
 #if VK_HOOK_DEBUG
 	static DeviceTable makeHooks();
 #endif /* VK_HOOK_DEBUG */

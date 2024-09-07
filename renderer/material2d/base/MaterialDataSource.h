@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class DataSource : public Subscription {
+class SP_PUBLIC DataSource : public Subscription {
 public:
 	using ChildsCount = ValueWrapper<size_t, class ChildsCountClassFlag>;
 

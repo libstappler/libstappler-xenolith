@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class DataScrollHandlerSlice : public DataScroll::Handler {
+class SP_PUBLIC DataScrollHandlerSlice : public DataScroll::Handler {
 public:
 	using DataCallback = Function<Rc<DataScroll::Item> (DataScrollHandlerSlice *h, Value &&, Vec2)>;
 

@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-struct GradientStep {
+struct SP_PUBLIC GradientStep {
 	float value = 0.0f;
 	float factor = 0.0f;
 	Color4F color = Color4F::WHITE;
@@ -40,7 +40,7 @@ struct GradientStep {
 	GradientStep &operator=(const GradientStep &) = default;
 };
 
-struct LinearGradientData : public Ref {
+struct SP_PUBLIC LinearGradientData : public Ref {
 	virtual ~LinearGradientData() = default;
 
 	Vec2 start;
@@ -52,7 +52,7 @@ struct LinearGradientData : public Ref {
 	LinearGradientData(LinearGradientData &&);
 };
 
-class LinearGradient : public Ref {
+class SP_PUBLIC LinearGradient : public Ref {
 public:
 	virtual ~LinearGradient() = default;
 

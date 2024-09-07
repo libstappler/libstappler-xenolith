@@ -47,14 +47,14 @@ enum class AllocationType {
 	Optimal,
 };
 
-struct MemoryRequirements {
+struct SP_PUBLIC MemoryRequirements {
 	VkMemoryRequirements requirements;
 	VkDeviceSize targetOffset;
 	bool prefersDedicated = false;
 	bool requiresDedicated = false;
 };
 
-class Allocator : public Ref {
+class SP_PUBLIC Allocator : public Ref {
 public:
 	static constexpr uint64_t PageSize = 8_MiB;
 	static constexpr uint64_t MaxIndex = 20; // Largest block
@@ -183,7 +183,7 @@ protected:
 	bool _hasDedicated = false;
 };
 
-class DeviceMemoryPool : public Ref {
+class SP_PUBLIC DeviceMemoryPool : public Ref {
 public:
 	struct MemData {
 		Allocator::MemType *type = nullptr;

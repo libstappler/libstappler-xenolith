@@ -80,67 +80,67 @@ enum Type {
 	Max
 };
 
-float interpolateTo(float time, Type type, float *easingParam);
+SP_PUBLIC float interpolateTo(float time, Type type, float *easingParam);
 
-float linear(float time);
+SP_PUBLIC float linear(float time);
 
-float easeIn(float time, float rate);
-float easeOut(float time, float rate);
-float easeInOut(float time, float rate);
+SP_PUBLIC float easeIn(float time, float rate);
+SP_PUBLIC float easeOut(float time, float rate);
+SP_PUBLIC float easeInOut(float time, float rate);
 
-float bezieratFunction(float t, float a, float b, float c, float d);
+SP_PUBLIC float bezieratFunction(float t, float a, float b, float c, float d);
 
-float quadraticIn(float time);
-float quadraticOut(float time);
-float quadraticInOut(float time);
+SP_PUBLIC float quadraticIn(float time);
+SP_PUBLIC float quadraticOut(float time);
+SP_PUBLIC float quadraticInOut(float time);
 
-float sineEaseIn(float time);
-float sineEaseOut(float time);
-float sineEaseInOut(float time);
+SP_PUBLIC float sineEaseIn(float time);
+SP_PUBLIC float sineEaseOut(float time);
+SP_PUBLIC float sineEaseInOut(float time);
 
-float quadEaseIn(float time);
-float quadEaseOut(float time);
-float quadEaseInOut(float time);
+SP_PUBLIC float quadEaseIn(float time);
+SP_PUBLIC float quadEaseOut(float time);
+SP_PUBLIC float quadEaseInOut(float time);
 
-float cubicEaseIn(float time);
-float cubicEaseOut(float time);
-float cubicEaseInOut(float time);
+SP_PUBLIC float cubicEaseIn(float time);
+SP_PUBLIC float cubicEaseOut(float time);
+SP_PUBLIC float cubicEaseInOut(float time);
 
-float quartEaseIn(float time);
-float quartEaseOut(float time);
-float quartEaseInOut(float time);
+SP_PUBLIC float quartEaseIn(float time);
+SP_PUBLIC float quartEaseOut(float time);
+SP_PUBLIC float quartEaseInOut(float time);
 
-float quintEaseIn(float time);
-float quintEaseOut(float time);
-float quintEaseInOut(float time);
+SP_PUBLIC float quintEaseIn(float time);
+SP_PUBLIC float quintEaseOut(float time);
+SP_PUBLIC float quintEaseInOut(float time);
 
-float expoEaseIn(float time);
-float expoEaseOut(float time);
-float expoEaseInOut(float time);
+SP_PUBLIC float expoEaseIn(float time);
+SP_PUBLIC float expoEaseOut(float time);
+SP_PUBLIC float expoEaseInOut(float time);
 
-float circEaseIn(float time);
-float circEaseOut(float time);
-float circEaseInOut(float time);
+SP_PUBLIC float circEaseIn(float time);
+SP_PUBLIC float circEaseOut(float time);
+SP_PUBLIC float circEaseInOut(float time);
 
-float elasticEaseIn(float time, float period);
-float elasticEaseOut(float time, float period);
-float elasticEaseInOut(float time, float period);
+SP_PUBLIC float elasticEaseIn(float time, float period);
+SP_PUBLIC float elasticEaseOut(float time, float period);
+SP_PUBLIC float elasticEaseInOut(float time, float period);
 
-float backEaseIn(float time);
-float backEaseOut(float time);
-float backEaseInOut(float time);
+SP_PUBLIC float backEaseIn(float time);
+SP_PUBLIC float backEaseOut(float time);
+SP_PUBLIC float backEaseInOut(float time);
 
-float bounceEaseIn(float time);
-float bounceEaseOut(float time);
-float bounceEaseInOut(float time);
+SP_PUBLIC float bounceEaseIn(float time);
+SP_PUBLIC float bounceEaseOut(float time);
+SP_PUBLIC float bounceEaseInOut(float time);
 
-float customEase(float time, float *easingParam);
+SP_PUBLIC float customEase(float time, float *easingParam);
 
 }
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class ActionEase : public ActionInterval {
+class SP_PUBLIC ActionEase : public ActionInterval {
 public:
 	virtual ~ActionEase();
 
@@ -154,7 +154,7 @@ protected:
 	Rc<ActionInterval> _inner;
 };
 
-class EaseRateAction : public ActionEase {
+class SP_PUBLIC EaseRateAction : public ActionEase {
 public:
 	virtual ~EaseRateAction();
 
@@ -174,7 +174,7 @@ protected:
          \f${ time }^{ rate }\f$.
  @ingroup Actions
  */
-class EaseIn : public EaseRateAction {
+class SP_PUBLIC EaseIn : public EaseRateAction {
 public:
 	SP_COVERAGE_TRIVIAL
 	virtual ~EaseIn() { }
@@ -189,7 +189,7 @@ public:
          \f${ time }^ { (1/rate) }\f$.
  @ingroup Actions
  */
-class EaseOut: public EaseRateAction {
+class SP_PUBLIC EaseOut: public EaseRateAction {
 public:
 	SP_COVERAGE_TRIVIAL
 	virtual ~EaseOut() { }
@@ -206,7 +206,7 @@ public:
 		 \f$1.0-0.5*{ 2-time }^{ rate }\f$.
  @ingroup Actions
  */
-class EaseInOut: public EaseRateAction {
+class SP_PUBLIC EaseInOut: public EaseRateAction {
 public:
 	SP_COVERAGE_TRIVIAL
 	virtual ~EaseInOut() { }
@@ -221,7 +221,7 @@ public:
 		 \f${ 2 }^{ 10*(time-1) }-1*0.001\f$.
  @ingroup Actions
  */
-class EaseExponentialIn: public ActionEase {
+class SP_PUBLIC EaseExponentialIn: public ActionEase {
 public:
 	virtual ~EaseExponentialIn() { }
 
@@ -235,7 +235,7 @@ public:
 		 \f$1-{ 2 }^{ -10*(time-1) }\f$.
  @ingroup Actions
  */
-class EaseExponentialOut : public ActionEase {
+class SP_PUBLIC EaseExponentialOut : public ActionEase {
 public:
 	virtual ~EaseExponentialOut() { }
 
@@ -251,7 +251,7 @@ public:
 		 \f$0.5*(2-{ 2 }^{ -10*(time-1) })\f$.
  @ingroup Actions
  */
-class EaseExponentialInOut : public ActionEase {
+class SP_PUBLIC EaseExponentialInOut : public ActionEase {
 public:
 	virtual ~EaseExponentialInOut() { }
 
@@ -265,7 +265,7 @@ public:
 		 \f$1-cos(time*\frac { \pi  }{ 2 } )\f$.
  @ingroup Actions
  */
-class EaseSineIn : public ActionEase {
+class SP_PUBLIC EaseSineIn : public ActionEase {
 public:
 	virtual ~EaseSineIn() { }
 
@@ -279,7 +279,7 @@ public:
 		 \f$sin(time*\frac { \pi  }{ 2 } )\f$.
  @ingroup Actions
  */
-class EaseSineOut : public ActionEase {
+class SP_PUBLIC EaseSineOut : public ActionEase {
 public:
 	virtual ~EaseSineOut() { }
 
@@ -293,7 +293,7 @@ public:
 		 \f$-0.5*(cos(\pi *time)-1)\f$.
  @ingroup Actions
  */
-class EaseSineInOut : public ActionEase {
+class SP_PUBLIC EaseSineInOut : public ActionEase {
 public:
 	virtual ~EaseSineInOut() { }
 
@@ -306,7 +306,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseElastic : public ActionEase {
+class SP_PUBLIC EaseElastic : public ActionEase {
 public:
 	SP_COVERAGE_TRIVIAL
 	virtual ~EaseElastic() { }
@@ -332,7 +332,7 @@ protected:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseElasticIn : public EaseElastic {
+class SP_PUBLIC EaseElasticIn : public EaseElastic {
 public:
 	virtual ~EaseElasticIn() { }
 
@@ -350,7 +350,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseElasticOut : public EaseElastic {
+class SP_PUBLIC EaseElasticOut : public EaseElastic {
 public:
 	virtual ~EaseElasticOut() { }
 
@@ -365,7 +365,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseElasticInOut : public EaseElastic {
+class SP_PUBLIC EaseElasticInOut : public EaseElastic {
 public:
 	virtual ~EaseElasticInOut() { }
 
@@ -380,7 +380,7 @@ public:
  @since v0.8.2
  @ingroup Actions
 */
-class EaseBounceIn : public ActionEase {
+class SP_PUBLIC EaseBounceIn : public ActionEase {
 public:
 	virtual ~EaseBounceIn() { }
 
@@ -395,7 +395,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseBounceOut : public ActionEase {
+class SP_PUBLIC EaseBounceOut : public ActionEase {
 public:
 	virtual ~EaseBounceOut() { }
 
@@ -410,7 +410,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseBounceInOut : public ActionEase {
+class SP_PUBLIC EaseBounceInOut : public ActionEase {
 public:
 	virtual ~EaseBounceInOut() { }
 
@@ -425,7 +425,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseBackIn : public ActionEase {
+class SP_PUBLIC EaseBackIn : public ActionEase {
 public:
 	virtual ~EaseBackIn() { }
 
@@ -440,7 +440,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseBackOut : public ActionEase {
+class SP_PUBLIC EaseBackOut : public ActionEase {
 public:
 	virtual ~EaseBackOut() { }
 
@@ -455,7 +455,7 @@ public:
  @since v0.8.2
  @ingroup Actions
  */
-class EaseBackInOut : public ActionEase {
+class SP_PUBLIC EaseBackInOut : public ActionEase {
 public:
 	virtual ~EaseBackInOut() { }
 
@@ -467,7 +467,7 @@ public:
 @brief Ease Bezier
 @ingroup Actions
 */
-class EaseBezierAction : public ActionEase {
+class SP_PUBLIC EaseBezierAction : public ActionEase {
 public:
 	virtual ~EaseBezierAction() { }
 
@@ -487,7 +487,7 @@ protected:
 @brief Ease Quadratic In
 @ingroup Actions
 */
-class EaseQuadraticActionIn : public ActionEase {
+class SP_PUBLIC EaseQuadraticActionIn : public ActionEase {
 public:
 	virtual ~EaseQuadraticActionIn() { }
 
@@ -499,7 +499,7 @@ public:
 @brief Ease Quadratic Out
 @ingroup Actions
 */
-class EaseQuadraticActionOut : public ActionEase {
+class SP_PUBLIC EaseQuadraticActionOut : public ActionEase {
 public:
 	virtual ~EaseQuadraticActionOut() { }
 
@@ -511,7 +511,7 @@ public:
 @brief Ease Quadratic InOut
 @ingroup Actions
 */
-class EaseQuadraticActionInOut : public ActionEase {
+class SP_PUBLIC EaseQuadraticActionInOut : public ActionEase {
 public:
 	virtual ~EaseQuadraticActionInOut() { }
 
@@ -523,7 +523,7 @@ public:
 @brief Ease Quartic In
 @ingroup Actions
 */
-class EaseQuarticActionIn : public ActionEase {
+class SP_PUBLIC EaseQuarticActionIn : public ActionEase {
 public:
 	virtual ~EaseQuarticActionIn() { }
 
@@ -535,7 +535,7 @@ public:
 @brief Ease Quartic Out
 @ingroup Actions
 */
-class EaseQuarticActionOut : public ActionEase {
+class SP_PUBLIC EaseQuarticActionOut : public ActionEase {
 public:
 	virtual ~EaseQuarticActionOut() { }
 
@@ -547,7 +547,7 @@ public:
 @brief Ease Quartic InOut
 @ingroup Actions
 */
-class EaseQuarticActionInOut : public ActionEase {
+class SP_PUBLIC EaseQuarticActionInOut : public ActionEase {
 public:
 	virtual ~EaseQuarticActionInOut() { }
 
@@ -559,7 +559,7 @@ public:
 @brief Ease Quintic In
 @ingroup Actions
 */
-class EaseQuinticActionIn : public ActionEase {
+class SP_PUBLIC EaseQuinticActionIn : public ActionEase {
 public:
 	virtual ~EaseQuinticActionIn() { }
 
@@ -571,7 +571,7 @@ public:
 @brief Ease Quintic Out
 @ingroup Actions
 */
-class EaseQuinticActionOut : public ActionEase {
+class SP_PUBLIC EaseQuinticActionOut : public ActionEase {
 public:
 	virtual ~EaseQuinticActionOut() { }
 
@@ -583,7 +583,7 @@ public:
 @brief Ease Quintic InOut
 @ingroup Actions
 */
-class EaseQuinticActionInOut : public ActionEase {
+class SP_PUBLIC EaseQuinticActionInOut : public ActionEase {
 public:
 	virtual ~EaseQuinticActionInOut() { }
 
@@ -595,7 +595,7 @@ public:
 @brief Ease Circle In
 @ingroup Actions
 */
-class EaseCircleActionIn : public ActionEase {
+class SP_PUBLIC EaseCircleActionIn : public ActionEase {
 public:
 	virtual ~EaseCircleActionIn() { }
 
@@ -607,7 +607,7 @@ public:
 @brief Ease Circle Out
 @ingroup Actions
 */
-class EaseCircleActionOut : public ActionEase {
+class SP_PUBLIC EaseCircleActionOut : public ActionEase {
 public:
 	virtual ~EaseCircleActionOut() { }
 
@@ -619,7 +619,7 @@ public:
 @brief Ease Circle InOut
 @ingroup Actions
 */
-class EaseCircleActionInOut : public ActionEase {
+class SP_PUBLIC EaseCircleActionInOut : public ActionEase {
 public:
 	virtual ~EaseCircleActionInOut() {}
 
@@ -631,7 +631,7 @@ public:
 @brief Ease Cubic In
 @ingroup Actions
 */
-class EaseCubicActionIn : public ActionEase {
+class SP_PUBLIC EaseCubicActionIn : public ActionEase {
 public:
 	virtual ~EaseCubicActionIn() { }
 
@@ -643,7 +643,7 @@ public:
 @brief Ease Cubic Out
 @ingroup Actions
 */
-class EaseCubicActionOut : public ActionEase {
+class SP_PUBLIC EaseCubicActionOut : public ActionEase {
 public:
 	virtual ~EaseCubicActionOut() { }
 
@@ -655,7 +655,7 @@ public:
 @brief Ease Cubic InOut
 @ingroup Actions
 */
-class EaseCubicActionInOut : public ActionEase {
+class SP_PUBLIC EaseCubicActionInOut : public ActionEase {
 public:
 	virtual ~EaseCubicActionInOut() { }
 

@@ -30,7 +30,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 // Frame emitter is an interface, that continuously spawns frames, and can control validity of a frame
-class FrameEmitter : public Ref {
+class SP_PUBLIC FrameEmitter : public Ref {
 public:
 	virtual ~FrameEmitter();
 

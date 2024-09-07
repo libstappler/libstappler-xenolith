@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 
-struct LoopData : Ref {
+struct SP_PUBLIC LoopData : Ref {
 	using DeviceSupportCallback = Function<bool(const DeviceInfo &)>;
 	using DeviceExtensionsCallback = Function<Vector<StringView>(const DeviceInfo &)>;
 	using DeviceFeaturesCallback = Function<DeviceInfo::Features(const DeviceInfo &)>;
@@ -41,7 +41,7 @@ struct LoopData : Ref {
 	DeviceFeaturesCallback deviceFeaturesCallback;
 };
 
-class Instance : public core::Instance, public InstanceTable {
+class SP_PUBLIC Instance : public core::Instance, public InstanceTable {
 public:
 	using PresentSupportCallback = Function<uint32_t(const Instance *, VkPhysicalDevice device, uint32_t familyIdx)>;
 
@@ -61,14 +61,6 @@ public:
 	void printDevicesInfo(std::ostream &stream) const;
 
 	uint32_t getVersion() const { return _version; }
-
-#if MODULE_XENOLITH_FONT
-	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const override;
-#endif
-
-#if MODULE_XENOLITH_BACKEND_VKGUI
-	virtual Rc<xenolith::View> makeView(Application &, const core::Device &, ViewInfo &&) const override;
-#endif
 
 private:
 	void getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &, ExtensionFlags, uint32_t) const;

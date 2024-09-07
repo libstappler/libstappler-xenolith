@@ -38,7 +38,7 @@ enum class SceneLightType {
 	Direct
 };
 
-class SceneLight : public Ref {
+class SP_PUBLIC SceneLight : public Ref {
 public:
 	virtual ~SceneLight() { }
 

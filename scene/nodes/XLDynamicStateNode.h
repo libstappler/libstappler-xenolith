@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class DynamicStateNode : public Node {
+class SP_PUBLIC DynamicStateNode : public Node {
 public:
 	enum StateApplyMode {
 		DoNotApply,

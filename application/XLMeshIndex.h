@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class MeshIndex : public ResourceObject {
+class SP_PUBLIC MeshIndex : public ResourceObject {
 public:
 	virtual ~MeshIndex();
 

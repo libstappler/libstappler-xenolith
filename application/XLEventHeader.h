@@ -45,7 +45,7 @@ class Event;
 	EventHeader eventHeader(Category);
  */
 
-class EventHeader {
+class SP_PUBLIC EventHeader {
 public:
 	using Category = int;
 	using EventID = int;

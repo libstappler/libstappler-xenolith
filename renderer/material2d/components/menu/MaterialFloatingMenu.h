@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class FloatingMenu : public Menu {
+class SP_PUBLIC FloatingMenu : public Menu {
 public:
 	using CloseCallback = Function<void ()>;
 	using Binding = OverlayLayout::Binding;

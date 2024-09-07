@@ -34,7 +34,7 @@ class Menu;
 class MenuButton;
 class MenuSeparator;
 
-class MenuItemInterface {
+class SP_PUBLIC MenuItemInterface {
 public:
 	virtual ~MenuItemInterface() { }
 
@@ -45,7 +45,7 @@ protected:
 	Menu *_menu = nullptr;
 };
 
-class Menu : public Surface {
+class SP_PUBLIC Menu : public Surface {
 public:
 	constexpr static float MenuVerticalPadding = 16.0f;
 	constexpr static float MenuItemHeight = 48.0f;

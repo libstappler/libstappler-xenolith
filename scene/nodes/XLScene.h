@@ -36,7 +36,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Application;
 class SceneContent;
 
-class Scene : public Node {
+class SP_PUBLIC Scene : public Node {
 public:
 	using Queue = core::Queue;
 	using FrameRequest = core::FrameRequest;

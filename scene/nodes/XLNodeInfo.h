@@ -53,7 +53,7 @@ enum class CommandFlags : uint16_t {
 
 SP_DEFINE_ENUM_AS_MASK(CommandFlags)
 
-struct MaterialInfo {
+struct SP_PUBLIC MaterialInfo {
 	std::array<uint64_t, config::MaxMaterialImages> images = { 0 };
 	std::array<uint16_t, config::MaxMaterialImages> samplers = { 0 };
 	std::array<core::ColorMode, config::MaxMaterialImages> colorModes = { core::ColorMode() };
@@ -75,7 +75,7 @@ struct MaterialInfo {
 	}
 };
 
-struct ZOrderLess {
+struct SP_PUBLIC ZOrderLess {
 	bool operator()(const SpanView<ZOrder> &l, const SpanView<ZOrder> &r) const noexcept {
 		auto len = std::max(l.size(), r.size());
 #if __LCC__ && __LCC__ <= 126
@@ -102,7 +102,7 @@ struct ZOrderLess {
 	}
 };
 
-struct DrawStateValues {
+struct SP_PUBLIC DrawStateValues {
 	core::DynamicState enabled = core::DynamicState::None;
 	URect viewport;
 	URect scissor;
@@ -116,7 +116,7 @@ struct DrawStateValues {
 	bool isViewportEnabled() const { return (enabled & core::DynamicState::Viewport) != core::DynamicState::None; }
 };
 
-struct DrawStat {
+struct SP_PUBLIC DrawStat {
 	uint32_t vertexes;
 	uint32_t triangles;
 	uint32_t zPaths;

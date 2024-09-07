@@ -38,7 +38,7 @@ class ActionManager;
 class Director;
 class FrameContext;
 
-struct ActionStorage : public Ref {
+struct SP_PUBLIC ActionStorage : public Ref {
 	Vector<Rc<Action>> actionToStart;
 
 	void addAction(Rc<Action> &&a);
@@ -49,7 +49,7 @@ struct ActionStorage : public Ref {
 	Action *getActionByTag(uint32_t);
 };
 
-class Node : public Ref {
+class SP_PUBLIC Node : public Ref {
 public:
 	/* Nodes with transparent zOrder will not be added into zPath */
 	static constexpr ZOrder ZOrderTransparent = ZOrder::min();

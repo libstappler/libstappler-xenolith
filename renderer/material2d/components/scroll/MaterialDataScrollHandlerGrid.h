@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class DataScrollHandlerGrid : public DataScroll::Handler {
+class SP_PUBLIC DataScrollHandlerGrid : public DataScroll::Handler {
 public:
 	virtual ~DataScrollHandlerGrid() { }
 

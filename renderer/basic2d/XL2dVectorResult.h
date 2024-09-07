@@ -34,7 +34,7 @@ using VectorImage = vg::VectorImage;
 using VectorPathRef = vg::VectorPathRef;
 using PathWriter = vg::PathWriter;
 
-struct VectorCanvasConfig {
+struct SP_PUBLIC VectorCanvasConfig {
 	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
 	float quality = 1.0f;
 	float boundaryOffset = config::VGAntialiasFactor;
@@ -49,7 +49,7 @@ struct VectorCanvasConfig {
 	bool verbose = false;
 };
 
-struct VectorCanvasResult : public Ref {
+struct SP_PUBLIC VectorCanvasResult : public Ref {
 	Vector<TransformVertexData> data;
 	Vector<TransformVertexData> mut;
 	VectorCanvasConfig config;
@@ -59,7 +59,7 @@ struct VectorCanvasResult : public Ref {
 	void updateColor(const Color4F &);
 };
 
-class VectorCanvasDeferredResult : public DeferredVertexResult {
+class SP_PUBLIC VectorCanvasDeferredResult : public DeferredVertexResult {
 public:
 	virtual ~VectorCanvasDeferredResult();
 

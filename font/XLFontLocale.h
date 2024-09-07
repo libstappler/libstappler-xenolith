@@ -94,48 +94,48 @@ enum class TimeTokens {
 
 extern EventHeader onLocale;
 
-void define(const StringView &locale, LocaleInitList &&);
-void define(const StringView &locale, LocaleIndexList &&);
-void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &);
+SP_PUBLIC void define(const StringView &locale, LocaleInitList &&);
+SP_PUBLIC void define(const StringView &locale, LocaleIndexList &&);
+SP_PUBLIC void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &);
 
-void setDefault(const String &);
-const String &getDefault();
+SP_PUBLIC void setDefault(StringView);
+SP_PUBLIC StringView getDefault();
 
-void setLocale(const String &);
-const String &getLocale();
+SP_PUBLIC void setLocale(StringView);
+SP_PUBLIC StringView getLocale();
 
-void setNumRule(const String &, NumRule &&);
+SP_PUBLIC void setNumRule(const String &, NumRule &&);
 
-WideStringView string(const WideStringView &);
-WideStringView string(size_t);
+SP_PUBLIC WideStringView string(const WideStringView &);
+SP_PUBLIC WideStringView string(size_t);
 
 template <char ... Chars>
-WideStringView string(const metastring::metastring<Chars...> &str) {
+SP_PUBLIC WideStringView string(const metastring::metastring<Chars...> &str) {
 	return string(WideStringView(str.to_std_ustring()));
 }
 
-WideStringView numeric(const WideStringView &, uint32_t);
+SP_PUBLIC WideStringView numeric(const WideStringView &, uint32_t);
 
 template <char ... Chars>
-WideStringView numeric(const metastring::metastring<Chars...> &str, uint32_t n) {
+SP_PUBLIC WideStringView numeric(const metastring::metastring<Chars...> &str, uint32_t n) {
 	return numeric(WideStringView(str.to_std_ustring()), n);
 }
 
-bool hasLocaleTagsFast(const WideStringView &);
-bool hasLocaleTags(const WideStringView &);
-WideString resolveLocaleTags(const WideStringView &);
+SP_PUBLIC bool hasLocaleTagsFast(const WideStringView &);
+SP_PUBLIC bool hasLocaleTags(const WideStringView &);
+SP_PUBLIC WideString resolveLocaleTags(const WideStringView &);
 
-String language(const StringView &locale);
+SP_PUBLIC String language(const StringView &locale);
 
 // convert locale name to common form ('en-us', 'ru-ru', 'fr-fr')
-String common(const StringView &locale);
+SP_PUBLIC String common(const StringView &locale);
 
-StringView timeToken(TimeTokens);
+SP_PUBLIC StringView timeToken(TimeTokens);
 
-const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTable();
+SP_PUBLIC const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTable();
 
-String localDate(Time);
-String localDate(const std::array<StringView, toInt(TimeTokens::Max)> &, Time);
+SP_PUBLIC String localDate(Time);
+SP_PUBLIC String localDate(const std::array<StringView, toInt(TimeTokens::Max)> &, Time);
 
 }
 

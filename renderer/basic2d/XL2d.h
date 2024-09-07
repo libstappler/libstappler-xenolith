@@ -129,7 +129,7 @@ struct SdfPrimitive2DHeader {
 	BytesView bytes;
 };
 
-class DeferredVertexResult : public Ref {
+class SP_PUBLIC DeferredVertexResult : public Ref {
 public:
 	virtual ~DeferredVertexResult() { }
 
@@ -145,7 +145,7 @@ protected:
 	std::atomic<bool> _isReady;
 };
 
-struct ShadowLightInput {
+struct SP_PUBLIC ShadowLightInput {
 	Color4F globalColor = Color4F::BLACK;
 	uint32_t ambientLightCount = 0;
 	uint32_t directLightCount = 0;

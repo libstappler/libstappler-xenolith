@@ -35,7 +35,7 @@ enum class ResourceType {
 	MeshIndex
 };
 
-class ResourceObject : public NamedRef {
+class SP_PUBLIC ResourceObject : public NamedRef {
 public:
 	virtual ~ResourceObject();
 

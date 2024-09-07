@@ -134,7 +134,7 @@ inline String getVersionDescription(uint32_t version) {
 	return toString(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b1111111111, ".", version & 0b111111111111);
 }
 
-class PoolRef : public Ref {
+class SP_PUBLIC PoolRef : public Ref {
 public:
 	virtual ~PoolRef() {
 		memory::pool::destroy(_pool);
@@ -166,17 +166,17 @@ protected:
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::profiling {
 
-struct ProfileData {
+struct SP_PUBLIC ProfileData {
 	uint64_t timestamp;
 	StringView tag;
 	StringView variant;
 	uint64_t limit;
 };
 
-ProfileData begin(StringView tag, StringView variant, uint64_t limit);
+SP_PUBLIC ProfileData begin(StringView tag, StringView variant, uint64_t limit);
 
-void end(ProfileData &);
-void store(ProfileData &);
+SP_PUBLIC void end(ProfileData &);
+SP_PUBLIC void store(ProfileData &);
 
 #define XL_PROFILE_DEBUG 0
 

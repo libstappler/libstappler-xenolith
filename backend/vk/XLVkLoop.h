@@ -34,7 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 class Device;
 class View;
 
-class Loop : public core::Loop {
+class SP_PUBLIC Loop : public core::Loop {
 public:
 	struct Timer;
 	struct Internal;

@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-class ImageStorage : public Ref {
+class SP_PUBLIC ImageStorage : public Ref {
 public:
 	virtual ~ImageStorage();
 

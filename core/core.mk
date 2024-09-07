@@ -30,6 +30,9 @@ MODULE_XENOLITH_CORE_DEPENDS_ON := \
 	stappler_geom \
 	stappler_font
 
+MODULE_XENOLITH_CORE_SHARED_CONSUME := \
+	xenolith_platform
+
 ifdef VULKAN_SDK_PREFIX
 MODULE_XENOLITH_CORE_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)
 endif

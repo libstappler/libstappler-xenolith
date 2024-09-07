@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class SwapchainImage;
 
-class Surface : public Ref {
+class SP_PUBLIC Surface : public Ref {
 public:
 	virtual ~Surface();
 
@@ -46,7 +46,7 @@ protected:
 	VkSurfaceKHR _surface = VK_NULL_HANDLE;
 };
 
-class SwapchainHandle : public core::Object {
+class SP_PUBLIC SwapchainHandle : public core::Object {
 public:
 	using ImageStorage = core::ImageStorage;
 
@@ -120,7 +120,7 @@ protected:
 	Rc<Surface> _surface;
 };
 
-class SwapchainImage : public core::ImageStorage {
+class SP_PUBLIC SwapchainImage : public core::ImageStorage {
 public:
 	enum class State {
 		Initial,

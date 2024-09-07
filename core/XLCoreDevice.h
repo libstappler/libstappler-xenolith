@@ -33,7 +33,7 @@ class Instance;
 class Object;
 class Loop;
 
-class Device : public Ref {
+class SP_PUBLIC Device : public Ref {
 public:
 	using DescriptorType = core::DescriptorType;
 	using ImageStorage = core::ImageStorage;

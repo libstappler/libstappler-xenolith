@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 using VectorPath = stappler::vg::VectorPath;
 
-class VectorCanvas : public Ref {
+class SP_PUBLIC VectorCanvas : public Ref {
 public:
 	static Rc<VectorCanvas> getInstance(bool deferred = false);
 

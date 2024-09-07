@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class LinuxViewInterface : public Ref {
+class SP_PUBLIC LinuxViewInterface : public Ref {
 public:
 	virtual ~LinuxViewInterface() { }
 

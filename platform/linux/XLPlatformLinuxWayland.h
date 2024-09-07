@@ -52,7 +52,7 @@ struct WaylandDecoration;
 struct XdgInterface;
 struct ViewporterInterface;
 
-class WaylandLibrary : public Ref {
+class SP_PUBLIC WaylandLibrary : public Ref {
 public:
 	struct ConnectionData {
 		struct wl_display *display = nullptr;
@@ -586,7 +586,7 @@ protected:
 	ConnectionData _current;
 };
 
-struct WaylandDisplay : Ref {
+struct SP_PUBLIC WaylandDisplay : Ref {
 	virtual ~WaylandDisplay();
 
 	bool init(const Rc<WaylandLibrary> &);
@@ -662,7 +662,7 @@ enum class WaylandDecorationName {
 	IconRestore
 };
 
-struct WaylandCursorTheme : public Ref {
+struct SP_PUBLIC WaylandCursorTheme : public Ref {
 	~WaylandCursorTheme();
 
 	bool init(WaylandDisplay *, StringView name, int size);
@@ -677,7 +677,7 @@ struct WaylandCursorTheme : public Ref {
 	Vector<wl_cursor *> cursors;
 };
 
-struct WaylandBuffer : Ref {
+struct SP_PUBLIC WaylandBuffer : Ref {
 	virtual ~WaylandBuffer();
 
 	bool init(WaylandLibrary *lib, wl_shm_pool *wl_shm_pool, int32_t offset,
@@ -689,7 +689,7 @@ struct WaylandBuffer : Ref {
 	uint32_t height = 0;
 };
 
-struct WaylandShm : Ref {
+struct SP_PUBLIC WaylandShm : Ref {
 	enum Format {
 		ARGB = WL_SHM_FORMAT_ARGB8888,
 		xRGB = WL_SHM_FORMAT_XRGB8888
@@ -745,7 +745,7 @@ struct WaylandShm : Ref {
 	uint32_t format;
 };
 
-struct WaylandOutput : Ref {
+struct SP_PUBLIC WaylandOutput : Ref {
 	struct Geometry {
 		int32_t x;
 		int32_t y;
@@ -781,7 +781,7 @@ struct WaylandOutput : Ref {
 	String desc;
 };
 
-struct WaylandSeat : Ref {
+struct SP_PUBLIC WaylandSeat : Ref {
 	struct KeyState {
 		xkb_mod_index_t controlIndex = 0;
 		xkb_mod_index_t altIndex = 0;
@@ -838,7 +838,7 @@ struct WaylandSeat : Ref {
 	Set<WaylandViewInterface *> keyboardViews;
 };
 
-struct WaylandDecoration : Ref {
+struct SP_PUBLIC WaylandDecoration : Ref {
 	virtual ~WaylandDecoration();
 
 	bool init(WaylandViewInterface *, Rc<WaylandBuffer> &&buffer, Rc<WaylandBuffer> &&active, WaylandDecorationName);
@@ -888,7 +888,7 @@ struct WaylandDecoration : Ref {
 	bool waitForMove = false;
 };
 
-class WaylandViewInterface {
+class SP_PUBLIC WaylandViewInterface {
 public:
 	virtual ~WaylandViewInterface() { }
 

@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-struct SnackbarData {
+struct SP_PUBLIC SnackbarData {
 	String text;
 	Color textColor = Color::White;
 	float textBlendValue = 0.0f;

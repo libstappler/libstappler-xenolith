@@ -37,7 +37,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 class Button;
 class MenuSourceButton;
 
-class MenuSourceItem : public Subscription {
+class SP_PUBLIC MenuSourceItem : public Subscription {
 public:
 	enum class Type {
 		Separator,
@@ -72,7 +72,7 @@ protected:
 	AttachCallback _detachCallback;
 };
 
-class MenuSourceCustom : public MenuSourceItem {
+class SP_PUBLIC MenuSourceCustom : public MenuSourceItem {
 public:
 	using FactoryFunction = Function<Rc<Node>(Node *, MenuSourceCustom *)>;
 	using HeightFunction = Function<float(Node *, float)>;
@@ -94,7 +94,7 @@ protected:
 	FactoryFunction _function = nullptr;
 };
 
-class MenuSource : public Subscription {
+class SP_PUBLIC MenuSource : public Subscription {
 public:
 	using Callback = Function<void (Button *b, MenuSourceButton *)>;
 	using FactoryFunction = MenuSourceCustom::FactoryFunction;
@@ -127,7 +127,7 @@ protected:
 	size_t _hintCount = 0;
 };
 
-class MenuSourceButton : public MenuSourceItem {
+class SP_PUBLIC MenuSourceButton : public MenuSourceItem {
 public:
 	using Callback = Function<void (Button *b, MenuSourceButton *)>;
 

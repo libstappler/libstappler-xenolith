@@ -37,7 +37,7 @@ enum class ViewDecorationFlags {
 
 SP_DEFINE_ENUM_AS_MASK(ViewDecorationFlags)
 
-class DecoratedLayout : public SceneLayout2d {
+class SP_PUBLIC DecoratedLayout : public SceneLayout2d {
 public:
 	virtual ~DecoratedLayout() { }
 

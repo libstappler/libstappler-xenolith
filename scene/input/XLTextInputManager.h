@@ -39,7 +39,7 @@ class TextInputManager;
 // - Whole input string from handler will be transferred to device input manager, so, try to
 // keep it small (e.g. when working with paragraphs, send only current paragraph). Large
 // strings can significantly reduce performance
-struct TextInputHandler {
+struct SP_PUBLIC TextInputHandler {
 	Function<void(WideStringView, TextCursor, TextCursor)> onText;
 	Function<void(bool, const Rect &, float)> onKeyboard;
 	Function<void(bool)> onInput;
@@ -65,7 +65,7 @@ struct TextInputHandler {
 	bool isActive() const;
 };
 
-class TextInputManager : public Ref {
+class SP_PUBLIC TextInputManager : public Ref {
 public:
 	TextInputManager();
 

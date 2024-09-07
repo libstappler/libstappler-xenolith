@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class MeshCompilerAttachment;
 
-class MeshCompiler : public core::Queue {
+class SP_PUBLIC MeshCompiler : public core::Queue {
 public:
 	using MeshAttachment = core::MeshAttachment;
 	using MeshInputData = core::MeshInputData;

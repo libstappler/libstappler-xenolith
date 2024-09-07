@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class MenuSeparator : public Node, public MenuItemInterface {
+class SP_PUBLIC MenuSeparator : public Node, public MenuItemInterface {
 public:
 	virtual ~MenuSeparator();
 

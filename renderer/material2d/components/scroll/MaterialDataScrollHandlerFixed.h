@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class DataScrollHandlerFixed : public DataScroll::Handler {
+class SP_PUBLIC DataScrollHandlerFixed : public DataScroll::Handler {
 public:
 	virtual ~DataScrollHandlerFixed() { }
 

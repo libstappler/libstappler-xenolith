@@ -49,6 +49,7 @@
 #include "XL2dScrollView.cc"
 
 #include "XL2dLinearGradient.cc"
+#include "XL2dBootstrapApplication.cc"
 
 #ifdef MODULE_XENOLITH_BACKEND_VK
 #include "backend/vk/XL2dVkMaterial.cc"

@@ -26,14 +26,7 @@
 #include "XLResourceCache.h"
 #include "XLCoreDevice.h"
 #include "XLCoreQueue.h"
-
-
-#if MODULE_XENOLITH_SCENE
-
-#include "XLView.h"
-
-#endif
-
+#include "SPSharedModule.h"
 
 #if MODULE_XENOLITH_FONT
 
@@ -41,7 +34,6 @@
 #include "XLFontLocale.h"
 
 #endif
-
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -140,16 +132,25 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	}
 	_glWaitCallback.clear();
 
-#if MODULE_XENOLITH_FONT
-	auto lib = Rc<font::FontExtension>::create(this, _instance->makeFontQueue());
+	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
+			"locale::setLocale(StringView);");
+	if (setLocale) {
+		setLocale(_info.locale);
+	}
 
-	auto builder = lib->makeDefaultControllerBuilder("ApplicationFontController");
+	auto createQueue = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>("xenolith_font",
+			"FontExtension::createFontQueue(core::Instance*,StringView)");
+	auto createFontExtension = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontExtension)>("xenolith_font",
+			"FontExtension::createFontExtension(Rc<Application>&&,Rc<core::Queue>&&)");
+	auto createFontController = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createDefaultController)>("xenolith_font",
+			"FontExtension::createDefaultController(FontExtension*,StringView)");
 
-	addExtension(lib->acquireController(move(builder)));
-	addExtension(move(lib));
+	if (createFontExtension && createQueue && createFontController) {
+		auto lib = createFontExtension(this, createQueue(_instance, "ApplicationFontQueue"));
 
-	locale::setLocale(_info.locale);
-#endif
+		addExtension(createFontController((font::FontExtension *)lib.get(), "ApplicationFontController"));
+		addExtension(move(lib));
+	}
 
 	_time.delta = 0;
 	_time.global = platform::clock(core::ClockType::Monotonic);
@@ -215,19 +216,9 @@ void Application::end()  {
 void Application::wakeup() {
 	if (isOnMainThread()) {
 		_immediateUpdate = true;
-#if MODULE_XENOLITH_SCENE
-		for (auto &it : _activeViews) {
-			it->setReadyForNextFrame();
-		}
-#endif
 	} else {
 		performOnMainThread([this] {
 			_immediateUpdate = true;
-#if MODULE_XENOLITH_SCENE
-			for (auto &it : _activeViews) {
-				it->setReadyForNextFrame();
-			}
-#endif
 		}, this);
 	}
 }
@@ -333,14 +324,6 @@ void Application::handleDeviceStarted(const core::Loop &loop, const core::Device
 	});
 
 	_device = &dev;
-
-#if MODULE_XENOLITH_SCENE
-	for (auto &it : _tmpViews) {
-		addView(move(it));
-	}
-
-	_tmpViews.clear();
-#endif
 }
 
 void Application::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {
@@ -389,39 +372,5 @@ void Application::performTimersUpdate(const CallbackInfo &cb, bool forced) {
 		_immediateUpdate = false;
 	}
 }
-
-#if MODULE_XENOLITH_SCENE
-bool Application::addView(ViewInfo &&info) {
-	_hasViews = true;
-	performOnGlThread([this, info = move(info)] () mutable {
-		if (_device) {
-			if (info.onClosed) {
-				auto tmp = move(info.onClosed);
-				info.onClosed = [this, tmp = move(tmp)] (xenolith::View &view) {
-					performOnMainThread([this, view = Rc<xenolith::View>(&view)] {
-						_activeViews.erase(view);
-					}, this);
-					tmp(view);
-				};
-			} else {
-				info.onClosed = [this] (xenolith::View &view) {
-					performOnMainThread([this, view = Rc<xenolith::View>(&view)] {
-						_activeViews.erase(view);
-					}, this);
-				};
-			}
-
-			auto v = _instance->makeView(*this, *_device, move(info));
-			performOnMainThread([this, v] {
-				_activeViews.emplace(v.get());
-			}, this);
-		} else {
-			_tmpViews.emplace_back(move(info));
-		}
-	}, this);
-
-	return true;
-}
-#endif
 
 }

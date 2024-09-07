@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class ImageLayer : public Node {
+class SP_PUBLIC ImageLayer : public Node {
 public:
 	static constexpr float GetMaxScaleFactor() { return 1.0f; }
 

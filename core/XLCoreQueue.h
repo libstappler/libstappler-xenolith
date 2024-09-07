@@ -44,7 +44,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
  * 			- RenderPassHandle - per-frame pass data
  */
 
-class Queue : public NamedRef {
+class SP_PUBLIC Queue : public NamedRef {
 public:
 	using FrameRequest = core::FrameRequest;
 	using FrameQueue = core::FrameQueue;
@@ -118,7 +118,7 @@ protected:
 	QueueData *_data = nullptr;
 };
 
-class AttachmentBuilder final {
+class SP_PUBLIC AttachmentBuilder final {
 public:
 	void setType(AttachmentType type);
 
@@ -137,7 +137,7 @@ protected:
 	AttachmentData *_data = nullptr;
 };
 
-class AttachmentPassBuilder final {
+class SP_PUBLIC AttachmentPassBuilder final {
 public:
 	void setAttachmentOps(AttachmentOps);
 	void setInitialLayout(AttachmentLayout);
@@ -159,7 +159,7 @@ protected:
 	AttachmentPassData *_data = nullptr;
 };
 
-class DescriptorSetBuilder final {
+class SP_PUBLIC DescriptorSetBuilder final {
 public:
 	// add single descriptor
 	// compiler CAN inspect shaders to modify descriptors count, if descriptor is actually an array
@@ -178,7 +178,7 @@ protected:
 	DescriptorSetData *_data = nullptr;
 };
 
-class PipelineLayoutBuilder final {
+class SP_PUBLIC PipelineLayoutBuilder final {
 public:
 	bool addSet(const Callback<void(DescriptorSetBuilder &)> &);
 	void setUsesTextureSet(bool);
@@ -191,7 +191,7 @@ protected:
 	PipelineLayoutData *_data = nullptr;
 };
 
-class SubpassBuilder final {
+class SP_PUBLIC SubpassBuilder final {
 public:
 	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
 			AttachmentOps = AttachmentOps::Undefined, BlendInfo = BlendInfo());
@@ -251,7 +251,7 @@ protected:
 	SubpassData *_data;
 };
 
-class QueuePassBuilder final {
+class SP_PUBLIC QueuePassBuilder final {
 public:
 	const PipelineLayoutData * addDescriptorLayout(StringView, const Callback<void(PipelineLayoutBuilder &)> &);
 	const PipelineLayoutData * addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &);
@@ -281,7 +281,7 @@ protected:
 	QueuePassData *_data = nullptr;
 };
 
-class Queue::Builder final {
+class SP_PUBLIC Queue::Builder final {
 public:
 	Builder(StringView);
 	~Builder();

@@ -351,18 +351,6 @@ VkInstance Instance::getInstance() const {
 	return _instance;
 }
 
-#if MODULE_XENOLITH_FONT
-Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
-	return Rc<FontQueue>::create(name);
-}
-#endif
-
-#if MODULE_XENOLITH_BACKEND_VKGUI
-Rc<xenolith::View> Instance::makeView(Application &loop, const core::Device &dev, ViewInfo &&info) const {
-	return vk::platform::createView(loop, dev, move(info));
-}
-#endif
-
 void Instance::printDevicesInfo(std::ostream &out) const {
 	out << "\n";
 

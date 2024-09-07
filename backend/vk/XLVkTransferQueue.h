@@ -35,7 +35,7 @@ class DeviceQueue;
 class CommandPool;
 class TransferAttachment;
 
-class TransferResource final : public core::AttachmentInputData {
+class SP_PUBLIC TransferResource final : public core::AttachmentInputData {
 public:
 	struct BufferAllocInfo {
 		core::BufferData *data = nullptr;
@@ -132,7 +132,7 @@ protected:
 	AllocationUsage _targetUsage = AllocationUsage::DeviceLocal;
 };
 
-class TransferQueue : public core::Queue {
+class SP_PUBLIC TransferQueue : public core::Queue {
 public:
 	virtual ~TransferQueue();
 

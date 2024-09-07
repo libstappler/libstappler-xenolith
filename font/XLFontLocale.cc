@@ -204,20 +204,20 @@ public:
 		}
 	}
 
-	void setDefault(const String &def) {
-		_default = def;
+	void setDefault(StringView def) {
+		_default = def.str<mem_std::Interface>();
 	}
-	const String &getDefault() {
+	StringView getDefault() {
 		return _default;
 	}
 
-	void setLocale(const String &loc) {
+	void setLocale(StringView loc) {
 		if (_locale != loc) {
-			_locale = loc;
+			_locale = loc.str<mem_std::Interface>();
 			onLocale(nullptr, loc);
 		}
 	}
-	const String &getLocale() {
+	StringView getLocale() {
 		return _locale;
 	}
 
@@ -462,17 +462,17 @@ WideStringView numeric(const WideStringView &str, uint32_t num) {
 	return LocaleManager::getInstance()->numeric(str, num);
 }
 
-void setDefault(const String &def) {
+void setDefault(StringView def) {
 	LocaleManager::getInstance()->setDefault(def);
 }
-const String &getDefault() {
+StringView getDefault() {
 	return LocaleManager::getInstance()->getDefault();
 }
 
-void setLocale(const String &loc) {
+void setLocale(StringView loc) {
 	LocaleManager::getInstance()->setLocale(loc);
 }
-const String &getLocale() {
+StringView getLocale() {
 	return LocaleManager::getInstance()->getLocale();
 }
 

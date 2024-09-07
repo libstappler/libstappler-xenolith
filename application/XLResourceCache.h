@@ -43,7 +43,7 @@ enum class TemporaryResourceFlags {
 
 SP_DEFINE_ENUM_AS_MASK(TemporaryResourceFlags)
 
-class ResourceCache : public Ref {
+class SP_PUBLIC ResourceCache : public Ref {
 public:
 	virtual ~ResourceCache();
 

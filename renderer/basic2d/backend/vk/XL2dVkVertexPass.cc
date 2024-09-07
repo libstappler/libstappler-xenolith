@@ -24,6 +24,7 @@
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
+#include "XLCorePlatform.h"
 #include "XLDirector.h"
 #include "XLVkRenderPass.h"
 #include "XLVkTextureSet.h"
@@ -141,7 +142,7 @@ struct VertexMaterialVertexProcessor : public Ref {
 
 VertexMaterialVertexProcessor::VertexMaterialVertexProcessor(VertexAttachmentHandle *a, Rc<FrameContextHandle2d> &&input, Function<void(bool)> &&cb)
 : _attachment(a), _input(move(input)), _callback(move(cb)) {
-	_time = platform::clock();
+	_time = xenolith::platform::clock();
 }
 
 void VertexMaterialVertexProcessor::run(core::FrameHandle &frame) {
@@ -849,7 +850,7 @@ void VertexMaterialVertexProcessor::finalize() {
 	_drawStat.surfaceCmds = surfaceCmds;
 	_drawStat.transparentCmds = transparentCmds;
 	_drawStat.shadowsCmds = shadowsCmds;
-	_drawStat.vertexInputTime = platform::clock() - _time;
+	_drawStat.vertexInputTime = xenolith::platform::clock() - _time;
 	_input->director->pushDrawStat(_drawStat);
 
 	_attachment->loadData(move(_input),

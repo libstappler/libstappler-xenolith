@@ -33,13 +33,13 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class FontExtension;
 
-struct FontUpdateRequest {
+struct SP_PUBLIC FontUpdateRequest {
 	Rc<FontFaceObject> object;
 	Vector<char32_t> chars;
 	bool persistent = false;
 };
 
-class FontController : public ApplicationExtension {
+class SP_PUBLIC FontController : public ApplicationExtension {
 public:
 	static EventHeader onLoaded;
 	static EventHeader onFontSourceUpdated;

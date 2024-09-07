@@ -47,7 +47,7 @@ enum class InputEventState {
 	Captured, // Получатель запрашивает цепочку событий в эксклюзивную обработку
 };
 
-struct InputEvent {
+struct SP_PUBLIC InputEvent {
 	InputEventData data;
 	Vec2 originalLocation;
 	Vec2 currentLocation;
@@ -59,7 +59,7 @@ struct InputEvent {
 	InputModifier previousModifiers = InputModifier::None;
 };
 
-class TextInputViewInterface {
+class SP_PUBLIC TextInputViewInterface {
 public:
 	SP_COVERAGE_TRIVIAL
 	virtual ~TextInputViewInterface() { }
@@ -81,7 +81,7 @@ constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
 namespace std {
 
 template <>
-struct hash<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData> {
+struct SP_PUBLIC hash<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData> {
 	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData &ev) const {
 		return std::hash<uint32_t>{}(ev.id);
 	}

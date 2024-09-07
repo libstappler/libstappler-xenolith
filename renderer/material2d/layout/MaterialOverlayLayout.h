@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class OverlayLayout : public SceneLayout2d {
+class SP_PUBLIC OverlayLayout : public SceneLayout2d {
 public:
 	enum class Binding {
 		Relative,

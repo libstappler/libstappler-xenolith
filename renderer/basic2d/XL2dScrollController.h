@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 class ScrollItemHandle;
 class ScrollViewBase;
 
-class ScrollController : public Component {
+class SP_PUBLIC ScrollController : public Component {
 public:
 	struct Item;
 

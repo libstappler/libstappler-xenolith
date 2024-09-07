@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SceneContent : public DynamicStateNode {
+class SP_PUBLIC SceneContent : public DynamicStateNode {
 public:
 	virtual ~SceneContent();
 

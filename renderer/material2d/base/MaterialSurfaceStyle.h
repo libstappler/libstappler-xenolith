@@ -76,7 +76,7 @@ enum class ActivityState {
 
 struct SurfaceStyleData;
 
-struct SurfaceStyle {
+struct SP_PUBLIC SurfaceStyle {
 	static SurfaceStyle Background;
 	static constexpr uint32_t PrimarySchemeTag = maxOf<uint32_t>();
 
@@ -125,7 +125,7 @@ struct SurfaceStyle {
 	ActivityState activityState = ActivityState::Enabled;
 };
 
-struct SurfaceStyleData {
+struct SP_PUBLIC SurfaceStyleData {
 	static SurfaceStyleData progress(const SurfaceStyleData &, const SurfaceStyleData &, float p);
 
 	uint32_t schemeTag = SurfaceStyle::PrimarySchemeTag;

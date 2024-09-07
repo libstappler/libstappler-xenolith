@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 class FontExtension;
 
-struct RenderFontInput : public core::AttachmentInputData {
+struct SP_PUBLIC RenderFontInput : public core::AttachmentInputData {
 	Rc<thread::TaskQueue> queue;
 	Rc<core::DynamicImage> image;
 	Rc<FontExtension> ext;
@@ -39,9 +39,13 @@ struct RenderFontInput : public core::AttachmentInputData {
 	Function<void(const core::ImageInfoData &, BytesView)> output;
 };
 
-class FontExtension : public ApplicationExtension {
+class SP_PUBLIC FontExtension : public ApplicationExtension {
 public:
 	using DefaultFontName = FontLibrary::DefaultFontName;
+
+	static Rc<core::Queue> createFontQueue(core::Instance *,StringView);
+	static Rc<ApplicationExtension> createFontExtension(Rc<Application> &&, Rc<core::Queue> &&);
+	static Rc<ApplicationExtension> createDefaultController(FontExtension *, StringView);
 
 	virtual ~FontExtension();
 

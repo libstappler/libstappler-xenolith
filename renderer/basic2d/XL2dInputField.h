@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class InputField : public Node, protected InputLabelDelegate {
+class SP_PUBLIC InputField : public Node, protected InputLabelDelegate {
 public:
 	using Handler = TextInputHandler;
 	using Cursor = TextCursor;

@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class Sidebar : public Node {
+class SP_PUBLIC Sidebar : public Node {
 public:
 	enum Position {
 		Left,

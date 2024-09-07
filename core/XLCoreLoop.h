@@ -36,7 +36,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 class Loop;
 class Device;
 
-struct LoopInfo {
+struct SP_PUBLIC LoopInfo {
 	uint32_t deviceIdx = core::Instance::DefaultDevice;
 	uint32_t threadsCount = 2;
 	Function<void(const Loop &, const Device &)> onDeviceStarted;
@@ -44,7 +44,7 @@ struct LoopInfo {
 	Rc<Ref> platformData;
 };
 
-class Loop : public thread::ThreadInterface<Interface> {
+class SP_PUBLIC Loop : public thread::ThreadInterface<Interface> {
 public:
 	using FrameCache = core::FrameCache;
 	using FrameRequest = core::FrameRequest;

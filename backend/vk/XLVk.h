@@ -250,37 +250,33 @@ enum class QueueOperations : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(QueueOperations)
 
-QueueOperations getQueueOperations(VkQueueFlags, bool present);
-QueueOperations getQueueOperations(core::PassType);
-String getQueueOperationsDesc(QueueOperations);
-VkShaderStageFlagBits getVkStageBits(core::ProgramStage);
+SP_PUBLIC QueueOperations getQueueOperations(VkQueueFlags, bool present);
+SP_PUBLIC QueueOperations getQueueOperations(core::PassType);
+SP_PUBLIC String getQueueOperationsDesc(QueueOperations);
+SP_PUBLIC VkShaderStageFlagBits getVkStageBits(core::ProgramStage);
 
-StringView getVkFormatName(VkFormat fmt);
-StringView getVkColorSpaceName(VkColorSpaceKHR fmt);
-StringView getVkResultName(VkResult res);
+SP_PUBLIC StringView getVkFormatName(VkFormat fmt);
+SP_PUBLIC StringView getVkColorSpaceName(VkColorSpaceKHR fmt);
+SP_PUBLIC StringView getVkResultName(VkResult res);
 
-String getVkMemoryPropertyFlags(VkMemoryPropertyFlags);
+SP_PUBLIC String getVkMemoryPropertyFlags(VkMemoryPropertyFlags);
 
-bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vector<VkExtensionProperties> &available,
+SP_PUBLIC bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vector<VkExtensionProperties> &available,
 		Vector<StringView> &optionals, Vector<StringView> &promoted, ExtensionFlags &flags);
 
-bool isPromotedExtension(uint32_t apiVersion, StringView name);
+SP_PUBLIC bool isPromotedExtension(uint32_t apiVersion, StringView name);
 
-size_t getFormatBlockSize(VkFormat);
+SP_PUBLIC size_t getFormatBlockSize(VkFormat);
 
-VkPresentModeKHR getVkPresentMode(core::PresentMode presentMode);
+SP_PUBLIC VkPresentModeKHR getVkPresentMode(core::PresentMode presentMode);
 
 template <typename T>
-void sanitizeVkStruct(T &t) {
+SP_PUBLIC void sanitizeVkStruct(T &t) {
 	::memset(&t, 0, sizeof(T));
 }
 
-std::ostream &operator<< (std::ostream &stream, VkResult res);
+SP_PUBLIC std::ostream &operator<< (std::ostream &stream, VkResult res);
 
 }
-
-#if WIN32
-#undef interface
-#endif
 
 #endif /* XENOLITH_BACKEND_VK_XLVK_H_ */

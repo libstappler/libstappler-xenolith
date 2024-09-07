@@ -26,6 +26,7 @@
 #include "director/XLFrameContext.cc"
 #include "director/XLScheduler.cc"
 #include "director/XLView.cc"
+#include "director/XLViewApplication.cc"
 
 #include "nodes/XLNode.cc"
 #include "nodes/XLDynamicStateNode.cc"

@@ -49,15 +49,4 @@ Rc<Loop> Instance::makeLoop(LoopInfo &&) const {
 	return nullptr;
 }
 
-#if MODULE_XENOLITH_FONT
-Rc<core::Queue> Instance::makeFontQueue(StringView name) const {
-	return nullptr;
-}
-#endif
-
-#if MODULE_XENOLITH_SCENE
-Rc<View> Instance::makeView(Application &, const Device &, ViewInfo &&) const {
-	return nullptr;
-}
-#endif
 }

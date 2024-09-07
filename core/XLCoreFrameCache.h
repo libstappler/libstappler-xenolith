@@ -27,17 +27,17 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-struct FrameCacheFramebuffer final {
+struct SP_PUBLIC FrameCacheFramebuffer final {
 	Vector<Rc<Framebuffer>> framebuffers;
 	Extent3 extent;
 };
 
-struct FrameCacheImageAttachment final {
+struct SP_PUBLIC FrameCacheImageAttachment final {
 	uint32_t refCount;
 	Vector<Rc<ImageStorage>> images;
 };
 
-class FrameCache final : public Ref {
+class SP_PUBLIC FrameCache final : public Ref {
 public:
 	virtual ~FrameCache();
 

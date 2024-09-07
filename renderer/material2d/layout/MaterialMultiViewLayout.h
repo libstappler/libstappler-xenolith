@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class MultiViewLayout : public FlexibleLayout {
+class SP_PUBLIC MultiViewLayout : public FlexibleLayout {
 public:
 	class Generator : public Component {
 	public:

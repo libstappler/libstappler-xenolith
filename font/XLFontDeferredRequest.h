@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-struct DeferredRequest : Ref {
+struct SP_PUBLIC DeferredRequest : Ref {
 	static void runFontRenderer(
 		thread::TaskQueue &,
 		const Rc<FontExtension> &,

@@ -51,7 +51,7 @@ struct DescriptorSet;
 
 using PipelineDescriptor = core::PipelineDescriptor;
 
-struct DeviceQueueFamily {
+struct SP_PUBLIC DeviceQueueFamily {
 	using FrameHandle = core::FrameHandle;
 
 	struct Waiter {
@@ -83,7 +83,7 @@ struct DeviceQueueFamily {
 	Vector<Waiter> waiters;
 };
 
-class DeviceQueue final : public Ref {
+class SP_PUBLIC DeviceQueue final : public Ref {
 public:
 	enum class IdleMode {
 		None,
@@ -132,12 +132,12 @@ enum class BufferLevel {
 	Secondary = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
 };
 
-struct QueueFamilyTransfer {
+struct SP_PUBLIC QueueFamilyTransfer {
 	uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 };
 
-struct ImageMemoryBarrier {
+struct SP_PUBLIC ImageMemoryBarrier {
 	ImageMemoryBarrier() = default;
 
 	ImageMemoryBarrier(Image *, VkAccessFlags src, VkAccessFlags dst,
@@ -165,7 +165,7 @@ struct ImageMemoryBarrier {
 	VkImageSubresourceRange subresourceRange;
 };
 
-struct BufferMemoryBarrier {
+struct SP_PUBLIC BufferMemoryBarrier {
 	BufferMemoryBarrier() = default;
 	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst);
 	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst,
@@ -186,7 +186,7 @@ struct BufferMemoryBarrier {
 	VkDeviceSize size = VK_WHOLE_SIZE;
 };
 
-struct DescriptorInfo {
+struct SP_PUBLIC DescriptorInfo {
 	DescriptorInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
 	: descriptor(desc), index(index), external(external) { }
 
@@ -195,7 +195,7 @@ struct DescriptorInfo {
 	bool external;
 };
 
-struct DescriptorImageInfo : public DescriptorInfo {
+struct SP_PUBLIC DescriptorImageInfo : public DescriptorInfo {
 	~DescriptorImageInfo();
 	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
@@ -204,7 +204,7 @@ struct DescriptorImageInfo : public DescriptorInfo {
 	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
-struct DescriptorBufferInfo : public DescriptorInfo {
+struct SP_PUBLIC DescriptorBufferInfo : public DescriptorInfo {
 	~DescriptorBufferInfo();
 	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
@@ -213,7 +213,7 @@ struct DescriptorBufferInfo : public DescriptorInfo {
 	VkDeviceSize range = VK_WHOLE_SIZE;
 };
 
-struct DescriptorBufferViewInfo : public DescriptorInfo {
+struct SP_PUBLIC DescriptorBufferViewInfo : public DescriptorInfo {
 	~DescriptorBufferViewInfo();
 	DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index, bool external);
 
@@ -221,7 +221,7 @@ struct DescriptorBufferViewInfo : public DescriptorInfo {
 	VkBufferView target = VK_NULL_HANDLE;
 };
 
-class CommandBuffer : public core::CommandBuffer {
+class SP_PUBLIC CommandBuffer : public core::CommandBuffer {
 public:
 	virtual ~CommandBuffer();
 
@@ -316,7 +316,7 @@ protected:
 	const ComputePipeline *_boundComputePipeline = nullptr;
 };
 
-class CommandPool : public Ref {
+class SP_PUBLIC CommandPool : public Ref {
 public:
 	static constexpr VkCommandBufferUsageFlagBits DefaultFlags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 

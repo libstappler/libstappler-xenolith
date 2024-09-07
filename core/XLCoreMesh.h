@@ -31,13 +31,13 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 class MeshAttachment;
 class MeshIndex;
 
-struct MeshInputData : AttachmentInputData {
+struct SP_PUBLIC MeshInputData : AttachmentInputData {
 	const MeshAttachment *attachment;
 	Vector<Rc<MeshIndex>> meshesToAdd;
 	Vector<Rc<MeshIndex>> meshesToRemove;
 };
 
-class MeshSet final : public Ref {
+class SP_PUBLIC MeshSet final : public Ref {
 public:
 	struct Index {
 		uint64_t indexOffset;
@@ -62,7 +62,7 @@ protected:
 	Rc<BufferObject> _indexBuffer;
 };
 
-class MeshIndex final : public Resource {
+class SP_PUBLIC MeshIndex final : public Resource {
 public:
 	using DataCallback = memory::callback<void(BytesView)>;
 	using BufferCallback = memory::function<void(uint8_t *, uint64_t, const DataCallback &)>;
@@ -91,7 +91,7 @@ protected:
 };
 
 // this attachment should provide material data buffer for rendering
-class MeshAttachment : public BufferAttachment {
+class SP_PUBLIC MeshAttachment : public BufferAttachment {
 public:
 	virtual ~MeshAttachment();
 

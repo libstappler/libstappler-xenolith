@@ -24,6 +24,7 @@
 #define TESTS_XLSNNINPUTTEST_H_
 
 #include "XLSnnVkInputLayer.h"
+#include "XLApplication.h"
 
 namespace stappler::xenolith::vk::shadernn {
 

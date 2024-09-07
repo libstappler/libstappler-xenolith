@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class EventListener : public Component, public EventHandler {
+class SP_PUBLIC EventListener : public Component, public EventHandler {
 public:
 	using EventCallback = Function<void(const Event &)>;
 

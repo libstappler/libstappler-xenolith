@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class ResourceOwner : public Ref {
+class SP_PUBLIC ResourceOwner : public Ref {
 public:
 	virtual ~ResourceOwner() { }
 

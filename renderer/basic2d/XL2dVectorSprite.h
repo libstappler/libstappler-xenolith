@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class VectorSprite : public Sprite {
+class SP_PUBLIC VectorSprite : public Sprite {
 public:
 	constexpr static float QualityWorst = 0.1f;
 	constexpr static float QualityLow = 0.25f;

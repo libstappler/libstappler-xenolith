@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Application;
 
-class ApplicationExtension : public Ref {
+class SP_PUBLIC ApplicationExtension : public Ref {
 public:
 	virtual ~ApplicationExtension() { }
 

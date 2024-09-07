@@ -32,7 +32,7 @@ struct FrameInfo;
 class Node;
 class Scene;
 
-class Component : public Ref {
+class SP_PUBLIC Component : public Ref {
 public:
 	static uint64_t GetNextComponentId();
 

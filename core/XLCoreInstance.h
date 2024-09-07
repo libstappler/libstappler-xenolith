@@ -26,18 +26,6 @@
 #include "XLCore.h"
 #include "SPDso.h"
 
-#if MODULE_XENOLITH_SCENE
-
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-struct ViewInfo;
-class View;
-class Application;
-
-}
-
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
@@ -46,14 +34,14 @@ class Device;
 
 struct LoopInfo;
 
-struct DeviceProperties {
+struct SP_PUBLIC DeviceProperties {
 	String deviceName;
 	uint32_t apiVersion = 0;
 	uint32_t driverVersion = 0;
 	bool supportsPresentation = false;
 };
 
-class Instance : public Ref {
+class SP_PUBLIC Instance : public Ref {
 public:
 	using TerminateCallback = Function<void()>;
 
@@ -67,14 +55,6 @@ public:
 	virtual Rc<Loop> makeLoop(LoopInfo &&) const;
 
 	Ref *getUserdata() const { return _userdata; }
-
-#if MODULE_XENOLITH_FONT
-	virtual Rc<core::Queue> makeFontQueue(StringView name = StringView("FontQueue")) const;
-#endif
-
-#if MODULE_XENOLITH_SCENE
-	virtual Rc<View> makeView(Application &, const Device &, ViewInfo &&) const;
-#endif
 
 protected:
 	Dso _dsoModule;

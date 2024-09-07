@@ -47,7 +47,7 @@ enum class TypescaleRole {
 	Unknown,
 };
 
-class TypescaleLabel : public Label {
+class SP_PUBLIC TypescaleLabel : public Label {
 public:
 	static DescriptionStyle getTypescaleRoleStyle(TypescaleRole, float density = 0.0f);
 

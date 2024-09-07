@@ -33,7 +33,7 @@ class ResourceCache;
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
 
-struct UpdateTime {
+struct SP_PUBLIC UpdateTime {
 	// global OS timer in microseconds
 	uint64_t global = 0;
 

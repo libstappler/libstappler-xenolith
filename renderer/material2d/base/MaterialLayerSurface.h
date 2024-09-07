@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 class SurfaceInterior;
 class StyleContainer;
 
-class LayerSurface : public Layer {
+class SP_PUBLIC LayerSurface : public Layer {
 public:
 	static constexpr uint32_t TransitionActionTag = maxOf<uint32_t>() - 1;
 

@@ -36,7 +36,7 @@ class ResourceObject;
 class Texture;
 class MeshIndex;
 
-class TemporaryResource : public Ref {
+class SP_PUBLIC TemporaryResource : public Ref {
 public:
 	static EventHeader onLoaded; // bool - true если ресурс загружен, false если выгружен
 

@@ -31,7 +31,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class XcbView : public LinuxViewInterface {
+class SP_PUBLIC XcbView : public LinuxViewInterface {
 public:
 	struct ScreenInfo {
 		uint16_t width;

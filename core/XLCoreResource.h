@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Queue;
 
-class Resource : public NamedRef {
+class SP_PUBLIC Resource : public NamedRef {
 public:
 	class Builder;
 
@@ -68,7 +68,7 @@ protected:
 	ResourceData *_data = nullptr;
 };
 
-class Resource::Builder final {
+class SP_PUBLIC Resource::Builder final {
 public:
 	Builder(StringView);
 	~Builder();

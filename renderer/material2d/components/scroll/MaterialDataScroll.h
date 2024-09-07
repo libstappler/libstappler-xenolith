@@ -31,7 +31,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class DataScroll : public ScrollView {
+class SP_PUBLIC DataScroll : public ScrollView {
 public:
 	enum class Request {
 		Reset,
@@ -154,7 +154,7 @@ protected:
 	TimeInterval _minLoadTime = TimeInterval::milliseconds(600);
 };
 
-class DataScroll::Loader : public Node {
+class SP_PUBLIC DataScroll::Loader : public Node {
 public:
 	virtual ~Loader() { }
 	virtual bool init(const Function<void()> &);
@@ -168,7 +168,7 @@ protected:
 	Function<void()> _callback = nullptr;
 };
 
-class DataScroll::Item : public Ref {
+class SP_PUBLIC DataScroll::Item : public Ref {
 public:
 	virtual ~Item() { }
 	virtual bool init(Value &&val, Vec2, Size2);
@@ -194,7 +194,7 @@ protected:
 	size_t _controllerId = 0;
 };
 
-class DataScroll::Handler : public Ref {
+class SP_PUBLIC DataScroll::Handler : public Ref {
 public:
 	using Request = DataScroll::Request;
 	using DataMap = DataScroll::DataMap;

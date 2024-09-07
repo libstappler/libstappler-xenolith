@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-struct FrameOutputBinding : public Ref {
+struct SP_PUBLIC FrameOutputBinding : public Ref {
 	using CompleteCallback = Function<bool(FrameAttachmentData &data, bool success, Ref *)>;
 
 	const AttachmentData *attachment = nullptr;
@@ -41,7 +41,7 @@ struct FrameOutputBinding : public Ref {
 	bool handleReady(FrameAttachmentData &data, bool success);
 };
 
-class FrameRequest final : public Ref {
+class SP_PUBLIC FrameRequest final : public Ref {
 public:
 	using CompleteCallback = FrameOutputBinding::CompleteCallback;
 

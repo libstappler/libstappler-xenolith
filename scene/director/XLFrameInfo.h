@@ -35,7 +35,7 @@ class Director;
 struct FrameInfo;
 struct FrameContextHandle;
 
-struct FrameInfo {
+struct SP_PUBLIC FrameInfo {
 	Rc<PoolRef> pool;
 
 	Rc<core::FrameRequest> request;

@@ -25,6 +25,7 @@
 
 #include "XLSnnVkActivationLayer.h"
 #include "XLSnnVkGenerationLayer.h"
+#include "XLApplication.h"
 
 namespace stappler::xenolith::vk::shadernn {
 

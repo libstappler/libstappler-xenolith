@@ -31,8 +31,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 inline const char *name() { return "Stappler+Xenolith"; }
 inline uint32_t version() { return XL_MAKE_API_VERSION(0, 1, 0, 0); }
 
-uint64_t clock(core::ClockType = core::ClockType::Default);
-void sleep(uint64_t microseconds);
+SP_PUBLIC uint64_t clock(core::ClockType = core::ClockType::Default);
+SP_PUBLIC void sleep(uint64_t microseconds);
 
 }
 

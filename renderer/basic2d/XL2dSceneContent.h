@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class SceneContent2d : public SceneContent {
+class SP_PUBLIC SceneContent2d : public SceneContent {
 public:
 	virtual ~SceneContent2d();
 

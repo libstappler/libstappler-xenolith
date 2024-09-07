@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class LayerRounded : public VectorSprite {
+class SP_PUBLIC LayerRounded : public VectorSprite {
 public:
 	virtual ~LayerRounded() { }
 

@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class LinearProgress : public Node {
+class SP_PUBLIC LinearProgress : public Node {
 public:
 	virtual bool init() override;
 	virtual void onContentSizeDirty() override;

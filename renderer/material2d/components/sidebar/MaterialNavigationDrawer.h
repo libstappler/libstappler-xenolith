@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class NavigationDrawer : public Sidebar {
+class SP_PUBLIC NavigationDrawer : public Sidebar {
 public:
 	static EventHeader onNavigation;
 

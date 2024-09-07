@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class InputTextContainer : public DynamicStateNode {
+class SP_PUBLIC InputTextContainer : public DynamicStateNode {
 public:
 	virtual ~InputTextContainer();
 

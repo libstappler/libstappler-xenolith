@@ -39,7 +39,7 @@ class TextInputManager;
 class ActionManager;
 class View;
 
-class Director : public Ref {
+class SP_PUBLIC Director : public Ref {
 public:
 	using FrameRequest = core::FrameRequest;
 

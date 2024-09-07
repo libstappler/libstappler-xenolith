@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class IconSprite : public VectorSprite {
+class SP_PUBLIC IconSprite : public VectorSprite {
 public:
 	virtual ~IconSprite() { }
 

@@ -68,7 +68,7 @@ enum class ColorRole {
 	Max
 };
 
-struct TonalPalette {
+struct SP_PUBLIC TonalPalette {
 	TonalPalette() = default;
 
 	explicit TonalPalette(const Color4F &color)
@@ -101,7 +101,7 @@ struct TonalPalette {
  * color scheme. 5 tonal palettes are generated, all except one use the same
  * hue as the key color, and all vary in chroma.
  */
-struct CorePalette {
+struct SP_PUBLIC CorePalette {
 	CorePalette() = default;
 	CorePalette(const Color4F &, bool isContentColor);
 	CorePalette(const geom::Cam16 &, bool isContentColor);
@@ -115,7 +115,7 @@ struct CorePalette {
 	TonalPalette error;
 };
 
-struct ColorScheme {
+struct SP_PUBLIC ColorScheme {
 	static ColorRole getColorRoleOn(ColorRole, ThemeType);
 
 	ColorScheme() = default;

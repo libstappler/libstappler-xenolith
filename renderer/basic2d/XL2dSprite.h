@@ -31,7 +31,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class Sprite : public DynamicStateNode {
+class SP_PUBLIC Sprite : public DynamicStateNode {
 public:
 	using Autofit = font::Autofit;
 
