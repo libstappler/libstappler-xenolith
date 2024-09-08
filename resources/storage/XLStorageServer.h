@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class ComponentContainer;
 
-class Server : public ApplicationExtension {
+class SP_PUBLIC Server : public ApplicationExtension {
 public:
 	using DataCallback = Function<void(const Value &)>;
 	using QueryCallback = Function<void(db::Query &)>;
@@ -45,6 +45,8 @@ public:
 	using Scheme = db::Scheme;
 
 	static EventHeader onBroadcast;
+
+	static Rc<ApplicationExtension> createServer(Application *, const Value &params);
 
 	virtual ~Server();
 

@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 class ComponentLoader;
 class Server;
 
-class Component : public db::AllocBase {
+class SP_PUBLIC Component : public db::AllocBase {
 public:
 	virtual ~Component();
 
@@ -49,7 +49,7 @@ protected:
 	db::String _name;
 };
 
-class ComponentLoader {
+class SP_PUBLIC ComponentLoader {
 public:
 	virtual ~ComponentLoader();
 
@@ -68,7 +68,7 @@ public:
 	}
 };
 
-class ComponentContainer : public Ref {
+class SP_PUBLIC ComponentContainer : public Ref {
 public:
 	using TaskCallback = Function<bool(const Server &, const db::Transaction &)>;
 

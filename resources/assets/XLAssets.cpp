@@ -24,3 +24,4 @@
 
 #include "XLAsset.cc"
 #include "XLAssetLibrary.cc"
+#include "XLAssetShared.cc"

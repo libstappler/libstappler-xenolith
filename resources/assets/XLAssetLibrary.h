@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 class AssetComponent;
 
-class AssetComponentContainer : public ComponentContainer {
+class SP_PUBLIC AssetComponentContainer : public ComponentContainer {
 public:
 	virtual ~AssetComponentContainer() { }
 
@@ -50,7 +50,7 @@ protected:
 };
 
 
-class AssetLibrary : public ApplicationExtension {
+class SP_PUBLIC AssetLibrary : public ApplicationExtension {
 public:
 	static EventHeader onLoaded;
 
@@ -79,6 +79,8 @@ public:
 
 	static String getAssetPath(int64_t);
 	static String getAssetUrl(StringView);
+
+	static Rc<ApplicationExtension> createLibrary(Application *, network::Controller *, const Value &dbParams);
 
 	virtual ~AssetLibrary();
 

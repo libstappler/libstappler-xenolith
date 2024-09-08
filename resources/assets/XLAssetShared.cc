@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,16 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLAssetLibrary.h"
+#include "SPSharedModule.h"
 
-#include "XLNetworkPlatform.cc"
-#include "XLNetworkController.cc"
-#include "XLNetworkRequest.cc"
-#include "XLNetworkShared.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
+
+static SharedSymbol s_xenolithResoureAsset[] = {
+	SharedSymbol{"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)",
+		(void *)AssetLibrary::createLibrary},
+};
+
+static SharedModule s_xenolithResourceAssetModule("xenolith_resources_assets", s_xenolithResoureAsset, sizeof(s_xenolithResoureAsset) / sizeof(SharedSymbol));
+
+}

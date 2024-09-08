@@ -314,6 +314,10 @@ bool Controller::Data::finalize(Handle &handle, Context *ctx, const Callback<boo
 	return handle.finalize(ctx, ret);
 }
 
+Rc<ApplicationExtension> Controller::createController(Application *app, StringView name, Bytes &&signKey) {
+	return Rc<network::Controller>::alloc(app, name, move(signKey));
+}
+
 Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
 	_data = new Data(app, this, name, move(signKey));
 	_data->init();

@@ -188,6 +188,10 @@ String AssetLibrary::getAssetUrl(StringView url) {
 	}
 }
 
+Rc<ApplicationExtension> AssetLibrary::createLibrary(Application *app, network::Controller *c, const Value &dbParams) {
+	return Rc<storage::AssetLibrary>::create(app, c, dbParams);
+}
+
 AssetLibrary::~AssetLibrary() {
 	_server = nullptr;
 }

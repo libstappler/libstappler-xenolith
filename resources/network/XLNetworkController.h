@@ -33,9 +33,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 class Request;
 
-class Controller final : public ApplicationExtension {
+class SP_PUBLIC Controller final : public ApplicationExtension {
 public:
 	static EventHeader onNetworkCapabilities;
+
+	static Rc<ApplicationExtension> createController(Application *, StringView, Bytes &&signKey = Bytes());
 
 	Controller(Application *, StringView, Bytes &&signKey = Bytes());
 	virtual ~Controller();

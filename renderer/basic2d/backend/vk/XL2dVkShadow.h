@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-class ShadowLightDataAttachment : public BufferAttachment {
+class SP_PUBLIC ShadowLightDataAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowLightDataAttachment();
 
@@ -44,7 +44,7 @@ protected:
 };
 
 // this attachment should provide vertex & index buffers
-class ShadowVertexAttachment : public BufferAttachment {
+class SP_PUBLIC ShadowVertexAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowVertexAttachment();
 
@@ -59,7 +59,7 @@ protected:
 };
 
 // this attachment should provide vertex & index buffers
-class ShadowPrimitivesAttachment : public BufferAttachment {
+class SP_PUBLIC ShadowPrimitivesAttachment : public BufferAttachment {
 public:
 	virtual ~ShadowPrimitivesAttachment();
 
@@ -71,7 +71,7 @@ protected:
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
-class ShadowSdfImageAttachment : public ImageAttachment {
+class SP_PUBLIC ShadowSdfImageAttachment : public ImageAttachment {
 public:
 	virtual ~ShadowSdfImageAttachment();
 
@@ -81,7 +81,7 @@ protected:
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
-class ShadowVertexAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC ShadowVertexAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ShadowVertexAttachmentHandle();
 
@@ -116,7 +116,7 @@ protected:
 	float _maxValue = 0.0f;
 };
 
-class ShadowLightDataAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC ShadowLightDataAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ShadowLightDataAttachmentHandle();
 
@@ -143,7 +143,7 @@ protected:
 	ShadowData _shadowData;
 };
 
-class ShadowPrimitivesAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC ShadowPrimitivesAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ShadowPrimitivesAttachmentHandle();
 
@@ -159,7 +159,7 @@ protected:
 	Rc<Buffer> _gridIndex;
 };
 
-class ShadowSdfImageAttachmentHandle : public ImageAttachmentHandle {
+class SP_PUBLIC ShadowSdfImageAttachmentHandle : public ImageAttachmentHandle {
 public:
 	virtual ~ShadowSdfImageAttachmentHandle() { }
 

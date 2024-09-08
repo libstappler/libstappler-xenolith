@@ -24,3 +24,4 @@
 
 #include "XLStorageServer.cc"
 #include "XLStorageComponent.cc"
+#include "XLStorageShared.cc"

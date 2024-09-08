@@ -33,7 +33,7 @@ class Asset;
 class AssetLibrary;
 struct AssetDownloadData;
 
-struct AssetVersionData {
+struct SP_PUBLIC AssetVersionData {
 	bool complete = false;
 	bool download = false; // is download active for file
 	uint32_t locked = 0;
@@ -48,7 +48,7 @@ struct AssetVersionData {
 	String etag;
 };
 
-class AssetLock : public Ref {
+class SP_PUBLIC AssetLock : public Ref {
 public:
 	virtual ~AssetLock();
 
@@ -77,7 +77,7 @@ protected:
 	Rc<Ref> _owner;
 };
 
-class Asset : public Subscription {
+class SP_PUBLIC Asset : public Subscription {
 public:
 	using VersionData = AssetVersionData;
 

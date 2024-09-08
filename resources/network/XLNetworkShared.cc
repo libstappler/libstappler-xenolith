@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,16 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLNetworkController.h"
+#include "SPSharedModule.h"
 
-#include "XLNetworkPlatform.cc"
-#include "XLNetworkController.cc"
-#include "XLNetworkRequest.cc"
-#include "XLNetworkShared.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
+
+static SharedSymbol s_xenolithResourceNetwork[] = {
+	SharedSymbol{"Controller::createController(Application*,StringView,Bytes&&)",
+		(void *)Controller::createController},
+};
+
+static SharedModule s_xenolithResourceNetworkModule("xenolith_resources_network", s_xenolithResourceNetwork, sizeof(s_xenolithResourceNetwork) / sizeof(SharedSymbol));
+
+}

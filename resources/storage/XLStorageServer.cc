@@ -140,6 +140,10 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 
 XL_DECLARE_EVENT_CLASS(Server, onBroadcast)
 
+Rc<ApplicationExtension> Server::createServer(Application *app, const Value &params) {
+	return Rc<storage::Server>::create(app, params);
+}
+
 Server::~Server() { }
 
 bool Server::init(Application *app, const Value &params) {

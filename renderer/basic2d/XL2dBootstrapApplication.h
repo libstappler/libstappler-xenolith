@@ -76,23 +76,29 @@ protected:
 
 #if MODULE_XENOLITH_RESOURCES_NETWORK
 public:
-	xenolith::network::Controller *getNetworkController() const { return _networkController; }
+	xenolith::network::Controller *getNetworkController() const {
+		return static_cast<xenolith::network::Controller *>(_networkController.get());
+	}
 protected:
-	Rc<xenolith::network::Controller> _networkController;
+	Rc<xenolith::ApplicationExtension> _networkController;
 #endif
 
 #if MODULE_XENOLITH_RESOURCES_STORAGE
 public:
-	xenolith::storage::Server *getStorageServer() const { return _storageServer; }
+	xenolith::storage::Server *getStorageServer() const {
+		return static_cast<xenolith::storage::Server *>(_storageServer.get());
+	}
 protected:
-	Rc<xenolith::storage::Server> _storageServer;
+	Rc<xenolith::ApplicationExtension> _storageServer;
 #endif
 
 #if MODULE_XENOLITH_RESOURCES_ASSETS
 public:
-	xenolith::storage::AssetLibrary *getAssetLibrary() const { return _assetLibrary; }
+	xenolith::storage::AssetLibrary *getAssetLibrary() const {
+		return static_cast<xenolith::storage::AssetLibrary *>(_assetLibrary.get());
+	}
 protected:
-	Rc<xenolith::storage::AssetLibrary> _assetLibrary;
+	Rc<xenolith::ApplicationExtension> _assetLibrary;
 #endif
 };
 

@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-class VertexAttachment : public BufferAttachment {
+class SP_PUBLIC VertexAttachment : public BufferAttachment {
 public:
 	virtual ~VertexAttachment();
 
@@ -44,7 +44,7 @@ protected:
 	const AttachmentData *_materials = nullptr;
 };
 
-class VertexAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC VertexAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~VertexAttachmentHandle();
 
@@ -87,7 +87,7 @@ protected:
 	float _maxShadowValue = 0.0f;
 };
 
-class VertexPass : public QueuePass {
+class SP_PUBLIC VertexPass : public QueuePass {
 public:
 	using AttachmentHandle = core::AttachmentHandle;
 
@@ -112,7 +112,7 @@ protected:
 	const AttachmentData *_materials = nullptr;
 };
 
-class VertexPassHandle : public QueuePassHandle {
+class SP_PUBLIC VertexPassHandle : public QueuePassHandle {
 public:
 	virtual ~VertexPassHandle() { }
 

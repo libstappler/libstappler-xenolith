@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-class ShadowPass : public VertexPass {
+class SP_PUBLIC ShadowPass : public VertexPass {
 public:
 	static constexpr StringView ShadowPipeline = "ShadowPipeline";
 	static constexpr StringView PseudoSdfPipeline = "PseudoSdfPipeline";
@@ -92,7 +92,7 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(ShadowPass::Flags)
 
-class ShadowPassHandle : public VertexPassHandle {
+class SP_PUBLIC ShadowPassHandle : public VertexPassHandle {
 public:
 	virtual ~ShadowPassHandle() { }
 
@@ -109,7 +109,7 @@ protected:
 	bool _usesPseudoSdf = false;
 };
 
-class ComputeShadowPass : public QueuePass {
+class SP_PUBLIC ComputeShadowPass : public QueuePass {
 public:
 	static constexpr StringView SdfTrianglesComp = "SdfTrianglesComp";
 	static constexpr StringView SdfCirclesComp = "SdfCirclesComp";
@@ -138,7 +138,7 @@ protected:
 	const AttachmentData *_sdf = nullptr;
 };
 
-class ComputeShadowPassHandle : public QueuePassHandle {
+class SP_PUBLIC ComputeShadowPassHandle : public QueuePassHandle {
 public:
 	virtual ~ComputeShadowPassHandle() { }
 

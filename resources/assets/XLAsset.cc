@@ -31,6 +31,10 @@
 #undef interface
 #endif
 
+#ifndef CURL_WRITEFUNC_ERROR
+#define CURL_WRITEFUNC_ERROR 0xFFFFFFFF
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 AssetLock::~AssetLock() {

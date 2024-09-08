@@ -132,6 +132,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	}
 	_glWaitCallback.clear();
 
+#if MODULE_XENOLITH_FONT
 	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
 			"locale::setLocale(StringView);");
 	if (setLocale) {
@@ -151,6 +152,7 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		addExtension(createFontController((font::FontExtension *)lib.get(), "ApplicationFontController"));
 		addExtension(move(lib));
 	}
+#endif
 
 	_time.delta = 0;
 	_time.global = platform::clock(core::ClockType::Monotonic);

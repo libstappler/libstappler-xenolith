@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 using namespace xenolith::vk;
 
-class MaterialAttachment : public core::MaterialAttachment {
+class SP_PUBLIC MaterialAttachment : public core::MaterialAttachment {
 public:
 	virtual ~MaterialAttachment();
 

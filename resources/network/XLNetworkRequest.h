@@ -40,7 +40,7 @@ class Request;
 
 using Method = stappler::network::Method;
 
-class Handle final : public NetworkHandle {
+class SP_PUBLIC Handle final : public NetworkHandle {
 public:
 	using Context = stappler::network::Context<Interface>;
 
@@ -88,7 +88,7 @@ protected:
 	Rc<Request> _request;
 };
 
-class Request : public Ref {
+class SP_PUBLIC Request : public Ref {
 public:
 	using CompleteCallback = Function<void(const Request &, bool)>;
 	using ProgressCallback = Function<void(const Request &, int64_t total, int64_t now)>;
