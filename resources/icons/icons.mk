@@ -26,5 +26,13 @@ MODULE_XENOLITH_RESOURCES_ICONS_INCLUDES_DIRS := $(XENOLITH_MODULE_DIR)/resource
 MODULE_XENOLITH_RESOURCES_ICONS_INCLUDES_OBJS :=
 MODULE_XENOLITH_RESOURCES_ICONS_DEPENDS_ON := xenolith_core stappler_vg
 
+#spec
+
+MODULE_XENOLITH_RESOURCES_ICONS_SHARED_SPEC_SUMMARY := Xenolith icons from Material Design
+
+define MODULE_XENOLITH_RESOURCES_ICONS_SHARED_SPEC_DESCRIPTION
+Module libxenolith-resources-icons contains set of vector icons from Material Design
+endef
+
 # module name resolution
 MODULE_xenolith_resources_icons := MODULE_XENOLITH_RESOURCES_ICONS

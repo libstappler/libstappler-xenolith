@@ -26,5 +26,14 @@ MODULE_XENOLITH_RESOURCES_ASSETS_INCLUDES_DIRS :=
 MODULE_XENOLITH_RESOURCES_ASSETS_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/resources/assets
 MODULE_XENOLITH_RESOURCES_ASSETS_DEPENDS_ON := xenolith_resources_network xenolith_resources_storage
 
+#spec
+
+MODULE_XENOLITH_RESOURCES_ASSETS_SHARED_SPEC_SUMMARY := Xenolith external asset interface
+
+define MODULE_XENOLITH_RESOURCES_ASSETS_SHARED_SPEC_DESCRIPTION
+Module libxenolith-resources-assets implements interface for downloading and storing
+external application assets
+endef
+
 # module name resolution
 MODULE_xenolith_resources_assets := MODULE_XENOLITH_RESOURCES_ASSETS

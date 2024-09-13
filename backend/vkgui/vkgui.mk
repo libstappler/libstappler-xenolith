@@ -26,5 +26,13 @@ MODULE_XENOLITH_BACKEND_VKGUI_INCLUDES_DIRS :=
 MODULE_XENOLITH_BACKEND_VKGUI_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/backend/vkgui
 MODULE_XENOLITH_BACKEND_VKGUI_DEPENDS_ON := xenolith_backend_vk xenolith_scene xenolith_platform
 
+#spec
+
+MODULE_XENOLITH_BACKEND_VKGUI_SHARED_SPEC_SUMMARY := Xenolith GUI interface for Vulkan API
+
+define MODULE_XENOLITH_BACKEND_VKGUI_SHARED_SPEC_DESCRIPTION
+Module libxenolith-backend-vkgui implements window system dependent GUI output support.
+endef
+
 # module name resolution
 MODULE_xenolith_backend_vkgui := MODULE_XENOLITH_BACKEND_VKGUI

@@ -30,5 +30,13 @@ ifdef WIN32
 MODULE_XENOLITH_PLATFORM_LIBS += -lgdi32 -lole32 -loleaut32 -lwinhttp
 endif
 
+#spec
+
+MODULE_XENOLITH_PLATFORM_SHARED_SPEC_SUMMARY := Xenolith platform-dependent functions
+
+define MODULE_XENOLITH_PLATFORM_SHARED_SPEC_DESCRIPTION
+Module libxenolith-platform implements platform-dependent functions
+endef
+
 # module name resolution
 MODULE_xenolith_platform := MODULE_XENOLITH_PLATFORM

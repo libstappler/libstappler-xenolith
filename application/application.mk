@@ -30,5 +30,15 @@ ifdef WIN32
 MODULE_XENOLITH_APPLICATION_LIBS += -lshell32
 endif
 
+#spec
+
+MODULE_XENOLITH_APPLICATION_SHARED_SPEC_SUMMARY := Xenolith general application interface
+
+define MODULE_XENOLITH_APPLICATION_SHARED_SPEC_DESCRIPTION
+Module libxenolith-application implements interface for application main loop:
+- Application-level resources
+- Event handling
+endef
+
 # module name resolution
 MODULE_xenolith_application := MODULE_XENOLITH_APPLICATION

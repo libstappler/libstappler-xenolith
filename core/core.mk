@@ -37,5 +37,17 @@ ifdef VULKAN_SDK_PREFIX
 MODULE_XENOLITH_CORE_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)
 endif
 
+#spec
+
+MODULE_XENOLITH_CORE_SHARED_SPEC_SUMMARY := Xenolith engine abstract interface
+
+define MODULE_XENOLITH_CORE_SHARED_SPEC_DESCRIPTION
+Module libxenolith-core implenets API-independent interface for graphic engine:
+- Frame processing interface
+- Passes and attachment hierarchy
+- Basic objects
+- Material system
+endef
+
 # module name resolution
 MODULE_xenolith_core := MODULE_XENOLITH_CORE

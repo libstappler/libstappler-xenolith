@@ -26,6 +26,15 @@ MODULE_XENOLITH_BACKEND_VK_INCLUDES_DIRS :=
 MODULE_XENOLITH_BACKEND_VK_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/backend/vk
 MODULE_XENOLITH_BACKEND_VK_DEPENDS_ON := xenolith_core
 
+#spec
+
+MODULE_XENOLITH_BACKEND_VK_SHARED_SPEC_SUMMARY := Xenolith on Vulkan API
+
+define MODULE_XENOLITH_BACKEND_VK_SHARED_SPEC_DESCRIPTION
+Module libxenolith-backend-vk implements graphic engine with backend on Vulkan API.
+This module only implements basic functions without platform-dependent parts.
+endef
+
 # module name resolution
 MODULE_xenolith_backend_vk := MODULE_XENOLITH_BACKEND_VK
 

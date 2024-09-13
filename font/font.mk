@@ -27,5 +27,14 @@ MODULE_XENOLITH_FONT_INCLUDES_OBJS :=
 MODULE_XENOLITH_FONT_DEPENDS_ON := xenolith_application stappler_brotli_lib
 MODULE_XENOLITH_FONT_SHARED_DEPENDS_ON := xenolith_backend_vkgui
 
+#spec
+
+MODULE_XENOLITH_FONT_SHARED_SPEC_SUMMARY := Xenolith font rendering engine
+
+define MODULE_XENOLITH_FONT_SHARED_SPEC_DESCRIPTION
+Module libxenolith-font implenets font rendering engine for Xenolith.
+Font rendering based on GPU-side atlases and caches.
+endef
+
 # module name resolution
 MODULE_xenolith_font := MODULE_XENOLITH_FONT

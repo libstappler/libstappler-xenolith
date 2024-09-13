@@ -27,5 +27,14 @@ MODULE_XENOLITH_RESOURCES_NETWORK_INCLUDES_DIRS :=
 MODULE_XENOLITH_RESOURCES_NETWORK_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/resources/network
 MODULE_XENOLITH_RESOURCES_NETWORK_DEPENDS_ON := xenolith_application xenolith_platform stappler_network
 
+#spec
+
+MODULE_XENOLITH_RESOURCES_NETWORK_SHARED_SPEC_SUMMARY := Xenolith network interface
+
+define MODULE_XENOLITH_RESOURCES_NETWORK_SHARED_SPEC_DESCRIPTION
+Module libxenolith-resources-network implements dedicated thread with multiplexed
+network interface, that can be bound with application loop.
+endef
+
 # module name resolution
 MODULE_xenolith_resources_network := MODULE_XENOLITH_RESOURCES_NETWORK

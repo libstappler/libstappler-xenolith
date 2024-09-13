@@ -26,5 +26,13 @@ MODULE_XENOLITH_RENDERER_MATERIAL2D_INCLUDES_DIRS := $(XENOLITH_MODULE_DIR)/rend
 MODULE_XENOLITH_RENDERER_MATERIAL2D_INCLUDES_OBJS :=
 MODULE_XENOLITH_RENDERER_MATERIAL2D_DEPENDS_ON := xenolith_renderer_basic2d xenolith_resources_icons
 
+#spec
+
+MODULE_XENOLITH_RENDERER_MATERIAL2D_SHARED_SPEC_SUMMARY := Xenolith Material Design GUI primitives
+
+define MODULE_XENOLITH_RENDERER_MATERIAL2D_SHARED_SPEC_DESCRIPTION
+Module libxenolith-renderer-material2d implements GUI primitives, based on Material Design
+endef
+
 # module name resolution
 MODULE_xenolith_renderer_material2d := MODULE_XENOLITH_RENDERER_MATERIAL2D

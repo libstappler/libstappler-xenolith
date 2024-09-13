@@ -26,5 +26,13 @@ MODULE_XENOLITH_RESOURCES_STORAGE_INCLUDES_DIRS :=
 MODULE_XENOLITH_RESOURCES_STORAGE_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/resources/storage
 MODULE_XENOLITH_RESOURCES_STORAGE_DEPENDS_ON := xenolith_application stappler_db
 
+#spec
+
+MODULE_XENOLITH_RESOURCES_STORAGE_SHARED_SPEC_SUMMARY := Xenolith internal storage interface
+
+define MODULE_XENOLITH_RESOURCES_STORAGE_SHARED_SPEC_DESCRIPTION
+Module libxenolith-resources-storage implements internal application database.
+endef
+
 # module name resolution
 MODULE_xenolith_resources_storage := MODULE_XENOLITH_RESOURCES_STORAGE

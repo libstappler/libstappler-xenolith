@@ -26,5 +26,16 @@ MODULE_XENOLITH_SCENE_INCLUDES_DIRS := $(XENOLITH_MODULE_DIR)/scene
 MODULE_XENOLITH_SCENE_INCLUDES_OBJS :=
 MODULE_XENOLITH_SCENE_DEPENDS_ON := xenolith_application xenolith_platform
 
+#spec
+
+MODULE_XENOLITH_SCENE_SHARED_SPEC_SUMMARY := Xenolith primitives for scene building
+
+define MODULE_XENOLITH_SCENE_SHARED_SPEC_DESCRIPTION
+Module libxenolith-scene provides primitives to build 2D and 3D scenes:
+- node hierarchy
+- actions and transformations
+- input interface
+endef
+
 # module name resolution
 MODULE_xenolith_scene := MODULE_XENOLITH_SCENE

@@ -46,5 +46,16 @@ MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_DEPENDS_ON := xenolith_backend_vkgui xen
 MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_CONSUME := \
 	xenolith_renderer_basic2d_shaders
 
+#spec
+
+MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_SPEC_SUMMARY := Xenolith basic GUI primitives
+
+define MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_SPEC_DESCRIPTION
+Module libxenolith-renderer-basic2d implements basic 2d GUI primitives:
+- Text labels
+- Sprites (with VG support)
+- ScrollView
+endef
+
 # module name resolution
 MODULE_xenolith_renderer_basic2d := MODULE_XENOLITH_RENDERER_BASIC2D
