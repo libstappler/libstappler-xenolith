@@ -318,42 +318,6 @@ RenderingLevel Surface::getRealRenderingLevel() const {
 	return l;
 }
 
-void Surface::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
-	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	if (handle->shadows) {
-		if (_realCornerRadius > 0.0f) {
-			handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&, this] (CmdSdfGroup2D &cmd) {
-				switch (_realShapeFamily) {
-				case ShapeFamily::RoundedCorners:
-					cmd.addRoundedRect2D(Rect(Vec2(0, 0), _contentSize), _realCornerRadius);
-					break;
-				case ShapeFamily::CutCorners: {
-					Vec2 points[8] = {
-						Vec2(0.0f, _realCornerRadius),
-						Vec2(_realCornerRadius, 0.0f),
-						Vec2(_contentSize.width - _realCornerRadius, 0.0f),
-						Vec2(_contentSize.width, _realCornerRadius),
-						Vec2(_contentSize.width, _contentSize.height - _realCornerRadius),
-						Vec2(_contentSize.width - _realCornerRadius, _contentSize.height),
-						Vec2(_realCornerRadius, _contentSize.height),
-						Vec2(0.0f, _contentSize.height - _realCornerRadius)
-					};
-					cmd.addPolygon2D(points);
-					break;
-				}
-				}
-			});
-		} else {
-			FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-			handle->shadows->pushSdfGroup(t, handle->getCurrentState(), frame.depthStack.back(), [&, this] (CmdSdfGroup2D &cmd) {
-				cmd.addRect2D(Rect(Vec2(0, 0), _contentSize));
-			});
-		}
-	} else {
-		VectorSprite::pushShadowCommands(frame, flags, t, data);
-	}
-}
-
 bool BackgroundSurface::init() {
 	return init(material2d::SurfaceStyle::Background);
 }

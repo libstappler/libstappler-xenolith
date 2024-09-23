@@ -249,6 +249,10 @@ bool Buffer::init(Device &dev, VkBuffer buffer, const BufferInfo &info, Rc<Devic
 	_memory = move(mem);
 	_memoryOffset = memoryOffset;
 
+	if (!_info.key.empty()) {
+		_name = _info.key.str<Interface>();
+	}
+
 	return core::BufferObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyBuffer(d->getDevice(), (VkBuffer)ptr.get(), nullptr);

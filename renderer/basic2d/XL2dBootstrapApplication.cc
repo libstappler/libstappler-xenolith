@@ -83,14 +83,14 @@ void BootstrapScene::onContentSizeDirty() {
 XL_DECLARE_EVENT_CLASS(BootstrapApplication, onSwapchainConfig);
 
 bool BootstrapApplication::init(ViewCommandLineData &&data, void *native) {
-	_data = move(data);
+	_initData = move(data);
 
 	Application::CommonInfo info({
-		.bundleName = _data.bundleName,
-		.applicationName = _data.applicationName,
-		.applicationVersion = _data.applicationVersion,
-		.userAgent = _data.userAgent,
-		.locale = _data.userLanguage,
+		.bundleName = _initData.bundleName,
+		.applicationName = _initData.applicationName,
+		.applicationVersion = _initData.applicationVersion,
+		.userAgent = _initData.userAgent,
+		.locale = _initData.userLanguage,
 		.nativeHandle = native
 	});
 
@@ -156,11 +156,11 @@ void BootstrapApplication::run(Function<void()> &&initCb) {
 	GuiApplication::CallbackInfo callbacks({
 		.initCallback = [&] (const Application &) {
 			GuiApplication::addView(ViewInfo{
-				.title = _data.applicationName,
-				.bundleId = _data.bundleName,
-				.rect = URect(UVec2{0, 0}, _data.screenSize),
-				.decoration = _data.viewDecoration,
-				.density = _data.density,
+				.title = _initData.applicationName,
+				.bundleId = _initData.bundleName,
+				.rect = URect(UVec2{0, 0}, _initData.screenSize),
+				.decoration = _initData.viewDecoration,
+				.density = _initData.density,
 				.selectConfig = [this] (xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
 					return selectConfig(static_cast<vk::View &>(view), info);
 				},

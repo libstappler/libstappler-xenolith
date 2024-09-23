@@ -33,11 +33,6 @@ enum class CommandType : uint16_t {
 	CommandGroup,
 	VertexArray,
 	Deferred,
-
-	ShadowArray,
-	ShadowDeferred,
-
-	SdfGroup2D
 };
 
 struct SP_PUBLIC CmdGeneral {
@@ -49,26 +44,10 @@ struct SP_PUBLIC CmdGeneral {
 };
 
 struct SP_PUBLIC CmdVertexArray : CmdGeneral {
-	SpanView<TransformVertexData> vertexes;
+	SpanView<InstanceVertexData> vertexes;
 };
 
 struct SP_PUBLIC CmdDeferred : CmdGeneral {
-	Rc<DeferredVertexResult> deferred;
-	Mat4 viewTransform;
-	Mat4 modelTransform;
-	bool normalized = false;
-};
-
-struct SP_PUBLIC CmdShadow {
-	StateId state = 0;
-	float value = 0.0f;
-};
-
-struct SP_PUBLIC CmdShadowArray : CmdShadow {
-	SpanView<TransformVertexData> vertexes;
-};
-
-struct SP_PUBLIC CmdShadowDeferred : CmdShadow {
 	Rc<DeferredVertexResult> deferred;
 	Mat4 viewTransform;
 	Mat4 modelTransform;
@@ -111,17 +90,11 @@ public:
 			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
 
 	// data should be preallocated from frame's pool
-	void pushVertexArray(SpanView<TransformVertexData>,
+	void pushVertexArray(const Callback<SpanView<InstanceVertexData>(memory::pool_t *)> &,
 			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
 
 	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, bool normalized,
 			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
-
-	void pushShadowArray(Rc<VertexData> &&, const Mat4 &, StateId state, float value);
-	void pushShadowArray(SpanView<TransformVertexData>, StateId state, float value);
-	void pushDeferredShadow(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, StateId state, bool normalized, float value);
-
-	void pushSdfGroup(const Mat4 &model, StateId state, float value, const Callback<void(CmdSdfGroup2D &)> &cb);
 
 	const Command *getFirst() const { return _first; }
 	const Command *getLast() const { return _last; }
@@ -142,7 +115,6 @@ protected:
 struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
 	ShadowLightInput lights;
 	Rc<CommandList> commands;
-	Rc<CommandList> shadows;
 };
 
 }

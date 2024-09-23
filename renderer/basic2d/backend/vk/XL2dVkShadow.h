@@ -43,79 +43,6 @@ protected:
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
-// this attachment should provide vertex & index buffers
-class SP_PUBLIC ShadowVertexAttachment : public BufferAttachment {
-public:
-	virtual ~ShadowVertexAttachment();
-
-	virtual bool init(AttachmentBuilder &) override;
-
-	virtual bool validateInput(const Rc<core::AttachmentInputData> &) const override;
-
-protected:
-	using BufferAttachment::init;
-
-	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
-};
-
-// this attachment should provide vertex & index buffers
-class SP_PUBLIC ShadowPrimitivesAttachment : public BufferAttachment {
-public:
-	virtual ~ShadowPrimitivesAttachment();
-
-	virtual bool init(AttachmentBuilder &) override;
-
-protected:
-	using BufferAttachment::init;
-
-	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
-};
-
-class SP_PUBLIC ShadowSdfImageAttachment : public ImageAttachment {
-public:
-	virtual ~ShadowSdfImageAttachment();
-
-	virtual bool init(AttachmentBuilder &, Extent2 extent);
-
-protected:
-	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
-};
-
-class SP_PUBLIC ShadowVertexAttachmentHandle : public BufferAttachmentHandle {
-public:
-	virtual ~ShadowVertexAttachmentHandle();
-
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
-
-	bool empty() const;
-
-	uint32_t getTrianglesCount() const { return _trianglesCount; }
-	uint32_t getCirclesCount() const { return _circlesCount; }
-	uint32_t getRectsCount() const { return _rectsCount; }
-	uint32_t getRoundedRectsCount() const { return _roundedRectsCount; }
-	uint32_t getPolygonsCount() const { return _polygonsCount; }
-	float getMaxValue() const { return _maxValue; }
-
-	const Rc<Buffer> &getVertexes() const { return _vertexes; }
-
-protected:
-	virtual bool loadVertexes(FrameHandle &, const Rc<FrameContextHandle2d> &);
-
-	Rc<Buffer> _indexes;
-	Rc<Buffer> _vertexes;
-	Rc<Buffer> _transforms;
-	Rc<Buffer> _circles;
-	Rc<Buffer> _rects;
-	Rc<Buffer> _roundedRects;
-	Rc<Buffer> _polygons;
-	uint32_t _trianglesCount = 0;
-	uint32_t _circlesCount = 0;
-	uint32_t _rectsCount = 0;
-	uint32_t _roundedRectsCount = 0;
-	uint32_t _polygonsCount = 0;
-	float _maxValue = 0.0f;
-};
-
 class SP_PUBLIC ShadowLightDataAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ShadowLightDataAttachmentHandle();
@@ -127,12 +54,11 @@ public:
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
-	void allocateBuffer(DeviceFrameHandle *, const ShadowVertexAttachmentHandle *vertexes, uint32_t gridCells, float maxValue = nan());
+	void allocateBuffer(DeviceFrameHandle *, uint32_t gridCells, float maxValue = nan());
 
 	float getBoxOffset(float value) const;
 
 	uint32_t getLightsCount() const;
-	uint32_t getObjectsCount() const;
 
 	const ShadowData &getShadowData() const { return _shadowData; }
 	const Rc<Buffer> &getBuffer() const { return _data; }
@@ -141,38 +67,6 @@ protected:
 	Rc<Buffer> _data;
 	Rc<FrameContextHandle2d> _input;
 	ShadowData _shadowData;
-};
-
-class SP_PUBLIC ShadowPrimitivesAttachmentHandle : public BufferAttachmentHandle {
-public:
-	virtual ~ShadowPrimitivesAttachmentHandle();
-
-	void allocateBuffer(DeviceFrameHandle *, const ShadowData &);
-
-	const Rc<Buffer> &getObjects() const { return _objects; }
-	const Rc<Buffer> &getGridSize() const { return _gridSize; }
-	const Rc<Buffer> &getGridIndex() const { return _gridIndex; }
-
-protected:
-	Rc<Buffer> _objects;
-	Rc<Buffer> _gridSize;
-	Rc<Buffer> _gridIndex;
-};
-
-class SP_PUBLIC ShadowSdfImageAttachmentHandle : public ImageAttachmentHandle {
-public:
-	virtual ~ShadowSdfImageAttachmentHandle() { }
-
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
-
-	ImageInfo getImageInfo() const { return _currentImageInfo; }
-	float getShadowDensity() const { return _shadowDensity; }
-	float getSceneDensity() const { return _sceneDensity; }
-
-protected:
-	float _sceneDensity = 1.0f;
-	float _shadowDensity = 1.0f;
-	ImageInfo _currentImageInfo;
 };
 
 }

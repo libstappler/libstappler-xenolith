@@ -103,7 +103,9 @@ struct VectorCanvas::Data : memory::AllocPool {
 	Rc<VectorImageData> image;
 	Size2 targetSize;
 
-	Vector<TransformVertexData> *out = nullptr;
+	Vector<InstanceVertexData> *out = nullptr;
+	std::forward_list<Vector<TransformData>> *instances = nullptr;
+	Map<String,VectorCanvasResult::ObjectRef> *objects = nullptr;
 
 	Data(memory::pool_t *p, bool deferred);
 	~Data();
@@ -113,12 +115,12 @@ struct VectorCanvas::Data : memory::AllocPool {
 
 	void applyTransform(const Mat4 &t);
 
-	void draw(const VectorPath &, StringView cache);
-	void draw(const VectorPath &, StringView cache, const Mat4 &);
+	void draw(const VectorPath &, StringView id, StringView cache);
+	void draw(const VectorPath &, StringView id, StringView cache, const Mat4 &);
 
-	void doDraw(const VectorPath &, StringView cache);
+	void doDraw(const VectorPath &, StringView id, StringView cache);
 
-	void writeCacheData(const VectorPath &p, TransformVertexData *out, const VectorCanvasCacheData &source);
+	void writeCacheData(const VectorPath &p, InstanceVertexData *out, const VectorCanvasCacheData &source);
 };
 
 static void VectorCanvasPathDrawer_pushVertex(void *ptr, uint32_t idx, const Vec2 &pt, float vertexValue, const Vec2 &norm) {
@@ -193,6 +195,8 @@ const VectorCanvasConfig &VectorCanvas::getConfig() const {
 Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 targetSize) {
 	auto ret = Rc<VectorCanvasResult>::alloc();
 	_data->out = &ret->data;
+	_data->instances = &ret->instances;
+	_data->objects = &ret->objects;
 	_data->image = move(image);
 	ret->targetSize = _data->targetSize = targetSize;
 	ret->config = static_cast<const VectorCanvasConfig &>(_data->pathDrawer);
@@ -216,11 +220,35 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 		_data->applyTransform(t);
 	}
 
-	_data->image->draw([&, this] (const VectorPath &path, StringView cacheId, const Mat4 &pos) {
+	_data->image->draw([&, this] (const VectorPath &path, StringView id, StringView cacheId, const Mat4 &pos) {
+		if (ret->config.instancedMode == VectorInstancedMode::Aggressive) {
+			auto it = _data->objects->find(id);
+			if (it != _data->objects->end()) {
+				// add new object instance
+
+				auto matTransform = path.getTransform() * pos;
+				bool hasTransform = !matTransform.isIdentity();
+
+				if (hasTransform) {
+					_data->save();
+					_data->applyTransform(matTransform);
+				}
+
+				it->second.instances->emplace_back(TransformData(_data->transform));
+				_data->out->at(it->second.dataIndex).instances = *it->second.instances;
+
+				if (hasTransform) {
+					_data->restore();
+				}
+
+				return;
+			}
+		}
+
 		if (pos.isIdentity()) {
-			_data->draw(path, cacheId);
+			_data->draw(path, id, cacheId);
 		} else {
-			_data->draw(path, cacheId, pos);
+			_data->draw(path, id, cacheId, pos);
 		}
 	});
 
@@ -265,21 +293,21 @@ void VectorCanvas::Data::applyTransform(const Mat4 &t) {
 	transform *= t;
 }
 
-void VectorCanvas::Data::draw(const VectorPath &path, StringView cache) {
+void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache) {
 	bool hasTransform = !path.getTransform().isIdentity();
 	if (hasTransform) {
 		save();
 		applyTransform(path.getTransform());
 	}
 
-	doDraw(path, cache);
+	doDraw(path, id, cache);
 
 	if (hasTransform) {
 		restore();
 	}
 }
 
-void VectorCanvas::Data::draw(const VectorPath &path, StringView cache, const Mat4 &mat) {
+void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache, const Mat4 &mat) {
 	auto matTransform = path.getTransform() * mat;
 	bool hasTransform = !matTransform.isIdentity();
 
@@ -288,17 +316,18 @@ void VectorCanvas::Data::draw(const VectorPath &path, StringView cache, const Ma
 		applyTransform(matTransform);
 	}
 
-	doDraw(path, cache);
+	doDraw(path, id, cache);
 
 	if (hasTransform) {
 		restore();
 	}
 }
 
-void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
-	TransformVertexData *outData = nullptr;
+void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringView cache) {
+	// Add new output slot or use already allocated and empty
+	InstanceVertexData *outData = nullptr;
 	if (out->empty() || !out->back().data->data.empty()) {
-		out->emplace_back(TransformVertexData{transform, Rc<VertexData>::alloc()});
+		out->emplace_back(InstanceVertexData{SpanView<TransformData>(), Rc<VertexData>::alloc()});
 	}
 
 	outData = &out->back();
@@ -317,6 +346,10 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 			if (auto it = VectorCanvasCache::getCacheData(data)) {
 				if (!it->data->indexes.empty()) {
 					writeCacheData(path, outData, *it);
+
+					auto &it = instances->emplace_front(Vector<TransformData>());
+					it.emplace_back(TransformData(transform));
+					outData->instances = it;
 				}
 				break;
 			}
@@ -328,11 +361,18 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 			if (ret != 0) {
 				if (auto it = VectorCanvasCache::setCacheData(move(data))) {
 					writeCacheData(path, outData, *it);
+
+					auto &inst = instances->emplace_front(Vector<TransformData>());
+					inst.emplace_back(TransformData(transform));
+					outData->instances = inst;
+
+					if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {
+						objects->emplace(id.str<Interface>(), VectorCanvasResult::ObjectRef{&inst, uint32_t(out->size() - 1)});
+					}
 				}
 			} else {
 				outData->data->data.clear();
 				outData->data->indexes.clear();
-				out->back().transform = transform;
 			}
 		} else {
 			auto ret = pathDrawer.draw(transactionPool, path, transform, outData->data, false,
@@ -340,7 +380,14 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 			if (ret == 0) {
 				outData->data->data.clear();
 				outData->data->indexes.clear();
-				out->back().transform = transform;
+			} else {
+				auto &inst = instances->emplace_front(Vector<TransformData>());
+				inst.emplace_back(TransformData(transform));
+				outData->instances = inst;
+
+				if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {
+					objects->emplace(id.str<Interface>(), VectorCanvasResult::ObjectRef{&inst, uint32_t(out->size() - 1)});
+				}
 			}
 		}
 	} while (0);
@@ -349,7 +396,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView cache) {
 	memory::pool::clear(transactionPool);
 }
 
-void VectorCanvas::Data::writeCacheData(const VectorPath &p, TransformVertexData *out, const VectorCanvasCacheData &source) {
+void VectorCanvas::Data::writeCacheData(const VectorPath &p, InstanceVertexData *out, const VectorCanvasCacheData &source) {
 	auto fillColor = Color4F(p.getFillColor());
 	auto strokeColor = Color4F(p.getStrokeColor());
 
@@ -638,7 +685,7 @@ void VectorCanvasResult::updateColor(const Color4F &color) {
 	mut.clear();
 	mut.reserve(data.size());
 	for (auto &it : data) {
-		auto &iit = mut.emplace_back(TransformVertexData{it.transform, copyData(it.data),
+		auto &iit = mut.emplace_back(InstanceVertexData{it.instances, copyData(it.data),
 			it.fillIndexes, it.strokeIndexes, it.sdfIndexes});
 		if (iit.sdfIndexes > 0) {
 			for (auto &vertex : iit.data->data) {
@@ -672,7 +719,7 @@ bool VectorCanvasDeferredResult::init(std::future<Rc<VectorCanvasResult>> &&futu
 	return true;
 }
 
-SpanView<TransformVertexData> VectorCanvasDeferredResult::getData() {
+bool VectorCanvasDeferredResult::acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &cb) {
 	std::unique_lock<Mutex> lock(_mutex);
 	if (_future) {
 		_result = _future->get();
@@ -680,7 +727,8 @@ SpanView<TransformVertexData> VectorCanvasDeferredResult::getData() {
 		_future = nullptr;
 		DeferredVertexResult::handleReady();
 	}
-	return _result->mut;
+	cb(_result->mut, None);
+	return true;
 }
 
 void VectorCanvasDeferredResult::handleReady(Rc<VectorCanvasResult> &&res) {
@@ -689,8 +737,10 @@ void VectorCanvasDeferredResult::handleReady(Rc<VectorCanvasResult> &&res) {
 		delete _future;
 		_future = nullptr;
 	}
-	_result = move(res);
-	DeferredVertexResult::handleReady();
+	if (res && (!_result || res.get() != _result.get())) {
+		_result = move(res);
+		DeferredVertexResult::handleReady();
+	}
 }
 
 Rc<VectorCanvasResult> VectorCanvasDeferredResult::getResult() const {

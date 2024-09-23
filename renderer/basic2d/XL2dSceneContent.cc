@@ -599,29 +599,14 @@ void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 	ctx->lights.shadowDensity = _shadowDensity;
 	ctx->lights.globalColor = _globalLight;
 
-	if (ctx->shadows) {
-		for (auto &it : _lights) {
-			switch (it->getType()) {
-			case SceneLightType::Ambient:
-				ctx->lights.addAmbientLight(Vec4(it->getNormal().x / scaledExtent.width, -it->getNormal().y / scaledExtent.height,
-						it->getNormal().z, it->getNormal().w), it->getColor(), it->isSoftShadow());
-				break;
-			case SceneLightType::Direct:
-				ctx->lights.addDirectLight(Vec4(it->getNormal().x / scaledExtent.width, -it->getNormal().y / scaledExtent.height,
-						it->getNormal().z, it->getNormal().w), it->getColor(), it->getData());
-				break;
-			}
-		}
-	} else {
-		for (auto &it : _lights) {
-			switch (it->getType()) {
-			case SceneLightType::Ambient:
-				ctx->lights.addAmbientLight(it->getNormal(), it->getColor(), it->isSoftShadow());
-				break;
-			case SceneLightType::Direct:
-				ctx->lights.addDirectLight(it->getNormal(), it->getColor(), it->getData());
-				break;
-			}
+	for (auto &it : _lights) {
+		switch (it->getType()) {
+		case SceneLightType::Ambient:
+			ctx->lights.addAmbientLight(it->getNormal(), it->getColor(), it->isSoftShadow());
+			break;
+		case SceneLightType::Direct:
+			ctx->lights.addDirectLight(it->getNormal(), it->getColor(), it->getData());
+			break;
 		}
 	}
 }

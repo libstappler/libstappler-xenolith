@@ -109,8 +109,6 @@ public:
 protected:
 	using DynamicStateNode::init;
 
-	virtual void pushShadowCommands(FrameInfo &, NodeFlags flags, const Mat4 &,
-			SpanView<TransformVertexData> = SpanView<TransformVertexData>());
 	virtual void pushCommands(FrameInfo &, NodeFlags flags);
 
 	virtual MaterialInfo getMaterialInfo() const;

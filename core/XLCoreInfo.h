@@ -84,6 +84,7 @@ struct SP_PUBLIC BufferInfo : NamedMem {
 	void setup(uint64_t value) { size = value; }
 	void setup(BufferPersistent value) { persistent = value.get(); }
 	void setup(PassType value) { type = value; }
+	void setup(StringView n) { key = n; }
 
 	template <typename T>
 	void define(T && t) {

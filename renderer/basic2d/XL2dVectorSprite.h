@@ -81,8 +81,6 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual void pushShadowCommands(FrameInfo &, NodeFlags flags, const Mat4 &,
-			SpanView<TransformVertexData> = SpanView<TransformVertexData>()) override;
 	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
 
 	virtual void initVertexes() override;

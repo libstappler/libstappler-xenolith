@@ -34,8 +34,6 @@ public:
 	static constexpr StringView MaterialAttachmentName = "MaterialInput2d";
 	static constexpr StringView VertexAttachmentName = "VertexInput2d";
 	static constexpr StringView LightDataAttachmentName = "ShadowLightDataAttachment";
-	static constexpr StringView ShadowVertexAttachmentName = "ShadowVertexAttachment";
-	static constexpr StringView SdfImageAttachmentName = "SdfImageAttachment";
 
 	virtual ~FrameContext2d() { }
 
@@ -51,11 +49,8 @@ protected:
 	const core::AttachmentData *_materialAttachmentData = nullptr;
 	const core::AttachmentData *_vertexAttachmentData = nullptr;
 	const core::AttachmentData *_lightAttachmentData = nullptr;
-	const core::AttachmentData *_shadowVertexAttachmentData = nullptr;
-	const core::AttachmentData *_sdfImageAttachmentData = nullptr;
 
 	bool _init = false;
-	bool _hasFullSdf = false;
 };
 
 struct SP_PUBLIC StateData : public Ref {

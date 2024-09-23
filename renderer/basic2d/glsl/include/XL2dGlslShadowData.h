@@ -57,25 +57,10 @@ struct ShadowData {
 	float shadowSdfDensity;
 	float maxValue;
 
-	uint gridSize;
-	uint gridWidth;
-	uint gridHeight;
-	uint objectsCount;
-
-	uint trianglesFirst;
-	uint trianglesCount;
-	uint circlesFirst;
-	uint circlesCount;
-
-	uint rectsFirst;
-	uint rectsCount;
-	uint roundedRectsFirst;
-	uint roundedRectsCount;
-
-	uint polygonsFirst;
-	uint polygonsCount;
 	uint ambientLightCount;
 	uint directLightCount;
+	uint padding0;
+	uint padding1;
 
 	AmbientLightData ambientLights[16];
 	DirectLightData directLights[16];

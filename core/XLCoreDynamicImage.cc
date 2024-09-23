@@ -26,8 +26,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-DynamicImage::~DynamicImage() { }
-
 bool DynamicImage::init(const Callback<bool(Builder &)> &cb) {
 	Builder builder(this);
 	if (cb(builder)) {

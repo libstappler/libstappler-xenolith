@@ -33,14 +33,14 @@ extern SpanView<uint32_t> PseudoSdfFrag;
 extern SpanView<uint32_t> PseudoSdfVert;
 extern SpanView<uint32_t> PseudoSdfShadowFrag;
 extern SpanView<uint32_t> PseudoSdfShadowVert;
-extern SpanView<uint32_t> SdfTrianglesComp;
+/*extern SpanView<uint32_t> SdfTrianglesComp;
 extern SpanView<uint32_t> SdfCirclesComp;
 extern SpanView<uint32_t> SdfRectsComp;
 extern SpanView<uint32_t> SdfRoundedRectsComp;
 extern SpanView<uint32_t> SdfPolygonsComp;
 extern SpanView<uint32_t> SdfShadowsFrag;
 extern SpanView<uint32_t> SdfShadowsVert;
-extern SpanView<uint32_t> SdfImageComp;
+extern SpanView<uint32_t> SdfImageComp;*/
 
 }
 

@@ -37,7 +37,7 @@ class EventListener;
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 struct SP_PUBLIC LabelResult : Ref {
-	TransformVertexData data;
+	InstanceVertexData data;
 	Vector<ColorMask> colorMap;
 };
 
@@ -47,7 +47,7 @@ public:
 
 	bool init(std::future<Rc<LabelResult>> &&);
 
-	virtual SpanView<TransformVertexData> getData() override;
+	virtual bool acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &) override;
 
 	virtual void handleReady(Rc<LabelResult> &&);
 

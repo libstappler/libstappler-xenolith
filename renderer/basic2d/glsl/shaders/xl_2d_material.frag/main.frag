@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
 
+#include "SPGlslInit.h"
 #include "XL2dGlslVertexData.h"
 
 layout (constant_id = 0) const int SAMPLERS_ARRAY_SIZE = 2;
@@ -17,7 +18,7 @@ layout (push_constant) uniform pcb {
 
 layout (set = 0, binding = 0) readonly buffer Vertices {
 	Vertex vertices[];
-} vertexBuffer[2];
+} vertexBuffer[3];
 
 layout (set = 0, binding = 1) readonly buffer Materials {
 	MaterialData materials[];

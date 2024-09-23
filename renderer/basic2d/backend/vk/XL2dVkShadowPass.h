@@ -53,18 +53,15 @@ public:
 
 		const AttachmentData *shadowSdfAttachment = nullptr;
 		const AttachmentData *lightsAttachment = nullptr;
-		const AttachmentData *sdfPrimitivesAttachment = nullptr;
 	};
 
-	static bool makeDefaultRenderQueue(Queue::Builder &, RenderQueueInfo &);
-	static bool makeSimpleRenderQueue(Queue::Builder &, RenderQueueInfo &);
+	static bool makeRenderQueue(Queue::Builder &, RenderQueueInfo &);
 
 	virtual ~ShadowPass() { }
 
 	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
 
 	const AttachmentData *getLightsData() const { return _lightsData; }
-	const AttachmentData *getShadowPrimitives() const { return _shadowPrimitives; }
 	const AttachmentData *getSdf() const { return _sdf; }
 
 	Flags getFlags() const { return _flags; }
@@ -76,7 +73,6 @@ protected:
 
 	Flags _flags = Flags::None;
 
-	virtual bool initAsFullSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
 	virtual bool initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
 
 	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, core::SubpassBuilder &subpassBuilder,
@@ -86,7 +82,6 @@ protected:
 
 	// shadows
 	const AttachmentData *_lightsData = nullptr;
-	const AttachmentData *_shadowPrimitives = nullptr;
 	const AttachmentData *_sdf = nullptr;
 };
 
@@ -104,56 +99,7 @@ protected:
 
 	// shadows
 	const ShadowLightDataAttachmentHandle *_shadowData = nullptr;
-	const ShadowPrimitivesAttachmentHandle *_shadowPrimitives = nullptr;
 	const ImageAttachmentHandle *_sdfImage = nullptr;
-	bool _usesPseudoSdf = false;
-};
-
-class SP_PUBLIC ComputeShadowPass : public QueuePass {
-public:
-	static constexpr StringView SdfTrianglesComp = "SdfTrianglesComp";
-	static constexpr StringView SdfCirclesComp = "SdfCirclesComp";
-	static constexpr StringView SdfRectsComp = "SdfRectsComp";
-	static constexpr StringView SdfRoundedRectsComp = "SdfRoundedRectsComp";
-	static constexpr StringView SdfPolygonsComp = "SdfPolygonsComp";
-	static constexpr StringView SdfImageComp = "SdfImageComp";
-
-	virtual ~ComputeShadowPass() { }
-
-	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, Extent2 defaultExtent);
-
-	const AttachmentData *getLights() const { return _lights; }
-	const AttachmentData *getVertexes() const { return _vertexes; }
-	const AttachmentData *getPrimitives() const { return _primitives; }
-	const AttachmentData *getSdf() const { return _sdf; }
-
-	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
-
-protected:
-	using QueuePass::init;
-
-	const AttachmentData *_lights = nullptr;
-	const AttachmentData *_vertexes = nullptr;
-	const AttachmentData *_primitives = nullptr;
-	const AttachmentData *_sdf = nullptr;
-};
-
-class SP_PUBLIC ComputeShadowPassHandle : public QueuePassHandle {
-public:
-	virtual ~ComputeShadowPassHandle() { }
-
-	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
-
-protected:
-	virtual void writeShadowCommands(RenderPass *, CommandBuffer &);
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
-
-	const ShadowLightDataAttachmentHandle *_lightsBuffer = nullptr;
-	const ShadowVertexAttachmentHandle *_vertexBuffer = nullptr;
-	const ShadowPrimitivesAttachmentHandle *_primitivesBuffer = nullptr;
-	const ShadowSdfImageAttachmentHandle *_sdfImage = nullptr;
-
-	uint32_t _gridCellSize = 64;
 };
 
 }

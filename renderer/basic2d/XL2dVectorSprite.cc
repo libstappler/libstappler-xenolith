@@ -255,25 +255,6 @@ void VectorSprite::setDeferred(bool val) {
 	}
 }
 
-void VectorSprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &transform, SpanView<TransformVertexData> data) {
-	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	if (handle->shadows) {
-		if (_deferredResult) {
-			handle->shadows->pushDeferredShadow(_deferredResult, frame.viewProjectionStack.back(), transform * _targetTransform,
-					handle->getCurrentState(), _normalized, frame.depthStack.back());
-		} else if (!data.empty()) {
-			auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
-			for (auto &it : data) {
-				p->transform = it.transform;
-				p->data = it.data;
-				++ p;
-			}
-
-			handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
-		}
-	}
-}
-
 void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	if (!_image) {
 		return;
@@ -286,49 +267,47 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 
 	if (_result) {
-		auto &targetData = _result->mut;
-		auto reqMemSize = sizeof(TransformVertexData) * targetData.size();
+		handle->commands->pushVertexArray([&] (memory::pool_t *pool) {
+			auto &targetData = _result->mut;
+			auto reqMemSize = sizeof(InstanceVertexData) * targetData.size();
 
-		// pool memory is 16-bytes aligned, no problems with Mat4
-		auto tmpData = new (memory::pool::palloc(frame.pool->getPool(), reqMemSize)) TransformVertexData[targetData.size()];
-		auto target = tmpData;
-		if (_normalized) {
-			auto transform = frame.modelTransformStack.back() * _targetTransform;
-			for (auto &it : targetData) {
-				auto modelTransform = transform * it.transform;
+			// pool memory is 16-bytes aligned, no problems with Mat4
+			auto tmpData = new (memory::pool::palloc(frame.pool->getPool(), reqMemSize)) InstanceVertexData[targetData.size()];
+			auto target = tmpData;
+			if (_normalized) {
+				auto transform = frame.modelTransformStack.back() * _targetTransform;
+				for (auto &it : targetData) {
+					target->instances = it.instances.pdup(pool);
+					for (auto &inst : target->instances) {
+						auto modelTransform = transform * inst.transform;
 
-				Mat4 newMV;
-				newMV.m[12] = floorf(modelTransform.m[12]);
-				newMV.m[13] = floorf(modelTransform.m[13]);
-				newMV.m[14] = floorf(modelTransform.m[14]);
+						Mat4 newMV;
+						newMV.m[12] = floorf(modelTransform.m[12]);
+						newMV.m[13] = floorf(modelTransform.m[13]);
+						newMV.m[14] = floorf(modelTransform.m[14]);
 
-				target->transform = frame.viewProjectionStack.back() * newMV;
-				target->data = it.data;
-				++ target;
+						const_cast<TransformData &>(inst).transform = frame.viewProjectionStack.back() * newMV;
+					}
+					target->data = it.data;
+					++ target;
+				}
+			} else {
+				auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back() * _targetTransform;
+				for (auto &it : targetData) {
+					target->instances = it.instances.pdup(pool);
+					for (auto &inst : target->instances) {
+						const_cast<TransformData &>(inst).transform = transform * inst.transform;
+					}
+					target->data = it.data;
+					++ target;
+				}
 			}
-		} else {
-			auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back() * _targetTransform;
-			for (auto &it : targetData) {
-				auto modelTransform = transform * it.transform;
-				target->transform = modelTransform;
-				target->data = it.data;
-				++ target;
-			}
-		}
 
-		if (_depthIndex > 0.0f) {
-			pushShadowCommands(frame, flags, frame.modelTransformStack.back(), makeSpanView(tmpData, targetData.size()));
-		}
-
-		handle->commands->pushVertexArray(makeSpanView(tmpData, targetData.size()), frame.zPath,
-				_materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+			return makeSpanView(tmpData, targetData.size());
+		}, frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
 	} else if (_deferredResult) {
 		if (_deferredResult->isReady() && _deferredResult->getResult()->data.empty()) {
 			return;
-		}
-
-		if (_depthIndex > 0.0f) {
-			pushShadowCommands(frame, flags, frame.modelTransformStack.back());
 		}
 
 		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(),
@@ -418,10 +397,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		//config.sdfBoundaryOffset *= frame.request->getFrameConstraints().density;
 		config.sdfBoundaryOffset = _savedSdfValue * frame.request->getFrameConstraints().density;
 
-		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-		if (handle && handle->shadows) {
-			config.forcePseudoSdf = false;
-		} else if (_depthIndex > 0.0f) {
+		if (_depthIndex > 0.0f) {
 			config.forcePseudoSdf = true;
 		}
 

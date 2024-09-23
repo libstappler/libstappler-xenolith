@@ -128,6 +128,9 @@ void Device::invalidateObjects() {
 		} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
 			log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
 					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+		} else if (auto obj = dynamic_cast<BufferObject *>(it)) {
+			log::warn("Gl-Device", "Buffer ", (void *)it, " \"", obj->getName(), "\" ((", typeid(*it).name(),
+					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
 		} else {
 			auto name = it->getName();
 			if (!name.empty()) {

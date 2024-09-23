@@ -344,18 +344,6 @@ void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
 	_textureLoadedCallback = move(cb);
 }
 
-void Sprite::pushShadowCommands(FrameInfo &frame, NodeFlags flags, const Mat4 &t, SpanView<TransformVertexData> data) {
-	auto p = new (memory::pool::palloc(frame.pool->getPool(), sizeof(TransformVertexData) * data.size())) TransformVertexData();
-	for (auto &it : data) {
-		p->transform = it.transform;
-		p->data = it.data;
-		++ p;
-	}
-
-	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
-	handle->shadows->pushShadowArray(makeSpanView(p, data.size()), handle->getCurrentState(), frame.depthStack.back());
-}
-
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	auto data = _vertexes.pop();
 	Mat4 newMV;
@@ -370,10 +358,6 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 
-	if (_depthIndex > 0.0f) {
-		TransformVertexData transformData{newMV, data};
-		pushShadowCommands(frame, flags, newMV, makeSpanView(&transformData, 1));
-	}
 	handle->commands->pushVertexArray(data.get(), frame.viewProjectionStack.back() * newMV,
 			frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back() * _displayedColor.a, _commandFlags);
 }

@@ -53,8 +53,7 @@ bool AppScene::init(Application *app, const core::FrameContraints &constraints) 
 		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
 	};
 
-	basic2d::vk::ShadowPass::makeSimpleRenderQueue(builder, info);
-	//basic2d::vk::ShadowPass::makeDefaultRenderQueue(builder, info);
+	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
 	if (!Scene2d::init(move(builder), constraints)) {
 		return false;

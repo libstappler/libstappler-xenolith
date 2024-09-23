@@ -189,7 +189,7 @@ public:
 		Custom,
 	};
 
-	virtual ~DataAtlas() { }
+	virtual ~DataAtlas() = default;
 
 	bool init(Type, uint32_t count, uint32_t objectSize, Extent2 = Extent2(0, 0));
 	void compile();

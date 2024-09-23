@@ -66,7 +66,7 @@ protected:
 
 	Value _storageParams;
 
-	ViewCommandLineData _data;
+	ViewCommandLineData _initData;
 
 	Mutex _configMutex;
 	core::PresentMode _preferredPresentMode = core::PresentMode::Unsupported;

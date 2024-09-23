@@ -33,14 +33,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 #include "xl_2d_pseudosdf.vert.h"
 #include "xl_2d_pseudosdf_shadow.frag.h"
 #include "xl_2d_pseudosdf_shadow.vert.h"
-#include "xl_sdf_triangles.comp.h"
-#include "xl_sdf_circles.comp.h"
-#include "xl_sdf_rects.comp.h"
-#include "xl_sdf_rounded_rects.comp.h"
-#include "xl_sdf_polygons.comp.h"
-#include "xl_sdf_shadows.frag.h"
-#include "xl_sdf_shadows.vert.h"
-#include "xl_sdf_image.comp.h"
 
 SpanView<uint32_t> MaterialFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_frag), xl_2d_material_frag_len / sizeof(uint32_t));
 SpanView<uint32_t> MaterialVert(reinterpret_cast<const uint32_t *>(xl_2d_material_vert), xl_2d_material_vert_len / sizeof(uint32_t));
@@ -48,13 +40,5 @@ SpanView<uint32_t> PseudoSdfFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudo
 SpanView<uint32_t> PseudoSdfVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_vert), xl_2d_pseudosdf_vert_len / sizeof(uint32_t));
 SpanView<uint32_t> PseudoSdfShadowFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_frag), xl_2d_pseudosdf_shadow_frag_len / sizeof(uint32_t));
 SpanView<uint32_t> PseudoSdfShadowVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_vert), xl_2d_pseudosdf_shadow_vert_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfTrianglesComp(reinterpret_cast<const uint32_t *>(xl_sdf_triangles_comp), xl_sdf_triangles_comp_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfCirclesComp(reinterpret_cast<const uint32_t *>(xl_sdf_circles_comp), xl_sdf_circles_comp_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfRectsComp(reinterpret_cast<const uint32_t *>(xl_sdf_rects_comp), xl_sdf_rects_comp_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfRoundedRectsComp(reinterpret_cast<const uint32_t *>(xl_sdf_rounded_rects_comp), xl_sdf_rounded_rects_comp_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfPolygonsComp(reinterpret_cast<const uint32_t *>(xl_sdf_polygons_comp), xl_sdf_polygons_comp_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfShadowsFrag(reinterpret_cast<const uint32_t *>(xl_sdf_shadows_frag), xl_sdf_shadows_frag_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfShadowsVert(reinterpret_cast<const uint32_t *>(xl_sdf_shadows_vert), xl_sdf_shadows_vert_len / sizeof(uint32_t));
-SpanView<uint32_t> SdfImageComp(reinterpret_cast<const uint32_t *>(xl_sdf_image_comp), xl_sdf_image_comp_len / sizeof(uint32_t));
 
 }

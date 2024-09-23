@@ -159,7 +159,7 @@ bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb,
 		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
 	};
 
-	basic2d::vk::ShadowPass::makeDefaultRenderQueue(builder, info);
+	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
 	cb(builder);
 

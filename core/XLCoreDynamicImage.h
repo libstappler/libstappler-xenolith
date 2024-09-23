@@ -33,7 +33,7 @@ class DynamicImage;
 class MaterialAttachment;
 
 struct SP_PUBLIC DynamicImageInstance : public Ref {
-	virtual ~DynamicImageInstance() { }
+	virtual ~DynamicImageInstance() = default;
 
 	ImageData data;
 	Rc<Ref> userdata;
@@ -45,7 +45,7 @@ class SP_PUBLIC DynamicImage : public Ref {
 public:
 	class Builder;
 
-	virtual ~DynamicImage();
+	virtual ~DynamicImage() = default;
 
 	bool init(const Callback<bool(Builder &)> &);
 	void finalize();

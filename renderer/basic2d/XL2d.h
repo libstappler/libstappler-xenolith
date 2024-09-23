@@ -71,6 +71,7 @@ struct VertexSpan {
 	uint32_t instanceCount = 0;
 	uint32_t firstIndex = 0;
 	uint32_t vertexOffset = 0;
+	uint32_t firstInstance = 0;
 	StateId state = 0;
 	uint32_t gradientOffset = 0;
 	uint32_t gradientCount = 0;
@@ -81,8 +82,8 @@ struct alignas(16) VertexData : public Ref {
 	Vector<uint32_t> indexes;
 };
 
-struct alignas(16) TransformVertexData {
-	Mat4 transform;
+struct InstanceVertexData {
+	SpanView<TransformData> instances;
 	Rc<VertexData> data;
 	uint32_t fillIndexes = 0;
 	uint32_t strokeIndexes = 0;
@@ -131,9 +132,14 @@ struct SdfPrimitive2DHeader {
 
 class SP_PUBLIC DeferredVertexResult : public Ref {
 public:
+	enum Flags {
+		None = 0,
+		Immutable = 1 << 0,
+	};
+
 	virtual ~DeferredVertexResult() { }
 
-	virtual SpanView<TransformVertexData> getData() = 0;
+	virtual bool acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &) = 0;
 
 	bool isReady() const { return _isReady.load(); }
 	bool isWaitOnReady() const { return _waitOnReady; }
@@ -144,6 +150,8 @@ protected:
 	bool _waitOnReady = true;
 	std::atomic<bool> _isReady;
 };
+
+SP_DEFINE_ENUM_AS_MASK(DeferredVertexResult::Flags)
 
 struct SP_PUBLIC ShadowLightInput {
 	Color4F globalColor = Color4F::BLACK;

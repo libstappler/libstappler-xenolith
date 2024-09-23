@@ -240,7 +240,6 @@ Rc<LabelResult> Label::writeResult(TextLayout *format, const Color4F &color) {
 	array.init(format->getData()->chars.size() * 4, format->getData()->chars.size() * 6);
 
 	writeQuads(array, format->getData(), result->colorMap);
-	result->data.transform = Mat4::IDENTITY;
 	result->data.data = array.pop();
 	return result;
 }
@@ -721,7 +720,7 @@ bool LabelDeferredResult::init(std::future<Rc<LabelResult>> &&future) {
 	return true;
 }
 
-SpanView<TransformVertexData> LabelDeferredResult::getData() {
+bool LabelDeferredResult::acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &cb) {
 	std::unique_lock<Mutex> lock(_mutex);
 	if (_future) {
 		_result = _future->get();
@@ -729,7 +728,8 @@ SpanView<TransformVertexData> LabelDeferredResult::getData() {
 		_future = nullptr;
 		DeferredVertexResult::handleReady();
 	}
-	return makeSpanView(&_result->data, 1);
+	cb(makeSpanView(&_result->data, 1), Immutable);
+	return true;
 }
 
 void LabelDeferredResult::handleReady(Rc<LabelResult> &&res) {
@@ -738,12 +738,14 @@ void LabelDeferredResult::handleReady(Rc<LabelResult> &&res) {
 		delete _future;
 		_future = nullptr;
 	}
-	_result = move(res);
-	DeferredVertexResult::handleReady();
+	if (res && (!_result || res.get() != _result.get())) {
+		_result = move(res);
+		DeferredVertexResult::handleReady();
+	}
 }
 
 void LabelDeferredResult::updateColor(const Color4F &color) {
-	getResult(); // ensure rendering was complete
+	acquireResult([] (SpanView<InstanceVertexData>, Flags) {}); // ensure rendering was complete
 
 	std::unique_lock<Mutex> lock(_mutex);
 	if (_result) {

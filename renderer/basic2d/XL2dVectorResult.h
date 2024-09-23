@@ -34,8 +34,14 @@ using VectorImage = vg::VectorImage;
 using VectorPathRef = vg::VectorPathRef;
 using PathWriter = vg::PathWriter;
 
+enum class VectorInstancedMode {
+	None,
+	Aggressive
+};
+
 struct SP_PUBLIC VectorCanvasConfig {
 	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
+	VectorInstancedMode instancedMode = VectorInstancedMode::Aggressive;
 	float quality = 1.0f;
 	float boundaryOffset = config::VGAntialiasFactor;
 	float boundaryInset = config::VGAntialiasFactor;
@@ -50,8 +56,15 @@ struct SP_PUBLIC VectorCanvasConfig {
 };
 
 struct SP_PUBLIC VectorCanvasResult : public Ref {
-	Vector<TransformVertexData> data;
-	Vector<TransformVertexData> mut;
+	struct ObjectRef {
+		Vector<TransformData> *instances = nullptr;
+		uint32_t dataIndex = 0;
+	};
+
+	Vector<InstanceVertexData> data;
+	Vector<InstanceVertexData> mut;
+	std::forward_list<Vector<TransformData>> instances;
+	Map<String, ObjectRef> objects;
 	VectorCanvasConfig config;
 	Size2 targetSize;
 	Mat4 targetTransform;
@@ -65,7 +78,7 @@ public:
 
 	bool init(std::future<Rc<VectorCanvasResult>> &&, bool waitOnReady);
 
-	virtual SpanView<TransformVertexData> getData() override;
+	virtual bool acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &) override;
 
 	virtual void handleReady(Rc<VectorCanvasResult> &&);
 	virtual void handleReady() override { DeferredVertexResult::handleReady(); }

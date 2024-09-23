@@ -2,6 +2,11 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
 
+#ifndef SP_GLSL
+#define SP_GLSL
+#endif
+
+#include "SPGlslInit.h"
 #include "XL2dGlslVertexData.h"
 
 layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 8;
@@ -16,11 +21,11 @@ layout (push_constant) uniform pcb {
 
 layout (set = 0, binding = 0) readonly buffer Vertices {
 	Vertex vertices[];
-} vertexBuffer[2];
+} vertexBuffer[3];
 
 layout (set = 0, binding = 0) readonly buffer TransformObjects {
 	TransformData objects[];
-} transformObjectBuffer[2];
+} transformObjectBuffer[3];
 
 layout (set = 0, binding = 1) readonly buffer Materials {
 	MaterialData materials[];
@@ -51,6 +56,7 @@ uint hash(uint k, uint capacity) {
 void main() {
 	const Vertex vertex = vertexBuffer[0].vertices[gl_VertexIndex];
 	const TransformData transform = transformObjectBuffer[1].objects[vertex.material >> 16];
+	const TransformData instance = transformObjectBuffer[1].objects[gl_InstanceIndex];
 	const MaterialData mat = materials[pushConstants.materialIdx];
 
 	vec4 pos = vertex.pos;
@@ -83,7 +89,7 @@ void main() {
 		}
 	}
 
-	gl_Position = transform.transform * pos * transform.mask + transform.offset;
+	gl_Position = transform.transform * instance.transform * pos * transform.mask + transform.offset;
 	fragPosition = gl_Position.xy;
 	fragColor = color;
 	fragTexCoord = tex;
