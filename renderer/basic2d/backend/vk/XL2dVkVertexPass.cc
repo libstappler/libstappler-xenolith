@@ -480,6 +480,7 @@ void VertexMaterialDynamicData::updatePathsDepth() {
 
 void VertexMaterialDynamicData::pushInitial(WriteTarget &writeTarget) {
 	TransformData nullTransforml;
+	nullTransforml.offset = Vec4::ZERO;
 	memcpy(writeTarget.transform, &nullTransforml, sizeof(TransformData));
 	++ writeTarget.transtormOffset;
 

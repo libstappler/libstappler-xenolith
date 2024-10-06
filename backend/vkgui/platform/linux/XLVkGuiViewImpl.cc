@@ -111,7 +111,7 @@ void ViewImpl::threadInit() {
 			if (waylandDisplay || strcasecmp("wayland", sessionType) == 0) {
 				auto view = Rc<xenolith::platform::WaylandView>::alloc(wayland, this, _info.name, _info.bundleId, _info.rect);
 				if (!view) {
-					log::error("VkView", "Fail to initialize wayland window");
+					log::error("ViewImpl", "Fail to initialize wayland window");
 					return;
 				}
 
@@ -134,7 +134,7 @@ void ViewImpl::threadInit() {
 			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
 				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb, this, _info.title, _info.bundleId, _info.rect);
 				if (!view) {
-					log::error("VkView", "Fail to initialize xcb window");
+					log::error("ViewImpl", "Fail to initialize xcb window");
 					return;
 				}
 
@@ -147,7 +147,7 @@ void ViewImpl::threadInit() {
 	}
 
 	if (!_view) {
-		log::error("View", "No available surface type");
+		log::error("ViewImpl", "No available surface type");
 	}
 
 	View::threadInit();
@@ -219,7 +219,9 @@ bool ViewImpl::worker() {
 void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
 	if (_eventFd >= 0) {
 		uint64_t value = 1;
-		::write(_eventFd, (const void *)&value, sizeof(uint64_t));
+		if (::write(_eventFd, (const void *)&value, sizeof(uint64_t)) <= 0) {
+			log::error("ViewImpl", "Fail to wakeup event processing with eventfd");
+		}
 	}
 }
 

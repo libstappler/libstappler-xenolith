@@ -255,6 +255,46 @@ void VectorSprite::setDeferred(bool val) {
 	}
 }
 
+Vec2 VectorSprite::convertToImageFromWorld(const Vec2 &worldLocation) const {
+	auto imageSize = _image->getImageSize();
+
+	Mat4 t = Mat4::IDENTITY;
+	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+
+	Mat4 tmp = (_modelViewTransform * _targetTransform * t * _image->getViewBoxTransform()).getInversed();
+	return tmp.transformPoint(worldLocation);
+}
+
+Vec2 VectorSprite::convertToImageFromNode(const Vec2 &worldLocation) const {
+	auto imageSize = _image->getImageSize();
+
+	Mat4 t = Mat4::IDENTITY;
+	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+
+	Mat4 tmp = (_targetTransform * t * _image->getViewBoxTransform()).getInversed();
+	return tmp.transformPoint(worldLocation);
+}
+
+Vec2 VectorSprite::convertFromImageToNode(const Vec2 &imageLocation) const {
+	auto imageSize = _image->getImageSize();
+
+	Mat4 t = Mat4::IDENTITY;
+	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+
+	Mat4 tmp = _targetTransform * t * _image->getViewBoxTransform();
+	return tmp.transformPoint(imageLocation);
+}
+
+Vec2 VectorSprite::convertFromImageToWorld(const Vec2 &imageLocation) const {
+	auto imageSize = _image->getImageSize();
+
+	Mat4 t = Mat4::IDENTITY;
+	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+
+	Mat4 tmp = _modelViewTransform * _targetTransform * t * _image->getViewBoxTransform();
+	return tmp.transformPoint(imageLocation);
+}
+
 void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	if (!_image) {
 		return;

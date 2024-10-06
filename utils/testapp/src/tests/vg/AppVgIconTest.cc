@@ -21,6 +21,7 @@
  **/
 
 #include "AppVgIconTest.h"
+#include "XL2dVectorSprite.h"
 
 namespace stappler::xenolith::app {
 
@@ -190,9 +191,7 @@ void VgIconTest::updateIcon(IconName name) {
 	do {
 		_sprite->clear();
 		_sprite->setAutofit(Sprite::Autofit::Contain);
-		//_sprite->setImage(Rc<vg::VectorImage>::create(imageData));
 		auto path = _sprite->addPath();
-		//path->getPath()->init(pathData);
 		getIconData(_currentName, [&] (BytesView bytes) {
 			path->getPath()->init(bytes);
 		});

@@ -1133,7 +1133,10 @@ void DBusInterface::addEvent(Function<void()> &&ev) {
 	lock.unlock();
 
 	uint64_t value = 1;
-	::write(eventFd, &value, sizeof(uint64_t));
+	if (::write(eventFd, &value, sizeof(uint64_t)) != sizeof(uint64_t)) {
+		char buf[256] = { 0 };
+		log::error("DBusInterface", "Fail to send dbus event with write: ", strerror_r(errno, buf, 255));
+	}
 }
 
 void DBusInterface::addEvent(EventStruct *ev) {

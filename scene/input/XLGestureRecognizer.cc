@@ -987,6 +987,8 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 			if (_hasMouseOver != v) {
 				_hasMouseOver = v;
 				updateState(event);
+			} else if (_hasMouseOver) {
+				updateState(event);
 			}
 		} else {
 			if (_hasMouseOver) {
@@ -1022,6 +1024,10 @@ void GestureMouseOverRecognizer::updateState(const InputEvent &event) {
 		_value = value;
 		_event.input = &event;
 		_event.event = _value ? GestureEvent::Began : GestureEvent::Ended;
+		_callback(_event);
+	} else if (_value && event.data.event == InputEventName::MouseMove) {
+		_event.input = &event;
+		_event.event = GestureEvent::Moved;
 		_callback(_event);
 	}
 }

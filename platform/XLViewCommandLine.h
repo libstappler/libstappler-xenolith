@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-struct ViewCommandLineData {
+struct SP_PUBLIC  ViewCommandLineData {
 	String bundleName = "org.stappler.xenolith.test";
 	String applicationName = "Xenolith";
 	String applicationVersion = "0.0.1";
@@ -49,8 +49,8 @@ struct ViewCommandLineData {
 	Value encode() const;
 };
 
-int parseViewCommandLineSwitch(ViewCommandLineData &ret, char c, const char *str);
-int parseViewCommandLineString(ViewCommandLineData &ret, const StringView &str, int argc, const char * argv[]);
+SP_PUBLIC int parseViewCommandLineSwitch(ViewCommandLineData &ret, char c, const char *str);
+SP_PUBLIC int parseViewCommandLineString(ViewCommandLineData &ret, const StringView &str, int argc, const char * argv[]);
 
 }
 

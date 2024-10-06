@@ -115,10 +115,10 @@ struct VectorCanvas::Data : memory::AllocPool {
 
 	void applyTransform(const Mat4 &t);
 
-	void draw(const VectorPath &, StringView id, StringView cache);
-	void draw(const VectorPath &, StringView id, StringView cache, const Mat4 &);
+	void draw(const VectorPath &, StringView id, StringView cache, const Color4F &color);
+	void draw(const VectorPath &, StringView id, StringView cache, const Mat4 &, const Color4F &color);
 
-	void doDraw(const VectorPath &, StringView id, StringView cache);
+	void doDraw(const VectorPath &, StringView id, StringView cache, const Color4F &color);
 
 	void writeCacheData(const VectorPath &p, InstanceVertexData *out, const VectorCanvasCacheData &source);
 };
@@ -220,7 +220,7 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 		_data->applyTransform(t);
 	}
 
-	_data->image->draw([&, this] (const VectorPath &path, StringView id, StringView cacheId, const Mat4 &pos) {
+	_data->image->draw([&, this] (const VectorPath &path, StringView id, StringView cacheId, const Mat4 &pos, const Color4F &color) {
 		if (ret->config.instancedMode == VectorInstancedMode::Aggressive) {
 			auto it = _data->objects->find(id);
 			if (it != _data->objects->end()) {
@@ -234,7 +234,8 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 					_data->applyTransform(matTransform);
 				}
 
-				it->second.instances->emplace_back(TransformData(_data->transform));
+				auto &inst = it->second.instances->emplace_back(TransformData(_data->transform));
+				inst.color = color;
 				_data->out->at(it->second.dataIndex).instances = *it->second.instances;
 
 				if (hasTransform) {
@@ -246,9 +247,9 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 tar
 		}
 
 		if (pos.isIdentity()) {
-			_data->draw(path, id, cacheId);
+			_data->draw(path, id, cacheId, color);
 		} else {
-			_data->draw(path, id, cacheId, pos);
+			_data->draw(path, id, cacheId, pos, color);
 		}
 	});
 
@@ -293,21 +294,21 @@ void VectorCanvas::Data::applyTransform(const Mat4 &t) {
 	transform *= t;
 }
 
-void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache) {
+void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache, const Color4F &color) {
 	bool hasTransform = !path.getTransform().isIdentity();
 	if (hasTransform) {
 		save();
 		applyTransform(path.getTransform());
 	}
 
-	doDraw(path, id, cache);
+	doDraw(path, id, cache, color);
 
 	if (hasTransform) {
 		restore();
 	}
 }
 
-void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache, const Mat4 &mat) {
+void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView cache, const Mat4 &mat, const Color4F &color) {
 	auto matTransform = path.getTransform() * mat;
 	bool hasTransform = !matTransform.isIdentity();
 
@@ -316,14 +317,14 @@ void VectorCanvas::Data::draw(const VectorPath &path, StringView id, StringView 
 		applyTransform(matTransform);
 	}
 
-	doDraw(path, id, cache);
+	doDraw(path, id, cache, color);
 
 	if (hasTransform) {
 		restore();
 	}
 }
 
-void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringView cache) {
+void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringView cache, const Color4F &color) {
 	// Add new output slot or use already allocated and empty
 	InstanceVertexData *outData = nullptr;
 	if (out->empty() || !out->back().data->data.empty()) {
@@ -348,7 +349,8 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 					writeCacheData(path, outData, *it);
 
 					auto &it = instances->emplace_front(Vector<TransformData>());
-					it.emplace_back(TransformData(transform));
+					auto &instObj = it.emplace_back(TransformData(transform));
+					instObj.color = color;
 					outData->instances = it;
 				}
 				break;
@@ -363,7 +365,8 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 					writeCacheData(path, outData, *it);
 
 					auto &inst = instances->emplace_front(Vector<TransformData>());
-					inst.emplace_back(TransformData(transform));
+					auto &instObj = inst.emplace_back(TransformData(transform));
+					instObj.color = color;
 					outData->instances = inst;
 
 					if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {
@@ -382,7 +385,8 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 				outData->data->indexes.clear();
 			} else {
 				auto &inst = instances->emplace_front(Vector<TransformData>());
-				inst.emplace_back(TransformData(transform));
+				auto &instObj = inst.emplace_back(TransformData(transform));
+				instObj.color = color;
 				outData->instances = inst;
 
 				if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {

@@ -78,6 +78,12 @@ public:
 	virtual void setWaitDeferred(bool value) { _waitDeferred = value; }
 	virtual bool isWaitDeferred() const { return _waitDeferred; }
 
+	virtual Vec2 convertToImageFromWorld(const Vec2 &worldLocation) const;
+	virtual Vec2 convertToImageFromNode(const Vec2 &worldLocation) const;
+
+	virtual Vec2 convertFromImageToNode(const Vec2 &imageLocation) const;
+	virtual Vec2 convertFromImageToWorld(const Vec2 &imageLocation) const;
+
 protected:
 	using Sprite::init;
 

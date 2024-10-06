@@ -81,7 +81,9 @@ void Application::nativeInit() { }
 void Application::nativeDispose() { }
 
 void Application::openUrl(StringView url) const {
-	::system(toString("xdg-open ", url).data());
+	if (::system(toString("xdg-open ", url).data()) != 0) {
+		log::error("xenolith::Application", "Fail to open external url: ", url);
+	}
 }
 
 }

@@ -89,9 +89,9 @@ void main() {
 		}
 	}
 
-	gl_Position = transform.transform * instance.transform * pos * transform.mask + transform.offset;
+	gl_Position = transform.transform * instance.transform * pos * transform.mask * instance.mask + transform.offset + instance.offset;
 	fragPosition = gl_Position.xy;
-	fragColor = color;
+	fragColor = color * instance.color;
 	fragTexCoord = tex;
 	shadowColor = transform.shadow;
 }
