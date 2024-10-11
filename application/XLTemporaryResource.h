@@ -67,6 +67,8 @@ public:
 	bool isRequested() const { return _requested; }
 	bool isLoaded() const { return _loaded; }
 
+	TemporaryResourceFlags getFlags() const { return _flags; }
+
 	Time getAccessTime() const { return _atime; }
 	TimeInterval getTimeout() const { return _timeout; }
 	size_t getUsersCount() const { return _users; }
@@ -78,7 +80,7 @@ public:
 protected:
 	bool _requested = false;
 	bool _loaded = false;
-	bool _removeOnClear = false;
+	TemporaryResourceFlags _flags = TemporaryResourceFlags::None;
 	size_t _users = 0;
 	uint64_t _atime;
 	TimeInterval _timeout;

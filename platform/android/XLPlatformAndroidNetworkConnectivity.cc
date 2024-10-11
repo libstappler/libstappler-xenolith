@@ -222,6 +222,9 @@ void NetworkConnectivity::finalize(JNIEnv *env) {
 			env->CallVoidMethod(thiz, networkConnectivityFinalize);
 		}
 	}
+
+	j_hasCapability = nullptr;
+
 	if (thiz) {
 		env->DeleteGlobalRef(thiz);
 		thiz = nullptr;
@@ -234,9 +237,16 @@ void NetworkConnectivity::finalize(JNIEnv *env) {
 
 void NetworkConnectivity::handleCreated(JNIEnv *env, jobject caps, jobject props) {
 	//log::verbose("NetworkConnectivity", "onCreated");
-	capabilities = readCapabilities(env, j_hasCapability, caps);
-	if (callback) {
-		callback(capabilities);
+	if (j_hasCapability && caps) {
+		capabilities = readCapabilities(env, j_hasCapability, caps);
+		if (callback) {
+			callback(capabilities);
+		}
+	} else if (capabilities != NetworkCapabilities::None) {
+		capabilities = NetworkCapabilities::None;
+		if (callback) {
+			callback(capabilities);
+		}
 	}
 }
 
@@ -248,9 +258,16 @@ void NetworkConnectivity::handleFinalized(JNIEnv *env) {
 
 void NetworkConnectivity::handleAvailable(JNIEnv *env, jobject caps, jobject props) {
 	//log::verbose("NetworkConnectivity", "onAvailable");
-	capabilities = readCapabilities(env, j_hasCapability, caps);
-	if (callback) {
-		callback(capabilities);
+	if (j_hasCapability && caps) {
+		capabilities = readCapabilities(env, j_hasCapability, caps);
+		if (callback) {
+			callback(capabilities);
+		}
+	} else if (capabilities != NetworkCapabilities::None) {
+		capabilities = NetworkCapabilities::None;
+		if (callback) {
+			callback(capabilities);
+		}
 	}
 }
 
@@ -264,9 +281,16 @@ void NetworkConnectivity::handleLost(JNIEnv *env) {
 
 void NetworkConnectivity::handleCapabilitiesChanged(JNIEnv *env, jobject caps) {
 	//log::verbose("NetworkConnectivity", "onCapabilitiesChanged");
-	capabilities = readCapabilities(env, j_hasCapability, caps);
-	if (callback) {
-		callback(capabilities);
+	if (j_hasCapability && caps) {
+		capabilities = readCapabilities(env, j_hasCapability, caps);
+		if (callback) {
+			callback(capabilities);
+		}
+	} else if (capabilities != NetworkCapabilities::None) {
+		capabilities = NetworkCapabilities::None;
+		if (callback) {
+			callback(capabilities);
+		}
 	}
 }
 

@@ -42,13 +42,10 @@ bool TemporaryResource::init(Rc<core::Resource> &&res, TimeInterval timeout, Tem
 	_timeout = timeout;
 	_resource = move(res);
 	_name = _resource->getName().str<Interface>();
+	_flags = flags;
 
-	if ((flags & TemporaryResourceFlags::Loaded) != TemporaryResourceFlags::None) {
+	if ((_flags & TemporaryResourceFlags::Loaded) != TemporaryResourceFlags::None) {
 		setLoaded(true);
-	}
-
-	if ((flags & TemporaryResourceFlags::RemoveOnClear) != TemporaryResourceFlags::None) {
-		_removeOnClear = true;
 	}
 
 	return true;
@@ -177,7 +174,7 @@ bool TemporaryResource::clear() {
 	_owners.clear();
 
 	setLoaded(false);
-	return _removeOnClear;
+	return (_flags & TemporaryResourceFlags::RemoveOnClear) != TemporaryResourceFlags::None;
 }
 
 StringView TemporaryResource::getName() const {

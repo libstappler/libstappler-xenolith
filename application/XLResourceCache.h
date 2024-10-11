@@ -85,6 +85,8 @@ public:
 	Rc<TemporaryResource> addTemporaryResource(Rc<core::Resource> &&, TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
 
+	Rc<TemporaryResource> addTemporaryResource(Rc<TemporaryResource> &&);
+
 	Rc<TemporaryResource> getTemporaryResource(StringView str) const;
 	bool hasTemporaryResource(StringView) const;
 	void removeTemporaryResource(StringView);

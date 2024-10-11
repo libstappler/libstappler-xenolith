@@ -20,6 +20,8 @@
  THE SOFTWARE.
  **/
 
+#if MODULE_XENOLITH_CORE
+
 #include "XLCommon.h"
 #include "XLSnnVkShaders.h"
 
@@ -461,3 +463,5 @@ void FillFloatBuffer(uint8_t *buf, uint64_t size, float val) {
 #include "XLSnnVkTrainableLayer.cc"
 
 #include "XLSnnVkNmeMath.cc"
+
+#endif

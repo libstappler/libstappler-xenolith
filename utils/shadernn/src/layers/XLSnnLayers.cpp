@@ -20,6 +20,8 @@
  THE SOFTWARE.
  **/
 
+#if MODULE_XENOLITH_SCENE
+
 #include "XLCommon.h"
 
 #include "XLSnnLayer.cc"
@@ -29,3 +31,5 @@
 #include "XLSnnMatrixMulLayer.cc"
 #include "XLSnnStatPercentLayer.cc"
 #include "XLSnnLossLayer.cc"
+
+#endif

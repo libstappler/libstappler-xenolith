@@ -216,14 +216,17 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 }
 
 Rc<TemporaryResource> ResourceCache::addTemporaryResource(Rc<core::Resource> &&res, TimeInterval ival, TemporaryResourceFlags flags) {
-	auto tmp = Rc<TemporaryResource>::create(move(res), ival, flags);
+	return addTemporaryResource(Rc<TemporaryResource>::create(move(res), ival, flags));
+}
+
+Rc<TemporaryResource> ResourceCache::addTemporaryResource(Rc<TemporaryResource> &&tmp) {
 	auto it = _temporaries.find(tmp->getName());
 	if (it != _temporaries.end()) {
 		_temporaries.erase(it);
 	}
 	it = _temporaries.emplace(tmp->getName(), move(tmp)).first;
 
-	if ((flags & TemporaryResourceFlags::CompileWhenAdded) != TemporaryResourceFlags::None) {
+	if ((it->second->getFlags() & TemporaryResourceFlags::CompileWhenAdded) != TemporaryResourceFlags::None) {
 		compileResource(it->second);
 	}
 	return it->second;
