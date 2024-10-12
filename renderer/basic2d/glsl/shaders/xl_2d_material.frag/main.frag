@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 #include "SPGlslInit.h"
 #include "XL2dGlslVertexData.h"
@@ -14,6 +15,9 @@ layout (push_constant) uniform pcb {
 	uint samplerIdx;
 	uint gradientOffset;
 	uint gradientCount;
+	uint padding;
+	uint64_t padding1;
+	uint64_t padding2;
 } pushConstants;
 
 layout (set = 0, binding = 0) readonly buffer Vertices {

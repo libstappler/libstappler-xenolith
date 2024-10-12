@@ -1,6 +1,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
+#extension GL_EXT_buffer_reference : require
 
 #ifndef SP_GLSL
 #define SP_GLSL
@@ -10,14 +12,6 @@
 #include "XL2dGlslVertexData.h"
 
 layout (constant_id = 0) const int BUFFERS_ARRAY_SIZE = 8;
-
-layout (push_constant) uniform pcb {
-	uint materialIdx;
-	uint padding0;
-	uint padding1;
-	uint padding2;
-	uint padding3;
-} pushConstants;
 
 layout (set = 0, binding = 0) readonly buffer Vertices {
 	Vertex vertices[];
@@ -29,7 +23,7 @@ layout (set = 0, binding = 0) readonly buffer TransformObjects {
 
 layout (set = 0, binding = 1) readonly buffer Materials {
 	MaterialData materials[];
-};
+} materialsBuffer;
 
 layout (set = 1, binding = 2) readonly buffer DataAtlasIndexBuffer {
 	DataAtlasIndex indexes[];
@@ -38,6 +32,40 @@ layout (set = 1, binding = 2) readonly buffer DataAtlasIndexBuffer {
 layout (set = 1, binding = 2) readonly buffer DataAtlasValueBuffer {
 	DataAtlasValue values[];
 } dataAtlasValues[BUFFERS_ARRAY_SIZE];
+
+// DBA mode
+
+layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer DataAtlasIndexDBA {
+	DataAtlasIndex indexes[];
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer DataAtlasValueDBA {
+	DataAtlasValue values[];
+};
+
+struct MaterialDataDBA {
+	uint samplerImageIdx;
+	uint setIdx;
+	uint atlasIdx;
+	uint flags;
+	DataAtlasIndexDBA atlasIndexBuffer;
+	DataAtlasValueDBA atlasDataBuffer;
+};
+
+layout (set = 0, binding = 1) readonly buffer MaterialsDBA {
+	MaterialDataDBA materials[];
+} materialsDBABuffer;
+
+layout (push_constant) uniform pcb {
+	uint materialIdx;
+	uint padding0;
+	uint padding1;
+	uint padding2;
+	uint padding3;
+	uint padding4;
+	DataAtlasIndexDBA atlasIndexBuffer;
+	DataAtlasValueDBA atlasDataBuffer;
+} pushConstants;
 
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec2 fragTexCoord;
@@ -57,7 +85,7 @@ void main() {
 	const Vertex vertex = vertexBuffer[0].vertices[gl_VertexIndex];
 	const TransformData transform = transformObjectBuffer[1].objects[vertex.material >> 16];
 	const TransformData instance = transformObjectBuffer[1].objects[gl_InstanceIndex];
-	const MaterialData mat = materials[pushConstants.materialIdx];
+	const MaterialData mat = materialsBuffer.materials[pushConstants.materialIdx];
 
 	vec4 pos = vertex.pos;
 	vec4 color = vertex.color;
@@ -66,24 +94,46 @@ void main() {
 	if (vertex.object != 0 && (mat.flags & XL_GLSL_MATERIAL_FLAG_HAS_ATLAS) != 0) {
 		uint size = 1 << (mat.flags >> XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
 		uint slot = hash(vertex.object, size);
-		uint dataAtlasIndex = mat.atlasIdx & 0xFFFF;
-		uint dataAtlasValue = mat.atlasIdx >> 16;
 		uint counter = 0;
-		while (counter < size) {
-			const DataAtlasIndex prev = dataAtlasIndexes[dataAtlasIndex].indexes[slot];
-			if (prev.key == vertex.object) {
-				const DataAtlasValue value = dataAtlasValues[dataAtlasValue].values[dataAtlasIndexes[dataAtlasIndex].indexes[slot].value];
 
-				pos += vec4(value.pos, 0, 0);
-				tex = value.tex;
-				break;
-			} else if (prev.key == uint(0xffffffff)) {
-				color = vec4(1, 0, 0, 1);
-				break;
+		if ((mat.flags & XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA) != 0) {
+			MaterialDataDBA matDba = materialsDBABuffer.materials[pushConstants.materialIdx];
+
+			while (counter < size) {
+				const DataAtlasIndex prev = pushConstants.atlasIndexBuffer.indexes[slot];
+				if (prev.key == vertex.object) {
+					const DataAtlasValue value = pushConstants.atlasDataBuffer.values[prev.value];
+
+					pos += vec4(value.pos, 0, 0);
+					tex = value.tex;
+					break;
+				} else if (prev.key == uint(0xffffffff)) {
+					color = vec4(1, 0, 0, 1);
+					break;
+				}
+				slot = (slot + 1) & (size - 1);
+				++ counter;
 			}
-			slot = (slot + 1) & (size - 1);
-			++ counter;
+		} else {
+			uint dataAtlasIndex = mat.atlasIdx & 0xFFFF;
+			uint dataAtlasValue = mat.atlasIdx >> 16;
+			while (counter < size) {
+				const DataAtlasIndex prev = dataAtlasIndexes[dataAtlasIndex].indexes[slot];
+				if (prev.key == vertex.object) {
+					const DataAtlasValue value = dataAtlasValues[dataAtlasValue].values[prev.value];
+
+					pos += vec4(value.pos, 0, 0);
+					tex = value.tex;
+					break;
+				} else if (prev.key == uint(0xffffffff)) {
+					color = vec4(1, 0, 0, 1);
+					break;
+				}
+				slot = (slot + 1) & (size - 1);
+				++ counter;
+			}
 		}
+
 		if (counter == size) {
 			color = vec4(0, 1, 0, 1);
 		}

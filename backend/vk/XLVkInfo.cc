@@ -64,6 +64,7 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 	ret.deviceDescriptorIndexing.descriptorBindingPartiallyBound = VK_TRUE;
 	ret.deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
 	ret.deviceDescriptorIndexing.runtimeDescriptorArray = VK_TRUE;
+	ret.deviceBufferDeviceAddress.bufferDeviceAddress = VK_TRUE;
 
 	ret.flags = ExtensionFlags::Maintenance3
 		| ExtensionFlags::DescriptorIndexing

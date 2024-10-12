@@ -32,6 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::glsl {
 #define XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX 1
 #define XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_DATA 2
 #define XL_GLSL_MATERIAL_FLAG_HAS_ATLAS 3 // (XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX | XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_DATA)
+#define XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA 4
 #define XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET 24
 
 struct Vertex {
@@ -47,10 +48,8 @@ struct MaterialData {
 	uint setIdx;
 	uint atlasIdx;
 	uint flags;
-	uint gradient;
-	uint padding0;
-	uint padding1;
-	uint padding2;
+	uint64_t atlasIndexBuffer;
+	uint64_t atlasDataBuffer;
 };
 
 struct TransformData {

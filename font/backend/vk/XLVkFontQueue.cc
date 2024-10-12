@@ -620,8 +620,10 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 
 	if (_device->hasDynamicIndexedBuffers()) {
 		_targetImage = allocator->preallocate(info, false, instance->data.image->getIndex());
-		_targetAtlasIndex = allocator->preallocate(core::BufferInfo(atlas->getIndexData().size(), core::BufferUsage::StorageBuffer));
-		_targetAtlasData = allocator->preallocate(core::BufferInfo(atlas->getData().size(), core::BufferUsage::StorageBuffer));
+		_targetAtlasIndex = allocator->preallocate(core::BufferInfo(atlas->getIndexData().size(),
+				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
+		_targetAtlasData = allocator->preallocate(core::BufferInfo(atlas->getData().size(),
+				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
 		Rc<Buffer> atlasBuffers[] = {
 			_targetAtlasIndex,

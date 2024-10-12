@@ -147,8 +147,8 @@ public:
 	void invalidateMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
 	void flushMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
 
-	bool setData(BytesView, VkDeviceSize offset = 0);
-	Bytes getData(VkDeviceSize size = maxOf<VkDeviceSize>(), VkDeviceSize offset = 0);
+	bool setData(BytesView, VkDeviceSize offset = 0, DeviceMemoryAccess = DeviceMemoryAccess::Flush);
+	Bytes getData(VkDeviceSize size = maxOf<VkDeviceSize>(), VkDeviceSize offset = 0, DeviceMemoryAccess = DeviceMemoryAccess::Invalidate);
 
 	// returns maxOf<uint64_t>() on overflow
 	uint64_t reserveBlock(uint64_t blockSize, uint64_t alignment);

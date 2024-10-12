@@ -639,6 +639,10 @@ bool Device::hasDynamicIndexedBuffers() const {
 	return _info.features.device10.features.shaderStorageBufferArrayDynamicIndexing;
 }
 
+bool Device::hasBufferDeviceAddresses() const {
+	return _info.features.deviceBufferDeviceAddress.bufferDeviceAddress;
+}
+
 void Device::waitIdle() const {
 	_table->vkDeviceWaitIdle(_device);
 }

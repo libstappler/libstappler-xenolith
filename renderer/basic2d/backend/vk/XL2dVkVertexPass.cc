@@ -1102,6 +1102,9 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		uint32_t samplerIdx = 0;
 		uint32_t gradientOffset = 0;
 		uint32_t gradientCount = 0;
+		uint32_t padding = 0;
+		uint64_t atlasIndexBuffer = 0;
+		uint64_t atlasDataBuffer = 0;
 	};
 
 	MaterialData data;
@@ -1138,6 +1141,15 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		data.samplerIdx = material->getImages().front().sampler;
 		data.gradientOffset = materialVertexSpan.gradientOffset;
 		data.gradientCount = materialVertexSpan.gradientCount;
+
+		if (auto a = material->getAtlas()) {
+			if (auto ref = a->getIndexBuffer()->getDeviceAddress()) {
+				data.atlasIndexBuffer = ref;
+			}
+			if (auto ref = a->getDataBuffer()->getDeviceAddress()) {
+				data.atlasDataBuffer = ref;
+			}
+		}
 
 		auto textureSetIndex =  material->getLayoutIndex();
 

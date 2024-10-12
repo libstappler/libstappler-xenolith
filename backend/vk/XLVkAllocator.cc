@@ -575,11 +575,7 @@ Rc<Buffer> Allocator::spawnPersistent(AllocationUsage usage, const BufferInfo &i
 	}
 
 	if (!view.empty()) {
-		void *ptr = nullptr;
-		if (_device->getTable()->vkMapMemory(_device->getDevice(), target->getMemory()->getMemory(), 0, view.size(), 0, &ptr) == VK_SUCCESS) {
-			memcpy(ptr, view.data(), view.size());
-			_device->getTable()->vkUnmapMemory(_device->getDevice(), target->getMemory()->getMemory());
-		} else {
+		if (!target->setData(view, 0)) {
 			return nullptr;
 		}
 	}
@@ -613,7 +609,13 @@ Rc<Buffer> Allocator::preallocate(const BufferInfo &info, BytesView view) {
 		return nullptr;
 	}
 
-	return Rc<Buffer>::create(*_device, target, info, nullptr, 0);
+	if (bufferInfo.size != info.size) {
+		BufferInfo tmpInfo(info);
+		tmpInfo.size = bufferInfo.size;
+		return Rc<Buffer>::create(*_device, target, tmpInfo, nullptr, 0);
+	} else {
+		return Rc<Buffer>::create(*_device, target, info, nullptr, 0);
+	}
 }
 
 Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized, uint64_t forceId) {
@@ -657,8 +659,13 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Rc<Im
 	uint32_t nonLinearObjects = 0;
 
 	auto mask = getInitialTypeMask();
+	bool requiresBufferAdresses = false;
 
 	for (auto &it : buffers) {
+		if ((it->getInfo().usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+			requiresBufferAdresses = true;
+		}
+
 		auto req = getBufferMemoryRequirements(it->getBuffer());
 		if (!req.prefersDedicated && !req.requiresDedicated) {
 			mask &= req.requirements.memoryTypeBits;
@@ -751,10 +758,21 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Rc<Im
 
 	VkDeviceMemory memObject;
 	if (requiredMemory > 0) {
-		VkMemoryAllocateInfo allocInfo{};
+		VkMemoryAllocateInfo allocInfo;
+		VkMemoryAllocateFlagsInfoKHR flagsInfo;
+
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.pNext = nullptr;
 		allocInfo.allocationSize = requiredMemory;
 		allocInfo.memoryTypeIndex = allocMemType->idx;
+
+		if (_device->hasBufferDeviceAddresses() && requiresBufferAdresses) {
+			flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+			flagsInfo.pNext = allocInfo.pNext;
+			flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+			allocInfo.pNext = &flagsInfo;
+		}
 
 		if (_device->getTable()->vkAllocateMemory(_device->getDevice(), &allocInfo, nullptr, &memObject) != VK_SUCCESS) {
 			log::error("vk::Allocator", "emplaceObjects: fail to allocate memory");
@@ -818,40 +836,40 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Buffer *target) {
 	}
 
 	VkDeviceMemory memory;
+
+	VkMemoryAllocateInfo allocInfo;
+	VkMemoryDedicatedAllocateInfo dedicatedInfo;
+	VkMemoryAllocateFlagsInfoKHR flagsInfo;
+
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = nullptr;
+	allocInfo.allocationSize = req.requirements.size;
+	allocInfo.memoryTypeIndex = type->idx;
+
 	if (hasDedicatedFeature()) {
-		VkMemoryDedicatedAllocateInfo dedicatedInfo;
 		dedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-		dedicatedInfo.pNext = nullptr;
+		dedicatedInfo.pNext = allocInfo.pNext;
 		dedicatedInfo.image = VK_NULL_HANDLE;
 		dedicatedInfo.buffer = target->getBuffer();
 
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.pNext = &dedicatedInfo;
-		allocInfo.allocationSize = req.requirements.size;
-		allocInfo.memoryTypeIndex = type->idx;
+	}
 
-		VkResult result = VK_ERROR_UNKNOWN;
-		_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
-			result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
-		});
-		if (result != VK_SUCCESS) {
-			return false;
-		}
-	} else {
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.pNext = nullptr;
-		allocInfo.allocationSize = req.requirements.size;
-		allocInfo.memoryTypeIndex = type->idx;
+	if (_device->hasBufferDeviceAddresses() && (target->getInfo().usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+		flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+		flagsInfo.pNext = allocInfo.pNext;
+		flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 
-		VkResult result = VK_ERROR_UNKNOWN;
-		_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
-			result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
-		});
-		if (result != VK_SUCCESS) {
-			return false;
-		}
+		allocInfo.pNext = &flagsInfo;
+	}
+
+	VkResult result = VK_ERROR_UNKNOWN;
+	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+		result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
+	});
+
+	if (result != VK_SUCCESS) {
+		return false;
 	}
 
 	target->bindMemory(Rc<DeviceMemory>::create(this, DeviceMemoryInfo{
@@ -869,42 +887,31 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Image *target) {
 	}
 
 	VkDeviceMemory memory;
+
+	VkMemoryAllocateInfo allocInfo;
+	VkMemoryDedicatedAllocateInfo dedicatedInfo;
+
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = nullptr;
+	allocInfo.allocationSize = req.requirements.size;
+	allocInfo.memoryTypeIndex = type->idx;
+
 	if (hasDedicatedFeature()) {
-		VkMemoryDedicatedAllocateInfo dedicatedInfo;
 		dedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-		dedicatedInfo.pNext = nullptr;
+		dedicatedInfo.pNext = allocInfo.pNext;
 		dedicatedInfo.image = target->getImage();
 		dedicatedInfo.buffer = VK_NULL_HANDLE;
 
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.pNext = &dedicatedInfo;
-		allocInfo.allocationSize = req.requirements.size;
-		allocInfo.memoryTypeIndex = type->idx;
+	}
 
-		VkResult result = VK_ERROR_UNKNOWN;
-		_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
-			result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
-		});
-		if (result != VK_SUCCESS) {
-			log::error("vk::Allocator", "Image: allocateDedicated: Fail to allocate memory for dedicated allocation");
-			return false;
-		}
-	} else {
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.pNext = nullptr;
-		allocInfo.allocationSize = req.requirements.size;
-		allocInfo.memoryTypeIndex = type->idx;
-
-		VkResult result = VK_ERROR_UNKNOWN;
-		_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
-			result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
-		});
-		if (result != VK_SUCCESS) {
-			log::error("vk::Allocator", "Image: allocateDedicated: Fail to allocate memory for dedicated allocation");
-			return false;
-		}
+	VkResult result = VK_ERROR_UNKNOWN;
+	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+		result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
+	});
+	if (result != VK_SUCCESS) {
+		log::error("vk::Allocator", "Image: allocateDedicated: Fail to allocate memory for dedicated allocation");
+		return false;
 	}
 
 	target->bindMemory(Rc<DeviceMemory>::create(this, DeviceMemoryInfo{
@@ -940,6 +947,11 @@ bool DeviceMemoryPool::init(const Rc<Allocator> &alloc, bool persistentMapping) 
 }
 
 Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info) {
+	if ((info.usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+		log::error("DeviceMemoryPool", "BDA feature is not available for device memory pools. Use dedicated persistent allocation instead.");
+		return nullptr;
+	}
+
 	auto buffer = _allocator->preallocate(info);
 	auto requirements = _allocator->getBufferMemoryRequirements(buffer->getBuffer());
 

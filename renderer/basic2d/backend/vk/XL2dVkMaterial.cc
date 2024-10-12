@@ -45,10 +45,16 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 					auto pow2index = std::countr_zero(indexSize);
 
 					material.flags |= (pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
+					material.atlasIndexBuffer = index->getDeviceAddress();
 				}
 				if (auto &data = image.image->atlas->getDataBuffer()) {
 					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_DATA;
 					material.atlasIdx |= (data->getDescriptor() << 16);
+					material.atlasDataBuffer = data->getDeviceAddress();
+				}
+
+				if (material.atlasIndexBuffer && material.atlasDataBuffer) {
+					material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
 				}
 			}
 			memcpy(target, &material, sizeof(MaterialData));

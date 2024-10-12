@@ -253,6 +253,22 @@ bool Buffer::init(Device &dev, VkBuffer buffer, const BufferInfo &info, Rc<Devic
 		_name = _info.key.str<Interface>();
 	}
 
+	if ((_info.usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+		if (dev.hasBufferDeviceAddresses()) {
+			if (_memory) {
+				VkBufferDeviceAddressInfoKHR info;
+				info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
+				info.pNext = nullptr;
+				info.buffer = _buffer;
+
+				_deviceAddress = dev.getTable()->vkGetBufferDeviceAddressKHR(dev.getDevice(), &info);
+			}
+		} else {
+			// Remove BDA flag if not available
+			_info.usage &= ~core::BufferUsage::ShaderDeviceAddress;
+		}
+	}
+
 	return core::BufferObject::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *thiz) {
 		auto d = ((Device *)dev);
 		d->getTable()->vkDestroyBuffer(d->getDevice(), (VkBuffer)ptr.get(), nullptr);
@@ -282,6 +298,16 @@ bool Buffer::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
 	if (dev->getTable()->vkBindBufferMemory(dev->getDevice(), _buffer, mem->getMemory(), offset + mem->getBlockOffset()) == VK_SUCCESS) {
 		_memoryOffset = offset;
 		_memory = move(mem);
+
+		if (_memory && (_info.usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+			VkBufferDeviceAddressInfoKHR info;
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
+			info.pNext = nullptr;
+			info.buffer = _buffer;
+
+			_deviceAddress = dev->getTable()->vkGetBufferDeviceAddressKHR(dev->getDevice(), &info);
+		}
+
 		return true;
 	}
 	return false;
@@ -317,15 +343,15 @@ void Buffer::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
 	_memory->flushMappedRegion(offset, size);
 }
 
-bool Buffer::setData(BytesView data, VkDeviceSize offset) {
+bool Buffer::setData(BytesView data, VkDeviceSize offset, DeviceMemoryAccess access) {
 	auto size = std::min(size_t(_info.size - offset), data.size());
 
 	return _memory->map([&] (uint8_t *ptr, VkDeviceSize size) {
 		::memcpy(ptr, data.data(), size);
-	}, _memoryOffset + offset, size, DeviceMemoryAccess::Flush);
+	}, _memoryOffset + offset, size, access);
 }
 
-Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset) {
+Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset, DeviceMemoryAccess access) {
 	size = std::min(_info.size - offset, size);
 
 	Bytes ret;
@@ -333,7 +359,7 @@ Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset) {
 	_memory->map([&] (uint8_t *ptr, VkDeviceSize size) {
 		ret.resize(size);
 		::memcpy(ret.data(), ptr, size);
-	}, _memoryOffset + offset, size, DeviceMemoryAccess::Invalidate);
+	}, _memoryOffset + offset, size, access);
 
 	return ret;
 }

@@ -306,11 +306,14 @@ public:
 	uint32_t getSet() const { return _set; }
 	uint32_t getDescriptor() const { return _descriptor; }
 
+	uint64_t getDeviceAddress() const { return _deviceAddress; }
+
 protected:
 	BufferInfo _info;
 
 	uint32_t _set = 0;
 	uint32_t _descriptor = 0;
+	uint64_t _deviceAddress = 0;
 };
 
 
