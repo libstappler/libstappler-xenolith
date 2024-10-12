@@ -111,7 +111,15 @@ struct HashTableKeyValue {
 	uint32_t value;
 };
 
-const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
+uint32_t DataAtlas::getHash(uint32_t id) const {
+	if (!_dataIndex.empty()) {
+		auto size = _dataIndex.size() / sizeof(HashTableKeyValue);
+		return hash(id, size);
+	}
+	return maxOf<uint32_t>();
+}
+
+uint32_t DataAtlas::getIndexByName(uint32_t id) const {
 	if (!_dataIndex.empty()) {
 		auto size = _dataIndex.size() / sizeof(HashTableKeyValue);
 		uint32_t slot = hash(id, size);
@@ -120,7 +128,7 @@ const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
 		while (true) {
 			uint32_t prev = data[slot].key;
 			if (prev == id) {
-				return _data.data() + _objectSize * data[slot].value;
+				return data[slot].value;
 			} else if (prev == 0xffffffffU) {
 				break;
 			}
@@ -131,8 +139,16 @@ const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
 	auto it = _intNames.find(id);
 	if (it != _intNames.end()) {
 		if (it->second < _data.size() / _objectSize) {
-			return _data.data() + _objectSize * it->second;
+			return it->second;
 		}
+	}
+	return maxOf<uint32_t>();
+}
+
+const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
+	auto index = getIndexByName(id);
+	if (index != maxOf<uint32_t>()) {
+		return _data.data() + _objectSize * index;
 	}
 	return nullptr;
 }

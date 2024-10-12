@@ -31,8 +31,6 @@ layout (location = 0) in vec4 fragColor;
 layout (location = 0) out vec4 outColor;
 layout (location = 1) in vec2 fragTexCoord;
 
-uint s_cellIdx;
-
 #define M_1_PI 0.318309886183790671538
 #define GAUSSIAN_CONST -6.2383246250
 
@@ -59,9 +57,6 @@ void main() {
 
 	vec4 textureColor = shadowData.globalColor;
 	for (uint i = 0; i < shadowData.ambientLightCount; ++ i) {
-		// Высота, для которой расчитан SDF (считается для условного потолка)
-		const float h = shadowData.maxValue - sdfSource.w;
-		
 		// Расстояние по высоте от текущего фрагмента до источника SDF
 		const float dh = sdfSource.w - depth;
 

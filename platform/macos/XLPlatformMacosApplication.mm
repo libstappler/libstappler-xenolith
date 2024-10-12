@@ -804,6 +804,11 @@ XL_OBJC_IMPLEMENTATION_BEGIN(XLMacView)
 	return self.layer;
 }
 
+- (BOOL)layer:(CALayer *)layer shouldInheritContentsScale:(CGFloat)newScale fromWindow:(NSWindow *)window {
+	std::cout << "shouldInheritContentsScale: " << newScale << "\n";
+	return YES;
+}
+
 - (BOOL)acceptsFirstResponder { return YES; }
 
 - (void) viewDidMoveToWindow {

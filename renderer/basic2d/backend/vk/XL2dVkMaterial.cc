@@ -27,8 +27,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 MaterialAttachment::~MaterialAttachment() { }
 
 bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info) {
-	return core::MaterialAttachment::init(builder, info, [] (uint8_t *target, const core::Material *material) {
-		auto &images = material->getImages();
+	return core::MaterialAttachment::init(builder, info, [] (uint8_t *target, const core::Material *m) {
+		auto &images = m->getImages();
 		if (!images.empty()) {
 			MaterialData material;
 			auto &image = images.front();

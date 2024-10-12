@@ -194,6 +194,9 @@ public:
 	bool init(Type, uint32_t count, uint32_t objectSize, Extent2 = Extent2(0, 0));
 	void compile();
 
+	uint32_t getHash(uint32_t) const;
+	uint32_t getIndexByName(uint32_t) const;
+
 	const uint8_t *getObjectByName(uint32_t) const;
 	const uint8_t *getObjectByName(StringView) const;
 	const uint8_t *getObjectByOrder(uint32_t) const;
