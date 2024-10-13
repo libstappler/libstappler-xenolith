@@ -1061,8 +1061,8 @@ Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &h
 		doFinalizeTransfer(materials, outputImageBarriers, outputBufferBarriers);
 
 		if (!outputBufferBarriers.empty() && !outputImageBarriers.empty()) {
-			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
+			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 				outputBufferBarriers, outputImageBarriers);
 		}
 

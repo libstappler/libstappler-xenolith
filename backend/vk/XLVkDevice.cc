@@ -643,6 +643,14 @@ bool Device::hasBufferDeviceAddresses() const {
 	return _info.features.deviceBufferDeviceAddress.bufferDeviceAddress;
 }
 
+bool Device::isPortabilityMode() const {
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+	return _info.features.devicePortability.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;
+#else
+	return false;
+#endif
+}
+
 void Device::waitIdle() const {
 	_table->vkDeviceWaitIdle(_device);
 }

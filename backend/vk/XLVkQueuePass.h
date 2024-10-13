@@ -93,7 +93,7 @@ public:
 	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, ImageAttachmentHandle &) const;
 	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *, BufferAttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
 
-	void setQueueIdleMode(DeviceQueue::IdleMode);
+	void setQueueIdleFlags(DeviceQueue::IdleFlags);
 
 protected:
 	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &);
@@ -116,7 +116,7 @@ protected:
 	vk::GraphicPipeline *getGraphicPipelineByName(uint32_t subpass, StringView) const;
 	vk::GraphicPipeline *getGraphicPipelineBySubName(uint32_t subpass, StringView) const;
 
-	DeviceQueue::IdleMode _queueIdleMode = DeviceQueue::IdleMode::None;
+	DeviceQueue::IdleFlags _queueIdleFlags = DeviceQueue::IdleFlags::None;
 	Function<void(bool)> _onPrepared;
 	bool _valid = true;
 	bool _commandsReady = false;

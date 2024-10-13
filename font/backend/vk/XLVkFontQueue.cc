@@ -144,6 +144,8 @@ protected:
 	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 
+	void submitResult(FrameHandle &);
+
 	FontAttachmentHandle *_fontAttachment = nullptr;
 	QueueOperations _queueOps = QueueOperations::None;
 	Rc<Image> _targetImage;
@@ -549,13 +551,17 @@ auto FontRenderPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHa
 FontRenderPassHandle::~FontRenderPassHandle() { }
 
 bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
-	if (!QueuePassHandle::init(pass, handle)) {
+	if (!vk::QueuePassHandle::init(pass, handle)) {
 		return false;
 	}
 
 	_queueOps = static_cast<vk::QueuePass *>(_queuePass.get())->getQueueOps();
 
 	auto dev = static_cast<Device *>(handle.getFrame()->getDevice());
+	if (dev->isPortabilityMode()) {
+		_queueIdleFlags = DeviceQueue::IdleFlags::PostQueue;
+	}
+
 	auto q = dev->getQueueFamily(_queueOps);
 	if (q->transferGranularity.width > 1 || q->transferGranularity.height > 1) {
 		_queueOps = QueueOperations::Graphics;
@@ -660,11 +666,26 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		}
 
 		ImageMemoryBarrier inputBarrier(_targetImage,
-			0, VK_ACCESS_TRANSFER_WRITE_BIT,
+			0, VK_ACCESS_MEMORY_WRITE_BIT,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 				persistentBarriers, makeSpanView(&inputBarrier, 1));
+
+		// Uncomment to clear image before drawing
+		/*buf.cmdClearColorImage(_targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Color::Black);
+
+		ImageMemoryBarrier inputBarrier2(_targetImage,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				persistentBarriers, makeSpanView(&inputBarrier2, 1));*/
+
+		if (_targetAtlasIndex && _targetAtlasData) {
+			buf.cmdCopyBuffer(stageAtlasIndex, _targetAtlasIndex);
+			buf.cmdCopyBuffer(stageAtlasData, _targetAtlasData);
+		}
 
 		// copy from temporary buffer
 		if (!copyFromTmp.empty()) {
@@ -677,16 +698,16 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		}
 
 		if (!copyToPersistent.empty()) {
+			if (auto b = _fontAttachment->getPersistentTargetBuffer()->getPendingBarrier()) {
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+						makeSpanView(b, 1));
+			}
+
 			buf.cmdCopyBuffer(_fontAttachment->getTmpBuffer(), _fontAttachment->getPersistentTargetBuffer(), copyToPersistent);
 			_fontAttachment->getPersistentTargetBuffer()->setPendingBarrier(BufferMemoryBarrier(_fontAttachment->getPersistentTargetBuffer(),
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
 				QueueFamilyTransfer(), 0, _fontAttachment->getPersistentTargetBuffer()->getReservedSize()
 			));
-		}
-
-		if (_targetAtlasIndex && _targetAtlasData) {
-			buf.cmdCopyBuffer(stageAtlasIndex, _targetAtlasIndex);
-			buf.cmdCopyBuffer(stageAtlasData, _targetAtlasData);
 		}
 
 		auto sourceLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -711,7 +732,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 				));
 
 				ImageMemoryBarrier reverseBarrier(_targetImage,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+					VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
 					sourceLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&reverseBarrier, 1));
 
@@ -719,36 +740,21 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 				buf.cmdCopyImageToBuffer(_targetImage, sourceLayout, _outBuffer, 0);
 
 				BufferMemoryBarrier bufferOutBarrier(_outBuffer,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT);
+						VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT);
 
 				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
 			}
 
 			ImageMemoryBarrier outputBarrier(_targetImage,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
 				sourceLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex});
-
-			VkPipelineStageFlags targetOps = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-					| VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-
-			auto ops = getQueueOps();
-			switch (ops) {
-			case QueueOperations::Transfer:
-				targetOps = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-				break;
-			case QueueOperations::Compute:
-				targetOps = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-				break;
-			default:
-				break;
-			}
 
 			if (q->index != _pool->getFamilyIdx()) {
 				_targetImage->setPendingBarrier(outputBarrier);
 			}
 
-			if (_targetAtlasIndex && _targetAtlasData) {
+			if (_targetAtlasIndex && _targetAtlasData && !_device->hasBufferDeviceAddresses()) {
 				BufferMemoryBarrier outputBufferBarrier[] = {
 					BufferMemoryBarrier(_targetAtlasIndex,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
@@ -763,10 +769,10 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 					_targetAtlasData->setPendingBarrier(outputBufferBarrier[1]);
 				}
 
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetOps, 0,
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 						makeSpanView(outputBufferBarrier, 2), makeSpanView(&outputBarrier, 1));
 			} else {
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetOps, 0,
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 						makeSpanView(&outputBarrier, 1));
 			}
 		}
@@ -778,24 +784,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 
 void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
 	if (success) {
-		auto &input = _fontAttachment->getInput();
-
-		auto atlas = _fontAttachment->getAtlas();
-		if (_device->hasDynamicIndexedBuffers()) {
-			atlas->setIndexBuffer(_targetAtlasIndex);
-			atlas->setDataBuffer(_targetAtlasData);
-		}
-
-		auto &sig = frame.getSignalDependencies();
-
-		input->image->updateInstance(*frame.getLoop(), _targetImage, move(atlas),
-				Rc<Ref>(_fontAttachment->getUserdata()), sig);
-
-		if (input->output) {
-			_outBuffer->map([&, this] (uint8_t *ptr, VkDeviceSize size) {
-				input->output(_targetImage->getInfo(), BytesView(ptr, size));
-			});
-		}
+		submitResult(frame);
 	}
 
 	vk::QueuePassHandle::doSubmitted(frame, move(func), success, move(fence));
@@ -804,6 +793,27 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 
 void FontRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
 	QueuePassHandle::doComplete(queue, move(func), success);
+}
+
+void FontRenderPassHandle::submitResult(FrameHandle &frame) {
+	auto &input = _fontAttachment->getInput();
+
+	auto atlas = _fontAttachment->getAtlas();
+	if (_device->hasDynamicIndexedBuffers()) {
+		atlas->setIndexBuffer(_targetAtlasIndex);
+		atlas->setDataBuffer(_targetAtlasData);
+	}
+
+	auto &sig = frame.getSignalDependencies();
+
+	input->image->updateInstance(*frame.getLoop(), _targetImage, move(atlas),
+			Rc<Ref>(_fontAttachment->getUserdata()), sig);
+
+	if (input->output) {
+		_outBuffer->map([&, this] (uint8_t *ptr, VkDeviceSize size) {
+			input->output(_targetImage->getInfo(), BytesView(ptr, size));
+		});
+	}
 }
 
 }

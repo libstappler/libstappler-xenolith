@@ -36,6 +36,7 @@
 #include FT_ADVANCES_H
 
 #include "SPFontFace.h"
+#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
@@ -292,7 +293,7 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font
 	input->image = image;
 	input->ext = this;
 	input->requests = move(data);
-	/*input->output = [] (const gl::ImageInfo &info, BytesView data) {
+	/*input->output = [] (const core::ImageInfoData &info, BytesView data) {
 		Bitmap bmp(data, info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
 		bmp.save(bitmap::FileFormat::Png, toString(Time::now().toMicros(), ".png"));
 	};*/

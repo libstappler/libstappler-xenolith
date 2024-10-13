@@ -267,7 +267,7 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &ha
 }
 
 bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited) {
-	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers, _queueIdleMode);
+	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers, _queueIdleFlags);
 	_pool = nullptr;
 	frame.performOnGlThread([this, success, onSubmited = move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
 		_queueData->submitTime = armedTime;
@@ -593,8 +593,8 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 	return ret;
 }
 
-void QueuePassHandle::setQueueIdleMode(DeviceQueue::IdleMode mode) {
-	_queueIdleMode = mode;
+void QueuePassHandle::setQueueIdleFlags(DeviceQueue::IdleFlags flags) {
+	_queueIdleFlags = flags;
 }
 
 }

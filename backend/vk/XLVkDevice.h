@@ -132,6 +132,7 @@ public:
 	bool hasNonSolidFillMode() const;
 	bool hasDynamicIndexedBuffers() const;
 	bool hasBufferDeviceAddresses() const;
+	bool isPortabilityMode() const;
 
 	virtual void waitIdle() const override;
 

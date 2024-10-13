@@ -42,7 +42,7 @@ bool DeviceQueue::init(Device &device, VkQueue queue, uint32_t index, QueueOpera
 	return true;
 }
 
-bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &commandPool, SpanView<const CommandBuffer *> buffers, IdleMode idle) {
+bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &commandPool, SpanView<const CommandBuffer *> buffers, IdleFlags idle) {
 	Vector<VkSemaphore> waitSem;
 	Vector<VkPipelineStageFlags> waitStages;
 	Vector<VkSemaphore> signalSem;
@@ -95,15 +95,11 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 #endif
 
 	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
-		switch (idle) {
-		case IdleMode::Queue:
+		if ((idle & IdleFlags::PreQueue) != IdleFlags::None) {
 			table.vkQueueWaitIdle(_queue);
-			break;
-		case IdleMode::Device:
+		}
+		if ((idle & IdleFlags::PreDevice) != IdleFlags::None) {
 			table.vkDeviceWaitIdle(_device->getDevice());
-			break;
-		case IdleMode::None:
-			break;
 		}
 #if XL_VKAPI_DEBUG
 		auto t = platform::clock(core::ClockType::Monotonic);
@@ -113,6 +109,12 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif
+		if ((idle & IdleFlags::PostQueue) != IdleFlags::None) {
+			table.vkQueueWaitIdle(_queue);
+		}
+		if ((idle & IdleFlags::PostDevice) != IdleFlags::None) {
+			table.vkDeviceWaitIdle(_device->getDevice());
+		}
 	});
 
 	if (_result == VK_SUCCESS) {
@@ -156,11 +158,11 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	return false;
 }
 
-bool DeviceQueue::submit(Fence &fence, const CommandBuffer *buffer, IdleMode idle) {
+bool DeviceQueue::submit(Fence &fence, const CommandBuffer *buffer, IdleFlags idle) {
 	return submit(fence, makeSpanView(&buffer, 1), idle);
 }
 
-bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, IdleMode idle) {
+bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, IdleFlags idle) {
 	Vector<VkCommandBuffer> vkBuffers; vkBuffers.reserve(buffers.size());
 
 	for (auto &it : buffers) {
@@ -190,15 +192,11 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 #endif
 
 	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
-		switch (idle) {
-		case IdleMode::Queue:
+		if ((idle & IdleFlags::PreQueue) != IdleFlags::None) {
 			table.vkQueueWaitIdle(_queue);
-			break;
-		case IdleMode::Device:
+		}
+		if ((idle & IdleFlags::PreDevice) != IdleFlags::None) {
 			table.vkDeviceWaitIdle(_device->getDevice());
-			break;
-		case IdleMode::None:
-			break;
 		}
 #if XL_VKAPI_DEBUG
 		auto t = platform::clock(core::ClockType::Monotonic);
@@ -208,6 +206,12 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif
+		if ((idle & IdleFlags::PostQueue) != IdleFlags::None) {
+			table.vkQueueWaitIdle(_queue);
+		}
+		if ((idle & IdleFlags::PostDevice) != IdleFlags::None) {
+			table.vkDeviceWaitIdle(_device->getDevice());
+		}
 	});
 
 	if (_result == VK_SUCCESS) {
@@ -355,6 +359,16 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, buffers.size(), buffers.data(), 0, nullptr);
 }
 
+void CommandBuffer::cmdGlobalBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
+		VkAccessFlags src, VkAccessFlags dst) {
+	VkMemoryBarrier barrier;
+	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = src;
+	barrier.dstAccessMask = dst;
+
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 1, &barrier, 0, nullptr, 0, nullptr);
+}
 
 void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
 		SpanView<BufferMemoryBarrier> bufferBarriers, SpanView<ImageMemoryBarrier> imageBarriers) {

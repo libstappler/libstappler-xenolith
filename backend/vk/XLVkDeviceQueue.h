@@ -85,10 +85,12 @@ struct SP_PUBLIC DeviceQueueFamily {
 
 class SP_PUBLIC DeviceQueue final : public Ref {
 public:
-	enum class IdleMode {
+	enum class IdleFlags {
 		None,
-		Queue,
-		Device
+		PreQueue = 1 << 0,
+		PreDevice = 1 << 1,
+		PostQueue = 1 << 2,
+		PostDevice = 1 << 3,
 	};
 
 	using FrameSync = core::FrameSync;
@@ -98,9 +100,9 @@ public:
 
 	virtual bool init(Device &, VkQueue, uint32_t, QueueOperations);
 
-	bool submit(const FrameSync &, Fence &, CommandPool &, SpanView<const CommandBuffer *>, IdleMode = IdleMode::None);
-	bool submit(Fence &, const CommandBuffer *, IdleMode = IdleMode::None);
-	bool submit(Fence &, SpanView<const CommandBuffer *>, IdleMode = IdleMode::None);
+	bool submit(const FrameSync &, Fence &, CommandPool &, SpanView<const CommandBuffer *>, IdleFlags = IdleFlags::None);
+	bool submit(Fence &, const CommandBuffer *, IdleFlags = IdleFlags::None);
+	bool submit(Fence &, SpanView<const CommandBuffer *>, IdleFlags = IdleFlags::None);
 
 	void waitIdle();
 
@@ -126,6 +128,8 @@ protected:
 	std::atomic<uint32_t> _nfences;
 	VkResult _result = VK_ERROR_UNKNOWN;
 };
+
+SP_DEFINE_ENUM_AS_MASK(DeviceQueue::IdleFlags)
 
 enum class BufferLevel {
 	Primary = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -234,6 +238,8 @@ public:
 			SpanView<BufferMemoryBarrier>);
 	void cmdPipelineBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
 			SpanView<BufferMemoryBarrier>, SpanView<ImageMemoryBarrier>);
+	void cmdGlobalBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
+			VkAccessFlags src, VkAccessFlags dst);
 
 	void cmdCopyBuffer(Buffer *src, Buffer *dst);
 	void cmdCopyBuffer(Buffer *src, Buffer *dst, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);

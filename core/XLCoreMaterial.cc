@@ -287,7 +287,9 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				oIt.view = nullptr;
 			}
 			if (oIt.image->atlas) {
-				if (auto &atlasIndex = oIt.image->atlas->getIndexBuffer()) {
+				auto &atlasIndex = oIt.image->atlas->getIndexBuffer();
+				auto &atlasData = oIt.image->atlas->getDataBuffer();
+				if (atlasIndex && atlasIndex->getDeviceAddress() == 0) {
 					auto descIdx = atlasIndex->getDescriptor();
 					if (descIdx < oldSet.bufferSlots.size()) {
 						-- oldSet.bufferSlots[descIdx].refCount;
@@ -296,7 +298,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 						}
 					}
 				}
-				if (auto &atlasData = oIt.image->atlas->getDataBuffer()) {
+				if (atlasData && atlasData->getDeviceAddress() == 0) {
 					auto descIdx = atlasData->getDescriptor();
 					if (descIdx < oldSet.bufferSlots.size()) {
 						-- oldSet.bufferSlots[descIdx].refCount;
@@ -330,10 +332,12 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		++ imageIdx;
 
 		if (it.image->atlas) {
-			if (auto &atlasIndex = it.image->atlas->getIndexBuffer()) {
+			auto &atlasIndex = it.image->atlas->getIndexBuffer();
+			auto &atlasData = it.image->atlas->getDataBuffer();
+			if (atlasIndex && atlasIndex->getDeviceAddress() == 0) {
 				uniqueBuffers.emplace_back(atlasIndex);
 			}
-			if (auto &atlasData = it.image->atlas->getDataBuffer()) {
+			if (atlasData && atlasData->getDeviceAddress() == 0) {
 				uniqueBuffers.emplace_back(atlasData);
 			}
 		}
