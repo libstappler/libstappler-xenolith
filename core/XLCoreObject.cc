@@ -83,7 +83,14 @@ uint64_t Framebuffer::getHash() const {
 	return hash::hash64((const char *)_viewIds.data(), _viewIds.size() * sizeof(uint64_t));
 }
 
-static std::atomic<uint64_t> s_ImageViewCurrentIndex = 1;
+inline uint32_t hash(uint32_t k, uint32_t capacity) {
+	k ^= k >> 16;
+	k *= 0x85ebca6b;
+	k ^= k >> 13;
+	k *= 0xc2b2ae35;
+	k ^= k >> 16;
+	return k & (capacity - 1);
+}
 
 bool DataAtlas::init(Type t, uint32_t count, uint32_t objectSize, Extent2 imageSize) {
 	_type = t;
@@ -94,41 +101,54 @@ bool DataAtlas::init(Type t, uint32_t count, uint32_t objectSize, Extent2 imageS
 }
 
 void DataAtlas::compile() {
-	makeHashIndex();
-}
+	auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
+	auto bufferObjectCount = math::npot(uint32_t(_intNames.size()));
 
-inline uint32_t hash(uint32_t k, uint32_t capacity) {
-	k ^= k >> 16;
-	k *= 0x85ebca6b;
-	k ^= k >> 13;
-	k *= 0xc2b2ae35;
-	k ^= k >> 16;
-	return k & (capacity - 1);
-}
+	Bytes dataStorage; dataStorage.resize(bufferObjectCount * bufferObjectSize, uint8_t(0xFFU));
 
-struct HashTableKeyValue {
-	uint32_t key;
-	uint32_t value;
-};
+	auto bufferData = dataStorage.data();
+
+	for (auto &it : _intNames) {
+		auto objectKey = uint32_t(it.first);
+		uint32_t slot = hash(objectKey, bufferObjectCount);
+
+		while (true) {
+			auto targetObject = bufferData + slot * bufferObjectSize;
+			uint32_t prev = *reinterpret_cast<uint32_t *>(targetObject);
+			if (prev == 0xffffffffU || prev == objectKey) {
+				memcpy(targetObject, &objectKey, sizeof(uint32_t));
+				memcpy(targetObject + sizeof(uint32_t), &it.second, sizeof(uint32_t));
+				memcpy(targetObject + sizeof(uint32_t) * 2, _data.data() + _objectSize * uint32_t(it.second), _objectSize);
+				break;
+			}
+			slot = (slot + 1) & (bufferObjectCount - 1);
+		}
+	}
+
+	_bufferData = move(dataStorage);
+}
 
 uint32_t DataAtlas::getHash(uint32_t id) const {
-	if (!_dataIndex.empty()) {
-		auto size = _dataIndex.size() / sizeof(HashTableKeyValue);
+	if (!_bufferData.empty()) {
+		auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
+		auto size = _bufferData.size() / bufferObjectSize;
 		return hash(id, size);
 	}
 	return maxOf<uint32_t>();
 }
 
-uint32_t DataAtlas::getIndexByName(uint32_t id) const {
-	if (!_dataIndex.empty()) {
-		auto size = _dataIndex.size() / sizeof(HashTableKeyValue);
+const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
+	if (!_bufferData.empty()) {
+		auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
+		auto size = _bufferData.size() / bufferObjectSize;
 		uint32_t slot = hash(id, size);
-		auto data = (HashTableKeyValue *)_dataIndex.data();
+
+		auto bufferData = _bufferData.data();
 
 		while (true) {
-			uint32_t prev = data[slot].key;
+			uint32_t prev = *reinterpret_cast<const uint32_t *>(bufferData + slot * bufferObjectSize);
 			if (prev == id) {
-				return data[slot].value;
+				return bufferData + slot * bufferObjectSize + sizeof(uint32_t) * 2;
 			} else if (prev == 0xffffffffU) {
 				break;
 			}
@@ -139,16 +159,8 @@ uint32_t DataAtlas::getIndexByName(uint32_t id) const {
 	auto it = _intNames.find(id);
 	if (it != _intNames.end()) {
 		if (it->second < _data.size() / _objectSize) {
-			return it->second;
+			return _data.data() + _objectSize * it->second;
 		}
-	}
-	return maxOf<uint32_t>();
-}
-
-const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
-	auto index = getIndexByName(id);
-	if (index != maxOf<uint32_t>()) {
-		return _data.data() + _objectSize * index;
 	}
 	return nullptr;
 }
@@ -186,35 +198,11 @@ void DataAtlas::addObject(StringView name, void *data) {
 	_stringNames.emplace(name.str<Interface>(), off / _objectSize);
 }
 
-void DataAtlas::setIndexBuffer(Rc<BufferObject> &&index) {
-	_indexBuffer = move(index);
+void DataAtlas::setBuffer(Rc<BufferObject> &&index) {
+	_buffer = move(index);
 }
 
-void DataAtlas::setDataBuffer(Rc<BufferObject> &&data) {
-	_dataBuffer = move(data);
-}
-
-void DataAtlas::makeHashIndex() {
-	auto size = math::npot(uint32_t(_intNames.size()));
-	Bytes dataStorage; dataStorage.resize(size * sizeof(HashTableKeyValue), uint8_t(0xFFU));
-	auto data = (HashTableKeyValue *)dataStorage.data();
-
-	for (auto &it : _intNames) {
-		uint32_t slot = hash(it.first, size);
-
-		while (true) {
-			uint32_t prev = data[slot].key;
-			if (prev == 0xffffffffU || prev == it.first) {
-				data[slot].key = it.first;
-				data[slot].value = it.second;
-				break;
-			}
-			slot = (slot + 1) & (size - 1);
-		}
-	}
-
-	_dataIndex = move(dataStorage);
-}
+static std::atomic<uint64_t> s_ImageViewCurrentIndex = 1;
 
 ImageObject::~ImageObject() { }
 

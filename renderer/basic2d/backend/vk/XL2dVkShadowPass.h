@@ -73,8 +73,6 @@ protected:
 
 	Flags _flags = Flags::None;
 
-	virtual bool initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
-
 	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, core::SubpassBuilder &subpassBuilder,
 			const core::PipelineLayoutData *layout2d, ResourceCache *cache,
 			const core::AttachmentPassData *colorAttachment, const core::AttachmentPassData *shadowAttachment,

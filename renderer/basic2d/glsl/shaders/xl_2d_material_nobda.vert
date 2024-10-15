@@ -1,7 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_EXT_buffer_reference : require
 
 #ifndef SP_GLSL
 #define SP_GLSL
@@ -28,11 +27,10 @@ layout (set = 1, binding = 2) readonly buffer DataAtlasIndexBuffer {
 	DataAtlasIndex indexes[];
 } dataAtlasIndexes[BUFFERS_ARRAY_SIZE];
 
-// DBA mode
-
-layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer DataAtlasIndexDBA {
-	DataAtlasIndex indexes[];
-};
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec2 fragTexCoord;
+layout (location = 2) out vec4 shadowColor;
+layout (location = 3) out vec2 fragPosition;
 
 layout (push_constant) uniform pcb {
 	uint materialIdx;
@@ -41,13 +39,9 @@ layout (push_constant) uniform pcb {
 	uint padding2;
 	uint padding3;
 	uint padding4;
-	DataAtlasIndexDBA atlasBuffer;
+	vec2 padding5_1;
+	vec2 padding5_2;
 } pushConstants;
-
-layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec2 fragTexCoord;
-layout (location = 2) out vec4 shadowColor;
-layout (location = 3) out vec2 fragPosition;
 
 uint hash(uint k, uint capacity) {
 	k ^= k >> 16;
@@ -75,35 +69,19 @@ void main() {
 
 		DataAtlasIndex prev;
 
-		if ((mat.flags & XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA) != 0) {
-			while (counter < size) {
-				prev = pushConstants.atlasBuffer.indexes[slot];
-				if (prev.key == vertex.object) {
-					pos += vec4(prev.pos, 0, 0);
-					tex = prev.tex;
-					break;
-				} else if (prev.key == uint(0xffffffff)) {
-					color = vec4(1, 0, 0, 1);
-					break;
-				}
-				slot = (slot + 1) & (size - 1);
-				++ counter;
+		uint dataAtlasIndex = mat.atlasIdx;
+		while (counter < size) {
+			prev = dataAtlasIndexes[dataAtlasIndex].indexes[slot];
+			if (prev.key == vertex.object) {
+				pos += vec4(prev.pos, 0, 0);
+				tex = prev.tex;
+				break;
+			} else if (prev.key == uint(0xffffffff)) {
+				color = vec4(1, 0, 0, 1);
+				break;
 			}
-		} else {
-			uint dataAtlasIndex = mat.atlasIdx;
-			while (counter < size) {
-				prev = dataAtlasIndexes[dataAtlasIndex].indexes[slot];
-				if (prev.key == vertex.object) {
-					pos += vec4(prev.pos, 0, 0);
-					tex = prev.tex;
-					break;
-				} else if (prev.key == uint(0xffffffff)) {
-					color = vec4(1, 0, 0, 1);
-					break;
-				}
-				slot = (slot + 1) & (size - 1);
-				++ counter;
-			}
+			slot = (slot + 1) & (size - 1);
+			++ counter;
 		}
 
 		if (counter == size) {

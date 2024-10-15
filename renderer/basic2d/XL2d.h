@@ -41,7 +41,6 @@ using TransformData = glsl::TransformData;
 using ShadowData = glsl::ShadowData;
 
 using DataAtlasIndex = glsl::DataAtlasIndex;
-using DataAtlasValue = glsl::DataAtlasValue;
 using AmbientLightData = glsl::AmbientLightData;
 using DirectLightData = glsl::DirectLightData;
 

@@ -97,7 +97,10 @@ struct SP_PUBLIC ProgramData : ProgramInfo {
 	using DataCallback = memory::callback<void(SpanView<uint32_t>)>;
 
 	SpanView<uint32_t> data;
-	memory::function<void(const DataCallback &)> callback = nullptr;
+
+	// Useful for conditional-loading against device capabilities
+	// Device can be null for shader code inspection
+	memory::function<void(Device &, const DataCallback &)> callback = nullptr;
 	Rc<Shader> program; // GL implementation-dependent object
 
 	void inspect(SpanView<uint32_t>);

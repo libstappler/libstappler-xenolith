@@ -149,8 +149,7 @@ protected:
 	FontAttachmentHandle *_fontAttachment = nullptr;
 	QueueOperations _queueOps = QueueOperations::None;
 	Rc<Image> _targetImage;
-	Rc<Buffer> _targetAtlasIndex;
-	Rc<Buffer> _targetAtlasData;
+	Rc<Buffer> _targetAtlas;
 	Rc<Buffer> _outBuffer;
 };
 
@@ -626,17 +625,10 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 
 	if (_device->hasDynamicIndexedBuffers()) {
 		_targetImage = allocator->preallocate(info, false, instance->data.image->getIndex());
-		_targetAtlasIndex = allocator->preallocate(core::BufferInfo(atlas->getIndexData().size(),
-				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
-		_targetAtlasData = allocator->preallocate(core::BufferInfo(atlas->getData().size(),
+		_targetAtlas = allocator->preallocate(core::BufferInfo(atlas->getBufferData().size(),
 				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
-		Rc<Buffer> atlasBuffers[] = {
-			_targetAtlasIndex,
-			_targetAtlasData
-		};
-
-		allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(&_targetImage, 1), makeSpanView(atlasBuffers, 2));
+		allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(&_targetImage, 1), makeSpanView(&_targetAtlas, 1));
 	} else {
 		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false, instance->data.image->getIndex());
 	}
@@ -644,16 +636,12 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 	auto frame = static_cast<DeviceFrameHandle *>(&handle);
 	auto &memPool = frame->getMemPool(&handle);
 
-	Rc<Buffer> stageAtlasIndex, stageAtlasData;
+	Rc<Buffer> stageAtlas;
 
-	if (_targetAtlasIndex && _targetAtlasData) {
-		stageAtlasIndex = memPool->spawn(AllocationUsage::HostTransitionSource,
-				core::BufferInfo(atlas->getIndexData().size(), core::ForceBufferUsage(core::BufferUsage::TransferSrc)));
-		stageAtlasData = memPool->spawn(AllocationUsage::HostTransitionSource,
-				core::BufferInfo(atlas->getData().size(), core::ForceBufferUsage(core::BufferUsage::TransferSrc)));
-
-		stageAtlasIndex->setData(atlas->getIndexData());
-		stageAtlasData->setData(atlas->getData());
+	if (_targetAtlas) {
+		stageAtlas = memPool->spawn(AllocationUsage::HostTransitionSource,
+				core::BufferInfo(atlas->getBufferData().size(), core::ForceBufferUsage(core::BufferUsage::TransferSrc)));
+		stageAtlas->setData(atlas->getBufferData());
 	}
 
 	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
@@ -682,9 +670,8 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 				persistentBarriers, makeSpanView(&inputBarrier2, 1));*/
 
-		if (_targetAtlasIndex && _targetAtlasData) {
-			buf.cmdCopyBuffer(stageAtlasIndex, _targetAtlasIndex);
-			buf.cmdCopyBuffer(stageAtlasData, _targetAtlasData);
+		if (_targetAtlas) {
+			buf.cmdCopyBuffer(stageAtlas, _targetAtlas);
 		}
 
 		// copy from temporary buffer
@@ -754,23 +741,19 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 				_targetImage->setPendingBarrier(outputBarrier);
 			}
 
-			if (_targetAtlasIndex && _targetAtlasData && !_device->hasBufferDeviceAddresses()) {
+			if (_targetAtlas && !_device->hasBufferDeviceAddresses()) {
 				BufferMemoryBarrier outputBufferBarrier[] = {
-					BufferMemoryBarrier(_targetAtlasIndex,
+					BufferMemoryBarrier(_targetAtlas,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-						QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex}, 0, _targetAtlasIndex->getSize()),
-					BufferMemoryBarrier(_targetAtlasData,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-						QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex}, 0, _targetAtlasData->getSize()),
+						QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex}, 0, _targetAtlas->getSize()),
 				};
 
 				if (q->index != _pool->getFamilyIdx()) {
-					_targetAtlasIndex->setPendingBarrier(outputBufferBarrier[0]);
-					_targetAtlasData->setPendingBarrier(outputBufferBarrier[1]);
+					_targetAtlas->setPendingBarrier(outputBufferBarrier[0]);
 				}
 
 				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-						makeSpanView(outputBufferBarrier, 2), makeSpanView(&outputBarrier, 1));
+						makeSpanView(outputBufferBarrier, 1), makeSpanView(&outputBarrier, 1));
 			} else {
 				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 						makeSpanView(&outputBarrier, 1));
@@ -800,8 +783,7 @@ void FontRenderPassHandle::submitResult(FrameHandle &frame) {
 
 	auto atlas = _fontAttachment->getAtlas();
 	if (_device->hasDynamicIndexedBuffers()) {
-		atlas->setIndexBuffer(_targetAtlasIndex);
-		atlas->setDataBuffer(_targetAtlasData);
+		atlas->setBuffer(_targetAtlas);
 	}
 
 	auto &sig = frame.getSignalDependencies();

@@ -597,11 +597,18 @@ Rc<Image> Allocator::spawnPersistent(AllocationUsage usage, const core::ImageInf
 }
 
 Rc<Buffer> Allocator::preallocate(const BufferInfo &info, BytesView view) {
+	auto usage = info.usage;
+	if ((usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
+		if (!_device->hasBufferDeviceAddresses()) {
+			usage &= ~core::BufferUsage::ShaderDeviceAddress;
+		}
+	}
+
 	VkBufferCreateInfo bufferInfo { };
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = (view.empty() ? info.size : view.size());
 	bufferInfo.flags = VkBufferCreateFlags(info.flags);
-	bufferInfo.usage = VkBufferUsageFlags(info.usage);
+	bufferInfo.usage = VkBufferUsageFlags(usage);
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VkBuffer target = VK_NULL_HANDLE;

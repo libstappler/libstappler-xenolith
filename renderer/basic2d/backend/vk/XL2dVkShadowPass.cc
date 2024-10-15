@@ -25,6 +25,7 @@
 #include "XLPlatform.h"
 #include "XLApplication.h"
 #include "XLVkLoop.h"
+#include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
 #include "XLVkPipeline.h"
 #include "XLCoreFrameHandle.h"
@@ -53,16 +54,6 @@ bool ShadowPass::makeRenderQueue(Queue::Builder &builder, RenderQueueInfo &info)
 }
 
 bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info) {
-	using namespace core;
-
-	return initAsPseudoSdf(queueBuilder, passBuilder, info);
-}
-
-auto ShadowPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHandle> {
-	return Rc<ShadowPassHandle>::create(*this, handle);
-}
-
-bool ShadowPass::initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info) {
 	using namespace core;
 
 	_output = queueBuilder.addAttachemnt("Output", [&] (AttachmentBuilder &builder) -> Rc<Attachment> {
@@ -291,6 +282,10 @@ bool ShadowPass::initAsPseudoSdf(Queue::Builder &queueBuilder, QueuePassBuilder 
 	return true;
 }
 
+auto ShadowPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHandle> {
+	return Rc<ShadowPassHandle>::create(*this, handle);
+}
+
 void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, core::SubpassBuilder &subpassBuilder,
 		const core::PipelineLayoutData *layout2d, ResourceCache *cache,
 		const core::AttachmentPassData *colorAttachment, const core::AttachmentPassData *shadowAttachment,
@@ -298,7 +293,15 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	using namespace core;
 
 	// load shaders by ref - do not copy data into engine
-	auto materialVert = queueBuilder.addProgramByRef("Loader_MaterialVert", shaders::MaterialVert);
+	auto materialVert = queueBuilder.addProgram("Loader_MaterialVert", [] (core::Device &dev, const core::ProgramData::DataCallback &cb) {
+		auto &vkDev = (vk::Device &)dev;
+		if (vkDev.hasBufferDeviceAddresses()) {
+			cb(shaders::MaterialVert);
+		} else {
+			cb(shaders::MaterialNoBdaVert);
+		}
+	});
+
 	auto materialFrag = queueBuilder.addProgramByRef("Loader_MaterialFrag", shaders::MaterialFrag);
 
 	auto shaderSpecInfo = Vector<SpecializationInfo>({

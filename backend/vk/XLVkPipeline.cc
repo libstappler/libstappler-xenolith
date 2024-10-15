@@ -51,7 +51,7 @@ bool Shader::init(Device &dev, const ProgramData &data) {
 		return setup(dev, data, data.data);
 	} else if (data.callback != nullptr) {
 		bool ret = false;
-		data.callback([&, this] (SpanView<uint32_t> shaderData) {
+		data.callback(dev, [&, this] (SpanView<uint32_t> shaderData) {
 			ret = setup(dev, data, shaderData);
 		});
 		return ret;
@@ -242,7 +242,6 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		info.flags = 0;
 		info.stage = VkShaderStageFlagBits(shader.data->stage);
 		info.module = shader.data->program.cast<Shader>()->getModule();
-
 		info.pName = shader.data->entryPoints.front().name.data();
 
 		if (!dev.getInfo().features.device10.features.shaderSampledImageArrayDynamicIndexing) {
@@ -381,7 +380,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 
-	if (dev.getTable()->vkCreateGraphicsPipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) == VK_SUCCESS) {
+	auto err = dev.getTable()->vkCreateGraphicsPipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline);
+	if (err == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
 		return core::GraphicPipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
@@ -468,7 +468,8 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 		pipelineInfo.stage.pSpecializationInfo = nullptr;
 	}
 
-	if (dev.getTable()->vkCreateComputePipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) == VK_SUCCESS) {
+	auto err = dev.getTable()->vkCreateComputePipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline);
+	if (err == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
 		return core::ComputePipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);

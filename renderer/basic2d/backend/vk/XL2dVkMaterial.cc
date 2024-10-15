@@ -37,24 +37,17 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 			material.flags = 0;
 			material.atlasIdx = 0;
 			if (image.image->atlas) {
-				if (auto &index = image.image->atlas->getIndexBuffer()) {
+				if (auto &buffer = image.image->atlas->getBuffer()) {
 					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX;
-					material.atlasIdx |= index->getDescriptor();
+					material.atlasIdx = buffer->getDescriptor();
 
-					auto indexSize = image.image->atlas->getIndexData().size() / sizeof(DataAtlasIndex);
+					auto indexSize = buffer->getSize() / (image.image->atlas->getObjectSize() + sizeof(uint32_t) * 2);
 					auto pow2index = std::countr_zero(indexSize);
 
 					material.flags |= (pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
-					material.atlasIndexBuffer = index->getDeviceAddress();
-				}
-				if (auto &data = image.image->atlas->getDataBuffer()) {
-					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_DATA;
-					material.atlasIdx |= (data->getDescriptor() << 16);
-					material.atlasDataBuffer = data->getDeviceAddress();
-				}
-
-				if (material.atlasIndexBuffer && material.atlasDataBuffer) {
-					material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
+					if (buffer->getDeviceAddress() != 0) {
+						material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
+					}
 				}
 			}
 			memcpy(target, &material, sizeof(MaterialData));

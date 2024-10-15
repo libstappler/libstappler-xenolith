@@ -299,7 +299,7 @@ public:
 	const ProgramData * addProgramByRef(StringView key, SpanView<uint32_t>, const ProgramInfo * = nullptr);
 
 	// add program, data will be acquired with callback when needed
-	const ProgramData * addProgram(StringView key, const memory::function<void(const ProgramData::DataCallback &)> &,
+	const ProgramData * addProgram(StringView key, const memory::function<void(Device &, const ProgramData::DataCallback &)> &,
 			const ProgramInfo * = nullptr);
 
 	// external resources, that should be compiled when added

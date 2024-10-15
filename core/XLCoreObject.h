@@ -195,7 +195,6 @@ public:
 	void compile();
 
 	uint32_t getHash(uint32_t) const;
-	uint32_t getIndexByName(uint32_t) const;
 
 	const uint8_t *getObjectByName(uint32_t) const;
 	const uint8_t *getObjectByName(StringView) const;
@@ -211,26 +210,20 @@ public:
 	uint32_t getObjectsCount() const { return _intNames.size() + _stringNames.size(); }
 
 	BytesView getData() const { return _data; }
-	BytesView getIndexData() const { return _dataIndex; }
+	BytesView getBufferData() const { return _bufferData; }
 
-	void setIndexBuffer(Rc<BufferObject> &&);
-	const Rc<BufferObject> &getIndexBuffer() const { return _indexBuffer; }
-
-	void setDataBuffer(Rc<BufferObject> &&);
-	const Rc<BufferObject> &getDataBuffer() const { return _dataBuffer; }
+	void setBuffer(Rc<BufferObject> &&);
+	const Rc<BufferObject> &getBuffer() const { return _buffer; }
 
 protected:
-	void makeHashIndex();
-
 	Type _type = Type::Custom;
 	uint32_t _objectSize;
 	Extent2 _imageExtent;
 	HashMap<uint32_t, uint32_t> _intNames;
 	HashMap<String, uint32_t> _stringNames;
 	Bytes _data;
-	Bytes _dataIndex;
-	Rc<BufferObject> _indexBuffer;
-	Rc<BufferObject> _dataBuffer;
+	Bytes _bufferData;
+	Rc<BufferObject> _buffer;
 };
 
 class SP_PUBLIC ImageObject : public Object {

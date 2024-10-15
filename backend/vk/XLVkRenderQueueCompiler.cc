@@ -47,6 +47,7 @@ public:
 	virtual bool setup(FrameQueue &handle, Function<void(bool)> &&) override;
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
 
+	StringView getTargetQueueName() const { return _targetQueueName; }
 	const Rc<core::Queue> &getRenderQueue() const { return _input->queue; }
 	const Rc<TransferResource> &getTransferResource() const { return _resource; }
 
@@ -59,6 +60,7 @@ protected:
 	std::atomic<size_t> _pipelinesInQueue = 0;
 	Rc<TransferResource> _resource;
 	Rc<RenderQueueInput> _input;
+	String _targetQueueName;
 };
 
 class RenderQueuePass : public QueuePass {
@@ -154,6 +156,8 @@ bool RenderQueueAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)>
 
 void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
 	_input = (RenderQueueInput *)data.get();
+	_targetQueueName = _input->queue->getName().str<Interface>();
+
 	if (!_input || q.isFinalized()) {
 		cb(false);
 		return;
@@ -189,6 +193,8 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 	size_t tasksCount = 0;
 	Vector<core::ProgramData *> programs;
 
+	_input->queue->prepare(*_device);
+
 	// count phase-1 tasks
 	_programsInQueue += _input->queue->getPasses().size();
 	tasksCount += _input->queue->getPasses().size();
@@ -207,7 +213,7 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 		frame.performRequiredTask([this, req = it] (FrameHandle &frame) {
 			auto ret = Rc<Shader>::create(*_device, *req);
 			if (!ret) {
-				log::error("Gl-Device", "Fail to compile shader program ", req->key);
+				log::error("RenderQueueAttachmentHandle", "Fail to compile shader program ", req->key);
 				return false;
 			} else {
 				req->program = _device->addProgram(ret);
@@ -216,16 +222,14 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 				}
 			}
 			return true;
-		}, this, "RenderQueueAttachmentHandle::runShaders - programs");
+		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile shader: ", _targetQueueName, "::", it->key));
 	}
-
-	_input->queue->prepare(*_device);
 
 	for (auto &it : _input->queue->getPasses()) {
 		frame.performRequiredTask([this, req = it] (FrameHandle &frame) -> bool {
 			auto ret = Rc<RenderPass>::create(*_device, *req);
 			if (!ret) {
-				log::error("Gl-Device", "Fail to compile render pass ", req->key);
+				log::error("RenderQueueAttachmentHandle", "Fail to compile render pass ", req->key);
 				return false;
 			} else {
 				req->impl = ret.get();
@@ -234,7 +238,7 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 				}
 			}
 			return true;
-		}, this, "RenderQueueAttachmentHandle::runShaders - passes");
+		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile pass: ", _targetQueueName, "::", it->key));
 	}
 
 	if (tasksCount == 0) {
@@ -257,25 +261,25 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
 					auto ret = Rc<GraphicPipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("Gl-Device", "Fail to compile pipeline ", pipeline->key);
+						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
 					}
 					return true;
-				}, this, "RenderQueueAttachmentHandle::runPipelines");
+				}, this, toString("RenderQueueAttachmentHandle::runPipelines - compile graphic pipeline: ", _targetQueueName, "::", it->key));
 			}
 			for (auto &it : sit->computePipelines) {
 				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
 					auto ret = Rc<ComputePipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("Gl-Device", "Fail to compile pipeline ", pipeline->key);
+						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
 					}
 					return true;
-				}, this, "RenderQueueAttachmentHandle::runPipelines");
+				}, this, toString("RenderQueueAttachmentHandle::runPipelines - compile compute pipeline: ", _targetQueueName, "::", it->key));
 			}
 		}
 	}
@@ -409,6 +413,12 @@ void RenderQueuePassHandle::submit(FrameQueue &queue, Rc<FrameSync> &&sync, Func
 
 void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 	QueuePassHandle::finalize(frame, successful);
+
+	if (!_attachment || !successful) {
+		log::error("RenderQueueCompiler", "Fail to compile render queue");
+		return;
+	}
+
 	Vector<uint64_t> passIds;
 	auto &cache = frame.getLoop()->getFrameCache();
 	for (auto &it : _attachment->getRenderQueue()->getPasses()) {

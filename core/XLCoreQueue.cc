@@ -917,6 +917,30 @@ uint64_t Queue::incrementOrder() {
 bool Queue::prepare(Device &dev) {
 	memory::pool::context ctx(_data->pool);
 
+	for (auto &it : _data->programs) {
+		if (!it->data.empty()) {
+			it->inspect(it->data);
+		} else if (it->callback) {
+			it->callback(dev, [&] (SpanView<uint32_t> data) {
+				it->inspect(data);
+			});
+		}
+	}
+
+	for (auto &pass : _data->passes) {
+		for (auto &subpass : pass->subpasses) {
+			for (auto &pipeline : subpass->graphicPipelines) {
+				for (auto &shaderSpec : pipeline->shaders) {
+					Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout, shaderSpec.data);
+				}
+			}
+
+			for (auto &pipeline : subpass->computePipelines) {
+				Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout, pipeline->shader.data);
+			}
+		}
+	}
+
 	for (auto &it : _data->input) {
 		auto &r = *it->attachment.get();
 		_data->typedInput.emplace(std::type_index(typeid(r)), it->attachment.get());
@@ -1222,8 +1246,6 @@ const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key, co
 	pipeline->layout = layout;
 	pipeline->subpass = _data;
 
-	Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout, pipeline->shader.data);
-
 	_data->computePipelines.emplace(pipeline);
 	((PipelineLayoutData *)pipeline->layout)->computePipelines.emplace_back(pipeline);
 
@@ -1258,10 +1280,6 @@ GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key, const Pipel
 
 void SubpassBuilder::finalizePipeline(GraphicPipelineData *data) {
 	// validate shaders descriptors
-
-	for (auto &shaderSpec : data->shaders) {
-		Queue_validateShaderPipelineLayout(data->key, data->layout, shaderSpec.data);
-	}
 
 	_data->graphicPipelines.emplace(data);
 
@@ -1485,8 +1503,6 @@ const ProgramData * Queue::Builder::addProgram(StringView key, SpanView<uint32_t
 			program->stage = info->stage;
 			program->bindings = info->bindings;
 			program->constants = info->constants;
-		} else {
-			program->inspect(data);
 		}
 		return program;
 	}, _data->pool)) {
@@ -1511,8 +1527,6 @@ const ProgramData * Queue::Builder::addProgramByRef(StringView key, SpanView<uin
 			program->stage = info->stage;
 			program->bindings = info->bindings;
 			program->constants = info->constants;
-		} else {
-			program->inspect(data);
 		}
 		return program;
 	}, _data->pool)) {
@@ -1523,7 +1537,7 @@ const ProgramData * Queue::Builder::addProgramByRef(StringView key, SpanView<uin
 	return nullptr;
 }
 
-const ProgramData * Queue::Builder::addProgram(StringView key, const memory::function<void(const ProgramData::DataCallback &)> &cb,
+const ProgramData * Queue::Builder::addProgram(StringView key, const memory::function<void(Device &, const ProgramData::DataCallback &)> &cb,
 		const ProgramInfo *info) {
 	if (!_data) {
 		log::error("Resource", "Fail to add shader: ", key, ", not initialized");
@@ -1538,10 +1552,6 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 			program->stage = info->stage;
 			program->bindings = info->bindings;
 			program->constants = info->constants;
-		} else {
-			cb([&] (SpanView<uint32_t> data) {
-				program->inspect(data);
-			});
 		}
 		return program;
 	}, _data->pool)) {
@@ -1551,22 +1561,6 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 	log::error("Resource", _data->key, ": Shader already added: ", key);
 	return nullptr;
 }
-
-/*void Queue::Builder::setInternalResource(Rc<Resource> &&res) {
-	if (!_data) {
-		log::error("Resource", "Fail to set internal resource: ", res->getName(), ", not initialized");
-		return;
-	}
-	if (_data->resource) {
-		log::error("Resource", "Fail to set internal resource: resource already defined");
-		return;
-	}
-	if (res->getOwner() != nullptr) {
-		log::error("Resource", "Fail to set internal resource: ", res->getName(), ", already owned by ", res->getOwner()->getName());
-		return;
-	}
-	_data->resource = move(res);
-}*/
 
 void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 	if (!_data) {

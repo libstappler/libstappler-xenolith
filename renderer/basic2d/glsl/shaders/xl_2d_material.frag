@@ -1,24 +1,12 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 #include "SPGlslInit.h"
 #include "XL2dGlslVertexData.h"
 
 layout (constant_id = 0) const int SAMPLERS_ARRAY_SIZE = 2;
 layout (constant_id = 1) const int IMAGES_ARRAY_SIZE = 128;
-
-layout (push_constant) uniform pcb {
-	uint materialIdx;
-	uint imageIdx;
-	uint samplerIdx;
-	uint gradientOffset;
-	uint gradientCount;
-	uint padding;
-	uint64_t padding1;
-	uint64_t padding2;
-} pushConstants;
 
 layout (set = 0, binding = 0) readonly buffer Vertices {
 	Vertex vertices[];
@@ -38,6 +26,17 @@ layout (location = 3) in vec2 fragPosition;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out vec4 outShadow;
+
+layout (push_constant) uniform pcb {
+	uint materialIdx;
+	uint imageIdx;
+	uint samplerIdx;
+	uint gradientOffset;
+	uint gradientCount;
+	uint padding;
+	uint padding1;
+	uint padding2;
+} pushConstants;
 
 #define GRAD_COLORS(n) vertexBuffer[0].vertices[pushConstants.gradientOffset + 2 + n].color
 #define GRAD_STEPS(n) vertexBuffer[0].vertices[pushConstants.gradientOffset + 2 + n].pos.z

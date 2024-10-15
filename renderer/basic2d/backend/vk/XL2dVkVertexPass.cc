@@ -586,7 +586,12 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 					auto &t = target[idx];
 					t.material = materialId | transform << 16;
 
-					if (auto d = reinterpret_cast<const DataAtlasValue *>(plan.atlas->getObjectByName(t.object))) {
+					struct AtlasData {
+						Vec2 pos;
+						Vec2 tex;
+					};
+
+					if (auto d = reinterpret_cast<const AtlasData *>(plan.atlas->getObjectByName(t.object))) {
 						t.pos += Vec4(d->pos.x, d->pos.y, 0, 0);
 						t.tex = d->tex;
 						t.object = 0;
@@ -1096,18 +1101,17 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
 
-	struct MaterialData {
+	struct MaterialDataFrag {
 		uint32_t materialIdx = 0;
 		uint32_t imageIdx = 0;
 		uint32_t samplerIdx = 0;
 		uint32_t gradientOffset = 0;
 		uint32_t gradientCount = 0;
 		uint32_t padding = 0;
-		uint64_t atlasIndexBuffer = 0;
-		uint64_t atlasDataBuffer = 0;
+		uint64_t atlasBuffer = 0;
 	};
 
-	MaterialData data;
+	MaterialDataFrag fragData;
 
 	auto &spans = _vertexBuffer->getVertexData();
 
@@ -1132,22 +1136,19 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		//}
 
 		//++ i;
-		data.materialIdx = materials->getMaterialOrder(materialVertexSpan.material);
+		fragData.materialIdx = materials->getMaterialOrder(materialVertexSpan.material);
 		const core::Material * material = materials->getMaterialById(materialVertexSpan.material);
 		if (!material) {
 			return;
 		}
-		data.imageIdx = material->getImages().front().descriptor;
-		data.samplerIdx = material->getImages().front().sampler;
-		data.gradientOffset = materialVertexSpan.gradientOffset;
-		data.gradientCount = materialVertexSpan.gradientCount;
+		fragData.imageIdx = material->getImages().front().descriptor;
+		fragData.samplerIdx = material->getImages().front().sampler;
+		fragData.gradientOffset = materialVertexSpan.gradientOffset;
+		fragData.gradientCount = materialVertexSpan.gradientCount;
 
 		if (auto a = material->getAtlas()) {
-			if (auto ref = a->getIndexBuffer()->getDeviceAddress()) {
-				data.atlasIndexBuffer = ref;
-			}
-			if (auto ref = a->getDataBuffer()->getDeviceAddress()) {
-				data.atlasDataBuffer = ref;
+			if (auto ref = a->getBuffer()->getDeviceAddress()) {
+				fragData.atlasBuffer = ref;
 			}
 		}
 
@@ -1175,7 +1176,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 
 		buf.cmdPushConstants(pass->getPipelineLayout(0),
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&data), sizeof(MaterialData)));
+				BytesView(reinterpret_cast<const uint8_t *>(&fragData), sizeof(MaterialDataFrag)));
 
 		buf.cmdDrawIndexed(
 			materialVertexSpan.indexCount, // indexCount

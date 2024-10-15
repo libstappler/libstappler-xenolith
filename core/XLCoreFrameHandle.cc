@@ -233,12 +233,13 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *r
 	auto linkId = retain();
 	_loop->performInQueue(Rc<thread::Task>::create([this, cb = move(cb)] (const thread::Task &) -> bool {
 		return cb(*this);
-	}, [this, linkId, tag] (const thread::Task &, bool success) {
+	}, [this, linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (success) {
 			onRequiredTaskCompleted(tag);
 		} else {
 			invalidate();
+			log::error("FrameHandle", "Async task failed: ", tag);
 		}
 		release(linkId);
 	}, ref));
@@ -250,13 +251,14 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform, F
 	auto linkId = retain();
 	_loop->performInQueue(Rc<thread::Task>::create([this, perform = move(perform)] (const thread::Task &) -> bool {
 		return perform(*this);
-	}, [this, complete = move(complete), linkId, tag] (const thread::Task &, bool success) {
+	}, [this, complete = move(complete), linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
 		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (success) {
 			onRequiredTaskCompleted(tag);
 		} else {
 			invalidate();
+			log::error("FrameHandle", "Async task failed: ", tag);
 		}
 		release(linkId);
 	}, ref));

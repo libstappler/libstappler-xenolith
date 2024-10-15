@@ -48,8 +48,6 @@ struct MaterialData {
 	uint setIdx;
 	uint atlasIdx;
 	uint flags;
-	uint64_t atlasIndexBuffer;
-	uint64_t atlasDataBuffer;
 };
 
 struct TransformData {
@@ -81,9 +79,6 @@ struct TransformData {
 struct DataAtlasIndex {
 	uint key;
 	uint value;
-};
-
-struct DataAtlasValue {
 	vec2 pos;
 	vec2 tex;
 };
