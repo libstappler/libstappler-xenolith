@@ -125,7 +125,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				.initialLayout = AttachmentLayout::Undefined,
 				.finalLayout = AttachmentLayout::DepthStencilAttachmentOptimal,
 				.clearOnLoad = true,
-				.clearColor = Color4F::BLACK
+				.clearColor = Color4F::WHITE
 		});
 	});
 
@@ -200,7 +200,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			SpecializationInfo(pseudoSdfFrag, Vector<SpecializationConstant>{ SpecializationConstant(toInt(PseudoSdfSpecialization::Solid)) }),
 		}), PipelineMaterialInfo({
 			BlendInfo(BlendFactor::One, BlendFactor::One, BlendOp::Min, ColorComponentFlags::R),
-			DepthInfo(true, true, CompareOp::GreaterOrEqual)
+			DepthInfo(true, true, CompareOp::LessOrEqual)
 		}));
 
 		subpassBuilder.addGraphicPipeline(ShadowPass::PseudoSdfPipeline, layoutSdf, Vector<SpecializationInfo>({
@@ -208,7 +208,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			SpecializationInfo(pseudoSdfFrag, Vector<SpecializationConstant>{ SpecializationConstant(toInt(PseudoSdfSpecialization::Sdf)) }),
 		}), PipelineMaterialInfo({
 			BlendInfo(BlendFactor::One, BlendFactor::One, BlendOp::Min, ColorComponentFlags::R),
-			DepthInfo(false, true, CompareOp::Greater)
+			DepthInfo(false, true, CompareOp::Less)
 		}));
 
 		subpassBuilder.addGraphicPipeline(ShadowPass::PseudoSdfBackreadPipeline, layoutSdf, Vector<SpecializationInfo>({
@@ -217,7 +217,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		}), PipelineMaterialInfo({
 			BlendInfo(BlendFactor::One, BlendFactor::Zero, BlendOp::Add,
 					ColorComponentFlags::G | ColorComponentFlags::B | ColorComponentFlags::A),
-			DepthInfo(false, true, CompareOp::Greater)
+			DepthInfo(false, true, CompareOp::Less)
 		}));
 	});
 

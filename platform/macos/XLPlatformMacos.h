@@ -124,6 +124,8 @@ public:
 	void windowWillStartLiveResize(NSNotification * _Nonnull);
 	void windowDidEndLiveResize(NSNotification * _Nonnull);
 
+	BOOL windowShouldClose(NSWindow * _Nonnull);
+
 	void mouseDown(NSEvent * _Nonnull);
 	void rightMouseDown(NSEvent * _Nonnull);
 	void otherMouseDown(NSEvent * _Nonnull);

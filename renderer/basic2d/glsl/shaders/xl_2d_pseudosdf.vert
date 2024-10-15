@@ -41,7 +41,7 @@ void main() {
 
 	const vec4 pos = vertex.pos;
 	gl_Position = transform.transform * pos * transform.mask + transform.offset;
-	gl_Position.z = transform.shadow.x / shadowData.maxValue;
+	gl_Position.z = 1.0 - transform.shadow.x / shadowData.maxValue;
 
 	const float pseudoSdfInset = vertex.tex.x;
 	const float pseudoSdfOffset = vertex.tex.y;

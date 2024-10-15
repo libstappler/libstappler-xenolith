@@ -77,11 +77,16 @@ void ViewImpl::threadInit() {
 }
 
 void ViewImpl::threadDispose() {
-	vk::View::threadDispose();
+	clearImages();
 
-	/*_loop->performOnGlThread([this] {
-		end();
-	}, this);*/
+	_running = false;
+	_swapchain = nullptr;
+	_surface = nullptr;
+
+	std::unique_lock<Mutex> lock(_mutex);
+	_callbacks.clear();
+
+	release(_refId);
 }
 
 bool ViewImpl::worker() {
@@ -90,6 +95,13 @@ bool ViewImpl::worker() {
 
 void ViewImpl::update(bool displayLink) {
 	View::update(!_displayLinkFlag.test_and_set());
+}
+
+void ViewImpl::end() {
+	auto id = retain();
+	threadDispose();
+	View::end();
+	release(id);
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {

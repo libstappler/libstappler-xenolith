@@ -228,6 +228,12 @@ void MacViewController::windowDidEndLiveResize(NSNotification *notification) {
 	//_engineView->stopLiveResize();
 }
 
+BOOL MacViewController::windowShouldClose(NSWindow * _Nonnull) {
+	_view->end();
+	stopMacApplication();
+	return NO;
+}
+
 void MacViewController::mouseDown(NSEvent *theEvent) {
 	CGPoint loc = CGPoint(XL_OBJC_CALL([_self.view convertPointToBacking: [_self.view convertPoint:theEvent.locationInWindow fromView:nil]]));
 	core::InputEventData event({
@@ -676,6 +682,10 @@ XL_OBJC_IMPLEMENTATION_BEGIN(XLMacViewController)
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification {
 	_controller->windowDidEndLiveResize(notification);
+}
+
+- (BOOL)windowShouldClose:(NSWindow *)sender {
+	return _controller->windowShouldClose(sender);
 }
 
 - (void)mouseDown:(NSEvent *)theEvent {
