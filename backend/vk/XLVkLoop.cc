@@ -669,7 +669,7 @@ const Vector<core::ImageFormat> &Loop::getSupportedDepthStencilFormat() const {
 	return _internal->device->getSupportedDepthStencilFormat();
 }
 
-Rc<Fence> Loop::acquireFence(uint32_t v, bool init) {
+Rc<Fence> Loop::acquireFence(uint64_t v, bool init) {
 	auto initFence = [&] (const Rc<Fence> &fence) {
 		if (!init) {
 			return;

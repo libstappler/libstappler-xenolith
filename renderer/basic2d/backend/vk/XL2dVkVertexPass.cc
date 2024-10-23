@@ -182,10 +182,10 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 	auto ret = mem_pool::perform([&] {
 		auto &cache = handle->getLoop()->getFrameCache();
 
-		_drawStat.cachedFramebuffers = cache->getFramebuffersCount();
-		_drawStat.cachedImages = cache->getImagesCount();
-		_drawStat.cachedImageViews = cache->getImageViewsCount();
-		_drawStat.materials = _attachment->getMaterialSet()->getMaterials().size();
+		_drawStat.cachedFramebuffers = uint32_t(cache->getFramebuffersCount());
+		_drawStat.cachedImages = uint32_t(cache->getImagesCount());
+		_drawStat.cachedImageViews = uint32_t(cache->getImageViewsCount());
+		_drawStat.materials = uint32_t(_attachment->getMaterialSet()->getMaterials().size());
 
 		auto dynamicData = new (pool) DynamicData;
 		dynamicData->surfaceExtent = fhandle.getFrameConstraints().extent;
@@ -668,7 +668,7 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				}
 
 				state.second.gradientStart = writeTarget.vertexOffset;
-				state.second.gradientCount = state.second.gradient->steps.size();
+				state.second.gradientCount = uint32_t(state.second.gradient->steps.size());
 
 				writeTarget.vertexOffset += state.second.gradient->steps.size() + 2;
 			}
@@ -796,7 +796,7 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 			writeTarget.indexOffset += writeIndexes(
 					reinterpret_cast<uint32_t *>(writeTarget.indexes) + writeTarget.indexOffset,
 					vertexes.data->indexes.data(),
-					vertexes.data->indexes.size() - vertexes.sdfIndexes,
+					uint32_t(vertexes.data->indexes.size() - vertexes.sdfIndexes),
 					localVertexOffset);
 			break;
 		case StatePlanShadowSolid:
@@ -850,7 +850,7 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 		packedInstance = statePlan.packed;
 		while (packedInstance) {
 			for (auto &vertexes : packedInstance->vertexes) {
-				processStatePlanIndexes(vertexes, phase, localVertexOffset);
+				processStatePlanIndexes(vertexes, phase, uint32_t(localVertexOffset));
 				localVertexOffset += vertexes.data->data.size();
 			}
 			packedInstance = packedInstance->next;
@@ -903,32 +903,32 @@ void VertexMaterialDynamicData::pushAll(VertexProcessor *processor, WriteTarget 
 	uint32_t counter = 0;
 	drawWritePlan(processor, writeTarget, solidWritePlan);
 
-	processor->solidCmds = processor->materialSpans.size() - counter;
-	counter = processor->materialSpans.size();
+	processor->solidCmds = uint32_t(processor->materialSpans.size() - counter);
+	counter = uint32_t(processor->materialSpans.size());
 
 	drawWritePlan(processor, writeTarget, surfaceWritePlan);
 
-	processor->surfaceCmds = processor->materialSpans.size() - counter;
-	counter = processor->materialSpans.size();
+	processor->surfaceCmds = uint32_t(processor->materialSpans.size() - counter);
+	counter = uint32_t(processor->materialSpans.size());
 
 	for (auto &it : transparentWritePlan) {
 		drawWritePlan(processor, writeTarget, it.second);
 	}
 
-	processor->transparentCmds = processor->materialSpans.size() - counter;
+	processor->transparentCmds = uint32_t(processor->materialSpans.size() - counter);
 }
 
 void VertexMaterialVertexProcessor::finalize(DynamicData *data) {
 	auto t = xenolith::platform::clock(core::ClockType::Monotonic);
 	_drawStat.vertexes = data->globalWritePlan.vertexes - data->excludeVertexes;
 	_drawStat.triangles = (data->globalWritePlan.indexes - data->excludeIndexes) / 3;
-	_drawStat.zPaths = data->paths.size();
-	_drawStat.drawCalls = materialSpans.size();
+	_drawStat.zPaths = uint32_t(data->paths.size());
+	_drawStat.drawCalls = uint32_t(materialSpans.size());
 	_drawStat.solidCmds = solidCmds;
 	_drawStat.surfaceCmds = surfaceCmds;
 	_drawStat.transparentCmds = transparentCmds;
 	_drawStat.shadowsCmds = shadowsCmds;
-	_drawStat.vertexInputTime = t - _time;
+	_drawStat.vertexInputTime = uint32_t(t - _time);
 	_input->director->pushDrawStat(_drawStat);
 
 	_attachment->loadData(move(_input),

@@ -375,8 +375,8 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				_device->getTable()->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 					0, nullptr,
-					outputBufferBarriers.size(), outputBufferBarriers.data(),
-					outputImageBarriers.size(), outputImageBarriers.data());
+					uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
+					uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
 				return true;
 			});
 

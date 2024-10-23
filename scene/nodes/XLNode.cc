@@ -895,13 +895,13 @@ const Mat4& Node::getNodeToParentTransform() const {
 		_transform.translate(-anchorPoint.x, -anchorPoint.y, 0);
 
 		if (_scale.x != 1.f) {
-			_transform.m[0] *= _scale.x, _transform.m[1] *= _scale.x, _transform.m[2] *= _scale.x;
+			_transform.m[0] *= _scale.x; _transform.m[1] *= _scale.x; _transform.m[2] *= _scale.x;
 		}
 		if (_scale.y != 1.f) {
-			_transform.m[4] *= _scale.y, _transform.m[5] *= _scale.y, _transform.m[6] *= _scale.y;
+			_transform.m[4] *= _scale.y; _transform.m[5] *= _scale.y; _transform.m[6] *= _scale.y;
 		}
 		if (_scale.z != 1.f) {
-			_transform.m[8] *= _scale.z, _transform.m[9] *= _scale.z, _transform.m[10] *= _scale.z;
+			_transform.m[8] *= _scale.z; _transform.m[9] *= _scale.z; _transform.m[10] *= _scale.z;
 		}
 
 		// If skew is needed, apply skew and then anchor point

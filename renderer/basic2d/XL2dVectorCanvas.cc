@@ -625,9 +625,9 @@ VectorCanvasCache::VectorCanvasCache() {
 			data.scale = it.getDouble("scale");
 			data.relocateRule = geom::Tesselator::RelocateRule(it.getInteger("rule"));
 			data.style = geom::DrawStyle(it.getInteger("style"));
-			data.fillIndexes = it.getInteger("fill");
-			data.strokeIndexes = it.getInteger("stroke");
-			data.sdfIndexes = it.getInteger("sdf");
+			data.fillIndexes = uint32_t(it.getInteger("fill"));
+			data.strokeIndexes = uint32_t(it.getInteger("stroke"));
+			data.sdfIndexes = uint32_t(it.getInteger("sdf"));
 
 			auto &vertexes = it.getBytes("vertexes");
 			auto &indexes = it.getBytes("indexes");

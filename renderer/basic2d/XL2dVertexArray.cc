@@ -271,8 +271,8 @@ VertexArray::Quad VertexArray::addQuad() {
 		copy();
 	}
 
-	auto firstVertex = _data->data.size();
-	auto firstIndex = _data->indexes.size();
+	auto firstVertex = uint32_t(_data->data.size());
+	auto firstIndex = uint32_t(_data->indexes.size());
 
 	_data->data.resize(_data->data.size() + 4);
 	_data->indexes.resize(_data->indexes.size() + 6);

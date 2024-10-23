@@ -129,7 +129,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		auto swapchainImageViewInfo = getSwapchainImageViewInfo(swapchainImageInfo);
 
 		for (auto &it : swapchainImages) {
-			auto image = Rc<Image>::create(dev, it, swapchainImageInfo, _images.size());
+			auto image = Rc<Image>::create(dev, it, swapchainImageInfo, uint32_t(_images.size()));
 
 			Map<ImageViewInfo, Rc<ImageView>> views;
 			views.emplace(swapchainImageViewInfo, Rc<ImageView>::create(dev, image.get(), swapchainImageViewInfo));
@@ -234,7 +234,7 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<Fence> &fence) -> Rc<Swapc
 
 VkResult SwapchainHandle::present(DeviceQueue &queue, const Rc<ImageStorage> &image) {
 	auto waitSem = ((Semaphore *)image->getSignalSem().get())->getSemaphore();
-	auto imageIndex = image->getImageIndex();
+	auto imageIndex = uint32_t(image->getImageIndex());
 
 	VkPresentInfoKHR presentInfo{}; sanitizeVkStruct(presentInfo);
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

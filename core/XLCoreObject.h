@@ -207,7 +207,7 @@ public:
 	uint32_t getObjectSize() const { return _objectSize; }
 	Extent2 getImageExtent() const { return _imageExtent; }
 
-	uint32_t getObjectsCount() const { return _intNames.size() + _stringNames.size(); }
+	uint32_t getObjectsCount() const { return uint32_t(_intNames.size() + _stringNames.size()); }
 
 	BytesView getData() const { return _data; }
 	BytesView getBufferData() const { return _bufferData; }

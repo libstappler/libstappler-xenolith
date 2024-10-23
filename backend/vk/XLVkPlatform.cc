@@ -248,7 +248,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 #endif
 	createInfo.pApplicationInfo = &appInfo;
 
-	createInfo.enabledExtensionCount = data.extensionsToEnable.size();
+	createInfo.enabledExtensionCount = uint32_t(data.extensionsToEnable.size());
 	createInfo.ppEnabledExtensionNames = data.extensionsToEnable.data();
 
 	enum VkResult ret = VK_SUCCESS;
@@ -263,7 +263,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 		createInfo.pNext = nullptr;
 	}
 
-	createInfo.enabledLayerCount = data.layersToEnable.size();
+	createInfo.enabledLayerCount = uint32_t(data.layersToEnable.size());
 	createInfo.ppEnabledLayerNames = data.layersToEnable.data();
 
 	if constexpr (s_enableValidateSynchronization) {

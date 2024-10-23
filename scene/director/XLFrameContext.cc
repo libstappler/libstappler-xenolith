@@ -56,7 +56,7 @@ void FrameContext::submitHandle(FrameInfo &info, FrameContextHandle *handle) {
 	}
 }
 
-uint64_t FrameContext::getMaterial(const MaterialInfo &info) const {
+core::MaterialId FrameContext::getMaterial(const MaterialInfo &info) const {
 	auto hash = info.hash();
 	auto it = _materials.find(hash);
 	if (it != _materials.end()) {
@@ -69,7 +69,7 @@ uint64_t FrameContext::getMaterial(const MaterialInfo &info) const {
 	return 0;
 }
 
-uint64_t FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
+core::MaterialId FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
 	auto pipeline = getPipelineForMaterial(info);
 	if (!pipeline) {
 		return 0;

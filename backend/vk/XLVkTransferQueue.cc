@@ -497,7 +497,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 	table->vkCmdPipelineBarrier(buf, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 			0, nullptr,
 			0, nullptr, // bufferBarriers.size(), bufferBarriers.data(),
-			inputImageBarriers.size(), inputImageBarriers.data());
+			uint32_t(inputImageBarriers.size()), inputImageBarriers.data());
 
 	for (auto &it : _stagingBuffer.copyData) {
 		if (it.targetBuffer) {
@@ -589,8 +589,8 @@ bool TransferResource::transfer(const Rc<DeviceQueue> &queue, const Rc<CommandPo
 		table->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
 			0, nullptr,
-			outputBufferBarriers.size(), outputBufferBarriers.data(),
-			outputImageBarriers.size(), outputImageBarriers.data());
+			uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
+			uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
 		return true;
 	});
 
@@ -978,8 +978,8 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 
 		table->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, targetMask, 0,
 			0, nullptr,
-			outputBufferBarriers.size(), outputBufferBarriers.data(),
-			outputImageBarriers.size(), outputImageBarriers.data());
+			uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
+			uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
 		return true;
 	});
 

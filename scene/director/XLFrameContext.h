@@ -48,8 +48,8 @@ public:
 	virtual Rc<FrameContextHandle> makeHandle(FrameInfo &);
 	virtual void submitHandle(FrameInfo &, FrameContextHandle *);
 
-	virtual uint64_t getMaterial(const MaterialInfo &) const;
-	virtual uint64_t acquireMaterial(const MaterialInfo &, Vector<core::MaterialImage> &&images, Ref *data, bool revokable);
+	virtual core::MaterialId getMaterial(const MaterialInfo &) const;
+	virtual core::MaterialId acquireMaterial(const MaterialInfo &, Vector<core::MaterialImage> &&images, Ref *data, bool revokable);
 
 	virtual void revokeImages(SpanView<uint64_t>);
 
@@ -107,11 +107,11 @@ struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 		auto it = std::find(states.begin(), states.end(), values);
 		if (it != states.end()) {
 			//log::verbose("FrameContextHandle", "addStateRet ", it - states.begin(), " ", values.scissor);
-			return it - states.begin();
+			return StateId(it - states.begin());
 		} else {
 			states.emplace_back(values);
 			//log::verbose("FrameContextHandle", "addState ", states.size() - 1, " ", values.scissor);
-			return states.size() - 1;
+			return StateId(states.size() - 1);
 		}
 	}
 

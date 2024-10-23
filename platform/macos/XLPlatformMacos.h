@@ -179,6 +179,8 @@ XL_OBJC_INTERFACE_BEGIN(XLMacAppDelegate) : NSObject <NSApplicationDelegate> {
 	NSWindow *_window;
 };
 
+- (void)doNothing:(id _Nonnull)object;
+
 XL_OBJC_INTERFACE_END(XLMacAppDelegate)
 
 
@@ -190,10 +192,12 @@ XL_OBJC_INTERFACE_BEGIN(XLMacViewController) : NSViewController <NSWindowDelegat
 
 - (stappler::xenolith::platform::MacViewController * _Nonnull) engineController;
 
+- (void)updateEngineView;
+
 XL_OBJC_INTERFACE_END(XLMacViewController)
 
 
-XL_OBJC_INTERFACE_BEGIN(XLMacView) : NSView <NSTextInputClient> {
+XL_OBJC_INTERFACE_BEGIN(XLMacView) : NSView <NSTextInputClient, NSViewLayerContentScaleDelegate> {
 	NSArray<NSAttributedStringKey> *_validAttributesForMarkedText;
 	bool _textDirty;
 };

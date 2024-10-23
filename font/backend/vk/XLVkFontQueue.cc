@@ -244,7 +244,7 @@ void FontAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputDa
 }
 
 void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool)> &&cb, Rc<font::RenderFontInput> &&d) {
-	_counter = d->requests.size();
+	_counter = uint32_t(d->requests.size());
 	_input = d;
 	if (auto instance = d->image->getInstance()) {
 		if (auto ud = instance->userdata.cast<RenderFontPersistentBufferUserdata>()) {
@@ -345,7 +345,7 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 	Vector<SpanView<VkBufferImageCopy>> commands;
 	if (!underlinePersistent) {
 		// write single white pixel for underlines
-		uint32_t offset = _frontBuffer->reserveBlock(1, _optimalTextureAlignment);
+		auto offset = _frontBuffer->reserveBlock(1, _optimalTextureAlignment);
 		if (offset + 1 <= Allocator::PageSize * 2) {
 			uint8_t whiteColor = 255;
 			_frontBuffer->setData(BytesView(&whiteColor, 1), offset);
@@ -374,7 +374,7 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 
 	// fill new persistent chars
 	for (auto &it : _copyPersistentCharData) {
-		it.bufferIdx = _userdata->buffers.size() - 1;
+		it.bufferIdx = uint32_t(_userdata->buffers.size() - 1);
 		auto cIt = _userdata->chars.find(it.objectId);
 		if (cIt == _userdata->chars.end()) {
 			_userdata->chars.emplace(it.objectId, it);
@@ -395,7 +395,7 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 	_imageExtent = FontAttachmentHandle_buildTextureData(commands);
 
 	auto atlas = Rc<core::DataAtlas>::create(core::DataAtlas::ImageAtlas,
-			_copyFromTmpBufferData.size() * 4, sizeof(font::FontAtlasValue), _imageExtent);
+			uint32_t(_copyFromTmpBufferData.size() * 4), uint32_t(sizeof(font::FontAtlasValue)), _imageExtent);
 
 	for (auto &c : commands) {
 		for (auto &it : c) {
@@ -416,12 +416,12 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 }
 
 uint32_t FontAttachmentHandle::nextBufferOffset(size_t blockSize) {
-	auto alignedSize = math::align(uint64_t(blockSize), _optimalTextureAlignment);
+	auto alignedSize = uint32_t(math::align(uint64_t(blockSize), _optimalTextureAlignment));
 	return _bufferOffset.fetch_add(alignedSize);
 }
 
 uint32_t FontAttachmentHandle::nextPersistentTransferOffset(size_t blockSize) {
-	auto alignedSize = math::align(uint64_t(blockSize), _optimalTextureAlignment);
+	auto alignedSize = uint32_t(math::align(uint64_t(blockSize), _optimalTextureAlignment));
 	return _persistentOffset.fetch_add(alignedSize);
 }
 
@@ -457,8 +457,8 @@ void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharText
 				" vs. ", texData.bitmapWidth, ";", texData.bitmapRows, "\n");
 	}
 
-	auto size = texData.bitmapRows * std::abs(texData.pitch);
-	uint32_t offset = _frontBuffer->reserveBlock(size, _optimalTextureAlignment);
+	auto size = uint32_t(texData.bitmapRows * std::abs(texData.pitch));
+	auto offset = _frontBuffer->reserveBlock(size, _optimalTextureAlignment);
 	if (offset + size > Allocator::PageSize * 2) {
 		return;
 	}
