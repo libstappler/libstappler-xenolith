@@ -61,10 +61,12 @@ public:
 
 	virtual void wakeup(std::unique_lock<Mutex> &) override;
 
-	void startLiveResize();
-	void stopLiveResize();
-
 	void submitTextData(WideStringView, TextCursor, TextCursor);
+
+	void captureWindow();
+	void releaseWindow();
+	void handlePaint();
+	void handleDisplayLink();
 
 protected:
 	using vk::View::init;
@@ -73,8 +75,15 @@ protected:
 
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg, core::PresentMode presentMode) override;
 
+	virtual void presentWithQueue(DeviceQueue &, Rc<ImageStorage> &&) override;
+
 	xenolith::platform::MacViewController *_viewController = nullptr;
 	std::atomic_flag _displayLinkFlag;
+	EngineOptions _tmpOptions;
+	bool _inputEnabled = false;
+	bool _windowCaptured = false;
+	std::mutex _captureMutex;
+	std::condition_variable _captureCondVar;
 };
 
 }

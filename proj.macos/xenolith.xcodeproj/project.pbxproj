@@ -1,0 +1,3765 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		268C47242CCA31D3006E6D5D /* libstappler-xenolith */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 268C47272CCA31D3006E6D5D /* Build configuration list for PBXAggregateTarget "libstappler-xenolith" */;
+			buildPhases = (
+			);
+			dependencies = (
+				268C47292CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C472B2CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C472D2CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C472F2CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C47312CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C47332CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C47352CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C47372CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C47392CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C473B2CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C473D2CCA31DF006E6D5D /* PBXTargetDependency */,
+				268C473F2CCA31DF006E6D5D /* PBXTargetDependency */,
+			);
+			name = "libstappler-xenolith";
+			packageProductDependencies = (
+			);
+			productName = "libstappler-xenolith";
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		268C453C2CC98791006E6D5D /* XLCore.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C43B12CC98782006E6D5D /* XLCore.scu.cpp */; };
+		268C454A2CC98815006E6D5D /* XLApplication.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C43412CC98782006E6D5D /* XLApplication.scu.cpp */; };
+		268C45582CC98855006E6D5D /* XLVk.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C43622CC98782006E6D5D /* XLVk.scu.cpp */; };
+		268C45662CC988C4006E6D5D /* XLVkGui.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C43992CC98782006E6D5D /* XLVkGui.scu.cpp */; };
+		268C45742CC98942006E6D5D /* XL2d.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C445A2CC98782006E6D5D /* XL2d.cpp */; };
+		268C45752CC98948006E6D5D /* XL2dShaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44562CC98782006E6D5D /* XL2dShaders.cpp */; };
+		268C45842CC98ADB006E6D5D /* Material.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44DD2CC98782006E6D5D /* Material.scu.cpp */; };
+		268C45852CC98ADD006E6D5D /* MaterialComponents.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44DF2CC98782006E6D5D /* MaterialComponents.scu.cpp */; };
+		268C45862CC98AF2006E6D5D /* XLPlatform.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44382CC98782006E6D5D /* XLPlatform.scu.cpp */; };
+		268C45872CC98AF7006E6D5D /* XLPlatformMacosApplication.mm in Sources */ = {isa = PBXBuildFile; fileRef = 268C442E2CC98782006E6D5D /* XLPlatformMacosApplication.mm */; };
+		268C45A22CC98B46006E6D5D /* XLFont.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C43E32CC98782006E6D5D /* XLFont.cpp */; };
+		268C45A32CC98B52006E6D5D /* XLScene.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C45302CC98782006E6D5D /* XLScene.scu.cpp */; };
+		268C45D82CC98C3B006E6D5D /* XLAssets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44E72CC98782006E6D5D /* XLAssets.cpp */; };
+		268C45D92CC98C44006E6D5D /* XLIcons.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44ED2CC98782006E6D5D /* XLIcons.cpp */; };
+		268C45DA2CC98C4E006E6D5D /* XLNetwork.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44F12CC98782006E6D5D /* XLNetwork.cpp */; };
+		268C45DB2CC98C5A006E6D5D /* XLStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C44FA2CC98782006E6D5D /* XLStorage.cpp */; };
+		268C484D2CCA3AA1006E6D5D /* XLThirdparty.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C453A2CC98782006E6D5D /* XLThirdparty.scu.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		268C47282CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45412CC987D1006E6D5D;
+			remoteInfo = application;
+		};
+		268C472A2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C454F2CC9882F006E6D5D;
+			remoteInfo = backend_vk;
+		};
+		268C472C2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C455D2CC9887D006E6D5D;
+			remoteInfo = backend_vkgui;
+		};
+		268C472E2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C43352CC98717006E6D5D;
+			remoteInfo = core;
+		};
+		268C47302CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C458C2CC98B1B006E6D5D;
+			remoteInfo = font;
+		};
+		268C47322CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C456B2CC988FF006E6D5D;
+			remoteInfo = renderer_basic2d;
+		};
+		268C47342CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C457B2CC98A94006E6D5D;
+			remoteInfo = renderer_material2d;
+		};
+		268C47362CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45A82CC98BAE006E6D5D;
+			remoteInfo = resources_assets;
+		};
+		268C47382CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45B52CC98BBC006E6D5D;
+			remoteInfo = resources_icons;
+		};
+		268C473A2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45C22CC98BCB006E6D5D;
+			remoteInfo = resources_network;
+		};
+		268C473C2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45CF2CC98BDA006E6D5D;
+			remoteInfo = resources_storage;
+		};
+		268C473E2CCA31DF006E6D5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 268C43102CC945CA006E6D5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 268C45992CC98B25006E6D5D;
+			remoteInfo = scene;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		268C43242CC945FA006E6D5D /* macos.projectconfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = macos.projectconfig.xcconfig; sourceTree = "<group>"; };
+		268C43252CC945FA006E6D5D /* xenolith_application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_application.xcconfig; sourceTree = "<group>"; };
+		268C43262CC945FA006E6D5D /* xenolith_backend_vk.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_backend_vk.xcconfig; sourceTree = "<group>"; };
+		268C43272CC945FA006E6D5D /* xenolith_backend_vkgui.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_backend_vkgui.xcconfig; sourceTree = "<group>"; };
+		268C43282CC945FA006E6D5D /* xenolith_core.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_core.xcconfig; sourceTree = "<group>"; };
+		268C43292CC945FA006E6D5D /* xenolith_font.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_font.xcconfig; sourceTree = "<group>"; };
+		268C432A2CC945FA006E6D5D /* xenolith_renderer_basic2d.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_renderer_basic2d.xcconfig; sourceTree = "<group>"; };
+		268C432B2CC945FA006E6D5D /* xenolith_renderer_material2d.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_renderer_material2d.xcconfig; sourceTree = "<group>"; };
+		268C432C2CC945FA006E6D5D /* xenolith_resources_assets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_resources_assets.xcconfig; sourceTree = "<group>"; };
+		268C432D2CC945FA006E6D5D /* xenolith_resources_icons.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_resources_icons.xcconfig; sourceTree = "<group>"; };
+		268C432E2CC945FA006E6D5D /* xenolith_resources_network.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_resources_network.xcconfig; sourceTree = "<group>"; };
+		268C432F2CC945FA006E6D5D /* xenolith_resources_storage.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_resources_storage.xcconfig; sourceTree = "<group>"; };
+		268C43302CC945FA006E6D5D /* xenolith_scene.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = xenolith_scene.xcconfig; sourceTree = "<group>"; };
+		268C43362CC98717006E6D5D /* xenolith_core.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = xenolith_core.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C433E2CC98782006E6D5D /* application.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = application.mk; sourceTree = "<group>"; };
+		268C433F2CC98782006E6D5D /* XLApplication.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLApplication.h; sourceTree = "<group>"; };
+		268C43402CC98782006E6D5D /* XLApplication.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLApplication.cc; sourceTree = "<group>"; };
+		268C43412CC98782006E6D5D /* XLApplication.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLApplication.scu.cpp; sourceTree = "<group>"; };
+		268C43422CC98782006E6D5D /* XLApplicationExtension.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLApplicationExtension.h; sourceTree = "<group>"; };
+		268C43432CC98782006E6D5D /* XLApplicationInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLApplicationInfo.h; sourceTree = "<group>"; };
+		268C43442CC98782006E6D5D /* XLApplicationPlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLApplicationPlatform.cc; sourceTree = "<group>"; };
+		268C43452CC98782006E6D5D /* XLEvent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLEvent.h; sourceTree = "<group>"; };
+		268C43462CC98782006E6D5D /* XLEvent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLEvent.cc; sourceTree = "<group>"; };
+		268C43472CC98782006E6D5D /* XLEventHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLEventHandler.h; sourceTree = "<group>"; };
+		268C43482CC98782006E6D5D /* XLEventHandler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLEventHandler.cc; sourceTree = "<group>"; };
+		268C43492CC98782006E6D5D /* XLEventHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLEventHeader.h; sourceTree = "<group>"; };
+		268C434A2CC98782006E6D5D /* XLEventHeader.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLEventHeader.cc; sourceTree = "<group>"; };
+		268C434B2CC98782006E6D5D /* XLMeshIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLMeshIndex.h; sourceTree = "<group>"; };
+		268C434C2CC98782006E6D5D /* XLMeshIndex.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLMeshIndex.cc; sourceTree = "<group>"; };
+		268C434D2CC98782006E6D5D /* XLResourceCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLResourceCache.h; sourceTree = "<group>"; };
+		268C434E2CC98782006E6D5D /* XLResourceCache.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLResourceCache.cc; sourceTree = "<group>"; };
+		268C434F2CC98782006E6D5D /* XLResourceObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLResourceObject.h; sourceTree = "<group>"; };
+		268C43502CC98782006E6D5D /* XLResourceObject.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLResourceObject.cc; sourceTree = "<group>"; };
+		268C43512CC98782006E6D5D /* XLResourceOwner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLResourceOwner.h; sourceTree = "<group>"; };
+		268C43522CC98782006E6D5D /* XLTemporaryResource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLTemporaryResource.h; sourceTree = "<group>"; };
+		268C43532CC98782006E6D5D /* XLTemporaryResource.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLTemporaryResource.cc; sourceTree = "<group>"; };
+		268C43542CC98782006E6D5D /* XLTexture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLTexture.h; sourceTree = "<group>"; };
+		268C43552CC98782006E6D5D /* XLTexture.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLTexture.cc; sourceTree = "<group>"; };
+		268C43572CC98782006E6D5D /* XLVkPlatformAndroid.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPlatformAndroid.cc; sourceTree = "<group>"; };
+		268C43592CC98782006E6D5D /* XLVkPlatformLinux.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPlatformLinux.cc; sourceTree = "<group>"; };
+		268C435B2CC98782006E6D5D /* XLVkPlatformMac.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPlatformMac.cc; sourceTree = "<group>"; };
+		268C435D2CC98782006E6D5D /* XLVkPlatformWin32.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPlatformWin32.cc; sourceTree = "<group>"; };
+		268C43602CC98782006E6D5D /* vk.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = vk.mk; sourceTree = "<group>"; };
+		268C43612CC98782006E6D5D /* XLVk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVk.h; sourceTree = "<group>"; };
+		268C43622CC98782006E6D5D /* XLVk.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVk.scu.cpp; sourceTree = "<group>"; };
+		268C43632CC98782006E6D5D /* XLVkAllocator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkAllocator.h; sourceTree = "<group>"; };
+		268C43642CC98782006E6D5D /* XLVkAllocator.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkAllocator.cc; sourceTree = "<group>"; };
+		268C43652CC98782006E6D5D /* XLVkAttachment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkAttachment.h; sourceTree = "<group>"; };
+		268C43662CC98782006E6D5D /* XLVkAttachment.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkAttachment.cc; sourceTree = "<group>"; };
+		268C43672CC98782006E6D5D /* XLVkConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkConfig.h; sourceTree = "<group>"; };
+		268C43682CC98782006E6D5D /* XLVkDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkDevice.h; sourceTree = "<group>"; };
+		268C43692CC98782006E6D5D /* XLVkDevice.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkDevice.cc; sourceTree = "<group>"; };
+		268C436A2CC98782006E6D5D /* XLVkDeviceQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkDeviceQueue.h; sourceTree = "<group>"; };
+		268C436B2CC98782006E6D5D /* XLVkDeviceQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkDeviceQueue.cc; sourceTree = "<group>"; };
+		268C436C2CC98782006E6D5D /* XLVkInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkInfo.h; sourceTree = "<group>"; };
+		268C436D2CC98782006E6D5D /* XLVkInfo.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkInfo.cc; sourceTree = "<group>"; };
+		268C436E2CC98782006E6D5D /* XLVkInstance.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkInstance.h; sourceTree = "<group>"; };
+		268C436F2CC98782006E6D5D /* XLVkInstance.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkInstance.cc; sourceTree = "<group>"; };
+		268C43702CC98782006E6D5D /* XLVkLoop.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkLoop.h; sourceTree = "<group>"; };
+		268C43712CC98782006E6D5D /* XLVkLoop.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkLoop.cc; sourceTree = "<group>"; };
+		268C43722CC98782006E6D5D /* XLVkMaterialCompiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkMaterialCompiler.h; sourceTree = "<group>"; };
+		268C43732CC98782006E6D5D /* XLVkMaterialCompiler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkMaterialCompiler.cc; sourceTree = "<group>"; };
+		268C43742CC98782006E6D5D /* XLVkMeshCompiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkMeshCompiler.h; sourceTree = "<group>"; };
+		268C43752CC98782006E6D5D /* XLVkMeshCompiler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkMeshCompiler.cc; sourceTree = "<group>"; };
+		268C43762CC98782006E6D5D /* XLVkObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkObject.h; sourceTree = "<group>"; };
+		268C43772CC98782006E6D5D /* XLVkObject.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkObject.cc; sourceTree = "<group>"; };
+		268C43782CC98782006E6D5D /* XLVkPipeline.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkPipeline.h; sourceTree = "<group>"; };
+		268C43792CC98782006E6D5D /* XLVkPipeline.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPipeline.cc; sourceTree = "<group>"; };
+		268C437A2CC98782006E6D5D /* XLVkPlatform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkPlatform.h; sourceTree = "<group>"; };
+		268C437B2CC98782006E6D5D /* XLVkPlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkPlatform.cc; sourceTree = "<group>"; };
+		268C437C2CC98782006E6D5D /* XLVkQueuePass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkQueuePass.h; sourceTree = "<group>"; };
+		268C437D2CC98782006E6D5D /* XLVkQueuePass.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkQueuePass.cc; sourceTree = "<group>"; };
+		268C437E2CC98782006E6D5D /* XLVkRenderPass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkRenderPass.h; sourceTree = "<group>"; };
+		268C437F2CC98782006E6D5D /* XLVkRenderPass.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkRenderPass.cc; sourceTree = "<group>"; };
+		268C43802CC98782006E6D5D /* XLVkRenderQueueCompiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkRenderQueueCompiler.h; sourceTree = "<group>"; };
+		268C43812CC98782006E6D5D /* XLVkRenderQueueCompiler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkRenderQueueCompiler.cc; sourceTree = "<group>"; };
+		268C43822CC98782006E6D5D /* XLVkSync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkSync.h; sourceTree = "<group>"; };
+		268C43832CC98782006E6D5D /* XLVkSync.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkSync.cc; sourceTree = "<group>"; };
+		268C43842CC98782006E6D5D /* XLVkTable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkTable.h; sourceTree = "<group>"; };
+		268C43852CC98782006E6D5D /* XLVkTable.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkTable.cc; sourceTree = "<group>"; };
+		268C43862CC98782006E6D5D /* XLVkTextureSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkTextureSet.h; sourceTree = "<group>"; };
+		268C43872CC98782006E6D5D /* XLVkTextureSet.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkTextureSet.cc; sourceTree = "<group>"; };
+		268C43882CC98782006E6D5D /* XLVkTransferQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkTransferQueue.h; sourceTree = "<group>"; };
+		268C43892CC98782006E6D5D /* XLVkTransferQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkTransferQueue.cc; sourceTree = "<group>"; };
+		268C438B2CC98782006E6D5D /* XLVkGuiViewImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiViewImpl.h; sourceTree = "<group>"; };
+		268C438C2CC98782006E6D5D /* XLVkGuiViewImpl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiViewImpl.cc; sourceTree = "<group>"; };
+		268C438E2CC98782006E6D5D /* XLVkGuiViewImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiViewImpl.h; sourceTree = "<group>"; };
+		268C438F2CC98782006E6D5D /* XLVkGuiViewImpl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiViewImpl.cc; sourceTree = "<group>"; };
+		268C43912CC98782006E6D5D /* XLVkGuiViewImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiViewImpl.h; sourceTree = "<group>"; };
+		268C43922CC98782006E6D5D /* XLVkGuiViewImpl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiViewImpl.cc; sourceTree = "<group>"; };
+		268C43942CC98782006E6D5D /* XLVkGuiViewImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiViewImpl.h; sourceTree = "<group>"; };
+		268C43952CC98782006E6D5D /* XLVkGuiViewImpl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiViewImpl.cc; sourceTree = "<group>"; };
+		268C43982CC98782006E6D5D /* vkgui.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = vkgui.mk; sourceTree = "<group>"; };
+		268C43992CC98782006E6D5D /* XLVkGui.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGui.scu.cpp; sourceTree = "<group>"; };
+		268C439A2CC98782006E6D5D /* XLVkGuiApplication.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiApplication.h; sourceTree = "<group>"; };
+		268C439B2CC98782006E6D5D /* XLVkGuiApplication.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiApplication.cc; sourceTree = "<group>"; };
+		268C439C2CC98782006E6D5D /* XLVkGuiConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiConfig.h; sourceTree = "<group>"; };
+		268C439D2CC98782006E6D5D /* XLVkGuiPlatform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkGuiPlatform.h; sourceTree = "<group>"; };
+		268C439E2CC98782006E6D5D /* XLVkGuiShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkGuiShared.cc; sourceTree = "<group>"; };
+		268C439F2CC98782006E6D5D /* XLVkSwapchain.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkSwapchain.h; sourceTree = "<group>"; };
+		268C43A02CC98782006E6D5D /* XLVkSwapchain.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkSwapchain.cc; sourceTree = "<group>"; };
+		268C43A12CC98782006E6D5D /* XLVkView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkView.h; sourceTree = "<group>"; };
+		268C43A22CC98782006E6D5D /* XLVkView.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkView.cc; sourceTree = "<group>"; };
+		268C43A52CC98782006E6D5D /* XLCorePlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCorePlatform.cc; sourceTree = "<group>"; };
+		268C43A72CC98782006E6D5D /* XLCorePlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCorePlatform.cc; sourceTree = "<group>"; };
+		268C43A92CC98782006E6D5D /* XLCorePlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCorePlatform.cc; sourceTree = "<group>"; };
+		268C43AB2CC98782006E6D5D /* XLCorePlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCorePlatform.cc; sourceTree = "<group>"; };
+		268C43AE2CC98782006E6D5D /* core.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = core.mk; sourceTree = "<group>"; };
+		268C43AF2CC98782006E6D5D /* XLCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCommon.h; sourceTree = "<group>"; };
+		268C43B02CC98782006E6D5D /* XLCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCore.h; sourceTree = "<group>"; };
+		268C43B12CC98782006E6D5D /* XLCore.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCore.scu.cpp; sourceTree = "<group>"; };
+		268C43B22CC98782006E6D5D /* XLCoreAttachment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreAttachment.h; sourceTree = "<group>"; };
+		268C43B32CC98782006E6D5D /* XLCoreAttachment.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreAttachment.cc; sourceTree = "<group>"; };
+		268C43B42CC98782006E6D5D /* XLCoreConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreConfig.h; sourceTree = "<group>"; };
+		268C43B52CC98782006E6D5D /* XLCoreDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreDevice.h; sourceTree = "<group>"; };
+		268C43B62CC98782006E6D5D /* XLCoreDevice.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreDevice.cc; sourceTree = "<group>"; };
+		268C43B72CC98782006E6D5D /* XLCoreDynamicImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreDynamicImage.h; sourceTree = "<group>"; };
+		268C43B82CC98782006E6D5D /* XLCoreDynamicImage.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreDynamicImage.cc; sourceTree = "<group>"; };
+		268C43B92CC98782006E6D5D /* XLCoreEnum.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreEnum.h; sourceTree = "<group>"; };
+		268C43BA2CC98782006E6D5D /* XLCoreFrameCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreFrameCache.h; sourceTree = "<group>"; };
+		268C43BB2CC98782006E6D5D /* XLCoreFrameCache.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreFrameCache.cc; sourceTree = "<group>"; };
+		268C43BC2CC98782006E6D5D /* XLCoreFrameEmitter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreFrameEmitter.h; sourceTree = "<group>"; };
+		268C43BD2CC98782006E6D5D /* XLCoreFrameEmitter.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreFrameEmitter.cc; sourceTree = "<group>"; };
+		268C43BE2CC98782006E6D5D /* XLCoreFrameHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreFrameHandle.h; sourceTree = "<group>"; };
+		268C43BF2CC98782006E6D5D /* XLCoreFrameHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreFrameHandle.cc; sourceTree = "<group>"; };
+		268C43C02CC98782006E6D5D /* XLCoreFrameQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreFrameQueue.h; sourceTree = "<group>"; };
+		268C43C12CC98782006E6D5D /* XLCoreFrameQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreFrameQueue.cc; sourceTree = "<group>"; };
+		268C43C22CC98782006E6D5D /* XLCoreFrameRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreFrameRequest.h; sourceTree = "<group>"; };
+		268C43C32CC98782006E6D5D /* XLCoreFrameRequest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreFrameRequest.cc; sourceTree = "<group>"; };
+		268C43C42CC98782006E6D5D /* XLCoreImageStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreImageStorage.h; sourceTree = "<group>"; };
+		268C43C52CC98782006E6D5D /* XLCoreImageStorage.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreImageStorage.cc; sourceTree = "<group>"; };
+		268C43C62CC98782006E6D5D /* XLCoreInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreInfo.h; sourceTree = "<group>"; };
+		268C43C72CC98782006E6D5D /* XLCoreInfo.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreInfo.cc; sourceTree = "<group>"; };
+		268C43C82CC98782006E6D5D /* XLCoreInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreInput.h; sourceTree = "<group>"; };
+		268C43C92CC98782006E6D5D /* XLCoreInstance.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreInstance.h; sourceTree = "<group>"; };
+		268C43CA2CC98782006E6D5D /* XLCoreInstance.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreInstance.cc; sourceTree = "<group>"; };
+		268C43CB2CC98782006E6D5D /* XLCoreLoop.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreLoop.h; sourceTree = "<group>"; };
+		268C43CC2CC98782006E6D5D /* XLCoreLoop.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreLoop.cc; sourceTree = "<group>"; };
+		268C43CD2CC98782006E6D5D /* XLCoreMaterial.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreMaterial.h; sourceTree = "<group>"; };
+		268C43CE2CC98782006E6D5D /* XLCoreMaterial.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreMaterial.cc; sourceTree = "<group>"; };
+		268C43CF2CC98782006E6D5D /* XLCoreMesh.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreMesh.h; sourceTree = "<group>"; };
+		268C43D02CC98782006E6D5D /* XLCoreMesh.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreMesh.cc; sourceTree = "<group>"; };
+		268C43D12CC98782006E6D5D /* XLCoreObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreObject.h; sourceTree = "<group>"; };
+		268C43D22CC98782006E6D5D /* XLCoreObject.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreObject.cc; sourceTree = "<group>"; };
+		268C43D32CC98782006E6D5D /* XLCorePipelineInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCorePipelineInfo.h; sourceTree = "<group>"; };
+		268C43D42CC98782006E6D5D /* XLCorePlatform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCorePlatform.h; sourceTree = "<group>"; };
+		268C43D52CC98782006E6D5D /* XLCoreQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreQueue.h; sourceTree = "<group>"; };
+		268C43D62CC98782006E6D5D /* XLCoreQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreQueue.cc; sourceTree = "<group>"; };
+		268C43D72CC98782006E6D5D /* XLCoreQueueData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreQueueData.h; sourceTree = "<group>"; };
+		268C43D82CC98782006E6D5D /* XLCoreQueueData.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreQueueData.cc; sourceTree = "<group>"; };
+		268C43D92CC98782006E6D5D /* XLCoreQueuePass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreQueuePass.h; sourceTree = "<group>"; };
+		268C43DA2CC98782006E6D5D /* XLCoreQueuePass.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreQueuePass.cc; sourceTree = "<group>"; };
+		268C43DB2CC98782006E6D5D /* XLCoreResource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLCoreResource.h; sourceTree = "<group>"; };
+		268C43DC2CC98782006E6D5D /* XLCoreResource.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLCoreResource.cc; sourceTree = "<group>"; };
+		268C43DE2CC98782006E6D5D /* XLVkFontQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLVkFontQueue.h; sourceTree = "<group>"; };
+		268C43DF2CC98782006E6D5D /* XLVkFontQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLVkFontQueue.cc; sourceTree = "<group>"; };
+		268C43E22CC98782006E6D5D /* font.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = font.mk; sourceTree = "<group>"; };
+		268C43E32CC98782006E6D5D /* XLFont.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFont.cpp; sourceTree = "<group>"; };
+		268C43E42CC98782006E6D5D /* XLFontConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontConfig.h; sourceTree = "<group>"; };
+		268C43E52CC98782006E6D5D /* XLFontController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontController.h; sourceTree = "<group>"; };
+		268C43E62CC98782006E6D5D /* XLFontController.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontController.cc; sourceTree = "<group>"; };
+		268C43E72CC98782006E6D5D /* XLFontDeferredRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontDeferredRequest.h; sourceTree = "<group>"; };
+		268C43E82CC98782006E6D5D /* XLFontDeferredRequest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontDeferredRequest.cc; sourceTree = "<group>"; };
+		268C43E92CC98782006E6D5D /* XLFontExtension.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontExtension.h; sourceTree = "<group>"; };
+		268C43EA2CC98782006E6D5D /* XLFontExtension.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontExtension.cc; sourceTree = "<group>"; };
+		268C43EB2CC98782006E6D5D /* XLFontLabelBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontLabelBase.h; sourceTree = "<group>"; };
+		268C43EC2CC98782006E6D5D /* XLFontLabelBase.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontLabelBase.cc; sourceTree = "<group>"; };
+		268C43ED2CC98782006E6D5D /* XLFontLocale.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFontLocale.h; sourceTree = "<group>"; };
+		268C43EE2CC98782006E6D5D /* XLFontLocale.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontLocale.cc; sourceTree = "<group>"; };
+		268C43EF2CC98782006E6D5D /* XLFontShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFontShared.cc; sourceTree = "<group>"; };
+		268C43F12CC98782006E6D5D /* AppSupportActivity.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = AppSupportActivity.java; sourceTree = "<group>"; };
+		268C43F22CC98782006E6D5D /* NetworkConnectivity.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = NetworkConnectivity.java; sourceTree = "<group>"; };
+		268C43F32CC98782006E6D5D /* TextInputEditText.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = TextInputEditText.java; sourceTree = "<group>"; };
+		268C43F42CC98782006E6D5D /* TextInputWrapper.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = TextInputWrapper.java; sourceTree = "<group>"; };
+		268C43FA2CC98782006E6D5D /* AndroidManifest.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = AndroidManifest.xml; sourceTree = "<group>"; };
+		268C43FD2CC98782006E6D5D /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		268C43FE2CC98782006E6D5D /* build.gradle */ = {isa = PBXFileReference; lastKnownFileType = text; path = build.gradle; sourceTree = "<group>"; };
+		268C44002CC98782006E6D5D /* MessagingActivityAdapter.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = MessagingActivityAdapter.java; sourceTree = "<group>"; };
+		268C44012CC98782006E6D5D /* MessagingService.java */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.java; path = MessagingService.java; sourceTree = "<group>"; };
+		268C44072CC98782006E6D5D /* AndroidManifest.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = AndroidManifest.xml; sourceTree = "<group>"; };
+		268C440A2CC98782006E6D5D /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		268C440B2CC98782006E6D5D /* build.gradle */ = {isa = PBXFileReference; lastKnownFileType = text; path = build.gradle; sourceTree = "<group>"; };
+		268C440D2CC98782006E6D5D /* XLPlatformAndroid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformAndroid.h; sourceTree = "<group>"; };
+		268C440E2CC98782006E6D5D /* XLPlatformAndroid.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroid.cc; sourceTree = "<group>"; };
+		268C440F2CC98782006E6D5D /* XLPlatformAndroidActivity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformAndroidActivity.h; sourceTree = "<group>"; };
+		268C44102CC98782006E6D5D /* XLPlatformAndroidActivity.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroidActivity.cc; sourceTree = "<group>"; };
+		268C44112CC98782006E6D5D /* XLPlatformAndroidClassLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformAndroidClassLoader.h; sourceTree = "<group>"; };
+		268C44122CC98782006E6D5D /* XLPlatformAndroidClassLoader.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroidClassLoader.cc; sourceTree = "<group>"; };
+		268C44132CC98782006E6D5D /* XLPlatformAndroidKeyCodes.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroidKeyCodes.cc; sourceTree = "<group>"; };
+		268C44142CC98782006E6D5D /* XLPlatformAndroidMessageInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformAndroidMessageInterface.h; sourceTree = "<group>"; };
+		268C44152CC98782006E6D5D /* XLPlatformAndroidMessageInterface.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroidMessageInterface.cc; sourceTree = "<group>"; };
+		268C44162CC98782006E6D5D /* XLPlatformAndroidNetworkConnectivity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformAndroidNetworkConnectivity.h; sourceTree = "<group>"; };
+		268C44172CC98782006E6D5D /* XLPlatformAndroidNetworkConnectivity.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformAndroidNetworkConnectivity.cc; sourceTree = "<group>"; };
+		268C44192CC98782006E6D5D /* xkb_unicode.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = xkb_unicode.cc; sourceTree = "<group>"; };
+		268C441B2CC98782006E6D5D /* viewporter-client-protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "viewporter-client-protocol.h"; sourceTree = "<group>"; };
+		268C441C2CC98782006E6D5D /* xdg-shell-client-protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "xdg-shell-client-protocol.h"; sourceTree = "<group>"; };
+		268C441F2CC98782006E6D5D /* XLPlatformLinuxDbus.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxDbus.h; sourceTree = "<group>"; };
+		268C44202CC98782006E6D5D /* XLPlatformLinuxDbus.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxDbus.cc; sourceTree = "<group>"; };
+		268C44212CC98782006E6D5D /* XLPlatformLinuxView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxView.h; sourceTree = "<group>"; };
+		268C44222CC98782006E6D5D /* XLPlatformLinuxWayland.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxWayland.h; sourceTree = "<group>"; };
+		268C44232CC98782006E6D5D /* XLPlatformLinuxWayland.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxWayland.cc; sourceTree = "<group>"; };
+		268C44242CC98782006E6D5D /* XLPlatformLinuxWaylandView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxWaylandView.h; sourceTree = "<group>"; };
+		268C44252CC98782006E6D5D /* XLPlatformLinuxWaylandView.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxWaylandView.cc; sourceTree = "<group>"; };
+		268C44262CC98782006E6D5D /* XLPlatformLinuxXcb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxXcb.h; sourceTree = "<group>"; };
+		268C44272CC98782006E6D5D /* XLPlatformLinuxXcb.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxXcb.cc; sourceTree = "<group>"; };
+		268C44282CC98782006E6D5D /* XLPlatformLinuxXcbView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxXcbView.h; sourceTree = "<group>"; };
+		268C44292CC98782006E6D5D /* XLPlatformLinuxXcbView.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxXcbView.cc; sourceTree = "<group>"; };
+		268C442A2CC98782006E6D5D /* XLPlatformLinuxXkb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformLinuxXkb.h; sourceTree = "<group>"; };
+		268C442B2CC98782006E6D5D /* XLPlatformLinuxXkb.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformLinuxXkb.cc; sourceTree = "<group>"; };
+		268C442D2CC98782006E6D5D /* XLPlatformMacos.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformMacos.h; sourceTree = "<group>"; };
+		268C442E2CC98782006E6D5D /* XLPlatformMacosApplication.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = XLPlatformMacosApplication.mm; sourceTree = "<group>"; };
+		268C442F2CC98782006E6D5D /* XLPlatformMacosUtils.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformMacosUtils.cc; sourceTree = "<group>"; };
+		268C44312CC98782006E6D5D /* XLPlatformWin32Library.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformWin32Library.h; sourceTree = "<group>"; };
+		268C44322CC98782006E6D5D /* XLPlatformWin32Library.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformWin32Library.cc; sourceTree = "<group>"; };
+		268C44332CC98782006E6D5D /* XLPlatformWin32View.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformWin32View.h; sourceTree = "<group>"; };
+		268C44342CC98782006E6D5D /* XLPlatformWin32View.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatformWin32View.cc; sourceTree = "<group>"; };
+		268C44362CC98782006E6D5D /* platform.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = platform.mk; sourceTree = "<group>"; };
+		268C44372CC98782006E6D5D /* XLPlatform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatform.h; sourceTree = "<group>"; };
+		268C44382CC98782006E6D5D /* XLPlatform.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLPlatform.scu.cpp; sourceTree = "<group>"; };
+		268C44392CC98782006E6D5D /* XLPlatformNetwork.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformNetwork.h; sourceTree = "<group>"; };
+		268C443A2CC98782006E6D5D /* XLPlatformViewInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLPlatformViewInterface.h; sourceTree = "<group>"; };
+		268C443B2CC98782006E6D5D /* XLViewCommandLine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLViewCommandLine.h; sourceTree = "<group>"; };
+		268C443C2CC98782006E6D5D /* XLViewCommandLine.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLViewCommandLine.cc; sourceTree = "<group>"; };
+		268C443E2CC98782006E6D5D /* XL2dVkMaterial.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVkMaterial.h; sourceTree = "<group>"; };
+		268C443F2CC98782006E6D5D /* XL2dVkMaterial.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVkMaterial.cc; sourceTree = "<group>"; };
+		268C44402CC98782006E6D5D /* XL2dVkShadow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVkShadow.h; sourceTree = "<group>"; };
+		268C44412CC98782006E6D5D /* XL2dVkShadow.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVkShadow.cc; sourceTree = "<group>"; };
+		268C44422CC98782006E6D5D /* XL2dVkShadowPass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVkShadowPass.h; sourceTree = "<group>"; };
+		268C44432CC98782006E6D5D /* XL2dVkShadowPass.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVkShadowPass.cc; sourceTree = "<group>"; };
+		268C44442CC98782006E6D5D /* XL2dVkVertexPass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVkVertexPass.h; sourceTree = "<group>"; };
+		268C44452CC98782006E6D5D /* XL2dVkVertexPass.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVkVertexPass.cc; sourceTree = "<group>"; };
+		268C44482CC98782006E6D5D /* XL2dGlslSdfData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dGlslSdfData.h; sourceTree = "<group>"; };
+		268C44492CC98782006E6D5D /* XL2dGlslSdfDescriptors.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dGlslSdfDescriptors.h; sourceTree = "<group>"; };
+		268C444A2CC98782006E6D5D /* XL2dGlslShadowData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dGlslShadowData.h; sourceTree = "<group>"; };
+		268C444B2CC98782006E6D5D /* XL2dGlslVertexData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dGlslVertexData.h; sourceTree = "<group>"; };
+		268C444D2CC98782006E6D5D /* xl_2d_material.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_material.frag; sourceTree = "<group>"; };
+		268C444E2CC98782006E6D5D /* xl_2d_material.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_material.vert; sourceTree = "<group>"; };
+		268C444F2CC98782006E6D5D /* xl_2d_material_nobda.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_material_nobda.vert; sourceTree = "<group>"; };
+		268C44502CC98782006E6D5D /* xl_2d_pseudosdf.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_pseudosdf.frag; sourceTree = "<group>"; };
+		268C44512CC98782006E6D5D /* xl_2d_pseudosdf.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_pseudosdf.vert; sourceTree = "<group>"; };
+		268C44522CC98782006E6D5D /* xl_2d_pseudosdf_shadow.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_pseudosdf_shadow.frag; sourceTree = "<group>"; };
+		268C44532CC98782006E6D5D /* xl_2d_pseudosdf_shadow.vert */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = xl_2d_pseudosdf_shadow.vert; sourceTree = "<group>"; };
+		268C44552CC98782006E6D5D /* XL2dShaders.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dShaders.h; sourceTree = "<group>"; };
+		268C44562CC98782006E6D5D /* XL2dShaders.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dShaders.cpp; sourceTree = "<group>"; };
+		268C44582CC98782006E6D5D /* basic2d.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = basic2d.mk; sourceTree = "<group>"; };
+		268C44592CC98782006E6D5D /* XL2d.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2d.h; sourceTree = "<group>"; };
+		268C445A2CC98782006E6D5D /* XL2d.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2d.cpp; sourceTree = "<group>"; };
+		268C445B2CC98782006E6D5D /* XL2dActionAcceleratedMove.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dActionAcceleratedMove.h; sourceTree = "<group>"; };
+		268C445C2CC98782006E6D5D /* XL2dActionAcceleratedMove.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dActionAcceleratedMove.cc; sourceTree = "<group>"; };
+		268C445D2CC98782006E6D5D /* XL2dBootstrapApplication.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dBootstrapApplication.h; sourceTree = "<group>"; };
+		268C445E2CC98782006E6D5D /* XL2dBootstrapApplication.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dBootstrapApplication.cc; sourceTree = "<group>"; };
+		268C445F2CC98782006E6D5D /* XL2dCommandList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dCommandList.h; sourceTree = "<group>"; };
+		268C44602CC98782006E6D5D /* XL2dCommandList.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dCommandList.cc; sourceTree = "<group>"; };
+		268C44612CC98782006E6D5D /* XL2dConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dConfig.h; sourceTree = "<group>"; };
+		268C44622CC98782006E6D5D /* XL2dFrameContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dFrameContext.h; sourceTree = "<group>"; };
+		268C44632CC98782006E6D5D /* XL2dFrameContext.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dFrameContext.cc; sourceTree = "<group>"; };
+		268C44642CC98782006E6D5D /* XL2dImageLayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dImageLayer.h; sourceTree = "<group>"; };
+		268C44652CC98782006E6D5D /* XL2dImageLayer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dImageLayer.cc; sourceTree = "<group>"; };
+		268C44662CC98782006E6D5D /* XL2dInputField.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dInputField.h; sourceTree = "<group>"; };
+		268C44672CC98782006E6D5D /* XL2dInputField.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dInputField.cc; sourceTree = "<group>"; };
+		268C44682CC98782006E6D5D /* XL2dInputLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dInputLabel.h; sourceTree = "<group>"; };
+		268C44692CC98782006E6D5D /* XL2dInputLabel.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dInputLabel.cc; sourceTree = "<group>"; };
+		268C446A2CC98782006E6D5D /* XL2dLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dLabel.h; sourceTree = "<group>"; };
+		268C446B2CC98782006E6D5D /* XL2dLabel.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dLabel.cc; sourceTree = "<group>"; };
+		268C446C2CC98782006E6D5D /* XL2dLayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dLayer.h; sourceTree = "<group>"; };
+		268C446D2CC98782006E6D5D /* XL2dLayer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dLayer.cc; sourceTree = "<group>"; };
+		268C446E2CC98782006E6D5D /* XL2dLayerRounded.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dLayerRounded.h; sourceTree = "<group>"; };
+		268C446F2CC98782006E6D5D /* XL2dLayerRounded.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dLayerRounded.cc; sourceTree = "<group>"; };
+		268C44702CC98782006E6D5D /* XL2dLinearGradient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dLinearGradient.h; sourceTree = "<group>"; };
+		268C44712CC98782006E6D5D /* XL2dLinearGradient.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dLinearGradient.cc; sourceTree = "<group>"; };
+		268C44722CC98782006E6D5D /* XL2dLinearProgress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dLinearProgress.h; sourceTree = "<group>"; };
+		268C44732CC98782006E6D5D /* XL2dLinearProgress.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dLinearProgress.cc; sourceTree = "<group>"; };
+		268C44742CC98782006E6D5D /* XL2dRoundedProgress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dRoundedProgress.h; sourceTree = "<group>"; };
+		268C44752CC98782006E6D5D /* XL2dRoundedProgress.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dRoundedProgress.cc; sourceTree = "<group>"; };
+		268C44762CC98782006E6D5D /* XL2dScene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dScene.h; sourceTree = "<group>"; };
+		268C44772CC98782006E6D5D /* XL2dScene.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dScene.cc; sourceTree = "<group>"; };
+		268C44782CC98782006E6D5D /* XL2dSceneContent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dSceneContent.h; sourceTree = "<group>"; };
+		268C44792CC98782006E6D5D /* XL2dSceneContent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dSceneContent.cc; sourceTree = "<group>"; };
+		268C447A2CC98782006E6D5D /* XL2dSceneLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dSceneLayout.h; sourceTree = "<group>"; };
+		268C447B2CC98782006E6D5D /* XL2dSceneLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dSceneLayout.cc; sourceTree = "<group>"; };
+		268C447C2CC98782006E6D5D /* XL2dSceneLight.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dSceneLight.h; sourceTree = "<group>"; };
+		268C447D2CC98782006E6D5D /* XL2dSceneLight.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dSceneLight.cc; sourceTree = "<group>"; };
+		268C447E2CC98782006E6D5D /* XL2dScrollController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dScrollController.h; sourceTree = "<group>"; };
+		268C447F2CC98782006E6D5D /* XL2dScrollController.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dScrollController.cc; sourceTree = "<group>"; };
+		268C44802CC98782006E6D5D /* XL2dScrollItemHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dScrollItemHandle.h; sourceTree = "<group>"; };
+		268C44812CC98782006E6D5D /* XL2dScrollItemHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dScrollItemHandle.cc; sourceTree = "<group>"; };
+		268C44822CC98782006E6D5D /* XL2dScrollView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dScrollView.h; sourceTree = "<group>"; };
+		268C44832CC98782006E6D5D /* XL2dScrollView.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dScrollView.cc; sourceTree = "<group>"; };
+		268C44842CC98782006E6D5D /* XL2dScrollViewBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dScrollViewBase.h; sourceTree = "<group>"; };
+		268C44852CC98782006E6D5D /* XL2dScrollViewBase.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dScrollViewBase.cc; sourceTree = "<group>"; };
+		268C44862CC98782006E6D5D /* XL2dSprite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dSprite.h; sourceTree = "<group>"; };
+		268C44872CC98782006E6D5D /* XL2dSprite.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dSprite.cc; sourceTree = "<group>"; };
+		268C44882CC98782006E6D5D /* XL2dVectorCanvas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVectorCanvas.h; sourceTree = "<group>"; };
+		268C44892CC98782006E6D5D /* XL2dVectorCanvas.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVectorCanvas.cc; sourceTree = "<group>"; };
+		268C448A2CC98782006E6D5D /* XL2dVectorResult.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVectorResult.h; sourceTree = "<group>"; };
+		268C448B2CC98782006E6D5D /* XL2dVectorSprite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVectorSprite.h; sourceTree = "<group>"; };
+		268C448C2CC98782006E6D5D /* XL2dVectorSprite.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVectorSprite.cc; sourceTree = "<group>"; };
+		268C448D2CC98782006E6D5D /* XL2dVertexArray.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XL2dVertexArray.h; sourceTree = "<group>"; };
+		268C448E2CC98782006E6D5D /* XL2dVertexArray.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XL2dVertexArray.cc; sourceTree = "<group>"; };
+		268C44902CC98782006E6D5D /* MaterialColorScheme.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialColorScheme.h; sourceTree = "<group>"; };
+		268C44912CC98782006E6D5D /* MaterialColorScheme.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialColorScheme.cc; sourceTree = "<group>"; };
+		268C44922CC98782006E6D5D /* MaterialConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialConfig.h; sourceTree = "<group>"; };
+		268C44932CC98782006E6D5D /* MaterialDataSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDataSource.h; sourceTree = "<group>"; };
+		268C44942CC98782006E6D5D /* MaterialDataSource.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDataSource.cc; sourceTree = "<group>"; };
+		268C44952CC98782006E6D5D /* MaterialEasing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialEasing.h; sourceTree = "<group>"; };
+		268C44962CC98782006E6D5D /* MaterialEasing.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialEasing.cc; sourceTree = "<group>"; };
+		268C44972CC98782006E6D5D /* MaterialIconSprite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialIconSprite.h; sourceTree = "<group>"; };
+		268C44982CC98782006E6D5D /* MaterialIconSprite.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialIconSprite.cc; sourceTree = "<group>"; };
+		268C44992CC98782006E6D5D /* MaterialLabel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialLabel.h; sourceTree = "<group>"; };
+		268C449A2CC98782006E6D5D /* MaterialLabel.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialLabel.cc; sourceTree = "<group>"; };
+		268C449B2CC98782006E6D5D /* MaterialLayerSurface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialLayerSurface.h; sourceTree = "<group>"; };
+		268C449C2CC98782006E6D5D /* MaterialLayerSurface.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialLayerSurface.cc; sourceTree = "<group>"; };
+		268C449D2CC98782006E6D5D /* MaterialMenuSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialMenuSource.h; sourceTree = "<group>"; };
+		268C449E2CC98782006E6D5D /* MaterialMenuSource.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialMenuSource.cc; sourceTree = "<group>"; };
+		268C449F2CC98782006E6D5D /* MaterialSnackbarData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSnackbarData.h; sourceTree = "<group>"; };
+		268C44A02CC98782006E6D5D /* MaterialStyleContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialStyleContainer.h; sourceTree = "<group>"; };
+		268C44A12CC98782006E6D5D /* MaterialStyleContainer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialStyleContainer.cc; sourceTree = "<group>"; };
+		268C44A22CC98782006E6D5D /* MaterialStyleMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialStyleMonitor.h; sourceTree = "<group>"; };
+		268C44A32CC98782006E6D5D /* MaterialStyleMonitor.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialStyleMonitor.cc; sourceTree = "<group>"; };
+		268C44A42CC98782006E6D5D /* MaterialSurface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSurface.h; sourceTree = "<group>"; };
+		268C44A52CC98782006E6D5D /* MaterialSurface.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialSurface.cc; sourceTree = "<group>"; };
+		268C44A62CC98782006E6D5D /* MaterialSurfaceInterior.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSurfaceInterior.h; sourceTree = "<group>"; };
+		268C44A72CC98782006E6D5D /* MaterialSurfaceInterior.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialSurfaceInterior.cc; sourceTree = "<group>"; };
+		268C44A82CC98782006E6D5D /* MaterialSurfaceStyle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSurfaceStyle.h; sourceTree = "<group>"; };
+		268C44A92CC98782006E6D5D /* MaterialSurfaceStyle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialSurfaceStyle.cc; sourceTree = "<group>"; };
+		268C44AB2CC98782006E6D5D /* MaterialAppBar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialAppBar.h; sourceTree = "<group>"; };
+		268C44AC2CC98782006E6D5D /* MaterialAppBar.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialAppBar.cc; sourceTree = "<group>"; };
+		268C44AE2CC98782006E6D5D /* MaterialButton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialButton.h; sourceTree = "<group>"; };
+		268C44AF2CC98782006E6D5D /* MaterialButton.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialButton.cc; sourceTree = "<group>"; };
+		268C44B12CC98782006E6D5D /* MaterialInputField.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialInputField.h; sourceTree = "<group>"; };
+		268C44B22CC98782006E6D5D /* MaterialInputField.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialInputField.cc; sourceTree = "<group>"; };
+		268C44B32CC98782006E6D5D /* MaterialInputTextContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialInputTextContainer.h; sourceTree = "<group>"; };
+		268C44B42CC98782006E6D5D /* MaterialInputTextContainer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialInputTextContainer.cc; sourceTree = "<group>"; };
+		268C44B62CC98782006E6D5D /* MaterialFloatingMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialFloatingMenu.h; sourceTree = "<group>"; };
+		268C44B72CC98782006E6D5D /* MaterialFloatingMenu.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialFloatingMenu.cc; sourceTree = "<group>"; };
+		268C44B82CC98782006E6D5D /* MaterialMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialMenu.h; sourceTree = "<group>"; };
+		268C44B92CC98782006E6D5D /* MaterialMenu.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialMenu.cc; sourceTree = "<group>"; };
+		268C44BA2CC98782006E6D5D /* MaterialMenuButton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialMenuButton.h; sourceTree = "<group>"; };
+		268C44BB2CC98782006E6D5D /* MaterialMenuButton.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialMenuButton.cc; sourceTree = "<group>"; };
+		268C44BC2CC98782006E6D5D /* MaterialMenuSeparator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialMenuSeparator.h; sourceTree = "<group>"; };
+		268C44BD2CC98782006E6D5D /* MaterialMenuSeparator.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialMenuSeparator.cc; sourceTree = "<group>"; };
+		268C44BE2CC98782006E6D5D /* MaterialTabBar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialTabBar.h; sourceTree = "<group>"; };
+		268C44BF2CC98782006E6D5D /* MaterialTabBar.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialTabBar.cc; sourceTree = "<group>"; };
+		268C44C12CC98782006E6D5D /* MaterialDataScroll.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDataScroll.h; sourceTree = "<group>"; };
+		268C44C22CC98782006E6D5D /* MaterialDataScroll.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDataScroll.cc; sourceTree = "<group>"; };
+		268C44C32CC98782006E6D5D /* MaterialDataScrollHandlerFixed.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDataScrollHandlerFixed.h; sourceTree = "<group>"; };
+		268C44C42CC98782006E6D5D /* MaterialDataScrollHandlerFixed.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDataScrollHandlerFixed.cc; sourceTree = "<group>"; };
+		268C44C52CC98782006E6D5D /* MaterialDataScrollHandlerGrid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDataScrollHandlerGrid.h; sourceTree = "<group>"; };
+		268C44C62CC98782006E6D5D /* MaterialDataScrollHandlerGrid.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDataScrollHandlerGrid.cc; sourceTree = "<group>"; };
+		268C44C72CC98782006E6D5D /* MaterialDataScrollHandlerSlice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDataScrollHandlerSlice.h; sourceTree = "<group>"; };
+		268C44C82CC98782006E6D5D /* MaterialDataScrollHandlerSlice.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDataScrollHandlerSlice.cc; sourceTree = "<group>"; };
+		268C44CA2CC98782006E6D5D /* MaterialNavigationDrawer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialNavigationDrawer.h; sourceTree = "<group>"; };
+		268C44CB2CC98782006E6D5D /* MaterialNavigationDrawer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialNavigationDrawer.cc; sourceTree = "<group>"; };
+		268C44CC2CC98782006E6D5D /* MaterialSidebar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSidebar.h; sourceTree = "<group>"; };
+		268C44CD2CC98782006E6D5D /* MaterialSidebar.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialSidebar.cc; sourceTree = "<group>"; };
+		268C44D02CC98782006E6D5D /* MaterialDecoratedLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialDecoratedLayout.h; sourceTree = "<group>"; };
+		268C44D12CC98782006E6D5D /* MaterialDecoratedLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialDecoratedLayout.cc; sourceTree = "<group>"; };
+		268C44D22CC98782006E6D5D /* MaterialFlexibleLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialFlexibleLayout.h; sourceTree = "<group>"; };
+		268C44D32CC98782006E6D5D /* MaterialFlexibleLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialFlexibleLayout.cc; sourceTree = "<group>"; };
+		268C44D42CC98782006E6D5D /* MaterialMultiViewLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialMultiViewLayout.h; sourceTree = "<group>"; };
+		268C44D52CC98782006E6D5D /* MaterialMultiViewLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialMultiViewLayout.cc; sourceTree = "<group>"; };
+		268C44D62CC98782006E6D5D /* MaterialOverlayLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialOverlayLayout.h; sourceTree = "<group>"; };
+		268C44D72CC98782006E6D5D /* MaterialOverlayLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialOverlayLayout.cc; sourceTree = "<group>"; };
+		268C44D82CC98782006E6D5D /* MaterialScene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialScene.h; sourceTree = "<group>"; };
+		268C44D92CC98782006E6D5D /* MaterialScene.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialScene.cc; sourceTree = "<group>"; };
+		268C44DA2CC98782006E6D5D /* MaterialSceneContent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialSceneContent.h; sourceTree = "<group>"; };
+		268C44DB2CC98782006E6D5D /* MaterialSceneContent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialSceneContent.cc; sourceTree = "<group>"; };
+		268C44DD2CC98782006E6D5D /* Material.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Material.scu.cpp; sourceTree = "<group>"; };
+		268C44DE2CC98782006E6D5D /* material2d.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = material2d.mk; sourceTree = "<group>"; };
+		268C44DF2CC98782006E6D5D /* MaterialComponents.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MaterialComponents.scu.cpp; sourceTree = "<group>"; };
+		268C44E22CC98782006E6D5D /* assets.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = assets.mk; sourceTree = "<group>"; };
+		268C44E32CC98782006E6D5D /* XLAsset.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLAsset.h; sourceTree = "<group>"; };
+		268C44E42CC98782006E6D5D /* XLAsset.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLAsset.cc; sourceTree = "<group>"; };
+		268C44E52CC98782006E6D5D /* XLAssetLibrary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLAssetLibrary.h; sourceTree = "<group>"; };
+		268C44E62CC98782006E6D5D /* XLAssetLibrary.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLAssetLibrary.cc; sourceTree = "<group>"; };
+		268C44E72CC98782006E6D5D /* XLAssets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLAssets.cpp; sourceTree = "<group>"; };
+		268C44E82CC98782006E6D5D /* XLAssetShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLAssetShared.cc; sourceTree = "<group>"; };
+		268C44EA2CC98782006E6D5D /* icons.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = icons.mk; sourceTree = "<group>"; };
+		268C44EB2CC98782006E6D5D /* XLIconImage.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLIconImage.cc; sourceTree = "<group>"; };
+		268C44EC2CC98782006E6D5D /* XLIcons.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLIcons.h; sourceTree = "<group>"; };
+		268C44ED2CC98782006E6D5D /* XLIcons.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLIcons.cpp; sourceTree = "<group>"; };
+		268C44EF2CC98782006E6D5D /* network.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = network.mk; sourceTree = "<group>"; };
+		268C44F02CC98782006E6D5D /* XLNetwork.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLNetwork.h; sourceTree = "<group>"; };
+		268C44F12CC98782006E6D5D /* XLNetwork.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNetwork.cpp; sourceTree = "<group>"; };
+		268C44F22CC98782006E6D5D /* XLNetworkController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLNetworkController.h; sourceTree = "<group>"; };
+		268C44F32CC98782006E6D5D /* XLNetworkController.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNetworkController.cc; sourceTree = "<group>"; };
+		268C44F42CC98782006E6D5D /* XLNetworkPlatform.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNetworkPlatform.cc; sourceTree = "<group>"; };
+		268C44F52CC98782006E6D5D /* XLNetworkRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLNetworkRequest.h; sourceTree = "<group>"; };
+		268C44F62CC98782006E6D5D /* XLNetworkRequest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNetworkRequest.cc; sourceTree = "<group>"; };
+		268C44F72CC98782006E6D5D /* XLNetworkShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNetworkShared.cc; sourceTree = "<group>"; };
+		268C44F92CC98782006E6D5D /* storage.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = storage.mk; sourceTree = "<group>"; };
+		268C44FA2CC98782006E6D5D /* XLStorage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLStorage.cpp; sourceTree = "<group>"; };
+		268C44FB2CC98782006E6D5D /* XLStorageComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLStorageComponent.h; sourceTree = "<group>"; };
+		268C44FC2CC98782006E6D5D /* XLStorageComponent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLStorageComponent.cc; sourceTree = "<group>"; };
+		268C44FD2CC98782006E6D5D /* XLStorageServer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLStorageServer.h; sourceTree = "<group>"; };
+		268C44FE2CC98782006E6D5D /* XLStorageServer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLStorageServer.cc; sourceTree = "<group>"; };
+		268C44FF2CC98782006E6D5D /* XLStorageShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLStorageShared.cc; sourceTree = "<group>"; };
+		268C45022CC98782006E6D5D /* XLAction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLAction.h; sourceTree = "<group>"; };
+		268C45032CC98782006E6D5D /* XLAction.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLAction.cc; sourceTree = "<group>"; };
+		268C45042CC98782006E6D5D /* XLActionEase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLActionEase.h; sourceTree = "<group>"; };
+		268C45052CC98782006E6D5D /* XLActionEase.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLActionEase.cc; sourceTree = "<group>"; };
+		268C45062CC98782006E6D5D /* XLActionManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLActionManager.h; sourceTree = "<group>"; };
+		268C45072CC98782006E6D5D /* XLActionManager.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLActionManager.cc; sourceTree = "<group>"; };
+		268C45092CC98782006E6D5D /* XLDirector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLDirector.h; sourceTree = "<group>"; };
+		268C450A2CC98782006E6D5D /* XLDirector.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLDirector.cc; sourceTree = "<group>"; };
+		268C450B2CC98782006E6D5D /* XLFrameContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFrameContext.h; sourceTree = "<group>"; };
+		268C450C2CC98782006E6D5D /* XLFrameContext.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLFrameContext.cc; sourceTree = "<group>"; };
+		268C450D2CC98782006E6D5D /* XLFrameInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLFrameInfo.h; sourceTree = "<group>"; };
+		268C450E2CC98782006E6D5D /* XLScheduler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLScheduler.h; sourceTree = "<group>"; };
+		268C450F2CC98782006E6D5D /* XLScheduler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLScheduler.cc; sourceTree = "<group>"; };
+		268C45102CC98782006E6D5D /* XLView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLView.h; sourceTree = "<group>"; };
+		268C45112CC98782006E6D5D /* XLView.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLView.cc; sourceTree = "<group>"; };
+		268C45122CC98782006E6D5D /* XLViewApplication.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLViewApplication.h; sourceTree = "<group>"; };
+		268C45132CC98782006E6D5D /* XLViewApplication.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLViewApplication.cc; sourceTree = "<group>"; };
+		268C45152CC98782006E6D5D /* XLGestureRecognizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLGestureRecognizer.h; sourceTree = "<group>"; };
+		268C45162CC98782006E6D5D /* XLGestureRecognizer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLGestureRecognizer.cc; sourceTree = "<group>"; };
+		268C45172CC98782006E6D5D /* XLInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLInput.h; sourceTree = "<group>"; };
+		268C45182CC98782006E6D5D /* XLInputDispatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLInputDispatcher.h; sourceTree = "<group>"; };
+		268C45192CC98782006E6D5D /* XLInputDispatcher.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLInputDispatcher.cc; sourceTree = "<group>"; };
+		268C451A2CC98782006E6D5D /* XLInputListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLInputListener.h; sourceTree = "<group>"; };
+		268C451B2CC98782006E6D5D /* XLInputListener.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLInputListener.cc; sourceTree = "<group>"; };
+		268C451C2CC98782006E6D5D /* XLTextInputManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLTextInputManager.h; sourceTree = "<group>"; };
+		268C451D2CC98782006E6D5D /* XLTextInputManager.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLTextInputManager.cc; sourceTree = "<group>"; };
+		268C451F2CC98782006E6D5D /* XLComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLComponent.h; sourceTree = "<group>"; };
+		268C45202CC98782006E6D5D /* XLComponent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLComponent.cc; sourceTree = "<group>"; };
+		268C45212CC98782006E6D5D /* XLDynamicStateNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLDynamicStateNode.h; sourceTree = "<group>"; };
+		268C45222CC98782006E6D5D /* XLDynamicStateNode.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLDynamicStateNode.cc; sourceTree = "<group>"; };
+		268C45232CC98782006E6D5D /* XLEventListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLEventListener.h; sourceTree = "<group>"; };
+		268C45242CC98782006E6D5D /* XLEventListener.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLEventListener.cc; sourceTree = "<group>"; };
+		268C45252CC98782006E6D5D /* XLNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLNode.h; sourceTree = "<group>"; };
+		268C45262CC98782006E6D5D /* XLNode.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLNode.cc; sourceTree = "<group>"; };
+		268C45272CC98782006E6D5D /* XLNodeInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLNodeInfo.h; sourceTree = "<group>"; };
+		268C45282CC98782006E6D5D /* XLScene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLScene.h; sourceTree = "<group>"; };
+		268C45292CC98782006E6D5D /* XLScene.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLScene.cc; sourceTree = "<group>"; };
+		268C452A2CC98782006E6D5D /* XLSceneContent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLSceneContent.h; sourceTree = "<group>"; };
+		268C452B2CC98782006E6D5D /* XLSceneContent.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLSceneContent.cc; sourceTree = "<group>"; };
+		268C452C2CC98782006E6D5D /* XLSubscriptionListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLSubscriptionListener.h; sourceTree = "<group>"; };
+		268C452D2CC98782006E6D5D /* XLSubscriptionListener.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLSubscriptionListener.cc; sourceTree = "<group>"; };
+		268C452F2CC98782006E6D5D /* scene.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = scene.mk; sourceTree = "<group>"; };
+		268C45302CC98782006E6D5D /* XLScene.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLScene.scu.cpp; sourceTree = "<group>"; };
+		268C45312CC98782006E6D5D /* XLSceneConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XLSceneConfig.h; sourceTree = "<group>"; };
+		268C45332CC98782006E6D5D /* spirv.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = spirv.h; sourceTree = "<group>"; };
+		268C45372CC98782006E6D5D /* spirv_reflect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = spirv_reflect.h; sourceTree = "<group>"; };
+		268C45382CC98782006E6D5D /* spirv_reflect.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = spirv_reflect.cc; sourceTree = "<group>"; };
+		268C453A2CC98782006E6D5D /* XLThirdparty.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = XLThirdparty.scu.cpp; sourceTree = "<group>"; };
+		268C45422CC987D1006E6D5D /* application.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = application.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C45502CC9882F006E6D5D /* backend_vk.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = backend_vk.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C455E2CC9887D006E6D5D /* backend_vkgui.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = backend_vkgui.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C456C2CC988FF006E6D5D /* renderer_basic2d.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = renderer_basic2d.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C457C2CC98A94006E6D5D /* renderer_material2d.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = renderer_material2d.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C458D2CC98B1B006E6D5D /* xenolith_font.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = xenolith_font.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C459A2CC98B25006E6D5D /* scene.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = scene.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C45A92CC98BAE006E6D5D /* resources_assets.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = resources_assets.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C45B62CC98BBC006E6D5D /* resources_icons.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = resources_icons.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C45C32CC98BCB006E6D5D /* resources_network.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = resources_network.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		268C45D02CC98BDA006E6D5D /* resources_storage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = resources_storage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		268C43332CC98717006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C453F2CC987D1006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C454D2CC9882F006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C455B2CC9887D006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45692CC988FF006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45792CC98A94006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C458A2CC98B1B006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45972CC98B25006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45A62CC98BAE006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45B32CC98BBC006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45C02CC98BCB006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45CD2CC98BDA006E6D5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		268C430F2CC945CA006E6D5D = {
+			isa = PBXGroup;
+			children = (
+				268C43242CC945FA006E6D5D /* macos.projectconfig.xcconfig */,
+				268C43252CC945FA006E6D5D /* xenolith_application.xcconfig */,
+				268C43262CC945FA006E6D5D /* xenolith_backend_vk.xcconfig */,
+				268C43272CC945FA006E6D5D /* xenolith_backend_vkgui.xcconfig */,
+				268C43282CC945FA006E6D5D /* xenolith_core.xcconfig */,
+				268C43292CC945FA006E6D5D /* xenolith_font.xcconfig */,
+				268C432A2CC945FA006E6D5D /* xenolith_renderer_basic2d.xcconfig */,
+				268C432B2CC945FA006E6D5D /* xenolith_renderer_material2d.xcconfig */,
+				268C432C2CC945FA006E6D5D /* xenolith_resources_assets.xcconfig */,
+				268C432D2CC945FA006E6D5D /* xenolith_resources_icons.xcconfig */,
+				268C432E2CC945FA006E6D5D /* xenolith_resources_network.xcconfig */,
+				268C432F2CC945FA006E6D5D /* xenolith_resources_storage.xcconfig */,
+				268C43302CC945FA006E6D5D /* xenolith_scene.xcconfig */,
+				268C43562CC98782006E6D5D /* application */,
+				268C43A42CC98782006E6D5D /* backend */,
+				268C43DD2CC98782006E6D5D /* core */,
+				268C43F02CC98782006E6D5D /* font */,
+				268C443D2CC98782006E6D5D /* platform */,
+				268C44E12CC98782006E6D5D /* renderer */,
+				268C45012CC98782006E6D5D /* resources */,
+				268C45322CC98782006E6D5D /* scene */,
+				268C453B2CC98782006E6D5D /* thirdparty */,
+				268C431A2CC945CA006E6D5D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		268C431A2CC945CA006E6D5D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				268C43362CC98717006E6D5D /* xenolith_core.framework */,
+				268C45422CC987D1006E6D5D /* application.framework */,
+				268C45502CC9882F006E6D5D /* backend_vk.framework */,
+				268C455E2CC9887D006E6D5D /* backend_vkgui.framework */,
+				268C456C2CC988FF006E6D5D /* renderer_basic2d.framework */,
+				268C457C2CC98A94006E6D5D /* renderer_material2d.framework */,
+				268C458D2CC98B1B006E6D5D /* xenolith_font.framework */,
+				268C459A2CC98B25006E6D5D /* scene.framework */,
+				268C45A92CC98BAE006E6D5D /* resources_assets.framework */,
+				268C45B62CC98BBC006E6D5D /* resources_icons.framework */,
+				268C45C32CC98BCB006E6D5D /* resources_network.framework */,
+				268C45D02CC98BDA006E6D5D /* resources_storage.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		268C43562CC98782006E6D5D /* application */ = {
+			isa = PBXGroup;
+			children = (
+				268C433E2CC98782006E6D5D /* application.mk */,
+				268C433F2CC98782006E6D5D /* XLApplication.h */,
+				268C43402CC98782006E6D5D /* XLApplication.cc */,
+				268C43412CC98782006E6D5D /* XLApplication.scu.cpp */,
+				268C43422CC98782006E6D5D /* XLApplicationExtension.h */,
+				268C43432CC98782006E6D5D /* XLApplicationInfo.h */,
+				268C43442CC98782006E6D5D /* XLApplicationPlatform.cc */,
+				268C43452CC98782006E6D5D /* XLEvent.h */,
+				268C43462CC98782006E6D5D /* XLEvent.cc */,
+				268C43472CC98782006E6D5D /* XLEventHandler.h */,
+				268C43482CC98782006E6D5D /* XLEventHandler.cc */,
+				268C43492CC98782006E6D5D /* XLEventHeader.h */,
+				268C434A2CC98782006E6D5D /* XLEventHeader.cc */,
+				268C434B2CC98782006E6D5D /* XLMeshIndex.h */,
+				268C434C2CC98782006E6D5D /* XLMeshIndex.cc */,
+				268C434D2CC98782006E6D5D /* XLResourceCache.h */,
+				268C434E2CC98782006E6D5D /* XLResourceCache.cc */,
+				268C434F2CC98782006E6D5D /* XLResourceObject.h */,
+				268C43502CC98782006E6D5D /* XLResourceObject.cc */,
+				268C43512CC98782006E6D5D /* XLResourceOwner.h */,
+				268C43522CC98782006E6D5D /* XLTemporaryResource.h */,
+				268C43532CC98782006E6D5D /* XLTemporaryResource.cc */,
+				268C43542CC98782006E6D5D /* XLTexture.h */,
+				268C43552CC98782006E6D5D /* XLTexture.cc */,
+			);
+			name = application;
+			path = ../application;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C43582CC98782006E6D5D /* android */ = {
+			isa = PBXGroup;
+			children = (
+				268C43572CC98782006E6D5D /* XLVkPlatformAndroid.cc */,
+			);
+			path = android;
+			sourceTree = "<group>";
+		};
+		268C435A2CC98782006E6D5D /* linux */ = {
+			isa = PBXGroup;
+			children = (
+				268C43592CC98782006E6D5D /* XLVkPlatformLinux.cc */,
+			);
+			path = linux;
+			sourceTree = "<group>";
+		};
+		268C435C2CC98782006E6D5D /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				268C435B2CC98782006E6D5D /* XLVkPlatformMac.cc */,
+			);
+			path = macos;
+			sourceTree = "<group>";
+		};
+		268C435E2CC98782006E6D5D /* win32 */ = {
+			isa = PBXGroup;
+			children = (
+				268C435D2CC98782006E6D5D /* XLVkPlatformWin32.cc */,
+			);
+			path = win32;
+			sourceTree = "<group>";
+		};
+		268C435F2CC98782006E6D5D /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				268C43582CC98782006E6D5D /* android */,
+				268C435A2CC98782006E6D5D /* linux */,
+				268C435C2CC98782006E6D5D /* macos */,
+				268C435E2CC98782006E6D5D /* win32 */,
+			);
+			path = platform;
+			sourceTree = "<group>";
+		};
+		268C438A2CC98782006E6D5D /* vk */ = {
+			isa = PBXGroup;
+			children = (
+				268C435F2CC98782006E6D5D /* platform */,
+				268C43602CC98782006E6D5D /* vk.mk */,
+				268C43612CC98782006E6D5D /* XLVk.h */,
+				268C43622CC98782006E6D5D /* XLVk.scu.cpp */,
+				268C43632CC98782006E6D5D /* XLVkAllocator.h */,
+				268C43642CC98782006E6D5D /* XLVkAllocator.cc */,
+				268C43652CC98782006E6D5D /* XLVkAttachment.h */,
+				268C43662CC98782006E6D5D /* XLVkAttachment.cc */,
+				268C43672CC98782006E6D5D /* XLVkConfig.h */,
+				268C43682CC98782006E6D5D /* XLVkDevice.h */,
+				268C43692CC98782006E6D5D /* XLVkDevice.cc */,
+				268C436A2CC98782006E6D5D /* XLVkDeviceQueue.h */,
+				268C436B2CC98782006E6D5D /* XLVkDeviceQueue.cc */,
+				268C436C2CC98782006E6D5D /* XLVkInfo.h */,
+				268C436D2CC98782006E6D5D /* XLVkInfo.cc */,
+				268C436E2CC98782006E6D5D /* XLVkInstance.h */,
+				268C436F2CC98782006E6D5D /* XLVkInstance.cc */,
+				268C43702CC98782006E6D5D /* XLVkLoop.h */,
+				268C43712CC98782006E6D5D /* XLVkLoop.cc */,
+				268C43722CC98782006E6D5D /* XLVkMaterialCompiler.h */,
+				268C43732CC98782006E6D5D /* XLVkMaterialCompiler.cc */,
+				268C43742CC98782006E6D5D /* XLVkMeshCompiler.h */,
+				268C43752CC98782006E6D5D /* XLVkMeshCompiler.cc */,
+				268C43762CC98782006E6D5D /* XLVkObject.h */,
+				268C43772CC98782006E6D5D /* XLVkObject.cc */,
+				268C43782CC98782006E6D5D /* XLVkPipeline.h */,
+				268C43792CC98782006E6D5D /* XLVkPipeline.cc */,
+				268C437A2CC98782006E6D5D /* XLVkPlatform.h */,
+				268C437B2CC98782006E6D5D /* XLVkPlatform.cc */,
+				268C437C2CC98782006E6D5D /* XLVkQueuePass.h */,
+				268C437D2CC98782006E6D5D /* XLVkQueuePass.cc */,
+				268C437E2CC98782006E6D5D /* XLVkRenderPass.h */,
+				268C437F2CC98782006E6D5D /* XLVkRenderPass.cc */,
+				268C43802CC98782006E6D5D /* XLVkRenderQueueCompiler.h */,
+				268C43812CC98782006E6D5D /* XLVkRenderQueueCompiler.cc */,
+				268C43822CC98782006E6D5D /* XLVkSync.h */,
+				268C43832CC98782006E6D5D /* XLVkSync.cc */,
+				268C43842CC98782006E6D5D /* XLVkTable.h */,
+				268C43852CC98782006E6D5D /* XLVkTable.cc */,
+				268C43862CC98782006E6D5D /* XLVkTextureSet.h */,
+				268C43872CC98782006E6D5D /* XLVkTextureSet.cc */,
+				268C43882CC98782006E6D5D /* XLVkTransferQueue.h */,
+				268C43892CC98782006E6D5D /* XLVkTransferQueue.cc */,
+			);
+			path = vk;
+			sourceTree = "<group>";
+		};
+		268C438D2CC98782006E6D5D /* android */ = {
+			isa = PBXGroup;
+			children = (
+				268C438B2CC98782006E6D5D /* XLVkGuiViewImpl.h */,
+				268C438C2CC98782006E6D5D /* XLVkGuiViewImpl.cc */,
+			);
+			path = android;
+			sourceTree = "<group>";
+		};
+		268C43902CC98782006E6D5D /* linux */ = {
+			isa = PBXGroup;
+			children = (
+				268C438E2CC98782006E6D5D /* XLVkGuiViewImpl.h */,
+				268C438F2CC98782006E6D5D /* XLVkGuiViewImpl.cc */,
+			);
+			path = linux;
+			sourceTree = "<group>";
+		};
+		268C43932CC98782006E6D5D /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				268C43912CC98782006E6D5D /* XLVkGuiViewImpl.h */,
+				268C43922CC98782006E6D5D /* XLVkGuiViewImpl.cc */,
+			);
+			path = macos;
+			sourceTree = "<group>";
+		};
+		268C43962CC98782006E6D5D /* win32 */ = {
+			isa = PBXGroup;
+			children = (
+				268C43942CC98782006E6D5D /* XLVkGuiViewImpl.h */,
+				268C43952CC98782006E6D5D /* XLVkGuiViewImpl.cc */,
+			);
+			path = win32;
+			sourceTree = "<group>";
+		};
+		268C43972CC98782006E6D5D /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				268C438D2CC98782006E6D5D /* android */,
+				268C43902CC98782006E6D5D /* linux */,
+				268C43932CC98782006E6D5D /* macos */,
+				268C43962CC98782006E6D5D /* win32 */,
+			);
+			path = platform;
+			sourceTree = "<group>";
+		};
+		268C43A32CC98782006E6D5D /* vkgui */ = {
+			isa = PBXGroup;
+			children = (
+				268C43972CC98782006E6D5D /* platform */,
+				268C43982CC98782006E6D5D /* vkgui.mk */,
+				268C43992CC98782006E6D5D /* XLVkGui.scu.cpp */,
+				268C439A2CC98782006E6D5D /* XLVkGuiApplication.h */,
+				268C439B2CC98782006E6D5D /* XLVkGuiApplication.cc */,
+				268C439C2CC98782006E6D5D /* XLVkGuiConfig.h */,
+				268C439D2CC98782006E6D5D /* XLVkGuiPlatform.h */,
+				268C439E2CC98782006E6D5D /* XLVkGuiShared.cc */,
+				268C439F2CC98782006E6D5D /* XLVkSwapchain.h */,
+				268C43A02CC98782006E6D5D /* XLVkSwapchain.cc */,
+				268C43A12CC98782006E6D5D /* XLVkView.h */,
+				268C43A22CC98782006E6D5D /* XLVkView.cc */,
+			);
+			path = vkgui;
+			sourceTree = "<group>";
+		};
+		268C43A42CC98782006E6D5D /* backend */ = {
+			isa = PBXGroup;
+			children = (
+				268C438A2CC98782006E6D5D /* vk */,
+				268C43A32CC98782006E6D5D /* vkgui */,
+			);
+			name = backend;
+			path = ../backend;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C43A62CC98782006E6D5D /* android */ = {
+			isa = PBXGroup;
+			children = (
+				268C43A52CC98782006E6D5D /* XLCorePlatform.cc */,
+			);
+			path = android;
+			sourceTree = "<group>";
+		};
+		268C43A82CC98782006E6D5D /* linux */ = {
+			isa = PBXGroup;
+			children = (
+				268C43A72CC98782006E6D5D /* XLCorePlatform.cc */,
+			);
+			path = linux;
+			sourceTree = "<group>";
+		};
+		268C43AA2CC98782006E6D5D /* mac */ = {
+			isa = PBXGroup;
+			children = (
+				268C43A92CC98782006E6D5D /* XLCorePlatform.cc */,
+			);
+			path = mac;
+			sourceTree = "<group>";
+		};
+		268C43AC2CC98782006E6D5D /* win32 */ = {
+			isa = PBXGroup;
+			children = (
+				268C43AB2CC98782006E6D5D /* XLCorePlatform.cc */,
+			);
+			path = win32;
+			sourceTree = "<group>";
+		};
+		268C43AD2CC98782006E6D5D /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				268C43A62CC98782006E6D5D /* android */,
+				268C43A82CC98782006E6D5D /* linux */,
+				268C43AA2CC98782006E6D5D /* mac */,
+				268C43AC2CC98782006E6D5D /* win32 */,
+			);
+			path = platform;
+			sourceTree = "<group>";
+		};
+		268C43DD2CC98782006E6D5D /* core */ = {
+			isa = PBXGroup;
+			children = (
+				268C43AD2CC98782006E6D5D /* platform */,
+				268C43AE2CC98782006E6D5D /* core.mk */,
+				268C43AF2CC98782006E6D5D /* XLCommon.h */,
+				268C43B02CC98782006E6D5D /* XLCore.h */,
+				268C43B12CC98782006E6D5D /* XLCore.scu.cpp */,
+				268C43B22CC98782006E6D5D /* XLCoreAttachment.h */,
+				268C43B32CC98782006E6D5D /* XLCoreAttachment.cc */,
+				268C43B42CC98782006E6D5D /* XLCoreConfig.h */,
+				268C43B52CC98782006E6D5D /* XLCoreDevice.h */,
+				268C43B62CC98782006E6D5D /* XLCoreDevice.cc */,
+				268C43B72CC98782006E6D5D /* XLCoreDynamicImage.h */,
+				268C43B82CC98782006E6D5D /* XLCoreDynamicImage.cc */,
+				268C43B92CC98782006E6D5D /* XLCoreEnum.h */,
+				268C43BA2CC98782006E6D5D /* XLCoreFrameCache.h */,
+				268C43BB2CC98782006E6D5D /* XLCoreFrameCache.cc */,
+				268C43BC2CC98782006E6D5D /* XLCoreFrameEmitter.h */,
+				268C43BD2CC98782006E6D5D /* XLCoreFrameEmitter.cc */,
+				268C43BE2CC98782006E6D5D /* XLCoreFrameHandle.h */,
+				268C43BF2CC98782006E6D5D /* XLCoreFrameHandle.cc */,
+				268C43C02CC98782006E6D5D /* XLCoreFrameQueue.h */,
+				268C43C12CC98782006E6D5D /* XLCoreFrameQueue.cc */,
+				268C43C22CC98782006E6D5D /* XLCoreFrameRequest.h */,
+				268C43C32CC98782006E6D5D /* XLCoreFrameRequest.cc */,
+				268C43C42CC98782006E6D5D /* XLCoreImageStorage.h */,
+				268C43C52CC98782006E6D5D /* XLCoreImageStorage.cc */,
+				268C43C62CC98782006E6D5D /* XLCoreInfo.h */,
+				268C43C72CC98782006E6D5D /* XLCoreInfo.cc */,
+				268C43C82CC98782006E6D5D /* XLCoreInput.h */,
+				268C43C92CC98782006E6D5D /* XLCoreInstance.h */,
+				268C43CA2CC98782006E6D5D /* XLCoreInstance.cc */,
+				268C43CB2CC98782006E6D5D /* XLCoreLoop.h */,
+				268C43CC2CC98782006E6D5D /* XLCoreLoop.cc */,
+				268C43CD2CC98782006E6D5D /* XLCoreMaterial.h */,
+				268C43CE2CC98782006E6D5D /* XLCoreMaterial.cc */,
+				268C43CF2CC98782006E6D5D /* XLCoreMesh.h */,
+				268C43D02CC98782006E6D5D /* XLCoreMesh.cc */,
+				268C43D12CC98782006E6D5D /* XLCoreObject.h */,
+				268C43D22CC98782006E6D5D /* XLCoreObject.cc */,
+				268C43D32CC98782006E6D5D /* XLCorePipelineInfo.h */,
+				268C43D42CC98782006E6D5D /* XLCorePlatform.h */,
+				268C43D52CC98782006E6D5D /* XLCoreQueue.h */,
+				268C43D62CC98782006E6D5D /* XLCoreQueue.cc */,
+				268C43D72CC98782006E6D5D /* XLCoreQueueData.h */,
+				268C43D82CC98782006E6D5D /* XLCoreQueueData.cc */,
+				268C43D92CC98782006E6D5D /* XLCoreQueuePass.h */,
+				268C43DA2CC98782006E6D5D /* XLCoreQueuePass.cc */,
+				268C43DB2CC98782006E6D5D /* XLCoreResource.h */,
+				268C43DC2CC98782006E6D5D /* XLCoreResource.cc */,
+			);
+			name = core;
+			path = ../core;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C43E02CC98782006E6D5D /* vk */ = {
+			isa = PBXGroup;
+			children = (
+				268C43DE2CC98782006E6D5D /* XLVkFontQueue.h */,
+				268C43DF2CC98782006E6D5D /* XLVkFontQueue.cc */,
+			);
+			path = vk;
+			sourceTree = "<group>";
+		};
+		268C43E12CC98782006E6D5D /* backend */ = {
+			isa = PBXGroup;
+			children = (
+				268C43E02CC98782006E6D5D /* vk */,
+			);
+			path = backend;
+			sourceTree = "<group>";
+		};
+		268C43F02CC98782006E6D5D /* font */ = {
+			isa = PBXGroup;
+			children = (
+				268C43E12CC98782006E6D5D /* backend */,
+				268C43E22CC98782006E6D5D /* font.mk */,
+				268C43E32CC98782006E6D5D /* XLFont.cpp */,
+				268C43E42CC98782006E6D5D /* XLFontConfig.h */,
+				268C43E52CC98782006E6D5D /* XLFontController.h */,
+				268C43E62CC98782006E6D5D /* XLFontController.cc */,
+				268C43E72CC98782006E6D5D /* XLFontDeferredRequest.h */,
+				268C43E82CC98782006E6D5D /* XLFontDeferredRequest.cc */,
+				268C43E92CC98782006E6D5D /* XLFontExtension.h */,
+				268C43EA2CC98782006E6D5D /* XLFontExtension.cc */,
+				268C43EB2CC98782006E6D5D /* XLFontLabelBase.h */,
+				268C43EC2CC98782006E6D5D /* XLFontLabelBase.cc */,
+				268C43ED2CC98782006E6D5D /* XLFontLocale.h */,
+				268C43EE2CC98782006E6D5D /* XLFontLocale.cc */,
+				268C43EF2CC98782006E6D5D /* XLFontShared.cc */,
+			);
+			name = font;
+			path = ../font;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C43F52CC98782006E6D5D /* appsupport */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F12CC98782006E6D5D /* AppSupportActivity.java */,
+				268C43F22CC98782006E6D5D /* NetworkConnectivity.java */,
+				268C43F32CC98782006E6D5D /* TextInputEditText.java */,
+				268C43F42CC98782006E6D5D /* TextInputWrapper.java */,
+			);
+			path = appsupport;
+			sourceTree = "<group>";
+		};
+		268C43F62CC98782006E6D5D /* xenolith */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F52CC98782006E6D5D /* appsupport */,
+			);
+			path = xenolith;
+			sourceTree = "<group>";
+		};
+		268C43F72CC98782006E6D5D /* stappler */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F62CC98782006E6D5D /* xenolith */,
+			);
+			path = stappler;
+			sourceTree = "<group>";
+		};
+		268C43F82CC98782006E6D5D /* org */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F72CC98782006E6D5D /* stappler */,
+			);
+			path = org;
+			sourceTree = "<group>";
+		};
+		268C43F92CC98782006E6D5D /* java */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F82CC98782006E6D5D /* org */,
+			);
+			path = java;
+			sourceTree = "<group>";
+		};
+		268C43FB2CC98782006E6D5D /* main */ = {
+			isa = PBXGroup;
+			children = (
+				268C43F92CC98782006E6D5D /* java */,
+				268C43FA2CC98782006E6D5D /* AndroidManifest.xml */,
+			);
+			path = main;
+			sourceTree = "<group>";
+		};
+		268C43FC2CC98782006E6D5D /* src */ = {
+			isa = PBXGroup;
+			children = (
+				268C43FB2CC98782006E6D5D /* main */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		268C43FF2CC98782006E6D5D /* appsupport */ = {
+			isa = PBXGroup;
+			children = (
+				268C43FC2CC98782006E6D5D /* src */,
+				268C43FD2CC98782006E6D5D /* .gitignore */,
+				268C43FE2CC98782006E6D5D /* build.gradle */,
+			);
+			path = appsupport;
+			sourceTree = "<group>";
+		};
+		268C44022CC98782006E6D5D /* firebase */ = {
+			isa = PBXGroup;
+			children = (
+				268C44002CC98782006E6D5D /* MessagingActivityAdapter.java */,
+				268C44012CC98782006E6D5D /* MessagingService.java */,
+			);
+			path = firebase;
+			sourceTree = "<group>";
+		};
+		268C44032CC98782006E6D5D /* xenolith */ = {
+			isa = PBXGroup;
+			children = (
+				268C44022CC98782006E6D5D /* firebase */,
+			);
+			path = xenolith;
+			sourceTree = "<group>";
+		};
+		268C44042CC98782006E6D5D /* stappler */ = {
+			isa = PBXGroup;
+			children = (
+				268C44032CC98782006E6D5D /* xenolith */,
+			);
+			path = stappler;
+			sourceTree = "<group>";
+		};
+		268C44052CC98782006E6D5D /* org */ = {
+			isa = PBXGroup;
+			children = (
+				268C44042CC98782006E6D5D /* stappler */,
+			);
+			path = org;
+			sourceTree = "<group>";
+		};
+		268C44062CC98782006E6D5D /* java */ = {
+			isa = PBXGroup;
+			children = (
+				268C44052CC98782006E6D5D /* org */,
+			);
+			path = java;
+			sourceTree = "<group>";
+		};
+		268C44082CC98782006E6D5D /* main */ = {
+			isa = PBXGroup;
+			children = (
+				268C44062CC98782006E6D5D /* java */,
+				268C44072CC98782006E6D5D /* AndroidManifest.xml */,
+			);
+			path = main;
+			sourceTree = "<group>";
+		};
+		268C44092CC98782006E6D5D /* src */ = {
+			isa = PBXGroup;
+			children = (
+				268C44082CC98782006E6D5D /* main */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		268C440C2CC98782006E6D5D /* firebase */ = {
+			isa = PBXGroup;
+			children = (
+				268C44092CC98782006E6D5D /* src */,
+				268C440A2CC98782006E6D5D /* .gitignore */,
+				268C440B2CC98782006E6D5D /* build.gradle */,
+			);
+			path = firebase;
+			sourceTree = "<group>";
+		};
+		268C44182CC98782006E6D5D /* android */ = {
+			isa = PBXGroup;
+			children = (
+				268C43FF2CC98782006E6D5D /* appsupport */,
+				268C440C2CC98782006E6D5D /* firebase */,
+				268C440D2CC98782006E6D5D /* XLPlatformAndroid.h */,
+				268C440E2CC98782006E6D5D /* XLPlatformAndroid.cc */,
+				268C440F2CC98782006E6D5D /* XLPlatformAndroidActivity.h */,
+				268C44102CC98782006E6D5D /* XLPlatformAndroidActivity.cc */,
+				268C44112CC98782006E6D5D /* XLPlatformAndroidClassLoader.h */,
+				268C44122CC98782006E6D5D /* XLPlatformAndroidClassLoader.cc */,
+				268C44132CC98782006E6D5D /* XLPlatformAndroidKeyCodes.cc */,
+				268C44142CC98782006E6D5D /* XLPlatformAndroidMessageInterface.h */,
+				268C44152CC98782006E6D5D /* XLPlatformAndroidMessageInterface.cc */,
+				268C44162CC98782006E6D5D /* XLPlatformAndroidNetworkConnectivity.h */,
+				268C44172CC98782006E6D5D /* XLPlatformAndroidNetworkConnectivity.cc */,
+			);
+			path = android;
+			sourceTree = "<group>";
+		};
+		268C441A2CC98782006E6D5D /* glfw */ = {
+			isa = PBXGroup;
+			children = (
+				268C44192CC98782006E6D5D /* xkb_unicode.cc */,
+			);
+			path = glfw;
+			sourceTree = "<group>";
+		};
+		268C441D2CC98782006E6D5D /* wayland-protocols */ = {
+			isa = PBXGroup;
+			children = (
+				268C441B2CC98782006E6D5D /* viewporter-client-protocol.h */,
+				268C441C2CC98782006E6D5D /* xdg-shell-client-protocol.h */,
+			);
+			path = "wayland-protocols";
+			sourceTree = "<group>";
+		};
+		268C441E2CC98782006E6D5D /* thirdparty */ = {
+			isa = PBXGroup;
+			children = (
+				268C441A2CC98782006E6D5D /* glfw */,
+				268C441D2CC98782006E6D5D /* wayland-protocols */,
+			);
+			path = thirdparty;
+			sourceTree = "<group>";
+		};
+		268C442C2CC98782006E6D5D /* linux */ = {
+			isa = PBXGroup;
+			children = (
+				268C441E2CC98782006E6D5D /* thirdparty */,
+				268C441F2CC98782006E6D5D /* XLPlatformLinuxDbus.h */,
+				268C44202CC98782006E6D5D /* XLPlatformLinuxDbus.cc */,
+				268C44212CC98782006E6D5D /* XLPlatformLinuxView.h */,
+				268C44222CC98782006E6D5D /* XLPlatformLinuxWayland.h */,
+				268C44232CC98782006E6D5D /* XLPlatformLinuxWayland.cc */,
+				268C44242CC98782006E6D5D /* XLPlatformLinuxWaylandView.h */,
+				268C44252CC98782006E6D5D /* XLPlatformLinuxWaylandView.cc */,
+				268C44262CC98782006E6D5D /* XLPlatformLinuxXcb.h */,
+				268C44272CC98782006E6D5D /* XLPlatformLinuxXcb.cc */,
+				268C44282CC98782006E6D5D /* XLPlatformLinuxXcbView.h */,
+				268C44292CC98782006E6D5D /* XLPlatformLinuxXcbView.cc */,
+				268C442A2CC98782006E6D5D /* XLPlatformLinuxXkb.h */,
+				268C442B2CC98782006E6D5D /* XLPlatformLinuxXkb.cc */,
+			);
+			path = linux;
+			sourceTree = "<group>";
+		};
+		268C44302CC98782006E6D5D /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				268C442D2CC98782006E6D5D /* XLPlatformMacos.h */,
+				268C442E2CC98782006E6D5D /* XLPlatformMacosApplication.mm */,
+				268C442F2CC98782006E6D5D /* XLPlatformMacosUtils.cc */,
+			);
+			path = macos;
+			sourceTree = "<group>";
+		};
+		268C44352CC98782006E6D5D /* win32 */ = {
+			isa = PBXGroup;
+			children = (
+				268C44312CC98782006E6D5D /* XLPlatformWin32Library.h */,
+				268C44322CC98782006E6D5D /* XLPlatformWin32Library.cc */,
+				268C44332CC98782006E6D5D /* XLPlatformWin32View.h */,
+				268C44342CC98782006E6D5D /* XLPlatformWin32View.cc */,
+			);
+			path = win32;
+			sourceTree = "<group>";
+		};
+		268C443D2CC98782006E6D5D /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				268C44182CC98782006E6D5D /* android */,
+				268C442C2CC98782006E6D5D /* linux */,
+				268C44302CC98782006E6D5D /* macos */,
+				268C44352CC98782006E6D5D /* win32 */,
+				268C44362CC98782006E6D5D /* platform.mk */,
+				268C44372CC98782006E6D5D /* XLPlatform.h */,
+				268C44382CC98782006E6D5D /* XLPlatform.scu.cpp */,
+				268C44392CC98782006E6D5D /* XLPlatformNetwork.h */,
+				268C443A2CC98782006E6D5D /* XLPlatformViewInterface.h */,
+				268C443B2CC98782006E6D5D /* XLViewCommandLine.h */,
+				268C443C2CC98782006E6D5D /* XLViewCommandLine.cc */,
+			);
+			name = platform;
+			path = ../platform;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C44462CC98782006E6D5D /* vk */ = {
+			isa = PBXGroup;
+			children = (
+				268C443E2CC98782006E6D5D /* XL2dVkMaterial.h */,
+				268C443F2CC98782006E6D5D /* XL2dVkMaterial.cc */,
+				268C44402CC98782006E6D5D /* XL2dVkShadow.h */,
+				268C44412CC98782006E6D5D /* XL2dVkShadow.cc */,
+				268C44422CC98782006E6D5D /* XL2dVkShadowPass.h */,
+				268C44432CC98782006E6D5D /* XL2dVkShadowPass.cc */,
+				268C44442CC98782006E6D5D /* XL2dVkVertexPass.h */,
+				268C44452CC98782006E6D5D /* XL2dVkVertexPass.cc */,
+			);
+			path = vk;
+			sourceTree = "<group>";
+		};
+		268C44472CC98782006E6D5D /* backend */ = {
+			isa = PBXGroup;
+			children = (
+				268C44462CC98782006E6D5D /* vk */,
+			);
+			path = backend;
+			sourceTree = "<group>";
+		};
+		268C444C2CC98782006E6D5D /* include */ = {
+			isa = PBXGroup;
+			children = (
+				268C44482CC98782006E6D5D /* XL2dGlslSdfData.h */,
+				268C44492CC98782006E6D5D /* XL2dGlslSdfDescriptors.h */,
+				268C444A2CC98782006E6D5D /* XL2dGlslShadowData.h */,
+				268C444B2CC98782006E6D5D /* XL2dGlslVertexData.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		268C44542CC98782006E6D5D /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				268C444D2CC98782006E6D5D /* xl_2d_material.frag */,
+				268C444E2CC98782006E6D5D /* xl_2d_material.vert */,
+				268C444F2CC98782006E6D5D /* xl_2d_material_nobda.vert */,
+				268C44502CC98782006E6D5D /* xl_2d_pseudosdf.frag */,
+				268C44512CC98782006E6D5D /* xl_2d_pseudosdf.vert */,
+				268C44522CC98782006E6D5D /* xl_2d_pseudosdf_shadow.frag */,
+				268C44532CC98782006E6D5D /* xl_2d_pseudosdf_shadow.vert */,
+			);
+			path = shaders;
+			sourceTree = "<group>";
+		};
+		268C44572CC98782006E6D5D /* glsl */ = {
+			isa = PBXGroup;
+			children = (
+				268C444C2CC98782006E6D5D /* include */,
+				268C44542CC98782006E6D5D /* shaders */,
+				268C44552CC98782006E6D5D /* XL2dShaders.h */,
+				268C44562CC98782006E6D5D /* XL2dShaders.cpp */,
+			);
+			path = glsl;
+			sourceTree = "<group>";
+		};
+		268C448F2CC98782006E6D5D /* basic2d */ = {
+			isa = PBXGroup;
+			children = (
+				268C44472CC98782006E6D5D /* backend */,
+				268C44572CC98782006E6D5D /* glsl */,
+				268C44582CC98782006E6D5D /* basic2d.mk */,
+				268C44592CC98782006E6D5D /* XL2d.h */,
+				268C445A2CC98782006E6D5D /* XL2d.cpp */,
+				268C445B2CC98782006E6D5D /* XL2dActionAcceleratedMove.h */,
+				268C445C2CC98782006E6D5D /* XL2dActionAcceleratedMove.cc */,
+				268C445D2CC98782006E6D5D /* XL2dBootstrapApplication.h */,
+				268C445E2CC98782006E6D5D /* XL2dBootstrapApplication.cc */,
+				268C445F2CC98782006E6D5D /* XL2dCommandList.h */,
+				268C44602CC98782006E6D5D /* XL2dCommandList.cc */,
+				268C44612CC98782006E6D5D /* XL2dConfig.h */,
+				268C44622CC98782006E6D5D /* XL2dFrameContext.h */,
+				268C44632CC98782006E6D5D /* XL2dFrameContext.cc */,
+				268C44642CC98782006E6D5D /* XL2dImageLayer.h */,
+				268C44652CC98782006E6D5D /* XL2dImageLayer.cc */,
+				268C44662CC98782006E6D5D /* XL2dInputField.h */,
+				268C44672CC98782006E6D5D /* XL2dInputField.cc */,
+				268C44682CC98782006E6D5D /* XL2dInputLabel.h */,
+				268C44692CC98782006E6D5D /* XL2dInputLabel.cc */,
+				268C446A2CC98782006E6D5D /* XL2dLabel.h */,
+				268C446B2CC98782006E6D5D /* XL2dLabel.cc */,
+				268C446C2CC98782006E6D5D /* XL2dLayer.h */,
+				268C446D2CC98782006E6D5D /* XL2dLayer.cc */,
+				268C446E2CC98782006E6D5D /* XL2dLayerRounded.h */,
+				268C446F2CC98782006E6D5D /* XL2dLayerRounded.cc */,
+				268C44702CC98782006E6D5D /* XL2dLinearGradient.h */,
+				268C44712CC98782006E6D5D /* XL2dLinearGradient.cc */,
+				268C44722CC98782006E6D5D /* XL2dLinearProgress.h */,
+				268C44732CC98782006E6D5D /* XL2dLinearProgress.cc */,
+				268C44742CC98782006E6D5D /* XL2dRoundedProgress.h */,
+				268C44752CC98782006E6D5D /* XL2dRoundedProgress.cc */,
+				268C44762CC98782006E6D5D /* XL2dScene.h */,
+				268C44772CC98782006E6D5D /* XL2dScene.cc */,
+				268C44782CC98782006E6D5D /* XL2dSceneContent.h */,
+				268C44792CC98782006E6D5D /* XL2dSceneContent.cc */,
+				268C447A2CC98782006E6D5D /* XL2dSceneLayout.h */,
+				268C447B2CC98782006E6D5D /* XL2dSceneLayout.cc */,
+				268C447C2CC98782006E6D5D /* XL2dSceneLight.h */,
+				268C447D2CC98782006E6D5D /* XL2dSceneLight.cc */,
+				268C447E2CC98782006E6D5D /* XL2dScrollController.h */,
+				268C447F2CC98782006E6D5D /* XL2dScrollController.cc */,
+				268C44802CC98782006E6D5D /* XL2dScrollItemHandle.h */,
+				268C44812CC98782006E6D5D /* XL2dScrollItemHandle.cc */,
+				268C44822CC98782006E6D5D /* XL2dScrollView.h */,
+				268C44832CC98782006E6D5D /* XL2dScrollView.cc */,
+				268C44842CC98782006E6D5D /* XL2dScrollViewBase.h */,
+				268C44852CC98782006E6D5D /* XL2dScrollViewBase.cc */,
+				268C44862CC98782006E6D5D /* XL2dSprite.h */,
+				268C44872CC98782006E6D5D /* XL2dSprite.cc */,
+				268C44882CC98782006E6D5D /* XL2dVectorCanvas.h */,
+				268C44892CC98782006E6D5D /* XL2dVectorCanvas.cc */,
+				268C448A2CC98782006E6D5D /* XL2dVectorResult.h */,
+				268C448B2CC98782006E6D5D /* XL2dVectorSprite.h */,
+				268C448C2CC98782006E6D5D /* XL2dVectorSprite.cc */,
+				268C448D2CC98782006E6D5D /* XL2dVertexArray.h */,
+				268C448E2CC98782006E6D5D /* XL2dVertexArray.cc */,
+			);
+			path = basic2d;
+			sourceTree = "<group>";
+		};
+		268C44AA2CC98782006E6D5D /* base */ = {
+			isa = PBXGroup;
+			children = (
+				268C44902CC98782006E6D5D /* MaterialColorScheme.h */,
+				268C44912CC98782006E6D5D /* MaterialColorScheme.cc */,
+				268C44922CC98782006E6D5D /* MaterialConfig.h */,
+				268C44932CC98782006E6D5D /* MaterialDataSource.h */,
+				268C44942CC98782006E6D5D /* MaterialDataSource.cc */,
+				268C44952CC98782006E6D5D /* MaterialEasing.h */,
+				268C44962CC98782006E6D5D /* MaterialEasing.cc */,
+				268C44972CC98782006E6D5D /* MaterialIconSprite.h */,
+				268C44982CC98782006E6D5D /* MaterialIconSprite.cc */,
+				268C44992CC98782006E6D5D /* MaterialLabel.h */,
+				268C449A2CC98782006E6D5D /* MaterialLabel.cc */,
+				268C449B2CC98782006E6D5D /* MaterialLayerSurface.h */,
+				268C449C2CC98782006E6D5D /* MaterialLayerSurface.cc */,
+				268C449D2CC98782006E6D5D /* MaterialMenuSource.h */,
+				268C449E2CC98782006E6D5D /* MaterialMenuSource.cc */,
+				268C449F2CC98782006E6D5D /* MaterialSnackbarData.h */,
+				268C44A02CC98782006E6D5D /* MaterialStyleContainer.h */,
+				268C44A12CC98782006E6D5D /* MaterialStyleContainer.cc */,
+				268C44A22CC98782006E6D5D /* MaterialStyleMonitor.h */,
+				268C44A32CC98782006E6D5D /* MaterialStyleMonitor.cc */,
+				268C44A42CC98782006E6D5D /* MaterialSurface.h */,
+				268C44A52CC98782006E6D5D /* MaterialSurface.cc */,
+				268C44A62CC98782006E6D5D /* MaterialSurfaceInterior.h */,
+				268C44A72CC98782006E6D5D /* MaterialSurfaceInterior.cc */,
+				268C44A82CC98782006E6D5D /* MaterialSurfaceStyle.h */,
+				268C44A92CC98782006E6D5D /* MaterialSurfaceStyle.cc */,
+			);
+			path = base;
+			sourceTree = "<group>";
+		};
+		268C44AD2CC98782006E6D5D /* appbar */ = {
+			isa = PBXGroup;
+			children = (
+				268C44AB2CC98782006E6D5D /* MaterialAppBar.h */,
+				268C44AC2CC98782006E6D5D /* MaterialAppBar.cc */,
+			);
+			path = appbar;
+			sourceTree = "<group>";
+		};
+		268C44B02CC98782006E6D5D /* button */ = {
+			isa = PBXGroup;
+			children = (
+				268C44AE2CC98782006E6D5D /* MaterialButton.h */,
+				268C44AF2CC98782006E6D5D /* MaterialButton.cc */,
+			);
+			path = button;
+			sourceTree = "<group>";
+		};
+		268C44B52CC98782006E6D5D /* input */ = {
+			isa = PBXGroup;
+			children = (
+				268C44B12CC98782006E6D5D /* MaterialInputField.h */,
+				268C44B22CC98782006E6D5D /* MaterialInputField.cc */,
+				268C44B32CC98782006E6D5D /* MaterialInputTextContainer.h */,
+				268C44B42CC98782006E6D5D /* MaterialInputTextContainer.cc */,
+			);
+			path = input;
+			sourceTree = "<group>";
+		};
+		268C44C02CC98782006E6D5D /* menu */ = {
+			isa = PBXGroup;
+			children = (
+				268C44B62CC98782006E6D5D /* MaterialFloatingMenu.h */,
+				268C44B72CC98782006E6D5D /* MaterialFloatingMenu.cc */,
+				268C44B82CC98782006E6D5D /* MaterialMenu.h */,
+				268C44B92CC98782006E6D5D /* MaterialMenu.cc */,
+				268C44BA2CC98782006E6D5D /* MaterialMenuButton.h */,
+				268C44BB2CC98782006E6D5D /* MaterialMenuButton.cc */,
+				268C44BC2CC98782006E6D5D /* MaterialMenuSeparator.h */,
+				268C44BD2CC98782006E6D5D /* MaterialMenuSeparator.cc */,
+				268C44BE2CC98782006E6D5D /* MaterialTabBar.h */,
+				268C44BF2CC98782006E6D5D /* MaterialTabBar.cc */,
+			);
+			path = menu;
+			sourceTree = "<group>";
+		};
+		268C44C92CC98782006E6D5D /* scroll */ = {
+			isa = PBXGroup;
+			children = (
+				268C44C12CC98782006E6D5D /* MaterialDataScroll.h */,
+				268C44C22CC98782006E6D5D /* MaterialDataScroll.cc */,
+				268C44C32CC98782006E6D5D /* MaterialDataScrollHandlerFixed.h */,
+				268C44C42CC98782006E6D5D /* MaterialDataScrollHandlerFixed.cc */,
+				268C44C52CC98782006E6D5D /* MaterialDataScrollHandlerGrid.h */,
+				268C44C62CC98782006E6D5D /* MaterialDataScrollHandlerGrid.cc */,
+				268C44C72CC98782006E6D5D /* MaterialDataScrollHandlerSlice.h */,
+				268C44C82CC98782006E6D5D /* MaterialDataScrollHandlerSlice.cc */,
+			);
+			path = scroll;
+			sourceTree = "<group>";
+		};
+		268C44CE2CC98782006E6D5D /* sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				268C44CA2CC98782006E6D5D /* MaterialNavigationDrawer.h */,
+				268C44CB2CC98782006E6D5D /* MaterialNavigationDrawer.cc */,
+				268C44CC2CC98782006E6D5D /* MaterialSidebar.h */,
+				268C44CD2CC98782006E6D5D /* MaterialSidebar.cc */,
+			);
+			path = sidebar;
+			sourceTree = "<group>";
+		};
+		268C44CF2CC98782006E6D5D /* components */ = {
+			isa = PBXGroup;
+			children = (
+				268C44AD2CC98782006E6D5D /* appbar */,
+				268C44B02CC98782006E6D5D /* button */,
+				268C44B52CC98782006E6D5D /* input */,
+				268C44C02CC98782006E6D5D /* menu */,
+				268C44C92CC98782006E6D5D /* scroll */,
+				268C44CE2CC98782006E6D5D /* sidebar */,
+			);
+			path = components;
+			sourceTree = "<group>";
+		};
+		268C44DC2CC98782006E6D5D /* layout */ = {
+			isa = PBXGroup;
+			children = (
+				268C44D02CC98782006E6D5D /* MaterialDecoratedLayout.h */,
+				268C44D12CC98782006E6D5D /* MaterialDecoratedLayout.cc */,
+				268C44D22CC98782006E6D5D /* MaterialFlexibleLayout.h */,
+				268C44D32CC98782006E6D5D /* MaterialFlexibleLayout.cc */,
+				268C44D42CC98782006E6D5D /* MaterialMultiViewLayout.h */,
+				268C44D52CC98782006E6D5D /* MaterialMultiViewLayout.cc */,
+				268C44D62CC98782006E6D5D /* MaterialOverlayLayout.h */,
+				268C44D72CC98782006E6D5D /* MaterialOverlayLayout.cc */,
+				268C44D82CC98782006E6D5D /* MaterialScene.h */,
+				268C44D92CC98782006E6D5D /* MaterialScene.cc */,
+				268C44DA2CC98782006E6D5D /* MaterialSceneContent.h */,
+				268C44DB2CC98782006E6D5D /* MaterialSceneContent.cc */,
+			);
+			path = layout;
+			sourceTree = "<group>";
+		};
+		268C44E02CC98782006E6D5D /* material2d */ = {
+			isa = PBXGroup;
+			children = (
+				268C44AA2CC98782006E6D5D /* base */,
+				268C44CF2CC98782006E6D5D /* components */,
+				268C44DC2CC98782006E6D5D /* layout */,
+				268C44DD2CC98782006E6D5D /* Material.scu.cpp */,
+				268C44DE2CC98782006E6D5D /* material2d.mk */,
+				268C44DF2CC98782006E6D5D /* MaterialComponents.scu.cpp */,
+			);
+			path = material2d;
+			sourceTree = "<group>";
+		};
+		268C44E12CC98782006E6D5D /* renderer */ = {
+			isa = PBXGroup;
+			children = (
+				268C448F2CC98782006E6D5D /* basic2d */,
+				268C44E02CC98782006E6D5D /* material2d */,
+			);
+			name = renderer;
+			path = ../renderer;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C44E92CC98782006E6D5D /* assets */ = {
+			isa = PBXGroup;
+			children = (
+				268C44E22CC98782006E6D5D /* assets.mk */,
+				268C44E32CC98782006E6D5D /* XLAsset.h */,
+				268C44E42CC98782006E6D5D /* XLAsset.cc */,
+				268C44E52CC98782006E6D5D /* XLAssetLibrary.h */,
+				268C44E62CC98782006E6D5D /* XLAssetLibrary.cc */,
+				268C44E72CC98782006E6D5D /* XLAssets.cpp */,
+				268C44E82CC98782006E6D5D /* XLAssetShared.cc */,
+			);
+			path = assets;
+			sourceTree = "<group>";
+		};
+		268C44EE2CC98782006E6D5D /* icons */ = {
+			isa = PBXGroup;
+			children = (
+				268C44EA2CC98782006E6D5D /* icons.mk */,
+				268C44EB2CC98782006E6D5D /* XLIconImage.cc */,
+				268C44EC2CC98782006E6D5D /* XLIcons.h */,
+				268C44ED2CC98782006E6D5D /* XLIcons.cpp */,
+			);
+			path = icons;
+			sourceTree = "<group>";
+		};
+		268C44F82CC98782006E6D5D /* network */ = {
+			isa = PBXGroup;
+			children = (
+				268C44EF2CC98782006E6D5D /* network.mk */,
+				268C44F02CC98782006E6D5D /* XLNetwork.h */,
+				268C44F12CC98782006E6D5D /* XLNetwork.cpp */,
+				268C44F22CC98782006E6D5D /* XLNetworkController.h */,
+				268C44F32CC98782006E6D5D /* XLNetworkController.cc */,
+				268C44F42CC98782006E6D5D /* XLNetworkPlatform.cc */,
+				268C44F52CC98782006E6D5D /* XLNetworkRequest.h */,
+				268C44F62CC98782006E6D5D /* XLNetworkRequest.cc */,
+				268C44F72CC98782006E6D5D /* XLNetworkShared.cc */,
+			);
+			path = network;
+			sourceTree = "<group>";
+		};
+		268C45002CC98782006E6D5D /* storage */ = {
+			isa = PBXGroup;
+			children = (
+				268C44F92CC98782006E6D5D /* storage.mk */,
+				268C44FA2CC98782006E6D5D /* XLStorage.cpp */,
+				268C44FB2CC98782006E6D5D /* XLStorageComponent.h */,
+				268C44FC2CC98782006E6D5D /* XLStorageComponent.cc */,
+				268C44FD2CC98782006E6D5D /* XLStorageServer.h */,
+				268C44FE2CC98782006E6D5D /* XLStorageServer.cc */,
+				268C44FF2CC98782006E6D5D /* XLStorageShared.cc */,
+			);
+			path = storage;
+			sourceTree = "<group>";
+		};
+		268C45012CC98782006E6D5D /* resources */ = {
+			isa = PBXGroup;
+			children = (
+				268C44E92CC98782006E6D5D /* assets */,
+				268C44EE2CC98782006E6D5D /* icons */,
+				268C44F82CC98782006E6D5D /* network */,
+				268C45002CC98782006E6D5D /* storage */,
+			);
+			name = resources;
+			path = ../resources;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C45082CC98782006E6D5D /* actions */ = {
+			isa = PBXGroup;
+			children = (
+				268C45022CC98782006E6D5D /* XLAction.h */,
+				268C45032CC98782006E6D5D /* XLAction.cc */,
+				268C45042CC98782006E6D5D /* XLActionEase.h */,
+				268C45052CC98782006E6D5D /* XLActionEase.cc */,
+				268C45062CC98782006E6D5D /* XLActionManager.h */,
+				268C45072CC98782006E6D5D /* XLActionManager.cc */,
+			);
+			path = actions;
+			sourceTree = "<group>";
+		};
+		268C45142CC98782006E6D5D /* director */ = {
+			isa = PBXGroup;
+			children = (
+				268C45092CC98782006E6D5D /* XLDirector.h */,
+				268C450A2CC98782006E6D5D /* XLDirector.cc */,
+				268C450B2CC98782006E6D5D /* XLFrameContext.h */,
+				268C450C2CC98782006E6D5D /* XLFrameContext.cc */,
+				268C450D2CC98782006E6D5D /* XLFrameInfo.h */,
+				268C450E2CC98782006E6D5D /* XLScheduler.h */,
+				268C450F2CC98782006E6D5D /* XLScheduler.cc */,
+				268C45102CC98782006E6D5D /* XLView.h */,
+				268C45112CC98782006E6D5D /* XLView.cc */,
+				268C45122CC98782006E6D5D /* XLViewApplication.h */,
+				268C45132CC98782006E6D5D /* XLViewApplication.cc */,
+			);
+			path = director;
+			sourceTree = "<group>";
+		};
+		268C451E2CC98782006E6D5D /* input */ = {
+			isa = PBXGroup;
+			children = (
+				268C45152CC98782006E6D5D /* XLGestureRecognizer.h */,
+				268C45162CC98782006E6D5D /* XLGestureRecognizer.cc */,
+				268C45172CC98782006E6D5D /* XLInput.h */,
+				268C45182CC98782006E6D5D /* XLInputDispatcher.h */,
+				268C45192CC98782006E6D5D /* XLInputDispatcher.cc */,
+				268C451A2CC98782006E6D5D /* XLInputListener.h */,
+				268C451B2CC98782006E6D5D /* XLInputListener.cc */,
+				268C451C2CC98782006E6D5D /* XLTextInputManager.h */,
+				268C451D2CC98782006E6D5D /* XLTextInputManager.cc */,
+			);
+			path = input;
+			sourceTree = "<group>";
+		};
+		268C452E2CC98782006E6D5D /* nodes */ = {
+			isa = PBXGroup;
+			children = (
+				268C451F2CC98782006E6D5D /* XLComponent.h */,
+				268C45202CC98782006E6D5D /* XLComponent.cc */,
+				268C45212CC98782006E6D5D /* XLDynamicStateNode.h */,
+				268C45222CC98782006E6D5D /* XLDynamicStateNode.cc */,
+				268C45232CC98782006E6D5D /* XLEventListener.h */,
+				268C45242CC98782006E6D5D /* XLEventListener.cc */,
+				268C45252CC98782006E6D5D /* XLNode.h */,
+				268C45262CC98782006E6D5D /* XLNode.cc */,
+				268C45272CC98782006E6D5D /* XLNodeInfo.h */,
+				268C45282CC98782006E6D5D /* XLScene.h */,
+				268C45292CC98782006E6D5D /* XLScene.cc */,
+				268C452A2CC98782006E6D5D /* XLSceneContent.h */,
+				268C452B2CC98782006E6D5D /* XLSceneContent.cc */,
+				268C452C2CC98782006E6D5D /* XLSubscriptionListener.h */,
+				268C452D2CC98782006E6D5D /* XLSubscriptionListener.cc */,
+			);
+			path = nodes;
+			sourceTree = "<group>";
+		};
+		268C45322CC98782006E6D5D /* scene */ = {
+			isa = PBXGroup;
+			children = (
+				268C45082CC98782006E6D5D /* actions */,
+				268C45142CC98782006E6D5D /* director */,
+				268C451E2CC98782006E6D5D /* input */,
+				268C452E2CC98782006E6D5D /* nodes */,
+				268C452F2CC98782006E6D5D /* scene.mk */,
+				268C45302CC98782006E6D5D /* XLScene.scu.cpp */,
+				268C45312CC98782006E6D5D /* XLSceneConfig.h */,
+			);
+			name = scene;
+			path = ../scene;
+			sourceTree = SOURCE_ROOT;
+		};
+		268C45342CC98782006E6D5D /* unified1 */ = {
+			isa = PBXGroup;
+			children = (
+				268C45332CC98782006E6D5D /* spirv.h */,
+			);
+			path = unified1;
+			sourceTree = "<group>";
+		};
+		268C45352CC98782006E6D5D /* spirv */ = {
+			isa = PBXGroup;
+			children = (
+				268C45342CC98782006E6D5D /* unified1 */,
+			);
+			path = spirv;
+			sourceTree = "<group>";
+		};
+		268C45362CC98782006E6D5D /* include */ = {
+			isa = PBXGroup;
+			children = (
+				268C45352CC98782006E6D5D /* spirv */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		268C45392CC98782006E6D5D /* SPIRV-Reflect */ = {
+			isa = PBXGroup;
+			children = (
+				268C45362CC98782006E6D5D /* include */,
+				268C45372CC98782006E6D5D /* spirv_reflect.h */,
+				268C45382CC98782006E6D5D /* spirv_reflect.cc */,
+			);
+			path = "SPIRV-Reflect";
+			sourceTree = "<group>";
+		};
+		268C453B2CC98782006E6D5D /* thirdparty */ = {
+			isa = PBXGroup;
+			children = (
+				268C45392CC98782006E6D5D /* SPIRV-Reflect */,
+				268C453A2CC98782006E6D5D /* XLThirdparty.scu.cpp */,
+			);
+			name = thirdparty;
+			path = ../thirdparty;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		268C43312CC98717006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C453D2CC987D1006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C454B2CC9882F006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45592CC9887D006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45672CC988FF006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45772CC98A94006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45882CC98B1B006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45952CC98B25006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45A42CC98BAE006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45B12CC98BBC006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45BE2CC98BCB006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45CB2CC98BDA006E6D5D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		268C43352CC98717006E6D5D /* xenolith-core */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C433B2CC98717006E6D5D /* Build configuration list for PBXNativeTarget "xenolith-core" */;
+			buildPhases = (
+				268C43312CC98717006E6D5D /* Headers */,
+				268C43322CC98717006E6D5D /* Sources */,
+				268C43332CC98717006E6D5D /* Frameworks */,
+				268C43342CC98717006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "xenolith-core";
+			packageProductDependencies = (
+			);
+			productName = core;
+			productReference = 268C43362CC98717006E6D5D /* xenolith_core.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45412CC987D1006E6D5D /* application */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45472CC987D1006E6D5D /* Build configuration list for PBXNativeTarget "application" */;
+			buildPhases = (
+				268C453D2CC987D1006E6D5D /* Headers */,
+				268C453E2CC987D1006E6D5D /* Sources */,
+				268C453F2CC987D1006E6D5D /* Frameworks */,
+				268C45402CC987D1006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = application;
+			packageProductDependencies = (
+			);
+			productName = application;
+			productReference = 268C45422CC987D1006E6D5D /* application.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C454F2CC9882F006E6D5D /* backend_vk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45552CC9882F006E6D5D /* Build configuration list for PBXNativeTarget "backend_vk" */;
+			buildPhases = (
+				268C454B2CC9882F006E6D5D /* Headers */,
+				268C454C2CC9882F006E6D5D /* Sources */,
+				268C454D2CC9882F006E6D5D /* Frameworks */,
+				268C454E2CC9882F006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = backend_vk;
+			packageProductDependencies = (
+			);
+			productName = backend_vk;
+			productReference = 268C45502CC9882F006E6D5D /* backend_vk.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C455D2CC9887D006E6D5D /* backend_vkgui */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45632CC9887D006E6D5D /* Build configuration list for PBXNativeTarget "backend_vkgui" */;
+			buildPhases = (
+				268C45592CC9887D006E6D5D /* Headers */,
+				268C455A2CC9887D006E6D5D /* Sources */,
+				268C455B2CC9887D006E6D5D /* Frameworks */,
+				268C455C2CC9887D006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = backend_vkgui;
+			packageProductDependencies = (
+			);
+			productName = backend_vkgui;
+			productReference = 268C455E2CC9887D006E6D5D /* backend_vkgui.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C456B2CC988FF006E6D5D /* renderer_basic2d */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45712CC988FF006E6D5D /* Build configuration list for PBXNativeTarget "renderer_basic2d" */;
+			buildPhases = (
+				268C45672CC988FF006E6D5D /* Headers */,
+				268C45762CC98A28006E6D5D /* ShellScript */,
+				268C45682CC988FF006E6D5D /* Sources */,
+				268C45692CC988FF006E6D5D /* Frameworks */,
+				268C456A2CC988FF006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = renderer_basic2d;
+			packageProductDependencies = (
+			);
+			productName = renderer_basic2d;
+			productReference = 268C456C2CC988FF006E6D5D /* renderer_basic2d.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C457B2CC98A94006E6D5D /* renderer_material2d */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45812CC98A94006E6D5D /* Build configuration list for PBXNativeTarget "renderer_material2d" */;
+			buildPhases = (
+				268C45772CC98A94006E6D5D /* Headers */,
+				268C45782CC98A94006E6D5D /* Sources */,
+				268C45792CC98A94006E6D5D /* Frameworks */,
+				268C457A2CC98A94006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = renderer_material2d;
+			packageProductDependencies = (
+			);
+			productName = renderer_material2d;
+			productReference = 268C457C2CC98A94006E6D5D /* renderer_material2d.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C458C2CC98B1B006E6D5D /* xenolith-font */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45922CC98B1B006E6D5D /* Build configuration list for PBXNativeTarget "xenolith-font" */;
+			buildPhases = (
+				268C45882CC98B1B006E6D5D /* Headers */,
+				268C45892CC98B1B006E6D5D /* Sources */,
+				268C458A2CC98B1B006E6D5D /* Frameworks */,
+				268C458B2CC98B1B006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "xenolith-font";
+			packageProductDependencies = (
+			);
+			productName = font;
+			productReference = 268C458D2CC98B1B006E6D5D /* xenolith_font.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45992CC98B25006E6D5D /* scene */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C459F2CC98B25006E6D5D /* Build configuration list for PBXNativeTarget "scene" */;
+			buildPhases = (
+				268C45952CC98B25006E6D5D /* Headers */,
+				268C45962CC98B25006E6D5D /* Sources */,
+				268C45972CC98B25006E6D5D /* Frameworks */,
+				268C45982CC98B25006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = scene;
+			packageProductDependencies = (
+			);
+			productName = scene;
+			productReference = 268C459A2CC98B25006E6D5D /* scene.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45A82CC98BAE006E6D5D /* resources_assets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45AE2CC98BAE006E6D5D /* Build configuration list for PBXNativeTarget "resources_assets" */;
+			buildPhases = (
+				268C45A42CC98BAE006E6D5D /* Headers */,
+				268C45A52CC98BAE006E6D5D /* Sources */,
+				268C45A62CC98BAE006E6D5D /* Frameworks */,
+				268C45A72CC98BAE006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = resources_assets;
+			packageProductDependencies = (
+			);
+			productName = resources_assets;
+			productReference = 268C45A92CC98BAE006E6D5D /* resources_assets.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45B52CC98BBC006E6D5D /* resources_icons */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45BB2CC98BBC006E6D5D /* Build configuration list for PBXNativeTarget "resources_icons" */;
+			buildPhases = (
+				268C45B12CC98BBC006E6D5D /* Headers */,
+				268C45B22CC98BBC006E6D5D /* Sources */,
+				268C45B32CC98BBC006E6D5D /* Frameworks */,
+				268C45B42CC98BBC006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = resources_icons;
+			packageProductDependencies = (
+			);
+			productName = resources_icons;
+			productReference = 268C45B62CC98BBC006E6D5D /* resources_icons.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45C22CC98BCB006E6D5D /* resources_network */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45C82CC98BCB006E6D5D /* Build configuration list for PBXNativeTarget "resources_network" */;
+			buildPhases = (
+				268C45BE2CC98BCB006E6D5D /* Headers */,
+				268C45BF2CC98BCB006E6D5D /* Sources */,
+				268C45C02CC98BCB006E6D5D /* Frameworks */,
+				268C45C12CC98BCB006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = resources_network;
+			packageProductDependencies = (
+			);
+			productName = resources_network;
+			productReference = 268C45C32CC98BCB006E6D5D /* resources_network.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		268C45CF2CC98BDA006E6D5D /* resources_storage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268C45D52CC98BDA006E6D5D /* Build configuration list for PBXNativeTarget "resources_storage" */;
+			buildPhases = (
+				268C45CB2CC98BDA006E6D5D /* Headers */,
+				268C45CC2CC98BDA006E6D5D /* Sources */,
+				268C45CD2CC98BDA006E6D5D /* Frameworks */,
+				268C45CE2CC98BDA006E6D5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = resources_storage;
+			packageProductDependencies = (
+			);
+			productName = resources_storage;
+			productReference = 268C45D02CC98BDA006E6D5D /* resources_storage.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		268C43102CC945CA006E6D5D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					268C43352CC98717006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45412CC987D1006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C454F2CC9882F006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C455D2CC9887D006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C456B2CC988FF006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C457B2CC98A94006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C458C2CC98B1B006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45992CC98B25006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45A82CC98BAE006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45B52CC98BBC006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45C22CC98BCB006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C45CF2CC98BDA006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					268C47242CCA31D3006E6D5D = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 268C43132CC945CA006E6D5D /* Build configuration list for PBXProject "xenolith" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 268C430F2CC945CA006E6D5D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 268C431A2CC945CA006E6D5D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				268C43352CC98717006E6D5D /* xenolith-core */,
+				268C45412CC987D1006E6D5D /* application */,
+				268C454F2CC9882F006E6D5D /* backend_vk */,
+				268C455D2CC9887D006E6D5D /* backend_vkgui */,
+				268C456B2CC988FF006E6D5D /* renderer_basic2d */,
+				268C457B2CC98A94006E6D5D /* renderer_material2d */,
+				268C458C2CC98B1B006E6D5D /* xenolith-font */,
+				268C45992CC98B25006E6D5D /* scene */,
+				268C45A82CC98BAE006E6D5D /* resources_assets */,
+				268C45B52CC98BBC006E6D5D /* resources_icons */,
+				268C45C22CC98BCB006E6D5D /* resources_network */,
+				268C45CF2CC98BDA006E6D5D /* resources_storage */,
+				268C47242CCA31D3006E6D5D /* libstappler-xenolith */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		268C43342CC98717006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45402CC987D1006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C454E2CC9882F006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C455C2CC9887D006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C456A2CC988FF006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C457A2CC98A94006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C458B2CC98B1B006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45982CC98B25006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45A72CC98BAE006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45B42CC98BBC006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45C12CC98BCB006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45CE2CC98BDA006E6D5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		268C45762CC98A28006E6D5D /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nmake -C .. mac-shaders RELEASE=1\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		268C43322CC98717006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C453C2CC98791006E6D5D /* XLCore.scu.cpp in Sources */,
+				268C45862CC98AF2006E6D5D /* XLPlatform.scu.cpp in Sources */,
+				268C45872CC98AF7006E6D5D /* XLPlatformMacosApplication.mm in Sources */,
+				268C484D2CCA3AA1006E6D5D /* XLThirdparty.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C453E2CC987D1006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C454A2CC98815006E6D5D /* XLApplication.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C454C2CC9882F006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45582CC98855006E6D5D /* XLVk.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C455A2CC9887D006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45662CC988C4006E6D5D /* XLVkGui.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45682CC988FF006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45742CC98942006E6D5D /* XL2d.cpp in Sources */,
+				268C45752CC98948006E6D5D /* XL2dShaders.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45782CC98A94006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45842CC98ADB006E6D5D /* Material.scu.cpp in Sources */,
+				268C45852CC98ADD006E6D5D /* MaterialComponents.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45892CC98B1B006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45A22CC98B46006E6D5D /* XLFont.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45962CC98B25006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45A32CC98B52006E6D5D /* XLScene.scu.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45A52CC98BAE006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45D82CC98C3B006E6D5D /* XLAssets.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45B22CC98BBC006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45D92CC98C44006E6D5D /* XLIcons.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45BF2CC98BCB006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45DA2CC98C4E006E6D5D /* XLNetwork.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		268C45CC2CC98BDA006E6D5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				268C45DB2CC98C5A006E6D5D /* XLStorage.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		268C47292CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45412CC987D1006E6D5D /* application */;
+			targetProxy = 268C47282CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C472B2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C454F2CC9882F006E6D5D /* backend_vk */;
+			targetProxy = 268C472A2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C472D2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C455D2CC9887D006E6D5D /* backend_vkgui */;
+			targetProxy = 268C472C2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C472F2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C43352CC98717006E6D5D /* xenolith-core */;
+			targetProxy = 268C472E2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C47312CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C458C2CC98B1B006E6D5D /* xenolith-font */;
+			targetProxy = 268C47302CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C47332CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C456B2CC988FF006E6D5D /* renderer_basic2d */;
+			targetProxy = 268C47322CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C47352CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C457B2CC98A94006E6D5D /* renderer_material2d */;
+			targetProxy = 268C47342CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C47372CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45A82CC98BAE006E6D5D /* resources_assets */;
+			targetProxy = 268C47362CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C47392CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45B52CC98BBC006E6D5D /* resources_icons */;
+			targetProxy = 268C47382CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C473B2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45C22CC98BCB006E6D5D /* resources_network */;
+			targetProxy = 268C473A2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C473D2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45CF2CC98BDA006E6D5D /* resources_storage */;
+			targetProxy = 268C473C2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+		268C473F2CCA31DF006E6D5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 268C45992CC98B25006E6D5D /* scene */;
+			targetProxy = 268C473E2CCA31DF006E6D5D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		268C43222CC945CA006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		268C43232CC945CA006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		268C433C2CC98717006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43282CC945FA006E6D5D /* xenolith_core.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.core;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C433D2CC98717006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43282CC945FA006E6D5D /* xenolith_core.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.core;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45482CC987D1006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43252CC945FA006E6D5D /* xenolith_application.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.application;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45492CC987D1006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43252CC945FA006E6D5D /* xenolith_application.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.application;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45562CC9882F006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43262CC945FA006E6D5D /* xenolith_backend_vk.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.backend-vk";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45572CC9882F006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43262CC945FA006E6D5D /* xenolith_backend_vk.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.backend-vk";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45642CC9887D006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43262CC945FA006E6D5D /* xenolith_backend_vk.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.backend-vkgui";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45652CC9887D006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43272CC945FA006E6D5D /* xenolith_backend_vkgui.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.backend-vkgui";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45722CC988FF006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432A2CC945FA006E6D5D /* xenolith_renderer_basic2d.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.renderer-basic2d";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45732CC988FF006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432A2CC945FA006E6D5D /* xenolith_renderer_basic2d.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.renderer-basic2d";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45822CC98A94006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432B2CC945FA006E6D5D /* xenolith_renderer_material2d.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.renderer-material2d";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45832CC98A94006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432B2CC945FA006E6D5D /* xenolith_renderer_material2d.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.renderer-material2d";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45932CC98B1B006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43292CC945FA006E6D5D /* xenolith_font.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.font;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45942CC98B1B006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43292CC945FA006E6D5D /* xenolith_font.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.font;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45A02CC98B25006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43302CC945FA006E6D5D /* xenolith_scene.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.scene;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45A12CC98B25006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C43302CC945FA006E6D5D /* xenolith_scene.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = org.stappler.xenolith.scene;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45AF2CC98BAE006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432C2CC945FA006E6D5D /* xenolith_resources_assets.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-assets";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45B02CC98BAE006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432C2CC945FA006E6D5D /* xenolith_resources_assets.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-assets";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45BC2CC98BBC006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432D2CC945FA006E6D5D /* xenolith_resources_icons.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-icons";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45BD2CC98BBC006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432D2CC945FA006E6D5D /* xenolith_resources_icons.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-icons";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45C92CC98BCB006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432E2CC945FA006E6D5D /* xenolith_resources_network.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-network";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45CA2CC98BCB006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432E2CC945FA006E6D5D /* xenolith_resources_network.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-network";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C45D62CC98BDA006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432F2CC945FA006E6D5D /* xenolith_resources_storage.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-storage";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Debug;
+		};
+		268C45D72CC98BDA006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 268C432F2CC945FA006E6D5D /* xenolith_resources_storage.xcconfig */;
+			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.4;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.stappler.xenolith.resources-storage";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		268C47252CCA31D3006E6D5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		268C47262CCA31D3006E6D5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		268C43132CC945CA006E6D5D /* Build configuration list for PBXProject "xenolith" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C43222CC945CA006E6D5D /* Debug */,
+				268C43232CC945CA006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C433B2CC98717006E6D5D /* Build configuration list for PBXNativeTarget "xenolith-core" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C433C2CC98717006E6D5D /* Debug */,
+				268C433D2CC98717006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45472CC987D1006E6D5D /* Build configuration list for PBXNativeTarget "application" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45482CC987D1006E6D5D /* Debug */,
+				268C45492CC987D1006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45552CC9882F006E6D5D /* Build configuration list for PBXNativeTarget "backend_vk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45562CC9882F006E6D5D /* Debug */,
+				268C45572CC9882F006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45632CC9887D006E6D5D /* Build configuration list for PBXNativeTarget "backend_vkgui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45642CC9887D006E6D5D /* Debug */,
+				268C45652CC9887D006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45712CC988FF006E6D5D /* Build configuration list for PBXNativeTarget "renderer_basic2d" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45722CC988FF006E6D5D /* Debug */,
+				268C45732CC988FF006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45812CC98A94006E6D5D /* Build configuration list for PBXNativeTarget "renderer_material2d" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45822CC98A94006E6D5D /* Debug */,
+				268C45832CC98A94006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45922CC98B1B006E6D5D /* Build configuration list for PBXNativeTarget "xenolith-font" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45932CC98B1B006E6D5D /* Debug */,
+				268C45942CC98B1B006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C459F2CC98B25006E6D5D /* Build configuration list for PBXNativeTarget "scene" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45A02CC98B25006E6D5D /* Debug */,
+				268C45A12CC98B25006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45AE2CC98BAE006E6D5D /* Build configuration list for PBXNativeTarget "resources_assets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45AF2CC98BAE006E6D5D /* Debug */,
+				268C45B02CC98BAE006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45BB2CC98BBC006E6D5D /* Build configuration list for PBXNativeTarget "resources_icons" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45BC2CC98BBC006E6D5D /* Debug */,
+				268C45BD2CC98BBC006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45C82CC98BCB006E6D5D /* Build configuration list for PBXNativeTarget "resources_network" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45C92CC98BCB006E6D5D /* Debug */,
+				268C45CA2CC98BCB006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C45D52CC98BDA006E6D5D /* Build configuration list for PBXNativeTarget "resources_storage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C45D62CC98BDA006E6D5D /* Debug */,
+				268C45D72CC98BDA006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		268C47272CCA31D3006E6D5D /* Build configuration list for PBXAggregateTarget "libstappler-xenolith" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C47252CCA31D3006E6D5D /* Debug */,
+				268C47262CCA31D3006E6D5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 268C43102CC945CA006E6D5D /* Project object */;
+}

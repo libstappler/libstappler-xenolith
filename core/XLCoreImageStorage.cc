@@ -60,7 +60,7 @@ const Rc<Semaphore> &ImageStorage::getSignalSem() const {
 	return _signalSem;
 }
 
-uint32_t ImageStorage::getImageIndex() const {
+uint64_t ImageStorage::getImageIndex() const {
 	return _image->getIndex();
 }
 

@@ -193,7 +193,7 @@ void ConfigSwitcher::handlePrevMode() {
 	if (_presentIndex > 0) {
 		-- _presentIndex;
 		if (_layers[_presentIndex]->getTag() != _selectedMode) {
-			_selectedMode = _layers[_presentIndex]->getTag();
+			_selectedMode = uint32_t(_layers[_presentIndex]->getTag());
 			_callback(_selectedMode);
 		}
 		updateState();
@@ -204,7 +204,7 @@ void ConfigSwitcher::handleNextMode() {
 	if (_presentIndex + 1 < _layers.size()) {
 		++ _presentIndex;
 		if (_layers[_presentIndex]->getTag() != _selectedMode) {
-			_selectedMode = _layers[_presentIndex]->getTag();
+			_selectedMode = uint32_t(_layers[_presentIndex]->getTag());
 			_callback(_selectedMode);
 		}
 		updateState();

@@ -37,15 +37,24 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		return nullptr;
 	}
 
-	auto loaderPath = filepath::merge<Interface>(filepath::root(pathBuf), "vulkan/lib", "libvulkan.dylib");
-	if (!filesystem::exists(loaderPath)) {
-		log::error("Vulkan", "Vulkan loader is not found on path: ", loaderPath);
+	auto bundledPath = filepath::merge<Interface>(filepath::root(filepath::root(pathBuf)), "Frameworks", "libvulkan.1.dylib");
+	auto flatPath = filepath::merge<Interface>(filepath::root(pathBuf), "vulkan/lib", "libvulkan.1.dylib");
+
+	bool isBundled = false;
+
+	if (filesystem::exists(bundledPath)) {
+		isBundled = true;
+	}
+
+	if (!isBundled && !filesystem::exists(flatPath)) {
+		log::error("Vulkan", "Vulkan loader is not found on paths: ", bundledPath, "; ", flatPath);
 		return nullptr;
 	}
 
-	//::setenv("MVK_CONFIG_DEBUG", "1", 1);
-
-	::setenv("VK_LAYER_PATH", filepath::merge<Interface>(filepath::root(pathBuf), "vulkan", "explicit_layer.d").data(), 1);
+	String loaderPath = isBundled ? bundledPath : flatPath;
+	if (!isBundled) {
+		::setenv("VK_LAYER_PATH", filepath::merge<Interface>(filepath::root(pathBuf), "vulkan", "explicit_layer.d").data(), 1);
+	}
 
 	Dso handle(loaderPath);
 	if (!handle) {

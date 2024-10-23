@@ -352,7 +352,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				// fill slot with new ImageView
 				set.imageSlots[loc].image = cb(*it.first);
 				set.imageSlots[loc].image->setLocation(setIdx, loc);
-				set.imageSlots[loc].refCount = it.second.size();
+				set.imageSlots[loc].refCount = uint32_t(it.second.size());
 				set.usedImageSlots = std::max(set.usedImageSlots, loc + 1);
 			}
 
@@ -500,7 +500,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 
 	Vector<uint32_t> imageLocations;
 	Vector<uint32_t> bufferLocations;
-	emplaceMaterial(_layouts.size() - 1, nIt, imageLocations, bufferLocations);
+	emplaceMaterial(uint32_t(_layouts.size() - 1), nIt, imageLocations, bufferLocations);
 }
 
 bool MaterialImage::canAlias(const MaterialImage &other) const {

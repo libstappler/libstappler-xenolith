@@ -155,7 +155,7 @@ protected:
 
 	RenderingLevel _renderingLevel = RenderingLevel::Default;
 	RenderingLevel _realRenderingLevel = RenderingLevel::Default;
-	uint64_t _materialId = 0;
+	core::MaterialId _materialId = 0;
 	CommandFlags _commandFlags = CommandFlags::None;
 
 	Color4F _tmpColor;

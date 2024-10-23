@@ -350,7 +350,7 @@ public:
 								if (validate.empty()) {
 									WideStringView vtoken(token.data(), token.size() - num.size() - 1);
 									num.readInteger().unwrap([&, this] (int64_t id) {
-										replacement = numeric(vtoken, id);
+										replacement = numeric(vtoken, uint32_t(id));
 									});
 								}
 							}

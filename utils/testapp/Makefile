@@ -20,6 +20,8 @@
 
 STAPPLER_ROOT ?= ../../..
 
+LOCAL_MAKEFILE := $(lastword $(MAKEFILE_LIST))
+
 LOCAL_OUTDIR ?= stappler-build
 LOCAL_EXECUTABLE := testapp
 

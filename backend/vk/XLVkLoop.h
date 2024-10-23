@@ -87,7 +87,7 @@ public:
 
 	virtual const Vector<core::ImageFormat> &getSupportedDepthStencilFormat() const override;
 
-	Rc<Fence> acquireFence(uint32_t, bool init = true);
+	Rc<Fence> acquireFence(uint64_t, bool init = true);
 
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) override;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) override;

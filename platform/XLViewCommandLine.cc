@@ -75,12 +75,12 @@ int parseViewCommandLineString(ViewCommandLineData &ret, const StringView &str, 
 	} else if (str.starts_with("w=")) {
 		auto s = str.sub(2).readInteger().get(0);
 		if (s > 0) {
-			ret.screenSize.width = s;
+			ret.screenSize.width = uint32_t(s);
 		}
 	} else if (str.starts_with("h=")) {
 		auto s = str.sub(2).readInteger().get(0);
 		if (s > 0) {
-			ret.screenSize.height = s;
+			ret.screenSize.height = uint32_t(s);
 		}
 	} else if (str.starts_with("d=")) {
 		auto s = str.sub(2).readDouble().get(0.0);

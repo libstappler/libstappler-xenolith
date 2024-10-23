@@ -484,7 +484,7 @@ uint32_t FontController::getFamilyIndex(StringView name) const {
 	std::shared_lock lock(_layoutSharedMutex);
 	auto it = std::find(_familiesNames.begin(), _familiesNames.end(), name);
 	if (it != _familiesNames.end()) {
-		return it - _familiesNames.begin();
+		return uint32_t(it - _familiesNames.begin());
 	}
 	return maxOf<uint32_t>();
 }
@@ -609,7 +609,7 @@ FontSpecializationVector FontController::findSpecialization(const FamilySpec &fa
 
 	Vector<Pair<FontFaceData *, uint32_t>> scores;
 
-	uint32_t offset = family.data.size();
+	uint32_t offset = uint32_t(family.data.size());
 	for (auto &it : family.data) {
 		auto spec = it->getSpecialization(params);
 		auto specScore = getFontFaceScore(params, spec) + offset;

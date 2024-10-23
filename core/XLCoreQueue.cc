@@ -229,7 +229,7 @@ static void Queue_buildLoadStore(QueueData *data) {
 				continue;
 			}
 
-			size_t descIndex = 0;
+			uint32_t descIndex = 0;
 			for (auto &desc : attachment->passes) {
 				auto wasWritten = dataWasWritten(attachment, descIndex); // Color, Stencil
 				auto willBeRead = dataWillBeRead(attachment, descIndex);
@@ -1066,7 +1066,7 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, D
 	p->type = type;
 	p->layout = layout;
 	p->count = 1;
-	p->index = _data->descriptors.size();
+	p->index = uint32_t(_data->descriptors.size());
 
 	_data->descriptors.emplace_back(p);
 	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
@@ -1085,7 +1085,7 @@ bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachme
 	p->type = type;
 	p->layout = layout;
 	p->count = count;
-	p->index = _data->descriptors.size();
+	p->index = uint32_t(_data->descriptors.size());
 	p->countIsPredefined = true;
 
 	_data->descriptors.emplace_back(p);
@@ -1104,7 +1104,7 @@ bool PipelineLayoutBuilder::addSet(const Callback<void(DescriptorSetBuilder &)> 
 	auto s = new (pool) DescriptorSetData;
 	s->key = _data->key;
 	s->layout = _data;
-	s->index = _data->sets.size();
+	s->index = uint32_t(_data->sets.size());
 
 	DescriptorSetBuilder builder(s);
 	cb(builder);
@@ -1325,7 +1325,7 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(StringView str,
 	auto layout = new (pool) PipelineLayoutData;
 	layout->key = str.pdup(_data->queue->pool);
 	layout->pass = _data;
-	layout->index = _data->pipelineLayouts.size();
+	layout->index = uint32_t(_data->pipelineLayouts.size());
 
 	PipelineLayoutBuilder builder(layout);
 	cb(builder);
@@ -1341,7 +1341,7 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<
 	auto layout = new (pool) PipelineLayoutData;
 	layout->key = _data->key;
 	layout->pass = _data;
-	layout->index = _data->pipelineLayouts.size();
+	layout->index = uint32_t(_data->pipelineLayouts.size());
 
 	PipelineLayoutBuilder builder(layout);
 	cb(builder);
@@ -1357,7 +1357,7 @@ const SubpassData * QueuePassBuilder::addSubpass(const Callback<void(SubpassBuil
 	auto subpass = new (pool) SubpassData;
 	subpass->key = _data->key;
 	subpass->pass = _data;
-	subpass->index = _data->subpasses.size();
+	subpass->index = uint32_t(_data->subpasses.size());
 
 	SubpassBuilder builder(subpass);
 	cb(builder);
@@ -1396,7 +1396,7 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 	a->key = data->key;
 	a->attachment = data;
 	a->pass = _data;
-	a->index = _data->attachments.size();
+	a->index = uint32_t(_data->attachments.size());
 
 	AttachmentPassBuilder builder(a);
 	cb(builder);

@@ -117,8 +117,8 @@ void MacViewController::setTitle(StringView title) {
 	_window.title = XL_OBJC_CALL([NSString stringWithUTF8String: title.data()]);
 }
 
-void MacViewController::setDisplayLinkCallback(Function<void()> &&cb) {
-	_displayLinkCallback = move(cb);
+void MacViewController::setInfo(MacViewInfo &&info) {
+	_info = move(info);
 }
 
 void MacViewController::setVSyncEnabled(bool val) {
@@ -213,19 +213,21 @@ CGSize MacViewController::windowWillResize(NSWindow *sender, CGSize frameSize) {
 
 void MacViewController::windowDidResize(NSNotification *notification) {
 	NSSize size = _self.view.window.contentLayoutRect.size;
+	_view->setReadyForNextFrame();
 	if (_currentSize.width != size.width || _currentSize.height != size.height) {
-		//_engineView->update(false);
-		//_engineView->deprecateSwapchain(false);
 		_currentSize = size;
+		_view->update(false);
+		_view->deprecateSwapchain(false);
+		std::cout << "windowDidResize: " << _currentSize.width << " " << _currentSize.height << "\n";
 	}
 }
 
 void MacViewController::windowWillStartLiveResize(NSNotification *notification) {
-	//_engineView->startLiveResize();
+	_info.captureView(_view);
 }
 
 void MacViewController::windowDidEndLiveResize(NSNotification *notification) {
-	//_engineView->stopLiveResize();
+	_info.releaseView(_view);
 }
 
 BOOL MacViewController::windowShouldClose(NSWindow * _Nonnull) {
@@ -240,7 +242,7 @@ void MacViewController::mouseDown(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Begin,
 		core::InputMouseButton::MouseLeft,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -255,7 +257,7 @@ void MacViewController::rightMouseDown(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Begin,
 		core::InputMouseButton::MouseRight,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -269,8 +271,8 @@ void MacViewController::otherMouseDown(NSEvent *theEvent) {
 	core::InputEventData event({
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Begin,
-		getInputMouseButton(theEvent.buttonNumber),
-		getInputModifiers(theEvent.modifierFlags),
+		getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -285,7 +287,7 @@ void MacViewController::mouseUp(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::End,
 		core::InputMouseButton::MouseLeft,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -300,7 +302,7 @@ void MacViewController::rightMouseUp(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::End,
 		core::InputMouseButton::MouseRight,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -314,8 +316,8 @@ void MacViewController::otherMouseUp(NSEvent *theEvent) {
 	core::InputEventData event({
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::End,
-		getInputMouseButton(theEvent.buttonNumber),
-		getInputModifiers(theEvent.modifierFlags),
+		getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -330,7 +332,7 @@ void MacViewController::mouseMoved(NSEvent *theEvent) {
 		std::numeric_limits<uint32_t>::max(),
 		core::InputEventName::MouseMove,
 		core::InputMouseButton::None,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -348,7 +350,7 @@ void MacViewController::mouseDragged(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Move,
 		core::InputMouseButton::MouseLeft,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	}));
@@ -356,7 +358,7 @@ void MacViewController::mouseDragged(NSEvent *theEvent) {
 		std::numeric_limits<uint32_t>::max(),
 		core::InputEventName::MouseMove,
 		core::InputMouseButton::None,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	}));
@@ -372,7 +374,7 @@ void MacViewController::scrollWheel(NSEvent *theEvent) {
 
 	uint32_t buttonId = 0;
 	core::InputMouseButton buttonName;
-	core::InputModifier mods = getInputModifiers(theEvent.modifierFlags) | _currentModifiers;
+	core::InputModifier mods = getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	if (theEvent.scrollingDeltaY != 0) {
 		if (theEvent.scrollingDeltaY > 0) {
@@ -429,7 +431,7 @@ void MacViewController::rightMouseDragged(NSEvent *theEvent) {
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Move,
 		core::InputMouseButton::MouseRight,
-		getInputModifiers(theEvent.modifierFlags),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -443,8 +445,8 @@ void MacViewController::otherMouseDragged(NSEvent *theEvent) {
 	core::InputEventData event({
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		core::InputEventName::Move,
-		getInputMouseButton(theEvent.buttonNumber),
-		getInputModifiers(theEvent.modifierFlags),
+		getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(loc.x),
 		float(loc.y)
 	});
@@ -497,8 +499,8 @@ void MacViewController::keyDown(NSEvent *theEvent) {
 	core::InputEventData event({
 		static_cast<uint32_t>(code),
 		theEvent.isARepeat ? core::InputEventName::KeyRepeated : core::InputEventName::KeyPressed,
-		getInputMouseButton(theEvent.buttonNumber),
-		getInputModifiers(theEvent.modifierFlags),
+		getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(_currentPointerLocation.x),
 		float(_currentPointerLocation.y)
 	});
@@ -518,8 +520,8 @@ void MacViewController::keyUp(NSEvent *theEvent) {
 	core::InputEventData event({
 		static_cast<uint32_t>(code),
 		core::InputEventName::KeyReleased,
-		getInputMouseButton(theEvent.buttonNumber),
-		getInputModifiers(theEvent.modifierFlags),
+		getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+		getInputModifiers(uint32_t(theEvent.modifierFlags)),
 		float(_currentPointerLocation.x),
 		float(_currentPointerLocation.y)
 	});
@@ -549,7 +551,7 @@ void MacViewController::flagsChanged(NSEvent *theEvent) {
 		std::make_pair(core::InputModifier::Mod4, core::InputKeyCode::WORLD_2),
 	};
 
-	core::InputModifier mods = getInputModifiers(theEvent.modifierFlags);
+	core::InputModifier mods = getInputModifiers(uint32_t(theEvent.modifierFlags));
 	if (mods == _currentModifiers) {
 		return;
 	}
@@ -592,7 +594,7 @@ void MacViewController::updateEngineView(bool displayLink) {
 
 void MacViewController::handleDisplayLink() {
 	// WARINIG - no thread control, display link MUST be disabled to modify callback
-	_displayLinkCallback();
+	_info.handleDisplayLink(_view);
 }
 
 void MacViewController::submitTextData(WideStringView str, core::TextCursor cursor, core::TextCursor marked) {

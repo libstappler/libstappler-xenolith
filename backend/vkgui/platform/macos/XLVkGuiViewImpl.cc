@@ -37,14 +37,21 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 		_viewController = xenolith::platform::MacViewController::makeConroller(this);
 		_viewController->setTitle(_info.title.empty() ? _info.bundleId : _info.title);
 
-		_viewController->setDisplayLinkCallback([this] {
-			if (!_options.followDisplayLink) {
-				return;
-			}
+		xenolith::platform::MacViewInfo info;
+		info.captureView = [] (ViewInterface *self) {
+			static_cast<ViewImpl *>(self)->captureWindow();
+		};
+		info.releaseView = [] (ViewInterface *self) {
+			static_cast<ViewImpl *>(self)->releaseWindow();
+		};
+		info.handlePaint = [] (ViewInterface *self) {
+			static_cast<ViewImpl *>(self)->handlePaint();
+		};
+		info.handleDisplayLink = [] (ViewInterface *self) {
+			static_cast<ViewImpl *>(self)->handleDisplayLink();
+		};
 
-			_displayLinkFlag.clear();
-			_viewController->wakeup();
-		});
+		_viewController->setInfo(move(info));
 	}, this);
 
 	return true;
@@ -94,7 +101,9 @@ bool ViewImpl::worker() {
 }
 
 void ViewImpl::update(bool displayLink) {
-	View::update(!_displayLinkFlag.test_and_set());
+	auto diplayLinkFlag = !_displayLinkFlag.test_and_set();
+	displayLink = displayLink || diplayLinkFlag;
+	View::update(displayLink);
 }
 
 void ViewImpl::end() {
@@ -158,37 +167,14 @@ void ViewImpl::mapWindow() {
 	}, this);
 }
 
-void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
-	_viewController->wakeup();
-}
-
-void ViewImpl::startLiveResize() {
-	/*_liveResize = true;
-	_loop->performOnGlThread([this] {
-		_loop->getFrameCache()->freeze();
-	}, this);
-	_options.renderImageOffscreen = true;
-	deprecateSwapchain(false);*/
-	/*_swapchain->deprecate(false);
-
-	auto it = _scheduledPresent.begin();
-	while (it != _scheduledPresent.end()) {
-		runScheduledPresent(move(*it));
-		it = _scheduledPresent.erase(it);
+void ViewImpl::wakeup(std::unique_lock<Mutex> &lock) {
+	lock.unlock();
+	std::unique_lock lock2(_captureMutex);
+	if (_windowCaptured) {
+		_captureCondVar.notify_all();
+	} else {
+		_viewController->wakeup();
 	}
-
-	// log::vtext("View", "recreateSwapchain - View::deprecateSwapchain (", renderqueue::FrameHandle::GetActiveFramesCount(), ")");
-	recreateSwapchain(_swapchain->getRebuildMode());*/
-}
-
-void ViewImpl::stopLiveResize() {
-	/*_options.renderImageOffscreen = false;
-	deprecateSwapchain(false);
-
-	_loop->performOnGlThread([this] {
-		_loop->getFrameCache()->unfreeze();
-	}, this);
-	_liveResize = false;*/
 }
 
 void ViewImpl::submitTextData(WideStringView str, TextCursor cursor, TextCursor marked) {
@@ -215,6 +201,50 @@ bool ViewImpl::createSwapchain(const core::SurfaceInfo &info, core::SwapchainCon
 		_constraints.density = _viewController->getLayerDensity();
 	}
 	return ret;
+}
+
+void ViewImpl::captureWindow() {
+	_tmpOptions = _options;
+	_options.presentImmediate = true;
+	_options.acquireImageImmediately = true;
+	_options.renderOnDemand = true;
+	_readyForNextFrame = false;
+	deprecateSwapchain(false);
+	std::unique_lock lock(_captureMutex);
+	_windowCaptured = true;
+	std::cout << "captureWindow\n";
+}
+
+void ViewImpl::releaseWindow() {
+	std::cout << "releaseWindow\n";
+	_options = _tmpOptions;
+	std::unique_lock lock(_captureMutex);
+	_windowCaptured = false;
+	deprecateSwapchain(false);
+}
+
+void ViewImpl::handlePaint() {
+	// draw frame in blocking mode when resizeing
+}
+
+void ViewImpl::handleDisplayLink() {
+	if (!_options.followDisplayLink && !_windowCaptured) {
+		return;
+	}
+
+	_displayLinkFlag.clear();
+	_viewController->wakeup();
+
+	if (_windowCaptured) {
+		std::cout << "handleDisplayLink\n";
+	}
+}
+
+void ViewImpl::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
+	if (_windowCaptured) {
+		std::cout << "presentWithQueue\n";
+	}
+	View::presentWithQueue(queue, move(image));
 }
 
 Rc<vk::View> createView(Application &app, const core::Device &dev, ViewInfo &&info) {

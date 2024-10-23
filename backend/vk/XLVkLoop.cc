@@ -480,6 +480,7 @@ bool Loop::worker() {
 	auto pool = memory::pool::create(_internal->pool);
 
 	while (_shouldExit.test_and_set()) {
+		memory::pool::push(pool);
 		bool timeoutPassed = false;
 
 		++ _clock;
@@ -507,6 +508,7 @@ bool Loop::worker() {
 		_frameCache->clear();
 
 		XL_PROFILE_END(loop)
+		memory::pool::pop();
 		memory::pool::clear(pool);
 	}
 
@@ -669,7 +671,7 @@ const Vector<core::ImageFormat> &Loop::getSupportedDepthStencilFormat() const {
 	return _internal->device->getSupportedDepthStencilFormat();
 }
 
-Rc<Fence> Loop::acquireFence(uint32_t v, bool init) {
+Rc<Fence> Loop::acquireFence(uint64_t v, bool init) {
 	auto initFence = [&] (const Rc<Fence> &fence) {
 		if (!init) {
 			return;

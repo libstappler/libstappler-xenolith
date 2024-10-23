@@ -106,7 +106,7 @@ bool TextureSetLayout::compile(Device &dev, const Vector<VkSampler> &samplers) {
 		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlags;
 		bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
 		bindingFlags.pNext = nullptr;
-		bindingFlags.bindingCount = flags.size();
+		bindingFlags.bindingCount = uint32_t(flags.size());
 		bindingFlags.pBindingFlags = flags.data();
 		layoutInfo.pNext = &bindingFlags;
 
@@ -468,7 +468,14 @@ bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
 	_partiallyBound = layout.isPartiallyBound();
 	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 		auto d = ((Device *)dev);
-		d->getTable()->vkDestroyDescriptorPool(d->getDevice(), (VkDescriptorPool)ptr.get(), nullptr);
+		if (d->isPortabilityMode()) {
+			auto pool = memory::pool::acquire();
+			memory::pool::pre_cleanup_register(pool, [d, ptr = (VkDescriptorPool)ptr.get()] () {
+				d->getTable()->vkDestroyDescriptorPool(d->getDevice(), ptr, nullptr);
+			});
+		} else {
+			d->getTable()->vkDestroyDescriptorPool(d->getDevice(), (VkDescriptorPool)ptr.get(), nullptr);
+		}
 	}, core::ObjectType::DescriptorPool, ObjectHandle(_pool));
 }
 
@@ -483,7 +490,7 @@ void TextureSet::write(const core::MaterialLayout &set) {
 	writeImages(writes, set, imagesList);
 	writeBuffers(writes, set, buffersList);
 
-	table->vkUpdateDescriptorSets(dev, writes.size(), writes.data(), 0, nullptr);
+	table->vkUpdateDescriptorSets(dev, uint32_t(writes.size()), writes.data(), 0, nullptr);
 }
 
 Vector<const ImageMemoryBarrier *> TextureSet::getPendingImageBarriers() const {
@@ -557,7 +564,7 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 	}
 
 	auto pushWritten = [&, this] {
-		imageWriteData.descriptorCount = localImages->size();
+		imageWriteData.descriptorCount = uint32_t(localImages->size());
 		imageWriteData.pImageInfo = localImages->data();
 		writes.emplace_back(move(imageWriteData));
 		imageWriteData = VkWriteDescriptorSet ({
@@ -626,7 +633,7 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 	}
 
 	if (imageWriteData.descriptorCount > 0) {
-		imageWriteData.descriptorCount = localImages->size();
+		imageWriteData.descriptorCount = uint32_t(localImages->size());
 		imageWriteData.pImageInfo = localImages->data();
 		writes.emplace_back(move(imageWriteData));
 	}
@@ -652,7 +659,7 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 	}
 
 	auto pushWritten = [&, this] {
-		bufferWriteData.descriptorCount = localBuffers->size();
+		bufferWriteData.descriptorCount = uint32_t(localBuffers->size());
 		bufferWriteData.pBufferInfo = localBuffers->data();
 		writes.emplace_back(move(bufferWriteData));
 		bufferWriteData = VkWriteDescriptorSet ({
@@ -725,7 +732,7 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 	}
 
 	if (bufferWriteData.descriptorCount > 0) {
-		bufferWriteData.descriptorCount = localBuffers->size();
+		bufferWriteData.descriptorCount = uint32_t(localBuffers->size());
 		bufferWriteData.pBufferInfo = localBuffers->data();
 		writes.emplace_back(move(bufferWriteData));
 	}

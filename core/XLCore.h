@@ -115,7 +115,7 @@ inline uint32_t XL_MAKE_API_VERSION(StringView version) {
 	uint32_t i = 0;
 	version.split<StringView::Chars<'.'>>([&] (StringView str) {
 		if (i < 4) {
-			ver[i++] = str.readInteger(10).get(0);
+			ver[i++] = uint32_t(str.readInteger(10).get(0));
 		}
 	});
 

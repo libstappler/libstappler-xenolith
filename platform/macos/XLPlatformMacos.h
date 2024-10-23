@@ -92,6 +92,12 @@ bool runMacApplication();
 
 void stopMacApplication();
 
+struct MacViewInfo {
+	Function<void(ViewInterface * _Nonnull)> captureView;
+	Function<void(ViewInterface * _Nonnull)> releaseView;
+	Function<void(ViewInterface * _Nonnull)> handlePaint;
+	Function<void(ViewInterface * _Nonnull)> handleDisplayLink;
+};
 
 class MacViewController : public Ref {
 public:
@@ -102,7 +108,7 @@ public:
 	MacViewController(XLMacViewController * _Nonnull, ViewInterface * _Nonnull, NSWindow * _Nonnull);
 
 	void setTitle(StringView);
-	void setDisplayLinkCallback(Function<void()> &&);
+	void setInfo(MacViewInfo &&);
 	void setVSyncEnabled(bool);
 	void mapWindow();
 	void wakeup();
@@ -162,8 +168,8 @@ protected:
 	ViewInterface * _Nonnull _view = nullptr;
 	CGSize _currentSize;
 	CGPoint _currentPointerLocation;
+	MacViewInfo _info;
 	core::InputModifier _currentModifiers = core::InputModifier::None;
-	Function<void()> _displayLinkCallback;
 	core::InputKeyCode _keycodes[256];
 	uint16_t _scancodes[128];
 };
@@ -179,6 +185,8 @@ XL_OBJC_INTERFACE_BEGIN(XLMacAppDelegate) : NSObject <NSApplicationDelegate> {
 	NSWindow *_window;
 };
 
+- (void)doNothing:(id _Nonnull)object;
+
 XL_OBJC_INTERFACE_END(XLMacAppDelegate)
 
 
@@ -190,10 +198,12 @@ XL_OBJC_INTERFACE_BEGIN(XLMacViewController) : NSViewController <NSWindowDelegat
 
 - (stappler::xenolith::platform::MacViewController * _Nonnull) engineController;
 
+- (void)updateEngineView;
+
 XL_OBJC_INTERFACE_END(XLMacViewController)
 
 
-XL_OBJC_INTERFACE_BEGIN(XLMacView) : NSView <NSTextInputClient> {
+XL_OBJC_INTERFACE_BEGIN(XLMacView) : NSView <NSTextInputClient, NSViewLayerContentScaleDelegate> {
 	NSArray<NSAttributedStringKey> *_validAttributesForMarkedText;
 	bool _textDirty;
 };

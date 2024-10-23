@@ -133,7 +133,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	for (auto &it : _families) {
 		it.queues.reserve(it.count);
 		it.pools.reserve(it.count);
-		for (size_t i = 0; i < it.count; ++ i) {
+		for (uint32_t i = 0; i < it.count; ++ i) {
 			VkQueue queue = VK_NULL_HANDLE;
 			getTable()->vkGetDeviceQueue(_device, it.index, i, &queue);
 
@@ -743,7 +743,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 void Device::compileSamplers(thread::TaskQueue &q, bool force) {
 	_immutableSamplers.resize(_samplersInfo.size(), VK_NULL_HANDLE);
 	_samplers.resize(_samplersInfo.size(), nullptr);
-	_samplersCount = _samplersInfo.size();
+	_samplersCount = uint32_t(_samplersInfo.size());
 
 	size_t i = 0;
 	for (auto &it : _samplersInfo) {

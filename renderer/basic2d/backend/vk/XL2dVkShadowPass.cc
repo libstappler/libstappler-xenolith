@@ -173,7 +173,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				colorAttachment, shadowAttachment, depth2dAttachment);
 	});
 
-	auto subpassSdf = passBuilder.addSubpass([&, this] (SubpassBuilder &subpassBuilder) {
+	auto subpassSdf = passBuilder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
 		subpassBuilder.addColor(sdfAttachment, AttachmentDependencyInfo{
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,
 			PipelineStage::ColorAttachmentOutput, AccessType::ColorAttachmentWrite,

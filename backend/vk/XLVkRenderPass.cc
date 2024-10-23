@@ -80,7 +80,7 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 	VkFramebufferCreateInfo framebufferInfo { };
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebufferInfo.renderPass = renderPass->getRenderPass();
-	framebufferInfo.attachmentCount = views.size();
+	framebufferInfo.attachmentCount = uint32_t(views.size());
 	framebufferInfo.pAttachments = views.data();
 	framebufferInfo.width = extent.width;
 	framebufferInfo.height = extent.height;
@@ -329,7 +329,7 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, uint32_t layout
 		return true;
 	}
 
-	table->vkUpdateDescriptorSets(dev->getDevice(), writes.size(), writes.data(), 0, nullptr);
+	table->vkUpdateDescriptorSets(dev->getDevice(), uint32_t(writes.size()), writes.data(), 0, nullptr);
 	return true;
 }
 
@@ -500,7 +500,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 			_variableAttachments.emplace(desc);
 		}
 
-		desc->index = _attachmentDescriptions.size();
+		desc->index = uint32_t(_attachmentDescriptions.size());
 
 		_attachmentDescriptions.emplace_back(attachment);
 		_attachmentDescriptionsAlternative.emplace_back(attachmentAlternative);
@@ -600,7 +600,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 				_attachmentReferences.emplace_back(attachmentRef);
 			}
 
-			subpass.inputAttachmentCount = it->inputImages.size();
+			subpass.inputAttachmentCount = uint32_t(it->inputImages.size());
 			subpass.pInputAttachments = _attachmentReferences.data() + off;
 		}
 
@@ -619,7 +619,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 				_attachmentReferences.emplace_back(attachmentRef);
 			}
 
-			subpass.colorAttachmentCount = it->outputImages.size();
+			subpass.colorAttachmentCount = uint32_t(it->outputImages.size());
 			subpass.pColorAttachments = _attachmentReferences.data() + off;
 		}
 
@@ -655,7 +655,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 		}
 
 		if (!it->preserve.empty()) {
-			subpass.preserveAttachmentCount = it->preserve.size();
+			subpass.preserveAttachmentCount = uint32_t(it->preserve.size());
 			subpass.pPreserveAttachments = it->preserve.data();
 		}
 
@@ -684,11 +684,11 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = _attachmentDescriptions.size();
+	renderPassInfo.attachmentCount = uint32_t(_attachmentDescriptions.size());
 	renderPassInfo.pAttachments = _attachmentDescriptions.data();
-	renderPassInfo.subpassCount = _subpasses.size();
+	renderPassInfo.subpassCount = uint32_t(_subpasses.size());
 	renderPassInfo.pSubpasses = _subpasses.data();
-	renderPassInfo.dependencyCount = _subpassDependencies.size();
+	renderPassInfo.dependencyCount = uint32_t(_subpassDependencies.size());
 	renderPassInfo.pDependencies = _subpassDependencies.data();
 
 	if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr, &pass.renderPass) != VK_SUCCESS) {
@@ -696,7 +696,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 	}
 
 	if (hasAlternative) {
-		renderPassInfo.attachmentCount = _attachmentDescriptionsAlternative.size();
+		renderPassInfo.attachmentCount = uint32_t(_attachmentDescriptionsAlternative.size());
 		renderPassInfo.pAttachments = _attachmentDescriptionsAlternative.data();
 
 		if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr, &pass.renderPassAlternative) != VK_SUCCESS) {
@@ -815,7 +815,7 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 		Vector<VkDescriptorBindingFlags> flags;
 		VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
 		Vector<VkDescriptorSetLayoutBinding> bindings; bindings.reserve(setData->descriptors.size());
-		size_t bindingIdx = 0;
+		uint32_t bindingIdx = 0;
 		for (auto &binding : setData->descriptors) {
 			if (binding->updateAfterBind) {
 				flags.emplace_back(VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
@@ -846,7 +846,7 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 		VkDescriptorSetLayoutCreateInfo layoutInfo { };
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.pNext = nullptr;
-		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.bindingCount = uint32_t(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 		layoutInfo.flags = 0;
 
@@ -856,7 +856,7 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 			VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlags;
 			bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
 			bindingFlags.pNext = nullptr;
-			bindingFlags.bindingCount = flags.size();
+			bindingFlags.bindingCount = uint32_t(flags.size());
 			bindingFlags.pBindingFlags = flags.data();
 			layoutInfo.pNext = &bindingFlags;
 
@@ -884,7 +884,7 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 	} else {
 		poolInfo.flags = 0;
 	}
-	poolInfo.poolSizeCount = sizes.size();
+	poolInfo.poolSizeCount = uint32_t(sizes.size());
 	poolInfo.pPoolSizes = sizes.data();
 	poolInfo.maxSets = maxSets;
 
@@ -953,9 +953,9 @@ bool RenderPass::initDescriptors(Device &dev, const core::PipelineLayoutData &da
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.pNext = nullptr;
 	pipelineLayoutInfo.flags = 0;
-	pipelineLayoutInfo.setLayoutCount = layouts.size();
+	pipelineLayoutInfo.setLayoutCount = uint32_t(layouts.size());
 	pipelineLayoutInfo.pSetLayouts = layouts.data();
-	pipelineLayoutInfo.pushConstantRangeCount = ranges.size();
+	pipelineLayoutInfo.pushConstantRangeCount = uint32_t(ranges.size());
 	pipelineLayoutInfo.pPushConstantRanges = ranges.data();
 
 	if (dev.getTable()->vkCreatePipelineLayout(dev.getDevice(), &pipelineLayoutInfo, nullptr, &layoutData.layout) == VK_SUCCESS) {

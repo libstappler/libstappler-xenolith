@@ -182,7 +182,7 @@ void Win32View::handleTimer() {
 	} else {
 		_shouldUpdate = true;
 	}
-	// Таймер замедлен на 16 миллисекунд, чтобы обновление по нему не срабатывало раньше релизного окна кадра
+
 	SetTimer(_window, 0, 1 /*(millisec)*/, nullptr);
 }
 
@@ -751,13 +751,7 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 
-		/*if (action == GLFW_RELEASE && wParam == VK_SHIFT) {
-			// HACK: Release both Shift keys on Shift up event, as when both
-			//       are pressed the first release does not emit any event
-			// NOTE: The other half of this is in _glfwPollEventsWin32
-			_glfwInputKey(window, GLFW_KEY_LEFT_SHIFT, scancode, action, mods);
-			_glfwInputKey(window, GLFW_KEY_RIGHT_SHIFT, scancode, action, mods);
-		} else*/ if (wParam == VK_SNAPSHOT) {
+		if (wParam == VK_SNAPSHOT) {
 			// HACK: Key down is not reported for the Print Screen key
 			view->handleKeyPress(key, scancode, c);
 			view->handleKeyRelease(key, scancode, c);

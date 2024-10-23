@@ -346,9 +346,12 @@ public:
 	void autorelease(Rc<Ref> &&);
 
 protected:
+	void recreatePool(Device &dev);
+
 	uint32_t _familyIdx = 0;
 	uint32_t _currentComplexity = 0;
 	uint32_t _bestComplexity = 0;
+	bool _invalidated = false;
 	QueueOperations _class = QueueOperations::Graphics;
 	VkCommandPool _commandPool = VK_NULL_HANDLE;
 	Vector<Rc<Ref>> _autorelease;

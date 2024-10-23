@@ -78,12 +78,12 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pNext = nullptr;
-	submitInfo.waitSemaphoreCount = waitSem.size();
+	submitInfo.waitSemaphoreCount = uint32_t(waitSem.size());
 	submitInfo.pWaitSemaphores = waitSem.data();
 	submitInfo.pWaitDstStageMask = waitStages.data();
-	submitInfo.commandBufferCount = vkBuffers.size();
+	submitInfo.commandBufferCount = uint32_t(vkBuffers.size());
 	submitInfo.pCommandBuffers = vkBuffers.data();
-	submitInfo.signalSemaphoreCount = signalSem.size();
+	submitInfo.signalSemaphoreCount = uint32_t(signalSem.size());
 	submitInfo.pSignalSemaphores = signalSem.data();
 
 #if XL_VKAPI_DEBUG
@@ -177,7 +177,7 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 	submitInfo.waitSemaphoreCount = 0;
 	submitInfo.pWaitSemaphores = nullptr;
 	submitInfo.pWaitDstStageMask = 0;
-	submitInfo.commandBufferCount = vkBuffers.size();
+	submitInfo.commandBufferCount = uint32_t(vkBuffers.size());
 	submitInfo.pCommandBuffers = vkBuffers.data();
 	submitInfo.signalSemaphoreCount = 0;
 	submitInfo.pSignalSemaphores = nullptr;
@@ -340,7 +340,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 		bindImage(it.image);
 	}
 
-	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, 0, nullptr, images.size(), images.data());
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, 0, nullptr, uint32_t(images.size()), images.data());
 }
 
 void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
@@ -356,7 +356,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 		bindBuffer(it.buffer);
 	}
 
-	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, buffers.size(), buffers.data(), 0, nullptr);
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, uint32_t(buffers.size()), buffers.data(), 0, nullptr);
 }
 
 void CommandBuffer::cmdGlobalBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
@@ -396,7 +396,7 @@ void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipeline
 	}
 
 	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr,
-			buffers.size(), buffers.data(), images.size(), images.data());
+			uint32_t(buffers.size()), buffers.data(), uint32_t(images.size()), images.data());
 }
 
 void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst) {
@@ -413,7 +413,7 @@ void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, SpanView<VkBufferCop
 	bindBuffer(src);
 	bindBuffer(dst);
 
-	_table->vkCmdCopyBuffer(_buffer, src->getBuffer(), dst->getBuffer(), copy.size(), copy.data());
+	_table->vkCmdCopyBuffer(_buffer, src->getBuffer(), dst->getBuffer(), uint32_t(copy.size()), copy.data());
 }
 
 void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, VkFilter filter) {
@@ -455,7 +455,7 @@ void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst
 	bindImage(src);
 	bindImage(dst);
 
-	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, copy.size(), copy.data());
+	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, uint32_t(copy.size()), copy.data());
 }
 
 void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout, VkDeviceSize offset) {
@@ -472,7 +472,7 @@ void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout 
 	bindBuffer(buf);
 	bindImage(img);
 
-	_table->vkCmdCopyBufferToImage(_buffer, buf->getBuffer(), img->getImage(), layout, copy.size(), copy.data());
+	_table->vkCmdCopyBufferToImage(_buffer, buf->getBuffer(), img->getImage(), layout, uint32_t(copy.size()), copy.data());
 }
 
 void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf, VkDeviceSize offset) {
@@ -489,7 +489,7 @@ void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffe
 	bindBuffer(buf);
 	bindImage(img);
 
-	_table->vkCmdCopyImageToBuffer(_buffer, img->getImage(), layout, buf->getBuffer(), copy.size(), copy.data());
+	_table->vkCmdCopyImageToBuffer(_buffer, img->getImage(), layout, buf->getBuffer(), uint32_t(copy.size()), copy.data());
 }
 
 void CommandBuffer::cmdClearColorImage(Image *image, VkImageLayout layout, const Color4F &color) {
@@ -519,7 +519,7 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass *pass, Framebuffer *fb, VkSubp
 	renderPassInfo.framebuffer = fb->getFramebuffer();
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = VkExtent2D{currentExtent.width, currentExtent.height};
-	renderPassInfo.clearValueCount = clearValues.size();
+	renderPassInfo.clearValueCount = uint32_t(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
 	bindFramebuffer(fb);
@@ -537,13 +537,13 @@ void CommandBuffer::cmdEndRenderPass() {
 }
 
 void CommandBuffer::cmdSetViewport(uint32_t firstViewport, SpanView<VkViewport> viewports) {
-	_table->vkCmdSetViewport(_buffer, firstViewport, viewports.size(), viewports.data());
+	_table->vkCmdSetViewport(_buffer, firstViewport, uint32_t(viewports.size()), viewports.data());
 }
 
 void CommandBuffer::cmdSetScissor(uint32_t firstScissor, SpanView<VkRect2D> scissors) {
 	//log::verbose("CommandBuffer", "cmdSetScissor: ", scissors.front().offset.x, " ", scissors.front().offset.y, " ",
 	//		scissors.front().extent.width, " ", scissors.front().extent.height);
-	_table->vkCmdSetScissor(_buffer, firstScissor, scissors.size(), scissors.data());
+	_table->vkCmdSetScissor(_buffer, firstScissor, uint32_t(scissors.size()), scissors.data());
 }
 
 void CommandBuffer::cmdBindPipeline(GraphicPipeline *pipeline) {
@@ -594,7 +594,7 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex
 		_boundLayout = targetLayout;
 
 		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
-				bindSets.size(), bindSets.data(), 0, nullptr);
+				uint32_t(bindSets.size()), bindSets.data(), 0, nullptr);
 	};
 
 	if (targetLayout != _boundLayout) {
@@ -614,18 +614,18 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescripto
 
 	if (!updateBoundSets(sets, firstSet)) {
 		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
-				sets.size(), sets.data(), 0, nullptr);
+				uint32_t(sets.size()), sets.data(), 0, nullptr);
 	}
 }
 
 void CommandBuffer::cmdBindGraphicDescriptorSets(VkPipelineLayout layout, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	_table->vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet,
-			sets.size(), sets.data(), 0, nullptr);
+			uint32_t(sets.size()), sets.data(), 0, nullptr);
 }
 
 void CommandBuffer::cmdBindComputeDescriptorSets(VkPipelineLayout layout, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	_table->vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, firstSet,
-			sets.size(), sets.data(), 0, nullptr);
+			uint32_t(sets.size()), sets.data(), 0, nullptr);
 }
 
 void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) {
@@ -637,12 +637,12 @@ void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, 
 }
 
 void CommandBuffer::cmdPushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
-	_table->vkCmdPushConstants(_buffer, layout, stageFlags, offset, data.size(), data.data());
+	_table->vkCmdPushConstants(_buffer, layout, stageFlags, offset, uint32_t(data.size()), data.data());
 }
 
 void CommandBuffer::cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
 	XLASSERT(_boundLayout, "cmdPushConstants without bound layout");
-	_table->vkCmdPushConstants(_buffer, _boundLayout, stageFlags, offset, data.size(), data.data());
+	_table->vkCmdPushConstants(_buffer, _boundLayout, stageFlags, offset, uint32_t(data.size()), data.data());
 }
 
 void CommandBuffer::cmdFillBuffer(Buffer *buffer, uint32_t data) {
@@ -756,6 +756,10 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, const Callback<bool(
 		return nullptr;
 	}
 
+	if (_invalidated) {
+		recreatePool(dev);
+	}
+
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = _commandPool;
@@ -766,7 +770,6 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, const Callback<bool(
 	if (dev.getTable()->vkAllocateCommandBuffers(dev.getDevice(), &allocInfo, &buf) != VK_SUCCESS) {
 		return nullptr;
 	}
-
 
 	VkCommandBufferBeginInfo beginInfo { };
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -818,15 +821,12 @@ void CommandPool::reset(Device &dev, bool release) {
 		if (buffersToFree.size() > 0) {
 			dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, static_cast<uint32_t>(buffersToFree.size()), buffersToFree.data());
 		}
-		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
 
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.pNext = nullptr;
-		poolInfo.queueFamilyIndex = _familyIdx;
-		poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
-
-		dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool);
+		if (dev.isPortabilityMode()) {
+			_invalidated = true;
+		} else {
+			recreatePool(dev);
+		}
 
 		_buffers.clear();
 		_autorelease.clear();
@@ -835,6 +835,23 @@ void CommandPool::reset(Device &dev, bool release) {
 
 void CommandPool::autorelease(Rc<Ref> &&ref) {
 	_autorelease.emplace_back(move(ref));
+}
+
+void CommandPool::recreatePool(Device &dev) {
+	if (_commandPool) {
+		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
+		_commandPool = nullptr;
+	}
+
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.pNext = nullptr;
+	poolInfo.queueFamilyIndex = _familyIdx;
+	poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
+
+	dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool);
+
+	_invalidated = false;
 }
 
 }

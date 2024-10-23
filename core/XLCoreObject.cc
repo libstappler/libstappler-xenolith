@@ -131,7 +131,7 @@ void DataAtlas::compile() {
 uint32_t DataAtlas::getHash(uint32_t id) const {
 	if (!_bufferData.empty()) {
 		auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
-		auto size = _bufferData.size() / bufferObjectSize;
+		auto size = uint32_t(_bufferData.size() / bufferObjectSize);
 		return hash(id, size);
 	}
 	return maxOf<uint32_t>();
@@ -140,7 +140,7 @@ uint32_t DataAtlas::getHash(uint32_t id) const {
 const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
 	if (!_bufferData.empty()) {
 		auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
-		auto size = _bufferData.size() / bufferObjectSize;
+		auto size = uint32_t(_bufferData.size() / bufferObjectSize);
 		uint32_t slot = hash(id, size);
 
 		auto bufferData = _bufferData.data();

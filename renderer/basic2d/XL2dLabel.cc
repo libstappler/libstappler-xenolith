@@ -237,7 +237,7 @@ void Label::writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory:
 Rc<LabelResult> Label::writeResult(TextLayout *format, const Color4F &color) {
 	auto result = Rc<LabelResult>::alloc();
 	VertexArray array;
-	array.init(format->getData()->chars.size() * 4, format->getData()->chars.size() * 6);
+	array.init(uint32_t(format->getData()->chars.size() * 4), uint32_t(format->getData()->chars.size() * 6));
 
 	writeQuads(array, format->getData(), result->colorMap);
 	result->data.data = array.pop();

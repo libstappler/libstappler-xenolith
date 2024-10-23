@@ -194,7 +194,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	colorBlending.flags = 0;
 	colorBlending.logicOpEnable = VK_FALSE;
 	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-	colorBlending.attachmentCount = colorBlendAttachments.size();
+	colorBlending.attachmentCount = uint32_t(colorBlendAttachments.size());
 	colorBlending.pAttachments = colorBlendAttachments.data();
 	colorBlending.blendConstants[0] = 0.0f; // Optional
 	colorBlending.blendConstants[1] = 0.0f; // Optional
@@ -215,7 +215,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.pNext = nullptr;
 	dynamicState.flags = 0;
-	dynamicState.dynamicStateCount = dynamicStates.size();
+	dynamicState.dynamicStateCount = uint32_t(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data();
 
 	Vector<VkPipelineShaderStageCreateInfo> shaderStages; shaderStages.reserve(params.shaders.size());
@@ -260,7 +260,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 			for (auto &it : shader.constants) {
 				VkSpecializationMapEntry &entry = spec.entries.emplace_back();
 				entry.constantID = idx;
-				entry.offset = spec.data.size();
+				entry.offset = uint32_t(spec.data.size());
 
 				BytesView data;
 				switch (it.type) {
@@ -280,7 +280,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 				++ idx;
 			}
 
-			spec.specInfo.mapEntryCount = spec.entries.size();
+			spec.specInfo.mapEntryCount = uint32_t(spec.entries.size());
 			spec.specInfo.pMapEntries = spec.entries.data();
 			spec.specInfo.dataSize = spec.data.size();
 			spec.specInfo.pData = spec.data.data();
@@ -363,7 +363,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
-	pipelineInfo.stageCount = shaderStages.size();
+	pipelineInfo.stageCount = uint32_t(shaderStages.size());
 	pipelineInfo.pStages = shaderStages.data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -439,7 +439,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 		for (auto &it : params.shader.constants) {
 			VkSpecializationMapEntry &entry = spec.entries.emplace_back();
 			entry.constantID = idx;
-			entry.offset = spec.data.size();
+			entry.offset = uint32_t(spec.data.size());
 
 			BytesView data;
 			switch (it.type) {
@@ -459,7 +459,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 			++ idx;
 		}
 
-		spec.specInfo.mapEntryCount = spec.entries.size();
+		spec.specInfo.mapEntryCount = uint32_t(spec.entries.size());
 		spec.specInfo.pMapEntries = spec.entries.data();
 		spec.specInfo.dataSize = spec.data.size();
 		spec.specInfo.pData = spec.data.data();

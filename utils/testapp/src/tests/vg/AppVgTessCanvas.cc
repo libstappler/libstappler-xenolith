@@ -205,7 +205,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 		auto loadArray = [&] (ContourData &c, const Value &val) {
 			for (auto &it : val.asArray()) {
 				Vec2 point(it.getDouble(0), it.getDouble(1));
-				auto pt = Rc<VgTessPoint>::create(point, c.points.size());
+				auto pt = Rc<VgTessPoint>::create(point, uint32_t(c.points.size()));
 
 				c.points.emplace_back(addChild(move(pt), ZOrder(10)));
 			}
@@ -284,13 +284,13 @@ uint32_t VgTessCanvas::getSelectedContour() const {
 }
 
 uint32_t VgTessCanvas::getContoursCount() const {
-	return _contours.size();
+	return uint32_t(_contours.size());
 }
 
 void VgTessCanvas::addContour() {
 	if (_contours.back().points.size() > 0) {
 		_contours.emplace_back(ContourData{uint32_t(_contours.size())});
-		_contourSelected = _contours.size() - 1;
+		_contourSelected = uint32_t(_contours.size() - 1);
 		_onContourUpdated();
 	}
 }
@@ -418,7 +418,7 @@ void VgTessCanvas::onActionTouch(const InputEvent &ev) {
 		loc = Vec2(roundf(loc.x), roundf(loc.y));
 
 		auto &c = _contours[_contourSelected];
-		auto pt = Rc<VgTessPoint>::create(loc, c.points.size());
+		auto pt = Rc<VgTessPoint>::create(loc, uint32_t(c.points.size()));
 		pt->setColor(getColorForIndex(_contourSelected));
 		c.points.emplace_back(addChild(move(pt), ZOrder(10)));
 		updatePoints();

@@ -51,7 +51,7 @@ public:
 
 	const Rc<Semaphore> &getWaitSem() const;
 	const Rc<Semaphore> &getSignalSem() const;
-	uint32_t getImageIndex() const;
+	uint64_t getImageIndex() const;
 
 	virtual ImageInfoData getInfo() const;
 	Rc<ImageObject> getImage() const;

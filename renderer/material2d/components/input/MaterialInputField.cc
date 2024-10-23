@@ -445,7 +445,7 @@ void InputField::acquireInput(const Vec2 &targetLocation) {
 	if (cursor != TextCursor::InvalidCursor) {
 		_cursor = cursor;
 	} else {
-		_cursor = TextCursor(_inputString.size(), 0);
+		_cursor = TextCursor(uint32_t(_inputString.size()), 0);
 	}
 
 	_container->setCursor(_cursor);

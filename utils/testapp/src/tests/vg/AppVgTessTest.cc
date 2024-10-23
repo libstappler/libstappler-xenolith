@@ -359,7 +359,7 @@ bool VgTessTest::init() {
 	float maxWidth = 150.0f;
 
 	_sliderWidth = addChild(Rc<SliderWithLabel>::create(toString("Width: ", defaultWidth),
-			(defaultWidth - minWidth) / (maxWidth - minWidth), [this, minWidth, maxWidth, defaultWidth] (float val) {
+			(defaultWidth - minWidth) / (maxWidth - minWidth), [this, minWidth, maxWidth] (float val) {
 		auto value = minWidth + val * (maxWidth - minWidth);
 		_canvas->setStrokeWidth(value);
 		_sliderWidth->setString(toString("Width: ", value));

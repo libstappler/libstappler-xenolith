@@ -68,6 +68,9 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 	}
 
 	auto app = Rc<AppDelegate>::create(move(data));
+	if (!app) {
+		return -1;
+	}
 	app->run();
 	return 0;
 }

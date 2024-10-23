@@ -35,12 +35,12 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 #include "xl_2d_pseudosdf_shadow.frag.h"
 #include "xl_2d_pseudosdf_shadow.vert.h"
 
-SpanView<uint32_t> MaterialFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_frag), xl_2d_material_frag_len / sizeof(uint32_t));
-SpanView<uint32_t> MaterialVert(reinterpret_cast<const uint32_t *>(xl_2d_material_vert), xl_2d_material_vert_len / sizeof(uint32_t));
-SpanView<uint32_t> MaterialNoBdaVert(reinterpret_cast<const uint32_t *>(xl_2d_material_nobda_vert), xl_2d_material_nobda_vert_len / sizeof(uint32_t));
-SpanView<uint32_t> PseudoSdfFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_frag), xl_2d_pseudosdf_frag_len / sizeof(uint32_t));
-SpanView<uint32_t> PseudoSdfVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_vert), xl_2d_pseudosdf_vert_len / sizeof(uint32_t));
-SpanView<uint32_t> PseudoSdfShadowFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_frag), xl_2d_pseudosdf_shadow_frag_len / sizeof(uint32_t));
-SpanView<uint32_t> PseudoSdfShadowVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_vert), xl_2d_pseudosdf_shadow_vert_len / sizeof(uint32_t));
+SpanView<uint32_t> MaterialFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_frag), sizeof(xl_2d_material_frag) / sizeof(uint32_t));
+SpanView<uint32_t> MaterialVert(reinterpret_cast<const uint32_t *>(xl_2d_material_vert), sizeof(xl_2d_material_vert) / sizeof(uint32_t));
+SpanView<uint32_t> MaterialNoBdaVert(reinterpret_cast<const uint32_t *>(xl_2d_material_nobda_vert), sizeof(xl_2d_material_nobda_vert) / sizeof(uint32_t));
+SpanView<uint32_t> PseudoSdfFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_frag), sizeof(xl_2d_pseudosdf_frag) / sizeof(uint32_t));
+SpanView<uint32_t> PseudoSdfVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_vert), sizeof(xl_2d_pseudosdf_vert) / sizeof(uint32_t));
+SpanView<uint32_t> PseudoSdfShadowFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_frag), sizeof(xl_2d_pseudosdf_shadow_frag) / sizeof(uint32_t));
+SpanView<uint32_t> PseudoSdfShadowVert(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_shadow_vert), sizeof(xl_2d_pseudosdf_shadow_vert) / sizeof(uint32_t));
 
 }
