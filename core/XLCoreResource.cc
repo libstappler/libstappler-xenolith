@@ -228,23 +228,21 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 }
 
 void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb) {
-	auto p = memory::pool::create(memory::pool::acquire());
-	memory::pool::push(p);
-	auto f = filesystem::openForReading(path);
-	if (f) {
-		auto fsize = f.size();
-		auto mem = (uint8_t *)memory::pool::palloc(p, fsize);
-		f.seek(0, io::Seek::Set);
-		f.read(mem, fsize);
-		f.close();
+	memory::pool::perform_temporary([&] {
+		auto f = filesystem::openForReading(path);
+		if (f) {
+			auto fsize = f.size();
+			auto mem = (uint8_t *)memory::pool::palloc(memory::pool::acquire(), fsize);
+			f.seek(0, io::Seek::Set);
+			f.read(mem, fsize);
+			f.close();
 
-		loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
-	} else {
-		log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
-		dcb(BytesView());
-	}
-	memory::pool::pop();
-	memory::pool::destroy(p);
+			loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
+		} else {
+			log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
+			dcb(BytesView());
+		}
+	});
 };
 
 Resource::Resource() { }
@@ -343,35 +341,33 @@ static T * Resource_conditionalInsert(memory::vector<T *> &vec, StringView key, 
 }
 
 static void Resource_loadFileData(uint8_t *ptr, uint64_t size, StringView path, const BufferData::DataCallback &dcb) {
-	auto p = memory::pool::create(memory::pool::acquire());
-	memory::pool::push(p);
-	auto f = filesystem::openForReading(path);
-	if (f) {
-		uint64_t fsize = f.size();
-		f.seek(0, io::Seek::Set);
-		if (ptr) {
-			f.read(ptr, std::min(fsize, size));
-			f.close();
+	memory::pool::perform_temporary([&] {
+		auto f = filesystem::openForReading(path);
+		if (f) {
+			uint64_t fsize = f.size();
+			f.seek(0, io::Seek::Set);
+			if (ptr) {
+				f.read(ptr, std::min(fsize, size));
+				f.close();
+			} else {
+				auto mem = (uint8_t *)memory::pool::palloc(memory::pool::acquire(), fsize);
+				f.read(mem, fsize);
+				f.close();
+				dcb(BytesView(mem, fsize));
+			}
 		} else {
-			auto mem = (uint8_t *)memory::pool::palloc(p, fsize);
-			f.read(mem, fsize);
-			f.close();
-			dcb(BytesView(mem, fsize));
+			dcb(BytesView());
 		}
-	} else {
-		dcb(BytesView());
-	}
-	memory::pool::pop();
-	memory::pool::destroy(p);
+	});
 };
 
 Resource::Builder::Builder(StringView name) {
 	auto p = memory::pool::create((memory::pool_t *)nullptr);
-	memory::pool::push(p);
-	_data = new (p) ResourceData;
-	_data->pool = p;
-	_data->key = name.pdup(p);
-	memory::pool::pop();
+	memory::pool::perform([&] {
+		_data = new (p) ResourceData;
+		_data->pool = p;
+		_data->key = name.pdup(p);
+	}, p);
 }
 
 Resource::Builder::~Builder() {

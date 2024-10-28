@@ -42,9 +42,9 @@ public:
 	virtual bool init(CommonInfo &&, Rc<core::Instance> && = nullptr);
 	virtual bool init(CommonInfo &&, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
 
-	virtual void run(const CallbackInfo &, uint32_t threadsCount = config::getMainThreadCount(),
+	virtual void run(RunInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
-	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
+	virtual void run(RunInfo &&, core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
 };
 

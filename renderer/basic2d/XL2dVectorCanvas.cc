@@ -332,9 +332,8 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 	}
 
 	outData = &out->back();
-	memory::pool::push(transactionPool);
 
-	do {
+	memory::pool::perform_clear([&] {
 		if (!deferred && !cache.empty()) {
 			auto style = path.getStyle();
 			float quality = pathDrawer.quality;
@@ -353,7 +352,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 					instObj.color = color;
 					outData->instances = it;
 				}
-				break;
+				return;
 			}
 
 			data.data = Rc<VertexData>::alloc();
@@ -394,10 +393,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 				}
 			}
 		}
-	} while (0);
-
-	memory::pool::pop();
-	memory::pool::clear(transactionPool);
+	}, transactionPool);
 }
 
 void VectorCanvas::Data::writeCacheData(const VectorPath &p, InstanceVertexData *out, const VectorCanvasCacheData &source) {

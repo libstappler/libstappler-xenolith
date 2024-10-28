@@ -47,10 +47,6 @@ Application *Application::getInstance() {
 }
 
 Application::~Application() {
-	if (_updatePool) {
-		memory::pool::destroy(_updatePool);
-	}
-
 	_instance = nullptr;
 
 	if (s_mainLoop == this) {
@@ -59,12 +55,7 @@ Application::~Application() {
 }
 
 
-Application::Application()
-: TaskQueue("Application", [this] () {
-	nativeWakeup();
-}) {
-
-}
+Application::Application() { }
 
 bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 	if (instance == nullptr) {
@@ -75,28 +66,58 @@ bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
 
 	_info = move(info);
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
-	_name = _info.applicationName;
+
+	_queue = Rc<thread::TaskQueue>::alloc(_info.applicationName, [this] () {
+		//nativeWakeup();
+	});
+
 	_instance = move(instance);
-	_updatePool = memory::pool::create(static_cast<memory::pool_t *>(nullptr));
 	return true;
 }
 
-void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_t threadsCount, TimeInterval iv) {
+void Application::run(RunInfo &&runInfo) {
+	_runInfo = move(runInfo);
+
+	_thread = std::thread(Application::workerThread, this, nullptr);
+}
+
+void Application::waitRunning() {
+	if (_running.load()) {
+		return;
+	}
+
+	std::unique_lock lock(_runningMutex);
+	if (_running.load()) {
+		return;
+	}
+
+	_runningVar.wait(lock, [&] {
+		return _running.load();
+	});
+}
+
+void Application::waitFinalized() {
+	_thread.join();
+}
+
+void Application::threadInit() {
 	_shouldQuit.test_and_set();
 	_threadId = std::this_thread::get_id();
 	_resourceCache = Rc<ResourceCache>::create(this);
 
-	auto tmpStarted = move(loopInfo.onDeviceStarted);
-	auto tmpFinalized = move(loopInfo.onDeviceFinalized);
+	thread::ThreadInfo::setThreadInfo("Application");
 
-	loopInfo.onDeviceStarted = [this, tmpStarted = move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
+	auto tmpStarted = move(_runInfo.loopInfo.onDeviceStarted);
+	auto tmpFinalized = move(_runInfo.loopInfo.onDeviceFinalized);
+
+	_runInfo.loopInfo.onDeviceStarted = [this, tmpStarted = move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
 		if (tmpStarted) {
 			tmpStarted(loop, dev);
 		}
 
 		handleDeviceStarted(loop, dev);
 	};
-	loopInfo.onDeviceFinalized = [this, tmpFinalized = move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
+	_runInfo.loopInfo.onDeviceFinalized = [this, tmpFinalized = move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
 		handleDeviceFinalized(loop, dev);
 
 		if (tmpFinalized) {
@@ -104,26 +125,26 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 		}
 	};
 
-	auto loop = _instance->makeLoop(move(loopInfo));
+	auto loop = _instance->makeLoop(move(_runInfo.loopInfo));
 
-	if (!spawnWorkers(0, threadsCount, _name)) {
+	if (!_queue->spawnWorkers(0, _runInfo.threadsCount, _info.applicationName)) {
 		log::error("MainLoop", "Fail to spawn worker threads");
 		return;
 	}
 
-	if (cb.initCallback) {
-		cb.initCallback(*this);
+	if (_runInfo.initCallback) {
+		_runInfo.initCallback(*this);
 	}
 
-	nativeInit();
-
-	for (auto &it : _extensions) {
-		it.second->initialize(this);
-	}
+	runExtensions();
 
 	loop->waitRinning();
 
 	_glLoop = move(loop);
+
+	for (auto &it : _extensions) {
+		it.second->initialize(this);
+	}
 
 	_resourceCache->initialize(*_glLoop);
 
@@ -132,53 +153,31 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 	}
 	_glWaitCallback.clear();
 
-#if MODULE_XENOLITH_FONT
-	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
-			"locale::setLocale(StringView);");
-	if (setLocale) {
-		setLocale(_info.locale);
-	}
-
-	auto createQueue = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>("xenolith_font",
-			"FontExtension::createFontQueue(core::Instance*,StringView)");
-	auto createFontExtension = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontExtension)>("xenolith_font",
-			"FontExtension::createFontExtension(Rc<Application>&&,Rc<core::Queue>&&)");
-	auto createFontController = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createDefaultController)>("xenolith_font",
-			"FontExtension::createDefaultController(FontExtension*,StringView)");
-
-	if (createFontExtension && createQueue && createFontController) {
-		auto lib = createFontExtension(this, createQueue(_instance, "ApplicationFontQueue"));
-
-		addExtension(createFontController((font::FontExtension *)lib.get(), "ApplicationFontController"));
-		addExtension(move(lib));
-	}
-#endif
-
 	_time.delta = 0;
 	_time.global = platform::clock(core::ClockType::Monotonic);
 	_time.app = 0;
 	_time.dt = 0.0f;
 
-	performAppUpdate(cb, _time);
+	performAppUpdate(_runInfo, _time);
 
-	_updateInterval = iv;
+	_running.store(true);
+	std::unique_lock lock(_runningMutex);
+	_runningVar.notify_all();
+}
 
-	nativeRunMainLoop(cb);
-
-	if (cb.finalizeCallback) {
-		cb.finalizeCallback(*this);
+void Application::threadDispose() {
+	if (_runInfo.finalizeCallback) {
+		_runInfo.finalizeCallback(*this);
 	}
 
 	for (auto &it : _extensions) {
 		it.second->invalidate(this);
 	}
 
-	nativeDispose();
-
 	_glLoop->cancel();
 
-	waitForAll();
-	TaskQueue::update();
+	_queue->waitForAll();
+	_queue->update();
 
 	_resourceCache->invalidate();
 
@@ -203,15 +202,30 @@ void Application::run(const CallbackInfo &cb, core::LoopInfo &&loopInfo, uint32_
 #endif
 	_resourceCache = nullptr;
 
-	cancelWorkers();
+	_queue->cancelWorkers();
+}
+
+bool Application::worker() {
+	uint32_t count = 0;
+	_startTime = _lastUpdate = _clock = _time.global;
+
+	count = 0;
+	if (!_immediateUpdate) {
+		_queue->wait(_runInfo.updateInterval - TimeInterval::microseconds(_clock - _lastUpdate), &count);
+	}
+	if (count > 0) {
+		_queue->update();
+	}
+
+	performTimersUpdate(_runInfo, _immediateUpdate);
+
+	return _shouldQuit.test_and_set();
 }
 
 void Application::end()  {
 	_shouldQuit.clear();
 	if (!isOnMainThread()) {
 		wakeup();
-	} else {
-		nativeStop();
 	}
 }
 
@@ -241,7 +255,7 @@ void Application::performOnMainThread(Function<void()> &&func, Ref *target, bool
 	if (isOnMainThread() && !onNextFrame) {
 		func();
 	} else {
-		TaskQueue::onMainThread(Rc<Task>::create([func = move(func)] (const thread::Task &, bool success) {
+		_queue->onMainThread(Rc<Task>::create([func = move(func)] (const thread::Task &, bool success) {
 			if (success) { func(); }
 		}, target));
 	}
@@ -251,7 +265,7 @@ void Application::performOnMainThread(Rc<Task> &&task, bool onNextFrame) {
 	if (isOnMainThread() && !onNextFrame) {
 		task->onComplete();
 	} else {
-		onMainThread(std::move(task));
+		_queue->onMainThread(std::move(task));
 	}
 }
 
@@ -260,11 +274,11 @@ void Application::perform(ExecuteCallback &&exec, CompleteCallback &&complete, R
 }
 
 void Application::perform(Rc<Task> &&task) {
-	TaskQueue::perform(std::move(task));
+	_queue->perform(std::move(task));
 }
 
 void Application::perform(Rc<Task> &&task, bool performFirst) {
-	TaskQueue::perform(std::move(task), performFirst);
+	_queue->perform(std::move(task), performFirst);
 }
 
 void Application::addEventListener(const EventHandlerNode *listener) {
@@ -311,7 +325,7 @@ uint64_t Application::getClock() const {
 }
 
 thread::TaskQueue *Application::getQueue() {
-	return this;
+	return _queue;
 }
 
 void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
@@ -345,8 +359,7 @@ void Application::handleRemoteNotification(Value &&val) {
 	onRemoteNotification(this, move(val));
 }
 
-void Application::performAppUpdate(const CallbackInfo &cb, const UpdateTime &t) {
-	memory::pool::push(_updatePool);
+void Application::performAppUpdate(const RunInfo &cb, const UpdateTime &t) {
 	if (cb.updateCallback) {
 		cb.updateCallback(*this, t);
 	}
@@ -354,16 +367,13 @@ void Application::performAppUpdate(const CallbackInfo &cb, const UpdateTime &t) 
 	for (auto &it : _extensions) {
 		it.second->update(this, t);
 	}
-
-	memory::pool::pop();
-	memory::pool::clear(_updatePool);
 }
 
-void Application::performTimersUpdate(const CallbackInfo &cb, bool forced) {
+void Application::performTimersUpdate(const RunInfo &cb, bool forced) {
 	_clock = platform::clock(core::ClockType::Monotonic);
 
 	auto dt = TimeInterval::microseconds(_clock - _lastUpdate);
-	if (dt >= _updateInterval || forced) {
+	if (dt >= cb.updateInterval || forced) {
 		_time.delta = dt.toMicros();
 		_time.global = _clock;
 		_time.app = _startTime - _clock;
@@ -373,6 +383,30 @@ void Application::performTimersUpdate(const CallbackInfo &cb, bool forced) {
 		_lastUpdate = _clock;
 		_immediateUpdate = false;
 	}
+}
+
+void Application::runExtensions() {
+#if MODULE_XENOLITH_FONT
+	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
+			"locale::setLocale(StringView);");
+	if (setLocale) {
+		setLocale(_info.locale);
+	}
+
+	auto createQueue = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>("xenolith_font",
+			"FontExtension::createFontQueue(core::Instance*,StringView)");
+	auto createFontExtension = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontExtension)>("xenolith_font",
+			"FontExtension::createFontExtension(Rc<Application>&&,Rc<core::Queue>&&)");
+	auto createFontController = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createDefaultController)>("xenolith_font",
+			"FontExtension::createDefaultController(FontExtension*,StringView)");
+
+	if (createFontExtension && createQueue && createFontController) {
+		auto lib = createFontExtension(this, createQueue(_instance, "ApplicationFontQueue"));
+
+		addExtension(createFontController((font::FontExtension *)lib.get(), "ApplicationFontController"));
+		addExtension(move(lib));
+	}
+#endif
 }
 
 }

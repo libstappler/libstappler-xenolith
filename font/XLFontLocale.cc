@@ -39,9 +39,9 @@ public:
 	static LocaleManager *getInstance() {
 		if (!s_sharedInstance) {
 			auto p = memory::pool::createTagged(nullptr, "LocaleManager");
-			memory::pool::push(p);
-			s_sharedInstance = new LocaleManager(p);
-			memory::pool::pop();
+			memory::pool::perform([&] {
+				s_sharedInstance = new LocaleManager(p);
+			}, p);
 		}
 		return s_sharedInstance;
 	}
@@ -98,7 +98,7 @@ public:
 	}
 
 	void define(const StringView &locale, LocaleInitList &&init) {
-		memory::pool::push(_pool);
+		memory::pool::context ctx(_pool);
 		auto it = _strings.find(locale);
 		if (it == _strings.end()) {
 			it = _strings.emplace(locale.str<Interface>(), StringMap()).first;
@@ -106,11 +106,10 @@ public:
 		for (auto &iit : init) {
 			it->second.emplace(string::toUtf16<Interface>(iit.first), string::toUtf16<Interface>(iit.second));
 		}
-		memory::pool::pop();
 	}
 
 	void define(const StringView &locale, LocaleIndexList &&init) {
-		memory::pool::push(_pool);
+		memory::pool::context ctx(_pool);
 		auto it = _indexes.find(locale);
 		if (it == _indexes.end()) {
 			it = _indexes.emplace(locale.str<Interface>(), StringIndexMap()).first;
@@ -118,11 +117,10 @@ public:
 		for (auto &iit : init) {
 			it->second.emplace(iit.first, string::toUtf16<Interface>(iit.second));
 		}
-		memory::pool::pop();
 	}
 
 	void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &arr) {
-		memory::pool::push(_pool);
+		memory::pool::context ctx(_pool);
 		auto it = _timeTokens.find(locale);
 		if (it == _timeTokens.end()) {
 			it = _timeTokens.emplace(locale.str<Interface>(), std::array<memory::string, toInt(TimeTokens::Max)>()).first;
@@ -133,7 +131,6 @@ public:
 			it->second[i] = arr_it.str<Interface>();
 			++ i;
 		}
-		memory::pool::pop();
 	}
 
 	WideStringView string(const WideStringView &str) {

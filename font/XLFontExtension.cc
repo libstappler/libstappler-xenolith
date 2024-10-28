@@ -62,6 +62,11 @@ bool FontExtension::init(Rc<Application> &&loop, Rc<core::Queue> &&q) {
 	_glLoop = _mainLoop->getGlLoop();
 	_queue = move(q);
 	_library = Rc<FontLibrary>::alloc();
+	return true;
+}
+
+void FontExtension::initialize(Application *app) {
+	_glLoop = app->getGlLoop();
 	if (_queue->isCompiled()) {
 		onActivated();
 	} else {
@@ -75,11 +80,6 @@ bool FontExtension::init(Rc<Application> &&loop, Rc<core::Queue> &&q) {
 			release(linkId);
 		});
 	}
-	return true;
-}
-
-void FontExtension::initialize(Application *) {
-
 }
 
 void FontExtension::invalidate(Application *) {
@@ -132,7 +132,6 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 	struct ControllerBuilder : Ref {
 		FontController::Builder builder;
 		Rc<FontController> controller;
-		Rc<core::DynamicImage> dynamicImage;
 
 		bool invalid = false;
 		std::atomic<size_t> pendingData = 0;
@@ -188,32 +187,16 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 				loadData();
 			}
 		}
-
-		void onImageLoaded(Rc<core::DynamicImage> &&image) {
-			auto v = pendingData.fetch_sub(1);
-			if (image) {
-				controller->setImage(move(image));
-				if (v == 1) {
-					loadData();
-				}
-			} else {
-				invalid = true;
-				if (v == 1) {
-					invalidate();
-				}
-			}
-		}
 	};
 
 	bool hasController = (b.getTarget() != nullptr);
 	auto builder = Rc<ControllerBuilder>::alloc(move(b));
 	builder->ext = this;
 	if (!hasController) {
-		builder->controller = Rc<FontController>::create(this);
-		builder->pendingData = builder->builder.getDataQueries().size() + 1;
-	} else {
-		builder->pendingData = builder->builder.getDataQueries().size();
+		builder->controller = Rc<FontController>::create(this, builder->builder.getName());
 	}
+
+	builder->pendingData = builder->builder.getDataQueries().size();
 
 	for (auto &it : builder->builder.getDataQueries()) {
 		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) mutable -> bool {
@@ -241,44 +224,34 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		});
 	}
 
-	if (!hasController) {
-		builder->dynamicImage = Rc<core::DynamicImage>::create([name = builder->builder.getName()] (core::DynamicImage::Builder &builder) {
-			builder.setImage(name,
-				core::ImageInfo(
-						Extent2(2, 2),
-						core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
-						core::PassType::Graphics,
-						core::ImageFormat::R8_UNORM
-				), [] (uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
-					if (ptr) {
-						ptr[0] = 0;
-						ptr[1] = 255;
-						ptr[2] = 255;
-						ptr[3] = 0;
-					} else {
-						Bytes bytes; bytes.reserve(4);
-						bytes.emplace_back(0);
-						bytes.emplace_back(255);
-						bytes.emplace_back(255);
-						bytes.emplace_back(0);
-						cb(bytes);
-					}
-				}, nullptr);
-			return true;
-		});
-
-		_glLoop->compileImage(builder->dynamicImage, [this, builder] (bool success) {
-			_mainLoop->performOnMainThread([success, builder] {
-				if (success) {
-					builder->onImageLoaded(move(builder->dynamicImage));
-				} else {
-					builder->onImageLoaded(nullptr);
-				}
-			}, this);
-		});
-	}
-
 	return builder->controller;
+}
+
+Rc<core::DynamicImage> FontExtension::makeInitialImage(StringView name) const {
+	return Rc<core::DynamicImage>::create([name = name.str<Interface>()] (core::DynamicImage::Builder &builder) {
+		builder.setImage(name,
+			core::ImageInfo(
+					Extent2(2, 2),
+					core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
+					core::PassType::Graphics,
+					core::ImageFormat::R8_UNORM
+			), [] (uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
+				if (ptr) {
+					ptr[0] = 0;
+					ptr[1] = 255;
+					ptr[2] = 255;
+					ptr[3] = 0;
+				} else {
+					Bytes bytes; bytes.reserve(4);
+					bytes.emplace_back(0);
+					bytes.emplace_back(255);
+					bytes.emplace_back(255);
+					bytes.emplace_back(0);
+					cb(bytes);
+				}
+			}, nullptr);
+		return true;
+	});
 }
 
 void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font::FontUpdateRequest> &&data,

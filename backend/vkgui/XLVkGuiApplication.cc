@@ -34,7 +34,7 @@ GuiApplication::~GuiApplication() { }
 
 bool GuiApplication::init(CommonInfo &&appInfo, Rc<core::Instance> &&instance) {
 	if (instance) {
-		if (Application::init(move(appInfo), move(instance))) {
+		if (ViewApplication::init(move(appInfo), move(instance))) {
 			return true;
 		}
 	} else {
@@ -44,7 +44,7 @@ bool GuiApplication::init(CommonInfo &&appInfo, Rc<core::Instance> &&instance) {
 			data.checkPresentationSupport = vk::platform::checkPresentationSupport;
 			return vk::platform::initInstance(data, info);
 		});
-		if (Application::init(move(appInfo), move(inst))) {
+		if (ViewApplication::init(move(appInfo), move(inst))) {
 			return true;
 		}
 	}
@@ -61,21 +61,25 @@ bool GuiApplication::init(CommonInfo &&appInfo, const Callback<bool(VulkanInstan
 		return false;
 	});
 
-	if (Application::init(move(appInfo), move(instance))) {
+	if (ViewApplication::init(move(appInfo), move(instance))) {
 		return true;
 	}
 
 	return false;
 }
 
-void GuiApplication::run(const CallbackInfo &cb, uint32_t threadCount, TimeInterval ival) {
+void GuiApplication::run(RunInfo &&runInfo, uint32_t threadCount, TimeInterval ival) {
 	core::LoopInfo info;
 
-	run(cb, move(info), threadCount, ival);
+	run(move(runInfo), move(info), threadCount, ival);
 }
 
-void GuiApplication::run(const CallbackInfo &cb, core::LoopInfo &&info, uint32_t threadCount, TimeInterval ival) {
-	if (!info.platformData) {
+void GuiApplication::run(RunInfo &&runInfo, core::LoopInfo &&info, uint32_t threadCount, TimeInterval ival) {
+	runInfo.threadsCount = threadCount;
+	runInfo.updateInterval = ival;
+	runInfo.loopInfo = move(info);
+
+	if (!runInfo.loopInfo.platformData) {
 		auto data = Rc<LoopData>::alloc();
 		data->deviceSupportCallback = [] (const vk::DeviceInfo &dev) {
 			return dev.supportsPresentation() &&
@@ -87,10 +91,10 @@ void GuiApplication::run(const CallbackInfo &cb, core::LoopInfo &&info, uint32_t
 			ret.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 			return ret;
 		};
-		info.platformData = data;
+		runInfo.loopInfo.platformData = data;
 	}
 
-	Application::run(cb, move(info), threadCount, ival);
+	ViewApplication::run(move(runInfo));
 }
 
 }

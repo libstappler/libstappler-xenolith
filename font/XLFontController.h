@@ -115,7 +115,7 @@ public:
 
 	virtual ~FontController();
 
-	bool init(const Rc<FontExtension> &);
+	bool init(const Rc<FontExtension> &, StringView name);
 
 	void extend(const Callback<bool(FontController::Builder &)> &);
 
@@ -158,6 +158,7 @@ protected:
 	void removeUnusedLayouts();
 
 	bool _loaded = false;
+	String _name;
 	std::atomic<uint64_t> _clock;
 	TimeInterval _unusedInterval = 100_msec;
 	String _defaultFontFamily = "default";

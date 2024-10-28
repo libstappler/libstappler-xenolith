@@ -33,7 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Event;
 class EventHandlerNode;
 
-class SP_PUBLIC Application : protected thread::TaskQueue {
+class SP_PUBLIC Application : public thread::ThreadInterface<Interface> {
 public:
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
@@ -51,10 +51,14 @@ public:
 		int dpi = 92;
 	};
 
-	struct CallbackInfo {
+	struct RunInfo {
 		Function<void(const Application &)> initCallback;
 		Function<void(const Application &, const UpdateTime &)> updateCallback;
 		Function<void(const Application &)> finalizeCallback;
+
+		core::LoopInfo loopInfo;
+		uint32_t threadsCount = 2;
+		TimeInterval updateInterval = TimeInterval::microseconds(100000);
 	};
 
 	using Task = thread::Task;
@@ -70,7 +74,14 @@ public:
 
 	virtual bool init(CommonInfo &&info, Rc<core::Instance> &&instance);
 
-	virtual void run(const CallbackInfo &, core::LoopInfo &&, uint32_t threadsCount, TimeInterval);
+	virtual void run(RunInfo &&);
+
+	virtual void waitRunning();
+	virtual void waitFinalized();
+
+	virtual void threadInit() override;
+	virtual void threadDispose() override;
+	virtual bool worker() override;
 
 	virtual void end();
 
@@ -105,12 +116,6 @@ public:
 
 	uint64_t getClock() const;
 
-	using mem_std::AllocBase::operator new;
-	using mem_std::AllocBase::operator delete;
-
-	using Ref::release;
-	using Ref::retain;
-
 	const Rc<ResourceCache> &getResourceCache() const { return _resourceCache; }
 	const Rc<core::Loop> &getGlLoop() const { return _glLoop; }
 
@@ -134,22 +139,23 @@ protected:
 	virtual void handleMessageToken(String &&);
 	virtual void handleRemoteNotification(Value &&);
 
-	virtual void performAppUpdate(const CallbackInfo &, const UpdateTime &);
-	virtual void performTimersUpdate(const CallbackInfo &cb, bool forced);
+	virtual void performAppUpdate(const RunInfo &, const UpdateTime &);
+	virtual void performTimersUpdate(const RunInfo &cb, bool forced);
 
-	void nativeInit();
-	void nativeDispose();
-	void nativeRunMainLoop(const CallbackInfo &cb);
-	void nativeWakeup();
-	void nativeStop();
+	virtual void runExtensions();
 
+	struct WaitCallbackInfo {
+		Function<void()> func;
+		Rc<Ref> target;
+		bool immediate = false;
+	};
+
+	Rc<thread::TaskQueue> _queue;
 	UpdateTime _time;
 	uint64_t _clock = 0;
 	uint64_t _startTime = 0;
 	uint64_t _lastUpdate = 0;
-	TimeInterval _updateInterval;
-	std::thread::id _threadId;
-	memory::pool_t *_updatePool = nullptr;
+
 	bool _started = false;
 	bool _immediateUpdate = false;
 	bool _hasViews = false;
@@ -165,13 +171,16 @@ protected:
 	String _messageToken;
 	CommonInfo _info;
 
-	struct WaitCallbackInfo {
-		Function<void()> func;
-		Rc<Ref> target;
-		bool immediate = false;
-	};
-
 	mutable Vector<WaitCallbackInfo> _glWaitCallback;
+
+	std::atomic<bool> _running = false;
+	std::mutex _runningMutex;
+	std::condition_variable _runningVar;
+
+	std::thread _thread;
+	std::thread::id _threadId;
+
+	RunInfo _runInfo;
 };
 
 template <typename T>

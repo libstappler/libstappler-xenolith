@@ -292,8 +292,9 @@ FontController::~FontController() {
 	invalidate(nullptr);
 }
 
-bool FontController::init(const Rc<FontExtension> &ext) {
+bool FontController::init(const Rc<FontExtension> &ext, StringView name) {
 	_ext = ext;
+	_name = name.str<Interface>();
 	return true;
 }
 
@@ -304,8 +305,10 @@ void FontController::extend(const Callback<bool(FontController::Builder &)> &cb)
 	}
 }
 
-void FontController::initialize(Application *) {
-
+void FontController::initialize(Application *app) {
+	_image = _ext->makeInitialImage(_name);
+	app->getGlLoop()->compileImage(_image, [this, app = Rc<Application>(app)] (bool success) { });
+	_texture = Rc<Texture>::create(_image);
 }
 
 void FontController::invalidate(Application *) {

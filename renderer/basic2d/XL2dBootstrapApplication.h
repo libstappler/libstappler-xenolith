@@ -64,6 +64,8 @@ protected:
 
 	virtual core::SwapchainConfig selectConfig(vk::View &, const core::SurfaceInfo &info);
 
+	virtual void runExtensions() override;
+
 	Value _storageParams;
 
 	ViewCommandLineData _initData;

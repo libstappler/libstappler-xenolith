@@ -76,10 +76,6 @@ void Application::openUrl(StringView url) const {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-void Application::nativeInit() { }
-
-void Application::nativeDispose() { }
-
 void Application::openUrl(StringView url) const {
 	if (::system(toString("xdg-open ", url).data()) != 0) {
 		log::error("xenolith::Application", "Fail to open external url: ", url);
@@ -161,10 +157,9 @@ void Application::nativeInit() {
 	   .perform = [] (void *info) {
 			auto data = (MacosApplicationData *)info;
 
-			memory::pool::push(data->updatePool);
-			data->queue->update(nullptr);
-			memory::pool::pop();
-			memory::pool::clear(data->updatePool);
+			memory::pool::perform_clear([&] {
+				data->queue->update(nullptr);
+			}, data->updatePool);
 
 			// forced timing update
 			if (data->app && data->cb) {
@@ -251,35 +246,4 @@ void Application::openUrl(StringView url) const {
 
 }
 
-#endif
-
-#if XL_APPLICATION_MAIN_LOOP_DEFAULT
-
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-void Application::nativeWakeup() { }
-
-void Application::nativeStop() { }
-
-void Application::nativeRunMainLoop(const CallbackInfo &cb) {
-	uint32_t count = 0;
-	_startTime = _lastUpdate = _clock = _time.global;
-
-	do {
-		count = 0;
-		if (!_immediateUpdate) {
-			wait(_updateInterval - TimeInterval::microseconds(_clock - _lastUpdate), &count);
-		}
-		if (count > 0) {
-			memory::pool::push(_updatePool);
-			TaskQueue::update();
-			memory::pool::pop();
-			memory::pool::clear(_updatePool);
-		}
-
-		performTimersUpdate(cb, _immediateUpdate);
-	} while (_shouldQuit.test_and_set());
-}
-
-}
 #endif

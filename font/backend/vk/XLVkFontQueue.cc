@@ -383,31 +383,27 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 		}
 	}
 
-	auto pool = memory::pool::create(memory::pool::acquire());
-	memory::pool::push(pool);
-
-	// TODO - use GPU rectangle placement
-	commands.emplace_back(_copyFromTmpBufferData);
-	for (auto &it : _copyFromPersistentBufferData) {
-		commands.emplace_back(it.second);
-	}
-
-	_imageExtent = FontAttachmentHandle_buildTextureData(commands);
-
-	auto atlas = Rc<core::DataAtlas>::create(core::DataAtlas::ImageAtlas,
-			uint32_t(_copyFromTmpBufferData.size() * 4), uint32_t(sizeof(font::FontAtlasValue)), _imageExtent);
-
-	for (auto &c : commands) {
-		for (auto &it : c) {
-			pushAtlasTexture(atlas, const_cast<VkBufferImageCopy &>(it));
+	memory::pool::perform_temporary([&] {
+		// TODO - use GPU rectangle placement
+		commands.emplace_back(_copyFromTmpBufferData);
+		for (auto &it : _copyFromPersistentBufferData) {
+			commands.emplace_back(it.second);
 		}
-	}
 
-	atlas->compile();
-	_atlas = move(atlas);
+		_imageExtent = FontAttachmentHandle_buildTextureData(commands);
 
-	memory::pool::pop();
-	memory::pool::destroy(pool);
+		auto atlas = Rc<core::DataAtlas>::create(core::DataAtlas::ImageAtlas,
+				uint32_t(_copyFromTmpBufferData.size() * 4), uint32_t(sizeof(font::FontAtlasValue)), _imageExtent);
+
+		for (auto &c : commands) {
+			for (auto &it : c) {
+				pushAtlasTexture(atlas, const_cast<VkBufferImageCopy &>(it));
+			}
+		}
+
+		atlas->compile();
+		_atlas = move(atlas);
+	});
 
 	handle.performOnGlThread([this] (FrameHandle &handle) {
 		_onInput(true);

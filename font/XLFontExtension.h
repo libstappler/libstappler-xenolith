@@ -64,6 +64,8 @@ public:
 
 	Rc<FontController> acquireController(FontController::Builder &&);
 
+	Rc<core::DynamicImage> makeInitialImage(StringView name) const;
+
 	void updateImage(const Rc<core::DynamicImage> &, Vector<FontUpdateRequest> &&,
 			Rc<core::DependencyEvent> &&);
 

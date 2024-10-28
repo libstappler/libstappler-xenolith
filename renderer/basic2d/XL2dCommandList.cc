@@ -133,15 +133,13 @@ CommandList::~CommandList() {
 		return;
 	}
 
-	memory::pool::push(_pool->getPool());
-
-	auto cmd = _first;
-	do {
-		cmd->release();
-		cmd = cmd->next;
-	} while (cmd);
-
-	memory::pool::pop();
+	memory::pool::perform([&] {
+		auto cmd = _first;
+		do {
+			cmd->release();
+			cmd = cmd->next;
+		} while (cmd);
+	},_pool->getPool());
 }
 
 bool CommandList::init(const Rc<PoolRef> &pool) {

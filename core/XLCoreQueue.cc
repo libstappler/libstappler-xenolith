@@ -1423,11 +1423,11 @@ QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 
 Queue::Builder::Builder(StringView name) : _internalResource(toString(name, "_resource")) {
 	auto p = memory::pool::create((memory::pool_t *)nullptr);
-	memory::pool::push(p);
-	_data = new (p) QueueData;
-	_data->pool = p;
-	_data->key = name.pdup(p);
-	memory::pool::pop();
+	memory::pool::perform([&] {
+		_data = new (p) QueueData;
+		_data->pool = p;
+		_data->key = name.pdup(p);
+	}, p);
 }
 
 Queue::Builder::~Builder() {
@@ -1447,18 +1447,19 @@ void Queue::Builder::setDefaultSyncPassState(FrameRenderPassState val) {
 const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &cb) {
 	auto it = _data->attachments.find(name);
 	if (it == _data->attachments.end()) {
-		memory::pool::push(_data->pool);
-		auto ret = new (_data->pool) AttachmentData();
-		ret->key = name.pdup(_data->pool);
-		ret->id = s_AttachmentCurrentIndex.fetch_add(1);
-		ret->queue = _data;
+		AttachmentData *ret = nullptr;
+		memory::pool::perform([&] {
+			ret = new (_data->pool) AttachmentData();
+			ret->key = name.pdup(_data->pool);
+			ret->id = s_AttachmentCurrentIndex.fetch_add(1);
+			ret->queue = _data;
 
-		AttachmentBuilder builder(ret);
-		auto p = cb(builder);
+			AttachmentBuilder builder(ret);
+			auto p = cb(builder);
 
-		ret->attachment = p;
-		_data->attachments.emplace(ret);
-		memory::pool::pop();
+			ret->attachment = p;
+			_data->attachments.emplace(ret);
+		}, _data->pool);
 		return ret;
 	} else {
 		log::error("Queue::Builder", "Attachment for name already defined: ", name);
@@ -1469,19 +1470,20 @@ const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callb
 const QueuePassData *Queue::Builder::addPass(StringView name, PassType type, RenderOrdering ordering, const Callback<Rc<QueuePass>(QueuePassBuilder &)> &cb) {
 	auto it = _data->passes.find(name);
 	if (it == _data->passes.end()) {
-		memory::pool::push(_data->pool);
-		auto ret = new (_data->pool) QueuePassData();
-		ret->key = name.pdup(_data->pool);
-		ret->queue = _data;
-		ret->ordering = ordering;
-		ret->type = type;
+		QueuePassData *ret = nullptr;
+		memory::pool::perform([&] {
+			ret = new (_data->pool) QueuePassData();
+			ret->key = name.pdup(_data->pool);
+			ret->queue = _data;
+			ret->ordering = ordering;
+			ret->type = type;
 
-		QueuePassBuilder builder(ret);
-		auto p = cb(builder);
+			QueuePassBuilder builder(ret);
+			auto p = cb(builder);
 
-		ret->pass = p;
-		_data->passes.emplace(ret);
-		memory::pool::pop();
+			ret->pass = p;
+			_data->passes.emplace(ret);
+		}, _data->pool);
 		return ret;
 	} else {
 		log::error("Queue::Builder", "RenderPass for name already defined: ", name);

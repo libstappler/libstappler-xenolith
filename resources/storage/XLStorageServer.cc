@@ -792,19 +792,16 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 
 	bool ret = false;
 
-	memory::pool::push(threadPool);
-
-	driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
-		adapter.performWithTransaction([&, this] (const db::Transaction &t) {
-			currentTransaction = &t;
-			auto ret = task.callback(*server, t);
-			currentTransaction = nullptr;
-			return ret;
+	memory::pool::perform_clear([&] {
+		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+			adapter.performWithTransaction([&, this] (const db::Transaction &t) {
+				currentTransaction = &t;
+				auto ret = task.callback(*server, t);
+				currentTransaction = nullptr;
+				return ret;
+			});
 		});
-	});
-
-	memory::pool::pop();
-	memory::pool::clear(threadPool);
+	}, threadPool);
 
 	runAsync();
 
@@ -812,59 +809,50 @@ bool Server::ServerData::execute(const TaskCallback &task) {
 }
 
 void Server::ServerData::runAsync() {
-	memory::pool::push(asyncPool);
+	memory::pool::perform_clear([&] {
+		while (asyncTasks && driver->isValid(handle)) {
+			auto tmp = asyncTasks;
+			asyncTasks = nullptr;
 
-	while (asyncTasks && driver->isValid(handle)) {
-		auto tmp = asyncTasks;
-		asyncTasks = nullptr;
-
-		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
-			adapter.performWithTransaction([&, this] (const db::Transaction &t) {
-				auto &vec = *tmp;
-				currentTransaction = &t;
-				for (auto &it : vec) {
-					it(t);
-				}
-				currentTransaction = nullptr;
-				return true;
+			driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+				adapter.performWithTransaction([&, this] (const db::Transaction &t) {
+					auto &vec = *tmp;
+					currentTransaction = &t;
+					for (auto &it : vec) {
+						it(t);
+					}
+					currentTransaction = nullptr;
+					return true;
+				});
 			});
-		});
-	}
-
-	memory::pool::pop();
-	memory::pool::clear(asyncPool);
+		}
+	}, asyncPool);
 }
 
 void Server::ServerData::threadInit() {
-	//db::setStorageRoot(this);
-
-	memory::pool::initialize();
-	memory::pool::push(serverPool);
-	handle = driver->connect(params);
-	if (!handle.get()) {
-		StringStream out;
-		for (auto &it : params) {
-			out << "\n\t" << it.first << ": " << it.second;
+	memory::pool::perform([&] {
+		handle = driver->connect(params);
+		if (!handle.get()) {
+			StringStream out;
+			for (auto &it : params) {
+				out << "\n\t" << it.first << ": " << it.second;
+			}
+			log::error("StorageServer", "Fail to initialize DB with params: ", out.str());
 		}
-		log::error("StorageServer", "Fail to initialize DB with params: ", out.str());
-	}
-	memory::pool::pop();
+	}, serverPool);
 
 	asyncPool = memory::pool::create();
-
 	threadPool = memory::pool::create();
-	memory::pool::push(threadPool);
 
-	driver->init(handle, db::Vector<db::StringView>());
+	memory::pool::perform_clear([&] {
+		driver->init(handle, db::Vector<db::StringView>());
 
-	driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
-		db::Scheme::initSchemes(predefinedSchemes);
-		interfaceConfig.name = adapter.getDatabaseName();
-		adapter.init(interfaceConfig, predefinedSchemes);
-	});
-
-	memory::pool::pop();
-	memory::pool::clear(threadPool);
+		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+			db::Scheme::initSchemes(predefinedSchemes);
+			interfaceConfig.name = adapter.getDatabaseName();
+			adapter.init(interfaceConfig, predefinedSchemes);
+		});
+	}, threadPool);
 
 	runAsync();
 
@@ -911,49 +899,46 @@ bool Server::ServerData::worker() {
 }
 
 void Server::ServerData::threadDispose() {
-	memory::pool::push(threadPool);
-
-	while (!queue.empty()) {
-		TaskCallback task;
-		do {
-			queue.pop_direct([&] (memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb) SP_COVERAGE_TRIVIAL {
-				task = move(cb);
-			});
-		} while (0);
-
-		if (task.callback) {
-			execute(task);
-		}
-	}
-
-	if (driver->isValid(handle)) {
-		driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
-			auto it = components.begin();
-			while (it != components.end()) {
-				adapter.performWithTransaction([&, this] (const db::Transaction &t) {
-					do {
-						memory::pool::context ctx(it->second->pool);
-						for (auto &iit : it->second->components) {
-							iit.second->handleChildRelease(*server, t);
-							iit.second->~Component();
-						}
-
-						it->second->container->handleStorageDisposed(t);
-					} while (0);
-					return true;
+	memory::pool::perform([&] {
+		while (!queue.empty()) {
+			TaskCallback task;
+			do {
+				queue.pop_direct([&] (memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb) SP_COVERAGE_TRIVIAL {
+					task = move(cb);
 				});
-				memory::pool::destroy(it->second->pool);
-				it = components.erase(it);
-			}
-			components.clear();
-		});
-	}
+			} while (0);
 
-	memory::pool::pop();
+			if (task.callback) {
+				execute(task);
+			}
+		}
+
+		if (driver->isValid(handle)) {
+			driver->performWithStorage(handle, [&, this] (const db::Adapter &adapter) {
+				auto it = components.begin();
+				while (it != components.end()) {
+					adapter.performWithTransaction([&, this] (const db::Transaction &t) {
+						do {
+							memory::pool::context ctx(it->second->pool);
+							for (auto &iit : it->second->components) {
+								iit.second->handleChildRelease(*server, t);
+								iit.second->~Component();
+							}
+
+							it->second->container->handleStorageDisposed(t);
+						} while (0);
+						return true;
+					});
+					memory::pool::destroy(it->second->pool);
+					it = components.erase(it);
+				}
+				components.clear();
+			});
+		}
+	}, threadPool);
 
 	memory::pool::destroy(threadPool);
 	memory::pool::destroy(asyncPool);
-	memory::pool::terminate();
 }
 
 void Server::ServerData::handleHeartbeat() {
@@ -965,20 +950,20 @@ void Server::ServerData::handleHeartbeat() {
 }
 
 void Server::ServerData::addAsyncTask(const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb) const {
-	memory::pool::push(asyncPool);
-	if (!asyncTasks) {
-		asyncTasks = new (asyncPool) db::Vector<db::Function<void(const db::Transaction &)>>;
-	}
-	asyncTasks->emplace_back(setupCb(asyncPool));
-	memory::pool::pop();
+	memory::pool::perform([&] {
+		if (!asyncTasks) {
+			asyncTasks = new (asyncPool) db::Vector<db::Function<void(const db::Transaction &)>>;
+		}
+		asyncTasks->emplace_back(setupCb(asyncPool));
+	}, asyncPool);
 }
 
 bool Server::ServerData::addComponent(ComponentContainer *comp, const db::Transaction &t) {
 	ServerComponentLoader loader(this, t);
 
-	memory::pool::push(loader.getPool());
-	comp->handleStorageInit(loader);
-	memory::pool::pop();
+	memory::pool::perform([&] {
+		comp->handleStorageInit(loader);
+	}, loader.getPool());
 
 	return loader.run(comp);
 }

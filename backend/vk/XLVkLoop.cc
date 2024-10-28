@@ -243,6 +243,7 @@ struct Loop::Internal final : memory::AllocPool {
 	void wakeup() { }
 
 	memory::pool_t *pool = nullptr;
+
 	Loop *loop = nullptr;
 	const core::LoopInfo *info = nullptr;
 
@@ -267,6 +268,8 @@ struct Loop::Internal final : memory::AllocPool {
 	uint32_t requiredTasks = 0;
 
 	Function<void()> signalInit;
+
+	PresentationData presentationData;
 };
 
 struct Loop::Timer final {
@@ -309,10 +312,7 @@ void Loop::threadInit() {
 	_threadId = std::this_thread::get_id();
 	_shouldExit.test_and_set();
 
-	memory::pool::initialize();
-	auto pool = memory::pool::createTagged("Gl::Loop", mempool::custom::PoolFlags::ThreadSafeAllocator);
-
-	memory::pool::push(pool);
+	auto pool = thread::ThreadInfo::getThreadInfo()->threadPool;
 
 	_internal = new (pool) vk::Loop::Internal(pool, this);
 	_internal->pool = pool;
@@ -345,15 +345,9 @@ void Loop::threadInit() {
 	} else {
 		log::error("vk::Loop", "Unable to create device");
 	}
-
-	memory::pool::pop();
 }
 
 void Loop::threadDispose() {
-	auto pool = _internal->pool;
-
-	memory::pool::push(pool);
-
 	if (_frameCache) {
 		_frameCache->invalidate();
 	}
@@ -375,12 +369,9 @@ void Loop::threadDispose() {
 
 	delete _internal;
 	_internal = nullptr;
-
-	memory::pool::pop();
-	memory::pool::destroy(pool);
 }
 
-static bool Loop_pollEvents(Loop::Internal *internal, PresentationData &data) {
+static bool Loop_pollEvents(Loop::Internal *internal) {
 	bool timeoutPassed = false;
 	auto counter = internal->queue->getOutputCounter();
 	if (counter > 0) {
@@ -388,22 +379,23 @@ static bool Loop_pollEvents(Loop::Internal *internal, PresentationData &data) {
 		internal->queue->update();
 		XL_PROFILE_END(queue)
 
-		data.now = platform::clock(core::ClockType::Monotonic);
-		if (data.now - data.last > data.updateInterval) {
+		internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
+		if (internal->presentationData.now - internal->presentationData.last > internal->presentationData.updateInterval) {
 			timeoutPassed = true;
 		}
 	} else {
-		data.now = platform::clock(core::ClockType::Monotonic);
-		if (data.now - data.last > data.updateInterval) {
+		internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
+		if (internal->presentationData.now - internal->presentationData.last > internal->presentationData.updateInterval) {
 			timeoutPassed = true;
 		} else {
 			if (internal->timers->empty() && internal->scheduledFences.empty()) {
 				// no timers - just wait for events with 60FPS wakeups
-				auto t = std::max(data.updateInterval, uint64_t(1'000'000 / 60));
+				auto t = std::max(internal->presentationData.updateInterval, uint64_t(1'000'000 / 60));
 				internal->queue->wait(TimeInterval::microseconds(t));
 			} else {
-				if (!internal->queue->wait(TimeInterval::microseconds(data.updateInterval - (data.now - data.last)))) {
-					data.now = platform::clock(core::ClockType::Monotonic);
+				if (!internal->queue->wait(TimeInterval::microseconds(
+						internal->presentationData.updateInterval - (internal->presentationData.now - internal->presentationData.last)))) {
+					internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
 					timeoutPassed = true;
 				}
 			}
@@ -475,12 +467,7 @@ bool Loop::worker() {
 		return false;
 	}
 
-	PresentationData data;
-
-	auto pool = memory::pool::create(_internal->pool);
-
-	while (_shouldExit.test_and_set()) {
-		memory::pool::push(pool);
+	if (_shouldExit.test_and_set()) {
 		bool timeoutPassed = false;
 
 		++ _clock;
@@ -488,17 +475,17 @@ bool Loop::worker() {
 		XL_PROFILE_BEGIN(loop, "vk::Loop", "loop", 1000);
 
 		XL_PROFILE_BEGIN(poll, "vk::Loop::Poll", "poll", 500);
-		timeoutPassed = Loop_pollEvents(_internal, data);
+		timeoutPassed = Loop_pollEvents(_internal);
 		XL_PROFILE_END(poll)
 
 		Loop_runFences(_internal);
 
 		if (timeoutPassed) {
-			auto dt = data.now - data.last;
+			auto dt = _internal->presentationData.now - _internal->presentationData.last;
 			XL_PROFILE_BEGIN(timers, "vk::Loop::Timers", "timers", 500);
 			Loop_runTimers(_internal, dt);
 			XL_PROFILE_END(timers)
-			data.last = data.now;
+			_internal->presentationData.last = _internal->presentationData.now;
 		}
 
 		XL_PROFILE_BEGIN(autorelease, "vk::Loop::Autorelease", "autorelease", 500);
@@ -508,11 +495,9 @@ bool Loop::worker() {
 		_frameCache->clear();
 
 		XL_PROFILE_END(loop)
-		memory::pool::pop();
-		memory::pool::clear(pool);
-	}
 
-	memory::pool::destroy(pool);
+		return true;
+	}
 
 	_running.store(false);
 	return false;

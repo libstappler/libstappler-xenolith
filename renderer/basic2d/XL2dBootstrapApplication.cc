@@ -104,56 +104,7 @@ bool BootstrapApplication::init(ViewCommandLineData &&data, void *native) {
 }
 
 void BootstrapApplication::run(Function<void()> &&initCb) {
-	if (_storageParams.getString("driver") == "sqlite") {
-		auto path = _storageParams.getString("dbname");
-		filesystem::mkdir(filepath::root(filepath::root(path)));
-		filesystem::mkdir(filepath::root(path));
-	}
-
-#if MODULE_XENOLITH_RESOURCES_STORAGE
-	auto createServer = SharedModule::acquireTypedSymbol<decltype(&storage::Server::createServer)>("xenolith_resources_storage",
-			"Server::createServer(Application*,Value const&)");
-
-	if (createServer) {
-		_storageServer = createServer(static_cast<Application *>(this), _storageParams);
-
-		if (_storageServer) {
-			addExtension(Rc<xenolith::ApplicationExtension>(_storageServer));
-		} else {
-			log::error("Application", "Fail to create storage server");
-		}
-	}
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_NETWORK
-	auto createController = SharedModule::acquireTypedSymbol<decltype(&network::Controller::createController)>("xenolith_resources_network",
-			"Controller::createController(Application*,StringView,Bytes&&)");
-	if (createController) {
-		_networkController = createController(static_cast<Application *>(this), "Root", Bytes());
-		if (_networkController) {
-			addExtension(Rc<xenolith::ApplicationExtension>(_networkController));
-		}
-	}
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_ASSETS
-	if (_networkController) {
-		auto createLibrary = SharedModule::acquireTypedSymbol<decltype(&storage::AssetLibrary::createLibrary)>("xenolith_resources_assets",
-				"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)");
-		if (createLibrary) {
-			_assetLibrary = createLibrary(static_cast<Application *>(this), getNetworkController(), Value({
-				pair("driver", Value("sqlite")),
-				pair("dbname", Value(filesystem::cachesPath<Interface>("assets.sqlite"))),
-				pair("serverName", Value("AssetStorage"))
-			}));
-			if (_assetLibrary) {
-				addExtension(Rc<xenolith::ApplicationExtension>(_assetLibrary));
-			}
-		}
-	}
-#endif
-
-	GuiApplication::CallbackInfo callbacks({
+	GuiApplication::RunInfo callbacks({
 		.initCallback = [&] (const Application &) {
 			GuiApplication::addView(ViewInfo{
 				.title = _initData.applicationName,
@@ -180,7 +131,7 @@ void BootstrapApplication::run(Function<void()> &&initCb) {
 		.updateCallback = [&] (const Application &, const UpdateTime &time) { }
 	});
 
-	GuiApplication::run(callbacks);
+	GuiApplication::run(move(callbacks));
 
 #if MODULE_XENOLITH_RESOURCES_ASSETS
 	_assetLibrary = nullptr;
@@ -271,6 +222,59 @@ core::SwapchainConfig BootstrapApplication::selectConfig(vk::View &, const core:
 	});
 
 	return ret;
+}
+
+void BootstrapApplication::runExtensions() {
+	GuiApplication::runExtensions();
+
+	if (_storageParams.getString("driver") == "sqlite") {
+		auto path = _storageParams.getString("dbname");
+		filesystem::mkdir(filepath::root(filepath::root(path)));
+		filesystem::mkdir(filepath::root(path));
+	}
+
+#if MODULE_XENOLITH_RESOURCES_STORAGE
+	auto createServer = SharedModule::acquireTypedSymbol<decltype(&storage::Server::createServer)>("xenolith_resources_storage",
+			"Server::createServer(Application*,Value const&)");
+
+	if (createServer) {
+		_storageServer = createServer(static_cast<Application *>(this), _storageParams);
+
+		if (_storageServer) {
+			addExtension(Rc<xenolith::ApplicationExtension>(_storageServer));
+		} else {
+			log::error("Application", "Fail to create storage server");
+		}
+	}
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_NETWORK
+	auto createController = SharedModule::acquireTypedSymbol<decltype(&network::Controller::createController)>("xenolith_resources_network",
+			"Controller::createController(Application*,StringView,Bytes&&)");
+	if (createController) {
+		_networkController = createController(static_cast<Application *>(this), "Root", Bytes());
+		if (_networkController) {
+			addExtension(Rc<xenolith::ApplicationExtension>(_networkController));
+		}
+	}
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_ASSETS
+	if (_networkController) {
+		auto createLibrary = SharedModule::acquireTypedSymbol<decltype(&storage::AssetLibrary::createLibrary)>("xenolith_resources_assets",
+				"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)");
+		if (createLibrary) {
+			_assetLibrary = createLibrary(static_cast<Application *>(this), getNetworkController(), Value({
+				pair("driver", Value("sqlite")),
+				pair("dbname", Value(filesystem::cachesPath<Interface>("assets.sqlite"))),
+				pair("serverName", Value("AssetStorage"))
+			}));
+			if (_assetLibrary) {
+				addExtension(Rc<xenolith::ApplicationExtension>(_assetLibrary));
+			}
+		}
+	}
+#endif
 }
 
 }
