@@ -37,248 +37,29 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-static Application *s_mainLoop = nullptr;
+static thread_local Application *tl_mainLoop = nullptr;
 
 XL_DECLARE_EVENT_CLASS(Application, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Application, onRemoteNotification)
 
 Application *Application::getInstance() {
-	return s_mainLoop;
+	return tl_mainLoop;
 }
 
-Application::~Application() {
-	_instance = nullptr;
-
-	if (s_mainLoop == this) {
-		s_mainLoop = nullptr;
-	}
-}
-
-
-Application::Application() { }
-
-bool Application::init(CommonInfo &&info, Rc<core::Instance> &&instance) {
-	if (instance == nullptr) {
-		return false;
-	}
-
-	s_mainLoop = this;
-
-	_info = move(info);
-	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
-
-	_queue = Rc<thread::TaskQueue>::alloc(_info.applicationName, [this] () {
-		//nativeWakeup();
-	});
-
-	_instance = move(instance);
-	return true;
-}
-
-void Application::run(RunInfo &&runInfo) {
-	_runInfo = move(runInfo);
-
-	_thread = std::thread(Application::workerThread, this, nullptr);
-}
-
-void Application::waitRunning() {
-	if (_running.load()) {
-		return;
-	}
-
-	std::unique_lock lock(_runningMutex);
-	if (_running.load()) {
-		return;
-	}
-
-	_runningVar.wait(lock, [&] {
-		return _running.load();
-	});
-}
-
-void Application::waitFinalized() {
-	_thread.join();
-}
+Application::~Application() { }
 
 void Application::threadInit() {
-	_shouldQuit.test_and_set();
-	_threadId = std::this_thread::get_id();
+	tl_mainLoop = this;
+
 	_resourceCache = Rc<ResourceCache>::create(this);
 
-	thread::ThreadInfo::setThreadInfo("Application");
-
-	auto tmpStarted = move(_runInfo.loopInfo.onDeviceStarted);
-	auto tmpFinalized = move(_runInfo.loopInfo.onDeviceFinalized);
-
-	_runInfo.loopInfo.onDeviceStarted = [this, tmpStarted = move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
-		if (tmpStarted) {
-			tmpStarted(loop, dev);
-		}
-
-		handleDeviceStarted(loop, dev);
-	};
-	_runInfo.loopInfo.onDeviceFinalized = [this, tmpFinalized = move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
-		handleDeviceFinalized(loop, dev);
-
-		if (tmpFinalized) {
-			tmpFinalized(loop, dev);
-		}
-	};
-
-	auto loop = _instance->makeLoop(move(_runInfo.loopInfo));
-
-	if (!_queue->spawnWorkers(0, _runInfo.threadsCount, _info.applicationName)) {
-		log::error("MainLoop", "Fail to spawn worker threads");
-		return;
-	}
-
-	if (_runInfo.initCallback) {
-		_runInfo.initCallback(*this);
-	}
-
-	runExtensions();
-
-	loop->waitRinning();
-
-	_glLoop = move(loop);
-
-	for (auto &it : _extensions) {
-		it.second->initialize(this);
-	}
-
-	_resourceCache->initialize(*_glLoop);
-
-	for (auto &it : _glWaitCallback) {
-		_glLoop->performOnGlThread(move(it.func), it.target, it.immediate);
-	}
-	_glWaitCallback.clear();
-
-	_time.delta = 0;
-	_time.global = platform::clock(core::ClockType::Monotonic);
-	_time.app = 0;
-	_time.dt = 0.0f;
-
-	performAppUpdate(_runInfo, _time);
-
-	_running.store(true);
-	std::unique_lock lock(_runningMutex);
-	_runningVar.notify_all();
+	PlatformApplication::threadInit();
 }
 
 void Application::threadDispose() {
-	if (_runInfo.finalizeCallback) {
-		_runInfo.finalizeCallback(*this);
-	}
+	PlatformApplication::threadDispose();
 
-	for (auto &it : _extensions) {
-		it.second->invalidate(this);
-	}
-
-	_glLoop->cancel();
-
-	_queue->waitForAll();
-	_queue->update();
-
-	_resourceCache->invalidate();
-
-#if SP_REF_DEBUG
-	if (_glLoop->getReferenceCount() > 1) {
-		auto loop = _glLoop.get();
-		_glLoop = nullptr;
-
-		loop->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
-			StringStream stream;
-			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-			for (auto &it : vec) {
-				stream << "\t" << it << "\n";
-			}
-			log::debug("core::Loop", stream.str());
-		});
-	} else {
-		_glLoop = nullptr;
-	}
-#else
-	_glLoop = nullptr;
-#endif
-	_resourceCache = nullptr;
-
-	_queue->cancelWorkers();
-}
-
-bool Application::worker() {
-	uint32_t count = 0;
-	_startTime = _lastUpdate = _clock = _time.global;
-
-	count = 0;
-	if (!_immediateUpdate) {
-		_queue->wait(_runInfo.updateInterval - TimeInterval::microseconds(_clock - _lastUpdate), &count);
-	}
-	if (count > 0) {
-		_queue->update();
-	}
-
-	performTimersUpdate(_runInfo, _immediateUpdate);
-
-	return _shouldQuit.test_and_set();
-}
-
-void Application::end()  {
-	_shouldQuit.clear();
-	if (!isOnMainThread()) {
-		wakeup();
-	}
-}
-
-void Application::wakeup() {
-	if (isOnMainThread()) {
-		_immediateUpdate = true;
-	} else {
-		performOnMainThread([this] {
-			_immediateUpdate = true;
-		}, this);
-	}
-}
-
-bool Application::isOnMainThread() const {
-	return _threadId == std::this_thread::get_id();
-}
-
-void Application::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
-	if (_glLoop) {
-		_glLoop->performOnGlThread(move(func), target, immediate);
-	} else {
-		_glWaitCallback.emplace_back(WaitCallbackInfo{move(func), target, immediate});
-	}
-}
-
-void Application::performOnMainThread(Function<void()> &&func, Ref *target, bool onNextFrame) {
-	if (isOnMainThread() && !onNextFrame) {
-		func();
-	} else {
-		_queue->onMainThread(Rc<Task>::create([func = move(func)] (const thread::Task &, bool success) {
-			if (success) { func(); }
-		}, target));
-	}
-}
-
-void Application::performOnMainThread(Rc<Task> &&task, bool onNextFrame) {
-	if (isOnMainThread() && !onNextFrame) {
-		task->onComplete();
-	} else {
-		_queue->onMainThread(std::move(task));
-	}
-}
-
-void Application::perform(ExecuteCallback &&exec, CompleteCallback &&complete, Ref *obj) {
-	perform(Rc<Task>::create(move(exec), move(complete), obj));
-}
-
-void Application::perform(Rc<Task> &&task) {
-	_queue->perform(std::move(task));
-}
-
-void Application::perform(Rc<Task> &&task, bool performFirst) {
-	_queue->perform(std::move(task), performFirst);
+	tl_mainLoop = nullptr;
 }
 
 void Application::addEventListener(const EventHandlerNode *listener) {
@@ -320,17 +101,18 @@ void Application::dispatchEvent(const Event &ev) {
 	}
 }
 
-uint64_t Application::getClock() const {
-	return platform::clock(core::ClockType::Monotonic);
+void Application::updateMessageToken(BytesView tok) {
+	if (tok != _messageToken) {
+		PlatformApplication::updateMessageToken(tok);
+		onMessageToken(this, _messageToken);
+	}
 }
 
-thread::TaskQueue *Application::getQueue() {
-	return _queue;
+void Application::receiveRemoteNotification(Value &&val) {
+	onRemoteNotification(this, move(val));
 }
 
 void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
-	log::debug("Application", "handleDeviceStarted");
-
 	auto emptyObject = dev.getEmptyImageObject();
 	auto solidObject = dev.getSolidImageObject();
 
@@ -339,58 +121,33 @@ void Application::handleDeviceStarted(const core::Loop &loop, const core::Device
 		_resourceCache->addImage(core::SolidTextureName, solidObject);
 	});
 
-	_device = &dev;
+	PlatformApplication::handleDeviceStarted(loop, dev);
 }
 
 void Application::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {
-	_device = nullptr;
+	PlatformApplication::handleDeviceFinalized(loop, dev);
 
 	performOnMainThread([cache = _resourceCache] {
 		cache->invalidate();
 	}, Rc<core::Device>(const_cast<core::Device *>(&dev)));
 }
 
-void Application::handleMessageToken(String &&str) {
-	_messageToken = move(str);
-	onMessageToken(this, _messageToken);
-}
-
-void Application::handleRemoteNotification(Value &&val) {
-	onRemoteNotification(this, move(val));
-}
-
-void Application::performAppUpdate(const RunInfo &cb, const UpdateTime &t) {
-	if (cb.updateCallback) {
-		cb.updateCallback(*this, t);
-	}
+void Application::performAppUpdate(const UpdateTime &t) {
+	PlatformApplication::performAppUpdate(t);
 
 	for (auto &it : _extensions) {
 		it.second->update(this, t);
 	}
 }
 
-void Application::performTimersUpdate(const RunInfo &cb, bool forced) {
-	_clock = platform::clock(core::ClockType::Monotonic);
+void Application::loadExtensions() {
+	PlatformApplication::loadExtensions();
 
-	auto dt = TimeInterval::microseconds(_clock - _lastUpdate);
-	if (dt >= cb.updateInterval || forced) {
-		_time.delta = dt.toMicros();
-		_time.global = _clock;
-		_time.app = _startTime - _clock;
-		_time.dt = float(_time.delta) / 1'000'000;
-
-		performAppUpdate(cb, _time);
-		_lastUpdate = _clock;
-		_immediateUpdate = false;
-	}
-}
-
-void Application::runExtensions() {
 #if MODULE_XENOLITH_FONT
 	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
 			"locale::setLocale(StringView);");
 	if (setLocale) {
-		setLocale(_info.locale);
+		setLocale(_info.userLanguage);
 	}
 
 	auto createQueue = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>("xenolith_font",
@@ -407,6 +164,27 @@ void Application::runExtensions() {
 		addExtension(move(lib));
 	}
 #endif
+}
+
+void Application::initializeExtensions() {
+	PlatformApplication::initializeExtensions();
+
+	for (auto &it : _extensions) {
+		it.second->initialize(this);
+	}
+
+	_resourceCache->initialize(*_glLoop);
+}
+
+void Application::finalizeExtensions() {
+	for (auto &it : _extensions) {
+		it.second->invalidate(this);
+	}
+
+	_resourceCache->invalidate();
+	_resourceCache = nullptr;
+
+	PlatformApplication::finalizeExtensions();
 }
 
 }

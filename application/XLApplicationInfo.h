@@ -24,6 +24,7 @@
 #define XENOLITH_APPLICATION_XLAPPLICATIONINFO_H_
 
 #include "XLCoreLoop.h"
+#include "XLPlatformApplication.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -32,20 +33,6 @@ class ResourceCache;
 
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
-
-struct SP_PUBLIC UpdateTime {
-	// global OS timer in microseconds
-	uint64_t global = 0;
-
-	// microseconds since application was started
-	uint64_t app = 0;
-
-	// microseconds since last update
-	uint64_t delta = 0;
-
-	// seconds since last update
-	float dt = 0.0f;
-};
 
 }
 

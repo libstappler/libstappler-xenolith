@@ -36,34 +36,6 @@ namespace STAPPLER_VERSIONIZED stappler::platform::i18n {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class EngineMainThread : public thread::ThreadInterface<Interface> {
-public:
-	using EngineThreadCallback = Function<void(Activity *, Function<void()> &&)>;
-
-	virtual ~EngineMainThread();
-
-	bool init(Activity *, EngineThreadCallback &&cb);
-
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
-
-	void waitForRunning();
-
-	void join();
-
-protected:
-	Rc<Activity> _activity;
-	EngineThreadCallback _callback;
-
-	std::atomic<bool> _running = false;
-	std::mutex _runningMutex;
-	std::condition_variable _runningVar;
-
-	std::thread _thread;
-	std::thread::id _threadId;
-};
-
 static thread_local AppEnv tl_interface;
 static JavaVM *s_vm = nullptr;
 
@@ -101,52 +73,6 @@ void AppEnv::init(JavaVM *v, JNIEnv *e, bool a) {
 	attached = a;
 }
 
-EngineMainThread::~EngineMainThread() { }
-
-bool EngineMainThread::init(Activity *a, EngineThreadCallback &&cb) {
-	_activity = a;
-	_callback = std::move(cb);
-	_thread = std::thread(EngineMainThread::workerThread, this, nullptr);
-	return true;
-}
-
-void EngineMainThread::threadInit() {
-	_threadId = std::this_thread::get_id();
-}
-
-void EngineMainThread::threadDispose() {
-	_activity = nullptr;
-}
-
-bool EngineMainThread::worker() {
-	auto cb = move(_callback);
-	cb(_activity, [this] () {
-		_running.store(true);
-		std::unique_lock lock(_runningMutex);
-		_runningVar.notify_all();
-	});
-	return false;
-}
-
-void EngineMainThread::waitForRunning() {
-	if (_running.load()) {
-		return;
-	}
-
-	std::unique_lock lock(_runningMutex);
-	if (_running.load()) {
-		return;
-	}
-
-	_runningVar.wait(lock, [&] {
-		return _running.load();
-	});
-}
-
-void EngineMainThread::join() {
-	_thread.join();
-}
-
 static core::ImageFormat s_getCommonFormat = core::ImageFormat::R8G8B8A8_UNORM;
 
 core::ImageFormat getCommonFormat() {
@@ -173,8 +99,6 @@ Activity::~Activity() {
 		_classLoader->finalize(_activity->env);
 		_classLoader = nullptr;
 	}
-
-	_thread = nullptr;
 
 	stappler::platform::i18n::finalizeJava();
 	filesystem::platform::Android_terminateFilesystem();
@@ -430,6 +354,44 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	return true;
 }
 
+bool Activity::runApplication(PlatformApplication *app) {
+	if (_application) {
+		return false;
+	}
+
+	_application = app;
+
+	auto tok = getMessageToken();
+	if (!tok.empty()) {
+		_application->updateMessageToken(BytesView(StringView(tok)));
+	}
+
+	addTokenCallback(this, [this] (StringView str) {
+		_application->performOnMainThread([this, str = str.str<Interface>()] () mutable {
+			_application->updateMessageToken(BytesView(StringView(str)));
+		}, this);
+	});
+
+	addRemoteNotificationCallback(this, [this] (const Value &val) {
+		_application->performOnMainThread([this, val = val] () mutable {
+			_application->receiveRemoteNotification(move(val));
+		}, this);
+	});
+
+	_application->run();
+
+
+
+	/*void Application::nativeDispose() {
+		auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
+
+		activity->removeTokenCallback(this);
+		activity->removeRemoteNotificationCallback(this);
+	}*/
+
+	return true;
+}
+
 NetworkCapabilities Activity::getNetworkCapabilities() const {
 	std::unique_lock lock(_callbackMutex);
 	return _capabilities;
@@ -484,10 +446,6 @@ void Activity::setView(platform::ViewInterface *view) {
 	_rootViewVar.notify_all();
 }
 
-void Activity::run(Function<void(Activity *, Function<void()> &&)> &&cb) {
-	_thread = Rc<EngineMainThread>::create(this, move(cb));
-}
-
 String Activity::getMessageToken() const {
 	std::unique_lock lock(_callbackMutex);
 	return _messageToken;
@@ -508,6 +466,19 @@ void Activity::handleRemoteNotification(const Value &val) {
 	for (auto &it : _notificationCallbacks) {
 		it.second.second(val);
 	}
+}
+
+ApplicationInfo Activity::makeApplicationInfo() const {
+	ApplicationInfo ret;
+	ret.bundleName = _info.bundleName;
+	ret.applicationName = _info.applicationName;
+	ret.applicationVersion = _info.applicationVersion;
+	ret.userLanguage = _info.locale;
+	ret.userAgent = _info.systemAgent;
+	ret.density = _info.density;
+	ret.screenSize = _info.sizeInDp;
+	ret.platformHandle = const_cast<Activity *>(this);
+	return ret;
 }
 
 void Activity::addComponent(Rc<ActivityComponent> &&c) {
@@ -578,7 +549,7 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
     log::format(log::Info, "NativeActivity", "NativeWindowCreated: %p -- %p -- %d x %d", _activity, window,
 			ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
-	_thread->waitForRunning();
+	_application->waitRunning();
 
 	if (auto view = waitForView()) {
 		view->linkWithNativeWindow(window);
@@ -658,8 +629,9 @@ void Activity::handleDestroy() {
 	if (_rootView) {
 		_rootView->end();
 	}
-	if (_thread) {
-		_thread->join();
+	if (_application) {
+		_application->end();
+		_application->waitFinalized();
 	}
 	release(_refId);
 }

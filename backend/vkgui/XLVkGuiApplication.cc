@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 GuiApplication::~GuiApplication() { }
 
-bool GuiApplication::init(CommonInfo &&appInfo, Rc<core::Instance> &&instance) {
+bool GuiApplication::init(ApplicationInfo &&appInfo, Rc<core::Instance> &&instance) {
 	if (instance) {
 		if (ViewApplication::init(move(appInfo), move(instance))) {
 			return true;
@@ -51,7 +51,7 @@ bool GuiApplication::init(CommonInfo &&appInfo, Rc<core::Instance> &&instance) {
 	return false;
 }
 
-bool GuiApplication::init(CommonInfo &&appInfo, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+bool GuiApplication::init(ApplicationInfo &&appInfo, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
 	auto instance = vk::platform::createInstance([&] (VulkanInstanceData &data, const VulkanInstanceInfo &info) {
 		if (cb(data, info)) {
 			data.applicationName = appInfo.applicationName;
@@ -68,18 +68,18 @@ bool GuiApplication::init(CommonInfo &&appInfo, const Callback<bool(VulkanInstan
 	return false;
 }
 
-void GuiApplication::run(RunInfo &&runInfo, uint32_t threadCount, TimeInterval ival) {
+void GuiApplication::run(uint32_t threadCount, TimeInterval ival) {
 	core::LoopInfo info;
 
-	run(move(runInfo), move(info), threadCount, ival);
+	run(move(info), threadCount, ival);
 }
 
-void GuiApplication::run(RunInfo &&runInfo, core::LoopInfo &&info, uint32_t threadCount, TimeInterval ival) {
-	runInfo.threadsCount = threadCount;
-	runInfo.updateInterval = ival;
-	runInfo.loopInfo = move(info);
+void GuiApplication::run(core::LoopInfo &&info, uint32_t threadCount, TimeInterval ival) {
+	_info.threadsCount = threadCount;
+	_info.updateInterval = ival;
+	_info.loopInfo = move(info);
 
-	if (!runInfo.loopInfo.platformData) {
+	if (!_info.loopInfo.platformData) {
 		auto data = Rc<LoopData>::alloc();
 		data->deviceSupportCallback = [] (const vk::DeviceInfo &dev) {
 			return dev.supportsPresentation() &&
@@ -91,10 +91,10 @@ void GuiApplication::run(RunInfo &&runInfo, core::LoopInfo &&info, uint32_t thre
 			ret.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 			return ret;
 		};
-		runInfo.loopInfo.platformData = data;
+		_info.loopInfo.platformData = data;
 	}
 
-	ViewApplication::run(move(runInfo));
+	ViewApplication::run();
 }
 
 }

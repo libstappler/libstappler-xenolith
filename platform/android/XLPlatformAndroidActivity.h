@@ -27,6 +27,7 @@
 #include "XLPlatformAndroidNetworkConnectivity.h"
 #include "XLPlatformViewInterface.h"
 #include "XLCoreInput.h"
+#include "XLPlatformApplication.h"
 
 #if ANDROID
 
@@ -57,7 +58,6 @@ struct ActivityInfo {
 };
 
 class Activity;
-class EngineMainThread;
 
 struct ActivityTextInputWrapper : public Ref {
 	Rc<Ref> target;
@@ -113,6 +113,9 @@ public:
 
 	virtual bool init(ANativeActivity *activity, ActivityFlags flags);
 
+	virtual bool runApplication(PlatformApplication *);
+	virtual PlatformApplication *getApplication() const { return _application; }
+
 	virtual NetworkCapabilities getNetworkCapabilities() const;
 	virtual void setNetworkCapabilities(NetworkCapabilities);
 
@@ -128,8 +131,6 @@ public:
 	virtual void wakeup();
 	virtual void setView(platform::ViewInterface *);
 
-	virtual void run(Function<void(Activity *, Function<void()> &&)> &&);
-
 	String getMessageToken() const;
 	void setMessageToken(StringView);
 
@@ -140,6 +141,8 @@ public:
 	const NativeBufferFormatSupport &getFormatSupport() const { return _formatSupport; }
 
 	const ActivityInfo &getActivityInfo() const { return _info; }
+
+	ApplicationInfo makeApplicationInfo() const;
 
 	virtual void addComponent(Rc<ActivityComponent> &&);
 
@@ -209,18 +212,18 @@ protected:
 	virtual void updateView();
 	virtual bool handleBackButton();
 
-	jmethodID _startActivityMethod;
-	jmethodID _intentInitMethod;
-	jmethodID _uriParseMethod;
-	jmethodID _intentAddFlagsMethod;
-	jfieldID _intentActionView;
+	jmethodID _startActivityMethod = nullptr;
+	jmethodID _intentInitMethod = nullptr;
+	jmethodID _uriParseMethod = nullptr;
+	jmethodID _intentAddFlagsMethod = nullptr;
+	jfieldID _intentActionView = nullptr;
 
-	jmethodID _runInputMethod;
-	jmethodID _updateInputMethod;
-	jmethodID _updateCursorMethod;
-	jmethodID _cancelInputMethod;
+	jmethodID _runInputMethod = nullptr;
+	jmethodID _updateInputMethod = nullptr;
+	jmethodID _updateCursorMethod = nullptr;
+	jmethodID _cancelInputMethod = nullptr;
 
-	jobject _clipboardServce;
+	jobject _clipboardServce = nullptr;
 
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;
@@ -250,7 +253,6 @@ protected:
 	bool isEmulator = false;
 
 	ActivityInfo _info;
-	Rc<EngineMainThread> _thread;
 	uint64_t _refId = 0;
 
 	mutable std::mutex _callbackMutex;
@@ -261,6 +263,7 @@ protected:
 	Map<void *, Pair<Rc<Ref>, Function<void(StringView)>>> _tokenCallbacks;
 
 	Value _drawables;
+	Rc<PlatformApplication> _application;
 	Vector<Rc<ActivityComponent>> _components;
 	Rc<ActivityTextInputWrapper> _textInputWrapper;
 };

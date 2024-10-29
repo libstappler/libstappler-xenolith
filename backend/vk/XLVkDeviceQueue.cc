@@ -840,7 +840,7 @@ void CommandPool::autorelease(Rc<Ref> &&ref) {
 void CommandPool::recreatePool(Device &dev) {
 	if (_commandPool) {
 		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
-		_commandPool = nullptr;
+		_commandPool = VkCommandPool(0);
 	}
 
 	VkCommandPoolCreateInfo poolInfo{};

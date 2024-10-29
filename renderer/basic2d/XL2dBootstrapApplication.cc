@@ -82,17 +82,8 @@ void BootstrapScene::onContentSizeDirty() {
 
 XL_DECLARE_EVENT_CLASS(BootstrapApplication, onSwapchainConfig);
 
-bool BootstrapApplication::init(ViewCommandLineData &&data, void *native) {
-	_initData = move(data);
-
-	Application::CommonInfo info({
-		.bundleName = _initData.bundleName,
-		.applicationName = _initData.applicationName,
-		.applicationVersion = _initData.applicationVersion,
-		.userAgent = _initData.userAgent,
-		.locale = _initData.userLanguage,
-		.nativeHandle = native
-	});
+bool BootstrapApplication::init(ApplicationInfo &&info) {
+	_initInfo = move(info);
 
 	_storageParams = Value({
 		pair("driver", Value("sqlite")),
@@ -100,50 +91,33 @@ bool BootstrapApplication::init(ViewCommandLineData &&data, void *native) {
 		pair("serverName", Value("RootStorage"))
 	});
 
-	return GuiApplication::init(move(info));
+	return GuiApplication::init(ApplicationInfo(_initInfo));
 }
 
-void BootstrapApplication::run(Function<void()> &&initCb) {
-	GuiApplication::RunInfo callbacks({
-		.initCallback = [&] (const Application &) {
-			GuiApplication::addView(ViewInfo{
-				.title = _initData.applicationName,
-				.bundleId = _initData.bundleName,
-				.rect = URect(UVec2{0, 0}, _initData.screenSize),
-				.decoration = _initData.viewDecoration,
-				.density = _initData.density,
-				.selectConfig = [this] (xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
-					return selectConfig(static_cast<vk::View &>(view), info);
-				},
-				.onCreated = [this] (xenolith::View &view, const core::FrameContraints &constraints) {
-					auto scene = createSceneForView(static_cast<vk::View &>(view), constraints);
-					view.getDirector()->runScene(move(scene));
-				},
-				.onClosed = [this] (xenolith::View &view) {
-					finalizeView(static_cast<vk::View &>(view));
-					end();
-				}
-			});
-			if (initCb) {
-				initCb();
+void BootstrapApplication::run() {
+	_info.initCallback = [&] (const PlatformApplication &) {
+		GuiApplication::addView(ViewInfo{
+			.title = _info.applicationName,
+			.bundleId = _info.bundleName,
+			.rect = URect(UVec2{0, 0}, _info.screenSize),
+			.decoration = _info.viewDecoration,
+			.density = _info.density,
+			.selectConfig = [this] (xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
+				return selectConfig(static_cast<vk::View &>(view), info);
+			},
+			.onCreated = [this] (xenolith::View &view, const core::FrameContraints &constraints) {
+				auto scene = createSceneForView(static_cast<vk::View &>(view), constraints);
+				view.getDirector()->runScene(move(scene));
+			},
+			.onClosed = [this] (xenolith::View &view) {
+				finalizeView(static_cast<vk::View &>(view));
+				end();
 			}
-		},
-		.updateCallback = [&] (const Application &, const UpdateTime &time) { }
-	});
+		});
+	};
+	_info.updateCallback = [&] (const PlatformApplication &, const UpdateTime &time) { };
 
-	GuiApplication::run(move(callbacks));
-
-#if MODULE_XENOLITH_RESOURCES_ASSETS
-	_assetLibrary = nullptr;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_NETWORK
-	_networkController = nullptr;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_STORAGE
-	_storageServer = nullptr;
-#endif
+	GuiApplication::run();
 }
 
 void BootstrapApplication::setPreferredPresentMode(core::PresentMode mode) {
@@ -224,8 +198,8 @@ core::SwapchainConfig BootstrapApplication::selectConfig(vk::View &, const core:
 	return ret;
 }
 
-void BootstrapApplication::runExtensions() {
-	GuiApplication::runExtensions();
+void BootstrapApplication::loadExtensions() {
+	GuiApplication::loadExtensions();
 
 	if (_storageParams.getString("driver") == "sqlite") {
 		auto path = _storageParams.getString("dbname");
@@ -274,6 +248,22 @@ void BootstrapApplication::runExtensions() {
 			}
 		}
 	}
+#endif
+}
+
+void BootstrapApplication::finalizeExtensions() {
+	GuiApplication::finalizeExtensions();
+
+#if MODULE_XENOLITH_RESOURCES_STORAGE
+	_storageServer = nullptr;
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_NETWORK
+	_networkController = nullptr;
+#endif
+
+#if MODULE_XENOLITH_RESOURCES_ASSETS
+	_assetLibrary = nullptr;
 #endif
 }
 

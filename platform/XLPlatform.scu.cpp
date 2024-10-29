@@ -23,7 +23,7 @@
 #include "XLCommon.h"
 #include "XLPlatform.h"
 
-#include "XLViewCommandLine.cc"
+#include "XLPlatformApplication.cc"
 
 #if LINUX
 #include "linux/thirdparty/glfw/xkb_unicode.cc"

@@ -125,6 +125,9 @@ void EventHeader::send(Ref *object, const String &value) const {
 void EventHeader::send(Ref *object, const StringView &value) const {
 	Event::send(*this, object, value);
 }
+void EventHeader::send(Ref *object, const BytesView &value) const {
+	Event::send(*this, object, value);
+}
 void EventHeader::send(Ref *object, const Value &value) const {
 	Event::send(*this, object, value);
 }

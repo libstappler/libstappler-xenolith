@@ -60,13 +60,13 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 }
 
 void ViewImpl::run() {
-	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().nativeHandle)->setView(this);
+	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle)->setView(this);
 }
 
 void ViewImpl::threadInit() {
 	_started = true;
 
-	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().nativeHandle);
+	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
 	setActivity(activity);
 
 	View::threadInit();
@@ -117,7 +117,7 @@ void ViewImpl::end() {
 }
 
 void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
-	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().nativeHandle)->wakeup();
+	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle)->wakeup();
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {

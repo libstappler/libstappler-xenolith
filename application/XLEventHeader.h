@@ -87,6 +87,7 @@ protected:
 	void send(Ref *object, const char *value) const;
 	void send(Ref *object, const String &value) const;
 	void send(Ref *object, const StringView &value) const;
+	void send(Ref *object, const BytesView &value) const;
 	void send(Ref *object, const Value &value) const;
 	void send(Ref *object = nullptr) const;
 

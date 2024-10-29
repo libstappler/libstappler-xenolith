@@ -26,6 +26,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+String Event::ZERO_STRING;
+Bytes Event::ZERO_BYTES;
+
 void Event::dispatch() const {
 	Application::getInstance()->dispatchEvent(*this);
 }
@@ -51,6 +54,32 @@ bool Event::is(const EventHeader &eventHeader) const {
 
 bool Event::operator == (const EventHeader &eventHeader) const {
 	return is(eventHeader);
+}
+
+Value Event::getValue() const {
+	switch (_type) {
+	case Type::Int:
+		return Value(_value.intValue);
+		break;
+	case Type::Float:
+		return Value(_value.floatValue);
+		break;
+	case Type::Bool:
+		return Value(_value.boolValue);
+		break;
+	case Type::String:
+		return Value(*_value.strValue);
+		break;
+	case Type::Bytes:
+		return Value(*_value.bytesValue);
+		break;
+	case Type::Data:
+		return Value(*_value.dataValue);
+		break;
+	case Type::Object:
+	case Type::None: break;
+	}
+	return Value();
 }
 
 Event::Event(const EventHeader &header, Ref *object)
@@ -99,6 +128,18 @@ void Event::send(const EventHeader &header, Ref *object, const StringView &value
 		});
 	}
 }
+
+void Event::send(const EventHeader &header, Ref *object, const BytesView &value) {
+	auto app = Application::getInstance();
+	if (app) {
+		app->performOnMainThread([header, object, value = value.bytes<Interface>()] () {
+			EventValue val; val.bytesValue = &value;
+			Event event(header, object, val, Type::Bytes);
+			event.dispatch();
+		});
+	}
+}
+
 void Event::send(const EventHeader &header, Ref *object, const Value &value) {
 	auto app = Application::getInstance();
 	if (app) {

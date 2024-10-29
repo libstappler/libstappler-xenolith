@@ -28,7 +28,7 @@
 #include "XLVkPlatform.h"
 #include "XLVkView.h"
 
-#include "XLViewCommandLine.h"
+#include "XLPlatformApplication.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -39,12 +39,12 @@ public:
 
 	virtual ~GuiApplication();
 
-	virtual bool init(CommonInfo &&, Rc<core::Instance> && = nullptr);
-	virtual bool init(CommonInfo &&, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
+	virtual bool init(ApplicationInfo &&, Rc<core::Instance> && = nullptr);
+	virtual bool init(ApplicationInfo &&, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
 
-	virtual void run(RunInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
+	virtual void run(uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
-	virtual void run(RunInfo &&, core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
+	virtual void run(core::LoopInfo &&, uint32_t threadsCount = config::getMainThreadCount(),
 			TimeInterval = TimeInterval(config::GuiMainLoopDefaultInterval));
 };
 

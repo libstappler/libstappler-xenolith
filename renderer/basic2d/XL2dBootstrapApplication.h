@@ -49,9 +49,9 @@ public:
 
 	virtual ~BootstrapApplication() = default;
 
-	virtual bool init(ViewCommandLineData &&, void *native = nullptr);
+	virtual bool init(ApplicationInfo &&);
 
-	virtual void run(Function<void()> &&initCb = nullptr);
+	virtual void run() override;
 
 	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
 	const core::SwapchainConfig &getSwapchainConfig() const { return _swapchainConfig; }
@@ -64,11 +64,12 @@ protected:
 
 	virtual core::SwapchainConfig selectConfig(vk::View &, const core::SurfaceInfo &info);
 
-	virtual void runExtensions() override;
+	virtual void loadExtensions() override;
+	virtual void finalizeExtensions() override;
 
 	Value _storageParams;
 
-	ViewCommandLineData _initData;
+	ApplicationInfo _initInfo;
 
 	Mutex _configMutex;
 	core::PresentMode _preferredPresentMode = core::PresentMode::Unsupported;

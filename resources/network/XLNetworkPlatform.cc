@@ -107,7 +107,7 @@ SPUNUSED static void unregisterNetworkCallback(Application *, void *key) {
 #if ANDROID
 
 SPUNUSED static void registerNetworkCallback(Application *app, void *key, Function<void(NetworkCapabilities)> &&cb) {
-	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().nativeHandle);
+	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().platformHandle);
 	cb(NetworkCapabilities(activity->getNetworkCapabilities()));
 	activity->addNetworkCallback(key, [key, cb = move(cb)] (platform::NetworkCapabilities caps) {
 		cb(NetworkCapabilities(caps));
@@ -116,7 +116,7 @@ SPUNUSED static void registerNetworkCallback(Application *app, void *key, Functi
 }
 
 SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
-	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().nativeHandle);
+	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().platformHandle);
 	activity->removeNetworkCallback(key);
 }
 

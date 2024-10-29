@@ -40,6 +40,7 @@ protected:
 		Bool,
 		Object,
 		String,
+		Bytes,
 		Data,
 		None
 	};
@@ -66,6 +67,7 @@ public:
 	inline bool valueIsFloat() const { return _type == Type::Float; }
 	inline bool valueIsObject() const { return _type == Type::Object; }
 	inline bool valueIsString() const { return _type == Type::String; }
+	inline bool valueIsBytes() const { return _type == Type::Bytes; }
 	inline bool valueIsData() const { return _type == Type::Data; }
 
 	inline int64_t getIntValue() const { return (_type == Type::Int)?_value.intValue:0; }
@@ -86,9 +88,14 @@ public:
 	inline StringView getStringValue() const {
 		return (_type == Type::String)?(*_value.strValue):ZERO_STRING;
 	}
+	inline BytesView getBytesValue() const {
+		return (_type == Type::Bytes)?(*_value.bytesValue):ZERO_BYTES;
+	}
 	inline const Value &getDataValue() const {
 		return (_type == Type::Data)?(*_value.dataValue):Value::Null;
 	}
+
+	Value getValue() const;
 
 protected:
 	union EventValue {
@@ -97,6 +104,7 @@ protected:
 		bool boolValue;
 		Ref *objValue;
 		const String *strValue;
+		const Bytes *bytesValue;
 		const Value * dataValue;
 	};
 
@@ -111,6 +119,7 @@ protected:
 	static void send(const EventHeader &header, Ref *object, const char *value);
 	static void send(const EventHeader &header, Ref *object, const String &value);
 	static void send(const EventHeader &header, Ref *object, const StringView &value);
+	static void send(const EventHeader &header, Ref *object, const BytesView &value);
 	static void send(const EventHeader &header, Ref *object, const Value &value);
 	static void send(const EventHeader &header, Ref *object);
 
@@ -126,6 +135,7 @@ protected:
 
 private:
 	static String ZERO_STRING;
+	static Bytes ZERO_BYTES;
 };
 
 }
