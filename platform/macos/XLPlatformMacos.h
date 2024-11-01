@@ -78,19 +78,14 @@ enum class ApplicationFlags {
 
 SP_DEFINE_ENUM_AS_MASK(ApplicationFlags)
 
+void openUrl(StringView);
 
-core::InputModifier getInputModifiers(uint32_t flags);
+bool isOnMainThread();
 
-core::InputMouseButton getInputMouseButton(int32_t buttonNumber);
+void performOnMainThread(Function<void()> &&, Ref * _Nullable = nullptr);
 
-void createKeyTables(core::InputKeyCode keycodes[256], uint16_t scancodes[stappler::toInt(core::InputKeyCode::Max)]);
-
-
-void * _Nonnull initMacApplication(ApplicationFlags);
-
-bool runMacApplication();
-
-void stopMacApplication();
+void runApplication();
+void stopApplication();
 
 struct MacViewInfo {
 	Function<void(ViewInterface * _Nonnull)> captureView;
@@ -101,16 +96,16 @@ struct MacViewInfo {
 
 class MacViewController : public Ref {
 public:
-	static MacViewController * _Nonnull makeConroller(ViewInterface * _Nonnull);
+	virtual ~MacViewController();
 
-	virtual ~MacViewController() = default;
-
-	MacViewController(XLMacViewController * _Nonnull, ViewInterface * _Nonnull, NSWindow * _Nonnull);
+	MacViewController(ViewInterface * _Nonnull);
 
 	void setTitle(StringView);
 	void setInfo(MacViewInfo &&);
 	void setVSyncEnabled(bool);
+	void initWindow();
 	void mapWindow();
+	void finalizeWindow();
 	void wakeup();
 
 	const CAMetalLayer * _Nonnull getLayer() const;
@@ -175,50 +170,6 @@ protected:
 };
 
 }
-
-#if __OBJC__
-
-#import <Cocoa/Cocoa.h>
-#import <AppKit/NSEvent.h>
-
-XL_OBJC_INTERFACE_BEGIN(XLMacAppDelegate) : NSObject <NSApplicationDelegate> {
-	NSWindow *_window;
-};
-
-- (void)doNothing:(id _Nonnull)object;
-
-XL_OBJC_INTERFACE_END(XLMacAppDelegate)
-
-
-XL_OBJC_INTERFACE_BEGIN(XLMacViewController) : NSViewController <NSWindowDelegate> {
-	stappler::Rc<stappler::xenolith::platform::MacViewController> _controller;
-};
-
-- (instancetype _Nonnull) initWithView: (stappler::xenolith::platform::ViewInterface * _Nonnull)view window: (NSWindow * _Nonnull)window;
-
-- (stappler::xenolith::platform::MacViewController * _Nonnull) engineController;
-
-- (void)updateEngineView;
-
-XL_OBJC_INTERFACE_END(XLMacViewController)
-
-
-XL_OBJC_INTERFACE_BEGIN(XLMacView) : NSView <NSTextInputClient, NSViewLayerContentScaleDelegate> {
-	NSArray<NSAttributedStringKey> *_validAttributesForMarkedText;
-	bool _textDirty;
-};
-
-- (void)updateTextCursorWithPosition:(uint32_t)pos length:(uint32_t)len;
-
-- (void)updateTextInputWithText:(stappler::WideStringView)str position:(uint32_t)pos length:(uint32_t)len type:(stappler::xenolith::core::TextInputType)type;
-
-- (void)runTextInputWithText:(stappler::WideStringView)str position:(uint32_t)pos length:(uint32_t)len type:(stappler::xenolith::core::TextInputType)type;
-
-- (void)cancelTextInput;
-
-XL_OBJC_INTERFACE_END(XLMacView)
-
-#endif // __OBJC__
 
 #endif
 

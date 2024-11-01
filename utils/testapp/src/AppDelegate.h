@@ -24,7 +24,6 @@
 #define SRC_APPDELEGATE_H_
 
 #include "XLVkGuiApplication.h"
-#include "XLViewCommandLine.h"
 #include "XLStorageServer.h"
 #include "XLNetworkController.h"
 #include "XLAssetLibrary.h"
@@ -37,15 +36,17 @@ public:
 
 	virtual ~AppDelegate();
 
-	virtual bool init(ViewCommandLineData &&, void *native = nullptr);
+	virtual bool init(ApplicationInfo &&);
 
-	virtual void run(Function<void()> &&initCb = nullptr);
+	virtual void run() override;
 
 	using mem_std::AllocBase::operator new;
 	using mem_std::AllocBase::operator delete;
 
 	using Ref::release;
 	using Ref::retain;
+
+	using GuiApplication::waitFinalized;
 
 	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
 	const core::SwapchainConfig &getSwapchainConfig() const { return _swapchainConfig; }
@@ -55,12 +56,13 @@ public:
 protected:
 	core::SwapchainConfig selectConfig(const core::SurfaceInfo &info);
 
+	virtual void loadExtensions() override;
+	virtual void finalizeExtensions() override;
+
 	Value _storageParams;
 	Rc<xenolith::storage::Server> _storageServer;
 	Rc<xenolith::network::Controller> _networkController;
 	Rc<xenolith::storage::AssetLibrary> _assetLibrary;
-
-	ViewCommandLineData _data;
 
 	Mutex _configMutex;
 	core::PresentMode _preferredPresentMode = core::PresentMode::Unsupported;

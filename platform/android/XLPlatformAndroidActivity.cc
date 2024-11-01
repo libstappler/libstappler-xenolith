@@ -380,15 +380,6 @@ bool Activity::runApplication(PlatformApplication *app) {
 
 	_application->run();
 
-
-
-	/*void Application::nativeDispose() {
-		auto activity = static_cast<platform::Activity *>(_info.nativeHandle);
-
-		activity->removeTokenCallback(this);
-		activity->removeRemoteNotificationCallback(this);
-	}*/
-
 	return true;
 }
 

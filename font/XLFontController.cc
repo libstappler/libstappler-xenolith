@@ -307,7 +307,7 @@ void FontController::extend(const Callback<bool(FontController::Builder &)> &cb)
 
 void FontController::initialize(Application *app) {
 	_image = _ext->makeInitialImage(_name);
-	app->getGlLoop()->compileImage(_image, [this, app = Rc<Application>(app)] (bool success) { });
+	app->getGlLoop()->compileImage(_image, [app = Rc<Application>(app)] (bool success) { });
 	_texture = Rc<Texture>::create(_image);
 }
 

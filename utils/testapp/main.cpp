@@ -41,14 +41,14 @@ Options are one of:
 	-h (--help))HelpString");
 
 SP_EXTERN_C int main(int argc, const char *argv[]) {
-	ViewCommandLineData data;
+	ApplicationInfo data;
 	Vector<String> args;
 
-	data::parseCommandLineOptions<Interface, ViewCommandLineData>(data, argc, argv,
-		[&] (ViewCommandLineData &, StringView str) {
-			args.emplace_back(str.str<Interface>());
-		},
-		&parseViewCommandLineSwitch, &parseViewCommandLineString);
+	// читаем данные командной строки в структуру данных о приложении
+	data::parseCommandLineOptions<Interface, ApplicationInfo>(data, argc, argv,
+			[&] (ApplicationInfo &, StringView str) {
+		args.emplace_back(str.str<Interface>());
+	}, &ApplicationInfo::parseCmdSwitch, &ApplicationInfo::parseCmdString);
 
 	if (data.help) {
 		std::cout << HELP_STRING << "\n";
@@ -67,11 +67,13 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		}
 	}
 
-	auto app = Rc<AppDelegate>::create(move(data));
-	if (!app) {
-		return -1;
-	}
-	app->run();
+	memory::pool::perform_temporary([&] {
+		auto app = Rc<AppDelegate>::create(move(data));
+
+		app->run();
+		app->waitFinalized();
+	});
+
 	return 0;
 }
 

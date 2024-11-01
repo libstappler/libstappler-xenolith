@@ -77,7 +77,7 @@ protected:
 
 	virtual void presentWithQueue(DeviceQueue &, Rc<ImageStorage> &&) override;
 
-	xenolith::platform::MacViewController *_viewController = nullptr;
+	Rc<xenolith::platform::MacViewController> _viewController = nullptr;
 	std::atomic_flag _displayLinkFlag;
 	EngineOptions _tmpOptions;
 	bool _inputEnabled = false;

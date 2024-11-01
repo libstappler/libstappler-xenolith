@@ -142,7 +142,7 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 	_info = move(info);
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
 
-	_queue = Rc<thread::TaskQueue>::alloc(_info.applicationName, [this] () {
+	_queue = Rc<thread::TaskQueue>::alloc("Application::Queue", [] () {
 		//wakeup();
 	});
 
@@ -152,6 +152,7 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 }
 
 void PlatformApplication::run() {
+	platformInitialize();
 	_thread = std::thread(PlatformApplication::workerThread, this, nullptr);
 }
 
@@ -171,7 +172,7 @@ void PlatformApplication::waitRunning() {
 }
 
 void PlatformApplication::waitFinalized() {
-	_thread.join();
+	platformWaitExit();
 }
 
 void PlatformApplication::threadInit() {
@@ -212,7 +213,7 @@ void PlatformApplication::threadInit() {
 
 	auto loop = _instance->makeLoop(move(_info.loopInfo));
 
-	if (!_queue->spawnWorkers(0, _info.threadsCount, _info.applicationName)) {
+	if (!_queue->spawnWorkers(0, _info.threadsCount, "Application::Queue")) {
 		log::error("MainLoop", "Fail to spawn worker threads");
 		return;
 	}
@@ -280,6 +281,8 @@ void PlatformApplication::threadDispose() {
 	_glLoop = nullptr;
 #endif
 	_queue->cancelWorkers();
+
+	platformSignalExit();
 }
 
 bool PlatformApplication::worker() {
@@ -428,6 +431,14 @@ void PlatformApplication::openUrl(StringView url) const {
 	}
 }
 
+void PlatformApplication::platformInitialize() { }
+
+void PlatformApplication::platformWaitExit() {
+	_thread.join();
+}
+
+void PlatformApplication::platformSignalExit() { }
+
 }
 
 #endif
@@ -437,8 +448,6 @@ void PlatformApplication::openUrl(StringView url) const {
 
 #include "android/XLPlatformAndroidActivity.h"
 
-#define XL_APPLICATION_MAIN_LOOP_DEFAULT 1
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void PlatformApplication::openUrl(StringView url) const {
@@ -447,7 +456,54 @@ void PlatformApplication::openUrl(StringView url) const {
 	activity->openUrl(url);
 }
 
+void PlatformApplication::platformInitialize() { }
+
+void PlatformApplication::platformWaitExit() {
+	_thread.join();
+}
+
+void PlatformApplication::platformSignalExit() { }
+
 }
 
 #endif
 
+
+#if MACOS
+
+#include "XLPlatformMacos.h"
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+void PlatformApplication::openUrl(StringView url) const {
+	platform::openUrl(url);
+}
+
+void PlatformApplication::platformInitialize() {
+	_shouldSignalOnExit = platform::isOnMainThread();
+}
+
+void PlatformApplication::platformWaitExit() {
+	if (_shouldSignalOnExit) {
+		if (platform::isOnMainThread()) {
+			platform::runApplication();
+		} else {
+			log::error("xenolith::PlatformApplication", "If application was runned from main thread, waitFinalized should be also called in main thread");
+		}
+	} else {
+		_thread.join();
+	}
+}
+
+void PlatformApplication::platformSignalExit() {
+	if (_shouldSignalOnExit) {
+		platform::performOnMainThread([this] () {
+			_thread.join();
+			platform::stopApplication();
+		}, this);
+	}
+}
+
+}
+
+#endif

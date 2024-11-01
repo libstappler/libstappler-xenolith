@@ -24,6 +24,8 @@
 
 #if MACOS
 
+#include "macos/XLPlatformMacos.h"
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info) {
@@ -34,7 +36,7 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 	_options.followDisplayLink = true;
 
 	loop.performOnMainThread([this] {
-		_viewController = xenolith::platform::MacViewController::makeConroller(this);
+		_viewController = Rc<xenolith::platform::MacViewController>::alloc(this);
 		_viewController->setTitle(_info.title.empty() ? _info.bundleId : _info.title);
 
 		xenolith::platform::MacViewInfo info;
@@ -58,13 +60,15 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 }
 
 void ViewImpl::run() {
-	_mainLoop->performOnMainThread([this] {
+	xenolith::platform::performOnMainThread([this] {
 		threadInit();
 	}, this);
 }
 
 void ViewImpl::threadInit() {
 	auto instance = _instance.cast<vk::Instance>();
+
+	_viewController->initWindow();
 
 	VkSurfaceKHR targetSurface;
 	VkMetalSurfaceCreateInfoEXT surfaceCreateInfo;
@@ -94,6 +98,9 @@ void ViewImpl::threadDispose() {
 	_callbacks.clear();
 
 	release(_refId);
+
+	_viewController->finalizeWindow();
+	_viewController = nullptr;
 }
 
 bool ViewImpl::worker() {
@@ -103,6 +110,11 @@ bool ViewImpl::worker() {
 void ViewImpl::update(bool displayLink) {
 	auto diplayLinkFlag = !_displayLinkFlag.test_and_set();
 	displayLink = displayLink || diplayLinkFlag;
+
+	if (_windowCaptured && diplayLinkFlag) {
+		handlePaint();
+	}
+
 	View::update(displayLink);
 }
 
@@ -162,9 +174,7 @@ void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *
 void ViewImpl::writeToClipboard(BytesView, StringView contentType) { }
 
 void ViewImpl::mapWindow() {
-	_mainLoop->performOnMainThread([this] {
-		_viewController->mapWindow();
-	}, this);
+	_viewController->mapWindow();
 }
 
 void ViewImpl::wakeup(std::unique_lock<Mutex> &lock) {
@@ -220,23 +230,41 @@ void ViewImpl::releaseWindow() {
 	_options = _tmpOptions;
 	std::unique_lock lock(_captureMutex);
 	_windowCaptured = false;
-	deprecateSwapchain(false);
 }
 
 void ViewImpl::handlePaint() {
 	// draw frame in blocking mode when resizeing
+
+	std::unique_lock lock(_captureMutex);
+
+	// wait until swaphain recreation
+	if (_swapchain->isDeprecated()) {
+		View::update(false);
+		while (_swapchain->isDeprecated()) {
+			auto status = _captureCondVar.wait_for(lock, std::chrono::milliseconds(10));
+			if (status == std::cv_status::timeout) {
+				return;
+			}
+			View::update(false);
+		}
+	}
+
+	auto c = _swapchain->getPresentedFramesCount();
+	View::update(false);
+	while (c == _swapchain->getPresentedFramesCount()) {
+		auto status = _captureCondVar.wait_for(lock, std::chrono::milliseconds(10));
+		if (status == std::cv_status::timeout) {
+			return;
+		}
+		View::update(false);
+	}
 }
 
 void ViewImpl::handleDisplayLink() {
-	if (!_options.followDisplayLink && !_windowCaptured) {
-		return;
-	}
-
 	_displayLinkFlag.clear();
-	_viewController->wakeup();
 
-	if (_windowCaptured) {
-		std::cout << "handleDisplayLink\n";
+	if (_options.followDisplayLink && !_windowCaptured) {
+		_viewController->wakeup();
 	}
 }
 

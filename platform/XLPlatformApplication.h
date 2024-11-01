@@ -187,6 +187,10 @@ protected:
 	virtual void performAppUpdate(const UpdateTime &);
 	virtual void performTimersUpdate(bool forced);
 
+	virtual void platformInitialize();
+	virtual void platformWaitExit();
+	virtual void platformSignalExit();
+
 	struct WaitCallbackInfo {
 		Function<void()> func;
 		Rc<Ref> target;
@@ -213,6 +217,7 @@ protected:
 
 	bool _extensionsInitialized = false;
 	bool _immediateUpdate = false;
+	bool _shouldSignalOnExit = false;
 
 	UpdateTime _time;
 	uint64_t _clock = 0;

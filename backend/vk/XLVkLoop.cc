@@ -308,7 +308,7 @@ void Loop::waitRinning() {
 }
 
 void Loop::threadInit() {
-	thread::ThreadInfo::setThreadInfo("Gl::Loop");
+	thread::ThreadInfo::setThreadInfo("vk::Loop");
 	_threadId = std::this_thread::get_id();
 	_shouldExit.test_and_set();
 

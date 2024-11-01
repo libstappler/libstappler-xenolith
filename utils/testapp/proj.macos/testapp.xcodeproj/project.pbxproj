@@ -9,10 +9,6 @@
 /* Begin PBXBuildFile section */
 		268C45FD2CCA2C54006E6D5D /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 268C45FA2CCA2C54006E6D5D /* MainMenu.xib */; };
 		268C46712CCA2F00006E6D5D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C46002CCA2EE5006E6D5D /* main.cpp */; };
-		268C46722CCA2F03006E6D5D /* AppDelegate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C466D2CCA2EE5006E6D5D /* AppDelegate.cpp */; };
-		268C46732CCA2F06006E6D5D /* AppScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C466F2CCA2EE5006E6D5D /* AppScene.cpp */; };
-		268C46742CCA2F10006E6D5D /* AppWidgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C466A2CCA2EE5006E6D5D /* AppWidgets.cpp */; };
-		268C46752CCA2F19006E6D5D /* AppTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C46552CCA2EE5006E6D5D /* AppTests.cpp */; };
 		268C48502CCA61EA006E6D5D /* bitmap.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 268C47DD2CCA39A3006E6D5D /* bitmap.framework */; };
 		268C48512CCA61EA006E6D5D /* bitmap.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C47DD2CCA39A3006E6D5D /* bitmap.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		268C48522CCA61EA006E6D5D /* core.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 268C47DF2CCA39A3006E6D5D /* core.framework */; };
@@ -66,10 +62,10 @@
 		268C48872CCA6539006E6D5D /* IOSurface.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48862CCA6539006E6D5D /* IOSurface.framework */; };
 		268C48892CCA6556006E6D5D /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48882CCA6556006E6D5D /* IOKit.framework */; };
 		268C48C92CCA69E2006E6D5D /* vulkan in Resources */ = {isa = PBXBuildFile; fileRef = 268C48C82CCA69E2006E6D5D /* vulkan */; };
-		268C48CC2CCA6BF2006E6D5D /* libMoltenVK.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C488A2CCA666D006E6D5D /* libMoltenVK.dylib */; };
-		268C48CE2CCA6BF2006E6D5D /* libvulkan.1.3.296.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C488C2CCA666D006E6D5D /* libvulkan.1.3.296.dylib */; };
-		268C48D02CCA6C29006E6D5D /* libVkLayer_khronos_validation.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48CF2CCA6C25006E6D5D /* libVkLayer_khronos_validation.dylib */; };
-		268C48D22CCA6CC2006E6D5D /* libvulkan.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48D12CCA6CB8006E6D5D /* libvulkan.1.dylib */; };
+		268C48CC2CCA6BF2006E6D5D /* libMoltenVK.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C488A2CCA666D006E6D5D /* libMoltenVK.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		268C48CE2CCA6BF2006E6D5D /* libvulkan.1.3.296.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C488C2CCA666D006E6D5D /* libvulkan.1.3.296.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		268C48D02CCA6C29006E6D5D /* libVkLayer_khronos_validation.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48CF2CCA6C25006E6D5D /* libVkLayer_khronos_validation.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		268C48D22CCA6CC2006E6D5D /* libvulkan.1.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 268C48D12CCA6CB8006E6D5D /* libvulkan.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		268C48E42CCB791F006E6D5D /* resources in Resources */ = {isa = PBXBuildFile; fileRef = 268C48E32CCB791F006E6D5D /* resources */; };
 /* End PBXBuildFile section */
 
@@ -314,108 +310,6 @@
 		268C45FC2CCA2C54006E6D5D /* testapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = testapp.entitlements; sourceTree = "<group>"; };
 		268C45FF2CCA2E5B006E6D5D /* macos.projectconfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = macos.projectconfig.xcconfig; sourceTree = "<group>"; };
 		268C46002CCA2EE5006E6D5D /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../main.cpp; sourceTree = SOURCE_ROOT; };
-		268C46012CCA2EE5006E6D5D /* AppActionEaseTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppActionEaseTest.h; sourceTree = "<group>"; };
-		268C46022CCA2EE5006E6D5D /* AppActionEaseTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppActionEaseTest.cc; sourceTree = "<group>"; };
-		268C46032CCA2EE5006E6D5D /* AppActionMaterialTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppActionMaterialTest.h; sourceTree = "<group>"; };
-		268C46042CCA2EE5006E6D5D /* AppActionMaterialTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppActionMaterialTest.cc; sourceTree = "<group>"; };
-		268C46052CCA2EE5006E6D5D /* AppActionRepeatTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppActionRepeatTest.h; sourceTree = "<group>"; };
-		268C46062CCA2EE5006E6D5D /* AppActionRepeatTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppActionRepeatTest.cc; sourceTree = "<group>"; };
-		268C46082CCA2EE5006E6D5D /* AppConfigMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppConfigMenu.h; sourceTree = "<group>"; };
-		268C46092CCA2EE5006E6D5D /* AppConfigMenu.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppConfigMenu.cc; sourceTree = "<group>"; };
-		268C460A2CCA2EE5006E6D5D /* AppConfigPresentModeSwitcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppConfigPresentModeSwitcher.h; sourceTree = "<group>"; };
-		268C460B2CCA2EE5006E6D5D /* AppConfigPresentModeSwitcher.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppConfigPresentModeSwitcher.cc; sourceTree = "<group>"; };
-		268C460D2CCA2EE5006E6D5D /* AppGeneralAutofitTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralAutofitTest.h; sourceTree = "<group>"; };
-		268C460E2CCA2EE5006E6D5D /* AppGeneralAutofitTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralAutofitTest.cc; sourceTree = "<group>"; };
-		268C460F2CCA2EE5006E6D5D /* AppGeneralLabelTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralLabelTest.h; sourceTree = "<group>"; };
-		268C46102CCA2EE5006E6D5D /* AppGeneralLabelTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralLabelTest.cc; sourceTree = "<group>"; };
-		268C46112CCA2EE5006E6D5D /* AppGeneralScissorTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralScissorTest.h; sourceTree = "<group>"; };
-		268C46122CCA2EE5006E6D5D /* AppGeneralScissorTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralScissorTest.cc; sourceTree = "<group>"; };
-		268C46132CCA2EE5006E6D5D /* AppGeneralTemporaryResourceTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralTemporaryResourceTest.h; sourceTree = "<group>"; };
-		268C46142CCA2EE5006E6D5D /* AppGeneralTemporaryResourceTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralTemporaryResourceTest.cc; sourceTree = "<group>"; };
-		268C46152CCA2EE5006E6D5D /* AppGeneralTransparencyTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralTransparencyTest.h; sourceTree = "<group>"; };
-		268C46162CCA2EE5006E6D5D /* AppGeneralTransparencyTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralTransparencyTest.cc; sourceTree = "<group>"; };
-		268C46172CCA2EE5006E6D5D /* AppGeneralUpdateTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralUpdateTest.h; sourceTree = "<group>"; };
-		268C46182CCA2EE5006E6D5D /* AppGeneralUpdateTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralUpdateTest.cc; sourceTree = "<group>"; };
-		268C46192CCA2EE5006E6D5D /* AppGeneralZOrderTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppGeneralZOrderTest.h; sourceTree = "<group>"; };
-		268C461A2CCA2EE5006E6D5D /* AppGeneralZOrderTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppGeneralZOrderTest.cc; sourceTree = "<group>"; };
-		268C461C2CCA2EE5006E6D5D /* AppInputKeyboardTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputKeyboardTest.h; sourceTree = "<group>"; };
-		268C461D2CCA2EE5006E6D5D /* AppInputKeyboardTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputKeyboardTest.cc; sourceTree = "<group>"; };
-		268C461E2CCA2EE5006E6D5D /* AppInputPinchTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputPinchTest.h; sourceTree = "<group>"; };
-		268C461F2CCA2EE5006E6D5D /* AppInputPinchTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputPinchTest.cc; sourceTree = "<group>"; };
-		268C46202CCA2EE5006E6D5D /* AppInputSwipeTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputSwipeTest.h; sourceTree = "<group>"; };
-		268C46212CCA2EE5006E6D5D /* AppInputSwipeTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputSwipeTest.cc; sourceTree = "<group>"; };
-		268C46222CCA2EE5006E6D5D /* AppInputTapPressTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputTapPressTest.h; sourceTree = "<group>"; };
-		268C46232CCA2EE5006E6D5D /* AppInputTapPressTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputTapPressTest.cc; sourceTree = "<group>"; };
-		268C46242CCA2EE5006E6D5D /* AppInputTextTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputTextTest.h; sourceTree = "<group>"; };
-		268C46252CCA2EE5006E6D5D /* AppInputTextTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputTextTest.cc; sourceTree = "<group>"; };
-		268C46262CCA2EE5006E6D5D /* AppInputTouchTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppInputTouchTest.h; sourceTree = "<group>"; };
-		268C46272CCA2EE5006E6D5D /* AppInputTouchTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppInputTouchTest.cc; sourceTree = "<group>"; };
-		268C46292CCA2EE5006E6D5D /* AppMaterialButtonTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialButtonTest.h; sourceTree = "<group>"; };
-		268C462A2CCA2EE5006E6D5D /* AppMaterialButtonTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialButtonTest.cc; sourceTree = "<group>"; };
-		268C462B2CCA2EE5006E6D5D /* AppMaterialColorPickerTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialColorPickerTest.h; sourceTree = "<group>"; };
-		268C462C2CCA2EE5006E6D5D /* AppMaterialColorPickerTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialColorPickerTest.cc; sourceTree = "<group>"; };
-		268C462D2CCA2EE5006E6D5D /* AppMaterialDynamicFontTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialDynamicFontTest.h; sourceTree = "<group>"; };
-		268C462E2CCA2EE5006E6D5D /* AppMaterialDynamicFontTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialDynamicFontTest.cc; sourceTree = "<group>"; };
-		268C462F2CCA2EE5006E6D5D /* AppMaterialInputFieldTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialInputFieldTest.h; sourceTree = "<group>"; };
-		268C46302CCA2EE5006E6D5D /* AppMaterialInputFieldTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialInputFieldTest.cc; sourceTree = "<group>"; };
-		268C46312CCA2EE5006E6D5D /* AppMaterialMenuTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialMenuTest.h; sourceTree = "<group>"; };
-		268C46322CCA2EE5006E6D5D /* AppMaterialMenuTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialMenuTest.cc; sourceTree = "<group>"; };
-		268C46332CCA2EE5006E6D5D /* AppMaterialNodeTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialNodeTest.h; sourceTree = "<group>"; };
-		268C46342CCA2EE5006E6D5D /* AppMaterialNodeTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialNodeTest.cc; sourceTree = "<group>"; };
-		268C46352CCA2EE5006E6D5D /* AppMaterialTabBarTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialTabBarTest.h; sourceTree = "<group>"; };
-		268C46362CCA2EE5006E6D5D /* AppMaterialTabBarTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialTabBarTest.cc; sourceTree = "<group>"; };
-		268C46372CCA2EE5006E6D5D /* AppMaterialToolbarTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialToolbarTest.h; sourceTree = "<group>"; };
-		268C46382CCA2EE5006E6D5D /* AppMaterialToolbarTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialToolbarTest.cc; sourceTree = "<group>"; };
-		268C463A2CCA2EE5006E6D5D /* AppUtilsAssetTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppUtilsAssetTest.h; sourceTree = "<group>"; };
-		268C463B2CCA2EE5006E6D5D /* AppUtilsAssetTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppUtilsAssetTest.cc; sourceTree = "<group>"; };
-		268C463C2CCA2EE5006E6D5D /* AppUtilsNetworkTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppUtilsNetworkTest.h; sourceTree = "<group>"; };
-		268C463D2CCA2EE5006E6D5D /* AppUtilsNetworkTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppUtilsNetworkTest.cc; sourceTree = "<group>"; };
-		268C463E2CCA2EE5006E6D5D /* AppUtilsStorageTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppUtilsStorageTest.h; sourceTree = "<group>"; };
-		268C463F2CCA2EE5006E6D5D /* AppUtilsStorageTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppUtilsStorageTest.cc; sourceTree = "<group>"; };
-		268C46412CCA2EE5006E6D5D /* AppVgDynamicIcons.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgDynamicIcons.h; sourceTree = "<group>"; };
-		268C46422CCA2EE5006E6D5D /* AppVgDynamicIcons.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgDynamicIcons.cc; sourceTree = "<group>"; };
-		268C46432CCA2EE5006E6D5D /* AppVgIconList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgIconList.h; sourceTree = "<group>"; };
-		268C46442CCA2EE5006E6D5D /* AppVgIconList.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgIconList.cc; sourceTree = "<group>"; };
-		268C46452CCA2EE5006E6D5D /* AppVgIconTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgIconTest.h; sourceTree = "<group>"; };
-		268C46462CCA2EE5006E6D5D /* AppVgIconTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgIconTest.cc; sourceTree = "<group>"; };
-		268C46472CCA2EE5006E6D5D /* AppVgLinearGradientTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgLinearGradientTest.h; sourceTree = "<group>"; };
-		268C46482CCA2EE5006E6D5D /* AppVgLinearGradientTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgLinearGradientTest.cc; sourceTree = "<group>"; };
-		268C46492CCA2EE5006E6D5D /* AppVgSdfTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgSdfTest.h; sourceTree = "<group>"; };
-		268C464A2CCA2EE5006E6D5D /* AppVgSdfTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgSdfTest.cc; sourceTree = "<group>"; };
-		268C464B2CCA2EE5006E6D5D /* AppVgShadowTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgShadowTest.h; sourceTree = "<group>"; };
-		268C464C2CCA2EE5006E6D5D /* AppVgShadowTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgShadowTest.cc; sourceTree = "<group>"; };
-		268C464D2CCA2EE5006E6D5D /* AppVgTessCanvas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgTessCanvas.h; sourceTree = "<group>"; };
-		268C464E2CCA2EE5006E6D5D /* AppVgTessCanvas.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgTessCanvas.cc; sourceTree = "<group>"; };
-		268C464F2CCA2EE5006E6D5D /* AppVgTessTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppVgTessTest.h; sourceTree = "<group>"; };
-		268C46502CCA2EE5006E6D5D /* AppVgTessTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppVgTessTest.cc; sourceTree = "<group>"; };
-		268C46522CCA2EE5006E6D5D /* AppRootLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppRootLayout.h; sourceTree = "<group>"; };
-		268C46532CCA2EE5006E6D5D /* AppRootLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppRootLayout.cc; sourceTree = "<group>"; };
-		268C46542CCA2EE5006E6D5D /* AppTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppTests.h; sourceTree = "<group>"; };
-		268C46552CCA2EE5006E6D5D /* AppTests.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppTests.cpp; sourceTree = "<group>"; };
-		268C46572CCA2EE5006E6D5D /* AppButton.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppButton.h; sourceTree = "<group>"; };
-		268C46582CCA2EE5006E6D5D /* AppButton.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppButton.cc; sourceTree = "<group>"; };
-		268C46592CCA2EE5006E6D5D /* AppCheckbox.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppCheckbox.h; sourceTree = "<group>"; };
-		268C465A2CCA2EE5006E6D5D /* AppCheckbox.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppCheckbox.cc; sourceTree = "<group>"; };
-		268C465B2CCA2EE5006E6D5D /* AppLayoutMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppLayoutMenu.h; sourceTree = "<group>"; };
-		268C465C2CCA2EE5006E6D5D /* AppLayoutMenu.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppLayoutMenu.cc; sourceTree = "<group>"; };
-		268C465D2CCA2EE5006E6D5D /* AppLayoutMenuItem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppLayoutMenuItem.h; sourceTree = "<group>"; };
-		268C465E2CCA2EE5006E6D5D /* AppLayoutMenuItem.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppLayoutMenuItem.cc; sourceTree = "<group>"; };
-		268C465F2CCA2EE5006E6D5D /* AppLayoutTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppLayoutTest.h; sourceTree = "<group>"; };
-		268C46602CCA2EE5006E6D5D /* AppLayoutTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppLayoutTest.cc; sourceTree = "<group>"; };
-		268C46612CCA2EE5006E6D5D /* AppMaterialBackground.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialBackground.h; sourceTree = "<group>"; };
-		268C46622CCA2EE5006E6D5D /* AppMaterialBackground.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialBackground.cc; sourceTree = "<group>"; };
-		268C46632CCA2EE5006E6D5D /* AppMaterialColorPicker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialColorPicker.h; sourceTree = "<group>"; };
-		268C46642CCA2EE5006E6D5D /* AppMaterialColorPicker.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialColorPicker.cc; sourceTree = "<group>"; };
-		268C46652CCA2EE5006E6D5D /* AppMaterialTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppMaterialTest.h; sourceTree = "<group>"; };
-		268C46662CCA2EE5006E6D5D /* AppMaterialTest.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppMaterialTest.cc; sourceTree = "<group>"; };
-		268C46672CCA2EE5006E6D5D /* AppSlider.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppSlider.h; sourceTree = "<group>"; };
-		268C46682CCA2EE5006E6D5D /* AppSlider.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppSlider.cc; sourceTree = "<group>"; };
-		268C46692CCA2EE5006E6D5D /* AppWidgets.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppWidgets.h; sourceTree = "<group>"; };
-		268C466A2CCA2EE5006E6D5D /* AppWidgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppWidgets.cpp; sourceTree = "<group>"; };
-		268C466C2CCA2EE5006E6D5D /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		268C466D2CCA2EE5006E6D5D /* AppDelegate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppDelegate.cpp; sourceTree = "<group>"; };
-		268C466E2CCA2EE5006E6D5D /* AppScene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppScene.h; sourceTree = "<group>"; };
-		268C466F2CCA2EE5006E6D5D /* AppScene.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppScene.cpp; sourceTree = "<group>"; };
 		268C47402CCA3361006E6D5D /* xenolith.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = xenolith.xcodeproj; path = ../../../proj.macos/xenolith.xcodeproj; sourceTree = "<group>"; };
 		268C476A2CCA3370006E6D5D /* core.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = core.xcodeproj; path = ../../../../core/proj.macos/core.xcodeproj; sourceTree = "<group>"; };
 		268C48862CCA6539006E6D5D /* IOSurface.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOSurface.framework; path = System/Library/Frameworks/IOSurface.framework; sourceTree = SDKROOT; };
@@ -427,6 +321,31 @@
 		268C48D12CCA6CB8006E6D5D /* libvulkan.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libvulkan.1.dylib; path = /usr/local/lib/libvulkan.1.dylib; sourceTree = "<absolute>"; };
 		268C48E32CCB791F006E6D5D /* resources */ = {isa = PBXFileReference; lastKnownFileType = folder; name = resources; path = ../resources; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		261315782CD3A877008E4213 /* Exceptions for "src" folder in "testapp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppDelegate.cpp,
+				AppScene.cpp,
+				tests/AppTests.cpp,
+				widgets/AppWidgets.cpp,
+			);
+			target = 268C45E42CCA2B2C006E6D5D /* testapp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		261315762CD3A858008E4213 /* src */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				261315782CD3A877008E4213 /* Exceptions for "src" folder in "testapp" target */,
+			);
+			name = src;
+			path = ../src;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		268C45E22CCA2B2C006E6D5D /* Frameworks */ = {
@@ -478,7 +397,7 @@
 				268C45FB2CCA2C54006E6D5D /* Base.lproj */,
 				268C45FC2CCA2C54006E6D5D /* testapp.entitlements */,
 				268C46002CCA2EE5006E6D5D /* main.cpp */,
-				268C46702CCA2EE5006E6D5D /* src */,
+				261315762CD3A858008E4213 /* src */,
 				268C468D2CCA307C006E6D5D /* Frameworks */,
 				268C45E62CCA2B2C006E6D5D /* Products */,
 				268C488A2CCA666D006E6D5D /* libMoltenVK.dylib */,
@@ -503,188 +422,6 @@
 			);
 			path = Base.lproj;
 			sourceTree = "<group>";
-		};
-		268C46072CCA2EE5006E6D5D /* action */ = {
-			isa = PBXGroup;
-			children = (
-				268C46012CCA2EE5006E6D5D /* AppActionEaseTest.h */,
-				268C46022CCA2EE5006E6D5D /* AppActionEaseTest.cc */,
-				268C46032CCA2EE5006E6D5D /* AppActionMaterialTest.h */,
-				268C46042CCA2EE5006E6D5D /* AppActionMaterialTest.cc */,
-				268C46052CCA2EE5006E6D5D /* AppActionRepeatTest.h */,
-				268C46062CCA2EE5006E6D5D /* AppActionRepeatTest.cc */,
-			);
-			path = action;
-			sourceTree = "<group>";
-		};
-		268C460C2CCA2EE5006E6D5D /* config */ = {
-			isa = PBXGroup;
-			children = (
-				268C46082CCA2EE5006E6D5D /* AppConfigMenu.h */,
-				268C46092CCA2EE5006E6D5D /* AppConfigMenu.cc */,
-				268C460A2CCA2EE5006E6D5D /* AppConfigPresentModeSwitcher.h */,
-				268C460B2CCA2EE5006E6D5D /* AppConfigPresentModeSwitcher.cc */,
-			);
-			path = config;
-			sourceTree = "<group>";
-		};
-		268C461B2CCA2EE5006E6D5D /* general */ = {
-			isa = PBXGroup;
-			children = (
-				268C460D2CCA2EE5006E6D5D /* AppGeneralAutofitTest.h */,
-				268C460E2CCA2EE5006E6D5D /* AppGeneralAutofitTest.cc */,
-				268C460F2CCA2EE5006E6D5D /* AppGeneralLabelTest.h */,
-				268C46102CCA2EE5006E6D5D /* AppGeneralLabelTest.cc */,
-				268C46112CCA2EE5006E6D5D /* AppGeneralScissorTest.h */,
-				268C46122CCA2EE5006E6D5D /* AppGeneralScissorTest.cc */,
-				268C46132CCA2EE5006E6D5D /* AppGeneralTemporaryResourceTest.h */,
-				268C46142CCA2EE5006E6D5D /* AppGeneralTemporaryResourceTest.cc */,
-				268C46152CCA2EE5006E6D5D /* AppGeneralTransparencyTest.h */,
-				268C46162CCA2EE5006E6D5D /* AppGeneralTransparencyTest.cc */,
-				268C46172CCA2EE5006E6D5D /* AppGeneralUpdateTest.h */,
-				268C46182CCA2EE5006E6D5D /* AppGeneralUpdateTest.cc */,
-				268C46192CCA2EE5006E6D5D /* AppGeneralZOrderTest.h */,
-				268C461A2CCA2EE5006E6D5D /* AppGeneralZOrderTest.cc */,
-			);
-			path = general;
-			sourceTree = "<group>";
-		};
-		268C46282CCA2EE5006E6D5D /* input */ = {
-			isa = PBXGroup;
-			children = (
-				268C461C2CCA2EE5006E6D5D /* AppInputKeyboardTest.h */,
-				268C461D2CCA2EE5006E6D5D /* AppInputKeyboardTest.cc */,
-				268C461E2CCA2EE5006E6D5D /* AppInputPinchTest.h */,
-				268C461F2CCA2EE5006E6D5D /* AppInputPinchTest.cc */,
-				268C46202CCA2EE5006E6D5D /* AppInputSwipeTest.h */,
-				268C46212CCA2EE5006E6D5D /* AppInputSwipeTest.cc */,
-				268C46222CCA2EE5006E6D5D /* AppInputTapPressTest.h */,
-				268C46232CCA2EE5006E6D5D /* AppInputTapPressTest.cc */,
-				268C46242CCA2EE5006E6D5D /* AppInputTextTest.h */,
-				268C46252CCA2EE5006E6D5D /* AppInputTextTest.cc */,
-				268C46262CCA2EE5006E6D5D /* AppInputTouchTest.h */,
-				268C46272CCA2EE5006E6D5D /* AppInputTouchTest.cc */,
-			);
-			path = input;
-			sourceTree = "<group>";
-		};
-		268C46392CCA2EE5006E6D5D /* material */ = {
-			isa = PBXGroup;
-			children = (
-				268C46292CCA2EE5006E6D5D /* AppMaterialButtonTest.h */,
-				268C462A2CCA2EE5006E6D5D /* AppMaterialButtonTest.cc */,
-				268C462B2CCA2EE5006E6D5D /* AppMaterialColorPickerTest.h */,
-				268C462C2CCA2EE5006E6D5D /* AppMaterialColorPickerTest.cc */,
-				268C462D2CCA2EE5006E6D5D /* AppMaterialDynamicFontTest.h */,
-				268C462E2CCA2EE5006E6D5D /* AppMaterialDynamicFontTest.cc */,
-				268C462F2CCA2EE5006E6D5D /* AppMaterialInputFieldTest.h */,
-				268C46302CCA2EE5006E6D5D /* AppMaterialInputFieldTest.cc */,
-				268C46312CCA2EE5006E6D5D /* AppMaterialMenuTest.h */,
-				268C46322CCA2EE5006E6D5D /* AppMaterialMenuTest.cc */,
-				268C46332CCA2EE5006E6D5D /* AppMaterialNodeTest.h */,
-				268C46342CCA2EE5006E6D5D /* AppMaterialNodeTest.cc */,
-				268C46352CCA2EE5006E6D5D /* AppMaterialTabBarTest.h */,
-				268C46362CCA2EE5006E6D5D /* AppMaterialTabBarTest.cc */,
-				268C46372CCA2EE5006E6D5D /* AppMaterialToolbarTest.h */,
-				268C46382CCA2EE5006E6D5D /* AppMaterialToolbarTest.cc */,
-			);
-			path = material;
-			sourceTree = "<group>";
-		};
-		268C46402CCA2EE5006E6D5D /* utils */ = {
-			isa = PBXGroup;
-			children = (
-				268C463A2CCA2EE5006E6D5D /* AppUtilsAssetTest.h */,
-				268C463B2CCA2EE5006E6D5D /* AppUtilsAssetTest.cc */,
-				268C463C2CCA2EE5006E6D5D /* AppUtilsNetworkTest.h */,
-				268C463D2CCA2EE5006E6D5D /* AppUtilsNetworkTest.cc */,
-				268C463E2CCA2EE5006E6D5D /* AppUtilsStorageTest.h */,
-				268C463F2CCA2EE5006E6D5D /* AppUtilsStorageTest.cc */,
-			);
-			path = utils;
-			sourceTree = "<group>";
-		};
-		268C46512CCA2EE5006E6D5D /* vg */ = {
-			isa = PBXGroup;
-			children = (
-				268C46412CCA2EE5006E6D5D /* AppVgDynamicIcons.h */,
-				268C46422CCA2EE5006E6D5D /* AppVgDynamicIcons.cc */,
-				268C46432CCA2EE5006E6D5D /* AppVgIconList.h */,
-				268C46442CCA2EE5006E6D5D /* AppVgIconList.cc */,
-				268C46452CCA2EE5006E6D5D /* AppVgIconTest.h */,
-				268C46462CCA2EE5006E6D5D /* AppVgIconTest.cc */,
-				268C46472CCA2EE5006E6D5D /* AppVgLinearGradientTest.h */,
-				268C46482CCA2EE5006E6D5D /* AppVgLinearGradientTest.cc */,
-				268C46492CCA2EE5006E6D5D /* AppVgSdfTest.h */,
-				268C464A2CCA2EE5006E6D5D /* AppVgSdfTest.cc */,
-				268C464B2CCA2EE5006E6D5D /* AppVgShadowTest.h */,
-				268C464C2CCA2EE5006E6D5D /* AppVgShadowTest.cc */,
-				268C464D2CCA2EE5006E6D5D /* AppVgTessCanvas.h */,
-				268C464E2CCA2EE5006E6D5D /* AppVgTessCanvas.cc */,
-				268C464F2CCA2EE5006E6D5D /* AppVgTessTest.h */,
-				268C46502CCA2EE5006E6D5D /* AppVgTessTest.cc */,
-			);
-			path = vg;
-			sourceTree = "<group>";
-		};
-		268C46562CCA2EE5006E6D5D /* tests */ = {
-			isa = PBXGroup;
-			children = (
-				268C46072CCA2EE5006E6D5D /* action */,
-				268C460C2CCA2EE5006E6D5D /* config */,
-				268C461B2CCA2EE5006E6D5D /* general */,
-				268C46282CCA2EE5006E6D5D /* input */,
-				268C46392CCA2EE5006E6D5D /* material */,
-				268C46402CCA2EE5006E6D5D /* utils */,
-				268C46512CCA2EE5006E6D5D /* vg */,
-				268C46522CCA2EE5006E6D5D /* AppRootLayout.h */,
-				268C46532CCA2EE5006E6D5D /* AppRootLayout.cc */,
-				268C46542CCA2EE5006E6D5D /* AppTests.h */,
-				268C46552CCA2EE5006E6D5D /* AppTests.cpp */,
-			);
-			path = tests;
-			sourceTree = "<group>";
-		};
-		268C466B2CCA2EE5006E6D5D /* widgets */ = {
-			isa = PBXGroup;
-			children = (
-				268C46572CCA2EE5006E6D5D /* AppButton.h */,
-				268C46582CCA2EE5006E6D5D /* AppButton.cc */,
-				268C46592CCA2EE5006E6D5D /* AppCheckbox.h */,
-				268C465A2CCA2EE5006E6D5D /* AppCheckbox.cc */,
-				268C465B2CCA2EE5006E6D5D /* AppLayoutMenu.h */,
-				268C465C2CCA2EE5006E6D5D /* AppLayoutMenu.cc */,
-				268C465D2CCA2EE5006E6D5D /* AppLayoutMenuItem.h */,
-				268C465E2CCA2EE5006E6D5D /* AppLayoutMenuItem.cc */,
-				268C465F2CCA2EE5006E6D5D /* AppLayoutTest.h */,
-				268C46602CCA2EE5006E6D5D /* AppLayoutTest.cc */,
-				268C46612CCA2EE5006E6D5D /* AppMaterialBackground.h */,
-				268C46622CCA2EE5006E6D5D /* AppMaterialBackground.cc */,
-				268C46632CCA2EE5006E6D5D /* AppMaterialColorPicker.h */,
-				268C46642CCA2EE5006E6D5D /* AppMaterialColorPicker.cc */,
-				268C46652CCA2EE5006E6D5D /* AppMaterialTest.h */,
-				268C46662CCA2EE5006E6D5D /* AppMaterialTest.cc */,
-				268C46672CCA2EE5006E6D5D /* AppSlider.h */,
-				268C46682CCA2EE5006E6D5D /* AppSlider.cc */,
-				268C46692CCA2EE5006E6D5D /* AppWidgets.h */,
-				268C466A2CCA2EE5006E6D5D /* AppWidgets.cpp */,
-			);
-			path = widgets;
-			sourceTree = "<group>";
-		};
-		268C46702CCA2EE5006E6D5D /* src */ = {
-			isa = PBXGroup;
-			children = (
-				268C46562CCA2EE5006E6D5D /* tests */,
-				268C466B2CCA2EE5006E6D5D /* widgets */,
-				268C466C2CCA2EE5006E6D5D /* AppDelegate.h */,
-				268C466D2CCA2EE5006E6D5D /* AppDelegate.cpp */,
-				268C466E2CCA2EE5006E6D5D /* AppScene.h */,
-				268C466F2CCA2EE5006E6D5D /* AppScene.cpp */,
-			);
-			name = src;
-			path = ../src;
-			sourceTree = SOURCE_ROOT;
 		};
 		268C468D2CCA307C006E6D5D /* Frameworks */ = {
 			isa = PBXGroup;
@@ -766,7 +503,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 1610;
 				TargetAttributes = {
 					268C45E42CCA2B2C006E6D5D = {
 						CreatedOnToolsVersion = 16.0;
@@ -999,10 +736,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				268C46712CCA2F00006E6D5D /* main.cpp in Sources */,
-				268C46722CCA2F03006E6D5D /* AppDelegate.cpp in Sources */,
-				268C46732CCA2F06006E6D5D /* AppScene.cpp in Sources */,
-				268C46742CCA2F10006E6D5D /* AppWidgets.cpp in Sources */,
-				268C46752CCA2F19006E6D5D /* AppTests.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1067,6 +800,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1128,6 +862,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1158,6 +893,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1187,6 +923,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
