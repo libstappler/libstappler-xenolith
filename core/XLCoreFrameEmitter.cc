@@ -56,7 +56,7 @@ void FrameEmitter::invalidate() {
 }
 
 void FrameEmitter::setFrameSubmitted(FrameHandle &frame) {
-	if (!_loop->isOnGlThread()) {
+	if (!_loop->isOnThisThread()) {
 		return;
 	}
 
@@ -107,7 +107,7 @@ void FrameEmitter::dropFrameTimeout() {
 }
 
 void FrameEmitter::dropFrames() {
-	if (!_loop->isOnGlThread()) {
+	if (!_loop->isOnThisThread()) {
 		return;
 	}
 
@@ -141,7 +141,7 @@ void FrameEmitter::onFrameEmitted(FrameHandle &) { }
 void FrameEmitter::onFrameSubmitted(FrameHandle &) { }
 
 void FrameEmitter::onFrameComplete(FrameHandle &frame) {
-	if (!_loop->isOnGlThread()) {
+	if (!_loop->isOnThisThread()) {
 		return;
 	}
 

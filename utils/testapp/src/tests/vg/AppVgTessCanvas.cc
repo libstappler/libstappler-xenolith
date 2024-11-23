@@ -221,7 +221,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 				_winding = vg::Winding(val.getInteger("winding"));
 			}
 			if (val.isInteger("drawStyle")) {
-				_drawStyle = vg::DrawStyle(val.getInteger("drawStyle"));
+				_drawStyle = vg::DrawFlags(val.getInteger("drawStyle"));
 			}
 			_contours.reserve(ncontours);
 
@@ -267,7 +267,7 @@ void VgTessCanvas::setWinding(vg::Winding w) {
 	}
 }
 
-void VgTessCanvas::setDrawStyle(vg::DrawStyle s) {
+void VgTessCanvas::setDrawStyle(vg::DrawFlags s) {
 	if (_drawStyle != s) {
 		_drawStyle = s;
 		updatePoints();

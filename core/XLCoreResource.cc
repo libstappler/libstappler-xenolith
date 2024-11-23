@@ -406,15 +406,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return nullptr;
 	}
 
-	String npath;
-	if (filesystem::exists(path.get())) {
-		npath = path.get().str<Interface>();
-	} else if (!filepath::isAbsolute(path.get())) {
-		npath = filesystem::currentDir<Interface>(path.get());
-		if (!filesystem::exists(npath)) {
-			npath.clear();
-		}
-	}
+	String npath = filesystem::loadableResourcePath<Interface>(path.get());
 
 	if (npath.empty()) {
 		log::error("Resource", "Fail to add buffer: ", key, ", file not found: ", path.get());
@@ -516,15 +508,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 		return nullptr;
 	}
 
-	String npath;
-	if (filesystem::exists(path.get())) {
-		npath = path.get().str<Interface>();
-	} else if (!filepath::isAbsolute(path.get())) {
-		npath = filesystem::currentDir<Interface>(path.get());
-		if (!filesystem::exists(npath)) {
-			npath.clear();
-		}
-	}
+	String npath = filesystem::loadableResourcePath<Interface>(path.get());
 
 	if (npath.empty()) {
 		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path.get());

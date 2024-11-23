@@ -45,15 +45,15 @@ class VgDrawStyleSwitcher : public Button {
 public:
 	virtual ~VgDrawStyleSwitcher() { }
 
-	virtual bool init(vg::DrawStyle, Function<void(vg::DrawStyle)> &&cb);
+	virtual bool init(vg::DrawFlags, Function<void(vg::DrawFlags)> &&cb);
 
 	virtual void onContentSizeDirty() override;
 
 protected:
 	void updateStyle();
 
-	vg::DrawStyle _style = vg::DrawStyle::Fill;
-	Function<void(vg::DrawStyle)> _windingCallback;
+	vg::DrawFlags _style = vg::DrawFlags::Fill;
+	Function<void(vg::DrawFlags)> _windingCallback;
 	Label *_label = nullptr;
 };
 
@@ -146,14 +146,14 @@ void VgWindingSwitcher::updateWinding() {
 	}
 }
 
-bool VgDrawStyleSwitcher::init(vg::DrawStyle style, Function<void(vg::DrawStyle)> &&cb) {
+bool VgDrawStyleSwitcher::init(vg::DrawFlags style, Function<void(vg::DrawFlags)> &&cb) {
 	if (!Button::init([this] {
 		auto w = toInt(_style);
 		++ w;
 		if (w > 3) {
 			w = 1;
 		}
-		_style = vg::DrawStyle(w);
+		_style = vg::DrawFlags(w);
 		updateStyle();
 		_windingCallback(_style);
 	})) {
@@ -182,11 +182,12 @@ void VgDrawStyleSwitcher::onContentSizeDirty() {
 
 void VgDrawStyleSwitcher::updateStyle() {
 	switch (_style) {
-	case vg::DrawStyle::Fill: _label->setString("DrawStyle: Fill"); break;
-	case vg::DrawStyle::Stroke: _label->setString("DrawStyle: Stroke"); break;
-	case vg::DrawStyle::FillAndStroke: _label->setString("DrawStyle: FillAndStroke"); break;
-	case vg::DrawStyle::PseudoSdf: _label->setString("DrawStyle: PseudoSdf"); break;
-	case vg::DrawStyle::None: break;
+	case vg::DrawFlags::Fill: _label->setString("DrawStyle: Fill"); break;
+	case vg::DrawFlags::Stroke: _label->setString("DrawStyle: Stroke"); break;
+	case vg::DrawFlags::FillAndStroke: _label->setString("DrawStyle: FillAndStroke"); break;
+	case vg::DrawFlags::PseudoSdf: _label->setString("DrawStyle: PseudoSdf"); break;
+	case vg::DrawFlags::UV: _label->setString("DrawStyle: UV"); break;
+	case vg::DrawFlags::None: break;
 	}
 }
 
@@ -340,7 +341,7 @@ bool VgTessTest::init() {
 	}));
 	_windingSwitcher->setAnchorPoint(Anchor::TopLeft);
 
-	_drawStyleSwitcher = addChild(Rc<VgDrawStyleSwitcher>::create(_canvas->getDrawStyle(), [this] (vg::DrawStyle w) {
+	_drawStyleSwitcher = addChild(Rc<VgDrawStyleSwitcher>::create(_canvas->getDrawStyle(), [this] (vg::DrawFlags w) {
 		_canvas->setDrawStyle(w);
 	}));
 	_drawStyleSwitcher->setAnchorPoint(Anchor::TopLeft);

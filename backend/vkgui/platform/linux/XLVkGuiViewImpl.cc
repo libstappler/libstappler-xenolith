@@ -98,7 +98,7 @@ static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Inst
 
 void ViewImpl::threadInit() {
 	thread::ThreadInfo::setThreadInfo(_threadName);
-	_threadId = std::this_thread::get_id();
+	_thisThreadId = std::this_thread::get_id();
 
 	auto presentMask = _device->getPresentatonMask();
 
@@ -177,7 +177,7 @@ bool ViewImpl::worker() {
 
 	update(false);
 
-	while (_shouldQuit.test_and_set()) {
+	while (_continueExecution.test_and_set()) {
 		bool shouldUpdate = false;
 
 		int ret = ::ppoll( fds, 2, &timeoutMin, nullptr);
@@ -259,7 +259,7 @@ void ViewImpl::presentWithQueue(vk::DeviceQueue &queue, Rc<ImageStorage> &&image
 
 bool ViewImpl::pollInput(bool frameReady) {
 	if (!_view->poll(frameReady)) {
-		close();
+		stop();
 		return false;
 	}
 	return true;

@@ -45,13 +45,9 @@ public:
 
 	bool init(Rc<Instance> &&, LoopInfo &&);
 
-	virtual void waitRinning() override;
-
 	virtual void threadInit() override;
 	virtual void threadDispose() override;
 	virtual bool worker() override;
-
-	virtual void cancel() override;
 
 	virtual bool isRunning() const override { return _running.load(); }
 
@@ -72,8 +68,6 @@ public:
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const override;
 
 	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const override;
-
-	virtual bool isOnGlThread() const override;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) override;
 
@@ -102,13 +96,6 @@ public:
 
 protected:
 	using core::Loop::init;
-
-	std::thread _thread;
-	std::thread::id _threadId;
-
-	std::mutex _mutex;
-	std::condition_variable _cond;
-	std::atomic<bool> _running = false;
 
 	Internal *_internal = nullptr;
 

@@ -46,9 +46,6 @@ bool View::init(Application &loop, ViewInfo &&info) {
 	_constraints.contentPadding = info.decoration;
 	_frameEmitter = Rc<FrameEmitter>::create(_glLoop, info.frameInterval);
 	_info = move(info);
-
-	log::debug("View", "init");
-
 	return true;
 }
 
@@ -76,12 +73,8 @@ void View::update(bool displayLink) {
 	}
 }
 
-void View::close() {
-	_shouldQuit.clear();
-}
-
 void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate) {
-	if (immediate && std::this_thread::get_id() == _threadId) {
+	if (immediate && isOnThisThread()) {
 		func();
 	} else {
 		std::unique_lock<Mutex> lock(_mutex);

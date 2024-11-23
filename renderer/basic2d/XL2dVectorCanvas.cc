@@ -50,7 +50,7 @@ struct VectorCanvasCacheData {
 	float quality = 1.0f;
 	float scale = 1.0f;
 	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
-	vg::DrawStyle style = vg::DrawStyle::Fill;
+	vg::DrawFlags style = vg::DrawFlags::Fill;
 
 	bool operator< (const VectorCanvasCacheData &other) const {
 		if (style != other.style) {
@@ -425,15 +425,15 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	auto style = path->getStyle();
 
 	Rc<geom::Tesselator> fillTess =
-			((style & geom::DrawStyle::Fill) != geom::DrawStyle::None)
+			((style & geom::DrawFlags::Fill) != geom::DrawFlags::None)
 			? Rc<geom::Tesselator>::create(pool)
 			: nullptr;
 	Rc<geom::Tesselator> strokeTess =
-			((style & geom::DrawStyle::Stroke) != geom::DrawStyle::None)
+			((style & geom::DrawFlags::Stroke) != geom::DrawFlags::None)
 			? Rc<geom::Tesselator>::create(pool)
 			: nullptr;
 	Rc<geom::Tesselator> sdfTess =
-			(fillTess && ((style & geom::DrawStyle::PseudoSdf) != geom::DrawStyle::None || forcePseudoSdf))
+			(fillTess && ((style & geom::DrawFlags::PseudoSdf) != geom::DrawFlags::None || forcePseudoSdf))
 			? Rc<geom::Tesselator>::create(pool)
 			: nullptr;
 
@@ -473,7 +473,7 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	if (fillTess) {
 		// draw antialias outline only if stroke is transparent enough
 		// for cached image, always draw antialias, because user can change color and opacity
-		if (path->isAntialiased() && (path->getStyle() == vg::DrawStyle::Fill || path->getStrokeOpacity() < 96 || cache)) {
+		if (path->isAntialiased() && (path->getStyle() == vg::DrawFlags::Fill || path->getStrokeOpacity() < 96 || cache)) {
 			fillTess->setBoundariesTransform(boundaryInset / approxScale, boundaryOffset / approxScale);
 			fillTess->setRelocateRule(relocateRule);
 		}
@@ -620,7 +620,7 @@ VectorCanvasCache::VectorCanvasCache() {
 			data.quality = it.getDouble("quality");
 			data.scale = it.getDouble("scale");
 			data.relocateRule = geom::Tesselator::RelocateRule(it.getInteger("rule"));
-			data.style = geom::DrawStyle(it.getInteger("style"));
+			data.style = geom::DrawFlags(it.getInteger("style"));
 			data.fillIndexes = uint32_t(it.getInteger("fill"));
 			data.strokeIndexes = uint32_t(it.getInteger("stroke"));
 			data.sdfIndexes = uint32_t(it.getInteger("sdf"));

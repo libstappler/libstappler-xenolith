@@ -30,7 +30,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void ViewApplication::wakeup() {
-	if (isOnMainThread()) {
+	if (isOnThisThread()) {
 		_immediateUpdate = true;
 		for (auto &it : _activeViews) {
 			it->setReadyForNextFrame();

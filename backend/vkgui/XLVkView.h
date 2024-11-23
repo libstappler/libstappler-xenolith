@@ -75,9 +75,8 @@ public:
 	virtual void threadDispose() override;
 
 	virtual void update(bool displayLink) override;
-	virtual void close() override;
 
-	virtual void run() override;
+	virtual void run();
 	virtual void runWithQueue(const Rc<RenderQueue> &) override;
 
 	virtual void onAdded(Device &);

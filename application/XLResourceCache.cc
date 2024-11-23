@@ -215,11 +215,11 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 	return nullptr;
 }
 
-Rc<TemporaryResource> ResourceCache::addTemporaryResource(Rc<core::Resource> &&res, TimeInterval ival, TemporaryResourceFlags flags) {
+TemporaryResource * ResourceCache::addTemporaryResource(Rc<core::Resource> &&res, TimeInterval ival, TemporaryResourceFlags flags) {
 	return addTemporaryResource(Rc<TemporaryResource>::create(move(res), ival, flags));
 }
 
-Rc<TemporaryResource> ResourceCache::addTemporaryResource(Rc<TemporaryResource> &&tmp) {
+TemporaryResource * ResourceCache::addTemporaryResource(Rc<TemporaryResource> &&tmp) {
 	auto it = _temporaries.find(tmp->getName());
 	if (it != _temporaries.end()) {
 		_temporaries.erase(it);

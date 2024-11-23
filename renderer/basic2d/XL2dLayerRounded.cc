@@ -62,7 +62,7 @@ void LayerRounded::onContentSizeDirty() {
 		})
 			.setAntialiased(false)
 			.setFillColor(_pathColor)
-			.setStyle(vg::DrawStyle::Fill);
+			.setStyle(vg::DrawFlags::Fill);
 
 		setImage(move(img));
 

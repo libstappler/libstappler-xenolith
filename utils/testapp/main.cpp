@@ -71,7 +71,7 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		auto app = Rc<AppDelegate>::create(move(data));
 
 		app->run();
-		app->waitFinalized();
+		app->waitStopped();
 	});
 
 	return 0;

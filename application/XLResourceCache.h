@@ -82,10 +82,10 @@ public:
 			const memory::function<void(uint8_t *, uint64_t, const core::ImageData::DataCallback &)> &cb,
 			TimeInterval = TimeInterval(), TemporaryResourceFlags flags = TemporaryResourceFlags::None);
 
-	Rc<TemporaryResource> addTemporaryResource(Rc<core::Resource> &&, TimeInterval = TimeInterval(),
+	TemporaryResource * addTemporaryResource(Rc<core::Resource> &&, TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
 
-	Rc<TemporaryResource> addTemporaryResource(Rc<TemporaryResource> &&);
+	TemporaryResource * addTemporaryResource(Rc<TemporaryResource> &&);
 
 	Rc<TemporaryResource> getTemporaryResource(StringView str) const;
 	bool hasTemporaryResource(StringView) const;

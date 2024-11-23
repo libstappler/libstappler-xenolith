@@ -39,19 +39,19 @@ public:
 	static EventHeader onRemoteNotification;
 
 	// thread-local
-	static Application *getInstance();
+	static const Application *getInstance();
 
 	virtual ~Application();
 
 	virtual void threadInit() override;
 	virtual void threadDispose() override;
 
-	void addEventListener(const EventHandlerNode *listener);
-	void removeEventListner(const EventHandlerNode *listener);
+	void addEventListener(const EventHandlerNode *listener) const;
+	void removeEventListner(const EventHandlerNode *listener) const;
 
-	void removeAllEventListeners();
+	void removeAllEventListeners() const;
 
-	void dispatchEvent(const Event &ev);
+	void dispatchEvent(const Event &ev) const;
 
 	const Rc<ResourceCache> &getResourceCache() const { return _resourceCache; }
 
@@ -59,7 +59,7 @@ public:
 	bool addExtension(Rc<T> &&);
 
 	template <typename T>
-	T *getExtension();
+	T *getExtension() const;
 
 	virtual void updateMessageToken(BytesView) override;
 	virtual void receiveRemoteNotification(Value &&) override;
@@ -76,7 +76,7 @@ protected:
 
 	bool _hasViews = false;
 
-	HashMap<EventHeader::EventID, HashSet<const EventHandlerNode *>> _eventListeners;
+	mutable HashMap<EventHeader::EventID, HashSet<const EventHandlerNode *>> _eventListeners;
 	Rc<ResourceCache> _resourceCache;
 
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
@@ -98,7 +98,7 @@ bool Application::addExtension(Rc<T> &&t) {
 }
 
 template <typename T>
-auto Application::getExtension() -> T * {
+auto Application::getExtension() const -> T * {
 	auto it = _extensions.find(std::type_index(typeid(T)));
 	if (it != _extensions.end()) {
 		return reinterpret_cast<T *>(it->second.get());

@@ -365,6 +365,11 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		return;
 	}
 
+	Rect contentRect;
+	Rect textureRect;
+
+	resolveAutofitForTexture(contentRect, textureRect);
+
 	Vec3 viewScale;
 	_modelViewTransform.decompose(&viewScale, nullptr, nullptr);
 
@@ -467,12 +472,12 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 
 			auto s = it.second->getStyle();
 			switch (s) {
-			case vg::DrawStyle::Fill:
+			case vg::DrawFlags::Fill:
 				if (it.second->getFillOpacity() != 255) {
 					return false;
 				}
 				break;
-			case vg::DrawStyle::FillAndStroke:
+			case vg::DrawFlags::FillAndStroke:
 				if (it.second->getFillOpacity() != 255) {
 					return false;
 				}
@@ -480,7 +485,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 					return false;
 				}
 				break;
-			case vg::DrawStyle::Stroke:
+			case vg::DrawFlags::Stroke:
 				if (it.second->getStrokeOpacity() != 255) {
 					return false;
 				}

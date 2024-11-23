@@ -244,7 +244,7 @@ dbus_bool_t dbus_timeout_get_enabled(DBusTimeout *timeout);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-struct DBusInterface : public thread::ThreadInterface<Interface> {
+struct DBusInterface : public thread::Thread {
 	struct Error {
 		DBusError error;
 		DBusInterface *iface;
@@ -324,11 +324,9 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 
 	bool openHandle(Dso &d);
 
-	bool startThread();
-
-	virtual void threadInit();
-	virtual void threadDispose();
-	virtual bool worker();
+	virtual void threadInit() override;
+	virtual void threadDispose() override;
+	virtual bool worker() override;
 
 	void wakeup();
 	void addEvent(Function<void()> &&);
@@ -433,10 +431,6 @@ struct DBusInterface : public thread::ThreadInterface<Interface> {
 	Dso handle;
 	Connection *sessionConnection = nullptr;
 	Connection *systemConnection = nullptr;
-
-	bool dbusThreadStarted = false;
-	std::thread dbusThread;
-	std::atomic_flag shouldExit;
 
 	std::mutex interfaceMutex;
 	std::condition_variable interfaceCondvar;
@@ -784,20 +778,20 @@ DBusInterface::DBusInterface() {
 		handle = Dso();
 	}
 
-	if (sessionConnection && systemConnection) {
-		startThread();
-	} else if (handle) {
-		delete sessionConnection;
-		delete systemConnection;
+	if (!sessionConnection || !systemConnection) {
+		if (sessionConnection) {
+			delete sessionConnection;
+		}
+		if (sessionConnection) {
+			delete systemConnection;
+		}
+	} else {
+		run();
 	}
 }
 
 DBusInterface::~DBusInterface() {
-	shouldExit.clear();
 	wakeup();
-	if (dbusThreadStarted) {
-		dbusThread.join();
-	}
 	if (sessionConnection) {
 		delete sessionConnection;
 		sessionConnection = nullptr;
@@ -1020,13 +1014,6 @@ bool DBusInterface::openHandle(Dso &d) {
 		&& this->dbus_timeout_get_enabled;
 }
 
-bool DBusInterface::startThread() {
-	dbusThreadStarted = true;
-	shouldExit.test_and_set();
-	dbusThread = std::thread(DBusInterface::workerThread, this, nullptr);
-	return true;
-}
-
 void DBusInterface::threadInit() {
 	thread::ThreadInfo::setThreadInfo("DBusThread");
 
@@ -1084,6 +1071,8 @@ void DBusInterface::threadInit() {
 			}
 		});
 	});
+
+	Thread::threadInit();
 }
 
 void DBusInterface::threadDispose() {
@@ -1095,19 +1084,21 @@ void DBusInterface::threadDispose() {
 		::close(epollFd);
 		epollFd = -1;
 	}
+
+	Thread::threadDispose();
 }
 
 bool DBusInterface::worker() {
 	std::array<struct epoll_event, 16> _events;
 
-	while (shouldExit.test_and_set()) {
+	if (_continueExecution.test_and_set()) {
 		int nevents = epoll_wait(epollFd, _events.data(), 16, 100);
 		if (nevents == -1 && errno != EINTR) {
 			char buf[256] = { 0 };
 			log::error("DBusConnection", "epoll_wait() failed with errno ", errno, " (", strerror_r(errno, buf, 255), ")");
-			break;
+			return false;
 		} else if (errno == EINTR) {
-			continue;
+			return true;
 		}
 
 		for (int i = 0; i < nevents; i++) {
@@ -1119,6 +1110,7 @@ bool DBusInterface::worker() {
 				event->handle(_events[i].events);
 			}
 		}
+		return true;
 	}
 	return false;
 }

@@ -93,7 +93,7 @@ bool InputKeyboardOnScreenKey::init(Function<void(bool)> &&cb) {
 	image->addPath()->openForWriting([] (vg::PathWriter &writer) {
 		writer.moveTo(10, 30).lineTo(20, 40).lineTo(30, 30);
 	}).setStrokeWidth(4.0f)
-			.setStyle(vg::DrawStyle::Stroke).setStrokeColor(Color::Black).setAntialiased(false);
+			.setStyle(vg::DrawFlags::Stroke).setStrokeColor(Color::Black).setAntialiased(false);
 
 	// background
 	image->addPath()->openForWriting([] (vg::PathWriter &writer) {

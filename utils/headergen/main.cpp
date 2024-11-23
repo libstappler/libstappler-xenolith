@@ -68,7 +68,7 @@ static IconData &exportIcon(Map<String, IconData> &icons, StringView name, vg::V
 	auto paths = image.getPaths();
 	if (paths.size() > 1) {
 		for (auto &it : paths) {
-			if (it.second->getStyle() == vg::DrawStyle::None) {
+			if (it.second->getStyle() == vg::DrawFlags::None) {
 				image.removePath(it.second);
 			}
 		}

@@ -292,25 +292,15 @@ bool Loop::init(Rc<Instance> &&instance, LoopInfo &&info) {
 	}
 
 	_vkInstance = move(instance);
-	_thread = std::thread(Loop::workerThread, this, nullptr);
+
+	run();
+
 	return true;
-}
-
-void Loop::waitRinning() {
-	std::unique_lock<std::mutex> lock(_mutex);
-	if (_running.load()) {
-		lock.unlock();
-		return;
-	}
-
-	_cond.wait(lock);
-	lock.unlock();
 }
 
 void Loop::threadInit() {
 	thread::ThreadInfo::setThreadInfo("vk::Loop");
-	_threadId = std::this_thread::get_id();
-	_shouldExit.test_and_set();
+	_thisThreadId = std::this_thread::get_id();
 
 	auto pool = thread::ThreadInfo::getThreadInfo()->threadPool;
 
@@ -321,10 +311,7 @@ void Loop::threadInit() {
 
 	_internal->signalInit = [this] {
 		// signal to main thread
-		_mutex.lock();
-		_running.store(true);
-		_cond.notify_all();
-		_mutex.unlock();
+		Thread::threadInit();
 	};
 
 	_internal->queue = Rc<thread::TaskQueue>::alloc("Vk::Loop::Queue");
@@ -369,6 +356,8 @@ void Loop::threadDispose() {
 
 	delete _internal;
 	_internal = nullptr;
+
+	Thread::threadDispose();
 }
 
 static bool Loop_pollEvents(Loop::Internal *internal) {
@@ -467,7 +456,7 @@ bool Loop::worker() {
 		return false;
 	}
 
-	if (_shouldExit.test_and_set()) {
+	if (_continueExecution.test_and_set()) {
 		bool timeoutPassed = false;
 
 		++ _clock;
@@ -501,11 +490,6 @@ bool Loop::worker() {
 
 	_running.store(false);
 	return false;
-}
-
-void Loop::cancel() {
-	_shouldExit.clear();
-	_thread.join();
 }
 
 void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) const {
@@ -544,12 +528,14 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 				callback(handle.isValid());
 			});
 		}
-		frame->update(true);
+		if (frame) {
+			frame->update(true);
+		}
 	}, this, true);
 }
 
 void Loop::schedule(Function<bool(core::Loop &)> &&cb, StringView tag) {
-	if (isOnGlThread()) {
+	if (isOnThisThread()) {
 		_internal->timers->emplace_back(0, move(cb), tag);
 	} else {
 		performOnGlThread([this, cb = move(cb), tag] () mutable {
@@ -559,7 +545,7 @@ void Loop::schedule(Function<bool(core::Loop &)> &&cb, StringView tag) {
 }
 
 void Loop::schedule(Function<bool(core::Loop &)> &&cb, uint64_t delay, StringView tag) {
-	if (isOnGlThread()) {
+	if (isOnThisThread()) {
 		_internal->timers->emplace_back(delay, move(cb), tag);
 	} else {
 		performOnGlThread([this, cb = move(cb), delay, tag] () mutable {
@@ -594,16 +580,12 @@ void Loop::performOnGlThread(Function<void()> &&func, Ref *target, bool immediat
 	}
 
 	if (immediate) {
-		if (isOnGlThread()) {
+		if (isOnThisThread()) {
 			func();
 			return;
 		}
 	}
 	_internal->queue->onMainThread(move(func), target);
-}
-
-bool Loop::isOnGlThread() const {
-	return _threadId == std::this_thread::get_id();
 }
 
 auto Loop::makeFrame(Rc<FrameRequest> &&req, uint64_t gen) -> Rc<FrameHandle> {
@@ -663,7 +645,7 @@ Rc<Fence> Loop::acquireFence(uint64_t v, bool init) {
 		}
 
 		fence->setFrame([this, fence] () mutable {
-			if (isOnGlThread()) {
+			if (isOnThisThread()) {
 				// schedule fence
 				_internal->scheduledFences.emplace(move(fence));
 				return true;
@@ -699,7 +681,7 @@ Rc<Fence> Loop::acquireFence(uint64_t v, bool init) {
 
 void Loop::signalDependencies(const Vector<Rc<DependencyEvent>> &events, Queue *q, bool success) {
 	if (!events.empty()) {
-		if (isOnGlThread() && _internal) {
+		if (isOnThisThread() && _internal) {
 			_internal->signalDependencies(events, q, success);
 			return;
 		}

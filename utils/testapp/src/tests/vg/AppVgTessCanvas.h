@@ -84,10 +84,10 @@ public:
 	virtual void onContentSizeDirty() override;
 
 	void setWinding(vg::Winding);
-	void setDrawStyle(vg::DrawStyle);
+	void setDrawStyle(vg::DrawFlags);
 
 	vg::Winding getWinding() const { return _winding; }
-	vg::DrawStyle getDrawStyle() const { return _drawStyle; }
+	vg::DrawFlags getDrawStyle() const { return _drawStyle; }
 
 	void setSelectedContour(uint32_t);
 	uint32_t getSelectedContour() const;
@@ -129,7 +129,7 @@ protected:
 	VectorSprite *_test2 = nullptr;
 
 	vg::Winding _winding = vg::Winding::EvenOdd;
-	vg::DrawStyle _drawStyle = vg::DrawStyle::Stroke;
+	vg::DrawFlags _drawStyle = vg::DrawFlags::Stroke;
 	uint32_t _contourSelected = 0;
 	Vector<ContourData> _contours;
 

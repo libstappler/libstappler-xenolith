@@ -46,7 +46,7 @@ public:
 	using Ref::release;
 	using Ref::retain;
 
-	using GuiApplication::waitFinalized;
+	using GuiApplication::waitStopped;
 
 	const core::SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
 	const core::SwapchainConfig &getSwapchainConfig() const { return _swapchainConfig; }

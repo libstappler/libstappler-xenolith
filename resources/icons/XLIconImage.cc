@@ -39,7 +39,7 @@ static void drawIcon_Dynamic_Loader(vg::VectorImage &image, float pr) {
 
 	image.addPath("")->openForWriting([&] (vg::PathWriter &writer) {
 		writer.addArc(Rect(4, 4, 16, 16), arcStart, arcLen);
-	}).setStyle(vg::DrawStyle::Stroke).setStrokeWidth(2.0f);
+	}).setStyle(vg::DrawFlags::Stroke).setStrokeWidth(2.0f);
 }
 
 static void drawIcon_Dynamic_Nav(vg::VectorImage &image, float pr) {
@@ -113,13 +113,13 @@ static void drawIcon_Dynamic_DownloadProgress(vg::VectorImage &image, float pr) 
 	t.translate(-24, 0, 0);
 	if (pr >= 1.0f) {
 		image.addPath("")->openForWriting([&] (vg::PathWriter &writer) { writer.addOval(Rect(3, 3, 18, 18)); })
-				.setStyle(vg::DrawStyle::Stroke).setStrokeWidth(2.0f);
+				.setStyle(vg::DrawFlags::Stroke).setStrokeWidth(2.0f);
 	} else if (pr <= 0.0f) {
 		image.addPath("")->openForWriting([&] (vg::PathWriter &writer) { writer.addArc(Rect(3, 3, 18, 18), 90.0_to_rad, 1_to_rad); })
-				.setStyle(vg::DrawStyle::Stroke).setStrokeWidth(2.0f);
+				.setStyle(vg::DrawFlags::Stroke).setStrokeWidth(2.0f);
 	} else {
 		image.addPath("")->openForWriting([&] (vg::PathWriter &writer) { writer.addArc(Rect(3, 3, 18, 18), 90.0_to_rad, 360_to_rad * pr); })
-				.setStyle(vg::DrawStyle::Stroke).setStrokeWidth(2.0f).setTransform(t);
+				.setStyle(vg::DrawFlags::Stroke).setStrokeWidth(2.0f).setTransform(t);
 	}
 
 	image.addPath("")->openForWriting([] (vg::PathWriter &writer) { writer.addRect(Rect(9, 9, 6, 6)); });

@@ -31,7 +31,7 @@ class SP_PUBLIC ResourceOwner : public Ref {
 public:
 	virtual ~ResourceOwner() { }
 
-	virtual void revokeImages(SpanView<uint64_t>) = 0;
+	virtual void revokeImages(SpanView<uint64_t>) { }
 };
 
 }

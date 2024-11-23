@@ -48,7 +48,7 @@ struct SP_PUBLIC ViewInfo {
 	Function<void(View &)> onClosed;
 };
 
-class SP_PUBLIC View : public thread::ThreadInterface<Interface>, public TextInputViewInterface, public platform::ViewInterface {
+class SP_PUBLIC View : public thread::Thread, public TextInputViewInterface, public platform::ViewInterface {
 public:
 	static constexpr size_t FrameAverageCount = 20;
 
@@ -67,12 +67,10 @@ public:
 
 	virtual bool init(Application &, ViewInfo &&);
 
-	virtual void run() = 0;
 	virtual void runWithQueue(const Rc<core::Queue> &) = 0;
 	virtual void end() override;
 
 	virtual void update(bool displayLink) override;
-	virtual void close();
 
 	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false);
 
@@ -169,9 +167,6 @@ protected:
 	uint64_t _gen = 1;
 	core::SwapchainConfig _config;
 
-	std::thread _thread;
-	std::thread::id _threadId;
-	std::atomic_flag _shouldQuit;
 	Mutex _mutex;
 	Vector<Pair<Function<void()>, Rc<Ref>>> _callbacks;
 

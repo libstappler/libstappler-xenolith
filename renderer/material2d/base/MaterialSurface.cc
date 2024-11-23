@@ -287,15 +287,15 @@ void Surface::updateBackgroundImage(VectorImage *img, const SurfaceStyleData &st
 	path->setAntialiased(false)
 		.setFillColor(Color::White)
 		.setFillOpacity(uint8_t(style.colorElevation.a * 255.0f))
-		.setStyle(vg::DrawStyle::None);
+		.setStyle(vg::DrawFlags::None);
 
 	if (style.colorElevation.a > 0.0f) {
-		path->setStyle(path->getStyle() | vg::DrawStyle::Fill);
+		path->setStyle(path->getStyle() | vg::DrawFlags::Fill);
 	}
 
 	if (style.outlineValue > 0.0f) {
 		path->setStrokeWidth(1.0f)
-			.setStyle(path->getStyle() | vg::DrawStyle::Stroke)
+			.setStyle(path->getStyle() | vg::DrawFlags::Stroke)
 			.setStrokeColor(Color::White)
 			.setStrokeOpacity(uint8_t(style.outlineValue * 255.0f))
 			.setAntialiased(true);

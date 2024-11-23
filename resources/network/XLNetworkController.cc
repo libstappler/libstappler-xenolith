@@ -34,15 +34,13 @@ struct ControllerHandle {
 	Context context;
 };
 
-struct Controller::Data final : thread::ThreadInterface<Interface> {
+struct Controller::Data final : thread::Thread {
 	using Context = stappler::network::Context<Interface>;
 
 	Application *_application = nullptr;
 	Controller *_controller = nullptr;
 	String _name;
 	Bytes _signKey;
-
-	std::thread _thread;
 
 	Mutex _mutexQueue;
 	Mutex _mutexFree;
@@ -51,7 +49,6 @@ struct Controller::Data final : thread::ThreadInterface<Interface> {
 
 	memory::PriorityQueue<Rc<Request>> _pending;
 
-	std::atomic_flag _shouldQuit;
 	Map<String, void *> _sharegroups;
 
 	Map<CURL *, ControllerHandle> _handles;
@@ -92,8 +89,7 @@ Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &
 
 }
 
-Controller::Data::~Data() {
-}
+Controller::Data::~Data() { }
 
 bool Controller::Data::init() {
 	registerNetworkCallback(_application, this, [this] (NetworkCapabilities cap) {
@@ -102,7 +98,6 @@ bool Controller::Data::init() {
 			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
 		}, this);
 	});
-	_thread = std::thread(Controller::Data::workerThread, this, nullptr);
 	return true;
 }
 
@@ -111,17 +106,18 @@ void Controller::Data::invalidate() {
 }
 
 void Controller::Data::threadInit() {
-	_shouldQuit.test_and_set();
 	_pending.setQueueLocking(_mutexQueue);
 	_pending.setFreeLocking(_mutexFree);
 
 	thread::ThreadInfo::setThreadInfo(_name);
 
 	_handle = curl_multi_init();
+
+	Thread::threadInit();
 }
 
 bool Controller::Data::worker() {
-	if (!_shouldQuit.test_and_set()) {
+	if (!_continueExecution.test_and_set()) {
 		return false;
 	}
 
@@ -226,6 +222,8 @@ void Controller::Data::threadDispose() {
 
 		_handle = nullptr;
 	}
+
+	Thread::threadDispose();
 }
 
 void *Controller::Data::getSharegroup(StringView name) {
@@ -321,12 +319,13 @@ Rc<ApplicationExtension> Controller::createController(Application *app, StringVi
 Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
 	_data = new Data(app, this, name, move(signKey));
 	_data->init();
+	_data->run();
 }
 
 Controller::~Controller() {
-	_data->_shouldQuit.clear();
+	_data->stop();
 	curl_multi_wakeup(_data->_handle);
-	_data->_thread.join();
+	_data->waitStopped();
 	delete _data;
 }
 

@@ -64,7 +64,7 @@ protected:
 };
 
 
-struct Server::ServerData : public thread::ThreadInterface<Interface>, public db::ApplicationInterface {
+struct Server::ServerData : public thread::Thread, public db::ApplicationInterface {
 	struct TaskCallback {
 		Function<bool(const Server &, const db::Transaction &)> callback;
 		Rc<Ref> ref;
@@ -86,9 +86,7 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 
 	db::String documentRoot;
 	StringView serverName;
-	std::thread thread;
 	std::condition_variable condition;
-	std::atomic_flag shouldQuit;
 	Mutex mutexQueue;
 	Mutex mutexFree;
 	memory::PriorityQueue<TaskCallback> queue;
@@ -109,7 +107,6 @@ struct Server::ServerData : public thread::ThreadInterface<Interface>, public db
 	ServerData();
 	virtual ~ServerData();
 
-	bool init();
 	bool execute(const TaskCallback &);
 	void runAsync();
 
@@ -151,12 +148,9 @@ bool Server::init(Application *app, const Value &params) {
 
 	memory::pool::context ctx(pool);
 
-	auto bytes = memory::pool::palloc(pool, sizeof(ServerData));
-
-	_data = new (bytes) ServerData;
+	_data = new (pool) ServerData;
 	_data->serverPool = pool;
 	_data->application = app;
-	_data->shouldQuit.test_and_set();
 
 	StringView driver;
 
@@ -180,7 +174,7 @@ bool Server::init(Application *app, const Value &params) {
 	}
 
 	_data->server = this;
-	return _data->init();
+	return _data->run();
 }
 
 void Server::initialize(Application *) {
@@ -718,7 +712,7 @@ bool Server::perform(Function<bool(const Server &, const db::Transaction &)> &&c
 		return false;
 	}
 
-	if (std::this_thread::get_id() == _data->thread.get_id()) {
+	if (std::this_thread::get_id() == _data->getThreadId()) {
 		_data->execute(ServerData::TaskCallback(move(cb), ref));
 	} else {
 		_data->queue.push(0, false, ServerData::TaskCallback(move(cb), ref));
@@ -772,14 +766,7 @@ Server::ServerData::ServerData() {
 }
 
 Server::ServerData::~ServerData() {
-	shouldQuit.clear();
 	condition.notify_all();
-	thread.join();
-}
-
-bool Server::ServerData::init() {
-	thread = std::thread(ThreadInterface::workerThread, this, nullptr);
-	return true;
 }
 
 bool Server::ServerData::execute(const TaskCallback &task) {
@@ -861,10 +848,12 @@ void Server::ServerData::threadInit() {
 	}
 
 	now = platform::clock(core::ClockType::Monotonic);
+
+	Thread::threadInit();
 }
 
 bool Server::ServerData::worker() {
-	if (!shouldQuit.test_and_set()) {
+	if (!_continueExecution.test_and_set()) {
 		return false;
 	}
 
@@ -939,6 +928,8 @@ void Server::ServerData::threadDispose() {
 
 	memory::pool::destroy(threadPool);
 	memory::pool::destroy(asyncPool);
+
+	Thread::threadDispose();
 }
 
 void Server::ServerData::handleHeartbeat() {

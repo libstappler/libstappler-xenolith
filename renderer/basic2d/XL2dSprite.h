@@ -126,6 +126,8 @@ protected:
 	static bool getAutofitParams(Autofit autofit, const Vec2 &autofitValue, const Size2 &contentSize, const Size2 &texSize,
 			Rect &contentRect, Rect &textureRect);
 
+	bool resolveAutofitForTexture(Rect &contentRect, Rect &textureRect) const;
+
 	virtual bool checkVertexDirty() const;
 
 	String _textureName;

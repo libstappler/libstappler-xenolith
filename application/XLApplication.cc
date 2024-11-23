@@ -42,8 +42,13 @@ static thread_local Application *tl_mainLoop = nullptr;
 XL_DECLARE_EVENT_CLASS(Application, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Application, onRemoteNotification)
 
-Application *Application::getInstance() {
-	return tl_mainLoop;
+const Application *Application::getInstance() {
+	if (tl_mainLoop) {
+		return tl_mainLoop;
+	} else {
+		// Find application in thread hierarchy
+		return Thread::findSpecificThread<Application>();
+	}
 }
 
 Application::~Application() { }
@@ -62,7 +67,7 @@ void Application::threadDispose() {
 	tl_mainLoop = nullptr;
 }
 
-void Application::addEventListener(const EventHandlerNode *listener) {
+void Application::addEventListener(const EventHandlerNode *listener) const {
 	auto it = _eventListeners.find(listener->getEventID());
 	if (it != _eventListeners.end()) {
 		it->second.insert(listener);
@@ -71,18 +76,18 @@ void Application::addEventListener(const EventHandlerNode *listener) {
 	}
 }
 
-void Application::removeEventListner(const EventHandlerNode *listener) {
+void Application::removeEventListner(const EventHandlerNode *listener) const {
 	auto it = _eventListeners.find(listener->getEventID());
 	if (it != _eventListeners.end()) {
 		it->second.erase(listener);
 	}
 }
 
-void Application::removeAllEventListeners() {
+void Application::removeAllEventListeners() const {
 	_eventListeners.clear();
 }
 
-void Application::dispatchEvent(const Event &ev) {
+void Application::dispatchEvent(const Event &ev) const {
 	if (_eventListeners.size() > 0) {
 		auto it = _eventListeners.find(ev.getHeader().getEventID());
 		if (it != _eventListeners.end() && it->second.size() != 0) {

@@ -153,31 +153,19 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 
 void PlatformApplication::run() {
 	platformInitialize();
-	_thread = std::thread(PlatformApplication::workerThread, this, nullptr);
+	Thread::run();
 }
 
 void PlatformApplication::waitRunning() {
-	if (_running.load()) {
-		return;
-	}
-
-	std::unique_lock lock(_runningMutex);
-	if (_running.load()) {
-		return;
-	}
-
-	_runningVar.wait(lock, [&] {
-		return _running.load();
-	});
+	Thread::waitRunning();
 }
 
-void PlatformApplication::waitFinalized() {
+void PlatformApplication::waitStopped() {
 	platformWaitExit();
 }
 
 void PlatformApplication::threadInit() {
-	_shouldQuit.test_and_set();
-	_threadId = std::this_thread::get_id();
+	_thisThreadId = std::this_thread::get_id();
 
 	thread::ThreadInfo::setThreadInfo("Application");
 
@@ -224,7 +212,7 @@ void PlatformApplication::threadInit() {
 
 	loadExtensions();
 
-	loop->waitRinning();
+	loop->waitRunning();
 
 	_glLoop = move(loop);
 
@@ -244,9 +232,7 @@ void PlatformApplication::threadInit() {
 
 	performAppUpdate(_time);
 
-	_running.store(true);
-	std::unique_lock lock(_runningMutex);
-	_runningVar.notify_all();
+	Thread::threadInit();
 }
 
 void PlatformApplication::threadDispose() {
@@ -254,7 +240,8 @@ void PlatformApplication::threadDispose() {
 		_info.finalizeCallback(*this);
 	}
 
-	_glLoop->cancel();
+	_glLoop->stop();
+	_glLoop->waitStopped();
 
 	finalizeExtensions();
 
@@ -283,6 +270,8 @@ void PlatformApplication::threadDispose() {
 	_queue->cancelWorkers();
 
 	platformSignalExit();
+
+	Thread::threadDispose();
 }
 
 bool PlatformApplication::worker() {
@@ -299,28 +288,24 @@ bool PlatformApplication::worker() {
 
 	performTimersUpdate(_immediateUpdate);
 
-	return _shouldQuit.test_and_set();
+	return _continueExecution.test_and_set();
 }
 
 void PlatformApplication::end()  {
-	_shouldQuit.clear();
-	if (!isOnMainThread()) {
+	stop();
+	if (!isOnThisThread()) {
 		wakeup();
 	}
 }
 
 void PlatformApplication::wakeup() {
-	if (isOnMainThread()) {
+	if (isOnThisThread()) {
 		_immediateUpdate = true;
 	} else {
 		performOnMainThread([this] {
 			_immediateUpdate = true;
 		}, this);
 	}
-}
-
-bool PlatformApplication::isOnMainThread() const {
-	return _threadId == std::this_thread::get_id();
 }
 
 void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
@@ -331,8 +316,8 @@ void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target
 	}
 }
 
-void PlatformApplication::performOnMainThread(Function<void()> &&func, Ref *target, bool onNextFrame) {
-	if (isOnMainThread() && !onNextFrame) {
+void PlatformApplication::performOnMainThread(Function<void()> &&func, Ref *target, bool onNextFrame) const {
+	if (isOnThisThread() && !onNextFrame) {
 		func();
 	} else {
 		_queue->onMainThread(Rc<Task>::create([func = move(func)] (const thread::Task &, bool success) {
@@ -341,23 +326,23 @@ void PlatformApplication::performOnMainThread(Function<void()> &&func, Ref *targ
 	}
 }
 
-void PlatformApplication::performOnMainThread(Rc<Task> &&task, bool onNextFrame) {
-	if (isOnMainThread() && !onNextFrame) {
+void PlatformApplication::performOnMainThread(Rc<Task> &&task, bool onNextFrame) const {
+	if (isOnThisThread() && !onNextFrame) {
 		task->onComplete();
 	} else {
 		_queue->onMainThread(std::move(task));
 	}
 }
 
-void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&complete, Ref *obj) {
+void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&complete, Ref *obj) const {
 	perform(Rc<Task>::create(move(exec), move(complete), obj));
 }
 
-void PlatformApplication::perform(Rc<Task> &&task) {
+void PlatformApplication::perform(Rc<Task> &&task) const {
 	_queue->perform(std::move(task));
 }
 
-void PlatformApplication::perform(Rc<Task> &&task, bool performFirst) {
+void PlatformApplication::perform(Rc<Task> &&task, bool performFirst) const {
 	_queue->perform(std::move(task), performFirst);
 }
 
@@ -434,7 +419,7 @@ void PlatformApplication::openUrl(StringView url) const {
 void PlatformApplication::platformInitialize() { }
 
 void PlatformApplication::platformWaitExit() {
-	_thread.join();
+	Thread::waitStopped();
 }
 
 void PlatformApplication::platformSignalExit() { }
@@ -459,7 +444,7 @@ void PlatformApplication::openUrl(StringView url) const {
 void PlatformApplication::platformInitialize() { }
 
 void PlatformApplication::platformWaitExit() {
-	_thread.join();
+	Thread::waitStopped();
 }
 
 void PlatformApplication::platformSignalExit() { }
@@ -491,7 +476,7 @@ void PlatformApplication::platformWaitExit() {
 			log::error("xenolith::PlatformApplication", "If application was runned from main thread, waitFinalized should be also called in main thread");
 		}
 	} else {
-		_thread.join();
+		Thread::waitStopped();
 	}
 }
 

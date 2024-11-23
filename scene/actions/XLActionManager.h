@@ -33,7 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Node;
 
-struct SP_PUBLIC ActionContainer : RefContainer<Action> {
+struct SP_PUBLIC ActionContainer : RefContainer<Action, Interface> {
 	Rc<Node> target;
 	bool paused = false;
 

@@ -44,7 +44,7 @@ struct SP_PUBLIC LoopInfo {
 	Rc<Ref> platformData;
 };
 
-class SP_PUBLIC Loop : public thread::ThreadInterface<Interface> {
+class SP_PUBLIC Loop : public thread::Thread {
 public:
 	using FrameCache = core::FrameCache;
 	using FrameRequest = core::FrameRequest;
@@ -64,10 +64,6 @@ public:
 	Loop();
 
 	virtual bool init(Instance *gl, LoopInfo &&);
-	virtual void waitRinning() = 0;
-	virtual void cancel() = 0;
-
-	virtual bool isRunning() const = 0;
 
 	const Rc<Instance> &getGlInstance() const { return _glInstance; }
 	const Rc<FrameCache> &getFrameCache() const { return _frameCache; }
@@ -92,8 +88,6 @@ public:
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
 	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const = 0;
-
-	virtual bool isOnGlThread() const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 
@@ -123,7 +117,6 @@ protected:
 	}
 #endif
 
-	std::atomic_flag _shouldExit;
 	Rc<Instance> _glInstance;
 	Rc<FrameCache> _frameCache;
 	LoopInfo _info;

@@ -186,7 +186,7 @@ bool Fence::check(Loop &loop, bool lockfree) {
 		_state = Signaled;
 		XL_VKAPI_LOG("Fence [", _frame, "] ", _tag, ": signaled: ", platform::clock(core::ClockType::Monotonic) - _armedTime);
 		lock.unlock();
-		if (loop.isOnGlThread()) {
+		if (loop.isOnThisThread()) {
 			doRelease(true);
 			scheduleReset(loop);
 		} else {

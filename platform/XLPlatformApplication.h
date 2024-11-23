@@ -119,7 +119,7 @@ struct SP_PUBLIC ApplicationInfo {
 	Value encode() const;
 };
 
-class SP_PUBLIC PlatformApplication : public thread::ThreadInterface<Interface> {
+class SP_PUBLIC PlatformApplication : public thread::Thread {
 public:
 	using Task = thread::Task;
 
@@ -133,8 +133,8 @@ public:
 
 	virtual void run();
 
-	virtual void waitRunning();
-	virtual void waitFinalized();
+	virtual void waitRunning() override;
+	virtual void waitStopped() override;
 
 	virtual void threadInit() override;
 	virtual void threadDispose() override;
@@ -144,32 +144,32 @@ public:
 
 	virtual void wakeup();
 
-	bool isOnMainThread() const;
-
 	void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const;
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-	void performOnMainThread(Function<void()> &&func, Ref *target = nullptr, bool onNextFrame = false);
+	void performOnMainThread(Function<void()> &&func, Ref *target = nullptr, bool onNextFrame = false) const;
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-    void performOnMainThread(Rc<Task> &&task, bool onNextFrame = false);
+    void performOnMainThread(Rc<Task> &&task, bool onNextFrame = false) const;
 
 	/* Performs action in this thread, task will be constructed in place */
-	void perform(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr);
+	void perform(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr) const;
 
 	/* Performs task in thread, identified by id */
-    void perform(Rc<Task> &&task);
+    void perform(Rc<Task> &&task) const;
 
 	/* Performs task in thread, identified by id */
-    void perform(Rc<Task> &&task, bool performFirst);
+    void perform(Rc<Task> &&task, bool performFirst) const;
 
 	thread::TaskQueue *getQueue() const { return _queue; }
 
 	const ApplicationInfo &getInfo() const { return _info; }
 
 	core::Loop *getGlLoop() const { return _glLoop; }
+
+	BytesView getMessageToken() const { return _messageToken; }
 
 	virtual void openUrl(StringView) const;
 
@@ -199,15 +199,6 @@ protected:
 
 	Rc<thread::TaskQueue> _queue;
 	ApplicationInfo _info;
-
-	mutable std::atomic_flag _shouldQuit;
-
-	std::atomic<bool> _running = false;
-	std::mutex _runningMutex;
-	std::condition_variable _runningVar;
-
-	std::thread _thread;
-	std::thread::id _threadId;
 
 	Rc<core::Loop> _glLoop;
 	Rc<core::Instance> _instance;

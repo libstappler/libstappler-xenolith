@@ -216,7 +216,7 @@ void FrameHandle::performInQueue(Function<bool(FrameHandle &)> &&perform, Functi
 }
 
 void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref, bool immediate, StringView tag) {
-	if (immediate && _loop->isOnGlThread()) {
+	if (immediate && _loop->isOnThisThread()) {
 		XL_FRAME_PROFILE(cb(*this), tag, 1000);
 	} else {
 		auto linkId = retain();
@@ -296,7 +296,7 @@ void FrameHandle::setReadyForSubmit(bool value) {
 }
 
 void FrameHandle::invalidate() {
-	if (_loop->isOnGlThread()) {
+	if (_loop->isOnThisThread()) {
 		if (_valid) {
 			if (!_timeEnd) {
 				_timeEnd = platform::clock(FrameClockType);

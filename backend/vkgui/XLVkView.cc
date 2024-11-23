@@ -78,8 +78,7 @@ void View::threadInit() {
 
 	_refId = retain();
 	thread::ThreadInfo::setThreadInfo(_threadName);
-	_threadId = std::this_thread::get_id();
-	_shouldQuit.test_and_set();
+	_thisThreadId = std::this_thread::get_id();
 
 	auto info = getSurfaceOptions();
 	auto cfg = _info.selectConfig(*this, info);
@@ -96,6 +95,8 @@ void View::threadInit() {
 	}
 
 	mapWindow();
+
+	Thread::threadInit();
 }
 
 void View::threadDispose() {
@@ -112,7 +113,6 @@ void View::threadDispose() {
 	finalize();
 
 	if (_threadStarted) {
-		_thread.detach();
 		_threadStarted = false;
 	}
 
@@ -188,14 +188,10 @@ void View::update(bool displayLink) {
 	}
 }
 
-void View::close() {
-	xenolith::View::close();
-}
-
 void View::run() {
 	auto refId = retain();
 	_threadStarted = true;
-	_thread = std::thread(View::workerThread, this, nullptr);
+	xenolith::View::run();
 	performOnThread([this, refId] {
 		release(refId);
 	}, this);
@@ -243,7 +239,7 @@ void View::onRemoved() {
 	_callbacks.clear();
 	lock.unlock();
 	if (_threadStarted) {
-		_thread.join();
+		waitStopped();
 	}
 }
 

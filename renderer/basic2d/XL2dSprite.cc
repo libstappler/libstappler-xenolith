@@ -405,25 +405,10 @@ void Sprite::initVertexes() {
 void Sprite::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 
-	auto texExtent = _texture->getExtent();
-	auto texSize = Size2(texExtent.width, texExtent.height);
-
-	texSize = Size2(texSize.width * _textureRect.size.width, texSize.height * _textureRect.size.height);
-
 	Rect contentRect;
 	Rect textureRect;
 
-	if (!getAutofitParams(_autofit, _autofitPos, _contentSize, Size2(texSize.width, texSize.height), contentRect, textureRect)) {
-		texSize = Size2(1.0f, 1.0f);
-		contentRect = Rect(0.0f, 0.0f, _contentSize.width, _contentSize.height);
-		textureRect = _textureRect;
-	} else {
-		textureRect = Rect(
-			_textureRect.origin.x + textureRect.origin.x / texSize.width,
-			_textureRect.origin.y + textureRect.origin.y / texSize.height,
-			textureRect.size.width / texSize.width,
-			textureRect.size.height / texSize.height);
-	}
+	resolveAutofitForTexture(contentRect, textureRect);
 
 	_vertexes.addQuad()
 		.setGeometry(Vec4(contentRect.origin.x, contentRect.origin.y, 0.0f, 1.0f), contentRect.size)
@@ -583,6 +568,26 @@ bool Sprite::getAutofitParams(Autofit autofit, const Vec2 &autofitPos, const Siz
 	}
 
 	return true;
+}
+
+bool Sprite::resolveAutofitForTexture(Rect &contentRect, Rect &textureRect) const {
+	auto texExtent = _texture->getExtent();
+	auto texSize = Size2(texExtent.width, texExtent.height);
+
+	texSize = Size2(texSize.width * _textureRect.size.width, texSize.height * _textureRect.size.height);
+
+	if (!getAutofitParams(_autofit, _autofitPos, _contentSize, Size2(texSize.width, texSize.height), contentRect, textureRect)) {
+		contentRect = Rect(0.0f, 0.0f, _contentSize.width, _contentSize.height);
+		textureRect = _textureRect;
+		return false;
+	} else {
+		textureRect = Rect(
+			_textureRect.origin.x + textureRect.origin.x / texSize.width,
+			_textureRect.origin.y + textureRect.origin.y / texSize.height,
+			textureRect.size.width / texSize.width,
+			textureRect.size.height / texSize.height);
+		return true;
+	}
 }
 
 }
