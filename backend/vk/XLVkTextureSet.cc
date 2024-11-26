@@ -23,7 +23,6 @@ THE SOFTWARE.
 
 #include "XLVkTextureSet.h"
 #include "XLVkLoop.h"
-#include <forward_list>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -171,7 +170,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 		}, this, "TextureSetLayout::initDefault releaseCommandPool");
 
 		loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-			auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
+			auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 				writeDefaults(buf);
 				return true;
 			});
@@ -254,7 +253,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
 			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
+				auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 					writeImageRead(*task->device, buf, task->pool->getFamilyIdx(), task->image, task->layout, task->transferBuffer);
 					return true;
 				});
@@ -336,7 +335,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
 			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
+				auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 					writeBufferRead(*task->device, buf, task->pool->getFamilyIdx(), task->buffer, task->transferBuffer);
 					return true;
 				});

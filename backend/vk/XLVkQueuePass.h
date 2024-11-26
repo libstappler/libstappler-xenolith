@@ -37,6 +37,7 @@ class Fence;
 class CommandPool;
 class ImageAttachmentHandle;
 class BufferAttachmentHandle;
+class DescriptorPool;
 
 struct SP_PUBLIC MaterialBuffers {
 	Rc<Buffer> stagingBuffer;
@@ -127,6 +128,7 @@ protected:
 	Rc<Fence> _fence;
 	Rc<CommandPool> _pool;
 	Rc<DeviceQueue> _queue;
+	Vector<Rc<DescriptorPool>> _descriptors;
 	Vector<const CommandBuffer *> _buffers;
 	Rc<FrameSync> _sync;
 	core::FrameContraints _constraints;

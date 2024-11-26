@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "XLVkDevice.h"
 #include "XLVkTextureSet.h"
 #include "XLVkSwapchain.h"
+#include "XLVkRenderPass.h"
 #include "XLVkGuiConfig.h"
 #include "XLDirector.h"
 #include "XLCoreImageStorage.h"
@@ -90,7 +91,7 @@ void View::threadInit() {
 	createSwapchain(info, move(cfg), cfg.presentMode);
 
 	if (_initImage && !_options.followDisplayLink) {
-		presentImmediate(move(_initImage), nullptr);
+		presentImmediate(move(_initImage), nullptr, false);
 		_initImage = nullptr;
 	}
 
@@ -102,6 +103,11 @@ void View::threadInit() {
 void View::threadDispose() {
 	clearImages();
 	_running = false;
+
+	// wait idle device before complete swapchain destruction
+	_glLoop->performOnGlThread([loop = _glLoop] {
+		loop->waitIdle();
+	}, _swapchain);
 
 	if (_options.renderImageOffscreen) {
 		// offscreen does not need swapchain outside of view thread
@@ -334,7 +340,7 @@ bool View::present(Rc<ImageStorage> &&object) {
 					XL_VKVIEW_LOG("present - scheduleNextImage");
 					scheduleNextImage(0, false);
 				}
-			});
+			}, true);
 			if (_swapchain->isDeprecated()) {
 				recreateSwapchain(_swapchain->getRebuildMode());
 			}
@@ -344,7 +350,7 @@ bool View::present(Rc<ImageStorage> &&object) {
 	return false;
 }
 
-bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&scheduleCb) {
+bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&scheduleCb, bool isRegularFrame) {
 	XL_VKVIEW_LOG("presentImmediate: ", _framesInProgress);
 	if (!_swapchain) {
 		return false;
@@ -355,6 +361,9 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 
 	VkFilter filter;
 	if (!isImagePresentable(*object->getImage(), filter)) {
+		if (isRegularFrame) {
+			-- _framesInProgress;
+		}
 		return false;
 	}
 
@@ -403,6 +412,9 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 		if (presentFence) {
 			presentFence->schedule(*loop);
 		}
+		if (isRegularFrame) {
+			-- _framesInProgress;
+		}
 		return cleanup();
 	}
 
@@ -412,7 +424,7 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 
 	pool = dev->acquireCommandPool(ops);
 
-	auto buf = pool->recordBuffer(*dev, [&] (CommandBuffer &buf) {
+	auto buf = pool->recordBuffer(*dev, Vector<Rc<DescriptorPool>>(), [&] (CommandBuffer &buf) {
 		auto targetImageObj = (Image *)targetImage->getImage().get();
 		auto sourceLayout = VkImageLayout(object->getLayout());
 
@@ -468,6 +480,9 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 
 	queue = dev->tryAcquireQueueSync(ops, true);
 	if (!queue) {
+		if (isRegularFrame) {
+			-- _framesInProgress;
+		}
 		return cleanup();
 	}
 
@@ -478,6 +493,9 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 	}
 
 	if (!queue->submit(frameSync, *presentFence, *pool, buffers)) {
+		if (isRegularFrame) {
+			-- _framesInProgress;
+		}
 		return cleanup();
 	}
 
@@ -487,6 +505,10 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 	updateFrameInterval();
 
 	XL_VKAPI_LOG("[PresentImmediate] [present] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+
+	if (isRegularFrame) {
+		-- _framesInProgress;
+	}
 
 	if (result == VK_SUCCESS) {
 		if (queue) {
@@ -716,7 +738,9 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					}
 
 					req->autorelease(swapchain);
-					req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
+					if (swapchainImage) {
+						req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
+					}
 					req->setOutput(a, [this, swapchain] (core::FrameAttachmentData &data, bool success, Ref *) {
 						XL_VKVIEW_LOG("scheduleSwapchainImage: output on frame");
 						if (data.image) {
@@ -735,7 +759,9 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					auto nextFrame = _frameEmitter->submitNextFrame(move(req));
 					if (nextFrame) {
 						auto order = nextFrame->getOrder();
-						swapchainImage->setFrameIndex(order);
+						if (swapchainImage) {
+							swapchainImage->setFrameIndex(order);
+						}
 
 						performOnThread([this, order] {
 							_frameOrder = order;
@@ -956,7 +982,7 @@ bool View::recreateSwapchain(core::PresentMode mode) {
 	if (ret) {
 		XL_VKVIEW_LOG("recreateSwapchain - scheduleNextImage");
 		_swapchainInvalidated = false;
-		// run frame as, no present window, no wait on fences
+		// run frame, no present window, no wait on fences
 		scheduleNextImage(0, true);
 	}
 	return ret;

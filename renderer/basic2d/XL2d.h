@@ -51,6 +51,8 @@ using Rect2DIndex = glsl::Rect2DIndex;
 using RoundedRect2DIndex = glsl::RoundedRect2DIndex;
 using Polygon2DIndex = glsl::Polygon2DIndex;
 
+using Autofit = font::Autofit;
+
 struct Triangle {
 	Vertex a;
 	Vertex b;
@@ -127,6 +129,23 @@ struct SdfPolygon2D {
 struct SdfPrimitive2DHeader {
 	SdfShape type;
 	BytesView bytes;
+};
+
+struct ImagePlacementResult {
+	Rect viewRect;
+	Rect imageRect;
+	Rect textureRect;
+
+	Size2 imageFragmentSize;
+	float scale = 1.0f;
+};
+
+struct ImagePlacementInfo {
+	Rect textureRect = Rect(0.0f, 0.0f, 1.0f, 1.0f); // normalized
+	Autofit autofit = Autofit::None;
+	Vec2 autofitPos = Vec2(0.5f, 0.5f);
+
+	ImagePlacementResult resolve(const Size2 &content, const Size2 &texSize);
 };
 
 class SP_PUBLIC DeferredVertexResult : public Ref {

@@ -315,15 +315,18 @@ CommandBuffer::~CommandBuffer() {
 	invalidate();
 }
 
-bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCommandBuffer buffer) {
+bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCommandBuffer buffer, Vector<Rc<DescriptorPool>> &&descriptors) {
 	_pool = pool;
 	_table = table;
 	_buffer = buffer;
+	_availableDescriptors = move(descriptors);
 	return true;
 }
 
 void CommandBuffer::invalidate() {
 	_buffer = VK_NULL_HANDLE;
+	_availableDescriptors.clear();
+	_usedDescriptors.clear();
 }
 
 void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
@@ -561,12 +564,12 @@ void CommandBuffer::cmdBindPipeline(ComputePipeline *pipeline) {
 }
 
 void CommandBuffer::cmdBindPipelineWithDescriptors(const core::GraphicPipelineData *data, uint32_t firstSet) {
-	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), data->layout->index, firstSet);
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), _availableDescriptors[data->layout->index], firstSet);
 	cmdBindPipeline(static_cast<GraphicPipeline *>(data->pipeline.get()));
 }
 
 void CommandBuffer::cmdBindPipelineWithDescriptors(const core::ComputePipelineData *data, uint32_t firstSet) {
-	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), data->layout->index, firstSet);
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), _availableDescriptors[data->layout->index], firstSet);
 	cmdBindPipeline(static_cast<ComputePipeline *>(data->pipeline.get()));
 }
 
@@ -574,11 +577,15 @@ void CommandBuffer::cmdBindIndexBuffer(Buffer *buf, VkDeviceSize offset, VkIndex
 	_table->vkCmdBindIndexBuffer(_buffer, buf->getBuffer(), offset, indexType);
 }
 
-void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex, uint32_t firstSet) {
-	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
-	auto &sets = pass->getDescriptorSets(layoutIndex);
+void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t index, uint32_t firstSet) {
+	cmdBindDescriptorSets(pass, _availableDescriptors[index], firstSet);
+}
 
-	auto targetLayout = pass->getPipelineLayout(layoutIndex);
+void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorPool> &pool, uint32_t firstSet) {
+	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
+	auto sets = pool->getSets();
+
+	auto targetLayout = pool->getLayout();
 
 	Vector<VkDescriptorSet> bindSets; bindSets.reserve(sets.size());
 	for (auto &it : sets) {
@@ -590,11 +597,15 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t layoutIndex
 			_descriptorSets.emplace(it);
 		}
 
-		_boundLayoutIndex = layoutIndex;
 		_boundLayout = targetLayout;
 
-		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
+		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout->getLayout(), firstSet,
 				uint32_t(bindSets.size()), bindSets.data(), 0, nullptr);
+
+		auto it = std::find(_availableDescriptors.begin(), _availableDescriptors.end(), pool);
+		if (it == _availableDescriptors.end()) {
+			_usedDescriptors.emplace(pool);
+		}
 	};
 
 	if (targetLayout != _boundLayout) {
@@ -613,7 +624,7 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescripto
 	}
 
 	if (!updateBoundSets(sets, firstSet)) {
-		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout, firstSet,
+		_table->vkCmdBindDescriptorSets(_buffer, bindPoint, _boundLayout->getLayout(), firstSet,
 				uint32_t(sets.size()), sets.data(), 0, nullptr);
 	}
 }
@@ -636,13 +647,13 @@ void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, 
 	_table->vkCmdDrawIndexed(_buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-void CommandBuffer::cmdPushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
-	_table->vkCmdPushConstants(_buffer, layout, stageFlags, offset, uint32_t(data.size()), data.data());
+void CommandBuffer::cmdPushConstants(PipelineLayout *layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
+	_table->vkCmdPushConstants(_buffer, layout->getLayout(), stageFlags, offset, uint32_t(data.size()), data.data());
 }
 
 void CommandBuffer::cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
 	XLASSERT(_boundLayout, "cmdPushConstants without bound layout");
-	_table->vkCmdPushConstants(_buffer, _boundLayout, stageFlags, offset, uint32_t(data.size()), data.data());
+	_table->vkCmdPushConstants(_buffer, _boundLayout->getLayout(), stageFlags, offset, uint32_t(data.size()), data.data());
 }
 
 void CommandBuffer::cmdFillBuffer(Buffer *buffer, uint32_t data) {
@@ -750,7 +761,8 @@ void CommandPool::invalidate(Device &dev) {
 	}
 }
 
-const CommandBuffer *CommandPool::recordBuffer(Device &dev, const Callback<bool(CommandBuffer &)> &cb,
+const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
+		const Callback<bool(CommandBuffer &)> &cb,
 		VkCommandBufferUsageFlagBits flags, Level level) {
 	if (!_commandPool) {
 		return nullptr;
@@ -782,7 +794,7 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, const Callback<bool(
 		return nullptr;
 	}
 
-	auto b = Rc<CommandBuffer>::create(this, dev.getTable(), buf);
+	auto b = Rc<CommandBuffer>::create(this, dev.getTable(), buf, move(descriptors));
 	if (!b) {
 		dev.getTable()->vkEndCommandBuffer(buf);
 		dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, 1, &buf);

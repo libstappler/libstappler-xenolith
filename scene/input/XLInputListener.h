@@ -27,7 +27,6 @@
 #include "XLCommon.h"
 #include "XLNodeInfo.h"
 #include "XLGestureRecognizer.h"
-#include <bitset>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

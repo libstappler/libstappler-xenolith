@@ -64,7 +64,7 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 
 	_image = addChild(Rc<VectorSprite>::create(move(image)));
 	_image->setColor(Color::Black);
-	_image->setAutofit(Sprite::Autofit::Contain);
+	_image->setTextureAutofit(Autofit::Contain);
 	_image->setContentSize(Size2(64.0f, 64.0f));
 	_image->setAnchorPoint(Anchor::Middle);
 	_image->setWaitDeferred(false);

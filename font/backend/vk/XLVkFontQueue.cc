@@ -21,6 +21,7 @@
  **/
 
 #include "XLVkFontQueue.h"
+#include "XLVkRenderPass.h"
 #include "XLFontExtension.h"
 #include "XLCoreFrameQueue.h"
 #include "XLFontDeferredRequest.h"
@@ -640,7 +641,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		stageAtlas->setData(atlas->getBufferData());
 	}
 
-	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 		Vector<BufferMemoryBarrier> persistentBarriers;
 		for (auto &it : copyFromPersistent) {
 			if (auto b = it.first->getPendingBarrier()) {

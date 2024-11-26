@@ -224,7 +224,7 @@ bool Conv2DLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb)
 }
 
 Vector<const vk::CommandBuffer *> Conv2DLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			buf.cmdBindDescriptorSets(pass, 0);

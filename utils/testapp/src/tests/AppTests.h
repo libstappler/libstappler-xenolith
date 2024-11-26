@@ -66,6 +66,7 @@ enum class LayoutName {
 	VgSdfTest,
 	VgDynamicIcons,
 	VgLinearGradient,
+	VgImageAutofitTest,
 
 	UtilsStorageTest = 256 * 5,
 	UtilsNetworkTest,

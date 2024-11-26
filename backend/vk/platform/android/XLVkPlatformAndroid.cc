@@ -24,8 +24,6 @@
 
 #if ANDROID
 
-#include <dlfcn.h>
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {

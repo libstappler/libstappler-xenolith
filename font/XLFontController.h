@@ -27,7 +27,6 @@
 #include "XLEventHeader.h"
 #include "XLResourceCache.h"
 #include "XLApplicationExtension.h"
-#include <shared_mutex>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 

@@ -78,6 +78,12 @@ public:
 	virtual void setWaitDeferred(bool value) { _waitDeferred = value; }
 	virtual bool isWaitDeferred() const { return _waitDeferred; }
 
+	virtual void setImageAutofit(Autofit);
+	virtual Autofit getImageAutofit() const { return _imagePlacement.autofit; }
+
+	virtual void setImageAutofitPosition(const Vec2 &);
+	virtual const Vec2 &getImageAutofitPosition() const { return _imagePlacement.autofitPos; }
+
 	virtual Vec2 convertToImageFromWorld(const Vec2 &worldLocation) const;
 	virtual Vec2 convertToImageFromNode(const Vec2 &worldLocation) const;
 
@@ -101,13 +107,15 @@ protected:
 	bool _waitDeferred = true;
 	bool _imageIsSolid = false;
 	uint64_t _asyncJobId = 0;
-	Size2 _targetSize;
-	Mat4 _targetTransform;
 	Rc<VectorImage> _image;
 	float _quality = QualityNormal;
 	float _savedSdfValue = nan();
 	Rc<VectorCanvasResult> _result;
 	Rc<VectorCanvasDeferredResult> _deferredResult;
+
+	ImagePlacementInfo _imagePlacement;
+	Size2 _imageTargetSize;
+	Mat4 _imageTargetTransform;
 };
 
 }

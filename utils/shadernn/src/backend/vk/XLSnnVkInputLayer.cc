@@ -139,7 +139,7 @@ void InputLayer::LayerHandle::doTransferInput(vk::CommandBuffer &buf, DeviceFram
 }
 
 Vector<const vk::CommandBuffer *> InputLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			auto data = static_cast<InputDataInput *>(_dataHandle->getInput());
@@ -269,7 +269,7 @@ bool InputBufferLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 }
 
 Vector<const vk::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			struct NormBufferData {
@@ -403,7 +403,7 @@ bool InputCsvIntLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 }
 
 Vector<const vk::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			struct InputInfo {

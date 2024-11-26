@@ -152,8 +152,8 @@ const Rc<LinearGradient> &Sprite::getLinearGradient() const {
 }
 
 void Sprite::setTextureRect(const Rect &rect) {
-	if (!_textureRect.equals(rect)) {
-		_textureRect = rect;
+	if (!_texturePlacement.textureRect.equals(rect)) {
+		_texturePlacement.textureRect = rect;
 		_vertexesDirty = true;
 	}
 }
@@ -174,7 +174,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		return;
 	}
 
-	if (_autofit != Autofit::None) {
+	if (_texturePlacement.autofit != Autofit::None) {
 		auto size = _texture->getExtent();
 		if (_targetTextureSize != size) {
 			_targetTextureSize = size;
@@ -317,17 +317,17 @@ void Sprite::setNormalized(bool value) {
 	}
 }
 
-void Sprite::setAutofit(Autofit autofit) {
-	if (_autofit != autofit) {
-		_autofit = autofit;
+void Sprite::setTextureAutofit(Autofit autofit) {
+	if (_texturePlacement.autofit != autofit) {
+		_texturePlacement.autofit = autofit;
 		_vertexesDirty = true;
 	}
 }
 
-void Sprite::setAutofitPosition(const Vec2 &vec) {
-	if (_autofitPos != vec) {
-		_autofitPos = vec;
-		if (_autofit != Autofit::None) {
+void Sprite::setTextureAutofitPosition(const Vec2 &vec) {
+	if (_texturePlacement.autofitPos != vec) {
+		_texturePlacement.autofitPos = vec;
+		if (_texturePlacement.autofit != Autofit::None) {
 			_vertexesDirty = true;
 		}
 	}
@@ -405,14 +405,11 @@ void Sprite::initVertexes() {
 void Sprite::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 
-	Rect contentRect;
-	Rect textureRect;
-
-	resolveAutofitForTexture(contentRect, textureRect);
+	auto placementResult = _texturePlacement.resolve(_contentSize, Size2(_texture->getExtent().width, _texture->getExtent().height));
 
 	_vertexes.addQuad()
-		.setGeometry(Vec4(contentRect.origin.x, contentRect.origin.y, 0.0f, 1.0f), contentRect.size)
-		.setTextureRect(textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
+		.setGeometry(Vec4(placementResult.viewRect.origin.x, placementResult.viewRect.origin.y, 0.0f, 1.0f), placementResult.viewRect.size)
+		.setTextureRect(placementResult.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
 		.setColor(_displayedColor);
 
 	_vertexColorDirty = false;
@@ -529,65 +526,6 @@ RenderingLevel Sprite::getRealRenderingLevel() const {
 
 bool Sprite::checkVertexDirty() const {
 	return _vertexesDirty;
-}
-
-bool Sprite::getAutofitParams(Autofit autofit, const Vec2 &autofitPos, const Size2 &contentSize, const Size2 &texSize,
-		Rect &contentRect, Rect &textureRect) {
-
-	contentRect = Rect(Vec2::ZERO, contentSize);
-
-	float scale = 1.0f;
-	switch (autofit) {
-	case Autofit::None:
-		return false;
-		break;
-	case Autofit::Width: scale = texSize.width / contentSize.width; break;
-	case Autofit::Height: scale = texSize.height / contentSize.height; break;
-	case Autofit::Contain: scale = std::max(texSize.width / contentSize.width, texSize.height / contentSize.height); break;
-	case Autofit::Cover: scale = std::min(texSize.width / contentSize.width, texSize.height / contentSize.height); break;
-	}
-
-	contentRect = Rect(Vec2::ZERO, contentSize);
-	textureRect = Rect(0, 0, texSize.width, texSize.height);
-
-	auto texSizeInView = Size2(texSize.width / scale, texSize.height / scale);
-	if (texSizeInView.width < contentSize.width) {
-		contentRect.size.width -= (contentSize.width - texSizeInView.width);
-		contentRect.origin.x = (contentSize.width - texSizeInView.width) * autofitPos.x;
-	} else if (texSizeInView.width > contentSize.width) {
-		textureRect.origin.x = (textureRect.size.width - contentSize.width * scale) * autofitPos.x;
-		textureRect.size.width = contentSize.width * scale;
-	}
-
-	if (texSizeInView.height < contentSize.height) {
-		contentRect.size.height -= (contentSize.height - texSizeInView.height);
-		contentRect.origin.y = (contentSize.height - texSizeInView.height) * autofitPos.y;
-	} else if (texSizeInView.height > contentSize.height) {
-		textureRect.origin.y = (textureRect.size.height - contentSize.height * scale) * autofitPos.y;
-		textureRect.size.height = contentSize.height * scale;
-	}
-
-	return true;
-}
-
-bool Sprite::resolveAutofitForTexture(Rect &contentRect, Rect &textureRect) const {
-	auto texExtent = _texture->getExtent();
-	auto texSize = Size2(texExtent.width, texExtent.height);
-
-	texSize = Size2(texSize.width * _textureRect.size.width, texSize.height * _textureRect.size.height);
-
-	if (!getAutofitParams(_autofit, _autofitPos, _contentSize, Size2(texSize.width, texSize.height), contentRect, textureRect)) {
-		contentRect = Rect(0.0f, 0.0f, _contentSize.width, _contentSize.height);
-		textureRect = _textureRect;
-		return false;
-	} else {
-		textureRect = Rect(
-			_textureRect.origin.x + textureRect.origin.x / texSize.width,
-			_textureRect.origin.y + textureRect.origin.y / texSize.height,
-			textureRect.size.width / texSize.width,
-			textureRect.size.height / texSize.height);
-		return true;
-	}
 }
 
 }

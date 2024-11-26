@@ -135,14 +135,18 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 
 	prepareSubpasses(q);
 
+	for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
+		_descriptors.emplace_back(static_cast<RenderPass *>(_data->impl.get())->acquireDescriptorPool(*_device, i));
+	}
+
 	// If updateAfterBind feature supported for all renderpass bindings
 	// - we can use separate thread to update them
-	// (ordering of bind|update is not defined in this case)
+	// (ordering for bind|update is not defined in this case)
 
 	if (_data->hasUpdateAfterBind) {
 		q.getFrame()->performInQueue([this] (FrameHandle &frame) {
-			for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
-				if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, i, true)) {
+			for (auto &it : _descriptors) {
+				if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, it, true)) {
 					return false;
 				}
 			}
@@ -164,8 +168,8 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	}
 
 	q.getFrame()->performInQueue([this] (FrameHandle &frame) {
-		for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
-			if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, i, false)) {
+		for (auto &it : _descriptors) {
+			if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, it, false)) {
 				return false;
 			}
 		}
@@ -191,7 +195,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 			_onPrepared(_valid);
 			_onPrepared = nullptr;
 		}
-	}, this, "RenderPass::doPrepareCommands");
+	}, this, "QueuePassHandle::doPrepareCommands");
 	return false;
 }
 
@@ -201,7 +205,7 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 		q.getFrame()->performInQueue([onComplete = move(onComplete)] (FrameHandle &frame) mutable {
 			onComplete(true);
 			return true;
-		}, this, "RenderPass::complete");
+		}, this, "QueuePassHandle::complete");
 		return;
 	}
 
@@ -213,10 +217,17 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 
 	_fence->addRelease([dev = _device, pool = _pool, loop = q.getLoop()] (bool success) {
 		dev->releaseCommandPool(*loop, Rc<CommandPool>(pool));
-	}, nullptr, "RenderPassHandle::submit dev->releaseCommandPool");
+	}, nullptr, "QueuePassHandle::submit dev->releaseCommandPool");
+
 	_fence->addRelease([this, func = move(onComplete), q = &q] (bool success) mutable {
 		doComplete(*q, move(func), success);
-	}, this, "RenderPassHandle::submit onComplete");
+	}, this, "QueuePassHandle::submit onComplete");
+
+	for (auto &pool : _descriptors) {
+		_fence->addRelease([pool, pass = static_cast<RenderPass *>(_data->impl.get())] (bool success) mutable {
+			pass->releaseDescriptorPool(move(pool));
+		}, _data->impl.get(), "QueuePassHandle::pass->releaseDescriptorPool");
+	}
 
 	_sync = move(sync);
 
@@ -230,7 +241,7 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 				return false;
 			}
 			return true;
-		}, this, "RenderPass::submit");
+		}, this, "QueuePassHandle::submit");
 	}, [this] (FrameHandle &frame) {
 		_sync = nullptr;
 		invalidate();
@@ -246,7 +257,7 @@ QueueOperations QueuePassHandle::getQueueOps() const {
 }
 
 Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		auto queue = handle.getFrameQueue(_data->queue->queue);
 		pass->perform(*this, buf, [&, this] {
@@ -285,7 +296,7 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 			log::error("VK-Error", "Fail to vkQueueSubmit");
 		}
 		_sync = nullptr;
-	}, nullptr, false, "RenderPassHandle::doSubmit");
+	}, nullptr, false, "QueuePassHandle::doSubmit");
 	return success;
 }
 
@@ -334,7 +345,7 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 			});
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
-			log::error("MaterialRenderPassHandle", "No set for material layout");
+			log::error("QueuePassHandle", "No set for material layout");
 		}
 	}
 }
@@ -359,7 +370,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 			target->set = Rc<TextureSet>(layout->acquireSet(*dev));
 			target->set->write(*target);
 			return true;
-		}, this, "RenderPassHandle::updateMaterials");
+		}, this, "QueuePassHandle::updateMaterials");
 	}
 
 	auto &bufferInfo = data->getInfo();

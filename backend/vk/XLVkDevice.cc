@@ -707,7 +707,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 				}, this, "TextureSetLayout::compileImage transferBuffer->dropPendingBarrier");
 
 				loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-					auto buf = task->pool->recordBuffer(*task->device, [&, this] (CommandBuffer &buf) {
+					auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 						auto f = getQueueFamily(task->resultImage->getInfo().type);
 						buf.writeImageTransfer(task->pool->getFamilyIdx(), f ? f->index : VK_QUEUE_FAMILY_IGNORED,
 								task->transferBuffer, task->resultImage);

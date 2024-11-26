@@ -26,7 +26,6 @@
 #include "XL2dSprite.h"
 #include "XLCoreInput.h"
 #include "XLFontLabelBase.h"
-#include <future>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

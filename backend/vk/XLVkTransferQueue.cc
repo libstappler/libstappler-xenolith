@@ -578,7 +578,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 bool TransferResource::transfer(const Rc<DeviceQueue> &queue, const Rc<CommandPool> &pool, const Rc<Fence> &fence) {
 	auto dev = _alloc->getDevice();
 	auto table = _alloc->getDevice()->getTable();
-	auto buf = pool->recordBuffer(*dev, [&, this] (CommandBuffer &buf) {
+	auto buf = pool->recordBuffer(*dev, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
 		Vector<VkImageMemoryBarrier> outputImageBarriers;
 		Vector<VkBufferMemoryBarrier> outputBufferBarriers;
 
@@ -957,7 +957,7 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 	}
 
 	auto table = _device->getTable();
-	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		Vector<VkImageMemoryBarrier> outputImageBarriers;
 		Vector<VkBufferMemoryBarrier> outputBufferBarriers;
 

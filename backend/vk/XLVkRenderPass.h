@@ -53,7 +53,7 @@ struct SP_PUBLIC DescriptorBinding {
 	Rc<Ref> write(uint32_t, DescriptorBufferViewInfo &&);
 };
 
-struct SP_PUBLIC DescriptorSet : public Ref {
+struct SP_PUBLIC DescriptorSetBindings : public Ref {
 	VkDescriptorSet set;
 	Vector<DescriptorBinding> bindings;
 };
@@ -72,19 +72,61 @@ protected:
 	VkFramebuffer _framebuffer = VK_NULL_HANDLE;
 };
 
-class SP_PUBLIC RenderPass : public core::RenderPass {
+class SP_PUBLIC PipelineLayout : public core::Object {
 public:
-	struct LayoutData {
-		VkPipelineLayout layout = VK_NULL_HANDLE;
-		VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-		Vector<VkDescriptorSetLayout> layouts;
-		Vector<Rc<DescriptorSet>> sets;
+	struct DescriptorBindingInfo {
+		VkDescriptorType type;
+		uint32_t count;
 	};
 
+	virtual ~PipelineLayout();
+
+	bool init(Device &dev, const core::PipelineLayoutData &, uint32_t index);
+
+	uint32_t getIndex() const { return _index; }
+	VkPipelineLayout getLayout() const { return _layout; }
+	SpanView<VkDescriptorSetLayout> getLayouts() const { return _layouts; }
+	SpanView<VkDescriptorPoolSize> getSizes() const { return _sizes; }
+	SpanView<DescriptorBindingInfo> getDescriptorsInfo(uint32_t idx) const { return _descriptors[idx]; }
+	uint32_t getMaxSets() const { return _maxSets; }
+	bool haveUpdateAfterBind() const { return _updateAfterBind; }
+
+protected:
+	uint32_t _index = 0;
+	VkPipelineLayout _layout = VK_NULL_HANDLE;
+	Vector<VkDescriptorSetLayout> _layouts;
+	Vector<VkDescriptorPoolSize> _sizes;
+	Vector<Vector<DescriptorBindingInfo>> _descriptors;
+
+	uint32_t _maxSets = 0;
+	bool _updateAfterBind = false;
+};
+
+class SP_PUBLIC DescriptorPool : public core::Object {
+public:
+	virtual ~DescriptorPool();
+
+	bool init(Device &dev, PipelineLayout *);
+
+	PipelineLayout *getLayout() const { return _layout; }
+	uint32_t getLayoutIndex() const { return _layoutIndex; }
+
+	DescriptorSetBindings *getSet(uint32_t idx) const { return _sets[idx]; }
+	SpanView<Rc<DescriptorSetBindings>> getSets() const { return _sets; }
+
+protected:
+	uint32_t _layoutIndex = 0;
+	Rc<PipelineLayout> _layout;
+	VkDescriptorPool _pool = VK_NULL_HANDLE;
+	Vector<Rc<DescriptorSetBindings>> _sets;
+};
+
+class SP_PUBLIC RenderPass : public core::RenderPass {
+public:
 	struct Data {
 		VkRenderPass renderPass = VK_NULL_HANDLE;
 		VkRenderPass renderPassAlternative = VK_NULL_HANDLE;
-		Vector<LayoutData> layouts;
+		Vector<Rc<PipelineLayout>> layouts;
 
 		bool cleanup(Device &dev);
 	};
@@ -94,13 +136,18 @@ public:
 	virtual bool init(Device &dev, QueuePassData &);
 
 	VkRenderPass getRenderPass(bool alt = false) const;
-	VkPipelineLayout getPipelineLayout(uint32_t idx) const { return _data->layouts[idx].layout; }
-	const Vector<Rc<DescriptorSet>> &getDescriptorSets(uint32_t idx) const { return _data->layouts[idx].sets; }
+	PipelineLayout *getPipelineLayout(uint32_t idx) const { return _data->layouts[idx]; }
+
+	//const Vector<Rc<DescriptorSetBindings>> &getDescriptorSets(uint32_t idx) const { return _data->layouts[idx].descriptors[0].sets; }
+
 	const Vector<VkClearValue> &getClearValues() const { return _clearValues; }
+
+	Rc<DescriptorPool> acquireDescriptorPool(Device &dev, uint32_t idx);
+	void releaseDescriptorPool(Rc<DescriptorPool> &&);
 
 	// if async is true - update descriptors with updateAfterBind flag
 	// 			   false - without updateAfterBindFlag
-	virtual bool writeDescriptors(const QueuePassHandle &, uint32_t layoutIndex, bool async) const;
+	virtual bool writeDescriptors(const QueuePassHandle &, DescriptorPool *pool, bool async) const;
 
 	virtual void perform(const QueuePassHandle &, CommandBuffer &buf, const Callback<void()> &, bool writeBarriers = false);
 
@@ -113,7 +160,6 @@ protected:
 	bool initGenericPass(Device &dev, QueuePassData &);
 
 	bool initDescriptors(Device &dev, const QueuePassData &, Data &);
-	bool initDescriptors(Device &dev, const core::PipelineLayoutData &, Data &, LayoutData &);
 
 	Vector<VkAttachmentDescription> _attachmentDescriptions;
 	Vector<VkAttachmentDescription> _attachmentDescriptionsAlternative;
@@ -125,6 +171,9 @@ protected:
 	Data *_data = nullptr;
 
 	Vector<VkClearValue> _clearValues;
+
+	Mutex _descriptorPoolMutex;
+	Vector<Vector<Rc<DescriptorPool>>> _descriptorPools;
 };
 
 }

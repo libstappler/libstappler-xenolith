@@ -47,7 +47,9 @@ class GraphicPipeline;
 class ComputePipeline;
 class CommandBuffer;
 class DeviceMemoryPool;
-struct DescriptorSet;
+class PipelineLayout;
+class DescriptorPool;
+struct DescriptorSetBindings;
 
 using PipelineDescriptor = core::PipelineDescriptor;
 
@@ -229,7 +231,7 @@ class SP_PUBLIC CommandBuffer : public core::CommandBuffer {
 public:
 	virtual ~CommandBuffer();
 
-	bool init(const CommandPool *, const DeviceTable *, VkCommandBuffer);
+	bool init(const CommandPool *, const DeviceTable *, VkCommandBuffer, Vector<Rc<DescriptorPool>> &&descriptors);
 	void invalidate();
 
 	void cmdPipelineBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
@@ -271,7 +273,8 @@ public:
 
 	void cmdBindIndexBuffer(Buffer *, VkDeviceSize offset, VkIndexType indexType);
 
-	void cmdBindDescriptorSets(RenderPass *, uint32_t layoutIndex, uint32_t firstSet = 0);
+	void cmdBindDescriptorSets(RenderPass *, uint32_t index, uint32_t firstSet = 0);
+	void cmdBindDescriptorSets(RenderPass *, const Rc<DescriptorPool> &, uint32_t firstSet = 0);
 	void cmdBindDescriptorSets(RenderPass *, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
 
 	void cmdBindGraphicDescriptorSets(VkPipelineLayout, SpanView<VkDescriptorSet>, uint32_t firstSet = 0);
@@ -281,7 +284,7 @@ public:
 	void cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
 			int32_t vertexOffset, uint32_t firstInstance);
 
-	void cmdPushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView);
+	void cmdPushConstants(PipelineLayout *layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView);
 	void cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset, BytesView);
 
 	void cmdFillBuffer(Buffer *, uint32_t data);
@@ -299,7 +302,7 @@ public:
 
 	uint32_t getCurrentSubpass() const { return _currentSubpass; }
 	uint32_t getBoundLayoutIndex() const { return _boundLayoutIndex; }
-	VkPipelineLayout getBoundLayout() const { return _boundLayout; }
+	PipelineLayout *getBoundLayout() const { return _boundLayout; }
 
 	void writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &, const Rc<Image> &);
 
@@ -308,13 +311,16 @@ public:
 protected:
 	bool updateBoundSets(SpanView<VkDescriptorSet>, uint32_t firstSet);
 
-	VkPipelineLayout _boundLayout = VK_NULL_HANDLE;
+	Vector<Rc<DescriptorPool>> _availableDescriptors;
+	Set<Rc<DescriptorPool>> _usedDescriptors;
+
+	Rc<PipelineLayout> _boundLayout;
 
 	const CommandPool *_pool = nullptr;
 	const DeviceTable *_table = nullptr;
 	VkCommandBuffer _buffer = VK_NULL_HANDLE;
 
-	Set<Rc<DescriptorSet>> _descriptorSets;
+	Set<Rc<DescriptorSetBindings>> _descriptorSets;
 	Set<Rc<DeviceMemoryPool>> _memPool;
 	Vector<VkDescriptorSet> _boundSets;
 
@@ -337,7 +343,8 @@ public:
 	uint32_t getFamilyIdx() const { return _familyIdx; }
 	VkCommandPool getCommandPool() const { return _commandPool; }
 
-	const CommandBuffer * recordBuffer(Device &dev, const Callback<bool(CommandBuffer &)> &,
+	const CommandBuffer * recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
+			const Callback<bool(CommandBuffer &)> &,
 			VkCommandBufferUsageFlagBits = DefaultFlags, Level = Level::Primary);
 
 	void freeDefaultBuffers(Device &dev, Vector<VkCommandBuffer> &);

@@ -190,7 +190,7 @@ void VgIconTest::updateIcon(IconName name) {
 
 	do {
 		_sprite->clear();
-		_sprite->setAutofit(Sprite::Autofit::Contain);
+		_sprite->setTextureAutofit(Autofit::Contain);
 		auto path = _sprite->addPath();
 		getIconData(_currentName, [&] (BytesView bytes) {
 			path->getPath()->init(bytes);

@@ -42,7 +42,7 @@ bool GeneralTemporaryResourceTest::init() {
 	_label->setFontWeight(font::FontWeight::Bold);
 
 	_sprite = addChild(Rc<Sprite>::create(), ZOrder(1));
-	_sprite->setAutofit(Sprite::Autofit::Contain);
+	_sprite->setTextureAutofit(Autofit::Contain);
 	_sprite->setAnchorPoint(Anchor::Middle);
 
 	_slider = addChild(Rc<SliderWithLabel>::create("0.0", 0.0f, [this] (float val) {
@@ -143,7 +143,7 @@ void GeneralTemporaryResourceTest::switchVisibility(bool val) {
 				StringView name("external://resources/xenolith-2-480.png");
 				if (auto tex = _resource->acquireTexture(name)) {
 					_sprite = addChild(Rc<Sprite>::create(move(tex)), ZOrder(1));
-					_sprite->setAutofit(Sprite::Autofit::Contain);
+					_sprite->setTextureAutofit(Autofit::Contain);
 					_sprite->setAnchorPoint(Anchor::Middle);
 					_sprite->setContentSize(_contentSize * 0.75f);
 					_sprite->setPosition(_contentSize / 2.0f);

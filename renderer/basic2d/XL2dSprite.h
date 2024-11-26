@@ -33,8 +33,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class SP_PUBLIC Sprite : public DynamicStateNode {
 public:
-	using Autofit = font::Autofit;
-
 	static constexpr uint16_t SamplerIndexDefaultFilterNearest = 0;
 	static constexpr uint16_t SamplerIndexDefaultFilterLinear = 1;
 
@@ -54,7 +52,7 @@ public:
 
 	// texture rect should be normalized
 	virtual void setTextureRect(const Rect &);
-	virtual const Rect &getTextureRect() const { return _textureRect; }
+	virtual const Rect &getTextureRect() const { return _texturePlacement.textureRect; }
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
@@ -83,11 +81,11 @@ public:
 	virtual void setNormalized(bool);
 	virtual bool isNormalized() const { return _normalized; }
 
-	virtual void setAutofit(Autofit);
-	virtual Autofit getAutofit() const { return _autofit; }
+	virtual void setTextureAutofit(Autofit);
+	virtual Autofit getTextureAutofit() const { return _texturePlacement.autofit; }
 
-	virtual void setAutofitPosition(const Vec2 &);
-	virtual const Vec2 &getAutofitPosition() const { return _autofitPos; }
+	virtual void setTextureAutofitPosition(const Vec2 &);
+	virtual const Vec2 &getTextureAutofitPosition() const { return _texturePlacement.autofitPos; }
 
 	/** Семплеры определяются во время старта цикла графики (gl::Loop) и неизменны в последствии
 	 * По умолчанию, семплер с индексом 0 использует фильтр nearest, 1 - linear.
@@ -123,10 +121,10 @@ protected:
 
 	virtual RenderingLevel getRealRenderingLevel() const;
 
-	static bool getAutofitParams(Autofit autofit, const Vec2 &autofitValue, const Size2 &contentSize, const Size2 &texSize,
+	static bool resolveAutofit(Autofit autofit, const Vec2 &value, const Size2 &content, const Size2 &texSize,
 			Rect &contentRect, Rect &textureRect);
-
-	bool resolveAutofitForTexture(Rect &contentRect, Rect &textureRect) const;
+	static bool resolveAutofit(Autofit autofit, const Vec2 &value, const Size2 &content, const Rect &rect, const Size2 &texSize,
+			Rect &contentRect, Rect &textureRect);
 
 	virtual bool checkVertexDirty() const;
 
@@ -146,13 +144,9 @@ protected:
 	bool _rotated = false;
 	bool _isTextureLoaded = false;
 
-	Rect _textureRect = Rect(0.0f, 0.0f, 1.0f, 1.0f); // normalized
+	ImagePlacementInfo _texturePlacement;
 
-	Autofit _autofit = Autofit::None;
-	Vec2 _autofitPos = Vec2(0.5f, 0.5f);
-
-	Vec2 _textureOrigin;
-	Size2 _textureSize;
+	// Track dynamic texture size
 	Extent3 _targetTextureSize;
 
 	RenderingLevel _renderingLevel = RenderingLevel::Default;

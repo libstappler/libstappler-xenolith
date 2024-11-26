@@ -108,7 +108,7 @@ bool StatPercentLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 }
 
 Vector<const vk::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			struct ClassesInputInfo {
@@ -274,7 +274,7 @@ bool StatAnalysisLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)>
 }
 
 Vector<const vk::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			struct InputInfo {

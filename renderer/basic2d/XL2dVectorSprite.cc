@@ -255,13 +255,29 @@ void VectorSprite::setDeferred(bool val) {
 	}
 }
 
+void VectorSprite::setImageAutofit(Autofit autofit) {
+	if (_imagePlacement.autofit != autofit) {
+		_imagePlacement.autofit = autofit;
+		_vertexesDirty = true;
+	}
+}
+
+void VectorSprite::setImageAutofitPosition(const Vec2 &vec) {
+	if (_imagePlacement.autofitPos != vec) {
+		_imagePlacement.autofitPos = vec;
+		if (_imagePlacement.autofit != Autofit::None) {
+			_vertexesDirty = true;
+		}
+	}
+}
+
 Vec2 VectorSprite::convertToImageFromWorld(const Vec2 &worldLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
 
-	Mat4 tmp = (_modelViewTransform * _targetTransform * t * _image->getViewBoxTransform()).getInversed();
+	Mat4 tmp = (_modelViewTransform * _imageTargetTransform * t * _image->getViewBoxTransform()).getInversed();
 	return tmp.transformPoint(worldLocation);
 }
 
@@ -269,9 +285,9 @@ Vec2 VectorSprite::convertToImageFromNode(const Vec2 &worldLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
 
-	Mat4 tmp = (_targetTransform * t * _image->getViewBoxTransform()).getInversed();
+	Mat4 tmp = (_imageTargetTransform * t * _image->getViewBoxTransform()).getInversed();
 	return tmp.transformPoint(worldLocation);
 }
 
@@ -279,9 +295,9 @@ Vec2 VectorSprite::convertFromImageToNode(const Vec2 &imageLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
 
-	Mat4 tmp = _targetTransform * t * _image->getViewBoxTransform();
+	Mat4 tmp = _imageTargetTransform * t * _image->getViewBoxTransform();
 	return tmp.transformPoint(imageLocation);
 }
 
@@ -289,9 +305,9 @@ Vec2 VectorSprite::convertFromImageToWorld(const Vec2 &imageLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_targetSize.width / imageSize.width, _targetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
 
-	Mat4 tmp = _modelViewTransform * _targetTransform * t * _image->getViewBoxTransform();
+	Mat4 tmp = _modelViewTransform * _imageTargetTransform * t * _image->getViewBoxTransform();
 	return tmp.transformPoint(imageLocation);
 }
 
@@ -315,7 +331,7 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 			auto tmpData = new (memory::pool::palloc(frame.pool->getPool(), reqMemSize)) InstanceVertexData[targetData.size()];
 			auto target = tmpData;
 			if (_normalized) {
-				auto transform = frame.modelTransformStack.back() * _targetTransform;
+				auto transform = frame.modelTransformStack.back() * _imageTargetTransform;
 				for (auto &it : targetData) {
 					target->instances = it.instances.pdup(pool);
 					for (auto &inst : target->instances) {
@@ -332,7 +348,7 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 					++ target;
 				}
 			} else {
-				auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back() * _targetTransform;
+				auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back() * _imageTargetTransform;
 				for (auto &it : targetData) {
 					target->instances = it.instances.pdup(pool);
 					for (auto &inst : target->instances) {
@@ -351,7 +367,7 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		}
 
 		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(),
-				frame.modelTransformStack.back() * _targetTransform, _normalized, frame.zPath,
+				frame.modelTransformStack.back() * _imageTargetTransform, _normalized, frame.zPath,
 						_materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
 	}
 }
@@ -365,58 +381,40 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		return;
 	}
 
-	Rect contentRect;
-	Rect textureRect;
-
-	resolveAutofitForTexture(contentRect, textureRect);
-
 	Vec3 viewScale;
 	_modelViewTransform.decompose(&viewScale, nullptr, nullptr);
 
 	Size2 imageSize = _image->getImageSize();
-	Size2 targetViewSpaceSize(_contentSize.width * viewScale.x / _textureRect.size.width,
-			_contentSize.height * viewScale.y / _textureRect.size.height);
+	Size2 targetViewSpaceSize = Size2(_contentSize.width * viewScale.x,
+			_contentSize.height * viewScale.y);
 
-	float targetScaleX = _textureRect.size.width;
-	float targetScaleY = _textureRect.size.height;
-	float targetOffsetX = -_textureRect.origin.x * imageSize.width;
-	float targetOffsetY = -_textureRect.origin.y * imageSize.height;
+	float targetOffsetX = -_imagePlacement.textureRect.origin.x * imageSize.width;
+	float targetOffsetY = -_imagePlacement.textureRect.origin.y * imageSize.height;
 
-	Size2 texSize(imageSize.width * _textureRect.size.width, imageSize.height * _textureRect.size.height);
+	auto placementResult = _imagePlacement.resolve(_contentSize, imageSize);
 
-	if (_autofit != Autofit::None) {
-		float scale = 1.0f;
-		switch (_autofit) {
-		case Autofit::None: break;
-		case Autofit::Width: scale = texSize.width / _contentSize.width; break;
-		case Autofit::Height: scale = texSize.height / _contentSize.height; break;
-		case Autofit::Contain: scale = std::max(texSize.width / _contentSize.width, texSize.height / _contentSize.height); break;
-		case Autofit::Cover: scale = std::min(texSize.width / _contentSize.width, texSize.height / _contentSize.height); break;
-		}
-
-		auto texSizeInView = Size2(texSize.width / scale, texSize.height / scale);
-		targetOffsetX = targetOffsetX + (_contentSize.width - texSizeInView.width) * _autofitPos.x;
-		targetOffsetY = targetOffsetY + (_contentSize.height - texSizeInView.height) * _autofitPos.y;
+	if (_imagePlacement.autofit != Autofit::None) {
+		auto texSizeInView = Size2(imageSize.width / placementResult.scale,
+				imageSize.height / placementResult.scale);
+		targetOffsetX = targetOffsetX + (_contentSize.width - texSizeInView.width) * _imagePlacement.autofitPos.x;
+		targetOffsetY = targetOffsetY + (_contentSize.height - texSizeInView.height) * _imagePlacement.autofitPos.y;
 
 		targetViewSpaceSize = Size2(texSizeInView.width * viewScale.x,
 				texSizeInView.height * viewScale.y);
-
-		targetScaleX =_textureRect.size.width;
-		targetScaleY =_textureRect.size.height;
 	}
 
 	Mat4 targetTransform(
-		targetScaleX, 0.0f, 0.0f, targetOffsetX,
-		0.0f, targetScaleY, 0.0f, targetOffsetY,
+		1.0f, 0.0f, 0.0f, targetOffsetX,
+		0.0f, 1.0f, 0.0f, targetOffsetY,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
 	bool isDirty = false;
 
-	if (_targetSize != targetViewSpaceSize) {
+	if (_imageTargetSize != targetViewSpaceSize) {
 		isDirty = true;
-		_targetSize = targetViewSpaceSize;
+		_imageTargetSize = targetViewSpaceSize;
 	}
 
 	auto targetDepth = VectorSprite_getPseudoSdfOffset(_depthIndex);
@@ -425,7 +423,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		_savedSdfValue = targetDepth;
 	}
 
-	_targetTransform = targetTransform;
+	_imageTargetTransform = targetTransform;
 
 	if (isDirty || _image->isDirty()) {
 		_image->clearDirty();
@@ -448,12 +446,12 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 
 		if (_deferred) {
 			_deferredResult = VectorSprite_runDeferredVectorCavas(*_director->getApplication()->getQueue(),
-					move(imageData), _targetSize, config, _waitDeferred);
+					move(imageData), _imageTargetSize, config, _waitDeferred);
 			_result = nullptr;
 		} else {
 			auto canvas = VectorCanvas::getInstance();
 			canvas->setConfig(config);
-			_result = canvas->draw(move(imageData), _targetSize);
+			_result = canvas->draw(move(imageData), _imageTargetSize);
 		}
 		_vertexColorDirty = false; // color will be already applied
 	}
@@ -462,7 +460,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 	scaleTransform.scale(viewScale);
 	scaleTransform.inverse();
 
-	_targetTransform *= scaleTransform;
+	_imageTargetTransform *= scaleTransform;
 
 	auto isSolidImage = [&, this] {
 		for (auto &it : _image->getPaths()) {

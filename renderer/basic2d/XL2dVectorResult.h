@@ -25,7 +25,6 @@
 
 #include "XL2d.h"
 #include "SPVectorImage.h"
-#include <future>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 

@@ -57,3 +57,69 @@
 #include "backend/vk/XL2dVkShadow.cc"
 #include "backend/vk/XL2dVkShadowPass.cc"
 #endif
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+
+ImagePlacementResult ImagePlacementInfo::resolve(const Size2 &viewSize, const Size2 &imageSize) {
+	ImagePlacementResult result;
+
+	// find texture fragment size on image
+	result.imageFragmentSize = Size2(imageSize.width * textureRect.size.width, imageSize.height * textureRect.size.height);
+
+	// write defaults
+	result.viewRect = Rect(Vec2::ZERO, viewSize);
+	result.imageRect = Rect(0, 0, result.imageFragmentSize.width, result.imageFragmentSize.height);
+	result.textureRect = textureRect;
+	result.scale = 1.0f;
+
+	// find scale from view to image
+	switch (autofit) {
+	case Autofit::None:
+		return result;
+		break;
+	case Autofit::Width:
+		result.scale = result.imageFragmentSize.width / viewSize.width;
+		break;
+	case Autofit::Height:
+		result.scale = result.imageFragmentSize.height / viewSize.height;
+		break;
+	case Autofit::Contain:
+		result.scale = std::max(result.imageFragmentSize.width / viewSize.width, result.imageFragmentSize.height / viewSize.height);
+		break;
+	case Autofit::Cover:
+		result.scale = std::min(result.imageFragmentSize.width / viewSize.width, result.imageFragmentSize.height / viewSize.height);
+		break;
+	}
+
+	auto imageSizeInView = Size2(result.imageFragmentSize.width / result.scale, result.imageFragmentSize.height / result.scale);
+	if (imageSizeInView.width < viewSize.width) {
+		// reduce view size to fit image
+		result.viewRect.size.width -= (viewSize.width - imageSizeInView.width);
+		result.viewRect.origin.x = (viewSize.width - imageSizeInView.width) * autofitPos.x;
+	} else if (imageSizeInView.width > viewSize.width) {
+		// truncate image to fit view
+		result.imageRect.origin.x = (result.imageFragmentSize.width - viewSize.width * result.scale) * autofitPos.x;
+		result.imageRect.size.width = viewSize.width * result.scale;
+	}
+
+	if (imageSizeInView.height < viewSize.height) {
+		// reduce view size to fit image
+		result.viewRect.size.height -= (viewSize.height - imageSizeInView.height);
+		result.viewRect.origin.y = (viewSize.height - imageSizeInView.height) * autofitPos.y;
+	} else if (imageSizeInView.height > viewSize.height) {
+		// truncate image to fit view
+		result.imageRect.origin.y = (result.imageFragmentSize.height - viewSize.height * result.scale) * autofitPos.y;
+		result.imageRect.size.height = viewSize.height * result.scale;
+	}
+
+	// adjust texture rect to image rect
+	result.textureRect = Rect(
+		textureRect.origin.x + result.imageRect.origin.x / imageSize.width,
+		textureRect.origin.y + result.imageRect.origin.y / imageSize.height,
+		result.imageRect.size.width / imageSize.width,
+		result.imageRect.size.height / imageSize.height);
+
+	return result;
+}
+
+}

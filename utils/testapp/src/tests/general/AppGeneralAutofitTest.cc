@@ -58,7 +58,7 @@ bool GeneralAutofitTestNode::init() {
 
 		_sprites[i] = addChild(Rc<Sprite>::create("xenolith-2-480.png"), ZOrder(2));
 		_sprites[i]->setAnchorPoint(Anchor::Middle);
-		_sprites[i]->setAutofit(Sprite::Autofit(i));
+		_sprites[i]->setTextureAutofit(Autofit(i));
 
 		_labels[i] = addChild(Rc<Label>::create(), ZOrder(3));
 		_labels[i]->setAnchorPoint(Anchor::MiddleBottom);
@@ -66,12 +66,12 @@ bool GeneralAutofitTestNode::init() {
 		_labels[i]->setFontSize(20);
 		_labels[i]->setOpacity(0.75);
 
-		switch (Sprite::Autofit(i)) {
-		case Sprite::Autofit::None: _labels[i]->setString("Autofit::None"); break;
-		case Sprite::Autofit::Width: _labels[i]->setString("Autofit::Width"); break;
-		case Sprite::Autofit::Height: _labels[i]->setString("Autofit::Height"); break;
-		case Sprite::Autofit::Cover: _labels[i]->setString("Autofit::Cover"); break;
-		case Sprite::Autofit::Contain: _labels[i]->setString("Autofit::Contain"); break;
+		switch (Autofit(i)) {
+		case Autofit::None: _labels[i]->setString("Autofit::None"); break;
+		case Autofit::Width: _labels[i]->setString("Autofit::Width"); break;
+		case Autofit::Height: _labels[i]->setString("Autofit::Height"); break;
+		case Autofit::Cover: _labels[i]->setString("Autofit::Cover"); break;
+		case Autofit::Contain: _labels[i]->setString("Autofit::Contain"); break;
 		}
 	}
 

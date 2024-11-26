@@ -374,7 +374,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = (dynamicStates.size() > 0) ? &dynamicState : nullptr; // Optional
 
-	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index);
+	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index)->getLayout();
 	pipelineInfo.renderPass = pass.pass->impl.cast<RenderPass>()->getRenderPass();
 	pipelineInfo.subpass = pass.index;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -396,7 +396,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
-	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index);
+	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index)->getLayout();
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = 0;
 

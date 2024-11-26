@@ -155,7 +155,7 @@ void Layer::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 	auto quad = _vertexes.addQuad()
 		.setGeometry(Vec4::ZERO, _contentSize)
-		.setTextureRect(_textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated);
+		.setTextureRect(_texturePlacement.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated);
 
 	Color4F color[4];
 	for (int i = 0; i < 4; i++) {

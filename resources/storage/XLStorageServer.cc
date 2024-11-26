@@ -26,7 +26,6 @@
 #include "SPValid.h"
 #include "SPThread.h"
 #include "SPSqlDriver.h"
-#include <typeindex>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 

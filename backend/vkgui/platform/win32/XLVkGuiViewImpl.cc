@@ -27,8 +27,6 @@
 #include "XLTextInputManager.h"
 #include "XLVkPlatform.h"
 
-#include <chrono>
-
 #define XL_WIN32_DEBUG 1
 
 #ifndef XL_WIN32_LOG

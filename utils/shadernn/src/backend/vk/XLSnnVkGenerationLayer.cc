@@ -100,7 +100,7 @@ bool GenerationLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &
 }
 
 Vector<const vk::CommandBuffer *> GenerationLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			auto extent = handle.getFrameConstraints().extent;

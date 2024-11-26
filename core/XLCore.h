@@ -42,10 +42,6 @@
 #include "SPColorHCT.h"
 #include "SPFontStyle.h"
 
-#include <typeindex>
-#include <forward_list>
-#include <optional>
-
 #include "XLCoreConfig.h"
 
 #define XL_ASSERT(cond, msg)  do { if (!(cond)) { stappler::log::text(stappler::log::LogType::Fatal, "Assert", msg); } assert((cond)); } while (0)

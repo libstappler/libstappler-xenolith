@@ -120,11 +120,6 @@ void MaterialColorPicker::initVertexes() {
 void MaterialColorPicker::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 
-	auto texExtent = _texture->getExtent();
-	auto texSize = Size2(texExtent.width, texExtent.height);
-
-	texSize = Size2(texSize.width * _textureRect.size.width, texSize.height * _textureRect.size.height);
-
 	Size2 size(_contentSize.width / QuadsCount, _contentSize.height);
 	Vec2 origin(0, 0);
 	for (size_t i = 0; i < QuadsCount; ++ i) {

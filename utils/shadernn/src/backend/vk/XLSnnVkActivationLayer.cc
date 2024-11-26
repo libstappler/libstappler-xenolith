@@ -114,7 +114,7 @@ bool ActivationLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &
 }
 
 Vector<const vk::CommandBuffer *> ActivationLayer::LayerHandle::doPrepareCommands(FrameHandle &) {
-	auto buf = _pool->recordBuffer(*_device, [&] (vk::CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			auto data = static_cast<ActivationDataInput *>(_dataBuffer->getInput());

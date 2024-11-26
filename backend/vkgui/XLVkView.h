@@ -85,7 +85,7 @@ public:
 	virtual void deprecateSwapchain(bool fast = false) override;
 
 	virtual bool present(Rc<ImageStorage> &&) override;
-	virtual bool presentImmediate(Rc<ImageStorage> &&, Function<void(bool)> &&scheduleCb) override;
+	virtual bool presentImmediate(Rc<ImageStorage> &&, Function<void(bool)> &&scheduleCb, bool isRegularFrame) override;
 	virtual void invalidateTarget(Rc<ImageStorage> &&) override;
 
 	virtual Rc<Ref> getSwapchainHandle() const override;

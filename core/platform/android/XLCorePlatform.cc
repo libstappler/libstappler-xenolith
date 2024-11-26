@@ -21,10 +21,9 @@
  **/
 
 #include "XLCorePlatform.h"
+#include "SPPlatformUnistd.h"
 
 #if ANDROID
-
-#include <unistd.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

@@ -332,7 +332,7 @@ Vector<const CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(F
 		targetStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 	}
 
-	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		buf.cmdCopyBuffer(buffers.stagingBuffer, buffers.targetBuffer);
 
 		if (q->index == _pool->getFamilyIdx()) {

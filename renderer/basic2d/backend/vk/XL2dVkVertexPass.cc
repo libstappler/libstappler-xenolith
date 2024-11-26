@@ -32,8 +32,6 @@
 #include "XL2dLinearGradient.h"
 #include "XL2dFrameContext.h"
 
-#include <list>
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 struct VertexMaterialVertexProcessor;
@@ -1057,7 +1055,7 @@ bool VertexPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 }
 
 Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		auto materials = _materialBuffer->getSet().get();
 
 		Vector<ImageMemoryBarrier> outputImageBarriers;

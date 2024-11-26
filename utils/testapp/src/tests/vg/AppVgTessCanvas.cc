@@ -35,7 +35,7 @@ bool VgTessCursor::init() {
 		return false;
 	}
 
-	setAutofit(Sprite::Autofit::Contain);
+	setTextureAutofit(Autofit::Contain);
 	setAnchorPoint(Anchor::Middle);
 
 	return true;

@@ -50,6 +50,7 @@
 #include "vg/AppVgSdfTest.cc"
 #include "vg/AppVgDynamicIcons.cc"
 #include "vg/AppVgLinearGradientTest.cc"
+#include "vg/AppVgImageAutofitTest.cc"
 #include "utils/AppUtilsStorageTest.cc"
 #include "utils/AppUtilsNetworkTest.cc"
 #include "utils/AppUtilsAssetTest.cc"
@@ -111,6 +112,7 @@ static Vector<MenuData> s_layouts {
 			LayoutName::VgSdfTest,
 			LayoutName::VgDynamicIcons,
 			LayoutName::VgLinearGradient,
+			LayoutName::VgImageAutofitTest,
 		}); }},
 	MenuData{LayoutName::UtilsTests, LayoutName::Root, "org.stappler.xenolith.test.UtilsTests", "Utils tests",
 		[] (LayoutName name) { return Rc<LayoutMenu>::create(name, Vector<LayoutName>{
@@ -181,6 +183,8 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<VgDynamicIcons>::create(); }},
 	MenuData{LayoutName::VgLinearGradient, LayoutName::VgTests, "org.stappler.xenolith.test.VgLinearGradient", "Linear gradient",
 		[] (LayoutName name) { return Rc<VgLinearGradientTest>::create(); }},
+	MenuData{LayoutName::VgImageAutofitTest, LayoutName::VgTests, "org.stappler.xenolith.test.VgImageAutofitTest", "Image autofit",
+		[] (LayoutName name) { return Rc<VgImageAutofitTest>::create(); }},
 
 	MenuData{LayoutName::UtilsStorageTest, LayoutName::UtilsTests, "org.stappler.xenolith.test.UtilsStorageTest", "Storage test",
 		[] (LayoutName name) { return Rc<UtilsStorageTest>::create(); }},
