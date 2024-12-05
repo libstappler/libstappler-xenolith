@@ -30,27 +30,23 @@
 
 #include <xcb/xcb.h>
 #include <xcb/randr.h>
+#include <xcb/sync.h>
 #include <xcb/xcb_keysyms.h>
 
 #define explicit _explicit;
 #include <xcb/xkb.h>
 #undef explicit
 
-#define XL_X11_DEBUG 0
+#define XL_X11_DEBUG 1
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+class XcbConnection;
 
 class SP_PUBLIC XcbLibrary : public Ref {
 public:
 	static constexpr int RANDR_MAJOR_VERSION = XCB_RANDR_MAJOR_VERSION;
 	static constexpr int RANDR_MINOR_VERSION = XCB_RANDR_MINOR_VERSION;
-
-	struct ConnectionData {
-		int screen_nbr = -1;
-		xcb_connection_t *connection = nullptr;
-		const xcb_setup_t *setup = nullptr;
-		xcb_screen_t *screen = nullptr;
-	};
 
 	static XcbLibrary *getInstance();
 
@@ -66,6 +62,7 @@ public:
 	bool hasRandr() const;
 	bool hasKeysyms() const;
 	bool hasXkb() const;
+	bool hasSync() const;
 
 	decltype(&::xcb_connect) xcb_connect = nullptr;
 	decltype(&::xcb_get_setup) xcb_get_setup = nullptr;
@@ -81,6 +78,8 @@ public:
 	decltype(&::xcb_get_extension_data) xcb_get_extension_data = nullptr;
 	decltype(&::xcb_map_window) xcb_map_window = nullptr;
 	decltype(&::xcb_create_window) xcb_create_window = nullptr;
+	decltype(&::xcb_configure_window) xcb_configure_window = nullptr;
+	decltype(&::xcb_change_window_attributes) xcb_change_window_attributes = nullptr;
 	decltype(&::xcb_change_property) xcb_change_property = nullptr;
 	decltype(&::xcb_intern_atom) xcb_intern_atom = nullptr;
 	decltype(&::xcb_intern_atom_reply) xcb_intern_atom_reply = nullptr;
@@ -165,21 +164,28 @@ public:
 	decltype(&::xcb_is_misc_function_key) xcb_is_misc_function_key = nullptr;
 	decltype(&::xcb_is_modifier_key) xcb_is_modifier_key = nullptr;
 	decltype(&::xcb_xkb_select_events) xcb_xkb_select_events = nullptr;
+	decltype(&::xcb_sync_id) xcb_sync_id = nullptr;
+	decltype(&::xcb_sync_create_counter) xcb_sync_create_counter = nullptr;
+	decltype(&::xcb_sync_create_counter_checked) xcb_sync_create_counter_checked = nullptr;
+	decltype(&::xcb_sync_destroy_counter) xcb_sync_destroy_counter = nullptr;
+	decltype(&::xcb_sync_destroy_counter_checked) xcb_sync_destroy_counter_checked = nullptr;
+	decltype(&::xcb_sync_set_counter) xcb_sync_set_counter = nullptr;
 
-	ConnectionData acquireConnection();
-	ConnectionData getActiveConnection() const;
+	XcbConnection * getCommonConnection();
+
+	Rc<XcbConnection> acquireConnection();
 
 protected:
 	void openAux();
-	void openConnection(ConnectionData &data);
 
 	Dso _handle;
 	Dso _randr;
 	Dso _keysyms;
 	Dso _xkb;
+	Dso _sync;
 
-	ConnectionData _pending;
-	ConnectionData _current;
+	std::mutex _connectionMutex;
+	Rc<XcbConnection> _connection;
 };
 
 enum class XcbAtomIndex {
@@ -187,34 +193,16 @@ enum class XcbAtomIndex {
 	WM_DELETE_WINDOW,
 	WM_NAME,
 	WM_ICON_NAME,
+	_NET_WM_SYNC_REQUEST,
+	_NET_WM_SYNC_REQUEST_COUNTER,
 	SAVE_TARGETS,
 	CLIPBOARD,
 	PRIMARY,
 	TARGETS,
 	MULTIPLE,
-	STRING,
+	UTF8_STRING,
 	XNULL,
 	XENOLITH_CLIPBOARD
-};
-
-struct XcbAtomRequest {
-	StringView name;
-	bool onlyIfExists;
-};
-
-static XcbAtomRequest s_atomRequests[] = {
-	{ "WM_PROTOCOLS", true },
-	{ "WM_DELETE_WINDOW", false },
-	{ "WM_NAME", false },
-	{ "WM_ICON_NAME", false },
-	{ "SAVE_TARGETS", false },
-	{ "CLIPBOARD", false },
-	{ "PRIMARY", false },
-	{ "TARGETS", false },
-	{ "MULTIPLE", false },
-	{ "UTF8_STRING", false },
-	{ "NULL", false },
-	{ "XENOLITH_CLIPBOARD", false },
 };
 
 }

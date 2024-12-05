@@ -52,7 +52,7 @@ bool View::init(Application &loop, ViewInfo &&info) {
 void View::end() {
 	_running = false;
 	_frameEmitter->invalidate();
-	_mainLoop->performOnMainThread([this, cb = move(_info.onClosed)] () {
+	_mainLoop->performOnMainThread([this, cb = sp::move(_info.onClosed)] () {
 		if (_director) {
 			_director->end();
 		}
@@ -64,7 +64,7 @@ void View::update(bool displayLink) {
 	Vector<Pair<Function<void()>, Rc<Ref>>> callback;
 
 	_mutex.lock();
-	callback = move(_callbacks);
+	callback = sp::move(_callbacks);
 	_callbacks.clear();
 	_mutex.unlock();
 
@@ -79,10 +79,10 @@ void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate)
 	} else {
 		std::unique_lock<Mutex> lock(_mutex);
 		if (_running) {
-			_callbacks.emplace_back(move(func), target);
+			_callbacks.emplace_back(sp::move(func), target);
 			wakeup(lock);
 		} else if (!_init) {
-			_callbacks.emplace_back(move(func), target);
+			_callbacks.emplace_back(sp::move(func), target);
 		}
 	}
 }
@@ -118,7 +118,7 @@ void View::handleInputEvent(const InputEventData &event) {
 }
 
 void View::handleInputEvents(Vector<InputEventData> &&events) {
-	_mainLoop->performOnMainThread([this, events = move(events)] () mutable {
+	_mainLoop->performOnMainThread([this, events = sp::move(events)] () mutable {
 		for (auto &event : events) {
 			if (event.isPointEvent()) {
 				event.point.density = _constraints.density;

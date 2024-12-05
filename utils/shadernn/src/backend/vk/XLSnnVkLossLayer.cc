@@ -125,7 +125,7 @@ bool CrossEntropyLossLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder 
 					}));
 
 			_pipelineOps.emplace(idx, PipelineOp(
-				idx, data, move(fn)
+				idx, data, sp::move(fn)
 			));
 		};
 
@@ -152,7 +152,7 @@ bool CrossEntropyLossLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder 
 						constants));
 
 			_pipelineOps.emplace(idx, PipelineOp(
-				idx, data, move(fn)
+				idx, data, sp::move(fn)
 			));
 
 			return data;

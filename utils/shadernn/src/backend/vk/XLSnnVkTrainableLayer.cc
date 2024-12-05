@@ -52,7 +52,7 @@ void TrainableLayer::initPropagation(Queue::Builder &queueBuilder, QueuePassBuil
 
 	_propagationAttachment = queueBuilder.addAttachemnt(toString(getName(), "_BackwardOnce_data"),
 			[&] (AttachmentBuilder &builder) -> Rc<core::Attachment> {
-		return Rc<vk::BufferAttachment>::create(builder, move(trainable));
+		return Rc<vk::BufferAttachment>::create(builder, sp::move(trainable));
 	});
 
 	_externalPropagationDataSource = source;

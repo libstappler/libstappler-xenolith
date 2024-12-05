@@ -93,7 +93,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 		return true;
 	});
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	uint32_t idx = 0;
 	for (auto &it : _values) {
@@ -212,7 +212,7 @@ void ConfigSwitcher::handleNextMode() {
 }
 
 bool ConfigPresentModeSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uint32_t)> &&cb) {
-	if (!ConfigSwitcher::init(app, selected, move(cb))) {
+	if (!ConfigSwitcher::init(app, selected, sp::move(cb))) {
 		return false;
 	}
 

@@ -65,7 +65,7 @@ public:
 		Rc<Ref> ref;
 
 		AssetRequest(StringView url, AssetCallback &&cb, TimeInterval ttl, Rc<Ref> &&ref)
-		: url(AssetLibrary::getAssetUrl(url)), callback(move(cb)), ttl(ttl), ref(move(ref)) { }
+		: url(AssetLibrary::getAssetUrl(url)), callback(sp::move(cb)), ttl(ttl), ref(sp::move(ref)) { }
 	};
 
 	struct AssetMultiRequest {
@@ -74,7 +74,7 @@ public:
 		Rc<Ref> ref;
 
 		AssetMultiRequest(Vector<AssetRequest> &&vec, AssetVecCallback &&cb, Rc<Ref> &&ref)
-		: vec(move(vec)), callback(move(cb)), ref(move(ref)) { }
+		: vec(sp::move(vec)), callback(sp::move(cb)), ref(sp::move(ref)) { }
 	};
 
 	static String getAssetPath(int64_t);

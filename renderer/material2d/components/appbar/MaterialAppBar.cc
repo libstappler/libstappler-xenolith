@@ -188,7 +188,7 @@ float AppBar::getBasicHeight() const {
 }
 
 void AppBar::setNavCallback(Function<void()> &&cb) {
-	_navCallback = move(cb);
+	_navCallback = sp::move(cb);
 }
 const Function<void()> & AppBar::getNavCallback() const {
 	return _navCallback;
@@ -211,7 +211,7 @@ Button *AppBar::getNavNode() const {
 }
 
 void AppBar::setBarCallback(Function<void()> &&cb) {
-	_barCallback = move(cb);
+	_barCallback = sp::move(cb);
 }
 
 const Function<void()> & AppBar::getBarCallback() const {

@@ -26,138 +26,86 @@
 #include "XLPlatformLinuxXcb.h"
 #include "XLPlatformLinuxXkb.h"
 #include "XLPlatformLinuxView.h"
+#include "XLPlatformLinuxXcbConnection.h"
 
 #if LINUX
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class SP_PUBLIC XcbView : public LinuxViewInterface {
+class SP_PUBLIC XcbView : public LinuxViewInterface, public XcbWindowInterface {
 public:
-	struct ScreenInfo {
-		uint16_t width;
-		uint16_t height;
-		uint16_t mwidth;
-		uint16_t mheight;
-		Vector<uint16_t> rates;
-	};
-
-	struct ModeInfo {
-		uint32_t id;
-	    uint16_t width;
-	    uint16_t height;
-	    uint16_t rate;
-	    String name;
-	};
-
-	struct CrtcInfo {
-		xcb_randr_crtc_t crtc;
-		int16_t x;
-		int16_t y;
-		uint16_t width;
-		uint16_t height;
-		xcb_randr_mode_t mode;
-		uint16_t rotation;
-		uint16_t rotations;
-		Vector<xcb_randr_output_t> outputs;
-		Vector<xcb_randr_output_t> possible;
-	};
-
-	struct OutputInfo {
-		xcb_randr_output_t output;
-	    xcb_randr_crtc_t crtc;
-		Vector<xcb_randr_mode_t> modes;
-		String name;
-	};
-
-	struct ScreenInfoData {
-		Vector<xcb_randr_crtc_t> currentCrtcs;
-		Vector<xcb_randr_output_t> currentOutputs;
-		Vector<ModeInfo> currentModeInfo;
-		Vector<ModeInfo> modeInfo;
-		Vector<ScreenInfo> screenInfo;
-		Vector<CrtcInfo> crtcInfo;
-
-		OutputInfo primaryOutput;
-		CrtcInfo primaryCrtc;
-		ModeInfo primaryMode;
-		xcb_timestamp_t config;
-	};
-
-	static void ReportError(int error);
-
-	XcbView(XcbLibrary *, ViewInterface *, StringView, StringView bundleId, URect);
 	virtual ~XcbView();
 
-	bool valid() const;
+	XcbView(Rc<XcbConnection> &&, ViewInterface *, StringView, StringView bundleId, URect);
 
-	virtual bool poll(bool frameReady) override;
+	virtual void handleConfigureNotify(xcb_configure_notify_event_t *) override;
 
-	virtual int getSocketFd() const override { return _socket; }
+	virtual void handleButtonPress(xcb_button_press_event_t *) override;
+	virtual void handleButtonRelease(xcb_button_release_event_t *) override;
+	virtual void handleMotionNotify(xcb_motion_notify_event_t *) override;
+	virtual void handleEnterNotify(xcb_enter_notify_event_t *) override;
+	virtual void handleLeaveNotify(xcb_leave_notify_event_t *) override;
+	virtual void handleFocusIn(xcb_focus_in_event_t *) override;
+	virtual void handleFocusOut(xcb_focus_out_event_t *) override;
+	virtual void handleKeyPress(xcb_key_press_event_t *) override;
+	virtual void handleKeyRelease(xcb_key_release_event_t *) override;
+
+	virtual void handleSelectionNotify(xcb_selection_notify_event_t *) override;
+	virtual void handleSelectionRequest(xcb_selection_request_event_t *e) override;
+
+	virtual void handleSyncRequest(xcb_timestamp_t, xcb_sync_int64_t) override;
+	virtual void handleCloseRequest() override;
+
+	virtual void handleScreenChangeNotify(xcb_randr_screen_change_notify_event_t *) override;
+
+	virtual void dispatchPendingEvents() override;
 
 	virtual uint64_t getScreenFrameInterval() const override;
 
 	virtual void mapWindow() override;
 
-	xcb_connection_t *getConnection() const { return _connection; }
-	uint32_t getWindow() const { return _window; }
+	xcb_window_t getWindow() const { return _info.window; }
+	xcb_connection_t *getConnection() const;
+
+	virtual void handleSwapchainRecreation() override;
 
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType) override;
 
+	virtual int getSocketFd() const override;
+	virtual bool poll(bool frameReady) override;
+
 protected:
-	ScreenInfoData getScreenInfo() const;
-
-	void initXkb();
-
-	void updateXkbMapping();
-	void updateKeysymMapping();
-	xcb_keysym_t getKeysym(xcb_keycode_t code, uint16_t state, bool resolveMods = true);
-	xkb_keysym_t composeSymbol(xkb_keysym_t sym, core::InputKeyComposeState &compose) const;
-
-	void updateXkbKey(xcb_keycode_t code);
-
-	// get code from keysym mapping table
-	core::InputKeyCode getKeyCode(xcb_keycode_t code) const;
-
-	// map keysym to InputKeyCode
-	core::InputKeyCode getKeysymCode(xcb_keysym_t sym) const;
-
 	void notifyClipboard(BytesView);
 
 	xcb_atom_t writeTargetToProperty(xcb_selection_request_event_t *request);
-	void handleSelectionRequest(xcb_selection_request_event_t *e);
 
-	Rc<XcbLibrary> _xcb;
-	Rc<XkbLibrary> _xkb;
+	void updateWindowAttributes();
+	void configureWindow(xcb_rectangle_t r, uint16_t border_width);
+
+	Rc<XcbConnection> _connection;
+	XcbLibrary *_xcb = nullptr;
+	XkbLibrary *_xkb = nullptr;
+
 	ViewInterface *_view = nullptr;
-	xcb_connection_t *_connection = nullptr;
+
 	xcb_screen_t *_defaultScreen = nullptr;
-	xcb_key_symbols_t *_keysyms = nullptr;
-	uint32_t _window = 0;
 
-	xcb_atom_t _atoms[sizeof(s_atomRequests) / sizeof(XcbAtomRequest)];
+	XcbWindowInfo _info;
 
-	uint16_t _width = 0;
-	uint16_t _height = 0;
+	xcb_timestamp_t _lastInputTime = 0;
+	xcb_timestamp_t _lastSyncTime = 0;
+	Vector<core::InputEventData> _pendingEvents;
+	bool _deprecateSwapchain = false;
+	bool _shouldClose = false;
+
+
+	uint16_t _borderWidth = 0;
 	uint16_t _rate = 60;
 
-	int _socket = -1;
-
-	uint16_t _numlock = 0;
-	uint16_t _shiftlock = 0;
-	uint16_t _capslock = 0;
-	uint16_t _modeswitch = 0;
-
-	bool _xcbSetup = false;
-	bool _randrEnabled = true;
-	int32_t _xkbDeviceId = 0;
-	uint8_t _xkbFirstEvent = 0;
-	uint8_t _xkbFirstError = 0;
-	uint8_t _randrFirstEvent = 0;
 	xkb_keymap *_xkbKeymap = nullptr;
 	xkb_state *_xkbState = nullptr;
 	xkb_compose_state *_xkbCompose = nullptr;
-	core::InputKeyCode _keycodes[256] = { core::InputKeyCode::Unknown };
 
 	String _wmClass;
 	ScreenInfoData _screenInfo;

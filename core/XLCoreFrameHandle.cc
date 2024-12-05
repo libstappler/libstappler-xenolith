@@ -179,7 +179,7 @@ FrameQueue *FrameHandle::getFrameQueue(Queue *queue) const {
 
 void FrameHandle::schedule(Function<bool(FrameHandle &)> &&cb, StringView tag) {
 	auto linkId = retain();
-	_loop->schedule([this, cb = move(cb), linkId] (Loop &ctx) {
+	_loop->schedule([this, cb = sp::move(cb), linkId] (Loop &ctx) {
 		if (!isValid()) {
 			release(linkId);
 			return true;
@@ -194,7 +194,7 @@ void FrameHandle::schedule(Function<bool(FrameHandle &)> &&cb, StringView tag) {
 
 void FrameHandle::performInQueue(Function<void(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, cb = move(cb)] (const thread::Task &) -> bool {
+	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
 		cb(*this);
 		return true;
 	}, [=, this] (const thread::Task &, bool) {
@@ -206,9 +206,9 @@ void FrameHandle::performInQueue(Function<void(FrameHandle &)> &&cb, Ref *ref, S
 void FrameHandle::performInQueue(Function<bool(FrameHandle &)> &&perform, Function<void(FrameHandle &, bool)> &&complete,
 		Ref *ref, StringView tag) {
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, perform = move(perform)] (const thread::Task &) -> bool {
+	_loop->performInQueue(Rc<thread::Task>::create([this, perform = sp::move(perform)] (const thread::Task &) -> bool {
 		return perform(*this);
-	}, [=, this, complete = move(complete)] (const thread::Task &, bool success) {
+	}, [=, this, complete = sp::move(complete)] (const thread::Task &, bool success) {
 		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		release(linkId);
@@ -220,7 +220,7 @@ void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref
 		XL_FRAME_PROFILE(cb(*this), tag, 1000);
 	} else {
 		auto linkId = retain();
-		_loop->performOnGlThread([=, this, cb = move(cb)] () {
+		_loop->performOnGlThread([=, this, cb = sp::move(cb)] () {
 			XL_FRAME_PROFILE(cb(*this);, tag, 1000);
 			XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 			release(linkId);
@@ -231,7 +231,7 @@ void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref
 void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
 	++ _tasksRequired;
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, cb = move(cb)] (const thread::Task &) -> bool {
+	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
 		return cb(*this);
 	}, [this, linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
@@ -249,9 +249,9 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform, F
 		Ref *ref, StringView tag) {
 	++ _tasksRequired;
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, perform = move(perform)] (const thread::Task &) -> bool {
+	_loop->performInQueue(Rc<thread::Task>::create([this, perform = sp::move(perform)] (const thread::Task &) -> bool {
 		return perform(*this);
-	}, [this, complete = move(complete), linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
+	}, [this, complete = sp::move(complete), linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
 		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (success) {
@@ -345,7 +345,7 @@ void FrameHandle::invalidate() {
 }
 
 void FrameHandle::setCompleteCallback(Function<void(FrameHandle &)> &&cb) {
-	_complete = move(cb);
+	_complete = sp::move(cb);
 }
 
 bool FrameHandle::setup() {
@@ -353,7 +353,7 @@ bool FrameHandle::setup() {
 		auto q = Rc<FrameQueue>::create(_pool, _request->getQueue(), *this);
 		q->setup();
 
-		_queues.emplace_back(move(q));
+		_queues.emplace_back(sp::move(q));
 	});
 
 	if (!_valid) {
@@ -390,11 +390,8 @@ void FrameHandle::onRequiredTaskCompleted(StringView tag) {
 	tryComplete();
 }
 
-void FrameHandle::onOutputAttachment(FrameAttachmentData &data) {
-	if (_request->onOutputReady(*_loop, data)) {
-		data.image = nullptr;
-		data.state = FrameAttachmentState::Detached;
-	}
+bool FrameHandle::onOutputAttachment(FrameAttachmentData &data) {
+	return _request->onOutputReady(*_loop, data);
 }
 
 void FrameHandle::onOutputAttachmentInvalidated(FrameAttachmentData &data) {
@@ -403,14 +400,14 @@ void FrameHandle::onOutputAttachmentInvalidated(FrameAttachmentData &data) {
 
 void FrameHandle::waitForDependencies(const Vector<Rc<DependencyEvent>> &events, Function<void(FrameHandle &, bool)> &&cb) {
 	auto linkId = retain();
-	_loop->waitForDependencies(events, [this, cb = move(cb), linkId] (bool success) {
+	_loop->waitForDependencies(events, [this, cb = sp::move(cb), linkId] (bool success) {
 		cb(*this, success);
 		release(linkId);
 	});
 }
 
 void FrameHandle::waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
-	_request->waitForInput(queue, a, move(cb));
+	_request->waitForInput(queue, a, sp::move(cb));
 }
 
 void FrameHandle::signalDependencies(bool success) {

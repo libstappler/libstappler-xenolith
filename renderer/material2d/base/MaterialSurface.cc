@@ -163,7 +163,7 @@ void Surface::setActivityState(ActivityState value) {
 }
 
 void Surface::setStyleDirtyCallback(Function<void(const SurfaceStyleData &)> &&cb) {
-	_styleDirtyCallback = move(cb);
+	_styleDirtyCallback = sp::move(cb);
 	_styleDirty = true;
 }
 

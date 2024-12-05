@@ -96,7 +96,7 @@ core::MaterialId FrameContext::acquireMaterial(const MaterialInfo &info, Vector<
 		newId = _materialAttachment->getNextMaterialId();
 	}
 
-	if (auto m = Rc<core::Material>::create(newId, pipeline, move(images), data)) {
+	if (auto m = Rc<core::Material>::create(newId, pipeline, sp::move(images), data)) {
 		auto id = m->getId();
 		addPendingMaterial(move(m));
 		addMaterial(info, id, revokable);
@@ -178,7 +178,7 @@ void FrameContext::addMaterial(const MaterialInfo &info, core::MaterialId id, bo
 		it->second.emplace_back(ContextMaterialInfo{info, id, revokable});
 	} else {
 		Vector<ContextMaterialInfo> ids({ContextMaterialInfo{info, id, revokable}});
-		_materials.emplace(materialHash, move(ids));
+		_materials.emplace(materialHash, sp::move(ids));
 	}
 }
 
@@ -229,8 +229,8 @@ void FrameContext::submitMaterials(const FrameInfo &info) {
 		if (!_pendingMaterialsToAdd.empty() || !_pendingMaterialsToRemove.empty()) {
 			auto req = Rc<core::MaterialInputData>::alloc();
 			req->attachment = _materialAttachment;
-			req->materialsToAddOrUpdate = move(_pendingMaterialsToAdd);
-			req->materialsToRemove = move(_pendingMaterialsToRemove);
+			req->materialsToAddOrUpdate = sp::move(_pendingMaterialsToAdd);
+			req->materialsToRemove = sp::move(_pendingMaterialsToRemove);
 			req->callback = [app = Rc<Application>(info.director->getApplication())] {
 				app->wakeup();
 			};

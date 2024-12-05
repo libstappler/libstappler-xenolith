@@ -33,7 +33,7 @@ bool Button::init(Function<void()> &&cb) {
 		return false;
 	}
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	_listener = addInputListener(Rc<InputListener>::create());
 	_listener->setTouchFilter([] (const InputEvent &event, const InputListener::DefaultEventFilter &) {
@@ -116,7 +116,7 @@ void Button::updateEnabled() {
 }
 
 bool ButtonWithLabel::init(StringView str, Function<void()> &&cb) {
-	if (!Button::init(move(cb))) {
+	if (!Button::init(sp::move(cb))) {
 		return false;
 	}
 

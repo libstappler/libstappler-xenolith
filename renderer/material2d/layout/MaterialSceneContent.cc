@@ -147,7 +147,7 @@ void Snackbar::hide(Function<void()> &&cb) {
 	} else {
 		runAction(Rc<Sequence>::create(
 				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, -_contentSize.height)), EasingType::Standard),
-				move(cb)));
+				sp::move(cb)));
 	}
 }
 

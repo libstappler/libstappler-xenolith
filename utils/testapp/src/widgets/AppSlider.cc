@@ -31,7 +31,7 @@ bool Slider::init(float value, Function<void(float)> &&cb) {
 	}
 
 	_value = value;
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	_foreground = addChild(Rc<Layer>::create(Color::Grey_500), ZOrder(1));
 	_foreground->setPosition(Vec2::ZERO);
@@ -95,7 +95,7 @@ void Slider::updateValue() {
 
 
 bool SliderWithLabel::init(StringView title, float value, Function<void(float)> &&cb) {
-	if (!Slider::init(value, move(cb))) {
+	if (!Slider::init(value, sp::move(cb))) {
 		return false;
 	}
 

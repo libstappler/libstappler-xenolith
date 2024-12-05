@@ -40,7 +40,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 SPUNUSED static void registerNetworkCallback(Application *, void *key, Function<void(NetworkCapabilities)> &&cb) {
 	auto lib = stappler::xenolith::platform::DBusLibrary::get();
-	lib.addNetworkConnectionCallback(key, [cb = move(cb)] (const stappler::xenolith::platform::NetworkState &state) {
+	lib.addNetworkConnectionCallback(key, [cb = sp::move(cb)] (const stappler::xenolith::platform::NetworkState &state) {
 		NetworkCapabilities defaultFlags = NetworkCapabilities::NotRoaming | NetworkCapabilities::NotCongested | NetworkCapabilities::NotVpn;
 		NetworkCapabilities caps = NetworkCapabilities::None;
 

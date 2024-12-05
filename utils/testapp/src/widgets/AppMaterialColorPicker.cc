@@ -34,7 +34,7 @@ bool MaterialColorPicker::init(Type type, const ColorHCT &color, Function<void(f
 
 	_type = type;
 	_targetColor = color;
-	_callback = move(cb);
+	_callback = sp::move(cb);
 	switch (_type) {
 	case Type::Hue: _value = _targetColor.data.hue / 360.0f; break;
 	case Type::Chroma: _value = _targetColor.data.chroma / 100.0f; break;

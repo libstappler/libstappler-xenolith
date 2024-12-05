@@ -243,7 +243,7 @@ void Scene2d::initialize() {
 
 				Vector<InputEventData> events{ _data1, _data2 };
 
-				_scene->getDirector()->getView()->handleInputEvents(move(events));
+				_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
 			}
 			return false;
 		}
@@ -257,7 +257,7 @@ void Scene2d::initialize() {
 
 		Vector<InputEventData> events{ _data1, _data2 };
 
-		_scene->getDirector()->getView()->handleInputEvents(move(events));
+		_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
 
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}));

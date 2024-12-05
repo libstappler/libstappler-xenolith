@@ -131,7 +131,7 @@ void ImageStorage::waitReady(Function<void(bool)> &&cb) {
 		cb(false);
 	}
 	if (!_ready) {
-		_waitReady.emplace_back(move(cb));
+		_waitReady.emplace_back(sp::move(cb));
 	} else {
 		cb(true);
 	}

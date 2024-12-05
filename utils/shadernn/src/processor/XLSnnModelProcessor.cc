@@ -108,12 +108,12 @@ ModelSpecialization ModelProcessor::specializeModel(Model *model, Extent3 extent
 	for (auto &it : model->getInputs()) {
 		inputs.emplace(it, extent);
 	}
-	return specializeModel(model, move(inputs));
+	return specializeModel(model, sp::move(inputs));
 }
 
 ModelSpecialization ModelProcessor::specializeModel(Model *model, Map<const Layer *, Extent3> &&inputs) {
 	ModelSpecialization ret;
-	ret.inputs = move(inputs);
+	ret.inputs = sp::move(inputs);
 
 	for (auto &it : ret.inputs) {
 		ret.attachments.emplace(it.first->getOutput(), it.second);

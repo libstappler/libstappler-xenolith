@@ -197,7 +197,7 @@ void SceneContent2d::pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb
 	}
 	node->onPush(this, false);
 
-	auto fn = [this, node, cb = move(cb)] {
+	auto fn = [this, node, cb = sp::move(cb)] {
 		updateNodesVisibility();
 		updateBackButtonStatus();
 		if (_layouts.size() > 1) {

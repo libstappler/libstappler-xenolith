@@ -77,7 +77,7 @@ void ComponentContainer::handleComponentsLoaded(const Server &serv) {
 
 	if (!_pendingTasks.empty()) {
 		for (auto &it : _pendingTasks) {
-			perform(move(it.first), it.second);
+			perform(sp::move(it.first), it.second);
 		}
 		_pendingTasks.clear();
 	}
@@ -90,11 +90,11 @@ void ComponentContainer::handleComponentsUnloaded(const Server &serv) {
 
 bool ComponentContainer::perform(Function<bool(const Server &, const db::Transaction &)> &&cb, Ref *ref) const {
 	if (!_server || !_loaded) {
-		_pendingTasks.emplace_back(pair(move(cb), Rc<Ref>(ref)));
+		_pendingTasks.emplace_back(pair(sp::move(cb), Rc<Ref>(ref)));
 		return false;
 	}
 
-	return _server->perform(move(cb), ref);
+	return _server->perform(sp::move(cb), ref);
 }
 
 }

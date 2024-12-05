@@ -773,7 +773,7 @@ void Queue::setCompiled(Device &dev, Function<void()> &&cb) {
 		attachment->attachment->setCompiled(dev);
 	}
 
-	_data->releaseCallback = move(cb);
+	_data->releaseCallback = sp::move(cb);
 }
 
 bool Queue::isCompatible(const ImageInfo &info) const {
@@ -1581,19 +1581,19 @@ void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 }
 
 void Queue::Builder::setBeginCallback(Function<void(FrameRequest &)> &&cb) {
-	_data->beginCallback = move(cb);
+	_data->beginCallback = sp::move(cb);
 }
 
 void Queue::Builder::setEndCallback(Function<void(FrameRequest &)> &&cb) {
-	_data->endCallback = move(cb);
+	_data->endCallback = sp::move(cb);
 }
 
 void Queue::Builder::setAttachCallback(Function<void(const FrameHandle *)> &&cb) {
-	_data->attachCallback = move(cb);
+	_data->attachCallback = sp::move(cb);
 }
 
 void Queue::Builder::setDetachCallback(Function<void(const FrameHandle *)> &&cb) {
-	_data->detachCallback = move(cb);
+	_data->detachCallback = sp::move(cb);
 }
 
 const BufferData * Queue::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {

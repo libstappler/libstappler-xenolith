@@ -432,9 +432,9 @@ public:
     void setTargetProgress(float progress) { _targetProgress = progress; }
     float getTargetProgress() const { return _targetProgress; }
 
-    void setStartCallback(StartCallback &&cb) { _onStart = move(cb); }
-    void setUpdateCallback(UpdateCallback &&cb) { _onUpdate = move(cb); }
-    void setStopCallback(StopCallback &&cb) { _onStop = move(cb); }
+    void setStartCallback(StartCallback &&cb) { _onStart = sp::move(cb); }
+    void setUpdateCallback(UpdateCallback &&cb) { _onUpdate = sp::move(cb); }
+    void setStopCallback(StopCallback &&cb) { _onStop = sp::move(cb); }
 
 protected:
     bool _stopped = true;

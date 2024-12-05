@@ -85,7 +85,7 @@ SPUNUSED static void unregisterNetworkCallback(Application *, void *);
 XL_DECLARE_EVENT(Controller, "network::Controller", onNetworkCapabilities);
 
 Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &&signKey)
-: _application(app), _controller(c), _name(name.str<Interface>()), _signKey(move(signKey)) {
+: _application(app), _controller(c), _name(name.str<Interface>()), _signKey(sp::move(signKey)) {
 
 }
 
@@ -313,11 +313,11 @@ bool Controller::Data::finalize(Handle &handle, Context *ctx, const Callback<boo
 }
 
 Rc<ApplicationExtension> Controller::createController(Application *app, StringView name, Bytes &&signKey) {
-	return Rc<network::Controller>::alloc(app, name, move(signKey));
+	return Rc<network::Controller>::alloc(app, name, sp::move(signKey));
 }
 
 Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
-	_data = new Data(app, this, name, move(signKey));
+	_data = new Data(app, this, name, sp::move(signKey));
 	_data->init();
 	_data->run();
 }
@@ -354,7 +354,7 @@ void Controller::run(Rc<Request> &&handle) {
 }
 
 void Controller::setSignKey(Bytes &&value) {
-	_data->_signKey = move(value);
+	_data->_signKey = sp::move(value);
 }
 
 bool Controller::isNetworkOnline() const {

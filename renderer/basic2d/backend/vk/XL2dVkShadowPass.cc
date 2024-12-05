@@ -381,7 +381,7 @@ bool ShadowPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		_sdfImage = static_cast<const ImageAttachmentHandle *>(sdfImage->handle.get());
 	}
 
-	return VertexPassHandle::prepare(q, move(cb));
+	return VertexPassHandle::prepare(q, sp::move(cb));
 }
 
 void ShadowPassHandle::prepareRenderPass(CommandBuffer &buf) {

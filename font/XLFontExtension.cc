@@ -160,7 +160,7 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 					for (auto &iit : it.second.sources) {
 						d.emplace_back(move(iit->data));
 					}
-					controller->addFont(it.second.family, move(d), it.second.addInFront);
+					controller->addFont(it.second.family, sp::move(d), it.second.addInFront);
 				}
 
 				if (builder.getTarget()) {
@@ -202,15 +202,15 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) mutable -> bool {
 			sourcePtr->data = _library->openFontData(name, sourcePtr->params, sourcePtr->preconfiguredParams, [&] () -> FontLibrary::FontData {
 				if (sourcePtr->fontCallback) {
-					return FontLibrary::FontData(move(sourcePtr->fontCallback));
+					return FontLibrary::FontData(sp::move(sourcePtr->fontCallback));
 				} else if (!sourcePtr->fontExternalData.empty()) {
 					return FontLibrary::FontData(sourcePtr->fontExternalData, true);
 				} else if (!sourcePtr->fontMemoryData.empty()) {
-					return FontLibrary::FontData(move(sourcePtr->fontMemoryData));
+					return FontLibrary::FontData(sp::move(sourcePtr->fontMemoryData));
 				} else if (!sourcePtr->fontFilePath.empty()) {
 					auto d = filesystem::readIntoMemory<Interface>(sourcePtr->fontFilePath);
 					if (!d.empty()) {
-						return FontLibrary::FontData(move(d));
+						return FontLibrary::FontData(sp::move(d));
 					}
 				}
 				return FontLibrary::FontData(BytesView(), false);
@@ -257,7 +257,7 @@ Rc<core::DynamicImage> FontExtension::makeInitialImage(StringView name) const {
 void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font::FontUpdateRequest> &&data,
 		Rc<core::DependencyEvent> &&dep) {
 	if (!_active) {
-		_pendingImageQueries.emplace_back(ImageQuery{image, move(data), move(dep)});
+		_pendingImageQueries.emplace_back(ImageQuery{image, sp::move(data), sp::move(dep)});
 		return;
 	}
 
@@ -265,7 +265,7 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font
 	input->queue = _mainLoop->getQueue();
 	input->image = image;
 	input->ext = this;
-	input->requests = move(data);
+	input->requests = sp::move(data);
 	/*input->output = [] (const core::ImageInfoData &info, BytesView data) {
 		Bitmap bmp(data, info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
 		bmp.save(bitmap::FileFormat::Png, toString(Time::now().toMicros(), ".png"));
@@ -273,15 +273,15 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font
 
 	auto req = Rc<core::FrameRequest>::create(_queue);
 	if (dep) {
-		req->addSignalDependency(move(dep));
+		req->addSignalDependency(sp::move(dep));
 	}
 
 	for (auto &it : _queue->getInputAttachments()) {
-		req->addInput(it, move(input));
+		req->addInput(it, sp::move(input));
 		break;
 	}
 
-	_glLoop->runRenderQueue(move(req), 0, [app = Rc<Application>(_mainLoop)] (bool success) {
+	_glLoop->runRenderQueue(sp::move(req), 0, [app = Rc<Application>(_mainLoop)] (bool success) {
 		app->wakeup();
 	});
 }
@@ -290,7 +290,7 @@ void FontExtension::onActivated() {
 	_active = true;
 
 	for (auto &it : _pendingImageQueries) {
-		updateImage(it.image, move(it.chars), move(it.dependency));
+		updateImage(it.image, sp::move(it.chars), sp::move(it.dependency));
 	}
 
 	_pendingImageQueries.clear();

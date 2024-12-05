@@ -158,7 +158,7 @@ struct VertexMaterialVertexProcessor : public Ref {
 };
 
 VertexMaterialVertexProcessor::VertexMaterialVertexProcessor(VertexAttachmentHandle *a, Rc<FrameContextHandle2d> &&input, Function<void(bool)> &&cb)
-: _attachment(a), _input(move(input)), _callback(move(cb)) {
+: _attachment(a), _input(sp::move(input)), _callback(sp::move(cb)) {
 	_time = xenolith::platform::clock(core::ClockType::Monotonic);
 }
 
@@ -929,9 +929,9 @@ void VertexMaterialVertexProcessor::finalize(DynamicData *data) {
 	_drawStat.vertexInputTime = uint32_t(t - _time);
 	_input->director->pushDrawStat(_drawStat);
 
-	_attachment->loadData(move(_input),
-			move(_indexes), move(_vertexes), move(_transforms),
-			move(materialSpans), move(shadowSolidSpans), move(shadowSdfSpans),
+	_attachment->loadData(sp::move(_input),
+			sp::move(_indexes), sp::move(_vertexes), sp::move(_transforms),
+			sp::move(materialSpans), sp::move(shadowSolidSpans), sp::move(shadowSdfSpans),
 			data->maxShadowValue);
 
 	_callback(true);
@@ -967,7 +967,7 @@ void VertexAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInput
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) mutable {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) mutable {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
@@ -976,7 +976,7 @@ void VertexAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInput
 		_materialSet = _materials->getSet();
 
 		handle.getPool()->perform([&] {
-			auto proc = Rc<VertexMaterialVertexProcessor>::alloc(this, move(d), move(cb));
+			auto proc = Rc<VertexMaterialVertexProcessor>::alloc(this, sp::move(d), sp::move(cb));
 			proc->run(handle);
 		});
 	});
@@ -994,9 +994,9 @@ void VertexAttachmentHandle::loadData(Rc<FrameContextHandle2d> &&data,
 	_indexes = move(indexes);
 	_vertexes = move(vertexes);
 	_transforms = move(transforms);
-	_spans = move(spans);
-	_shadowSolidSpans = move(shadowSolidSpans);
-	_shadowSdfSpans = move(shadowSdfSpans);
+	_spans = sp::move(spans);
+	_shadowSolidSpans = sp::move(shadowSolidSpans);
+	_shadowSdfSpans = sp::move(shadowSdfSpans);
 
 	_maxShadowValue = maxShadowValue;
 
@@ -1051,7 +1051,7 @@ bool VertexPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		_vertexBuffer = static_cast<const VertexAttachmentHandle *>(vertexBuffer->handle.get());
 	}
 
-	return QueuePassHandle::prepare(q, move(cb));
+	return QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {

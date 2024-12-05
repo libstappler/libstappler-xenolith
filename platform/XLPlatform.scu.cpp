@@ -26,12 +26,20 @@
 #include "XLPlatformApplication.cc"
 
 #if LINUX
+
+#if XL_X11_DEBUG
+#define XL_X11_LOG(...) log::debug("XCB", __VA_ARGS__)
+#else
+#define XL_X11_LOG(...)
+#endif
+
 #include "linux/thirdparty/glfw/xkb_unicode.cc"
 #include "linux/XLPlatformLinuxDbus.cc"
 #include "linux/XLPlatformLinuxXkb.cc"
 #include "linux/XLPlatformLinuxWayland.cc"
 #include "linux/XLPlatformLinuxWaylandView.cc"
 #include "linux/XLPlatformLinuxXcb.cc"
+#include "linux/XLPlatformLinuxXcbConnection.cc"
 #include "linux/XLPlatformLinuxXcbView.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {

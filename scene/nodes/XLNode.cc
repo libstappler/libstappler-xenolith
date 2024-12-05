@@ -1161,23 +1161,23 @@ bool Node::isTouchedNodeSpace(const Vec2 &point, float padding) {
 }
 
 void Node::setOnEnterCallback(Function<void(Scene *)> &&cb) {
-	_onEnterCallback = move(cb);
+	_onEnterCallback = sp::move(cb);
 }
 
 void Node::setOnExitCallback(Function<void()> &&cb) {
-	_onExitCallback = move(cb);
+	_onExitCallback = sp::move(cb);
 }
 
 void Node::setOnContentSizeDirtyCallback(Function<void()> &&cb) {
-	_onContentSizeDirtyCallback = move(cb);
+	_onContentSizeDirtyCallback = sp::move(cb);
 }
 
 void Node::setOnTransformDirtyCallback(Function<void(const Mat4 &)> &&cb) {
-	_onTransformDirtyCallback = move(cb);
+	_onTransformDirtyCallback = sp::move(cb);
 }
 
 void Node::setOnReorderChildDirtyCallback(Function<void()> &&cb) {
-	_onReorderChildDirtyCallback = move(cb);
+	_onReorderChildDirtyCallback = sp::move(cb);
 }
 
 Mat4 Node::transform(const Mat4 &parentTransform) {

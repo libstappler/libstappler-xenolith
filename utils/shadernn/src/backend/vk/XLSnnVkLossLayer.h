@@ -56,7 +56,7 @@ public:
 		PipelineOpFn command;
 
 		PipelineOp(PipelineOpIndex i, const core::ComputePipelineData *p, PipelineOpFn &&f)
-		: idx(i), pipeline(p), command(move(f)) { };
+		: idx(i), pipeline(p), command(sp::move(f)) { };
 	};
 
 	static constexpr uint32_t DescriptorArraySize = 8;

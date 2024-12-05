@@ -159,7 +159,7 @@ void LayerSurface::setActivityState(ActivityState value) {
 }
 
 void LayerSurface::setStyleDirtyCallback(Function<void(const SurfaceStyleData &)> &&cb) {
-	_styleDirtyCallback = move(cb);
+	_styleDirtyCallback = sp::move(cb);
 	_styleDirty = true;
 }
 

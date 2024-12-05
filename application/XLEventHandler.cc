@@ -53,11 +53,11 @@ void EventHandler::removeHandlerNode(EventHandlerNode *handler) {
 }
 
 EventHandlerNode * EventHandler::setEventHandler(const EventHeader &h, Callback && callback, bool destroyAfterEvent) {
-	return EventHandlerNode::onEvent(h, nullptr, std::move(callback), this, destroyAfterEvent);
+	return EventHandlerNode::onEvent(h, nullptr, sp::move(callback), this, destroyAfterEvent);
 }
 
 EventHandlerNode * EventHandler::setEventHandlerForObject(const EventHeader &h, Ref *obj, Callback && callback, bool destroyAfterEvent) {
-	return EventHandlerNode::onEvent(h, obj, std::move(callback), this, destroyAfterEvent);
+	return EventHandlerNode::onEvent(h, obj, sp::move(callback), this, destroyAfterEvent);
 }
 
 Ref *EventHandler::getInterface() const {
@@ -68,14 +68,14 @@ Ref *EventHandler::getInterface() const {
 }
 
 void EventHandler::clearEvents() {
-	auto h = move(_handlers);
+	auto h = sp::move(_handlers);
 	_handlers.clear();
 
 	for (auto it : h) {
 		it->setSupport(nullptr);
 	}
 
-	Application::getInstance()->performOnMainThread([h = move(h)] {
+	Application::getInstance()->performOnMainThread([h = sp::move(h)] {
 		for (auto it : h) {
 			Application::getInstance()->removeEventListner(it);
 		}
@@ -84,7 +84,7 @@ void EventHandler::clearEvents() {
 
 Rc<EventHandlerNode> EventHandlerNode::onEvent(const EventHeader &header, Ref *ref, Callback && callback, EventHandler *obj, bool destroyAfterEvent) {
 	if (callback) {
-		auto h = Rc<EventHandlerNode>::alloc(header, ref, std::move(callback), obj, destroyAfterEvent);
+		auto h = Rc<EventHandlerNode>::alloc(header, ref, sp::move(callback), obj, destroyAfterEvent);
 		obj->addHandlerNode(h);
 		return h;
 	}
@@ -92,7 +92,7 @@ Rc<EventHandlerNode> EventHandlerNode::onEvent(const EventHeader &header, Ref *r
 }
 
 EventHandlerNode::EventHandlerNode(const EventHeader &header, Ref *ref, Callback && callback, EventHandler *obj, bool destroyAfterEvent)
-: _destroyAfterEvent(destroyAfterEvent), _eventID(header.getEventID()), _callback(std::move(callback)), _obj(ref), _support(obj) { }
+: _destroyAfterEvent(destroyAfterEvent), _eventID(header.getEventID()), _callback(sp::move(callback)), _obj(ref), _support(obj) { }
 
 EventHandlerNode::~EventHandlerNode() { }
 

@@ -109,6 +109,7 @@ protected:
 	void handleKey(const InputEventData &, bool clear);
 
 	void cancelTouchEvents(float x, float y, InputModifier mods);
+	void cancelKeyEvents(float x, float y, InputModifier mods);
 
 	uint64_t _currentTime = 0;
 	HashMap<uint32_t, EventHandlersInfo> _activeEvents;

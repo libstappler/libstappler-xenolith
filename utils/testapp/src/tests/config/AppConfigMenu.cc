@@ -71,7 +71,7 @@ bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
 	}
 
 	_enabled = enabled;
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(20);

@@ -99,7 +99,7 @@ bool SubpixelLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&c
 
 	_front = pass->getFront();
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {

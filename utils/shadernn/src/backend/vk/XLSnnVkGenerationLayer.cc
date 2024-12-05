@@ -96,7 +96,7 @@ bool GenerationLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &
 		_dataBuffer = (const vk::BufferAttachmentHandle *)bufferAttachment->handle.get();
 	}
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> GenerationLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {

@@ -179,7 +179,7 @@ bool TransferResource::init(const Rc<Allocator> &alloc, const Rc<core::Resource>
 	_alloc = alloc;
 	_resource = res;
 	if (cb) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 	}
 	return true;
 }
@@ -188,7 +188,7 @@ bool TransferResource::init(const Rc<Allocator> &alloc, Rc<core::Resource> &&res
 	_alloc = alloc;
 	_resource = move(res);
 	if (cb) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 	}
 	return true;
 }
@@ -909,7 +909,7 @@ void TransferAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInp
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = move(cb)] (FrameHandle &handle, bool success) {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb)] (FrameHandle &handle, bool success) {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
@@ -920,7 +920,7 @@ void TransferAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInp
 				return true;
 			}
 			return false;
-		}, [cb = move(cb)] (FrameHandle &frame, bool success) {
+		}, [cb = sp::move(cb)] (FrameHandle &frame, bool success) {
 			cb(success);
 		}, nullptr, "TransferAttachmentHandle::submitInput");
 	});
@@ -998,7 +998,7 @@ void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)
 		transfer->getResource()->compile();
 	}
 
-	QueuePassHandle::doComplete(queue, move(func), success);
+	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
 }

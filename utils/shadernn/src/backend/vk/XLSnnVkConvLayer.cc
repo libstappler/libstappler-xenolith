@@ -220,7 +220,7 @@ bool Conv2DLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb)
 
 	_front = pass->getFront();
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> Conv2DLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {

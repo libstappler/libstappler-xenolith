@@ -37,7 +37,7 @@ void ShadowLightDataAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attach
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) mutable {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) mutable {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;

@@ -30,7 +30,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 enum class FrameRenderPassState {
 	Initial,
 	Ready,
-	Owned,
 	ResourcesAcquired,
 	Prepared,
 	Submission,

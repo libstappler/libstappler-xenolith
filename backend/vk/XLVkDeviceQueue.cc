@@ -319,7 +319,7 @@ bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCo
 	_pool = pool;
 	_table = table;
 	_buffer = buffer;
-	_availableDescriptors = move(descriptors);
+	_availableDescriptors = sp::move(descriptors);
 	return true;
 }
 
@@ -794,7 +794,7 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<Descriptor
 		return nullptr;
 	}
 
-	auto b = Rc<CommandBuffer>::create(this, dev.getTable(), buf, move(descriptors));
+	auto b = Rc<CommandBuffer>::create(this, dev.getTable(), buf, sp::move(descriptors));
 	if (!b) {
 		dev.getTable()->vkEndCommandBuffer(buf);
 		dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, 1, &buf);

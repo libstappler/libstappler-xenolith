@@ -61,7 +61,7 @@ EventHeader::EventHeader(StringView catName, StringView eventName)
 : EventHeader(string::hash32(catName), eventName) { }
 
 EventHeader::EventHeader(const EventHeader &other) : _category(other._category), _id(other._id), _name(other._name) { }
-EventHeader::EventHeader(EventHeader &&other) : _category(other._category), _id(other._id), _name(std::move(other._name)) { }
+EventHeader::EventHeader(EventHeader &&other) : _category(other._category), _id(other._id), _name(sp::move(other._name)) { }
 
 EventHeader &EventHeader::operator=(const EventHeader &other) {
 	_category = other._category;
@@ -72,7 +72,7 @@ EventHeader &EventHeader::operator=(const EventHeader &other) {
 EventHeader &EventHeader::operator=(EventHeader &&other) {
 	_category = other._category;
 	_id = other._id;
-	_name = std::move(other._name);
+	_name = sp::move(other._name);
 	return *this;
 }
 

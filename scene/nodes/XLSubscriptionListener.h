@@ -67,7 +67,7 @@ public:
 	virtual ~DataListener() { }
 
 	virtual bool init(DirtyCallback &&cb = nullptr, T *sub = nullptr) {
-		if (!SubscriptionListener::init(move(cb))) {
+		if (!SubscriptionListener::init(sp::move(cb))) {
 			return false;
 		}
 

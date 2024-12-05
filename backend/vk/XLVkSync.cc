@@ -84,16 +84,16 @@ void Fence::clear() {
 
 void Fence::setFrame(Function<bool()> &&schedule, Function<void()> &&release, uint64_t f) {
 	_frame = f;
-	_scheduleFn = move(schedule);
-	_releaseFn = move(release);
+	_scheduleFn = sp::move(schedule);
+	_releaseFn = sp::move(release);
 }
 
 void Fence::setScheduleCallback(Function<bool()> &&schedule) {
-	_scheduleFn = move(schedule);
+	_scheduleFn = sp::move(schedule);
 }
 
 void Fence::setReleaseCallback(Function<bool()> &&release) {
-	_releaseFn = move(release);
+	_releaseFn = sp::move(release);
 }
 
 void Fence::setArmed(DeviceQueue &q) {
@@ -116,7 +116,7 @@ void Fence::setTag(StringView tag) {
 
 void Fence::addRelease(Function<void(bool)> &&cb, Ref *ref, StringView tag) {
 	std::unique_lock<Mutex> lock(_mutex);
-	_release.emplace_back(ReleaseHandle({move(cb), ref, tag}));
+	_release.emplace_back(ReleaseHandle({sp::move(cb), ref, tag}));
 }
 
 bool Fence::schedule(Loop &loop) {
@@ -128,7 +128,7 @@ bool Fence::schedule(Loop &loop) {
 				doRelease(false);
 
 				if (_releaseFn) {
-					auto releaseFn = move(_releaseFn);
+					auto releaseFn = sp::move(_releaseFn);
 					_releaseFn = nullptr;
 					_scheduleFn = nullptr;
 					releaseFn();
@@ -154,7 +154,7 @@ bool Fence::schedule(Loop &loop) {
 		return false;
 	}
 
-	auto scheduleFn = move(_scheduleFn);
+	auto scheduleFn = sp::move(_scheduleFn);
 	_scheduleFn = nullptr;
 
 	if (lock.owns_lock()) {
@@ -224,7 +224,7 @@ void Fence::scheduleReset(Loop &loop) {
 			dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 			return true;
 		}, [this] (const thread::Task &, bool success) {
-			auto releaseFn = move(_releaseFn);
+			auto releaseFn = sp::move(_releaseFn);
 			_releaseFn = nullptr;
 			releaseFn();
 		}, this));
@@ -243,7 +243,7 @@ void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 		}, [this, s] (const thread::Task &, bool success) {
 			doRelease(s);
 
-			auto releaseFn = move(_releaseFn);
+			auto releaseFn = sp::move(_releaseFn);
 			_releaseFn = nullptr;
 			releaseFn();
 		}, this));

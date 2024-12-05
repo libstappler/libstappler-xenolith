@@ -121,7 +121,7 @@ void QueuePassHandle::invalidate() {
 }
 
 bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
-	_onPrepared = move(cb);
+	_onPrepared = sp::move(cb);
 	_loop = static_cast<Loop *>(q.getLoop());
 	_device = static_cast<Device *>(q.getFrame()->getDevice());
 	_pool = _device->acquireCommandPool(getQueueOps());
@@ -180,7 +180,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 
 		auto ret = doPrepareCommands(frame);
 		if (!ret.empty()) {
-			_buffers = move(ret);
+			_buffers = sp::move(ret);
 			return true;
 		}
 		return false;
@@ -202,7 +202,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
 	if (!_pool) {
 		onSubmited(true);
-		q.getFrame()->performInQueue([onComplete = move(onComplete)] (FrameHandle &frame) mutable {
+		q.getFrame()->performInQueue([onComplete = sp::move(onComplete)] (FrameHandle &frame) mutable {
 			onComplete(true);
 			return true;
 		}, this, "QueuePassHandle::complete");
@@ -219,8 +219,8 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 		dev->releaseCommandPool(*loop, Rc<CommandPool>(pool));
 	}, nullptr, "QueuePassHandle::submit dev->releaseCommandPool");
 
-	_fence->addRelease([this, func = move(onComplete), q = &q] (bool success) mutable {
-		doComplete(*q, move(func), success);
+	_fence->addRelease([this, func = sp::move(onComplete), q = &q] (bool success) mutable {
+		doComplete(*q, sp::move(func), success);
 	}, this, "QueuePassHandle::submit onComplete");
 
 	for (auto &pool : _descriptors) {
@@ -233,11 +233,11 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 
 	auto ops = getQueueOps();
 
-	_device->acquireQueue(ops, *f.get(), [this, onSubmited = move(onSubmited)]  (FrameHandle &frame, const Rc<DeviceQueue> &queue) mutable {
+	_device->acquireQueue(ops, *f.get(), [this, onSubmited = sp::move(onSubmited)]  (FrameHandle &frame, const Rc<DeviceQueue> &queue) mutable {
 		_queue = queue;
 
-		frame.performInQueue([this, onSubmited = move(onSubmited)] (FrameHandle &frame) mutable {
-			if (!doSubmit(frame, move(onSubmited))) {
+		frame.performInQueue([this, onSubmited = sp::move(onSubmited)] (FrameHandle &frame) mutable {
+			if (!doSubmit(frame, sp::move(onSubmited))) {
 				return false;
 			}
 			return true;
@@ -280,7 +280,7 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &ha
 bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited) {
 	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers, _queueIdleFlags);
 	_pool = nullptr;
-	frame.performOnGlThread([this, success, onSubmited = move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
+	frame.performOnGlThread([this, success, onSubmited = sp::move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
 		_queueData->submitTime = armedTime;
 
 		if (queue) {
@@ -288,7 +288,7 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 			queue = nullptr;
 		}
 
-		doSubmitted(frame, move(onSubmited), success, move(_fence));
+		doSubmitted(frame, sp::move(onSubmited), success, move(_fence));
 		_fence = nullptr;
 		invalidate();
 

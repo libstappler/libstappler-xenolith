@@ -49,7 +49,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
     	startSpeed = -velProject.length();
     }
 
-    return ActionAcceleratedMove::createBounce(acceleration, from, to, startSpeed, bounceAcceleration, move(callback));
+    return ActionAcceleratedMove::createBounce(acceleration, from, to, startSpeed, bounceAcceleration, sp::move(callback));
 }
 
 Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 from, Vec2 to, float velocity,
@@ -73,7 +73,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
 		auto b = ActionAcceleratedMove::createWithDuration(duration, normal, a->getEndPosition(), a->getEndVelocity(), -acceleration);
 
 		a->setCallback(Function<void(Node *)>(callback));
-		b->setCallback(move(callback));
+		b->setCallback(sp::move(callback));
 
 		return Rc<Sequence>::create(a, b);
 	} else {
@@ -88,7 +88,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
 			auto b = ActionAcceleratedMove::createWithDuration(pseudoDuration, normal, a->getEndPosition(), a->getEndVelocity(), -acceleration);
 
 			a->setCallback(Function<void(Node *)>(callback));
-			b->setCallback(move(callback));
+			b->setCallback(sp::move(callback));
 
 			return Rc<Sequence>::create(a, b);
 		} else if (startSpeed > 0 && distance <= result) {
@@ -101,7 +101,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
 				auto b = ActionAcceleratedMove::createWithDuration(pseudoDuration, normal, a->getEndPosition(), a->getEndVelocity(), -acceleration);
 
 				a->setCallback(Function<void(Node *)>(callback));
-				b->setCallback(move(callback));
+				b->setCallback(sp::move(callback));
 
 				return Rc<Sequence>::create(a, b);
 			} else {
@@ -120,7 +120,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
 				a0->setCallback(Function<void(Node *)>(callback));
 				a1->setCallback(Function<void(Node *)>(callback));
 				a->setCallback(Function<void(Node *)>(callback));
-				b->setCallback(move(callback));
+				b->setCallback(sp::move(callback));
 
 				return Rc<Sequence>::create(a0, a1, a, b);
 			}
@@ -150,11 +150,11 @@ Rc<ActionInterval> ActionAcceleratedMove::createBounce(float acceleration, Vec2 
 			if (a1) {
 				a2->setCallback(Function<void(Node *)>(callback));
 				b->setCallback(Function<void(Node *)>(callback));
-				a1->setCallback(move(callback));
+				a1->setCallback(sp::move(callback));
 				return Rc<Sequence>::create(a1, a2, b);
 			} else {
 				a2->setCallback(Function<void(Node *)>(callback));
-				b->setCallback(move(callback));
+				b->setCallback(sp::move(callback));
 				return Rc<Sequence>::create(a2, b);
 			}
 		}
@@ -177,16 +177,16 @@ Rc<ActionInterval> ActionAcceleratedMove::createFreeBounce(float acceleration, V
     }
 
     if (startSpeed < 0) {
-    	return createBounce(acceleration, from, to, velocity, bounceAcceleration, move(callback));
+    	return createBounce(acceleration, from, to, velocity, bounceAcceleration, sp::move(callback));
     } else {
     	float duration = startSpeed / acceleration;
     	float deccelerationPath = startSpeed * duration - acceleration * duration * duration * 0.5;
     	if (deccelerationPath < distance) {
     		auto a = createWithDuration(duration, normal, from, startSpeed, -acceleration);
-			a->setCallback(move(callback));
+			a->setCallback(sp::move(callback));
 			return a;
     	} else {
-    		return createBounce(acceleration, from, to, velocity, bounceAcceleration, move(callback));
+    		return createBounce(acceleration, from, to, velocity, bounceAcceleration, sp::move(callback));
     	}
     }
 }
@@ -217,17 +217,17 @@ Rc<ActionInterval> ActionAcceleratedMove::createWithBounds(float acceleration, V
 			if (std::fabs(pos - end) < std::numeric_limits<float>::epsilon()) {
 				return Rc<DelayTime>::create(0.0f);
 			} else if (pos + dist < end) {
-				return createDecceleration(Vec2(0, 1), from, velocity.y, -acceleration, move(callback));
+				return createDecceleration(Vec2(0, 1), from, velocity.y, -acceleration, sp::move(callback));
 			} else {
-				return createAccelerationTo(from, Vec2(from.x, end), v, -acceleration, move(callback));
+				return createAccelerationTo(from, Vec2(from.x, end), v, -acceleration, sp::move(callback));
 			}
 		} else {
 			if (std::fabs(pos - start) < std::numeric_limits<float>::epsilon()) {
 				return Rc<DelayTime>::create(0.0f);
 			} else if (pos - dist > start) {
-				return createDecceleration(Vec2(0, -1), from, velocity.y, -acceleration, move(callback));
+				return createDecceleration(Vec2(0, -1), from, velocity.y, -acceleration, sp::move(callback));
 			} else {
-				return createAccelerationTo(from, Vec2(from.x, start), std::fabs(v), -acceleration, move(callback));
+				return createAccelerationTo(from, Vec2(from.x, start), std::fabs(v), -acceleration, sp::move(callback));
 			}
 		}
 	}
@@ -245,17 +245,17 @@ Rc<ActionInterval> ActionAcceleratedMove::createWithBounds(float acceleration, V
 			if (std::fabs(pos - end) < std::numeric_limits<float>::epsilon()) {
 				return Rc<DelayTime>::create(0.0f);
 			} else if (pos + dist < end) {
-				return createDecceleration(Vec2(1, 0), from, v, -acceleration, move(callback));
+				return createDecceleration(Vec2(1, 0), from, v, -acceleration, sp::move(callback));
 			} else {
-				return createAccelerationTo(from, Vec2(end, from.y), v, -acceleration, move(callback));
+				return createAccelerationTo(from, Vec2(end, from.y), v, -acceleration, sp::move(callback));
 			}
 		} else {
 			if (std::fabs(pos - start) < std::numeric_limits<float>::epsilon()) {
 				return nullptr;
 			} else if (pos - dist > start) {
-				return createDecceleration(Vec2(-1, 0), from, v, -acceleration, move(callback));
+				return createDecceleration(Vec2(-1, 0), from, v, -acceleration, sp::move(callback));
 			} else {
-				return createAccelerationTo(from, Vec2(start, from.y), v, -acceleration, move(callback));
+				return createAccelerationTo(from, Vec2(start, from.y), v, -acceleration, sp::move(callback));
 			}
 		}
 	}
@@ -305,7 +305,7 @@ Rc<ActionInterval> ActionAcceleratedMove::createWithBounds(float acceleration, V
 	float path = v * t - acceleration * t * t * 0.5;
 
 	if (path < i_len) {
-		return createDecceleration(normal, from, v, acceleration, move(callback));
+		return createDecceleration(normal, from, v, acceleration, sp::move(callback));
 	} else {
 		auto a1 = createAccelerationTo(from, i, v, -acceleration);
 
@@ -329,16 +329,16 @@ Rc<ActionInterval> ActionAcceleratedMove::createWithBounds(float acceleration, V
 
 			if (path < i_len) {
 				auto a2 = createDecceleration(newNormal, i, v, acceleration);
-				a2->setCallback(move(callback));
+				a2->setCallback(sp::move(callback));
 				return Rc<Sequence>::create(a1, a2);
 			} else {
 				auto a2 = createAccelerationTo(i, y, v, -acceleration);
-				a2->setCallback(move(callback));
+				a2->setCallback(sp::move(callback));
 				return Rc<Sequence>::create(a1, a2);
 			}
 		} else {
 			if (a1) {
-				a1->setCallback(move(callback));
+				a1->setCallback(sp::move(callback));
 			}
 			return a1;
 		}
@@ -360,7 +360,7 @@ float ActionAcceleratedMove::computeEndVelocity() {
 Rc<ActionAcceleratedMove> ActionAcceleratedMove::createDecceleration(Vec2 normal, Vec2 startPoint, float startVelocity,
 		float acceleration, Function<void(Node *)> &&callback) {
 	auto pRet = Rc<ActionAcceleratedMove>::alloc();
-	if (pRet->initDecceleration(normal, startPoint, startVelocity, acceleration, move(callback))) {
+	if (pRet->initDecceleration(normal, startPoint, startVelocity, acceleration, sp::move(callback))) {
 		return pRet;
 	}
 	return nullptr;
@@ -369,7 +369,7 @@ Rc<ActionAcceleratedMove> ActionAcceleratedMove::createDecceleration(Vec2 normal
 Rc<ActionAcceleratedMove> ActionAcceleratedMove::createDecceleration(Vec2 startPoint, Vec2 endPoint,
 		float acceleration, Function<void(Node *)> &&callback) {
 	auto pRet = Rc<ActionAcceleratedMove>::alloc();
-	if (pRet->initDecceleration(startPoint, endPoint, acceleration, move(callback))) {
+	if (pRet->initDecceleration(startPoint, endPoint, acceleration, sp::move(callback))) {
 		return pRet;
 	}
 	return nullptr;
@@ -378,7 +378,7 @@ Rc<ActionAcceleratedMove> ActionAcceleratedMove::createDecceleration(Vec2 startP
 Rc<ActionAcceleratedMove> ActionAcceleratedMove::createAccelerationTo(Vec2 normal, Vec2 startPoint, float startVelocity, float endVelocity,
 		float acceleration, Function<void(Node *)> &&callback) {
 	auto pRet = Rc<ActionAcceleratedMove>::alloc();
-	if (pRet->initAccelerationTo(normal, startPoint, startVelocity, endVelocity, acceleration, move(callback))) {
+	if (pRet->initAccelerationTo(normal, startPoint, startVelocity, endVelocity, acceleration, sp::move(callback))) {
 		return pRet;
 	}
 	return nullptr;
@@ -387,7 +387,7 @@ Rc<ActionAcceleratedMove> ActionAcceleratedMove::createAccelerationTo(Vec2 norma
 Rc<ActionAcceleratedMove> ActionAcceleratedMove::createAccelerationTo(Vec2 startPoint, Vec2 endPoint, float startVelocity,
 		float acceleration, Function<void(Node *)> &&callback) {
 	auto pRet = Rc<ActionAcceleratedMove>::alloc();
-	if (pRet->initAccelerationTo(startPoint, endPoint, startVelocity, acceleration, move(callback))) {
+	if (pRet->initAccelerationTo(startPoint, endPoint, startVelocity, acceleration, sp::move(callback))) {
 		return pRet;
 	}
 	return nullptr;
@@ -396,7 +396,7 @@ Rc<ActionAcceleratedMove> ActionAcceleratedMove::createAccelerationTo(Vec2 start
 Rc<ActionAcceleratedMove> ActionAcceleratedMove::createWithDuration(float duration, Vec2 normal, Vec2 startPoint, float startVelocity,
 		float acceleration, Function<void(Node *)> &&callback) {
 	auto pRet = Rc<ActionAcceleratedMove>::alloc();
-	if (pRet->initWithDuration(duration, normal, startPoint, startVelocity, acceleration, move(callback))) {
+	if (pRet->initWithDuration(duration, normal, startPoint, startVelocity, acceleration, sp::move(callback))) {
 		return pRet;
 	}
 	return nullptr;
@@ -436,7 +436,7 @@ bool ActionAcceleratedMove::initDecceleration(Vec2 normal, Vec2 startPoint, floa
 		return false;
 	}
 
-	_callback = move(callback);
+	_callback = sp::move(callback);
 	return true;
 }
 
@@ -472,7 +472,7 @@ bool ActionAcceleratedMove::initDecceleration(Vec2 startPoint, Vec2 endPoint, fl
 		return false;
 	}
 
-	_callback = move(callback);
+	_callback = sp::move(callback);
 	return true;
 }
 
@@ -509,7 +509,7 @@ bool ActionAcceleratedMove::initAccelerationTo(Vec2 normal, Vec2 startPoint, flo
 		return false;
 	}
 
-	_callback = move(callback);
+	_callback = sp::move(callback);
 	return true;
 }
 
@@ -569,7 +569,7 @@ bool ActionAcceleratedMove::initAccelerationTo(Vec2 startPoint, Vec2 endPoint, f
 		return false;
 	}
 
-	_callback = move(callback);
+	_callback = sp::move(callback);
 	return true;
 }
 
@@ -601,7 +601,7 @@ bool ActionAcceleratedMove::initWithDuration(float duration, Vec2 normal, Vec2 s
 		return false;
 	}
 
-	_callback = move(callback);
+	_callback = sp::move(callback);
 	return true;
 }
 
@@ -636,7 +636,7 @@ void ActionAcceleratedMove::update(float t) {
 }
 
 void ActionAcceleratedMove::setCallback(Function<void(Node *)> &&callback) {
-	_callback = move(callback);
+	_callback = sp::move(callback);
 }
 
 }

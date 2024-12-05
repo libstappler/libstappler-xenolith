@@ -31,7 +31,7 @@
 namespace stappler::xenolith::app {
 
 bool RootLayout::init(LayoutName, Vector<LayoutName> &&layouts) {
-	if (!LayoutMenu::init(LayoutName::Root, move(layouts))) {
+	if (!LayoutMenu::init(LayoutName::Root, sp::move(layouts))) {
 		return false;
 	}
 
@@ -46,7 +46,7 @@ void RootLayout::makeScrollList(ScrollController *controller, Vector<LayoutName>
 		return s;
 	}, 300.0f);
 
-	LayoutMenu::makeScrollList(controller, move(items));
+	LayoutMenu::makeScrollList(controller, sp::move(items));
 }
 
 }

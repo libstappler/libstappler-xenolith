@@ -117,7 +117,7 @@ bool VgWindingSwitcher::init(vg::Winding w, Function<void(vg::Winding)> &&cb) {
 	}
 
 	_winding = w;
-	_windingCallback = move(cb);
+	_windingCallback = sp::move(cb);
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(20);
@@ -161,7 +161,7 @@ bool VgDrawStyleSwitcher::init(vg::DrawFlags style, Function<void(vg::DrawFlags)
 	}
 
 	_style = style;
-	_windingCallback = move(cb);
+	_windingCallback = sp::move(cb);
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(20);
@@ -192,7 +192,7 @@ void VgDrawStyleSwitcher::updateStyle() {
 }
 
 bool VgContourSwitcherButton::init(uint32_t idx, Function<void()> &&cb) {
-	if (!Button::init(move(cb))) {
+	if (!Button::init(sp::move(cb))) {
 		return false;
 	}
 
@@ -228,7 +228,7 @@ void VgContourSwitcherButton::onContentSizeDirty() {
 }
 
 bool VgContourSwitcherAdd::init(Function<void()> &&cb) {
-	if (!Button::init(move(cb))) {
+	if (!Button::init(sp::move(cb))) {
 		return false;
 	}
 
@@ -319,11 +319,11 @@ void VgContourSwitcher::setContours(uint32_t count, uint32_t selected) {
 }
 
 void VgContourSwitcher::setAddCallback(Function<void()> &&cb) {
-	_add->setCallback(move(cb));
+	_add->setCallback(sp::move(cb));
 }
 
 void VgContourSwitcher::setSelectedCallback(Function<void(uint32_t)> &&cb) {
-	_selectedCallback = move(cb);
+	_selectedCallback = sp::move(cb);
 }
 
 bool VgTessTest::init() {

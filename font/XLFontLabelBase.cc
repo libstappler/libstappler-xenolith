@@ -639,7 +639,7 @@ void LabelBase::prepend(const WideStringView &value) {
 
 void LabelBase::setTextRangeStyle(size_t start, size_t length, Style &&style) {
 	if (length > 0) {
-		_styles.emplace_back(start, length, std::move(style));
+		_styles.emplace_back(start, length, sp::move(style));
 		setLabelDirty();
 	}
 }
@@ -647,23 +647,23 @@ void LabelBase::setTextRangeStyle(size_t start, size_t length, Style &&style) {
 void LabelBase::appendTextWithStyle(const StringView &str, Style &&style) {
 	auto start = _string16.length();
 	append(str);
-	setTextRangeStyle(start, _string16.length() - start, std::move(style));
+	setTextRangeStyle(start, _string16.length() - start, sp::move(style));
 }
 
 void LabelBase::appendTextWithStyle(const WideStringView &str, Style &&style) {
 	auto start = _string16.length();
 	append(str);
-	setTextRangeStyle(start, str.size(), std::move(style));
+	setTextRangeStyle(start, str.size(), sp::move(style));
 }
 
 void LabelBase::prependTextWithStyle(const StringView &str, Style &&style) {
 	auto len = _string16.length();
 	prepend(str);
-	setTextRangeStyle(0, _string16.length() - len, std::move(style));
+	setTextRangeStyle(0, _string16.length() - len, sp::move(style));
 }
 void LabelBase::prependTextWithStyle(const WideStringView &str, Style &&style) {
 	prepend(str);
-	setTextRangeStyle(0, str.size(), std::move(style));
+	setTextRangeStyle(0, str.size(), sp::move(style));
 }
 
 void LabelBase::clearStyles() {
@@ -680,7 +680,7 @@ const LabelBase::StyleVec &LabelBase::getCompiledStyles() const {
 }
 
 void LabelBase::setStyles(StyleVec &&vec) {
-	_styles = std::move(vec);
+	_styles = sp::move(vec);
 	setLabelDirty();
 }
 void LabelBase::setStyles(const StyleVec &vec) {

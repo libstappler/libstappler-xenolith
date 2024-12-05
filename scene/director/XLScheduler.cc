@@ -51,9 +51,9 @@ void Scheduler::unscheduleAll() {
 void Scheduler::schedulePerFrame(SchedulerFunc &&callback, void *target, int32_t priority, bool paused) {
 	if (_locked) {
 		// prevent to insert new callbacks when update in progress
-		_tmp.emplace_back(ScheduledTemporary{move(callback), target, priority, paused});
+		_tmp.emplace_back(ScheduledTemporary{sp::move(callback), target, priority, paused});
 	} else {
-		_list.emplace(target, priority, move(callback), paused);
+		_list.emplace(target, priority, sp::move(callback), paused);
 	}
 }
 
@@ -73,7 +73,7 @@ void Scheduler::update(const UpdateTime &time) {
 
 	_locked = false;
 	for (auto &it : _tmp) {
-		_list.emplace(it.target, it.priority, move(it.callback), it.paused);
+		_list.emplace(it.target, it.priority, sp::move(it.callback), it.paused);
 	}
 }
 

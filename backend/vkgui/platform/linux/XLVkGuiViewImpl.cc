@@ -26,6 +26,7 @@
 
 #include "linux/XLPlatformLinuxWaylandView.h"
 #include "linux/XLPlatformLinuxXcbView.h"
+#include "linux/XLPlatformLinuxXcbConnection.h"
 #include "XLTextInputManager.h"
 #include "XLVkPlatform.h"
 #include "SPPlatformUnistd.h"
@@ -132,7 +133,7 @@ void ViewImpl::threadInit() {
 		// try X11
 		if (auto xcb = xenolith::platform::XcbLibrary::getInstance()) {
 			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
-				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb, this, _info.title, _info.bundleId, _info.rect);
+				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb->acquireConnection(), this, _info.title, _info.bundleId, _info.rect);
 				if (!view) {
 					log::error("ViewImpl", "Fail to initialize xcb window");
 					return;
@@ -257,6 +258,14 @@ void ViewImpl::presentWithQueue(vk::DeviceQueue &queue, Rc<ImageStorage> &&image
 	vk::View::presentWithQueue(queue, move(image));
 }
 
+bool ViewImpl::recreateSwapchain(core::PresentMode mode) {
+	auto ret = vk::View::recreateSwapchain(mode);
+	if (ret) {
+		_view->handleSwapchainRecreation();
+	}
+	return ret;
+}
+
 bool ViewImpl::pollInput(bool frameReady) {
 	if (!_view->poll(frameReady)) {
 		stop();
@@ -279,9 +288,9 @@ void ViewImpl::mapWindow() {
 }
 
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
-		_view->readFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
+		_view->readFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
+			_mainLoop->performOnMainThread([cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);
@@ -331,8 +340,9 @@ uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice
 #endif
 	}
 	if ((instanceData->surfaceType & SurfaceType::XCB) != SurfaceType::None) {
-		auto conn = xenolith::platform::XcbLibrary::getInstance()->getActiveConnection();
-		auto supports = instance->vkGetPhysicalDeviceXcbPresentationSupportKHR(device, queueIdx, conn.connection, conn.screen->root_visual);
+		auto conn = xenolith::platform::XcbLibrary::getInstance()->getCommonConnection();
+		auto supports = instance->vkGetPhysicalDeviceXcbPresentationSupportKHR(device, queueIdx,
+				conn->getConnection(), conn->getDefaultScreen()->root_visual);
 		if (supports) {
 			ret |= toInt(SurfaceType::XCB);
 		}

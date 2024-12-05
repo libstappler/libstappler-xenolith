@@ -60,15 +60,15 @@ void ScrollItemHandle::onNodeRemoved(ScrollController *c, Item &item, size_t ind
 }
 
 void ScrollItemHandle::setInsertCallback(Callback &&cb) {
-	_insertCallback = move(cb);
+	_insertCallback = sp::move(cb);
 }
 
 void ScrollItemHandle::setUpdateCallback(Callback &&cb) {
-	_updateCallback = move(cb);
+	_updateCallback = sp::move(cb);
 }
 
 void ScrollItemHandle::setRemoveCallback(Callback &&cb) {
-	_removeCallback = move(cb);
+	_removeCallback = sp::move(cb);
 }
 
 void ScrollItemHandle::resize(float newSize, bool forward) {

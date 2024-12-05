@@ -169,8 +169,8 @@ void MacosApplicationData::updateOnTimer() {
 void MacosApplicationData::updateOnSource() {
 	outputMutex.lock();
 
-	auto stack = std::move(outputQueue);
-	auto callbacks = std::move(outputCallbacks);
+	auto stack = sp::move(outputQueue);
+	auto callbacks = sp::move(outputCallbacks);
 
 	outputQueue.clear();
 	outputCallbacks.clear();

@@ -304,10 +304,10 @@ bool Sidebar::isEnabled() const {
 }
 
 void Sidebar::setNodeVisibleCallback(BoolCallback &&cb) {
-	_visibleCallback = move(cb);
+	_visibleCallback = sp::move(cb);
 }
 void Sidebar::setNodeEnabledCallback(BoolCallback &&cb) {
-	_enabledCallback = move(cb);
+	_enabledCallback = sp::move(cb);
 }
 
 void Sidebar::onNodeEnabled(bool value) {

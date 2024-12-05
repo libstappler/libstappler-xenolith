@@ -478,7 +478,7 @@ ScrollController::Item * ScrollView::getItemForNode(Node *node) const {
 }
 
 Rc<ActionProgress> ScrollView::resizeNode(Node *node, float newSize, float duration, Function<void()> &&cb) {
-	return resizeNode(getItemForNode(node), newSize, duration, move(cb));
+	return resizeNode(getItemForNode(node), newSize, duration, sp::move(cb));
 }
 
 Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float newSize, float duration, Function<void()> &&cb) {
@@ -537,7 +537,7 @@ Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float ne
 		_controller->onScrollPosition(true);
 	}, [] () {
 
-	}, [cb = move(cb)] () {
+	}, [cb = sp::move(cb)] () {
 		if (cb) {
 			cb();
 		}
@@ -546,11 +546,11 @@ Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float ne
 }
 
 Rc<ActionProgress> ScrollView::removeNode(Node *node, float duration, Function<void()> &&cb, bool disable) {
-	return removeNode(getItemForNode(node), duration, move(cb), disable);
+	return removeNode(getItemForNode(node), duration, sp::move(cb), disable);
 }
 
 Rc<ActionProgress> ScrollView::removeNode(ScrollController::Item *item, float duration, Function<void()> &&cb, bool disable) {
-	return resizeNode(item, 0.0f, duration, [item, cb = move(cb), disable] {
+	return resizeNode(item, 0.0f, duration, [item, cb = sp::move(cb), disable] {
 		if (item->node) {
 			if (item->node->isRunning()) {
 				item->node->removeFromParent();

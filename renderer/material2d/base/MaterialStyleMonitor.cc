@@ -34,13 +34,13 @@ bool StyleMonitor::init(StyleCallback &&cb) {
 		return false;
 	}
 
-	_styleCallback = move(cb);
+	_styleCallback = sp::move(cb);
 
 	return true;
 }
 
 void StyleMonitor::setStyleCallback(StyleCallback &&cb) {
-	_styleCallback = move(cb);
+	_styleCallback = sp::move(cb);
 }
 
 const StyleMonitor::StyleCallback &StyleMonitor::getStyleCallback() const {

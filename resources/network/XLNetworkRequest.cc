@@ -103,12 +103,12 @@ void Request::perform(Application *app, CompleteCallback &&cb) {
 		return;
 	}
 
-	perform(c, move(cb));
+	perform(c, sp::move(cb));
 }
 
 void Request::perform(Controller *c, CompleteCallback &&cb) {
 	if (cb) {
-		_onComplete = move(cb);
+		_onComplete = sp::move(cb);
 	}
 
 	_handle._request = this;
@@ -142,11 +142,11 @@ void Request::setIgnoreResponseData(bool value) {
 }
 
 void Request::setUploadProgress(ProgressCallback &&cb) {
-	_onUploadProgress = move(cb);
+	_onUploadProgress = sp::move(cb);
 }
 
 void Request::setDownloadProgress(ProgressCallback &&cb) {
-	_onDownloadProgress = move(cb);
+	_onDownloadProgress = sp::move(cb);
 }
 
 void Request::handleHeader(StringView key, StringView value) {

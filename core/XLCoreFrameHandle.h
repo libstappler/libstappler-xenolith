@@ -97,7 +97,7 @@ public:
 	virtual void onQueueSubmitted(FrameQueue &);
 	virtual void onQueueComplete(FrameQueue &);
 	virtual void onQueueInvalidated(FrameQueue &);
-	virtual void onOutputAttachment(FrameAttachmentData &);
+	virtual bool onOutputAttachment(FrameAttachmentData &);
 	virtual void onOutputAttachmentInvalidated(FrameAttachmentData &);
 
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(FrameHandle &, bool)> &&);

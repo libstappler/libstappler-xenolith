@@ -65,6 +65,9 @@ public:
 
 		// Запускать следующий кадр только по запросу либо наличию действий в процессе
 		bool renderOnDemand = true;
+
+		// Запускать кадр синхронно после пересоздания swapchain
+		bool syncFrameAfterSwapchainRecreation = true;
 	};
 
 	virtual ~View();
@@ -84,9 +87,9 @@ public:
 
 	virtual void deprecateSwapchain(bool fast = false) override;
 
-	virtual bool present(Rc<ImageStorage> &&) override;
-	virtual bool presentImmediate(Rc<ImageStorage> &&, Function<void(bool)> &&scheduleCb, bool isRegularFrame) override;
-	virtual void invalidateTarget(Rc<ImageStorage> &&) override;
+	virtual bool present(ImageStorage *) override;
+	virtual bool presentImmediate(ImageStorage *, Function<void(bool)> &&scheduleCb, bool isRegularFrame) override;
+	virtual void invalidateTarget(ImageStorage *) override;
 
 	virtual Rc<Ref> getSwapchainHandle() const override;
 
@@ -128,6 +131,15 @@ protected:
 		uint64_t clock;
 	};
 
+	struct ImageSyncInfo : public Ref {
+		std::mutex mutex;
+		std::condition_variable cond;
+
+		bool success = false;
+		Rc<ImageStorage> resultImage;
+		Function<void()> resultCallback;
+	};
+
 	virtual bool pollInput(bool frameReady);
 
 	virtual core::SurfaceInfo getSurfaceOptions() const;
@@ -136,13 +148,15 @@ protected:
 
 	void scheduleNextImage(uint64_t windowOffset, bool immediately);
 
+	void scheduleNextImageSync(uint64_t timeout);
+
 	// Начать подготовку нового изображения для презентации
 	// Создает объект кадра и начинает сбор данных для его рисования
 	// Создает объект изображения и начинает цикл его захвата
 	// Если режим acquireImageImmediately - блокирует поток до успешного захвата изображения
 	// windowOffset - интервал от текущего момента. когда предполагается презентовать изображение
 	//   Служит для ограничения частоты кадров
-	void scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode);
+	bool scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode, ImageSyncInfo * = nullptr);
 
 	// Попытаться захватить изображение для отрисовки кадра. Если задан флаг immediate
 	// или включен режим followDisplayLink - блокирует поток до успешного захвата
@@ -159,7 +173,8 @@ protected:
 	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;
 
 	// Презентует отложенное подготовленное (кадр завершён) изображение
-	void runScheduledPresent(Rc<SwapchainImage> &&);
+	void runScheduledPresent(SwapchainImage *);
+	void presentSwapchainImage(Rc<DeviceQueue> &&queue, SwapchainImage *);
 
 	virtual void presentWithQueue(DeviceQueue &, Rc<ImageStorage> &&);
 	void invalidateSwapchainImage(Rc<ImageStorage> &&);

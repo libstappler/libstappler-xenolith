@@ -436,11 +436,11 @@ LocaleManager *LocaleManager::s_sharedInstance = nullptr;
 EventHeader onLocale("Locale", "onLocale");
 
 void define(const StringView &locale, LocaleInitList &&init) {
-	LocaleManager::getInstance()->define(locale, move(init));
+	LocaleManager::getInstance()->define(locale, sp::move(init));
 }
 
 void define(const StringView &locale, LocaleIndexList &&init) {
-	LocaleManager::getInstance()->define(locale, move(init));
+	LocaleManager::getInstance()->define(locale, sp::move(init));
 }
 
 void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &arr) {

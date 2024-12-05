@@ -96,10 +96,10 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 
 Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
 		Vector<StringView> &&optionals, Dso &&vulkanModule, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled, Rc<Ref> &&userdata)
-: core::Instance(move(vulkanModule), move(terminate), move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
+: core::Instance(sp::move(vulkanModule), sp::move(terminate), sp::move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
 , _version(targetVersion)
-, _optionals(move(optionals))
-, _checkPresentSupport(move(present)) {
+, _optionals(sp::move(optionals))
+, _checkPresentSupport(sp::move(present)) {
 	if (validationEnabled) {
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { };
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -668,8 +668,8 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	ret.presentFamily = (presentFamily == maxOf<uint32_t>()) ? DeviceInfo::QueueFamilyInfo() : queueInfo[presentFamily];
 	ret.transferFamily = queueInfo[transferFamily];
 	ret.computeFamily = queueInfo[computeFamily];
-	ret.optionalExtensions = move(enabledOptionals);
-	ret.promotedExtensions = move(promotedOptionals);
+	ret.optionalExtensions = sp::move(enabledOptionals);
+	ret.promotedExtensions = sp::move(promotedOptionals);
 
 	ret.availableExtensions.reserve(availableExtensions.size());
 	for (auto &it : availableExtensions) {

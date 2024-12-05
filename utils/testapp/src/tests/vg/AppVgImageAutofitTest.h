@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,32 +20,39 @@
  THE SOFTWARE.
  **/
 
-#include "MaterialDataScrollHandlerFixed.h"
+#ifndef SRC_TESTS_VG_APPVGIMAGEAUTOFITTEST_H_
+#define SRC_TESTS_VG_APPVGIMAGEAUTOFITTEST_H_
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
+#include "AppLayoutTest.h"
+#include "XL2dVectorSprite.h"
 
-bool DataScrollHandlerFixed::init(DataScroll *s, float size) {
-	if (!Handler::init(s)) {
-		return false;
-	}
+namespace stappler::xenolith::app {
 
-	_dataSize = size;
+class VgAutofitTestResize : public VectorSprite {
+public:
+	virtual ~VgAutofitTestResize() = default;
 
-	return true;
+	virtual bool init() override;
+
+protected:
+	using VectorSprite::init;
+};
+
+class VgImageAutofitTest : public LayoutTest {
+public:
+	virtual ~VgImageAutofitTest() = default;
+
+	virtual bool init() override;
+
+	virtual void onContentSizeDirty() override;
+
+protected:
+	using LayoutTest::init;
+
+	Node *_nodeAutofit = nullptr;
+	Node *_nodeResize = nullptr;
+};
+
 }
 
-DataScroll::ItemMap DataScrollHandlerFixed::run(Request t, DataMap &&data) {
-	DataScroll::ItemMap ret;
-	Size2 size = (_layout == DataScroll::Layout::Vertical)?Size2(_size.width, _dataSize):Size2(_dataSize, _size.height);
-	for (auto &it : data) {
-		Vec2 origin = (_layout == DataScroll::Layout::Vertical)
-				?Vec2(0.0f, it.first.get() * _dataSize)
-				:Vec2(it.first.get() * _dataSize, 0.0f);
-
-		auto item = Rc<DataScroll::Item>::create(sp::move(it.second), origin, size);
-		ret.insert(std::make_pair(it.first, item));
-	}
-	return ret;
-}
-
-}
+#endif /* SRC_TESTS_VG_APPVGIMAGEAUTOFITTEST_H_ */

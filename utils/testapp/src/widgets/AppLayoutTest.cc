@@ -72,7 +72,7 @@ bool LayoutTestBackButton::init(Function<void()> &&cb) {
 		return false;
 	});
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	return true;
 }

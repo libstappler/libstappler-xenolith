@@ -256,7 +256,7 @@ const Rc<Texture> &ImageLayer::getTexture() const {
 }
 
 void ImageLayer::setActionCallback(Function<void()> &&cb) {
-	_actionCallback = move(cb);
+	_actionCallback = sp::move(cb);
 }
 
 Vec2 ImageLayer::getTexturePosition() const {

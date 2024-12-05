@@ -43,13 +43,13 @@ void EventListener::onEventRecieved(const Event &ev, const EventCallback &cb) {
 
 EventHandlerNode * EventListener::onEvent(const EventHeader &h, EventCallback &&callback, bool destroyAfterEvent) {
 	return EventHandlerNode::onEvent(h, nullptr,
-			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, std::move(callback)),
+			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, sp::move(callback)),
 			this, destroyAfterEvent);
 }
 
 EventHandlerNode * EventListener::onEventWithObject(const EventHeader &h, Ref *obj, EventCallback &&callback, bool destroyAfterEvent) {
 	return EventHandlerNode::onEvent(h, obj,
-			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, std::move(callback)),
+			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, sp::move(callback)),
 			this, destroyAfterEvent);
 }
 

@@ -52,7 +52,7 @@ bool LayoutMenu::init(LayoutName layout, Vector<LayoutName> &&items) {
 	_scrollView->setIndicatorColor(Color::Grey_500);
 	auto controller = _scrollView->setController(Rc<ScrollController>::create());
 
-	makeScrollList(controller, move(items));
+	makeScrollList(controller, sp::move(items));
 
 	setName(getLayoutNameId(_layout));
 

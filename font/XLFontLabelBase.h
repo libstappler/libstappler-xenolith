@@ -163,7 +163,7 @@ public:
 		Style style;
 
 		StyleSpec(size_t s, size_t l, Style &&style)
-		: start(s), length(l), style(std::move(style)) { }
+		: start(s), length(l), style(sp::move(style)) { }
 
 		StyleSpec(size_t s, size_t l, const Style &style)
 		: start(s), length(l), style(style) { }

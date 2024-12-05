@@ -76,14 +76,14 @@ public:
 
 	// true - if presentation request accepted, false otherwise,
 	// frame should not mark image as detached if false is returned
-	virtual bool present(Rc<ImageStorage> &&) = 0;
+	virtual bool present(ImageStorage *) = 0;
 
 	// present image in place instead of scheduling presentation
 	// should be called in view's thread
-	virtual bool presentImmediate(Rc<ImageStorage> &&, Function<void(bool)> &&, bool isRegularFrame) = 0;
+	virtual bool presentImmediate(ImageStorage *, Function<void(bool)> &&, bool isRegularFrame) = 0;
 
 	// invalidate swapchain image target, if drawing process was not successful
-	virtual void invalidateTarget(Rc<ImageStorage> &&) = 0;
+	virtual void invalidateTarget(ImageStorage *) = 0;
 
 	virtual Rc<Ref> getSwapchainHandle() const = 0;
 

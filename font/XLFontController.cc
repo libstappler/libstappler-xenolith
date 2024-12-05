@@ -96,7 +96,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontMemoryData = move(data);
+		it->second.fontMemoryData = sp::move(data);
 		it->second.preconfiguredParams = false;
 		return &it->second;
 	}
@@ -122,7 +122,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontCallback = move(cb);
+		it->second.fontCallback = sp::move(cb);
 		it->second.preconfiguredParams = false;
 		return &it->second;
 	}
@@ -149,7 +149,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontMemoryData = move(data);
+		it->second.fontMemoryData = sp::move(data);
 		it->second.params = params;
 		it->second.preconfiguredParams = true;
 		return &it->second;
@@ -177,7 +177,7 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontCallback = move(cb);
+		it->second.fontCallback = sp::move(cb);
 		it->second.params = params;
 		it->second.preconfiguredParams = true;
 		return &it->second;
@@ -213,7 +213,7 @@ const FontController::FamilyQuery * FontController::Builder::addFontFaceQuery(St
 		it = _data->familyQueries.emplace(family.str<Interface>(), FamilyQuery{family.str<Interface>()}).first;
 	}
 
-	addSources(&it->second, move(sources), front);
+	addSources(&it->second, sp::move(sources), front);
 	return &it->second;
 }
 
@@ -346,7 +346,7 @@ void FontController::addFont(StringView family, Vector<Rc<FontFaceData>> &&data,
 	}
 
 	if (familyIt->second.data.empty()) {
-		familyIt->second.data = move(data);
+		familyIt->second.data = sp::move(data);
 	} else {
 		if (front) {
 			for (auto &it : data) {
@@ -451,7 +451,7 @@ Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
 	}
 
 	// create layout
-	ret = Rc<FontFaceSet>::create(move(cfgName), style.fontFamily, move(spec), move(data), _ext->getLibrary());
+	ret = Rc<FontFaceSet>::create(sp::move(cfgName), style.fontFamily, sp::move(spec), sp::move(data), _ext->getLibrary());
 	_layouts.emplace(ret->getName(), ret);
 	ret->touch(_clock, style.persistent);
 	return ret;
@@ -519,18 +519,18 @@ void FontController::update(Application *, const UpdateTime &clock) {
 				if (lb == objects.end()) {
 					auto req = iit->getRequiredChars();
 					if (!req.empty()) {
-						objects.emplace_back(FontUpdateRequest{iit, move(req), it.second->isPersistent()});
+						objects.emplace_back(FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
 					}
 				} else if (lb != objects.end() && lb->object != iit) {
 					auto req = iit->getRequiredChars();
 					if (!req.empty()) {
-						objects.emplace(lb, FontUpdateRequest{iit, move(req), it.second->isPersistent()});
+						objects.emplace(lb, FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
 					}
 				}
 			}
 		}
 		if (!objects.empty()) {
-			_ext->updateImage(_image, move(objects), move(_dependency));
+			_ext->updateImage(_image, sp::move(objects), move(_dependency));
 			_dependency = nullptr;
 		}
 		_dirty = false;
@@ -538,7 +538,7 @@ void FontController::update(Application *, const UpdateTime &clock) {
 }
 
 void FontController::setImage(Rc<core::DynamicImage> &&image) {
-	_image = move(image);
+	_image = sp::move(image);
 	_texture = Rc<Texture>::create(_image);
 }
 
@@ -558,7 +558,7 @@ void FontController::sendFontUpdatedEvent() {
 
 void FontController::setAliases(Map<String, String> &&aliases) {
 	if (_aliases.empty()) {
-		_aliases = move(aliases);
+		_aliases = sp::move(aliases);
 	} else {
 		for (auto &it : aliases) {
 			_aliases.insert_or_assign(it.first, it.second);

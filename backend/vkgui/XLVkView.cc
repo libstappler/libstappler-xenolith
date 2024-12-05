@@ -267,66 +267,32 @@ void View::deprecateSwapchain(bool fast) {
 		}
 
 		if (!_blockSwapchainRecreation && _swapchain->getAcquiredImagesCount() == 0) {
+			_glLoop->performOnGlThread([this] {
+				_device->waitIdle();
+			}, this);
 			recreateSwapchain(_swapchain->getRebuildMode());
 		}
 	}, this, true);
 }
 
-bool View::present(Rc<ImageStorage> &&object) {
+bool View::present(ImageStorage *object) {
 	XL_VKVIEW_LOG("present");
 	if (object->isSwapchainImage()) {
 		if (_options.followDisplayLink) {
-			performOnThread([this, object = move(object)] () mutable {
+			// schedule image for next DispayLink signal
+			performOnThread([this, object = Rc<ImageStorage>(object)] () mutable {
 				schedulePresent((SwapchainImage *)object.get(), 0);
 			}, this);
-			return false;
+			return true;
 		}
 		auto clock = xenolith::platform::clock(core::ClockType::Monotonic);
-		auto img = (SwapchainImage *)object.get();
+		auto img = static_cast<SwapchainImage *>(object);
 		if (!img->getPresentWindow() || img->getPresentWindow() < clock) {
-			if (_options.presentImmediate) {
-				performOnThread([this, object = move(object)] () mutable {
-					auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, true);
-					auto img = (SwapchainImage *)object.get();
-					if (img->getSwapchain() == _swapchain && img->isSubmitted()) {
-						presentWithQueue(*queue, move(object));
-					}
-					_glLoop->performOnGlThread([this,  queue = move(queue)] () mutable {
-						_device->releaseQueue(move(queue));
-					}, this);
-				}, this);
-				return false;
-			}
-			auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, false);
-			if (queue) {
-				performOnThread([this, queue = move(queue), object = move(object)] () mutable {
-					auto img = (SwapchainImage *)object.get();
-					if (img->getSwapchain() == _swapchain && img->isSubmitted()) {
-						presentWithQueue(*queue, move(object));
-					}
-					_glLoop->performOnGlThread([this,  queue = move(queue)] () mutable {
-						_device->releaseQueue(move(queue));
-					}, this);
-				}, this);
-			} else {
-				_device->acquireQueue(QueueOperations::Present, *(Loop *)_glLoop.get(),
-						[this, object = move(object)] (Loop &, const Rc<DeviceQueue> &queue) mutable {
-					performOnThread([this, queue, object = move(object)] () mutable {
-						auto img = (SwapchainImage *)object.get();
-						if (img->getSwapchain() == _swapchain && img->isSubmitted()) {
-							presentWithQueue(*queue, move(object));
-						}
-						_glLoop->performOnGlThread([this,  queue = move(queue)] () mutable {
-							_device->releaseQueue(move(queue));
-						}, this);
-					}, this);
-				}, [this] (Loop &) {
-					invalidate();
-				}, this);
-			}
+			runScheduledPresent(img);
 		} else {
-			performOnThread([this, object = move(object), t = img->getPresentWindow() - clock] () mutable {
-				schedulePresent((SwapchainImage *)object.get(), t);
+			// schedule image until next present window
+			performOnThread([this, object = Rc<ImageStorage>(object), t = img->getPresentWindow() - clock] () mutable {
+				schedulePresent(static_cast<SwapchainImage *>(object.get()), t);
 			}, this, true);
 		}
 	} else {
@@ -334,8 +300,8 @@ bool View::present(Rc<ImageStorage> &&object) {
 			return true;
 		}
 		auto gen = _gen;
-		performOnThread([this, object = move(object), gen] () mutable {
-			presentImmediate(move(object), [this, gen] (bool success) {
+		performOnThread([this, object = Rc<ImageStorage>(object), gen] () mutable {
+			presentImmediate(object, [this, gen] (bool success) {
 				if (gen == _gen) {
 					XL_VKVIEW_LOG("present - scheduleNextImage");
 					scheduleNextImage(0, false);
@@ -345,12 +311,11 @@ bool View::present(Rc<ImageStorage> &&object) {
 				recreateSwapchain(_swapchain->getRebuildMode());
 			}
 		}, this);
-		return true;
 	}
-	return false;
+	return true;
 }
 
-bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&scheduleCb, bool isRegularFrame) {
+bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&scheduleCb, bool isRegularFrame) {
 	XL_VKVIEW_LOG("presentImmediate: ", _framesInProgress);
 	if (!_swapchain) {
 		return false;
@@ -406,7 +371,7 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 		presentFence = loop->acquireFence(0, false);
 	}
 
-	auto swapchainAcquiredImage = _swapchain->acquire(true, presentFence);;
+	auto swapchainAcquiredImage = _swapchain->acquire(true, presentFence);
 	if (!swapchainAcquiredImage) {
 		XL_VKAPI_LOG("[PresentImmediate] [acquire-failed] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
 		if (presentFence) {
@@ -463,7 +428,7 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 	object->rearmSemaphores(*loop);
 
 	frameSync.waitAttachments.emplace_back(core::FrameSyncAttachment{nullptr, object->getWaitSem(),
-		object.get(), core::PipelineStage::Transfer});
+		object, core::PipelineStage::Transfer});
 	frameSync.waitAttachments.emplace_back(core::FrameSyncAttachment{nullptr, targetImage->getWaitSem(),
 		targetImage.get(), core::PipelineStage::Transfer});
 
@@ -517,7 +482,11 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 		}
 		if (scheduleCb) {
 			pool->autorelease(object);
-			presentFence->addRelease([dev, pool = pool ? move(pool) : nullptr, scheduleCb = move(scheduleCb), object = move(object), loop] (bool success) mutable {
+			presentFence->addRelease([dev,
+									  pool = pool ? move(pool) : nullptr,
+									  scheduleCb = sp::move(scheduleCb),
+									  object = Rc<ImageStorage>(object),
+									  loop] (bool success) mutable {
 				if (pool) {
 					dev->releaseCommandPoolUnsafe(move(pool));
 				}
@@ -528,7 +497,7 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 		} else {
 			presentFence->check(*((Loop *)_glLoop.get()), false);
 			dev->releaseCommandPoolUnsafe(move(pool));
-			loop->releaseImage(move(object));
+			loop->releaseImage(object);
 		}
 		XL_VKAPI_LOG("[PresentImmediate] [presentFence] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
 		presentFence = nullptr;
@@ -554,17 +523,17 @@ bool View::presentImmediate(Rc<ImageStorage> &&object, Function<void(bool)> &&sc
 	}
 }
 
-void View::invalidateTarget(Rc<ImageStorage> &&object) {
+void View::invalidateTarget(ImageStorage *object) {
 	XL_VKVIEW_LOG("invalidateTarget");
 	if (!object) {
 		return;
 	}
 
 	if (object->isSwapchainImage()) {
-		auto img = (SwapchainImage *)object.get();
+		auto img = static_cast<SwapchainImage *>(object);
 		img->invalidateImage();
 	} else {
-
+		// do nothing,,,
 	}
 }
 
@@ -602,7 +571,7 @@ void View::captureImage(StringView name, const Rc<core::ImageObject> &image, Att
 }
 
 void View::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, AttachmentLayout l) const {
-	_device->getTextureSetLayout()->readImage(*_device, *(Loop *)_glLoop.get(), (Image *)image.get(), l, move(cb));
+	_device->getTextureSetLayout()->readImage(*_device, *(Loop *)_glLoop.get(), (Image *)image.get(), l, sp::move(cb));
 }
 
 void View::scheduleFence(Rc<Fence> &&fence) {
@@ -689,7 +658,59 @@ void View::scheduleNextImage(uint64_t windowOffset, bool immediately) {
 	}, this, true);
 }
 
-void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode) {
+void View::scheduleNextImageSync(uint64_t timeout) {
+	if (!isOnThisThread()) {
+		scheduleNextImage(0, true);
+		return;
+	}
+
+	_scheduledTime = xenolith::platform::clock(core::ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
+	_frameEmitter->setEnableBarrier(false);
+
+	auto sync = Rc<ImageSyncInfo>::alloc();
+	std::unique_lock lock(sync->mutex);
+
+	if (!scheduleSwapchainImage(0, _options.renderImageOffscreen ? AcquireOffscreenImage : AcquireSwapchainImageImmediate, sync)) {
+		if (_swapchain->isDeprecated()) {
+			performOnThread([this] {
+				_device->waitIdle();
+				recreateSwapchain(_swapchain->getRebuildMode());
+			}, this, false);
+		}
+		return;
+	}
+
+	auto ret = sync->cond.wait_for(lock, std::chrono::microseconds(timeout));
+	if (ret == std::cv_status::timeout) {
+		return;
+	}
+
+	lock.unlock();
+
+	if (!sync->success) {
+		invalidateTarget(sync->resultImage);
+	} else if (sync->resultImage->isSwapchainImage()) {
+		auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, true);
+		presentSwapchainImage(move(queue), static_cast<SwapchainImage *>(sync->resultImage.get()));
+	} else {
+		presentImmediate(sync->resultImage, [this] (bool success) {
+			XL_VKVIEW_LOG("present - scheduleNextImageSync");
+			scheduleNextImage(0, false);
+		}, true);
+		if (_swapchain->isDeprecated()) {
+			performOnThread([this] {
+				_device->waitIdle();
+				recreateSwapchain(_swapchain->getRebuildMode());
+			}, this, false);
+		}
+	}
+
+	if (sync->resultCallback) {
+		sync->resultCallback();
+	}
+}
+
+bool View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode, ImageSyncInfo *sync) {
 	XL_VKVIEW_LOG("scheduleSwapchainImage");
 	Rc<SwapchainImage> swapchainImage;
 	Rc<FrameRequest> newFrameRequest;
@@ -697,7 +718,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 
 	if (mode != ScheduleImageMode::AcquireOffscreenImage) {
         if (!_swapchain) {
-            return;
+            return false;
         }
 
 		auto fullOffset = getUpdateInterval() + windowOffset;
@@ -711,6 +732,12 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 		constraints.extent = Extent2(swapchainImage->getInfo().extent.width, swapchainImage->getInfo().extent.height);
 	}
 
+	if (sync && swapchainImage) {
+		if (!acquireScheduledImageImmediate(swapchainImage)) {
+			return false;
+		}
+	}
+
 	++ _framesInProgress;
 	if (_framesInProgress > _swapchain->getConfig().imageCount - 1 && _framesInProgress > 1) {
 		XL_VKVIEW_LOG("scheduleSwapchainImage: extra frame: ", _framesInProgress);
@@ -719,11 +746,11 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 	newFrameRequest = _frameEmitter->makeRequest(constraints);
 
 	// make new frame request immediately
-	_mainLoop->performOnMainThread([this, req = move(newFrameRequest), swapchainImage, swapchain = _swapchain] () mutable {
+	_mainLoop->performOnMainThread([this, req = move(newFrameRequest), swapchainImage, swapchain = _swapchain, sync = Rc<ImageSyncInfo>(sync)] () mutable {
 		XL_VKVIEW_LOG("scheduleSwapchainImage: _director->acquireFrame");
 		if (_director->acquireFrame(req)) {
 			XL_VKVIEW_LOG("scheduleSwapchainImage: frame acquired");
-			_glLoop->performOnGlThread([this, req = move(req), swapchainImage = move(swapchainImage), swapchain] () mutable {
+			_glLoop->performOnGlThread([this, req = move(req), swapchainImage = move(swapchainImage), swapchain, sync = move(sync)] () mutable {
 				if (_glLoop->isRunning() && swapchain) {
 					XL_VKVIEW_LOG("scheduleSwapchainImage: setup frame request");
 					auto &queue = req->getQueue();
@@ -741,17 +768,34 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 					if (swapchainImage) {
 						req->setRenderTarget(a, Rc<core::ImageStorage>(swapchainImage));
 					}
-					req->setOutput(a, [this, swapchain] (core::FrameAttachmentData &data, bool success, Ref *) {
+					req->setOutput(a, [this, swapchain, sync = move(sync)] (core::FrameAttachmentData &data, bool success, Ref *) {
+						// Called in GL Thread
 						XL_VKVIEW_LOG("scheduleSwapchainImage: output on frame");
-						if (data.image) {
-							if (success) {
-								return present(move(data.image));
-							} else {
-								invalidateTarget(move(data.image));
-								performOnThread([this] {
+						if (sync) {
+							// send result to synchronous waiter
+							std::unique_lock lock(sync->mutex);
+							sync->success = success;
+							sync->resultImage = data.image;
+							if (!success) {
+								sync->resultCallback = [this] {
 									-- _framesInProgress;
-								}, this);
+								};
 							}
+							sync->cond.notify_all();
+							return true;
+						} else if (data.image && success) {
+							auto ret = present(data.image);
+							if (ret || !data.image) {
+								return true;
+							}
+							return false;
+						} else {
+							if (data.image) {
+								invalidateTarget(data.image);
+							}
+							performOnThread([this] {
+								-- _framesInProgress;
+							}, this);
 						}
 						return true;
 					}, this);
@@ -774,7 +818,7 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 
 	// we should wait until all current fences become signaled
 	// then acquire image and wait for fence
-	if (swapchainImage) {
+	if (!sync && swapchainImage) {
 		if (mode == AcquireSwapchainImageAsync && _options.waitOnSwapchainPassFence && _fenceOrder != 0) {
 			updateFences();
 			if (_fenceOrder < swapchainImage->getOrder()) {
@@ -788,6 +832,8 @@ void View::scheduleSwapchainImage(uint64_t windowOffset, ScheduleImageMode mode)
 			}
 		}
 	}
+
+	return true;
 }
 
 bool View::acquireScheduledImageImmediate(const Rc<SwapchainImage> &image) {
@@ -809,16 +855,20 @@ bool View::acquireScheduledImageImmediate(const Rc<SwapchainImage> &image) {
 	}
 
 	if (!_requestedSwapchainImage.empty()) {
+		// Есть запрошенное изображение из свопчейна, ожидающее асинхронного распределения
 		return false;
 	}
 
 	if (!_scheduledImages.empty() && _requestedSwapchainImage.empty()) {
+		// очередь ожидания изображений не пуста, они должны получить изображение раньше текущего выхова
+		// пытаемся запросить новое изображение для ожидающих
 		acquireScheduledImage();
 		return false;
 	}
 
 	auto nimages = _swapchain->getConfig().imageCount - _swapchain->getSurfaceInfo().minImageCount;
 	if (_swapchain->getAcquiredImagesCount() > nimages) {
+		// Уже запошено больше изображений, чем позволяет свопчейн
 		return false;
 	}
 
@@ -834,8 +884,8 @@ bool View::acquireScheduledImageImmediate(const Rc<SwapchainImage> &image) {
 		}, image, true);
 		return true;
 	} else {
+		// Свопчейн не смог вернуть изображение
 		fence->schedule(*loop);
-		return false;
 	}
 
 	return false;
@@ -925,8 +975,8 @@ bool View::recreateSwapchain(core::PresentMode mode) {
 	};
 
 	auto data = Rc<ResetData>::alloc();
-	data->fenceImages = move(_fenceImages);
-	data->scheduledImages = move(_scheduledImages);
+	data->fenceImages = sp::move(_fenceImages);
+	data->scheduledImages = sp::move(_scheduledImages);
 	data->frameEmitter = _frameEmitter;
 
 	_scheduledTime = 0;
@@ -980,10 +1030,15 @@ bool View::recreateSwapchain(core::PresentMode mode) {
 		ret = createSwapchain(info, move(cfg), mode);
 	}
 	if (ret) {
-		XL_VKVIEW_LOG("recreateSwapchain - scheduleNextImage");
 		_swapchainInvalidated = false;
-		// run frame, no present window, no wait on fences
-		scheduleNextImage(0, true);
+		_nextPresentWindow = 0;
+		XL_VKVIEW_LOG("recreateSwapchain - scheduleNextImage");
+		if (_options.syncFrameAfterSwapchainRecreation) {
+			scheduleNextImageSync(getFrameInterval());
+		} else {
+			// run frame, no present window, no wait on fences
+			scheduleNextImage(0, true);
+		}
 	}
 	return ret;
 }
@@ -1095,37 +1150,45 @@ bool View::isImagePresentable(const core::ImageObject &image, VkFilter &filter) 
 	return true;
 }
 
-void View::runScheduledPresent(Rc<SwapchainImage> &&object) {
+void View::runScheduledPresent(SwapchainImage *object) {
 	XL_VKVIEW_LOG("runScheduledPresent");
+
 	if (_options.presentImmediate) {
-		auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, true);
-		if (object->getSwapchain() == _swapchain && object->isSubmitted()) {
-			presentWithQueue(*queue, move(object));
-		}
-		_glLoop->performOnGlThread([this, queue = move(queue)] () mutable {
-			_device->releaseQueue(move(queue));
-		}, this);
+		performOnThread([this, object = Rc<SwapchainImage>(object)] () mutable {
+			auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, true);
+			presentSwapchainImage(move(queue), object);
+		}, this, true);
 	} else {
-		_glLoop->performOnGlThread([this, object = move(object)] () mutable {
+		_glLoop->performOnGlThread([this, object = Rc<SwapchainImage>(object)] () mutable {
 			if (!_glLoop->isRunning()) {
 				return;
 			}
-
-			_device->acquireQueue(QueueOperations::Present, *(Loop*) _glLoop.get(),
-					[this, object = move(object)](Loop&, const Rc<DeviceQueue> &queue) mutable {
-				performOnThread([this, queue, object = move(object)]() mutable {
-					if (object->getSwapchain() == _swapchain && object->isSubmitted()) {
-						presentWithQueue(*queue, move(object));
-					}
-					_glLoop->performOnGlThread([this, queue = move(queue)]() mutable {
-						_device->releaseQueue(move(queue));
-					}, this);
+			auto queue = _device->tryAcquireQueueSync(QueueOperations::Present, false);
+			if (queue) {
+				performOnThread([this, queue = move(queue), object = move(object)]() mutable {
+					presentSwapchainImage(move(queue), object);
 				}, this);
-			}, [this](Loop&) {
-				invalidate();
-			}, this);
-		}, this);
+			} else {
+				_device->acquireQueue(QueueOperations::Present, *(Loop*) _glLoop.get(),
+						[this, object = move(object)](Loop&, const Rc<DeviceQueue> &queue) mutable {
+					performOnThread([this, queue, object = move(object)]() mutable {
+						presentSwapchainImage(Rc<DeviceQueue>(queue), object);
+					}, this);
+				}, [this] (Loop&) {
+					invalidate();
+				}, this);
+			}
+		}, this, true);
 	}
+}
+
+void View::presentSwapchainImage(Rc<DeviceQueue> &&queue, SwapchainImage *image) {
+	if (image->getSwapchain() == _swapchain && image->isSubmitted()) {
+		presentWithQueue(*queue, image);
+	}
+	_glLoop->performOnGlThread([this, queue = move(queue)] () mutable {
+		_device->releaseQueue(move(queue));
+	}, this);
 }
 
 void View::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
@@ -1159,7 +1222,9 @@ void View::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
 		waitForFences(_frameOrder);
 		queue.waitIdle();
 
-		recreateSwapchain(_swapchain->getRebuildMode());
+		performOnThread([this] {
+			recreateSwapchain(_swapchain->getRebuildMode());
+		}, this, false);
 	} else {
 		if (!_options.renderOnDemand || _readyForNextFrame) {
 			if (_options.followDisplayLink) {

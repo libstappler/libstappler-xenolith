@@ -52,7 +52,7 @@ Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceDat
 		return nullptr;
 	}
 
-	return doCreateInstance(data, move(vulkanModule), move(termCb));
+	return doCreateInstance(data, sp::move(vulkanModule), sp::move(termCb));
 }
 
 VulkanInstanceInfo FunctionTable::loadInfo() const {
@@ -289,8 +289,15 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 		return nullptr;
 	}
 
-	auto vkInstance = Rc<vk::Instance>::alloc(instance, vkGetInstanceProcAddr, data.targetVulkanVersion, move(enabledOptionals),
-			move(vulkanModule), move(cb), move(data.checkPresentationSupport), validationEnabled && (debugExt != nullptr), move(data.userdata));
+	auto vkInstance = Rc<vk::Instance>::alloc(instance,
+			vkGetInstanceProcAddr,
+			data.targetVulkanVersion,
+			sp::move(enabledOptionals),
+			sp::move(vulkanModule),
+			sp::move(cb),
+			sp::move(data.checkPresentationSupport),
+			validationEnabled && (debugExt != nullptr),
+			sp::move(data.userdata));
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;

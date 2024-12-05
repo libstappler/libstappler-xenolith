@@ -40,7 +40,7 @@ struct SP_PUBLIC SchedulerCallback {
     SchedulerCallback() = default;
 
     SchedulerCallback(SchedulerFunc &&fn, bool p)
-    : callback(move(fn)), paused(p) { }
+    : callback(sp::move(fn)), paused(p) { }
 };
 
 class SP_PUBLIC Scheduler : public Ref {
@@ -185,15 +185,15 @@ SchedulerListener<T> &SchedulerListener<T>::operator= (const SchedulerListener<T
 }
 
 template <class T>
-SchedulerListener<T>::SchedulerListener(SchedulerListener<T> &&other) : _binding(std::move(other._binding)), _callback(std::move(other._callback)) {
+SchedulerListener<T>::SchedulerListener(SchedulerListener<T> &&other) : _binding(sp::move(other._binding)), _callback(sp::move(other._callback)) {
 	other.updateScheduler();
 	updateScheduler();
 }
 
 template <class T>
 SchedulerListener<T> &SchedulerListener<T>::operator= (SchedulerListener<T> &&other) {
-	_binding = std::move(other._binding);
-	_callback = std::move(other._callback);
+	_binding = sp::move(other._binding);
+	_callback = sp::move(other._callback);
 	other.updateScheduler();
 	updateScheduler();
 	return *this;

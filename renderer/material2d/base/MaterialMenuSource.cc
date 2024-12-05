@@ -41,7 +41,7 @@ void MenuSourceItem::setCustomData(const Value &val) {
 }
 
 void MenuSourceItem::setCustomData(Value &&val) {
-	_customData = std::move(val);
+	_customData = sp::move(val);
 	setDirty();
 }
 
@@ -88,7 +88,7 @@ bool MenuSourceButton::init(StringView str, IconName name, Callback &&cb) {
 
 	_name = str.str<Interface>();
 	_nameIcon = name;
-	_callback = move(cb);
+	_callback = sp::move(cb);
 	return true;
 }
 
@@ -166,7 +166,7 @@ IconName MenuSourceButton::getValueIcon() const {
 }
 
 void MenuSourceButton::setCallback(Callback &&cb) {
-	_callback = move(cb);
+	_callback = sp::move(cb);
 	setDirty();
 }
 const MenuSourceButton::Callback & MenuSourceButton::getCallback() const {
@@ -266,13 +266,13 @@ void MenuSource::addItem(MenuSourceItem *item) {
 }
 
 MenuSourceButton *MenuSource::addButton(StringView str, Callback &&cb) {
-	auto item = Rc<MenuSourceButton>::create(str, IconName::None, move(cb));
+	auto item = Rc<MenuSourceButton>::create(str, IconName::None, sp::move(cb));
 	addItem(item);
 	return item;
 }
 
 MenuSourceButton *MenuSource::addButton(StringView str, IconName name, Callback &&cb) {
-	auto item = Rc<MenuSourceButton>::create(str, name, move(cb));
+	auto item = Rc<MenuSourceButton>::create(str, name, sp::move(cb));
 	addItem(item);
 	return item;
 }

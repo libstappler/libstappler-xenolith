@@ -1121,7 +1121,7 @@ void DBusInterface::wakeup() {
 
 void DBusInterface::addEvent(Function<void()> &&ev) {
 	std::unique_lock lock(eventMutex);
-	events.emplace_back(move(ev));
+	events.emplace_back(sp::move(ev));
 	lock.unlock();
 
 	uint64_t value = 1;
@@ -1160,7 +1160,7 @@ void DBusInterface::handleEvents() {
 	auto sz = ::read(eventFd, &value, sizeof(uint64_t));
 	if (sz == 8 && value) {
 		std::unique_lock lock(eventMutex);
-		auto data = move(events);
+		auto data = sp::move(events);
 		events.clear();
 		lock.unlock();
 
@@ -1196,7 +1196,7 @@ DBusPendingCall *DBusInterface::readInterfaceTheme(Function<void(InterfaceThemeI
 
 		dbus_message_append_args(message,
 				DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &v_ARRAY, 1, DBUS_TYPE_INVALID);
-	}, [this, cb = move(cb)] (DBusMessage *reply) {
+	}, [this, cb = sp::move(cb)] (DBusMessage *reply) {
 		cb(parseInterfaceThemeSettings(reply));
 	});
 }
@@ -1207,7 +1207,7 @@ DBusPendingCall *DBusInterface::updateNetworkState(Connection &c, Function<void(
 			[this] (DBusMessage *msg) {
 		const char *interface_name = "org.freedesktop.NetworkManager";
 		dbus_message_append_args(msg, DBUS_TYPE_STRING, &interface_name, DBUS_TYPE_INVALID);
-	}, [this, cb = move(cb)] (DBusMessage *reply) {
+	}, [this, cb = sp::move(cb)] (DBusMessage *reply) {
 		cb(parseNetworkState(reply));
 	});
 }
@@ -1291,7 +1291,7 @@ struct MessageData {
 
 DBusPendingCall *DBusInterface::loadServiceNames(Connection &c, Set<String> &services, Function<void()> &&cb) {
 	return callMethod(c, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames",
-			nullptr, [this, services = &services, cb = move(cb)] (DBusMessage *reply) {
+			nullptr, [this, services = &services, cb = sp::move(cb)] (DBusMessage *reply) {
 		parseServiceList(*services, reply);
 		cb();
 	});
@@ -1315,7 +1315,7 @@ DBusPendingCall *DBusInterface::callMethod(Connection &c, StringView bus, String
 		auto data = new MessageData;
 		data->interface = this;
 		data->connection = &c;
-		data->callback = move(resultCallback);
+		data->callback = sp::move(resultCallback);
 
 		this->dbus_pending_call_set_notify(ret, MessageData::parseReply, data, MessageData::freeMessage);
 		c.flush();
@@ -1401,7 +1401,7 @@ NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 			} else if (prop == "Capabilities") {
 				Vector<uint32_t> value;
 				if (parseProperty(entry, &value)) {
-					ret.capabilities = move(value);
+					ret.capabilities = sp::move(value);
 				}
 			}
 		}
@@ -1559,9 +1559,9 @@ void DBusInterface::setNetworkState(NetworkState &&state) {
 }
 
 void DBusInterface::addNetworkConnectionCallback(void *key, Function<void(const NetworkState &)> &&cb) {
-	addEvent([this, cb = move(cb), key] () mutable {
+	addEvent([this, cb = sp::move(cb), key] () mutable {
 		cb(networkState);
-		networkCallbacks.emplace(key, StateCallback{move(cb), this});
+		networkCallbacks.emplace(key, StateCallback{sp::move(cb), this});
 	});
 }
 
@@ -1640,7 +1640,7 @@ InterfaceThemeInfo DBusLibrary::getCurrentInterfaceTheme() const {
 }
 
 void DBusLibrary::addNetworkConnectionCallback(void *key, Function<void(const NetworkState &)> &&cb) {
-	_connection->addNetworkConnectionCallback(key, move(cb));
+	_connection->addNetworkConnectionCallback(key, sp::move(cb));
 }
 
 void DBusLibrary::removeNetworkConnectionCallback(void *key) {

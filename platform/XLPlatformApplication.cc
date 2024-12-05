@@ -170,8 +170,8 @@ void PlatformApplication::threadInit() {
 	thread::ThreadInfo::setThreadInfo("Application");
 
 	if (_info.loopInfo.onDeviceStarted) {
-		auto tmpStarted = move(_info.loopInfo.onDeviceStarted);
-		_info.loopInfo.onDeviceStarted = [this, tmpStarted = move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
+		auto tmpStarted = sp::move(_info.loopInfo.onDeviceStarted);
+		_info.loopInfo.onDeviceStarted = [this, tmpStarted = sp::move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
 			if (tmpStarted) {
 				tmpStarted(loop, dev);
 			}
@@ -185,8 +185,8 @@ void PlatformApplication::threadInit() {
 	}
 
 	if (_info.loopInfo.onDeviceFinalized) {
-		auto tmpFinalized = move(_info.loopInfo.onDeviceFinalized);
-		_info.loopInfo.onDeviceFinalized = [this, tmpFinalized = move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
+		auto tmpFinalized = sp::move(_info.loopInfo.onDeviceFinalized);
+		_info.loopInfo.onDeviceFinalized = [this, tmpFinalized = sp::move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
 			handleDeviceFinalized(loop, dev);
 
 			if (tmpFinalized) {
@@ -221,7 +221,7 @@ void PlatformApplication::threadInit() {
 	_extensionsInitialized = true;
 
 	for (auto &it : _glWaitCallback) {
-		_glLoop->performOnGlThread(move(it.func), it.target, it.immediate);
+		_glLoop->performOnGlThread(sp::move(it.func), it.target, it.immediate);
 	}
 	_glWaitCallback.clear();
 
@@ -310,9 +310,9 @@ void PlatformApplication::wakeup() {
 
 void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
 	if (_glLoop) {
-		_glLoop->performOnGlThread(move(func), target, immediate);
+		_glLoop->performOnGlThread(sp::move(func), target, immediate);
 	} else {
-		_glWaitCallback.emplace_back(WaitCallbackInfo{move(func), target, immediate});
+		_glWaitCallback.emplace_back(WaitCallbackInfo{sp::move(func), target, immediate});
 	}
 }
 
@@ -320,7 +320,7 @@ void PlatformApplication::performOnMainThread(Function<void()> &&func, Ref *targ
 	if (isOnThisThread() && !onNextFrame) {
 		func();
 	} else {
-		_queue->onMainThread(Rc<Task>::create([func = move(func)] (const thread::Task &, bool success) {
+		_queue->onMainThread(Rc<Task>::create([func = sp::move(func)] (const thread::Task &, bool success) {
 			if (success) { func(); }
 		}, target));
 	}
@@ -330,20 +330,20 @@ void PlatformApplication::performOnMainThread(Rc<Task> &&task, bool onNextFrame)
 	if (isOnThisThread() && !onNextFrame) {
 		task->onComplete();
 	} else {
-		_queue->onMainThread(std::move(task));
+		_queue->onMainThread(sp::move(task));
 	}
 }
 
 void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&complete, Ref *obj) const {
-	perform(Rc<Task>::create(move(exec), move(complete), obj));
+	perform(Rc<Task>::create(sp::move(exec), sp::move(complete), obj));
 }
 
 void PlatformApplication::perform(Rc<Task> &&task) const {
-	_queue->perform(std::move(task));
+	_queue->perform(sp::move(task));
 }
 
 void PlatformApplication::perform(Rc<Task> &&task, bool performFirst) const {
-	_queue->perform(std::move(task), performFirst);
+	_queue->perform(sp::move(task), performFirst);
 }
 
 void PlatformApplication::updateMessageToken(BytesView tok) {

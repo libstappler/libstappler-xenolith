@@ -36,13 +36,13 @@ bool DataScrollHandlerSlice::init(DataScroll *s, DataCallback &&cb) {
 		_originBack.y += items.rbegin()->second->getContentSize().height;
 	}
 
-	_dataCallback = move(cb);
+	_dataCallback = sp::move(cb);
 
 	return true;
 }
 
 void DataScrollHandlerSlice::setDataCallback(DataCallback &&cb) {
-	_dataCallback = move(cb);
+	_dataCallback = sp::move(cb);
 }
 
 DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
@@ -52,7 +52,7 @@ DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
 
 	if (t == DataScroll::Request::Front) {
 		for (auto it = data.rbegin(); it != data.rend(); it ++) {
-			auto item = onItem(std::move(it->second), origin);
+			auto item = onItem(sp::move(it->second), origin);
 
 			item->setPosition(
 					(_layout == DataScroll::Layout::Vertical)
@@ -69,7 +69,7 @@ DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
 		}
 	} else {
 		for (auto &it : data) {
-			auto item = onItem(std::move(it.second), origin);
+			auto item = onItem(sp::move(it.second), origin);
 
 			if (_layout == DataScroll::Layout::Vertical) {
 				origin.y += item->getContentSize().height;
@@ -104,7 +104,7 @@ Vec2 DataScrollHandlerSlice::getOrigin(Request t) const {
 
 Rc<DataScroll::Item> DataScrollHandlerSlice::onItem(Value &&d, const Vec2 &o) {
 	if (_dataCallback) {
-		return _dataCallback(this, std::move(d), o);
+		return _dataCallback(this, sp::move(d), o);
 	}
 	return nullptr;
 }

@@ -150,7 +150,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 		return false;
 	}
 
-	_onContourUpdated = move(cb);
+	_onContourUpdated = sp::move(cb);
 
 	auto inputListener = addInputListener(Rc<InputListener>::create());
 	inputListener->addTouchRecognizer([this] (const GestureData &ev) {
@@ -173,7 +173,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 		std::cout << ev.event << " " << ev.input->data.key.keycode << " (" << ev.input->data.key.keysym << ")\n";
 
 		return true;
-	}, move(keys));
+	}, sp::move(keys));
 
 	inputListener->setPointerEnterCallback([this] (bool pointerEnter) {
 		return onPointerEnter(pointerEnter);

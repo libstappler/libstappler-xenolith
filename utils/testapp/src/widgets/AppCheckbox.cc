@@ -33,7 +33,7 @@ bool Checkbox::init(bool value, Function<void(bool)> &&cb) {
 	}
 
 	_value = value;
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	setColor(_backgroundColor);
 	setContentSize(Size2(32.0f, 32.0f));
@@ -100,7 +100,7 @@ void Checkbox::updateValue() {
 }
 
 bool CheckboxWithLabel::init(StringView title, bool value, Function<void(bool)> &&cb) {
-	if (!Checkbox::init(value, move(cb))) {
+	if (!Checkbox::init(value, sp::move(cb))) {
 		return false;
 	}
 

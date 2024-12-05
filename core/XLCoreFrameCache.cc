@@ -74,9 +74,9 @@ void FrameCache::releaseFramebuffer(Rc<Framebuffer> &&fb) {
 	if (isReachable(SpanView<uint64_t>(ids))) {
 		auto it = _framebuffers.find(ids);
 		if (it == _framebuffers.end()) {
-			_framebuffers.emplace(move(ids), FrameCacheFramebuffer{ Vector<Rc<Framebuffer>>{move(fb)}, e });
+			_framebuffers.emplace(sp::move(ids), FrameCacheFramebuffer{ Vector<Rc<Framebuffer>>{sp::move(fb)}, e });
 		} else {
-			it->second.framebuffers.emplace_back(move(fb));
+			it->second.framebuffers.emplace_back(sp::move(fb));
 		}
 	}
 }

@@ -75,6 +75,7 @@ public:
 	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) override;
 
 protected:
+	virtual bool recreateSwapchain(core::PresentMode) override;
 	virtual bool pollInput(bool frameReady) override;
 
 	virtual core::SurfaceInfo getSurfaceOptions() const override;

@@ -202,7 +202,7 @@ VkPhysicalDevice Device::getPhysicalDevice() const {
 void Device::begin(Loop &loop, thread::TaskQueue &q, Function<void(bool)> &&cb) {
 	compileSamplers(q, true);
 	_textureSetLayout->compile(*this, _immutableSamplers);
-	_textureSetLayout->initDefault(*this, loop, move(cb));
+	_textureSetLayout->initDefault(*this, loop, sp::move(cb));
 	_loopThreadId = std::this_thread::get_id();
 }
 
@@ -324,7 +324,7 @@ bool Device::acquireQueue(QueueOperations ops, FrameHandle &handle, Function<voi
 		family->queues.pop_back();
 	} else {
 		XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(move(acquire), move(invalidate), &handle, move(ref)));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &handle, sp::move(ref)));
 	}
 
 	if (queue) {
@@ -350,7 +350,7 @@ bool Device::acquireQueue(QueueOperations ops, Loop &loop, Function<void(Loop &,
 		family->queues.pop_back();
 	} else {
 		XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(move(acquire), move(invalidate), &loop, move(ref)));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &loop, sp::move(ref)));
 	}
 
 	lock.unlock();
@@ -396,8 +396,8 @@ void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
 			Function<void(FrameHandle &, const Rc<DeviceQueue> &)> cb;
 			Function<void(FrameHandle &)> invalidate;
 
-			cb = move(family->waiters.front().acquireForFrame);
-			invalidate = move(family->waiters.front().releaseForFrame);
+			cb = sp::move(family->waiters.front().acquireForFrame);
+			invalidate = sp::move(family->waiters.front().releaseForFrame);
 			ref = move(family->waiters.front().ref);
 			handle = move(family->waiters.front().handle);
 			family->waiters.erase(family->waiters.begin());
@@ -422,8 +422,8 @@ void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
 			Function<void(Loop &, const Rc<DeviceQueue> &)> cb;
 			Function<void(Loop &)> invalidate;
 
-			cb = move(family->waiters.front().acquireForLoop);
-			invalidate = move(family->waiters.front().releaseForLoop);
+			cb = sp::move(family->waiters.front().acquireForLoop);
+			invalidate = sp::move(family->waiters.front().releaseForLoop);
 			ref = move(family->waiters.front().ref);
 			loop = move(family->waiters.front().loop);
 			family->waiters.erase(family->waiters.begin());
@@ -670,7 +670,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 	};
 
 	auto task = new CompileImageTask();
-	task->callback = move(cb);
+	task->callback = sp::move(cb);
 	task->image = img;
 	task->loop = (Loop *)&loop;
 	task->device = this;

@@ -191,7 +191,7 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 					++ i;
 				}
 
-				auto mat = Rc<Material>::create(material, move(images));
+				auto mat = Rc<Material>::create(material, sp::move(images));
 
 				for (auto &it : mat->getImages()) {
 					if (it.dynamic && _owner) {
@@ -200,7 +200,7 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 				}
 
 				emplaceMaterialImages(mIt->second, mat.get(), cb);
-				mIt->second = move(mat);
+				mIt->second = sp::move(mat);
 				ret.emplace_back(mIt->second.get());
 				for (auto &it : mIt->second->getImages()) {
 					if (it.dynamic && _owner) {
@@ -220,8 +220,8 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 }
 
 void MaterialSet::setBuffer(Rc<BufferObject> &&buffer, std::unordered_map<MaterialId, uint32_t> &&ordering) {
-	_buffer = move(buffer);
-	_ordering = move(ordering);
+	_buffer = sp::move(buffer);
+	_ordering = sp::move(ordering);
 }
 
 const MaterialLayout *MaterialSet::getLayout(uint32_t idx) const {
@@ -518,7 +518,7 @@ Material::~Material() {
 bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<MaterialImage> &&images, Rc<Ref> &&data) {
 	_id = id;
 	_pipeline = pipeline;
-	_images = move(images);
+	_images = sp::move(images);
 	_data = move(data);
 	return true;
 }
@@ -605,7 +605,7 @@ bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtla
 bool Material::init(const Material *master, Vector<MaterialImage> &&images) {
 	_id = master->getId();
 	_pipeline = master->getPipeline();
-	_images = move(images);
+	_images = sp::move(images);
 	for (auto &it : _images) {
 		if (it.image->atlas) {
 			_atlas = it.image->atlas;
@@ -628,7 +628,7 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 	}
 
 	_materialObjectSize = size;
-	_encodeCallback = move(cb);
+	_encodeCallback = sp::move(cb);
 	return true;
 }
 
@@ -638,7 +638,7 @@ void MaterialAttachment::addPredefinedMaterials(Vector<Rc<Material>> &&materials
 	}
 
 	if (_predefinedMaterials.empty()) {
-		_predefinedMaterials = move(materials);
+		_predefinedMaterials = sp::move(materials);
 	} else {
 		for (auto &it : materials) {
 			_predefinedMaterials.emplace_back(move(it));

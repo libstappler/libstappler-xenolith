@@ -716,7 +716,7 @@ LabelDeferredResult::~LabelDeferredResult() {
 }
 
 bool LabelDeferredResult::init(std::future<Rc<LabelResult>> &&future) {
-	_future = new std::future<Rc<LabelResult>>(move(future));
+	_future = new std::future<Rc<LabelResult>>(sp::move(future));
 	return true;
 }
 

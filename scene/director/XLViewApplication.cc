@@ -50,8 +50,8 @@ bool ViewApplication::addView(ViewInfo &&info) {
 	performOnGlThread([this, info = move(info)] () mutable {
 		if (_device) {
 			if (info.onClosed) {
-				auto tmp = move(info.onClosed);
-				info.onClosed = [this, tmp = move(tmp)] (xenolith::View &view) {
+				auto tmp = sp::move(info.onClosed);
+				info.onClosed = [this, tmp = sp::move(tmp)] (xenolith::View &view) {
 					performOnMainThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
 					}, this);

@@ -244,8 +244,8 @@ bool GestureTouchRecognizer::init(InputCallback &&cb, ButtonMask &&mask) {
 
 	if (cb) {
 		_maxEvents = 10;
-		_buttonMask = move(mask);
-		_callback = move(cb);
+		_buttonMask = sp::move(mask);
+		_callback = sp::move(cb);
 		_eventMask.set(toInt(InputEventName::Begin));
 		_eventMask.set(toInt(InputEventName::Move));
 		_eventMask.set(toInt(InputEventName::End));
@@ -328,8 +328,8 @@ bool GestureTapRecognizer::init(InputCallback &&cb, ButtonMask &&mask, uint32_t 
 	if (cb) {
 		_maxEvents = 1;
 		_maxTapCount = maxTapCount;
-		_callback = move(cb);
-		_buttonMask = move(mask);
+		_callback = sp::move(cb);
+		_buttonMask = sp::move(mask);
 		_eventMask.set(toInt(InputEventName::Begin));
 		_eventMask.set(toInt(InputEventName::Move));
 		_eventMask.set(toInt(InputEventName::End));
@@ -428,10 +428,10 @@ bool GesturePressRecognizer::init(InputCallback &&cb, TimeInterval interval, boo
 
 	if (cb) {
 		_maxEvents = 1;
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_interval = interval;
 		_continuous = continuous;
-		_buttonMask = move(btn);
+		_buttonMask = sp::move(btn);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -517,10 +517,10 @@ bool GestureSwipeRecognizer::init(InputCallback &&cb, float threshold, bool incl
 
 	if (cb) {
 		_maxEvents = 2;
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_threshold = threshold;
 		_includeThreshold = includeThreshold;
-		_buttonMask = move(btn);
+		_buttonMask = sp::move(btn);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -707,8 +707,8 @@ bool GesturePinchRecognizer::init(InputCallback &&cb, ButtonMask &&btn) {
 
 	if (cb) {
 		_maxEvents = 2;
-		_callback = move(cb);
-		_buttonMask = move(btn);
+		_callback = sp::move(cb);
+		_buttonMask = sp::move(btn);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -811,7 +811,7 @@ bool GestureScrollRecognizer::init(InputCallback &&cb) {
 	}
 
 	if (cb) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_eventMask.set(toInt(InputEventName::Scroll));
 		return true;
 	}
@@ -842,7 +842,7 @@ bool GestureMoveRecognizer::init(InputCallback &&cb, bool withinNode) {
 	}
 
 	if (cb) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_eventMask.set(toInt(InputEventName::MouseMove));
 		_onlyWithinNode = withinNode;
 		return true;
@@ -896,7 +896,7 @@ bool GestureKeyRecognizer::init(InputCallback &&cb, KeyMask &&mask) {
 	}
 
 	if (cb && mask.any()) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_keyMask = mask;
 		_eventMask.set(toInt(InputEventName::KeyPressed));
 		_eventMask.set(toInt(InputEventName::KeyRepeated));
@@ -956,7 +956,7 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 	}
 
 	if (cb) {
-		_callback = move(cb);
+		_callback = sp::move(cb);
 		_eventMask.set(toInt(InputEventName::MouseMove));
 		_eventMask.set(toInt(InputEventName::FocusGain));
 		_eventMask.set(toInt(InputEventName::PointerEnter));

@@ -34,9 +34,9 @@ uint32_t DependencyEvent::GetNextId() {
 
 DependencyEvent::~DependencyEvent() { }
 
-DependencyEvent::DependencyEvent(QueueSet &&q) : _queues(move(q)) { }
+DependencyEvent::DependencyEvent(QueueSet &&q) : _queues(sp::move(q)) { }
 
-DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il) : _queues(move(il)) { }
+DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il) : _queues(sp::move(il)) { }
 
 bool DependencyEvent::signal(Queue *q, bool success) {
 	if (!success) {
@@ -88,23 +88,23 @@ bool Attachment::isTransient() const {
 }
 
 void Attachment::setInputCallback(Function<void(FrameQueue &, const Rc<AttachmentHandle> &, Function<void(bool)> &&)> &&input) {
-	_inputCallback = move(input);
+	_inputCallback = sp::move(input);
 }
 
 void Attachment::setValidateInputCallback(ValidateInputCallback &&cb) {
-	_validateInputCallback = move(cb);
+	_validateInputCallback = sp::move(cb);
 }
 
 void Attachment::setFrameHandleCallback(FrameHandleCallback &&cb) {
-	_frameHandleCallback = move(cb);
+	_frameHandleCallback = sp::move(cb);
 }
 
 void Attachment::acquireInput(FrameQueue &frame, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
 	if (_inputCallback) {
-		_inputCallback(frame, a, move(cb));
+		_inputCallback(frame, a, sp::move(cb));
 	} else {
 		// wait for input on handle
-		frame.getFrame()->waitForInput(frame, a, move(cb));
+		frame.getFrame()->waitForInput(frame, a, sp::move(cb));
 	}
 }
 
@@ -203,7 +203,7 @@ bool BufferAttachment::init(AttachmentBuilder &builder, Vector<const BufferData 
 	_info = *buffers.front();
 	builder.setType(AttachmentType::Buffer);
 	if (Attachment::init(builder)) {
-		_staticBuffers = move(buffers);
+		_staticBuffers = sp::move(buffers);
 		_info.key = _data->key;
 		return true;
 	}
@@ -341,7 +341,7 @@ void AttachmentHandle::setQueueData(FrameAttachmentData &data) {
 }
 
 void AttachmentHandle::setInputCallback(InputCallback &&cb) {
-	_inputCallback = move(cb);
+	_inputCallback = sp::move(cb);
 }
 
 // returns true for immediate setup, false if seyup job was scheduled
@@ -359,16 +359,16 @@ void AttachmentHandle::submitInput(FrameQueue &q, Rc<AttachmentInputData> &&data
 	if (_input->waitDependencies.empty()) {
 		auto ret = true;
 		if (_inputCallback) {
-			_inputCallback(*this, q, _input, move(cb));
+			_inputCallback(*this, q, _input, sp::move(cb));
 		} else {
 			cb(ret);
 		}
 	} else {
-		q.getFrame()->waitForDependencies(_input->waitDependencies, [this, cb = move(cb), q = Rc<FrameQueue>(&q)] (FrameHandle &, bool success) mutable {
+		q.getFrame()->waitForDependencies(_input->waitDependencies, [this, cb = sp::move(cb), q = Rc<FrameQueue>(&q)] (FrameHandle &, bool success) mutable {
 			if (!success) {
 				cb(success);
 			} else if (_inputCallback) {
-				_inputCallback(*this, *q, _input, move(cb));
+				_inputCallback(*this, *q, _input, sp::move(cb));
 			} else {
 				cb(success);
 			}

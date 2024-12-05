@@ -61,44 +61,7 @@ Rc<QueuePassHandle> QueuePass::makeFrameHandle(const FrameQueue &handle) {
 }
 
 void QueuePass::setFrameHandleCallback(FrameHandleCallback &&cb) {
-	_frameHandleCallback = move(cb);
-}
-
-bool QueuePass::acquireForFrame(FrameQueue &frame, Function<void(bool)> &&onAcquired) {
-	if (_owner) {
-		if (_next.queue) {
-			_next.acquired(false);
-		}
-		_next = FrameQueueWaiter{
-			&frame,
-			move(onAcquired)
-		};
-		return false;
-	} else {
-		_owner = &frame;
-		return true;
-	}
-}
-
-bool QueuePass::releaseForFrame(FrameQueue &frame) {
-	if (_owner == &frame) {
-		if (_next.queue) {
-			_owner = move(_next.queue);
-			_next.acquired(true);
-			_next.queue = nullptr;
-			_next.acquired = nullptr;
-		} else {
-			_owner = nullptr;
-		}
-		return true;
-	} else if (_next.queue == &frame) {
-		auto tmp = move(_next.acquired);
-		_next.queue = nullptr;
-		_next.acquired = nullptr;
-		tmp(false);
-		return true;
-	}
-	return false;
+	_frameHandleCallback = sp::move(cb);
 }
 
 void QueuePass::prepare(Device &device) {

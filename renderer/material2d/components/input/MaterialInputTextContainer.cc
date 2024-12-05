@@ -322,7 +322,7 @@ void InputTextContainer::touchPointers() {
 }
 
 void InputTextContainer::setCursorCallback(Function<void(TextCursor)> &&cb) {
-	_cursorCallback = move(cb);
+	_cursorCallback = sp::move(cb);
 }
 
 const Function<void(TextCursor)> &InputTextContainer::getCursorCallback() const {

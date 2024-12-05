@@ -32,7 +32,7 @@ bool SubscriptionListener::init(DirtyCallback &&cb) {
 		return false;
 	}
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 	return true;
 }
 
@@ -55,7 +55,7 @@ void SubscriptionListener::onExit() {
 }
 
 void SubscriptionListener::setCallback(DirtyCallback &&cb) {
-	_callback = move(cb);
+	_callback = sp::move(cb);
 }
 
 void SubscriptionListener::setDirty() {

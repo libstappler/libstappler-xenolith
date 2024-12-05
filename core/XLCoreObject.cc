@@ -125,7 +125,7 @@ void DataAtlas::compile() {
 		}
 	}
 
-	_bufferData = move(dataStorage);
+	_bufferData = sp::move(dataStorage);
 }
 
 uint32_t DataAtlas::getHash(uint32_t id) const {
@@ -241,12 +241,12 @@ bool ImageView::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandl
 }
 
 void ImageView::setReleaseCallback(Function<void()> &&cb) {
-	_releaseCallback = move(cb);
+	_releaseCallback = sp::move(cb);
 }
 
 void ImageView::runReleaseCallback() {
 	if (_releaseCallback) {
-		auto cb = move(_releaseCallback);
+		auto cb = sp::move(_releaseCallback);
 		_releaseCallback = nullptr;
 		cb();
 	}

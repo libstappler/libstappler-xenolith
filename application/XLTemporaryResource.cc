@@ -122,7 +122,7 @@ bool TemporaryResource::load(Ref *ref, Function<void(bool)> &&cb) {
 		}
 		return false;
 	} else {
-		_callbacks.emplace_back(pair(ref, move(cb)));
+		_callbacks.emplace_back(pair(ref, sp::move(cb)));
 		++ _users;
 		return true;
 	}

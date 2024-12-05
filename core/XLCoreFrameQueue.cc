@@ -201,7 +201,7 @@ void FrameQueue::update() {
 	} while (0);
 
 	do {
-		auto awaitPasses = move(_awaitPasses);
+		auto awaitPasses = sp::move(_awaitPasses);
 		_awaitPasses.clear();
 		_awaitPasses.reserve(awaitPasses.size());
 
@@ -279,7 +279,7 @@ bool FrameQueue::isResourcePending(const FrameAttachmentData &image) {
 
 void FrameQueue::waitForResource(const FrameAttachmentData &image, Function<void(bool)> &&cb) {
 	if (image.image) {
-		image.image->waitReady(move(cb));
+		image.image->waitReady(sp::move(cb));
 	} else {
 		cb(false);
 	}
@@ -411,28 +411,19 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 	}
 }
 
-void FrameQueue::onAttachmentRelease(FrameAttachmentData &attachment) {
-	if (attachment.image) {
-		if (attachment.handle->getAttachment()->getData()->type == AttachmentType::Image) {
-			if (attachment.image) {
-				_loop->releaseImage(move(attachment.image));
-				attachment.image = nullptr;
-			}
-		}
+void FrameQueue::onAttachmentRelease(FrameAttachmentData &attachment, FrameAttachmentState state) {
+	if (attachment.image && attachment.handle->getAttachment()->getData()->type == AttachmentType::Image) {
+		_loop->releaseImage(move(attachment.image));
+		attachment.image = nullptr;
+	}
 
-		if (_finalized && attachment.state != FrameAttachmentState::Finalized) {
+	if (_finalized) {
+		if (attachment.state != FrameAttachmentState::Finalized) {
 			finalizeAttachment(attachment);
-		} else {
-			XL_FRAME_QUEUE_LOG("[Attachment:", attachment.handle->getName(), "] State: ResourcesReleased");
-			attachment.state = FrameAttachmentState::ResourcesReleased;
 		}
 	} else {
-		if (_finalized && attachment.state != FrameAttachmentState::Finalized) {
-			finalizeAttachment(attachment);
-		} else {
-			XL_FRAME_QUEUE_LOG("[Attachment:", attachment.handle->getName(), "] State: ResourcesReleased");
-			attachment.state = FrameAttachmentState::ResourcesReleased;
-		}
+		XL_FRAME_QUEUE_LOG("[Attachment:", attachment.handle->getName(), "] State: ResourcesReleased");
+		attachment.state = state;
 	}
 }
 
@@ -463,10 +454,6 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 		return;
 	}
 
-	if (state == FrameRenderPassState::Ready && data.handle->isAsync()) {
-		state = FrameRenderPassState::Owned;
-	}
-
 	if (toInt(data.state) >= toInt(state)) {
 		return;
 	}
@@ -485,10 +472,6 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 	case FrameRenderPassState::Ready:
 		XL_FRAME_QUEUE_LOG("[RenderPass:", data.handle->getName(), "] State: Ready");
 		onRenderPassReady(data);
-		break;
-	case FrameRenderPassState::Owned:
-		XL_FRAME_QUEUE_LOG("[RenderPass:", data.handle->getName(), "] State: Owned");
-		onRenderPassOwned(data);
 		break;
 	case FrameRenderPassState::ResourcesAcquired:
 		XL_FRAME_QUEUE_LOG("[RenderPass:", data.handle->getName(), "] State: ResourcesAcquired");
@@ -546,25 +529,6 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 }
 
 void FrameQueue::onRenderPassReady(FramePassData &data) {
-	if (data.handle->isAsync()) {
-		updateRenderPassState(data, FrameRenderPassState::Owned);
-	} else {
-		if (data.handle->getQueuePass()->acquireForFrame(*this, [this, data = &data] (bool success) {
-			data->waitForResult = false;
-			if (success && !_finalized) {
-				updateRenderPassState(*data, FrameRenderPassState::Owned);
-			} else {
-				invalidate(*data);
-			}
-		})) {
-			updateRenderPassState(data, FrameRenderPassState::Owned);
-		} else {
-			data.waitForResult = true;
-		}
-	}
-}
-
-void FrameQueue::onRenderPassOwned(FramePassData &data) {
 	if (_finalized) {
 		invalidate(data);
 		return;
@@ -618,7 +582,7 @@ void FrameQueue::onRenderPassOwned(FramePassData &data) {
 						release(refId);
 						return;
 					}
-					onRenderPassOwned(*data);
+					onRenderPassReady(*data);
 					release(refId);
 				});
 			} else {
@@ -731,7 +695,7 @@ void FrameQueue::onRenderPassPrepared(FramePassData &data) {
 		return;
 	}
 
-	if (data.handle->isAsync() || _frame->isReadyForSubmit()) {
+	if (_frame->isReadyForSubmit()) {
 		updateRenderPassState(data, FrameRenderPassState::Submission);
 	} else {
 		_renderPassesPrepared.emplace(&data);
@@ -785,11 +749,13 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 		if (it.second->handle->isOutput()
 				&& it.second->handle->getAttachment()->getData()->outputState == FrameRenderPassState::Submitted
 				&& it.first->attachment->attachment->getLastRenderPass() == data.handle->getData()) {
-			_frame->onOutputAttachment(*it.second);
+			if (_frame->onOutputAttachment(*it.second)) {
+				it.second->image = nullptr;
+				onAttachmentRelease(*it.second, FrameAttachmentState::Detached);
+			}
 		}
 	}
 
-	data.handle->getQueuePass()->releaseForFrame(*this);
 	if (!data.submitTime) {
 		data.submitTime = platform::clock(ClockType::Monotonic);
 	}
@@ -930,9 +896,7 @@ void FrameQueue::invalidate(FramePassData &data) {
 		return;
 	}
 
-	if (data.state == FrameRenderPassState::Ready || data.state == FrameRenderPassState::Owned
-			|| (!data.waitForResult && toInt(data.state) > toInt(FrameRenderPassState::Ready))) {
-		data.handle->getQueuePass()->releaseForFrame(*this);
+	if (data.state == FrameRenderPassState::Ready || (!data.waitForResult && toInt(data.state) > toInt(FrameRenderPassState::Ready))) {
 		data.waitForResult = false;
 	}
 

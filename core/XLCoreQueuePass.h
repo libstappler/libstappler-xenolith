@@ -54,10 +54,6 @@ public:
 
 	void setFrameHandleCallback(FrameHandleCallback &&);
 
-	const Rc<FrameQueue> &getOwner() const { return _owner; }
-	bool acquireForFrame(FrameQueue &, Function<void(bool)> &&onAcquired);
-	bool releaseForFrame(FrameQueue &);
-
 	const QueuePassData *getData() const { return _data; }
 
 protected:
@@ -66,13 +62,6 @@ protected:
 	// called before compilation
 	virtual void prepare(Device &);
 
-	struct FrameQueueWaiter {
-		Rc<FrameQueue> queue;
-		Function<void(bool)> acquired;
-	};
-
-	Rc<FrameQueue> _owner;
-	FrameQueueWaiter _next;
 	Function<Extent2(const FrameQueue &)> _frameSizeCallback;
 	FrameHandleCallback _frameHandleCallback;
 	const QueuePassData *_data = nullptr;
@@ -99,7 +88,6 @@ public:
 	virtual const Rc<Framebuffer> &getFramebuffer() const;
 
 	virtual bool isAvailable(const FrameQueue &) const;
-	virtual bool isAsync() const { return _isAsync; }
 
 	virtual bool isSubmitted() const;
 	virtual bool isCompleted() const;
@@ -131,7 +119,6 @@ public:
 protected:
 	virtual void prepareSubpasses(FrameQueue &);
 
-	bool _isAsync = false; // async passes can be submitted before previous frame submits all passes
 	Rc<QueuePass> _queuePass;
 	const QueuePassData *_data = nullptr;
 	FramePassData *_queueData = nullptr;

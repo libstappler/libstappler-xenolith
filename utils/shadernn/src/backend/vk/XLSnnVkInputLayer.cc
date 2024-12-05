@@ -113,7 +113,7 @@ bool InputLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) 
 		_dataHandle = (const core::AttachmentHandle *)bufferAttachment->handle.get();
 	}
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 void InputLayer::LayerHandle::doTransferInput(vk::CommandBuffer &buf, DeviceFrameHandle &handle, InputDataInput *input) {
@@ -265,7 +265,7 @@ bool InputBufferLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	_dataHandle->addBufferView(dest); // output
 	_dataHandle->addBufferView(staging); // input
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
@@ -399,7 +399,7 @@ bool InputCsvIntLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	_inputBuffer->addBufferView(staging);
 	_outputBuffer->addBufferView(dest);
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {

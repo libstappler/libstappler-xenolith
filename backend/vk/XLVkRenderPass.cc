@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -177,14 +177,14 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 			layoutInfo.pNext = &bindingFlags;
 
 			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr, &setLayout) == VK_SUCCESS) {
-				_descriptors.emplace_back(move(descriptors));
+				_descriptors.emplace_back(sp::move(descriptors));
 				_layouts.emplace_back(setLayout);
 			} else {
 				return cleanup();
 			}
 		} else {
 			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr, &setLayout) == VK_SUCCESS) {
-				_descriptors.emplace_back(move(descriptors));
+				_descriptors.emplace_back(sp::move(descriptors));
 				_layouts.emplace_back(setLayout);
 			} else {
 				return cleanup();

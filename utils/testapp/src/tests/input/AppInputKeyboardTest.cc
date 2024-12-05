@@ -106,7 +106,7 @@ bool InputKeyboardOnScreenKey::init(Function<void(bool)> &&cb) {
 
 	setContentSize(Size2(40, 50));
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	return true;
 }

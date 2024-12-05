@@ -29,7 +29,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 FrameOutputBinding::FrameOutputBinding(const AttachmentData *a, CompleteCallback &&cb, Rc<Ref> &&ref)
-: attachment(a), callback(move(cb)), handle(move(ref)) { }
+: attachment(a), callback(sp::move(cb)), handle(sp::move(ref)) { }
 
 FrameOutputBinding::~FrameOutputBinding() { }
 
@@ -88,10 +88,10 @@ void FrameRequest::addSignalDependency(Rc<DependencyEvent> &&dep) {
 
 void FrameRequest::addSignalDependencies(Vector<Rc<DependencyEvent>> &&deps) {
 	if (_signalDependencies.empty()) {
-		_signalDependencies = move(deps);
+		_signalDependencies = sp::move(deps);
 	} else {
 		for (auto &it : deps) {
-			_signalDependencies.emplace_back(move(it));
+			_signalDependencies.emplace_back(sp::move(it));
 		}
 	}
 }
@@ -99,7 +99,7 @@ void FrameRequest::addSignalDependencies(Vector<Rc<DependencyEvent>> &&deps) {
 void FrameRequest::addImageSpecialization(const ImageAttachment *image, ImageInfoData &&data) {
 	auto it = _imageSpecialization.find(image);
 	if (it != _imageSpecialization.end()) {
-		it->second = move(data);
+		it->second = sp::move(data);
 	} else {
 		_imageSpecialization.emplace(image, data);
 	}
@@ -114,16 +114,16 @@ const ImageInfoData *FrameRequest::getImageSpecialization(const ImageAttachment 
 }
 
 bool FrameRequest::addInput(const Attachment *a, Rc<AttachmentInputData> &&data) {
-	return addInput(a->getData(), move(data));
+	return addInput(a->getData(), sp::move(data));
 }
 
 bool FrameRequest::addInput(const AttachmentData *a, Rc<AttachmentInputData> &&data) {
 	if (a && a->attachment->validateInput(data)) {
 		auto wIt = _waitForInputs.find(a);
 		if (wIt != _waitForInputs.end()) {
-			wIt->second.handle->submitInput(*wIt->second.queue, move(data), move(wIt->second.callback));
+			wIt->second.handle->submitInput(*wIt->second.queue, sp::move(data), sp::move(wIt->second.callback));
 		} else {
-			_input.emplace(a, move(data));
+			_input.emplace(a, sp::move(data));
 		}
 		return true;
 	}
@@ -146,19 +146,19 @@ void FrameRequest::setQueue(const Rc<Queue> &q) {
 }
 
 void FrameRequest::setOutput(Rc<FrameOutputBinding> &&binding) {
-	_output.emplace(binding->attachment, move(binding));
+	_output.emplace(binding->attachment, sp::move(binding));
 }
 
 void FrameRequest::setOutput(const AttachmentData *a, CompleteCallback &&cb, Rc<Ref> &&ref) {
-	setOutput(Rc<FrameOutputBinding>::alloc(a, move(cb), move(ref)));
+	setOutput(Rc<FrameOutputBinding>::alloc(a, sp::move(cb), sp::move(ref)));
 }
 
 void FrameRequest::setOutput(const Attachment *a, CompleteCallback &&cb, Rc<Ref> &&ref) {
-	setOutput(a->getData(), move(cb));
+	setOutput(a->getData(), sp::move(cb));
 }
 
 void FrameRequest::setRenderTarget(const AttachmentData *a, Rc<ImageStorage> &&img) {
-	_renderTargets.emplace(a, move(img));
+	_renderTargets.emplace(a, sp::move(img));
 }
 
 void FrameRequest::attachFrame(FrameHandle *h) {
@@ -247,9 +247,9 @@ void FrameRequest::waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a
 	auto it = _waitForInputs.find(a->getAttachment()->getData());
 	if (it != _waitForInputs.end()) {
 		it->second.callback(false);
-		it->second.callback = move(cb);
+		it->second.callback = sp::move(cb);
 	} else {
-		_waitForInputs.emplace(a->getAttachment()->getData(), WaitInputData{&queue, a, move(cb)});
+		_waitForInputs.emplace(a->getAttachment()->getData(), WaitInputData{&queue, a, sp::move(cb)});
 	}
 }
 

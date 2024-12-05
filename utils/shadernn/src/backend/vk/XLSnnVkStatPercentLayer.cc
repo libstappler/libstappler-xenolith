@@ -104,7 +104,7 @@ bool StatPercentLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	_classesBuffer->addBufferView(_classesIndexes);
 	_outputBuffer->addBufferView(_output);
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
@@ -171,7 +171,7 @@ Vector<const vk::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareComman
 }
 
 void StatPercentLayer::LayerHandle::doSubmitted(FrameHandle &h, Function<void(bool)> &&cb, bool s, Rc<Fence> &&fence) {
-	vk::QueuePassHandle::doSubmitted(h, move(cb), s, move(fence));
+	vk::QueuePassHandle::doSubmitted(h, sp::move(cb), s, sp::move(fence));
 
 	/*h.getLoop()->captureBuffer([] (const BufferInfo &info, BytesView view) {
 		std::cout << view.size() / (sizeof(float) * 4) << "\n";
@@ -270,7 +270,7 @@ bool StatAnalysisLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)>
 
 	_outputBuffer->addBufferView(_output);
 
-	return vk::QueuePassHandle::prepare(q, move(cb));
+	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const vk::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
@@ -316,7 +316,7 @@ Vector<const vk::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareComma
 }
 
 void StatAnalysisLayer::LayerHandle::doSubmitted(FrameHandle &h, Function<void(bool)> &&cb, bool s, Rc<Fence> &&fence) {
-	vk::QueuePassHandle::doSubmitted(h, move(cb), s, move(fence));
+	vk::QueuePassHandle::doSubmitted(h, sp::move(cb), s, sp::move(fence));
 
 	/*h.getLoop()->captureBuffer([] (const BufferInfo &info, BytesView view) {
 		std::cout << view.size() / (sizeof(float) * 4) << "\n";

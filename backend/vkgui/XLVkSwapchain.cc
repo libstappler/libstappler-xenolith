@@ -110,7 +110,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		if (old) {
 			std::unique_lock<Mutex> lock(_resourceMutex);
 			std::unique_lock<Mutex> lock2(old->_resourceMutex);
-			_semaphores = move(old->_semaphores);
+			_semaphores = sp::move(old->_semaphores);
 			for (auto &it : old->_presentSemaphores) {
 				releaseSemaphore(move(it));
 			}
@@ -134,7 +134,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 			Map<ImageViewInfo, Rc<ImageView>> views;
 			views.emplace(swapchainImageViewInfo, Rc<ImageView>::create(dev, image.get(), swapchainImageViewInfo));
 
-			_images.emplace_back(SwapchainImageData{move(image), move(views)});
+			_images.emplace_back(SwapchainImageData{sp::move(image), sp::move(views)});
 		}
 
 		_rebuildMode = _presentMode = presentMode;
@@ -223,6 +223,10 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<Fence> &fence) -> Rc<Swapc
 		_deprecated = true;
 		++ _acquiredImages;
 		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_images.at(imageIndex), move(sem), this);
+		break;
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		_deprecated = true;
+		releaseSemaphore(move(sem));
 		break;
 	default:
 		releaseSemaphore(move(sem));

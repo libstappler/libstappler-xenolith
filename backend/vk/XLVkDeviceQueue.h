@@ -68,11 +68,11 @@ struct SP_PUBLIC DeviceQueueFamily {
 
 		Waiter(Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&a, Function<void(FrameHandle &)> &&r,
 				FrameHandle *h, Rc<Ref> &&ref)
-		: acquireForFrame(move(a)), releaseForFrame(move(r)), handle(h), ref(move(ref)) { }
+		: acquireForFrame(sp::move(a)), releaseForFrame(sp::move(r)), handle(h), ref(sp::move(ref)) { }
 
 		Waiter(Function<void(Loop &, const Rc<DeviceQueue> &)> &&a, Function<void(Loop &)> &&r,
 				Loop *h, Rc<Ref> &&ref)
-		: acquireForLoop(move(a)), releaseForLoop(move(r)), loop(h), ref(move(ref)) { }
+		: acquireForLoop(sp::move(a)), releaseForLoop(sp::move(r)), loop(h), ref(sp::move(ref)) { }
 	};
 
 	uint32_t index;

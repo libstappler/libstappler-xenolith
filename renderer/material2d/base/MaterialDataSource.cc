@@ -76,9 +76,9 @@ struct DataSource::SliceRequest : public Ref {
 		auto front = val.begin()->first;
 		for(auto &it : val) {
 			if (it.first != Self) {
-				data.emplace(it.first + Id(ptr->offset) - front, std::move(it.second));
+				data.emplace(it.first + Id(ptr->offset) - front, sp::move(it.second));
 			} else {
-				data.emplace(Id(ptr->offset), std::move(it.second));
+				data.emplace(Id(ptr->offset), sp::move(it.second));
 			}
 		}
 
@@ -121,16 +121,16 @@ struct DataSource::BatchRequest {
 		for (auto &it : vec) {
 			scb([this, it] (Value &&val) {
 				if (val.isArray()) {
-					onData(it, std::move(val.getValue(0)));
+					onData(it, sp::move(val.getValue(0)));
 				} else {
-					onData(it, std::move(val));
+					onData(it, sp::move(val));
 				}
 			}, it);
 		}
 	}
 
 	void onData(Id id, Value &&val) {
-		map.insert(std::make_pair(id, std::move(val)));
+		map.insert(std::make_pair(id, sp::move(val)));
 		requests --;
 
 		if (requests == 0) {
@@ -186,7 +186,7 @@ DataSource::Id DataSource::getId() const {
 }
 
 void DataSource::setSubCategories(Vector<Rc<DataSource>> &&vec) {
-	_subCats = std::move(vec);
+	_subCats = sp::move(vec);
 	setDirty();
 }
 void DataSource::setSubCategories(const Vector<Rc<DataSource>> &vec) {
@@ -213,7 +213,7 @@ void DataSource::setData(const Value &val) {
 }
 
 void DataSource::setData(Value &&val) {
-	_data = std::move(val);
+	_data = sp::move(val);
 }
 
 const Value &DataSource::getData() const {
@@ -444,9 +444,9 @@ void DataSource::onSliceRequest(const BatchCallback &cb, Id::Type first, size_t 
 			_sourceCallback([cb] (Value &&val) {
 				Map<Id, Value> map;
 				if (val.isArray()) {
-					map.insert(std::make_pair(Self, std::move(val.getValue(0))));
+					map.insert(std::make_pair(Self, sp::move(val.getValue(0))));
 				} else {
-					map.insert(std::make_pair(Self, std::move(val)));
+					map.insert(std::make_pair(Self, sp::move(val)));
 				}
 				cb(map);
 			}, Self);
@@ -498,7 +498,7 @@ bool DataSource::initValue(const Value &val) {
 }
 
 bool DataSource::initValue(Value &&val) {
-	_data = std::move(val);
+	_data = sp::move(val);
 	return true;
 }
 

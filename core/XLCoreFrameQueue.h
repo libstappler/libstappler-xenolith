@@ -116,14 +116,13 @@ protected:
 	void onAttachmentSetupComplete(FrameAttachmentData &);
 	void onAttachmentInput(FrameAttachmentData &);
 	void onAttachmentAcquire(FrameAttachmentData &);
-	void onAttachmentRelease(FrameAttachmentData &);
+	void onAttachmentRelease(FrameAttachmentData &, FrameAttachmentState state = FrameAttachmentState::ResourcesReleased);
 
 	bool isRenderPassReady(const FramePassData &) const;
 	bool isRenderPassReadyForState(const FramePassData &, FrameRenderPassState) const;
 	void updateRenderPassState(FramePassData &, FrameRenderPassState);
 
 	void onRenderPassReady(FramePassData &);
-	void onRenderPassOwned(FramePassData &);
 	void onRenderPassResourcesAcquired(FramePassData &);
 	void onRenderPassPrepared(FramePassData &);
 	void onRenderPassSubmission(FramePassData &);

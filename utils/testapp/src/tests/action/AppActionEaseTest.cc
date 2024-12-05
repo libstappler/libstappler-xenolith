@@ -41,7 +41,7 @@ bool ActionEaseNode::init(StringView str, Function<Rc<ActionInterval>(Rc<ActionI
 	_layer->setAnchorPoint(Anchor::BottomLeft);
 	_layer->setContentSize(Size2(48.0f, 48.0f));
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	auto l = _layer->addInputListener(Rc<InputListener>::create());
 	l->addTapRecognizer([this] (const GestureTap &tap) {

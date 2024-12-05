@@ -236,9 +236,9 @@ void FontAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputDa
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = move(cb), d = move(d)] (FrameHandle &handle, bool success) mutable {
-		handle.performInQueue([this, cb = move(cb), d = move(d)] (FrameHandle &handle) mutable -> bool {
-			doSubmitInput(handle, move(cb), move(d));
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb), d = sp::move(d)] (FrameHandle &handle, bool success) mutable {
+		handle.performInQueue([this, cb = sp::move(cb), d = sp::move(d)] (FrameHandle &handle) mutable -> bool {
+			doSubmitInput(handle, sp::move(cb), sp::move(d));
 			return true;
 		}, nullptr, "RenderFontAttachmentHandle::submitInput");
 	});
@@ -291,7 +291,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		underlinePersistent = false;
 	}
 
-	_onInput = move(cb); // see RenderFontAttachmentHandle::writeAtlasData
+	_onInput = sp::move(cb); // see RenderFontAttachmentHandle::writeAtlasData
 
 	if (processedPersistent == totalCount && underlinePersistent) {
 		// no need to transfer extra chars
@@ -590,7 +590,7 @@ bool FontRenderPassHandle::prepare(FrameQueue &handle, Function<void(bool)> &&cb
 	if (auto a = handle.getAttachment(static_cast<FontRenderPass *>(_queuePass.get())->getRenderFontAttachment())) {
 		_fontAttachment = static_cast<FontAttachmentHandle *>(a->handle.get());
 	}
-	return QueuePassHandle::prepare(handle, move(cb));
+	return QueuePassHandle::prepare(handle, sp::move(cb));
 }
 
 void FontRenderPassHandle::finalize(FrameQueue &handle, bool successful) {
@@ -767,12 +767,12 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 		submitResult(frame);
 	}
 
-	vk::QueuePassHandle::doSubmitted(frame, move(func), success, move(fence));
+	vk::QueuePassHandle::doSubmitted(frame, sp::move(func), success, sp::move(fence));
 	frame.signalDependencies(success);
 }
 
 void FontRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
-	QueuePassHandle::doComplete(queue, move(func), success);
+	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
 void FontRenderPassHandle::submitResult(FrameHandle &frame) {

@@ -49,7 +49,7 @@ StringView AssetLock::getCachePath() const {
 }
 
 AssetLock::AssetLock(Rc<Asset> &&asset, const AssetVersionData &data, Function<void(const AssetVersionData &)> &&cb, Ref *owner)
-: _lockedVersion(data), _releaseFunction(move(cb)), _asset(move(asset)), _owner(owner) { }
+: _lockedVersion(data), _releaseFunction(sp::move(cb)), _asset(sp::move(asset)), _owner(owner) { }
 
 Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
 	bool resumeDownload = false;
@@ -236,7 +236,7 @@ void Asset::setData(const Value &d) {
 
 void Asset::setData(Value &&d) {
 	std::unique_lock ctx(_mutex);
-	_data = std::move(d);
+	_data = sp::move(d);
 	_dirty = true;
 }
 
@@ -293,7 +293,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 		} else {
 			if (filesystem::exists(versionPath)) {
 				auto &v = _versions.emplace_back(move(data));
-				v.path = move(versionPath);
+				v.path = sp::move(versionPath);
 				v.download = true;
 
 				paths.emplace(v.path);

@@ -138,7 +138,7 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void compileResource(Rc<TransferResource> &&req) {
-		auto h = loop->makeFrame(transferQueue->makeRequest(move(req)), 0);
+		auto h = loop->makeFrame(transferQueue->makeRequest(sp::move(req)), 0);
 		h->update(true);
 	}
 
@@ -148,7 +148,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 		auto h = Rc<DeviceFrameHandle>::create(*loop, *device, renderQueueCompiler->makeRequest(move(input)), 0);
 		if (cb) {
-			h->setCompleteCallback([cb = move(cb), req] (FrameHandle &handle) {
+			h->setCompleteCallback([cb = sp::move(cb), req] (FrameHandle &handle) {
 				cb(handle.isValid());
 			});
 		}
@@ -158,11 +158,11 @@ struct Loop::Internal final : memory::AllocPool {
 
 	void compileMaterials(Rc<core::MaterialInputData> &&req, Vector<Rc<DependencyEvent>> &&deps) {
 		if (materialQueue->inProgress(req->attachment)) {
-			materialQueue->appendRequest(req->attachment, move(req), move(deps));
+			materialQueue->appendRequest(req->attachment, sp::move(req), sp::move(deps));
 		} else {
 			auto attachment = req->attachment;
 			materialQueue->setInProgress(attachment);
-			materialQueue->runMaterialCompilationFrame(*loop, move(req), move(deps));
+			materialQueue->runMaterialCompilationFrame(*loop, sp::move(req), sp::move(deps));
 		}
 	}
 
@@ -217,8 +217,8 @@ struct Loop::Internal final : memory::AllocPool {
 #endif
 
 		auto req = Rc<DependencyRequest>::alloc();
-		req->events = move(events);
-		req->callback = move(cb);
+		req->events = sp::move(events);
+		req->callback = sp::move(cb);
 		req->initial = platform::clock(core::ClockType::Monotonic);
 
 		for (auto &it : req->events) {
@@ -274,7 +274,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 struct Loop::Timer final {
 	Timer(uint64_t interval, Function<bool(Loop &)> &&cb, StringView t)
-	: interval(interval), callback(move(cb)), tag(t) { }
+	: interval(interval), callback(sp::move(cb)), tag(t) { }
 
 	uint64_t interval;
 	uint64_t value = 0;
@@ -443,7 +443,7 @@ static void Loop_runTimers(Loop::Internal *internal, uint64_t dt) {
 
 	if (!internal->timers->empty()) {
 		for (auto &it : *internal->timers) {
-			timers->emplace_back(std::move(it));
+			timers->emplace_back(sp::move(it));
 		}
 		internal->timers->clear();
 	}
@@ -493,38 +493,38 @@ bool Loop::worker() {
 }
 
 void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) const {
-	auto res = Rc<TransferResource>::create(_internal->device->getAllocator(), move(req), move(cb));
+	auto res = Rc<TransferResource>::create(_internal->device->getAllocator(), sp::move(req), sp::move(cb));
 	if (preload) {
 		res->initialize();
 	}
-	performOnGlThread([this, res = move(res)] () mutable {
-		_internal->compileResource(move(res));
+	performOnGlThread([this, res = sp::move(res)] () mutable {
+		_internal->compileResource(sp::move(res));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) const {
-	performOnGlThread([this, req, callback = move(callback)]() mutable {
-		_internal->compileQueue(req, move(callback));
+	performOnGlThread([this, req, callback = sp::move(callback)]() mutable {
+		_internal->compileQueue(req, sp::move(callback));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> &deps) const {
 	performOnGlThread([this, req = move(req), deps = deps] () mutable {
-		_internal->compileMaterials(move(req), move(deps));
+		_internal->compileMaterials(sp::move(req), sp::move(deps));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> &&callback) const {
-	performOnGlThread([this, img, callback = move(callback)]() mutable {
-		_internal->device->compileImage(*this, img, move(callback));
+	performOnGlThread([this, img, callback = sp::move(callback)]() mutable {
+		_internal->device->compileImage(*this, img, sp::move(callback));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
-	performOnGlThread([this, req = move(req), gen, callback = move(callback)]() mutable {
+	performOnGlThread([this, req = sp::move(req), gen, callback = sp::move(callback)]() mutable {
 		auto frame = makeFrame(move(req), gen);
 		if (frame && callback) {
-			frame->setCompleteCallback([callback = move(callback)] (FrameHandle &handle) {
+			frame->setCompleteCallback([callback = sp::move(callback)] (FrameHandle &handle) {
 				callback(handle.isValid());
 			});
 		}
@@ -536,20 +536,20 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 
 void Loop::schedule(Function<bool(core::Loop &)> &&cb, StringView tag) {
 	if (isOnThisThread()) {
-		_internal->timers->emplace_back(0, move(cb), tag);
+		_internal->timers->emplace_back(0, sp::move(cb), tag);
 	} else {
-		performOnGlThread([this, cb = move(cb), tag] () mutable {
-			_internal->timers->emplace_back(0, move(cb), tag);
+		performOnGlThread([this, cb = sp::move(cb), tag] () mutable {
+			_internal->timers->emplace_back(0, sp::move(cb), tag);
 		});
 	}
 }
 
 void Loop::schedule(Function<bool(core::Loop &)> &&cb, uint64_t delay, StringView tag) {
 	if (isOnThisThread()) {
-		_internal->timers->emplace_back(delay, move(cb), tag);
+		_internal->timers->emplace_back(delay, sp::move(cb), tag);
 	} else {
-		performOnGlThread([this, cb = move(cb), delay, tag] () mutable {
-			_internal->timers->emplace_back(delay, move(cb), tag);
+		performOnGlThread([this, cb = sp::move(cb), delay, tag] () mutable {
+			_internal->timers->emplace_back(delay, sp::move(cb), tag);
 		});
 	}
 }
@@ -571,7 +571,7 @@ void Loop::performInQueue(Function<void()> &&func, Ref *target) const {
 		return;
 	}
 
-	_internal->queue->perform(move(func), target);
+	_internal->queue->perform(sp::move(func), target);
 }
 
 void Loop::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
@@ -585,7 +585,7 @@ void Loop::performOnGlThread(Function<void()> &&func, Ref *target, bool immediat
 			return;
 		}
 	}
-	_internal->queue->onMainThread(move(func), target);
+	_internal->queue->onMainThread(sp::move(func), target);
 }
 
 auto Loop::makeFrame(Rc<FrameRequest> &&req, uint64_t gen) -> Rc<FrameHandle> {
@@ -696,8 +696,8 @@ void Loop::waitForDependencies(const Vector<Rc<DependencyEvent>> &events, Functi
 	if (events.empty()) {
 		cb(true);
 	} else {
-		performOnGlThread([this, events = events, cb = move(cb)] () mutable {
-			_internal->waitForDependencies(move(events), move(cb));
+		performOnGlThread([this, events = events, cb = sp::move(cb)] () mutable {
+			_internal->waitForDependencies(sp::move(events), sp::move(cb));
 		}, this, true);
 	}
 }
@@ -715,8 +715,8 @@ void Loop::waitIdle() {
 }
 
 void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
-	performOnGlThread([this, cb = move(cb), image, l] () mutable {
-		_internal->device->getTextureSetLayout()->readImage(*_internal->device, *this, image.cast<Image>(), l, move(cb));
+	performOnGlThread([this, cb = sp::move(cb), image, l] () mutable {
+		_internal->device->getTextureSetLayout()->readImage(*_internal->device, *this, image.cast<Image>(), l, sp::move(cb));
 	}, this, true);
 }
 
@@ -725,8 +725,8 @@ void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> 
 		log::error("vk::Loop::captureBuffer", "Buffer '", buf->getName(), "' has no BufferUsage::TransferSrc flag to being captured");
 	}
 
-	performOnGlThread([this, cb = move(cb), buf] () mutable {
-		_internal->device->getTextureSetLayout()->readBuffer(*_internal->device, *this, buf.cast<Buffer>(), move(cb));
+	performOnGlThread([this, cb = sp::move(cb), buf] () mutable {
+		_internal->device->getTextureSetLayout()->readBuffer(*_internal->device, *this, buf.cast<Buffer>(), sp::move(cb));
 	}, this, true);
 }
 

@@ -62,7 +62,7 @@ DataScroll::ItemMap DataScrollHandlerGrid::run(Request t, DataMap &&data) {
 	_widthPadding = (_size.width - _currentCellSize.width * _currentCols) / 2.0f;
 
 	for (auto &it : data) {
-		auto item = onItem(std::move(it.second), it.first);
+		auto item = onItem(sp::move(it.second), it.first);
 		ret.insert(std::make_pair(it.first, item));
 	}
 	return ret;
@@ -95,7 +95,7 @@ Rc<DataScroll::Item> DataScrollHandlerGrid::onItem(Value &&data, DataSource::Id 
 
 	Vec2 pos(col * _currentCellSize.width + _widthPadding, row * _currentCellSize.height);
 
-	return Rc<DataScroll::Item>::create(std::move(data), pos, _currentCellSize);
+	return Rc<DataScroll::Item>::create(sp::move(data), pos, _currentCellSize);
 }
 
 }

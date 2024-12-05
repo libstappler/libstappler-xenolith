@@ -165,7 +165,7 @@ void MeshCompiler::appendRequest(const MeshAttachment *a, Rc<MeshInputData> &&re
 	}
 
 	if (it->second.deps.empty()) {
-		it->second.deps = move(deps);
+		it->second.deps = sp::move(deps);
 	} else {
 		for (auto &iit : deps) {
 			it->second.deps.emplace_back(move(iit));
@@ -181,7 +181,7 @@ auto MeshCompiler::makeRequest(Rc<core::MeshInputData> &&input,
 		Vector<Rc<core::DependencyEvent>> &&deps) -> Rc<FrameRequest> {
 	auto req = Rc<FrameRequest>::create(this);
 	req->addInput(_attachment, move(input));
-	req->addSignalDependencies(move(deps));
+	req->addSignalDependencies(sp::move(deps));
 	return req;
 }
 
@@ -189,12 +189,12 @@ void MeshCompiler::runMeshCompilationFrame(core::Loop &loop, Rc<MeshInputData> &
 		Vector<Rc<core::DependencyEvent>> &&deps) {
 	auto targetAttachment = req->attachment;
 
-	auto h = loop.makeFrame(makeRequest(move(req), move(deps)), 0);
+	auto h = loop.makeFrame(makeRequest(sp::move(req), sp::move(deps)), 0);
 	h->setCompleteCallback([this, targetAttachment] (FrameHandle &handle) {
 		auto reqIt = _requests.find(targetAttachment);
 		if (reqIt != _requests.end()) {
 			if (handle.getLoop()->isRunning()) {
-				auto deps = move(reqIt->second.deps);
+				auto deps = sp::move(reqIt->second.deps);
 				Rc<MeshInputData> req = Rc<MeshInputData>::alloc();
 				req->attachment = targetAttachment;
 				req->meshesToAdd.reserve(reqIt->second.toAdd.size());
@@ -207,7 +207,7 @@ void MeshCompiler::runMeshCompilationFrame(core::Loop &loop, Rc<MeshInputData> &
 				}
 				_requests.erase(reqIt);
 
-				runMeshCompilationFrame(*handle.getLoop(), move(req), move(deps));
+				runMeshCompilationFrame(*handle.getLoop(), sp::move(req), sp::move(deps));
 			} else {
 				clearRequests();
 				dropInProgress(targetAttachment);
@@ -237,8 +237,8 @@ void MeshCompilerAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachmen
 		cb(false);
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) {
-		handle.performOnGlThread([this, d = move(d), cb = move(cb)] (FrameHandle &handle) {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) {
+		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle) {
 			_inputData = d;
 			_originSet = _inputData->attachment->getMeshes();
 			cb(true);
@@ -271,7 +271,7 @@ bool MeshCompilerPassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&c
 		_meshAttachment = static_cast<MeshCompilerAttachmentHandle *>(a->handle.get());
 	}
 
-	return QueuePassHandle::prepare(frame, move(cb));
+	return QueuePassHandle::prepare(frame, sp::move(cb));
 }
 
 void MeshCompilerPassHandle::finalize(FrameQueue &handle, bool successful) {
@@ -428,7 +428,7 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 	});
 
 	if (buf) {
-		_outputData = Rc<core::MeshSet>::create(move(indexes), indexBuffer, vertexBuffer);
+		_outputData = Rc<core::MeshSet>::create(sp::move(indexes), indexBuffer, vertexBuffer);
 
 		return Vector<const CommandBuffer *>{buf};
 	}
@@ -437,15 +437,15 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 
 void MeshCompilerPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
 	if (success) {
-		_meshAttachment->getInputData()->attachment->setMeshes(move(_outputData));
+		_meshAttachment->getInputData()->attachment->setMeshes(sp::move(_outputData));
 	}
 
-	QueuePassHandle::doSubmitted(frame, move(func), success, move(fence));
+	QueuePassHandle::doSubmitted(frame, sp::move(func), success, sp::move(fence));
 	frame.signalDependencies(success);
 }
 
 void MeshCompilerPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
-	QueuePassHandle::doComplete(queue, move(func), success);
+	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
 bool MeshCompilerPassHandle::loadPersistent(core::MeshIndex *index) {

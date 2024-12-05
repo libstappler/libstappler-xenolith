@@ -142,7 +142,7 @@ bool Model::link() {
 	}
 
 	if (linkedLayers.size() == _layers.size()) {
-		_sortedLayers = move(linkedLayers);
+		_sortedLayers = sp::move(linkedLayers);
 		return true;
 	}
 

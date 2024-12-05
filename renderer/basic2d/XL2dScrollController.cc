@@ -27,7 +27,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 ScrollController::Item::Item(NodeFunction &&f, Vec2 pos, Size2 size, ZOrder z, StringView name)
-: nodeFunction(move(f)), size(size), pos(pos), zIndex(z), name(name.str<Interface>()) { }
+: nodeFunction(sp::move(f)), size(size), pos(pos), zIndex(z), name(name.str<Interface>()) { }
 
 ScrollController::~ScrollController() { }
 
@@ -265,7 +265,7 @@ void ScrollController::onNextObject(Item &h, float pos, float size) {
 }
 
 size_t ScrollController::addItem(NodeFunction &&fn, Size2 size, Vec2 vec, ZOrder z, StringView tag) {
-	_nodes.emplace_back(move(fn), vec, size, z, tag);
+	_nodes.emplace_back(sp::move(fn), vec, size, z, tag);
 	_infoDirty = true;
 	return _nodes.size() - 1;
 }
@@ -275,7 +275,7 @@ size_t ScrollController::addItem(NodeFunction &&fn, float size, float pos, ZOrde
 		return std::numeric_limits<size_t>::max();
 	}
 
-	_nodes.emplace_back(move(fn), _scroll->getPositionForNode(pos), _scroll->getContentSizeForNode(size), z, tag);
+	_nodes.emplace_back(sp::move(fn), _scroll->getPositionForNode(pos), _scroll->getContentSizeForNode(size), z, tag);
 	_infoDirty = true;
 	return _nodes.size() - 1;
 }
@@ -290,7 +290,7 @@ size_t ScrollController::addItem(NodeFunction &&fn, float size, ZOrder zIndex, S
 		pos = _scroll->getNodeScrollPosition(_nodes.back().pos) + _scroll->getNodeScrollSize(_nodes.back().size);
 	}
 
-	return addItem(move(fn), size, pos, zIndex, tag);
+	return addItem(sp::move(fn), size, pos, zIndex, tag);
 }
 
 size_t ScrollController::addPlaceholder(Size2 size, Vec2 pos) {

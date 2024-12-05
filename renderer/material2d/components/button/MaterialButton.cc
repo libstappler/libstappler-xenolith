@@ -267,15 +267,15 @@ float Button::getTrailingIconProgress() const {
 }
 
 void Button::setTapCallback(Function<void()> &&cb) {
-	_callbackTap = move(cb);
+	_callbackTap = sp::move(cb);
 }
 
 void Button::setLongPressCallback(Function<void()> &&cb) {
-	_callbackLongPress = move(cb);
+	_callbackLongPress = sp::move(cb);
 }
 
 void Button::setDoubleTapCallback(Function<void()> &&cb) {
-	_callbackDoubleTap = move(cb);
+	_callbackDoubleTap = sp::move(cb);
 }
 
 void Button::setMenuSourceButton(Rc<MenuSourceButton> &&button) {

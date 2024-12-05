@@ -29,10 +29,10 @@ LinearGradientData::LinearGradientData(const LinearGradientData &other)
 
 
 LinearGradientData::LinearGradientData(LinearGradientData &&other)
-: start(other.start), end(other.end), steps(move(other.steps)) { }
+: start(other.start), end(other.end), steps(sp::move(other.steps)) { }
 
 bool LinearGradient::init(const Vec2 &start, const Vec2 &end, Vector<GradientStep> &&steps) {
-	if (!updateWithData(start, end, move(steps))) {
+	if (!updateWithData(start, end, sp::move(steps))) {
 		return false;
 	}
 
@@ -40,7 +40,7 @@ bool LinearGradient::init(const Vec2 &start, const Vec2 &end, Vector<GradientSte
 }
 
 bool LinearGradient::init(const Vec2 &origin, float angle, float distance, Vector<GradientStep> &&steps) {
-	return init(origin, origin + Vec2::forAngle(angle) * distance, move(steps));
+	return init(origin, origin + Vec2::forAngle(angle) * distance, sp::move(steps));
 }
 
 bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<GradientStep> &&steps) {
@@ -57,7 +57,7 @@ bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<G
 
 	_data->start = start;
 	_data->end = end;
-	_data->steps = move(steps);
+	_data->steps = sp::move(steps);
 
 	std::sort(_data->steps.begin(), _data->steps.end(), [] (const GradientStep &l, const GradientStep &r) {
 		return l.value < r.value;
@@ -73,7 +73,7 @@ bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<G
 }
 
 bool LinearGradient::updateWithData(const Vec2 &origin, float angle, float distance, Vector<GradientStep> &&steps) {
-	return updateWithData(origin, origin + Vec2::forAngle(angle) * distance, move(steps));
+	return updateWithData(origin, origin + Vec2::forAngle(angle) * distance, sp::move(steps));
 }
 
 const Vec2 &LinearGradient::getStart() const {

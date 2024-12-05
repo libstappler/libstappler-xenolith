@@ -245,8 +245,8 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 
 		if (!handlers.event.data.getValue()) {
-			// Mouse left window, cancel active mouse events
 			cancelTouchEvents(event.x, event.y, event.modifiers);
+			cancelKeyEvents(event.x, event.y, event.modifiers);
 		}
 		break;
 	}
@@ -533,6 +533,18 @@ void InputDispatcher::cancelTouchEvents(float x, float y, InputModifier mods) {
 		handleInputEvent(it.second.event.data);
 	}
 	_activeEvents.clear();
+}
+
+void InputDispatcher::cancelKeyEvents(float x, float y, InputModifier mods) {
+	auto tmpEvents = _activeKeys;
+	for (auto &it : tmpEvents) {
+		it.second.event.data.x = x;
+		it.second.event.data.y = y;
+		it.second.event.data.event = InputEventName::KeyCanceled;
+		it.second.event.data.modifiers = mods;
+		handleInputEvent(it.second.event.data);
+	}
+	_activeKeys.clear();
 }
 
 }

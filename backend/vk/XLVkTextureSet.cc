@@ -153,7 +153,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 	};
 
 	auto task = new CompileTask();
-	task->callback = move(cb);
+	task->callback = sp::move(cb);
 	task->loop = &loop;
 	task->device = &dev;
 
@@ -219,7 +219,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 	};
 
 	auto task = new ReadImageTask();
-	task->callback = move(cb);
+	task->callback = sp::move(cb);
 	task->image = image;
 	task->loop = &loop;
 	task->device = &dev;
@@ -300,7 +300,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 	};
 
 	auto task = new ReadBufferTask();
-	task->callback = move(cb);
+	task->callback = sp::move(cb);
 	task->buffer = buf;
 	task->loop = &loop;
 	task->device = &dev;

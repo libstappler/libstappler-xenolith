@@ -28,7 +28,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 MeshSet::~MeshSet() { }
 
 bool MeshSet::init(Vector<Index> &&idx, BufferObject *index, BufferObject *vertex) {
-	_indexes = move(idx);
+	_indexes = sp::move(idx);
 	_indexBuffer = index;
 	_vertexBuffer = vertex;
 	return true;
@@ -64,7 +64,7 @@ bool MeshAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, Ve
 		return false;
 	}
 
-	_initials = move(initials);
+	_initials = sp::move(initials);
 	return true;
 }
 

@@ -79,7 +79,7 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 		return true;
 	});
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	setTag(toInt(iconName));
 

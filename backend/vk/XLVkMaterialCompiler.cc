@@ -171,7 +171,7 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 	}
 
 	if (it->second.deps.empty()) {
-		it->second.deps = move(deps);
+		it->second.deps = sp::move(deps);
 	} else {
 		for (auto &iit : deps) {
 			it->second.deps.emplace_back(move(iit));
@@ -179,12 +179,12 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 	}
 
 	if (it->second.callback) {
-		it->second.callback = [cb = move(it->second.callback), cb2 = move(req->callback)] {
+		it->second.callback = [cb = sp::move(it->second.callback), cb2 = sp::move(req->callback)] {
 			cb();
 			cb2();
 		};
 	} else {
-		it->second.callback = move(req->callback);
+		it->second.callback = sp::move(req->callback);
 	}
 }
 
@@ -195,7 +195,7 @@ void MaterialCompiler::clearRequests() {
 auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input, Vector<Rc<core::DependencyEvent>> &&deps) -> Rc<FrameRequest> {
 	auto req = Rc<FrameRequest>::create(this);
 	req->addInput(_attachment, move(input));
-	req->addSignalDependencies(move(deps));
+	req->addSignalDependencies(sp::move(deps));
 	return req;
 }
 
@@ -203,12 +203,12 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 		Vector<Rc<core::DependencyEvent>> &&deps) {
 	auto targetAttachment = req->attachment;
 
-	auto h = loop.makeFrame(makeRequest(move(req), move(deps)), 0);
+	auto h = loop.makeFrame(makeRequest(sp::move(req), sp::move(deps)), 0);
 	h->setCompleteCallback([this, targetAttachment] (FrameHandle &handle) {
 		auto reqIt = _requests.find(targetAttachment);
 		if (reqIt != _requests.end()) {
 			if (handle.getLoop()->isRunning()) {
-				auto deps = move(reqIt->second.deps);
+				auto deps = sp::move(reqIt->second.deps);
 				Rc<MaterialInputData> req = Rc<MaterialInputData>::alloc();
 				req->attachment = targetAttachment;
 				req->materialsToAddOrUpdate.reserve(reqIt->second.materials.size());
@@ -223,7 +223,7 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 				for (auto &m : reqIt->second.dynamic) {
 					req->dynamicMaterialsToUpdate.emplace_back(m);
 				}
-				req->callback = move(reqIt->second.callback);
+				req->callback = sp::move(reqIt->second.callback);
 				_requests.erase(reqIt);
 
 				runMaterialCompilationFrame(*handle.getLoop(), move(req), Vector<Rc<core::DependencyEvent>>(deps));
@@ -256,8 +256,8 @@ void MaterialCompilationAttachmentHandle::submitInput(FrameQueue &q, Rc<core::At
 		cb(false);
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = move(d), cb = move(cb)] (FrameHandle &handle, bool success) {
-		handle.performOnGlThread([this, d = move(d), cb = move(cb)] (FrameHandle &handle) {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) {
+		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle) {
 			_inputData = d;
 			_originalSet = _inputData->attachment->getMaterials();
 			cb(true);
@@ -294,7 +294,7 @@ bool MaterialCompilationPassHandle::prepare(FrameQueue &frame, Function<void(boo
 	auto &inputData = _materialAttachment->getInputData();
 	_outputData = inputData->attachment->cloneSet(originalData);
 
-	return QueuePassHandle::prepare(frame, move(cb));
+	return QueuePassHandle::prepare(frame, sp::move(cb));
 }
 
 void MaterialCompilationPassHandle::finalize(FrameQueue &handle, bool successful) {
@@ -349,9 +349,9 @@ Vector<const CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(F
 
 	if (buf) {
 		auto tmpBuffer = new Rc<Buffer>(move(buffers.targetBuffer));
-		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(move(buffers.ordering));
+		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(sp::move(buffers.ordering));
 		handle.performOnGlThread([data = _outputData, tmpBuffer, tmpOrder] (FrameHandle &) {
-			data->setBuffer(move(*tmpBuffer), move(*tmpOrder));
+			data->setBuffer(sp::move(*tmpBuffer), sp::move(*tmpOrder));
 			delete tmpBuffer;
 			delete tmpOrder;
 		}, nullptr, true, "MaterialCompilationRenderPassHandle::doPrepareCommands");
@@ -365,7 +365,7 @@ void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<voi
 		_materialAttachment->getInputData()->attachment->setMaterials(_outputData);
 	}
 
-	QueuePassHandle::doSubmitted(frame, move(func), success, move(fence));
+	QueuePassHandle::doSubmitted(frame, sp::move(func), success, sp::move(fence));
 	frame.signalDependencies(success);
 }
 
@@ -374,7 +374,7 @@ void MaterialCompilationPassHandle::doComplete(FrameQueue &queue, Function<void(
 		cb();
 	}
 
-	QueuePassHandle::doComplete(queue, move(func), success);
+	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
 }

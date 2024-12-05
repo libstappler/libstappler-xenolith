@@ -420,7 +420,7 @@ bool TextInputManager::doInsertText(WideStringView sInsert, bool compose) {
 			sText.append(_string.substr(_cursor.start));
 		}
 
-		_string = std::move(sText);
+		_string = sp::move(sText);
 
 		if (compose) {
 			_cursor.length += sInsert.size();

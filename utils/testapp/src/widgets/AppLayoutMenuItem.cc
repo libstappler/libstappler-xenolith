@@ -91,7 +91,7 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 		return false;
 	});
 
-	_callback = move(cb);
+	_callback = sp::move(cb);
 
 	return true;
 }

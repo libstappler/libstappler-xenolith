@@ -163,7 +163,7 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = move(cb)] (FrameHandle &handle, bool success) {
+	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb)] (FrameHandle &handle, bool success) {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
@@ -177,11 +177,11 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 					return true;
 				}
 				return false;
-			}, [cb = move(cb)] (FrameHandle &frame, bool success) {
+			}, [cb = sp::move(cb)] (FrameHandle &frame, bool success) {
 				cb(success);
 			}, nullptr, "RenderQueueAttachmentHandle::submitInput _input->queue->getInternalResource");
 		} else {
-			handle.performOnGlThread([this, cb = move(cb)] (FrameHandle &frame) {
+			handle.performOnGlThread([this, cb = sp::move(cb)] (FrameHandle &frame) {
 				cb(true);
 				runShaders(frame);
 			}, this, true, "RenderQueueAttachmentHandle::submitInput");
@@ -313,7 +313,6 @@ bool RenderQueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
 		return false;
 	}
 
-	_isAsync = true;
 	return true;
 }
 
@@ -384,7 +383,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				_buffers.emplace_back(buf);
 			}
 			return true;
-		}, [this, cb = move(cb)] (FrameHandle &frame, bool success) {
+		}, [this, cb = sp::move(cb)] (FrameHandle &frame, bool success) {
 			if (success) {
 				_commandsReady = true;
 				_descriptorsReady = true;
@@ -394,7 +393,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 			cb(success);
 		}, this, "RenderPass::doPrepareCommands _attachment->getTransferResource");
 	} else {
-		frame.getFrame()->performOnGlThread([cb = move(cb)] (FrameHandle &frame) {
+		frame.getFrame()->performOnGlThread([cb = sp::move(cb)] (FrameHandle &frame) {
 			cb(true);
 		}, this, false, "RenderPass::doPrepareCommands");
 	}
@@ -407,7 +406,7 @@ void RenderQueuePassHandle::submit(FrameQueue &queue, Rc<FrameSync> &&sync, Func
 		onSubmited(true);
 		onComplete(true);
 	} else {
-		QueuePassHandle::submit(queue, move(sync), move(onSubmited), move(onComplete));
+		QueuePassHandle::submit(queue, sp::move(sync), sp::move(onSubmited), sp::move(onComplete));
 	}
 }
 
@@ -437,8 +436,8 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 	}
 
 	_attachment->getRenderQueue()->setCompiled(*_device, [loop = Rc<core::Loop>(frame.getLoop()),
-			passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
-		loop->performOnGlThread([loop, passIds = move(passIds), attachmentIds = move(attachmentIds)] () mutable {
+			passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
+		loop->performOnGlThread([loop, passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
 			auto &cache = loop->getFrameCache();
 			for (auto &id : passIds) {
 				cache->removeRenderPass(id);
@@ -498,9 +497,9 @@ bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, VkCommandBuffe
 		}
 
 		auto tmpBuffer = new Rc<Buffer>(move(buffers.targetBuffer));
-		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(move(buffers.ordering));
+		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(sp::move(buffers.ordering));
 		iframe.performOnGlThread([attachment, data, tmpBuffer, tmpOrder] (FrameHandle &) {
-			data->setBuffer(move(*tmpBuffer), move(*tmpOrder));
+			data->setBuffer(sp::move(*tmpBuffer), sp::move(*tmpOrder));
 			attachment->setMaterials(data);
 			delete tmpBuffer;
 			delete tmpOrder;

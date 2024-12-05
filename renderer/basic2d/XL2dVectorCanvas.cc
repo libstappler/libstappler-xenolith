@@ -714,7 +714,7 @@ VectorCanvasDeferredResult::~VectorCanvasDeferredResult() {
 }
 
 bool VectorCanvasDeferredResult::init(std::future<Rc<VectorCanvasResult>> &&future, bool waitOnReady) {
-	_future = new std::future<Rc<VectorCanvasResult>>(move(future));
+	_future = new std::future<Rc<VectorCanvasResult>>(sp::move(future));
 	_waitOnReady = waitOnReady;
 	return true;
 }

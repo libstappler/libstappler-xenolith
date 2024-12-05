@@ -341,7 +341,7 @@ void Sprite::setSamplerIndex(uint16_t idx) {
 }
 
 void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
-	_textureLoadedCallback = move(cb);
+	_textureLoadedCallback = sp::move(cb);
 }
 
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {

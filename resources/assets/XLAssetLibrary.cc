@@ -127,8 +127,8 @@ void AssetComponent::handleChildInit(const Server &serv, const db::Transaction &
 
 	cleanup(t);
 
-	_container->getLibrary()->getApplication()->performOnMainThread([assetsVec = move(assetsVec), lib = _container->getLibrary()] () mutable {
-		lib->handleLibraryLoaded(move(assetsVec));
+	_container->getLibrary()->getApplication()->performOnMainThread([assetsVec = sp::move(assetsVec), lib = _container->getLibrary()] () mutable {
+		lib->handleLibraryLoaded(sp::move(assetsVec));
 	}, _container->getLibrary());
 }
 
@@ -241,7 +241,7 @@ void AssetLibrary::update(Application *, const UpdateTime &t) {
 
 bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterval ttl, Rc<Ref> &&ref) {
 	if (!_loaded) {
-		_tmpRequests.push_back(AssetRequest(iurl, move(cb), ttl, move(ref)));
+		_tmpRequests.push_back(AssetRequest(iurl, sp::move(cb), ttl, sp::move(ref)));
 		return true;
 	}
 
@@ -255,11 +255,11 @@ bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterva
 
 	auto it = _callbacks.find(url);
 	if (it != _callbacks.end()) {
-		it->second.emplace_back(move(cb), move(ref));
+		it->second.emplace_back(sp::move(cb), sp::move(ref));
 	} else {
-		_callbacks.emplace(url, Vector<Pair<AssetCallback, Rc<Ref>>>({pair(move(cb), move(ref))}));
+		_callbacks.emplace(url, Vector<Pair<AssetCallback, Rc<Ref>>>({pair(sp::move(cb), sp::move(ref))}));
 
-		_server->perform([this, url = move(url), ttl] (const Server &, const db::Transaction &t) {
+		_server->perform([this, url = sp::move(url), ttl] (const Server &, const db::Transaction &t) {
 			Rc<Asset> asset;
 			if (auto data = _container->getComponent()->getAsset(t, url)) {
 				if (data.getInteger("ttl") != int64_t(ttl.toMicros())) {
@@ -284,10 +284,10 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 	if (!_loaded) {
 		if (!icb && !ref) {
 			for (auto &it : vec) {
-				_tmpRequests.emplace_back(move(it));
+				_tmpRequests.emplace_back(sp::move(it));
 			}
 		} else {
-			_tmpMultiRequest.emplace_back(AssetMultiRequest(vec.vec<Interface>(), move(icb), move(ref)));
+			_tmpMultiRequest.emplace_back(AssetMultiRequest(vec.vec<Interface>(), sp::move(icb), sp::move(ref)));
 		}
 		return true;
 	}
@@ -299,7 +299,7 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 	AssetVecCallback *cb = nullptr;
 	if (cb) {
 		retVec = new Vector<Rc<Asset>>;
-		cb = new AssetVecCallback(move(icb));
+		cb = new AssetVecCallback(sp::move(icb));
 	}
 
 	for (auto &it : vec) {
@@ -337,7 +337,7 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 						}
 					}, nullptr);
 				}
-				_callbacks.emplace(it.url, move(vec));
+				_callbacks.emplace(it.url, sp::move(vec));
 				requests->push_back(it);
 			}
 		}
@@ -443,7 +443,7 @@ Asset *AssetLibrary::getLiveAsset(int64_t id) const {
 }
 
 bool AssetLibrary::perform(TaskCallback &&cb, Ref *ref) const {
-	return _container->perform(move(cb), ref);
+	return _container->perform(sp::move(cb), ref);
 }
 
 void AssetLibrary::removeAsset(Asset *asset) {
@@ -471,13 +471,13 @@ void AssetLibrary::handleLibraryLoaded(Vector<Rc<Asset>> &&assets) {
 	_loaded = true;
 
 	for (auto &it : _tmpRequests) {
-		acquireAsset(it.url, move(it.callback), it.ttl, move(it.ref));
+		acquireAsset(it.url, sp::move(it.callback), it.ttl, sp::move(it.ref));
 	}
 
 	_tmpRequests.clear();
 
 	for (auto &it : _tmpMultiRequest) {
-		acquireAssets(it.vec, move(it.callback), move(it.ref));
+		acquireAssets(it.vec, sp::move(it.callback), sp::move(it.ref));
 	}
 
 	_tmpMultiRequest.clear();

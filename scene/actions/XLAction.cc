@@ -138,7 +138,7 @@ bool CallFunc::init(Function<void()> &&func, bool runOnce) {
 		return false;
 	}
 
-	_callback = move(func);
+	_callback = sp::move(func);
 	return true;
 }
 
@@ -368,7 +368,7 @@ bool Sequence::reserve(size_t s) {
 }
 
 bool Sequence::addAction(Function<void()> &&cb) {
-	auto a = Rc<CallFunc>::create(move(cb));
+	auto a = Rc<CallFunc>::create(sp::move(cb));
 	return addAction(a.get());
 }
 
@@ -431,7 +431,7 @@ bool Spawn::reserve(size_t s) {
 }
 
 bool Spawn::addAction(Function<void()> &&cb) {
-	auto a = Rc<CallFunc>::create(move(cb));
+	auto a = Rc<CallFunc>::create(sp::move(cb));
 	return addAction(a.get());
 }
 
@@ -581,11 +581,11 @@ void TintTo::update(float time) {
 }
 
 bool ActionProgress::init(float duration, UpdateCallback &&update, StartCallback &&start, StopCallback &&stop) {
-	return init(duration, 0.0f, 1.0f, move(update), move(start), move(stop));
+	return init(duration, 0.0f, 1.0f, sp::move(update), sp::move(start), sp::move(stop));
 }
 
 bool ActionProgress::init(float duration, float targetProgress, UpdateCallback &&update, StartCallback &&start, StopCallback &&stop) {
-	return init(duration, 0.0f, targetProgress, move(update), move(start), move(stop));
+	return init(duration, 0.0f, targetProgress, sp::move(update), sp::move(start), sp::move(stop));
 }
 
 bool ActionProgress::init(float duration, float sourceProgress, float targetProgress,
@@ -596,9 +596,9 @@ bool ActionProgress::init(float duration, float sourceProgress, float targetProg
 
 	_sourceProgress = sourceProgress;
 	_targetProgress = targetProgress;
-	_onUpdate = move(update);
-	_onStart = move(start);
-	_onStop = move(stop);
+	_onUpdate = sp::move(update);
+	_onStart = sp::move(start);
+	_onStop = sp::move(stop);
 
 	return true;
 }

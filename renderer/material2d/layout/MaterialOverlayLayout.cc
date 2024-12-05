@@ -102,11 +102,11 @@ Rc<OverlayLayout::Transition> OverlayLayout::makeExitTransition(SceneContent2d *
 }
 
 void OverlayLayout::setReadyCallback(Function<void(bool)> &&cb) {
-	_readyCallback = move(cb);
+	_readyCallback = sp::move(cb);
 }
 
 void OverlayLayout::setCloseCallback(Function<void()> &&cb) {
-	_closeCallback = move(cb);
+	_closeCallback = sp::move(cb);
 }
 
 void OverlayLayout::emplaceNode(const Vec2 &origin, Binding b) {

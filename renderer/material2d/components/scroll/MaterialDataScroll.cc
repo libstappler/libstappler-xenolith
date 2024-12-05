@@ -66,7 +66,7 @@ void DataScroll::Loader::onExit() {
 
 
 bool DataScroll::Item::init(Value &&val, Vec2 pos, Size2 size) {
-	_data = std::move(val);
+	_data = sp::move(val);
 	_position = pos;
 	_size = size;
 	return true;
@@ -115,7 +115,7 @@ bool DataScroll::Handler::init(DataScroll *s) {
 }
 
 void DataScroll::Handler::setCompleteCallback(CompleteCallback &&cb) {
-	_callback = move(cb);
+	_callback = sp::move(cb);
 }
 
 const DataScroll::Handler::CompleteCallback &DataScroll::Handler::getCompleteCallback() const {
@@ -276,15 +276,15 @@ TimeInterval DataScroll::getMinLoadTime() const {
 }
 
 void DataScroll::setHandlerCallback(HandlerCallback &&cb) {
-	_handlerCallback = move(cb);
+	_handlerCallback = sp::move(cb);
 }
 
 void DataScroll::setItemCallback(ItemCallback &&cb) {
-	_itemCallback = move(cb);
+	_itemCallback = sp::move(cb);
 }
 
 void DataScroll::setLoaderCallback(LoaderCallback &&cb) {
-	_loaderCallback = move(cb);
+	_loaderCallback = sp::move(cb);
 }
 
 void DataScroll::onSourceDirty() {
@@ -453,19 +453,19 @@ void DataScroll::onSliceData(DataMap &val, Time time, Request type) {
 	}
 
 	auto itemPtr = new ItemMap();
-	auto dataPtr = new DataMap(std::move(val));
+	auto dataPtr = new DataMap(sp::move(val));
 	auto handler = onHandler();
 
 	auto deferred = _director->getApplication();
 
 	deferred->perform(Rc<thread::Task>::create([handler, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
-		(*itemPtr) = handler->run(type, std::move(*dataPtr));
+		(*itemPtr) = handler->run(type, sp::move(*dataPtr));
 		for (auto &it : (*itemPtr)) {
 			it.second->setId(it.first.get());
 		}
 		return true;
 	}, [this, handler, itemPtr, dataPtr, time, type] (const thread::Task &, bool) {
-		onSliceItems(std::move(*itemPtr), time, type);
+		onSliceItems(sp::move(*itemPtr), time, type);
 
 		auto interval = Time::now() - time;
 		if (interval < _minLoadTime && type != Request::Update) {
@@ -512,7 +512,7 @@ void DataScroll::onSliceItems(ItemMap &&val, Time time, Request type) {
 		val.insert(_items.begin(), _items.end()); // merge item maps
 	}
 
-	_items = std::move(val);
+	_items = sp::move(val);
 
 	_currentSliceStart = DataSource::Id(_items.begin()->first);
 	_currentSliceLen = size_t(_items.rbegin()->first.get()) + 1 - size_t(_currentSliceStart.get());
