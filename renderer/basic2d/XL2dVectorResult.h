@@ -41,6 +41,7 @@ enum class VectorInstancedMode {
 struct SP_PUBLIC VectorCanvasConfig {
 	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
 	VectorInstancedMode instancedMode = VectorInstancedMode::Aggressive;
+	Size2 targetSize;
 	float quality = 1.0f;
 	float boundaryOffset = config::VGAntialiasFactor;
 	float boundaryInset = config::VGAntialiasFactor;
@@ -65,7 +66,6 @@ struct SP_PUBLIC VectorCanvasResult : public Ref {
 	std::forward_list<Vector<TransformData>> instances;
 	Map<String, ObjectRef> objects;
 	VectorCanvasConfig config;
-	Size2 targetSize;
 	Mat4 targetTransform;
 
 	void updateColor(const Color4F &);

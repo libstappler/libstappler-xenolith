@@ -36,7 +36,7 @@ public:
 
 	virtual bool init(AppDelegate *, uint32_t, Function<void(uint32_t)> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using Node::init;

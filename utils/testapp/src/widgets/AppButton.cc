@@ -128,8 +128,8 @@ bool ButtonWithLabel::init(StringView str, Function<void()> &&cb) {
 	return true;
 }
 
-void ButtonWithLabel::onContentSizeDirty() {
-	Button::onContentSizeDirty();
+void ButtonWithLabel::handleContentSizeDirty() {
+	Button::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }

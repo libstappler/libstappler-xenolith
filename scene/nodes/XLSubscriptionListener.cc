@@ -36,22 +36,22 @@ bool SubscriptionListener::init(DirtyCallback &&cb) {
 	return true;
 }
 
-void SubscriptionListener::onEnter(Scene *scene) {
-	Component::onEnter(scene);
+void SubscriptionListener::handleEnter(Scene *scene) {
+	Component::handleEnter(scene);
 
 	_scheduler = scene->getDirector()->getScheduler();
 
 	updateScheduler();
 }
 
-void SubscriptionListener::onExit() {
+void SubscriptionListener::handleExit() {
 	if (_scheduled) {
 		unschedule();
 	}
 
 	_scheduler = nullptr;
 
-	Component::onExit();
+	Component::handleExit();
 }
 
 void SubscriptionListener::setCallback(DirtyCallback &&cb) {

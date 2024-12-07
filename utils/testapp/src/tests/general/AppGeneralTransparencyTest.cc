@@ -76,8 +76,8 @@ bool GeneralTransparencyTest::init() {
 	return true;
 }
 
-void GeneralTransparencyTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralTransparencyTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	Vec2 center = _contentSize / 2.0f;
 

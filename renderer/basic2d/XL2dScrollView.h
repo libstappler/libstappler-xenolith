@@ -54,10 +54,10 @@ public:
 
 		virtual bool init() override;
 		virtual bool init(Direction);
-		virtual void onContentSizeDirty() override;
+		virtual void handleContentSizeDirty() override;
 		virtual void update(const UpdateTime &time) override;
-		virtual void onEnter(Scene*) override;
-		virtual void onExit() override;
+		virtual void handleEnter(Scene*) override;
+		virtual void handleExit() override;
 
 		virtual void setDirection(Direction);
 		virtual Direction getDirection() const;
@@ -81,7 +81,7 @@ public:
 
 	virtual bool init(Layout l) override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setOverscrollColor(const Color4F &, bool withOpacity = false);
 	virtual Color4F getOverscrollColor() const;

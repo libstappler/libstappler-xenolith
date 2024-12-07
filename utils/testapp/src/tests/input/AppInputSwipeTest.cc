@@ -71,8 +71,8 @@ bool InputSwipeTest::init() {
 	return true;
 }
 
-void InputSwipeTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void InputSwipeTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_boundsLayer->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 64.0f));
 	_boundsLayer->setContentSize(_contentSize - Size2(64.0f, 96.0f));

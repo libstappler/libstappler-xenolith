@@ -34,7 +34,7 @@ public:
 
 	virtual bool init(IconName, Function<void(IconName)> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using Node::init;
@@ -86,8 +86,8 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 	return true;
 }
 
-void VgIconListNode::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void VgIconListNode::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_image->setPosition(_contentSize / 2.0f);
 }
@@ -100,7 +100,7 @@ bool VgIconListPopup::init() {
 	_label = addChild(Rc<Label>::create(), ZOrder(1));
 	_label->setAnchorPoint(Anchor::Middle);
 	_label->setFontSize(20);
-	_label->setOnContentSizeDirtyCallback([this] {
+	_label->setContentSizeDirtyCallback([this] {
 		setContentSize(_label->getContentSize() + Size2(16.0f, 16.0f));
 	});
 
@@ -109,8 +109,8 @@ bool VgIconListPopup::init() {
 	return true;
 }
 
-void VgIconListPopup::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void VgIconListPopup::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }
@@ -166,8 +166,8 @@ bool VgIconList::init() {
 	return true;
 }
 
-void VgIconList::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgIconList::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_scrollView->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height));
 	_scrollView->setContentSize(_contentSize);

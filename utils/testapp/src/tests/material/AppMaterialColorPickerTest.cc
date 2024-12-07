@@ -49,8 +49,8 @@ bool MaterialColorSchemeNode::init(material2d::ColorRole name) {
 	return true;
 }
 
-void MaterialColorSchemeNode::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void MaterialColorSchemeNode::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 	_labelName->setPosition(Vec2(4.0f, _contentSize.height - 2.0f));
 	_labelDesc->setPosition(Vec2(_contentSize.width - 4.0f, 4.0f));
 }
@@ -207,16 +207,16 @@ bool MaterialColorPickerTest::init() {
 	return true;
 }
 
-void MaterialColorPickerTest::onEnter(Scene *scene) {
-	MaterialTest::onEnter(scene);
+void MaterialColorPickerTest::handleEnter(Scene *scene) {
+	MaterialTest::handleEnter(scene);
 }
 
-void MaterialColorPickerTest::onExit() {
-	MaterialTest::onExit();
+void MaterialColorPickerTest::handleExit() {
+	MaterialTest::handleExit();
 }
 
-void MaterialColorPickerTest::onContentSizeDirty() {
-	MaterialTest::onContentSizeDirty();
+void MaterialColorPickerTest::handleContentSizeDirty() {
+	MaterialTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);

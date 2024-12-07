@@ -130,8 +130,8 @@ public:
 
 	virtual bool visitGeometry(FrameInfo &info, NodeFlags parentFlags) override;
 
-	virtual void onContentSizeDirty() override;
-	virtual void onExit() override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleExit() override;
 
 	virtual Vec2 getCursorMarkPosition() const;
 

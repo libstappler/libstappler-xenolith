@@ -101,16 +101,16 @@ void Scene::render(FrameInfo &info) {
 	eventDispatcher->commitStorage(move(info.input));
 }
 
-void Scene::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void Scene::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 }
 
-void Scene::onExit() {
-	Node::onExit();
+void Scene::handleExit() {
+	Node::handleExit();
 }
 
-void Scene::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void Scene::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	setAnchorPoint(Anchor::Middle);
 	setPosition(Vec2((_contentSize * _constraints.density) / 2.0f));
@@ -143,11 +143,11 @@ void Scene::onPresented(Director *dir) {
 		dir->getResourceCache()->addResource(res);
 	}
 
-	onEnter(this);
+	handleEnter(this);
 }
 
 void Scene::onFinished(Director *dir) {
-	onExit();
+	handleExit();
 
 	if (_director == dir) {
 		if (auto res = _queue->getInternalResource()) {

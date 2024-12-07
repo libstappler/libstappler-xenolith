@@ -30,13 +30,12 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
-		Size2 targetSize, const VectorCanvasConfig &config, bool waitOnReady) {
+		const VectorCanvasConfig &config, bool waitOnReady) {
 	auto result = new std::promise<Rc<VectorCanvasResult>>;
 	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
-	queue.perform([queue = Rc<thread::TaskQueue>(&queue), image = move(image), targetSize, config, ret, result] () mutable {
+	queue.perform([queue = Rc<thread::TaskQueue>(&queue), image = move(image), config, ret, result] () mutable {
 		auto canvas = VectorCanvas::getInstance();
-		canvas->setConfig(config);
-		auto res = canvas->draw(move(image), targetSize);
+		auto res = canvas->draw(config, move(image));
 		result->set_value(res);
 
 		queue->onMainThread([ret = move(ret), res = move(res), result] () mutable {
@@ -73,6 +72,7 @@ bool VectorSprite::init(Rc<VectorImage> &&img) {
 	if (_image) {
 		_contentSize = _image->getImageSize();
 	}
+
 	return true;
 }
 
@@ -204,9 +204,9 @@ void VectorSprite::setQuality(float val) {
 	}
 }
 
-void VectorSprite::onTransformDirty(const Mat4 &parent) {
+void VectorSprite::handleTransformDirty(const Mat4 &parent) {
 	_vertexesDirty = true;
-	Sprite::onTransformDirty(parent);
+	Sprite::handleTransformDirty(parent);
 }
 
 bool VectorSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
@@ -394,13 +394,24 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 	auto placementResult = _imagePlacement.resolve(_contentSize, imageSize);
 
 	if (_imagePlacement.autofit != Autofit::None) {
-		auto texSizeInView = Size2(imageSize.width / placementResult.scale,
+		auto imageSizeInView = Size2(imageSize.width / placementResult.scale,
 				imageSize.height / placementResult.scale);
-		targetOffsetX = targetOffsetX + (_contentSize.width - texSizeInView.width) * _imagePlacement.autofitPos.x;
-		targetOffsetY = targetOffsetY + (_contentSize.height - texSizeInView.height) * _imagePlacement.autofitPos.y;
+		targetOffsetX = targetOffsetX + (_contentSize.width - imageSizeInView.width) * _imagePlacement.autofitPos.x;
+		targetOffsetY = targetOffsetY + (_contentSize.height - imageSizeInView.height) * _imagePlacement.autofitPos.y;
 
-		targetViewSpaceSize = Size2(texSizeInView.width * viewScale.x,
-				texSizeInView.height * viewScale.y);
+		targetViewSpaceSize = Size2(imageSizeInView.width * viewScale.x,
+				imageSizeInView.height * viewScale.y);
+
+		if (imageSizeInView.width > _contentSize.width || imageSizeInView.height > _contentSize.height) {
+			setStateApplyMode(StateApplyMode::ApplyForAll);
+			enableScissor(0.0f);
+		} else {
+			setStateApplyMode(StateApplyMode::DoNotApply);
+			disableScissor();
+		}
+	} else {
+		setStateApplyMode(StateApplyMode::DoNotApply);
+		disableScissor();
 	}
 
 	Mat4 targetTransform(
@@ -434,6 +445,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		VectorCanvasConfig config;
 		config.color = _displayedColor;
 		config.quality = _quality;
+		config.targetSize = _imageTargetSize;
 
 		// Canvas uses pixel-wide extents, but for sdf we need dp-wide
 		config.sdfBoundaryInset *= frame.request->getFrameConstraints().density;
@@ -446,12 +458,11 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 
 		if (_deferred) {
 			_deferredResult = VectorSprite_runDeferredVectorCavas(*_director->getApplication()->getQueue(),
-					move(imageData), _imageTargetSize, config, _waitDeferred);
+					move(imageData), config, _waitDeferred);
 			_result = nullptr;
 		} else {
 			auto canvas = VectorCanvas::getInstance();
-			canvas->setConfig(config);
-			_result = canvas->draw(move(imageData), _imageTargetSize);
+			_result = canvas->draw(config, move(imageData));
 		}
 		_vertexColorDirty = false; // color will be already applied
 	}

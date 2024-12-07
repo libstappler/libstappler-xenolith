@@ -31,7 +31,7 @@ public:
 
 	virtual bool init(vg::Winding, Function<void(vg::Winding)> &&cb);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	void updateWinding();
@@ -47,7 +47,7 @@ public:
 
 	virtual bool init(vg::DrawFlags, Function<void(vg::DrawFlags)> &&cb);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	void updateStyle();
@@ -63,7 +63,7 @@ public:
 
 	virtual bool init(uint32_t idx, Function<void()> &&cb);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	uint32_t _index = 0;
@@ -77,7 +77,7 @@ public:
 
 	virtual bool init(Function<void()> &&cb);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	Label *_label = nullptr;
@@ -89,7 +89,7 @@ public:
 
 	virtual bool init(uint32_t count, uint32_t selected);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	void setContours(uint32_t count, uint32_t selected);
 	void setAddCallback(Function<void()> &&cb);
@@ -121,7 +121,7 @@ bool VgWindingSwitcher::init(vg::Winding w, Function<void(vg::Winding)> &&cb) {
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(20);
-	_label->setOnContentSizeDirtyCallback([this] {
+	_label->setContentSizeDirtyCallback([this] {
 		setContentSize(_label->getContentSize() + Size2(24, 12));
 	});
 	_label->setAnchorPoint(Anchor::Middle);
@@ -131,8 +131,8 @@ bool VgWindingSwitcher::init(vg::Winding w, Function<void(vg::Winding)> &&cb) {
 	return true;
 }
 
-void VgWindingSwitcher::onContentSizeDirty() {
-	Button::onContentSizeDirty();
+void VgWindingSwitcher::handleContentSizeDirty() {
+	Button::handleContentSizeDirty();
 	_label->setPosition(_contentSize / 2.0f);
 }
 
@@ -165,7 +165,7 @@ bool VgDrawStyleSwitcher::init(vg::DrawFlags style, Function<void(vg::DrawFlags)
 
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(20);
-	_label->setOnContentSizeDirtyCallback([this] {
+	_label->setContentSizeDirtyCallback([this] {
 		setContentSize(_label->getContentSize() + Size2(24, 12));
 	});
 	_label->setAnchorPoint(Anchor::Middle);
@@ -175,8 +175,8 @@ bool VgDrawStyleSwitcher::init(vg::DrawFlags style, Function<void(vg::DrawFlags)
 	return true;
 }
 
-void VgDrawStyleSwitcher::onContentSizeDirty() {
-	Button::onContentSizeDirty();
+void VgDrawStyleSwitcher::handleContentSizeDirty() {
+	Button::handleContentSizeDirty();
 	_label->setPosition(_contentSize / 2.0f);
 }
 
@@ -201,7 +201,7 @@ bool VgContourSwitcherButton::init(uint32_t idx, Function<void()> &&cb) {
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(16);
 	_label->setString(toString("Contour ", idx));
-	_label->setOnContentSizeDirtyCallback([this] {
+	_label->setContentSizeDirtyCallback([this] {
 		setContentSize(_label->getContentSize() + Size2(50, 12));
 	});
 	_label->setAnchorPoint(Anchor::MiddleLeft);
@@ -221,8 +221,8 @@ bool VgContourSwitcherButton::init(uint32_t idx, Function<void()> &&cb) {
 	return true;
 }
 
-void VgContourSwitcherButton::onContentSizeDirty() {
-	Button::onContentSizeDirty();
+void VgContourSwitcherButton::handleContentSizeDirty() {
+	Button::handleContentSizeDirty();
 	_label->setPosition(Vec2(12.0f, _contentSize.height / 2.0f));
 	_indicator->setPosition(Vec2(_contentSize.width - 12.0f, _contentSize.height / 2.0f));
 }
@@ -235,7 +235,7 @@ bool VgContourSwitcherAdd::init(Function<void()> &&cb) {
 	_label = addChild(Rc<Label>::create());
 	_label->setFontSize(16);
 	_label->setString("Add contour");
-	_label->setOnContentSizeDirtyCallback([this] {
+	_label->setContentSizeDirtyCallback([this] {
 		setContentSize(_label->getContentSize() + Size2(24, 12));
 	});
 	_label->setAnchorPoint(Anchor::Middle);
@@ -243,8 +243,8 @@ bool VgContourSwitcherAdd::init(Function<void()> &&cb) {
 	return true;
 }
 
-void VgContourSwitcherAdd::onContentSizeDirty() {
-	Button::onContentSizeDirty();
+void VgContourSwitcherAdd::handleContentSizeDirty() {
+	Button::handleContentSizeDirty();
 	_label->setPosition(_contentSize / 2.0f);
 }
 
@@ -274,8 +274,8 @@ bool VgContourSwitcher::init(uint32_t count, uint32_t selected) {
 	return true;
 }
 
-void VgContourSwitcher::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void VgContourSwitcher::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	auto pt = Vec2(_contentSize);
 
@@ -371,8 +371,8 @@ bool VgTessTest::init() {
 	return true;
 }
 
-void VgTessTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgTessTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	Vec2 center = _contentSize / 2.0f;
 

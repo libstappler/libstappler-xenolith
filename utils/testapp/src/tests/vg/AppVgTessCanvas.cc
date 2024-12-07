@@ -237,14 +237,14 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 	return true;
 }
 
-void VgTessCanvas::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void VgTessCanvas::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 
 	_pointerInWindow = _director->getView()->isPointerWithinWindow();
 }
 
-void VgTessCanvas::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void VgTessCanvas::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	if (_test1) {
 		_test1->setPosition(Vec2(_contentSize / 2.0f) - Vec2(0.0f, _contentSize.height / 4.0f));

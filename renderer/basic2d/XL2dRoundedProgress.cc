@@ -67,8 +67,8 @@ bool RoundedProgress::isInverted() const {
 	return _inverted;
 }
 
-void RoundedProgress::onContentSizeDirty() {
-	LayerRounded::onContentSizeDirty();
+void RoundedProgress::handleContentSizeDirty() {
+	LayerRounded::handleContentSizeDirty();
 
 	auto l = _layout;
 	if (l == Auto) {

@@ -44,8 +44,8 @@ bool MaterialInputFieldTest::init() {
 	return true;
 }
 
-void MaterialInputFieldTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialInputFieldTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);

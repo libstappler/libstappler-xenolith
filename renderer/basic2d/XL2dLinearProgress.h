@@ -31,10 +31,10 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 class SP_PUBLIC LinearProgress : public Node {
 public:
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
 	virtual void setAnimated(bool value);
 	virtual bool isAnimated() const;

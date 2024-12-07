@@ -38,8 +38,8 @@ public:
 
 	virtual bool init(DirtyCallback &&cb = nullptr);
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
 	virtual void setCallback(DirtyCallback &&cb);
 	virtual const DirtyCallback &getCallback() const { return _callback; }

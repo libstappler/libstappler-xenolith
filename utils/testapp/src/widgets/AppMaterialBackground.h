@@ -36,9 +36,9 @@ public:
 	virtual ~MaterialBackground() { }
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
-	virtual void onEnter(xenolith::Scene *) override;
+	virtual void handleEnter(xenolith::Scene *) override;
 
 protected:
 	material2d::StyleContainer *_sceneStyleContainer = nullptr;

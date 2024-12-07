@@ -47,8 +47,8 @@ bool VgLinearGradientTest::init() {
 	return true;
 }
 
-void VgLinearGradientTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgLinearGradientTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_sprite->setPosition(_contentSize / 2.0f);
 	_sprite->setContentSize(Size2(750.0f, 600.0f));

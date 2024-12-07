@@ -90,8 +90,8 @@ bool InputField::init() {
 	return true;
 }
 
-void InputField::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void InputField::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_node->setContentSize(_contentSize);
 	_label->setPosition(Vec2(0.0f, _contentSize.width / 2.0f));
@@ -112,15 +112,15 @@ bool InputField::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	return Node::visitGeometry(info, parentFlags);
 }
 
-void InputField::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void InputField::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 	//_scene->pushFloatNode(_menu, 1);
 	_label->setDelegate(this);
 }
-void InputField::onExit() {
+void InputField::handleExit() {
 	_label->setDelegate(nullptr);
 	//_scene->popFloatNode(_menu);
-	Node::onExit();
+	Node::handleExit();
 }
 
 void InputField::setInputCallback(const Callback &cb) {

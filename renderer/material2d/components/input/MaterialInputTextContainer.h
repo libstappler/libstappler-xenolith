@@ -36,7 +36,7 @@ public:
 
 	virtual bool init() override;
 	virtual void update(const UpdateTime &time) override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 

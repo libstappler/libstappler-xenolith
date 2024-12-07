@@ -52,8 +52,8 @@ bool ActionEaseNode::init(StringView str, Function<Rc<ActionInterval>(Rc<ActionI
 	return true;
 }
 
-void ActionEaseNode::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void ActionEaseNode::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(-4.0f, _contentSize.height / 2.0f));
 	_layer->setContentSize(Size2(48.0f, _contentSize.height));
@@ -164,8 +164,8 @@ bool ActionEaseTest::init() {
 	return true;
 }
 
-void ActionEaseTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void ActionEaseTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	auto size = 28.0f * _nodes.size();
 	auto offset = size / 2.0f;

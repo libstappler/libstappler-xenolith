@@ -138,8 +138,8 @@ bool Layer::init(const SimpleGradient &grad) {
 	return true;
 }
 
-void Layer::onContentSizeDirty() {
-	Sprite::onContentSizeDirty();
+void Layer::handleContentSizeDirty() {
+	Sprite::handleContentSizeDirty();
 }
 
 void Layer::setGradient(const SimpleGradient &g) {

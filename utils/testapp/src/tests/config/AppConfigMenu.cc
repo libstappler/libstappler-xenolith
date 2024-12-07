@@ -36,7 +36,7 @@ public:
 
 	bool init(bool enabled, Function<void()> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	void setEnabled(bool);
 
@@ -54,7 +54,7 @@ public:
 
 	bool init(uint64_t value, Function<void(uint64_t)> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	void setValue(uint64_t);
 
@@ -101,8 +101,8 @@ bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
 	return true;
 }
 
-void ConfigApplyButton::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void ConfigApplyButton::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }
@@ -168,8 +168,8 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 	return true;
 }
 
-void ConfigFrameRateSlider::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void ConfigFrameRateSlider::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	_slider->setContentSize(Size2(_contentSize.width - 216.0f, 24.0f));
 	_slider->setPosition(Vec2(_contentSize / 2.0f) + Vec2(56.0f, 0.0f));
@@ -210,14 +210,14 @@ bool ConfigMenu::init() {
 	return true;
 }
 
-void ConfigMenu::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void ConfigMenu::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	updateAppData((AppDelegate *)_director->getApplication());
 }
 
-void ConfigMenu::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void ConfigMenu::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_scrollView->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height));
 	_scrollView->setContentSize(Size2(std::min(512.0f, _contentSize.width), _contentSize.height));

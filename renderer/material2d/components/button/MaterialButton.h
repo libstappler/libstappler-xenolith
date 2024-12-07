@@ -55,7 +55,7 @@ public:
 			ColorRole = ColorRole::Primary, uint32_t schemeTag = SurfaceStyle::PrimarySchemeTag);
 	virtual bool init(const SurfaceStyle &) override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setFollowContentSize(bool);
 	virtual bool isFollowContentSize() const;

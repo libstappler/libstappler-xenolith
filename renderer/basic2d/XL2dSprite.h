@@ -57,10 +57,10 @@ public:
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
 
-	virtual void onEnter(xenolith::Scene *) override;
-	virtual void onExit() override;
-	virtual void onContentSizeDirty() override;
-	virtual void onTextureLoaded();
+	virtual void handleEnter(xenolith::Scene *) override;
+	virtual void handleExit() override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleTextureLoaded();
 
 	virtual void setColorMode(const core::ColorMode &);
 	virtual const core::ColorMode &getColorMode() const { return _colorMode; }

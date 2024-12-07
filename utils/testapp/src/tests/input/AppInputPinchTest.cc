@@ -50,8 +50,8 @@ bool InputPinchTest::init() {
 	return true;
 }
 
-void InputPinchTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void InputPinchTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_node->setPosition(_contentSize / 2.0f);
 }

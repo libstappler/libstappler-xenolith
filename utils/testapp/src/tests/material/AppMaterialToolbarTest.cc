@@ -101,8 +101,8 @@ bool MaterialToolbarTest::init() {
 	return true;
 }
 
-void MaterialToolbarTest::onContentSizeDirty() {
-	MaterialTest::onContentSizeDirty();
+void MaterialToolbarTest::handleContentSizeDirty() {
+	MaterialTest::handleContentSizeDirty();
 
 	_huePicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 298.0f - 48.0f - _decorationPadding.horizontal()), 360.0f), 24.0f));
 	_huePicker->setPosition(Vec2(32.0f + _decorationPadding.left, _contentSize.height - _decorationPadding.top - 96.0f));

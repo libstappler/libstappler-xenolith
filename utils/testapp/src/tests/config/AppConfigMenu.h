@@ -40,8 +40,8 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using LayoutTest::init;

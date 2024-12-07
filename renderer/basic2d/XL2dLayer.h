@@ -61,7 +61,7 @@ public:
 	virtual bool init(const Color4F &);
 	virtual bool init(const SimpleGradient &);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setGradient(const SimpleGradient &);
 	virtual const SimpleGradient &getGradient() const;

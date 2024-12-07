@@ -68,8 +68,8 @@ bool InputTextTest::init() {
 	return true;
 }
 
-void InputTextTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void InputTextTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setPosition(_contentSize / 2.0f);
 	_background->setContentSize(_contentSize * 0.7f);

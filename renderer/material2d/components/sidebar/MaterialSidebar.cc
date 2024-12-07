@@ -105,8 +105,8 @@ bool Sidebar::init(Position pos) {
 	return true;
 }
 
-void Sidebar::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void Sidebar::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 

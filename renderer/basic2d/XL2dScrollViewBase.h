@@ -50,14 +50,14 @@ public:
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
-	virtual void onEnter(Scene *) override;
+	virtual void handleEnter(Scene *) override;
 
 	inline bool isVertical() const { return _layout == Vertical; }
 	inline bool isHorizontal() const { return _layout == Horizontal; }
 	virtual Layout getLayout() const { return _layout; }
 
-	virtual void onContentSizeDirty() override;
-	virtual void onTransformDirty(const Mat4 &) override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleTransformDirty(const Mat4 &) override;
 
 	virtual void setEnabled(bool value);
 	virtual bool isEnabled() const;

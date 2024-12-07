@@ -43,22 +43,22 @@ bool LinearProgress::init() {
 
 	return true;
 }
-void LinearProgress::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void LinearProgress::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 	layoutSubviews();
 }
 
-void LinearProgress::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void LinearProgress::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 
 	if (_animated) {
 		updateAnimations();
 	}
 }
 
-void LinearProgress::onExit() {
+void LinearProgress::handleExit() {
 	stopAllActions();
-	Node::onExit();
+	Node::handleExit();
 }
 
 void LinearProgress::setAnimated(bool value) {

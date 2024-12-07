@@ -156,17 +156,17 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 	return true;
 }
 
-void InputField::onEnter(Scene *scene) {
-	Surface::onEnter(scene);
+void InputField::handleEnter(Scene *scene) {
+	Surface::handleEnter(scene);
 }
 
-void InputField::onExit() {
-	Surface::onExit();
+void InputField::handleExit() {
+	Surface::handleExit();
 	_container->setCursorCallback(nullptr);
 }
 
-void InputField::onContentSizeDirty() {
-	Surface::onContentSizeDirty();
+void InputField::handleContentSizeDirty() {
+	Surface::handleContentSizeDirty();
 
 	_supportingText->setPosition(Vec2(16.0f, -4.0f));
 	_supportingText->setWidth(_contentSize.width - 32.0f);

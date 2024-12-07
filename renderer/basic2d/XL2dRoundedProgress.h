@@ -38,7 +38,7 @@ public:
 	virtual ~RoundedProgress();
 
 	virtual bool init(Layout = Auto);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setLayout(Layout);
 	virtual Layout getLayout() const;

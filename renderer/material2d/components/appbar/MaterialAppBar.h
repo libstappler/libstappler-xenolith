@@ -46,7 +46,7 @@ public:
 	virtual ~AppBar() { }
 
 	virtual bool init(AppBarLayout = AppBarLayout::Small, const SurfaceStyle & = DefaultAppBarStyle);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setLayout(AppBarLayout);
 	virtual AppBarLayout getLayout() const { return _layout; }

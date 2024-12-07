@@ -57,80 +57,80 @@ bool DynamicStateNode::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 
 	auto newState = updateDynamicState(currentState ? *currentState : DrawStateValues());
 
-	StateId stateId = maxOf<StateId>();
+	_currentStateId = maxOf<StateId>();
 
 	if (newState.enabled == core::DynamicState::None) {
 		// no need to enable anything, drop to 0
 		if (prevStateId == maxOf<StateId>()) {
 			return Node::visitDraw(info, parentFlags);
 		}
-		// perform with default id
 	} else {
-		stateId = ctx->addState(newState);
+		_currentStateId = ctx->addState(newState);
 	}
 
-	return wrapVisit(info, parentFlags, [&] (NodeFlags flags, bool visibleByCamera) {
-		if (!_children.empty()) {
-			sortAllChildren();
+	VisitInfo visitInfo;
+	visitInfo.visitNodesBelow = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+		auto applyMode = static_cast<DynamicStateNode *>(visitInfo.node)->getStateApplyMode();
+		auto stateId = static_cast<DynamicStateNode *>(visitInfo.node)->getCurrentStateId();
 
-			switch (_applyMode) {
-			case ApplyForAll:
-			case ApplyForNodesBelow:
-				ctx->stateStack.push_back(stateId);
-				break;
-			default: break;
-			}
+		auto &ctx = visitInfo.frameInfo->contextStack.back();
 
-			size_t i = 0;
-
-			// draw children zOrder < 0
-			for (; i < _children.size(); i++) {
-				auto node = _children.at(i);
-
-				if (node && node->getLocalZOrder() < ZOrder(0))
-					node->visitDraw(info, flags);
-				else
-					break;
-			}
-
-			switch (_applyMode) {
-			case ApplyForNodesAbove:
-				ctx->stateStack.push_back(stateId);
-				break;
-			default: break;
-			}
-
-			visitSelf(info, flags, visibleByCamera);
-
-			switch (_applyMode) {
-			case ApplyForNodesBelow:
-				ctx->stateStack.pop_back();
-				break;
-			default: break;
-			}
-
-			for (auto it = _children.cbegin() + i; it != _children.cend(); ++it) {
-				(*it)->visitDraw(info, flags);
-			}
-
-			switch (_applyMode) {
-			case ApplyForAll:
-			case ApplyForNodesAbove:
-				ctx->stateStack.pop_back();
-				break;
-			default: break;
-			}
-
-		} else {
+		switch (applyMode) {
+		case ApplyForAll:
+		case ApplyForNodesBelow:
 			ctx->stateStack.push_back(stateId);
-
-			visitSelf(info, flags, visibleByCamera);
-
-			ctx->stateStack.pop_back();
+			break;
+		default: break;
 		}
-	}, true);
 
-	return true;
+		for (auto &it : nodes) {
+			it->visitDraw(*visitInfo.frameInfo, visitInfo.flags);
+		}
+
+		switch (applyMode) {
+		case ApplyForNodesAbove:
+			ctx->stateStack.push_back(stateId);
+			break;
+		default: break;
+		}
+	};
+
+	visitInfo.visitSelf = [] (const VisitInfo &visitInfo, Node *node) {
+		node->visitSelf(*visitInfo.frameInfo, visitInfo.flags, visitInfo.visibleByCamera);
+	};
+
+	visitInfo.visitNodesAbove = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+		auto applyMode = static_cast<DynamicStateNode *>(visitInfo.node)->getStateApplyMode();
+
+		auto &ctx = visitInfo.frameInfo->contextStack.back();
+
+		switch (applyMode) {
+		case ApplyForNodesBelow:
+			ctx->stateStack.pop_back();
+			break;
+		default: break;
+		}
+
+		for (auto &it : nodes) {
+			it->visitDraw(*visitInfo.frameInfo, visitInfo.flags);
+		}
+
+		switch (applyMode) {
+		case ApplyForAll:
+		case ApplyForNodesAbove:
+			ctx->stateStack.pop_back();
+			break;
+		default: break;
+		}
+	};
+
+	visitInfo.node = this;
+
+	auto ret = wrapVisit(info, parentFlags, visitInfo, true);
+
+	_currentStateId = maxOf<StateId>();
+
+	return ret;
 }
 
 void DynamicStateNode::enableScissor(Padding outline) {

@@ -111,8 +111,8 @@ bool LayoutMenuItem::handlePress() {
 	return true;
 }
 
-void LayoutMenuItem::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void LayoutMenuItem::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }

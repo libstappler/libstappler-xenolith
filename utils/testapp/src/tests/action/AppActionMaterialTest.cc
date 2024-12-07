@@ -84,8 +84,8 @@ bool ActionMaterialTest::init() {
 	return true;
 }
 
-void ActionMaterialTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void ActionMaterialTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	auto size = 28.0f * _nodes.size();
 	auto offset = size / 2.0f;

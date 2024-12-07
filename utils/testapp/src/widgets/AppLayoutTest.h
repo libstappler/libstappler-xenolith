@@ -32,7 +32,7 @@ class LayoutTestBackButton : public VectorSprite {
 public:
 	virtual bool init(Function<void()> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using VectorSprite::init;
@@ -51,9 +51,9 @@ public:
 
 	virtual bool init(LayoutName, StringView);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
-	virtual void onEnter(xenolith::Scene *) override;
+	virtual void handleEnter(xenolith::Scene *) override;
 
 	virtual void setDataValue(Value &&) override;
 

@@ -111,8 +111,8 @@ bool CheckboxWithLabel::init(StringView title, bool value, Function<void(bool)> 
 	return true;
 }
 
-void CheckboxWithLabel::onContentSizeDirty() {
-	Checkbox::onContentSizeDirty();
+void CheckboxWithLabel::handleContentSizeDirty() {
+	Checkbox::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize.width + 16.0f, _contentSize.height / 2.0f));
 }

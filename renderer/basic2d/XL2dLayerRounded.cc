@@ -34,7 +34,7 @@ bool LayerRounded::init(const Color4F &color, float borderRadius) {
 	return true;
 }
 
-void LayerRounded::onContentSizeDirty() {
+void LayerRounded::handleContentSizeDirty() {
 	auto radius = std::min(std::min(_contentSize.width / 2.0f, _contentSize.height / 2.0f), _borderRadius);
 
 	if (radius != _realBorderRadius || _contentSize != _image->getImageSize()) {
@@ -69,7 +69,7 @@ void LayerRounded::onContentSizeDirty() {
 		_realBorderRadius = radius;
 	}
 
-	VectorSprite::onContentSizeDirty();
+	VectorSprite::handleContentSizeDirty();
 }
 
 void LayerRounded::setPathColor(const Color4B &color, bool withOpaity) {

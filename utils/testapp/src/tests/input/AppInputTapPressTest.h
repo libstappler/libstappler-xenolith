@@ -33,7 +33,7 @@ public:
 
 	virtual bool init(StringView) override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	void handleTap();
 
@@ -51,7 +51,7 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using LayoutTest::init;

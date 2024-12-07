@@ -58,8 +58,8 @@ bool UtilsAssetTest::init() {
 	return true;
 }
 
-void UtilsAssetTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void UtilsAssetTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setPosition(_contentSize / 2.0f);
 	_background->setContentSize(_contentSize);
@@ -74,8 +74,8 @@ void UtilsAssetTest::onContentSizeDirty() {
 	_progress->setContentSize(Size2(240.0f, 16.0f));
 }
 
-void UtilsAssetTest::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void UtilsAssetTest::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	auto lib = _director->getApplication()->getExtension<storage::AssetLibrary>();
 	lib->acquireAsset("https://apps.stappler.org/api/v2/issues/id80417/content", [this] (const Rc<storage::Asset> &asset) {
@@ -87,8 +87,8 @@ void UtilsAssetTest::onEnter(Scene *scene) {
 	}, TimeInterval::seconds(60 * 60), this);
 }
 
-void UtilsAssetTest::onExit() {
-	LayoutTest::onExit();
+void UtilsAssetTest::handleExit() {
+	LayoutTest::handleExit();
 
 	_listener->setSubscription(nullptr);
 }

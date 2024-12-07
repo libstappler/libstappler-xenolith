@@ -42,8 +42,8 @@ bool InputTapPressTestNode::init(StringView text) {
 	return true;
 }
 
-void InputTapPressTestNode::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void InputTapPressTestNode::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }
@@ -118,8 +118,8 @@ bool InputTapPressTest::init() {
 	return true;
 }
 
-void InputTapPressTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void InputTapPressTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	float nodeHeight = 64.0f;
 

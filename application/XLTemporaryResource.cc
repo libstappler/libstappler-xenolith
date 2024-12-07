@@ -128,7 +128,7 @@ bool TemporaryResource::load(Ref *ref, Function<void(bool)> &&cb) {
 	}
 }
 
-void TemporaryResource::onEnter(ResourceOwner *owner, ResourceObject *res) {
+void TemporaryResource::handleEnter(ResourceOwner *owner, ResourceObject *res) {
 	_owners.emplace(owner);
 	_atime = platform::clock(core::ClockType::Monotonic);
 
@@ -151,7 +151,7 @@ void TemporaryResource::onEnter(ResourceOwner *owner, ResourceObject *res) {
 	++ _users;
 }
 
-void TemporaryResource::onExit(ResourceOwner *, ResourceObject *) {
+void TemporaryResource::handleExit(ResourceOwner *, ResourceObject *) {
 	_atime = platform::clock(core::ClockType::Monotonic);
 	-- _users;
 }

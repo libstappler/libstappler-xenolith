@@ -46,7 +46,7 @@ public:
 
 	virtual void update(const UpdateTime &time) override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setFpsVisible(bool);
 	virtual bool isFpsVisible() const;

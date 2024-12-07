@@ -36,10 +36,10 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	// replaced node will be alone in stack, so, no need for exit transition
 	virtual void replaceLayout(SceneLayout2d *);

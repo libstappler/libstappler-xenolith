@@ -100,14 +100,14 @@ void AppScene::update(const UpdateTime &time) {
 	Scene2d::update(time);
 }
 
-void AppScene::onEnter(Scene *scene) {
-	Scene2d::onEnter(scene);
+void AppScene::handleEnter(Scene *scene) {
+	Scene2d::handleEnter(scene);
 	std::cout << "AppScene::onEnter\n";
 }
 
-void AppScene::onExit() {
+void AppScene::handleExit() {
 	std::cout << "AppScene::onExit\n";
-	Scene2d::onExit();
+	Scene2d::handleExit();
 }
 
 void AppScene::render(FrameInfo &info) {

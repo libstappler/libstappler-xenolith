@@ -63,8 +63,8 @@ bool MaterialMenuTest::init() {
 	return true;
 }
 
-void MaterialMenuTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialMenuTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(Vec2(_contentSize / 2.0f));

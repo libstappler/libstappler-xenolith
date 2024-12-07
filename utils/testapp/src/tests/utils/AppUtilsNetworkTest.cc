@@ -49,8 +49,8 @@ bool UtilsNetworkTest::init() {
 	return true;
 }
 
-void UtilsNetworkTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void UtilsNetworkTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setPosition(_contentSize / 2.0f);
 	_background->setContentSize(_contentSize);

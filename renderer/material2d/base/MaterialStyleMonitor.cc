@@ -51,7 +51,7 @@ void StyleMonitor::setDirty(bool value) {
 	_dirty = value;
 }
 
-void StyleMonitor::visit(FrameInfo &frame, NodeFlags parentFlags) {
+void StyleMonitor::visitSelf(FrameInfo &frame, NodeFlags parentFlags) {
 	auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
 	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
 	if (style && (_dirty || style->getStyle() != _interiorData)) {
@@ -62,7 +62,7 @@ void StyleMonitor::visit(FrameInfo &frame, NodeFlags parentFlags) {
 		_dirty = false;
 	}
 
-	Component::visit(frame, parentFlags);
+	Component::visitSelf(frame, parentFlags);
 }
 
 }

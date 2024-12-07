@@ -53,8 +53,8 @@ bool Slider::init(float value, Function<void(float)> &&cb) {
 	return true;
 }
 
-void Slider::onContentSizeDirty() {
-	Layer::onContentSizeDirty();
+void Slider::handleContentSizeDirty() {
+	Layer::handleContentSizeDirty();
 
 	updateValue();
 }
@@ -112,8 +112,8 @@ bool SliderWithLabel::init(StringView title, float value, Function<void(float)> 
 	return true;
 }
 
-void SliderWithLabel::onContentSizeDirty() {
-	Slider::onContentSizeDirty();
+void SliderWithLabel::handleContentSizeDirty() {
+	Slider::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize.width + 16.0f, _contentSize.height / 2.0f));
 	_prefix->setPosition(Vec2(- 16.0f, _contentSize.height / 2.0f));

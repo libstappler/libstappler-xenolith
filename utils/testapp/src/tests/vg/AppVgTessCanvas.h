@@ -80,8 +80,8 @@ public:
 
 	virtual bool init(Function<void()> &&);
 
-	virtual void onEnter(Scene *) override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleContentSizeDirty() override;
 
 	void setWinding(vg::Winding);
 	void setDrawStyle(vg::DrawFlags);

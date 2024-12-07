@@ -42,14 +42,14 @@ bool StyleContainer::init() {
 	return true;
 }
 
-void StyleContainer::onEnter(Scene *scene) {
-	Component::onEnter(scene);
+void StyleContainer::handleEnter(Scene *scene) {
+	Component::handleEnter(scene);
 	_scene = scene;
 }
 
-void StyleContainer::onExit() {
+void StyleContainer::handleExit() {
 	_scene = nullptr;
-	Component::onExit();
+	Component::handleExit();
 }
 
 void StyleContainer::setPrimaryScheme(ColorScheme &&scheme) {

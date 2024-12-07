@@ -37,7 +37,7 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	material2d::ThemeType _themeType = material2d::ThemeType::LightTheme;

@@ -35,7 +35,7 @@ public:
 
 	virtual bool init(float, Function<void(float)> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setValue(float);
 	virtual float getValue() const;
@@ -64,7 +64,7 @@ public:
 
 	virtual bool init(StringView, float, Function<void(float)> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setString(StringView);
 	virtual StringView getString() const;

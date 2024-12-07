@@ -89,7 +89,7 @@ XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, StringView title
 
 	_info.overrideRedirect = 0;
 	_info.overrideClose = true;
-	//_info.enableSync = true;
+	_info.enableSync = true;
 
 	_info.rect = xcb_rectangle_t{
 		static_cast<int16_t>(rect.x), static_cast<int16_t>(rect.y),

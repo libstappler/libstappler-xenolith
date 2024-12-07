@@ -50,7 +50,7 @@ public:
 	virtual ~TabBar() { }
 
 	virtual bool init(MenuSource *, ButtonStyle = ButtonStyle::Title, BarStyle = BarStyle::Layout, Alignment = Alignment::Center);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setMenuSource(MenuSource *);
 	virtual MenuSource *getMenuSource() const;

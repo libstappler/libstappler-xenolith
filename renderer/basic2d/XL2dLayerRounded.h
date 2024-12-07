@@ -34,7 +34,7 @@ public:
 
 	virtual bool init(const Color4F &, float borderRadius);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setBorderRadius(float);
 	virtual float getBorderRadius() const { return _borderRadius; }

@@ -45,6 +45,8 @@ public:
 	virtual bool isIgnoreParentState() const { return _ignoreParentState; }
 	virtual void setIgnoreParentState(bool);
 
+	virtual StateId getCurrentStateId() const { return _currentStateId; }
+
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void enableScissor(Padding outline = Padding());
@@ -64,6 +66,7 @@ protected:
 	bool _ignoreParentState = false;
 	bool _scissorEnabled = false;
 	Padding _scissorOutline;
+	StateId _currentStateId = maxOf<StateId>();
 };
 
 }

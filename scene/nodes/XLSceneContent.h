@@ -33,10 +33,10 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual bool onBackButton();
 

@@ -183,7 +183,7 @@ bool TabBar::init(MenuSource *source, ButtonStyle button, BarStyle bar, Alignmen
 	return true;
 }
 
-void TabBar::onContentSizeDirty() {
+void TabBar::handleContentSizeDirty() {
 	struct ItemData {
 		float width = 0.0f;
 		MenuSourceButton *button = nullptr;
@@ -191,7 +191,7 @@ void TabBar::onContentSizeDirty() {
 		bool wrapped = false;
 	};
 
-	Surface::onContentSizeDirty();
+	Surface::handleContentSizeDirty();
 
 	if (_buttonCount == 0) {
 		auto c = _scroll->getController();

@@ -57,9 +57,9 @@ public:
 	virtual bool init(InputFieldStyle = InputFieldStyle::Filled);
 	virtual bool init(InputFieldStyle, const SurfaceStyle &);
 
-	virtual void onEnter(xenolith::Scene *) override;
-	virtual void onExit() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleEnter(xenolith::Scene *) override;
+	virtual void handleExit() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setLabelText(StringView);
 	virtual StringView getLabelText() const;

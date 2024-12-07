@@ -93,8 +93,8 @@ bool MaterialDynamicFontTest::init() {
 	return true;
 }
 
-void MaterialDynamicFontTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialDynamicFontTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 	_label->setWidth(_contentSize.width);

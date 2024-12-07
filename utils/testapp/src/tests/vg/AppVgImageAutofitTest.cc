@@ -34,7 +34,7 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	Size2 _targetSize;
@@ -54,8 +54,8 @@ bool VgAutofitTestNode::init() {
 
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath()->openForWriting([] (PathWriter &writer) {
-		writer.moveTo(0.0f, 0.0f).lineTo(10.0f, 10.0f).lineTo(0.0f, 10.0f).lineTo(10.0f, 0.0f).closePath();
-	}).setFillColor(Color::Black);
+		writer.moveTo(0.0f, 0.0f).lineTo(10.0f, 10.0f).lineTo(10.0f, 0.0f).lineTo(0.0f, 10.0f).closePath();
+	}).setFillColor(Color::White);
 
 	for (size_t i = 0; i < 5; ++ i) {
 		_layers[i] = addChild(Rc<Layer>::create(Color::Teal_500), ZOrder(1));
@@ -64,6 +64,7 @@ bool VgAutofitTestNode::init() {
 		_sprites[i] = addChild(Rc<VectorSprite>::create(Rc<VectorImage>(image)), ZOrder(2));
 		_sprites[i]->setAnchorPoint(Anchor::Middle);
 		_sprites[i]->setImageAutofit(Autofit(i));
+		_sprites[i]->setTexture("xenolith-1-480.png");
 
 		_labels[i] = addChild(Rc<Label>::create(), ZOrder(3));
 		_labels[i]->setAnchorPoint(Anchor::MiddleBottom);
@@ -83,8 +84,8 @@ bool VgAutofitTestNode::init() {
 	return true;
 }
 
-void VgAutofitTestNode::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void VgAutofitTestNode::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	if (_background) {
 		_background->setContentSize(_contentSize);
@@ -188,8 +189,8 @@ bool VgImageAutofitTest::init() {
 	return true;
 }
 
-void VgImageAutofitTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgImageAutofitTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_nodeAutofit->setPosition(_contentSize / 2.0f);
 	_nodeAutofit->setContentSize(_contentSize * 0.90f);

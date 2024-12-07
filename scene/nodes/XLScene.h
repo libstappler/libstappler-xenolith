@@ -50,10 +50,10 @@ public:
 	virtual void renderRequest(const Rc<FrameRequest> &);
 	virtual void render(FrameInfo &info);
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	const Rc<Queue> &getQueue() const { return _queue; }
 	Director *getDirector() const { return _director; }

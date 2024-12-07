@@ -37,9 +37,9 @@ public:
 
 	virtual bool init(LayoutName, Vector<LayoutName> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
-	virtual void onEnter(xenolith::Scene *scene) override;
+	virtual void handleEnter(xenolith::Scene *scene) override;
 
 protected:
 	using SceneLayout2d::init;

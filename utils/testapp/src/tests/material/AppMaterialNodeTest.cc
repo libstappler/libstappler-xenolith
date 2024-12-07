@@ -33,7 +33,7 @@ public:
 
 	virtual bool init(const material2d::SurfaceStyle &, StringView);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	bool initialize(StringView);
@@ -56,8 +56,8 @@ bool MaterialNodeWithLabel::initialize(StringView str) {
 	return true;
 }
 
-void MaterialNodeWithLabel::onContentSizeDirty() {
-	Surface::onContentSizeDirty();
+void MaterialNodeWithLabel::handleContentSizeDirty() {
+	Surface::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
 }
@@ -155,8 +155,8 @@ bool MaterialNodeTest::init() {
 	return true;
 }
 
-void MaterialNodeTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialNodeTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);

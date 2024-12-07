@@ -65,8 +65,8 @@ bool DecoratedLayout::init(ColorRole role) {
 	return true;
 }
 
-void DecoratedLayout::onContentSizeDirty() {
-	SceneLayout2d::onContentSizeDirty();
+void DecoratedLayout::handleContentSizeDirty() {
+	SceneLayout2d::handleContentSizeDirty();
 
 	_decorationRoot->setContentSize(_contentSize);
 	_decorationRoot->setDepthIndex(20.0f);

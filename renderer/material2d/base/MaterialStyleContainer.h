@@ -39,8 +39,8 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
 	void setPrimaryScheme(ColorScheme &&);
 	void setPrimaryScheme(ThemeType, const CorePalette &);

@@ -37,8 +37,8 @@ public:
 	virtual bool init() override;
 	virtual bool init(SurfaceStyle &&style);
 
-	virtual void onAdded(Node *owner) override;
-	virtual void visit(FrameInfo &, NodeFlags parentFlags) override;
+	virtual void handleAdded(Node *owner) override;
+	virtual void visitSelf(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void setStyle(SurfaceStyleData &&style) { _interiorStyle = move(style); }
 	virtual const SurfaceStyleData &getStyle() const { return _interiorStyle; }

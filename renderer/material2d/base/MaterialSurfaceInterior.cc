@@ -50,14 +50,14 @@ bool SurfaceInterior::init(SurfaceStyle &&style) {
 	return true;
 }
 
-void SurfaceInterior::onAdded(Node *owner) {
-	Component::onAdded(owner);
+void SurfaceInterior::handleAdded(Node *owner) {
+	Component::handleAdded(owner);
 
 	_ownerIsMaterialNode = ((dynamic_cast<Surface *>(_owner) != nullptr) || (dynamic_cast<LayerSurface *>(_owner) != nullptr));
 }
 
-void SurfaceInterior::visit(FrameInfo &info, NodeFlags parentFlags) {
-	Component::visit(info, parentFlags);
+void SurfaceInterior::visitSelf(FrameInfo &info, NodeFlags parentFlags) {
+	Component::visitSelf(info, parentFlags);
 
 	if (!_ownerIsMaterialNode) {
 		auto style = info.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);

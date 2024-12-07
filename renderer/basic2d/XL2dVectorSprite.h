@@ -65,7 +65,7 @@ public:
     virtual void setQuality(float);
     virtual float getQuality() const { return _quality; }
 
-	virtual void onTransformDirty(const Mat4 &) override;
+	virtual void handleTransformDirty(const Mat4 &) override;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 

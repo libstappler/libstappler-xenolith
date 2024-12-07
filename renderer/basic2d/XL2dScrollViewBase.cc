@@ -81,8 +81,8 @@ bool ScrollViewBase::init(Layout layout) {
 	_root->setPosition(Vec2(0, 0));
 	_root->setAnchorPoint((_layout == Vertical)?Vec2(0, 1):Vec2(0, 0));
 	_root->setCascadeOpacityEnabled(true);
-	_root->setOnContentSizeDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
-	_root->setOnTransformDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
+	_root->setContentSizeDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
+	_root->setTransformDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
 
 	return true;
 }
@@ -108,12 +108,12 @@ bool ScrollViewBase::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	return ret;
 }
 
-void ScrollViewBase::onEnter(Scene *scene) {
-	DynamicStateNode::onEnter(scene);
+void ScrollViewBase::handleEnter(Scene *scene) {
+	DynamicStateNode::handleEnter(scene);
 	onPosition();
 }
 
-void ScrollViewBase::onContentSizeDirty() {
+void ScrollViewBase::handleContentSizeDirty() {
 	if (!isnan(_scrollSpaceLimit)) {
 		auto padding = _paddingGlobal;
 		if (isVertical()) {
@@ -131,13 +131,13 @@ void ScrollViewBase::onContentSizeDirty() {
 		}
 		_paddingGlobal = padding;
 	}
-	DynamicStateNode::onContentSizeDirty();
+	DynamicStateNode::handleContentSizeDirty();
 	updateScrollBounds();
 	fixPosition();
 }
 
-void ScrollViewBase::onTransformDirty(const Mat4 &parentTransform) {
-	DynamicStateNode::onTransformDirty(parentTransform);
+void ScrollViewBase::handleTransformDirty(const Mat4 &parentTransform) {
+	DynamicStateNode::handleTransformDirty(parentTransform);
 
 	Vec3 scale;
 	parentTransform.decompose(&scale, nullptr, nullptr);

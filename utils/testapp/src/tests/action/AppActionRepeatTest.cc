@@ -76,8 +76,8 @@ bool ActionRepeatTest::init() {
 	return true;
 }
 
-void ActionRepeatTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void ActionRepeatTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	auto size = 28.0f * 0.0f;
 	auto offset = size / 2.0f;

@@ -41,7 +41,7 @@ bool InputTextContainer::init() {
 	_label = addChild(Rc<TypescaleLabel>::create(TypescaleRole::BodyLarge), ZOrder(-1));
 	_label->setAnchorPoint(Anchor::BottomLeft);
 
-	_label->setOnTransformDirtyCallback([this] (const Mat4 &) {
+	_label->setTransformDirtyCallback([this] (const Mat4 &) {
 		updateCursorPointers();
 	});
 
@@ -99,8 +99,8 @@ void InputTextContainer::update(const UpdateTime &time) {
 	}
 }
 
-void InputTextContainer::onContentSizeDirty() {
-	DynamicStateNode::onContentSizeDirty();
+void InputTextContainer::handleContentSizeDirty() {
+	DynamicStateNode::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(0.0f, 0.0f) + Vec2(_label->getContentSize() - _contentSize) * _adjustment);
 	_caret->setContentSize(Size2(1.5f, _label->getFontHeight()));

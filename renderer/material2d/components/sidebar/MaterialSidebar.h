@@ -41,7 +41,7 @@ public:
 	virtual ~Sidebar();
 
 	virtual bool init(Position);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	template <typename T, typename ... Args>
 	auto setNode(const Rc<T> &ptr, Args && ... args) -> T * {

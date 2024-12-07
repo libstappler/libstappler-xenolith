@@ -260,13 +260,13 @@ public:
 
 	virtual bool isRunning() const { return _running; }
 
-	virtual void onEnter(Scene *);
-	virtual void onExit();
+	virtual void handleEnter(Scene *);
+	virtual void handleExit();
 
-	virtual void onContentSizeDirty();
-	virtual void onTransformDirty(const Mat4 &);
-	virtual void onGlobalTransformDirty(const Mat4 &);
-	virtual void onReorderChildDirty();
+	virtual void handleContentSizeDirty();
+	virtual void handleTransformDirty(const Mat4 &);
+	virtual void handleGlobalTransformDirty(const Mat4 &);
+	virtual void handleReorderChildDirty();
 
 	virtual void cleanup();
 
@@ -320,17 +320,19 @@ public:
 	// on this step, we also process parent-to-child geometry changes
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags);
 
+	virtual void visitSelf(FrameInfo &, NodeFlags flags, bool visibleByCamera);
+
 	void scheduleUpdate();
 	void unscheduleUpdate();
 
 	virtual bool isTouched(const Vec2 &location, float padding = 0.0f);
 	virtual bool isTouchedNodeSpace(const Vec2 &location, float padding = 0.0f);
 
-	virtual void setOnEnterCallback(Function<void(Scene *)> &&);
-	virtual void setOnExitCallback(Function<void()> &&);
-	virtual void setOnContentSizeDirtyCallback(Function<void()> &&);
-	virtual void setOnTransformDirtyCallback(Function<void(const Mat4 &)> &&);
-	virtual void setOnReorderChildDirtyCallback(Function<void()> &&);
+	virtual void setEnterCallback(Function<void(Scene *)> &&);
+	virtual void setExitCallback(Function<void()> &&);
+	virtual void setContentSizeDirtyCallback(Function<void()> &&);
+	virtual void setTransformDirtyCallback(Function<void(const Mat4 &)> &&);
+	virtual void setReorderChildDirtyCallback(Function<void()> &&);
 
 	float getInputDensity() const { return _inputDensity; }
 
@@ -349,6 +351,17 @@ public:
 	virtual uint32_t getFocus() const { return _focus; }
 
 protected:
+	struct VisitInfo {
+		void (*visitNodesBelow) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
+		void (*visitSelf) (const VisitInfo &, Node *) = nullptr;
+		void (*visitNodesAbove) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
+		Node *node = nullptr;
+
+		mutable NodeFlags flags = NodeFlags::None;
+		mutable FrameInfo *frameInfo = nullptr;
+		mutable bool visibleByCamera = true;
+	};
+
 	virtual void updateCascadeOpacity();
 	virtual void disableCascadeOpacity();
 	virtual void updateCascadeColor();
@@ -358,9 +371,7 @@ protected:
 	Mat4 transform(const Mat4 &parentTransform);
 	virtual NodeFlags processParentFlags(FrameInfo &info, NodeFlags parentFlags);
 
-	virtual void visitSelf(FrameInfo &, NodeFlags flags, bool visibleByCamera);
-
-	virtual bool wrapVisit(FrameInfo &, NodeFlags flags, const Callback<void(NodeFlags, bool visible)> &, bool useContext);
+	virtual bool wrapVisit(FrameInfo &, NodeFlags flags, const VisitInfo &, bool useContext);
 
 	bool _is3d = false;
 	bool _running = false;
@@ -407,11 +418,11 @@ protected:
 	Vector<Rc<Node>> _children;
 	Node *_parent = nullptr;
 
-	Function<void(Scene *)> _onEnterCallback;
-	Function<void()> _onExitCallback;
-	Function<void()> _onContentSizeDirtyCallback;
-	Function<void(const Mat4 &)> _onTransformDirtyCallback;
-	Function<void()> _onReorderChildDirtyCallback;
+	Function<void(Scene *)> _enterCallback;
+	Function<void()> _exitCallback;
+	Function<void()> _contentSizeDirtyCallback;
+	Function<void(const Mat4 &)> _transformDirtyCallback;
+	Function<void()> _reorderChildDirtyCallback;
 
 	Vector<Rc<Component>> _components;
 	Vector<Rc<InputListener>> _inputEvents;

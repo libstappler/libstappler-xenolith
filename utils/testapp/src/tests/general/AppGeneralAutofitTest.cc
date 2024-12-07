@@ -34,7 +34,7 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	Size2 _targetSize;
@@ -78,8 +78,8 @@ bool GeneralAutofitTestNode::init() {
 	return true;
 }
 
-void GeneralAutofitTestNode::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void GeneralAutofitTestNode::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	if (_background) {
 		_background->setContentSize(_contentSize);
@@ -183,8 +183,8 @@ bool GeneralAutofitTest::init() {
 	return true;
 }
 
-void GeneralAutofitTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralAutofitTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_nodeAutofit->setPosition(_contentSize / 2.0f);
 	_nodeAutofit->setContentSize(_contentSize * 0.90f);

@@ -70,16 +70,16 @@ bool MaterialTest::init(LayoutName layout, StringView text) {
 	return true;
 }
 
-void MaterialTest::onContentSizeDirty() {
-	FlexibleLayout::onContentSizeDirty();
+void MaterialTest::handleContentSizeDirty() {
+	FlexibleLayout::handleContentSizeDirty();
 
 	_backButton->setPosition(Size2(_contentSize.width - _decorationPadding.right, _contentSize.height - _decorationPadding.top));
 	_infoLabel->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - _decorationPadding.top - 16.0f));
 	_infoLabel->setWidth(_contentSize.width * 3.0f / 4.0f);
 }
 
-void MaterialTest::onEnter(xenolith::Scene *scene) {
-	FlexibleLayout::onEnter(scene);
+void MaterialTest::handleEnter(xenolith::Scene *scene) {
+	FlexibleLayout::handleEnter(scene);
 
 	if (auto s = dynamic_cast<AppScene *>(scene)) {
 		s->setActiveLayoutId(getName(), Value(getDataValue()));

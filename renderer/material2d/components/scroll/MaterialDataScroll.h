@@ -55,7 +55,7 @@ public:
 
 	virtual bool init(DataSource *dataCategory = nullptr, Layout = Layout::Vertical);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 	virtual void reset();
 
 	virtual Value save() const override;
@@ -158,10 +158,10 @@ class SP_PUBLIC DataScroll::Loader : public Node {
 public:
 	virtual ~Loader() { }
 	virtual bool init(const Function<void()> &);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
-	virtual void onEnter(xenolith::Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(xenolith::Scene *) override;
+	virtual void handleExit() override;
 
 protected:
 	IconSprite *_icon = nullptr;

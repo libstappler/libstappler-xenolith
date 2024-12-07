@@ -159,8 +159,8 @@ bool InputLabel::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	return Label::visitGeometry(info, parentFlags);
 }
 
-void InputLabel::onContentSizeDirty() {
-	Label::onContentSizeDirty();
+void InputLabel::handleContentSizeDirty() {
+	Label::handleContentSizeDirty();
 
 	_cursorSelection->setContentSize(_contentSize);
 
@@ -168,8 +168,8 @@ void InputLabel::onContentSizeDirty() {
 	updateFocus();
 }
 
-void InputLabel::onExit() {
-	Label::onExit();
+void InputLabel::handleExit() {
+	Label::handleExit();
 	if (_handler.isActive()) {
 		releaseInput();
 	}
@@ -808,7 +808,7 @@ void InputLabelContainer::setLabel(Rc<InputLabel> &&l, ZOrder zIndex) {
 		_label = nullptr;
 	}
 	if (l) {
-		l->setOnTransformDirtyCallback(std::bind(&InputLabelContainer::onLabelPosition, this));
+		l->setTransformDirtyCallback(std::bind(&InputLabelContainer::onLabelPosition, this));
 		_label = addChild(move(l), zIndex);
 	}
 }

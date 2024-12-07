@@ -72,8 +72,8 @@ bool GeneralTemporaryResourceTest::init() {
 	return true;
 }
 
-void GeneralTemporaryResourceTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralTemporaryResourceTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 64.0f));
 
@@ -89,8 +89,8 @@ void GeneralTemporaryResourceTest::onContentSizeDirty() {
 	_checkbox->setPosition(Vec2(_contentSize.width / 2.0f - 80.0f, 64.0f));
 }
 
-void GeneralTemporaryResourceTest::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void GeneralTemporaryResourceTest::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	auto cache = _director->getResourceCache();
 
@@ -118,8 +118,8 @@ void GeneralTemporaryResourceTest::onEnter(Scene *scene) {
 	}
 }
 
-void GeneralTemporaryResourceTest::onExit() {
-	LayoutTest::onExit();
+void GeneralTemporaryResourceTest::handleExit() {
+	LayoutTest::handleExit();
 }
 
 void GeneralTemporaryResourceTest::setResourceTimeout(float val) {

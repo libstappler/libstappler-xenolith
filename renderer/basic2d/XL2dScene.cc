@@ -73,7 +73,7 @@ bool Scene2d::FpsDisplay::init(font::FontController *fontController) {
 		_label->setAnchorPoint(Anchor::BottomLeft);
 		_label->setColor(Color::Black, true);
 		_label->setFontSize(16);
-		_label->setOnContentSizeDirtyCallback([this] {
+		_label->setContentSizeDirtyCallback([this] {
 			setContentSize(_label->getContentSize());
 		});
 		_label->setPersistentLayout(true);
@@ -184,8 +184,8 @@ void Scene2d::update(const UpdateTime &time) {
 	xenolith::Scene::update(time);
 }
 
-void Scene2d::onContentSizeDirty() {
-	xenolith::Scene::onContentSizeDirty();
+void Scene2d::handleContentSizeDirty() {
+	xenolith::Scene::handleContentSizeDirty();
 
 	if (_fps) {
 		_fps->setPosition(Vec2(6.0f, 6.0f));

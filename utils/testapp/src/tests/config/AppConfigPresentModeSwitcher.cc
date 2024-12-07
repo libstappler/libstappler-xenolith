@@ -112,8 +112,8 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	return true;
 }
 
-void ConfigSwitcher::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void ConfigSwitcher::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(_contentSize / 2.0f) + Vec2(0.0f, 4.0f));
 

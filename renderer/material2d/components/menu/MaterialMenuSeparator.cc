@@ -56,8 +56,8 @@ bool MenuSeparator::init(Menu *menu, MenuSourceItem *item) {
 	return true;
 }
 
-void MenuSeparator::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void MenuSeparator::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 	handleSourceDirty();
 }
 

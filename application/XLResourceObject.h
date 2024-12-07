@@ -49,8 +49,8 @@ public:
 
 	virtual bool isLoaded() const;
 
-	virtual void onEnter(ResourceOwner *);
-	virtual void onExit(ResourceOwner *);
+	virtual void handleEnter(ResourceOwner *);
+	virtual void handleExit(ResourceOwner *);
 
 	ResourceType getType() const { return _type; }
 	Rc<TemporaryResource> getTemporary() const;

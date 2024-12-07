@@ -72,7 +72,7 @@ public:
 	virtual void onMenuButtonPressed(MenuButton *button);
 	virtual void layoutSubviews();
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual ScrollView *getScroll() const;
 

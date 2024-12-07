@@ -61,7 +61,7 @@ public:
 	virtual ~FlexibleLayout() { }
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	template <typename T, typename ... Args>
 	auto setBaseNode(const Rc<T> &ptr, Args && ... args) -> T * {

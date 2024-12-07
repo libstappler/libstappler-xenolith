@@ -397,24 +397,24 @@ void Label::updateLabel() {
 	applyLayout(spec);
 }
 
-void Label::onContentSizeDirty() {
-	Sprite::onContentSizeDirty();
+void Label::handleContentSizeDirty() {
+	Sprite::handleContentSizeDirty();
 
 	_selection->setContentSize(_contentSize);
 	_marked->setContentSize(_contentSize);
 }
 
-void Label::onTransformDirty(const Mat4 &parent) {
+void Label::handleTransformDirty(const Mat4 &parent) {
 	updateLabelScale(parent);
-	Sprite::onTransformDirty(parent);
+	Sprite::handleTransformDirty(parent);
 }
 
-void Label::onGlobalTransformDirty(const Mat4 &parent) {
+void Label::handleGlobalTransformDirty(const Mat4 &parent) {
 	if (!_transformDirty) {
 		updateLabelScale(parent);
 	}
 
-	Sprite::onGlobalTransformDirty(parent);
+	Sprite::handleGlobalTransformDirty(parent);
 }
 
 void Label::updateColor() {

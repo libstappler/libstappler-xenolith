@@ -42,7 +42,7 @@ public:
 	virtual ~DecoratedLayout() { }
 
 	virtual bool init(ColorRole decorationColorRole = ColorRole::PrimaryContainer);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void setDecorationColorRole(ColorRole);

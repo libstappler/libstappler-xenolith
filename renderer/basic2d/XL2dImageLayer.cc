@@ -147,8 +147,8 @@ bool ImageLayer::init() {
 	return true;
 }
 
-void ImageLayer::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void ImageLayer::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	auto imageSize = _image->getTexture()->getExtent();
 	if (_imageSizePredefined) {
@@ -202,8 +202,8 @@ void ImageLayer::onContentSizeDirty() {
 	_root->setPosition(getCorrectPosition(getContainerSize(), _root->getPosition().xy()));
 }
 
-void ImageLayer::onTransformDirty(const Mat4 &parentTransform) {
-	Node::onTransformDirty(parentTransform);
+void ImageLayer::handleTransformDirty(const Mat4 &parentTransform) {
+	Node::handleTransformDirty(parentTransform);
 	Vec3 scale;
 	getNodeToWorldTransform().getScale(&scale);
 	_globalScale = Vec2(scale.x, scale.y);

@@ -40,19 +40,19 @@ public:
 	virtual ~Component();
 	virtual bool init();
 
-	virtual void onAdded(Node *owner);
-	virtual void onRemoved();
+	virtual void handleAdded(Node *owner);
+	virtual void handleRemoved();
 
-	virtual void onEnter(Scene *);
-	virtual void onExit();
+	virtual void handleEnter(Scene *);
+	virtual void handleExit();
 
-	virtual void visit(FrameInfo &, NodeFlags parentFlags);
+	virtual void visitSelf(FrameInfo &, NodeFlags parentFlags);
 
 	virtual void update(const UpdateTime &time);
 
-	virtual void onContentSizeDirty();
-	virtual void onTransformDirty(const Mat4 &);
-	virtual void onReorderChildDirty();
+	virtual void handleContentSizeDirty();
+	virtual void handleTransformDirty(const Mat4 &);
+	virtual void handleReorderChildDirty();
 
 	virtual bool isRunning() const;
 

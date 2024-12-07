@@ -35,7 +35,7 @@ public:
 	virtual ~Snackbar() { }
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void setSnackbarData(SnackbarData &&);
 
@@ -92,8 +92,8 @@ bool Snackbar::init() {
 	return true;
 }
 
-void Snackbar::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void Snackbar::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_surface->setContentSize(_contentSize);
 
@@ -201,8 +201,8 @@ bool SceneContent::init() {
 	return true;
 }
 
-void SceneContent::onContentSizeDirty() {
-	SceneContent2d::onContentSizeDirty();
+void SceneContent::handleContentSizeDirty() {
+	SceneContent2d::handleContentSizeDirty();
 
 	_snackbarRoot->setPosition(Vec2::ZERO);
 	_snackbarRoot->setContentSize(_contentSize);

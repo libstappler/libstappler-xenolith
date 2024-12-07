@@ -59,7 +59,7 @@ public:
 	virtual ~InputKeyboardOnScreenKeyboard() { }
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	bool handleTouchBegin(const InputEvent &);
@@ -172,8 +172,8 @@ bool InputKeyboardOnScreenKeyboard::init() {
 	return true;
 }
 
-void InputKeyboardOnScreenKeyboard::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void InputKeyboardOnScreenKeyboard::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_up->setPosition(_contentSize / 2.0f);
 	_right->setPosition(_contentSize / 2.0f);
@@ -341,8 +341,8 @@ bool InputKeyboardTest::init() {
 	return true;
 }
 
-void InputKeyboardTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void InputKeyboardTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	if (_layer->getContentSize() == Size2::ZERO) {
 		_layer->setContentSize(Size2(50, 50));

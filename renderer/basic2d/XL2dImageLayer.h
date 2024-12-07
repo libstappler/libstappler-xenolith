@@ -35,8 +35,8 @@ public:
 	virtual ~ImageLayer();
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
-    virtual void onTransformDirty(const Mat4 &) override;
+	virtual void handleContentSizeDirty() override;
+    virtual void handleTransformDirty(const Mat4 &) override;
 
 	virtual void setTexture(Rc<Texture> &&);
 	virtual const Rc<Texture> &getTexture() const;

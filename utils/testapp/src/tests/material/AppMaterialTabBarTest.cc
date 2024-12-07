@@ -45,8 +45,8 @@ bool MaterialTabBarTest::init() {
 	return true;
 }
 
-void MaterialTabBarTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialTabBarTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(Vec2(_contentSize / 2.0f));

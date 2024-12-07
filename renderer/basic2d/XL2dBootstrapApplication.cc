@@ -37,7 +37,7 @@ public:
 
 	virtual bool init(Application *, const core::FrameContraints &constraints) override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using Scene::init;
@@ -74,8 +74,8 @@ bool BootstrapScene::init(Application *app, const core::FrameContraints &constra
 	return true;
 }
 
-void BootstrapScene::onContentSizeDirty() {
-	Scene2d::onContentSizeDirty();
+void BootstrapScene::handleContentSizeDirty() {
+	Scene2d::handleContentSizeDirty();
 
 	_helloWorldLabel->setPosition(_content->getContentSize() / 2.0f);
 }

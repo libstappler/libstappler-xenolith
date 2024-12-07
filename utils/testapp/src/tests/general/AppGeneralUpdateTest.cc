@@ -39,20 +39,20 @@ bool GeneralUpdateTest::init() {
 	return true;
 }
 
-void GeneralUpdateTest::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void GeneralUpdateTest::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	runAction(Rc<RenderContinuously>::create());
 }
 
-void GeneralUpdateTest::onExit() {
+void GeneralUpdateTest::handleExit() {
 	stopAllActions();
 
-	LayoutTest::onExit();
+	LayoutTest::handleExit();
 }
 
-void GeneralUpdateTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralUpdateTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);

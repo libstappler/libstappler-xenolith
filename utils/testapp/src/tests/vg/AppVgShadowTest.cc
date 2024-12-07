@@ -41,8 +41,8 @@ public:
 	virtual ~LightNormalSelector() { }
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
-	virtual void onEnter(Scene *) override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleEnter(Scene *) override;
 
 	void setSoftShadow(bool);
 	void setK(float);
@@ -114,14 +114,14 @@ bool VgShadowTest::LightNormalSelector::init() {
 	return true;
 }
 
-void VgShadowTest::LightNormalSelector::onContentSizeDirty() {
-	VectorSprite::onContentSizeDirty();
+void VgShadowTest::LightNormalSelector::handleContentSizeDirty() {
+	VectorSprite::handleContentSizeDirty();
 
 	_point->setPosition(Vec2(_contentSize / 2.0f) + _normal * Vec2(_contentSize / 2.0f));
 }
 
-void VgShadowTest::LightNormalSelector::onEnter(Scene *scene) {
-	VectorSprite::onEnter(scene);
+void VgShadowTest::LightNormalSelector::handleEnter(Scene *scene) {
+	VectorSprite::handleEnter(scene);
 
 	updateLightNormal(_normal);
 }
@@ -275,8 +275,8 @@ bool VgShadowTest::init() {
 	return true;
 }
 
-void VgShadowTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgShadowTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_sprite->setPosition(Size2(_contentSize.width / 2.0f, _contentSize.height / 2.0f));
 

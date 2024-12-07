@@ -125,8 +125,8 @@ Rc<MenuSeparator> Menu::createSeparator(Menu *m, MenuSourceItem *item) {
 	return Rc<MenuSeparator>::create(m, item);
 }
 
-void Menu::onContentSizeDirty() {
-	Surface::onContentSizeDirty();
+void Menu::handleContentSizeDirty() {
+	Surface::handleContentSizeDirty();
 	layoutSubviews();
 }
 

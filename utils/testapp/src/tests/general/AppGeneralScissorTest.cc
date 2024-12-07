@@ -35,7 +35,7 @@ bool GeneralScissorTest::init() {
 	_node = addChild(Rc<DynamicStateNode>::create());
 	_node->setAnchorPoint(Anchor::Middle);
 	_node->enableScissor();
-	_node->setOnContentSizeDirtyCallback([this] {
+	_node->setContentSizeDirtyCallback([this] {
 		_layer->setPosition(_node->getContentSize() / 2.0f);
 	});
 
@@ -92,8 +92,8 @@ bool GeneralScissorTest::init() {
 	return true;
 }
 
-void GeneralScissorTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralScissorTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_layer->setContentSize(_contentSize);
 

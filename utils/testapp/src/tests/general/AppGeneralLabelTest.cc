@@ -50,8 +50,8 @@ bool GeneralLabelTest::init() {
 	return true;
 }
 
-void GeneralLabelTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void GeneralLabelTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	Vec2 center = _contentSize / 2.0f;
 

@@ -146,8 +146,8 @@ bool VgIconTest::init() {
 	return true;
 }
 
-void VgIconTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgIconTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_sprite->setPosition(Size2(_contentSize.width / 2.0f, _contentSize.height / 2.0f));
 	_triangles->setPosition(Size2(_contentSize.width / 2.0f, _contentSize.height / 2.0f));

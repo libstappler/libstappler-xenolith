@@ -56,15 +56,15 @@ bool ResourceObject::isLoaded() const {
 	return !_temporary || (_temporary && _temporary->isLoaded());
 }
 
-void ResourceObject::onEnter(ResourceOwner *scene) {
+void ResourceObject::handleEnter(ResourceOwner *scene) {
 	if (_temporary) {
-		_temporary->onEnter(scene, this);
+		_temporary->handleEnter(scene, this);
 	}
 }
 
-void ResourceObject::onExit(ResourceOwner *scene) {
+void ResourceObject::handleExit(ResourceOwner *scene) {
 	if (_temporary) {
-		_temporary->onExit(scene, this);
+		_temporary->handleExit(scene, this);
 	}
 }
 

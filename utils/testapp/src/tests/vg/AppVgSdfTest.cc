@@ -261,8 +261,8 @@ bool VgSdfTest::init() {
 	return true;
 }
 
-void VgSdfTest::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void VgSdfTest::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	auto light = Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, Color::White);
 
@@ -271,8 +271,8 @@ void VgSdfTest::onEnter(Scene *scene) {
 	content->addLight(move(light));
 }
 
-void VgSdfTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgSdfTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_sliderScaleX->setPosition(Vec2(16.0f, _contentSize.height - 16.0f));
 	_sliderScaleY->setPosition(Vec2(384.0f + 16.0f, _contentSize.height - 16.0f));

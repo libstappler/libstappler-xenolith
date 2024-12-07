@@ -45,14 +45,14 @@ bool Button::init(const SurfaceStyle &style) {
 	_labelText = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelText->setAnchorPoint(Anchor::MiddleLeft);
 	_labelText->setLocaleEnabled(true);
-	_labelText->setOnContentSizeDirtyCallback([this] {
+	_labelText->setContentSizeDirtyCallback([this] {
 		updateSizeFromContent();
 	});
 
 	_labelValue = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelValue->setAnchorPoint(Anchor::MiddleLeft);
 	_labelValue->setLocaleEnabled(true);
-	_labelValue->setOnContentSizeDirtyCallback([this] {
+	_labelValue->setContentSizeDirtyCallback([this] {
 		updateSizeFromContent();
 	});
 
@@ -116,8 +116,8 @@ bool Button::init(const SurfaceStyle &style) {
 	return true;
 }
 
-void Button::onContentSizeDirty() {
-	Surface::onContentSizeDirty();
+void Button::handleContentSizeDirty() {
+	Surface::handleContentSizeDirty();
 
 	if (_followContentSize && hasContent()) {
 		updateSizeFromContent();

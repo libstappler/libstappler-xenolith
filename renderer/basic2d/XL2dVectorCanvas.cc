@@ -25,6 +25,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 struct VectorCanvasPathOutput {
+	Mat4 transform;
+	Size2 targetSize;
 	Color4F color;
 	VertexData *vertexes = nullptr;
 	uint32_t material = 0;
@@ -101,7 +103,6 @@ struct VectorCanvas::Data : memory::AllocPool {
 	TimeInterval subAccum;
 
 	Rc<VectorImageData> image;
-	Size2 targetSize;
 
 	Vector<InstanceVertexData> *out = nullptr;
 	std::forward_list<Vector<TransformData>> *instances = nullptr;
@@ -132,7 +133,7 @@ static void VectorCanvasPathDrawer_pushVertex(void *ptr, uint32_t idx, const Vec
 	out->vertexes->data[idx] = Vertex{
 		Vec4(pt, 0.0f, 1.0f),
 		Vec4(out->color.r, out->color.g, out->color.b, out->color.a * vertexValue),
-		Vec2(0.0f, 0.0f), out->material, 0
+		out->transform.transformPoint(pt), out->material, 0
 	};
 }
 
@@ -192,19 +193,23 @@ const VectorCanvasConfig &VectorCanvas::getConfig() const {
 	return _data->pathDrawer;
 }
 
-Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image, Size2 targetSize) {
+Rc<VectorCanvasResult> VectorCanvas::draw(const VectorCanvasConfig &config, Rc<VectorImageData> &&image) {
+	setConfig(config);
+	return draw(move(image));
+}
+
+Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image) {
 	auto ret = Rc<VectorCanvasResult>::alloc();
 	_data->out = &ret->data;
 	_data->instances = &ret->instances;
 	_data->objects = &ret->objects;
 	_data->image = move(image);
-	ret->targetSize = _data->targetSize = targetSize;
 	ret->config = static_cast<const VectorCanvasConfig &>(_data->pathDrawer);
 
 	auto imageSize = _data->image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(targetSize.width / imageSize.width, targetSize.height / imageSize.height, 1.0f);
+	t.scale(_data->pathDrawer.targetSize.width / imageSize.width, _data->pathDrawer.targetSize.height / imageSize.height, 1.0f);
 
 	ret->targetTransform = t;
 
@@ -462,7 +467,8 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	}
 	line.drawClose(false);
 
-	VectorCanvasPathOutput target { Color4F::WHITE, out };
+	VectorCanvasPathOutput target { transform, targetSize, Color4F::WHITE, out };
+	target.transform.scale(1.0f / targetSize.width, -1.0f / targetSize.height, 1.0f);
 	target.config = this;
 
 	geom::TessResult result;

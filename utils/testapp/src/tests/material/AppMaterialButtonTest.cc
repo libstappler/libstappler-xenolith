@@ -72,8 +72,8 @@ bool MaterialButtonTest::init() {
 	return true;
 }
 
-void MaterialButtonTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void MaterialButtonTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);

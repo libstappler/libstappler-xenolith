@@ -44,24 +44,24 @@ bool SceneContent2d::init() {
 	return true;
 }
 
-void SceneContent2d::onEnter(Scene *scene) {
-	SceneContent::onEnter(scene);
+void SceneContent2d::handleEnter(Scene *scene) {
+	SceneContent::handleEnter(scene);
 
 	for (auto &it : _lights) {
 		it->onEnter(scene);
 	}
 }
 
-void SceneContent2d::onExit() {
+void SceneContent2d::handleExit() {
 	for (auto &it : _lights) {
 		it->onExit();
 	}
 
-	SceneContent::onExit();
+	SceneContent::handleExit();
 }
 
-void SceneContent2d::onContentSizeDirty() {
-	SceneContent::onContentSizeDirty();
+void SceneContent2d::handleContentSizeDirty() {
+	SceneContent::handleContentSizeDirty();
 
 	for (auto &node : _layouts) {
 		updateLayoutNode(node);

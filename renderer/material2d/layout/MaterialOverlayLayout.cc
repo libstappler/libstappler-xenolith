@@ -64,8 +64,8 @@ bool OverlayLayout::init(const Vec2 &globalOrigin, Binding b, Surface *node, Siz
 	return true;
 }
 
-void OverlayLayout::onContentSizeDirty() {
-	SceneLayout2d::onContentSizeDirty();
+void OverlayLayout::handleContentSizeDirty() {
+	SceneLayout2d::handleContentSizeDirty();
 
 	if (_initSize != Size2::ZERO) {
 		if (_sceneContent) {

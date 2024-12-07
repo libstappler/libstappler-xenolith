@@ -43,7 +43,7 @@ public:
 
 	virtual bool init(const Vec2 &globalOrigin, Binding b, Surface *root, Size2 targetSize);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
 	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace) override;

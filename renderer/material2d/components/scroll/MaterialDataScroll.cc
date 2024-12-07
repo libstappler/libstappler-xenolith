@@ -45,22 +45,22 @@ bool DataScroll::Loader::init(const Function<void()> &cb) {
 	return true;
 }
 
-void DataScroll::Loader::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void DataScroll::Loader::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 	_icon->setPosition(_contentSize / 2.0f);
 }
 
-void DataScroll::Loader::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void DataScroll::Loader::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 	_icon->animate();
 	if (_callback) {
 		_callback();
 	}
 }
 
-void DataScroll::Loader::onExit() {
+void DataScroll::Loader::handleExit() {
 	stopAllActions();
-	Node::onExit();
+	Node::handleExit();
 	_icon->stopAllActions();
 }
 
@@ -145,8 +145,8 @@ bool DataScroll::init(DataSource *source, Layout l) {
 	return true;
 }
 
-void DataScroll::onContentSizeDirty() {
-	ScrollView::onContentSizeDirty();
+void DataScroll::handleContentSizeDirty() {
+	ScrollView::handleContentSizeDirty();
 	if ((isVertical() && _savedSize != _contentSize.width) || (!isVertical() && _savedSize != _contentSize.height)) {
 		_savedSize = isVertical()?_contentSize.width:_contentSize.height;
 		onSourceDirty();

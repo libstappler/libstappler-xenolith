@@ -36,7 +36,7 @@ public:
 	virtual ~NavigationDrawer();
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	virtual Menu *getNavigationMenu() const;
 

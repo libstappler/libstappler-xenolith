@@ -37,11 +37,11 @@ public:
 	using CharFilter = Function<bool(char16_t)>;
 
 	virtual bool init() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 	virtual bool visitGeometry(FrameInfo &, NodeFlags parentFlags) override;
 
-	virtual void onEnter(Scene *) override;
-	virtual void onExit() override;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
 	virtual void setInputCallback(const Callback &);
 	virtual const Callback &getInputCallback() const;

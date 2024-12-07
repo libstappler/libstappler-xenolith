@@ -81,7 +81,7 @@ void Sprite::setTexture(StringView textureName) {
 		if (textureName.empty()) {
 			if (_texture) {
 				if (_running) {
-					_texture->onExit(_frameContext);
+					_texture->handleExit(_frameContext);
 				}
 				_texture = nullptr;
 				_materialDirty = true;
@@ -100,7 +100,7 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 	if (_texture) {
 		if (!tex) {
 			if (_running) {
-				_texture->onExit(_frameContext);
+				_texture->handleExit(_frameContext);
 			}
 			_texture = nullptr;
 			_textureName.clear();
@@ -108,11 +108,11 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 			_isTextureLoaded = false;
 		} else if (_texture->getName() != tex->getName()) {
 			if (_running) {
-				_texture->onExit(_frameContext);
+				_texture->handleExit(_frameContext);
 			}
 			_texture = move(tex);
 			if (_running) {
-				_texture->onEnter(_frameContext);
+				_texture->handleEnter(_frameContext);
 			}
 			_isTextureLoaded = _texture->isLoaded();
 			if (_isTextureLoaded && _textureLoadedCallback) {
@@ -126,7 +126,7 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 		if (tex) {
 			_texture = move(tex);
 			if (_running) {
-				_texture->onEnter(_frameContext);
+				_texture->handleEnter(_frameContext);
 			}
 			_isTextureLoaded = _texture->isLoaded();
 			if (_isTextureLoaded && _textureLoadedCallback) {
@@ -162,7 +162,7 @@ bool Sprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	if (_texture) {
 		auto loaded = _texture->isLoaded();
 		if (loaded != _isTextureLoaded && loaded) {
-			onTextureLoaded();
+			handleTextureLoaded();
 			_isTextureLoaded = loaded;
 		}
 	}
@@ -242,8 +242,8 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 	_pendingDependencies.clear();
 }
 
-void Sprite::onEnter(Scene *scene) {
-	Node::onEnter(scene);
+void Sprite::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
 
 	if (!_textureName.empty()) {
 		if (!_texture || _texture->getName() != _textureName) {
@@ -258,23 +258,23 @@ void Sprite::onEnter(Scene *scene) {
 	}
 
 	if (_texture) {
-		_texture->onEnter(_frameContext);
+		_texture->handleEnter(_frameContext);
 	}
 }
 
-void Sprite::onExit() {
+void Sprite::handleExit() {
 	if (_texture) {
-		_texture->onExit(_frameContext);
+		_texture->handleExit(_frameContext);
 	}
-	Node::onExit();
+	Node::handleExit();
 }
 
-void Sprite::onContentSizeDirty() {
+void Sprite::handleContentSizeDirty() {
 	_vertexesDirty = true;
-	Node::onContentSizeDirty();
+	Node::handleContentSizeDirty();
 }
 
-void Sprite::onTextureLoaded() {
+void Sprite::handleTextureLoaded() {
 	if (_textureLoadedCallback) {
 		_textureLoadedCallback();
 	}

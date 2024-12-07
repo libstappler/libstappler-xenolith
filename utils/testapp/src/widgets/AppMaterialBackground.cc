@@ -65,16 +65,16 @@ bool MaterialBackground::init() {
 	return true;
 }
 
-void MaterialBackground::onContentSizeDirty() {
-	BackgroundSurface::onContentSizeDirty();
+void MaterialBackground::handleContentSizeDirty() {
+	BackgroundSurface::handleContentSizeDirty();
 
 	_huePicker->setPosition(Vec2(16.0f, _contentSize.height - 16.0f));
 	_huePicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f), 24.0f));
 	_lightCheckbox->setPosition(Vec2(16.0f, _contentSize.height - 48.0f));
 }
 
-void MaterialBackground::onEnter(xenolith::Scene *scene) {
-	BackgroundSurface::onEnter(scene);
+void MaterialBackground::handleEnter(xenolith::Scene *scene) {
+	BackgroundSurface::handleEnter(scene);
 
 	if (auto sceneStyle = scene->getComponentByType<material2d::StyleContainer>()) {
 		auto color = sceneStyle->getPrimaryScheme().hct(material2d::ColorRole::Primary);

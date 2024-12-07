@@ -43,8 +43,8 @@ bool ScrollView::Overscroll::init(Direction dir) {
 	return true;
 }
 
-void ScrollView::Overscroll::onContentSizeDirty() {
-	VectorSprite::onContentSizeDirty();
+void ScrollView::Overscroll::handleContentSizeDirty() {
+	VectorSprite::handleContentSizeDirty();
 
 	if (_contentSize == Size2::ZERO) {
 		_image->clear();
@@ -64,14 +64,14 @@ void ScrollView::Overscroll::update(const UpdateTime &time) {
 	}
 }
 
-void ScrollView::Overscroll::onEnter(Scene *scene) {
-	VectorSprite::onEnter(scene);
+void ScrollView::Overscroll::handleEnter(Scene *scene) {
+	VectorSprite::handleEnter(scene);
 	scheduleUpdate();
 }
 
-void ScrollView::Overscroll::onExit() {
+void ScrollView::Overscroll::handleExit() {
 	unscheduleUpdate();
-	VectorSprite::onExit();
+	VectorSprite::handleExit();
 }
 
 void ScrollView::Overscroll::setDirection(Direction dir) {
@@ -123,8 +123,8 @@ bool ScrollView::init(Layout l) {
 	return true;
 }
 
-void ScrollView::onContentSizeDirty() {
-	ScrollViewBase::onContentSizeDirty();
+void ScrollView::handleContentSizeDirty() {
+	ScrollViewBase::handleContentSizeDirty();
 	if (isVertical()) {
 		_overflowFront->setAnchorPoint(Vec2(0, 1)); // top
 		_overflowFront->setDirection(Overscroll::Direction::Top);

@@ -35,7 +35,7 @@ public:
 
 	virtual bool init(StringView, Function<void()> &&cb);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 protected:
 	using Layer::init;

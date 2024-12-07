@@ -79,8 +79,8 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	return true;
 }
 
-void AppBar::onContentSizeDirty() {
-	Surface::onContentSizeDirty();
+void AppBar::handleContentSizeDirty() {
+	Surface::handleContentSizeDirty();
 	updateDefaultHeight();
 	layoutSubviews();
 }

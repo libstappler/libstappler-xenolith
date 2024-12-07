@@ -35,7 +35,7 @@ public:
 	virtual ~MenuSeparator();
 
 	virtual bool init(Menu *, MenuSourceItem *);
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 	virtual void setTopLevel(bool value);
 
 protected:

@@ -66,8 +66,8 @@ bool NavigationDrawer::init() {
 	return true;
 }
 
-void NavigationDrawer::onContentSizeDirty() {
-	Sidebar::onContentSizeDirty();
+void NavigationDrawer::handleContentSizeDirty() {
+	Sidebar::handleContentSizeDirty();
 
 	if (auto source = _navigation->getMenuSource()) {
 		source->setDirty();

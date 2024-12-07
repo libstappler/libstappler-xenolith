@@ -253,8 +253,8 @@ bool UtilsStorageTest::init() {
 	return true;
 }
 
-void UtilsStorageTest::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void UtilsStorageTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_background->setPosition(_contentSize / 2.0f);
 	_background->setContentSize(_contentSize);
@@ -275,8 +275,8 @@ void UtilsStorageTest::onContentSizeDirty() {
 	_result->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 220.0f));
 }
 
-void UtilsStorageTest::onEnter(Scene *scene) {
-	LayoutTest::onEnter(scene);
+void UtilsStorageTest::handleEnter(Scene *scene) {
+	LayoutTest::handleEnter(scene);
 
 	auto serv = _director->getApplication()->getExtension<storage::Server>();
 
@@ -289,12 +289,12 @@ void UtilsStorageTest::onEnter(Scene *scene) {
 	}, this);
 }
 
-void UtilsStorageTest::onExit() {
+void UtilsStorageTest::handleExit() {
 	auto serv = _director->getApplication()->getExtension<storage::Server>();
 
 	serv->removeComponentContainer(_container);
 
-	LayoutTest::onExit();
+	LayoutTest::handleExit();
 }
 
 }

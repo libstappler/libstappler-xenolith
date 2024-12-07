@@ -62,8 +62,8 @@ bool VgDynamicIcons::init() {
 	return true;
 }
 
-void VgDynamicIcons::onContentSizeDirty() {
-	LayoutTest::onContentSizeDirty();
+void VgDynamicIcons::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
 
 	_iconLoader->setPosition(_contentSize / 2.0f);
 	_iconNav->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-96.0f, 0.0f));

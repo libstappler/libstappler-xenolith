@@ -57,8 +57,8 @@ public:
 	// Возвращает true если загрузка начата и false есть ресурс уже загружен
 	bool load(Ref *, Function<void(bool)> &&);
 
-	void onEnter(ResourceOwner *, ResourceObject *);
-	void onExit(ResourceOwner *, ResourceObject *);
+	void handleEnter(ResourceOwner *, ResourceObject *);
+	void handleExit(ResourceOwner *, ResourceObject *);
 
 	bool clear();
 

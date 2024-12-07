@@ -59,15 +59,15 @@ bool LayoutMenu::init(LayoutName layout, Vector<LayoutName> &&items) {
 	return true;
 }
 
-void LayoutMenu::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void LayoutMenu::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_scrollView->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height));
 	_scrollView->setContentSize(Size2(std::min(512.0f, _contentSize.width), _contentSize.height));
 }
 
-void LayoutMenu::onEnter(xenolith::Scene *scene) {
-	Node::onEnter(scene);
+void LayoutMenu::handleEnter(xenolith::Scene *scene) {
+	Node::handleEnter(scene);
 
 	if (auto s = dynamic_cast<AppScene *>(scene)) {
 		s->setActiveLayoutId(getName(), Value(getDataValue()));

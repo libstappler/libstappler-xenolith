@@ -104,9 +104,9 @@ public:
 	virtual void setStyle(const DescriptionStyle &);
 	virtual const DescriptionStyle &getStyle() const;
 
-	virtual void onContentSizeDirty() override;
-	virtual void onTransformDirty(const Mat4 &) override;
-	virtual void onGlobalTransformDirty(const Mat4 &) override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleTransformDirty(const Mat4 &) override;
+	virtual void handleGlobalTransformDirty(const Mat4 &) override;
 
 	virtual void setAdjustValue(uint8_t);
 	virtual uint8_t getAdjustValue() const;

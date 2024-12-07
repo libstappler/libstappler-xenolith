@@ -40,7 +40,8 @@ public:
 	void setConfig(const VectorCanvasConfig &config);
 	const VectorCanvasConfig &getConfig() const;
 
-	Rc<VectorCanvasResult> draw(Rc<VectorImageData> &&, Size2 targetSize);
+	Rc<VectorCanvasResult> draw(const VectorCanvasConfig &config, Rc<VectorImageData> &&);
+	Rc<VectorCanvasResult> draw(Rc<VectorImageData> &&);
 
 protected:
 	struct Data;

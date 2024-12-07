@@ -41,7 +41,7 @@ public:
 
 	virtual void setDirty(bool);
 
-	virtual void visit(FrameInfo &, NodeFlags parentFlags) override;
+	virtual void visitSelf(FrameInfo &, NodeFlags parentFlags) override;
 
 protected:
 	StyleCallback _styleCallback;

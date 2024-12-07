@@ -80,8 +80,8 @@ bool FlexibleLayout::init() {
 	return true;
 }
 
-void FlexibleLayout::onContentSizeDirty() {
-	DecoratedLayout::onContentSizeDirty();
+void FlexibleLayout::handleContentSizeDirty() {
+	DecoratedLayout::handleContentSizeDirty();
 
 	float realFlexMin = _targetFlexibleMinHeight;
 	float realFlexMax = _targetFlexibleMaxHeight;

@@ -41,21 +41,21 @@ bool Component::init() {
 	return true;
 }
 
-void Component::onAdded(Node *owner) {
+void Component::handleAdded(Node *owner) {
 	_owner = owner;
 }
-void Component::onRemoved() {
+void Component::handleRemoved() {
 	_owner = nullptr;
 }
 
-void Component::onEnter(Scene *sc) {
+void Component::handleEnter(Scene *sc) {
 	_running = true;
 	if (_scheduled) {
 		sc->getDirector()->getScheduler()->scheduleUpdate(this, 0, false);
 	}
 }
 
-void Component::onExit() {
+void Component::handleExit() {
 	if (_scheduled) {
 		unscheduleUpdate();
 		_scheduled = true; // -re-enable after restart;
@@ -63,13 +63,13 @@ void Component::onExit() {
 	_running = false;
 }
 
-void Component::visit(FrameInfo &, NodeFlags parentFlags) { }
+void Component::visitSelf(FrameInfo &, NodeFlags parentFlags) { }
 
 void Component::update(const UpdateTime &time) { }
 
-void Component::onContentSizeDirty() { }
-void Component::onTransformDirty(const Mat4 &) { }
-void Component::onReorderChildDirty() { }
+void Component::handleContentSizeDirty() { }
+void Component::handleTransformDirty(const Mat4 &) { }
+void Component::handleReorderChildDirty() { }
 
 bool Component::isRunning() const {
 	return _running;

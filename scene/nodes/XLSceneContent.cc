@@ -52,8 +52,8 @@ bool SceneContent::init() {
 	return true;
 }
 
-void SceneContent::onEnter(Scene *scene) {
-	DynamicStateNode::onEnter(scene);
+void SceneContent::handleEnter(Scene *scene) {
+	DynamicStateNode::handleEnter(scene);
 
 	if (_retainBackButton && !_backButtonRetained) {
 		_director->getView()->retainBackButton();
@@ -69,17 +69,17 @@ void SceneContent::onEnter(Scene *scene) {
 	}
 }
 
-void SceneContent::onExit() {
+void SceneContent::handleExit() {
 	if (_retainBackButton && _backButtonRetained) {
 		_director->getView()->releaseBackButton();
 		_backButtonRetained = false;
 	}
 
-	DynamicStateNode::onExit();
+	DynamicStateNode::handleExit();
 }
 
-void SceneContent::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void SceneContent::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 }
 
 SP_COVERAGE_TRIVIAL

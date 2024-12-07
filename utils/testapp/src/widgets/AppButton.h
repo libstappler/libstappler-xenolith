@@ -61,7 +61,7 @@ public:
 
 	bool init(StringView, Function<void()> &&);
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 
 	void setString(StringView);
 

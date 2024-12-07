@@ -54,9 +54,9 @@ public:
 
 	virtual ~ScrollController();
 
-	virtual void onAdded(Node *owner) override;
-	virtual void onRemoved() override;
-	virtual void onContentSizeDirty() override;
+	virtual void handleAdded(Node *owner) override;
+	virtual void handleRemoved() override;
+	virtual void handleContentSizeDirty() override;
 
 	/// Scroll view callbacks handlers
 	virtual void onScrollPosition(bool force = false);

@@ -77,8 +77,8 @@ bool LayoutTestBackButton::init(Function<void()> &&cb) {
 	return true;
 }
 
-void LayoutTestBackButton::onContentSizeDirty() {
-	VectorSprite::onContentSizeDirty();
+void LayoutTestBackButton::handleContentSizeDirty() {
+	VectorSprite::handleContentSizeDirty();
 
 	_background->setContentSize(_contentSize);
 	_background->setPosition(_contentSize / 2.0f);
@@ -142,16 +142,16 @@ bool LayoutTest::init(LayoutName layout, StringView text) {
 	return true;
 }
 
-void LayoutTest::onContentSizeDirty() {
-	Node::onContentSizeDirty();
+void LayoutTest::handleContentSizeDirty() {
+	Node::handleContentSizeDirty();
 
 	_backButton->setPosition(_contentSize);
 	_infoLabel->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height - 16.0f));
 	_infoLabel->setWidth(_contentSize.width * 3.0f / 4.0f);
 }
 
-void LayoutTest::onEnter(xenolith::Scene *scene) {
-	Node::onEnter(scene);
+void LayoutTest::handleEnter(xenolith::Scene *scene) {
+	Node::handleEnter(scene);
 
 	if (auto s = dynamic_cast<AppScene *>(scene)) {
 		s->setActiveLayoutId(getName(), Value(getDataValue()));

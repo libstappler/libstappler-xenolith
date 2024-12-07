@@ -39,7 +39,7 @@ public:
 
 	virtual bool init() override;
 
-	virtual void onContentSizeDirty() override;
+	virtual void handleContentSizeDirty() override;
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void showSnackbar(SnackbarData &&);
