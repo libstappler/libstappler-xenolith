@@ -56,8 +56,8 @@ void SurfaceInterior::handleAdded(Node *owner) {
 	_ownerIsMaterialNode = ((dynamic_cast<Surface *>(_owner) != nullptr) || (dynamic_cast<LayerSurface *>(_owner) != nullptr));
 }
 
-void SurfaceInterior::visitSelf(FrameInfo &info, NodeFlags parentFlags) {
-	Component::visitSelf(info, parentFlags);
+void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags parentFlags) {
+	Component::handleVisitSelf(info, node, parentFlags);
 
 	if (!_ownerIsMaterialNode) {
 		auto style = info.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);

@@ -23,7 +23,6 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_XL2DINPUTLABEL_H_
 #define XENOLITH_RENDERER_BASIC2D_XL2DINPUTLABEL_H_
 
-#include "XLDynamicStateNode.h"
 #include "XLTextInputManager.h"
 #include "XL2d.h"
 #include "XL2dLabel.h"
@@ -58,7 +57,7 @@ public:
 	virtual void handlePointer(bool);
 };
 
-class SP_PUBLIC InputLabelContainer : public DynamicStateNode {
+class SP_PUBLIC InputLabelContainer : public Node {
 public:
 	template <typename T, typename ... Args>
 	auto setLabel(const Rc<T> &ptr, Args && ... args) {

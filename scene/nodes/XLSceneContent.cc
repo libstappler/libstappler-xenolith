@@ -24,13 +24,14 @@
 #include "XLInputListener.h"
 #include "XLDirector.h"
 #include "XLView.h"
+#include "XLDynamicStateComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 SceneContent::~SceneContent() { }
 
 bool SceneContent::init() {
-	if (!DynamicStateNode::init()) {
+	if (!Node::init()) {
 		return false;
 	}
 
@@ -49,11 +50,13 @@ bool SceneContent::init() {
 		return true;
 	});
 
+	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create());
+
 	return true;
 }
 
 void SceneContent::handleEnter(Scene *scene) {
-	DynamicStateNode::handleEnter(scene);
+	Node::handleEnter(scene);
 
 	if (_retainBackButton && !_backButtonRetained) {
 		_director->getView()->retainBackButton();
@@ -75,7 +78,7 @@ void SceneContent::handleExit() {
 		_backButtonRetained = false;
 	}
 
-	DynamicStateNode::handleExit();
+	Node::handleExit();
 }
 
 void SceneContent::handleContentSizeDirty() {
@@ -119,6 +122,20 @@ void SceneContent::hideViewDecoration() {
 		}
 		_decorationVisible = false;
 	}
+}
+
+void SceneContent::enableScissor() {
+	_scissorComponent->enableScissor();
+	_scissorComponent->setStateApplyMode(DynamicStateApplyMode::ApplyForAll);
+}
+
+void SceneContent::disableScissor() {
+	_scissorComponent->disableScissor();
+	_scissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
+}
+
+bool SceneContent::isScissorEnabled() const {
+	return _scissorComponent->isScissorEnabled();
 }
 
 void SceneContent::setDecorationPadding(Padding padding) {

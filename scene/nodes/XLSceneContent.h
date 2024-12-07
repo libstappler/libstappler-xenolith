@@ -23,11 +23,11 @@
 #ifndef XENOLITH_SCENE_NODES_XLSCENECONTENT_H_
 #define XENOLITH_SCENE_NODES_XLSCENECONTENT_H_
 
-#include "XLDynamicStateNode.h"
+#include "XLNode.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SP_PUBLIC SceneContent : public DynamicStateNode {
+class SP_PUBLIC SceneContent : public Node {
 public:
 	virtual ~SceneContent();
 
@@ -48,6 +48,10 @@ public:
 
 	Padding getDecorationPadding() const { return _decorationPadding; }
 
+	virtual void enableScissor();
+	virtual void disableScissor();
+	virtual bool isScissorEnabled() const;
+
 protected:
 	friend class Scene;
 
@@ -59,6 +63,7 @@ protected:
 
 	Padding _decorationPadding;
 	InputListener *_inputListener = nullptr;
+	DynamicStateComponent *_scissorComponent = nullptr;
 
 	bool _retainBackButton = false;
 	bool _backButtonRetained = false;

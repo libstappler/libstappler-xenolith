@@ -24,6 +24,7 @@
 #include "AppGeneralAutofitTest.h"
 #include "XL2dLayer.h"
 #include "XLInputListener.h"
+#include "XLDynamicStateComponent.h"
 
 namespace stappler::xenolith::app {
 
@@ -32,12 +33,14 @@ bool GeneralScissorTest::init() {
 		return false;
 	}
 
-	_node = addChild(Rc<DynamicStateNode>::create());
+	_node = addChild(Rc<Node>::create());
 	_node->setAnchorPoint(Anchor::Middle);
-	_node->enableScissor();
 	_node->setContentSizeDirtyCallback([this] {
 		_layer->setPosition(_node->getContentSize() / 2.0f);
 	});
+
+	auto comp = _node->addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	comp->enableScissor(Padding(-2.0f));
 
 	_layer = _node->addChild(Rc<Layer>::create(Color::Red_500));
 	_layer->setAnchorPoint(Anchor::Middle);

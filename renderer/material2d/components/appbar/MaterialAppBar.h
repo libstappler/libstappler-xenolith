@@ -95,7 +95,7 @@ protected:
 	Button *_navButton = nullptr;
 
 	size_t _maxActionIcons = 3;
-	DynamicStateNode *_scissorNode = nullptr;
+	Node *_scissorNode = nullptr;
 	Node *_iconsComposer = nullptr;
 	Node *_prevComposer = nullptr;
 
@@ -110,6 +110,7 @@ protected:
 	float _iconWidth = 0.0f;
 
 	InputListener *_inputListener = nullptr;
+	DynamicStateComponent *_scissorComponent = nullptr;
 };
 
 }

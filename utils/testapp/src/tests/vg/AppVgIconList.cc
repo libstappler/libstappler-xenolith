@@ -171,7 +171,6 @@ void VgIconList::handleContentSizeDirty() {
 
 	_scrollView->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height));
 	_scrollView->setContentSize(_contentSize);
-	_scrollView->disableScissor();
 }
 
 bool VgIconList::rebuildScroll(ScrollController *c) {

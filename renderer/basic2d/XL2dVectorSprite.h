@@ -116,6 +116,8 @@ protected:
 	ImagePlacementInfo _imagePlacement;
 	Size2 _imageTargetSize;
 	Mat4 _imageTargetTransform;
+
+	DynamicStateComponent *_imageScissorComponent = nullptr;
 };
 
 }

@@ -34,7 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 InputTextContainer::~InputTextContainer() { }
 
 bool InputTextContainer::init() {
-	if (!DynamicStateNode::init()) {
+	if (!Node::init()) {
 		return false;
 	}
 
@@ -67,14 +67,14 @@ bool InputTextContainer::init() {
 	_selectionPointerEnd->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerEnd->setVisible(false);
 
-	setStateApplyMode(StateApplyMode::ApplyForNodesBelow);
-	enableScissor(Padding(0.0f, 2.0f));
+	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForNodesBelow));
+	_scissorComponent->enableScissor(Padding(0.0f, 2.0f));
 
 	return true;
 }
 
 void InputTextContainer::update(const UpdateTime &time) {
-	DynamicStateNode::update(time);
+	Node::update(time);
 
 	if (_selectedPointer) {
 		if (hasHorizontalOverflow()) {
@@ -100,7 +100,7 @@ void InputTextContainer::update(const UpdateTime &time) {
 }
 
 void InputTextContainer::handleContentSizeDirty() {
-	DynamicStateNode::handleContentSizeDirty();
+	Node::handleContentSizeDirty();
 
 	_label->setPosition(Vec2(0.0f, 0.0f) + Vec2(_label->getContentSize() - _contentSize) * _adjustment);
 	_caret->setContentSize(Size2(1.5f, _label->getFontHeight()));
@@ -129,7 +129,7 @@ bool InputTextContainer::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 		}
 	}
 
-	return DynamicStateNode::visitDraw(frame, parentFlags);
+	return Node::visitDraw(frame, parentFlags);
 }
 
 void InputTextContainer::setEnabled(bool value) {

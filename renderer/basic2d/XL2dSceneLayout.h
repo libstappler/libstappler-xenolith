@@ -23,7 +23,7 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCENELAYOUT_H_
 #define XENOLITH_RENDERER_BASIC2D_XL2DSCENELAYOUT_H_
 
-#include "XLDynamicStateNode.h"
+#include "XLNode.h"
 #include "XLAction.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -49,7 +49,7 @@ enum class DecorationStatus {
 	Hidden
 };
 
-class SP_PUBLIC SceneLayout2d : public DynamicStateNode {
+class SP_PUBLIC SceneLayout2d : public Node {
 public:
 	using BackButtonCallback = Function<bool()>;
 	using Transition = ActionInterval;

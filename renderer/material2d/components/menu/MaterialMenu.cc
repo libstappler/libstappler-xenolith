@@ -23,6 +23,7 @@
 #include "MaterialMenu.h"
 #include "MaterialMenuButton.h"
 #include "MaterialMenuSeparator.h"
+#include "XLDynamicStateComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -43,7 +44,9 @@ bool Menu::init() {
 
 	_scroll = addChild(Rc<ScrollView>::create(ScrollView::Vertical), ZOrder(1));
 	_scroll->setAnchorPoint(Vec2(0, 1));
-	_scroll->enableScissor(Padding(-2.0f));
+
+	auto comp = _scroll->addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	comp->enableScissor(Padding(-2.0f));
 
 	_controller = _scroll->setController(Rc<ScrollController>::create());
 

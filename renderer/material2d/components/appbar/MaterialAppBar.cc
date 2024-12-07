@@ -24,6 +24,7 @@
 #include "MaterialButton.h"
 #include "XLInputListener.h"
 #include "XLAction.h"
+#include "XLDynamicStateComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -62,7 +63,7 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_label = addChild(Rc<TypescaleLabel>::create(TypescaleRole::TitleLarge));
 	_label->setAnchorPoint(Anchor::MiddleLeft);
 
-	_scissorNode = addChild(Rc<DynamicStateNode>::create());
+	_scissorNode = addChild(Rc<Node>::create());
 	_scissorNode->setPosition(Vec2(0, 0));
 	_scissorNode->setAnchorPoint(Anchor::BottomLeft);
 
@@ -73,8 +74,8 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 
 	updateDefaultHeight();
 
-	setStateApplyMode(StateApplyMode::ApplyForAll);
-	enableScissor();
+	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	_scissorComponent->enableScissor();
 
 	return true;
 }

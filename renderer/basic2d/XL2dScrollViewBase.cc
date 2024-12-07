@@ -27,7 +27,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 bool ScrollViewBase::init(Layout layout) {
-	if (!DynamicStateNode::init()) {
+	if (!Node::init()) {
 		return false;
 	}
 
@@ -99,7 +99,7 @@ bool ScrollViewBase::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	if (_animationDirty) {
 		fixPosition();
 	}
-	auto ret = DynamicStateNode::visitDraw(info, parentFlags);
+	auto ret = Node::visitDraw(info, parentFlags);
 	if (_animationDirty) {
 		onPosition();
 		onScroll(0, true);
@@ -109,7 +109,7 @@ bool ScrollViewBase::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 }
 
 void ScrollViewBase::handleEnter(Scene *scene) {
-	DynamicStateNode::handleEnter(scene);
+	Node::handleEnter(scene);
 	onPosition();
 }
 
@@ -131,13 +131,13 @@ void ScrollViewBase::handleContentSizeDirty() {
 		}
 		_paddingGlobal = padding;
 	}
-	DynamicStateNode::handleContentSizeDirty();
+	Node::handleContentSizeDirty();
 	updateScrollBounds();
 	fixPosition();
 }
 
 void ScrollViewBase::handleTransformDirty(const Mat4 &parentTransform) {
-	DynamicStateNode::handleTransformDirty(parentTransform);
+	Node::handleTransformDirty(parentTransform);
 
 	Vec3 scale;
 	parentTransform.decompose(&scale, nullptr, nullptr);
@@ -181,19 +181,19 @@ bool ScrollViewBase::addComponentItem(Component *cmp) {
 		setController(c);
 		return true;
 	} else {
-		return DynamicStateNode::addComponentItem(cmp);
+		return Node::addComponentItem(cmp);
 	}
 }
 
 void ScrollViewBase::setController(ScrollController *c) {
 	if (c != _controller) {
 		if (_controller) {
-			DynamicStateNode::removeComponent(_controller);
+			Node::removeComponent(_controller);
 			_controller = nullptr;
 		}
 		_controller = c;
 		if (_controller) {
-			DynamicStateNode::addComponentItem(_controller);
+			Node::addComponentItem(_controller);
 		}
 	}
 }

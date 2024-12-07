@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class SP_PUBLIC InputTextContainer : public DynamicStateNode {
+class SP_PUBLIC InputTextContainer : public Node {
 public:
 	virtual ~InputTextContainer();
 
@@ -86,6 +86,7 @@ protected:
 	IconSprite *_cursorPointer = nullptr;
 	IconSprite *_selectionPointerStart = nullptr;
 	IconSprite *_selectionPointerEnd = nullptr;
+	DynamicStateComponent *_scissorComponent = nullptr;
 
 	float _cursorAnchor = 1.2f;
 	TextCursor _cursor = TextCursor::InvalidCursor;

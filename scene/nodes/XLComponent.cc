@@ -63,7 +63,15 @@ void Component::handleExit() {
 	_running = false;
 }
 
-void Component::visitSelf(FrameInfo &, NodeFlags parentFlags) { }
+void Component::handleVisitBegin(FrameInfo &) { }
+
+void Component::handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) { }
+
+void Component::handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) { }
+
+void Component::handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) { }
+
+void Component::handleVisitEnd(FrameInfo &) { }
 
 void Component::update(const UpdateTime &time) { }
 
@@ -81,6 +89,10 @@ bool Component::isEnabled() const {
 
 void Component::setEnabled(bool b) {
 	_enabled = b;
+}
+
+void Component::setComponentFlags(ComponentFlags flags) {
+	_componentFlags = flags;
 }
 
 bool Component::isScheduled() const {

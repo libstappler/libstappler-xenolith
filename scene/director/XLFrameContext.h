@@ -35,6 +35,7 @@ struct FrameContextHandle;
 
 class Scene;
 class Director;
+class FrameStateOwnerInterface;
 
 class SP_PUBLIC FrameContext : public ResourceOwner {
 public:
@@ -100,7 +101,7 @@ struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 	Rc<Director> director; // allow to access director from rendering pipeline (to send stats)
 	FrameContext *context = nullptr;
 
-	memory::vector<StateId> stateStack;
+	memory::vector<Pair<StateId, FrameStateOwnerInterface *>> stateStack;
 	memory::vector<DrawStateValues> states;
 
 	StateId addState(DrawStateValues values) {
@@ -124,8 +125,16 @@ struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 	}
 
 	StateId getCurrentState() const {
-		return stateStack.empty() ? maxOf<StateId>() : stateStack.back();
+		return stateStack.empty() ? maxOf<StateId>() : stateStack.back().first;
 	}
+};
+
+class SP_PUBLIC FrameStateOwnerInterface {
+public:
+	virtual ~FrameStateOwnerInterface() = default;
+
+	// Object should use context to fully rebuild previously pushed state
+	virtual StateId rebuildState(FrameContextHandle &) = 0;
 };
 
 }

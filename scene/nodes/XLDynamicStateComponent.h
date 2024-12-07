@@ -1,6 +1,5 @@
 /**
- Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,33 +20,44 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_SCENE_NODES_XLDYNAMICSTATENODE_H_
-#define XENOLITH_SCENE_NODES_XLDYNAMICSTATENODE_H_
+#ifndef XENOLITH_SCENE_NODES_XLDYNAMICSTATECOMPONENT_H_
+#define XENOLITH_SCENE_NODES_XLDYNAMICSTATECOMPONENT_H_
 
-#include "XLNode.h"
+#include "XLComponent.h"
+#include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SP_PUBLIC DynamicStateNode : public Node {
+enum class DynamicStateApplyMode {
+	DoNotApply = 0,
+	ApplyForNodesBelow = 1 << 0,
+	ApplyForSelf = 1 << 1,
+	ApplyForNodesAbove = 1 << 2,
+	ApplyForAll = ApplyForNodesBelow | ApplyForSelf | ApplyForNodesAbove,
+};
+
+SP_DEFINE_ENUM_AS_MASK(DynamicStateApplyMode)
+
+class SP_PUBLIC DynamicStateComponent : public Component, protected FrameStateOwnerInterface {
 public:
-	enum StateApplyMode {
-		DoNotApply,
-		ApplyForAll,
-		ApplyForNodesBelow,
-		ApplyForNodesAbove
-	};
+	virtual ~DynamicStateComponent() = default;
 
 	virtual bool init() override;
+	virtual bool init(DynamicStateApplyMode value);
 
-	virtual StateApplyMode getStateApplyMode() const { return _applyMode; }
-	virtual void setStateApplyMode(StateApplyMode value);
+	virtual void handleVisitBegin(FrameInfo &) override;
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitEnd(FrameInfo &) override;
+
+	virtual DynamicStateApplyMode getStateApplyMode() const { return _applyMode; }
+	virtual void setStateApplyMode(DynamicStateApplyMode value);
 
 	virtual bool isIgnoreParentState() const { return _ignoreParentState; }
 	virtual void setIgnoreParentState(bool);
 
 	virtual StateId getCurrentStateId() const { return _currentStateId; }
-
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void enableScissor(Padding outline = Padding());
 	virtual void disableScissor();
@@ -57,18 +67,28 @@ public:
 	virtual Padding getScissorOutline() const { return _scissorOutline; }
 
 protected:
-	using Node::init;
+	using Component::init;
 
 	virtual DrawStateValues updateDynamicState(const DrawStateValues &) const;
 
-	StateApplyMode _applyMode = ApplyForAll;
+	virtual void pushState(FrameInfo &);
+	virtual void popState(FrameInfo &);
+
+	virtual StateId rebuildState(FrameContextHandle &) override;
+
+	DynamicStateApplyMode _applyMode = DynamicStateApplyMode::DoNotApply;
 
 	bool _ignoreParentState = false;
 	bool _scissorEnabled = false;
 	Padding _scissorOutline;
 	StateId _currentStateId = maxOf<StateId>();
+
+	bool _isStateActive = false;
+	bool _isStatePushed = false;
+	bool _isStateValuesActual = false;
+	DrawStateValues _stateValues;
 };
 
 }
 
-#endif /* XENOLITH_SCENE_NODES_XLDYNAMICSTATENODE_H_ */
+#endif /* XENOLITH_SCENE_NODES_XLDYNAMICSTATECOMPONENT_H_ */

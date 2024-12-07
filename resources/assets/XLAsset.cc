@@ -56,7 +56,7 @@ Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
 	const db::Value *versions = nullptr;
 	for (auto &it : val.asDict()) {
 		if (it.first == "__oid") {
-			_id = reinterpretValue<uint64_t>(it.second.getInteger());
+			_id = bit_cast<uint64_t>(it.second.getInteger());
 		} else if (it.first == "url") {
 			_url = StringView(it.second.getString()).str<Interface>();
 		} else if (it.first == "data") {

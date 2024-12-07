@@ -24,7 +24,7 @@
 #define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_
 
 #include "XL2d.h"
-#include "XLDynamicStateNode.h"
+#include "XLNode.h"
 #include "XL2dActionAcceleratedMove.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 class ScrollController;
 class ActionAcceleratedMove;
 
-class SP_PUBLIC ScrollViewBase : public DynamicStateNode {
+class SP_PUBLIC ScrollViewBase : public Node {
 public:
 	using ScrollFilterCallback = std::function<float (float delta)>;
 	using ScrollCallback = std::function<void (float delta, bool finished)>;
@@ -167,7 +167,7 @@ public:
 	virtual void onTap(int count, const Vec2 &loc);
 
 protected:
-	using DynamicStateNode::init;
+	using Node::init;
 
 	Layout _layout = Vertical;
 

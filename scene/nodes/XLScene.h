@@ -29,7 +29,6 @@ THE SOFTWARE.
 #include "XLCoreQueue.h"
 #include "XLCoreAttachment.h"
 #include "XLCoreMaterial.h"
-#include "XLDynamicStateNode.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

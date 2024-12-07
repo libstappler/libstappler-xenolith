@@ -38,7 +38,7 @@ public:
 protected:
 	using LayoutTest::init;
 
-	DynamicStateNode *_node = nullptr;
+	Node *_node = nullptr;
 	Layer *_layer = nullptr;
 	Node *_nodeResize = nullptr;
 };

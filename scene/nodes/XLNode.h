@@ -30,6 +30,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Component;
+class DynamicStateComponent;
 class Scene;
 class Scheduler;
 class InputListener;
@@ -352,14 +353,17 @@ public:
 
 protected:
 	struct VisitInfo {
+		void (*visitBegin) (const VisitInfo &) = nullptr;
 		void (*visitNodesBelow) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
 		void (*visitSelf) (const VisitInfo &, Node *) = nullptr;
 		void (*visitNodesAbove) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
+		void (*visitEnd) (const VisitInfo &) = nullptr;
 		Node *node = nullptr;
 
 		mutable NodeFlags flags = NodeFlags::None;
 		mutable FrameInfo *frameInfo = nullptr;
 		mutable bool visibleByCamera = true;
+		mutable Vector<Rc<Component>> visitableComponents;
 	};
 
 	virtual void updateCascadeOpacity();

@@ -25,13 +25,13 @@
 #define XENOLITH_RENDERER_BASIC2D_XL2DSPRITE_H_
 
 #include "XLResourceCache.h"
-#include "XLDynamicStateNode.h"
+#include "XLNode.h"
 #include "XL2dVertexArray.h"
 #include "XL2dLinearGradient.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-class SP_PUBLIC Sprite : public DynamicStateNode {
+class SP_PUBLIC Sprite : public Node {
 public:
 	static constexpr uint16_t SamplerIndexDefaultFilterNearest = 0;
 	static constexpr uint16_t SamplerIndexDefaultFilterLinear = 1;
@@ -105,7 +105,7 @@ public:
 	virtual void setTextureLoadedCallback(Function<void()> &&);
 
 protected:
-	using DynamicStateNode::init;
+	using Node::init;
 
 	virtual void pushCommands(FrameInfo &, NodeFlags flags);
 

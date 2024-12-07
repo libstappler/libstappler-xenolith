@@ -37,7 +37,6 @@ Sprite::Sprite() {
 			core::BlendFactor::Zero, core::BlendFactor::One, core::BlendOp::Add);
 	_materialInfo.setBlendInfo(_blendInfo);
 	_materialInfo.setDepthInfo(core::DepthInfo(false, true, core::CompareOp::Less));
-	_applyMode = DoNotApply;
 }
 
 Sprite::~Sprite() { }
@@ -47,7 +46,7 @@ bool Sprite::init() {
 }
 
 bool Sprite::init(StringView textureName) {
-	if (!DynamicStateNode::init()) {
+	if (!Node::init()) {
 		return false;
 	}
 
@@ -57,7 +56,7 @@ bool Sprite::init(StringView textureName) {
 }
 
 bool Sprite::init(Rc<Texture> &&texture) {
-	if (!DynamicStateNode::init()) {
+	if (!Node::init()) {
 		return false;
 	}
 
@@ -166,7 +165,7 @@ bool Sprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 			_isTextureLoaded = loaded;
 		}
 	}
-	return DynamicStateNode::visitDraw(frame, parentFlags);
+	return Node::visitDraw(frame, parentFlags);
 }
 
 void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
@@ -230,7 +229,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 
 		auto newStateId = context->addState(state);
 
-		context->stateStack.push_back(newStateId);
+		context->stateStack.emplace_back(newStateId, nullptr);
 	}
 
 	pushCommands(frame, flags);

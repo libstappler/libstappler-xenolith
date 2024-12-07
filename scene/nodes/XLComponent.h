@@ -32,6 +32,19 @@ struct FrameInfo;
 class Node;
 class Scene;
 
+enum class ComponentFlags {
+	None,
+	HandleOwnerEvents = 1 << 0, // Added/Removed
+	HandleSceneEvents = 1 << 1, // Enter/Exit
+	HandleNodeEvents = 1 << 2, // ContentSize/Transform/Reorder
+	HandleVisitSelf = 1 << 3, // VisitSelf
+	HandleVisitControl = 1 << 4, // VisitBegin/VisitNodesBelow/VisitNodesAbove/VisitEnd
+
+	Default = HandleOwnerEvents | HandleSceneEvents | HandleNodeEvents | HandleVisitSelf
+};
+
+SP_DEFINE_ENUM_AS_MASK(ComponentFlags)
+
 class SP_PUBLIC Component : public Ref {
 public:
 	static uint64_t GetNextComponentId();
@@ -46,7 +59,11 @@ public:
 	virtual void handleEnter(Scene *);
 	virtual void handleExit();
 
-	virtual void visitSelf(FrameInfo &, NodeFlags parentFlags);
+	virtual void handleVisitBegin(FrameInfo &);
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags);
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags);
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags);
+	virtual void handleVisitEnd(FrameInfo &);
 
 	virtual void update(const UpdateTime &time);
 
@@ -58,6 +75,9 @@ public:
 
 	virtual bool isEnabled() const;
 	virtual void setEnabled(bool b);
+
+	virtual void setComponentFlags(ComponentFlags);
+	virtual ComponentFlags getComponentFlags() const { return _componentFlags; }
 
 	bool isScheduled() const;
 	void scheduleUpdate();
@@ -74,6 +94,7 @@ protected:
 	bool _running = false;
 	bool _scheduled = false;
 	uint64_t _frameTag = InvalidTag;
+	ComponentFlags _componentFlags = ComponentFlags::Default;
 };
 
 }

@@ -26,6 +26,7 @@
 #include "XL2dFrameContext.h"
 #include "XLFrameInfo.h"
 #include "XLDirector.h"
+#include "XLDynamicStateComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -73,79 +74,51 @@ bool VectorSprite::init(Rc<VectorImage> &&img) {
 		_contentSize = _image->getImageSize();
 	}
 
+	_imageScissorComponent = addComponent(Rc<DynamicStateComponent>::create());
+
 	return true;
 }
 
 bool VectorSprite::init(Size2 size, StringView data) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(size, data)) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(size, data);
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 bool VectorSprite::init(Size2 size, VectorPath &&path) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(size, move(path))) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(size, move(path));
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 bool VectorSprite::init(Size2 size) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(size)) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(size);
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 bool VectorSprite::init(StringView data) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(data)) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(data);
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 bool VectorSprite::init(BytesView data) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(data)) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(data);
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 bool VectorSprite::init(FilePath path) {
-	if (!Sprite::init()) {
-		return false;
+	if (auto image = Rc<VectorImage>::create(path)) {
+		return init(move(image));
 	}
-
-	_image = Rc<VectorImage>::create(path);
-	if (_image) {
-		_contentSize = _image->getImageSize();
-	}
-	return _image != nullptr;
+	return false;
 }
 
 Rc<VectorPathRef> VectorSprite::addPath(StringView id, StringView cache, Mat4 pos) {
@@ -403,15 +376,15 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 				imageSizeInView.height * viewScale.y);
 
 		if (imageSizeInView.width > _contentSize.width || imageSizeInView.height > _contentSize.height) {
-			setStateApplyMode(StateApplyMode::ApplyForAll);
-			enableScissor(0.0f);
+			_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::ApplyForSelf);
+			_imageScissorComponent->enableScissor(0.0f);
 		} else {
-			setStateApplyMode(StateApplyMode::DoNotApply);
-			disableScissor();
+			_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
+			_imageScissorComponent->disableScissor();
 		}
 	} else {
-		setStateApplyMode(StateApplyMode::DoNotApply);
-		disableScissor();
+		_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
+		_imageScissorComponent->disableScissor();
 	}
 
 	Mat4 targetTransform(
