@@ -147,8 +147,7 @@ bool CommandList::init(const Rc<PoolRef> &pool) {
 	return true;
 }
 
-void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, SpanView<ZOrder> zPath,
-		core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
+void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, CmdInfo &&info, CommandFlags flags) {
 	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::VertexArray, flags);
 		auto cmdData = reinterpret_cast<CmdVertexArray *>(cmd->data);
@@ -163,22 +162,22 @@ void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, SpanView
 
 		cmdData->vertexes = makeSpanView(p, 1);
 
-		while (!zPath.empty() && zPath.back() == ZOrder(0)) {
-			zPath.pop_back();
+		while (!info.zPath.empty() && info.zPath.back() == ZOrder(0)) {
+			info.zPath.pop_back();
 		}
 
-		cmdData->zPath = zPath.pdup(_pool->getPool());
-		cmdData->material = material;
-		cmdData->state = state;
-		cmdData->renderingLevel = level;
-		cmdData->depthValue = depthValue;
+		cmdData->zPath = info.zPath.pdup(_pool->getPool());
+		cmdData->material = info.material;
+		cmdData->state = info.state;
+		cmdData->renderingLevel = info.renderingLevel;
+		cmdData->depthValue = info.depthValue;
+		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});
 }
 
-void CommandList::pushVertexArray(const Callback<SpanView<InstanceVertexData>(memory::pool_t *)> &cb, SpanView<ZOrder> zPath,
-		core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
+void CommandList::pushVertexArray(const Callback<SpanView<InstanceVertexData>(memory::pool_t *)> &cb, CmdInfo &&info, CommandFlags flags) {
 	_pool->perform([&, this] {
 		auto data = cb(_pool->getPool());
 		if (data.empty()) {
@@ -190,22 +189,23 @@ void CommandList::pushVertexArray(const Callback<SpanView<InstanceVertexData>(me
 
 		cmdData->vertexes = data;
 
-		while (!zPath.empty() && zPath.back() == ZOrder(0)) {
-			zPath.pop_back();
+		while (!info.zPath.empty() && info.zPath.back() == ZOrder(0)) {
+			info.zPath.pop_back();
 		}
 
-		cmdData->zPath = zPath.pdup(_pool->getPool());
-		cmdData->material = material;
-		cmdData->state = state;
-		cmdData->renderingLevel = level;
-		cmdData->depthValue = depthValue;
+		cmdData->zPath = info.zPath.pdup(_pool->getPool());
+		cmdData->material = info.material;
+		cmdData->state = info.state;
+		cmdData->renderingLevel = info.renderingLevel;
+		cmdData->depthValue = info.depthValue;
+		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});
 }
 
 void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, const Mat4 &viewT, const Mat4 &modelT, bool normalized,
-		SpanView<ZOrder> zPath, core::MaterialId material, StateId state, RenderingLevel level, float depthValue, CommandFlags flags) {
+		CmdInfo &&info, CommandFlags flags) {
 	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::Deferred, flags);
 		auto cmdData = reinterpret_cast<CmdDeferred *>(cmd->data);
@@ -215,15 +215,16 @@ void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, 
 		cmdData->modelTransform = modelT;
 		cmdData->normalized = normalized;
 
-		while (!zPath.empty() && zPath.back() == ZOrder(0)) {
-			zPath.pop_back();
+		while (!info.zPath.empty() && info.zPath.back() == ZOrder(0)) {
+			info.zPath.pop_back();
 		}
 
-		cmdData->zPath = zPath.pdup(_pool->getPool());
-		cmdData->material = material;
-		cmdData->state = state;
-		cmdData->renderingLevel = level;
-		cmdData->depthValue = depthValue;
+		cmdData->zPath = info.zPath.pdup(_pool->getPool());
+		cmdData->material = info.material;
+		cmdData->state = info.state;
+		cmdData->renderingLevel = info.renderingLevel;
+		cmdData->depthValue = info.depthValue;
+		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});

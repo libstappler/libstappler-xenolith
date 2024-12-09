@@ -28,7 +28,7 @@ layout (set = 1, binding = 2) readonly buffer DataAtlasIndexBuffer {
 } dataAtlasIndexes[BUFFERS_ARRAY_SIZE];
 
 layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec2 fragTexCoord;
+layout (location = 1) out vec4 fragTexCoord;
 layout (location = 2) out vec4 shadowColor;
 layout (location = 3) out vec2 fragPosition;
 
@@ -92,6 +92,6 @@ void main() {
 	gl_Position = transform.transform * instance.transform * pos * transform.mask * instance.mask + transform.offset + instance.offset;
 	fragPosition = gl_Position.xy;
 	fragColor = color * instance.color;
-	fragTexCoord = tex;
-	shadowColor = transform.shadow;
+	fragTexCoord = vec4(tex, max(transform.textureLayer, instance.textureLayer), 0.0);
+	shadowColor = vec4(transform.shadowValue.xxx, transform.shadowValue > 0.0 ? 1.0 : 0.0);
 }

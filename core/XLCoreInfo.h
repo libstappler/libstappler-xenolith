@@ -452,6 +452,8 @@ SP_PUBLIC PixelFormat getImagePixelFormat(ImageFormat format);
 SP_PUBLIC bool isStencilFormat(ImageFormat format);
 SP_PUBLIC bool isDepthFormat(ImageFormat format);
 
+SP_PUBLIC ImageViewType getImageViewType(ImageType, ArrayLayers);
+
 SP_PUBLIC bool hasReadAccess(AccessType);
 SP_PUBLIC bool hasWriteAccess(AccessType);
 

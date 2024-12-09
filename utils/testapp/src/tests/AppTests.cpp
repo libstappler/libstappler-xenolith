@@ -62,6 +62,7 @@
 #include "material/AppMaterialToolbarTest.cc"
 #include "material/AppMaterialMenuTest.cc"
 #include "material/AppMaterialTabBarTest.cc"
+#include "2d/Renderer2dAnimationTest.cc"
 #include "config/AppConfigMenu.cc"
 #include "config/AppConfigPresentModeSwitcher.cc"
 
@@ -76,6 +77,7 @@ static Vector<MenuData> s_layouts {
 			LayoutName::VgTests,
 			LayoutName::UtilsTests,
 			LayoutName::MaterialTests,
+			LayoutName::Renderer2dTests,
 			LayoutName::Config,
 		}); }},
 	MenuData{LayoutName::GeneralTests, LayoutName::Root, "org.stappler.xenolith.test.GeneralTests", "General tests",
@@ -130,6 +132,10 @@ static Vector<MenuData> s_layouts {
 			LayoutName::MaterialToolbarTest,
 			LayoutName::MaterialMenuTest,
 			LayoutName::MaterialTabBarTest,
+		}); }},
+	MenuData{LayoutName::Renderer2dTests, LayoutName::Root, "org.stappler.xenolith.test.Renderer2dTests", "2d renderer tests",
+		[] (LayoutName name) { return Rc<LayoutMenu>::create(name, Vector<LayoutName>{
+			LayoutName::Renderer2dAnimationTest,
 		}); }},
 
 	MenuData{LayoutName::Config, LayoutName::Root, "org.stappler.xenolith.test.Config", "Config",
@@ -209,6 +215,9 @@ static Vector<MenuData> s_layouts {
 		[] (LayoutName name) { return Rc<MaterialMenuTest>::create(); }},
 	MenuData{LayoutName::MaterialTabBarTest, LayoutName::MaterialTests, "org.stappler.xenolith.test.MaterialTabBarTest", "Tab bar test",
 		[] (LayoutName name) { return Rc<MaterialTabBarTest>::create(); }},
+
+	MenuData{LayoutName::Renderer2dAnimationTest, LayoutName::Renderer2dTests, "org.stappler.xenolith.test.Renderer2dAnimationTest", "Animation test",
+		[] (LayoutName name) { return Rc<Renderer2dAnimationTest>::create(); }},
 };
 
 LayoutName getRootLayoutForLayout(LayoutName name) {

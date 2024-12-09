@@ -294,6 +294,10 @@ void Sprite::setBlendInfo(const core::BlendInfo &info) {
 	}
 }
 
+void Sprite::setTextureLayer(float value) {
+	_textureLayer = value;
+}
+
 void Sprite::setLineWidth(float value) {
 	if (_materialInfo.getLineWidth() != value) {
 		_materialInfo.setLineWidth(value);
@@ -358,7 +362,7 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 
 	handle->commands->pushVertexArray(data.get(), frame.viewProjectionStack.back() * newMV,
-			frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back() * _displayedColor.a, _commandFlags);
+			buildCmdInfo(frame), _commandFlags);
 }
 
 MaterialInfo Sprite::getMaterialInfo() const {
@@ -474,6 +478,15 @@ void Sprite::updateBlendAndDepth() {
 		}
 	}
 	_materialInfo.setDepthInfo(depth);
+
+	if (_texture) {
+		auto info = _texture->getImageInfo();
+		auto viewType = core::getImageViewType(info.imageType, info.arrayLayers);
+		if (_materialInfo.getImageViewType() != viewType) {
+			_materialInfo.setImageViewType(viewType);
+			_materialDirty = true;
+		}
+	}
 }
 
 RenderingLevel Sprite::getRealRenderingLevel() const {
@@ -525,6 +538,12 @@ RenderingLevel Sprite::getRealRenderingLevel() const {
 
 bool Sprite::checkVertexDirty() const {
 	return _vertexesDirty;
+}
+
+CmdInfo Sprite::buildCmdInfo(const FrameInfo &frame) const {
+	auto handle = static_cast<const FrameContextHandle2d *>(frame.currentContext);
+	return CmdInfo{frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel,
+		_displayedColor.a > 0.0f ? frame.depthStack.back() : 0.0f, _textureLayer};
 }
 
 }

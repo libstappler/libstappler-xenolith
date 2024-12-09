@@ -38,6 +38,7 @@ enum class LayoutName {
 	VgTests,
 	UtilsTests,
 	MaterialTests,
+	Renderer2dTests,
 	Config,
 
 	GeneralUpdateTest = 256 * 1,
@@ -80,6 +81,8 @@ enum class LayoutName {
 	MaterialToolbarTest,
 	MaterialMenuTest,
 	MaterialTabBarTest,
+
+	Renderer2dAnimationTest = 256 * 7,
 };
 
 struct MenuData {

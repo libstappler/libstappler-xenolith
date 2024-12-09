@@ -333,15 +333,15 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 			}
 
 			return makeSpanView(tmpData, targetData.size());
-		}, frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+		}, buildCmdInfo(frame), _commandFlags);
 	} else if (_deferredResult) {
 		if (_deferredResult->isReady() && _deferredResult->getResult()->data.empty()) {
 			return;
 		}
 
 		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(),
-				frame.modelTransformStack.back() * _imageTargetTransform, _normalized, frame.zPath,
-						_materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+				frame.modelTransformStack.back() * _imageTargetTransform, _normalized,
+				buildCmdInfo(frame), _commandFlags);
 	}
 }
 

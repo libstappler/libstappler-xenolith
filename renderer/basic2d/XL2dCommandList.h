@@ -35,19 +35,20 @@ enum class CommandType : uint16_t {
 	Deferred,
 };
 
-struct SP_PUBLIC CmdGeneral {
+struct SP_PUBLIC CmdInfo {
 	SpanView<ZOrder> zPath;
 	core::MaterialId material = 0;
 	StateId state = StateIdNone;
 	RenderingLevel renderingLevel = RenderingLevel::Solid;
 	float depthValue = 0.0f;
+	float textureLayer = 0.0f;
 };
 
-struct SP_PUBLIC CmdVertexArray : CmdGeneral {
+struct SP_PUBLIC CmdVertexArray : CmdInfo {
 	SpanView<InstanceVertexData> vertexes;
 };
 
-struct SP_PUBLIC CmdDeferred : CmdGeneral {
+struct SP_PUBLIC CmdDeferred : CmdInfo {
 	Rc<DeferredVertexResult> deferred;
 	Mat4 viewTransform;
 	Mat4 modelTransform;
@@ -87,14 +88,14 @@ public:
 	bool init(const Rc<PoolRef> &);
 
 	void pushVertexArray(Rc<VertexData> &&, const Mat4 &,
-			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			CmdInfo &&info, CommandFlags = CommandFlags::None);
 
 	// data should be preallocated from frame's pool
 	void pushVertexArray(const Callback<SpanView<InstanceVertexData>(memory::pool_t *)> &,
-			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			CmdInfo &&info, CommandFlags = CommandFlags::None);
 
 	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, bool normalized,
-			SpanView<ZOrder> zPath, core::MaterialId material, StateId, RenderingLevel, float depthValue, CommandFlags = CommandFlags::None);
+			CmdInfo &&info, CommandFlags = CommandFlags::None);
 
 	const Command *getFirst() const { return _first; }
 	const Command *getLast() const { return _last; }

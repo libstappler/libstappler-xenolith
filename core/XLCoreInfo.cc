@@ -548,7 +548,7 @@ String ImageInfo::description() const {
 }
 
 size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
-	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth;
+	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth * arrayLayers.get();
 	if (expectedSize > expected) {
 		log::error("core::ImageData", "Not enoudh space for image: ", expectedSize, " required, ", expected, " allocated");
 		return 0;
@@ -560,18 +560,22 @@ size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
 		return size;
 	} else if (memCallback) {
 		size_t size = expectedSize;
+		size_t writeSize = 0;
 		memCallback(mem, expectedSize, [&] (BytesView data) {
-			size = data.size();
+			writeSize += data.size();
 			memcpy(mem, data.data(), size);
+			mem += data.size();
 		});
-		return size;
+		return writeSize != 0 ? writeSize : size;
 	} else if (stdCallback) {
 		size_t size = expectedSize;
+		size_t writeSize = 0;
 		stdCallback(mem, expectedSize, [&] (BytesView data) {
-			size = data.size();
+			writeSize += data.size();
 			memcpy(mem, data.data(), size);
+			mem += data.size();
 		});
-		return size;
+		return writeSize != 0 ? writeSize : size;
 	}
 	return 0;
 }
@@ -647,25 +651,7 @@ void ImageViewInfo::setup(ColorMode value, bool allowSwizzle) {
 
 void ImageViewInfo::setup(ImageType t, ArrayLayers layers) {
 	layerCount = layers;
-	switch (t) {
-	case ImageType::Image1D:
-		if (layerCount.get() > 1 && layerCount != ArrayLayers::max()) {
-			type = ImageViewType::ImageView1DArray;
-		} else {
-			type = ImageViewType::ImageView1D;
-		}
-		break;
-	case ImageType::Image2D:
-		if (layerCount.get() > 1 && layerCount != ArrayLayers::max()) {
-			type = ImageViewType::ImageView2DArray;
-		} else {
-			type = ImageViewType::ImageView2D;
-		}
-		break;
-	case ImageType::Image3D:
-		type = ImageViewType::ImageView3D;
-		break;
-	}
+	type = getImageViewType(t, layers);
 }
 
 ColorMode ImageViewInfo::getColorMode() const {
@@ -1429,6 +1415,29 @@ bool isDepthFormat(ImageFormat format) {
 	return false;
 }
 
+ImageViewType getImageViewType(ImageType imageType, ArrayLayers arrayLayers) {
+	switch (imageType) {
+	case ImageType::Image1D:
+		if (arrayLayers.get() > 1 && arrayLayers != ArrayLayers::max()) {
+			return ImageViewType::ImageView1DArray;
+		} else {
+			return ImageViewType::ImageView1D;
+		}
+		break;
+	case ImageType::Image2D:
+		if (arrayLayers.get() > 1 && arrayLayers != ArrayLayers::max()) {
+			return ImageViewType::ImageView2DArray;
+		} else {
+			return ImageViewType::ImageView2D;
+		}
+		break;
+	case ImageType::Image3D:
+		return ImageViewType::ImageView3D;
+		break;
+	}
+	return ImageViewType::ImageView2D;
+}
+
 bool hasReadAccess(AccessType access) {
 	if ((access & (
 			AccessType::IndirectCommandRead
@@ -1562,6 +1571,10 @@ void PipelineMaterialInfo::setLineWidth(float width) {
 	}
 }
 
+void PipelineMaterialInfo::setImageViewType(ImageViewType type) {
+	imageViewType = type;
+}
+
 void PipelineMaterialInfo::_setup(const BlendInfo &info) {
 	setBlendInfo(info);
 }
@@ -1580,6 +1593,10 @@ void PipelineMaterialInfo::_setup(const StencilInfo &info) {
 
 void PipelineMaterialInfo::_setup(LineWidth width) {
 	setLineWidth(width.get());
+}
+
+void PipelineMaterialInfo::_setup(ImageViewType type) {
+	setImageViewType(type);
 }
 
 StringView getInputKeyCodeName(InputKeyCode code) {

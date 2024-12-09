@@ -679,7 +679,8 @@ size_t TransferResource::writeData(uint8_t *mem, BufferAllocInfo &info) {
 }
 
 size_t TransferResource::writeData(uint8_t *mem, ImageAllocInfo &info) {
-	uint64_t expectedSize = getFormatBlockSize(info.data->format) * info.data->extent.width * info.data->extent.height * info.data->extent.depth;
+	uint64_t expectedSize = getFormatBlockSize(info.data->format)
+			* info.data->extent.width * info.data->extent.height * info.data->extent.depth * info.data->arrayLayers.get();
 	return info.data->writeData(mem, expectedSize);
 }
 
@@ -722,7 +723,8 @@ size_t TransferResource::preTransferData() {
 			it.useStaging = true;
 			stagingSize = math::align<VkDeviceSize>(stagingSize, alignment);
 			it.stagingOffset = stagingSize;
-			stagingSize += getFormatBlockSize(it.info.format) * it.info.extent.width * it.info.extent.height * it.info.extent.depth;
+			stagingSize += getFormatBlockSize(it.info.format)
+					* it.info.extent.width * it.info.extent.height * it.info.extent.depth * it.info.arrayLayers;
 		} else {
 			writeData(generalMem + it.offset, it);
 		}

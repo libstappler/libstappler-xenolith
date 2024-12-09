@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,46 +20,32 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_XLTEXTURE_H_
-#define XENOLITH_APPLICATION_XLTEXTURE_H_
+#ifndef SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
+#define SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
 
-#include "XLResourceObject.h"
-#include "XLCoreDynamicImage.h"
-#include "XLCoreMaterial.h"
+#include "AppLayoutTest.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
+namespace stappler::xenolith::app {
 
-class SP_PUBLIC Texture : public ResourceObject {
+class Renderer2dAnimationTest : public LayoutTest {
 public:
-	virtual ~Texture();
+	virtual ~Renderer2dAnimationTest() { }
 
-	virtual bool init(const core::ImageData *);
-	virtual bool init(const core::ImageData *, const Rc<core::Resource> &);
-	virtual bool init(const core::ImageData *, const Rc<TemporaryResource> &);
-	virtual bool init(const Rc<core::DynamicImage> &);
+	virtual bool init() override;
 
-	virtual StringView getName() const;
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
 
-	uint64_t getIndex() const;
-
-	bool hasAlpha() const;
-
-	Extent3 getExtent() const;
-
-	virtual bool isLoaded() const;
-
-	core::MaterialImage getMaterialImage() const;
-
-	// returns nullptr for dynamic images
-	const core::ImageData *getImageData() const { return _data; }
-
-	core::ImageInfoData getImageInfo() const;
+	virtual void handleContentSizeDirty() override;
 
 protected:
-	const core::ImageData *_data = nullptr;
-	Rc<core::DynamicImage> _dynamic;
+	using LayoutTest::init;
+
+	Rc<TemporaryResource> _resource;
+	Sprite *_sprite = nullptr;
+	CheckboxWithLabel *_checkbox = nullptr;
 };
 
 }
 
-#endif /* XENOLITH_SCENE_DIRECTOR_XLTEXTURE_H_ */
+#endif /* SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_ */

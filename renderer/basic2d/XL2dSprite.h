@@ -28,6 +28,7 @@
 #include "XLNode.h"
 #include "XL2dVertexArray.h"
 #include "XL2dLinearGradient.h"
+#include "XL2dCommandList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -67,6 +68,9 @@ public:
 
 	virtual void setBlendInfo(const core::BlendInfo &);
 	virtual const core::BlendInfo &getBlendInfo() const { return _materialInfo.getBlendInfo(); }
+
+	virtual void setTextureLayer(float);
+	virtual float getTextureLayer() const { return _textureLayer; }
 
 	// used for debug purposes only, follow rules from PipelineMaterialInfo.lineWidth:
 	// 0.0f - draw triangles, < 0.0f - points,  > 0.0f - lines with width
@@ -121,12 +125,9 @@ protected:
 
 	virtual RenderingLevel getRealRenderingLevel() const;
 
-	static bool resolveAutofit(Autofit autofit, const Vec2 &value, const Size2 &content, const Size2 &texSize,
-			Rect &contentRect, Rect &textureRect);
-	static bool resolveAutofit(Autofit autofit, const Vec2 &value, const Size2 &content, const Rect &rect, const Size2 &texSize,
-			Rect &contentRect, Rect &textureRect);
-
 	virtual bool checkVertexDirty() const;
+
+	virtual CmdInfo buildCmdInfo(const FrameInfo &) const;
 
 	String _textureName;
 	Rc<Texture> _texture;
@@ -145,6 +146,8 @@ protected:
 	bool _isTextureLoaded = false;
 
 	ImagePlacementInfo _texturePlacement;
+
+	float _textureLayer = 0.0f;
 
 	// Track dynamic texture size
 	Extent3 _targetTextureSize;

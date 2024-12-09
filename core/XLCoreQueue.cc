@@ -1421,8 +1421,8 @@ void QueuePassBuilder::addCompleteCallback(memory::function<void(const QueuePass
 
 QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 
-Queue::Builder::Builder(StringView name) : _internalResource(toString(name, "_resource")) {
-	auto p = memory::pool::create((memory::pool_t *)nullptr);
+Queue::Builder::Builder(StringView name) : _internalResource(memory::pool::create((memory::pool_t *)nullptr), toString(name, "_resource")) {
+	auto p = _internalResource.getPool();
 	memory::pool::perform([&] {
 		_data = new (p) QueueData;
 		_data->pool = p;

@@ -70,7 +70,7 @@ core::MaterialId FrameContext::getMaterial(const MaterialInfo &info) const {
 }
 
 core::MaterialId FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
-	auto pipeline = getPipelineForMaterial(info);
+	auto pipeline = getPipelineForMaterial(info, images);
 	if (!pipeline) {
 		return 0;
 	}
@@ -78,7 +78,7 @@ core::MaterialId FrameContext::acquireMaterial(const MaterialInfo &info, Vector<
 	for (uint32_t idx = 0; idx < uint32_t(images.size()); ++ idx) {
 		if (images[idx].image != nullptr) {
 			auto &image = images[idx];
-			image.info = getImageViewForMaterial(info, idx, images[idx].image);
+			image.info = getImageViewForMaterial(pipeline, info, idx, images[idx].image);
 			image.view = nullptr;
 			image.sampler = info.samplers[idx];
 		}
@@ -193,17 +193,18 @@ String FrameContext::listMaterials() const {
 	return out.str();
 }
 
-core::ImageViewInfo FrameContext::getImageViewForMaterial(const MaterialInfo &info, uint32_t idx, const core::ImageData *image) const {
-	return core::ImageViewInfo(image->format, info.colorModes[idx]);
+core::ImageViewInfo FrameContext::getImageViewForMaterial(const core::GraphicPipelineData *pipeline,
+		const MaterialInfo &info, uint32_t idx, const core::ImageData *image) const {
+	return core::ImageViewInfo(*image, pipeline->material.getImageViewType(), info.colorModes[idx]);
 }
 
-auto FrameContext::getPipelineForMaterial(const MaterialInfo &info) const -> const core::GraphicPipelineData * {
+auto FrameContext::getPipelineForMaterial(const MaterialInfo &info, SpanView<core::MaterialImage> images) const -> const core::GraphicPipelineData * {
 	auto hash = info.pipeline.hash();
 	for (auto &it : _layouts) {
 		auto hashIt = it.pipelines.find(hash);
 		if (hashIt != it.pipelines.end()) {
 			for (auto &pipeline : hashIt->second) {
-				if (pipeline->material == info.pipeline && isPipelineMatch(pipeline, info)) {
+				if (pipeline->material == info.pipeline && isPipelineMatch(pipeline, info, images)) {
 					return pipeline;
 				}
 			}
@@ -214,7 +215,7 @@ auto FrameContext::getPipelineForMaterial(const MaterialInfo &info) const -> con
 	return nullptr;
 }
 
-bool FrameContext::isPipelineMatch(const core::GraphicPipelineData *data, const MaterialInfo &info) const {
+bool FrameContext::isPipelineMatch(const core::GraphicPipelineData *data, const MaterialInfo &info, SpanView<core::MaterialImage> images) const {
 	return true; // TODO: true match
 }
 

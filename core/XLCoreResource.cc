@@ -32,6 +32,7 @@ struct Resource::ResourceData : memory::AllocPool {
 
 	const Queue *owner = nullptr;
 	bool compiled = false;
+	bool externalPool = false;
 	StringView key;
 	memory::pool_t *pool = nullptr;
 
@@ -46,10 +47,11 @@ struct Resource::ResourceData : memory::AllocPool {
 	}
 };
 
-static void Resource_loadImageDirect(uint8_t *glBuffer, uint64_t expectedSize, BytesView encodedImageData, const bitmap::ImageInfo &imageInfo) {
+static size_t Resource_loadImageDirect(uint8_t *glBuffer, uint64_t expectedSize, BytesView encodedImageData, const bitmap::ImageInfo &imageInfo) {
 	struct WriteData {
 		uint8_t *buffer;
 		uint32_t offset;
+		uint32_t writableSize;
 		uint64_t expectedSize;
 	} data;
 
@@ -71,6 +73,7 @@ static void Resource_loadImageDirect(uint8_t *glBuffer, uint64_t expectedSize, B
 		if (size > writeData->expectedSize) {
 			abort();
 		}
+		writeData->writableSize = size;
 	};
 	w.getData = [] (void *ptr, uint32_t location) {
 		auto writeData = ((WriteData *)ptr);
@@ -84,43 +87,46 @@ static void Resource_loadImageDirect(uint8_t *glBuffer, uint64_t expectedSize, B
 	w.clear = [] (void *ptr) { };
 
 	imageInfo.format->load(encodedImageData.data(), encodedImageData.size(), w);
+
+	return std::max(data.offset, data.writableSize);
 }
 
-static void Resource_loadImageConverted(StringView path, uint8_t *glBuffer, BytesView encodedImageData, const bitmap::ImageInfo &imageInfo, ImageFormat fmt) {
+static uint64_t Resource_loadImageConverted(StringView path, uint8_t *glBuffer, BytesView encodedImageData, const bitmap::ImageInfo &imageInfo, ImageFormat fmt) {
 	Bitmap bmp(encodedImageData);
 
 	switch (fmt) {
 	case ImageFormat::R8G8B8A8_SRGB:
 	case ImageFormat::R8G8B8A8_UNORM:
 	case ImageFormat::R8G8B8A8_UINT:
-		bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::RGBA8888);
+		return bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::RGBA8888);
 		break;
 	case ImageFormat::R8G8B8_SRGB:
 	case ImageFormat::R8G8B8_UNORM:
 	case ImageFormat::R8G8B8_UINT:
-		bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::RGB888);
+		return bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::RGB888);
 		break;
 	case ImageFormat::R8G8_SRGB:
 	case ImageFormat::R8G8_UNORM:
 	case ImageFormat::R8G8_UINT:
-		bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::IA88);
+		return bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::IA88);
 		break;
 	case ImageFormat::R8_SRGB:
 	case ImageFormat::R8_UNORM:
 	case ImageFormat::R8_UINT:
 		if (bmp.alpha() == bitmap::AlphaFormat::Opaque) {
-			bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::I8);
+			return bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::I8);
 		} else {
-			bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::A8);
+			return bmp.convertWithTarget(glBuffer, bitmap::PixelFormat::A8);
 		}
 		break;
 	default:
 		log::error("Resource", "loadImageConverted: ", path, ": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
+	return 0;
 }
 
-static void Resource_loadImageDefault(StringView path, BytesView encodedImageData, ImageFormat fmt, const ImageData::DataCallback &dcb) {
+static uint64_t Resource_loadImageDefault(StringView path, BytesView encodedImageData, ImageFormat fmt, const ImageData::DataCallback &dcb) {
 	Bitmap bmp(encodedImageData);
 
 	bool availableFormat = true;
@@ -153,12 +159,14 @@ static void Resource_loadImageDefault(StringView path, BytesView encodedImageDat
 
 	if (availableFormat) {
 		dcb(BytesView(bmp.dataPtr(), bmp.data().size()));
+		return bmp.data().size();
 	} else {
 		dcb(BytesView());
 	}
+	return 0;
 }
 
-void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb) {
+uint64_t Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb) {
 	bitmap::ImageInfo info;
 	if (!bitmap::getImageInfo(data, info)) {
 		log::error("Resource", "loadImageMmmoryData: fail to read image info");
@@ -171,10 +179,10 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 				case ImageFormat::R8G8B8A8_SRGB:
 				case ImageFormat::R8G8B8A8_UNORM:
 				case ImageFormat::R8G8B8A8_UINT:
-					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					return Resource_loadImageDirect(ptr, expectedSize, data, info);
 					break;
 				default:
-					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					return Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
 					break;
 				}
 				break;
@@ -183,10 +191,10 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 				case ImageFormat::R8G8B8_SRGB:
 				case ImageFormat::R8G8B8_UNORM:
 				case ImageFormat::R8G8B8_UINT:
-					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					return Resource_loadImageDirect(ptr, expectedSize, data, info);
 					break;
 				default:
-					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					return Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
 					break;
 				}
 				break;
@@ -195,10 +203,10 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 				case ImageFormat::R8G8_SRGB:
 				case ImageFormat::R8G8_UNORM:
 				case ImageFormat::R8G8_UINT:
-					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					return Resource_loadImageDirect(ptr, expectedSize, data, info);
 					break;
 				default:
-					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					return Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
 					break;
 				}
 				break;
@@ -208,10 +216,10 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 				case ImageFormat::R8_SRGB:
 				case ImageFormat::R8_UNORM:
 				case ImageFormat::R8_UINT:
-					Resource_loadImageDirect(ptr, expectedSize, data, info);
+					return Resource_loadImageDirect(ptr, expectedSize, data, info);
 					break;
 				default:
-					Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
+					return Resource_loadImageConverted(StringView(), ptr, data, info, fmt);
 					break;
 				}
 				break;
@@ -222,13 +230,14 @@ void Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, BytesVie
 			}
 		} else {
 			// use data callback
-			Resource_loadImageDefault(StringView(), data, fmt, dcb);
+			return Resource_loadImageDefault(StringView(), data, fmt, dcb);
 		}
 	}
+	return 0;
 }
 
-void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb) {
-	memory::pool::perform_temporary([&] {
+uint64_t Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb) {
+	return memory::pool::perform_temporary([&] () -> uint64_t {
 		auto f = filesystem::openForReading(path);
 		if (f) {
 			auto fsize = f.size();
@@ -237,11 +246,12 @@ void Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView
 			f.read(mem, fsize);
 			f.close();
 
-			loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
+			return loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
 		} else {
 			log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
 			dcb(BytesView());
 		}
+		return 0;
 	});
 };
 
@@ -361,17 +371,22 @@ static void Resource_loadFileData(uint8_t *ptr, uint64_t size, StringView path, 
 	});
 };
 
-Resource::Builder::Builder(StringView name) {
-	auto p = memory::pool::create((memory::pool_t *)nullptr);
+Resource::Builder::Builder(StringView name)
+: Builder(memory::pool::create((memory::pool_t *)nullptr), name) {
+	_data->externalPool = false;
+}
+
+Resource::Builder::Builder(memory::pool_t *p, StringView name) {
 	memory::pool::perform([&] {
 		_data = new (p) ResourceData;
 		_data->pool = p;
 		_data->key = name.pdup(p);
+		_data->externalPool = true;
 	}, p);
 }
 
 Resource::Builder::~Builder() {
-	if (_data) {
+	if (_data && !_data->externalPool) {
 		auto p = _data->pool;
 		memory::pool::destroy(p);
 		_data = nullptr;
@@ -502,6 +517,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 	}
 	return p;
 }
+
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, FilePath path, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
@@ -518,6 +534,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 	Extent3 extent;
 	extent.depth = 1;
 	if (!bitmap::getImageSize(StringView(npath), extent.width, extent.height)) {
+		log::error("Resource", "Fail to add image: ", key, ", fail to find image dimensions: ", path.get());
 		return nullptr;
 	}
 
@@ -540,6 +557,86 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, Fi
 	}
  	return p;
 }
+
+const ImageData * Resource::Builder::addImage(StringView key, ImageInfo &&img, SpanView<FilePath> data, AttachmentLayout layout, AccessType access) {
+	if (!_data) {
+		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		return nullptr;
+	}
+
+	struct LoadableImageInfo {
+		StringView path;
+		Extent3 extent = {1, 1, 1};
+	};
+
+	Vector<LoadableImageInfo> images;
+
+	for (auto &it : data) {
+		String npath = filesystem::loadableResourcePath<Interface>(it.get());
+		if (npath.empty()) {
+			log::error("Resource", "Fail to add image: ", key, ", file not found: ", it.get());
+			return nullptr;
+		}
+
+		Extent3 extent;
+		extent.depth = 1;
+		if (!bitmap::getImageSize(StringView(npath), extent.width, extent.height)) {
+			log::error("Resource", "Fail to add image: ", key, ", fail to find image dimensions: ", it.get());
+			return nullptr;
+		}
+
+		if (!images.empty()) {
+			if (images.front().extent != extent) {
+				log::error("Resource", "Fail to add image: ", key, ", fail to find image layer: ", it.get(),
+						", all images should have same extent (", images.front().extent, "), but layer have ", extent);
+				return nullptr;
+			}
+		}
+		images.emplace_back(LoadableImageInfo{it.get(), extent});
+	}
+
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this] () -> ImageData * {
+		for (auto &it : images) {
+			it.path = it.path.pdup(_data->pool);
+		}
+
+		auto imagesData = makeSpanView(images).pdup(_data->pool);
+
+		auto buf = new (_data->pool) ImageData;
+		static_cast<ImageInfo &>(*buf) = move(img);
+		buf->key = key.pdup(_data->pool);
+		buf->memCallback = [imagesData, format = img.format] (uint8_t *ptr, uint64_t size, const ImageData::DataCallback &dcb) {
+			for (auto &it : imagesData) {
+				auto ret = Resource::loadImageFileData(ptr, size, it.path, format, dcb);
+				if (ptr) {
+					if (size >= ret) {
+						ptr += ret;
+						size -= ret;
+					} else {
+						break;
+					}
+				}
+			}
+		};
+		buf->extent = imagesData.front().extent;
+		if (buf->imageType == ImageType::Image3D) {
+			buf->extent.depth = imagesData.size();
+		} else {
+			// assume image2d array
+			buf->imageType = ImageType::Image2D;
+			buf->arrayLayers = ArrayLayers(imagesData.size());
+		}
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
+		return buf;
+	}, _data->pool);
+	if (!p) {
+		log::error("Resource", _data->key, ": Image already added: ", key);
+		return nullptr;
+	}
+ 	return p;
+}
+
 const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&img, BytesView data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
@@ -586,6 +683,10 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 
 bool Resource::Builder::empty() const {
 	return _data->buffers.empty() && _data->images.empty();
+}
+
+memory::pool_t *Resource::Builder::getPool() const {
+	return _data->pool;
 }
 
 }

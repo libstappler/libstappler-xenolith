@@ -54,24 +54,29 @@ struct TransformData {
 	mat4 transform;
 	vec4 mask;
 	vec4 offset;
-	vec4 shadow;
 	vec4 color;
+	float shadowValue;
+	float textureLayer;
+	float padding0;
+	float padding1;
 
 #ifndef SP_GLSL
 	TransformData() :
 	transform(mat4::IDENTITY),
 	mask(vec4(1.0f, 1.0f, 0.0f, 0.0f)),
 	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	shadow(vec4::ZERO),
-	color(vec4::ONE)
+	color(vec4::ONE),
+	shadowValue(0.0f),
+	textureLayer(0.0f)
 	{ }
 
 	TransformData(const mat4 &m) :
 	transform(m),
 	mask(vec4(1.0f, 1.0f, 0.0f, 0.0f)),
 	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	shadow(vec4::ZERO),
-	color(vec4::ONE)
+	color(vec4::ONE),
+	shadowValue(0.0f),
+	textureLayer(0.0f)
 	{ }
 #endif
 };

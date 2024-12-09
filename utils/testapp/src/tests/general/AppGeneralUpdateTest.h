@@ -47,4 +47,5 @@ protected:
 };
 
 }
+
 #endif /* TEST_SRC_TESTS_GENERAL_APPGENERALUPDATETEST_H_ */

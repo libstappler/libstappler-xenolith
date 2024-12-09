@@ -171,7 +171,8 @@ public:
 	void enableStencil(const StencilInfo &);
 	void enableStencil(const StencilInfo &front, const StencilInfo &back);
 	void disableStancil();
-	void setLineWidth(float lineWidth);
+	void setLineWidth(float);
+	void setImageViewType(ImageViewType);
 
 	const BlendInfo &getBlendInfo() const { return blend; }
 	const DepthInfo &getDepthInfo() const { return depth; }
@@ -183,17 +184,21 @@ public:
 
 	float getLineWidth() const { return lineWidth; }
 
+	ImageViewType getImageViewType() const { return imageViewType; }
+
 	bool operator==(const PipelineMaterialInfo &tmp2) const {
 		return this->blend == tmp2.blend && this->depth == tmp2.depth && this->bounds == tmp2.bounds
 				&& this->stencil == tmp2.stencil && (!this->stencil || (this->front == tmp2.front && this->back == tmp2.back))
-				&& this->lineWidth == tmp2.lineWidth;
+				&& this->lineWidth == tmp2.lineWidth && this->imageViewType == tmp2.imageViewType;
 	}
 
 	bool operator!=(const PipelineMaterialInfo &tmp2) const {
 		return this->blend != tmp2.blend || this->depth != tmp2.depth || this->bounds != tmp2.bounds
 				|| this->stencil != tmp2.stencil || (this->stencil && (this->front != tmp2.front || this->back != tmp2.back))
-				|| this->lineWidth != tmp2.lineWidth;
+				|| this->lineWidth != tmp2.lineWidth || this->imageViewType != tmp2.imageViewType;
 	}
+
+	bool isMatch(const PipelineMaterialInfo &tmp2) const;
 
 	size_t hash() const {
 		return hash::hashSize((const char *)this, sizeof(PipelineMaterialInfo));
@@ -207,7 +212,8 @@ protected:
 	void _setup(const DepthInfo &);
 	void _setup(const DepthBounds &);
 	void _setup(const StencilInfo &);
-	void _setup(LineWidth lineWidth);
+	void _setup(LineWidth);
+	void _setup(ImageViewType);
 
 	template <typename T>
 	void setup(T &&t) {
@@ -229,6 +235,7 @@ protected:
 	StencilInfo back;
 	uint32_t stencil = 0;
 	float lineWidth = 0.0f; // 0.0f - draw triangles, < 0.0f - points,  > 0.0f - lines with width
+	ImageViewType imageViewType = ImageViewType::ImageView1D;
 };
 
 }

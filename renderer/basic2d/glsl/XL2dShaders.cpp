@@ -28,6 +28,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 
 #include "xl_2d_material.frag.h"
+#include "xl_2d_material_tex2darray.frag.h"
+#include "xl_2d_material_tex3d.frag.h"
 #include "xl_2d_material.vert.h"
 #include "xl_2d_material_nobda.vert.h"
 #include "xl_2d_pseudosdf.frag.h"
@@ -36,6 +38,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 #include "xl_2d_pseudosdf_shadow.vert.h"
 
 SpanView<uint32_t> MaterialFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_frag), sizeof(xl_2d_material_frag) / sizeof(uint32_t));
+SpanView<uint32_t> MaterialTex2dArrayFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_tex2darray_frag), sizeof(xl_2d_material_tex2darray_frag) / sizeof(uint32_t));
+SpanView<uint32_t> MaterialTex3dFrag(reinterpret_cast<const uint32_t *>(xl_2d_material_tex3d_frag), sizeof(xl_2d_material_tex3d_frag) / sizeof(uint32_t));
 SpanView<uint32_t> MaterialVert(reinterpret_cast<const uint32_t *>(xl_2d_material_vert), sizeof(xl_2d_material_vert) / sizeof(uint32_t));
 SpanView<uint32_t> MaterialNoBdaVert(reinterpret_cast<const uint32_t *>(xl_2d_material_nobda_vert), sizeof(xl_2d_material_nobda_vert) / sizeof(uint32_t));
 SpanView<uint32_t> PseudoSdfFrag(reinterpret_cast<const uint32_t *>(xl_2d_pseudosdf_frag), sizeof(xl_2d_pseudosdf_frag) / sizeof(uint32_t));

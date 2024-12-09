@@ -319,13 +319,15 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	// pipelines for material-besed rendering
 	auto materialPipeline = subpassBuilder.addGraphicPipeline("Solid", layout2d, shaderSpecInfo, PipelineMaterialInfo({
 		BlendInfo(),
-		DepthInfo(true, true, CompareOp::Less)
+		DepthInfo(true, true, CompareOp::Less),
+		ImageViewType::ImageView2D
 	}));
 
 	auto transparentPipeline = subpassBuilder.addGraphicPipeline("Transparent", layout2d, shaderSpecInfo, PipelineMaterialInfo({
 		BlendInfo(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha, BlendOp::Add,
 				BlendFactor::Zero, BlendFactor::One, BlendOp::Add),
-		DepthInfo(false, true, CompareOp::LessOrEqual)
+		DepthInfo(false, true, CompareOp::LessOrEqual),
+		ImageViewType::ImageView2D
 	}));
 
 	// pipeline for debugging - draw lines instead of triangles
@@ -333,8 +335,67 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 		BlendInfo(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha, BlendOp::Add,
 				BlendFactor::Zero, BlendFactor::One, BlendOp::Add),
 		DepthInfo(false, true, CompareOp::LessOrEqual),
+		ImageViewType::ImageView2D,
 		LineWidth(1.0f)
 	));
+
+	auto materialTex2dArrayFrag = queueBuilder.addProgramByRef("Loader_MaterialTex2dArrayFrag", shaders::MaterialTex2dArrayFrag);
+
+	auto shaderTex2dArraySpecInfo = Vector<SpecializationInfo>({
+		// no specialization required for vertex shader
+		core::SpecializationInfo(materialVert, Vector<SpecializationConstant>{
+			SpecializationConstant(PredefinedConstant::BuffersArraySize)
+		}),
+		// specialization for fragment shader - use platform-dependent array sizes
+		core::SpecializationInfo(materialTex2dArrayFrag, Vector<SpecializationConstant>{
+			SpecializationConstant(PredefinedConstant::SamplersArraySize),
+			SpecializationConstant(PredefinedConstant::TexturesArraySize)
+		})
+	});
+
+	// pipelines for material-besed rendering
+	subpassBuilder.addGraphicPipeline("Solid_Tex2dArrayFrag", layout2d, shaderTex2dArraySpecInfo, PipelineMaterialInfo({
+		BlendInfo(),
+		DepthInfo(true, true, CompareOp::Less),
+		ImageViewType::ImageView2DArray
+	}));
+
+	subpassBuilder.addGraphicPipeline("Transparent_Tex2dArrayFrag", layout2d, shaderTex2dArraySpecInfo, PipelineMaterialInfo({
+		BlendInfo(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha, BlendOp::Add,
+				BlendFactor::Zero, BlendFactor::One, BlendOp::Add),
+		DepthInfo(false, true, CompareOp::LessOrEqual),
+		ImageViewType::ImageView2DArray
+	}));
+
+
+	auto materialTex3dFrag = queueBuilder.addProgramByRef("Loader_MaterialTex3dFrag", shaders::MaterialTex3dFrag);
+
+	auto shaderTex3dSpecInfo = Vector<SpecializationInfo>({
+		// no specialization required for vertex shader
+		core::SpecializationInfo(materialVert, Vector<SpecializationConstant>{
+			SpecializationConstant(PredefinedConstant::BuffersArraySize)
+		}),
+		// specialization for fragment shader - use platform-dependent array sizes
+		core::SpecializationInfo(materialTex3dFrag, Vector<SpecializationConstant>{
+			SpecializationConstant(PredefinedConstant::SamplersArraySize),
+			SpecializationConstant(PredefinedConstant::TexturesArraySize)
+		})
+	});
+
+	// pipelines for material-besed rendering
+	subpassBuilder.addGraphicPipeline("Solid_Tex3dFrag", layout2d, shaderTex3dSpecInfo, PipelineMaterialInfo({
+		BlendInfo(),
+		DepthInfo(true, true, CompareOp::Less),
+		ImageViewType::ImageView3D
+	}));
+
+	subpassBuilder.addGraphicPipeline("Transparent_Tex3dFrag", layout2d, shaderTex3dSpecInfo, PipelineMaterialInfo({
+		BlendInfo(BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha, BlendOp::Add,
+				BlendFactor::Zero, BlendFactor::One, BlendOp::Add),
+		DepthInfo(false, true, CompareOp::LessOrEqual),
+		ImageViewType::ImageView3D
+	}));
+
 
 	static_cast<MaterialAttachment *>(_materials->attachment.get())->addPredefinedMaterials(Vector<Rc<Material>>({
 		Rc<Material>::create(Material::MaterialIdInitial, materialPipeline, cache->getEmptyImage(), ColorMode::IntensityChannel),

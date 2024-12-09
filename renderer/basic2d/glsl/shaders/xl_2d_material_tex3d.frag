@@ -17,7 +17,7 @@ layout (set = 0, binding = 1) readonly buffer Materials {
 };
 
 layout (set = 1, binding = 0) uniform sampler immutableSamplers[SAMPLERS_ARRAY_SIZE];
-layout (set = 1, binding = 1) uniform texture2D images[IMAGES_ARRAY_SIZE];
+layout (set = 1, binding = 1) uniform texture3D images[IMAGES_ARRAY_SIZE];
 
 #include "XL2dGlslGradient.h"
 
@@ -42,10 +42,10 @@ layout (push_constant) uniform pcb {
 
 void main() {
 	vec4 textureColor = texture(
-		sampler2D(
+		sampler3D(
 			images[pushConstants.imageIdx],
 			immutableSamplers[pushConstants.samplerIdx]
-		), fragTexCoord.xy);
+		), fragTexCoord.xyz);
 	outColor = fragColor * textureColor;
 
 	if (pushConstants.gradientCount > 0) {

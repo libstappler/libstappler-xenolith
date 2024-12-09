@@ -507,6 +507,10 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		createInfo.subresourceRange.layerCount = info.layerCount.get();
 	}
 
+	if (info.type == core::ImageViewType::ImageView2D && createInfo.subresourceRange.layerCount > 1) {
+		createInfo.subresourceRange.layerCount = 1;
+	}
+
 	if (dev.getTable()->vkCreateImageView(dev.getDevice(), &createInfo, nullptr, &_imageView) == VK_SUCCESS) {
 		_info = info;
 		_info.format = format;

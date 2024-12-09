@@ -55,6 +55,7 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 		SpanView<InstanceVertexData> vertexes;
 		SpanView<ZOrder> zOrder;
 		float depthValue = 0.0f;
+		float textureLayer = 0.0f;
 
 		uint32_t vertexOffset = 0;
 		uint32_t vertexCount = 0;
@@ -109,7 +110,7 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 	memory::pool_t *pool = nullptr;
 
 	void emplaceWritePlan(FrameContextHandle2d *input, const core::Material *material, Map<core::MaterialId, MaterialWritePlan> &writePlan,
-			const Command *c, const CmdGeneral *cmd,
+			const Command *c, const CmdInfo *cmd,
 			SpanView<InstanceVertexData> vertexes);
 
 	void applyNormalized(SpanView<InstanceVertexData> &vertexes, const CmdDeferred *cmd);
@@ -282,7 +283,7 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 
 void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, const core::Material *material,
 		Map<core::MaterialId, MaterialWritePlan> &writePlan,
-		const Command *c, const CmdGeneral *cmd, SpanView<InstanceVertexData> vertexes) {
+		const Command *c, const CmdInfo *cmd, SpanView<InstanceVertexData> vertexes) {
 	auto materialIt = writePlan.find(cmd->material);
 	if (materialIt == writePlan.end()) {
 		if (material) {
@@ -343,6 +344,7 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, co
 					vertexData->vertexes = makeSpanView(packedStart, packedCommands);
 					vertexData->zOrder = cmd->zPath;
 					vertexData->depthValue = cmd->depthValue;
+					vertexData->textureLayer = cmd->textureLayer;
 					stateIt->second.packed = vertexData;
 				}
 
@@ -351,6 +353,7 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, co
 				vertexData->vertexes = makeSpanView(&vIt, 1);
 				vertexData->zOrder = cmd->zPath;
 				vertexData->depthValue = cmd->depthValue;
+				vertexData->textureLayer = cmd->textureLayer;
 				stateIt->second.instanced = vertexData;
 
 				packedCommands = 0;
@@ -368,6 +371,7 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, co
 			vertexData->vertexes = makeSpanView(packedStart, packedCommands);
 			vertexData->zOrder = cmd->zPath;
 			vertexData->depthValue = cmd->depthValue;
+			vertexData->textureLayer = cmd->textureLayer;
 			stateIt->second.packed = vertexData;
 		}
 	}
@@ -677,7 +681,7 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				packedInstance->transformOffset = writeTarget.transtormOffset;
 
 				float zOffset = 0.0f;
-				Vec4 depthValue = Vec4::ZERO;
+				float depthValue = 0.0f;
 				auto pathIt = paths.find(packedInstance->zOrder);
 				if (pathIt != paths.end()) {
 					zOffset = pathIt->second;
@@ -686,7 +690,7 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				if (packedInstance->depthValue > 0.0f) {
 					auto f16 = halffloat::encode(packedInstance->depthValue);
 					auto value = halffloat::decode(f16);
-					depthValue = Vec4(value, value, value, 1.0);
+					depthValue = value;
 				}
 
 				for (auto &iit : packedInstance->vertexes) {
@@ -694,7 +698,8 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 						auto instanceTarget = writeTarget.transform + writeTarget.transtormOffset;
 						memcpy(instanceTarget, &inst, sizeof(TransformData));
 						instanceTarget->offset.z = zOffset;
-						instanceTarget->shadow = depthValue;
+						instanceTarget->shadowValue = depthValue;
+						instanceTarget->textureLayer = packedInstance->textureLayer;
 
 						++ writeTarget.transtormOffset;
 					}
@@ -714,7 +719,7 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				packedInstance->transformOffset = writeTarget.transtormOffset;
 
 				float zOffset = 0.0f;
-				Vec4 depthValue = Vec4::ZERO;
+				float depthValue = 0.0f;
 				auto pathIt = paths.find(packedInstance->zOrder);
 				if (pathIt != paths.end()) {
 					zOffset = pathIt->second;
@@ -723,14 +728,15 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				if (packedInstance->depthValue > 0.0f) {
 					auto f16 = halffloat::encode(packedInstance->depthValue);
 					auto value = halffloat::decode(f16);
-					depthValue = Vec4(value, value, value, 1.0);
+					depthValue = value;
 				}
 
 				for (auto &iit : packedInstance->vertexes) {
 					auto instanceTarget = writeTarget.transform + writeTarget.transtormOffset;
 					memcpy(instanceTarget, &iit.instances.front(), sizeof(TransformData));
 					instanceTarget->offset.z = zOffset;
-					instanceTarget->shadow = depthValue;
+					instanceTarget->shadowValue = depthValue;
+					instanceTarget->textureLayer = packedInstance->textureLayer;
 
 					pushVertexes(plan.first, plan.second, writeTarget.transtormOffset, iit);
 					++ writeTarget.transtormOffset;

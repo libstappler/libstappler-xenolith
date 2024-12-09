@@ -468,7 +468,7 @@ void Label::pushCommands(FrameInfo &frame, NodeFlags flags) {
 		FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 
 		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(), frame.modelTransformStack.back(),
-				_normalized, frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel, frame.depthStack.back(), _commandFlags);
+				_normalized, buildCmdInfo(frame), _commandFlags);
 	} else {
 		Sprite::pushCommands(frame, flags);
 	}

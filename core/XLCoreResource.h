@@ -35,8 +35,8 @@ class SP_PUBLIC Resource : public NamedRef {
 public:
 	class Builder;
 
-	static void loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb);
-	static void loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb);
+	static uint64_t loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb);
+	static uint64_t loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb);
 
 	Resource();
 	virtual ~Resource();
@@ -71,6 +71,7 @@ protected:
 class SP_PUBLIC Resource::Builder final {
 public:
 	Builder(StringView);
+	Builder(memory::pool_t *, StringView);
 	~Builder();
 
 	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
@@ -87,6 +88,8 @@ public:
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 	const ImageData * addImage(StringView key, ImageInfo &&img, FilePath data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+	const ImageData * addImage(StringView key, ImageInfo &&img, SpanView<FilePath> data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 	const ImageData * addImage(StringView key, ImageInfo &&img,
@@ -94,6 +97,8 @@ public:
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 
 	bool empty() const;
+
+	memory::pool_t *getPool() const;
 
 protected:
 	friend class Resource;

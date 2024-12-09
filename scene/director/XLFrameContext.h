@@ -73,10 +73,11 @@ protected:
 	void addMaterial(const MaterialInfo &, core::MaterialId, bool revokable);
 	String listMaterials() const;
 
-	virtual core::ImageViewInfo getImageViewForMaterial(const MaterialInfo &, uint32_t idx, const core::ImageData *) const;
+	virtual core::ImageViewInfo getImageViewForMaterial(const core::GraphicPipelineData *pipeline,
+			const MaterialInfo &, uint32_t idx, const core::ImageData *) const;
 
-	virtual const core::GraphicPipelineData *getPipelineForMaterial(const MaterialInfo &) const;
-	virtual bool isPipelineMatch(const core::GraphicPipelineData *, const MaterialInfo &) const;
+	virtual const core::GraphicPipelineData *getPipelineForMaterial(const MaterialInfo &, SpanView<core::MaterialImage> images) const;
+	virtual bool isPipelineMatch(const core::GraphicPipelineData *, const MaterialInfo &, SpanView<core::MaterialImage> images) const;
 
 	virtual void submitMaterials(const FrameInfo &);
 

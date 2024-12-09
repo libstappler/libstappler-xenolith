@@ -131,7 +131,16 @@ core::MaterialImage Texture::getMaterialImage() const {
 	} else {
 		ret.image = _data;
 	}
+	ret.info.setup(*ret.image);
 	return ret;
+}
+
+core::ImageInfoData Texture::getImageInfo() const {
+	if (_dynamic) {
+		return _dynamic->getInfo();
+	} else {
+		return *_data;
+	}
 }
 
 }
