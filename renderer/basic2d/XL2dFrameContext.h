@@ -61,6 +61,8 @@ struct SP_PUBLIC StateData : public Ref {
 
 	Mat4 transform;
 	Rc<LinearGradientData> gradient;
+	float outlineOffset = 0.0f;
+	Color4F outlineColor;
 };
 
 }

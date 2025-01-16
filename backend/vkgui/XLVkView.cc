@@ -1220,8 +1220,6 @@ void View::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
 
 	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
 		waitForFences(_frameOrder);
-		queue.waitIdle();
-
 		performOnThread([this] {
 			recreateSwapchain(_swapchain->getRebuildMode());
 		}, this, false);

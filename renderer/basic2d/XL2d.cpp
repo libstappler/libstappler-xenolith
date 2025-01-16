@@ -75,6 +75,7 @@ ImagePlacementResult ImagePlacementInfo::resolve(const Size2 &viewSize, const Si
 	// find scale from view to image
 	switch (autofit) {
 	case Autofit::None:
+		result.scale = (result.imageFragmentSize.width / viewSize.width + result.imageFragmentSize.height / viewSize.height) / 2.0f;
 		return result;
 		break;
 	case Autofit::Width:

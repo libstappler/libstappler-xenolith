@@ -47,7 +47,7 @@ bool ShadowPass::makeRenderQueue(Queue::Builder &builder, RenderQueueInfo &info)
 
 	builder.addPass("MaterialSwapchainPass", PassType::Graphics, RenderOrderingHighest, [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<ShadowPass>::create(builder, passBuilder, PassCreateInfo{
-			info.target, info.extent, info.flags | Flags::UsePseudoSdf});
+			info.target, info.extent, info.flags | Flags::UsePseudoSdf, info.backgroundColor});
 	});
 
 	return true;
@@ -69,7 +69,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				.initialLayout = AttachmentLayout::Undefined,
 				.finalLayout = AttachmentLayout::PresentSrc,
 				.clearOnLoad = true,
-				.clearColor = Color4F(1.0f, 1.0f, 1.0f, 1.0f) // Color4F::WHITE;
+				.clearColor = info.backgroundColor // Color4F::WHITE;
 		});
 	});
 

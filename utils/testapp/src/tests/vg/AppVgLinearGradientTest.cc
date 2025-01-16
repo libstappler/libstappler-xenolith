@@ -32,7 +32,7 @@ bool VgLinearGradientTest::init() {
 
 	_sprite = addChild(Rc<Sprite>::create("xenolith-1-480.png"));
 	//_sprite->setAutofit(Sprite::Autofit::Contain);
-	_sprite->setSamplerIndex(Sprite::SamplerIndexDefaultFilterLinear);
+	_sprite->setSamplerIndex(SamplerIndex::DefaultFilterLinear);
 	_sprite->setAnchorPoint(Anchor::Middle);
 
 	updateAngle(0.5f);

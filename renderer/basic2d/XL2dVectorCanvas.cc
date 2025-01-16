@@ -240,7 +240,7 @@ Rc<VectorCanvasResult> VectorCanvas::draw(Rc<VectorImageData> &&image) {
 				}
 
 				auto &inst = it->second.instances->emplace_back(TransformData(_data->transform));
-				inst.color = color;
+				inst.instanceColor = color;
 				_data->out->at(it->second.dataIndex).instances = *it->second.instances;
 
 				if (hasTransform) {
@@ -354,7 +354,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 
 					auto &it = instances->emplace_front(Vector<TransformData>());
 					auto &instObj = it.emplace_back(TransformData(transform));
-					instObj.color = color;
+					instObj.instanceColor = color;
 					outData->instances = it;
 				}
 				return;
@@ -370,7 +370,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 
 					auto &inst = instances->emplace_front(Vector<TransformData>());
 					auto &instObj = inst.emplace_back(TransformData(transform));
-					instObj.color = color;
+					instObj.instanceColor = color;
 					outData->instances = inst;
 
 					if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {
@@ -390,7 +390,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 			} else {
 				auto &inst = instances->emplace_front(Vector<TransformData>());
 				auto &instObj = inst.emplace_back(TransformData(transform));
-				instObj.color = color;
+				instObj.instanceColor = color;
 				outData->instances = inst;
 
 				if (pathDrawer.instancedMode == VectorInstancedMode::Aggressive) {
@@ -468,7 +468,13 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 	line.drawClose(false);
 
 	VectorCanvasPathOutput target { transform, targetSize, Color4F::WHITE, out };
-	target.transform.scale(1.0f / targetSize.width, -1.0f / targetSize.height, 1.0f);
+	target.transform.scale(1.0f / targetSize.width, 1.0f / targetSize.height, 1.0f);
+
+	target.transform = Mat4(
+		textureFlippedX ? -1.0f : 1.0, 0.0f,
+		0.0f, textureFlippedY ? 1.0f : -1.0f,
+		textureFlippedX ? 1.0f : 0.0f, textureFlippedY ? 0.0f : 1.0f) * target.transform;
+
 	target.config = this;
 
 	geom::TessResult result;

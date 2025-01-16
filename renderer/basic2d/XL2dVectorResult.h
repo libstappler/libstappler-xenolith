@@ -41,7 +41,11 @@ enum class VectorInstancedMode {
 struct SP_PUBLIC VectorCanvasConfig {
 	geom::Tesselator::RelocateRule relocateRule = geom::Tesselator::RelocateRule::Auto;
 	VectorInstancedMode instancedMode = VectorInstancedMode::Aggressive;
+
 	Size2 targetSize;
+	bool textureFlippedX = false;
+	bool textureFlippedY = false;
+
 	float quality = 1.0f;
 	float boundaryOffset = config::VGAntialiasFactor;
 	float boundaryInset = config::VGAntialiasFactor;

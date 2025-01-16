@@ -38,10 +38,15 @@ void main() {
 	const Vertex vertex = vertexBuffer[0].vertices[gl_VertexIndex];
 	const uint transformIdx = vertex.material >> 16;
 	const TransformData transform = transformObjectBuffer[1].objects[transformIdx];
+	const TransformData instance = transformObjectBuffer[1].objects[gl_InstanceIndex];
 
 	const vec4 pos = vertex.pos;
-	gl_Position = transform.transform * pos * transform.mask + transform.offset;
-	gl_Position.z = 1.0 - transform.shadow.x / shadowData.maxValue;
+	const float shadowValue = max(instance.shadowValue, transform.shadowValue);
+
+	gl_Position = transform.transform * instance.transform * pos
+		* makeMask(transform.flags) * makeMask(transform.flags)
+		+ transform.offset + instance.offset;
+	gl_Position.z = 1.0 - shadowValue / shadowData.maxValue;
 
 	const float pseudoSdfInset = vertex.tex.x;
 	const float pseudoSdfOffset = vertex.tex.y;
@@ -49,7 +54,7 @@ void main() {
 	if (PSEUDOSDF_MODE != PSEUDOSDF_MODE_SOLID) {
 		const float sdfValue = (1.0 - vertex.color.a);
 		const float pseudoSdfScale = (pseudoSdfInset + pseudoSdfOffset) / shadowData.density;
-		const float height = shadowData.maxValue - transform.shadow.x;
+		const float height = shadowData.maxValue - shadowValue;
 
 		float preudoSdfValue = sdfValue * pseudoSdfScale;
 		if (preudoSdfValue > 0.0) {
@@ -60,7 +65,7 @@ void main() {
 			//preudoSdfValue = preudoSdfValue + height;
 		}
 
-		fragColor = vec4(preudoSdfValue, vertex.color.g, vertex.color.b, transform.shadow.x);
+		fragColor = vec4(preudoSdfValue, vertex.color.g, vertex.color.b, shadowValue);
 	} else {
 		fragColor = vec4(pushConstants.pseudoSdfMax, 0.0, 0.0, 1.0);
 	}

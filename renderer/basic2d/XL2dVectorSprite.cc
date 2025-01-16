@@ -228,6 +228,13 @@ void VectorSprite::setDeferred(bool val) {
 	}
 }
 
+void VectorSprite::setRespectEmptyDrawOrder(bool val) {
+	if (val != _respectEmptyDrawOrder) {
+		_respectEmptyDrawOrder = val;
+		_vertexesDirty = true;
+	}
+}
+
 void VectorSprite::setImageAutofit(Autofit autofit) {
 	if (_imagePlacement.autofit != autofit) {
 		_imagePlacement.autofit = autofit;
@@ -360,6 +367,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 	Size2 imageSize = _image->getImageSize();
 	Size2 targetViewSpaceSize = Size2(_contentSize.width * viewScale.x,
 			_contentSize.height * viewScale.y);
+	Size2 contentSpaceSize = _contentSize;
 
 	float targetOffsetX = -_imagePlacement.textureRect.origin.x * imageSize.width;
 	float targetOffsetY = -_imagePlacement.textureRect.origin.y * imageSize.height;
@@ -382,6 +390,8 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 			_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
 			_imageScissorComponent->disableScissor();
 		}
+
+		contentSpaceSize = placementResult.viewRect.size;
 	} else {
 		_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
 		_imageScissorComponent->disableScissor();
@@ -413,16 +423,26 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		_image->clearDirty();
 		_result = nullptr;
 		_deferredResult = nullptr;
+		_vertexColorDirty = false; // color will be already applied
 
 		auto imageData = _image->popData();
+
+		if (imageData->getDrawOrder().empty() && _respectEmptyDrawOrder) {
+			return;
+		}
+
 		VectorCanvasConfig config;
 		config.color = _displayedColor;
 		config.quality = _quality;
 		config.targetSize = _imageTargetSize;
+		config.textureFlippedX = _flippedX;
+		config.textureFlippedY = _flippedY;
+
+		auto texPlacementResult = _texturePlacement.resolve(contentSpaceSize, Size2(_texture->getExtent().width, _texture->getExtent().height));
+		_textureScale = texPlacementResult.scale;
 
 		// Canvas uses pixel-wide extents, but for sdf we need dp-wide
 		config.sdfBoundaryInset *= frame.request->getFrameConstraints().density;
-		//config.sdfBoundaryOffset *= frame.request->getFrameConstraints().density;
 		config.sdfBoundaryOffset = _savedSdfValue * frame.request->getFrameConstraints().density;
 
 		if (_depthIndex > 0.0f) {
@@ -437,7 +457,6 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 			auto canvas = VectorCanvas::getInstance();
 			_result = canvas->draw(config, move(imageData));
 		}
-		_vertexColorDirty = false; // color will be already applied
 	}
 
 	Mat4 scaleTransform;

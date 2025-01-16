@@ -92,7 +92,7 @@ public:
 	void invalidateImage(const ImageStorage *);
 
 	Rc<Semaphore> acquireSemaphore();
-	void releaseSemaphore(Rc<Semaphore> &&);
+	bool releaseSemaphore(Rc<Semaphore> &&);
 
 	Rc<core::ImageView> makeView(const Rc<core::ImageObject> &, const ImageViewInfo &);
 
@@ -118,6 +118,8 @@ protected:
 	Vector<Rc<Semaphore>> _semaphores;
 	Vector<Rc<Semaphore>> _presentSemaphores;
 	Rc<Surface> _surface;
+
+	Vector<Rc<Semaphore>> _invalidatedSemaphores;
 };
 
 class SP_PUBLIC SwapchainImage : public core::ImageStorage {

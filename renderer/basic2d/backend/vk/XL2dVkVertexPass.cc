@@ -37,9 +37,9 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 struct VertexMaterialVertexProcessor;
 
 struct  VertexMaterialWriteTarget {
-	TransformData *transform;
-	uint8_t *vertexes;
-	uint8_t *indexes;
+	TransformData *transform = nullptr;
+	uint8_t *vertexes = nullptr;
+	uint8_t *indexes = nullptr;
 
 	uint32_t vertexOffset = 0;
 	uint32_t indexOffset = 0;
@@ -64,8 +64,7 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 	};
 
 	struct StatePlanInfo {
-		Mat4 transform;
-		const LinearGradientData *gradient = nullptr;
+		const StateData *stateData = nullptr;
 
 		VertexDataPlanInfo *instanced = nullptr;
 		VertexDataPlanInfo *packed = nullptr;
@@ -212,15 +211,7 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 			cmd = cmd->next;
 		}
 
-		if (dynamicData->globalWritePlan.vertexes == 0 || dynamicData->globalWritePlan.indexes == 0) {
-			_callback(true);
-			return true;
-		}
-
-		dynamicData->updatePathsDepth();
-
 		auto devFrame = static_cast<DeviceFrameHandle *>(handle);
-
 		auto &devPool = devFrame->getMemPool(this);
 
 		// create buffers
@@ -260,8 +251,14 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 			writeTarget.transform = reinterpret_cast<TransformData *>(transformData.data());
 		}
 
-		// write initial full screen quad
-		dynamicData->pushAll(this, writeTarget);
+		if (dynamicData->globalWritePlan.vertexes == 0 || dynamicData->globalWritePlan.indexes == 0) {
+			dynamicData->pushInitial(writeTarget);
+		} else {
+			dynamicData->updatePathsDepth();
+
+			// write initial full screen quad
+			dynamicData->pushAll(this, writeTarget);
+		}
 
 		if (fhandle.isPersistentMapping()) {
 			_vertexes->flushMappedRegion();
@@ -305,10 +302,11 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, co
 				if (state) {
 					auto stateData = dynamic_cast<StateData *>(state->data ? state->data.get() : nullptr);
 
-					if (stateData && stateData->gradient) {
-						globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
-						stateIt->second.transform = stateData->transform;
-						stateIt->second.gradient = stateData->gradient.get();
+					if (stateData) {
+						stateIt->second.stateData = stateData;
+						if (stateData->gradient) {
+							globalWritePlan.vertexes += stateData->gradient->steps.size() + 2;
+						}
 					}
 				}
 			}
@@ -333,8 +331,13 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input, co
 
 			maxShadowValue = std::max(maxShadowValue, cmd->depthValue);
 
-			// pack non-instanced blocks
+			bool drawAsInstances = false;
 			if (vIt.instances.size() > 1) {
+				drawAsInstances = true;
+			}
+
+			// pack non-instanced blocks
+			if (drawAsInstances) {
 				globalWritePlan.transforms += vIt.instances.size();
 
 				if (packedCommands > 0) {
@@ -481,91 +484,96 @@ void VertexMaterialDynamicData::updatePathsDepth() {
 }
 
 void VertexMaterialDynamicData::pushInitial(WriteTarget &writeTarget) {
-	TransformData nullTransforml;
-	nullTransforml.offset = Vec4::ZERO;
-	memcpy(writeTarget.transform, &nullTransforml, sizeof(TransformData));
-	++ writeTarget.transtormOffset;
-
-	Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6 };
-
-	Vector<Vertex> vertexes {
-		// full screen quad data
-		Vertex{
-			Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2::ZERO, 0, 0
-		},
-		Vertex{
-			Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2::UNIT_Y, 0, 0
-		},
-		Vertex{
-			Vec4(1.0f, 1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2::ONE, 0, 0
-		},
-		Vertex{
-			Vec4(1.0f, -1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2::UNIT_X, 0, 0
-		},
-
-		// shadow quad data
-		Vertex{
-			Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2(0.0f, 1.0f - shadowSize.y), 0, 0
-		},
-		Vertex{
-			Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2(0.0f, 1.0f), 0, 0
-		},
-		Vertex{
-			Vec4(1.0f, 1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2(shadowSize.x, 1.0f), 0, 0
-		},
-		Vertex{
-			Vec4(1.0f, -1.0f, 0.0f, 1.0f),
-			Vec4::ONE, Vec2(shadowSize.x, 1.0f - shadowSize.y), 0, 0
-		}
-	};
-
-	switch (core::getPureTransform(transform)) {
-	case core::SurfaceTransformFlags::Rotate90:
-		vertexes[0].tex = Vec2::UNIT_Y;
-		vertexes[1].tex = Vec2::ONE;
-		vertexes[2].tex = Vec2::UNIT_X;
-		vertexes[3].tex = Vec2::ZERO;
-		vertexes[4].tex = Vec2(0.0f, shadowSize.y);
-		vertexes[5].tex = shadowSize;
-		vertexes[6].tex = Vec2(shadowSize.x, 0.0f);
-		vertexes[7].tex = Vec2::ZERO;
-		break;
-	case core::SurfaceTransformFlags::Rotate180:
-		vertexes[0].tex = Vec2::ONE;
-		vertexes[1].tex = Vec2::UNIT_X;
-		vertexes[2].tex = Vec2::ZERO;
-		vertexes[3].tex = Vec2::UNIT_Y;
-		vertexes[4].tex = shadowSize;
-		vertexes[5].tex = Vec2(shadowSize.x, 0.0f);
-		vertexes[6].tex = Vec2::ZERO;
-		vertexes[7].tex = Vec2(0.0f, shadowSize.y);
-		break;
-	case core::SurfaceTransformFlags::Rotate270:
-		vertexes[0].tex = Vec2::UNIT_X;
-		vertexes[1].tex = Vec2::ZERO;
-		vertexes[2].tex = Vec2::UNIT_Y;
-		vertexes[3].tex = Vec2::ONE;
-		vertexes[4].tex = Vec2(shadowSize.x, 0.0f);
-		vertexes[5].tex = Vec2::ZERO;
-		vertexes[6].tex = Vec2(0.0f, shadowSize.y);
-		vertexes[7].tex = shadowSize;
-		break;
-	default:
-		break;
+	if (writeTarget.transform) {
+		TransformData nullTransforml;
+		nullTransforml.offset = Vec4::ZERO;
+		memcpy(writeTarget.transform, &nullTransforml, sizeof(TransformData));
+		++ writeTarget.transtormOffset;
 	}
 
-	memcpy(writeTarget.vertexes, vertexes.data(), vertexes.size() * sizeof(Vertex));
-	memcpy(writeTarget.indexes, indexes.data(), indexes.size() * sizeof(uint32_t));
+	if (writeTarget.indexes) {
+		Vector<uint32_t> indexes{ 0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6 };
+		memcpy(writeTarget.indexes, indexes.data(), indexes.size() * sizeof(uint32_t));
+		writeTarget.indexOffset += indexes.size();
+	}
 
-	writeTarget.vertexOffset += vertexes.size();
-	writeTarget.indexOffset += indexes.size();
+	if (writeTarget.vertexes) {
+		Vector<Vertex> vertexes {
+			// full screen quad data
+			Vertex{
+				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2::ZERO, 0, 0
+			},
+			Vertex{
+				Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2::UNIT_Y, 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2::ONE, 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2::UNIT_X, 0, 0
+			},
+
+			// shadow quad data
+			Vertex{
+				Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(0.0f, 1.0f - shadowSize.y), 0, 0
+			},
+			Vertex{
+				Vec4(-1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(0.0f, 1.0f), 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, 1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(shadowSize.x, 1.0f), 0, 0
+			},
+			Vertex{
+				Vec4(1.0f, -1.0f, 0.0f, 1.0f),
+				Vec4::ONE, Vec2(shadowSize.x, 1.0f - shadowSize.y), 0, 0
+			}
+		};
+
+		switch (core::getPureTransform(transform)) {
+		case core::SurfaceTransformFlags::Rotate90:
+			vertexes[0].tex = Vec2::UNIT_Y;
+			vertexes[1].tex = Vec2::ONE;
+			vertexes[2].tex = Vec2::UNIT_X;
+			vertexes[3].tex = Vec2::ZERO;
+			vertexes[4].tex = Vec2(0.0f, shadowSize.y);
+			vertexes[5].tex = shadowSize;
+			vertexes[6].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[7].tex = Vec2::ZERO;
+			break;
+		case core::SurfaceTransformFlags::Rotate180:
+			vertexes[0].tex = Vec2::ONE;
+			vertexes[1].tex = Vec2::UNIT_X;
+			vertexes[2].tex = Vec2::ZERO;
+			vertexes[3].tex = Vec2::UNIT_Y;
+			vertexes[4].tex = shadowSize;
+			vertexes[5].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[6].tex = Vec2::ZERO;
+			vertexes[7].tex = Vec2(0.0f, shadowSize.y);
+			break;
+		case core::SurfaceTransformFlags::Rotate270:
+			vertexes[0].tex = Vec2::UNIT_X;
+			vertexes[1].tex = Vec2::ZERO;
+			vertexes[2].tex = Vec2::UNIT_Y;
+			vertexes[3].tex = Vec2::ONE;
+			vertexes[4].tex = Vec2(shadowSize.x, 0.0f);
+			vertexes[5].tex = Vec2::ZERO;
+			vertexes[6].tex = Vec2(0.0f, shadowSize.y);
+			vertexes[7].tex = shadowSize;
+			break;
+		default:
+			break;
+		}
+
+		memcpy(writeTarget.vertexes, vertexes.data(), vertexes.size() * sizeof(Vertex));
+		writeTarget.vertexOffset += vertexes.size();
+	}
 }
 
 void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<core::MaterialId, MaterialWritePlan> &writePlan) {
@@ -632,11 +640,11 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 	for (auto &plan : writePlan) {
 		for (auto &state : plan.second.states) {
 			// write gradient vertexes (2 + n: start, end, anchors)
-			if (state.second.gradient) {
+			if (state.second.stateData && state.second.stateData->gradient) {
 				auto target = reinterpret_cast<Vertex *>(writeTarget.vertexes) + writeTarget.vertexOffset;
 
-				Vec2 start = state.second.transform * state.second.gradient->start;
-				Vec2 end = state.second.transform * state.second.gradient->end;
+				Vec2 start = state.second.stateData->transform * state.second.stateData->gradient->start;
+				Vec2 end = state.second.stateData->transform * state.second.stateData->gradient->end;
 
 				start.y = surfaceExtent.height - start.y;
 				end.y = surfaceExtent.height - end.y;
@@ -662,7 +670,7 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				target->tex = axisAngle;
 				++ target;
 
-				for (auto &it : state.second.gradient->steps) {
+				for (auto &it : state.second.stateData->gradient->steps) {
 					target->pos = Vec4(math::lerp(start, end, it.value), it.value, it.factor);
 					target->tex = axisAngle;
 					target->color = Vec4(it.color.r, it.color.g, it.color.b, it.color.a);
@@ -670,9 +678,9 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 				}
 
 				state.second.gradientStart = writeTarget.vertexOffset;
-				state.second.gradientCount = uint32_t(state.second.gradient->steps.size());
+				state.second.gradientCount = uint32_t(state.second.stateData->gradient->steps.size());
 
-				writeTarget.vertexOffset += state.second.gradient->steps.size() + 2;
+				writeTarget.vertexOffset += state.second.stateData->gradient->steps.size() + 2;
 			}
 
 			auto packedInstance = state.second.instanced;
@@ -700,6 +708,9 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 						instanceTarget->offset.z = zOffset;
 						instanceTarget->shadowValue = depthValue;
 						instanceTarget->textureLayer = packedInstance->textureLayer;
+						if (state.second.stateData) {
+							instanceTarget->outlineColor = state.second.stateData->outlineColor;
+						}
 
 						++ writeTarget.transtormOffset;
 					}
@@ -737,6 +748,9 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget, Map<c
 					instanceTarget->offset.z = zOffset;
 					instanceTarget->shadowValue = depthValue;
 					instanceTarget->textureLayer = packedInstance->textureLayer;
+					if (state.second.stateData) {
+						instanceTarget->outlineColor = state.second.stateData->outlineColor;
+					}
 
 					pushVertexes(plan.first, plan.second, writeTarget.transtormOffset, iit);
 					++ writeTarget.transtormOffset;
@@ -843,7 +857,9 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 						.firstInstance = packedInstance->transformOffset,
 						.state = stateId,
 						.gradientOffset = statePlan.gradientStart,
-						.gradientCount = statePlan.gradientCount});
+						.gradientCount = statePlan.gradientCount,
+						.outlineOffset = (statePlan.stateData ? statePlan.stateData->outlineOffset : 0.0f)
+					});
 				}
 				materialIndexes = writeTarget.indexOffset;
 			}
@@ -870,7 +886,9 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 				.firstInstance = 0,
 				.state = stateId,
 				.gradientOffset = statePlan.gradientStart,
-				.gradientCount = statePlan.gradientCount});
+				.gradientCount = statePlan.gradientCount,
+				.outlineOffset = (statePlan.stateData ? statePlan.stateData->outlineOffset : 0.0f)
+			});
 		}
 	};
 
@@ -1094,12 +1112,14 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 	auto commands = _vertexBuffer->getCommands();
 	auto pass = static_cast<RenderPass *>(_data->impl.get());
 
+	// bind global indexes
+	if (_vertexBuffer->getIndexes()) {
+		buf.cmdBindIndexBuffer(_vertexBuffer->getIndexes(), 0, VK_INDEX_TYPE_UINT32);
+	}
+
 	if (_vertexBuffer->empty() || !_vertexBuffer->getIndexes() || !_vertexBuffer->getVertexes()) {
 		return;
 	}
-
-	// bind global indexes
-	buf.cmdBindIndexBuffer(_vertexBuffer->getIndexes(), 0, VK_INDEX_TYPE_UINT32);
 
 	clearDynamicState(buf);
 
@@ -1111,7 +1131,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		uint32_t samplerIdx = 0;
 		uint32_t gradientOffset = 0;
 		uint32_t gradientCount = 0;
-		uint32_t padding = 0;
+		float outlineOffset = 0;
 		uint64_t atlasBuffer = 0;
 	};
 
@@ -1145,10 +1165,12 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet * materials, Co
 		if (!material) {
 			return;
 		}
+
 		fragData.imageIdx = material->getImages().front().descriptor;
 		fragData.samplerIdx = material->getImages().front().sampler;
 		fragData.gradientOffset = materialVertexSpan.gradientOffset;
 		fragData.gradientCount = materialVertexSpan.gradientCount;
+		fragData.outlineOffset = materialVertexSpan.outlineOffset;
 
 		if (auto a = material->getAtlas()) {
 			if (auto ref = a->getBuffer()->getDeviceAddress()) {

@@ -75,6 +75,11 @@ public:
 	virtual void setDeferred(bool);
 	virtual bool isDeferred() const { return _deferred; }
 
+	// If true - do not draw image when it's drawOrder is empty
+	// If false - image with empty draw order is drawn path-by-path in undefined order
+	virtual void setRespectEmptyDrawOrder(bool);
+	virtual bool isRespectEmptyDrawOrder() const { return _respectEmptyDrawOrder; }
+
 	virtual void setWaitDeferred(bool value) { _waitDeferred = value; }
 	virtual bool isWaitDeferred() const { return _waitDeferred; }
 
@@ -106,6 +111,8 @@ protected:
 	bool _deferred = true;
 	bool _waitDeferred = true;
 	bool _imageIsSolid = false;
+	bool _respectEmptyDrawOrder = false;
+
 	uint64_t _asyncJobId = 0;
 	Rc<VectorImage> _image;
 	float _quality = QualityNormal;

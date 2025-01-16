@@ -53,6 +53,9 @@ public:
 
 	void incrementMode();
 
+	void hide();
+	void show();
+
 protected:
 	using Layer::init;
 
@@ -148,6 +151,20 @@ void Scene2d::FpsDisplay::incrementMode() {
 	setVisible(_mode != Disabled);
 }
 
+void Scene2d::FpsDisplay::hide() {
+	if (_mode != DisplayMode::Disabled) {
+		_mode = DisplayMode::Disabled;
+		setVisible(_mode != Disabled);
+	}
+}
+
+void Scene2d::FpsDisplay::show() {
+	if (_mode == DisplayMode::Disabled) {
+		_mode = DisplayMode::Fps;
+		setVisible(_mode != Disabled);
+	}
+}
+
 bool Scene2d::init(Application *app, const core::FrameContraints &constraints) {
 	return init(app, [] (Queue::Builder &) { }, constraints);
 }
@@ -195,7 +212,11 @@ void Scene2d::handleContentSizeDirty() {
 }
 
 void Scene2d::setFpsVisible(bool value) {
-	_fps->setVisible(value);
+	if (value) {
+		_fps->show();
+	} else {
+		_fps->hide();
+	}
 }
 
 bool Scene2d::isFpsVisible() const {

@@ -55,34 +55,6 @@ struct Sdf2DObjectData {
 	uint count;
 };
 
-/*struct Circle2DData {
-	vec2 origin;
-	float radius;
-	uint padding;
-};
-
-struct Triangle2DData {
-	vec2 a;
-	vec2 b;
-	vec2 c;
-};
-
-struct Rect2DData {
-	vec2 origin;
-	vec2 size;
-};
-
-struct RoundedRect2DData {
-	vec2 origin;
-	vec2 size;
-	vec4 corners;
-};
-
-struct Polygon2DData {
-	uint origin;
-	uint count;
-};*/
-
 struct Circle2DIndex {
 	uint origin;
 	uint transform;

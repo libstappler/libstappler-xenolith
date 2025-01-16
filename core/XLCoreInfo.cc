@@ -455,6 +455,10 @@ String getImageUsageDescription(ImageUsage fmt) {
 	return stream.str();
 }
 
+SamplerIndex SamplerIndex::DefaultFilterNearest = SamplerIndex(0);
+SamplerIndex SamplerIndex::DefaultFilterLinear = SamplerIndex(1);
+SamplerIndex SamplerIndex::DefaultFilterLinearClamped = SamplerIndex(2);
+
 String BufferInfo::description() const {
 	StringStream stream;
 

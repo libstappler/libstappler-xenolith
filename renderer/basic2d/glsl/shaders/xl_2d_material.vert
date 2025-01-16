@@ -40,14 +40,15 @@ layout (push_constant) uniform pcb {
 	uint padding1;
 	uint padding2;
 	uint padding3;
-	uint padding4;
+	float padding4;
 	DataAtlasIndexDBA atlasBuffer;
 } pushConstants;
 
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 fragTexCoord;
 layout (location = 2) out vec4 shadowColor;
-layout (location = 3) out vec2 fragPosition;
+layout (location = 3) out vec4 outlineColor;
+layout (location = 4) out vec2 fragPosition;
 
 uint hash(uint k, uint capacity) {
 	k ^= k >> 16;
@@ -111,9 +112,12 @@ void main() {
 		}
 	}
 
-	gl_Position = transform.transform * instance.transform * pos * transform.mask * instance.mask + transform.offset + instance.offset;
+	gl_Position = transform.transform * instance.transform * pos
+		* makeMask(transform.flags) * makeMask(transform.flags)
+		+ transform.offset + instance.offset;
 	fragPosition = gl_Position.xy;
-	fragColor = color * instance.color;
+	fragColor = color * transform.instanceColor * instance.instanceColor;
 	fragTexCoord = vec4(tex, max(transform.textureLayer, instance.textureLayer), 0.0);
 	shadowColor = vec4(transform.shadowValue.xxx, transform.shadowValue > 0.0 ? 1.0 : 0.0);
+	outlineColor = transform.outlineColor * instance.outlineColor;
 }

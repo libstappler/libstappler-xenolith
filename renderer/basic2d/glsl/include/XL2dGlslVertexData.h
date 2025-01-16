@@ -35,6 +35,13 @@ namespace STAPPLER_VERSIONIZED stappler::glsl {
 #define XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA 4
 #define XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET 24
 
+#define XL_GLSL_FLAG_POSITION_MASK_X (1 << 0)
+#define XL_GLSL_FLAG_POSITION_MASK_Y (1 << 1)
+#define XL_GLSL_FLAG_POSITION_MASK_Z (1 << 2)
+#define XL_GLSL_FLAG_POSITION_MASK_W (1 << 3)
+
+#define XL_GLSL_FLAG_DEFAULT (XL_GLSL_FLAG_POSITION_MASK_X | XL_GLSL_FLAG_POSITION_MASK_Y)
+
 struct Vertex {
 	vec4 pos;
 	vec4 color;
@@ -52,31 +59,35 @@ struct MaterialData {
 
 struct TransformData {
 	mat4 transform;
-	vec4 mask;
 	vec4 offset;
-	vec4 color;
+	vec4 instanceColor;
+	vec4 outlineColor;
 	float shadowValue;
 	float textureLayer;
-	float padding0;
 	float padding1;
+	uint flags;
 
 #ifndef SP_GLSL
 	TransformData() :
 	transform(mat4::IDENTITY),
-	mask(vec4(1.0f, 1.0f, 0.0f, 0.0f)),
 	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	color(vec4::ONE),
+	instanceColor(vec4::ONE),
+	outlineColor(vec4::ONE),
 	shadowValue(0.0f),
-	textureLayer(0.0f)
+	textureLayer(0.0f),
+	padding1(0.0f),
+	flags(XL_GLSL_FLAG_DEFAULT)
 	{ }
 
 	TransformData(const mat4 &m) :
 	transform(m),
-	mask(vec4(1.0f, 1.0f, 0.0f, 0.0f)),
 	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	color(vec4::ONE),
+	instanceColor(vec4::ONE),
+	outlineColor(vec4::ONE),
 	shadowValue(0.0f),
-	textureLayer(0.0f)
+	textureLayer(0.0f),
+	padding1(0.0f),
+	flags(XL_GLSL_FLAG_DEFAULT)
 	{ }
 #endif
 };
@@ -87,6 +98,15 @@ struct DataAtlasIndex {
 	vec2 pos;
 	vec2 tex;
 };
+
+SP_GLSL_INLINE vec4 makeMask(uint value) {
+	return vec4(
+		((value & XL_GLSL_FLAG_POSITION_MASK_X) != 0) ? 1.0 : 0.0,
+		((value & XL_GLSL_FLAG_POSITION_MASK_Y) != 0) ? 1.0 : 0.0,
+		((value & XL_GLSL_FLAG_POSITION_MASK_Z) != 0) ? 1.0 : 0.0,
+		((value & XL_GLSL_FLAG_POSITION_MASK_W) != 0) ? 1.0 : 0.0
+	);
+}
 
 #ifndef SP_GLSL
 }

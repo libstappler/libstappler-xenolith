@@ -24,7 +24,8 @@ layout (set = 1, binding = 1) uniform texture2DArray images[IMAGES_ARRAY_SIZE];
 layout (location = 0) in vec4 fragColor;
 layout (location = 1) in vec4 fragTexCoord;
 layout (location = 2) in vec4 shadowColor;
-layout (location = 3) in vec2 fragPosition;
+layout (location = 3) in vec4 outlineColor;
+layout (location = 4) in vec2 fragPosition;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out vec4 outShadow;
@@ -35,7 +36,7 @@ layout (push_constant) uniform pcb {
 	uint samplerIdx;
 	uint gradientOffset;
 	uint gradientCount;
-	uint padding;
+	float outlineOffset; // 5
 	uint padding1;
 	uint padding2;
 } pushConstants;

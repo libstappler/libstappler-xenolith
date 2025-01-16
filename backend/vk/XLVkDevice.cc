@@ -652,7 +652,10 @@ bool Device::isPortabilityMode() const {
 }
 
 void Device::waitIdle() const {
+	std::unique_lock lock(_resourceMutex);
+
 	_table->vkDeviceWaitIdle(_device);
+	_invalidatedSemaphores.clear();
 }
 
 void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, Function<void(bool)> &&cb) {
@@ -738,6 +741,11 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 			});
 		});
 	}, (Loop *)&loop);
+}
+
+void Device::invalidateSemaphore(Rc<Semaphore> &&sem) const {
+	std::unique_lock lock(_resourceMutex);
+	_invalidatedSemaphores.emplace_back(move(sem));
 }
 
 void Device::compileSamplers(thread::TaskQueue &q, bool force) {

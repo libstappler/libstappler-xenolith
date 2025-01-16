@@ -34,10 +34,10 @@ bool Renderer2dAnimationTest::init() {
 	_sprite = addChild(Rc<Sprite>::create(), ZOrder(1));
 	_sprite->setTextureAutofit(Autofit::Contain);
 	_sprite->setAnchorPoint(Anchor::Middle);
-	_sprite->setSamplerIndex(0);
+	_sprite->setSamplerIndex(SamplerIndex::DefaultFilterNearest);
 
 	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Use linear filtration", false, [this] (bool val) {
-		_sprite->setSamplerIndex(val ? 1 : 0);
+		_sprite->setSamplerIndex(val ? SamplerIndex::DefaultFilterLinear : SamplerIndex::DefaultFilterNearest);
 	}), ZOrder(2));
 	_checkbox->setAnchorPoint(Anchor::Middle);
 

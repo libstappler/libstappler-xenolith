@@ -338,7 +338,6 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		pushCopyTexture(reqIdx, texData);
 	}, [this, handle = Rc<FrameHandle>(&handle), underlinePersistent] {
 		writeAtlasData(*handle, underlinePersistent);
-		// std::cout << "RenderFontAttachmentHandle::submitInput: " << platform::device::_clock(platform::device::ClockType::Monotonic) - handle->getTimeStart() << "\n";
 	});
 }
 

@@ -169,6 +169,8 @@ bool Sprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 }
 
 void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
+	bool hasExtraState = false;
+
 	if (!_texture || !_texture->isLoaded()) {
 		return;
 	}
@@ -209,7 +211,7 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		emplace_ordered(frame.currentContext->waitDependencies, move(it));
 	}
 
-	if (_linearGradient) {
+	if (_linearGradient || _outlineOffset > 0.0f) {
 		auto context = frame.contextStack.back();
 
 		DrawStateValues state;
@@ -224,17 +226,26 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		transform.scale(_contentSize.width, _contentSize.height, 1.0f);
 
 		newData->transform = transform;
-		newData->gradient = _linearGradient->pop();
+		if (_linearGradient) {
+			newData->gradient = _linearGradient->pop();
+		}
+
+		if (_outlineOffset > 0.0f) {
+			newData->outlineOffset = _outlineOffset * _inputDensity * _textureScale;
+			newData->outlineColor = _outlineColor;
+		}
+
 		state.data = newData;
 
 		auto newStateId = context->addState(state);
 
 		context->stateStack.emplace_back(newStateId, nullptr);
+		hasExtraState = true;
 	}
 
 	pushCommands(frame, flags);
 
-	if (_linearGradient) {
+	if (hasExtraState) {
 		frame.contextStack.back()->stateStack.pop_back();
 	}
 
@@ -336,7 +347,7 @@ void Sprite::setTextureAutofitPosition(const Vec2 &vec) {
 	}
 }
 
-void Sprite::setSamplerIndex(uint16_t idx) {
+void Sprite::setSamplerIndex(SamplerIndex idx) {
 	if (_samplerIdx != idx) {
 		_samplerIdx = idx;
 		_materialDirty = true;
@@ -345,6 +356,14 @@ void Sprite::setSamplerIndex(uint16_t idx) {
 
 void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
 	_textureLoadedCallback = sp::move(cb);
+}
+
+void Sprite::setOutlineOffset(float val) {
+	_outlineOffset = val;
+}
+
+void Sprite::setOutlineColor(const Color4F &color) {
+	_outlineColor = color;
 }
 
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
@@ -368,7 +387,7 @@ void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 MaterialInfo Sprite::getMaterialInfo() const {
 	MaterialInfo ret;
 	ret.images[0] = _texture->getIndex();
-	ret.samplers[0] = _samplerIdx;
+	ret.samplers[0] = _samplerIdx.get();
 	ret.colorModes[0] = _colorMode;
 	ret.pipeline = _materialInfo;
 	return ret;
@@ -414,7 +433,7 @@ void Sprite::updateVertexes(FrameInfo &frame) {
 		.setGeometry(Vec4(placementResult.viewRect.origin.x, placementResult.viewRect.origin.y, 0.0f, 1.0f), placementResult.viewRect.size)
 		.setTextureRect(placementResult.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
 		.setColor(_displayedColor);
-
+	_textureScale = placementResult.scale;
 	_vertexColorDirty = false;
 }
 

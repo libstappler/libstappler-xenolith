@@ -259,6 +259,10 @@ void Fence::doRelease(bool success) {
 		_queue->releaseFence(*this);
 		_queue = nullptr;
 	}
+
+	auto autorelease = sp::move(_autorelease);
+	_autorelease.clear();
+
 	if (!_release.empty()) {
 		XL_PROFILE_BEGIN(total, "vk::Fence::reset", "total", 250);
 		for (auto &it : _release) {
@@ -271,8 +275,8 @@ void Fence::doRelease(bool success) {
 		XL_PROFILE_END(total);
 		_release.clear();
 	}
-	_autorelease.clear();
 	_tag = StringView();
+	autorelease.clear();
 }
 
 }

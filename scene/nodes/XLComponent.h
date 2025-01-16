@@ -97,6 +97,87 @@ protected:
 	ComponentFlags _componentFlags = ComponentFlags::Default;
 };
 
+class SP_PUBLIC CallbackComponent : public Component {
+public:
+	virtual ~CallbackComponent() = default;
+
+	CallbackComponent();
+
+	virtual void handleAdded(Node *owner) override;
+	virtual void handleRemoved() override;
+
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
+
+	virtual void handleVisitBegin(FrameInfo &) override;
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitEnd(FrameInfo &) override;
+
+	virtual void update(const UpdateTime &time) override;
+
+	virtual void handleContentSizeDirty() override;
+	virtual void handleTransformDirty(const Mat4 &) override;
+	virtual void handleReorderChildDirty() override;
+
+	virtual void setAddedCallback(Function<void(CallbackComponent *, Node *)> &&);
+	virtual auto getAddedCallback() -> const Function<void(CallbackComponent *, Node *)> &  { return _handleAdded; }
+
+	virtual void setRemovedCallback(Function<void(CallbackComponent *)> &&);
+	virtual auto getRemovedCallback() -> const Function<void(CallbackComponent *)> &  { return _handleRemoved; }
+
+	virtual void setEnterCallback(Function<void(CallbackComponent *, Scene *)> &&);
+	virtual auto getEnterCallback() -> const Function<void(CallbackComponent *, Scene *)> &  { return _handleEnter; }
+
+	virtual void setExitCallback(Function<void(CallbackComponent *)> &&);
+	virtual auto getExitCallback() -> const Function<void(CallbackComponent *)> &  { return _handleExit; }
+
+	virtual void setVisitBeginCallback(Function<void(CallbackComponent *, FrameInfo &)> &&);
+	virtual auto getVisitBeginCallback() -> const Function<void(CallbackComponent *, FrameInfo &)> &  { return _handleVisitBegin; }
+
+	virtual void setVisitNodesBelowCallback(Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> &&);
+	virtual auto getVisitNodesBelowCallback() -> const Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> & { return _handleVisitNodesBelow; }
+
+	virtual void setVisitSelfCallback(Function<void(CallbackComponent *, FrameInfo &, Node *, NodeFlags)> &&);
+	virtual auto getVisitSelfCallback() -> const Function<void(CallbackComponent *, FrameInfo &, Node *, NodeFlags)> & { return _handleVisitSelf; }
+
+	virtual void setVisitNodesAboveCallback(Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> &&);
+	virtual auto getVisitNodesAboveCallback() -> const Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> & { return _handleVisitNodesAbove; }
+
+	virtual void setVisitEndCallback(Function<void(CallbackComponent *, FrameInfo &)> &&);
+	virtual auto getVisitEndCallback() -> const Function<void(CallbackComponent *, FrameInfo &)> & { return _handleVisitEnd; }
+
+	virtual void setUpdateCallback(Function<void(CallbackComponent *, const UpdateTime &)> &&);
+	virtual auto getUpdateCallback() -> const Function<void(CallbackComponent *, const UpdateTime &)> & { return _handleUpdate; }
+
+	virtual void setContentSizeDirtyCallback(Function<void(CallbackComponent *)> &&);
+	virtual auto getContentSizeDirtyCallback() -> const Function<void(CallbackComponent *)> & { return _handleContentSizeDirty; }
+
+	virtual void setTransformDirtyCallback(Function<void(CallbackComponent *, const Mat4 &)> &&);
+	virtual auto getTransformDirtyCallback() -> const Function<void(CallbackComponent *, const Mat4 &)> & { return _handleTransformDirty; }
+
+	virtual void setReorderChildDirtyCallback(Function<void(CallbackComponent *)> &&);
+	virtual auto getReorderChildDirtyCallback() -> const Function<void(CallbackComponent *)> & { return _handleReorderChildDirty; }
+
+protected:
+	virtual void updateFlags();
+
+	Function<void(CallbackComponent *, Node *)> _handleAdded;
+	Function<void(CallbackComponent *)> _handleRemoved;
+	Function<void(CallbackComponent *, Scene *)> _handleEnter;
+	Function<void(CallbackComponent *)> _handleExit;
+	Function<void(CallbackComponent *, FrameInfo &)> _handleVisitBegin;
+	Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> _handleVisitNodesBelow;
+	Function<void(CallbackComponent *, FrameInfo &, Node *, NodeFlags flags)> _handleVisitSelf;
+	Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> _handleVisitNodesAbove;
+	Function<void(CallbackComponent *, FrameInfo &)> _handleVisitEnd;
+	Function<void(CallbackComponent *, const UpdateTime &time)> _handleUpdate;
+	Function<void(CallbackComponent *)> _handleContentSizeDirty;
+	Function<void(CallbackComponent *, const Mat4 &)> _handleTransformDirty;
+	Function<void(CallbackComponent *)> _handleReorderChildDirty;
+};
+
 }
 
 #endif /* XENOLITH_SCENE_NODES_XLCOMPONENT_H_ */

@@ -54,7 +54,21 @@ SwapchainHandle::~SwapchainHandle() {
 			}
 		}
 	}
+
 	invalidate();
+
+	_semaphores.clear();
+
+	if (_device) {
+		for (auto &it : _presentSemaphores) {
+			if (it) {
+				_device->invalidateSemaphore(move(it));
+				it = nullptr;
+			}
+		}
+	}
+
+	_presentSemaphores.clear();
 }
 
 bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const core::SwapchainConfig &cfg, ImageInfo &&swapchainImageInfo,
@@ -107,15 +121,6 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 #endif
 	});
 	if (result == VK_SUCCESS) {
-		if (old) {
-			std::unique_lock<Mutex> lock(_resourceMutex);
-			std::unique_lock<Mutex> lock2(old->_resourceMutex);
-			_semaphores = sp::move(old->_semaphores);
-			for (auto &it : old->_presentSemaphores) {
-				releaseSemaphore(move(it));
-			}
-		}
-
 		Vector<VkImage> swapchainImages;
 
 		uint32_t imageCount = 0;
@@ -125,6 +130,21 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 
 		_images.reserve(imageCount);
 		_presentSemaphores.resize(imageCount);
+
+		if (old) {
+			std::unique_lock<Mutex> lock(_resourceMutex);
+			std::unique_lock<Mutex> lock2(old->_resourceMutex);
+			_semaphores = sp::move(old->_semaphores);
+
+			for (auto &it : old->_presentSemaphores) {
+				if (it) {
+					if (!releaseSemaphore(move(it))) {
+						_invalidatedSemaphores.emplace_back(move(it));
+					}
+					it = nullptr;
+				}
+			}
+		}
 
 		auto swapchainImageViewInfo = getSwapchainImageViewInfo(swapchainImageInfo);
 
@@ -237,14 +257,15 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<Fence> &fence) -> Rc<Swapc
 }
 
 VkResult SwapchainHandle::present(DeviceQueue &queue, const Rc<ImageStorage> &image) {
-	auto waitSem = ((Semaphore *)image->getSignalSem().get())->getSemaphore();
+	auto waitSem = (Semaphore *)image->getSignalSem().get();
+	auto waitSemObj = waitSem->getSemaphore();
 	auto imageIndex = uint32_t(image->getImageIndex());
 
 	VkPresentInfoKHR presentInfo{}; sanitizeVkStruct(presentInfo);
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &waitSem;
+	presentInfo.pWaitSemaphores = &waitSemObj;
 
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &_swapchain;
@@ -271,13 +292,23 @@ VkResult SwapchainHandle::present(DeviceQueue &queue, const Rc<ImageStorage> &im
 		-- _acquiredImages;
 	} while (0);
 
-	if (result == VK_SUCCESS) {
-		if (_presentSemaphores[imageIndex]) {
-			_presentSemaphores[imageIndex]->setWaited(true);
-			releaseSemaphore(move(_presentSemaphores[imageIndex]));
-		}
-		_presentSemaphores[imageIndex] = (Semaphore *)image->getSignalSem().get();
+	if (_presentSemaphores[imageIndex]) {
+		_presentSemaphores[imageIndex]->setWaited(true);
+		releaseSemaphore(move(_presentSemaphores[imageIndex]));
+		_presentSemaphores[imageIndex] = nullptr;
+	}
 
+	/*for (auto &it : _presentSemaphores) {
+		if (it) {
+			it->setWaited(true);
+			releaseSemaphore(move(it));
+			it = nullptr;
+		}
+	}*/
+
+	_presentSemaphores[imageIndex] = waitSem;
+
+	if (result == VK_SUCCESS) {
 		++ _presentedFrames;
 		if (_presentedFrames == config::MaxSuboptimalFrames && _presentMode == _config.presentModeFast
 				&& _config.presentModeFast != _config.presentMode) {
@@ -308,11 +339,13 @@ Rc<Semaphore> SwapchainHandle::acquireSemaphore() {
 	return Rc<Semaphore>::create(*_device);
 }
 
-void SwapchainHandle::releaseSemaphore(Rc<Semaphore> &&sem) {
+bool SwapchainHandle::releaseSemaphore(Rc<Semaphore> &&sem) {
 	if (sem && sem->reset()) {
 		std::unique_lock<Mutex> lock(_resourceMutex);
 		_semaphores.emplace_back(move(sem));
+		return true;
 	}
+	return false;
 }
 
 Rc<core::ImageView> SwapchainHandle::makeView(const Rc<core::ImageObject> &image, const ImageViewInfo &viewInfo) {
@@ -354,9 +387,16 @@ SwapchainImage::~SwapchainImage() {
 		_image = nullptr;
 		_swapchain = nullptr;
 		_state = State::Presented;
+	} else {
+		if (_swapchain && _waitSem) {
+			_swapchain->releaseSemaphore((Semaphore *)_waitSem.get());
+		}
 	}
 	// prevent views from released
 	_views.clear();
+
+	_waitSem = nullptr;
+	_signalSem = nullptr;
 }
 
 bool SwapchainImage::init(Rc<SwapchainHandle> &&swapchain, uint64_t order, uint64_t presentWindow) {
@@ -394,8 +434,9 @@ void SwapchainImage::rearmSemaphores(core::Loop &loop) {
 void SwapchainImage::releaseSemaphore(core::Semaphore *sem) {
 	if (_state == State::Presented && sem == _waitSem && _swapchain) {
 		// work on last submit is over, wait sem no longer in use
-		_swapchain->releaseSemaphore((Semaphore *)sem);
-		_waitSem = nullptr;
+		if (_swapchain->releaseSemaphore((Semaphore *)sem)) {
+			_waitSem = nullptr;
+		}
 	}
 }
 

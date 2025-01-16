@@ -32,8 +32,12 @@ Device::~Device() {
 
 bool Device::init(const Instance *instance) {
 	_glInstance = instance;
-	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Nearest, .minFilter = Filter::Nearest});
-	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Linear, .minFilter = Filter::Linear});
+	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Nearest, .minFilter = Filter::Nearest,
+		.addressModeU = SamplerAddressMode::Repeat, .addressModeV = SamplerAddressMode::Repeat, .addressModeW = SamplerAddressMode::Repeat});
+	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Linear, .minFilter = Filter::Linear,
+		.addressModeU = SamplerAddressMode::Repeat, .addressModeV = SamplerAddressMode::Repeat, .addressModeW = SamplerAddressMode::Repeat});
+	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Linear, .minFilter = Filter::Linear,
+		.addressModeU = SamplerAddressMode::ClampToEdge, .addressModeV = SamplerAddressMode::ClampToEdge, .addressModeW = SamplerAddressMode::ClampToEdge});
 	return true;
 }
 

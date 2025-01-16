@@ -44,12 +44,14 @@ public:
 		Application *target = nullptr;
 		Extent2 extent;
 		Flags flags = Flags::None;
+		Color4F backgroundColor = Color4F::WHITE;
 	};
 
 	struct PassCreateInfo {
 		Application *target = nullptr;
 		Extent2 extent;
 		Flags flags;
+		Color4F backgroundColor = Color4F::WHITE;
 
 		const AttachmentData *shadowSdfAttachment = nullptr;
 		const AttachmentData *lightsAttachment = nullptr;

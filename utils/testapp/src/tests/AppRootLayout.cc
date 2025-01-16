@@ -42,7 +42,7 @@ void RootLayout::makeScrollList(ScrollController *controller, Vector<LayoutName>
 	controller->addItem([] (const ScrollController::Item &item) {
 		auto s = Rc<Sprite>::create("xenolith-2-480.png");
 		s->setTextureAutofit(Autofit::Contain);
-		s->setSamplerIndex(Sprite::SamplerIndexDefaultFilterLinear);
+		s->setSamplerIndex(SamplerIndex::DefaultFilterLinear);
 		return s;
 	}, 300.0f);
 

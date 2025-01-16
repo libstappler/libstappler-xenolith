@@ -138,6 +138,8 @@ public:
 
 	void compileImage(const Loop &loop, const Rc<core::DynamicImage> &, Function<void(bool)> &&);
 
+	void invalidateSemaphore(Rc<Semaphore> &&sem) const;
+
 private:
 	using core::Device::init;
 
@@ -173,10 +175,12 @@ private:
 
 	std::unordered_map<VkFormat, VkFormatProperties> _formats;
 
-	Mutex _resourceMutex;
+	mutable Mutex _resourceMutex;
 	uint32_t _resourceQueueWaiters = 0;
 	std::condition_variable _resourceQueueCond;
 	Mutex _apiMutex;
+
+	mutable Vector<Rc<Semaphore>> _invalidatedSemaphores;
 };
 
 }

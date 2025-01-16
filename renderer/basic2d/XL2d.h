@@ -52,6 +52,7 @@ using RoundedRect2DIndex = glsl::RoundedRect2DIndex;
 using Polygon2DIndex = glsl::Polygon2DIndex;
 
 using Autofit = font::Autofit;
+using SamplerIndex = core::SamplerIndex;
 
 struct Triangle {
 	Vertex a;
@@ -76,6 +77,7 @@ struct VertexSpan {
 	StateId state = 0;
 	uint32_t gradientOffset = 0;
 	uint32_t gradientCount = 0;
+	float outlineOffset = 0;
 };
 
 struct alignas(16) VertexData : public Ref {
@@ -132,8 +134,13 @@ struct SdfPrimitive2DHeader {
 };
 
 struct ImagePlacementResult {
+	// position in requested view coordinate space
 	Rect viewRect;
+
+	// position in image coordinate space
 	Rect imageRect;
+
+	// normalized texture rect
 	Rect textureRect;
 
 	Size2 imageFragmentSize;

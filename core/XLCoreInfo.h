@@ -38,6 +38,15 @@ using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
 using Extent1 = ValueWrapper<uint32_t, class Extent1Flag>;
 using BaseArrayLayer = ValueWrapper<uint32_t, class BaseArrayLayerFlag>;
 
+struct SamplerIndex : ValueWrapper<uint32_t, class SamplerIndexFlag> {
+	// Predefined samplers
+	static SamplerIndex DefaultFilterNearest;
+	static SamplerIndex DefaultFilterLinear;
+	static SamplerIndex DefaultFilterLinearClamped;
+
+	using ValueWrapper::ValueWrapper;
+};
+
 struct SP_PUBLIC SamplerInfo {
 	Filter magFilter = Filter::Nearest;
 	Filter minFilter = Filter::Nearest;

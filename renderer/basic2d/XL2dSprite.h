@@ -34,9 +34,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class SP_PUBLIC Sprite : public Node {
 public:
-	static constexpr uint16_t SamplerIndexDefaultFilterNearest = 0;
-	static constexpr uint16_t SamplerIndexDefaultFilterLinear = 1;
-
 	Sprite();
 	virtual ~Sprite();
 
@@ -98,8 +95,8 @@ public:
 	 *
 	 * Если семплер с указанным индексом не определён в движке - поведение не определено
 	 */
-	virtual void setSamplerIndex(uint16_t);
-	virtual uint16_t getSamplerIndex() const { return _samplerIdx; }
+	virtual void setSamplerIndex(SamplerIndex);
+	virtual SamplerIndex getSamplerIndex() const { return _samplerIdx; }
 
 	virtual void setCommandFlags(CommandFlags flags) { _commandFlags = flags; }
 	virtual void addCommandFlags(CommandFlags flags) { _commandFlags |= flags; }
@@ -107,6 +104,12 @@ public:
 	virtual CommandFlags getCommandFlags() const { return _commandFlags; }
 
 	virtual void setTextureLoadedCallback(Function<void()> &&);
+
+	virtual void setOutlineOffset(float);
+	virtual float getOutlineOffset() const { return _outlineOffset; }
+
+	virtual void setOutlineColor(const Color4F &);
+	virtual const Color4F &getOutlineColor() const {return _outlineColor; }
 
 protected:
 	using Node::init;
@@ -133,7 +136,7 @@ protected:
 	Rc<Texture> _texture;
 	VertexArray _vertexes;
 
-	uint16_t _samplerIdx = 0;
+	SamplerIndex _samplerIdx = SamplerIndex::DefaultFilterNearest;
 
 	bool _materialDirty = true;
 	bool _normalized = false;
@@ -145,9 +148,11 @@ protected:
 	bool _rotated = false;
 	bool _isTextureLoaded = false;
 
-	ImagePlacementInfo _texturePlacement;
-
+	float _textureScale = 1.0f;
 	float _textureLayer = 0.0f;
+	float _outlineOffset = 0.0f;
+
+	ImagePlacementInfo _texturePlacement;
 
 	// Track dynamic texture size
 	Extent3 _targetTextureSize;
@@ -157,6 +162,7 @@ protected:
 	core::MaterialId _materialId = 0;
 	CommandFlags _commandFlags = CommandFlags::None;
 
+	Color4F _outlineColor = Color4F::WHITE;
 	Color4F _tmpColor;
 	core::ColorMode _colorMode;
 	core::BlendInfo _blendInfo;
