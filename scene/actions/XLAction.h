@@ -237,6 +237,8 @@ public:
 
 protected:
 	bool reserve(size_t);
+
+	bool addAction(SpanView<Action *>);
 	bool addAction(Function<void()> &&); // add callback action
 	bool addAction(float); // add timeout action
 	bool addAction(TimeInterval); // add timeout action
@@ -247,6 +249,26 @@ protected:
 	}
 
 	bool addAction(Action *);
+
+	template <typename T>
+	bool addAction(SpanView<T> d) {
+		for (auto &it : d) {
+			if (!addAction(it)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	template <typename T>
+	bool addAction(SpanView<Rc<T>> d) {
+		for (auto &it : d) {
+			if (!addAction(it)) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	template <typename T, typename ... Args>
 	bool initWithActions(T &&t, Args && ... args) {

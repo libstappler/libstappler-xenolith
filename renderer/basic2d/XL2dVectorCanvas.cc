@@ -176,7 +176,7 @@ VectorCanvas::~VectorCanvas() {
 }
 
 bool VectorCanvas::init(bool deferred) {
-	auto p = memory::pool::createTagged("xenolith::VectorCanvas");
+	auto p = memory::pool::create_tagged("xenolith::VectorCanvas");
 	memory::pool::context ctx(p);
 	_data = new (p) Data(p, deferred);
 	if (_data) {

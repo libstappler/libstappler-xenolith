@@ -38,7 +38,7 @@ public:
 
 	static LocaleManager *getInstance() {
 		if (!s_sharedInstance) {
-			auto p = memory::pool::createTagged(nullptr, "LocaleManager");
+			auto p = memory::pool::create_tagged(nullptr, "LocaleManager");
 			memory::pool::perform([&] {
 				s_sharedInstance = new LocaleManager(p);
 			}, p);
