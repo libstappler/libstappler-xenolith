@@ -292,7 +292,7 @@ bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	if (dev.getTable()->vkAllocateDescriptorSets(dev.getDevice(), &allocInfo, sets.data()) != VK_SUCCESS) {
 		sets.clear();
 		dev.getTable()->vkDestroyDescriptorPool(dev.getDevice(), _pool, nullptr);
-		_pool = nullptr;
+		_pool = VK_NULL_HANDLE;
 		return false;
 	}
 

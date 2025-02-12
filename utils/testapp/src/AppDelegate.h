@@ -30,7 +30,7 @@
 
 namespace stappler::xenolith::app {
 
-class AppDelegate : private vk::GuiApplication {
+class AppDelegate : public vk::GuiApplication {
 public:
 	static EventHeader onSwapchainConfig;
 

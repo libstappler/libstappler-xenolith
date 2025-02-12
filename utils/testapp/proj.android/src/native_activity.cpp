@@ -38,20 +38,10 @@ void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_
 	auto info = a->getActivityInfo();
 
 	a->addComponent(Rc<platform::MessagingActivityAdapter>::create(a, 1));
-	a->run([info = move(info)] (platform::Activity *a, Function<void()> &&initCb) {
-		ViewCommandLineData appInfo({
-			.bundleName = move(info.bundleName),
-			.applicationName = move(info.applicationName),
-			.applicationVersion = move(info.applicationVersion),
-			.userLanguage = move(info.locale),
-			.userAgent = move(info.systemAgent),
-			.screenSize = Extent2 (info.sizeInPixels.width, info.sizeInPixels.height),
-			.density = info.density
-		});
 
-		auto app = Rc<app::AppDelegate>::create(move(appInfo), a);
-		app->run(move(initCb));
-	});
+	auto applicationInfo = a->makeApplicationInfo();
+
+	a->runApplication(Rc<app::AppDelegate>::create(move(applicationInfo)));
 }
 
 }

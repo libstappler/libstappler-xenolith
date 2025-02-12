@@ -93,7 +93,7 @@ bool ViewImpl::worker() {
 void ViewImpl::update(bool displayLink) {
 	if (displayLink) {
 		if (_initImage) {
-			presentImmediate(move(_initImage), nullptr);
+			presentImmediate(sp::move(_initImage), nullptr, false);
 			_initImage = nullptr;
 			View::update(false);
 			//scheduleNextImage(_frameInterval, false);
@@ -218,7 +218,7 @@ void ViewImpl::initWindow() {
 	createSwapchain(info, move(cfg), cfg.presentMode);
 
 	if (_initImage && !_options.followDisplayLink) {
-		presentImmediate(move(_initImage), nullptr);
+		presentImmediate(sp::move(_initImage), nullptr, false);
 		_initImage = nullptr;
 	}
 
@@ -537,9 +537,9 @@ void ViewImpl::updateDecorations() {
 }
 
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
-		doReadFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([this, cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
+		doReadFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
+			_mainLoop->performOnMainThread([this, cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);

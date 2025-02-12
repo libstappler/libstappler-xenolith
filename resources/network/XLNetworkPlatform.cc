@@ -109,7 +109,7 @@ SPUNUSED static void unregisterNetworkCallback(Application *, void *key) {
 SPUNUSED static void registerNetworkCallback(Application *app, void *key, Function<void(NetworkCapabilities)> &&cb) {
 	auto activity = reinterpret_cast<platform::Activity *>(app->getInfo().platformHandle);
 	cb(NetworkCapabilities(activity->getNetworkCapabilities()));
-	activity->addNetworkCallback(key, [key, cb = move(cb)] (platform::NetworkCapabilities caps) {
+	activity->addNetworkCallback(key, [key, cb = sp::move(cb)] (platform::NetworkCapabilities caps) {
 		cb(NetworkCapabilities(caps));
 	});
 

@@ -9,6 +9,7 @@ tasks.register('prepareAndroidMk', Exec) {
 }
 
 preBuild.dependsOn prepareAndroidMk
+clean.dependsOn prepareAndroidMk
 
 android {
     compileSdk 34

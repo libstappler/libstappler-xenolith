@@ -54,11 +54,17 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 	if (auto res = cache->getTemporaryResource(name)) {
 		_resource = res;
 	} else {
-
 		core::Resource::Builder builder(name);
 
+		StringView dirPath = "resources/anim";
+
 		Vector<FilePath> paths;
-		auto animPath = filesystem::loadableResourcePath<Interface>("resources/anim");
+		auto animPath = filesystem::loadableResourcePath<Interface>(dirPath);
+		if (animPath.empty()) {
+			log::error("Renderer2dAnimationTest", "Fail to find resource path for: ", dirPath);
+			return;
+		}
+
 		filesystem::ftw(animPath, [&] (StringView path, bool isFile) {
 			if (isFile) {
 				paths.emplace_back(FilePath(path.pdup(builder.getPool())));

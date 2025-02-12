@@ -398,7 +398,7 @@ void Activity::setNetworkCapabilities(NetworkCapabilities cap) {
 
 void Activity::addNetworkCallback(void *key, Function<void(NetworkCapabilities)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_networkCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
+	_networkCallbacks.emplace(key, pair(Rc<Ref>(this), sp::move(cb)));
 }
 
 void Activity::removeNetworkCallback(void *key) {
@@ -408,7 +408,7 @@ void Activity::removeNetworkCallback(void *key) {
 
 void Activity::addRemoteNotificationCallback(void *key, Function<void(const Value &)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_notificationCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
+	_notificationCallbacks.emplace(key, pair(Rc<Ref>(this), sp::move(cb)));
 }
 
 void Activity::removeRemoteNotificationCallback(void *key) {
@@ -418,7 +418,7 @@ void Activity::removeRemoteNotificationCallback(void *key) {
 
 void Activity::addTokenCallback(void *key, Function<void(StringView)> &&cb) {
 	std::unique_lock lock(_callbackMutex);
-	_tokenCallbacks.emplace(key, pair(Rc<Ref>(this), move(cb)));
+	_tokenCallbacks.emplace(key, pair(Rc<Ref>(this), sp::move(cb)));
 }
 
 void Activity::removeTokenCallback(void *key) {
@@ -622,7 +622,7 @@ void Activity::handleDestroy() {
 	}
 	if (_application) {
 		_application->end();
-		_application->waitFinalized();
+		_application->waitStopped();
 	}
 	release(_refId);
 }
@@ -749,7 +749,7 @@ int Activity::handleKeyEvent(AInputEvent *event) {
 	}
 	}
 	if (!events.empty()) {
-		transferInputEvents(move(events));
+		transferInputEvents(sp::move(events));
 		return 1;
 	}
 	return 0;
@@ -867,7 +867,7 @@ int Activity::handleMotionEvent(AInputEvent *event) {
 		break;
 	}
 	if (!events.empty()) {
-		transferInputEvents(move(events));
+		transferInputEvents(sp::move(events));
 		return 1;
 	}
 	return 0;
@@ -1279,7 +1279,7 @@ void Activity::transferInputEvent(const core::InputEventData &event) {
 
 void Activity::transferInputEvents(Vector<core::InputEventData> &&events) {
 	if (_rootView) {
-		_rootView->handleInputEvents(move(events));
+		_rootView->handleInputEvents(sp::move(events));
 	}
 }
 

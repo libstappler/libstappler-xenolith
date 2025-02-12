@@ -201,7 +201,7 @@ bool NetworkConnectivity::init(JNIEnv *env, ClassLoader *classLoader, jobject co
 				clazz = reinterpret_cast<jclass>(env->NewGlobalRef(networkConnectivityClass));
 				env->DeleteLocalRef(conn);
 				env->DeleteLocalRef(networkConnectivityClass);
-				callback = move(cb);
+				callback = sp::move(cb);
 				if (callback) {
 					callback(capabilities);
 				}
