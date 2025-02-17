@@ -158,6 +158,14 @@ protected:
 	memory::pool_t *_pool = nullptr;
 };
 
+SP_PUBLIC const char * getVersionString();
+
+// API version number
+SP_PUBLIC uint32_t getVersionApi();
+
+// Build revision version number
+SP_PUBLIC uint32_t getVersionRev();
+
 }
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::profiling {

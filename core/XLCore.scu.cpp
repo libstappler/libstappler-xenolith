@@ -87,4 +87,23 @@
 #include "platform/win32/XLCorePlatform.cc"
 #include "platform/mac/XLCorePlatform.cc"
 
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+const char * getVersionString() {
+	return TOSTRING(XENOLITH_VERSION_API) "/" TOSTRING(XENOLITH_VERSION_REV);
+}
+
+uint32_t getVersionApi() {
+	return XENOLITH_VERSION_API;
+}
+
+uint32_t getVersionRev() {
+	return XENOLITH_VERSION_REV;
+}
+
+}
+
 #endif /* XENOLITH_CORE_XLCORE_CPP_ */
