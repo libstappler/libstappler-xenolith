@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,174 @@
  **/
 
 #include "XLPlatformApplication.h"
+#include "SPCommandLineParser.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+// Опции для аргументов командной строки
+CommandLineParser<ApplicationInfo> ApplicationInfo::CommandLine({
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-v", "--verbose"
+		},
+		.description = "Produce more verbose output",
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.verbose = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-h", "--help"
+		},
+		.description = StringView("Show help message and exit"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.help = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-q", "--quiet"
+		},
+		.description = StringView("Disable verbose output"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.quiet = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-W<#>", "--width <#>"
+		},
+		.description = StringView("Window width"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.screenSize.width = uint32_t(StringView(args[0]).readInteger(10).get(0));
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-H<#>", "--height <#>"
+		},
+		.description = StringView("Window height"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.screenSize.height = uint32_t(StringView(args[0]).readInteger(10).get(0));
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"-D<#.#>", "--density <#.#>"
+		},
+		.description = StringView("Pixel density for a window"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.density = float(StringView(args[0]).readFloat().get(0));
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--l <locale>", "--locale <locale>"
+		},
+		.description = StringView("User language locale"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.userLanguage = StringView(args[0]).str<Interface>();
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--phone"
+		},
+		.description = StringView("Use phone-screen layout, if possible"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.isPhone = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--bundle <bundle-name>"
+		},
+		.description = StringView("Application bundle name"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.bundleName = StringView(args[0]).str<Interface>();;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--fixed"
+		},
+		.description = StringView("Use fixed (so, not resizable) window layout"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.isFixed = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--renderdoc"
+		},
+		.description = StringView("Open connection for renderdoc"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.renderdoc = true;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--novalidation"
+		},
+		.description = StringView("Force-disable Vulkan validation layers"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.validation = false;
+			return true;
+		}
+	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--decor <decoration-description>"
+		},
+		.description = StringView("Define window decoration paddings"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			auto values = StringView(args[0]);
+			float f[4] = { nan(), nan(), nan(), nan() };
+			uint32_t i = 0;
+			values.split<StringView::Chars<','>>([&] (StringView val) {
+				if (i < 4) {
+					f[i] = val.readFloat().get(nan());
+				}
+				++ i;
+			});
+			if (!isnan(f[0])) {
+				if (isnan(f[1])) {
+					f[1] = f[0];
+				}
+				if (isnan(f[2])) {
+					f[2] = f[0];
+				}
+				if (isnan(f[3])) {
+					f[3] = f[1];
+				}
+				target.viewDecoration = Padding(f[0], f[1], f[2], f[3]);
+				return true;
+			}
+			return false;
+		}
+	},
+});
+
+ApplicationInfo ApplicationInfo::readFromCommandLine(int argc, const char * argv[], const Callback<void(StringView)> &cb) {
+	ApplicationInfo ret;
+
+	CommandLine.parse(ret, argc, argv, cb ? Callback<void(ApplicationInfo &, StringView)>([&] (ApplicationInfo &, StringView arg) {
+		cb(arg);
+	}) : nullptr);
+
+	return ret;
+}
 
 Value ApplicationInfo::encode() const {
 	Value ret;
@@ -56,75 +222,6 @@ Value ApplicationInfo::encode() const {
 		ret.setBool(help, "help");
 	}
 	return ret;
-}
-
-int ApplicationInfo::parseCmdSwitch(ApplicationInfo &ret, char c, const char *str) {
-	if (c == 'h') {
-		ret.help = true;
-	} else if (c == 'v') {
-		ret.verbose = true;
-	}
-	return 1;
-}
-
-int ApplicationInfo::parseCmdString(ApplicationInfo &ret, const StringView &str, int argc, const char * argv[]) {
-	if (str == "help") {
-		ret.help = true;
-	} else if (str == "verbose") {
-		ret.verbose = true;
-	} else if (str.starts_with("w=")) {
-		auto s = str.sub(2).readInteger().get(0);
-		if (s > 0) {
-			ret.screenSize.width = uint32_t(s);
-		}
-	} else if (str.starts_with("h=")) {
-		auto s = str.sub(2).readInteger().get(0);
-		if (s > 0) {
-			ret.screenSize.height = uint32_t(s);
-		}
-	} else if (str.starts_with("d=")) {
-		auto s = str.sub(2).readDouble().get(0.0);
-		if (s > 0) {
-			ret.density = s;
-		}
-	} else if (str.starts_with("l=")) {
-		ret.userLanguage = str.sub(2).str<Interface>();
-	} else if (str.starts_with("locale=")) {
-		ret.userLanguage = str.sub("locale="_len).str<Interface>();
-	} else if (str == "phone") {
-		ret.isPhone = true;
-	} else if (str.starts_with("bundle=")) {
-		ret.bundleName = str.sub("bundle="_len).str<Interface>();
-	} else if (str == "fixed") {
-		ret.isFixed = true;
-	} else if (str == "renderdoc") {
-		ret.renderdoc = true;
-	} else if (str == "novalidation") {
-		ret.validation = false;
-	} else if (str.starts_with("decor=")) {
-		auto values = str.sub(6);
-		float f[4] = { nan(), nan(), nan(), nan() };
-		uint32_t i = 0;
-		values.split<StringView::Chars<','>>([&] (StringView val) {
-			if (i < 4) {
-				f[i] = val.readFloat().get(nan());
-			}
-			++ i;
-		});
-		if (!isnan(f[0])) {
-			if (isnan(f[1])) {
-				f[1] = f[0];
-			}
-			if (isnan(f[2])) {
-				f[2] = f[0];
-			}
-			if (isnan(f[3])) {
-				f[3] = f[1];
-			}
-			ret.viewDecoration = Padding(f[0], f[1], f[2], f[3]);
-		}
-	}
-	return 1;
 }
 
 PlatformApplication::~PlatformApplication() {

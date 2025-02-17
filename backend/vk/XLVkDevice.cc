@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -672,7 +672,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 		Rc<Fence> fence;
 	};
 
-	auto task = new CompileImageTask();
+	auto task = new (std::nothrow_t()) CompileImageTask();
 	task->callback = sp::move(cb);
 	task->image = img;
 	task->loop = (Loop *)&loop;

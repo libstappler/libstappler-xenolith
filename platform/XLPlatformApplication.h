@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@
 #include "XLCoreInstance.h"
 #include "SPThread.h"
 #include "SPThreadTaskQueue.h"
+#include "SPCommandLineParser.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -47,6 +48,10 @@ struct SP_PUBLIC UpdateTime {
 };
 
 struct SP_PUBLIC ApplicationInfo {
+	static CommandLineParser<ApplicationInfo> CommandLine;
+
+	static ApplicationInfo readFromCommandLine(int argc, const char * argv[], const Callback<void(StringView)> &cb = nullptr);
+
 	// application reverce-domain name
 	String bundleName = "org.stappler.xenolith.test";
 
@@ -98,6 +103,9 @@ struct SP_PUBLIC ApplicationInfo {
 	// Flag: application help requested
 	bool help = false;
 
+	// Flag: disable verbose Vulkan output
+	bool quiet = false;
+
 	// Native platform application controller pointer (if exists)
 	void *platformHandle = nullptr;
 
@@ -112,9 +120,6 @@ struct SP_PUBLIC ApplicationInfo {
 	Function<void(const PlatformApplication &)> finalizeCallback;
 
 	core::LoopInfo loopInfo;
-
-	static int parseCmdSwitch(ApplicationInfo &ret, char c, const char *str);
-	static int parseCmdString(ApplicationInfo &ret, const StringView &str, int argc, const char * argv[]);
 
 	Value encode() const;
 };

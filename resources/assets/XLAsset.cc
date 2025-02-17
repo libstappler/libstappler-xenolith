@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -98,7 +98,7 @@ Rc<AssetLock> Asset::lockVersion(int64_t id, Ref *owner) {
 	for (auto &it : _versions) {
 		if (it.id == id && it.complete) {
 			++ it.locked;
-			auto ret = new AssetLock(this, it, [this] (const VersionData &data) {
+			auto ret = new (std::nothrow_t()) AssetLock(this, it, [this] (const VersionData &data) {
 				releaseLock(data);
 			}, owner);
 			auto ref = Rc<AssetLock>(ret);
@@ -114,7 +114,7 @@ Rc<AssetLock> Asset::lockReadableVersion(Ref *owner) {
 	for (auto &it : _versions) {
 		if (it.complete && filesystem::exists(it.path)) {
 			++ it.locked;
-			auto ret = new AssetLock(this, it, [this] (const VersionData &data) {
+			auto ret = new (std::nothrow_t()) AssetLock(this, it, [this] (const VersionData &data) {
 				releaseLock(data);
 			}, owner);
 			auto ref = Rc<AssetLock>(ret);

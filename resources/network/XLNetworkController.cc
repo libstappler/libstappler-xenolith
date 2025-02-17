@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -317,7 +317,7 @@ Rc<ApplicationExtension> Controller::createController(Application *app, StringVi
 }
 
 Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
-	_data = new Data(app, this, name, sp::move(signKey));
+	_data = new (std::nothrow_t()) Data(app, this, name, sp::move(signKey));
 	_data->init();
 	_data->run();
 }

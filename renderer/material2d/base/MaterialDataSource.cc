@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -357,7 +357,7 @@ bool DataSource::removeItem(Id n, const Value &v, uint32_t l, bool subcats) {
 }
 
 size_t DataSource::getSliceData(const BatchCallback &cb, Id first, size_t count, uint32_t l, bool subcats) {
-	SliceRequest *req = new SliceRequest(cb);
+	SliceRequest *req = new (std::nothrow_t()) SliceRequest(cb);
 
 	size_t f = size_t(first.get());
 	onSlice(req->vec, f, count, l, subcats);

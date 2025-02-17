@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -44,17 +44,17 @@ void Model::loadBlob(const char *path, const std::function<void(const uint8_t *,
 	}
 
 	size_t size = 0;
-	::fread(&size, sizeof(size), 1, f);
+	if (::fread(&size, sizeof(size), 1, f) > 0) {
+		auto buf = new uint8_t[size];
+		if (size > 0) {
+			if (::fread(buf, size, 1, f) > 0) {
+				cb(buf, size);
+			}
+		}
 
-	auto buf = new uint8_t[size];
-	if (size > 0) {
-		::fread(buf, size, 1, f);
-
-		cb(buf, size);
+		::fclose(f);
+		delete[] buf;
 	}
-
-	::fclose(f);
-	delete[] buf;
 }
 
 bool Model::compareBlob(const uint8_t *a, size_t na, const uint8_t *b, size_t nb, float v) {

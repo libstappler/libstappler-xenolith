@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -77,32 +77,9 @@ protected:
 	core::SurfaceInfo _surfaceInfo;
 	core::SwapchainConfig _swapchainConfig;
 
-#if MODULE_XENOLITH_RESOURCES_NETWORK
-public:
-	xenolith::network::Controller *getNetworkController() const {
-		return static_cast<xenolith::network::Controller *>(_networkController.get());
-	}
-protected:
 	Rc<xenolith::ApplicationExtension> _networkController;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_STORAGE
-public:
-	xenolith::storage::Server *getStorageServer() const {
-		return static_cast<xenolith::storage::Server *>(_storageServer.get());
-	}
-protected:
 	Rc<xenolith::ApplicationExtension> _storageServer;
-#endif
-
-#if MODULE_XENOLITH_RESOURCES_ASSETS
-public:
-	xenolith::storage::AssetLibrary *getAssetLibrary() const {
-		return static_cast<xenolith::storage::AssetLibrary *>(_assetLibrary.get());
-	}
-protected:
 	Rc<xenolith::ApplicationExtension> _assetLibrary;
-#endif
 };
 
 }

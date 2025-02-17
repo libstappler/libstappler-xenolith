@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,9 @@ void MnistTrainData::loadVectors(StringView ipath) {
 		auto fsize = ::ftell(vectors);
 		::fseek(vectors, 0, SEEK_SET);
 
-		::fread(&vectorsHeader, sizeof(VectorsHeader), 1, vectors);
+		if (::fread(&vectorsHeader, sizeof(VectorsHeader), 1, vectors) == 0) {
+			log::error("shadernn::MnistTrainData", "Fail to read model file");
+		}
 
 		vectorsHeader.magic = byteorder::bswap32(vectorsHeader.magic);
 		vectorsHeader.items = byteorder::bswap32(vectorsHeader.items);
@@ -49,7 +51,9 @@ void MnistTrainData::loadVectors(StringView ipath) {
 		auto dataSize = fsize - sizeof(ImagesHeader);
 
 		uint8_t *buf = (uint8_t *)::malloc(dataSize);
-		::fread(buf, dataSize, 1, vectors);
+		if (::fread(buf, dataSize, 1, vectors) == 0) {
+			log::error("shadernn::MnistTrainData", "Fail to read model file");
+		}
 
 		vectorsData = (float *)malloc(dataSize * sizeof(float) * 10);
 		::memset(vectorsData, 0, dataSize * sizeof(float));
@@ -75,7 +79,9 @@ void MnistTrainData::loadImages(StringView ipath) {
 		auto fsize = ::ftell(images);
 		::fseek(images, 0, SEEK_SET);
 
-		::fread(&imagesHeader, sizeof(ImagesHeader), 1, images);
+		if (::fread(&vectorsHeader, sizeof(ImagesHeader), 1, images) == 0) {
+			log::error("shadernn::MnistTrainData", "Fail to read model file");
+		}
 
 		imagesHeader.magic = byteorder::bswap32(imagesHeader.magic);
 		imagesHeader.images = byteorder::bswap32(imagesHeader.images);
@@ -84,10 +90,11 @@ void MnistTrainData::loadImages(StringView ipath) {
 
 		auto dataSize = fsize - sizeof(ImagesHeader);
 
-
 		uint8_t *buf = (uint8_t *)::malloc(dataSize);
 
-		::fread(buf, dataSize, 1, images);
+		if (::fread(buf, dataSize, 1, images) == 0) {
+			log::error("shadernn::MnistTrainData", "Fail to read model file");
+		}
 
 		imagesData = (float *)malloc(dataSize * sizeof(float));
 		auto ptr = imagesData;

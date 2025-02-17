@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +24,6 @@ THE SOFTWARE.
 #include "XLVkInstance.h"
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
-
-#if MODULE_XENOLITH_FONT
-#include "backend/vk/XLVkFontQueue.h"
-#endif
-
-#if MODULE_XENOLITH_BACKEND_VKGUI
-#include "XLVkGuiPlatform.h"
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 

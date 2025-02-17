@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -152,7 +152,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 		Rc<Fence> fence;
 	};
 
-	auto task = new CompileTask();
+	auto task = new (std::nothrow_t()) CompileTask();
 	task->callback = sp::move(cb);
 	task->loop = &loop;
 	task->device = &dev;
@@ -218,7 +218,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 		Rc<DeviceMemoryPool> mempool;
 	};
 
-	auto task = new ReadImageTask();
+	auto task = new (std::nothrow_t()) ReadImageTask();
 	task->callback = sp::move(cb);
 	task->image = image;
 	task->loop = &loop;
@@ -299,7 +299,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 		Rc<DeviceMemoryPool> mempool;
 	};
 
-	auto task = new ReadBufferTask();
+	auto task = new (std::nothrow_t()) ReadBufferTask();
 	task->callback = sp::move(cb);
 	task->buffer = buf;
 	task->loop = &loop;

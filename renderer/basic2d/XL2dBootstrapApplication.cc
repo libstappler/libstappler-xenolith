@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -238,7 +238,7 @@ void BootstrapApplication::loadExtensions() {
 		auto createLibrary = SharedModule::acquireTypedSymbol<decltype(&storage::AssetLibrary::createLibrary)>("xenolith_resources_assets",
 				"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)");
 		if (createLibrary) {
-			_assetLibrary = createLibrary(static_cast<Application *>(this), getNetworkController(), Value({
+			_assetLibrary = createLibrary(static_cast<Application *>(this), static_cast<network::Controller *>(_networkController.get()), Value({
 				pair("driver", Value("sqlite")),
 				pair("dbname", Value(filesystem::cachesPath<Interface>("assets.sqlite"))),
 				pair("serverName", Value("AssetStorage"))
