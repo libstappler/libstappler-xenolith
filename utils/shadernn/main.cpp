@@ -24,7 +24,6 @@
 #include "XLCore.h"
 #include "SPData.h"
 #include "XLApplication.h"
-#include "XLViewCommandLine.h"
 #include "XLVkPlatform.h"
 #include "XLVkLoop.h"
 
@@ -35,21 +34,15 @@
 
 namespace stappler::xenolith::shadernn {
 
-void runApplication(Function<void(const Application &)> &&cb) {
-	Application::CommonInfo commonInfo({
-		.bundleName = String("org.stappler.xenolith.cli"),
-		.applicationName = String("xenolith-cli"),
-		.applicationVersion = String("0.1.0")
-	});
-
-	auto instance = vk::platform::createInstance([&] (vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
-		data.applicationName = commonInfo.applicationName;
-		data.applicationVersion = commonInfo.applicationVersion;
-		return true;
-	});
-
-	// create main looper
-	auto app = Rc<Application>::create(move(commonInfo), move(instance));
+void runApplication(ApplicationInfo &&appInfo, Function<void(const Application &)> &&cb) {
+	appInfo.bundleName = String("org.stappler.xenolith.cli");
+	appInfo.applicationName = String("xenolith-cli");
+	appInfo.applicationVersion = String("0.1.0");
+	appInfo.updateCallback = [&] (const Application &app, const UpdateTime &time) {
+		if (time.app == 0) {
+			cb(app);
+		}
+	};
 
 	// define device selector/initializer
 	auto data = Rc<vk::LoopData>::alloc();
@@ -57,19 +50,22 @@ void runApplication(Function<void(const Application &)> &&cb) {
 		return dev.requiredExtensionsExists && dev.requiredFeaturesExists;
 	};
 
-	Application::CallbackInfo callbackInfo({
-		.updateCallback = [&] (const Application &app, const UpdateTime &time) {
-			if (time.app == 0) {
-				cb(app);
-			}
-		}
+	appInfo.loopInfo.platformData = data;
+	appInfo.threadsCount = 2;
+	appInfo.updateInterval = TimeInterval::microseconds(500000);
+
+	auto instance = vk::platform::createInstance([&] (vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
+		data.applicationName = appInfo.applicationName;
+		data.applicationVersion = appInfo.applicationVersion;
+		return true;
 	});
 
-	core::LoopInfo info;
-	info.platformData = data;
+	// create main looper
+	auto app = Rc<Application>::create(move(appInfo), move(instance));
 
 	// run main loop with 2 additional threads and 0.5sec update interval
-	app->run(callbackInfo, move(info), 2, TimeInterval::microseconds(500000));
+	app->run();
+	app->waitStopped();
 }
 
 static constexpr auto HELP_STRING(
@@ -81,14 +77,18 @@ Options are one of:
 	-h (--help))HelpString");
 
 SP_EXTERN_C int main(int argc, const char **argv) {
-	ViewCommandLineData data;
-	Vector<String> args;
+	Vector<StringView> args;
+	ApplicationInfo data = ApplicationInfo::readFromCommandLine(argc, argv, [&] (StringView str) {
+		args.emplace_back(str.str<Interface>());
+	});
 
-	data::parseCommandLineOptions<Interface, ViewCommandLineData>(data, argc, argv,
-		[&] (ViewCommandLineData &, StringView str) {
-			args.emplace_back(str.str<Interface>());
-		},
-		&parseViewCommandLineSwitch, &parseViewCommandLineString);
+	if (data.help) {
+		std::cout << HELP_STRING << "\n";
+		ApplicationInfo::CommandLine.describe([&] (StringView str) {
+			std::cout << str;
+		});
+		return 0;
+	}
 
 	if (data.help) {
 		std::cout << HELP_STRING << "\n";

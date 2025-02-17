@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-STAPPLER_ROOT ?= ../../..
+STAPPLER_BUILD_ROOT ?= ../../../build/make
 
 LOCAL_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
@@ -36,8 +36,8 @@ LOCAL_INCLUDES_OBJS :=
 LOCAL_MAIN := main.cpp
 
 LOCAL_MODULES_PATHS = \
-	$(STAPPLER_ROOT)/core/stappler-modules.mk \
-	$(STAPPLER_ROOT)/xenolith/xenolith-modules.mk
+	core/stappler-modules.mk \
+	xenolith/xenolith-modules.mk
 
 LOCAL_MODULES ?= \
 	xenolith_backend_vkgui \
@@ -51,7 +51,7 @@ LOCAL_APPLICATION_MK := proj.android/app/Application.mk # path to Application.mk
 LOCAL_ANDROID_TARGET := application # target to build
 LOCAL_ANDROID_PLATFORM := android-24 # android platform version
 
-include $(STAPPLER_ROOT)/build/make/universal.mk
+include $(STAPPLER_BUILD_ROOT)/universal.mk
 
 prepare-android:
 	@mkdir -p proj.android/app/assets
