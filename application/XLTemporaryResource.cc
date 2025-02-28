@@ -23,7 +23,6 @@
 #include "XLTemporaryResource.h"
 #include "XLMeshIndex.h"
 #include "XLTexture.h"
-#include "XLCorePlatform.h"
 #include "XLCoreObject.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -38,7 +37,7 @@ TemporaryResource::~TemporaryResource() {
 }
 
 bool TemporaryResource::init(Rc<core::Resource> &&res, TimeInterval timeout, TemporaryResourceFlags flags) {
-	_atime = platform::clock(core::ClockType::Monotonic);
+	_atime = sp::platform::clock(ClockType::Monotonic);
 	_timeout = timeout;
 	_resource = move(res);
 	_name = _resource->getName().str<Interface>();
@@ -103,7 +102,7 @@ void TemporaryResource::setLoaded(bool val) {
 		_resource->clear();
 		onLoaded(this, _loaded);
 	}
-	_atime = platform::clock(core::ClockType::Monotonic);
+	_atime = sp::platform::clock(ClockType::Monotonic);
 }
 
 void TemporaryResource::setRequested(bool val) {
@@ -115,7 +114,7 @@ void TemporaryResource::setTimeout(TimeInterval ival) {
 }
 
 bool TemporaryResource::load(Ref *ref, Function<void(bool)> &&cb) {
-	_atime = platform::clock(core::ClockType::Monotonic);
+	_atime = sp::platform::clock(ClockType::Monotonic);
 	if (_loaded) {
 		if (cb) {
 			cb(false);
@@ -130,7 +129,7 @@ bool TemporaryResource::load(Ref *ref, Function<void(bool)> &&cb) {
 
 void TemporaryResource::handleEnter(ResourceOwner *owner, ResourceObject *res) {
 	_owners.emplace(owner);
-	_atime = platform::clock(core::ClockType::Monotonic);
+	_atime = sp::platform::clock(ClockType::Monotonic);
 
 	if (res->getType() == ResourceType::Texture) {
 		auto tex = (Texture *)res;
@@ -152,7 +151,7 @@ void TemporaryResource::handleEnter(ResourceOwner *owner, ResourceObject *res) {
 }
 
 void TemporaryResource::handleExit(ResourceOwner *, ResourceObject *) {
-	_atime = platform::clock(core::ClockType::Monotonic);
+	_atime = sp::platform::clock(ClockType::Monotonic);
 	-- _users;
 }
 

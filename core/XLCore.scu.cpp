@@ -82,18 +82,39 @@
 #include "XLCoreFrameQueue.cc"
 #include "XLCoreFrameHandle.cc"
 
-#include "platform/android/XLCorePlatform.cc"
-#include "platform/linux/XLCorePlatform.cc"
-#include "platform/win32/XLCorePlatform.cc"
-#include "platform/mac/XLCorePlatform.cc"
+#define XENOLITH_VERSION_VARIANT 0
+
+#ifndef XENOLITH_VERSION_API
+#define XENOLITH_VERSION_API 0
+#endif
+
+#ifndef XENOLITH_VERSION_REV
+#define XENOLITH_VERSION_REV 0
+#endif
+
+#ifndef XENOLITH_VERSION_BUILD
+#define XENOLITH_VERSION_BUILD 0
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
+const char * getEngineName() {
+	return "Stappler/Xenolith";
+}
+
 const char * getVersionString() {
-	return TOSTRING(XENOLITH_VERSION_API) "/" TOSTRING(XENOLITH_VERSION_REV);
+	return TOSTRING(XENOLITH_VERSION_VARIANT) "." TOSTRING(XENOLITH_VERSION_API) "." TOSTRING(XENOLITH_VERSION_REV) "." TOSTRING(XENOLITH_VERSION_BUILD);
+}
+
+uint32_t getVersionIndex() {
+	return SP_MAKE_API_VERSION(XENOLITH_VERSION_VARIANT, XENOLITH_VERSION_API, XENOLITH_VERSION_REV, XENOLITH_VERSION_BUILD);
+}
+
+uint32_t getVersionVariant() {
+	return XENOLITH_VERSION_VARIANT;
 }
 
 uint32_t getVersionApi() {
@@ -102,6 +123,10 @@ uint32_t getVersionApi() {
 
 uint32_t getVersionRev() {
 	return XENOLITH_VERSION_REV;
+}
+
+uint32_t getVersionBuild() {
+	return XENOLITH_VERSION_BUILD;
 }
 
 }

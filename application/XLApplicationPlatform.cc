@@ -32,7 +32,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void Application::nativeInit() {
-	platform::clock(core::ClockType::Monotonic);
+	sp::platform::clock(ClockType::Monotonic);
 }
 
 void Application::nativeDispose() { }

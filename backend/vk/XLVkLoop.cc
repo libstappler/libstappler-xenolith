@@ -50,11 +50,11 @@ struct PresentationData {
 
 	uint64_t getLastUpdateInterval() {
 		auto tmp = lastUpdate;
-		lastUpdate = platform::clock(core::ClockType::Monotonic);
+		lastUpdate = sp::platform::clock(ClockType::Monotonic);
 		return lastUpdate - tmp;
 	}
 
-	uint64_t now = platform::clock(core::ClockType::Monotonic);
+	uint64_t now = sp::platform::clock(ClockType::Monotonic);
 	uint64_t last = 0;
 	uint64_t updateInterval = config::PresentationSchedulerInterval;
 	uint64_t lastUpdate = 0;
@@ -219,7 +219,7 @@ struct Loop::Internal final : memory::AllocPool {
 		auto req = Rc<DependencyRequest>::alloc();
 		req->events = sp::move(events);
 		req->callback = sp::move(cb);
-		req->initial = platform::clock(core::ClockType::Monotonic);
+		req->initial = sp::platform::clock(ClockType::Monotonic);
 
 		for (auto &it : req->events) {
 			if (it->isSignaled()) {
@@ -368,12 +368,12 @@ static bool Loop_pollEvents(Loop::Internal *internal) {
 		internal->queue->update();
 		XL_PROFILE_END(queue)
 
-		internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
+		internal->presentationData.now = sp::platform::clock(ClockType::Monotonic);
 		if (internal->presentationData.now - internal->presentationData.last > internal->presentationData.updateInterval) {
 			timeoutPassed = true;
 		}
 	} else {
-		internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
+		internal->presentationData.now = sp::platform::clock(ClockType::Monotonic);
 		if (internal->presentationData.now - internal->presentationData.last > internal->presentationData.updateInterval) {
 			timeoutPassed = true;
 		} else {
@@ -384,7 +384,7 @@ static bool Loop_pollEvents(Loop::Internal *internal) {
 			} else {
 				if (!internal->queue->wait(TimeInterval::microseconds(
 						internal->presentationData.updateInterval - (internal->presentationData.now - internal->presentationData.last)))) {
-					internal->presentationData.now = platform::clock(core::ClockType::Monotonic);
+					internal->presentationData.now = sp::platform::clock(ClockType::Monotonic);
 					timeoutPassed = true;
 				}
 			}

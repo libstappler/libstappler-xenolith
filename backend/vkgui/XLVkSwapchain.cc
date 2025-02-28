@@ -112,10 +112,10 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 	VkResult result = VK_ERROR_UNKNOWN;
 	dev.makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-		auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+		auto t = sp::platform::clock(ClockType::Monotonic);
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &_swapchain);
 		XL_VKAPI_LOG("vkCreateSwapchainKHR: ", result,
-				" [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &_swapchain);
 #endif
@@ -168,9 +168,9 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 			auto d = ((Device *)dev);
 			d->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-				auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+				auto t = sp::platform::clock(ClockType::Monotonic);
 				table.vkDestroySwapchainKHR(device, (VkSwapchainKHR)ptr.get(), nullptr);
-				XL_VKAPI_LOG("vkDestroySwapchainKHR: [",xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+				XL_VKAPI_LOG("vkDestroySwapchainKHR: [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 				table.vkDestroySwapchainKHR(device, (VkSwapchainKHR)ptr.get(), nullptr);
 #endif
@@ -208,11 +208,11 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<Fence> &fence) -> Rc<Swapc
 	VkResult ret = VK_ERROR_UNKNOWN;
 	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-		auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+		auto t = sp::platform::clock(ClockType::Monotonic);
 		ret = table.vkAcquireNextImageKHR(device, _swapchain, timeout,
 				sem ? sem->getSemaphore() : VK_NULL_HANDLE, fence->getFence(), &imageIndex);
 		XL_VKAPI_LOG("vkAcquireNextImageKHR: ", imageIndex, " ", ret,
-				" [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		ret = table.vkAcquireNextImageKHR(device, _swapchain, timeout,
 				sem ? sem->getSemaphore() : VK_NULL_HANDLE, fence ? fence->getFence() : VK_NULL_HANDLE, &imageIndex);
@@ -275,10 +275,10 @@ VkResult SwapchainHandle::present(DeviceQueue &queue, const Rc<ImageStorage> &im
 	VkResult result = VK_ERROR_UNKNOWN;
 	_device->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
-		auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+		auto t = sp::platform::clock(ClockType::Monotonic);
 		result = table.vkQueuePresentKHR(queue.getQueue(), &presentInfo);
 		XL_VKAPI_LOG("[", image->getFrameIndex(), "] vkQueuePresentKHR: ", imageIndex, " ", result,
-				" [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "] [timeout: ", t - _presentTime,
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "] [timeout: ", t - _presentTime,
 				"] [acquisition: ", t - image->getAcquisitionTime(), "]");
 		_presentTime = t;
 #else

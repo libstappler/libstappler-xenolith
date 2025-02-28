@@ -323,7 +323,7 @@ void PlatformApplication::threadInit() {
 	_glWaitCallback.clear();
 
 	_time.delta = 0;
-	_time.global = platform::clock(core::ClockType::Monotonic);
+	_time.global = sp::platform::clock(ClockType::Monotonic);
 	_time.app = 0;
 	_time.dt = 0.0f;
 
@@ -480,7 +480,7 @@ void PlatformApplication::performAppUpdate(const UpdateTime &t) {
 }
 
 void PlatformApplication::performTimersUpdate(bool forced) {
-	_clock = platform::clock(core::ClockType::Monotonic);
+	_clock = sp::platform::clock(ClockType::Monotonic);
 
 	auto dt = TimeInterval::microseconds(_clock - _lastUpdate);
 	if (dt >= _info.updateInterval || forced) {

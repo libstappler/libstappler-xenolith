@@ -25,7 +25,6 @@
 
 #include "XLCoreQueueData.h"
 #include "XLCoreInfo.h"
-#include "XLCorePlatform.h"
 #include "XLCoreImageStorage.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -53,7 +52,7 @@ public:
 protected:
 	uint32_t _id = GetNextId();
 	StringView _tag;
-	uint64_t _clock = platform::clock(core::ClockType::Monotonic);
+	uint64_t _clock = sp::platform::clock(ClockType::Monotonic);
 	QueueSet _queues;
 	bool _success = true;
 };

@@ -357,7 +357,7 @@ bool DataSource::removeItem(Id n, const Value &v, uint32_t l, bool subcats) {
 }
 
 size_t DataSource::getSliceData(const BatchCallback &cb, Id first, size_t count, uint32_t l, bool subcats) {
-	SliceRequest *req = new (std::nothrow_t()) SliceRequest(cb);
+	SliceRequest *req = new (std::nothrow) SliceRequest(cb);
 
 	size_t f = size_t(first.get());
 	onSlice(req->vec, f, count, l, subcats);

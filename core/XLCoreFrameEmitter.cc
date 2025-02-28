@@ -25,7 +25,6 @@
 #include "XLCoreFrameCache.h"
 #include "XLCoreQueue.h"
 #include "XLCoreLoop.h"
-#include "XLCorePlatform.h"
 #include "XLCoreFrameRequest.h"
 
 #ifndef XL_FRAME_EMITTER_LOG
@@ -60,7 +59,7 @@ void FrameEmitter::setFrameSubmitted(FrameHandle &frame) {
 		return;
 	}
 
-	XL_FRAME_EMITTER_LOG("FrameTime:        ", _frame.load(), "   ", platform::clock(ClockType::Monotonic) - _frame.load(), " mks");
+	XL_FRAME_EMITTER_LOG("FrameTime:        ", _frame.load(), "   ", sp::platform::clock(ClockType::Monotonic) - _frame.load(), " mks");
 
 	auto it = _frames.begin();
 	while (it != _frames.end()) {
@@ -186,7 +185,7 @@ void FrameEmitter::onFrameTimeout(uint64_t order) {
 
 void FrameEmitter::onFrameRequest(bool timeout) {
 	if (canStartFrame()) {
-		auto next = platform::clock();
+		auto next = sp::platform::clock();
 
 		if (_nextFrameRequest) {
 			scheduleFrameTimeout();
@@ -239,10 +238,10 @@ void FrameEmitter::scheduleFrameTimeout() {
 	if (_valid && _frameInterval && _frameTimeoutPassed && !_onDemand) {
 		_frameTimeoutPassed = false;
 		++ _order;
-		[[maybe_unused]] auto t = platform::clock();
+		[[maybe_unused]] auto t = sp::platform::clock();
 		_loop->schedule([=, guard = Rc<FrameEmitter>(this), idx = _order] (Loop &ctx) {
-			XL_FRAME_EMITTER_LOG("TimeoutPassed:    ", _frame.load(), "   ", platform::clock() - _frame.load(), " (",
-					platform::clock(ClockType::Monotonic) - t, ") mks");
+			XL_FRAME_EMITTER_LOG("TimeoutPassed:    ", _frame.load(), "   ", sp::platform::clock() - _frame.load(), " (",
+					sp::platform::clock(ClockType::Monotonic) - t, ") mks");
 			guard->onFrameTimeout(idx);
 			return true; // end spinning
 		}, _frameInterval - config::FrameIntervalSafeOffset, "FrameEmitter::scheduleFrameTimeout");
@@ -250,7 +249,7 @@ void FrameEmitter::scheduleFrameTimeout() {
 }
 
 Rc<FrameRequest> FrameEmitter::makeRequest(const FrameContraints &constraints) {
-	_frame = platform::clock();
+	_frame = sp::platform::clock();
 	return Rc<FrameRequest>::create(this, constraints);
 }
 
@@ -263,14 +262,14 @@ Rc<FrameHandle> FrameEmitter::submitNextFrame(Rc<FrameRequest> &&req) {
 	auto frame = makeFrame(move(req), readyForSubmit);
 	_nextFrameRequest = nullptr;
 	if (frame && frame->isValidFlag()) {
-		auto now = platform::clock();
+		auto now = sp::platform::clock();
 		_lastSubmit = now;
 
 		frame->setCompleteCallback([this] (FrameHandle &frame) {
 			onFrameComplete(frame);
 		});
 
-		XL_FRAME_EMITTER_LOG("SubmitNextFrame:  ", _frame.load(), "   ", platform::clock(ClockType::Monotonic) - _frame.load(), " mks ", readyForSubmit);
+		XL_FRAME_EMITTER_LOG("SubmitNextFrame:  ", _frame.load(), "   ", sp::platform::clock(ClockType::Monotonic) - _frame.load(), " mks ", readyForSubmit);
 
 		_nextFrameAcquired = false;
 		onFrameEmitted(*frame);

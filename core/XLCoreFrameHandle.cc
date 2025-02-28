@@ -21,7 +21,6 @@
  **/
 
 #include "XLCoreFrameHandle.h"
-#include "XLCorePlatform.h"
 #include "XLCoreLoop.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
@@ -33,7 +32,7 @@ static constexpr ClockType FrameClockType = ClockType::Monotonic;
 #ifdef XL_FRAME_LOG
 #define XL_FRAME_LOG_INFO _request->getEmitter() ? "[Emitted] " : "", \
 	"[", _order, "] [", s_frameCount.load(), \
-	"] [", platform::clock(FrameClockType) - _timeStart, "] "
+	"] [", sp::platform::clock(FrameClockType) - _timeStart, "] "
 #else
 #define XL_FRAME_LOG_INFO
 #define XL_FRAME_LOG(...)
@@ -108,7 +107,7 @@ bool FrameHandle::init(Loop &loop, Device &dev, Rc<FrameRequest> &&req, uint64_t
 	_device = &dev;
 	_request = move(req);
 	_pool = _request->getPool();
-	_timeStart = platform::clock(FrameClockType);
+	_timeStart = sp::platform::clock(FrameClockType);
 	if (!_request || !_request->getQueue()) {
 		return false;
 	}
@@ -299,7 +298,7 @@ void FrameHandle::invalidate() {
 	if (_loop->isOnThisThread()) {
 		if (_valid) {
 			if (!_timeEnd) {
-				_timeEnd = platform::clock(FrameClockType);
+				_timeEnd = sp::platform::clock(FrameClockType);
 			}
 
 			if (auto e = _request->getEmitter()) {
@@ -429,7 +428,7 @@ void FrameHandle::tryComplete() {
 
 void FrameHandle::onComplete() {
 	if (!_completed && _valid) {
-		_timeEnd = platform::clock(FrameClockType);
+		_timeEnd = sp::platform::clock(FrameClockType);
 		if (auto e = getEmitter()) {
 			XL_FRAME_LOG(XL_FRAME_LOG_INFO, "complete: ", e->getFrameTime());
 		}

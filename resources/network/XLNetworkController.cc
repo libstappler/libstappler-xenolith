@@ -317,7 +317,7 @@ Rc<ApplicationExtension> Controller::createController(Application *app, StringVi
 }
 
 Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
-	_data = new (std::nothrow_t()) Data(app, this, name, sp::move(signKey));
+	_data = new (std::nothrow) Data(app, this, name, sp::move(signKey));
 	_data->init();
 	_data->run();
 }

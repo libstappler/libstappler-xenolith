@@ -55,6 +55,7 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 	_options.presentImmediate = false;
 	_options.acquireImageImmediately = true;
 	_options.renderOnDemand = true;
+	_options.syncFrameAfterSwapchainRecreation = false;
 
 	return true;
 }

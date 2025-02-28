@@ -757,12 +757,12 @@ void FrameQueue::onRenderPassSubmitted(FramePassData &data) {
 	}
 
 	if (!data.submitTime) {
-		data.submitTime = platform::clock(ClockType::Monotonic);
+		data.submitTime = sp::platform::clock(ClockType::Monotonic);
 	}
 }
 
 void FrameQueue::onRenderPassComplete(FramePassData &data) {
-	auto t = platform::clock(ClockType::Monotonic) - data.submitTime;
+	auto t = sp::platform::clock(ClockType::Monotonic) - data.submitTime;
 
 	_submissionTime += t;
 	if (_finalized) {

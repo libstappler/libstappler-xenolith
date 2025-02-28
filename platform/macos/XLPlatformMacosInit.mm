@@ -79,7 +79,7 @@ void stopApplication() {
 }
 
 MacosApplicationData::MacosApplicationData() {
-	platform::clock(core::ClockType::Monotonic); // ensure clock is initialized
+	sp::platform::clock(ClockType::Monotonic); // ensure clock is initialized
 
 	delegate = [[XLMacAppDelegate alloc] init];
 	application = [NSApplication sharedApplication];

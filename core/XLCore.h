@@ -30,6 +30,7 @@
 #include "SPSpanView.h"
 #include "SPLog.h"
 #include "SPHashTable.h"
+#include "SPPlatform.h"
 
 #include "SPVec2.h"
 #include "SPVec3.h"
@@ -102,7 +103,7 @@ using geom::Padding;
 namespace Anchor = geom::Anchor;
 
 inline constexpr uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
-   return (uint32_t(variant) << 29) | (uint32_t(major) << 22) | (uint32_t(minor) << 12) | uint32_t(patch);
+   return SP_MAKE_API_VERSION(variant, major, minor, patch);
 }
 
 // based on VK_MAKE_API_VERSION
@@ -127,7 +128,7 @@ inline uint32_t XL_MAKE_API_VERSION(StringView version) {
 }
 
 inline String getVersionDescription(uint32_t version) {
-	return toString(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b1111111111, ".", version & 0b111111111111);
+	return toString(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b11'1111'1111, ".", version & 0b1111'1111'1111);
 }
 
 class SP_PUBLIC PoolRef : public Ref {
@@ -158,13 +159,21 @@ protected:
 	memory::pool_t *_pool = nullptr;
 };
 
+SP_PUBLIC const char * getEngineName();
+
 SP_PUBLIC const char * getVersionString();
+
+SP_PUBLIC uint32_t getVersionIndex();
+
+SP_PUBLIC uint32_t getVersionVariant();
 
 // API version number
 SP_PUBLIC uint32_t getVersionApi();
 
 // Build revision version number
 SP_PUBLIC uint32_t getVersionRev();
+
+SP_PUBLIC uint32_t getVersionBuild();
 
 }
 

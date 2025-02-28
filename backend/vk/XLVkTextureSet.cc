@@ -152,7 +152,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 		Rc<Fence> fence;
 	};
 
-	auto task = new (std::nothrow_t()) CompileTask();
+	auto task = new (std::nothrow) CompileTask();
 	task->callback = sp::move(cb);
 	task->loop = &loop;
 	task->device = &dev;
@@ -218,7 +218,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 		Rc<DeviceMemoryPool> mempool;
 	};
 
-	auto task = new (std::nothrow_t()) ReadImageTask();
+	auto task = new (std::nothrow) ReadImageTask();
 	task->callback = sp::move(cb);
 	task->image = image;
 	task->loop = &loop;
@@ -299,7 +299,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 		Rc<DeviceMemoryPool> mempool;
 	};
 
-	auto task = new (std::nothrow_t()) ReadBufferTask();
+	auto task = new (std::nothrow) ReadBufferTask();
 	task->callback = sp::move(cb);
 	task->buffer = buf;
 	task->loop = &loop;

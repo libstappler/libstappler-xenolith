@@ -547,7 +547,7 @@ void FontController::setLoaded(bool value) {
 		_loaded = value;
 		onLoaded(this);
 		UpdateTime t;
-		t.global = platform::clock(core::ClockType::Monotonic);
+		t.global = sp::platform::clock(ClockType::Monotonic);
 		update(nullptr, t);
 	}
 }

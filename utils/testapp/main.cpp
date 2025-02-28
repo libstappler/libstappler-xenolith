@@ -48,6 +48,9 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		std::cout << " Options: " << stappler::data::EncodeFormat::Pretty << data.encode() << "\n";
 	}
 
+	std::cout << "Stappler version: " << getStapplerVersionString() << "\n";
+	std::cout << "Xenolith version: " << xenolith::getVersionString() << "\n";
+
 	memory::pool::perform_temporary([&] {
 		auto app = Rc<AppDelegate>::create(move(data));
 

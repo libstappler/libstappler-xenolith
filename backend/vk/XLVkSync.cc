@@ -101,13 +101,13 @@ void Fence::setArmed(DeviceQueue &q) {
 	_state = Armed;
 	_queue = &q;
 	_queue->retainFence(*this);
-	_armedTime = platform::clock(core::ClockType::Monotonic);
+	_armedTime = sp::platform::clock(ClockType::Monotonic);
 }
 
 void Fence::setArmed() {
 	std::unique_lock<Mutex> lock(_mutex);
 	_state = Armed;
-	_armedTime = platform::clock(core::ClockType::Monotonic);
+	_armedTime = sp::platform::clock(ClockType::Monotonic);
 }
 
 void Fence::setTag(StringView tag) {
@@ -184,7 +184,7 @@ bool Fence::check(Loop &loop, bool lockfree) {
 	switch (status) {
 	case VK_SUCCESS:
 		_state = Signaled;
-		XL_VKAPI_LOG("Fence [", _frame, "] ", _tag, ": signaled: ", platform::clock(core::ClockType::Monotonic) - _armedTime);
+		XL_VKAPI_LOG("Fence [", _frame, "] ", _tag, ": signaled: ", sp::platform::clock(ClockType::Monotonic) - _armedTime);
 		lock.unlock();
 		if (loop.isOnThisThread()) {
 			doRelease(true);
@@ -197,7 +197,7 @@ bool Fence::check(Loop &loop, bool lockfree) {
 	case VK_TIMEOUT:
 	case VK_NOT_READY:
 		_state = Armed;
-		if (platform::clock(core::ClockType::Monotonic) - _armedTime > 1'000'000) {
+		if (sp::platform::clock(ClockType::Monotonic) - _armedTime > 1'000'000) {
 			lock.unlock();
 			if (_queue) {
 				XL_VKAPI_LOG("Fence [", _queue->getFrameIndex(), "] Fence is possibly broken: ", _tag);

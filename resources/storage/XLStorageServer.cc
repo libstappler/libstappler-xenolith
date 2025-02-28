@@ -846,7 +846,7 @@ void Server::ServerData::threadInit() {
 		thread::ThreadInfo::setThreadInfo(serverName);
 	}
 
-	now = platform::clock(core::ClockType::Monotonic);
+	now = sp::platform::clock(ClockType::Monotonic);
 
 	Thread::threadInit();
 }
@@ -856,7 +856,7 @@ bool Server::ServerData::worker() {
 		return false;
 	}
 
-	auto t = platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 	if (t - now > TimeInterval::seconds(1).toMicros()) {
 		now = t;
 		handleHeartbeat();

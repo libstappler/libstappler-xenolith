@@ -234,8 +234,8 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 	appInfo.pNext = nullptr;
 	appInfo.pApplicationName = data.applicationName.data();
 	appInfo.applicationVersion = XL_MAKE_API_VERSION(data.applicationVersion);
-	appInfo.pEngineName = xenolith::platform::name();
-	appInfo.engineVersion = xenolith::platform::version();
+	appInfo.pEngineName = xenolith::getEngineName();
+	appInfo.engineVersion = xenolith::getVersionIndex();
 	appInfo.apiVersion = data.targetVulkanVersion;
 
 	VkInstanceCreateInfo createInfo{}; vk::sanitizeVkStruct(createInfo);

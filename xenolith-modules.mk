@@ -22,7 +22,8 @@
 XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 XENOLITH_VERSION_API := 2
-XENOLITH_VERSION_REV := 3
+XENOLITH_VERSION_REV := 4
+XENOLITH_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(XENOLITH_MODULE_DIR)))
 
 TOOLKIT_MODULE_LIST += \
 	$(XENOLITH_MODULE_DIR)/core/core.mk \

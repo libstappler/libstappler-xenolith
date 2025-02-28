@@ -844,14 +844,6 @@ enum class PixelFormat {
 	S // stencil
 };
 
-enum class ClockType {
-	Default,
-	Monotonic,
-	Realtime,
-	Process,
-	Thread,
-};
-
 }
 
 #endif /* XENOLITH_CORE_XLCOREENUM_H_ */

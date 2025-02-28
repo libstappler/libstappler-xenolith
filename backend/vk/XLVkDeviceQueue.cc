@@ -87,10 +87,10 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	submitInfo.pSignalSemaphores = signalSem.data();
 
 #if XL_VKAPI_DEBUG
-	auto t = platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 	fence.addRelease([frameIdx = _frameIdx, t] (bool success) {
 		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
@@ -102,10 +102,10 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 			table.vkDeviceWaitIdle(_device->getDevice());
 		}
 #if XL_VKAPI_DEBUG
-		auto t = platform::clock(core::ClockType::Monotonic);
+		auto t = sp::platform::clock(ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
-				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif
@@ -184,10 +184,10 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 
 #if XL_VKAPI_DEBUG
 	[[maybe_unused]] auto frameIdx = _frameIdx;
-	[[maybe_unused]] auto t = platform::clock(core::ClockType::Monotonic);
+	[[maybe_unused]] auto t = sp::platform::clock(ClockType::Monotonic);
 	fence.addRelease([=] (bool success) {
 		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
@@ -199,10 +199,10 @@ bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, 
 			table.vkDeviceWaitIdle(_device->getDevice());
 		}
 #if XL_VKAPI_DEBUG
-		auto t = platform::clock(core::ClockType::Monotonic);
+		auto t = sp::platform::clock(ClockType::Monotonic);
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
-				" [", platform::clock(core::ClockType::Monotonic) - t, "]");
+				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 #endif

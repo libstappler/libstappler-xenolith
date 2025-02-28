@@ -672,7 +672,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 		Rc<Fence> fence;
 	};
 
-	auto task = new (std::nothrow_t()) CompileImageTask();
+	auto task = new (std::nothrow) CompileImageTask();
 	task->callback = sp::move(cb);
 	task->image = img;
 	task->loop = (Loop *)&loop;

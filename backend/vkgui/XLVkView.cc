@@ -169,7 +169,7 @@ void View::update(bool displayLink) {
 
 	acquireScheduledImage();
 
-	auto clock = xenolith::platform::clock(core::ClockType::Monotonic);
+	auto clock = sp::platform::clock(ClockType::Monotonic);
 
 	if (!_options.followDisplayLink) {
 		auto it = _scheduledPresent.begin();
@@ -285,7 +285,7 @@ bool View::present(ImageStorage *object) {
 			}, this);
 			return true;
 		}
-		auto clock = xenolith::platform::clock(core::ClockType::Monotonic);
+		auto clock = sp::platform::clock(ClockType::Monotonic);
 		auto img = static_cast<SwapchainImage *>(object);
 		if (!img->getPresentWindow() || img->getPresentWindow() < clock) {
 			runScheduledPresent(img);
@@ -358,14 +358,14 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 	};
 
 #if XL_VKAPI_DEBUG
-	auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 #endif
 
 	if (_options.waitOnSwapchainPassFence) {
 		waitForFences(_frameOrder);
 	}
 
-	XL_VKAPI_LOG("[PresentImmediate] [waitForFences] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [waitForFences] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	if (!scheduleCb) {
 		presentFence = loop->acquireFence(0, false);
@@ -373,7 +373,7 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 
 	auto swapchainAcquiredImage = _swapchain->acquire(true, presentFence);
 	if (!swapchainAcquiredImage) {
-		XL_VKAPI_LOG("[PresentImmediate] [acquire-failed] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("[PresentImmediate] [acquire-failed] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 		if (presentFence) {
 			presentFence->schedule(*loop);
 		}
@@ -385,7 +385,7 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 
 	targetImage = Rc<SwapchainImage>::create(Rc<SwapchainHandle>(_swapchain), *swapchainAcquiredImage->data, move(swapchainAcquiredImage->sem));
 
-	XL_VKAPI_LOG("[PresentImmediate] [acquire] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [acquire] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	pool = dev->acquireCommandPool(ops);
 
@@ -435,13 +435,13 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 	frameSync.signalAttachments.emplace_back(core::FrameSyncAttachment{nullptr, targetImage->getSignalSem(),
 		targetImage.get()});
 
-	XL_VKAPI_LOG("[PresentImmediate] [writeBuffers] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [writeBuffers] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	if (presentFence) {
 		presentFence->check(*(Loop *)_glLoop.get(), false);
 	}
 
-	XL_VKAPI_LOG("[PresentImmediate] [acquireFence] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [acquireFence] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	queue = dev->tryAcquireQueueSync(ops, true);
 	if (!queue) {
@@ -451,7 +451,7 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 		return cleanup();
 	}
 
-	XL_VKAPI_LOG("[PresentImmediate] [acquireQueue] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [acquireQueue] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	if (!presentFence) {
 		presentFence = loop->acquireFence(0, false);
@@ -464,12 +464,12 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 		return cleanup();
 	}
 
-	XL_VKAPI_LOG("[PresentImmediate] [submit] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [submit] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	auto result = _swapchain->present(*queue, targetImage);
 	updateFrameInterval();
 
-	XL_VKAPI_LOG("[PresentImmediate] [present] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+	XL_VKAPI_LOG("[PresentImmediate] [present] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 
 	if (isRegularFrame) {
 		-- _framesInProgress;
@@ -499,9 +499,9 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 			dev->releaseCommandPoolUnsafe(move(pool));
 			loop->releaseImage(object);
 		}
-		XL_VKAPI_LOG("[PresentImmediate] [presentFence] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("[PresentImmediate] [presentFence] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 		presentFence = nullptr;
-		XL_VKAPI_LOG("[PresentImmediate] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("[PresentImmediate] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 		return true;
 	} else {
 		if (queue) {
@@ -512,13 +512,13 @@ bool View::presentImmediate(ImageStorage *object, Function<void(bool)> &&schedul
 		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
 			_swapchain->deprecate(false);
 			presentFence->check(*loop, false);
-			XL_VKAPI_LOG("[PresentImmediate] [presentFence] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+			XL_VKAPI_LOG("[PresentImmediate] [presentFence] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 			presentFence = nullptr;
 
 			dev->releaseCommandPoolUnsafe(move(pool));
 			pool = nullptr;
 		}
-		XL_VKAPI_LOG("[PresentImmediate] [", xenolith::platform::clock(core::ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("[PresentImmediate] [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 		return cleanup();
 	}
 }
@@ -641,7 +641,7 @@ void View::invalidate() {
 void View::scheduleNextImage(uint64_t windowOffset, bool immediately) {
 	XL_VKVIEW_LOG("scheduleNextImage");
 	performOnThread([this, windowOffset, immediately] {
-		_scheduledTime = xenolith::platform::clock(core::ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
+		_scheduledTime = sp::platform::clock(ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
 		if (!_options.renderOnDemand || _readyForNextFrame || immediately) {
 			_frameEmitter->setEnableBarrier(_options.enableFrameEmitterBarrier);
 
@@ -664,7 +664,7 @@ void View::scheduleNextImageSync(uint64_t timeout) {
 		return;
 	}
 
-	_scheduledTime = xenolith::platform::clock(core::ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
+	_scheduledTime = sp::platform::clock(ClockType::Monotonic) + _info.frameInterval + config::OnDemandFrameInterval;
 	_frameEmitter->setEnableBarrier(false);
 
 	auto sync = Rc<ImageSyncInfo>::alloc();
@@ -680,9 +680,11 @@ void View::scheduleNextImageSync(uint64_t timeout) {
 		return;
 	}
 
-	auto ret = sync->cond.wait_for(lock, std::chrono::microseconds(timeout));
-	if (ret == std::cv_status::timeout) {
-		return;
+	if (timeout) {
+		auto ret = sync->cond.wait_for(lock, std::chrono::microseconds(timeout));
+		if (ret == std::cv_status::timeout) {
+			return;
+		}
 	}
 
 	lock.unlock();
@@ -847,7 +849,7 @@ bool View::acquireScheduledImageImmediate(const Rc<SwapchainImage> &image) {
 		auto acquiredImage = _swapchainImages.front();
 		_swapchainImages.pop_front();
 		_glLoop->performOnGlThread([tmp = image.get(), acquiredImage = move(acquiredImage)] () mutable {
-			tmp->setAcquisitionTime(xenolith::platform::clock(core::ClockType::Monotonic));
+			tmp->setAcquisitionTime(sp::platform::clock(ClockType::Monotonic));
 			tmp->setImage(move(acquiredImage->swapchain), *acquiredImage->data, move(acquiredImage->sem));
 			tmp->setReady(true);
 		}, image, true);
@@ -878,7 +880,7 @@ bool View::acquireScheduledImageImmediate(const Rc<SwapchainImage> &image) {
 		fence->check(*loop, false);
 		fence = nullptr;
 		loop->performOnGlThread([tmp = image.get(), acquiredImage = move(acquiredImage)] () mutable {
-			tmp->setAcquisitionTime(xenolith::platform::clock(core::ClockType::Monotonic));
+			tmp->setAcquisitionTime(sp::platform::clock(ClockType::Monotonic));
 			tmp->setImage(move(acquiredImage->swapchain), *acquiredImage->data, move(acquiredImage->sem));
 			tmp->setReady(true);
 		}, image, true);
@@ -911,7 +913,7 @@ bool View::acquireScheduledImage() {
 			}, this, true);
 #if XL_VKAPI_DEBUG
 			XL_VKAPI_LOG("[", f->getFrame(),  "] vkAcquireNextImageKHR [complete]",
-					" [", xenolith::platform::clock(core::ClockType::Monotonic) - f->getArmedTime(), "]");
+					" [", sp::platform::clock(ClockType::Monotonic) - f->getArmedTime(), "]");
 #endif
 		}, this, "View::acquireScheduledImage");
 		scheduleFence(move(fence));
@@ -929,7 +931,7 @@ void View::scheduleImage(Rc<SwapchainImage> &&swapchainImage) {
 		auto acquiredImage = _swapchainImages.front();
 		_swapchainImages.pop_front();
 		_glLoop->performOnGlThread([tmp = swapchainImage.get(), acquiredImage = move(acquiredImage)] () mutable {
-			tmp->setAcquisitionTime(xenolith::platform::clock(core::ClockType::Monotonic));
+			tmp->setAcquisitionTime(sp::platform::clock(ClockType::Monotonic));
 			tmp->setImage(move(acquiredImage->swapchain), *acquiredImage->data, move(acquiredImage->sem));
 			tmp->setReady(true);
 		}, swapchainImage, true);
@@ -949,7 +951,7 @@ void View::onSwapchainImageReady(Rc<SwapchainHandle::SwapchainAcquiredImage> &&i
 		_scheduledImages.pop_front();
 
 		_glLoop->performOnGlThread([image = move(image), target = move(target)] () mutable {
-			target->setAcquisitionTime(xenolith::platform::clock(core::ClockType::Monotonic));
+			target->setAcquisitionTime(sp::platform::clock(ClockType::Monotonic));
 			target->setImage(move(image->swapchain), *image->data, move(image->sem));
 			target->setReady(true);
 		}, this, true);
@@ -1216,7 +1218,9 @@ void View::presentWithQueue(DeviceQueue &queue, Rc<ImageStorage> &&image) {
 	}
 
 	_blockSwapchainRecreation = false;
-	-- _framesInProgress;
+	if (_framesInProgress > 0) {
+		-- _framesInProgress;
+	}
 
 	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
 		waitForFences(_frameOrder);
@@ -1261,7 +1265,7 @@ void View::invalidateSwapchainImage(Rc<ImageStorage> &&image) {
 
 View::FrameTimeInfo View::updateFrameInterval() {
 	FrameTimeInfo ret;
-	ret.clock = xenolith::platform::clock(core::ClockType::Monotonic);
+	ret.clock = sp::platform::clock(ClockType::Monotonic);
 	ret.dt = ret.clock - _lastFrameStart;
 	_lastFrameInterval = ret.dt;
 	_avgFrameInterval.addValue(ret.dt);

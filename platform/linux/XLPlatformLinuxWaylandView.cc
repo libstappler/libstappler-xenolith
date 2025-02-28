@@ -667,7 +667,7 @@ void WaylandView::handleKey(uint32_t time, uint32_t scancode, uint32_t state) {
 		auto it = _keys.emplace(scancode, KeyData{
 			scancode,
 			codepoint,
-			platform::clock(core::ClockType::Monotonic),
+			sp::platform::clock(ClockType::Monotonic),
 			false
 		}).first;
 
@@ -746,7 +746,7 @@ void WaylandView::handleKeyRepeat() {
 
 	uint64_t repeatDelay = _display->seat->keyState.keyRepeatDelay;
 	uint64_t repeatInterval = _display->seat->keyState.keyRepeatInterval;
-	auto t = platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 	for (auto &it : _keys) {
 		if (it.second.repeats) {
 			if (!it.second.lastRepeat) {

@@ -24,7 +24,6 @@
 #define XENOLITH_CORE_XLCOREINFO_H_
 
 #include "XLCorePipelineInfo.h"
-#include "XLCorePlatform.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 

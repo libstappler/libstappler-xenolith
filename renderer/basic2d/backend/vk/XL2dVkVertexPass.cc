@@ -24,7 +24,6 @@
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
-#include "XLCorePlatform.h"
 #include "XLDirector.h"
 #include "XLVkRenderPass.h"
 #include "XLVkTextureSet.h"
@@ -159,7 +158,7 @@ struct VertexMaterialVertexProcessor : public Ref {
 
 VertexMaterialVertexProcessor::VertexMaterialVertexProcessor(VertexAttachmentHandle *a, Rc<FrameContextHandle2d> &&input, Function<void(bool)> &&cb)
 : _attachment(a), _input(sp::move(input)), _callback(sp::move(cb)) {
-	_time = xenolith::platform::clock(core::ClockType::Monotonic);
+	_time = sp::platform::clock(ClockType::Monotonic);
 }
 
 void VertexMaterialVertexProcessor::run(core::FrameHandle &frame) {
@@ -941,7 +940,7 @@ void VertexMaterialDynamicData::pushAll(VertexProcessor *processor, WriteTarget 
 }
 
 void VertexMaterialVertexProcessor::finalize(DynamicData *data) {
-	auto t = xenolith::platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 	_drawStat.vertexes = data->globalWritePlan.vertexes - data->excludeVertexes;
 	_drawStat.triangles = (data->globalWritePlan.indexes - data->excludeIndexes) / 3;
 	_drawStat.zPaths = uint32_t(data->paths.size());

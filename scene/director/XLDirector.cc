@@ -50,7 +50,7 @@ bool Director::init(Application *main, const core::FrameContraints &constraints,
 		_actionManager = Rc<ActionManager>::create();
 		_inputDispatcher = Rc<InputDispatcher>::create(_pool, view);
 	});
-	_startTime = platform::clock(core::ClockType::Monotonic);
+	_startTime = sp::platform::clock(ClockType::Monotonic);
 	_time.global = 0;
 	_time.app = 0;
 	_time.delta = 0;
@@ -75,7 +75,7 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 		return false;
 	}
 
-	auto t = platform::clock(core::ClockType::Monotonic);
+	auto t = sp::platform::clock(ClockType::Monotonic);
 
 	setFrameConstraints(req->getFrameConstraints());
 
@@ -98,7 +98,7 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 		});
 	}, this, true);
 
-	_avgFrameTime.addValue(platform::clock(core::ClockType::Monotonic) - t);
+	_avgFrameTime.addValue(sp::platform::clock(ClockType::Monotonic) - t);
 	_avgFrameTimeValue = _avgFrameTime.getAverage();
 	return true;
 }
