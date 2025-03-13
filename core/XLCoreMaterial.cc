@@ -620,7 +620,12 @@ void Material::setLayoutIndex(uint32_t idx) {
 	_layoutIndex = idx;
 }
 
-MaterialAttachment::~MaterialAttachment() { }
+MaterialAttachment::~MaterialAttachment() {
+	std::unique_lock<Mutex> lock(_dynamicMutex);
+	for (auto &it : _dynamicTrackers) {
+		it.first->removeTracker(this);
+	}
+}
 
 bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, MaterialSet::EncodeCallback &&cb, uint32_t size) {
 	if (!BufferAttachment::init(builder, info)) {

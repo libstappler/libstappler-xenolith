@@ -44,11 +44,22 @@ static void Fence_destroy(core::Device *dev, core::ObjectType, core::ObjectHandl
 	d->getTable()->vkDestroyFence(d->getDevice(), (VkFence)ptr.get(), nullptr);
 }
 
-bool Semaphore::init(Device &dev) {
+bool Semaphore::init(Device &dev, core::SemaphoreType type) {
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	semaphoreInfo.pNext = nullptr;
 	semaphoreInfo.flags = 0;
+
+	VkSemaphoreTypeCreateInfo semaphoreTypeInfo;
+	semaphoreTypeInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+	semaphoreTypeInfo.pNext = nullptr;
+	semaphoreTypeInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+	semaphoreTypeInfo.initialValue = 0;
+
+	if (type == core::SemaphoreType::Timeline) {
+		semaphoreInfo.pNext = &semaphoreTypeInfo;
+		_type = type;
+	}
 
 	if (dev.getTable()->vkCreateSemaphore(dev.getDevice(), &semaphoreInfo, nullptr, &_sem) == VK_SUCCESS) {
 		return core::Semaphore::init(dev, Semaphore_destroy, core::ObjectType::Semaphore, core::ObjectHandle(_sem));
@@ -63,10 +74,10 @@ bool Fence::init(Device &dev, core::FenceType type) {
 	exportInfo.pNext = nullptr;
 	exportInfo.handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
 
-
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	if (dev.hasExternalFences()) {
+	if (false && type == core::FenceType::Default && dev.hasExternalFences()) {
+		_exportable = true;
 		fenceInfo.pNext = &exportInfo;
 	} else {
 		fenceInfo.pNext = nullptr;
@@ -83,7 +94,7 @@ bool Fence::init(Device &dev, core::FenceType type) {
 }
 
 Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
-	if (_type != core::FenceType::Default) {
+	if (!_exportable) {
 		return nullptr;
 	}
 

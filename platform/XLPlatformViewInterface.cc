@@ -29,10 +29,19 @@ void ViewInterface::update(bool displayLink) {
 }
 
 void ViewInterface::setReadyForNextFrame() {
-	_presentationEngine->setReadyForNextFrame();
+	_glLoop->performOnThread([this] {
+		if (_presentationEngine) {
+			_presentationEngine->setReadyForNextFrame();
+		}
+	}, this, true);
 }
 
 void ViewInterface::setRenderOnDemand(bool value) {
+	_glLoop->performOnThread([this, value] {
+		if (_presentationEngine) {
+			_presentationEngine->setRenderOnDemand(value);
+		}
+	}, this, true);
 	_presentationEngine->setRenderOnDemand(value);
 }
 

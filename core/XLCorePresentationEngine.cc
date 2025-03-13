@@ -33,7 +33,7 @@
 #endif
 
 #if XL_COREPRESENT_DEBUG
-#define XL_COREPRESENT_LOG(...) log::debug("vk::ViewPresentationEngine", __VA_ARGS__)
+#define XL_COREPRESENT_LOG(...) log::debug("core::PresentationEngine", __VA_ARGS__)
 #else
 #define XL_COREPRESENT_LOG(...)
 #endif
@@ -58,16 +58,18 @@ Rc<FrameHandle> PresentationEngine::submitNextFrame(Rc<FrameRequest> &&req) {
 
 void PresentationEngine::scheduleNextImage(Function<void(PresentationFrame *, bool)> &&cb,
 		PresentationFrame::Flags frameFlags) {
+	if (!_activeFrames.empty()) {
+		return;
+	}
+
 	XL_COREPRESENT_LOG("scheduleNextImage");
 
-	uint64_t presentWindow = 0;//_nextPresentWindow;
+	uint64_t presentWindow = (_options.usePresentWindow ? _nextPresentWindow : 0);
 
 	if (_options.renderImageOffscreen) {
 		frameFlags = PresentationFrame::OffscreenTarget;
-	} else if (_options.acquireImageImmediately) {
-		frameFlags = PresentationFrame::None;
 	} else {
-		frameFlags = PresentationFrame::AsyncAcquire;
+		frameFlags = PresentationFrame::None;
 	}
 
 	scheduleSwapchainImage(Rc<PresentationFrame>::create(this, _constraints,
@@ -100,10 +102,6 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 				XL_COREPRESENT_LOG("scheduleSwapchainImage: output on frame");
 				if (data.image && success) {
 					frame->assignResult(data.image);
-					auto ret = present(frame);
-					if (ret || !data.image) {
-						return true;
-					}
 					return false;
 				} else {
 					frame->invalidate(false);
@@ -123,20 +121,8 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 		}
 	});
 
-	if (auto swapchainImage = frame->getSwapchainImage()) {
-		// we should wait until all current fences become signaled
-		// then acquire image and wait for fence
-		if (_options.waitOnSwapchainPassFence && _fenceOrder != 0) {
-			updateFences();
-			if (_fenceOrder >= swapchainImage->getOrder()) {
-				_fenceFrames.emplace_back(frame);
-				return true;
-			}
-		}
-		// try acquire image synchronously, and schedule if it fails
-		if (!acquireScheduledImageImmediate(frame)) {
-			scheduleImage(frame);
-		}
+	if (frame->getSwapchainImage()) {
+		scheduleImage(frame);
 	}
 
 	return true;
@@ -170,6 +156,37 @@ bool PresentationEngine::run() {
 
 void PresentationEngine::end() {
 	_running = false;
+
+	Vector<Rc<Ref>> releaseList;
+
+	for (auto &it : _activeFrames) {
+		releaseList.emplace_back(it);
+		it->invalidate();
+	}
+	_activeFrames.clear();
+
+	for (auto &it : _totalFrames) {
+		releaseList.emplace_back(it);
+		it->invalidate();
+	}
+	_totalFrames.clear();
+
+	releaseList.clear();
+
+	for (auto &it :_framesAwaitingImages) {
+		it->invalidate(true);
+	}
+	_framesAwaitingImages.clear();
+
+	for (auto &it :_scheduledForPresent) {
+		it->invalidate(true);
+	}
+	_scheduledForPresent.clear();
+
+	for (auto &it :_scheduledPresentHandles) {
+		it->cancel();
+	}
+	_scheduledPresentHandles.clear();
 }
 
 bool PresentationEngine::present(PresentationFrame *frame) {
@@ -178,17 +195,27 @@ bool PresentationEngine::present(PresentationFrame *frame) {
 		if (_options.followDisplayLink) {
 			// schedule image for next DispayLink signal
 			XL_COREPRESENT_LOG("schedulePresent: ", 0);
-			schedulePresent(frame, 0);
+			_scheduledForPresent.emplace_back(frame);
 			return true;
 		}
 		auto clock = sp::platform::clock(ClockType::Monotonic);
 		if (!frame->getPresentWindow() || frame->getPresentWindow() < clock + _engineUpdateInterval) {
 			runScheduledPresent(frame);
 		} else {
-			XL_COREPRESENT_LOG("schedulePresent: ", img->getPresentWindow() - clock);
+			XL_COREPRESENT_LOG("schedulePresent: ", frame->getPresentWindow() - clock);
 
 			// schedule image until next present window
-			schedulePresent(frame, frame->getPresentWindow() - clock);
+			auto handle = _loop->getLooper()->schedule(TimeInterval::microseconds(frame->getPresentWindow() - clock),
+					[this, frame = Rc<PresentationFrame>(frame)] (event::Handle *h, bool success) {
+				if (success) {
+					runScheduledPresent(frame);
+				} else {
+					frame->invalidate(false);
+				}
+				_scheduledPresentHandles.erase(h);
+			}, this);
+
+			_scheduledPresentHandles.emplace(move(handle));
 		}
 	} else {
 		if (!_options.renderImageOffscreen) {
@@ -207,8 +234,6 @@ bool PresentationEngine::present(PresentationFrame *frame) {
 }
 
 void PresentationEngine::update(bool displayLink) {
-	updateFences();
-
 	if (displayLink && _options.followDisplayLink) {
 		// ignore present windows
 		for (auto &it : _scheduledForPresent) {
@@ -216,46 +241,6 @@ void PresentationEngine::update(bool displayLink) {
 		}
 		_scheduledForPresent.clear();
 	}
-
-	do {
-		auto it = _fenceFrames.begin();
-		while (it != _fenceFrames.end()) {
-			if (_fenceOrder < (*it)->getFrameOrder()) {
-				_framesAwaitingImages.emplace_back(move(*it));
-				it = _fenceFrames.erase(it);
-			} else {
-				++ it;
-			}
-		}
-	} while (0);
-
-	acquireScheduledImage();
-
-	auto clock = sp::platform::clock(ClockType::Monotonic);
-
-	if (!_options.followDisplayLink) {
-		auto it = _scheduledForPresent.begin();
-		while (it != _scheduledForPresent.end()) {
-			if (!(*it)->getPresentWindow() || (*it)->getPresentWindow() < clock + _engineUpdateInterval / 2) {
-				runScheduledPresent(move(*it));
-				it = _scheduledForPresent.erase(it);
-			} else {
-				++ it;
-			}
-		}
-	}
-
-	if (_swapchain && !_swapchain->isDeprecated() && _options.renderOnDemand && _readyForNextFrame) {
-		auto acquiredImages = _swapchain->getAcquiredImagesCount();
-		if (_swapchain && acquiredImages == 0 && _activeFrames.empty()) {
-			XL_COREPRESENT_LOG("update - scheduleNextImage");
-			scheduleNextImage();
-		}
-	}
-}
-
-void PresentationEngine::invalidate() {
-
 }
 
 void PresentationEngine::setTargetFrameInterval(uint64_t value) {
@@ -263,7 +248,7 @@ void PresentationEngine::setTargetFrameInterval(uint64_t value) {
 }
 
 void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame *frame) {
-	XL_COREPRESENT_LOG("presentWithQueue: ", _framesInProgress);
+	XL_COREPRESENT_LOG("presentWithQueue: ", _activeFrames.size());
 	auto clock = sp::platform::clock(ClockType::Monotonic);
 	auto res = _swapchain->present(queue, frame->getSwapchainImage());
 	auto dt = updatePresentationInterval();
@@ -276,47 +261,44 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame 
 	}
 	XL_COREPRESENT_LOG("presentWithQueue - presented");
 
+	// read before frame marked as presented
 	bool isCorrectable = frame->hasFlag(PresentationFrame::CorrectableFrame);
+
 	frame->setPresented();
 
-	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
-		waitForFences(_frameOrder);
-		// perform on next stack frame
-		scheduleSwapchainRecreation();
-	} else {
-		if (!_options.renderOnDemand || _readyForNextFrame) {
-			if (_options.followDisplayLink) {
-				// no need for a present window if we in DisplayLink mode
-				XL_COREPRESENT_LOG("presentWithQueue - scheduleNextImage - followDisplayLink");
-				if (_activeFrames.empty()) {
-					scheduleNextImage();
-				}
-				XL_COREPRESENT_LOG("presentWithQueue - end");
-				return;
-			} else {
-				if (_targetFrameInterval) {
-					// adjust present window
-					// use clock before `present` call
-					_nextPresentWindow = clock + _targetFrameInterval
-							- _engineUpdateInterval; // allow one tick of `update`, that may be required for scheduling
+	// queue.waitIdle();
 
-					// if current or average framerate below target - reduce present window to release new frame early
-					if (isCorrectable && dt.dt > _targetFrameInterval + _engineUpdateInterval) {
-						_nextPresentWindow -= (dt.dt - _targetFrameInterval);
-					}
-				} else {
-					_nextPresentWindow = 0;
-				}
-
-				XL_COREPRESENT_LOG("presentWithQueue - scheduleNextImage");
-				if (_activeFrames.empty()) {
-					scheduleNextImage(nullptr, PresentationFrame::CorrectableFrame);
-				}
-			}
-		}
+	if (!_running || (_swapchain->getAcquiredImagesCount() != 0 && !_activeFrames.empty())) {
+		return;
 	}
 
-	XL_COREPRESENT_LOG("presentWithQueue - end");
+	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
+		// perform on next stack frame
+		scheduleSwapchainRecreation();
+	} else if ((!_options.renderOnDemand || _readyForNextFrame) && _activeFrames.empty()) {
+		if (_options.followDisplayLink) {
+			// no need for a present window if we in DisplayLink mode
+			XL_COREPRESENT_LOG("presentWithQueue - scheduleNextImage - followDisplayLink");
+			scheduleNextImage();
+		} else {
+			if (_targetFrameInterval) {
+				// adjust present window
+				// use clock before `present` call
+				_nextPresentWindow = clock + _targetFrameInterval
+						- _engineUpdateInterval; // allow one tick of `update`, that may be required for scheduling
+
+				// if current or average framerate below target - reduce present window to release new frame early
+				if (isCorrectable && dt.dt > _targetFrameInterval + _engineUpdateInterval) {
+					_nextPresentWindow -= (dt.dt - _targetFrameInterval);
+				}
+			} else {
+				_nextPresentWindow = 0;
+			}
+
+			XL_COREPRESENT_LOG("presentWithQueue - scheduleNextImage");
+			scheduleNextImage(nullptr, PresentationFrame::CorrectableFrame);
+		}
+	}
 }
 
 PresentationEngine::FrameTimeInfo PresentationEngine::updatePresentationInterval() {
@@ -348,30 +330,26 @@ uint64_t PresentationEngine::getLastDeviceFrameTime() const {
 }
 
 void PresentationEngine::setReadyForNextFrame() {
-	_loop->performOnThread([this] {
-		// if we not in on-demand mode - ignore
-		if (!_options.renderOnDemand) {
-			_readyForNextFrame = false;
-			return;
-		}
+	// if we not in on-demand mode - ignore
+	if (!_options.renderOnDemand) {
+		_readyForNextFrame = false;
+		return;
+	}
 
-		if (!_readyForNextFrame) {
-			// spawn frame if there is none
-			if (_swapchain && _swapchain->getAcquiredImagesCount() == 0) {
-				XL_COREPRESENT_LOG("setReadyForNextFrame - scheduleNextImage");
-				scheduleNextImage();
-			} else {
-				// or mark for update
-				_readyForNextFrame = true;
-			}
+	if (!_readyForNextFrame) {
+		// spawn frame if there is none
+		if (_swapchain && _swapchain->getAcquiredImagesCount() == 0 && _activeFrames.empty()) {
+			XL_COREPRESENT_LOG("setReadyForNextFrame - scheduleNextImage");
+			scheduleNextImage();
+		} else {
+			// or mark for update
+			_readyForNextFrame = true;
 		}
-	}, this, true);
+	}
 }
 
 void PresentationEngine::setRenderOnDemand(bool value) {
-	_loop->performOnThread([this, value] {
-		_options.renderOnDemand = value;
-	}, this, true);
+	_options.renderOnDemand = value;
 }
 
 bool PresentationEngine::isRenderOnDemand() const {
@@ -383,18 +361,43 @@ bool PresentationEngine::isRunning() const {
 }
 
 bool PresentationEngine::handleFrameStarted(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameStarted");
+	_totalFrames.emplace(frame);
 	return _activeFrames.emplace(frame).second;
 }
 
 void PresentationEngine::handleFrameInvalidated(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameInvalidated");
 	_activeFrames.erase(frame);
+	_totalFrames.erase(frame);
+	acquireScheduledImage();
+}
+
+void PresentationEngine::handleFrameReady(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameReady");
+	if (_options.earlyPresent) {
+		present(frame);
+	} else if (_options.preStartFrame) {
+		_activeFrames.erase(frame);
+		if ((!_options.renderOnDemand || _readyForNextFrame) && _activeFrames.empty()) {
+			scheduleNextImage();
+		}
+	}
 }
 
 void PresentationEngine::handleFramePresented(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFramePresented");
 	_activeFrames.erase(frame);
+	if (!_options.earlyPresent) {
+		_totalFrames.erase(frame);
+		if (!_framesAwaitingImages.empty()) {
+			acquireScheduledImage();
+		}
+	}
 }
 
-void PresentationEngine::handleFrameCancel(PresentationFrame *frame) {
+void PresentationEngine::handleFrameComplete(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameCancel");
 	if (auto h = frame->getHandle()) {
 		_lastFrameTime = h->getTimeEnd() - h->getTimeStart();
 		_avgFrameTime.addValue(_lastFrameTime);
@@ -404,6 +407,18 @@ void PresentationEngine::handleFrameCancel(PresentationFrame *frame) {
 			_lastDeviceFrameTime = t;
 			_avgFenceInterval.addValue(t);
 			_avgFenceIntervalValue = _avgFenceInterval.getAverage();
+		}
+	}
+	if (!_options.earlyPresent && frame->hasFlag(PresentationFrame::ImageRendered)) {
+		_loop->performOnThread([this, frame = Rc<PresentationFrame>(frame)] {
+			present(frame);
+		}, this, false);
+	} else {
+		_totalFrames.erase(frame);
+		if ((!_options.renderOnDemand || _readyForNextFrame) && _activeFrames.empty()) {
+			scheduleNextImage();
+		} else if (!_framesAwaitingImages.empty()) {
+			acquireScheduledImage();
 		}
 	}
 }
@@ -434,62 +449,32 @@ void PresentationEngine::resetFrames() {
 		}
 	}, this, false);*/
 
-	_fenceFrames.clear();
+	for (auto &it :_scheduledPresentHandles) {
+		it->cancel();
+	}
+	_scheduledPresentHandles.clear();
+
 	_framesAwaitingImages.clear();
 	_scheduledForPresent.clear();
 	_requestedSwapchainImage.clear();
 	_acquiredSwapchainImages.clear();
 }
 
-bool PresentationEngine::acquireScheduledImageImmediate(PresentationFrame *frame) {
-	XL_COREPRESENT_LOG("acquireScheduledImageImmediate");
-	if (frame->getSwapchain() != _swapchain) {
-		frame->invalidate();
-		return true;
-	}
-
+void PresentationEngine::scheduleImage(PresentationFrame *frame) {
+	XL_COREPRESENT_LOG("scheduleImage");
 	if (!_acquiredSwapchainImages.empty()) {
+		// pop one of the previously acquired images
 		auto acquiredImage = _acquiredSwapchainImages.front();
 		_acquiredSwapchainImages.pop_front();
-
 		frame->assignSwapchainImage(acquiredImage);
-		return true;
-	}
-
-	if (!_requestedSwapchainImage.empty()) {
-		// Есть запрошенное изображение из свопчейна, ожидающее асинхронного распределения
-		return false;
-	}
-
-	if (!_framesAwaitingImages.empty() && _requestedSwapchainImage.empty()) {
-		// очередь ожидания изображений не пуста, они должны получить изображение раньше текущего выхова
-		// пытаемся запросить новое изображение для ожидающих
-		acquireScheduledImage();
-		return false;
-	}
-
-	auto nimages = _swapchain->getConfig().imageCount - _swapchain->getSurfaceInfo().minImageCount;
-	if (_swapchain->getAcquiredImagesCount() > nimages) {
-		// Уже запрошено больше изображений, чем позволяет свопчейн
-		return false;
-	}
-
-	auto fence = _loop->acquireFence(FenceType::Swapchain);
-	if (auto acquiredImage = _swapchain->acquire(false, fence)) {
-		fence->check(*_loop, false);
-		fence = nullptr;
-		frame->assignSwapchainImage(acquiredImage);
-		return true;
 	} else {
-		// Свопчейн не смог вернуть изображение
-		fence->schedule(*_loop);
+		_framesAwaitingImages.emplace_back(frame);
+		acquireScheduledImage();
 	}
-
-	return false;
 }
 
 bool PresentationEngine::acquireScheduledImage() {
-	if (!_requestedSwapchainImage.empty() || _framesAwaitingImages.empty()) {
+	if (!_requestedSwapchainImage.empty() || _framesAwaitingImages.empty() || _totalFrames.size() != _activeFrames.size()) {
 		return false;
 	}
 
@@ -498,6 +483,7 @@ bool PresentationEngine::acquireScheduledImage() {
 	auto fence = loop->acquireFence(FenceType::Swapchain);
 	if (auto acquiredImage = _swapchain->acquire(true, fence)) {
 		_requestedSwapchainImage.emplace(acquiredImage);
+		XL_COREPRESENT_LOG("acquireScheduledImage - spawn request: ", _requestedSwapchainImage.size());
 		fence->addRelease([this, f = fence.get(), acquiredImage] (bool success) mutable {
 			if (success) {
 				handleSwapchainImageReady(move(acquiredImage));
@@ -507,7 +493,7 @@ bool PresentationEngine::acquireScheduledImage() {
 			XL_COREPRESENT_LOG("[", f->getFrame(),  "] acquireScheduledImage [complete]",
 					" [", sp::platform::clock(ClockType::Monotonic) - f->getArmedTime(), "]");
 		}, this, "PresentationEngine::acquireScheduledImage");
-		scheduleFence(move(fence));
+		fence->schedule(*loop);
 		return true;
 	} else {
 		fence->schedule(*loop);
@@ -516,7 +502,7 @@ bool PresentationEngine::acquireScheduledImage() {
 }
 
 void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image) {
-	XL_COREPRESENT_LOG("onSwapchainImageReady");
+	XL_COREPRESENT_LOG("onSwapchainImageReady: ", _framesAwaitingImages.size());
 	auto ptr = image.get();
 
 	if (!_framesAwaitingImages.empty()) {
@@ -536,74 +522,6 @@ void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquir
 		// run next image query if someone waits for it
 		acquireScheduledImage();
 	}
-}
-
-void PresentationEngine::scheduleImage(PresentationFrame *frame) {
-	XL_COREPRESENT_LOG("scheduleImage");
-	if (!_acquiredSwapchainImages.empty()) {
-		// pop one of the previously acquired images
-		auto acquiredImage = _acquiredSwapchainImages.front();
-		_acquiredSwapchainImages.pop_front();
-		frame->assignSwapchainImage(acquiredImage);
-	} else {
-		_framesAwaitingImages.emplace_back(frame);
-		acquireScheduledImage();
-	}
-}
-
-void PresentationEngine::scheduleFence(Rc<Fence> &&fence) {
-	XL_COREPRESENT_LOG("scheduleFence");
-	if (isRunning()) {
-		auto loop = (Loop *)_loop.get();
-		if (!fence->check(*loop, true)) {
-			auto frame = fence->getFrame();
-			if (frame != 0 && (_fenceOrder == 0 || _fenceOrder > frame)) {
-				_fenceOrder = frame;
-			}
-			_fences.emplace_back(move(fence));
-		}
-	} else {
-		auto loop = (Loop *)_loop.get();
-		fence->check(*loop, false);
-	}
-}
-
-void PresentationEngine::waitForFences(uint64_t min) {
-	auto loop = (Loop *)_loop.get();
-	auto it = _fences.begin();
-	while (it != _fences.end()) {
-		if ((*it)->getFrame() <= min) {
-			// log::debug("View", "waitForFences: ", (*it)->getTag());
-			if ((*it)->check(*loop, false)) {
-				it = _fences.erase(it);
-			} else {
-				++ it;
-			}
-		} else {
-			++ it;
-		}
-	}
-}
-
-void PresentationEngine::updateFences() {
-	uint64_t fenceOrder = 0;
-	do {
-		auto loop = (Loop *)_loop.get();
-		auto it = _fences.begin();
-		while (it != _fences.end()) {
-			if ((*it)->check(*loop, true)) {
-				it = _fences.erase(it);
-			} else {
-				auto frame = (*it)->getFrame();
-				if (frame != 0 && (fenceOrder == 0 || fenceOrder > frame)) {
-					fenceOrder = frame;
-				}
-				++ it;
-			}
-		}
-	} while (0);
-
-	_fenceOrder = fenceOrder;
 }
 
 void PresentationEngine::runScheduledPresent(PresentationFrame *frame) {
@@ -630,32 +548,6 @@ void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue, Presenta
 		presentWithQueue(*queue, frame);
 	}
 	_device->releaseQueue(move(queue));
-}
-
-void PresentationEngine::schedulePresent(PresentationFrame *frame, uint64_t diff) {
-	_scheduledForPresent.emplace_back(frame);
-}
-
-void PresentationEngine::clearImages() {
-	for (auto &it : _fences) {
-		it->check(*_loop, false);
-	}
-	_fences.clear();
-
-	for (auto &it :_fenceFrames) {
-		it->invalidate(true);
-	}
-	_fenceFrames.clear();
-
-	for (auto &it :_framesAwaitingImages) {
-		it->invalidate(true);
-	}
-	_framesAwaitingImages.clear();
-
-	for (auto &it :_scheduledForPresent) {
-		it->invalidate(true);
-	}
-	_scheduledForPresent.clear();
 }
 
 }

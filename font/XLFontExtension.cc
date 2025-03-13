@@ -256,6 +256,10 @@ Rc<core::DynamicImage> FontExtension::makeInitialImage(StringView name) const {
 
 void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font::FontUpdateRequest> &&data,
 		Rc<core::DependencyEvent> &&dep) {
+	if (!_mainLoop) {
+		return; // extension is disabled
+	}
+
 	if (!_active) {
 		_pendingImageQueries.emplace_back(ImageQuery{image, sp::move(data), sp::move(dep)});
 		return;

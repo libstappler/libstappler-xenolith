@@ -61,21 +61,20 @@ public:
 	enum Flags {
 		None,
 		OffscreenTarget = 1 << 0,
-		AsyncAcquire = 1 << 1,
-		SwapchainImageAcquired = 1 << 2,
+		SwapchainImageAcquired = 1 << 1,
 
 		// stage flags
-		ImageAcquired = 1 << 3,
-		InputAcquired = 1 << 4,
-		FrameSubmitted = 1 << 5,
-		QueueSubmitted = 1 << 6,
-		ImageRendered = 1 << 7,
-		ImagePresented = 1 << 8,
-		Invalidated = 1 << 9,
+		ImageAcquired = 1 << 2,
+		InputAcquired = 1 << 3,
+		FrameSubmitted = 1 << 4,
+		QueueSubmitted = 1 << 5,
+		ImageRendered = 1 << 6,
+		ImagePresented = 1 << 7,
+		Invalidated = 1 << 8,
 
 		// Frame scheduled in context, that allows presentation interval correction
 		// On-demand frame can not be CorrectableFrame
-		CorrectableFrame = 1 << 10,
+		CorrectableFrame = 1 << 9,
 	};
 
 	virtual ~PresentationFrame() = default;

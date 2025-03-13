@@ -215,12 +215,12 @@ void Device::end() {
 		it.pools.clear();
 	}
 
-	_finished = true;
-
 	for (auto &it : _samplers) {
 		it->invalidate();
 	}
 	_samplers.clear();
+
+	core::Device::end();
 }
 
 #if VK_HOOK_DEBUG
@@ -343,7 +343,7 @@ auto Device::makeImage(const ImageInfoData &imageInfo) -> Rc<ImageStorage> {
 }
 
 Rc<core::Semaphore> Device::makeSemaphore() {
-	auto ret = Rc<Semaphore>::create(*this);
+	auto ret = Rc<Semaphore>::create(*this, core::SemaphoreType::Default);
 	return ret;
 }
 

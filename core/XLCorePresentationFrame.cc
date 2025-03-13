@@ -114,15 +114,20 @@ bool PresentationFrame::assignSwapchainImage(Swapchain::SwapchainAcquiredImage *
 
 bool PresentationFrame::assignResult(core::ImageStorage *target) {
 	if (_target && _target != target) {
-		log::error("vk::ViewFrame", "Target alrady assigned");
+		log::error("vk::ViewFrame", "Target already assigned");
 		return false;
 	}
 	_target = target;
 	_flags |= ImageRendered;
+	_engine->handleFrameReady(this);
 	return true;
 }
 
 void PresentationFrame::invalidate(bool invalidateSwapchain) {
+	if (sp::hasFlag(_flags, Invalidated)) {
+		return;
+	}
+
 	if (invalidateSwapchain) {
 		if (auto sw = getSwapchainImage()) {
 			sw->invalidateSwapchain();
@@ -140,6 +145,10 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 	_flags |= Invalidated;
 
 	if (_active && _engine) {
+		if (_frameHandle) {
+			_frameHandle->invalidate();
+		}
+
 		_engine->handleFrameInvalidated(this);
 		if (_completeCallback) {
 			_completeCallback(this, false);
@@ -148,13 +157,12 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 	}
 
 	_frameRequest = nullptr;
-	_frameHandle = nullptr;
 	_swapchain = nullptr;
 	_target = nullptr;
 }
 
 void PresentationFrame::cancelFrameHandle() {
-	_engine->handleFrameCancel(this);
+	_engine->handleFrameComplete(this);
 	_frameHandle = nullptr;
 }
 

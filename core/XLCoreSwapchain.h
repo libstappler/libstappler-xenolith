@@ -66,7 +66,7 @@ public:
 		: imageIndex(idx), data(data), sem(move(sem)), swapchain(move(s)) { }
 	};
 
-	virtual ~Swapchain() = default;
+	virtual ~Swapchain();
 
 	PresentMode getPresentMode() const { return _presentMode; }
 	PresentMode getRebuildMode() const { return _rebuildMode; }

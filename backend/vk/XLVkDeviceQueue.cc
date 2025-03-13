@@ -66,7 +66,7 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 	if (sync) {
 		for (auto &it : sync->waitAttachments) {
 			if (it.semaphore) {
-				auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
+				auto sem = it.semaphore.get_cast<Semaphore>()->getSemaphore();
 
 				if (!it.semaphore->isWaited()) {
 					waitSem.emplace_back(sem);
@@ -80,7 +80,7 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 
 		for (auto &it : sync->signalAttachments) {
 			if (it.semaphore) {
-				auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
+				auto sem = it.semaphore.get_cast<Semaphore>()->getSemaphore();
 
 				signalSem.emplace_back(sem);
 				if (commandPool) {
@@ -120,8 +120,8 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 		}
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
-		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
+		result = table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
+		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", result, " ", (void *)_queue,
 				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		result = table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());

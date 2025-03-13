@@ -56,10 +56,6 @@ protected:
 
 	virtual core::SurfaceInfo getSurfaceOptions() const;
 
-	void invalidate();
-
-	virtual void finalize();
-
 	bool _readyForNextFrame = false;
 
 	Rc<Instance> _instance;

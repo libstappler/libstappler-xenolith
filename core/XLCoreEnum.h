@@ -875,6 +875,11 @@ enum class FenceType {
 	Swapchain,
 };
 
+enum class SemaphoreType {
+	Default,
+	Timeline,
+};
+
 }
 
 #endif /* XENOLITH_CORE_XLCOREENUM_H_ */

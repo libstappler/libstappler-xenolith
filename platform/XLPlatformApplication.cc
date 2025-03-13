@@ -346,9 +346,9 @@ void PlatformApplication::threadDispose() {
 		_info.finalizeCallback(*this);
 	}
 
-	_glLoop->stop();
-
 	finalizeExtensions();
+
+	_glLoop->stop();
 
 #if SP_REF_DEBUG
 	if (_glLoop->getReferenceCount() > 1) {
@@ -385,8 +385,19 @@ bool PlatformApplication::worker() {
 
 void PlatformApplication::end()  {
 	stop();
+
 	if (!isOnThisThread()) {
-		wakeup();
+		performOnAppThread([this] {
+			_appLooper->wakeup(event::QueueWakeupInfo{
+				.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
+				.timeout = TimeInterval::seconds(1)
+			});
+		}, this);
+	} else {
+		_appLooper->wakeup(event::QueueWakeupInfo{
+			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
+			.timeout = TimeInterval::seconds(1)
+		});
 	}
 }
 
@@ -507,7 +518,14 @@ void PlatformApplication::platformWaitExit() {
 	Thread::waitStopped();
 }
 
-void PlatformApplication::platformSignalExit() { }
+void PlatformApplication::platformSignalExit() {
+	_mainLooper->performOnThread([this] {
+		_mainLooper->wakeup(event::QueueWakeupInfo{
+			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
+			.timeout = TimeInterval::seconds(1)
+		});
+	}, this);
+}
 
 }
 

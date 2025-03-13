@@ -61,12 +61,6 @@ bool View::init(Application &app, const Device &dev, ViewInfo &&info) {
 }
 
 void View::end() {
-
-	// wait idle device before complete swapchain destruction
-	_glLoop->waitIdle();
-
-	finalize();
-
 	xenolith::View::end();
 }
 
@@ -106,15 +100,6 @@ void View::handleFramePresented(core::PresentationFrame *frame) {
 core::SurfaceInfo View::getSurfaceOptions() const {
 	// return _instance->getSurfaceOptions(_surface->getSurface(), _device->getPhysicalDevice());
 	return core::SurfaceInfo();
-}
-
-void View::invalidate() {
-
-}
-
-
-void View::finalize() {
-
 }
 
 }

@@ -35,6 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
 class Device;
+class PresentationEngine;
 
 struct SP_PUBLIC LoopInfo {
 	uint16_t deviceIdx = core::Instance::DefaultDevice;

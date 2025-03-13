@@ -131,7 +131,6 @@ private:
 	Rc<Allocator> _allocator;
 	Rc<TextureSetLayout> _textureSetLayout;
 
-	bool _finished = false;
 	bool _updateAfterBindEnabled = true;
 
 	Vector<VkSampler> _immutableSamplers;

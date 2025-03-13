@@ -380,6 +380,8 @@ class SP_PUBLIC Semaphore : public Object {
 public:
 	virtual ~Semaphore() { }
 
+	SemaphoreType getType() const { return _type; }
+
 	void setSignaled(bool value);
 	bool isSignaled() const { return _signaled; }
 
@@ -394,6 +396,7 @@ public:
 	virtual bool reset();
 
 protected:
+	SemaphoreType _type = SemaphoreType::Default;
 	uint64_t _timeline = 0;
 	bool _signaled = false;
 	bool _waited = false;

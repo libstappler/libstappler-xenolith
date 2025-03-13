@@ -31,6 +31,7 @@
 #include "XLActionManager.h"
 #include "XLCoreLoop.h"
 #include "XLCoreFrameRequest.h"
+#include "XLCorePresentationEngine.h"
 #include "XLView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -44,6 +45,7 @@ Director::~Director() { }
 bool Director::init(Application *main, const core::FrameConstraints &constraints, View *view) {
 	_mainLoop = main;
 	_view = view;
+	_engine = _view->getPresentationEngine();
 	_pool = Rc<PoolRef>::alloc();
 	_pool->perform([&, this] {
 		_scheduler = Rc<Scheduler>::create();
@@ -112,7 +114,9 @@ bool Director::acquireFrame(FrameRequest *req) {
 			_scene->renderRequest(req);
 
 			if (hasActiveInteractions()) {
-				_view->setReadyForNextFrame();
+				if (_view) {
+					_view->setReadyForNextFrame();
+				}
 			}
 		});
 	}, this, true);
@@ -190,6 +194,8 @@ void Director::end() {
 #else
 	if (_scene) {
 		_scene->onFinished(this);
+		_scene->removeAllChildren(true);
+		_scene->cleanup();
 		_scene = nullptr;
 	}
 
@@ -198,6 +204,10 @@ void Director::end() {
 	}
 
 	_nextScene = nullptr;
+
+	_view = nullptr;
+	_engine = nullptr;
+
 	_autorelease.clear();
 #endif
 }
@@ -247,19 +257,20 @@ void Director::pushDrawStat(const DrawStat &stat) {
 }
 
 float Director::getFps() const {
-	return 1.0f / (_view->getPresentationEngine()->getLastFrameInterval() / 1000000.0f);
+	return _engine ? 1.0f / (_engine->getLastFrameInterval() / 1000000.0f) : 1.0f;
 }
 
 float Director::getAvgFps() const {
-	return 1.0f / (_view->getPresentationEngine()->getAvgFrameInterval() / 1000000.0f);
+	return _engine ? 1.0f / (_engine->getAvgFrameInterval() / 1000000.0f) : 1.0f;
 }
 
 float Director::getSpf() const {
+	return _engine ? _engine->getLastFrameTime() / 1000.0f : 1.0f;
 	return _view->getPresentationEngine()->getLastFrameTime() / 1000.0f;
 }
 
 float Director::getDeviceFrameTime() const {
-	return _view->getPresentationEngine()->getLastDeviceFrameTime() / 1000.0f;
+	return _engine ? _engine->getLastDeviceFrameTime() / 1000.0f : 1.0f;
 }
 
 void Director::autorelease(Ref *ref) {

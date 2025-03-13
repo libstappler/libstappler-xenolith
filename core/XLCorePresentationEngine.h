@@ -28,6 +28,7 @@
 #include "XLCoreSwapchain.h"
 #include "XLCorePresentationFrame.h"
 #include "SPMovingAverage.h"
+#include "SPEventHandle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -58,17 +59,21 @@ public:
 
 		// Использовать внеэкранный рендеринг для подготовки изображений. В этом режиме презентация нового изображения выполняется
 		// строго синхронно (см. presentImmediate)
+		// TODO -пока не реализовано
 		bool renderImageOffscreen = false;
 
-		// by default, we use vkAcquireNextImageKHR in lockfree manner, but in some cases blocking variant
-		// is more preferable. If this option is set, vkAcquireNextImageKHR called with UIN64_MAX timeout
-		// be careful not to block whole view's thread operation on this
-		bool acquireImageImmediately = true;
+		// Начинать новый кадр как только предыдущий был отправлен на исполнение (то есть, до его завершения и презентации)
+		bool preStartFrame = true;
 
-		// on some systems, we can not acquire next image until queue operations on previous image is finished
-		// on this system, we wait on last swapchain pass fence before acquire swapchain image
-		// swapchain-independent passes is not affected by this option
-		bool waitOnSwapchainPassFence = false;
+		// Использовать временное окно для презентации кадра
+		// Вместо презентации по готовности, система будет стараться удерживать целевую частоту кадров за счёт откладывания
+		// презентации до следующего окна времени
+		// Не работает в режиме followDisplayLink
+		bool usePresentWindow = true;
+
+		// Экспериментально: отправлять кадр на презентацию сразу после его отправки в обработку. Может снизить видимую задержку ввода.
+		// На текущий момент, работает нестабильно для режима FIFO
+		bool earlyPresent = false;
 	};
 
 	virtual ~PresentationEngine() = default;
@@ -84,7 +89,6 @@ public:
 	virtual bool presentImmediate(PresentationFrame *frame) { return false; }
 
 	virtual void update(bool displayLink);
-	virtual void invalidate();
 
 	void setTargetFrameInterval(uint64_t);
 
@@ -96,8 +100,6 @@ public:
 			PresentationFrame::Flags frameFlags = PresentationFrame::None);
 
 	bool scheduleSwapchainImage(Rc<PresentationFrame> &&);
-
-	void presentWithQueue(DeviceQueue &queue, PresentationFrame *frame);
 
 	Swapchain *getSwapchain() const { return _swapchain; }
 
@@ -119,8 +121,9 @@ public:
 
 	virtual bool handleFrameStarted(PresentationFrame *);
 	virtual void handleFrameInvalidated(PresentationFrame *);
+	virtual void handleFrameReady(PresentationFrame *);
 	virtual void handleFramePresented(PresentationFrame *);
-	virtual void handleFrameCancel(PresentationFrame *);
+	virtual void handleFrameComplete(PresentationFrame *);
 
 protected:
 	virtual void acquireFrameData(PresentationFrame *, Function<void(core::PresentationFrame *)> &&) = 0;
@@ -129,26 +132,16 @@ protected:
 
 	void resetFrames();
 
-	bool acquireScheduledImageImmediate(PresentationFrame *frame);
-	bool acquireScheduledImage();
-	void handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image);
-
 	void scheduleImage(PresentationFrame *frame);
 
-	void scheduleFence(Rc<Fence> &&fence);
+	bool acquireScheduledImage();
 
-	// Синхронно ожидать до завершения всех операций ранее переданного порядка
-	void waitForFences(uint64_t min);
-
-	// Обойхи ожидающие операции, убрать завершённые
-	void updateFences();
+	void handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image);
 
 	void runScheduledPresent(PresentationFrame *frame);
 	void presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame);
 
-	void schedulePresent(PresentationFrame *frame, uint64_t);
-
-	void clearImages();
+	void presentWithQueue(DeviceQueue &queue, PresentationFrame *frame);
 
 	Options _options;
 	FrameConstraints _constraints;
@@ -183,27 +176,18 @@ protected:
 	std::atomic<uint64_t> _avgFenceIntervalValue = 0;
 
 	uint64_t _frameOrder = 0; // current scheduled frame order
-	uint64_t _fenceOrder = 0; // last released frame order
 
 	bool _running = false;
 	bool _readyForNextFrame = false;
-
-	// Presentation or acquisition fences
-	Vector<Rc<Fence>> _fences;
-
-	// New frames, that waits on view's fences
-	Vector<Rc<PresentationFrame>> _fenceFrames;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;
 
 	// Frames, waiting to be presented
-	// Frames can be scheduled for present in DisplayLink mode
-	// or if frame become ready for presentation before it's present window and targetFrameInterval is set.
-	// Frame presentation scheduling normally should do most of vsync job instead of internal driver fence,
-	// that can improve general system (not application, but whole system) performance.
-	// Triggering vsync fence for a long time can cause stuttering on other GPU-accelerated windows.
 	Vector<Rc<PresentationFrame>> _scheduledForPresent;
+
+	// Handles, waiting for their present windows
+	Set<Rc<event::Handle>> _scheduledPresentHandles;
 
 	// Async request for a swapchain images
 	Set<Swapchain::SwapchainAcquiredImage *> _requestedSwapchainImage;
@@ -212,6 +196,7 @@ protected:
 	std::deque<Rc<Swapchain::SwapchainAcquiredImage>> _acquiredSwapchainImages;
 
 	Set<PresentationFrame *> _activeFrames;
+	Set<PresentationFrame *> _totalFrames;
 };
 
 }

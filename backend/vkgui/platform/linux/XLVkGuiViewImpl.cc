@@ -169,6 +169,15 @@ void ViewImpl::run() {
 	_glLoop->getLooper()->performHandle(_pollHandle);
 }
 
+void ViewImpl::end() {
+	_pollHandle->cancel();
+	_pollHandle = nullptr;
+
+	_view = nullptr;
+
+	View::end();
+}
+
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
 
 }
@@ -194,14 +203,6 @@ void ViewImpl::cancelTextInput() {
 		}, this);
 	}, this);
 }
-
-/*bool ViewImpl::recreateSwapchain(core::PresentMode mode) {
-	auto ret = vk::View::recreateSwapchain(mode);
-	if (ret) {
-		_view->handleSwapchainRecreation();
-	}
-	return ret;
-}*/
 
 core::SurfaceInfo ViewImpl::getSurfaceOptions() const {
 	core::SurfaceInfo ret = vk::View::getSurfaceOptions();
@@ -233,12 +234,9 @@ void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
 }
 
 void ViewImpl::handleFramePresented(core::PresentationFrame *frame) {
-	_view->handleFramePresented();
-}
-
-void ViewImpl::finalize() {
-	_view = nullptr;
-	View::finalize();
+	if (_view) {
+		_view->handleFramePresented();
+	}
 }
 
 Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&info) {

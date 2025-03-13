@@ -47,7 +47,7 @@ class SP_PUBLIC Semaphore : public core::Semaphore {
 public:
 	virtual ~Semaphore();
 
-	bool init(Device &);
+	bool init(Device &, core::SemaphoreType);
 
 	VkSemaphore getSemaphore() const { return _sem; }
 
@@ -74,6 +74,7 @@ protected:
 	virtual void doResetFence() override;
 
 	VkFence _fence = VK_NULL_HANDLE;
+	bool _exportable = false;
 };
 
 }

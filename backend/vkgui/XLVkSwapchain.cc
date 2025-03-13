@@ -187,13 +187,18 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence) -> Rc
 
 	auto dev = static_cast<Device *>(_object.device);
 
+	if (_acquiredImages > 0) {
+		std::cout << "test\n";
+	}
+
 	uint32_t imageIndex = maxOf<uint32_t>();
 	VkResult ret = VK_ERROR_UNKNOWN;
 	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		ret = table.vkAcquireNextImageKHR(device, _swapchain, timeout,
-				sem ? sem->getSemaphore() : VK_NULL_HANDLE, fence->getFence(), &imageIndex);
+		ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
+				sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
+				fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
 		XL_VKAPI_LOG("vkAcquireNextImageKHR: ", imageIndex, " ", ret,
 				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
@@ -262,7 +267,7 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 	dev->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		result = table.vkQueuePresentKHR(queue.getQueue(), &presentInfo);
+		result = table.vkQueuePresentKHR(static_cast<DeviceQueue &>(queue).getQueue(), &presentInfo);
 		XL_VKAPI_LOG("[", image->getFrameIndex(), "] vkQueuePresentKHR: ", imageIndex, " ", result,
 				" [", sp::platform::clock(ClockType::Monotonic) - t, "] [timeout: ", t - _presentTime,
 				"] [acquisition: ", t - image->getAcquisitionTime(), "]");
@@ -314,7 +319,7 @@ Rc<core::Semaphore> SwapchainHandle::acquireSemaphore() {
 	}
 	lock.unlock();
 
-	return Rc<Semaphore>::create(*static_cast<Device *>(_object.device));
+	return Rc<Semaphore>::create(*static_cast<Device *>(_object.device), core::SemaphoreType::Default);
 }
 
 bool SwapchainHandle::releaseSemaphore(Rc<core::Semaphore> &&sem) {

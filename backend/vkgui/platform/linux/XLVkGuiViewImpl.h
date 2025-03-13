@@ -45,6 +45,7 @@ public:
 	virtual bool init(Application &loop, const core::Device &dev, ViewInfo &&);
 
 	virtual void run() override;
+	virtual void end() override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
 	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
@@ -70,8 +71,6 @@ protected:
 	//virtual bool recreateSwapchain(core::PresentMode) override;
 
 	virtual core::SurfaceInfo getSurfaceOptions() const override;
-
-	virtual void finalize() override;
 
 	Rc<event::Handle> _pollHandle;
 	Rc<xenolith::platform::LinuxViewInterface> _view;

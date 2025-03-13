@@ -42,10 +42,6 @@ bool View::init(Application &loop, ViewInfo &&info) {
 }
 
 void View::run() {
-	_glLoop->scheduleUpdate([this] () {
-		update(false);
-	}, this);
-
 	if (!_presentationEngine->isRunning()) {
 		_presentationEngine->run();
 	}
@@ -56,17 +52,21 @@ void View::run() {
 }
 
 void View::end() {
-	_glLoop->unscheduleUpdate(this);
+	auto engine = move(_presentationEngine);
+	_presentationEngine = nullptr;
 
-	if (_presentationEngine) {
-		_presentationEngine->invalidate();
+	if (engine) {
+		engine->end();
 	}
 
-	_mainLoop->performOnAppThread([this, cb = sp::move(_info.onClosed)] () {
+	_mainLoop->performOnAppThread([this, cb = sp::move(_info.onClosed), engine = move(engine)] () mutable {
 		if (_director) {
 			_director->end();
 		}
 		cb(*this);
+		_glLoop->performOnThread([this, engine = move(engine)] () mutable {
+			engine = nullptr;
+		}, this);
 	}, this);
 }
 

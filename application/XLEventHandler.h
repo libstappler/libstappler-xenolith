@@ -25,6 +25,7 @@
 #define XENOLITH_APPLICATION_XLEVENTHANDLER_H_
 
 #include "XLEventHeader.h"
+#include "SPEventLooper.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

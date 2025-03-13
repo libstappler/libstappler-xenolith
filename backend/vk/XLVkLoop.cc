@@ -85,6 +85,8 @@ struct Loop::Internal final : memory::AllocPool {
 		swapchainFences.clear();
 		transferQueue = nullptr;
 		renderQueueCompiler = nullptr;
+		materialQueue = nullptr;
+		meshQueue = nullptr;
 		device->end();
 
 		if (info->onDeviceFinalized) {
@@ -109,10 +111,6 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void waitIdle() {
-		/*auto r = running->exchange(false);
-
-		queue->lock(); // lock to prevent new tasks
-
 		// wait for all pending tasks on fences
 		for (auto &it : scheduledFences) {
 			it->check(*loop, false);
@@ -123,25 +121,22 @@ struct Loop::Internal final : memory::AllocPool {
 			// wait for device
 			device->waitIdle();
 		}
-
-		queue->unlock();
-
-		// wait for all CPU tasks
-		queue->waitForAll();
-
-		// after this, there should be no CPU or GPU tasks pending or executing
-
-		if (r) {
-			running->exchange(true);
-		}*/
 	}
 
 	void compileResource(Rc<TransferResource> &&req) {
+		if (!_running.load()) {
+			return;
+		}
+
 		auto h = loop->makeFrame(transferQueue->makeRequest(sp::move(req)), 0);
 		h->update(true);
 	}
 
 	void compileQueue(const Rc<core::Queue> &req, Function<void(bool)> &&cb) {
+		if (!_running.load()) {
+			return;
+		}
+
 		if (!device) {
 			log::error("vk::Loop", "No device to compileQueue");
 			return;
@@ -161,6 +156,10 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void compileMaterials(Rc<core::MaterialInputData> &&req, Vector<Rc<DependencyEvent>> &&deps) {
+		if (!_running.load()) {
+			return;
+		}
+
 		if (materialQueue->inProgress(req->attachment)) {
 			materialQueue->appendRequest(req->attachment, sp::move(req), sp::move(deps));
 		} else {
@@ -271,6 +270,7 @@ struct Loop::Internal final : memory::AllocPool {
 	Rc<MeshCompiler> meshQueue;
 
 	std::atomic<uint32_t> pendingTasks = 0;
+	std::atomic<bool> _running = true;
 
 	Map<Rc<Ref>, Function<void()>> scheduledUpdates;
 };
@@ -330,20 +330,40 @@ bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info)
 }
 
 void Loop::stop() {
+	std::mutex mutex;
+	std::condition_variable condvar;
+	std::unique_lock lock(mutex);
+
 	_looper->performOnThread([&] {
+		std::unique_lock ulock(mutex);
+
+		_internal->_running = false;
+
+		_internal->updateTimerHandle->cancel();
+		_internal->updateTimerHandle = nullptr;
+
 		if (_frameCache) {
 			_frameCache->invalidate();
 		}
 
 		_internal->waitIdle();
 		_internal->endDevice();
+
+		auto mempool = _internal->pool;
+
 		delete _internal;
 		_internal = nullptr;
+
+		memory::pool::destroy(mempool);
+
+		condvar.notify_all();
 	}, this);
+
+	condvar.wait(lock);
 }
 
 bool Loop::isRunning() const {
-	return true; // _internal->pendingTasks.load() == 0;
+	return _internal->_running;
 }
 
 void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) const {
@@ -376,6 +396,10 @@ void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> 
 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
 	performOnThread([this, req = sp::move(req), gen, callback = sp::move(callback)]() mutable {
+		if (!_internal->_running.load()) {
+			return;
+		}
+
 		auto frame = makeFrame(move(req), gen);
 		if (frame && callback) {
 			frame->setCompleteCallback([callback = sp::move(callback)] (FrameHandle &handle) {
@@ -389,11 +413,8 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 }
 
 void Loop::performInQueue(Rc<thread::Task> &&task) const {
-	if (!_internal) {
-		auto &tasks = task->getCompleteTasks();
-		for (auto &it : tasks) {
-			it(*task, false);
-		}
+	if (!_internal || !_internal->_running.load()) {
+		task->cancel();
 		return;
 	}
 
@@ -401,10 +422,18 @@ void Loop::performInQueue(Rc<thread::Task> &&task) const {
 }
 
 void Loop::performInQueue(Function<void()> &&func, Ref *target) const {
+	if (!_internal || !_internal->_running.load()) {
+		return;
+	}
+
 	_looper->performAsync(sp::move(func), target);
 }
 
 void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate) const {
+	if (!_internal || !_internal->_running.load()) {
+		return;
+	}
+
 	if (immediate) {
 		if (_looper->isOnThisThread()) {
 			func();

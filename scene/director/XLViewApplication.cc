@@ -75,7 +75,6 @@ bool ViewApplication::addView(ViewInfo &&info) {
 				}, this);
 			}
 #endif
-
 		} else {
 			_tmpViews.emplace_back(move(info));
 		}

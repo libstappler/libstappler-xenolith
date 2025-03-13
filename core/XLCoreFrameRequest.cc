@@ -199,13 +199,14 @@ void FrameRequest::finalize(Loop &loop, HashMap<const AttachmentData *, FrameAtt
 	_waitForInputs.clear();
 
 	if (!success) {
-		for (auto &it : _output) {
+		auto output = sp::move(_output);
+		_output.clear();
+		for (auto &it : output) {
 			auto iit = attachments.find(it.second->attachment);
 			if (iit != attachments.end()) {
 				it.second->handleReady(*(iit->second), false);
 			}
 		}
-		_output.clear();
 	}
 	if (_presentationFrame) {
 		_presentationFrame->cancelFrameHandle();

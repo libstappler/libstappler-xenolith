@@ -95,7 +95,8 @@ protected:
 	bool hasActiveInteractions();
 
 	Rc<Application> _mainLoop;
-	View *_view = nullptr;
+	Rc<View> _view;
+	Rc<core::PresentationEngine> _engine;
 
 	core::FrameConstraints _constraints;
 

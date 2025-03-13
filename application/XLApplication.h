@@ -66,7 +66,6 @@ public:
 
 protected:
 	virtual void handleDeviceStarted(const core::Loop &loop, const core::Device &dev) override;
-	virtual void handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) override;
 
 	virtual void performAppUpdate(const UpdateTime &) override;
 

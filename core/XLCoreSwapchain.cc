@@ -54,6 +54,11 @@ void Swapchain::SwapchainData::invalidate(Device &dev) {
 	presentSemaphores.clear();
 }
 
+Swapchain::~Swapchain() {
+	invalidate();
+	_surface = nullptr;
+}
+
 bool Swapchain::isDeprecated() {
 	return _deprecated;
 }
@@ -133,7 +138,7 @@ bool SwapchainImage::init(Swapchain *swapchain, const Swapchain::SwapchainImageD
 }
 
 void SwapchainImage::cleanup() {
-	stappler::log::info("SwapchainImage", "cleanup");
+	// stappler::log::info("SwapchainImage", "cleanup");
 }
 
 void SwapchainImage::rearmSemaphores(core::Loop &loop) {
@@ -184,7 +189,7 @@ void SwapchainImage::setPresented() {
 }
 
 void SwapchainImage::invalidateImage() {
-	if (_image) {
+	if (_image && _swapchain) {
 		_swapchain->invalidateImage(this);
 	}
 	_swapchain = nullptr;

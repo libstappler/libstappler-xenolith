@@ -62,6 +62,8 @@ void Application::threadInit() {
 }
 
 void Application::threadDispose() {
+	_resourceCache->invalidate();
+
 	PlatformApplication::threadDispose();
 
 	tl_mainLoop = nullptr;
@@ -118,23 +120,12 @@ void Application::receiveRemoteNotification(Value &&val) {
 }
 
 void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
-	auto emptyObject = dev.getEmptyImageObject();
-	auto solidObject = dev.getSolidImageObject();
-
 	performOnAppThread([this, emptyObject = dev.getEmptyImageObject(), solidObject = dev.getSolidImageObject()] () {
 		_resourceCache->addImage(core::EmptyTextureName, emptyObject);
 		_resourceCache->addImage(core::SolidTextureName, solidObject);
 	});
 
 	PlatformApplication::handleDeviceStarted(loop, dev);
-}
-
-void Application::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {
-	PlatformApplication::handleDeviceFinalized(loop, dev);
-
-	performOnAppThread([cache = _resourceCache] {
-		cache->invalidate();
-	}, Rc<core::Device>(const_cast<core::Device *>(&dev)));
 }
 
 void Application::performAppUpdate(const UpdateTime &t) {
