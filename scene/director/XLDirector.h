@@ -26,7 +26,6 @@
 
 #include "XLResourceCache.h"
 #include "XLApplication.h"
-#include "XLCoreFrameEmitter.h"
 #include "XLInput.h"
 #include "SPMovingAverage.h"
 
@@ -47,13 +46,13 @@ public:
 
 	Director();
 
-	bool init(Application *, const core::FrameContraints &, View *view);
+	bool init(Application *, const core::FrameConstraints &, View *view);
 
-	void setFrameConstraints(const core::FrameContraints &);
+	void setFrameConstraints(const core::FrameConstraints &);
 
 	void runScene(Rc<Scene> &&);
 
-	bool acquireFrame(const Rc<FrameRequest> &);
+	bool acquireFrame(FrameRequest *);
 
 	void update(uint64_t t);
 
@@ -72,7 +71,7 @@ public:
 	const Rc<ResourceCache> &getResourceCache() const;
 	const Mat4 &getGeneralProjection() const { return _generalProjection; }
 
-	const core::FrameContraints & getFrameConstraints() const { return _constraints; }
+	const core::FrameConstraints & getFrameConstraints() const { return _constraints; }
 
 	void pushDrawStat(const DrawStat &);
 
@@ -81,7 +80,7 @@ public:
 	float getFps() const;
 	float getAvgFps() const;
 	float getSpf() const; // in milliseconds
-	float getLocalFrameTime() const; // in milliseconds
+	float getDeviceFrameTime() const;
 
 	float getDirectorFrameTime() const { return _avgFrameTimeValue / 1000.0f; }
 
@@ -98,7 +97,7 @@ protected:
 	Rc<Application> _mainLoop;
 	View *_view = nullptr;
 
-	core::FrameContraints _constraints;
+	core::FrameConstraints _constraints;
 
 	uint64_t _startTime = 0;
 	UpdateTime _time;

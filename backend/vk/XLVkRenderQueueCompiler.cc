@@ -26,7 +26,6 @@
 #include "XLVkRenderQueueCompiler.h"
 #include "XLVkTransferQueue.h"
 #include "XLVkMaterialCompiler.h"
-#include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
 #include "XLCoreFrameRequest.h"
@@ -341,7 +340,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 
 	if (res || hasMaterials) {
 		_resource = res;
-		_pool = _device->acquireCommandPool(QueueOperations::Transfer);
+		_pool = static_cast<CommandPool *>(_device->acquireCommandPool(core::QueueFlags::Transfer).get());
 		if (!_pool) {
 			invalidate();
 			return false;
@@ -437,7 +436,7 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 
 	_attachment->getRenderQueue()->setCompiled(*_device, [loop = Rc<core::Loop>(frame.getLoop()),
 			passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
-		loop->performOnGlThread([loop, passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
+		loop->performOnThread([loop, passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
 			auto &cache = loop->getFrameCache();
 			for (auto &id : passIds) {
 				cache->removeRenderPass(id);
@@ -473,7 +472,7 @@ bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, VkCommandBuffe
 	Vector<VkImageMemoryBarrier> outputImageBarriers;
 	table->vkCmdCopyBuffer(buf, stagingBuf, targetBuf, 1, &indexesCopy);
 
-	QueueOperations ops = QueueOperations::None;
+	core::QueueFlags ops = core::QueueFlags::None;
 	for (auto &it : attachment->getRenderPasses()) {
 		ops |= static_cast<vk::QueuePass *>(it->pass.get())->getQueueOps();
 	}

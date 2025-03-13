@@ -37,8 +37,8 @@ public:
 
 	virtual ~DependencyEvent();
 
-	DependencyEvent(QueueSet &&);
-	DependencyEvent(InitializerList<Rc<Queue>> &&);
+	DependencyEvent(QueueSet &&, StringView);
+	DependencyEvent(InitializerList<Rc<Queue>> &&, StringView);
 
 	uint32_t getId() const { return _id; }
 
@@ -51,9 +51,9 @@ public:
 
 protected:
 	uint32_t _id = GetNextId();
-	StringView _tag;
 	uint64_t _clock = sp::platform::clock(ClockType::Monotonic);
 	QueueSet _queues;
+	StringView _tag;
 	bool _success = true;
 };
 

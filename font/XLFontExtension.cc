@@ -73,7 +73,7 @@ void FontExtension::initialize(Application *app) {
 		auto linkId = retain();
 		_glLoop->compileQueue(_queue, [this, linkId] (bool success) {
 			if (success) {
-				_mainLoop->performOnMainThread([this] {
+				_mainLoop->performOnAppThread([this] {
 					onActivated();
 				}, this);
 			}
@@ -154,7 +154,7 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 				return;
 			}
 
-			ext->getMainLoop()->performOnMainThread([this] () {
+			ext->getMainLoop()->performOnAppThread([this] () {
 				for (const Pair<const String, FontController::FamilyQuery> &it : builder.getFamilyQueries()) {
 					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
 					for (auto &iit : it.second.sources) {
@@ -262,7 +262,7 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font
 	}
 
 	auto input = Rc<RenderFontInput>::alloc();
-	input->queue = _mainLoop->getQueue();
+	input->queue = _mainLoop->getAppLooper();
 	input->image = image;
 	input->ext = this;
 	input->requests = sp::move(data);

@@ -22,6 +22,7 @@
 
 #include "XLPlatformApplication.h"
 #include "SPCommandLineParser.h"
+#include "SPEventTimerHandle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -178,6 +179,16 @@ CommandLineParser<ApplicationInfo> ApplicationInfo::CommandLine({
 			return false;
 		}
 	},
+	CommandLineOption<ApplicationInfo> {
+		.patterns = {
+			"--device <#>"
+		},
+		.description = StringView("Force-disable Vulkan validation layers"),
+		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+			target.loopInfo.deviceIdx = StringView(args.at(0)).readInteger(10).get(core::Instance::DefaultDevice);
+			return true;
+		}
+	},
 });
 
 ApplicationInfo ApplicationInfo::readFromCommandLine(int argc, const char * argv[], const Callback<void(StringView)> &cb) {
@@ -236,12 +247,12 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 		return false;
 	}
 
+	_mainLooper = event::Looper::acquire(event::LooperInfo{
+		.workersCount = info.mainThreadsCount
+	});
+
 	_info = move(info);
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
-
-	_queue = Rc<thread::TaskQueue>::alloc("Application::Queue", [] () {
-		//wakeup();
-	});
 
 	_instance = move(instance);
 
@@ -264,7 +275,19 @@ void PlatformApplication::waitStopped() {
 void PlatformApplication::threadInit() {
 	_thisThreadId = std::this_thread::get_id();
 
-	thread::ThreadInfo::setThreadInfo("Application");
+	_appLooper = event::Looper::acquire(event::LooperInfo{
+		.name = StringView("Application"),
+		.workersCount = _info.appThreadsCount
+	});
+
+	_timer = _appLooper->scheduleTimer(event::TimerInfo{
+		.completion = event::TimerInfo::Completion::create<PlatformApplication>(this,
+				[] (PlatformApplication *data, event::TimerHandle *self, uint32_t value, Status status) {
+			data->performUpdate();
+		}),
+		.interval = _info.updateInterval,
+		.count = event::TimerInfo::Infinite - 1,
+	});
 
 	if (_info.loopInfo.onDeviceStarted) {
 		auto tmpStarted = sp::move(_info.loopInfo.onDeviceStarted);
@@ -296,12 +319,7 @@ void PlatformApplication::threadInit() {
 		};
 	}
 
-	auto loop = _instance->makeLoop(move(_info.loopInfo));
-
-	if (!_queue->spawnWorkers(0, _info.threadsCount, "Application::Queue")) {
-		log::error("MainLoop", "Fail to spawn worker threads");
-		return;
-	}
+	_glLoop = _instance->makeLoop(_mainLooper, move(_info.loopInfo));
 
 	if (_info.initCallback) {
 		_info.initCallback(*this);
@@ -309,25 +327,16 @@ void PlatformApplication::threadInit() {
 
 	loadExtensions();
 
-	loop->waitRunning();
-
-	_glLoop = move(loop);
-
 	initializeExtensions();
 
 	_extensionsInitialized = true;
-
-	for (auto &it : _glWaitCallback) {
-		_glLoop->performOnGlThread(sp::move(it.func), it.target, it.immediate);
-	}
-	_glWaitCallback.clear();
 
 	_time.delta = 0;
 	_time.global = sp::platform::clock(ClockType::Monotonic);
 	_time.app = 0;
 	_time.dt = 0.0f;
 
-	performAppUpdate(_time);
+	performUpdate();
 
 	Thread::threadInit();
 }
@@ -338,12 +347,8 @@ void PlatformApplication::threadDispose() {
 	}
 
 	_glLoop->stop();
-	_glLoop->waitStopped();
 
 	finalizeExtensions();
-
-	_queue->waitForAll();
-	_queue->update();
 
 #if SP_REF_DEBUG
 	if (_glLoop->getReferenceCount() > 1) {
@@ -364,7 +369,6 @@ void PlatformApplication::threadDispose() {
 #else
 	_glLoop = nullptr;
 #endif
-	_queue->cancelWorkers();
 
 	platformSignalExit();
 
@@ -372,18 +376,9 @@ void PlatformApplication::threadDispose() {
 }
 
 bool PlatformApplication::worker() {
-	uint32_t count = 0;
 	_startTime = _lastUpdate = _clock = _time.global;
 
-	count = 0;
-	if (!_immediateUpdate) {
-		_queue->wait(_info.updateInterval - TimeInterval::microseconds(_clock - _lastUpdate), &count);
-	}
-	if (count > 0) {
-		_queue->update();
-	}
-
-	performTimersUpdate(_immediateUpdate);
+	_appLooper->run();
 
 	return _continueExecution.test_and_set();
 }
@@ -399,35 +394,29 @@ void PlatformApplication::wakeup() {
 	if (isOnThisThread()) {
 		_immediateUpdate = true;
 	} else {
-		performOnMainThread([this] {
+		performOnAppThread([this] {
 			_immediateUpdate = true;
 		}, this);
 	}
 }
 
 void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
-	if (_glLoop) {
-		_glLoop->performOnGlThread(sp::move(func), target, immediate);
-	} else {
-		_glWaitCallback.emplace_back(WaitCallbackInfo{sp::move(func), target, immediate});
-	}
+	_mainLooper->performOnThread(sp::move(func), target, immediate);
 }
 
-void PlatformApplication::performOnMainThread(Function<void()> &&func, Ref *target, bool onNextFrame) const {
+void PlatformApplication::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame) const {
 	if (isOnThisThread() && !onNextFrame) {
 		func();
 	} else {
-		_queue->onMainThread(Rc<Task>::create([func = sp::move(func)] (const thread::Task &, bool success) {
-			if (success) { func(); }
-		}, target));
+		_appLooper->performOnThread(sp::move(func), target);
 	}
 }
 
-void PlatformApplication::performOnMainThread(Rc<Task> &&task, bool onNextFrame) const {
+void PlatformApplication::performOnAppThread(Rc<Task> &&task, bool onNextFrame) const {
 	if (isOnThisThread() && !onNextFrame) {
-		task->onComplete();
+		task->handleCompleted();
 	} else {
-		_queue->onMainThread(sp::move(task));
+		_appLooper->performOnThread(sp::move(task));
 	}
 }
 
@@ -436,11 +425,11 @@ void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&com
 }
 
 void PlatformApplication::perform(Rc<Task> &&task) const {
-	_queue->perform(sp::move(task));
+	_appLooper->performAsync(sp::move(task));
 }
 
 void PlatformApplication::perform(Rc<Task> &&task, bool performFirst) const {
-	_queue->perform(sp::move(task), performFirst);
+	_appLooper->performAsync(sp::move(task), performFirst);
 }
 
 void PlatformApplication::updateMessageToken(BytesView tok) {
@@ -473,26 +462,24 @@ void PlatformApplication::finalizeExtensions() {
 
 }
 
-void PlatformApplication::performAppUpdate(const UpdateTime &t) {
+void PlatformApplication::performAppUpdate(const UpdateTime &time) {
 	if (_info.updateCallback) {
-		_info.updateCallback(*this, t);
+		_info.updateCallback(*this, _time);
 	}
 }
 
-void PlatformApplication::performTimersUpdate(bool forced) {
+void PlatformApplication::performUpdate() {
 	_clock = sp::platform::clock(ClockType::Monotonic);
 
-	auto dt = TimeInterval::microseconds(_clock - _lastUpdate);
-	if (dt >= _info.updateInterval || forced) {
-		_time.delta = dt.toMicros();
-		_time.global = _clock;
-		_time.app = _startTime - _clock;
-		_time.dt = float(_time.delta) / 1'000'000;
+	_time.delta = _clock - _lastUpdate;
+	_time.global = _clock;
+	_time.app = _startTime - _clock;
+	_time.dt = float(_time.delta) / 1'000'000;
 
-		performAppUpdate(_time);
-		_lastUpdate = _clock;
-		_immediateUpdate = false;
-	}
+	performAppUpdate(_time);
+
+	_lastUpdate = _clock;
+	_immediateUpdate = false;
 }
 
 }
@@ -516,6 +503,7 @@ void PlatformApplication::openUrl(StringView url) const {
 void PlatformApplication::platformInitialize() { }
 
 void PlatformApplication::platformWaitExit() {
+	_mainLooper->run();
 	Thread::waitStopped();
 }
 

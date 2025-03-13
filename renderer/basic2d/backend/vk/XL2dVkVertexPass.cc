@@ -1077,7 +1077,7 @@ bool VertexPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	return QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		auto materials = _materialBuffer->getSet().get();
 
@@ -1102,7 +1102,7 @@ Vector<const CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &h
 		return true;
 	});
 
-	return Vector<const CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 void VertexPassHandle::prepareRenderPass(CommandBuffer &) { }

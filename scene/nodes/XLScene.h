@@ -44,7 +44,7 @@ public:
 
 	virtual ~Scene();
 
-	virtual bool init(Queue::Builder &&, const core::FrameContraints &);
+	virtual bool init(Queue::Builder &&, const core::FrameConstraints &);
 
 	virtual void renderRequest(const Rc<FrameRequest> &);
 	virtual void render(FrameInfo &info);
@@ -69,8 +69,8 @@ public:
 	virtual void onFrameAttached(const FrameHandle *);
 	virtual void onFrameDetached(const FrameHandle *);
 
-	virtual void setFrameConstraints(const core::FrameContraints &);
-	const core::FrameContraints & getFrameConstraints() const { return _constraints; }
+	virtual void setFrameConstraints(const core::FrameConstraints &);
+	const core::FrameConstraints & getFrameConstraints() const { return _constraints; }
 
 	virtual const Size2& getContentSize() const override;
 
@@ -96,7 +96,7 @@ protected:
 
 	Rc<Queue> _queue;
 
-	core::FrameContraints _constraints;
+	core::FrameConstraints _constraints;
 };
 
 }

@@ -21,7 +21,6 @@
  **/
 
 #include "XLCoreFrameRequest.h"
-#include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreQueue.h"
 #include "XLCoreLoop.h"
@@ -48,11 +47,19 @@ FrameRequest::~FrameRequest() {
 	_pool = nullptr;
 }
 
-bool FrameRequest::init(const Rc<FrameEmitter> &emitter, const FrameContraints &constraints) {
+bool FrameRequest::init(const Rc<PresentationFrame> &pFrame, const Rc<Queue> &q, const FrameConstraints &constraints) {
+	if (init(q)) {
+		_presentationFrame = pFrame;
+		_constraints = constraints;
+		return true;
+	}
+	return false;
+}
+
+bool FrameRequest::init(const Rc<PresentationFrame> &pFrame, const FrameConstraints &constraints) {
 	_pool = Rc<PoolRef>::alloc();
-	_emitter = emitter;
+	_presentationFrame = pFrame;
 	_constraints = constraints;
-	_readyForSubmit = false;
 	return true;
 }
 
@@ -62,19 +69,9 @@ bool FrameRequest::init(const Rc<Queue> &q) {
 	return true;
 }
 
-bool FrameRequest::init(const Rc<Queue> &q, const FrameContraints &constraints) {
+bool FrameRequest::init(const Rc<Queue> &q, const FrameConstraints &constraints) {
 	if (init(q)) {
 		_constraints = constraints;
-		return true;
-	}
-	return false;
-}
-
-bool FrameRequest::init(const Rc<Queue> &q, const Rc<FrameEmitter> &emitter, const FrameContraints &constraints) {
-	if (init(q)) {
-		_emitter = emitter;
-		_constraints = constraints;
-		_readyForSubmit = emitter->isReadyForSubmit();
 		return true;
 	}
 	return false;
@@ -210,8 +207,9 @@ void FrameRequest::finalize(Loop &loop, HashMap<const AttachmentData *, FrameAtt
 		}
 		_output.clear();
 	}
-	if (_emitter) {
-		_emitter = nullptr;
+	if (_presentationFrame) {
+		_presentationFrame->cancelFrameHandle();
+		_presentationFrame = nullptr;
 	}
 }
 

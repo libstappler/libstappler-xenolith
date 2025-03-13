@@ -69,18 +69,22 @@
 #include "XLCoreImageStorage.cc"
 #include "XLCoreObject.cc"
 #include "XLCoreDevice.cc"
+#include "XLCoreDeviceQueue.cc"
 #include "XLCoreQueuePass.cc"
 #include "XLCoreInstance.cc"
 #include "XLCoreLoop.cc"
 #include "XLCoreDynamicImage.cc"
 #include "XLCoreMaterial.cc"
 #include "XLCoreMesh.cc"
+#include "XLCoreSwapchain.cc"
 
 #include "XLCoreFrameCache.cc"
 #include "XLCoreFrameRequest.cc"
-#include "XLCoreFrameEmitter.cc"
 #include "XLCoreFrameQueue.cc"
 #include "XLCoreFrameHandle.cc"
+
+#include "XLCorePresentationFrame.cc"
+#include "XLCorePresentationEngine.cc"
 
 #define XENOLITH_VERSION_VARIANT 0
 

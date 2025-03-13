@@ -31,26 +31,12 @@
 #include "XLVkPlatform.h"
 #include "SPPlatformUnistd.h"
 
+#include "platform/fd/SPEventPollFd.h"
+
 #include <sys/eventfd.h>
 #include <poll.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
-
-ViewImpl::ViewImpl() { }
-
-ViewImpl::~ViewImpl() {
-	_view = nullptr;
-}
-
-bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info) {
-	_constraints.density = info.density;
-
-	if (!vk::View::init(loop, static_cast<const vk::Device &>(dev), move(info))) {
-		return false;
-	}
-
-	return true;
-}
 
 #if XL_ENABLE_WAYLAND
 static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::Instance *instance, VkPhysicalDevice dev) {
@@ -97,10 +83,16 @@ static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Inst
 	return surface;
 }
 
-void ViewImpl::threadInit() {
-	thread::ThreadInfo::setThreadInfo(_threadName);
-	_thisThreadId = std::this_thread::get_id();
+ViewImpl::~ViewImpl() {
+	_view = nullptr;
+}
 
+bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info) {
+	if (!vk::View::init(loop, static_cast<const vk::Device &>(dev), move(info))) {
+		return false;
+	}
+
+	Rc<Surface> surface;
 	auto presentMask = _device->getPresentatonMask();
 
 #if XL_ENABLE_WAYLAND
@@ -111,19 +103,19 @@ void ViewImpl::threadInit() {
 
 			if (waylandDisplay || strcasecmp("wayland", sessionType) == 0) {
 				auto view = Rc<xenolith::platform::WaylandView>::alloc(wayland, this, _info.name, _info.bundleId, _info.rect);
-				if (!view) {
-					log::error("ViewImpl", "Fail to initialize wayland window");
-					return;
+				if (view) {
+					_view = view;
+					_surface = Rc<vk::Surface>::create(_instance,
+							createWindowSurface(view, _instance, _device->getPhysicalDevice()), _view);
+					if (_surface) {
+						setFrameInterval(_view->getScreenFrameInterval());
+					} else {
+						_view = nullptr;
+					}
+				} else {
+					log::error("ViewImpl", "Fail to initialize wayland window, try X11");
 				}
 
-				_view = view;
-				_surface = Rc<vk::Surface>::create(_instance,
-						createWindowSurface(view, _instance, _device->getPhysicalDevice()), _view);
-				if (_surface) {
-					setFrameInterval(_view->getScreenFrameInterval());
-				} else {
-					_view = nullptr;
-				}
 			}
 		}
 	}
@@ -133,97 +125,48 @@ void ViewImpl::threadInit() {
 		// try X11
 		if (auto xcb = xenolith::platform::XcbLibrary::getInstance()) {
 			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
-				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb->acquireConnection(), this, _info.title, _info.bundleId, _info.rect);
+				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb->acquireConnection(), this, _info.window);
 				if (!view) {
 					log::error("ViewImpl", "Fail to initialize xcb window");
-					return;
+					return false;
 				}
 
-				_view = view;
-				_surface = Rc<vk::Surface>::create(_instance,
-						createWindowSurface(view, _instance, _device->getPhysicalDevice()), _view);
-				setFrameInterval(_view->getScreenFrameInterval());
+				surface = Rc<vk::Surface>::create(_instance,
+						createWindowSurface(view, _instance, _device->getPhysicalDevice()), view);
+				_view = move(view);
 			}
 		}
 	}
 
 	if (!_view) {
 		log::error("ViewImpl", "No available surface type");
+		return false;
 	}
 
-	View::threadInit();
-}
-
-void ViewImpl::threadDispose() {
-	View::threadDispose();
-}
-
-bool ViewImpl::worker() {
-	_eventFd = eventfd(0, EFD_NONBLOCK);
-	auto socket = _view->getSocketFd();
-
-	timespec timeoutMin;
-	timeoutMin.tv_sec = 0;
-	timeoutMin.tv_nsec = 1000 * 250;
-
-	struct pollfd fds[2];
-
-	fds[0].fd = _eventFd;
-	fds[0].events = POLLIN;
-	fds[0].revents = 0;
-
-	fds[1].fd = socket;
-	fds[1].events = POLLIN;
-	fds[1].revents = 0;
-
-	update(false);
-
-	while (_continueExecution.test_and_set()) {
-		bool shouldUpdate = false;
-
-		int ret = ::ppoll( fds, 2, &timeoutMin, nullptr);
-		if (ret > 0) {
-			if (fds[0].revents != 0) {
-				uint64_t value = 0;
-				auto sz = ::read(_eventFd, &value, sizeof(uint64_t));
-				if (sz == 8 && value) {
-					shouldUpdate = true;
-				}
-				fds[0].revents = 0;
-			}
-			if (fds[1].revents != 0) {
-				fds[1].revents = 0;
-				if (!_view->poll(false)) {
-					break;
-				}
-			}
-		} else if (ret == 0) {
-			shouldUpdate = true;
-		} else if (errno != EINTR) {
-			// ignore EINTR to allow debugging
-			break;
-		}
-
-		if (shouldUpdate) {
-			update(false);
-		}
+	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface),
+			_view->exportConstraints(_info.exportConstraints()), _view->getScreenFrameInterval());
+	if (engine) {
+		setPresentationEngine(move(engine));
+		return true;
 	}
 
-	if (_swapchain) {
-		_swapchain->deprecate(false);
-	}
-
-	::close(_eventFd);
+	log::error("ViewImpl", "Fail to initalize PresentationEngine");
 	return false;
 }
 
-void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
-	if (_eventFd >= 0) {
-		uint64_t value = 1;
-		if (::write(_eventFd, (const void *)&value, sizeof(uint64_t)) <= 0) {
-			log::error("ViewImpl", "Fail to wakeup event processing with eventfd");
+void ViewImpl::run() {
+	View::run();
+
+	_pollHandle = event::PollFdHandle::create(_glLoop->getLooper()->getQueue(), _view->getSocketFd(), event::PollFlags::In,
+			[this] (int fd, event::PollFlags flags) {
+		if (hasFlag(flags, event::PollFlags::In)) {
+			if (!_view->poll(false)) {
+				end();
+			}
 		}
-	}
+		return Status::Ok;
+	});
+	_glLoop->getLooper()->performHandle(_pollHandle);
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
@@ -237,7 +180,7 @@ void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, T
 void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
 	performOnThread([this] {
 		_inputEnabled = true;
-		_mainLoop->performOnMainThread([this] () {
+		_mainLoop->performOnAppThread([this] () {
 			_director->getTextInputManager()->setInputEnabled(true);
 		}, this);
 	}, this);
@@ -246,33 +189,19 @@ void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, Text
 void ViewImpl::cancelTextInput() {
 	performOnThread([this] {
 		_inputEnabled = false;
-		_mainLoop->performOnMainThread([this] () {
+		_mainLoop->performOnAppThread([this] () {
 			_director->getTextInputManager()->setInputEnabled(false);
 		}, this);
 	}, this);
 }
 
-void ViewImpl::presentWithQueue(vk::DeviceQueue &queue, Rc<ImageStorage> &&image) {
-	auto &e = _swapchain->getImageInfo().extent;
-	_view->commit(e.width, e.height);
-	vk::View::presentWithQueue(queue, move(image));
-}
-
-bool ViewImpl::recreateSwapchain(core::PresentMode mode) {
+/*bool ViewImpl::recreateSwapchain(core::PresentMode mode) {
 	auto ret = vk::View::recreateSwapchain(mode);
 	if (ret) {
 		_view->handleSwapchainRecreation();
 	}
 	return ret;
-}
-
-bool ViewImpl::pollInput(bool frameReady) {
-	if (!_view->poll(frameReady)) {
-		stop();
-		return false;
-	}
-	return true;
-}
+}*/
 
 core::SurfaceInfo ViewImpl::getSurfaceOptions() const {
 	core::SurfaceInfo ret = vk::View::getSurfaceOptions();
@@ -290,7 +219,7 @@ void ViewImpl::mapWindow() {
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
 	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
 		_view->readFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+			_mainLoop->performOnAppThread([cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);
@@ -301,6 +230,10 @@ void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
 	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
 		_view->writeToClipboard(data, contentType);
 	}, this);
+}
+
+void ViewImpl::handleFramePresented(core::PresentationFrame *frame) {
+	_view->handleFramePresented();
 }
 
 void ViewImpl::finalize() {

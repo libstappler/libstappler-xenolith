@@ -321,14 +321,14 @@ void FrameCache::makeViews(const Rc<ImageStorage> &img, SpanView<ImageViewInfo> 
 	for (auto &info : views) {
 		auto v = img->getView(info);
 		if (!v) {
-			auto v = _device->makeImageView(img->getImage(), info);
-			addImageView(v->getIndex());
-			v->setReleaseCallback([loop = Rc<Loop>(_loop), id = v->getIndex()] {
-				loop->performOnGlThread([loop, id] {
+			auto imageView = _device->makeImageView(img->getImage(), info);
+			addImageView(imageView->getIndex());
+			imageView->setReleaseCallback([loop = Rc<Loop>(_loop), id = imageView->getIndex()] {
+				loop->performOnThread([loop, id] {
 					loop->getFrameCache()->removeImageView(id);
 				});
 			});
-			img->addView(info, move(v));
+			img->addView(info, move(imageView));
 		}
 	}
 }

@@ -45,7 +45,7 @@ Scene::~Scene() {
 	_queue = nullptr;
 }
 
-bool Scene::init(Queue::Builder &&builder, const core::FrameContraints &constraints) {
+bool Scene::init(Queue::Builder &&builder, const core::FrameConstraints &constraints) {
 	if (!Node::init()) {
 		return false;
 	}
@@ -177,7 +177,7 @@ void Scene::onFrameDetached(const FrameHandle *frame) {
 
 }
 
-void Scene::setFrameConstraints(const core::FrameContraints &constraints) {
+void Scene::setFrameConstraints(const core::FrameConstraints &constraints) {
 	if (_constraints != constraints) {
 		auto size = constraints.getScreenSize();
 

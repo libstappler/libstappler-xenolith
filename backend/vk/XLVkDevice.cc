@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameRequest.h"
 #include "XLVkRenderPass.h"
+#include "SPEventLooper.h"
 
 #ifndef XL_VKDEVICE_LOG
 #define XL_VKDEVICE_LOG(...)
@@ -94,7 +95,7 @@ Device::~Device() {
 bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &features, const Vector<StringView> &extensions) {
 	Set<uint32_t> uniqueQueueFamilies = { info.graphicsFamily.index, info.presentFamily.index, info.transferFamily.index, info.computeFamily.index };
 
-	auto emplaceQueueFamily = [&, this] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, QueueOperations preferred) {
+	auto emplaceQueueFamily = [&, this] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, core::QueueFlags preferred) {
 		for (auto &it : _families) {
 			if (it.index == info.index) {
 				it.preferred |= preferred;
@@ -103,17 +104,17 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 			}
 		}
 		count = std::min(count, std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
-		_families.emplace_back(DeviceQueueFamily({ info.index, count, preferred, info.ops, info.minImageTransferGranularity}));
+		_families.emplace_back(core::DeviceQueueFamily({ info.index, count, preferred, info.flags, info.minImageTransferGranularity}));
 	};
 
 	_presentMask = info.presentFamily.presentSurfaceMask;
 
 	info.presentFamily.count = 1;
 
-	emplaceQueueFamily(info.graphicsFamily, std::thread::hardware_concurrency(), QueueOperations::Graphics);
-	emplaceQueueFamily(info.presentFamily, 1, QueueOperations::Present);
-	emplaceQueueFamily(info.transferFamily, 2, QueueOperations::Transfer);
-	emplaceQueueFamily(info.computeFamily, std::thread::hardware_concurrency(), QueueOperations::Compute);
+	emplaceQueueFamily(info.graphicsFamily, std::thread::hardware_concurrency(), core::QueueFlags::Graphics);
+	emplaceQueueFamily(info.presentFamily, 1, core::QueueFlags::Present);
+	emplaceQueueFamily(info.transferFamily, 2, core::QueueFlags::Transfer);
+	emplaceQueueFamily(info.computeFamily, std::thread::hardware_concurrency(), core::QueueFlags::Compute);
 
 	if (!setup(inst, info.device, info.properties, _families, features, extensions)) {
 		return false;
@@ -137,7 +138,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 			VkQueue queue = VK_NULL_HANDLE;
 			getTable()->vkGetDeviceQueue(_device, it.index, i, &queue);
 
-			it.queues.emplace_back(Rc<DeviceQueue>::create(*this, queue, it.index, it.ops));
+			it.queues.emplace_back(Rc<DeviceQueue>::create(*this, queue, it.index, it.flags));
 			it.pools.emplace_back(Rc<CommandPool>::create(*this, it.index, it.preferred));
 		}
 	}
@@ -199,8 +200,8 @@ VkPhysicalDevice Device::getPhysicalDevice() const {
 	return _info.device;
 }
 
-void Device::begin(Loop &loop, thread::TaskQueue &q, Function<void(bool)> &&cb) {
-	compileSamplers(q, true);
+void Device::begin(Loop &loop, Function<void(bool)> &&cb) {
+	compileSamplers(loop.getLooper(), true);
 	_textureSetLayout->compile(*this, _immutableSamplers);
 	_textureSetLayout->initDefault(*this, loop, sp::move(cb));
 	_loopThreadId = std::this_thread::get_id();
@@ -209,7 +210,7 @@ void Device::begin(Loop &loop, thread::TaskQueue &q, Function<void(bool)> &&cb) 
 void Device::end() {
 	for (auto &it : _families) {
 		for (auto &b : it.pools) {
-			b->invalidate(*this);
+			b->invalidate();
 		}
 		it.pools.clear();
 	}
@@ -239,286 +240,6 @@ const DeviceTable * Device::getTable() const {
 #endif
 
 	return _table;
-}
-
-const DeviceQueueFamily *Device::getQueueFamily(uint32_t familyIdx) const {
-	for (auto &it : _families) {
-		if (it.index == familyIdx) {
-			return &it;
-		}
-	}
-	return nullptr;
-}
-
-const DeviceQueueFamily *Device::getQueueFamily(QueueOperations ops) const {
-	for (auto &it : _families) {
-		if (it.preferred == ops) {
-			return &it;
-		}
-	}
-	for (auto &it : _families) {
-		if ((it.ops & ops) != QueueOperations::None) {
-			return &it;
-		}
-	}
-	return nullptr;
-}
-
-const DeviceQueueFamily *Device::getQueueFamily(core::PassType type) const {
-	switch (type) {
-	case core::PassType::Graphics:
-		return getQueueFamily(QueueOperations::Graphics);
-		break;
-	case core::PassType::Compute:
-		return getQueueFamily(QueueOperations::Compute);
-		break;
-	case core::PassType::Transfer:
-		return getQueueFamily(QueueOperations::Transfer);
-		break;
-	case core::PassType::Generic:
-		return nullptr;
-		break;
-	}
-	return nullptr;
-}
-
-const Vector<DeviceQueueFamily> &Device::getQueueFamilies() const {
-	return _families;
-}
-
-Rc<DeviceQueue> Device::tryAcquireQueueSync(QueueOperations ops, bool lockThread) {
-	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
-	if (!family) {
-		return nullptr;
-	}
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	if (lockThread) {
-		++ _resourceQueueWaiters;
-		while (family->queues.empty()) {
-			_resourceQueueCond.wait(lock);
-		}
-		-- _resourceQueueWaiters;
-	}
-	if (!family->queues.empty()) {
-		XL_VKDEVICE_LOG("tryAcquireQueueSync ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		auto queue = move(family->queues.back());
-		family->queues.pop_back();
-		return queue;
-	}
-	return nullptr;
-}
-
-bool Device::acquireQueue(QueueOperations ops, FrameHandle &handle, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
-		Function<void(FrameHandle &)> && invalidate, Rc<Ref> &&ref) {
-
-	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
-	if (!family) {
-		return false;
-	}
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	Rc<DeviceQueue> queue;
-	if (!family->queues.empty()) {
-		queue = move(family->queues.back());
-		family->queues.pop_back();
-	} else {
-		XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &handle, sp::move(ref)));
-	}
-
-	if (queue) {
-		queue->setOwner(handle);
-		XL_VKDEVICE_LOG("acquireQueue ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		acquire(handle, queue);
-	}
-	return true;
-}
-
-bool Device::acquireQueue(QueueOperations ops, Loop &loop, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
-		Function<void(Loop &)> && invalidate, Rc<Ref> &&ref) {
-
-	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
-	if (!family) {
-		return false;
-	}
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	Rc<DeviceQueue> queue;
-	if (!family->queues.empty()) {
-		queue = move(family->queues.back());
-		family->queues.pop_back();
-	} else {
-		XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &loop, sp::move(ref)));
-	}
-
-	lock.unlock();
-
-	if (queue) {
-		XL_VKDEVICE_LOG("acquireQueue ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		acquire(loop, queue);
-	}
-	return true;
-}
-
-void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
-	DeviceQueueFamily *family = nullptr;
-	for (auto &it : _families) {
-		if (it.index == queue->getIndex()) {
-			family = &it;
-			break;
-		}
-	}
-
-	if (!family) {
-		return;
-	}
-
-	queue->reset();
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	// Проверяем, есть ли синхронные ожидающие
-	if (_resourceQueueWaiters > 0) {
-		family->queues.emplace_back(move(queue));
-		_resourceQueueCond.notify_one();
-		return;
-	}
-
-	// Проверяем, есть ли асинхронные ожидающие
-	if (family->waiters.empty()) {
-		XL_VKDEVICE_LOG("releaseQueue ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-		family->queues.emplace_back(move(queue));
-	} else {
-		if (family->waiters.front().handle) {
-			Rc<FrameHandle> handle;
-			Rc<Ref> ref;
-			Function<void(FrameHandle &, const Rc<DeviceQueue> &)> cb;
-			Function<void(FrameHandle &)> invalidate;
-
-			cb = sp::move(family->waiters.front().acquireForFrame);
-			invalidate = sp::move(family->waiters.front().releaseForFrame);
-			ref = move(family->waiters.front().ref);
-			handle = move(family->waiters.front().handle);
-			family->waiters.erase(family->waiters.begin());
-
-			lock.unlock();
-
-			if (handle && handle->isValid()) {
-				if (cb) {
-					queue->setOwner(*handle);
-					XL_VKDEVICE_LOG("release-acquireQueue ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-					cb(*handle, queue);
-				}
-			} else if (invalidate) {
-				XL_VKDEVICE_LOG("invalidate ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-				invalidate(*handle);
-			}
-
-			handle = nullptr;
-		} else if (family->waiters.front().loop) {
-			Rc<Loop> loop;
-			Rc<Ref> ref;
-			Function<void(Loop &, const Rc<DeviceQueue> &)> cb;
-			Function<void(Loop &)> invalidate;
-
-			cb = sp::move(family->waiters.front().acquireForLoop);
-			invalidate = sp::move(family->waiters.front().releaseForLoop);
-			ref = move(family->waiters.front().ref);
-			loop = move(family->waiters.front().loop);
-			family->waiters.erase(family->waiters.begin());
-
-			lock.unlock();
-
-			if (loop && loop->isRunning()) {
-				if (cb) {
-					XL_VKDEVICE_LOG("release-acquireQueue ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-					cb(*loop, queue);
-				}
-			} else if (invalidate) {
-				XL_VKDEVICE_LOG("invalidate ", family->index, " (", family->count, ") ", getQueueOperationsDesc(family->ops));
-				invalidate(*loop);
-			}
-
-			loop = nullptr;
-		}
-	}
-
-	queue = nullptr;
-}
-
-Rc<CommandPool> Device::acquireCommandPool(QueueOperations c, uint32_t) {
-	auto family = (DeviceQueueFamily *)getQueueFamily(c);
-	if (!family) {
-		return nullptr;
-	}
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	if (!family->pools.empty()) {
-		auto ret = family->pools.back();
-		family->pools.pop_back();
-		return ret;
-	}
-	lock.unlock();
-	return Rc<CommandPool>::create(*this, family->index, family->ops);
-}
-
-Rc<CommandPool> Device::acquireCommandPool(uint32_t familyIndex) {
-	auto family = (DeviceQueueFamily *)getQueueFamily(familyIndex);
-	if (!family) {
-		return nullptr;
-	}
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	if (!family->pools.empty()) {
-		auto ret = family->pools.back();
-		family->pools.pop_back();
-		return ret;
-	}
-	lock.unlock();
-	return Rc<CommandPool>::create(*this, family->index, family->ops);
-}
-
-void Device::releaseCommandPool(core::Loop &loop, Rc<CommandPool> &&pool) {
-	pool->reset(*this, true);
-
-	/*auto idx = pool->getFamilyIdx();
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	for (auto &it : _families) {
-		if (it.index == idx) {
-			it.pools.emplace_back(move(pool));
-			break;
-		}
-	}*/
-
-	auto refId = retain();
-	loop.performInQueue(Rc<thread::Task>::create([this, pool = Rc<CommandPool>(pool)] (const thread::Task &) -> bool {
-		pool->reset(*this);
-		return true;
-	}, [this, pool = Rc<CommandPool>(pool), refId] (const thread::Task &, bool success) mutable {
-		if (success) {
-			auto idx = pool->getFamilyIdx();
-			std::unique_lock<Mutex> lock(_resourceMutex);
-			for (auto &it : _families) {
-				if (it.index == idx) {
-					it.pools.emplace_back(move(pool));
-					break;
-				}
-			}
-		}
-		release(refId);
-	}, this));
-}
-
-void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
-	pool->reset(*this);
-
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	for (auto &it : _families) {
-		if (it.index == pool->getFamilyIdx()) {
-			it.pools.emplace_back(Rc<CommandPool>(pool));
-		}
-	}
 }
 
 static BytesView Device_emplaceConstant(Bytes &data, BytesView constant) {
@@ -631,6 +352,10 @@ Rc<core::ImageView> Device::makeImageView(const Rc<core::ImageObject> &img, cons
 	return ret;
 }
 
+Rc<core::CommandPool> Device::makeCommandPool(uint32_t family, core::QueueFlags flags) {
+	return Rc<CommandPool>::create(*this, family, flags);
+}
+
 bool Device::hasNonSolidFillMode() const {
 	return _info.features.device10.features.fillModeNonSolid;
 }
@@ -641,6 +366,11 @@ bool Device::hasDynamicIndexedBuffers() const {
 
 bool Device::hasBufferDeviceAddresses() const {
 	return _info.features.deviceBufferDeviceAddress.bufferDeviceAddress;
+}
+
+bool Device::hasExternalFences() const {
+	return hasFlag(_info.features.flags, ExtensionFlags::ExternalFenceFd)
+			&& (_info.features.fenceSyncFd.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT);
 }
 
 bool Device::isPortabilityMode() const {
@@ -655,7 +385,8 @@ void Device::waitIdle() const {
 	std::unique_lock lock(_resourceMutex);
 
 	_table->vkDeviceWaitIdle(_device);
-	_invalidatedSemaphores.clear();
+
+	core::Device::waitIdle();
 }
 
 void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, Function<void(bool)> &&cb) {
@@ -689,18 +420,18 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 		task->resultImage = task->device->getAllocator()->spawnPersistent(AllocationUsage::DeviceLocal, task->image->getInfo(), false);
 
 		if (!task->transferBuffer) {
-			task->loop->performOnGlThread([task] {
+			task->loop->performOnThread([task] {
 				task->callback(false);
 				task->release(0);
 			});
 			return;
 		}
 
-		task->loop->performOnGlThread([this, task] {
-			task->device->acquireQueue(QueueOperations::Transfer, *task->loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
-				task->fence = loop.acquireFence(0);
-				task->pool = task->device->acquireCommandPool(QueueOperations::Transfer);
-				task->queue = move(queue);
+		task->loop->performOnThread([this, task] {
+			task->device->acquireQueue(core::QueueFlags::Transfer, *task->loop, [this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+				task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
+				task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(core::QueueFlags::Transfer));
+				task->queue = ref_cast<DeviceQueue>(queue);
 
 				auto refId = task->retain();
 				task->fence->addRelease([task, refId] (bool) {
@@ -717,7 +448,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 						return true;
 					});
 
-					if (task->queue->submit(*task->fence, buf)) {
+					if (task->queue->submit(*task->fence, buf) == Status::Ok) {
 						return true;
 					}
 					return false;
@@ -735,7 +466,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 					task->fence = nullptr;
 					task->release(0);
 				}));
-			}, [task] (Loop &) {
+			}, [task] (core::Loop &) {
 				task->callback(false);
 				task->release(0);
 			});
@@ -743,40 +474,22 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 	}, (Loop *)&loop);
 }
 
-void Device::invalidateSemaphore(Rc<Semaphore> &&sem) const {
-	std::unique_lock lock(_resourceMutex);
-	_invalidatedSemaphores.emplace_back(move(sem));
-}
-
-void Device::compileSamplers(thread::TaskQueue &q, bool force) {
+void Device::compileSamplers(event::Looper *looper, bool force) {
 	_immutableSamplers.resize(_samplersInfo.size(), VK_NULL_HANDLE);
 	_samplers.resize(_samplersInfo.size(), nullptr);
 	_samplersCount = uint32_t(_samplersInfo.size());
 
 	size_t i = 0;
 	for (auto &it : _samplersInfo) {
-		auto objIt = _samplers.data() + i;
-		auto glIt = _immutableSamplers.data() + i;
-		q.perform(Rc<thread::Task>::create([this, objIt, glIt, v = &it] (const thread::Task &) -> bool {
-			*objIt = Rc<Sampler>::create(*this, *v);
-			*glIt = (*objIt)->getSampler();
-			return true;
-		}, [this] (const thread::Task &, bool) {
-			++ _compiledSamplers;
-			if (_compiledSamplers == _samplersCount) {
-				_samplersCompiled = true;
-			}
-		}));
-
+		_samplers[i] = Rc<Sampler>::create(*this, it);
+		_immutableSamplers[i] = _samplers[i]->getSampler();
 		++ i;
 	}
-	if (force) {
-		q.waitForAll();
-	}
+	_samplersCompiled = true;
 }
 
 bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
-		const Vector<DeviceQueueFamily> &queueFamilies, const Features &f, const Vector<StringView> &ext) {
+		const Vector<core::DeviceQueueFamily> &queueFamilies, const Features &f, const Vector<StringView> &ext) {
 	_enabledFeatures = f;
 
 	Vector<const char *> requiredExtension;

@@ -84,11 +84,12 @@ void FrameHandle::DescribeActiveFrames() {
 
 FrameHandle::~FrameHandle() {
 	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "Destroy");
-
+#if DEBUG
 	s_frameMutex.lock();
 	-- s_frameCount;
 	s_activeFrames.erase(this);
 	s_frameMutex.unlock();
+#endif
 
 	if (_request) {
 		_request->detachFrame();
@@ -98,10 +99,12 @@ FrameHandle::~FrameHandle() {
 }
 
 bool FrameHandle::init(Loop &loop, Device &dev, Rc<FrameRequest> &&req, uint64_t gen) {
+#if DEBUG
 	s_frameMutex.lock();
 	s_activeFrames.emplace(this);
 	++ s_frameCount;
 	s_frameMutex.unlock();
+#endif
 
 	_loop = &loop;
 	_device = &dev;
@@ -131,15 +134,11 @@ void FrameHandle::update(bool init) {
 	}
 }
 
-const Rc<FrameEmitter> &FrameHandle::getEmitter() const {
-	return _request->getEmitter();
-}
-
 const Rc<Queue> &FrameHandle::getQueue() const {
 	return _request->getQueue();
 }
 
-const FrameContraints &FrameHandle::getFrameConstraints() const {
+const FrameConstraints &FrameHandle::getFrameConstraints() const {
 	return _request->getFrameConstraints();
 }
 
@@ -176,21 +175,6 @@ FrameQueue *FrameHandle::getFrameQueue(Queue *queue) const {
 	return nullptr;
 }
 
-void FrameHandle::schedule(Function<bool(FrameHandle &)> &&cb, StringView tag) {
-	auto linkId = retain();
-	_loop->schedule([this, cb = sp::move(cb), linkId] (Loop &ctx) {
-		if (!isValid()) {
-			release(linkId);
-			return true;
-		}
-		if (cb(*this)) {
-			release(linkId);
-			return true; // end
-		}
-		return false;
-	}, tag);
-}
-
 void FrameHandle::performInQueue(Function<void(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
 	auto linkId = retain();
 	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
@@ -219,7 +203,7 @@ void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref
 		XL_FRAME_PROFILE(cb(*this), tag, 1000);
 	} else {
 		auto linkId = retain();
-		_loop->performOnGlThread([=, this, cb = sp::move(cb)] () {
+		_loop->performOnThread([=, this, cb = sp::move(cb)] () {
 			XL_FRAME_PROFILE(cb(*this);, tag, 1000);
 			XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 			release(linkId);
@@ -264,7 +248,7 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform, F
 }
 
 bool FrameHandle::isValid() const {
-	return _valid && (!_request->getEmitter() || _request->getEmitter()->isFrameValid(*this));
+	return _valid && (!_request->getPresentationFrame() || _request->getPresentationFrame()->isValid());
 }
 
 bool FrameHandle::isPersistentMapping() const {
@@ -275,34 +259,11 @@ Rc<AttachmentInputData> FrameHandle::getInputData(const AttachmentData *attachme
 	return _request->getInputData(attachment);
 }
 
-bool FrameHandle::isReadyForSubmit() const {
-	return _request->isReadyForSubmit();
-}
-
-void FrameHandle::setReadyForSubmit(bool value) {
-	if (!isValid()) {
-		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "[invalid] frame ready to submit");
-		return;
-	}
-
-	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "frame ready to submit");
-	_request->setReadyForSubmit(value);
-	if (_request->isReadyForSubmit()) {
-		_loop->performOnGlThread([this] {
-			update();
-		}, this);
-	}
-}
-
 void FrameHandle::invalidate() {
 	if (_loop->isOnThisThread()) {
 		if (_valid) {
 			if (!_timeEnd) {
 				_timeEnd = sp::platform::clock(FrameClockType);
-			}
-
-			if (auto e = _request->getEmitter()) {
-				XL_FRAME_LOG(XL_FRAME_LOG_INFO, "complete: ", e->getFrameTime());
 			}
 
 			_valid = false;
@@ -320,8 +281,8 @@ void FrameHandle::invalidate() {
 
 			if (!_submitted) {
 				_submitted = true;
-				if (_request->getEmitter()) {
-					_request->getEmitter()->setFrameSubmitted(*this);
+				if (auto f = _request->getPresentationFrame()) {
+					f->setSubmitted();
 				}
 			}
 
@@ -337,7 +298,7 @@ void FrameHandle::invalidate() {
 			}
 		}
 	} else {
-		_loop->performOnGlThread([this] {
+		_loop->performOnThread([this] {
 			invalidate();
 		}, this);
 	}
@@ -372,8 +333,8 @@ void FrameHandle::onQueueSubmitted(FrameQueue &queue) {
 	++ _queuesSubmitted;
 	if (_queuesSubmitted == _queues.size()) {
 		_submitted = true;
-		if (_request->getEmitter()) {
-			_request->getEmitter()->setFrameSubmitted(*this);
+		if (auto f = _request->getPresentationFrame()) {
+			f->setSubmitted();
 		}
 	}
 }
@@ -429,9 +390,6 @@ void FrameHandle::tryComplete() {
 void FrameHandle::onComplete() {
 	if (!_completed && _valid) {
 		_timeEnd = sp::platform::clock(FrameClockType);
-		if (auto e = getEmitter()) {
-			XL_FRAME_LOG(XL_FRAME_LOG_INFO, "complete: ", e->getFrameTime());
-		}
 		_completed = true;
 
 		HashMap<const AttachmentData *, FrameAttachmentData *> attachments;

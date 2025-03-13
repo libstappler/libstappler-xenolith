@@ -42,13 +42,13 @@ bool QueuePass::init(QueuePassBuilder &passBuilder) {
 		switch (getType()) {
 		case core::PassType::Graphics:
 		case core::PassType::Generic:
-			_queueOps = QueueOperations::Graphics;
+			_queueOps = core::QueueFlags::Graphics;
 			break;
 		case core::PassType::Compute:
-			_queueOps = QueueOperations::Compute;
+			_queueOps = core::QueueFlags::Compute;
 			break;
 		case core::PassType::Transfer:
-			_queueOps = QueueOperations::Transfer;
+			_queueOps = core::QueueFlags::Transfer;
 			break;
 		}
 		return true;
@@ -65,7 +65,7 @@ Rc<core::QueuePassHandle> QueuePass::makeFrameHandle(const FrameQueue &queue) {
 	return Rc<vk::QueuePassHandle>::create(*this, queue);
 }
 
-VkRect2D QueuePassHandle::rotateScissor(const core::FrameContraints &constraints, const URect &scissor) {
+VkRect2D QueuePassHandle::rotateScissor(const core::FrameConstraints &constraints, const URect &scissor) {
 	VkRect2D scissorRect{
 		{ int32_t(scissor.x), int32_t(constraints.extent.height - scissor.y - scissor.height) },
 		{ scissor.width, scissor.height }
@@ -124,7 +124,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	_onPrepared = sp::move(cb);
 	_loop = static_cast<Loop *>(q.getLoop());
 	_device = static_cast<Device *>(q.getFrame()->getDevice());
-	_pool = _device->acquireCommandPool(getQueueOps());
+	_pool = static_cast<CommandPool *>(_device->acquireCommandPool(getQueueOps()).get());
 
 	_constraints = q.getFrame()->getFrameConstraints();
 
@@ -211,8 +211,8 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 
 	Rc<FrameHandle> f = q.getFrame(); // capture frame ref
 
-	_fence = _loop->acquireFence(f->getOrder());
-
+	_fence = ref_cast<Fence>(_loop->acquireFence(core::FenceType::Default));
+	_fence->setFrame(f->getOrder());
 	_fence->setTag(getName());
 
 	_fence->addRelease([dev = _device, pool = _pool, loop = q.getLoop()] (bool success) {
@@ -233,8 +233,9 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 
 	auto ops = getQueueOps();
 
-	_device->acquireQueue(ops, *f.get(), [this, onSubmited = sp::move(onSubmited)]  (FrameHandle &frame, const Rc<DeviceQueue> &queue) mutable {
-		_queue = queue;
+	_device->acquireQueue(ops, *f.get(),
+			[this, onSubmited = sp::move(onSubmited)] (FrameHandle &frame, const Rc<core::DeviceQueue> &queue) mutable {
+		_queue = static_cast<DeviceQueue *>(queue.get());
 
 		frame.performInQueue([this, onSubmited = sp::move(onSubmited)] (FrameHandle &frame) mutable {
 			if (!doSubmit(frame, sp::move(onSubmited))) {
@@ -252,11 +253,11 @@ void QueuePassHandle::finalize(FrameQueue &, bool success) {
 
 }
 
-QueueOperations QueuePassHandle::getQueueOps() const {
+core::QueueFlags QueuePassHandle::getQueueOps() const {
 	return (static_cast<vk::QueuePass *>(_queuePass.get()))->getQueueOps();
 }
 
-Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		auto queue = handle.getFrameQueue(_data->queue->queue);
@@ -274,11 +275,11 @@ Vector<const CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &ha
 		});
 		return true;
 	});
-	return Vector<const CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited) {
-	auto success = _queue->submit(*_sync, *_fence, *_pool, _buffers, _queueIdleFlags);
+	auto success = _queue->submit(*_sync, *_pool, *_fence, _buffers, _queueIdleFlags);
 	_pool = nullptr;
 	frame.performOnGlThread([this, success, onSubmited = sp::move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
 		_queueData->submitTime = armedTime;
@@ -288,16 +289,16 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 			queue = nullptr;
 		}
 
-		doSubmitted(frame, sp::move(onSubmited), success, move(_fence));
+		doSubmitted(frame, sp::move(onSubmited), success == Status::Ok, move(_fence));
 		_fence = nullptr;
 		invalidate();
 
-		if (!success) {
-			log::error("VK-Error", "Fail to vkQueueSubmit");
+		if (success != Status::Ok) {
+			log::error("VK-Error", "Fail to vkQueueSubmit: ", success);
 		}
 		_sync = nullptr;
 	}, nullptr, false, "QueuePassHandle::doSubmit");
-	return success;
+	return success == Status::Ok;
 }
 
 void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
@@ -604,7 +605,7 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 	return ret;
 }
 
-void QueuePassHandle::setQueueIdleFlags(DeviceQueue::IdleFlags flags) {
+void QueuePassHandle::setQueueIdleFlags(core::DeviceIdleFlags flags) {
 	_queueIdleFlags = flags;
 }
 

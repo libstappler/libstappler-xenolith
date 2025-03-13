@@ -54,15 +54,15 @@ public:
 
 	virtual Rc<core::QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
 
-	QueueOperations getQueueOps() const { return _queueOps; }
+	core::QueueFlags getQueueOps() const { return _queueOps; }
 
 protected:
-	QueueOperations _queueOps = QueueOperations::Graphics;
+	core::QueueFlags _queueOps = core::QueueFlags::Graphics;
 };
 
 class SP_PUBLIC QueuePassHandle : public core::QueuePassHandle {
 public:
-	static VkRect2D rotateScissor(const core::FrameContraints &constraints, const URect &scissor);
+	static VkRect2D rotateScissor(const core::FrameConstraints &constraints, const URect &scissor);
 
 	struct ImageInputOutputBarrier {
 		vk::ImageMemoryBarrier input;
@@ -89,15 +89,15 @@ public:
 	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) override;
 	virtual void finalize(FrameQueue &, bool) override;
 
-	virtual QueueOperations getQueueOps() const;
+	virtual core::QueueFlags getQueueOps() const;
 
 	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, ImageAttachmentHandle &) const;
 	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *, BufferAttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
 
-	void setQueueIdleFlags(DeviceQueue::IdleFlags);
+	void setQueueIdleFlags(core::DeviceIdleFlags);
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &);
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &);
 	virtual bool doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited);
 
 	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&);
@@ -117,7 +117,7 @@ protected:
 	vk::GraphicPipeline *getGraphicPipelineByName(uint32_t subpass, StringView) const;
 	vk::GraphicPipeline *getGraphicPipelineBySubName(uint32_t subpass, StringView) const;
 
-	DeviceQueue::IdleFlags _queueIdleFlags = DeviceQueue::IdleFlags::None;
+	core::DeviceIdleFlags _queueIdleFlags = core::DeviceIdleFlags::None;
 	Function<void(bool)> _onPrepared;
 	bool _valid = true;
 	bool _commandsReady = false;
@@ -129,9 +129,9 @@ protected:
 	Rc<CommandPool> _pool;
 	Rc<DeviceQueue> _queue;
 	Vector<Rc<DescriptorPool>> _descriptors;
-	Vector<const CommandBuffer *> _buffers;
+	Vector<const core::CommandBuffer *> _buffers;
 	Rc<FrameSync> _sync;
-	core::FrameContraints _constraints;
+	core::FrameConstraints _constraints;
 };
 
 }

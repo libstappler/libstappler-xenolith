@@ -57,85 +57,23 @@ protected:
 	VkSemaphore _sem = VK_NULL_HANDLE;
 };
 
-
-/* VkFence wrapper
- *
- * usage pattern:
- * - store handles in common storage
- * - pop one before running signal function
- * - associate resources with Fence
- * - run function, that signals VkFence
- * - schedule spinner on check()
- * - release resources when VkFence is signaled
- * - push Fence back into storage when VkFence is signaled
- * - storage should reset() Fence on push
- */
-
-class SP_PUBLIC Fence : public core::Object {
+class SP_PUBLIC Fence final : public core::Fence {
 public:
-	enum State {
-		Disabled,
-		Armed,
-		Signaled
-	};
+	virtual ~Fence() = default;
 
-	virtual ~Fence();
-
-	bool init(Device &);
-	void clear();
+	bool init(Device &, core::FenceType);
 
 	VkFence getFence() const { return _fence; }
 
-	void setFrame(Function<bool()> &&schedule, Function<void()> &&release, uint64_t f);
-	uint64_t getFrame() const { return _frame; }
-
-	void setScheduleCallback(Function<bool()> &&schedule);
-	void setReleaseCallback(Function<bool()> &&release);
-
-	uint64_t getArmedTime() const { return _armedTime; }
-
-	bool isArmed() const { return _state == Armed; }
-	void setArmed(DeviceQueue &);
-	void setArmed();
-
-	void setTag(StringView);
-	StringView getTag() const { return _tag; }
-
-	// function will be called and ref will be released on fence's signal
-	void addRelease(Function<void(bool)> &&, Ref *, StringView tag);
-
-	bool schedule(Loop &);
-
-	bool check(Loop &, bool lockfree = true);
-	// void reset(Loop &, Function<void(Rc<Fence> &&)> &&);
-
-	void autorelease(Rc<Ref> &&);
+	Rc<event::Handle> exportFence(Loop &, Function<void()> &&);
 
 protected:
 	using core::Object::init;
 
-	void scheduleReset(Loop &);
-	void scheduleReleaseReset(Loop &, bool s);
-	void doRelease(bool success);
+	virtual Status doCheckFence(bool lockfree) override;
+	virtual void doResetFence() override;
 
-	struct ReleaseHandle {
-		Function<void(bool)> callback;
-		Rc<Ref> ref;
-		StringView tag;
-	};
-
-	uint64_t _frame = 0;
-	State _state = Disabled;
 	VkFence _fence = VK_NULL_HANDLE;
-	Vector<ReleaseHandle> _release;
-	Mutex _mutex;
-	DeviceQueue *_queue = nullptr;
-	uint64_t _armedTime = 0;
-	StringView _tag;
-
-	Function<bool()> _scheduleFn;
-	Function<void()> _releaseFn;
-	Vector<Rc<Ref>> _autorelease;
 };
 
 }

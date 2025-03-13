@@ -75,7 +75,7 @@ public:
 	virtual void finalize(FrameQueue &, bool successful) override;
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 
@@ -274,7 +274,7 @@ bool MaterialCompilationRenderPass::init(QueuePassBuilder &passBuilder, const At
 		return false;
 	}
 
-	_queueOps = QueueOperations::Transfer;
+	_queueOps = core::QueueFlags::Transfer;
 	_materialAttachment = attachment;
 	return true;
 }
@@ -301,31 +301,31 @@ void MaterialCompilationPassHandle::finalize(FrameQueue &handle, bool successful
 	QueuePassHandle::finalize(handle, successful);
 }
 
-Vector<const CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(FrameHandle &handle) {
 	auto layout = _device->getTextureSetLayout();
 
 	auto &inputData = _materialAttachment->getInputData();
 	auto buffers = updateMaterials(handle, _outputData, inputData->materialsToAddOrUpdate,
 			inputData->dynamicMaterialsToUpdate, inputData->materialsToRemove);
 	if (!buffers.targetBuffer) {
-		return Vector<const CommandBuffer *>();
+		return Vector<const core::CommandBuffer *>();
 	}
 
-	QueueOperations ops = QueueOperations::None;
+	core::QueueFlags ops = core::QueueFlags::None;
 	for (auto &it : inputData->attachment->getRenderPasses()) {
 		ops |= static_cast<vk::QueuePass *>(it->pass.get())->getQueueOps();
 	}
 
 	auto q = _device->getQueueFamily(ops);
 	if (!q) {
-		return Vector<const CommandBuffer *>();
+		return Vector<const core::CommandBuffer *>();
 	}
 
 	VkPipelineStageFlags targetStages = 0;
-	if ((_pool->getClass() & QueueOperations::Graphics) != QueueOperations::None) {
+	if ((_pool->getClass() & core::QueueFlags::Graphics) != core::QueueFlags::None) {
 		targetStages |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 	}
-	if ((_pool->getClass() & QueueOperations::Compute) != QueueOperations::None) {
+	if ((_pool->getClass() & core::QueueFlags::Compute) != core::QueueFlags::None) {
 		targetStages |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 	}
 	if (!targetStages) {
@@ -355,9 +355,9 @@ Vector<const CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(F
 			delete tmpBuffer;
 			delete tmpOrder;
 		}, nullptr, true, "MaterialCompilationRenderPassHandle::doPrepareCommands");
-		return Vector<const CommandBuffer *>{buf};
+		return Vector<const core::CommandBuffer *>{buf};
 	}
-	return Vector<const CommandBuffer *>();
+	return Vector<const core::CommandBuffer *>();
 }
 
 void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {

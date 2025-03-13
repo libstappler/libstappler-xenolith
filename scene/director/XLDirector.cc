@@ -41,7 +41,7 @@ Director::Director() {
 
 Director::~Director() { }
 
-bool Director::init(Application *main, const core::FrameContraints &constraints, View *view) {
+bool Director::init(Application *main, const core::FrameConstraints &constraints, View *view) {
 	_mainLoop = main;
 	_view = view;
 	_pool = Rc<PoolRef>::alloc();
@@ -70,8 +70,25 @@ const Rc<ResourceCache> &Director::getResourceCache() const {
 	return _mainLoop->getResourceCache();
 }
 
-bool Director::acquireFrame(const Rc<FrameRequest> &req) {
+bool Director::acquireFrame(FrameRequest *req) {
+	if (_nextScene) {
+		// handle scene transition
+		if (!req->getQueue() || req->getQueue() == _nextScene->getQueue()) {
+			_scene = _nextScene;
+			_nextScene = nullptr;
+			_scene->setFrameConstraints(_constraints);
+			updateGeneralTransform();
+			_scene->onPresented(this);
+		}
+	}
+
 	if (!_scene) {
+		log::error("xenolith::Director", "No scene defined for a FrameRequest");
+		return false;
+	}
+
+	if (req->getQueue() && _scene->getQueue() != req->getQueue()) {
+		log::error("xenolith::Director", "Scene render queue is not the same, as in FrameRequest, can't render with it");
 		return false;
 	}
 
@@ -80,11 +97,13 @@ bool Director::acquireFrame(const Rc<FrameRequest> &req) {
 	setFrameConstraints(req->getFrameConstraints());
 
 	update(t);
+
 	if (_scene) {
 		req->setQueue(_scene->getQueue());
 	}
 
-	_mainLoop->performOnMainThread([this, req] {
+	// break current stack frame, perform on next one
+	_mainLoop->performOnAppThread([this, req = Rc<core::FrameRequest>(req)] {
 		if (!_scene) {
 			return;
 		}
@@ -187,7 +206,7 @@ core::Loop *Director::getGlLoop() const {
 	return _mainLoop->getGlLoop();
 }
 
-void Director::setFrameConstraints(const core::FrameContraints &c) {
+void Director::setFrameConstraints(const core::FrameConstraints &c) {
 	if (_constraints != c) {
 		_constraints = c;
 		if (_scene) {
@@ -207,47 +226,40 @@ void Director::runScene(Rc<Scene> &&scene) {
 
 	auto linkId = retain();
 	auto &queue = scene->getQueue();
+
+	_nextScene = scene;
+
+	// compile render queue
 	getGlLoop()->compileQueue(queue, [this, scene = move(scene), linkId, view = Rc<View>(_view)] (bool success) mutable {
+		// now we on the main/view thread, call runWithQueue directly
 		if (success) {
-			_mainLoop->performOnMainThread([this, scene = move(scene), view] {
-				_nextScene = scene;
-				if (!_scene) {
-					_scene = _nextScene;
-					_nextScene = nullptr;
-					_scene->setFrameConstraints(_constraints);
-					updateGeneralTransform();
-					_scene->onPresented(this);
-					getGlLoop()->performOnGlThread([view, scene = _scene] {
-						auto &q = scene->getQueue();
-						view->runWithQueue(q);
-					}, this);
-				}
-			}, this);
+			auto &q = scene->getQueue();
+			view->runWithQueue(q);
 		}
 		release(linkId);
 	});
 }
 
 void Director::pushDrawStat(const DrawStat &stat) {
-	_mainLoop->performOnMainThread([this, stat] {
+	_mainLoop->performOnAppThread([this, stat] {
 		_drawStat = stat;
 	}, this);
 }
 
 float Director::getFps() const {
-	return 1.0f / (_view->getLastFrameInterval() / 1000000.0f);
+	return 1.0f / (_view->getPresentationEngine()->getLastFrameInterval() / 1000000.0f);
 }
 
 float Director::getAvgFps() const {
-	return 1.0f / (_view->getAvgFrameInterval() / 1000000.0f);
+	return 1.0f / (_view->getPresentationEngine()->getAvgFrameInterval() / 1000000.0f);
 }
 
 float Director::getSpf() const {
-	return _view->getLastFrameTime() / 1000.0f;
+	return _view->getPresentationEngine()->getLastFrameTime() / 1000.0f;
 }
 
-float Director::getLocalFrameTime() const {
-	return _view->getAvgFenceTime() / 1000.0f;
+float Director::getDeviceFrameTime() const {
+	return _view->getPresentationEngine()->getLastDeviceFrameTime() / 1000.0f;
 }
 
 void Director::autorelease(Ref *ref) {

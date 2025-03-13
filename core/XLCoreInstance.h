@@ -45,14 +45,14 @@ class SP_PUBLIC Instance : public Ref {
 public:
 	using TerminateCallback = Function<void()>;
 
-	static constexpr uint32_t DefaultDevice = maxOf<uint32_t>();
+	static constexpr uint16_t DefaultDevice = maxOf<uint16_t>();
 
 	Instance(Dso &&, TerminateCallback &&, Rc<Ref> &&);
 	virtual ~Instance();
 
 	const Vector<DeviceProperties> &getAvailableDevices() const { return _availableDevices; }
 
-	virtual Rc<Loop> makeLoop(LoopInfo &&) const;
+	virtual Rc<Loop> makeLoop(event::Looper *, LoopInfo &&) const;
 
 	Ref *getUserdata() const { return _userdata; }
 

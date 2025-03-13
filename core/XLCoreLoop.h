@@ -37,14 +37,13 @@ class Loop;
 class Device;
 
 struct SP_PUBLIC LoopInfo {
-	uint32_t deviceIdx = core::Instance::DefaultDevice;
-	uint32_t threadsCount = 2;
+	uint16_t deviceIdx = core::Instance::DefaultDevice;
 	Function<void(const Loop &, const Device &)> onDeviceStarted;
 	Function<void(const Loop &, const Device &)> onDeviceFinalized;
 	Rc<Ref> platformData;
 };
 
-class SP_PUBLIC Loop : public thread::Thread {
+class SP_PUBLIC Loop : public Ref {
 public:
 	using FrameCache = core::FrameCache;
 	using FrameRequest = core::FrameRequest;
@@ -61,12 +60,15 @@ public:
 
 	virtual ~Loop();
 
-	Loop();
+	virtual bool init(event::Looper *, Instance *gl, LoopInfo &&);
 
-	virtual bool init(Instance *gl, LoopInfo &&);
-
-	const Rc<Instance> &getGlInstance() const { return _glInstance; }
+	const Rc<Instance> &getInstance() const { return _instance; }
 	const Rc<FrameCache> &getFrameCache() const { return _frameCache; }
+	event::Looper *getLooper() const { return _looper; }
+
+	bool isOnThisThread() const;
+
+	virtual bool isRunning() const { return false; }
 
 	// in preload mode, resource will be prepared for transfer immediately in caller's thread
 	// (device will allocate transfer buffer then fill it with resource data)
@@ -80,14 +82,10 @@ public:
 	// run frame with RenderQueue
 	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) = 0;
 
-	// callback should return true to end spinning
-	virtual void schedule(Function<bool(Loop &)> &&, StringView) = 0;
-	virtual void schedule(Function<bool(Loop &)> &&, uint64_t, StringView) = 0;
-
 	virtual void performInQueue(Rc<thread::Task> &&) const = 0;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
-	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const = 0;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 
@@ -99,13 +97,18 @@ public:
 
 	virtual Rc<Semaphore> makeSemaphore() = 0;
 
+	virtual Rc<Fence> acquireFence(FenceType) = 0;
+
 	virtual const Vector<ImageFormat> &getSupportedDepthStencilFormat() const = 0;
 
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) = 0;
 
-	virtual void wakeup() = 0;
+	virtual void scheduleUpdate(Function<void()> &&, Ref *) = 0;
+	virtual void unscheduleUpdate(Ref *) = 0;
+
 	virtual void waitIdle() = 0;
+	virtual void stop() = 0;
 
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
 	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<BufferObject> &) = 0;
@@ -117,9 +120,10 @@ protected:
 	}
 #endif
 
-	Rc<Instance> _glInstance;
+	Rc<Instance> _instance;
 	Rc<FrameCache> _frameCache;
 	LoopInfo _info;
+	event::Looper *_looper = nullptr;
 };
 
 }

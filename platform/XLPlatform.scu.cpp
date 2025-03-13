@@ -24,6 +24,7 @@
 #include "XLPlatform.h"
 
 #include "XLPlatformApplication.cc"
+#include "XLPlatformViewInterface.cc"
 
 #if LINUX
 

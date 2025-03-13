@@ -48,6 +48,9 @@ struct SP_PUBLIC DeviceInfo {
 		VkPhysicalDeviceVulkan12Features device12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, nullptr };
 		VkPhysicalDeviceVulkan11Features device11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, nullptr };
 		VkPhysicalDeviceFeatures2KHR device10 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR, nullptr };
+
+		VkExternalFenceProperties fenceSyncFd = { VK_STRUCTURE_TYPE_EXTERNAL_FENCE_PROPERTIES, nullptr, 0, 0, 0 };
+
 		ExtensionFlags flags = ExtensionFlags::None;
 
 		bool canEnable(const Features &, uint32_t version) const;
@@ -83,11 +86,11 @@ struct SP_PUBLIC DeviceInfo {
 	};
 
 	struct QueueFamilyInfo {
-		QueueOperations ops = QueueOperations::None;
+		core::QueueFlags flags = core::QueueFlags::None;
 		uint32_t index = 0;
 		uint32_t count = 0;
 		uint32_t used = 0;
-		VkExtent3D minImageTransferGranularity;
+		Extent3 minImageTransferGranularity;
 		uint32_t presentSurfaceMask;
 	};
 

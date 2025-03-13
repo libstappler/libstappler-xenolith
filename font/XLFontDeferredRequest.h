@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct SP_PUBLIC DeferredRequest : Ref {
 	static void runFontRenderer(
-		thread::TaskQueue &,
+		event::Looper *,
 		const Rc<FontExtension> &,
 		const Vector<FontUpdateRequest> &req,
 		Function<void(uint32_t reqIdx, const CharTexture &texData)> &&,

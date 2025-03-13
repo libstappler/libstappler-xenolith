@@ -69,13 +69,13 @@ bool GuiApplication::init(ApplicationInfo &&appInfo, const Callback<bool(VulkanI
 }
 
 void GuiApplication::run(uint32_t threadCount, TimeInterval ival) {
-	core::LoopInfo info;
+	core::LoopInfo info = _info.loopInfo;
 
 	run(move(info), threadCount, ival);
 }
 
 void GuiApplication::run(core::LoopInfo &&info, uint32_t threadCount, TimeInterval ival) {
-	_info.threadsCount = threadCount;
+	_info.appThreadsCount = threadCount;
 	_info.updateInterval = ival;
 	_info.loopInfo = move(info);
 

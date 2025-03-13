@@ -30,16 +30,16 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(thread::TaskQueue &queue, Rc<VectorImageData> &&image,
+static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(event::Looper *queue, Rc<VectorImageData> &&image,
 		const VectorCanvasConfig &config, bool waitOnReady) {
 	auto result = new std::promise<Rc<VectorCanvasResult>>;
 	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
-	queue.perform([queue = Rc<thread::TaskQueue>(&queue), image = move(image), config, ret, result] () mutable {
+	queue->performAsync([queue, image = move(image), config, ret, result] () mutable {
 		auto canvas = VectorCanvas::getInstance();
 		auto res = canvas->draw(config, move(image));
 		result->set_value(res);
 
-		queue->onMainThread([ret = move(ret), res = move(res), result] () mutable {
+		queue->performOnThread([ret = move(ret), res = move(res), result] () mutable {
 			ret->handleReady(move(res));
 			delete result;
 		}, queue);
@@ -450,7 +450,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		}
 
 		if (_deferred) {
-			_deferredResult = VectorSprite_runDeferredVectorCavas(*_director->getApplication()->getQueue(),
+			_deferredResult = VectorSprite_runDeferredVectorCavas(_director->getApplication()->getAppLooper(),
 					move(imageData), config, _waitDeferred);
 			_result = nullptr;
 		} else {

@@ -24,8 +24,8 @@
 #define XENOLITH_SCENE_DIRECTOR_XLVIEW_H_
 
 #include "XLEventHeader.h"
-#include "XLCoreFrameEmitter.h"
 #include "XLCoreLoop.h"
+#include "XLCorePresentationEngine.h"
 #include "XLPlatformViewInterface.h"
 #include "XLInput.h"
 #include "XLDirector.h"
@@ -37,18 +37,22 @@ class View;
 class Director;
 
 struct SP_PUBLIC ViewInfo {
-	String title;
-	String bundleId;
-	URect rect = URect(0, 0, 1024, 768);
-	Padding decoration;
-	uint64_t frameInterval = 0; // in microseconds ( 1'000'000 / 60 for 60 fps)
-	float density = 0.0f;
-	Function<core::SwapchainConfig (View &, const core::SurfaceInfo &)> selectConfig;
-	Function<void(View &, const core::FrameContraints &)> onCreated;
+	platform::WindowInfo window;
+	Function<core::SwapchainConfig (const View &, const core::SurfaceInfo &)> selectConfig;
+	Function<void(View &, const core::FrameConstraints &)> onCreated;
 	Function<void(View &)> onClosed;
+
+	core::FrameConstraints exportConstraints() {
+		return core::FrameConstraints{
+			.extent = Extent2(window.rect.width, window.rect.height),
+			.contentPadding = window.decoration,
+			.transform = core::SurfaceTransformFlags::Identity,
+			.density = window.density
+		};
+	}
 };
 
-class SP_PUBLIC View : public thread::Thread, public TextInputViewInterface, public platform::ViewInterface {
+class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInterface  {
 public:
 	static constexpr size_t FrameAverageCount = 20;
 
@@ -62,38 +66,30 @@ public:
 	static EventHeader onBackground;
 	static EventHeader onFocus;
 
-	View();
 	virtual ~View();
 
 	virtual bool init(Application &, ViewInfo &&);
 
-	virtual void runWithQueue(const Rc<core::Queue> &) = 0;
+	virtual void runWithQueue(const Rc<core::Queue> &);
+
+	virtual void run();
+
 	virtual void end() override;
 
-	virtual void update(bool displayLink) override;
+	void setPresentationEngine(Rc<core::PresentationEngine> &&);
+
+	bool isOnThisThread() const;
 
 	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false);
-
-	// true - if presentation request accepted, false otherwise,
-	// frame should not mark image as detached if false is returned
-	virtual bool present(ImageStorage *) = 0;
-
-	// present image in place instead of scheduling presentation
-	// should be called in view's thread
-	virtual bool presentImmediate(ImageStorage *, Function<void(bool)> &&, bool isRegularFrame) = 0;
-
-	// invalidate swapchain image target, if drawing process was not successful
-	virtual void invalidateTarget(ImageStorage *) = 0;
-
-	virtual Rc<Ref> getSwapchainHandle() const = 0;
 
 	virtual void captureImage(StringView, const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,
 			const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 
-	const Rc<Director> &getDirector() const;
-	const Rc<Application> &getMainLoop() const { return _mainLoop; }
-	const Rc<core::Loop> &getGlLoop() const { return _glLoop; }
+	Director *getDirector() const;
+	Application *getApplication() const { return _mainLoop; }
+	core::Loop *getGlLoop() const { return _glLoop; }
+	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
 	// update screen extent, non thread-safe
 	// only updates field, view is not resized
@@ -102,34 +98,16 @@ public:
 	virtual void handleInputEvent(const InputEventData &) override;
 	virtual void handleInputEvents(Vector<InputEventData> &&) override;
 
-	virtual core::ImageInfo getSwapchainImageInfo() const;
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const;
 	virtual core::ImageViewInfo getSwapchainImageViewInfo(const core::ImageInfo &image) const;
 
-	// interval between two frame presented
-	uint64_t getLastFrameInterval() const;
-	uint64_t getAvgFrameInterval() const;
-
-	// time between frame stared and last queue submission completed
-	uint64_t getLastFrameTime() const;
-	uint64_t getAvgFrameTime() const;
-
-	uint64_t getAvgFenceTime() const;
-
-	const core::FrameContraints & getFrameContraints() const { return _constraints; }
 	virtual Extent2 getExtent() const override;
+
+	core::SwapchainConfig selectConfig(const core::SurfaceInfo &) const;
 
 	bool hasFocus() const { return _hasFocus; }
 	bool isInBackground() const { return _inBackground; }
 	bool isPointerWithinWindow() const { return _pointerInWindow; }
-
-	uint64_t getFrameInterval() const;
-	void setFrameInterval(uint64_t);
-
-	virtual void setReadyForNextFrame() override;
-
-	virtual void setRenderOnDemand(bool value);
-	virtual bool isRenderOnDemand() const;
 
 	virtual void retainBackButton();
 	virtual void releaseBackButton();
@@ -138,43 +116,18 @@ public:
 	virtual void setDecorationTone(float); // 0.0 - 1.0
 	virtual void setDecorationVisible(bool);
 
-	virtual uint64_t retainView() override;
-	virtual void releaseView(uint64_t) override;
-
-	virtual void setContentPadding(const Padding &) override;
+	virtual void mapWindow() { }
 
 protected:
-	virtual void wakeup(std::unique_lock<Mutex> &) = 0;
-
-	core::FrameContraints _constraints;
-
 	bool _inBackground = false;
 	bool _hasFocus = true;
 	bool _pointerInWindow = false;
-	bool _threadStarted = false;
 	bool _navigationEmpty = true;
-
-	std::atomic<bool> _init = false;
-	std::atomic<bool> _running = false;
 
 	Rc<Director> _director;
 	Rc<Application> _mainLoop;
-	Rc<core::Loop> _glLoop;
-	Rc<core::FrameEmitter> _frameEmitter;
 
 	ViewInfo _info;
-
-	uint64_t _gen = 1;
-	core::SwapchainConfig _config;
-
-	Mutex _mutex;
-	Vector<Pair<Function<void()>, Rc<Ref>>> _callbacks;
-
-	mutable Mutex _frameIntervalMutex;
-	uint64_t _lastFrameStart = 0;
-	std::atomic<uint64_t> _lastFrameInterval = 0;
-	math::MovingAverage<FrameAverageCount, uint64_t> _avgFrameInterval;
-	std::atomic<uint64_t> _avgFrameIntervalValue = 0;
 	uint64_t _backButtonCounter = 0;
 };
 

@@ -132,6 +132,7 @@ static const char * const s_optionalDeviceExtensions[] = {
 	VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 	VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+	VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
 #if __APPLE__
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
@@ -151,7 +152,7 @@ enum class ExtensionFlags {
 	MemoryBudget = 1 << 8,
 	GetMemoryRequirements2 = 1 << 9,
 	DedicatedAllocation = 1 << 10,
-	BufferDeviceAddress = 1 << 11,
+	ExternalFenceFd = 1 << 11,
 	Portability = 1 << 12,
 };
 
@@ -239,20 +240,8 @@ static const char * const s_promotedVk13Extensions[] = {
 	nullptr
 };
 
-enum class QueueOperations : uint32_t {
-	None,
-	Graphics = VK_QUEUE_GRAPHICS_BIT,
-	Compute = VK_QUEUE_COMPUTE_BIT,
-	Transfer = VK_QUEUE_TRANSFER_BIT,
-	SparceBinding = VK_QUEUE_SPARSE_BINDING_BIT,
-	Present = 0x8000'0000,
-};
-
-SP_DEFINE_ENUM_AS_MASK(QueueOperations)
-
-SP_PUBLIC QueueOperations getQueueOperations(VkQueueFlags, bool present);
-SP_PUBLIC QueueOperations getQueueOperations(core::PassType);
-SP_PUBLIC String getQueueOperationsDesc(QueueOperations);
+SP_PUBLIC core::QueueFlags getQueueFlags(VkQueueFlags, bool present);
+SP_PUBLIC core::QueueFlags getQueueFlags(core::PassType);
 SP_PUBLIC VkShaderStageFlagBits getVkStageBits(core::ProgramStage);
 
 SP_PUBLIC StringView getVkFormatName(VkFormat fmt);
@@ -274,6 +263,8 @@ template <typename T>
 SP_PUBLIC void sanitizeVkStruct(T &t) {
 	::memset(&t, 0, sizeof(T));
 }
+
+SP_PUBLIC Status getStatus(VkResult res);
 
 SP_PUBLIC std::ostream &operator<< (std::ostream &stream, VkResult res);
 

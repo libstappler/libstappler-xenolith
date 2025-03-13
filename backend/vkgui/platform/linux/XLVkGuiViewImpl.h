@@ -40,31 +40,21 @@ SP_DEFINE_ENUM_AS_MASK(SurfaceType)
 
 class ViewImpl : public vk::View {
 public:
-	ViewImpl();
 	virtual ~ViewImpl();
 
 	virtual bool init(Application &loop, const core::Device &dev, ViewInfo &&);
 
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
-
-	virtual void wakeup(std::unique_lock<Mutex> &) override;
+	virtual void run() override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
 	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
 	virtual void runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
 	virtual void cancelTextInput() override;
 
-	virtual void presentWithQueue(vk::DeviceQueue &, Rc<ImageStorage> &&) override;
-
 	virtual bool isInputEnabled() const override { return _inputEnabled; }
 	xenolith::platform::LinuxViewInterface *getView() const { return _view; }
 
 	vk::Device *getDevice() const { return _device; }
-
-	// minimal poll interval
-	virtual uint64_t getUpdateInterval() const override { return 250; }
 
 	virtual void mapWindow() override;
 
@@ -74,16 +64,17 @@ public:
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) override;
 
+	virtual void handleFramePresented(core::PresentationFrame *) override;
+
 protected:
-	virtual bool recreateSwapchain(core::PresentMode) override;
-	virtual bool pollInput(bool frameReady) override;
+	//virtual bool recreateSwapchain(core::PresentMode) override;
 
 	virtual core::SurfaceInfo getSurfaceOptions() const override;
 
 	virtual void finalize() override;
 
+	Rc<event::Handle> _pollHandle;
 	Rc<xenolith::platform::LinuxViewInterface> _view;
-	int _eventFd = -1;
 	bool _inputEnabled = false;
 };
 

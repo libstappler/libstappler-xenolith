@@ -1486,6 +1486,19 @@ bool hasWriteAccess(AccessType access) {
 	return false;
 }
 
+String getQueueFlagsDesc(QueueFlags flags) {
+	StringStream stream;
+	if ((flags & QueueFlags::Graphics) != QueueFlags::None) { stream << " Graphics"; }
+	if ((flags & QueueFlags::Compute) != QueueFlags::None) { stream << " Compute"; }
+	if ((flags & QueueFlags::Transfer) != QueueFlags::None) { stream << " Transfer"; }
+	if ((flags & QueueFlags::SparceBinding) != QueueFlags::None) { stream << " SparceBinding"; }
+	if ((flags & QueueFlags::Protected) != QueueFlags::None) { stream << " Protected"; }
+	if ((flags & QueueFlags::VideoDecode) != QueueFlags::None) { stream << " VideoDecode"; }
+	if ((flags & QueueFlags::VideoEncode) != QueueFlags::None) { stream << " VideoEncode"; }
+	if ((flags & QueueFlags::Present) != QueueFlags::None) { stream << " Present"; }
+	return stream.str();
+}
+
 std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value) {
 	stream << "ImageInfoData: " << value.extent << " Layers:" << value.arrayLayers.get();
 	return stream;

@@ -111,7 +111,7 @@ void Event::send(const EventHeader &header, Ref *object, const char *value) {
 void Event::send(const EventHeader &header, Ref *object, const String &value) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object, value] () {
+		app->performOnAppThread([header, object, value] () {
 			EventValue val; val.strValue = &value;
 			Event event(header, object, val, Type::String);
 			event.dispatch();
@@ -121,7 +121,7 @@ void Event::send(const EventHeader &header, Ref *object, const String &value) {
 void Event::send(const EventHeader &header, Ref *object, const StringView &value) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object, value = value.str<Interface>()] () {
+		app->performOnAppThread([header, object, value = value.str<Interface>()] () {
 			EventValue val; val.strValue = &value;
 			Event event(header, object, val, Type::String);
 			event.dispatch();
@@ -132,7 +132,7 @@ void Event::send(const EventHeader &header, Ref *object, const StringView &value
 void Event::send(const EventHeader &header, Ref *object, const BytesView &value) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object, value = value.bytes<Interface>()] () {
+		app->performOnAppThread([header, object, value = value.bytes<Interface>()] () {
 			EventValue val; val.bytesValue = &value;
 			Event event(header, object, val, Type::Bytes);
 			event.dispatch();
@@ -143,7 +143,7 @@ void Event::send(const EventHeader &header, Ref *object, const BytesView &value)
 void Event::send(const EventHeader &header, Ref *object, const Value &value) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object, value] () {
+		app->performOnAppThread([header, object, value] () {
 			EventValue val; val.dataValue = &value;
 			Event event(header, object, val, Type::Data);
 			event.dispatch();
@@ -153,7 +153,7 @@ void Event::send(const EventHeader &header, Ref *object, const Value &value) {
 void Event::send(const EventHeader &header, Ref *object, EventValue val, Type type) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object, val, type] () {
+		app->performOnAppThread([header, object, val, type] () {
 			Event event(header, object, val, type);
 			event.dispatch();
 		});
@@ -162,7 +162,7 @@ void Event::send(const EventHeader &header, Ref *object, EventValue val, Type ty
 void Event::send(const EventHeader &header, Ref *object) {
 	auto app = Application::getInstance();
 	if (app) {
-		app->performOnMainThread([header, object] () {
+		app->performOnAppThread([header, object] () {
 			Event event(header, object);
 			event.dispatch();
 		});

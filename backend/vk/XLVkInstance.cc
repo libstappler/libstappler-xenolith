@@ -138,8 +138,8 @@ Instance::~Instance() {
 	vkDestroyInstance(_instance, nullptr);
 }
 
-Rc<core::Loop> Instance::makeLoop(core::LoopInfo &&info) const {
-	return Rc<vk::Loop>::create(Rc<Instance>(const_cast<Instance *>(this)), move(info));
+Rc<core::Loop> Instance::makeLoop(event::Looper *looper, core::LoopInfo &&info) const {
+	return Rc<vk::Loop>::create(looper, Rc<Instance>(const_cast<Instance *>(this)), move(info));
 }
 
 Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
@@ -481,6 +481,13 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 
 		features.updateTo12(true);
 	}
+
+	VkPhysicalDeviceExternalFenceInfo fenceInfo;
+	fenceInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FENCE_INFO;
+	fenceInfo.pNext = nullptr;
+	fenceInfo.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+
+	vkGetPhysicalDeviceExternalFenceProperties(device, &fenceInfo, &features.fenceSyncFd);
 }
 
 void Instance::getDeviceProperties(const VkPhysicalDevice &device, DeviceInfo::Properties &properties, ExtensionFlags flags, uint32_t api) const {
@@ -531,10 +538,11 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 		auto presentSupport = _checkPresentSupport ? _checkPresentSupport(this, device, i) : false;
 
 		queueInfo[i].index = i;
-		queueInfo[i].ops = getQueueOperations(queueFamily.queueFlags, presentSupport);
+		queueInfo[i].flags = getQueueFlags(queueFamily.queueFlags, presentSupport);
 		queueInfo[i].count = queueFamily.queueCount;
 		queueInfo[i].used = 0;
-		queueInfo[i].minImageTransferGranularity = queueFamily.minImageTransferGranularity;
+		queueInfo[i].minImageTransferGranularity = Extent3(queueFamily.minImageTransferGranularity.width,
+				queueFamily.minImageTransferGranularity.height, queueFamily.minImageTransferGranularity.depth);
 		queueInfo[i].presentSurfaceMask = presentSupport;
 
 		if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) && graphicsFamily == maxOf<uint32_t>()) {
@@ -559,7 +567,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	// try to select different families for transfer and compute (for more concurrency)
 	if (computeFamily == graphicsFamily) {
 		for (auto &it : queueInfo) {
-			if (it.index != graphicsFamily && ((it.ops & QueueOperations::Compute) != QueueOperations::None)) {
+			if (it.index != graphicsFamily && ((it.flags & core::QueueFlags::Compute) != core::QueueFlags::None)) {
 				computeFamily = it.index;
 			}
 		}
@@ -567,7 +575,8 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 	if (transferFamily == computeFamily || transferFamily == graphicsFamily) {
 		for (auto &it : queueInfo) {
-			if (it.index != graphicsFamily && it.index != computeFamily && ((it.ops & QueueOperations::Transfer) != QueueOperations::None)) {
+			if (it.index != graphicsFamily && it.index != computeFamily
+					&& ((it.flags & core::QueueFlags::Transfer) != core::QueueFlags::None)) {
 				transferFamily = it.index;
 				break;
 			}
@@ -583,7 +592,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 	// try to map present with graphics
 	if (presentFamily != graphicsFamily) {
-		if ((queueInfo[graphicsFamily].ops & QueueOperations::Present) != QueueOperations::None) {
+		if ((queueInfo[graphicsFamily].flags & core::QueueFlags::Present) != core::QueueFlags::None) {
 			presentFamily = graphicsFamily;
 		}
 	}
@@ -591,7 +600,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	// fallback when Transfer or Compute is not defined
 	if (transferFamily == maxOf<uint32_t>()) {
 		transferFamily = graphicsFamily;
-		queueInfo[transferFamily].ops |= QueueOperations::Transfer;
+		queueInfo[transferFamily].flags |= core::QueueFlags::Transfer;
 	}
 
 	if (computeFamily == maxOf<uint32_t>()) {

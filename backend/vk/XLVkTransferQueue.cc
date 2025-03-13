@@ -24,7 +24,6 @@
 #include "XLVkTransferQueue.h"
 #include "XLVkDevice.h"
 #include "XLVkObject.h"
-#include "XLCoreFrameEmitter.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameRequest.h"
 
@@ -71,7 +70,7 @@ public:
 	virtual ~TransferRenderPassHandle();
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 };
 
@@ -524,7 +523,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 
 	for (auto &it : _stagingBuffer.copyData) {
 		if (it.targetImage) {
-			if (auto q = dev->getQueueFamily(getQueueOperations(it.targetImage->data->type))) {
+			if (auto q = dev->getQueueFamily(getQueueFlags(it.targetImage->data->type))) {
 				uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
@@ -549,7 +548,7 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 				}
 			}
 		} else if (it.targetBuffer) {
-			if (auto q = dev->getQueueFamily(getQueueOperations(it.targetBuffer->data->type))) {
+			if (auto q = dev->getQueueFamily(getQueueFlags(it.targetBuffer->data->type))) {
 				uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
@@ -595,7 +594,7 @@ bool TransferResource::transfer(const Rc<DeviceQueue> &queue, const Rc<CommandPo
 	});
 
 	if (buf) {
-		return queue->submit(*fence, buf);
+		return queue->submit(*fence, buf) == Status::Ok;
 	}
 	return false;
 }
@@ -945,7 +944,7 @@ auto TransferPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHand
 
 TransferRenderPassHandle::~TransferRenderPassHandle() { }
 
-Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameHandle &) {
+Vector<const core::CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameHandle &) {
 	auto pass = static_cast<TransferPass *>(_queuePass.get());
 	TransferAttachmentHandle *transfer = nullptr;
 	for (auto &it : _queueData->attachments) {
@@ -955,7 +954,7 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 	}
 
 	if (!transfer) {
-		return Vector<const CommandBuffer *>();
+		return Vector<const core::CommandBuffer *>();
 	}
 
 	auto table = _device->getTable();
@@ -968,10 +967,10 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 		}
 
 		VkPipelineStageFlags targetMask = 0;
-		if ((_pool->getClass() & QueueOperations::Graphics) != QueueOperations::None) {
+		if ((_pool->getClass() & core::QueueFlags::Graphics) != core::QueueFlags::None) {
 			targetMask |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
-		if ((_pool->getClass() & QueueOperations::Compute) != QueueOperations::None) {
+		if ((_pool->getClass() & core::QueueFlags::Compute) != core::QueueFlags::None) {
 			targetMask |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		}
 		if (targetMask == 0) {
@@ -985,7 +984,7 @@ Vector<const CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(FrameH
 		return true;
 	});
 
-	return Vector<const CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {

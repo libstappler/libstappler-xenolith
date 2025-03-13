@@ -59,10 +59,10 @@ public:
 	void setPreferredPresentMode(core::PresentMode);
 
 protected:
-	virtual Rc<Scene> createSceneForView(vk::View &view, const core::FrameContraints &constraints);
+	virtual Rc<Scene> createSceneForView(vk::View &view, const core::FrameConstraints &constraints);
 	virtual void finalizeView(vk::View &view);
 
-	virtual core::SwapchainConfig selectConfig(vk::View &, const core::SurfaceInfo &info);
+	virtual core::SwapchainConfig selectConfig(const vk::View &, const core::SurfaceInfo &info);
 
 	virtual void loadExtensions() override;
 	virtual void finalizeExtensions() override;

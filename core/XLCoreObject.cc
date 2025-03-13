@@ -23,6 +23,7 @@
 #include "XLCoreObject.h"
 #include "XLCoreInfo.h"
 #include "XLCoreDevice.h"
+#include "XLCoreDeviceQueue.h"
 #include "SPIRV-Reflect/spirv_reflect.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -359,6 +360,213 @@ bool Semaphore::reset() {
 		return true;
 	}
 	return false;
+}
+
+Fence::~Fence() {
+	doRelease(false);
+}
+
+void Fence::clear() {
+	if (_releaseFn) {
+		_releaseFn = nullptr;
+	}
+	if (_scheduleFn) {
+		_scheduleFn = nullptr;
+	}
+}
+
+void Fence::setFrame(uint64_t f) {
+	_frame = f;
+}
+
+void Fence::setFrame(Function<bool()> &&schedule, Function<void()> &&release, uint64_t f) {
+	_frame = f;
+	_scheduleFn = sp::move(schedule);
+	_releaseFn = sp::move(release);
+}
+
+void Fence::setScheduleCallback(Function<bool()> &&schedule) {
+	_scheduleFn = sp::move(schedule);
+}
+
+void Fence::setReleaseCallback(Function<bool()> &&release) {
+	_releaseFn = sp::move(release);
+}
+
+void Fence::setArmed(DeviceQueue &q) {
+	std::unique_lock<Mutex> lock(_mutex);
+	_state = Armed;
+	_queue = &q;
+	_queue->retainFence(*this);
+	_armedTime = sp::platform::clock(ClockType::Monotonic);
+}
+
+void Fence::setArmed() {
+	std::unique_lock<Mutex> lock(_mutex);
+	_state = Armed;
+	_armedTime = sp::platform::clock(ClockType::Monotonic);
+}
+
+void Fence::setTag(StringView tag) {
+	_tag = tag;
+}
+
+void Fence::addRelease(Function<void(bool)> &&cb, Ref *ref, StringView tag) {
+	std::unique_lock<Mutex> lock(_mutex);
+	_release.emplace_back(ReleaseHandle({sp::move(cb), ref, tag}));
+}
+
+bool Fence::schedule(Loop &loop) {
+	std::unique_lock<Mutex> lock(_mutex);
+	if (_state != Armed) {
+		lock.unlock();
+		if (_releaseFn) {
+			loop.performOnThread([this] {
+				doRelease(false);
+
+				if (_releaseFn) {
+					auto releaseFn = sp::move(_releaseFn);
+					_releaseFn = nullptr;
+					_scheduleFn = nullptr;
+					releaseFn();
+				} else {
+					_scheduleFn = nullptr;
+				}
+			}, this, true);
+		} else {
+			doRelease(false);
+			_scheduleFn = nullptr;
+		}
+		return false;
+	} else {
+		lock.unlock();
+
+		if (check(loop, true)) {
+			// fence was released
+			_scheduleFn = nullptr;
+			return false;
+		}
+	}
+
+	if (!_scheduleFn) {
+		return false;
+	}
+
+	auto scheduleFn = sp::move(_scheduleFn);
+	_scheduleFn = nullptr;
+
+	if (lock.owns_lock()) {
+		lock.unlock();
+	}
+
+	return scheduleFn();
+}
+
+bool Fence::check(Loop &loop, bool lockfree) {
+	std::unique_lock<Mutex> lock(_mutex);
+	if (_state != Armed) {
+		return true;
+	}
+
+	Status status = doCheckFence(lockfree);
+
+	switch (status) {
+	case Status::Ok:
+		_state = Signaled;
+		// XL_VKAPI_LOG("Fence [", _frame, "] ", _tag, ": signaled: ", sp::platform::clock(ClockType::Monotonic) - _armedTime);
+		lock.unlock();
+		setSignaled(loop);
+		return true;
+		break;
+	case Status::Suspended:
+	case Status::Declined:
+		_state = Armed;
+		if (sp::platform::clock(ClockType::Monotonic) - _armedTime > 1'000'000) {
+			lock.unlock();
+			/*if (_queue) {
+				XL_VKAPI_LOG("Fence [", _queue->getFrameIndex(), "] Fence is possibly broken: ", _tag);
+			} else {
+				XL_VKAPI_LOG("Fence [", _frame, "] Fence is possibly broken: ", _tag);
+			}*/
+			return check(loop, false);
+		}
+		return false;
+	default:
+		break;
+	}
+	return false;
+}
+
+void Fence::autorelease(Rc<Ref> &&ref) {
+	_autorelease.emplace_back(move(ref));
+}
+
+void Fence::setSignaled(Loop &loop) {
+	_state = Signaled;
+	if (loop.isOnThisThread()) {
+		doRelease(true);
+		scheduleReset(loop);
+	} else {
+		scheduleReleaseReset(loop, true);
+	}
+}
+
+void Fence::scheduleReset(Loop &loop) {
+	if (_releaseFn) {
+		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
+			doResetFence();
+			return true;
+		}, [this] (const thread::Task &, bool success) {
+			auto releaseFn = sp::move(_releaseFn);
+			_releaseFn = nullptr;
+			releaseFn();
+		}, this));
+	} else {
+		doResetFence();
+	}
+}
+
+void Fence::scheduleReleaseReset(Loop &loop, bool s) {
+	if (_releaseFn) {
+		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
+			doResetFence();
+			return true;
+		}, [this, s] (const thread::Task &, bool success) {
+			doRelease(s);
+
+			auto releaseFn = sp::move(_releaseFn);
+			_releaseFn = nullptr;
+			releaseFn();
+		}, this));
+	} else {
+		doResetFence();
+		doRelease(s);
+	}
+}
+
+void Fence::doRelease(bool success) {
+	if (_queue) {
+		_queue->releaseFence(*this);
+		_queue = nullptr;
+	}
+
+	auto autorelease = sp::move(_autorelease);
+	_autorelease.clear();
+
+	if (!_release.empty()) {
+		XL_PROFILE_BEGIN(total, "vk::Fence::reset", "total", 250);
+		for (auto &it : _release) {
+			if (it.callback) {
+				XL_PROFILE_BEGIN(fence, "vk::Fence::reset", it.tag, 250);
+				it.callback(success);
+				XL_PROFILE_END(fence);
+			}
+		}
+		XL_PROFILE_END(total);
+		_release.clear();
+	}
+	_tag = StringView();
+	autorelease.clear();
 }
 
 }

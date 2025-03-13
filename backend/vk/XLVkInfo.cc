@@ -77,7 +77,7 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 		| ExtensionFlags::MemoryBudget
 		| ExtensionFlags::DedicatedAllocation
 		| ExtensionFlags::GetMemoryRequirements2
-		| ExtensionFlags::BufferDeviceAddress;
+		| ExtensionFlags::ExternalFenceFd;
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 	ret.devicePortability.constantAlphaColorBlendFactors = VK_TRUE;
@@ -518,10 +518,10 @@ DeviceInfo::DeviceInfo(VkPhysicalDevice dev, QueueFamilyInfo gr, QueueFamilyInfo
 
 bool DeviceInfo::supportsPresentation() const {
 	// transferFamily and computeFamily can be same as graphicsFamily
-	bool supportsGraphics = (graphicsFamily.ops & QueueOperations::Graphics) != QueueOperations::None;
-	bool supportsPresent = (presentFamily.ops & QueueOperations::Present) != QueueOperations::None;
-	bool supportsTransfer = (transferFamily.ops & QueueOperations::Transfer) != QueueOperations::None;
-	bool supportsCompute = (computeFamily.ops & QueueOperations::Compute) != QueueOperations::None;
+	bool supportsGraphics = (graphicsFamily.flags & core::QueueFlags::Graphics) != core::QueueFlags::None;
+	bool supportsPresent = (presentFamily.flags & core::QueueFlags::Present) != core::QueueFlags::None;
+	bool supportsTransfer = (transferFamily.flags & core::QueueFlags::Transfer) != core::QueueFlags::None;
+	bool supportsCompute = (computeFamily.flags & core::QueueFlags::Compute) != core::QueueFlags::None;
 	if (supportsGraphics && supportsPresent && supportsTransfer && supportsCompute
 			&& requiredFeaturesExists && requiredExtensionsExists) {
 		return true;
@@ -533,25 +533,25 @@ String DeviceInfo::description() const {
 	StringStream stream;
 	stream << "\t\t[Queue] ";
 
-	if ((graphicsFamily.ops & QueueOperations::Graphics) != QueueOperations::None) {
+	if ((graphicsFamily.flags & core::QueueFlags::Graphics) != core::QueueFlags::None) {
 		stream << "Graphics: [" << graphicsFamily.index << "]; ";
 	} else {
 		stream << "Graphics: [Not available]; ";
 	}
 
-	if ((presentFamily.ops & QueueOperations::Present) != QueueOperations::None) {
+	if ((presentFamily.flags & core::QueueFlags::Present) != core::QueueFlags::None) {
 		stream << "Presentation: [" << presentFamily.index << "]; ";
 	} else {
 		stream << "Presentation: [Not available]; ";
 	}
 
-	if ((transferFamily.ops & QueueOperations::Transfer) != QueueOperations::None) {
+	if ((transferFamily.flags & core::QueueFlags::Transfer) != core::QueueFlags::None) {
 		stream << "Transfer: [" << transferFamily.index << "]; ";
 	} else {
 		stream << "Transfer: [Not available]; ";
 	}
 
-	if ((computeFamily.ops & QueueOperations::Compute) != QueueOperations::None) {
+	if ((computeFamily.flags & core::QueueFlags::Compute) != core::QueueFlags::None) {
 		stream << "Compute: [" << computeFamily.index << "];\n";
 	} else {
 		stream << "Compute: [Not available];\n";
@@ -632,33 +632,32 @@ String DeviceInfo::description() const {
 	return stream.str();
 }
 
-QueueOperations getQueueOperations(VkQueueFlags flags, bool present) {
-	QueueOperations ret = QueueOperations(flags) &
-			(QueueOperations::Graphics | QueueOperations::Compute | QueueOperations::Transfer | QueueOperations::SparceBinding);
+core::QueueFlags getQueueFlags(VkQueueFlags flags, bool present) {
+	core::QueueFlags ret = core::QueueFlags::None;
+	if ((flags & VK_QUEUE_GRAPHICS_BIT) != 0) { ret |= core::QueueFlags::Graphics; }
+	if ((flags & VK_QUEUE_COMPUTE_BIT) != 0) { ret |= core::QueueFlags::Compute; }
+	if ((flags & VK_QUEUE_TRANSFER_BIT) != 0) { ret |= core::QueueFlags::Transfer; }
+	if ((flags & VK_QUEUE_SPARSE_BINDING_BIT) != 0) { ret |= core::QueueFlags::SparceBinding; }
+	if ((flags & VK_QUEUE_PROTECTED_BIT) != 0) { ret |= core::QueueFlags::Protected; }
+	if ((flags & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0) { ret |= core::QueueFlags::VideoDecode; }
+#if VK_ENABLE_BETA_EXTENSIONS
+	if ((flags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) != 0) { ret |= core::QueueFlags::VideoEncode; }
+#endif
+
 	if (present) {
-		ret |= QueueOperations::Present;
+		ret |= core::QueueFlags::Present;
 	}
 	return ret;
 }
 
-QueueOperations getQueueOperations(core::PassType type) {
+core::QueueFlags getQueueFlags(core::PassType type) {
 	switch (type) {
-	case core::PassType::Graphics: return QueueOperations::Graphics; break;
-	case core::PassType::Compute: return QueueOperations::Compute; break;
-	case core::PassType::Transfer: return QueueOperations::Transfer; break;
-	case core::PassType::Generic: return QueueOperations::None; break;
+	case core::PassType::Graphics: return core::QueueFlags::Graphics; break;
+	case core::PassType::Compute: return core::QueueFlags::Compute; break;
+	case core::PassType::Transfer: return core::QueueFlags::Transfer; break;
+	case core::PassType::Generic: return core::QueueFlags::None; break;
 	}
-	return QueueOperations::None;
-}
-
-String getQueueOperationsDesc(QueueOperations ops) {
-	StringStream stream;
-	if ((ops & QueueOperations::Graphics) != QueueOperations::None) { stream << " Graphics"; }
-	if ((ops & QueueOperations::Compute) != QueueOperations::None) { stream << " Compute"; }
-	if ((ops & QueueOperations::Transfer) != QueueOperations::None) { stream << " Transfer"; }
-	if ((ops & QueueOperations::SparceBinding) != QueueOperations::None) { stream << " SparceBinding"; }
-	if ((ops & QueueOperations::Present) != QueueOperations::None) { stream << " Present"; }
-	return stream.str();
+	return core::QueueFlags::None;
 }
 
 VkShaderStageFlagBits getVkStageBits(core::ProgramStage stage) {
@@ -1020,6 +1019,8 @@ static ExtensionFlags getFlagForExtension(const char *name) {
 		return ExtensionFlags::GetMemoryRequirements2;
 	} else if (strcmp(name, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
 		return ExtensionFlags::DedicatedAllocation;
+	} else if (strcmp(name, VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME) == 0) {
+		return ExtensionFlags::ExternalFenceFd;
 #if __APPLE__
 	} else if (strcmp(name, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0) {
 		return ExtensionFlags::Portability;
@@ -1369,6 +1370,55 @@ VkPresentModeKHR getVkPresentMode(core::PresentMode presentMode) {
 	default: break;
 	}
 	return VkPresentModeKHR(0);
+}
+
+Status getStatus(VkResult res) {
+	switch (res) {
+	case VK_SUCCESS: return Status::Ok; break;
+	case VK_NOT_READY: return Status::Declined; break;
+	case VK_TIMEOUT: return Status::Suspended; break;
+	case VK_EVENT_SET: return Status::EventSet; break;
+	case VK_EVENT_RESET: return Status::EventReset; break;
+	case VK_INCOMPLETE: return Status::Incomplete; break;
+	case VK_ERROR_OUT_OF_HOST_MEMORY: return Status::ErrorOutOfHostMemory; break;
+	case VK_ERROR_OUT_OF_DEVICE_MEMORY: return Status::ErrorOutOfDeviceMemory; break;
+	case VK_ERROR_INITIALIZATION_FAILED: return Status::ErrorInvalidArguemnt; break;
+	case VK_ERROR_DEVICE_LOST: return Status::ErrorDeviceLost; break;
+	case VK_ERROR_MEMORY_MAP_FAILED: return Status::ErrorMemoryMapFailed; break;
+	case VK_ERROR_LAYER_NOT_PRESENT: return Status::ErrorLayerNotPresent; break;
+	case VK_ERROR_EXTENSION_NOT_PRESENT: return Status::ErrorExtensionNotPresent; break;
+	case VK_ERROR_FEATURE_NOT_PRESENT: return Status::ErrorFeatureNotPresent; break;
+	case VK_ERROR_INCOMPATIBLE_DRIVER: return Status::ErrorIncompatibleDevice; break;
+	case VK_ERROR_TOO_MANY_OBJECTS: return Status::ErrorTooManyObjects; break;
+	case VK_ERROR_FORMAT_NOT_SUPPORTED: return Status::ErrorNotSupported; break;
+	case VK_ERROR_FRAGMENTED_POOL: return Status::ErrorFragmentedPool; break;
+	case VK_ERROR_UNKNOWN: return Status::ErrorUnknown; break;
+	case VK_ERROR_OUT_OF_POOL_MEMORY: return Status::ErrorOutOfPoolMemory; break;
+	case VK_ERROR_INVALID_EXTERNAL_HANDLE: return Status::ErrorInvalidExternalHandle; break;
+	case VK_ERROR_FRAGMENTATION: return Status::ErrorFragmentation; break;
+	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: return Status::ErrorInvalidCaptureAddress; break;
+#if VK_VERSION_1_3
+	case VK_PIPELINE_COMPILE_REQUIRED: return Status::ErrorPipelineCompileRequired; break;
+#endif
+	case VK_ERROR_SURFACE_LOST_KHR: return Status::ErrorSurfaceLost; break;
+	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return Status::ErrorNativeWindowInUse; break;
+	case VK_SUBOPTIMAL_KHR: return Status::Suboptimal; break;
+	case VK_ERROR_OUT_OF_DATE_KHR: return Status::ErrorCancelled; break;
+	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: return Status::ErrorIncompatibleDisplay; break;
+	case VK_ERROR_VALIDATION_FAILED_EXT: return Status::ErrorValidationFailed; break;
+	case VK_ERROR_INVALID_SHADER_NV: return Status::ErrorInvalidShader; break;
+	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return Status::ErrorInvalidDrmFormat; break;
+#if VK_VERSION_1_3
+	case VK_ERROR_NOT_PERMITTED_KHR: return Status::ErrorNotPermitted; break;
+#endif
+	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return Status::ErrorFullscreenLost; break;
+	case VK_THREAD_IDLE_KHR: return Status::ThreadIdle; break;
+	case VK_THREAD_DONE_KHR: return Status::ThreadDone;; break;
+	case VK_OPERATION_DEFERRED_KHR: return Status::OperationDeferred; break;
+	case VK_OPERATION_NOT_DEFERRED_KHR: return Status::OperationNotDeferred; break;
+	default: break;
+	}
+	return Status::ErrorUnknown;
 }
 
 std::ostream &operator<< (std::ostream &stream, VkResult res) {

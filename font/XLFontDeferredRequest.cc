@@ -24,14 +24,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-void DeferredRequest::runFontRenderer(thread::TaskQueue &queue, const Rc<FontExtension> &ext,
+void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontExtension> &ext,
 		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {
 	auto data = Rc<DeferredRequest>::alloc(ext, req);
 	data->onTexture = sp::move(onTex);
 	data->onComplete = sp::move(onComp);
 
-	for (uint32_t i = 0; i < queue.getThreadCount(); ++ i) {
-		queue.perform([data] () {
+	for (uint32_t i = 0; i < queue->getWorkersCount(); ++ i) {
+		queue->performAsync([data] () {
 			data->runThread();
 		});
 	}

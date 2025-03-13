@@ -35,7 +35,7 @@ class BootstrapScene : public basic2d::Scene2d {
 public:
 	virtual ~BootstrapScene() = default;
 
-	virtual bool init(Application *, const core::FrameContraints &constraints) override;
+	virtual bool init(Application *, const core::FrameConstraints &constraints) override;
 
 	virtual void handleContentSizeDirty() override;
 
@@ -45,7 +45,7 @@ protected:
 	basic2d::Label *_helloWorldLabel = nullptr;
 };
 
-bool BootstrapScene::init(Application *app, const core::FrameContraints &constraints) {
+bool BootstrapScene::init(Application *app, const core::FrameConstraints &constraints) {
 	if (!Scene2d::init(app, constraints)) {
 		return false;
 	}
@@ -97,15 +97,17 @@ bool BootstrapApplication::init(ApplicationInfo &&info) {
 void BootstrapApplication::run() {
 	_info.initCallback = [&] (const PlatformApplication &) {
 		GuiApplication::addView(ViewInfo{
-			.title = _info.applicationName,
-			.bundleId = _info.bundleName,
-			.rect = URect(UVec2{0, 0}, _info.screenSize),
-			.decoration = _info.viewDecoration,
-			.density = _info.density,
-			.selectConfig = [this] (xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
-				return selectConfig(static_cast<vk::View &>(view), info);
+			.window = platform::WindowInfo{
+				.title = _info.applicationName,
+				.bundleId = _info.bundleName,
+				.rect = URect(UVec2{0, 0}, _info.screenSize),
+				.decoration = _info.viewDecoration,
+				.density = _info.density,
 			},
-			.onCreated = [this] (xenolith::View &view, const core::FrameContraints &constraints) {
+			.selectConfig = [this] (const xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
+				return selectConfig(static_cast<const vk::View &>(view), info);
+			},
+			.onCreated = [this] (xenolith::View &view, const core::FrameConstraints &constraints) {
 				auto scene = createSceneForView(static_cast<vk::View &>(view), constraints);
 				view.getDirector()->runScene(move(scene));
 			},
@@ -125,7 +127,7 @@ void BootstrapApplication::setPreferredPresentMode(core::PresentMode mode) {
 	_preferredPresentMode = mode;
 }
 
-Rc<Scene> BootstrapApplication::createSceneForView(vk::View &view, const core::FrameContraints &constraints) {
+Rc<Scene> BootstrapApplication::createSceneForView(vk::View &view, const core::FrameConstraints &constraints) {
 #if MODULE_XENOLITH_RENDERER_BASIC2D
 	return Rc<BootstrapScene>::create(this, constraints);
 #else
@@ -137,7 +139,7 @@ void BootstrapApplication::finalizeView(vk::View &view) {
 
 }
 
-core::SwapchainConfig BootstrapApplication::selectConfig(vk::View &, const core::SurfaceInfo &info) {
+core::SwapchainConfig BootstrapApplication::selectConfig(const vk::View &, const core::SurfaceInfo &info) {
 	std::unique_lock<Mutex> lock(_configMutex);
 	core::SwapchainConfig ret;
 	ret.extent = info.currentExtent;
@@ -188,7 +190,7 @@ core::SwapchainConfig BootstrapApplication::selectConfig(vk::View &, const core:
 
 	ret.transform = info.currentTransform;
 
-	performOnMainThread([this, info, ret] {
+	performOnAppThread([this, info, ret] {
 		_surfaceInfo = info;
 		_swapchainConfig = ret;
 

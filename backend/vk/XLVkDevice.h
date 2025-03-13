@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -67,46 +67,12 @@ public:
 	VkDevice getDevice() const { return _device; }
 	VkPhysicalDevice getPhysicalDevice() const;
 
-	void begin(Loop &loop, thread::TaskQueue &, Function<void(bool)> &&);
+	void begin(Loop &loop, Function<void(bool)> &&);
 	virtual void end() override;
 
 	const DeviceInfo & getInfo() const { return _info; }
 	const DeviceTable * getTable() const;
 	const Rc<Allocator> & getAllocator() const { return _allocator; }
-
-	const DeviceQueueFamily *getQueueFamily(uint32_t) const;
-	const DeviceQueueFamily *getQueueFamily(QueueOperations) const;
-	const DeviceQueueFamily *getQueueFamily(core::PassType) const;
-
-	const Vector<DeviceQueueFamily> &getQueueFamilies() const;
-
-	// acquire VkQueue handle
-	// - QueueOperations - one of QueueOperations flags, defining capabilities of required queue
-	// - gl::FrameHandle - frame, in which queue will be used
-	// - acquire - function, to call with result, can be called immediately
-	// 		or when queue for specified operations become available (on GL thread)
-	// - invalidate - function to call when queue query is invalidated (e.g. when frame is invalidated)
-	// - ref - ref to preserve until query is completed
-	// returns
-	// - true is query was completed or scheduled,
-	// - false if frame is not valid or no queue family with requested capabilities exists
-	//
-	// Acquired DeviceQueue must be released with releaseQueue
-	bool acquireQueue(QueueOperations, FrameHandle &, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
-			Function<void(FrameHandle &)> && invalidate, Rc<Ref> && = nullptr);
-	bool acquireQueue(QueueOperations, Loop &, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
-			Function<void(Loop &)> && invalidate, Rc<Ref> && = nullptr);
-	void releaseQueue(Rc<DeviceQueue> &&);
-
-	// Запросить DeviceQueue синхронно, может блокировать текущий поток до завершения захвата
-	// Преднахзначна для потоков, не относящихся к группе графических (например, для потока окна)
-	// Вызов в графическом потоке может заблокировать возврат очереди, уже принадлежащей потоку
-	Rc<DeviceQueue> tryAcquireQueueSync(QueueOperations, bool lock);
-
-	Rc<CommandPool> acquireCommandPool(QueueOperations, uint32_t = 0);
-	Rc<CommandPool> acquireCommandPool(uint32_t familyIndex);
-	void releaseCommandPool(core::Loop &, Rc<CommandPool> &&);
-	void releaseCommandPoolUnsafe(Rc<CommandPool> &&);
 
 	const Rc<TextureSetLayout> &getTextureSetLayout() const { return _textureSetLayout; }
 
@@ -121,6 +87,7 @@ public:
 	virtual Rc<ImageStorage> makeImage(const ImageInfoData &) override;
 	virtual Rc<core::Semaphore> makeSemaphore() override;
 	virtual Rc<core::ImageView> makeImageView(const Rc<core::ImageObject> &, const ImageViewInfo &) override;
+	virtual Rc<core::CommandPool> makeCommandPool(uint32_t family, core::QueueFlags flags) override;
 
 	template <typename Callback>
 	void makeApiCall(const Callback &cb) {
@@ -132,23 +99,24 @@ public:
 	bool hasNonSolidFillMode() const;
 	bool hasDynamicIndexedBuffers() const;
 	bool hasBufferDeviceAddresses() const;
+	bool hasExternalFences() const;
 	bool isPortabilityMode() const;
 
 	virtual void waitIdle() const override;
 
 	void compileImage(const Loop &loop, const Rc<core::DynamicImage> &, Function<void(bool)> &&);
 
-	void invalidateSemaphore(Rc<Semaphore> &&sem) const;
-
 private:
 	using core::Device::init;
 
 	friend class DeviceQueue;
 
-	virtual void compileSamplers(thread::TaskQueue &q, bool force);
+	// TODO - move this to queue compiler
+	virtual void compileSamplers(event::Looper *looper, bool force);
 
 	bool setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
-			const Vector<DeviceQueueFamily> &queueFamilies, const Features &features, const Vector<StringView> &requiredExtension);
+			const Vector<core::DeviceQueueFamily> &queueFamilies,
+			const Features &features, const Vector<StringView> &requiredExtension);
 
 	const vk::Instance *_vkInstance = nullptr;
 	const DeviceTable *_table = nullptr;
@@ -163,8 +131,6 @@ private:
 	Rc<Allocator> _allocator;
 	Rc<TextureSetLayout> _textureSetLayout;
 
-	Vector<DeviceQueueFamily> _families;
-
 	bool _finished = false;
 	bool _updateAfterBindEnabled = true;
 
@@ -175,12 +141,8 @@ private:
 
 	std::unordered_map<VkFormat, VkFormatProperties> _formats;
 
-	mutable Mutex _resourceMutex;
-	uint32_t _resourceQueueWaiters = 0;
 	std::condition_variable _resourceQueueCond;
 	Mutex _apiMutex;
-
-	mutable Vector<Rc<Semaphore>> _invalidatedSemaphores;
 };
 
 }

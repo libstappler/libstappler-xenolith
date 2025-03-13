@@ -49,7 +49,7 @@ public:
 			Vector<StringView> &&optionals, Dso &&vulkanModule, TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled, Rc<Ref> &&);
 	virtual ~Instance();
 
-	virtual Rc<core::Loop> makeLoop(core::LoopInfo &&) const override;
+	virtual Rc<core::Loop> makeLoop(event::Looper *, core::LoopInfo &&) const override;
 
 	Rc<Device> makeDevice(const core::LoopInfo &) const;
 

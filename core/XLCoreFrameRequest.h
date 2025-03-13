@@ -23,7 +23,7 @@
 #ifndef XENOLITH_CORE_XLCOREFRAMEREQUEST_H_
 #define XENOLITH_CORE_XLCOREFRAMEREQUEST_H_
 
-#include "XLCoreFrameEmitter.h"
+#include "XLCorePresentationEngine.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -47,10 +47,10 @@ public:
 
 	virtual ~FrameRequest();
 
-	bool init(const Rc<FrameEmitter> &, const FrameContraints &);
+	bool init(const Rc<PresentationFrame> &, const Rc<Queue> &q, const FrameConstraints &);
+	bool init(const Rc<PresentationFrame> &, const FrameConstraints &);
 	bool init(const Rc<Queue> &q);
-	bool init(const Rc<Queue> &q, const FrameContraints &);
-	bool init(const Rc<Queue> &q, const Rc<FrameEmitter> &, const FrameContraints &);
+	bool init(const Rc<Queue> &q, const FrameConstraints &);
 
 	void addSignalDependency(Rc<DependencyEvent> &&);
 	void addSignalDependencies(Vector<Rc<DependencyEvent>> &&);
@@ -81,17 +81,16 @@ public:
 	Rc<AttachmentInputData> getInputData(const AttachmentData *attachment);
 
 	const Rc<PoolRef> &getPool() const { return _pool; }
+
 	Rc<ImageStorage> getRenderTarget(const AttachmentData *);
 
-	const Rc<FrameEmitter> &getEmitter() const { return _emitter; }
+	PresentationFrame *getPresentationFrame() const { return _presentationFrame; }
+
 	const Rc<Queue> &getQueue() const { return _queue; }
 
 	Set<Rc<Queue>> getQueueList() const;
 
-	const FrameContraints & getFrameConstraints() const { return _constraints; }
-
-	void setReadyForSubmit(bool value) { _readyForSubmit = value; }
-	bool isReadyForSubmit() const { return _readyForSubmit; }
+	const FrameConstraints & getFrameConstraints() const { return _constraints; }
 
 	bool isPersistentMapping() const { return _persistentMappings; }
 
@@ -115,9 +114,9 @@ protected:
 	FrameRequest &operator=(const FrameRequest &) = delete;
 
 	Rc<PoolRef> _pool;
-	Rc<FrameEmitter> _emitter;
+	Rc<PresentationFrame> _presentationFrame;
 	Rc<Queue> _queue;
-	FrameContraints _constraints;
+	FrameConstraints _constraints;
 	Map<const AttachmentData *, Rc<AttachmentInputData>> _input;
 	bool _readyForSubmit = true; // if true, do not wait synchronization with other active frames in emitter
 	bool _persistentMappings = true; // true; // true; // try to map per-frame GPU memory persistently

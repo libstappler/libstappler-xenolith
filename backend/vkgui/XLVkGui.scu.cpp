@@ -37,6 +37,7 @@
 
 #include "XLVkGuiApplication.cc"
 #include "XLVkSwapchain.cc"
+#include "XLVkPresentationEngine.cc"
 #include "XLVkView.cc"
 #include "XLVkGuiShared.cc"
 

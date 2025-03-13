@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,25 @@
  THE SOFTWARE.
  **/
 
-#include "XLCoreLoop.h"
-#include "XLCoreInstance.h"
-#include "SPEventLooper.h"
+#include "XLPlatformViewInterface.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-Loop::~Loop() {
-	log::debug("core::Loop", "~Loop");
+void ViewInterface::update(bool displayLink) {
+	_presentationEngine->update(displayLink);
 }
 
-bool Loop::init(event::Looper *looper, Instance *gl, LoopInfo &&info) {
-	_instance = gl;
-	_info = move(info);
-	_looper = looper;
-	return true;
+void ViewInterface::setReadyForNextFrame() {
+	_presentationEngine->setReadyForNextFrame();
 }
 
-bool Loop::isOnThisThread() const {
-	return _looper->isOnThisThread();
+void ViewInterface::setRenderOnDemand(bool value) {
+	_presentationEngine->setRenderOnDemand(value);
 }
+
+bool ViewInterface::isRenderOnDemand() const {
+	return _presentationEngine->isRenderOnDemand();
+}
+
 
 }

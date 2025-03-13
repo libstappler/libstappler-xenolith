@@ -28,6 +28,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
+class PresentationEngine;
+
 class SP_PUBLIC FrameHandle : public Ref {
 public:
 	using FrameRequest = core::FrameRequest;
@@ -48,9 +50,9 @@ public:
 	uint64_t getSubmissionTime() const { return _submissionTime; }
 	Loop *getLoop() const { return _loop; }
 	Device *getDevice() const { return _device; }
-	const Rc<FrameEmitter> &getEmitter() const;
+
 	const Rc<Queue> &getQueue() const;
-	const FrameContraints &getFrameConstraints() const;
+	const FrameConstraints &getFrameConstraints() const;
 	const Rc<PoolRef> &getPool() const { return _pool; }
 	const Rc<FrameRequest> &getRequest() const { return _request; }
 
@@ -64,9 +66,6 @@ public:
 
 	const Vector<Rc<FrameQueue>> &getFrameQueues() const { return _queues; }
 	FrameQueue *getFrameQueue(Queue *) const;
-
-	// spinners within frame should not spin directly on loop to preserve FrameHandle object
-	virtual void schedule(Function<bool(FrameHandle &)> &&, StringView tag);
 
 	// thread tasks within frame should not be performed directly on loop's queue to preserve FrameHandle object
 	virtual void performInQueue(Function<void(FrameHandle &)> &&, Ref *, StringView tag);
@@ -86,9 +85,6 @@ public:
 	virtual bool isPersistentMapping() const;
 
 	virtual Rc<AttachmentInputData> getInputData(const AttachmentData *);
-
-	virtual bool isReadyForSubmit() const;
-	virtual void setReadyForSubmit(bool);
 
 	virtual void invalidate();
 

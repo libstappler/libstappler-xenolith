@@ -36,7 +36,7 @@ class SP_PUBLIC XcbView : public LinuxViewInterface, public XcbWindowInterface {
 public:
 	virtual ~XcbView();
 
-	XcbView(Rc<XcbConnection> &&, ViewInterface *, StringView, StringView bundleId, URect);
+	XcbView(Rc<XcbConnection> &&, ViewInterface *, const WindowInfo &);
 
 	virtual void handleConfigureNotify(xcb_configure_notify_event_t *) override;
 
@@ -67,13 +67,15 @@ public:
 	xcb_window_t getWindow() const { return _info.window; }
 	xcb_connection_t *getConnection() const;
 
-	virtual void handleSwapchainRecreation() override;
+	virtual void handleFramePresented() override;
 
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType) override;
 
 	virtual int getSocketFd() const override;
 	virtual bool poll(bool frameReady) override;
+
+	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
 protected:
 	void notifyClipboard(BytesView);
@@ -98,7 +100,6 @@ protected:
 	Vector<core::InputEventData> _pendingEvents;
 	bool _deprecateSwapchain = false;
 	bool _shouldClose = false;
-
 
 	uint16_t _borderWidth = 0;
 	uint16_t _rate = 60;

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
 #include "XLCoreLoop.h"
-#include "XLCoreFrameHandle.h"
+#include "XLCoreDeviceQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -53,85 +53,26 @@ struct DescriptorSetBindings;
 
 using PipelineDescriptor = core::PipelineDescriptor;
 
-struct SP_PUBLIC DeviceQueueFamily {
-	using FrameHandle = core::FrameHandle;
-
-	struct Waiter {
-		Function<void(Loop &, const Rc<DeviceQueue> &)> acquireForLoop;
-		Function<void(Loop &)> releaseForLoop;
-		Function<void(FrameHandle &, const Rc<DeviceQueue> &)> acquireForFrame;
-		Function<void(FrameHandle &)> releaseForFrame;
-
-		Rc<FrameHandle> handle;
-		Rc<Loop> loop;
-		Rc<Ref> ref;
-
-		Waiter(Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&a, Function<void(FrameHandle &)> &&r,
-				FrameHandle *h, Rc<Ref> &&ref)
-		: acquireForFrame(sp::move(a)), releaseForFrame(sp::move(r)), handle(h), ref(sp::move(ref)) { }
-
-		Waiter(Function<void(Loop &, const Rc<DeviceQueue> &)> &&a, Function<void(Loop &)> &&r,
-				Loop *h, Rc<Ref> &&ref)
-		: acquireForLoop(sp::move(a)), releaseForLoop(sp::move(r)), loop(h), ref(sp::move(ref)) { }
-	};
-
-	uint32_t index;
-	uint32_t count;
-	QueueOperations preferred = QueueOperations::None;
-	QueueOperations ops = QueueOperations::None;
-	VkExtent3D transferGranularity;
-	Vector<Rc<DeviceQueue>> queues;
-	Vector<Rc<CommandPool>> pools;
-	Vector<Waiter> waiters;
-};
-
-class SP_PUBLIC DeviceQueue final : public Ref {
+class SP_PUBLIC DeviceQueue final : public core::DeviceQueue {
 public:
-	enum class IdleFlags {
-		None,
-		PreQueue = 1 << 0,
-		PreDevice = 1 << 1,
-		PostQueue = 1 << 2,
-		PostDevice = 1 << 3,
-	};
-
 	using FrameSync = core::FrameSync;
 	using FrameHandle = core::FrameHandle;
 
 	virtual ~DeviceQueue();
 
-	virtual bool init(Device &, VkQueue, uint32_t, QueueOperations);
+	bool init(Device &device, VkQueue queue, uint32_t index, core::QueueFlags flags);
 
-	bool submit(const FrameSync &, Fence &, CommandPool &, SpanView<const CommandBuffer *>, IdleFlags = IdleFlags::None);
-	bool submit(Fence &, const CommandBuffer *, IdleFlags = IdleFlags::None);
-	bool submit(Fence &, SpanView<const CommandBuffer *>, IdleFlags = IdleFlags::None);
+	virtual Status waitIdle() override;
 
-	void waitIdle();
-
-	uint32_t getActiveFencesCount();
-	void retainFence(const Fence &);
-	void releaseFence(const Fence &);
-
-	uint32_t getIndex() const { return _index; }
-	uint64_t getFrameIndex() const { return _frameIdx; }
 	VkQueue getQueue() const { return _queue; }
-	QueueOperations getOps() const { return _ops; }
-	VkResult getResult() const { return _result; }
-
-	void setOwner(FrameHandle &);
-	void reset();
 
 protected:
-	Device *_device = nullptr;
-	uint32_t _index = 0;
-	uint64_t _frameIdx = 0;
-	QueueOperations _ops = QueueOperations::None;
+	virtual Status doSubmit(const FrameSync *, core::CommandPool *, core::Fence &, SpanView<const core::CommandBuffer *>,
+			core::DeviceIdleFlags = core::DeviceIdleFlags::None) override;
+
 	VkQueue _queue;
-	std::atomic<uint32_t> _nfences;
-	VkResult _result = VK_ERROR_UNKNOWN;
 };
 
-SP_DEFINE_ENUM_AS_MASK(DeviceQueue::IdleFlags)
 
 enum class BufferLevel {
 	Primary = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -328,7 +269,7 @@ protected:
 	const ComputePipeline *_boundComputePipeline = nullptr;
 };
 
-class SP_PUBLIC CommandPool : public Ref {
+class SP_PUBLIC CommandPool : public core::CommandPool {
 public:
 	static constexpr VkCommandBufferUsageFlagBits DefaultFlags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
@@ -336,11 +277,8 @@ public:
 
 	virtual ~CommandPool();
 
-	bool init(Device &dev, uint32_t familyIdx, QueueOperations c = QueueOperations::Graphics, bool transient = true);
-	void invalidate(Device &dev);
+	bool init(Device &dev, uint32_t familyIdx, core::QueueFlags c = core::QueueFlags::Graphics, bool transient = true);
 
-	QueueOperations getClass() const { return _class; }
-	uint32_t getFamilyIdx() const { return _familyIdx; }
 	VkCommandPool getCommandPool() const { return _commandPool; }
 
 	const CommandBuffer * recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
@@ -355,14 +293,7 @@ public:
 protected:
 	void recreatePool(Device &dev);
 
-	uint32_t _familyIdx = 0;
-	uint32_t _currentComplexity = 0;
-	uint32_t _bestComplexity = 0;
-	bool _invalidated = false;
-	QueueOperations _class = QueueOperations::Graphics;
 	VkCommandPool _commandPool = VK_NULL_HANDLE;
-	Vector<Rc<Ref>> _autorelease;
-	Vector<Rc<CommandBuffer>> _buffers;
 };
 
 }

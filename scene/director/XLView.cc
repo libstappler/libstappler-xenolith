@@ -22,14 +22,13 @@
 
 #include "XLView.h"
 #include "XLInputDispatcher.h"
+#include "SPEventTimerHandle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(View, onFrameRate);
 XL_DECLARE_EVENT_CLASS(View, onBackground);
 XL_DECLARE_EVENT_CLASS(View, onFocus);
-
-View::View() { }
 
 View::~View() {
 	log::debug("xenolith::View", "~View");
@@ -38,21 +37,32 @@ View::~View() {
 bool View::init(Application &loop, ViewInfo &&info) {
 	_mainLoop = &loop;
 	_glLoop = _mainLoop->getGlLoop();
-	_constraints.extent = Extent2(info.rect.width, info.rect.height);
-	_constraints.density = 1.0f;
-	if (info.density != 0.0f) {
-		_constraints.density = info.density;
-	}
-	_constraints.contentPadding = info.decoration;
-	_frameEmitter = Rc<FrameEmitter>::create(_glLoop, info.frameInterval);
 	_info = move(info);
 	return true;
 }
 
+void View::run() {
+	_glLoop->scheduleUpdate([this] () {
+		update(false);
+	}, this);
+
+	if (!_presentationEngine->isRunning()) {
+		_presentationEngine->run();
+	}
+
+	_presentationEngine->scheduleNextImage([this] (core::PresentationFrame *, bool success) {
+		mapWindow();
+	});
+}
+
 void View::end() {
-	_running = false;
-	_frameEmitter->invalidate();
-	_mainLoop->performOnMainThread([this, cb = sp::move(_info.onClosed)] () {
+	_glLoop->unscheduleUpdate(this);
+
+	if (_presentationEngine) {
+		_presentationEngine->invalidate();
+	}
+
+	_mainLoop->performOnAppThread([this, cb = sp::move(_info.onClosed)] () {
 		if (_director) {
 			_director->end();
 		}
@@ -60,41 +70,51 @@ void View::end() {
 	}, this);
 }
 
-void View::update(bool displayLink) {
-	Vector<Pair<Function<void()>, Rc<Ref>>> callback;
-
-	_mutex.lock();
-	callback = sp::move(_callbacks);
-	_callbacks.clear();
-	_mutex.unlock();
-
-	for (auto &it : callback) {
-		it.first();
+void View::runWithQueue(const Rc<RenderQueue> &queue) {
+	if (!_presentationEngine->isRunning()) {
+		run();
 	}
+}
+
+void View::setPresentationEngine(Rc<core::PresentationEngine> &&e) {
+	if (_presentationEngine) {
+		log::error("View", "Presentation engine already defined");
+		return;
+	}
+
+	_presentationEngine = move(e);
+
+	auto c = _presentationEngine->getFrameConstraints();
+	_director = Rc<Director>::create(_mainLoop, c, this);
+	if (_info.onCreated) {
+		_mainLoop->performOnAppThread([this, c] {
+			_info.onCreated(*this, c);
+		}, this);
+	} else {
+		run();
+	}
+}
+
+bool View::isOnThisThread() const {
+	return _glLoop->isOnThisThread();
 }
 
 void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate) {
 	if (immediate && isOnThisThread()) {
 		func();
 	} else {
-		std::unique_lock<Mutex> lock(_mutex);
-		if (_running) {
-			_callbacks.emplace_back(sp::move(func), target);
-			wakeup(lock);
-		} else if (!_init) {
-			_callbacks.emplace_back(sp::move(func), target);
-		}
+		_glLoop->getLooper()->performOnThread(sp::move(func), target);
 	}
 }
 
-const Rc<Director> &View::getDirector() const {
+Director *View::getDirector() const {
 	return _director;
 }
 
 void View::handleInputEvent(const InputEventData &event) {
-	_mainLoop->performOnMainThread([this, event = event] () mutable {
+	_mainLoop->performOnAppThread([this, event = event] () mutable {
 		if (event.isPointEvent()) {
-			event.point.density = _constraints.density;
+			event.point.density = _presentationEngine ? _presentationEngine->getFrameConstraints().density : _info.window.density;
 		}
 
 		switch (event.event) {
@@ -118,10 +138,10 @@ void View::handleInputEvent(const InputEventData &event) {
 }
 
 void View::handleInputEvents(Vector<InputEventData> &&events) {
-	_mainLoop->performOnMainThread([this, events = sp::move(events)] () mutable {
+	_mainLoop->performOnAppThread([this, events = sp::move(events)] () mutable {
 		for (auto &event : events) {
 			if (event.isPointEvent()) {
-				event.point.density = _constraints.density;
+				event.point.density = _presentationEngine ? _presentationEngine->getFrameConstraints().density : _info.window.density;
 			}
 
 			switch (event.event) {
@@ -143,10 +163,6 @@ void View::handleInputEvents(Vector<InputEventData> &&events) {
 		}
 	}, this, true);
 	setReadyForNextFrame();
-}
-
-core::ImageInfo View::getSwapchainImageInfo() const {
-	return getSwapchainImageInfo(_config);
 }
 
 core::ImageInfo View::getSwapchainImageInfo(const core::SwapchainConfig &cfg) const {
@@ -180,56 +196,18 @@ core::ImageViewInfo View::getSwapchainImageViewInfo(const core::ImageInfo &image
 	return image.getViewInfo(info);
 }
 
-uint64_t View::getLastFrameInterval() const {
-	return _lastFrameInterval;
-}
-uint64_t View::getAvgFrameInterval() const {
-	return _avgFrameIntervalValue;
-}
-
-uint64_t View::getLastFrameTime() const {
-	return _frameEmitter->getLastFrameTime();
-}
-uint64_t View::getAvgFrameTime() const {
-	return _frameEmitter->getAvgFrameTime();
-}
-
-uint64_t View::getAvgFenceTime() const {
-	return _frameEmitter->getAvgFenceTime();
+core::SwapchainConfig View::selectConfig(const core::SurfaceInfo &surface) const {
+	return _info.selectConfig(*this, surface);
 }
 
 SP_COVERAGE_TRIVIAL
 Extent2 View::getExtent() const {
-	return Extent2(_constraints.extent.width, _constraints.extent.height);
-}
-
-uint64_t View::getFrameInterval() const {
-	std::unique_lock<Mutex> lock(_frameIntervalMutex);
-	return _info.frameInterval;
-}
-
-void View::setFrameInterval(uint64_t value) {
-	performOnThread([this, value] {
-		std::unique_lock<Mutex> lock(_frameIntervalMutex);
-		_info.frameInterval = value;
-		_frameEmitter->setFrameInterval(value);
-		onFrameRate(this, int64_t(_info.frameInterval));
-	}, this, true);
-}
-
-SP_COVERAGE_TRIVIAL
-void View::setReadyForNextFrame() {
-
-}
-
-SP_COVERAGE_TRIVIAL
-void View::setRenderOnDemand(bool value) {
-
-}
-
-SP_COVERAGE_TRIVIAL
-bool View::isRenderOnDemand() const {
-	return true;
+	if (_presentationEngine) {
+		auto &e = _presentationEngine->getFrameConstraints().extent;
+		return Extent2(e.width, e.height);
+	} else {
+		return Extent2(_info.window.rect.width, _info.window.rect.height);
+	}
 }
 
 void View::retainBackButton() {
@@ -254,20 +232,6 @@ void View::setDecorationTone(float) {
 
 void View::setDecorationVisible(bool) {
 
-}
-
-uint64_t View::retainView() {
-	return retain();
-}
-
-void View::releaseView(uint64_t id) {
-	release(id);
-}
-
-SP_COVERAGE_TRIVIAL
-void View::setContentPadding(const Padding &padding) {
-	_constraints.contentPadding = padding;
-	setReadyForNextFrame();
 }
 
 }

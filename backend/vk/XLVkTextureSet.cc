@@ -157,10 +157,10 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 	task->loop = &loop;
 	task->device = &dev;
 
-	dev.acquireQueue(QueueOperations::Graphics, loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
-		task->queue = queue;
-		task->fence = task->loop->acquireFence(0);
-		task->pool = task->device->acquireCommandPool(QueueOperations::Graphics);
+	dev.acquireQueue(core::QueueFlags::Graphics, loop, [this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+		task->queue = ref_cast<DeviceQueue>(queue);
+		task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
+		task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(core::QueueFlags::Graphics));
 
 		auto refId = task->retain();
 		task->fence->addRelease([task, refId] (bool success) {
@@ -175,7 +175,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 				return true;
 			});
 
-			if (task->queue->submit(*task->fence, buf)) {
+			if (task->queue->submit(*task->fence, buf) == Status::Ok) {
 				return true;
 			}
 			return false;
@@ -188,7 +188,7 @@ void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)>
 			task->fence = nullptr;
 			task->release(0);
 		}, this));
-	}, [task] (Loop &) {
+	}, [task] (core::Loop &) {
 		task->callback(false);
 		task->release(0);
 	}, this);
@@ -225,11 +225,12 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 	task->device = &dev;
 	task->layout = l;
 
-	task->loop->performOnGlThread([this, task] {
-		task->device->acquireQueue(getQueueOperations(task->image->getInfo().type), *task->loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
-			task->fence = loop.acquireFence(0);
-			task->pool = task->device->acquireCommandPool(getQueueOperations(task->image->getInfo().type));
-			task->queue = move(queue);
+	task->loop->performOnThread([this, task] {
+		task->device->acquireQueue(getQueueFlags(task->image->getInfo().type), *task->loop,
+				[this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+			task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
+			task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(getQueueFlags(task->image->getInfo().type)));
+			task->queue = ref_cast<DeviceQueue>(queue);
 			task->mempool = Rc<DeviceMemoryPool>::create(task->device->getAllocator(), true);
 
 			auto &info = task->image->getInfo();
@@ -258,7 +259,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 					return true;
 				});
 
-				if (task->queue->submit(*task->fence, buf)) {
+				if (task->queue->submit(*task->fence, buf) == Status::Ok) {
 					return true;
 				}
 				return false;
@@ -273,7 +274,7 @@ void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image
 				task->fence = nullptr;
 				task->release(0);
 			}));
-		}, [task] (Loop &) {
+		}, [task] (core::Loop &) {
 			task->callback(ImageInfo(), BytesView());
 			task->release(0);
 		});
@@ -306,11 +307,12 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 	task->device = &dev;
 	task->mempool = buf->getMemory()->getPool();
 
-	task->loop->performOnGlThread([this, task] {
-		task->device->acquireQueue(getQueueOperations(task->buffer->getInfo().type), *task->loop, [this, task] (Loop &loop, const Rc<DeviceQueue> &queue) {
-			task->fence = loop.acquireFence(0);
-			task->pool = task->device->acquireCommandPool(getQueueOperations(task->buffer->getInfo().type));
-			task->queue = move(queue);
+	task->loop->performOnThread([this, task] {
+		task->device->acquireQueue(getQueueFlags(task->buffer->getInfo().type), *task->loop,
+				[this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+			task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
+			task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(getQueueFlags(task->buffer->getInfo().type)));
+			task->queue = ref_cast<DeviceQueue>(queue);
 			if (!task->mempool) {
 				task->mempool = Rc<DeviceMemoryPool>::create(task->device->getAllocator(), true);
 			}
@@ -340,7 +342,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 					return true;
 				});
 
-				if (task->queue->submit(*task->fence, buf)) {
+				if (task->queue->submit(*task->fence, buf) == Status::Ok) {
 					return true;
 				}
 				return false;
@@ -355,7 +357,7 @@ void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf
 				task->fence = nullptr;
 				task->release(0);
 			}));
-		}, [task] (Loop &) {
+		}, [task] (core::Loop &) {
 			task->callback(BufferInfo(), BytesView());
 			task->release(0);
 		});
@@ -583,7 +585,7 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 				localImages = &imagesList.emplace_front(Vector<VkDescriptorImageInfo>());
 			}
 			localImages->emplace_back(VkDescriptorImageInfo({
-				VK_NULL_HANDLE, ((ImageView *)set.imageSlots[i].image.get())->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				VK_NULL_HANDLE, set.imageSlots[i].image.get_cast<ImageView>()->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			}));
 			auto image = (Image *)set.imageSlots[i].image->getImage().get();
 			if (image->getPendingBarrier()) {

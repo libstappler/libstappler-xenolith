@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 class FontExtension;
 
 struct SP_PUBLIC RenderFontInput : public core::AttachmentInputData {
-	Rc<thread::TaskQueue> queue;
+	event::Looper *queue;
 	Rc<core::DynamicImage> image;
 	Rc<FontExtension> ext;
 	Vector<FontUpdateRequest> requests;

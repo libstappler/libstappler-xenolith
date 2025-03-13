@@ -76,10 +76,10 @@ public:
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 	virtual void finalize(FrameQueue &, bool successful) override;
 
-	virtual QueueOperations getQueueOps() const override;
+	virtual core::QueueFlags getQueueOps() const override;
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 
@@ -255,7 +255,7 @@ bool MeshCompilerPass::init(QueuePassBuilder &passBuilder, const AttachmentData 
 		return false;
 	}
 
-	_queueOps = QueueOperations::Transfer;
+	_queueOps = core::QueueFlags::Transfer;
 	_meshAttachment = attachment;
 	return true;
 }
@@ -278,25 +278,25 @@ void MeshCompilerPassHandle::finalize(FrameQueue &handle, bool successful) {
 	QueuePassHandle::finalize(handle, successful);
 }
 
-QueueOperations MeshCompilerPassHandle::getQueueOps() const {
+core::QueueFlags MeshCompilerPassHandle::getQueueOps() const {
 	return QueuePassHandle::getQueueOps();
 }
 
-Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHandle &handle) {
 	auto &allocator = _device->getAllocator();
 	auto memPool = static_cast<DeviceFrameHandle &>(handle).getMemPool(this);
 
 	auto input = _meshAttachment->getInputData();
 	auto prev = _meshAttachment->getMeshSet();
 
-	QueueOperations ops = QueueOperations::None;
+	core::QueueFlags ops = core::QueueFlags::None;
 	for (auto &it : input->attachment->getRenderPasses()) {
 		ops |= static_cast<vk::QueuePass *>(it->pass.get())->getQueueOps();
 	}
 
 	auto q = _device->getQueueFamily(ops);
 	if (!q) {
-		return Vector<const CommandBuffer *>();
+		return Vector<const core::CommandBuffer *>();
 	}
 
 	auto indexes = _meshAttachment->getMeshSet()->getIndexes();
@@ -430,9 +430,9 @@ Vector<const CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(FrameHan
 	if (buf) {
 		_outputData = Rc<core::MeshSet>::create(sp::move(indexes), indexBuffer, vertexBuffer);
 
-		return Vector<const CommandBuffer *>{buf};
+		return Vector<const core::CommandBuffer *>{buf};
 	}
-	return Vector<const CommandBuffer *>();
+	return Vector<const core::CommandBuffer *>();
 }
 
 void MeshCompilerPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {

@@ -34,15 +34,24 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 DeviceQueue::~DeviceQueue() { }
 
-bool DeviceQueue::init(Device &device, VkQueue queue, uint32_t index, QueueOperations ops) {
-	_device = &device;
+bool DeviceQueue::init(Device &device, VkQueue queue, uint32_t index, core::QueueFlags flags) {
+	if (!core::DeviceQueue::init(device, index, flags)) {
+		return false;
+	}
 	_queue = queue;
-	_index = index;
-	_ops = ops;
 	return true;
 }
 
-bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &commandPool, SpanView<const CommandBuffer *> buffers, IdleFlags idle) {
+Status DeviceQueue::waitIdle() {
+	VkResult result;
+	static_cast<Device *>(_device)->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+		result = table.vkQueueWaitIdle(_queue);
+	});
+	return getStatus(result);
+}
+
+Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPool, core::Fence &fence, SpanView<const core::CommandBuffer *> buffers,
+		core::DeviceIdleFlags idle) {
 	Vector<VkSemaphore> waitSem;
 	Vector<VkPipelineStageFlags> waitStages;
 	Vector<VkSemaphore> signalSem;
@@ -50,28 +59,34 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 
 	for (auto &it : buffers) {
 		if (it) {
-			vkBuffers.emplace_back(it->getBuffer());
+			vkBuffers.emplace_back(static_cast<const CommandBuffer *>(it)->getBuffer());
 		}
 	}
 
-	for (auto &it : sync.waitAttachments) {
-		if (it.semaphore) {
-			auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
+	if (sync) {
+		for (auto &it : sync->waitAttachments) {
+			if (it.semaphore) {
+				auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
 
-			if (!it.semaphore->isWaited()) {
-				waitSem.emplace_back(sem);
-				waitStages.emplace_back(VkPipelineStageFlags(it.stages));
+				if (!it.semaphore->isWaited()) {
+					waitSem.emplace_back(sem);
+					waitStages.emplace_back(VkPipelineStageFlags(it.stages));
+				}
+				if (commandPool) {
+					commandPool->autorelease(it.semaphore.get());
+				}
 			}
-			commandPool.autorelease(it.semaphore.get());
 		}
-	}
 
-	for (auto &it : sync.signalAttachments) {
-		if (it.semaphore) {
-			auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
+		for (auto &it : sync->signalAttachments) {
+			if (it.semaphore) {
+				auto sem = ((Semaphore *)it.semaphore.get())->getSemaphore();
 
-			signalSem.emplace_back(sem);
-			commandPool.autorelease(it.semaphore.get());
+				signalSem.emplace_back(sem);
+				if (commandPool) {
+					commandPool->autorelease(it.semaphore.get());
+				}
+			}
 		}
 	}
 
@@ -94,158 +109,75 @@ bool DeviceQueue::submit(const FrameSync &sync, Fence &fence, CommandPool &comma
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
-	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
-		if ((idle & IdleFlags::PreQueue) != IdleFlags::None) {
+	VkResult result;
+	auto dev = static_cast<Device *>(_device);
+
+	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+		if (hasFlag(idle, core::DeviceIdleFlags::PreDevice)) {
+			table.vkDeviceWaitIdle(dev->getDevice());
+		} else if (hasFlag(idle, core::DeviceIdleFlags::PreQueue)) {
 			table.vkQueueWaitIdle(_queue);
-		}
-		if ((idle & IdleFlags::PreDevice) != IdleFlags::None) {
-			table.vkDeviceWaitIdle(_device->getDevice());
 		}
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
+		result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
 		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
 				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
-		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
+		result = table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
 #endif
-		if ((idle & IdleFlags::PostQueue) != IdleFlags::None) {
+
+		if (hasFlag(idle, core::DeviceIdleFlags::PostDevice)) {
+			table.vkDeviceWaitIdle(dev->getDevice());
+		} else if (hasFlag(idle, core::DeviceIdleFlags::PostQueue)) {
 			table.vkQueueWaitIdle(_queue);
-		}
-		if ((idle & IdleFlags::PostDevice) != IdleFlags::None) {
-			table.vkDeviceWaitIdle(_device->getDevice());
 		}
 	});
 
-	if (_result == VK_SUCCESS) {
+	if (result == VK_SUCCESS) {
 		// mark semaphores
-
-		for (auto &it : sync.waitAttachments) {
-			if (it.semaphore) {
-				it.semaphore->setWaited(true);
-				if (it.image && !it.image->isSemaphorePersistent()) {
-					fence.addRelease([img = it.image, sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
-						sem->setInUse(false, t);
-						img->releaseSemaphore(sem);
-					}, it.image, "DeviceQueue::submit::!isSemaphorePersistent");
-				} else {
-					fence.addRelease([sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
-						sem->setInUse(false, t);
-					}, it.semaphore, "DeviceQueue::submit::isSemaphorePersistent");
+		if (sync) {
+			for (auto &it : sync->waitAttachments) {
+				if (it.semaphore) {
+					it.semaphore->setWaited(true);
+					if (it.image && !it.image->isSemaphorePersistent()) {
+						fence.addRelease([img = it.image, sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
+							sem->setInUse(false, t);
+							img->releaseSemaphore(sem);
+						}, it.image, "DeviceQueue::submit::!isSemaphorePersistent");
+					} else {
+						fence.addRelease([sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
+							sem->setInUse(false, t);
+						}, it.semaphore, "DeviceQueue::submit::isSemaphorePersistent");
+					}
+					fence.autorelease(it.semaphore.get());
+					if (commandPool) {
+						commandPool->autorelease(it.semaphore.get());
+					}
 				}
-				fence.autorelease(it.semaphore.get());
-				commandPool.autorelease(it.semaphore.get());
 			}
-		}
 
-		for (auto &it : sync.signalAttachments) {
-			if (it.semaphore) {
-				it.semaphore->setSignaled(true);
-				it.semaphore->setInUse(true, it.semaphore->getTimeline());
-				fence.autorelease(it.semaphore.get());
-				commandPool.autorelease(it.semaphore.get());
+			for (auto &it : sync->signalAttachments) {
+				if (it.semaphore) {
+					it.semaphore->setSignaled(true);
+					it.semaphore->setInUse(true, it.semaphore->getTimeline());
+					fence.autorelease(it.semaphore.get());
+					if (commandPool) {
+						commandPool->autorelease(it.semaphore.get());
+					}
+				}
 			}
 		}
 
 		fence.setArmed(*this);
 
-		for (auto &it : sync.images) {
-			it.image->setLayout(it.newLayout);
-		}
-
-		return true;
-	}
-	return false;
-}
-
-bool DeviceQueue::submit(Fence &fence, const CommandBuffer *buffer, IdleFlags idle) {
-	return submit(fence, makeSpanView(&buffer, 1), idle);
-}
-
-bool DeviceQueue::submit(Fence &fence, SpanView<const CommandBuffer *> buffers, IdleFlags idle) {
-	Vector<VkCommandBuffer> vkBuffers; vkBuffers.reserve(buffers.size());
-
-	for (auto &it : buffers) {
-		if (it) {
-			vkBuffers.emplace_back(it->getBuffer());
+		if (sync) {
+			for (auto &it : sync->images) {
+				it.image->setLayout(it.newLayout);
+			}
 		}
 	}
-
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pNext = nullptr;
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitSemaphores = nullptr;
-	submitInfo.pWaitDstStageMask = 0;
-	submitInfo.commandBufferCount = uint32_t(vkBuffers.size());
-	submitInfo.pCommandBuffers = vkBuffers.data();
-	submitInfo.signalSemaphoreCount = 0;
-	submitInfo.pSignalSemaphores = nullptr;
-
-#if XL_VKAPI_DEBUG
-	[[maybe_unused]] auto frameIdx = _frameIdx;
-	[[maybe_unused]] auto t = sp::platform::clock(ClockType::Monotonic);
-	fence.addRelease([=] (bool success) {
-		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
-	}, nullptr, "DeviceQueue::submit");
-#endif
-
-	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
-		if ((idle & IdleFlags::PreQueue) != IdleFlags::None) {
-			table.vkQueueWaitIdle(_queue);
-		}
-		if ((idle & IdleFlags::PreDevice) != IdleFlags::None) {
-			table.vkDeviceWaitIdle(_device->getDevice());
-		}
-#if XL_VKAPI_DEBUG
-		auto t = sp::platform::clock(ClockType::Monotonic);
-		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
-		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", _result, " ", (void *)_queue,
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
-#else
-		_result = table.vkQueueSubmit(_queue, 1, &submitInfo, fence.getFence());
-#endif
-		if ((idle & IdleFlags::PostQueue) != IdleFlags::None) {
-			table.vkQueueWaitIdle(_queue);
-		}
-		if ((idle & IdleFlags::PostDevice) != IdleFlags::None) {
-			table.vkDeviceWaitIdle(_device->getDevice());
-		}
-	});
-
-	if (_result == VK_SUCCESS) {
-		fence.setArmed(*this);
-		return true;
-	}
-	return false;
-}
-
-void DeviceQueue::waitIdle() {
-	_device->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
-		table.vkQueueWaitIdle(_queue);
-	});
-}
-
-uint32_t DeviceQueue::getActiveFencesCount() {
-	return _nfences.load();
-}
-
-void DeviceQueue::retainFence(const Fence &fence) {
-	++ _nfences;
-}
-
-void DeviceQueue::releaseFence(const Fence &fence) {
-	-- _nfences;
-}
-
-void DeviceQueue::setOwner(FrameHandle &frame) {
-	_frameIdx = frame.getOrder();
-}
-
-void DeviceQueue::reset() {
-	_result = VK_ERROR_UNKNOWN;
-	_frameIdx = 0;
+	return getStatus(result);
 }
 
 ImageMemoryBarrier::ImageMemoryBarrier(Image *image, VkAccessFlags src, VkAccessFlags dst,
@@ -740,25 +672,30 @@ CommandPool::~CommandPool() {
 	}
 }
 
-bool CommandPool::init(Device &dev, uint32_t familyIdx, QueueOperations c, bool transient) {
+static void CommandPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
+	auto d = static_cast<Device *>(dev);
+	auto target = (VkCommandPool *)ptr.get();
+	if (*target) {
+		d->getTable()->vkDestroyCommandPool(d->getDevice(), *target, nullptr);
+		*target = nullptr;
+	}
+}
+
+bool CommandPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c, bool transient) {
 	_familyIdx = familyIdx;
 	_class = c;
+
 	VkCommandPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.pNext = nullptr;
 	poolInfo.queueFamilyIndex = familyIdx;
 	poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
 
-	return dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool) == VK_SUCCESS;
-}
-
-void CommandPool::invalidate(Device &dev) {
-	if (_commandPool) {
-		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
-		_commandPool = VK_NULL_HANDLE;
-	} else {
-		log::error("VK-Error", "CommandPool is not defined");
+	if (dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool) == VK_SUCCESS) {
+		return core::CommandPool::init(dev, CommandPool_destroy, core::ObjectType::CommandPool, core::ObjectHandle(&_commandPool));
 	}
+
+	return false;
 }
 
 const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
@@ -810,7 +747,7 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<Descriptor
 		return nullptr;
 	}
 
-	return _buffers.emplace_back(move(b)).get();
+	return static_cast<const CommandBuffer *>(_buffers.emplace_back(move(b)).get());
 }
 
 void CommandPool::freeDefaultBuffers(Device &dev, Vector<VkCommandBuffer> &vec) {
@@ -827,7 +764,7 @@ void CommandPool::reset(Device &dev, bool release) {
 		Vector<VkCommandBuffer> buffersToFree;
 		for (auto &it : _buffers) {
 			if (it) {
-				buffersToFree.emplace_back(it->getBuffer());
+				buffersToFree.emplace_back(static_cast<const CommandBuffer *>(it.get())->getBuffer());
 			}
 		}
 		if (buffersToFree.size() > 0) {
@@ -839,10 +776,9 @@ void CommandPool::reset(Device &dev, bool release) {
 		} else {
 			recreatePool(dev);
 		}
-
-		_buffers.clear();
-		_autorelease.clear();
 	}
+
+	core::CommandPool::reset(dev, release);
 }
 
 void CommandPool::autorelease(Rc<Ref> &&ref) {

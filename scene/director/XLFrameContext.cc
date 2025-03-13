@@ -167,7 +167,7 @@ void FrameContext::addPendingMaterial(Rc<core::Material> &&material) {
 	if (!_materialDependency) {
 		_materialDependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
 			Rc<core::Queue>(_materialAttachment->getCompiler())
-		});
+		}, "Material");
 	}
 }
 

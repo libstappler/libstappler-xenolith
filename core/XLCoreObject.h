@@ -49,6 +49,8 @@ class Loop;
 class Device;
 class Attachment;
 class Queue;
+class CommandPool;
+class DeviceQueue;
 
 struct GraphicPipelineInfo;
 struct GraphicPipelineData;
@@ -396,6 +398,90 @@ protected:
 	bool _signaled = false;
 	bool _waited = false;
 	bool _inUse = false;
+};
+
+/* Fence wrapper
+ *
+ * usage pattern:
+ * - store handles in common storage
+ * - pop one before running signal function
+ * - associate resources with Fence
+ * - run function, that signals VkFence
+ * - schedule spinner on check()
+ * - release resources when VkFence is signaled
+ * - push Fence back into storage when Fence is signaled
+ * - storage should reset() Fence on push
+ */
+class SP_PUBLIC Fence : public Object {
+public:
+	enum State {
+		Disabled,
+		Armed,
+		Signaled
+	};
+
+	virtual ~Fence();
+
+	void clear();
+
+	FenceType getType() const { return _type; }
+
+	void setFrame(uint64_t f);
+	void setFrame(Function<bool()> &&schedule, Function<void()> &&release, uint64_t f);
+	uint64_t getFrame() const { return _frame; }
+
+	void setScheduleCallback(Function<bool()> &&schedule);
+	void setReleaseCallback(Function<bool()> &&release);
+
+	uint64_t getArmedTime() const { return _armedTime; }
+
+	bool isArmed() const { return _state == Armed; }
+	void setArmed(DeviceQueue &);
+	void setArmed();
+
+	void setTag(StringView);
+	StringView getTag() const { return _tag; }
+
+	// function will be called and ref will be released on fence's signal
+	void addRelease(Function<void(bool)> &&, Ref *, StringView tag);
+
+	bool schedule(Loop &);
+
+	bool check(Loop &, bool lockfree = true);
+	// void reset(Loop &, Function<void(Rc<Fence> &&)> &&);
+
+	void autorelease(Rc<Ref> &&);
+
+protected:
+	using Object::init;
+
+	void setSignaled(Loop &loop);
+
+	void scheduleReset(Loop &);
+	void scheduleReleaseReset(Loop &, bool s);
+	void doRelease(bool success);
+
+	virtual Status doCheckFence(bool lockfree) = 0;
+	virtual void doResetFence() = 0;
+
+	struct ReleaseHandle {
+		Function<void(bool)> callback;
+		Rc<Ref> ref;
+		StringView tag;
+	};
+
+	uint64_t _frame = 0;
+	FenceType _type = FenceType::Default;
+	State _state = Disabled;
+	Vector<ReleaseHandle> _release;
+	Mutex _mutex;
+	DeviceQueue *_queue = nullptr;
+	uint64_t _armedTime = 0;
+	StringView _tag;
+
+	Function<bool()> _scheduleFn;
+	Function<void()> _releaseFn;
+	Vector<Rc<Ref>> _autorelease;
 };
 
 }

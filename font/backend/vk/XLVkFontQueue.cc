@@ -134,13 +134,13 @@ public:
 
 	virtual bool init(QueuePass &, const FrameQueue &) override;
 
-	virtual QueueOperations getQueueOps() const override;
+	virtual core::QueueFlags getQueueOps() const override;
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 	virtual void finalize(FrameQueue &, bool successful)  override;
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
@@ -148,7 +148,7 @@ protected:
 	void submitResult(FrameHandle &);
 
 	FontAttachmentHandle *_fontAttachment = nullptr;
-	QueueOperations _queueOps = QueueOperations::None;
+	core::QueueFlags _queueOps = core::QueueFlags::None;
 	Rc<Image> _targetImage;
 	Rc<Buffer> _targetAtlas;
 	Rc<Buffer> _outBuffer;
@@ -334,7 +334,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		}
 	}
 
-	font::DeferredRequest::runFontRenderer(*_input->queue, _input->ext, _input->requests, [this] (uint32_t reqIdx, const font::CharTexture &texData) {
+	font::DeferredRequest::runFontRenderer(_input->queue, _input->ext, _input->requests, [this] (uint32_t reqIdx, const font::CharTexture &texData) {
 		pushCopyTexture(reqIdx, texData);
 	}, [this, handle = Rc<FrameHandle>(&handle), underlinePersistent] {
 		writeAtlasData(*handle, underlinePersistent);
@@ -554,18 +554,18 @@ bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
 
 	auto dev = static_cast<Device *>(handle.getFrame()->getDevice());
 	if (dev->isPortabilityMode()) {
-		_queueIdleFlags = DeviceQueue::IdleFlags::PostQueue;
+		_queueIdleFlags = core::DeviceIdleFlags::PostQueue;
 	}
 
 	auto q = dev->getQueueFamily(_queueOps);
 	if (q->transferGranularity.width > 1 || q->transferGranularity.height > 1) {
-		_queueOps = QueueOperations::Graphics;
+		_queueOps = core::QueueFlags::Graphics;
 		for (auto &it : dev->getQueueFamilies()) {
 			if (it.index != q->index) {
 				switch (it.preferred) {
-				case QueueOperations::Compute:
-				case QueueOperations::Transfer:
-				case QueueOperations::Graphics:
+				case core::QueueFlags::Compute:
+				case core::QueueFlags::Transfer:
+				case core::QueueFlags::Graphics:
 					if ((it.transferGranularity.width == 1 || it.transferGranularity.height == 1) && toInt(_queueOps) < toInt(it.preferred)) {
 						_queueOps = it.preferred;
 					}
@@ -580,7 +580,7 @@ bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
 	return true;
 }
 
-QueueOperations FontRenderPassHandle::getQueueOps() const {
+core::QueueFlags FontRenderPassHandle::getQueueOps() const {
 	return _queueOps;
 }
 
@@ -596,7 +596,7 @@ void FontRenderPassHandle::finalize(FrameQueue &handle, bool successful) {
 	QueuePassHandle::finalize(handle, successful);
 }
 
-Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandle &handle) {
 	Vector<VkCommandBuffer> ret;
 
 	auto &input = _fontAttachment->getInput();
@@ -607,7 +607,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 	auto &masterImage = input->image;
 	auto instance = masterImage->getInstance();
 	if (!instance) {
-		return Vector<const CommandBuffer *>();
+		return Vector<const core::CommandBuffer *>();
 	}
 
 	auto atlas = _fontAttachment->getAtlas();
@@ -624,7 +624,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		_targetAtlas = allocator->preallocate(core::BufferInfo(atlas->getBufferData().size(),
 				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
-		allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(&_targetImage, 1), makeSpanView(&_targetAtlas, 1));
+		(void) allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(&_targetImage, 1), makeSpanView(&_targetAtlas, 1));
 	} else {
 		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false, instance->data.image->getIndex());
 	}
@@ -694,7 +694,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		}
 
 		auto sourceLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		if (auto q = _device->getQueueFamily(getQueueOperations(info.type))) {
+		if (auto q = _device->getQueueFamily(getQueueFlags(info.type))) {
 			uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
@@ -758,7 +758,7 @@ Vector<const CommandBuffer *> FontRenderPassHandle::doPrepareCommands(FrameHandl
 		return true;
 	});
 
-	return Vector<const CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {

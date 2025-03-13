@@ -830,6 +830,7 @@ enum class ObjectType {
 	Semaphore,
 	ShaderModule,
 	DeviceMemory,
+	Surface,
 	Swapchain
 };
 
@@ -842,6 +843,36 @@ enum class PixelFormat {
 	D, // depth
 	DS, // depth-stencil
 	S // stencil
+};
+
+// VkQueueFlagBits
+enum class QueueFlags : uint32_t {
+	None,
+	Graphics = 1 << 0,
+	Compute = 1 << 1,
+	Transfer = 1 << 2,
+	SparceBinding = 1 << 3,
+	Protected = 1 << 4,
+	VideoDecode = 1 << 5,
+	VideoEncode = 1 << 6,
+	Present = 0x8000'0000,
+};
+
+SP_DEFINE_ENUM_AS_MASK(QueueFlags)
+
+enum class DeviceIdleFlags {
+	None,
+	PreQueue = 1 << 0,
+	PreDevice = 1 << 1,
+	PostQueue = 1 << 2,
+	PostDevice = 1 << 3,
+};
+
+SP_DEFINE_ENUM_AS_MASK(DeviceIdleFlags)
+
+enum class FenceType {
+	Default,
+	Swapchain,
 };
 
 }

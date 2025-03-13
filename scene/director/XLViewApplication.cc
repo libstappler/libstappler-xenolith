@@ -36,7 +36,7 @@ void ViewApplication::wakeup() {
 			it->setReadyForNextFrame();
 		}
 	} else {
-		performOnMainThread([this] {
+		performOnAppThread([this] {
 			_immediateUpdate = true;
 			for (auto &it : _activeViews) {
 				it->setReadyForNextFrame();
@@ -52,14 +52,14 @@ bool ViewApplication::addView(ViewInfo &&info) {
 			if (info.onClosed) {
 				auto tmp = sp::move(info.onClosed);
 				info.onClosed = [this, tmp = sp::move(tmp)] (xenolith::View &view) {
-					performOnMainThread([this, view = Rc<xenolith::View>(&view)] {
+					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
 					}, this);
 					tmp(view);
 				};
 			} else {
 				info.onClosed = [this] (xenolith::View &view) {
-					performOnMainThread([this, view = Rc<xenolith::View>(&view)] {
+					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
 					}, this);
 				};
@@ -70,7 +70,7 @@ bool ViewApplication::addView(ViewInfo &&info) {
 					"platform::createView(Application&,core::Device const&,ViewInfo&&)");
 			if (createView) {
 				auto v = createView(*this, *_device, move(info));
-				performOnMainThread([this, v] {
+				performOnAppThread([this, v] {
 					_activeViews.emplace(v.get());
 				}, this);
 			}
@@ -80,7 +80,6 @@ bool ViewApplication::addView(ViewInfo &&info) {
 			_tmpViews.emplace_back(move(info));
 		}
 	}, this);
-
 	return true;
 }
 

@@ -93,7 +93,7 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 	if (_director) {
 		auto fps = _director->getAvgFps();
 		auto spf = _director->getSpf();
-		auto local = _director->getLocalFrameTime();
+		auto local = _director->getDeviceFrameTime();
 		auto stat = _director->getDrawStat();
 		auto tm = _director->getDirectorFrameTime();
 		auto vertex = stat.vertexInputTime / float(1000);
@@ -165,11 +165,11 @@ void Scene2d::FpsDisplay::show() {
 	}
 }
 
-bool Scene2d::init(Application *app, const core::FrameContraints &constraints) {
+bool Scene2d::init(Application *app, const core::FrameConstraints &constraints) {
 	return init(app, [] (Queue::Builder &) { }, constraints);
 }
 
-bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb, const core::FrameContraints &constraints) {
+bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
 	basic2d::vk::ShadowPass::RenderQueueInfo info{
@@ -187,7 +187,7 @@ bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb,
 	return true;
 }
 
-bool Scene2d::init(Queue::Builder &&builder, const core::FrameContraints &constraints) {
+bool Scene2d::init(Queue::Builder &&builder, const core::FrameConstraints &constraints) {
 	if (!xenolith::Scene::init(move(builder), constraints)) {
 		return false;
 	}

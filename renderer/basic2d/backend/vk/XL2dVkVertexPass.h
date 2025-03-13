@@ -119,7 +119,7 @@ public:
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 
 protected:
-	virtual Vector<const CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 	virtual void prepareRenderPass(CommandBuffer &);
 	virtual void prepareMaterialCommands(core::MaterialSet * materials, CommandBuffer &);

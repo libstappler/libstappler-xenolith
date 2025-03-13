@@ -26,6 +26,7 @@
 #include "XLCoreQueueData.h"
 #include "XLCoreObject.h"
 #include "XLCoreImageStorage.h"
+#include "XLCoreDeviceQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -71,10 +72,45 @@ public:
 	virtual Rc<ImageStorage> makeImage(const ImageInfoData &);
 	virtual Rc<Semaphore> makeSemaphore();
 	virtual Rc<ImageView> makeImageView(const Rc<ImageObject> &, const ImageViewInfo &);
+	virtual Rc<CommandPool> makeCommandPool(uint32_t family, QueueFlags flags);
 
 	uint32_t getPresentatonMask() const { return _presentMask; }
 
-	virtual void waitIdle() const { }
+	const DeviceQueueFamily *getQueueFamily(uint32_t) const;
+	const DeviceQueueFamily *getQueueFamily(QueueFlags) const;
+	const DeviceQueueFamily *getQueueFamily(PassType) const;
+
+	const Vector<DeviceQueueFamily> &getQueueFamilies() const;
+
+	// acquire DeviceQueue handle
+	// - QueueFlags - one of QueueOperations flags, defining capabilities of required queue
+	// - core::FrameHandle - frame, in which queue will be used
+	// - acquire - function, to call with result, can be called immediately
+	// 		or when queue for specified operations become available (on GL thread)
+	// - invalidate - function to call when queue query is invalidated (e.g. when frame is invalidated)
+	// - ref - ref to preserve until query is completed
+	// returns
+	// - true is query was completed or scheduled,
+	// - false if frame is not valid or no queue family with requested capabilities exists
+	//
+	// Acquired DeviceQueue must be released with releaseQueue
+	bool acquireQueue(QueueFlags, FrameHandle &, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
+			Function<void(FrameHandle &)> && invalidate, Rc<Ref> && = nullptr);
+	bool acquireQueue(QueueFlags, Loop &, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
+			Function<void(Loop &)> && invalidate, Rc<Ref> && = nullptr);
+	void releaseQueue(Rc<DeviceQueue> &&);
+
+	// Запросить DeviceQueue синхронно, если возможно
+	Rc<DeviceQueue> tryAcquireQueue(QueueFlags);
+
+	Rc<CommandPool> acquireCommandPool(QueueFlags, uint32_t = 0);
+	Rc<CommandPool> acquireCommandPool(uint32_t familyIndex);
+	void releaseCommandPool(core::Loop &, Rc<CommandPool> &&);
+	void releaseCommandPoolUnsafe(Rc<CommandPool> &&);
+
+	void invalidateSemaphore(Rc<Semaphore> &&sem) const;
+
+	virtual void waitIdle() const;
 
 protected:
 	friend class Loop;
@@ -102,6 +138,13 @@ protected:
 
 	std::thread::id _loopThreadId;
 	uint32_t _presentMask = 0;
+
+	mutable Mutex _resourceMutex;
+	uint32_t _resourceQueueWaiters = 0;
+
+	Vector<DeviceQueueFamily> _families;
+
+	mutable Vector<Rc<Semaphore>> _invalidatedSemaphores;
 };
 
 }

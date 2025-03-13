@@ -339,7 +339,7 @@ struct SP_PUBLIC ImageViewInfo {
 #endif
 };
 
-struct SP_PUBLIC FrameContraints {
+struct SP_PUBLIC FrameConstraints {
 	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
@@ -399,8 +399,8 @@ struct SP_PUBLIC FrameContraints {
 		return out;
 	}
 
-	constexpr bool operator==(const FrameContraints &) const = default;
-	constexpr bool operator!=(const FrameContraints &) const = default;
+	constexpr bool operator==(const FrameConstraints &) const = default;
+	constexpr bool operator!=(const FrameConstraints &) const = default;
 };
 
 struct SP_PUBLIC SwapchainConfig {
@@ -464,6 +464,8 @@ SP_PUBLIC ImageViewType getImageViewType(ImageType, ArrayLayers);
 
 SP_PUBLIC bool hasReadAccess(AccessType);
 SP_PUBLIC bool hasWriteAccess(AccessType);
+
+SP_PUBLIC String getQueueFlagsDesc(QueueFlags);
 
 SP_PUBLIC std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value);
 

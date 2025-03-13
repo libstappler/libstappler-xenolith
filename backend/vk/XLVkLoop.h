@@ -39,17 +39,13 @@ public:
 	struct Timer;
 	struct Internal;
 
-	virtual ~Loop();
+	virtual ~Loop() = default;
 
-	Loop();
+	bool init(event::Looper *, Rc<Instance> &&, LoopInfo &&);
 
-	bool init(Rc<Instance> &&, LoopInfo &&);
+	virtual void stop() override;
 
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
-
-	virtual bool isRunning() const override { return _running.load(); }
+	virtual bool isRunning() const override;
 
 	virtual void compileResource(Rc<core::Resource> &&req, Function<void(bool)> && = nullptr, bool preload = false) const override;
 	virtual void compileQueue(const Rc<Queue> &req, Function<void(bool)> && = nullptr) const override;
@@ -60,14 +56,10 @@ public:
 	// run frame with RenderQueue
 	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) override;
 
-	// callback should return true to end spinning
-	virtual void schedule(Function<bool(core::Loop &)> &&, StringView) override;
-	virtual void schedule(Function<bool(core::Loop &)> &&, uint64_t, StringView) override;
-
 	virtual void performInQueue(Rc<thread::Task> &&) const override;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const override;
 
-	virtual void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const override;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const override;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) override;
 
@@ -81,12 +73,14 @@ public:
 
 	virtual const Vector<core::ImageFormat> &getSupportedDepthStencilFormat() const override;
 
-	Rc<Fence> acquireFence(uint64_t, bool init = true);
+	virtual Rc<core::Fence> acquireFence(core::FenceType) override;
 
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) override;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) override;
 
-	virtual void wakeup() override;
+	virtual void scheduleUpdate(Function<void()> &&, Ref *) override;
+	virtual void unscheduleUpdate(Ref *) override;
+
 	virtual void waitIdle() override;
 
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
@@ -97,11 +91,10 @@ public:
 protected:
 	using core::Loop::init;
 
+	void performInit();
+	void finalizeInit();
+
 	Internal *_internal = nullptr;
-
-	Rc<Instance> _vkInstance;
-
-	uint64_t _clock = 0;
 };
 
 }

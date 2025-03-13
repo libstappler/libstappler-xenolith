@@ -121,7 +121,7 @@ void Application::handleDeviceStarted(const core::Loop &loop, const core::Device
 	auto emptyObject = dev.getEmptyImageObject();
 	auto solidObject = dev.getSolidImageObject();
 
-	performOnMainThread([this, emptyObject = dev.getEmptyImageObject(), solidObject = dev.getSolidImageObject()] () {
+	performOnAppThread([this, emptyObject = dev.getEmptyImageObject(), solidObject = dev.getSolidImageObject()] () {
 		_resourceCache->addImage(core::EmptyTextureName, emptyObject);
 		_resourceCache->addImage(core::SolidTextureName, solidObject);
 	});
@@ -132,7 +132,7 @@ void Application::handleDeviceStarted(const core::Loop &loop, const core::Device
 void Application::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {
 	PlatformApplication::handleDeviceFinalized(loop, dev);
 
-	performOnMainThread([cache = _resourceCache] {
+	performOnAppThread([cache = _resourceCache] {
 		cache->invalidate();
 	}, Rc<core::Device>(const_cast<core::Device *>(&dev)));
 }

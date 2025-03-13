@@ -37,7 +37,7 @@ Instance::~Instance() {
 	log::debug("core::Instance", "~Instance");
 }
 
-Rc<Loop> Instance::makeLoop(LoopInfo &&) const {
+Rc<Loop> Instance::makeLoop(event::Looper *, LoopInfo &&) const {
 	return nullptr;
 }
 

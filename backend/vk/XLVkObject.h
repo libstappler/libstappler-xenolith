@@ -32,7 +32,6 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Surface;
-class SwapchainImage;
 
 struct SP_PUBLIC DeviceMemoryInfo {
 	VkDeviceSize size;

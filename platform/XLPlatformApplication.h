@@ -28,6 +28,7 @@
 #include "SPThread.h"
 #include "SPThreadTaskQueue.h"
 #include "SPCommandLineParser.h"
+#include "SPEventLooper.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -110,7 +111,10 @@ struct SP_PUBLIC ApplicationInfo {
 	void *platformHandle = nullptr;
 
 	// Worker threads count, for async application-level tasks
-	uint32_t threadsCount = 2;
+	uint16_t appThreadsCount = 2;
+
+	// Worker threads count, for async general and gl tasks
+	uint16_t mainThreadsCount = 2;
 
 	// Application event update interval (NOT screen update interval)
 	TimeInterval updateInterval = TimeInterval::microseconds(100000);
@@ -153,11 +157,11 @@ public:
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-	void performOnMainThread(Function<void()> &&func, Ref *target = nullptr, bool onNextFrame = false) const;
+	void performOnAppThread(Function<void()> &&func, Ref *target = nullptr, bool onNextFrame = false) const;
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-    void performOnMainThread(Rc<Task> &&task, bool onNextFrame = false) const;
+    void performOnAppThread(Rc<Task> &&task, bool onNextFrame = false) const;
 
 	/* Performs action in this thread, task will be constructed in place */
 	void perform(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr) const;
@@ -168,9 +172,10 @@ public:
 	/* Performs task in thread, identified by id */
     void perform(Rc<Task> &&task, bool performFirst) const;
 
-	thread::TaskQueue *getQueue() const { return _queue; }
-
 	const ApplicationInfo &getInfo() const { return _info; }
+
+	event::Looper *getMainLooper() const { return _mainLooper; }
+	event::Looper *getAppLooper() const { return _appLooper; }
 
 	core::Loop *getGlLoop() const { return _glLoop; }
 
@@ -190,7 +195,7 @@ protected:
 	virtual void finalizeExtensions();
 
 	virtual void performAppUpdate(const UpdateTime &);
-	virtual void performTimersUpdate(bool forced);
+	virtual void performUpdate();
 
 	virtual void platformInitialize();
 	virtual void platformWaitExit();
@@ -202,14 +207,16 @@ protected:
 		bool immediate = false;
 	};
 
-	Rc<thread::TaskQueue> _queue;
+	event::Looper *_mainLooper = nullptr;
+	event::Looper *_appLooper = nullptr;
+
+	Rc<event::TimerHandle> _timer;
+
 	ApplicationInfo _info;
 
 	Rc<core::Loop> _glLoop;
 	Rc<core::Instance> _instance;
 	const core::Device *_device = nullptr;
-
-	mutable Vector<WaitCallbackInfo> _glWaitCallback;
 
 	bool _extensionsInitialized = false;
 	bool _immediateUpdate = false;

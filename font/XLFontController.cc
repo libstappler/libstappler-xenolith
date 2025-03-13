@@ -475,7 +475,7 @@ Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> 
 		if (!_dependency) {
 			_dependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
 				_ext->getQueue()
-			});
+			}, "FontController");
 		}
 		_dirty = true;
 		return _dependency;

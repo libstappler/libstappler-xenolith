@@ -42,6 +42,7 @@
 #include "SPColor.h"
 #include "SPColorHCT.h"
 #include "SPFontStyle.h"
+#include "SPEvent.h"
 
 #include "XLCoreConfig.h"
 
@@ -130,34 +131,6 @@ inline uint32_t XL_MAKE_API_VERSION(StringView version) {
 inline String getVersionDescription(uint32_t version) {
 	return toString(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b11'1111'1111, ".", version & 0b1111'1111'1111);
 }
-
-class SP_PUBLIC PoolRef : public Ref {
-public:
-	virtual ~PoolRef() {
-		memory::pool::destroy(_pool);
-	}
-
-	PoolRef(memory::pool_t *root = nullptr) {
-		_pool = memory::pool::create(root);
-	}
-
-	PoolRef(PoolRef *p) : PoolRef(p->_pool) { }
-
-	memory::pool_t *getPool() const { return _pool; }
-
-	void *palloc(size_t size) {
-		return memory::pool::palloc(_pool, size);
-	}
-
-	template <typename Callable>
-	auto perform(const Callable &cb) {
-		memory::pool::context<memory::pool_t *> ctx(_pool);
-		return cb();
-	}
-
-protected:
-	memory::pool_t *_pool = nullptr;
-};
 
 SP_PUBLIC const char * getEngineName();
 

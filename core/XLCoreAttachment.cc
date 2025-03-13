@@ -34,9 +34,9 @@ uint32_t DependencyEvent::GetNextId() {
 
 DependencyEvent::~DependencyEvent() { }
 
-DependencyEvent::DependencyEvent(QueueSet &&q) : _queues(sp::move(q)) { }
+DependencyEvent::DependencyEvent(QueueSet &&q, StringView str) : _queues(sp::move(q)), _tag(str) { }
 
-DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il) : _queues(sp::move(il)) { }
+DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il, StringView str) : _queues(sp::move(il)), _tag(str) { }
 
 bool DependencyEvent::signal(Queue *q, bool success) {
 	if (!success) {

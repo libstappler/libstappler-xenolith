@@ -26,7 +26,7 @@ MODULE_XENOLITH_CORE_INCLUDES_DIRS :=
 MODULE_XENOLITH_CORE_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/core $(XENOLITH_MODULE_DIR)/thirdparty
 MODULE_XENOLITH_CORE_DEPENDS_ON := \
 	stappler_bitmap \
-	stappler_threads \
+	stappler_event \
 	stappler_geom \
 	stappler_font
 

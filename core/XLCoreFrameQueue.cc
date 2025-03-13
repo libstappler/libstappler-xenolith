@@ -158,30 +158,32 @@ bool FrameQueue::setup() {
 }
 
 void FrameQueue::update() {
-	for (auto &it : _attachmentsInitial) {
-		if (it->handle->setup(*this, [this, guard = Rc<FrameQueue>(this), attachment = it] (bool success) {
-			_loop->performOnGlThread([this, attachment, success] {
-				attachment->waitForResult = false;
-				if (success && !_finalized) {
-					onAttachmentSetupComplete(*attachment);
-					_loop->performOnGlThread([this] {
-						if (_frame) {
-							_frame->update();
-						}
-					}, this);
-				} else {
-					invalidate(*attachment);
-				}
-			}, guard, true);
-		})) {
-			onAttachmentSetupComplete(*it);
-		} else {
-			it->waitForResult = true;
-			XL_FRAME_QUEUE_LOG("[Attachment:", it->handle->getName(), "] State: Setup");
-			it->state = FrameAttachmentState::Setup;
+	if (!_attachmentsInitial.empty()) {
+		for (auto &it : _attachmentsInitial) {
+			if (it->handle->setup(*this, [this, guard = Rc<FrameQueue>(this), attachment = it] (bool success) {
+				_loop->performOnThread([this, attachment, success] {
+					attachment->waitForResult = false;
+					if (success && !_finalized) {
+						onAttachmentSetupComplete(*attachment);
+						_loop->performOnThread([this] {
+							if (_frame) {
+								_frame->update();
+							}
+						}, this);
+					} else {
+						invalidate(*attachment);
+					}
+				}, guard, true);
+			})) {
+				onAttachmentSetupComplete(*it);
+			} else {
+				it->waitForResult = true;
+				XL_FRAME_QUEUE_LOG("[Attachment:", it->handle->getName(), "] State: Setup");
+				it->state = FrameAttachmentState::Setup;
+			}
 		}
+		_attachmentsInitial.clear();
 	}
-	_attachmentsInitial.clear();
 
 	do {
 		auto it = _renderPassesInitial.begin();
@@ -304,11 +306,11 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 			attachment.waitForResult = true;
 			attachment.handle->submitInput(*this, move(data),
 					[this, guard = Rc<FrameQueue>(this), attachment = &attachment] (bool success) {
-				_loop->performOnGlThread([this, attachment, success] {
+				_loop->performOnThread([this, attachment, success] {
 					attachment->waitForResult = false;
 					if (success && !_finalized) {
 						onAttachmentInput(*attachment);
-						_loop->performOnGlThread([frame = _frame] {
+						_loop->performOnThread([frame = _frame] {
 							if (frame) {
 								frame->update();
 							}
@@ -322,11 +324,11 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 			attachment.waitForResult = true;
 			attachment.handle->getAttachment()->acquireInput(*this, attachment.handle,
 					[this, guard = Rc<FrameQueue>(this), attachment = &attachment] (bool success) {
-				_loop->performOnGlThread([this, attachment, success] {
+				_loop->performOnThread([this, attachment, success] {
 					attachment->waitForResult = false;
 					if (success && !_finalized) {
 						onAttachmentInput(*attachment);
-						_loop->performOnGlThread([frame = _frame] {
+						_loop->performOnThread([frame = _frame] {
 							if (frame) {
 								frame->update();
 							}
@@ -674,7 +676,7 @@ void FrameQueue::onRenderPassResourcesAcquired(FramePassData &data) {
 
 	if (data.handle->prepare(*this,
 			[this, guard = Rc<FrameQueue>(this), data = &data] (bool success) mutable {
-		_loop->performOnGlThread([this, data, success] {
+		_loop->performOnThread([this, data, success] {
 			data->waitForResult = false;
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Prepared);
@@ -695,11 +697,7 @@ void FrameQueue::onRenderPassPrepared(FramePassData &data) {
 		return;
 	}
 
-	if (_frame->isReadyForSubmit()) {
-		updateRenderPassState(data, FrameRenderPassState::Submission);
-	} else {
-		_renderPassesPrepared.emplace(&data);
-	}
+	updateRenderPassState(data, FrameRenderPassState::Submission);
 }
 
 void FrameQueue::onRenderPassSubmission(FramePassData &data) {
@@ -712,7 +710,7 @@ void FrameQueue::onRenderPassSubmission(FramePassData &data) {
 
 	data.waitForResult = true;
 	data.handle->submit(*this, move(sync), [this, guard = Rc<FrameQueue>(this), data = &data] (bool success) {
-		_loop->performOnGlThread([this, data, success] {
+		_loop->performOnThread([this, data, success] {
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Submitted);
 			} else {
@@ -721,7 +719,7 @@ void FrameQueue::onRenderPassSubmission(FramePassData &data) {
 			}
 		}, guard, true);
 	}, [this, guard = Rc<FrameQueue>(this), data = &data] (bool success) {
-		_loop->performOnGlThread([this, data, success] {
+		_loop->performOnThread([this, data, success] {
 			data->waitForResult = false;
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Complete);

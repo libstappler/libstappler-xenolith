@@ -22,6 +22,7 @@
 
 #include "XLPlatformLinuxXcbView.h"
 #include "XLCoreInput.h"
+#include "XLCorePresentationEngine.h"
 #include <X11/keysym.h>
 
 uint32_t _glfwKeySym2Unicode(unsigned int keysym);
@@ -55,7 +56,7 @@ XcbView::~XcbView() {
 	_connection = nullptr;
 }
 
-XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, StringView title, StringView bundleId, URect rect) {
+XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, const WindowInfo &info) {
 	_connection = move(conn);
 	_view = view;
 	_xcb = _connection->getXcb();
@@ -72,9 +73,9 @@ XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, StringView title
 		return;
 	}
 
-	_wmClass.resize(title.size() + bundleId.size() + 1, char(0));
-	memcpy(_wmClass.data(), title.data(), title.size());
-	memcpy(_wmClass.data() + title.size() + 1, bundleId.data(), bundleId.size());
+	_wmClass.resize(info.title.size() + info.bundleId.size() + 1, char(0));
+	memcpy(_wmClass.data(), info.title.data(), info.title.size());
+	memcpy(_wmClass.data() + info.title.size() + 1, info.bundleId.data(), info.bundleId.size());
 
 	_defaultScreen = _connection->getDefaultScreen();
 
@@ -92,12 +93,12 @@ XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, StringView title
 	_info.enableSync = true;
 
 	_info.rect = xcb_rectangle_t{
-		static_cast<int16_t>(rect.x), static_cast<int16_t>(rect.y),
-		static_cast<uint16_t>(rect.width), static_cast<uint16_t>(rect.height)
+		static_cast<int16_t>(info.rect.x), static_cast<int16_t>(info.rect.y),
+		static_cast<uint16_t>(info.rect.width), static_cast<uint16_t>(info.rect.height)
 	};
 
-	_info.title = title;
-	_info.icon = title;
+	_info.title = info.title;
+	_info.icon = info.title;
 	_info.wmClass = _wmClass;
 
 	if (!_connection->createWindow(_info)) {
@@ -436,7 +437,7 @@ void XcbView::dispatchPendingEvents() {
 	_pendingEvents.clear();
 
 	if (_deprecateSwapchain) {
-		_view->deprecateSwapchain();
+		_view->getPresentationEngine()->deprecateSwapchain(false);
 		_deprecateSwapchain = false;
 	}
 }
@@ -451,7 +452,7 @@ void XcbView::mapWindow() {
 	_xcb->xcb_flush(_connection->getConnection());
 }
 
-void XcbView::handleSwapchainRecreation() {
+void XcbView::handleFramePresented() {
     if (_info.syncCounter && (_info.syncValue.lo != 0 || _info.syncValue.hi != 0)) {
     	_xcb->xcb_sync_set_counter(_connection->getConnection(), _info.syncCounter, _info.syncValue);
     	_xcb-> xcb_flush(_connection->getConnection());
@@ -507,6 +508,11 @@ int XcbView::getSocketFd() const {
 bool XcbView::poll(bool frameReady) {
 	_connection->poll();
 	return !_shouldClose;
+}
+
+core::FrameConstraints XcbView::exportConstraints(core::FrameConstraints &&c) const {
+	c.extent = Extent3(_info.rect.width, _info.rect.height, 1);
+	return move(c);
 }
 
 void XcbView::notifyClipboard(BytesView data) {

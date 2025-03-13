@@ -35,7 +35,7 @@ EventHandler::~EventHandler() {
 void EventHandler::addHandlerNode(EventHandlerNode *handler) {
 	auto linkId = handler->retain();
 	_handlers.insert(handler);
-	Application::getInstance()->performOnMainThread([handler, linkId] {
+	Application::getInstance()->performOnAppThread([handler, linkId] {
 		Application::getInstance()->addEventListener(handler);
 
 		handler->release(linkId);
@@ -45,7 +45,7 @@ void EventHandler::removeHandlerNode(EventHandlerNode *handler) {
 	auto linkId = handler->retain();
 	if (_handlers.erase(handler) > 0) {
 		handler->setSupport(nullptr);
-		Application::getInstance()->performOnMainThread([handler, linkId] {
+		Application::getInstance()->performOnAppThread([handler, linkId] {
 			Application::getInstance()->removeEventListner(handler);
 			handler->release(linkId);
 		}, nullptr);
@@ -75,7 +75,7 @@ void EventHandler::clearEvents() {
 		it->setSupport(nullptr);
 	}
 
-	Application::getInstance()->performOnMainThread([h = sp::move(h)] {
+	Application::getInstance()->performOnAppThread([h = sp::move(h)] {
 		for (auto it : h) {
 			Application::getInstance()->removeEventListner(it);
 		}

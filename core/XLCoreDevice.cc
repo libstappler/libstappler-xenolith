@@ -95,6 +95,288 @@ Rc<ImageView> Device::makeImageView(const Rc<ImageObject> &, const ImageViewInfo
 	return nullptr;
 }
 
+Rc<CommandPool> Device::makeCommandPool(uint32_t family, QueueFlags flags) {
+	return nullptr;
+}
+
+const DeviceQueueFamily *Device::getQueueFamily(uint32_t familyIdx) const {
+	for (auto &it : _families) {
+		if (it.index == familyIdx) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
+
+const DeviceQueueFamily *Device::getQueueFamily(QueueFlags ops) const {
+	for (auto &it : _families) {
+		if (it.preferred == ops) {
+			return &it;
+		}
+	}
+	for (auto &it : _families) {
+		if ((it.flags & ops) != QueueFlags::None) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
+
+const DeviceQueueFamily *Device::getQueueFamily(core::PassType type) const {
+	switch (type) {
+	case core::PassType::Graphics:
+		return getQueueFamily(QueueFlags::Graphics);
+		break;
+	case core::PassType::Compute:
+		return getQueueFamily(QueueFlags::Compute);
+		break;
+	case core::PassType::Transfer:
+		return getQueueFamily(QueueFlags::Transfer);
+		break;
+	case core::PassType::Generic:
+		log::warn("core::Device", "core::PassType::Generic can not be assigned to queue family by it's type;"
+				" please acquire queue family through flags");
+		return nullptr;
+		break;
+	}
+	return nullptr;
+}
+
+Rc<DeviceQueue> Device::tryAcquireQueue(QueueFlags ops) {
+	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
+	if (!family) {
+		return nullptr;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	if (!family->queues.empty()) {
+		// XL_VKDEVICE_LOG("tryAcquireQueueSync ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		auto queue = move(family->queues.back());
+		family->queues.pop_back();
+		return queue;
+	}
+	return nullptr;
+}
+
+bool Device::acquireQueue(QueueFlags ops, FrameHandle &handle, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
+		Function<void(FrameHandle &)> && invalidate, Rc<Ref> &&ref) {
+
+	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
+	if (!family) {
+		return false;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	Rc<DeviceQueue> queue;
+	if (!family->queues.empty()) {
+		queue = move(family->queues.back());
+		family->queues.pop_back();
+	} else {
+		// XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &handle, sp::move(ref)));
+	}
+
+	if (queue) {
+		queue->setOwner(handle);
+		// XL_VKDEVICE_LOG("acquireQueue ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		acquire(handle, queue);
+	}
+	return true;
+}
+
+bool Device::acquireQueue(QueueFlags ops, Loop &loop, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
+		Function<void(Loop &)> && invalidate, Rc<Ref> &&ref) {
+
+	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
+	if (!family) {
+		return false;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	Rc<DeviceQueue> queue;
+	if (!family->queues.empty()) {
+		queue = move(family->queues.back());
+		family->queues.pop_back();
+	} else {
+		// XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &loop, sp::move(ref)));
+	}
+
+	lock.unlock();
+
+	if (queue) {
+		// XL_VKDEVICE_LOG("acquireQueue ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		acquire(loop, queue);
+	}
+	return true;
+}
+
+void Device::releaseQueue(Rc<DeviceQueue> &&queue) {
+	DeviceQueueFamily *family = nullptr;
+	for (auto &it : _families) {
+		if (it.index == queue->getIndex()) {
+			family = &it;
+			break;
+		}
+	}
+
+	if (!family) {
+		return;
+	}
+
+	queue->reset();
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+
+	// Проверяем, есть ли асинхронные ожидающие
+	if (family->waiters.empty()) {
+		// XL_VKDEVICE_LOG("releaseQueue ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+		family->queues.emplace_back(move(queue));
+	} else {
+		if (family->waiters.front().handle) {
+			Rc<FrameHandle> handle;
+			Rc<Ref> ref;
+			Function<void(FrameHandle &, const Rc<DeviceQueue> &)> cb;
+			Function<void(FrameHandle &)> invalidate;
+
+			cb = sp::move(family->waiters.front().acquireForFrame);
+			invalidate = sp::move(family->waiters.front().releaseForFrame);
+			ref = move(family->waiters.front().ref);
+			handle = move(family->waiters.front().handle);
+			family->waiters.erase(family->waiters.begin());
+
+			lock.unlock();
+
+			if (handle && handle->isValid()) {
+				if (cb) {
+					queue->setOwner(*handle);
+					// XL_VKDEVICE_LOG("release-acquireQueue ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+					cb(*handle, queue);
+				}
+			} else if (invalidate) {
+				// XL_VKDEVICE_LOG("invalidate ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+				invalidate(*handle);
+			}
+
+			handle = nullptr;
+		} else if (family->waiters.front().loop) {
+			Rc<Loop> loop;
+			Rc<Ref> ref;
+			Function<void(Loop &, const Rc<DeviceQueue> &)> cb;
+			Function<void(Loop &)> invalidate;
+
+			cb = sp::move(family->waiters.front().acquireForLoop);
+			invalidate = sp::move(family->waiters.front().releaseForLoop);
+			ref = move(family->waiters.front().ref);
+			loop = move(family->waiters.front().loop);
+			family->waiters.erase(family->waiters.begin());
+
+			lock.unlock();
+
+			if (loop && loop->isRunning()) {
+				if (cb) {
+					// XL_VKDEVICE_LOG("release-acquireQueue ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+					cb(*loop, queue);
+				}
+			} else if (invalidate) {
+				// XL_VKDEVICE_LOG("invalidate ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
+				invalidate(*loop);
+			}
+
+			loop = nullptr;
+		}
+	}
+
+	queue = nullptr;
+}
+
+Rc<CommandPool> Device::acquireCommandPool(QueueFlags c, uint32_t) {
+	auto family = (DeviceQueueFamily *)getQueueFamily(c);
+	if (!family) {
+		return nullptr;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	if (!family->pools.empty()) {
+		auto ret = family->pools.back();
+		family->pools.pop_back();
+		return ret;
+	}
+	lock.unlock();
+	return makeCommandPool(family->index, family->flags);
+}
+
+Rc<CommandPool> Device::acquireCommandPool(uint32_t familyIndex) {
+	auto family = (DeviceQueueFamily *)getQueueFamily(familyIndex);
+	if (!family) {
+		return nullptr;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	if (!family->pools.empty()) {
+		auto ret = family->pools.back();
+		family->pools.pop_back();
+		return ret;
+	}
+	lock.unlock();
+	return makeCommandPool(family->index, family->flags);
+}
+
+void Device::releaseCommandPool(core::Loop &loop, Rc<CommandPool> &&pool) {
+	pool->reset(*this, true);
+
+	/*auto idx = pool->getFamilyIdx();
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	for (auto &it : _families) {
+		if (it.index == idx) {
+			it.pools.emplace_back(move(pool));
+			break;
+		}
+	}*/
+
+	auto refId = retain();
+	loop.performInQueue(Rc<thread::Task>::create([this, pool = Rc<CommandPool>(pool)] (const thread::Task &) -> bool {
+		pool->reset(*this);
+		return true;
+	}, [this, pool = Rc<CommandPool>(pool), refId] (const thread::Task &, bool success) mutable {
+		if (success) {
+			auto idx = pool->getFamilyIdx();
+			std::unique_lock<Mutex> lock(_resourceMutex);
+			for (auto &it : _families) {
+				if (it.index == idx) {
+					it.pools.emplace_back(move(pool));
+					break;
+				}
+			}
+		}
+		release(refId);
+	}, this));
+}
+
+void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
+	pool->reset(*this);
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	for (auto &it : _families) {
+		if (it.index == pool->getFamilyIdx()) {
+			it.pools.emplace_back(Rc<CommandPool>(pool));
+		}
+	}
+}
+
+void Device::invalidateSemaphore(Rc<Semaphore> &&sem) const {
+	std::unique_lock lock(_resourceMutex);
+	_invalidatedSemaphores.emplace_back(move(sem));
+}
+
+void Device::waitIdle() const {
+	_invalidatedSemaphores.clear();
+}
+
+const Vector<DeviceQueueFamily> &Device::getQueueFamilies() const {
+	return _families;
+}
+
 void Device::addObject(Object *obj) {
 	std::unique_lock<Mutex> lock(_objectMutex);
 	_objects.emplace(obj);
