@@ -23,6 +23,8 @@
 #include "XLCoreSwapchain.h"
 #include "XLCoreDevice.h"
 
+#include <linux/dma-buf.h>
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 bool Surface::init(Instance *instance, Ref *win) {

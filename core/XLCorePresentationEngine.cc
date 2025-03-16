@@ -205,7 +205,8 @@ bool PresentationEngine::present(PresentationFrame *frame) {
 			XL_COREPRESENT_LOG("schedulePresent: ", frame->getPresentWindow() - clock);
 
 			// schedule image until next present window
-			auto handle = _loop->getLooper()->schedule(TimeInterval::microseconds(frame->getPresentWindow() - clock),
+			auto handle = _loop->getLooper()->schedule(
+					TimeInterval::microseconds(frame->getPresentWindow() - clock),
 					[this, frame = Rc<PresentationFrame>(frame)] (event::Handle *h, bool success) {
 				if (success) {
 					runScheduledPresent(frame);
@@ -358,6 +359,11 @@ bool PresentationEngine::isRenderOnDemand() const {
 
 bool PresentationEngine::isRunning() const {
 	return _running && _swapchain && !_swapchain->isDeprecated();
+}
+
+void PresentationEngine::setContentPadding(const Padding &padding) {
+	_constraints.contentPadding = padding;
+	setReadyForNextFrame();
 }
 
 bool PresentationEngine::handleFrameStarted(PresentationFrame *frame) {

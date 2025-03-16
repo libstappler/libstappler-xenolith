@@ -78,9 +78,6 @@ public:
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) override;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) override;
 
-	virtual void scheduleUpdate(Function<void()> &&, Ref *) override;
-	virtual void unscheduleUpdate(Ref *) override;
-
 	virtual void waitIdle() override;
 
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,

@@ -52,73 +52,24 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 		return false;
 	}
 
-	_options.presentImmediate = false;
-	_options.acquireImageImmediately = true;
-	_options.renderOnDemand = true;
-	_options.syncFrameAfterSwapchainRecreation = false;
-
 	return true;
 }
 
 void ViewImpl::run() {
-	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle)->setView(this);
+	View::run();
 }
 
-void ViewImpl::threadInit() {
-	_started = true;
-
-	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
-	setActivity(activity);
-
-	View::threadInit();
+void ViewImpl::update(bool displayLink) {
+	_presentationEngine->update(displayLink);
 }
 
-void ViewImpl::mapWindow() {
-	View::mapWindow();
-}
+void ViewImpl::end() {
+	vk::View::end();
 
-void ViewImpl::threadDispose() {
-	View::threadDispose();
 	if (_nativeWindow) {
 		ANativeWindow_release(_nativeWindow);
 		_nativeWindow = nullptr;
 	}
-	_surface = nullptr;
-	_started = false;
-}
-
-bool ViewImpl::worker() {
-	return false;
-}
-
-void ViewImpl::update(bool displayLink) {
-	if (displayLink) {
-		if (_initImage) {
-			presentImmediate(sp::move(_initImage), nullptr, false);
-			_initImage = nullptr;
-			View::update(false);
-			//scheduleNextImage(_frameInterval, false);
-			return;
-		}
-
-		/*while (_scheduledPresent.empty()) {
-			View::update(false);
-		}*/
-		View::update(true);
-	} else {
-		View::update(displayLink);
-	}
-}
-
-void ViewImpl::end() {
-	performOnThread([this] {
-		threadDispose();
-		vk::View::end();
-	}, this, true);
-}
-
-void ViewImpl::wakeup(std::unique_lock<Mutex> &) {
-	reinterpret_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle)->wakeup();
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
@@ -143,19 +94,19 @@ void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, Text
 			auto wrapper = Rc<xenolith::platform::ActivityTextInputWrapper>::alloc();
 			wrapper->target = this;
 			wrapper->textChanged = [this] (Ref *ref, WideStringView text, core::TextCursor cursor) {
-				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this), text = text.str<Interface>(), cursor] {
+				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this), text = text.str<Interface>(), cursor] {
 					dir->getTextInputManager()->textChanged(text, cursor, core::TextCursor());
 					view->setReadyForNextFrame();
 				}, ref);
 			};
 			wrapper->inputEnabled = [this] (Ref *ref, bool value) {
-				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this), value] {
+				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this), value] {
 					dir->getTextInputManager()->setInputEnabled(value);
 					view->setReadyForNextFrame();
 				}, ref);
 			};
 			wrapper->cancelInput = [this] (Ref *ref) {
-				_mainLoop->performOnMainThread([dir = _director, view = Rc<ViewImpl>(this)] {
+				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this)] {
 					dir->getTextInputManager()->cancel();
 					view->setReadyForNextFrame();
 				}, ref);
@@ -175,6 +126,7 @@ void ViewImpl::cancelTextInput() {
 }
 
 void ViewImpl::runWithWindow(ANativeWindow *window) {
+	auto constraints = _info.exportConstraints();
 	auto instance = _instance.cast<vk::Instance>();
 
 	VkSurfaceKHR targetSurface;
@@ -185,14 +137,14 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 	surfaceCreateInfo.window = window;
 
 	_nativeWindow = window;
-	_constraints.extent = Extent2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+	constraints.extent = Extent2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
 	if (instance->vkCreateAndroidSurfaceKHR(instance->getInstance(), &surfaceCreateInfo, nullptr, &targetSurface) != VK_SUCCESS) {
 		log::error("ViewImpl", "fail to create surface");
 		return;
 	}
 
-	_surface = Rc<vk::Surface>::create(instance, targetSurface);
+	auto surface = Rc<vk::Surface>::create(instance, targetSurface);
 	ANativeWindow_acquire(_nativeWindow);
 
 	auto info = View::getSurfaceOptions();
@@ -203,63 +155,18 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 		_identityExtent = info.currentExtent;
 	}
 
-	if (!_started) {
-		_options.followDisplayLink = true;
-		threadInit();
-		_options.followDisplayLink = false;
-	} else {
-		initWindow();
-	}
-}
 
-void ViewImpl::initWindow() {
-	auto info = getSurfaceOptions();
-	core::SwapchainConfig cfg = _info.selectConfig(*this, info);
-
-	createSwapchain(info, move(cfg), cfg.presentMode);
-
-	if (_initImage && !_options.followDisplayLink) {
-		presentImmediate(sp::move(_initImage), nullptr, false);
-		_initImage = nullptr;
+	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface), move(constraints), 0);
+	if (!engine) {
+		log::error("vk::ViewImpl", "Fail to create PresentationEngine");
 	}
 
-	mapWindow();
-}
+	setPresentationEngine(move(engine));
 
-void ViewImpl::stopWindow() {
-	_surface = nullptr;
+	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
 
-	_swapchain->deprecate(false);
-	recreateSwapchain(core::PresentMode::Unsupported);
-
-	std::unique_lock lock(_windowMutex);
-	_glLoop->performOnGlThread([this] {
-		std::unique_lock windowLock(_windowMutex);
-		_glLoop->waitIdle();
-		_windowCond.notify_all();
-	});
-
-	_windowCond.wait(lock);
-
-	clearImages();
-
-	for (auto &it : _scheduledPresent) {
-		invalidateSwapchainImage(it);
-	}
-
-	_scheduledPresent.clear();
-
-	if (_swapchain) {
-		_swapchain = nullptr;
-	}
-	_surface = nullptr;
-
-	if (_nativeWindow) {
-		ANativeWindow_release(_nativeWindow);
-		_nativeWindow = nullptr;
-	}
-
-	_framesInProgress = 0;
+	activity->setView(this);
+	setActivity(activity);
 }
 
 void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
@@ -315,14 +222,6 @@ void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
 		| flag_FLAG_LAYOUT_INSET_DECOR | flag_FLAG_LAYOUT_IN_SCREEN);
 
 	updateDecorations();
-}
-
-bool ViewImpl::pollInput(bool frameReady) {
-	if (!_nativeWindow) {
-		return false;
-	}
-
-	return true;
 }
 
 core::SurfaceInfo ViewImpl::getSurfaceOptions() const {
@@ -406,10 +305,6 @@ bool ViewImpl::isInputEnabled() const {
 
 void ViewImpl::linkWithNativeWindow(void *window) {
 	runWithWindow(static_cast<ANativeWindow *>(window));
-}
-
-void ViewImpl::stopNativeWindow() {
-	stopWindow();
 }
 
 void ViewImpl::doSetDecorationTone(float value) {
@@ -540,7 +435,7 @@ void ViewImpl::updateDecorations() {
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
 	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
 		doReadFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([this, cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+			_mainLoop->performOnAppThread([this, cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);

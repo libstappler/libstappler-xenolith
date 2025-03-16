@@ -38,14 +38,8 @@ public:
 	virtual bool init(Application &loop, core::Device &dev, ViewInfo &&info);
 
 	virtual void run() override;
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
 	virtual void update(bool displayLink) override;
 	virtual void end() override;
-
-	virtual void wakeup(std::unique_lock<Mutex> &) override;
-	virtual void mapWindow() override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
 	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
@@ -53,8 +47,6 @@ public:
 	virtual void cancelTextInput() override;
 
 	void runWithWindow(ANativeWindow *);
-	void initWindow();
-	void stopWindow();
 
 	void setActivity(xenolith::platform::Activity *);
 
@@ -64,7 +56,6 @@ public:
 	virtual bool isInputEnabled() const override;
 
 	virtual void linkWithNativeWindow(void *) override;
-	virtual void stopNativeWindow() override;
 
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType) override;
@@ -72,7 +63,6 @@ public:
 protected:
 	using vk::View::init;
 
-	virtual bool pollInput(bool frameReady) override;
 	virtual core::SurfaceInfo getSurfaceOptions() const override;
 
 	void doSetDecorationTone(float);
@@ -82,7 +72,6 @@ protected:
 	void doReadFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
 	void doWriteToClipboard(BytesView, StringView contentType);
 
-	bool _started = false;
 	ANativeWindow *_nativeWindow = nullptr;
 	Extent2 _identityExtent;
 	xenolith::platform::Activity *_activity = nullptr;

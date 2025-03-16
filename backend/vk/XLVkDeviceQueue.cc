@@ -674,10 +674,10 @@ CommandPool::~CommandPool() {
 
 static void CommandPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
 	auto d = static_cast<Device *>(dev);
-	auto target = (VkCommandPool *)ptr.get();
-	if (*target) {
-		d->getTable()->vkDestroyCommandPool(d->getDevice(), *target, nullptr);
-		*target = nullptr;
+	auto target = (VkCommandPool)ptr.get();
+	if (target) {
+		d->getTable()->vkDestroyCommandPool(d->getDevice(), target, nullptr);
+		target = VK_NULL_HANDLE;
 	}
 }
 
@@ -692,7 +692,7 @@ bool CommandPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c, bool
 	poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
 
 	if (dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool) == VK_SUCCESS) {
-		return core::CommandPool::init(dev, CommandPool_destroy, core::ObjectType::CommandPool, core::ObjectHandle(&_commandPool));
+		return core::CommandPool::init(dev, CommandPool_destroy, core::ObjectType::CommandPool, core::ObjectHandle(_commandPool));
 	}
 
 	return false;
@@ -789,6 +789,7 @@ void CommandPool::recreatePool(Device &dev) {
 	if (_commandPool) {
 		dev.getTable()->vkDestroyCommandPool(dev.getDevice(), _commandPool, nullptr);
 		_commandPool = VkCommandPool(0);
+		_object.handle = ObjectHandle::zero();
 	}
 
 	VkCommandPoolCreateInfo poolInfo{};
@@ -798,6 +799,8 @@ void CommandPool::recreatePool(Device &dev) {
 	poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
 
 	dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool);
+
+	_object.handle = ObjectHandle(_commandPool);
 
 	_invalidated = false;
 }

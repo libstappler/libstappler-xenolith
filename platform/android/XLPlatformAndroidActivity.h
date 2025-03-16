@@ -232,11 +232,6 @@ protected:
 	Rc<ClassLoader> _classLoader;
 	Rc<NetworkConnectivity> _networkConnectivity;
 
-	ViewInterfaceRef _rootViewTmp = nullptr;
-	ViewInterfaceRef _rootView = nullptr;
-	std::mutex _rootViewMutex;
-	std::condition_variable _rootViewVar;
-
 	int _eventfd = -1;
 	int _timerfd = -1;
 
@@ -251,6 +246,8 @@ protected:
 	NativeBufferFormatSupport _formatSupport;
 	bool _recreateSwapchain = false;
 	bool isEmulator = false;
+
+	Rc<ViewInterface> _rootView;
 
 	ActivityInfo _info;
 	uint64_t _refId = 0;

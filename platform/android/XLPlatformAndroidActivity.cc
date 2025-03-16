@@ -367,13 +367,13 @@ bool Activity::runApplication(PlatformApplication *app) {
 	}
 
 	addTokenCallback(this, [this] (StringView str) {
-		_application->performOnMainThread([this, str = str.str<Interface>()] () mutable {
+		_application->performOnAppThread([this, str = str.str<Interface>()] () mutable {
 			_application->updateMessageToken(BytesView(StringView(str)));
 		}, this);
 	});
 
 	addRemoteNotificationCallback(this, [this] (const Value &val) {
-		_application->performOnMainThread([this, val = val] () mutable {
+		_application->performOnAppThread([this, val = val] () mutable {
 			_application->receiveRemoteNotification(move(val));
 		}, this);
 	});
@@ -432,9 +432,7 @@ void Activity::wakeup() {
 }
 
 void Activity::setView(platform::ViewInterface *view) {
-	std::unique_lock lock(_rootViewMutex);
-	_rootViewTmp = view;
-	_rootViewVar.notify_all();
+	_rootView = view;
 }
 
 String Activity::getMessageToken() const {
@@ -553,7 +551,7 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
 	log::format(log::Info, "NativeActivity", "NativeWindowDestroyed: %p -- %p", _activity, window);
 	if (_rootView) {
-		_rootView->stopNativeWindow();
+		_rootView->end();
 		_recreateSwapchain = true;
 	}
 }
@@ -574,7 +572,7 @@ void Activity::handleNativeWindowResized(ANativeWindow *window) {
 	if (_rootView && (_windowSize != newSize || _recreateSwapchain)) {
 		_recreateSwapchain = false;
 		_windowSize = newSize;
-		_rootView->deprecateSwapchain(false);
+		_rootView->getPresentationEngine()->deprecateSwapchain(false);
 	}
 }
 
@@ -1217,7 +1215,7 @@ ActivityInfo Activity::getActivityInfo(AConfiguration *config) {
 }
 
 platform::ViewInterface *Activity::waitForView() {
-	std::unique_lock lock(_rootViewMutex);
+	/*std::unique_lock lock(_rootViewMutex);
 	if (_rootView) {
 		lock.unlock();
 	} else {
@@ -1225,7 +1223,7 @@ platform::ViewInterface *Activity::waitForView() {
 			return _rootViewTmp != nullptr;
 		});
 		_rootView = move(_rootViewTmp);
-	}
+	}*/
 	return _rootView;
 }
 

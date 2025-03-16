@@ -42,12 +42,16 @@ void ViewInterface::setRenderOnDemand(bool value) {
 			_presentationEngine->setRenderOnDemand(value);
 		}
 	}, this, true);
-	_presentationEngine->setRenderOnDemand(value);
 }
 
 bool ViewInterface::isRenderOnDemand() const {
 	return _presentationEngine->isRenderOnDemand();
 }
 
+void ViewInterface::setContentPadding(const Padding &padding) {
+	_glLoop->performOnThread([this, padding] {
+		_presentationEngine->setContentPadding(padding);
+	}, this, true);
+}
 
 }

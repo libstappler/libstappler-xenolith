@@ -117,6 +117,8 @@ public:
 	void setRenderOnDemand(bool value);
 	bool isRenderOnDemand() const;
 
+	void setContentPadding(const Padding &padding);
+
 	bool isRunning() const;
 
 	virtual bool handleFrameStarted(PresentationFrame *);

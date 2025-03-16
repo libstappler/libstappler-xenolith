@@ -104,9 +104,8 @@ struct Loop::Internal final : memory::AllocPool {
 			}
 		}
 
-		auto updates = scheduledUpdates;
-		for (auto &it : updates) {
-			it.second();
+		if (scheduledFences.empty()) {
+			updateTimerHandle->pause();
 		}
 	}
 
@@ -244,6 +243,12 @@ struct Loop::Internal final : memory::AllocPool {
 		if (auto handle = fence->exportFence(*loop, nullptr)) {
 			loop->getLooper()->performHandle(handle);
 		} else {
+			if (scheduledFences.empty()) {
+				auto status = updateTimerHandle->resume();
+				if (status != Status::Ok) {
+					log::error("vk::Loop", "Fail to resume fence scheduler: ", status);
+				}
+			}
 			scheduledFences.emplace(move(fence));
 		}
 	}
@@ -271,8 +276,6 @@ struct Loop::Internal final : memory::AllocPool {
 
 	std::atomic<uint32_t> pendingTasks = 0;
 	std::atomic<bool> _running = true;
-
-	Map<Rc<Ref>, Function<void()>> scheduledUpdates;
 };
 
 struct Loop::Timer final {
@@ -571,14 +574,6 @@ void Loop::waitForDependencies(const Vector<Rc<DependencyEvent>> &events, Functi
 			_internal->waitForDependencies(sp::move(events), sp::move(cb));
 		}, this, true);
 	}
-}
-
-void Loop::scheduleUpdate(Function<void()> &&cb, Ref *ref) {
-	_internal->scheduledUpdates.emplace(ref, sp::move(cb));
-}
-
-void Loop::unscheduleUpdate(Ref *ref) {
-	_internal->scheduledUpdates.erase(ref);
 }
 
 void Loop::waitIdle() {

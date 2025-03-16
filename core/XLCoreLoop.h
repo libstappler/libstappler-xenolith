@@ -105,9 +105,6 @@ public:
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) = 0;
 
-	virtual void scheduleUpdate(Function<void()> &&, Ref *) = 0;
-	virtual void unscheduleUpdate(Ref *) = 0;
-
 	virtual void waitIdle() = 0;
 	virtual void stop() = 0;
 

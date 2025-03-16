@@ -94,6 +94,8 @@ bool Fence::init(Device &dev, core::FenceType type) {
 }
 
 Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
+	using namespace event;
+
 	if (!_exportable) {
 		return nullptr;
 	}
@@ -116,10 +118,10 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 			}
 
 			auto refId = retain();
-			return event::PollFdHandle::create(loop.getLooper()->getQueue(), fd,
-					event::PollFlags::In | event::PollFlags::CloseFd,
-					[this, refId, completeCb = sp::move(cb), l = &loop] (int fd, event::PollFlags flags) -> Status {
-				if (hasFlag(flags, event::PollFlags::In)) {
+			return PollFdHandle::create(loop.getLooper()->getQueue(), fd,
+					PollFlags::In | PollFlags::CloseFd,
+					[this, refId, completeCb = sp::move(cb), l = &loop] (int fd, PollFlags flags) -> Status {
+				if (hasFlag(flags, PollFlags::In)) {
 					if (completeCb) {
 						completeCb();
 					}

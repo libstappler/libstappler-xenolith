@@ -53,7 +53,6 @@ public:
 	virtual bool isInputEnabled() const = 0;
 
 	virtual void linkWithNativeWindow(void *) = 0;
-	virtual void stopNativeWindow() = 0;
 
 	virtual uint64_t getBackButtonCounter() const = 0;
 
@@ -67,6 +66,8 @@ public:
 
 	void setRenderOnDemand(bool value);
 	bool isRenderOnDemand() const;
+
+	void setContentPadding(const Padding &padding);
 
 protected:
 	Rc<core::Loop> _glLoop;
