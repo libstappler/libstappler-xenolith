@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #include "XLCoreDynamicImage.h"
 #include "XLCoreLoop.h"
 #include "XLCoreDevice.h"
+#include "XLCoreTextureSet.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -245,6 +246,10 @@ uint32_t MaterialSet::getMaterialOrder(MaterialId idx) const {
 		return it->second;
 	}
 	return maxOf<uint32_t>();
+}
+
+const TextureSetLayoutData *MaterialSet::getTargetLayout() const {
+	return _owner->getTargetLayout();
 }
 
 void MaterialSet::removeMaterial(Material *oldMaterial) {
@@ -627,11 +632,13 @@ MaterialAttachment::~MaterialAttachment() {
 	}
 }
 
-bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, MaterialSet::EncodeCallback &&cb, uint32_t size) {
+bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
+		const TextureSetLayoutData *layout, MaterialSet::EncodeCallback &&cb, uint32_t size) {
 	if (!BufferAttachment::init(builder, info)) {
 		return false;
 	}
 
+	_targetLayout = layout;
 	_materialObjectSize = size;
 	_encodeCallback = sp::move(cb);
 	return true;
@@ -665,7 +672,7 @@ void MaterialAttachment::setMaterials(const Rc<MaterialSet> &data) const {
 
 Rc<MaterialSet> MaterialAttachment::allocateSet(const Device &dev) const {
 	return Rc<MaterialSet>::create(_info, _encodeCallback, _materialObjectSize,
-			dev.getTextureLayoutImagesCount(), dev.getTextureLayoutBuffersCount(), this);
+			_targetLayout->layout->getImageCount(), _targetLayout->layout->getBuffersCount(), this);
 }
 
 Rc<MaterialSet> MaterialAttachment::cloneSet(const Rc<MaterialSet> &other) const {

@@ -91,6 +91,7 @@ public:
 	virtual void update(bool displayLink);
 
 	void setTargetFrameInterval(uint64_t);
+	uint64_t getTargetFrameInterval() const { return _targetFrameInterval; }
 
 	bool isFrameValid(const PresentationFrame *) const;
 

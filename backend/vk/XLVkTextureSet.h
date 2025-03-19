@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "XLVkDevice.h"
 #include "XLVkObject.h"
+#include "XLCoreTextureSet.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -33,67 +34,26 @@ class TextureSet;
 class Loop;
 
 // persistent object, part of Device
-class SP_PUBLIC TextureSetLayout : public Ref {
+class SP_PUBLIC TextureSetLayout : public core::TextureSetLayout {
 public:
 	using AttachmentLayout = core::AttachmentLayout;
 
-	virtual ~TextureSetLayout() { }
+	virtual ~TextureSetLayout() = default;
 
-	bool init(Device &dev, uint32_t imageCount, uint32_t bufferLimit);
-	void invalidate(Device &dev);
+	bool init(Device &dev, const core::TextureSetLayoutData &);
 
-	bool compile(Device &dev, const Vector<VkSampler> &);
-
-	const uint32_t &getImageCount() const { return _imageCount; }
-	const uint32_t &getSamplersCount() const { return _samplersCount; }
-	const uint32_t &getBuffersCount() const { return _bufferCount; }
 	VkDescriptorSetLayout getLayout() const { return _layout; }
-	const Rc<ImageView> &getEmptyImageView() const { return _emptyImageView; }
-	const Rc<ImageView> &getSolidImageView() const { return _solidImageView; }
-	const Rc<Buffer> &getEmptyBuffer() const { return _emptyBuffer; }
-
-	Rc<TextureSet> acquireSet(Device &dev);
-	void releaseSet(Rc<TextureSet> &&);
-
-	void initDefault(Device &dev, Loop &, Function<void(bool)> &&);
-
-	bool isPartiallyBound() const { return _partiallyBound; }
-
-	Rc<Image> getEmptyImageObject() const;
-	Rc<Image> getSolidImageObject() const;
-
-	void readImage(Device &dev, Loop &loop, const Rc<Image> &, AttachmentLayout, Function<void(const ImageInfoData &, BytesView)> &&);
-	void readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &, Function<void(const BufferInfo &, BytesView)> &&);
 
 protected:
-	void writeDefaults(CommandBuffer &buf);
-	void writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t, const Rc<Buffer> &, const Rc<Image> &);
-	void writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &,
-			AttachmentLayout, const Rc<Buffer> &);
-	void writeBufferRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &,
-			const Rc<Buffer> &);
-
-	bool _partiallyBound = false;
-	uint32_t _imageCount = 0;
-	uint32_t _bufferCount = 0;
-	uint32_t _samplersCount = 0;
 	VkDescriptorSetLayout _layout = VK_NULL_HANDLE;
 
-	Rc<Image> _emptyImage;
-	Rc<ImageView> _emptyImageView;
-	Rc<Image> _solidImage;
-	Rc<ImageView> _solidImageView;
-	Rc<Buffer> _emptyBuffer;
-
-	mutable Mutex _mutex;
-	Vector<Rc<TextureSet>> _sets;
 };
 
 class SP_PUBLIC TextureSet : public core::TextureSet {
 public:
 	virtual ~TextureSet() { }
 
-	bool init(Device &dev, const TextureSetLayout &);
+	bool init(Device &dev, const core::TextureSetLayout &);
 
 	VkDescriptorSet getSet() const { return _set; }
 
@@ -102,8 +62,8 @@ public:
 	Vector<const ImageMemoryBarrier *> getPendingImageBarriers() const;
 	Vector<const BufferMemoryBarrier *> getPendingBufferBarriers() const;
 
-	void foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &) const;
-	void foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &) const;
+	void foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &, bool drain) const;
+	void foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &, bool drain) const;
 
 	void dropPendingBarriers();
 

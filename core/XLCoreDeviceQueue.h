@@ -110,6 +110,10 @@ public:
 
 	virtual void reset(Device &dev, bool release = false);
 
+	virtual const CommandBuffer * recordBuffer(Device &dev, const Callback<bool(CommandBuffer &)> &) {
+		return nullptr;
+	}
+
 	void autorelease(Rc<Ref> &&);
 
 protected:

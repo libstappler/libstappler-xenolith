@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,12 +32,6 @@ Device::~Device() {
 
 bool Device::init(const Instance *instance) {
 	_glInstance = instance;
-	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Nearest, .minFilter = Filter::Nearest,
-		.addressModeU = SamplerAddressMode::Repeat, .addressModeV = SamplerAddressMode::Repeat, .addressModeW = SamplerAddressMode::Repeat});
-	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Linear, .minFilter = Filter::Linear,
-		.addressModeU = SamplerAddressMode::Repeat, .addressModeV = SamplerAddressMode::Repeat, .addressModeW = SamplerAddressMode::Repeat});
-	_samplersInfo.emplace_back(SamplerInfo{ .magFilter = Filter::Linear, .minFilter = Filter::Linear,
-		.addressModeU = SamplerAddressMode::ClampToEdge, .addressModeV = SamplerAddressMode::ClampToEdge, .addressModeW = SamplerAddressMode::ClampToEdge});
 	return true;
 }
 
@@ -96,6 +90,10 @@ Rc<ImageView> Device::makeImageView(const Rc<ImageObject> &, const ImageViewInfo
 }
 
 Rc<CommandPool> Device::makeCommandPool(uint32_t family, QueueFlags flags) {
+	return nullptr;
+}
+
+Rc<TextureSet> Device::makeTextureSet(const TextureSetLayout &) {
 	return nullptr;
 }
 
@@ -362,6 +360,67 @@ void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
 			it.pools.emplace_back(Rc<CommandPool>(pool));
 		}
 	}
+}
+
+void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
+	struct DeviceQueueTaskData : public Ref {
+		Device *device = nullptr;
+		Rc<Loop> loop;
+
+		Rc<CommandPool> pool;
+		Rc<DeviceQueue> queue;
+		Rc<Fence> fence;
+
+		Rc<core::DeviceQueueTask> task;
+
+		DeviceQueueTaskData(Device *dev, Rc<Loop> &&l, Rc<core::DeviceQueueTask> &&t)
+		: device(dev), loop(move(l)), task(move(t)) { }
+	};
+
+	auto taskData = Rc<DeviceQueueTaskData>::alloc(this, &loop, move(t));
+
+	taskData->loop->performOnThread([this, taskData] {
+		taskData->device->acquireQueue(taskData->task->getQueueFlags(), *taskData->loop,
+				[this, taskData] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+			taskData->fence = ref_cast<Fence>(taskData->loop->acquireFence(core::FenceType::Default));
+			taskData->pool = ref_cast<CommandPool>(taskData->device->acquireCommandPool(taskData->task->getQueueFlags()));
+			taskData->queue = ref_cast<DeviceQueue>(queue);
+
+			if (!taskData->task->handleQueueAcquired(*taskData->device, *queue)) {
+				taskData->device->releaseQueue(move(taskData->queue));
+				taskData->device->releaseCommandPool(*taskData->loop, move(taskData->pool));
+				return;
+			}
+
+			taskData->fence->addRelease([taskData] (bool success) {
+				taskData->device->releaseCommandPool(*taskData->loop, move(taskData->pool));
+				taskData->task->handleComplete(success);
+			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
+
+			loop.performInQueue(Rc<thread::Task>::create([this, taskData] (const thread::Task &) -> bool {
+				auto buf = taskData->pool->recordBuffer(*taskData->device, [&, this] (CommandBuffer &buf) {
+					taskData->task->fillCommandBuffer(*taskData->device, buf);
+					return true;
+				});
+
+				if (taskData->queue->submit(*taskData->fence, buf) == Status::Ok) {
+					return true;
+				}
+				return false;
+			}, [taskData] (const thread::Task &, bool success) {
+				if (taskData->queue) {
+					taskData->device->releaseQueue(move(taskData->queue));
+				}
+				if (!success) {
+					taskData->task->handleComplete(false);
+				}
+				taskData->fence->schedule(*taskData->loop);
+				taskData->fence = nullptr;
+			}));
+		}, [taskData] (core::Loop &) {
+			taskData->task->handleComplete(false);
+		});
+	}, taskData, true);
 }
 
 void Device::invalidateSemaphore(Rc<Semaphore> &&sem) const {

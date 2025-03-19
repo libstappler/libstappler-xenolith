@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,27 @@ class Instance;
 class Object;
 class Loop;
 
+class DeviceQueueTask : public Ref {
+public:
+	virtual ~DeviceQueueTask() = default;
+
+	virtual bool init(core::QueueFlags flags) {
+		_queueFlags = flags;
+		return true;
+	}
+
+	core::QueueFlags getQueueFlags() const { return _queueFlags; }
+
+	virtual bool handleQueueAcquired(Device &, DeviceQueue &) { return false; }
+
+	virtual void fillCommandBuffer(Device &, CommandBuffer &) { }
+
+	virtual void handleComplete(bool success) { }
+
+protected:
+	core::QueueFlags _queueFlags = core::QueueFlags::None;
+};
+
 class SP_PUBLIC Device : public Ref {
 public:
 	using DescriptorType = core::DescriptorType;
@@ -51,12 +72,6 @@ public:
 	void addObject(Object *);
 	void removeObject(Object *);
 
-	uint32_t getSamplersCount() const { return _samplersCount; }
-	bool isSamplersCompiled() const { return _samplersCompiled; }
-
-	uint32_t getTextureLayoutImagesCount() const { return _textureLayoutImagesCount; }
-	uint32_t getTextureLayoutBuffersCount() const { return _textureLayoutBuffersCount; }
-
 	const Vector<ImageFormat> &getSupportedDepthStencilFormat() const { return _depthFormats; }
 	const Vector<ImageFormat> &getSupportedColorFormat() const { return _colorFormats; }
 
@@ -65,14 +80,12 @@ public:
 
 	virtual bool supportsUpdateAfterBind(DescriptorType) const;
 
-	virtual Rc<ImageObject> getEmptyImageObject() const = 0;
-	virtual Rc<ImageObject> getSolidImageObject() const = 0;
-
 	virtual Rc<Framebuffer> makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>);
 	virtual Rc<ImageStorage> makeImage(const ImageInfoData &);
 	virtual Rc<Semaphore> makeSemaphore();
 	virtual Rc<ImageView> makeImageView(const Rc<ImageObject> &, const ImageViewInfo &);
 	virtual Rc<CommandPool> makeCommandPool(uint32_t family, QueueFlags flags);
+	virtual Rc<TextureSet> makeTextureSet(const TextureSetLayout &);
 
 	uint32_t getPresentatonMask() const { return _presentMask; }
 
@@ -108,6 +121,8 @@ public:
 	void releaseCommandPool(core::Loop &, Rc<CommandPool> &&);
 	void releaseCommandPoolUnsafe(Rc<CommandPool> &&);
 
+	void runTask(Loop &loop, Rc<DeviceQueueTask> &&);
+
 	void invalidateSemaphore(Rc<Semaphore> &&sem) const;
 
 	virtual void waitIdle() const;
@@ -127,16 +142,9 @@ protected:
 
 	HashSet<Object *> _objects;
 
-	Vector<SamplerInfo> _samplersInfo;
 	Vector<ImageFormat> _depthFormats;
 	Vector<ImageFormat> _colorFormats;
 
-	uint32_t _samplersCount = 0;
-	bool _samplersCompiled = false;
-	uint32_t _textureLayoutImagesCount = 0;
-	uint32_t _textureLayoutBuffersCount = 0;
-
-	std::thread::id _loopThreadId;
 	uint32_t _presentMask = 0;
 
 	mutable Mutex _resourceMutex;

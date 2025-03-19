@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,39 +20,39 @@
  THE SOFTWARE.
  **/
 
-#ifndef SRC_APPSCENE_H_
-#define SRC_APPSCENE_H_
+#include "XLCoreTextureSet.h"
+#include "XLCoreDevice.h"
 
-#include "AppTests.h"
-#include "XL2dScene.h"
-#include "XL2dSprite.h"
-#include "XL2dLayer.h"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-namespace stappler::xenolith::app {
+void TextureSet::write(const MaterialLayout &set) {
+	_layoutIndexes.clear();
+	for (uint32_t i = 0; i < set.usedImageSlots; ++ i) {
+		if (set.imageSlots[i].image) {
+			_layoutIndexes.emplace_back(set.imageSlots[i].image->getIndex());
+		} else {
+			_layoutIndexes.emplace_back(0);
+		}
+	}
 
-class AppScene : public Scene2d {
-public:
-	virtual ~AppScene() { }
-
-	virtual bool init(Application *, const core::FrameConstraints &constraints) override;
-
-	virtual void onPresented(Director *) override;
-	virtual void onFinished(Director *) override;
-
-	virtual void update(const UpdateTime &) override;
-	virtual void handleEnter(Scene *) override;
-	virtual void handleExit() override;
-
-	virtual void render(FrameInfo &info) override;
-
-	void runLayout(LayoutName l, Rc<SceneLayout2d> &&);
-
-	void setActiveLayoutId(StringView, Value && = Value());
-
-protected:
-	using Scene::init;
-};
-
+	_layoutIndexes.resize(_count, 0);
 }
 
-#endif /* SRC_APPSCENE_H_ */
+Rc<TextureSet> TextureSetLayout::acquireSet(Device &dev) {
+	std::unique_lock<Mutex> lock(_mutex);
+	if (_sets.empty()) {
+		lock.unlock();
+		return dev.makeTextureSet(*this);
+	} else {
+		auto v = move(_sets.back());
+		_sets.pop_back();
+		return v;
+	}
+}
+
+void TextureSetLayout::releaseSet(Rc<TextureSet> &&set) {
+	std::unique_lock<Mutex> lock(_mutex);
+	_sets.emplace_back(move(set));
+}
+
+}

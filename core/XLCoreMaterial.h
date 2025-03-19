@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,8 @@ public:
 	const Material * getMaterialById(MaterialId) const;
 	uint32_t getMaterialOrder(MaterialId) const;
 
+	const TextureSetLayoutData *getTargetLayout() const;
+
 protected:
 	void removeMaterial(Material *oldMaterial);
 	void emplaceMaterialImages(Material *oldMaterial, Material *newMaterial,
@@ -160,7 +162,7 @@ class SP_PUBLIC MaterialAttachment : public BufferAttachment {
 public:
 	virtual ~MaterialAttachment();
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, MaterialSet::EncodeCallback &&,
+	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const TextureSetLayoutData *, MaterialSet::EncodeCallback &&,
 			uint32_t materialObjectSize);
 
 	void addPredefinedMaterials(Vector<Rc<Material>> &&);
@@ -169,6 +171,8 @@ public:
 	void setMaterials(const Rc<MaterialSet> &) const;
 
 	const Vector<Rc<Material>> &getPredefinedMaterials() const { return _predefinedMaterials; }
+
+	const TextureSetLayoutData *getTargetLayout() const { return _targetLayout; }
 
 	virtual Rc<MaterialSet> allocateSet(const Device &) const;
 	virtual Rc<MaterialSet> cloneSet(const Rc<MaterialSet> &) const;
@@ -193,6 +197,7 @@ protected:
 	};
 
 	Queue *_compiler = nullptr;
+	const TextureSetLayoutData *_targetLayout = nullptr;
 	mutable std::atomic<MaterialId> _attachmentMaterialId = 1;
 	uint32_t _materialObjectSize = 0;
 	MaterialSet::EncodeCallback _encodeCallback;

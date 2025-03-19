@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -302,8 +303,6 @@ void MaterialCompilationPassHandle::finalize(FrameQueue &handle, bool successful
 }
 
 Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto layout = _device->getTextureSetLayout();
-
 	auto &inputData = _materialAttachment->getInputData();
 	auto buffers = updateMaterials(handle, _outputData, inputData->materialsToAddOrUpdate,
 			inputData->dynamicMaterialsToUpdate, inputData->materialsToRemove);

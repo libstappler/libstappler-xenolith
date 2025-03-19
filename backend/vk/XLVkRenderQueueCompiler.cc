@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,9 +53,19 @@ public:
 
 protected:
 	void runShaders(FrameHandle &frame);
+	void runPasses(FrameHandle &frame);
 	void runPipelines(FrameHandle &frame);
 
+	struct SamplersCompilationData : public Ref {
+		std::atomic<uint32_t> samplersInProcess = 0;
+		core::TextureSetLayoutData *layout = nullptr;
+		Rc<Device> device;
+
+		bool setSampler(uint32_t, Rc<Sampler> &&);
+	};
+
 	Device *_device = nullptr;
+	std::atomic<size_t> _layoutsInQueue = 0;
 	std::atomic<size_t> _programsInQueue = 0;
 	std::atomic<size_t> _pipelinesInQueue = 0;
 	Rc<TransferResource> _resource;
@@ -194,6 +205,28 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 
 	_input->queue->prepare(*_device);
 
+	_layoutsInQueue = _input->queue->getTextureSetLayouts().size();
+
+	for (auto &it : _input->queue->getTextureSetLayouts()) {
+		auto ref = Rc<SamplersCompilationData>::alloc();
+		ref->layout = it;
+		ref->device = _device;
+		ref->samplersInProcess = uint32_t(it->samplers.size());
+
+		uint32_t i = 0;
+		for (auto &iit : it->samplers) {
+			frame.performRequiredTask([this, req = iit, ref, i] (FrameHandle &frame) {
+				if (ref->setSampler(i, Rc<Sampler>::create(*_device, req))) {
+					if (_layoutsInQueue.fetch_sub(1) == 1) {
+						runPasses(frame);
+					}
+				}
+				return true;
+			}, this, toString("RenderQueueAttachmentHandle::runShaders - compile samplers: ", _targetQueueName, "::", it->key));
+			++ i;
+		}
+	}
+
 	// count phase-1 tasks
 	_programsInQueue += _input->queue->getPasses().size();
 	tasksCount += _input->queue->getPasses().size();
@@ -224,6 +257,16 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile shader: ", _targetQueueName, "::", it->key));
 	}
 
+	if (_input->queue->getTextureSetLayouts().size() == 0 && _input->queue->getPasses().size() > 0) {
+		runPasses(frame);
+	}
+
+	if (tasksCount == 0) {
+		runPipelines(frame);
+	}
+}
+
+void RenderQueueAttachmentHandle::runPasses(FrameHandle &frame) {
 	for (auto &it : _input->queue->getPasses()) {
 		frame.performRequiredTask([this, req = it] (FrameHandle &frame) -> bool {
 			auto ret = Rc<RenderPass>::create(*_device, *req);
@@ -238,10 +281,6 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 			}
 			return true;
 		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile pass: ", _targetQueueName, "::", it->key));
-	}
-
-	if (tasksCount == 0) {
-		runPipelines(frame);
 	}
 }
 
@@ -282,6 +321,15 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 			}
 		}
 	}
+}
+
+bool RenderQueueAttachmentHandle::SamplersCompilationData::setSampler(uint32_t i, Rc<Sampler> &&sampler) {
+	layout->compiledSamplers[i] = move(sampler);
+	if (samplersInProcess.fetch_sub(1) == 1) {
+		layout->layout = Rc<TextureSetLayout>::create(*device, *layout);
+		return true;
+	}
+	return false;
 }
 
 RenderQueuePass::~RenderQueuePass() { }

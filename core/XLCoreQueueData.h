@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -254,7 +254,9 @@ struct SP_PUBLIC DescriptorSetData : NamedMem {
 struct SP_PUBLIC PipelineLayoutData : NamedMem {
 	const QueuePassData *pass = nullptr;
 	uint32_t index = 0;
-	bool usesTextureSet = false;
+
+	const TextureSetLayoutData *textureSetLayout = nullptr;
+
 	memory::vector<DescriptorSetData *> sets;
 	memory::vector<const GraphicPipelineData *> graphicPipelines;
 	memory::vector<const ComputePipelineData *> computePipelines;
@@ -348,6 +350,7 @@ struct SP_PUBLIC QueueData : NamedMem {
 	HashTable<ProgramData *> programs;
 	HashTable<GraphicPipelineData *> graphicPipelines;
 	HashTable<ComputePipelineData *> computePipelines;
+	HashTable<TextureSetLayoutData *> textureSets;
 	HashTable<Rc<Resource>> linked;
 	Function<void(FrameRequest &)> beginCallback;
 	Function<void(FrameRequest &)> endCallback;

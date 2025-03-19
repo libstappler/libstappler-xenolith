@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,32 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
-/* Minimal safe interval offset for frame timeout scheduling, to ensure, that actual timeout is less then nominal */
-static constexpr uint64_t FrameIntervalSafeOffset = 200;
-
 /* Presentation Scheduler interval, used for non-blocking vkWaitForFence */
 static constexpr uint64_t PresentationSchedulerInterval = 500; // 500 ms or 1/32 of 60fps frame
+
+#if ANDROID
+
+// On mobile platform, use smaller limits
+
+/* Max sampled image descriptors per material texture set (can be actually lower due maxPerStageDescriptorSampledImages) */
+static constexpr uint32_t MaxTextureSetImages = 256;
+
+/* Max buffers in buffer array */
+static constexpr uint32_t MaxBufferArrayObjects = 4;
+
+#else
+
+/* Max sampled image descriptors per material texture set (can be actually lower due maxPerStageDescriptorSampledImages) */
+static constexpr uint32_t MaxTextureSetImages = 1024;
+
+/* Max buffers in buffer array */
+static constexpr uint32_t MaxBufferArrayObjects = 64;
+
+#endif
+
+static constexpr uint32_t MaxTextureSetImagesIndexed = 1024 << 4;
+
+static constexpr uint32_t MaxBufferArrayObjectsIndexed = 1024;
 
 }
 

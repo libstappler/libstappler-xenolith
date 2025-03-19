@@ -262,32 +262,6 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 void PlatformApplication::run() {
 	platformInitialize();
 	Thread::run();
-}
-
-void PlatformApplication::waitRunning() {
-	Thread::waitRunning();
-}
-
-void PlatformApplication::waitStopped() {
-	platformWaitExit();
-}
-
-void PlatformApplication::threadInit() {
-	_thisThreadId = std::this_thread::get_id();
-
-	_appLooper = event::Looper::acquire(event::LooperInfo{
-		.name = StringView("Application"),
-		.workersCount = _info.appThreadsCount
-	});
-
-	_timer = _appLooper->scheduleTimer(event::TimerInfo{
-		.completion = event::TimerInfo::Completion::create<PlatformApplication>(this,
-				[] (PlatformApplication *data, event::TimerHandle *self, uint32_t value, Status status) {
-			data->performUpdate();
-		}),
-		.interval = _info.updateInterval,
-		.count = event::TimerInfo::Infinite - 1,
-	});
 
 	if (_info.loopInfo.onDeviceStarted) {
 		auto tmpStarted = sp::move(_info.loopInfo.onDeviceStarted);
@@ -320,16 +294,33 @@ void PlatformApplication::threadInit() {
 	}
 
 	_glLoop = _instance->makeLoop(_mainLooper, move(_info.loopInfo));
+	_glLoop->run();
+}
+
+void PlatformApplication::waitStopped() {
+	platformWaitExit();
+}
+
+void PlatformApplication::threadInit() {
+	_thisThreadId = std::this_thread::get_id();
+
+	_appLooper = event::Looper::acquire(event::LooperInfo{
+		.name = StringView("Application"),
+		.workersCount = _info.appThreadsCount
+	});
+
+	_timer = _appLooper->scheduleTimer(event::TimerInfo{
+		.completion = event::TimerInfo::Completion::create<PlatformApplication>(this,
+				[] (PlatformApplication *data, event::TimerHandle *self, uint32_t value, Status status) {
+			data->performUpdate();
+		}),
+		.interval = _info.updateInterval,
+		.count = event::TimerInfo::Infinite - 1,
+	});
 
 	if (_info.initCallback) {
 		_info.initCallback(*this);
 	}
-
-	loadExtensions();
-
-	initializeExtensions();
-
-	_extensionsInitialized = true;
 
 	_time.delta = 0;
 	_time.global = sp::platform::clock(ClockType::Monotonic);
@@ -455,6 +446,14 @@ void PlatformApplication::receiveRemoteNotification(Value &&val) {
 
 void PlatformApplication::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
 	_device = &dev;
+
+	performOnAppThread([this] {
+		loadExtensions();
+
+		initializeExtensions();
+
+		_extensionsInitialized = true;
+	}, this);
 }
 
 void PlatformApplication::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {

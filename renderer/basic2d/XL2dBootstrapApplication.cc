@@ -95,29 +95,26 @@ bool BootstrapApplication::init(ApplicationInfo &&info) {
 }
 
 void BootstrapApplication::run() {
-	_info.initCallback = [&] (const PlatformApplication &) {
-		GuiApplication::addView(ViewInfo{
-			.window = platform::WindowInfo{
-				.title = _info.applicationName,
-				.bundleId = _info.bundleName,
-				.rect = URect(UVec2{0, 0}, _info.screenSize),
-				.decoration = _info.viewDecoration,
-				.density = _info.density,
-			},
-			.selectConfig = [this] (const xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
-				return selectConfig(static_cast<const vk::View &>(view), info);
-			},
-			.onCreated = [this] (xenolith::View &view, const core::FrameConstraints &constraints) {
-				auto scene = createSceneForView(static_cast<vk::View &>(view), constraints);
-				view.getDirector()->runScene(move(scene));
-			},
-			.onClosed = [this] (xenolith::View &view) {
-				finalizeView(static_cast<vk::View &>(view));
-				end();
-			}
-		});
-	};
-	_info.updateCallback = [&] (const PlatformApplication &, const UpdateTime &time) { };
+	addView(ViewInfo{
+		.window = platform::WindowInfo{
+			.title = _info.applicationName,
+			.bundleId = _info.bundleName,
+			.rect = URect(UVec2{0, 0}, _info.screenSize),
+			.decoration = _info.viewDecoration,
+			.density = _info.density,
+		},
+		.selectConfig = [this] (const xenolith::View &view, const core::SurfaceInfo &info) -> core::SwapchainConfig {
+			return selectConfig(static_cast<const vk::View &>(view), info);
+		},
+		.onCreated = [this] (xenolith::View &view, const core::FrameConstraints &constraints) {
+			auto scene = createSceneForView(static_cast<vk::View &>(view), constraints);
+			view.getDirector()->runScene(move(scene));
+		},
+		.onClosed = [this] (xenolith::View &view) {
+			finalizeView(static_cast<vk::View &>(view));
+			end();
+		}
+	});
 
 	GuiApplication::run();
 }

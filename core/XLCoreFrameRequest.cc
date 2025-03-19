@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -189,7 +189,9 @@ void FrameRequest::onOutputInvalidated(Loop &loop, FrameAttachmentData &data) {
 	auto it = _output.find(data.handle->getAttachment()->getData());
 	if (it != _output.end()) {
 		if (it->second->handleReady(data, false)) {
-			_output.erase(it);
+			if (!_output.empty()) {
+				_output.erase(it);
+			}
 			return;
 		}
 	}

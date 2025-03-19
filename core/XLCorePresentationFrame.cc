@@ -128,6 +128,10 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 		return;
 	}
 
+	_flags |= Invalidated;
+
+	auto refId = retain();
+
 	if (invalidateSwapchain) {
 		if (auto sw = getSwapchainImage()) {
 			sw->invalidateSwapchain();
@@ -142,23 +146,26 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 		_target->invalidate();
 	}
 
-	_flags |= Invalidated;
-
 	if (_active && _engine) {
+		_active = false;
 		if (_frameHandle) {
 			_frameHandle->invalidate();
 		}
 
-		_engine->handleFrameInvalidated(this);
+		if (_engine) {
+			_engine->handleFrameInvalidated(this);
+		}
+
 		if (_completeCallback) {
 			_completeCallback(this, false);
 		}
-		_active = false;
 	}
 
 	_frameRequest = nullptr;
 	_swapchain = nullptr;
 	_target = nullptr;
+
+	release(refId);
 }
 
 void PresentationFrame::cancelFrameHandle() {

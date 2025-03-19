@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -658,7 +658,7 @@ Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized,
 	}
 }
 
-Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Rc<Image>> images, SpanView<Rc<Buffer>> buffers) {
+Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Image *> images, SpanView<Buffer *> buffers) {
 	Vector<MemoryRequirements> bufferRequirements; bufferRequirements.reserve(buffers.size());
 	Vector<MemoryRequirements> imageRequirements; imageRequirements.reserve(images.size());
 

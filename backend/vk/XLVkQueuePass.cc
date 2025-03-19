@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -338,12 +338,12 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 
 	for (auto &it : materials->getLayouts()) {
 		if (it.set) {
-			(static_cast<TextureSet *>(it.set.get()))->foreachPendingImageBarriers([&] (const ImageMemoryBarrier &b) {
+			it.set.get_cast<TextureSet>()->foreachPendingImageBarriers([&] (const ImageMemoryBarrier &b) {
 				outputImageBarriers.emplace_back(b);
-			});
-			(static_cast<TextureSet *>(it.set.get()))->foreachPendingBufferBarriers([&] (const BufferMemoryBarrier &b) {
+			}, true);
+			it.set.get_cast<TextureSet>()->foreachPendingBufferBarriers([&] (const BufferMemoryBarrier &b) {
 				outputBufferBarriers.emplace_back(b);
-			});
+			}, true);
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
 			log::error("QueuePassHandle", "No set for material layout");
@@ -354,21 +354,28 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::MaterialSet> &data, const Vector<Rc<core::Material>> &materials,
 		SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove) -> MaterialBuffers {
 	MaterialBuffers ret;
-	auto &layout = _device->getTextureSetLayout();
 
 	// update list of materials in set
 	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove, [&, this] (const core::MaterialImage &image) -> Rc<core::ImageView> {
+		for (auto &it : image.image->views) {
+			if (*it == image.info || it->view->getInfo() == image.info) {
+				return it->view;
+			}
+		}
+
 		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()), image.info);
 	});
 	if (updated.empty()) {
 		return MaterialBuffers();
 	}
 
+	auto layout = data->getTargetLayout();
+
 	for (auto &it : data->getLayouts()) {
 		frame.performRequiredTask([layout, data, target = &it] (FrameHandle &handle) {
 			auto dev = static_cast<Device *>(handle.getDevice());
 
-			target->set = Rc<TextureSet>(layout->acquireSet(*dev));
+			target->set = ref_cast<TextureSet>(layout->layout->acquireSet(*dev));
 			target->set->write(*target);
 			return true;
 		}, this, "QueuePassHandle::updateMaterials");

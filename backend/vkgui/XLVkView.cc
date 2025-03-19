@@ -66,7 +66,7 @@ void View::end() {
 
 void View::captureImage(StringView name, const Rc<core::ImageObject> &image, AttachmentLayout l) const {
 	auto str = name.str<Interface>();
-	_device->getTextureSetLayout()->readImage(*_device, *(Loop *)_glLoop.get(), (Image *)image.get(), l,
+	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l,
 		[str] (const ImageInfoData &info, BytesView view) mutable {
 			if (!StringView(str).ends_with(".png")) {
 				str = str + String(".png");
@@ -90,7 +90,7 @@ void View::captureImage(StringView name, const Rc<core::ImageObject> &image, Att
 }
 
 void View::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, AttachmentLayout l) const {
-	_device->getTextureSetLayout()->readImage(*_device, *(Loop *)_glLoop.get(), (Image *)image.get(), l, sp::move(cb));
+	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l, sp::move(cb));
 }
 
 void View::handleFramePresented(core::PresentationFrame *frame) {

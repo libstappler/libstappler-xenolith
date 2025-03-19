@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "XLVkPipeline.h"
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
+#include "XLVkTextureSet.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -41,6 +42,49 @@ static BytesView Shader_emplaceConstant(Bytes &data, float constant) {
 
 static BytesView Shader_emplaceConstant(Bytes &data, int constant) {
 	return Shader_emplaceConstant(data, BytesView((const uint8_t *)&constant, sizeof(int)));
+}
+
+static BytesView Pipeline_emplaceConstant(Bytes &data, BytesView constant) {
+	auto originalSize = data.size();
+	auto constantSize = constant.size();
+	data.resize(originalSize + constantSize);
+	memcpy(data.data() + originalSize, constant.data(), constantSize);
+	return BytesView(data.data() + originalSize, constantSize);
+}
+
+static BytesView Pipeline_emplaceConstant(const core::PipelineLayoutData *layout, Bytes &data, core::PredefinedConstant c) {
+	uint32_t intData = 0;
+	switch (c) {
+	case core::PredefinedConstant::SamplersArraySize:
+		if (layout->textureSetLayout && layout->textureSetLayout->layout) {
+			return Pipeline_emplaceConstant(data, BytesView(
+					(const uint8_t *)&layout->textureSetLayout->layout->getSamplersCount(), sizeof(uint32_t)));
+		}
+		break;
+	case core::PredefinedConstant::SamplersDescriptorIdx:
+		intData = 0;
+		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
+		break;
+	case core::PredefinedConstant::TexturesArraySize:
+		return Pipeline_emplaceConstant(data, BytesView(
+				(const uint8_t *)&layout->textureSetLayout->layout->getImageCount(), sizeof(uint32_t)));
+		break;
+	case core::PredefinedConstant::TexturesDescriptorIdx:
+		intData = 1;
+		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
+		break;
+	case core::PredefinedConstant::BuffersArraySize:
+		return Pipeline_emplaceConstant(data, BytesView(
+				(const uint8_t *)&layout->textureSetLayout->layout->getBuffersCount(), sizeof(uint32_t)));
+		break;
+	case core::PredefinedConstant::BuffersDescriptorIdx:
+		intData = 2;
+		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
+		break;
+	case core::PredefinedConstant::CurrentSamplerIdx:
+		break;
+	}
+	return BytesView();
 }
 
 bool Shader::init(Device &dev, const ProgramData &data) {
@@ -273,7 +317,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 					entry.size = data.size();
 					break;
 				case core::SpecializationConstant::Predefined:
-					data = dev.emplaceConstant(it.predefinedValue, spec.data);
+					data = Pipeline_emplaceConstant(params.layout, spec.data, it.predefinedValue);
 					entry.size = data.size();
 					break;
 				}
@@ -452,7 +496,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 				entry.size = data.size();
 				break;
 			case core::SpecializationConstant::Predefined:
-				data = dev.emplaceConstant(it.predefinedValue, spec.data);
+				data = Pipeline_emplaceConstant(params.layout, spec.data, it.predefinedValue);
 				entry.size = data.size();
 				break;
 			}

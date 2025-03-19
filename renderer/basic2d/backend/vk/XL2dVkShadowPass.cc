@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,32 @@ bool ShadowPass::makeRenderQueue(Queue::Builder &builder, RenderQueueInfo &info)
 
 bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info) {
 	using namespace core;
+
+	core::SamplerInfo samplers[] = {
+		SamplerInfo{
+			.magFilter = Filter::Nearest,
+			.minFilter = Filter::Nearest,
+			.addressModeU = SamplerAddressMode::Repeat,
+			.addressModeV = SamplerAddressMode::Repeat,
+			.addressModeW = SamplerAddressMode::Repeat
+		},
+		SamplerInfo{
+			.magFilter = Filter::Linear,
+			.minFilter = Filter::Linear,
+			.addressModeU = SamplerAddressMode::Repeat,
+			.addressModeV = SamplerAddressMode::Repeat,
+			.addressModeW = SamplerAddressMode::Repeat
+		},
+		SamplerInfo{
+			.magFilter = Filter::Linear,
+			.minFilter = Filter::Linear,
+			.addressModeU = SamplerAddressMode::ClampToEdge,
+			.addressModeV = SamplerAddressMode::ClampToEdge,
+			.addressModeW = SamplerAddressMode::ClampToEdge
+		},
+	};
+
+	auto texLayout = queueBuilder.addTextureSetLayout("General", samplers);
 
 	_output = queueBuilder.addAttachemnt("Output", [&] (AttachmentBuilder &builder) -> Rc<Attachment> {
 		// swapchain output
@@ -129,8 +155,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		});
 	});
 
-	_materials = queueBuilder.addAttachemnt(FrameContext2d::MaterialAttachmentName, [] (AttachmentBuilder &builder) -> Rc<Attachment> {
-		return Rc<vk::MaterialAttachment>::create(builder, BufferInfo(core::BufferUsage::StorageBuffer));
+	_materials = queueBuilder.addAttachemnt(FrameContext2d::MaterialAttachmentName, [&] (AttachmentBuilder &builder) -> Rc<Attachment> {
+		return Rc<vk::MaterialAttachment>::create(builder, BufferInfo(core::BufferUsage::StorageBuffer), texLayout);
 	});
 
 	_vertexes = queueBuilder.addAttachemnt(FrameContext2d::VertexAttachmentName, [&, this] (AttachmentBuilder &builder) -> Rc<Attachment> {
@@ -158,6 +184,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			setBuilder.addDescriptor(shadowAttachment, DescriptorType::InputAttachment, AttachmentLayout::ShaderReadOnlyOptimal);
 			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment, AttachmentLayout::ShaderReadOnlyOptimal);
 		});
+		layoutBuilder.setTextureSetLayout(texLayout);
 	});
 
 	auto layoutSdf = passBuilder.addDescriptorLayout("LayoutSdf", [&, this] (PipelineLayoutBuilder &layoutBuilder) {
@@ -166,6 +193,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			setBuilder.addDescriptor(passBuilder.addAttachment(_lightsData));
 			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment, AttachmentLayout::General);
 		});
+		layoutBuilder.setTextureSetLayout(texLayout);
 	});
 
 	auto subpass2d = passBuilder.addSubpass([&, this] (SubpassBuilder &subpassBuilder) {
@@ -396,12 +424,11 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 		ImageViewType::ImageView3D
 	}));
 
-
 	static_cast<MaterialAttachment *>(_materials->attachment.get())->addPredefinedMaterials(Vector<Rc<Material>>({
-		Rc<Material>::create(Material::MaterialIdInitial, materialPipeline, cache->getEmptyImage(), ColorMode::IntensityChannel),
-		Rc<Material>::create(Material::MaterialIdInitial, materialPipeline, cache->getSolidImage(), ColorMode::IntensityChannel),
-		Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline, cache->getEmptyImage(), ColorMode()),
-		Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline, cache->getSolidImage(), ColorMode()),
+		Rc<Material>::create(Material::MaterialIdInitial, materialPipeline, layout2d->textureSetLayout->emptyImage, ColorMode::IntensityChannel),
+		Rc<Material>::create(Material::MaterialIdInitial, materialPipeline, layout2d->textureSetLayout->solidImage, ColorMode::IntensityChannel),
+		Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline, layout2d->textureSetLayout->emptyImage, ColorMode()),
+		Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline, layout2d->textureSetLayout->solidImage, ColorMode()),
 	}));
 
 	subpassBuilder.addColor(colorAttachment, AttachmentDependencyInfo{

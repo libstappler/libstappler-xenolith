@@ -67,27 +67,22 @@ public:
 	VkDevice getDevice() const { return _device; }
 	VkPhysicalDevice getPhysicalDevice() const;
 
-	void begin(Loop &loop, Function<void(bool)> &&);
 	virtual void end() override;
 
 	const DeviceInfo & getInfo() const { return _info; }
 	const DeviceTable * getTable() const;
 	const Rc<Allocator> & getAllocator() const { return _allocator; }
 
-	const Rc<TextureSetLayout> &getTextureSetLayout() const { return _textureSetLayout; }
-
-	BytesView emplaceConstant(core::PredefinedConstant, Bytes &) const;
+	//BytesView emplaceConstant(core::PredefinedConstant, Bytes &) const;
 
 	virtual bool supportsUpdateAfterBind(DescriptorType) const override;
-
-	virtual Rc<core::ImageObject> getEmptyImageObject() const override;
-	virtual Rc<core::ImageObject> getSolidImageObject() const override;
 
 	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *, SpanView<Rc<core::ImageView>>) override;
 	virtual Rc<ImageStorage> makeImage(const ImageInfoData &) override;
 	virtual Rc<core::Semaphore> makeSemaphore() override;
 	virtual Rc<core::ImageView> makeImageView(const Rc<core::ImageObject> &, const ImageViewInfo &) override;
 	virtual Rc<core::CommandPool> makeCommandPool(uint32_t family, core::QueueFlags flags) override;
+	virtual Rc<core::TextureSet> makeTextureSet(const core::TextureSetLayout &) override;
 
 	template <typename Callback>
 	void makeApiCall(const Callback &cb) {
@@ -106,13 +101,13 @@ public:
 
 	void compileImage(const Loop &loop, const Rc<core::DynamicImage> &, Function<void(bool)> &&);
 
+	void readImage(Loop &loop, const Rc<Image> &, core::AttachmentLayout, Function<void(const ImageInfoData &, BytesView)> &&);
+	void readBuffer(Loop &loop, const Rc<Buffer> &, Function<void(const BufferInfo &, BytesView)> &&);
+
 private:
 	using core::Device::init;
 
 	friend class DeviceQueue;
-
-	// TODO - move this to queue compiler
-	virtual void compileSamplers(event::Looper *looper, bool force);
 
 	bool setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
 			const Vector<core::DeviceQueueFamily> &queueFamilies,
@@ -129,14 +124,8 @@ private:
 	Features _enabledFeatures;
 
 	Rc<Allocator> _allocator;
-	Rc<TextureSetLayout> _textureSetLayout;
 
 	bool _updateAfterBindEnabled = true;
-
-	Vector<VkSampler> _immutableSamplers;
-	Vector<Rc<Sampler>> _samplers;
-	size_t _compiledSamplers = 0;
-	std::atomic<bool> _samplersCompiled = false;
 
 	std::unordered_map<VkFormat, VkFormatProperties> _formats;
 

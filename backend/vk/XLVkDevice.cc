@@ -37,6 +37,120 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
+class ReadImageTask : public core::DeviceQueueTask {
+public:
+	virtual ~ReadImageTask() = default;
+
+	bool init(const Rc<Image> &img, core::AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
+		if (!DeviceQueueTask::init(vk::getQueueFlags(img->getInfo().type))) {
+			return false;
+		}
+
+		_layout = l;
+		_image = img;
+		_callback = sp::move(cb);
+
+		return true;
+	}
+
+	virtual bool handleQueueAcquired(core::Device &dev, core::DeviceQueue &queue) override {
+		_mempool = Rc<DeviceMemoryPool>::create(static_cast<Device &>(dev).getAllocator(), true);
+
+		auto &info = _image->getInfo();
+		auto &extent = info.extent;
+
+		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
+			core::ForceBufferUsage(core::BufferUsage::TransferDst),
+			size_t(extent.width * extent.height * extent.depth * core::getFormatBlockSize(info.format)),
+			_image->getInfo().type
+		));
+		return true;
+	}
+
+	virtual void fillCommandBuffer(core::Device &dev, core::CommandBuffer &cbuf) override {
+		auto &buf = static_cast<CommandBuffer &>(cbuf);
+
+		auto inImageBarrier = ImageMemoryBarrier(_image,
+			VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+			VkImageLayout(_layout), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
+
+		buf.cmdCopyImageToBuffer(_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transferBuffer, 0);
+
+		BufferMemoryBarrier bufferOutBarrier(_transferBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT);
+
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
+	}
+
+	virtual void handleComplete(bool success) {
+		if (success) {
+			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+				_callback(_image->getInfo(), BytesView(buf, size));
+			});
+		} else {
+			_callback(_image->getInfo(), BytesView());
+		}
+	}
+
+protected:
+	core::AttachmentLayout _layout = core::AttachmentLayout::Undefined;
+	Rc<DeviceMemoryPool> _mempool;
+	Rc<Buffer> _transferBuffer;
+	Rc<Image> _image;
+	Function<void(const ImageInfoData &, BytesView)> _callback;
+};
+
+class ReadBufferTask : public core::DeviceQueueTask {
+public:
+	virtual ~ReadBufferTask() = default;
+
+	bool init(const Rc<Buffer> &buf, Function<void(const BufferInfo &, BytesView)> &&cb) {
+		if (!DeviceQueueTask::init(vk::getQueueFlags(buf->getInfo().type))) {
+			return false;
+		}
+
+		_buffer = buf;
+		_callback = sp::move(cb);
+
+		return true;
+	}
+
+	virtual bool handleQueueAcquired(core::Device &dev, core::DeviceQueue &queue) override {
+		_mempool = Rc<DeviceMemoryPool>::create(static_cast<Device &>(dev).getAllocator(), true);
+
+		auto &info = _buffer->getInfo();
+
+		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
+			core::ForceBufferUsage(core::BufferUsage::TransferDst),
+			size_t(info.size),
+			info.type
+		));
+
+		return true;
+	}
+
+	virtual void fillCommandBuffer(core::Device &dev, core::CommandBuffer &buf) override {
+		static_cast<CommandBuffer &>(buf).cmdCopyBuffer(_buffer, _transferBuffer);
+	}
+
+	virtual void handleComplete(bool success) {
+		if (success) {
+			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+				_callback(_buffer->getInfo(), BytesView(buf, size));
+			});
+		} else {
+			_callback(_buffer->getInfo(), BytesView());
+		}
+	}
+
+protected:
+	Rc<DeviceMemoryPool> _mempool;
+	Rc<Buffer> _transferBuffer;
+	Rc<Buffer> _buffer;
+	Function<void(const BufferInfo &, BytesView)> _callback;
+};
+
 DeviceFrameHandle::~DeviceFrameHandle() {
 	if (!_valid) {
 #if XL_VK_FINALIZE_INVALID_FRAMES
@@ -73,11 +187,6 @@ Device::~Device() {
 		if (_allocator) {
 			_allocator->invalidate(*this);
 			_allocator = nullptr;
-		}
-
-		if (_textureSetLayout) {
-			_textureSetLayout->invalidate(*this);
-			_textureSetLayout = nullptr;
 		}
 
 		clearShaders();
@@ -145,21 +254,6 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 
 	_allocator = Rc<Allocator>::create(*this, _info.device, _info.features, _info.properties);
 
-	auto maxDescriptors = _info.properties.device10.properties.limits.maxPerStageDescriptorSampledImages;
-	auto maxResources = _info.properties.device10.properties.limits.maxPerStageResources - 16;
-
-	auto imageLimit = std::min(maxResources, maxDescriptors);
-	auto bufferLimit = std::min(info.properties.device10.properties.limits.maxPerStageDescriptorStorageBuffers, maxDescriptors);
-
-	_textureLayoutImagesCount = imageLimit = std::min(imageLimit, config::MaxTextureSetImages) - 2;
-
-	if (!_info.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
-		_textureLayoutImagesCount = imageLimit = 1;
-	}
-
-	_textureLayoutBuffersCount = bufferLimit = std::min(bufferLimit - 4, config::MaxBufferArrayObjects);
-	_textureSetLayout = Rc<TextureSetLayout>::create(*this, imageLimit, bufferLimit);
-
 	do {
 		VkFormatProperties properties;
 
@@ -200,13 +294,6 @@ VkPhysicalDevice Device::getPhysicalDevice() const {
 	return _info.device;
 }
 
-void Device::begin(Loop &loop, Function<void(bool)> &&cb) {
-	compileSamplers(loop.getLooper(), true);
-	_textureSetLayout->compile(*this, _immutableSamplers);
-	_textureSetLayout->initDefault(*this, loop, sp::move(cb));
-	_loopThreadId = std::this_thread::get_id();
-}
-
 void Device::end() {
 	for (auto &it : _families) {
 		for (auto &b : it.pools) {
@@ -214,11 +301,6 @@ void Device::end() {
 		}
 		it.pools.clear();
 	}
-
-	for (auto &it : _samplers) {
-		it->invalidate();
-	}
-	_samplers.clear();
 
 	core::Device::end();
 }
@@ -240,44 +322,6 @@ const DeviceTable * Device::getTable() const {
 #endif
 
 	return _table;
-}
-
-static BytesView Device_emplaceConstant(Bytes &data, BytesView constant) {
-	auto originalSize = data.size();
-	auto constantSize = constant.size();
-	data.resize(originalSize + constantSize);
-	memcpy(data.data() + originalSize, constant.data(), constantSize);
-	return BytesView(data.data() + originalSize, constantSize);
-}
-
-BytesView Device::emplaceConstant(core::PredefinedConstant c, Bytes &data) const {
-	uint32_t intData = 0;
-	switch (c) {
-	case core::PredefinedConstant::SamplersArraySize:
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&_samplersCount, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::SamplersDescriptorIdx:
-		intData = 0;
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::TexturesArraySize:
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&_textureSetLayout->getImageCount(), sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::TexturesDescriptorIdx:
-		intData = 1;
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::BuffersArraySize:
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&_textureSetLayout->getBuffersCount(), sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::BuffersDescriptorIdx:
-		intData = 2;
-		return Device_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::CurrentSamplerIdx:
-		break;
-	}
-	return BytesView();
 }
 
 bool Device::supportsUpdateAfterBind(DescriptorType type) const {
@@ -320,14 +364,6 @@ bool Device::supportsUpdateAfterBind(DescriptorType type) const {
 	return false;
 }
 
-Rc<core::ImageObject> Device::getEmptyImageObject() const {
-	return _textureSetLayout->getEmptyImageObject();
-}
-
-Rc<core::ImageObject> Device::getSolidImageObject() const {
-	return _textureSetLayout->getSolidImageObject();
-}
-
 Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass, SpanView<Rc<core::ImageView>> views) {
 	return Rc<Framebuffer>::create(*this, (RenderPass *)pass->impl.get(), views);
 }
@@ -354,6 +390,10 @@ Rc<core::ImageView> Device::makeImageView(const Rc<core::ImageObject> &img, cons
 
 Rc<core::CommandPool> Device::makeCommandPool(uint32_t family, core::QueueFlags flags) {
 	return Rc<CommandPool>::create(*this, family, flags);
+}
+
+Rc<core::TextureSet> Device::makeTextureSet(const core::TextureSetLayout &layout) {
+	return Rc<TextureSet>::create(*this, layout);
 }
 
 bool Device::hasNonSolidFillMode() const {
@@ -474,18 +514,23 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 	}, (Loop *)&loop);
 }
 
-void Device::compileSamplers(event::Looper *looper, bool force) {
-	_immutableSamplers.resize(_samplersInfo.size(), VK_NULL_HANDLE);
-	_samplers.resize(_samplersInfo.size(), nullptr);
-	_samplersCount = uint32_t(_samplersInfo.size());
-
-	size_t i = 0;
-	for (auto &it : _samplersInfo) {
-		_samplers[i] = Rc<Sampler>::create(*this, it);
-		_immutableSamplers[i] = _samplers[i]->getSampler();
-		++ i;
+void Device::readImage(Loop &loop, const Rc<Image> &image,
+		core::AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
+	if (!image) {
+		log::error("vk::Device", "readImage: Image is null");
+		return;
 	}
-	_samplersCompiled = true;
+
+	runTask(loop, Rc<ReadImageTask>::create(image, l, sp::move(cb)));
+}
+
+void Device::readBuffer(Loop &loop, const Rc<Buffer> &buf, Function<void(const BufferInfo &, BytesView)> &&cb) {
+	if (!buf) {
+		log::error("vk::Device", "readBuffer: Buffer is null");
+		return;
+	}
+
+	runTask(loop, Rc<ReadBufferTask>::create(buf, sp::move(cb)));
 }
 
 bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,

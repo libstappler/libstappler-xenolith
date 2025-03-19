@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2022-2025 Roman Katuntsev <sbkarr@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -122,7 +122,7 @@ bool UtilsStorageTestComponentContainer::getAll(Function<void(Value &&)> &&cb, R
 			val.addString(it.getString("name"));
 		}
 
-		serv.getApplication()->performOnMainThread([cb = sp::move(cb), val = Value(val)] () mutable {
+		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
 			cb(move(val));
 		}, ref);
 
@@ -145,7 +145,7 @@ bool UtilsStorageTestComponentContainer::createUser(StringView name, StringView 
 			}));
 		}
 
-		serv.getApplication()->performOnMainThread([cb = sp::move(cb), val = Value(val)] () mutable {
+		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
 			cb(move(val));
 		}, ref);
 
@@ -165,7 +165,7 @@ bool UtilsStorageTestComponentContainer::checkUser(StringView name, StringView p
 			}
 		}
 
-		serv.getApplication()->performOnMainThread([cb = sp::move(cb), val = Value(val)] () mutable {
+		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
 			cb(move(val));
 		}, ref);
 

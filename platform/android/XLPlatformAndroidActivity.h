@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,6 @@
 #include <jni.h>
 
 #include <android/native_activity.h>
-#include <android/configuration.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -42,22 +41,6 @@ enum class ActivityFlags {
 	None = 0,
 	CaptureInput = 1 << 0,
 };
-
-struct ActivityInfo {
-	String bundleName;
-	String applicationName;
-	String applicationVersion;
-	String userAgent;
-	String systemAgent;
-	String locale;
-
-	float density = 1.0f;
-
-	Extent2 sizeInPixels;
-	Size2 sizeInDp;
-};
-
-class Activity;
 
 struct ActivityTextInputWrapper : public Ref {
 	Rc<Ref> target;
@@ -128,7 +111,6 @@ public:
 	virtual void addTokenCallback(void *key, Function<void(StringView)> &&);
 	virtual void removeTokenCallback(void *key);
 
-	virtual void wakeup();
 	virtual void setView(platform::ViewInterface *);
 
 	String getMessageToken() const;
@@ -197,15 +179,10 @@ protected:
 
 	void handleWindowFocusChanged(int focused);
 
-	int handleLooperEvent(int fd, int events);
 	int handleInputEventQueue(int fd, int events, AInputQueue *);
 	int handleInputEvent(AInputEvent *);
 	int handleKeyEvent(AInputEvent *);
 	int handleMotionEvent(AInputEvent *);
-
-	ActivityInfo getActivityInfo(AConfiguration *);
-
-	platform::ViewInterface *waitForView();
 
 	virtual void transferInputEvent(const core::InputEventData &);
 	virtual void transferInputEvents(Vector<core::InputEventData> &&);
@@ -228,12 +205,9 @@ protected:
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;
 	AConfiguration *_config = nullptr;
-	ALooper *_looper = nullptr;
+	ANativeWindow *_window = nullptr;
 	Rc<ClassLoader> _classLoader;
 	Rc<NetworkConnectivity> _networkConnectivity;
-
-	int _eventfd = -1;
-	int _timerfd = -1;
 
 	Map<AInputQueue *, InputLooperData> _input;
 

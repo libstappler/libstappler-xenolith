@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,6 +50,8 @@ LOCAL_ANDROID_MK := proj.android/app/Android.mk # path to root Android.mk
 LOCAL_APPLICATION_MK := proj.android/app/Application.mk # path to Application.mk
 LOCAL_ANDROID_TARGET := application # target to build
 LOCAL_ANDROID_PLATFORM := android-24 # android platform version
+
+#ASAN := 1
 
 include $(STAPPLER_BUILD_ROOT)/universal.mk
 

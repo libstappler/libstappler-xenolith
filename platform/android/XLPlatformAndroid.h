@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,14 @@
 #if ANDROID
 
 #include <jni.h>
+#include <android/configuration.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct NetworkConnectivity;
 struct ClassLoader;
+
+class Activity;
 
 struct NativeBufferFormatSupport {
 	bool R8G8B8A8_UNORM = true;
@@ -43,6 +46,23 @@ struct NativeBufferFormatSupport {
 	bool R5G6B5_UNORM = true;
 	bool R16G16B16A16_FLOAT = true;
 	bool R10G10B10A2_UNORM = true;
+};
+
+struct ActivityInfo {
+	static ActivityInfo get(AConfiguration *, JNIEnv *env, jclass activityClass, jobject activity,
+			const ActivityInfo *prev = nullptr);
+
+	String bundleName;
+	String applicationName;
+	String applicationVersion;
+	String userAgent;
+	String systemAgent;
+	String locale;
+
+	float density = 1.0f;
+
+	Extent2 sizeInPixels;
+	Size2 sizeInDp;
 };
 
 void checkJniError(JNIEnv *env);

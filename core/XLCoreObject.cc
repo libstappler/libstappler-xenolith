@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -275,19 +275,6 @@ void CommandBuffer::bindBuffer(BufferObject *buffer) {
 
 void CommandBuffer::bindFramebuffer(Framebuffer *fb) {
 	_framebuffers.emplace(fb);
-}
-
-void TextureSet::write(const MaterialLayout &set) {
-	_layoutIndexes.clear();
-	for (uint32_t i = 0; i < set.usedImageSlots; ++ i) {
-		if (set.imageSlots[i].image) {
-			_layoutIndexes.emplace_back(set.imageSlots[i].image->getIndex());
-		} else {
-			_layoutIndexes.emplace_back(0);
-		}
-	}
-
-	_layoutIndexes.resize(_count, 0);
 }
 
 String Shader::inspectShader(SpanView<uint32_t> data) {

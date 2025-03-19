@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,28 +41,24 @@ bool AppDelegate::init(ApplicationInfo &&info) {
 }
 
 void AppDelegate::run() {
-	_info.initCallback = [&] (const PlatformApplication &) {
-		GuiApplication::addView(ViewInfo{
+	addView(ViewInfo{
+		.window = WindowInfo {
 			.title = _info.applicationName,
 			.bundleId = _info.bundleName,
 			.rect = URect(UVec2{0, 0}, _info.screenSize),
 			.density = _info.density,
-			.selectConfig = [this] (View &, const core::SurfaceInfo &info) -> core::SwapchainConfig {
-				return selectConfig(info);
-			},
-			.onCreated = [this] (View &view, const core::FrameContraints &constraints) {
-				auto scene = Rc<AppScene>::create(static_cast<Application *>(this), constraints);
-				view.getDirector()->runScene(move(scene));
-			},
-			.onClosed = [this] (View &view) {
-				end();
-			}
-		});
-	};
-
-	_info.updateCallback = [&] (const PlatformApplication &, const UpdateTime &time) {
-
-	};
+		},
+		.selectConfig = [this] (const View &, const core::SurfaceInfo &info) -> core::SwapchainConfig {
+			return selectConfig(info);
+		},
+		.onCreated = [this] (View &view, const core::FrameConstraints &constraints) {
+			auto scene = Rc<AppScene>::create(static_cast<Application *>(this), constraints);
+			view.getDirector()->runScene(move(scene));
+		},
+		.onClosed = [this] (View &view) {
+			end();
+		}
+	});
 
 	GuiApplication::run();
 }
@@ -123,7 +119,7 @@ core::SwapchainConfig AppDelegate::selectConfig(const core::SurfaceInfo &info) {
 
 	ret.transform = info.currentTransform;
 
-	performOnMainThread([this, info, ret] {
+	performOnAppThread([this, info, ret] {
 		_surfaceInfo = info;
 		_swapchainConfig = ret;
 

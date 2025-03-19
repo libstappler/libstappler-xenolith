@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -213,7 +213,7 @@ bool Server::addComponentContainer(const Rc<ComponentContainer> &comp) {
 
 	perform([this, comp] (const Server &serv, const db::Transaction &t) -> bool {
 		if (_data->addComponent(comp, t)) {
-			_data->application->performOnMainThread([this, comp] {
+			_data->application->performOnAppThread([this, comp] {
 				comp->handleComponentsLoaded(*this);
 			}, this);
 		}
@@ -260,7 +260,7 @@ bool Server::get(CoderSource key, DataCallback &&cb) const {
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, p, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
 		auto d = t.getAdapter().get(key);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(d)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -274,7 +274,7 @@ bool Server::set(CoderSource key, Value &&data, DataCallback &&cb) const {
 		return perform([this, p, key = key.view().bytes<Interface>(), data = sp::move(data)] (const Server &serv, const db::Transaction &t) {
 			auto d = t.getAdapter().get(key);
 			t.getAdapter().set(key, data);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(d)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -294,7 +294,7 @@ bool Server::clear(CoderSource key, DataCallback &&cb) const {
 		return perform([this, p, key = key.view().bytes<Interface>()] (const Server &serv, const db::Transaction &t) {
 			auto d = t.getAdapter().get(key);
 			t.getAdapter().clear(key);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(d)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(d)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -316,7 +316,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid, db::Upda
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, oid, flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -331,7 +331,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias, db::
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -366,7 +366,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid, StringVi
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, oid, field = field.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, field, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -382,7 +382,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias, Stri
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), field = field.str<Interface>(), flags, p] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, field, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -540,7 +540,7 @@ bool Server::select(const Scheme &scheme, DataCallback &&cb, QueryCallback &&qcb
 			(*q)(query);
 			delete q;
 			auto ret = scheme->select(t, query, flags);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -550,7 +550,7 @@ bool Server::select(const Scheme &scheme, DataCallback &&cb, QueryCallback &&qcb
 		auto p = new DataCallback(sp::move(cb));
 		return perform([this, scheme = &scheme, p, flags] (const Server &serv, const db::Transaction &t) {
 			auto ret = scheme->select(t, db::Query(), flags);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -572,7 +572,7 @@ bool Server::create(const Scheme &scheme, Value &&data, DataCallback &&cb, db::U
 		auto p = new DataCallback(sp::move(cb));
 		return perform([this, scheme = &scheme, data = move(data), flags, conflict, p] (const Server &serv, const db::Transaction &t) {
 			auto ret = scheme->create(t, data, flags | db::UpdateFlags::NoReturn, conflict);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -592,7 +592,7 @@ bool Server::update(const Scheme &scheme, uint64_t oid, Value &&data, DataCallba
 		return perform([this, scheme = &scheme, oid, data = sp::move(data), flags, p] (const Server &serv, const db::Transaction &t) {
 			db::Value patch(data);
 			auto ret = scheme->update(t, oid, patch, flags);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -614,7 +614,7 @@ bool Server::update(const Scheme &scheme, const Value & obj, Value &&data, DataC
 			db::Value value(obj);
 			db::Value patch(data);
 			auto ret = scheme->update(t, value, patch, flags);
-			_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+			_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 				(*p)(ret);
 				delete p;
 			});
@@ -635,7 +635,7 @@ bool Server::remove(const Scheme &scheme, uint64_t oid, Function<void(bool)> &&c
 		auto p = new Function<void(bool)>(sp::move(cb));
 		return perform([this, scheme = &scheme, oid, p] (const Server &serv, const db::Transaction &t) {
 			auto ret = scheme->remove(t, oid);
-			_data->application->performOnMainThread([p, ret] {
+			_data->application->performOnAppThread([p, ret] {
 				(*p)(ret);
 				delete p;
 			});
@@ -658,7 +658,7 @@ bool Server::count(const Scheme &scheme, Function<void(size_t)> &&cb) const {
 		auto p = new Function<void(size_t)>(sp::move(cb));
 		return perform([this, scheme = &scheme, p] (const Server &serv, const db::Transaction &t) {
 			auto c = scheme->count(t);
-			_data->application->performOnMainThread([p, c] {
+			_data->application->performOnAppThread([p, c] {
 				(*p)(c);
 				delete p;
 			});
@@ -678,7 +678,7 @@ bool Server::count(const Scheme &scheme, Function<void(size_t)> &&cb, QueryCallb
 				(*q)(query);
 				delete q;
 				auto c = scheme->count(t, query);
-				_data->application->performOnMainThread([p, c] {
+				_data->application->performOnAppThread([p, c] {
 					(*p)(c);
 					delete p;
 				});
@@ -733,7 +733,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid,
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, oid, flags, p, fields = sp::move(fields)] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, oid, fields, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});
@@ -750,7 +750,7 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias,
 	auto p = new DataCallback(sp::move(cb));
 	return perform([this, scheme = &scheme, alias = alias.str<Interface>(), flags, p, fields = sp::move(fields)] (const Server &serv, const db::Transaction &t) {
 		auto ret = scheme->get(t, alias, fields, flags);
-		_data->application->performOnMainThread([p, ret = xenolith::Value(ret)] {
+		_data->application->performOnAppThread([p, ret = xenolith::Value(ret)] {
 			(*p)(ret);
 			delete p;
 		});

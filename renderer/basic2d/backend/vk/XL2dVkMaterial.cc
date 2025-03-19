@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 MaterialAttachment::~MaterialAttachment() { }
 
-bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info) {
-	return core::MaterialAttachment::init(builder, info, [] (uint8_t *target, const core::Material *m) {
+bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, const core::TextureSetLayoutData *layout) {
+	return core::MaterialAttachment::init(builder, info, layout, [] (uint8_t *target, const core::Material *m) {
 		auto &images = m->getImages();
 		if (!images.empty()) {
 			MaterialData material;

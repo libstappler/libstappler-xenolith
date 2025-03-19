@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,25 @@ static std::atomic<uint32_t> s_frameCount = 0;
 
 static Mutex s_frameMutex;
 static std::set<FrameHandle *> s_activeFrames;
+
+FrameExternalTask::~FrameExternalTask() {
+	if (_frame) {
+		_frame->releaseTask(this, _success);
+	}
+}
+
+void FrameExternalTask::invalidate() {
+	_success = true;
+}
+
+bool FrameExternalTask::init(FrameHandle &frame, uint32_t idx, Ref *ref, StringView tag) {
+	_frame = &frame;
+	_index = idx;
+	_success = true;
+	_tag = tag;
+	_userdata = ref;
+	return true;
+}
 
 uint32_t FrameHandle::GetActiveFramesCount() {
 	return s_frameCount.load();
@@ -175,6 +194,12 @@ FrameQueue *FrameHandle::getFrameQueue(Queue *queue) const {
 	return nullptr;
 }
 
+Rc<FrameExternalTask> FrameHandle::acquireTask(Ref *ref, StringView tag) {
+	auto task = Rc<FrameExternalTask>::alloc();
+	task->init(*this, _tasksRequired.fetch_add(1), ref, tag);
+	return task;
+}
+
 void FrameHandle::performInQueue(Function<void(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
 	auto linkId = retain();
 	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
@@ -212,39 +237,31 @@ void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref
 }
 
 void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
-	++ _tasksRequired;
-	auto linkId = retain();
+	auto task = acquireTask(ref, tag);
 	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
 		return cb(*this);
-	}, [this, linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
+	}, [this, tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
-		if (success) {
-			onRequiredTaskCompleted(tag);
-		} else {
-			invalidate();
+		if (!success) {
+			task->invalidate();
 			log::error("FrameHandle", "Async task failed: ", tag);
 		}
-		release(linkId);
-	}, ref));
+	}, task));
 }
 
 void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform, Function<void(FrameHandle &, bool)> &&complete,
 		Ref *ref, StringView tag) {
-	++ _tasksRequired;
-	auto linkId = retain();
+	auto task = acquireTask(ref, tag);
 	_loop->performInQueue(Rc<thread::Task>::create([this, perform = sp::move(perform)] (const thread::Task &) -> bool {
 		return perform(*this);
-	}, [this, complete = sp::move(complete), linkId, tag = tag.str<Interface>()] (const thread::Task &, bool success) {
+	}, [this, complete = sp::move(complete), tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
 		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
-		if (success) {
-			onRequiredTaskCompleted(tag);
-		} else {
-			invalidate();
+		if (!success) {
+			task->invalidate();
 			log::error("FrameHandle", "Async task failed: ", tag);
 		}
-		release(linkId);
-	}, ref));
+	}, task));
 }
 
 bool FrameHandle::isValid() const {
@@ -345,9 +362,16 @@ void FrameHandle::onQueueComplete(FrameQueue &queue) {
 	tryComplete();
 }
 
-void FrameHandle::onRequiredTaskCompleted(StringView tag) {
-	++ _tasksCompleted;
-	tryComplete();
+void FrameHandle::releaseTask(FrameExternalTask *task, bool success) {
+	_loop->performOnThread([this, success, tag = task->getTag()] () {
+		if (success) {
+			++ _tasksCompleted;
+			tryComplete();
+		} else {
+			log::info("FrameHandle", "Task '", tag, "' failed, invalidate frame");
+			invalidate();
+		}
+	}, this, true);
 }
 
 bool FrameHandle::onOutputAttachment(FrameAttachmentData &data) {

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,7 @@ bool ViewApplication::addView(ViewInfo &&info) {
 		} else {
 			_tmpViews.emplace_back(move(info));
 		}
-	}, this);
+	}, this, true);
 	return true;
 }
 

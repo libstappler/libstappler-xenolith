@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@
 
 namespace stappler::xenolith::app {
 
-bool AppScene::init(Application *app, const core::FrameContraints &constraints) {
+bool AppScene::init(Application *app, const core::FrameConstraints &constraints) {
 	// build presentation RenderQueue
 	core::Queue::Builder builder("Loader");
 	builder.addImage("xenolith-1-480.png",

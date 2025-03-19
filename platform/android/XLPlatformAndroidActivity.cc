@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -103,27 +103,9 @@ Activity::~Activity() {
 	stappler::platform::i18n::finalizeJava();
 	filesystem::platform::Android_terminateFilesystem();
 
-	if (_looper) {
-		if (_eventfd >= 0) {
-			ALooper_removeFd(_looper, _eventfd);
-		}
-		if (_timerfd >= 0) {
-			ALooper_removeFd(_looper, _timerfd);
-		}
-		ALooper_release(_looper);
-		_looper = nullptr;
-	}
 	if (_config) {
 		AConfiguration_delete(_config);
 		_config = nullptr;
-	}
-	if (_eventfd) {
-		::close(_eventfd);
-		_eventfd = -1;
-	}
-	if (_timerfd) {
-		::close(_timerfd);
-		_timerfd = -1;
 	}
 }
 
@@ -169,31 +151,6 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 				};
 			}
 		}
-	}
-
-	_looper = ALooper_forThread();
-	if (_looper) {
-		ALooper_acquire(_looper);
-
-		_eventfd = ::eventfd(0, EFD_NONBLOCK);
-
-		ALooper_addFd(_looper, _eventfd, ALOOPER_POLL_CALLBACK, ALOOPER_EVENT_INPUT,
-				[] (int fd, int events, void* data) -> int {
-			return reinterpret_cast<Activity *>(data)->handleLooperEvent(fd, events);
-		}, this);
-
-		struct itimerspec timer{
-			{ 0, config::PresentationSchedulerInterval * 1000 },
-			{ 0, config::PresentationSchedulerInterval * 1000 }
-		};
-
-		_timerfd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-		::timerfd_settime(_timerfd, 0, &timer, nullptr);
-
-		ALooper_addFd(_looper, _timerfd, ALOOPER_POLL_CALLBACK, ALOOPER_EVENT_INPUT,
-				[] (int fd, int events, void* data) -> int {
-			return reinterpret_cast<Activity *>(data)->handleLooperEvent(fd, events);
-		}, this);
 	}
 
 	_activity->callbacks->onConfigurationChanged = [] (ANativeActivity* a) {
@@ -311,7 +268,7 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	filesystem::platform::Android_initializeFilesystem(_activity->assetManager,
 			_activity->internalDataPath, _activity->externalDataPath, _classLoader ? _classLoader->apkPath : StringView());
 
-	_info = getActivityInfo(_config);
+	_info = ActivityInfo::get(_config, _activity->env, getClass(), _activity->clazz);
 	_activity->instance = this;
 
 	if (_classLoader) {
@@ -426,13 +383,13 @@ void Activity::removeTokenCallback(void *key) {
 	_tokenCallbacks.erase(key);
 }
 
-void Activity::wakeup() {
-	uint64_t value = 1;
-	::write(_eventfd, &value, sizeof(value));
-}
-
 void Activity::setView(platform::ViewInterface *view) {
 	_rootView = view;
+	if (_window) {
+		_rootView->linkWithNativeWindow(_window);
+		ANativeWindow_release(_window);
+		_window = nullptr;
+	}
 }
 
 String Activity::getMessageToken() const {
@@ -486,7 +443,7 @@ void Activity::handleConfigurationChanged() {
 	AConfiguration_fromAssetManager(_config, _activity->assetManager);
 	_sdkVersion = AConfiguration_getSdkVersion(_config);
 
-	_info = getActivityInfo(_config);
+	_info = ActivityInfo::get(_config, _activity->env, getClass(), _activity->clazz, &_info);
 
 	for (auto &it : _components) {
 		it->handleConfigurationChanged(this, _config);
@@ -496,9 +453,9 @@ void Activity::handleConfigurationChanged() {
 void Activity::handleContentRectChanged(const ARect *r) {
 	log::format(log::Info, "NativeActivity", "ContentRectChanged: l=%d,t=%d,r=%d,b=%d", r->left, r->top, r->right, r->bottom);
 
-	if (auto view = waitForView()) {
+	if (_rootView) {
 		auto verticalSpace = _windowSize.height - r->top;
-		view->setContentPadding(Padding(r->top, _windowSize.width - r->right, _windowSize.height - r->bottom, r->left));
+		_rootView->setContentPadding(Padding(r->top, _windowSize.width - r->right, _windowSize.height - r->bottom, r->left));
 	}
 }
 
@@ -506,7 +463,7 @@ void Activity::handleInputQueueCreated(AInputQueue *queue) {
 	log::info("NativeActivity", "onInputQueueCreated");
 	if ((_flags & ActivityFlags::CaptureInput) != ActivityFlags::None) {
 		auto it = _input.emplace(queue, InputLooperData { this, queue }).first;
-		AInputQueue_attachLooper(queue, _looper, 0, [](int fd, int events, void *data) {
+		AInputQueue_attachLooper(queue, ALooper_forThread(), 0, [](int fd, int events, void *data) {
 			auto d = reinterpret_cast<InputLooperData*>(data);
 			return d->activity->handleInputEventQueue(fd, events, d->queue);
 		}, &it->second);
@@ -540,8 +497,11 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 
 	_application->waitRunning();
 
-	if (auto view = waitForView()) {
-		view->linkWithNativeWindow(window);
+	if (_rootView) {
+		_rootView->linkWithNativeWindow(window);
+	} else {
+		_window = window;
+		ANativeWindow_acquire(_window);
 	}
 
 	_windowSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
@@ -628,21 +588,6 @@ void Activity::handleWindowFocusChanged(int focused) {
 	stappler::log::info("NativeActivity", "onWindowFocusChanged");
 	core::InputEventData event = core::InputEventData::BoolEvent(core::InputEventName::FocusGain, focused != 0);
 	transferInputEvent(event);
-}
-
-int Activity::handleLooperEvent(int fd, int events) {
-	if (fd == _eventfd && events == ALOOPER_EVENT_INPUT) {
-		uint64_t value = 0;
-		::read(fd, &value, sizeof(value));
-		if (value > 0) {
-			updateView();
-		}
-		return 1;
-	} else if (fd == _timerfd && events == ALOOPER_EVENT_INPUT) {
-		updateView();
-		return 1;
-	}
-	return 0;
 }
 
 int Activity::handleInputEventQueue(int fd, int events, AInputQueue *queue) {
@@ -903,328 +848,6 @@ void Activity::handleInputEnabled(jboolean value) {
 	if (_textInputWrapper) {
 		_textInputWrapper->inputEnabled(_textInputWrapper->target, (value == 0) ? false : true);
 	}
-}
-
-static String Activity_getApplicatioName(JNIEnv *env, jclass activityClass, jobject activity) {
-	static jmethodID j_getApplicationInfo = nullptr;
-	static jfieldID j_labelRes = nullptr;
-	static jfieldID j_nonLocalizedLabel = nullptr;
-	static jmethodID j_toString = nullptr;
-	static jmethodID j_getString = nullptr;
-
-	String ret;
-	if (!j_getApplicationInfo) {
-		j_getApplicationInfo = env->GetMethodID(activityClass, "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
-	}
-
-	if (!j_getApplicationInfo) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jAppInfo = env->CallObjectMethod(activity, j_getApplicationInfo);
-	if (!jAppInfo) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jAppInfo_class = env->GetObjectClass(jAppInfo);
-	//auto jAppInfo_class = _activity->env->FindClass("android/content/pm/ApplicationInfo");
-	if (!j_labelRes) {
-		j_labelRes = env->GetFieldID(jAppInfo_class, "labelRes", "I");
-	}
-
-	if (!j_nonLocalizedLabel) {
-		j_nonLocalizedLabel = env->GetFieldID(jAppInfo_class, "nonLocalizedLabel", "Ljava/lang/CharSequence;");
-	}
-
-	auto labelRes = env->GetIntField(jAppInfo, j_labelRes);
-	if (labelRes == 0) {
-		auto jNonLocalizedLabel = env->GetObjectField(jAppInfo, j_nonLocalizedLabel);
-		jclass clzCharSequence = env->GetObjectClass(jNonLocalizedLabel);
-		if (!j_toString) {
-			j_toString = env->GetMethodID(clzCharSequence, "toString", "()Ljava/lang/String;");
-		}
-		jobject s = env->CallObjectMethod(jNonLocalizedLabel, j_toString);
-		const char* cstr = env->GetStringUTFChars(static_cast<jstring>(s), NULL);
-		ret = cstr;
-		env->ReleaseStringUTFChars(static_cast<jstring>(s), cstr);
-		env->DeleteLocalRef(s);
-		env->DeleteLocalRef(jNonLocalizedLabel);
-	} else {
-		if (!j_getString) {
-			j_getString = env->GetMethodID(activityClass, "getString", "(I)Ljava/lang/String;");
-		}
-		auto jAppName = static_cast<jstring>(env->CallObjectMethod(activity, j_getString, labelRes));
-		const char* cstr = env->GetStringUTFChars(jAppName, NULL);
-		ret = cstr;
-		env->ReleaseStringUTFChars(jAppName, cstr);
-		env->DeleteLocalRef(jAppName);
-	}
-	env->DeleteLocalRef(jAppInfo);
-	return ret;
-}
-
-static String Activity_getApplicatioVersion(JNIEnv *env, jclass activityClass, jobject activity, jstring jPackageName) {
-	static jmethodID j_getPackageManager = nullptr;
-	static jmethodID j_getPackageInfo = nullptr;
-	static jfieldID j_versionName = nullptr;
-
-	String ret;
-	if (!j_getPackageManager) {
-		j_getPackageManager = env->GetMethodID(activityClass, "getPackageManager", "()Landroid/content/pm/PackageManager;");
-	}
-	if (!j_getPackageManager) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jpm = env->CallObjectMethod(activity, j_getPackageManager);
-	if (!jpm) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jpm_class = env->GetObjectClass(jpm);
-	//auto jpm_class = env->FindClass("android/content/pm/PackageManager");
-	if (!j_getPackageInfo) {
-		j_getPackageInfo = env->GetMethodID(jpm_class, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
-	}
-	if (!j_getPackageInfo) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jinfo = env->CallObjectMethod(jpm, j_getPackageInfo, jPackageName, 0);
-	if (!jinfo) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jinfo_class = env->GetObjectClass(jinfo);
-	//auto jinfo_class = env->FindClass("android/content/pm/PackageInfo");
-	if (!j_versionName) {
-		j_versionName = env->GetFieldID(jinfo_class, "versionName", "Ljava/lang/String;");
-	}
-	if (!j_versionName) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto jversion = reinterpret_cast<jstring>(env->GetObjectField(jinfo, j_versionName));
-	if (!jversion) {
-		checkJniError(env);
-		return String();
-	}
-
-	auto versionChars = env->GetStringUTFChars(jversion, NULL);
-	ret = versionChars;
-	env->ReleaseStringUTFChars(jversion, versionChars);
-
-	env->DeleteLocalRef(jversion);
-	env->DeleteLocalRef(jinfo);
-	env->DeleteLocalRef(jpm);
-	return ret;
-}
-
-static String Activity_getSystemAgent(JNIEnv *env) {
-	static jmethodID j_getProperty = nullptr;
-	String ret;
-	auto systemClass = env->FindClass("java/lang/System");
-	if (systemClass) {
-		if (!j_getProperty) {
-			j_getProperty = env->GetStaticMethodID(systemClass, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
-		}
-		if (j_getProperty) {
-			auto jPropRequest = env->NewStringUTF("http.agent");
-			auto jUserAgent = static_cast<jstring>(env->CallStaticObjectMethod(systemClass, j_getProperty, jPropRequest));
-			if (jUserAgent) {
-				const char* cstr = env->GetStringUTFChars(jUserAgent, NULL);
-				ret = cstr;
-				env->ReleaseStringUTFChars(jUserAgent, cstr);
-				env->DeleteLocalRef(jUserAgent);
-			} else {
-				checkJniError(env);
-			}
-		} else {
-			checkJniError(env);
-		}
-	} else {
-		checkJniError(env);
-	}
-	return ret;
-}
-
-static String Activity_getUserAgent(JNIEnv *env, jobject activity) {
-	static jmethodID j_getDefaultUserAgent = nullptr;
-	String ret;
-	auto settingsClass = env->FindClass("android/webkit/WebSettings");
-	if (settingsClass) {
-		if (!j_getDefaultUserAgent) {
-			j_getDefaultUserAgent = env->GetStaticMethodID(settingsClass, "getDefaultUserAgent", "(Landroid/content/Context;)Ljava/lang/String;");
-		}
-		if (j_getDefaultUserAgent) {
-			auto jUserAgent = static_cast<jstring>(env->CallStaticObjectMethod(settingsClass, j_getDefaultUserAgent, activity));
-			const char* cstr = env->GetStringUTFChars(jUserAgent, NULL);
-			ret = cstr;
-			env->ReleaseStringUTFChars(jUserAgent, cstr);
-			env->DeleteLocalRef(jUserAgent);
-		} else {
-			checkJniError(env);
-		}
-	} else {
-		checkJniError(env);
-	}
-	return ret;
-}
-
-ActivityInfo Activity::getActivityInfo(AConfiguration *config) {
-	static jmethodID j_getPackageName = nullptr;
-	static jmethodID j_getResources = nullptr;
-	static jmethodID j_getDisplayMetrics = nullptr;
-	static jfieldID j_density = nullptr;
-	static jfieldID j_heightPixels = nullptr;
-	static jfieldID j_widthPixels = nullptr;
-
-	ActivityInfo activityInfo;
-	auto cl = getClass();
-
-	do {
-		if (!j_getPackageName) {
-			j_getPackageName = getMethodID(cl, "getPackageName", "()Ljava/lang/String;");
-		}
-		if (!j_getPackageName) {
-			break;
-		}
-
-		jstring jPackageName = reinterpret_cast<jstring>(_activity->env->CallObjectMethod(_activity->clazz, j_getPackageName));
-		if (!jPackageName) {
-			break;
-		}
-
-		if (_info.bundleName.empty()) {
-			auto chars = _activity->env->GetStringUTFChars(jPackageName, NULL);
-			activityInfo.bundleName = chars;
-			_activity->env->ReleaseStringUTFChars(jPackageName, chars);
-		} else {
-			activityInfo.bundleName = _info.bundleName;
-		}
-
-		if (_info.applicationName.empty()) {
-			activityInfo.applicationName = Activity_getApplicatioName(_activity->env, cl, _activity->clazz);
-		} else {
-			activityInfo.applicationName = _info.applicationName;
-		}
-
-		if (_info.applicationVersion.empty()) {
-			activityInfo.applicationVersion = Activity_getApplicatioVersion(_activity->env, cl, _activity->clazz, jPackageName);
-		} else {
-			activityInfo.applicationVersion = _info.applicationVersion;
-		}
-
-		if (_info.systemAgent.empty()) {
-			activityInfo.systemAgent = Activity_getSystemAgent(_activity->env);
-		} else {
-			activityInfo.systemAgent = _info.systemAgent;
-		}
-
-		if (_info.userAgent.empty()) {
-			activityInfo.userAgent = Activity_getUserAgent(_activity->env, _activity->clazz);
-		} else {
-			activityInfo.userAgent = _info.userAgent;
-		}
-
-		_activity->env->DeleteLocalRef(jPackageName);
-	} while (0);
-
-	int widthPixels = 0;
-	int heightPixels = 0;
-	float density = nan();
-	if (!j_getResources) {
-		j_getResources = getMethodID(cl, "getResources", "()Landroid/content/res/Resources;");
-	}
-
-	if (jobject resObj = reinterpret_cast<jstring>(_activity->env->CallObjectMethod(_activity->clazz, j_getResources))) {
-		if (!j_getDisplayMetrics) {
-			j_getDisplayMetrics = getMethodID(_activity->env->GetObjectClass(resObj), "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
-		}
-		if (jobject dmObj = reinterpret_cast<jstring>(_activity->env->CallObjectMethod(resObj, j_getDisplayMetrics))) {
-			if (!j_density) {
-				j_density = _activity->env->GetFieldID(_activity->env->GetObjectClass(dmObj), "density", "F");
-			}
-			if (!j_heightPixels) {
-				j_heightPixels = _activity->env->GetFieldID(_activity->env->GetObjectClass(dmObj), "heightPixels", "I");
-			}
-			if (!j_widthPixels) {
-				j_widthPixels = _activity->env->GetFieldID(_activity->env->GetObjectClass(dmObj), "widthPixels", "I");
-			}
-			density = _activity->env->GetFloatField(dmObj, j_density);
-			heightPixels = _activity->env->GetIntField(dmObj, j_heightPixels);
-			widthPixels = _activity->env->GetIntField(dmObj, j_widthPixels);
-		}
-	}
-
-	String language = "en-us";
-	AConfiguration_getLanguage(config, language.data());
-	AConfiguration_getCountry(config, language.data() + 3);
-	language = string::tolower<Interface>(language);
-	activityInfo.locale = language;
-
-	if (isnan(density)) {
-		auto densityValue = AConfiguration_getDensity(config);
-		switch (densityValue) {
-			case ACONFIGURATION_DENSITY_LOW: density = 0.75f; break;
-			case ACONFIGURATION_DENSITY_MEDIUM: density = 1.0f; break;
-			case ACONFIGURATION_DENSITY_TV: density = 1.5f; break;
-			case ACONFIGURATION_DENSITY_HIGH: density = 1.5f; break;
-			case 280: density = 2.0f; break;
-			case ACONFIGURATION_DENSITY_XHIGH: density = 2.0f; break;
-			case 360: density = 3.0f; break;
-			case 400: density = 3.0f; break;
-			case 420: density = 3.0f; break;
-			case ACONFIGURATION_DENSITY_XXHIGH: density = 3.0f; break;
-			case 560: density = 4.0f; break;
-			case ACONFIGURATION_DENSITY_XXXHIGH: density = 4.0f; break;
-			default: break;
-		}
-	}
-
-	activityInfo.density = density;
-
-	int32_t orientation = AConfiguration_getOrientation(config);
-	int32_t width = AConfiguration_getScreenWidthDp(config);
-	int32_t height = AConfiguration_getScreenHeightDp(config);
-
-	switch (orientation) {
-	case ACONFIGURATION_ORIENTATION_ANY:
-	case ACONFIGURATION_ORIENTATION_SQUARE:
-		activityInfo.sizeInPixels = Extent2(widthPixels, heightPixels);
-		activityInfo.sizeInDp = Size2(widthPixels / density, heightPixels / density);
-		break;
-	case ACONFIGURATION_ORIENTATION_PORT:
-		activityInfo.sizeInPixels = Extent2(std::min(widthPixels, heightPixels), std::max(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::min(widthPixels, heightPixels) / density, std::max(widthPixels, heightPixels) / density);
-		break;
-	case ACONFIGURATION_ORIENTATION_LAND:
-		activityInfo.sizeInPixels = Extent2(std::max(widthPixels, heightPixels), std::min(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::max(widthPixels, heightPixels) / density, std::min(widthPixels, heightPixels) / density);
-		break;
-	}
-
-	return activityInfo;
-}
-
-platform::ViewInterface *Activity::waitForView() {
-	/*std::unique_lock lock(_rootViewMutex);
-	if (_rootView) {
-		lock.unlock();
-	} else {
-		_rootViewVar.wait(lock, [this] {
-			return _rootViewTmp != nullptr;
-		});
-		_rootView = move(_rootViewTmp);
-	}*/
-	return _rootView;
 }
 
 void Activity::openUrl(StringView url) {

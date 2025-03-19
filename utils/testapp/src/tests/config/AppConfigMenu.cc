@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2022-2025 Roman Katuntsev <sbkarr@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -284,7 +284,7 @@ void ConfigMenu::applyConfig() {
 		}
 	}
 
-	_director->getView()->deprecateSwapchain();
+	_director->getView()->updateConfig();
 }
 
 }

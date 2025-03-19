@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -117,15 +117,6 @@ void Application::updateMessageToken(BytesView tok) {
 
 void Application::receiveRemoteNotification(Value &&val) {
 	onRemoteNotification(this, move(val));
-}
-
-void Application::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
-	performOnAppThread([this, emptyObject = dev.getEmptyImageObject(), solidObject = dev.getSolidImageObject()] () {
-		_resourceCache->addImage(core::EmptyTextureName, emptyObject);
-		_resourceCache->addImage(core::SolidTextureName, solidObject);
-	});
-
-	PlatformApplication::handleDeviceStarted(loop, dev);
 }
 
 void Application::performAppUpdate(const UpdateTime &t) {

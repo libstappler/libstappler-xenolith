@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -154,7 +154,7 @@ public:
 	Rc<Buffer> preallocate(const BufferInfo &, BytesView = BytesView());
 	Rc<Image> preallocate(const ImageInfoData &, bool preinitialized, uint64_t forceId = 0);
 
-	Rc<DeviceMemory> emplaceObjects(AllocationUsage usage, SpanView<Rc<Image>>, SpanView<Rc<Buffer>>);
+	Rc<DeviceMemory> emplaceObjects(AllocationUsage usage, SpanView<Image *>, SpanView<Buffer *>);
 
 protected:
 	friend class DeviceMemoryPool;

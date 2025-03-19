@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 static constexpr auto EmptyTextureName = "org.xenolith.EmptyImage";
 static constexpr auto SolidTextureName = "org.xenolith.SolidImage";
+static constexpr auto EmptyBufferName = "org.xenolith.EmptyBuffer";
 
 /**
  * ColorMode defines how to map texture color to shader color representation

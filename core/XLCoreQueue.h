@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -76,6 +76,7 @@ public:
 	const HashTable<GraphicPipelineData *> &getGraphicPipelines() const;
 	const HashTable<ComputePipelineData *> &getComputePipelines() const;
 	const HashTable<AttachmentData *> &getAttachments() const;
+	const HashTable<TextureSetLayoutData *> &getTextureSetLayouts() const;
 	const HashTable<Rc<Resource>> &getLinkedResources() const;
 	Rc<Resource> getInternalResource() const;
 
@@ -181,7 +182,7 @@ protected:
 class SP_PUBLIC PipelineLayoutBuilder final {
 public:
 	bool addSet(const Callback<void(DescriptorSetBuilder &)> &);
-	void setUsesTextureSet(bool);
+	void setTextureSetLayout(const TextureSetLayoutData *);
 
 protected:
 	friend class QueuePassBuilder;
@@ -302,6 +303,12 @@ public:
 	const ProgramData * addProgram(StringView key, const memory::function<void(Device &, const ProgramData::DataCallback &)> &,
 			const ProgramInfo * = nullptr);
 
+	const TextureSetLayoutData *addTextureSetLayout(StringView key, SpanView<SamplerInfo>,
+			uint32_t images = config::MaxTextureSetImages,
+			uint32_t buffers = config::MaxBufferArrayObjects,
+			uint32_t imagesIndexed = config::MaxTextureSetImagesIndexed,
+			uint32_t buffersIndexed = config::MaxBufferArrayObjectsIndexed);
+
 	// external resources, that should be compiled when added
 	void addLinkedResource(const Rc<Resource> &);
 
@@ -330,6 +337,8 @@ public:
 	const ImageData * addImage(StringView key, ImageInfo &&img,
 			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+
+	const ImageViewData *addImageView(const ImageData *, ImageViewInfo &&);
 
 protected:
 	friend class Queue;

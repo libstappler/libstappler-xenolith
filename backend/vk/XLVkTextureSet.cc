@@ -26,50 +26,43 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-bool TextureSetLayout::init(Device &dev, uint32_t imageLimit, uint32_t bufferLimit) {
-	_imageCount = imageLimit;
-	_bufferCount = bufferLimit;
+bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data) {
+	auto &devInfo = dev.getInfo();
 
-	// create dummy image
-	auto alloc = dev.getAllocator();
-	_emptyImage = alloc->preallocate(ImageInfo(
-			Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM, core::EmptyTextureName), false);
-	_solidImage = alloc->preallocate(ImageInfo(
-			Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM, core::SolidTextureName, core::ImageHints::Opaque), false);
-	_emptyBuffer = alloc->preallocate(BufferInfo(uint64_t(8), core::BufferUsage::StorageBuffer));
-
-	Rc<Image> images[] = {
-		_emptyImage, _solidImage
-	};
-
-	alloc->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(images, 2), SpanView<Rc<Buffer>>(&_emptyBuffer, 1));
-
-	_emptyImageView = Rc<ImageView>::create(dev, _emptyImage, ImageViewInfo());
-	_solidImageView = Rc<ImageView>::create(dev, _solidImage, ImageViewInfo());
-
-	return true;
-}
-
-void TextureSetLayout::invalidate(Device &dev) {
-	if (_layout) {
-		dev.getTable()->vkDestroyDescriptorSetLayout(dev.getDevice(), _layout, nullptr);
-		_layout = VK_NULL_HANDLE;
+	uint32_t maxImageCount = data.imageCount;
+	uint32_t maxBufferCount = data.bufferCount;
+	if (dev.getInfo().features.deviceDescriptorIndexing.descriptorBindingPartiallyBound) {
+		maxImageCount = data.imageCountIndexed;
+		maxBufferCount = data.bufferCountIndexed;
 	}
 
-	_emptyImage = nullptr;
-	_emptyImageView = nullptr;
-	_solidImage = nullptr;
-	_solidImageView = nullptr;
-}
+	auto maxResources = devInfo.properties.device10.properties.limits.maxPerStageResources - 16;
 
-bool TextureSetLayout::compile(Device &dev, const Vector<VkSampler> &samplers) {
+	auto imageLimit = std::min(devInfo.properties.device10.properties.limits.maxPerStageDescriptorSampledImages, maxResources);
+	auto bufferLimit = std::min(devInfo.properties.device10.properties.limits.maxPerStageDescriptorStorageBuffers, maxResources);
+
+	_imageCount = imageLimit = std::min(imageLimit - 2, maxImageCount);
+
+	if (!devInfo.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
+		_imageCount = imageLimit = 1;
+	}
+
+	_bufferCount = bufferLimit = std::min(bufferLimit - 4, maxBufferCount);
+
+	Vector<VkSampler> vkSamplers;
+	for (auto &it : data.compiledSamplers) {
+		vkSamplers.emplace_back(it.get_cast<Sampler>()->getSampler());
+	}
+
+	_samplersCount = uint32_t(data.compiledSamplers.size());
+
 	VkDescriptorSetLayoutBinding b[] = {
 		VkDescriptorSetLayoutBinding{
 			uint32_t(0),
 			VK_DESCRIPTOR_TYPE_SAMPLER,
-			uint32_t(samplers.size()),
+			uint32_t(vkSamplers.size()),
 			VK_SHADER_STAGE_FRAGMENT_BIT,
-			samplers.data()
+			vkSamplers.data()
 		},
 		VkDescriptorSetLayoutBinding{
 			uint32_t(1),
@@ -86,8 +79,6 @@ bool TextureSetLayout::compile(Device &dev, const Vector<VkSampler> &samplers) {
 			nullptr
 		},
 	};
-
-	_samplersCount = uint32_t(samplers.size());
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo { };
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -121,305 +112,26 @@ bool TextureSetLayout::compile(Device &dev, const Vector<VkSampler> &samplers) {
 		}
 	}
 
+	_emptyImage = data.emptyImage;
+	_solidImage = data.solidImage;
+	_emptyBuffer = data.emptyBuffer;
+
+	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *data) {
+		auto d = ((Device *)dev);
+		if (d->isPortabilityMode()) {
+			auto pool = memory::pool::acquire();
+			memory::pool::pre_cleanup_register(pool, [d, ptr = (VkDescriptorSetLayout)ptr.get()] () {
+				d->getTable()->vkDestroyDescriptorSetLayout(d->getDevice(), ptr, nullptr);
+			});
+		} else {
+			d->getTable()->vkDestroyDescriptorSetLayout(d->getDevice(), (VkDescriptorSetLayout)ptr.get(), nullptr);
+		}
+	}, core::ObjectType::DescriptorSetLayout, ObjectHandle(_layout));
+
 	return true;
 }
 
-Rc<TextureSet> TextureSetLayout::acquireSet(Device &dev) {
-	std::unique_lock<Mutex> lock(_mutex);
-	if (_sets.empty()) {
-		lock.unlock();
-		return Rc<TextureSet>::create(dev, *this);
-	} else {
-		auto v = move(_sets.back());
-		_sets.pop_back();
-		return v;
-	}
-}
-
-void TextureSetLayout::releaseSet(Rc<TextureSet> &&set) {
-	std::unique_lock<Mutex> lock(_mutex);
-	_sets.emplace_back(move(set));
-}
-
-void TextureSetLayout::initDefault(Device &dev, Loop &loop, Function<void(bool)> &&cb) {
-	struct CompileTask : public Ref {
-		Function<void(bool)> callback;
-		Rc<Loop> loop;
-		Device *device;
-
-		Rc<CommandPool> pool;
-		Rc<DeviceQueue> queue;
-		Rc<Fence> fence;
-	};
-
-	auto task = new (std::nothrow) CompileTask();
-	task->callback = sp::move(cb);
-	task->loop = &loop;
-	task->device = &dev;
-
-	dev.acquireQueue(core::QueueFlags::Graphics, loop, [this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
-		task->queue = ref_cast<DeviceQueue>(queue);
-		task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
-		task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(core::QueueFlags::Graphics));
-
-		auto refId = task->retain();
-		task->fence->addRelease([task, refId] (bool success) {
-			task->device->releaseCommandPool(*task->loop, move(task->pool));
-			task->callback(success);
-			task->release(refId);
-		}, this, "TextureSetLayout::initDefault releaseCommandPool");
-
-		loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-			auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
-				writeDefaults(buf);
-				return true;
-			});
-
-			if (task->queue->submit(*task->fence, buf) == Status::Ok) {
-				return true;
-			}
-			return false;
-		}, [task] (const thread::Task &, bool success) mutable {
-			if (task->queue) {
-				task->device->releaseQueue(move(task->queue));
-			}
-
-			task->fence->schedule(*task->loop);
-			task->fence = nullptr;
-			task->release(0);
-		}, this));
-	}, [task] (core::Loop &) {
-		task->callback(false);
-		task->release(0);
-	}, this);
-}
-
-Rc<Image> TextureSetLayout::getEmptyImageObject() const {
-	return _emptyImage;
-}
-
-Rc<Image> TextureSetLayout::getSolidImageObject() const {
-	return _solidImage;
-}
-
-void TextureSetLayout::readImage(Device &dev, Loop &loop, const Rc<Image> &image,
-		AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
-	struct ReadImageTask : public Ref {
-		Function<void(const ImageInfoData &, BytesView)> callback;
-		Rc<Image> image;
-		Rc<Loop> loop;
-		Device *device;
-		AttachmentLayout layout;
-
-		Rc<Buffer> transferBuffer;
-		Rc<CommandPool> pool;
-		Rc<DeviceQueue> queue;
-		Rc<Fence> fence;
-		Rc<DeviceMemoryPool> mempool;
-	};
-
-	auto task = new (std::nothrow) ReadImageTask();
-	task->callback = sp::move(cb);
-	task->image = image;
-	task->loop = &loop;
-	task->device = &dev;
-	task->layout = l;
-
-	task->loop->performOnThread([this, task] {
-		task->device->acquireQueue(getQueueFlags(task->image->getInfo().type), *task->loop,
-				[this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
-			task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
-			task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(getQueueFlags(task->image->getInfo().type)));
-			task->queue = ref_cast<DeviceQueue>(queue);
-			task->mempool = Rc<DeviceMemoryPool>::create(task->device->getAllocator(), true);
-
-			auto &info = task->image->getInfo();
-			auto &extent = info.extent;
-
-			task->transferBuffer = task->mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
-				core::ForceBufferUsage(core::BufferUsage::TransferDst),
-				size_t(extent.width * extent.height * extent.depth * core::getFormatBlockSize(info.format)),
-				task->image->getInfo().type
-			));
-
-			auto refId = task->retain();
-			task->fence->addRelease([task, refId] (bool) {
-				task->device->releaseCommandPool(*task->loop, move(task->pool));
-
-				task->transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
-					task->callback(task->image->getInfo(), BytesView(buf, size));
-				});
-
-				task->release(refId);
-			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
-
-			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
-					writeImageRead(*task->device, buf, task->pool->getFamilyIdx(), task->image, task->layout, task->transferBuffer);
-					return true;
-				});
-
-				if (task->queue->submit(*task->fence, buf) == Status::Ok) {
-					return true;
-				}
-				return false;
-			}, [task] (const thread::Task &, bool success) {
-				if (task->queue) {
-					task->device->releaseQueue(move(task->queue));
-				}
-				if (!success) {
-					task->callback(ImageInfo(), BytesView());
-				}
-				task->fence->schedule(*task->loop);
-				task->fence = nullptr;
-				task->release(0);
-			}));
-		}, [task] (core::Loop &) {
-			task->callback(ImageInfo(), BytesView());
-			task->release(0);
-		});
-	}, task, true);
-}
-
-void TextureSetLayout::readBuffer(Device &dev, Loop &loop, const Rc<Buffer> &buf, Function<void(const BufferInfo &, BytesView)> &&cb) {
-	if (!buf) {
-		log::error("vk::TextureSetLayout", "Buffer is null");
-		return;
-	}
-
-	struct ReadBufferTask : public Ref {
-		Function<void(const BufferInfo &, BytesView)> callback;
-		Rc<Buffer> buffer;
-		Rc<Loop> loop;
-		Device *device;
-
-		Rc<Buffer> transferBuffer;
-		Rc<CommandPool> pool;
-		Rc<DeviceQueue> queue;
-		Rc<Fence> fence;
-		Rc<DeviceMemoryPool> mempool;
-	};
-
-	auto task = new (std::nothrow) ReadBufferTask();
-	task->callback = sp::move(cb);
-	task->buffer = buf;
-	task->loop = &loop;
-	task->device = &dev;
-	task->mempool = buf->getMemory()->getPool();
-
-	task->loop->performOnThread([this, task] {
-		task->device->acquireQueue(getQueueFlags(task->buffer->getInfo().type), *task->loop,
-				[this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
-			task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
-			task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(getQueueFlags(task->buffer->getInfo().type)));
-			task->queue = ref_cast<DeviceQueue>(queue);
-			if (!task->mempool) {
-				task->mempool = Rc<DeviceMemoryPool>::create(task->device->getAllocator(), true);
-			}
-
-			auto &info = task->buffer->getInfo();
-
-			task->transferBuffer = task->mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
-				core::ForceBufferUsage(core::BufferUsage::TransferDst),
-				size_t(info.size),
-				info.type
-			));
-
-			auto refId = task->retain();
-			task->fence->addRelease([task, refId] (bool) {
-				task->device->releaseCommandPool(*task->loop, move(task->pool));
-
-				task->transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
-					task->callback(task->buffer->getInfo(), BytesView(buf, size));
-				});
-
-				task->release(refId);
-			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
-
-			loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-				auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
-					writeBufferRead(*task->device, buf, task->pool->getFamilyIdx(), task->buffer, task->transferBuffer);
-					return true;
-				});
-
-				if (task->queue->submit(*task->fence, buf) == Status::Ok) {
-					return true;
-				}
-				return false;
-			}, [task] (const thread::Task &, bool success) {
-				if (task->queue) {
-					task->device->releaseQueue(move(task->queue));
-				}
-				if (!success) {
-					task->callback(BufferInfo(), BytesView());
-				}
-				task->fence->schedule(*task->loop);
-				task->fence = nullptr;
-				task->release(0);
-			}));
-		}, [task] (core::Loop &) {
-			task->callback(BufferInfo(), BytesView());
-			task->release(0);
-		});
-	}, task, true);
-}
-
-void TextureSetLayout::writeDefaults(CommandBuffer &buf) {
-	std::array<ImageMemoryBarrier, 2> inImageBarriers;
-	// define input barrier/transition (Undefined -> TransferDst)
-	inImageBarriers[0] = ImageMemoryBarrier(_emptyImage,
-		0, VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	inImageBarriers[1] = ImageMemoryBarrier(_solidImage,
-		0, VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, inImageBarriers);
-
-	buf.cmdClearColorImage(_emptyImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Color4F::ZERO);
-	buf.cmdClearColorImage(_solidImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Color4F::ONE);
-	buf.cmdFillBuffer(_emptyBuffer, 0xffffffffU);
-
-	std::array<ImageMemoryBarrier, 2> outImageBarriers;
-	outImageBarriers[0] = ImageMemoryBarrier(_emptyImage,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	outImageBarriers[1] = ImageMemoryBarrier(_solidImage,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	BufferMemoryBarrier outBufferBarrier(_emptyBuffer,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-			makeSpanView(&outBufferBarrier, 1), outImageBarriers);
-}
-
-void TextureSetLayout::writeImageTransfer(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &buffer, const Rc<Image> &image) {
-	auto f = dev.getQueueFamily(image->getInfo().type);
-	buf.writeImageTransfer(qidx, f ? f->index : VK_QUEUE_FAMILY_IGNORED, buffer, image);
-}
-
-void TextureSetLayout::writeImageRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Image> &image,
-		AttachmentLayout layout, const Rc<Buffer> &target) {
-	auto inImageBarrier = ImageMemoryBarrier(image,
-		VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-		VkImageLayout(layout), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
-
-	buf.cmdCopyImageToBuffer(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target, 0);
-
-	BufferMemoryBarrier bufferOutBarrier(target, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT);
-
-	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
-}
-
-void TextureSetLayout::writeBufferRead(Device &dev, CommandBuffer &buf, uint32_t qidx, const Rc<Buffer> &source,
-		const Rc<Buffer> &target) {
-	buf.cmdCopyBuffer(source, target);
-}
-
-bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
+bool TextureSet::init(Device &dev, const core::TextureSetLayout &layout) {
 	_imageCount = layout.getImageCount();
 	_bufferCount = layout.getBuffersCount();
 
@@ -450,7 +162,7 @@ bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
 		return false;
 	}
 
-	auto descriptorSetLayout = layout.getLayout();
+	auto descriptorSetLayout = static_cast<const TextureSetLayout &>(layout).getLayout();
 
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -465,7 +177,7 @@ bool TextureSet::init(Device &dev, const TextureSetLayout &layout) {
 		return false;
 	}
 
-	_layout = &layout;
+	_layout = &static_cast<const TextureSetLayout &>(layout);
 	_partiallyBound = layout.isPartiallyBound();
 	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 		auto d = ((Device *)dev);
@@ -514,18 +226,24 @@ Vector<const BufferMemoryBarrier *> TextureSet::getPendingBufferBarriers() const
 	return ret;
 }
 
-void TextureSet::foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &cb) const {
+void TextureSet::foreachPendingImageBarriers(const Callback<void(const ImageMemoryBarrier &)> &cb, bool drain) const {
 	for (auto &it : _pendingImageBarriers) {
 		if (auto b = it->getPendingBarrier()) {
 			cb(*b);
+			if (drain) {
+				it->dropPendingBarrier();
+			}
 		}
 	}
 }
 
-void TextureSet::foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &cb) const {
+void TextureSet::foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &cb, bool drain) const {
 	for (auto &it : _pendingBufferBarriers) {
 		if (auto b = it->getPendingBarrier()) {
 			cb(*b);
+			if (drain) {
+				it->dropPendingBarrier();
+			}
 		}
 	}
 }
@@ -579,6 +297,8 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 		localImages = nullptr;
 	};
 
+	auto emptyImageView = _layout->getEmptyImage()->views.front();
+
 	for (uint32_t i = 0; i < set.usedImageSlots; ++ i) {
 		if (set.imageSlots[i].image && _layoutIndexes[i] != set.imageSlots[i].image->getIndex()) {
 			if (!localImages) {
@@ -593,14 +313,14 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 			}
 			_layoutIndexes[i] = set.imageSlots[i].image->getIndex();
 			++ imageWriteData.descriptorCount;
-		} else if (!_partiallyBound && !set.imageSlots[i].image && _layoutIndexes[i] != _layout->getEmptyImageView()->getIndex()) {
+		} else if (!_partiallyBound && !set.imageSlots[i].image && _layoutIndexes[i] != emptyImageView->view->getIndex()) {
 			if (!localImages) {
 				localImages = &imagesList.emplace_front(Vector<VkDescriptorImageInfo>());
 			}
 			localImages->emplace_back(VkDescriptorImageInfo({
-				VK_NULL_HANDLE, _layout->getEmptyImageView()->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				VK_NULL_HANDLE, emptyImageView->view.get_cast<ImageView>()->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			}));
-			_layoutIndexes[i] = _layout->getEmptyImageView()->getIndex();
+			_layoutIndexes[i] = emptyImageView->view->getIndex();
 			++ imageWriteData.descriptorCount;
 		} else {
 			// no need to write, push written
@@ -614,14 +334,14 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 	if (!_partiallyBound) {
 		// write empty
 		for (uint32_t i = set.usedImageSlots; i < _imageCount; ++ i) {
-			if (_layoutIndexes[i] != _layout->getEmptyImageView()->getIndex()) {
+			if (_layoutIndexes[i] != emptyImageView->view->getIndex()) {
 				if (!localImages) {
 					localImages = &imagesList.emplace_front(Vector<VkDescriptorImageInfo>());
 				}
 				localImages->emplace_back(VkDescriptorImageInfo({
-					VK_NULL_HANDLE, _layout->getEmptyImageView()->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+					VK_NULL_HANDLE, emptyImageView->view.get_cast<ImageView>()->getImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 				}));
-				_layoutIndexes[i] = _layout->getEmptyImageView()->getIndex();
+				_layoutIndexes[i] = emptyImageView->view->getIndex();
 				++ imageWriteData.descriptorCount;
 			} else {
 				// no need to write, push written
@@ -674,6 +394,8 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 		localBuffers = nullptr;
 	};
 
+	auto emptyBuffer = _layout->getEmptyBuffer()->buffer.get_cast<Buffer>();
+
 	for (uint32_t i = 0; i < set.usedBufferSlots; ++ i) {
 		if (set.bufferSlots[i].buffer && _layoutBuffers[i] != set.bufferSlots[i].buffer) {
 			// replace old buffer in descriptor
@@ -691,15 +413,15 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 			}
 			_layoutBuffers[i] = set.bufferSlots[i].buffer;
 			++ bufferWriteData.descriptorCount;
-		} else if (!_partiallyBound && !set.bufferSlots[i].buffer && _layoutBuffers[i] != _layout->getEmptyBuffer()) {
+		} else if (!_partiallyBound && !set.bufferSlots[i].buffer && _layoutBuffers[i] != emptyBuffer) {
 			// if partiallyBound feature is not available, drop old buffers to preallocated empty buffer
 			if (!localBuffers) {
 				localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());
 			}
 			localBuffers->emplace_back(VkDescriptorBufferInfo({
-				_layout->getEmptyBuffer()->getBuffer(), 0, VK_WHOLE_SIZE
+				emptyBuffer->getBuffer(), 0, VK_WHOLE_SIZE
 			}));
-			_layoutBuffers[i] = _layout->getEmptyBuffer();
+			_layoutBuffers[i] = emptyBuffer;
 			++ bufferWriteData.descriptorCount;
 		} else {
 			// descriptor was not changed, no need to write, push written
@@ -713,14 +435,14 @@ void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::
 	if (!_partiallyBound) {
 		// write empty buffers into empty descriptors
 		for (uint32_t i = set.usedBufferSlots; i < _bufferCount; ++ i) {
-			if (_layoutBuffers[i] != _layout->getEmptyBuffer()) {
+			if (_layoutBuffers[i] != emptyBuffer) {
 				if (!localBuffers) {
 					localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());
 				}
 				localBuffers->emplace_back(VkDescriptorBufferInfo({
-					_layout->getEmptyBuffer()->getBuffer(), 0, VK_WHOLE_SIZE
+					emptyBuffer->getBuffer(), 0, VK_WHOLE_SIZE
 				}));
-				_layoutBuffers[i] = _layout->getEmptyBuffer();
+				_layoutBuffers[i] = emptyBuffer;
 				++ bufferWriteData.descriptorCount;
 			} else {
 				// no need to write, push written

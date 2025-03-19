@@ -114,7 +114,7 @@ struct SP_PUBLIC ApplicationInfo {
 	uint16_t appThreadsCount = 2;
 
 	// Worker threads count, for async general and gl tasks
-	uint16_t mainThreadsCount = 2;
+	uint16_t mainThreadsCount = 1;
 
 	// Application event update interval (NOT screen update interval)
 	TimeInterval updateInterval = TimeInterval::microseconds(100000);
@@ -142,7 +142,6 @@ public:
 
 	virtual void run();
 
-	virtual void waitRunning() override;
 	virtual void waitStopped() override;
 
 	virtual void threadInit() override;

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -105,6 +105,7 @@ public:
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) = 0;
 
+	virtual void run() = 0;
 	virtual void waitIdle() = 0;
 	virtual void stop() = 0;
 

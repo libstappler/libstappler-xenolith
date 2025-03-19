@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,31 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class PresentationEngine;
+
+// handle for a running external task
+// when it's destroyed - task will be marked as completed
+class SP_PUBLIC FrameExternalTask final : public Ref {
+public:
+	virtual ~FrameExternalTask();
+
+	// mark task as failed, so, it's frame will be invalidated too
+	void invalidate();
+
+	uint32_t getIndex() const { return _index; }
+	StringView getTag() const { return _tag; }
+	Ref *getRef() const { return _userdata; }
+
+protected:
+	friend class FrameHandle;
+
+	bool init(FrameHandle &, uint32_t idx, Ref *, StringView tag);
+
+	bool _success = true;
+	uint32_t _index = 0;
+	StringView _tag;
+	Rc<FrameHandle> _frame;
+	Rc<Ref> _userdata;
+};
 
 class SP_PUBLIC FrameHandle : public Ref {
 public:
@@ -67,6 +92,8 @@ public:
 	const Vector<Rc<FrameQueue>> &getFrameQueues() const { return _queues; }
 	FrameQueue *getFrameQueue(Queue *) const;
 
+	Rc<FrameExternalTask> acquireTask(Ref * = nullptr, StringView tag = StringView());
+
 	// thread tasks within frame should not be performed directly on loop's queue to preserve FrameHandle object
 	virtual void performInQueue(Function<void(FrameHandle &)> &&, Ref *, StringView tag);
 	virtual void performInQueue(Function<bool(FrameHandle &)> &&, Function<void(FrameHandle &, bool)> &&, Ref *, StringView tag);
@@ -103,9 +130,11 @@ public:
 	virtual void signalDependencies(bool success);
 
 protected:
+	friend class FrameExternalTask;
+
 	virtual bool setup();
 
-	virtual void onRequiredTaskCompleted(StringView tag);
+	void releaseTask(FrameExternalTask *, bool success);
 
 	virtual void tryComplete();
 	virtual void onComplete();

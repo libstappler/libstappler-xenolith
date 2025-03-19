@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -257,7 +257,6 @@ protected:
 
 	Rc<PipelineLayout> _boundLayout;
 
-	const CommandPool *_pool = nullptr;
 	const DeviceTable *_table = nullptr;
 	VkCommandBuffer _buffer = VK_NULL_HANDLE;
 
@@ -275,11 +274,13 @@ public:
 
 	using Level = BufferLevel;
 
-	virtual ~CommandPool();
+	virtual ~CommandPool() = default;
 
 	bool init(Device &dev, uint32_t familyIdx, core::QueueFlags c = core::QueueFlags::Graphics, bool transient = true);
 
 	VkCommandPool getCommandPool() const { return _commandPool; }
+
+	virtual const core::CommandBuffer * recordBuffer(core::Device &dev, const Callback<bool(core::CommandBuffer &)> &) override;
 
 	const CommandBuffer * recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
 			const Callback<bool(CommandBuffer &)> &,

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -51,6 +51,9 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 	if (!View::init(loop, static_cast<vk::Device &>(dev), move(info))) {
 		return false;
 	}
+
+	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
+	activity->setView(this);
 
 	return true;
 }
@@ -164,8 +167,6 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 	setPresentationEngine(move(engine));
 
 	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
-
-	activity->setView(this);
 	setActivity(activity);
 }
 

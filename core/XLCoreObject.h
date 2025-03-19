@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -334,7 +334,10 @@ public:
 	virtual void bindBuffer(BufferObject *);
 	virtual void bindFramebuffer(Framebuffer *);
 
+	const CommandPool *getCommandPool() const { return _pool; }
+
 protected:
+	const CommandPool *_pool = nullptr;
 	uint32_t _currentSubpass = 0;
 	uint32_t _boundLayoutIndex = 0;
 	bool _withinRenderpass = false;
@@ -362,18 +365,6 @@ struct SP_PUBLIC MaterialLayout {
 	uint32_t usedBufferSlots = 0;
 
 	Rc<TextureSet> set;
-};
-
-class SP_PUBLIC TextureSet : public Object {
-public:
-	virtual ~TextureSet() { }
-
-	virtual void write(const MaterialLayout &);
-
-protected:
-	uint32_t _count = 0;
-	Vector<uint64_t> _layoutIndexes;
-	Vector<BufferObject *> _layoutBuffers;
 };
 
 class SP_PUBLIC Semaphore : public Object {

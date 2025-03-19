@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -409,7 +409,11 @@ bool TransferResource::compile() {
 		if (it.barrier) {
 			img->setPendingBarrier(it.barrier.value());
 		}
-		it.data->image.set(img);
+
+		for (auto &iit : it.data->views) {
+			iit->view = Rc<ImageView>::create(*_alloc->getDevice(), img, *iit);
+		}
+		it.data->image = move(img);
 		it.image = VK_NULL_HANDLE;
 	}
 
@@ -427,7 +431,7 @@ bool TransferResource::compile() {
 		if (it.barrier) {
 			buf->setPendingBarrier(it.barrier.value());
 		}
-		it.data->buffer.set(buf);
+		it.data->buffer = move(buf);
 		it.buffer = VK_NULL_HANDLE;
 	}
 

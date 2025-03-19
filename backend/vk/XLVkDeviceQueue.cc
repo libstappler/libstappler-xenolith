@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -666,12 +666,6 @@ bool CommandBuffer::updateBoundSets(SpanView<VkDescriptorSet> sets, uint32_t fir
 	return false;
 }
 
-CommandPool::~CommandPool() {
-	if (_commandPool) {
-		log::error("VK-Error", "CommandPool was not destroyed");
-	}
-}
-
 static void CommandPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
 	auto d = static_cast<Device *>(dev);
 	auto target = (VkCommandPool)ptr.get();
@@ -696,6 +690,12 @@ bool CommandPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c, bool
 	}
 
 	return false;
+}
+
+const core::CommandBuffer *CommandPool::recordBuffer(core::Device &dev, const Callback<bool(core::CommandBuffer &)> &cb) {
+	return recordBuffer(static_cast<Device &>(dev), Vector<Rc<DescriptorPool>>(), [&] (CommandBuffer &buf) {
+		return cb(buf);
+	});
 }
 
 const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,

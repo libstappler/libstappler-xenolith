@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class BufferObject;
 class ImageObject;
+class ImageView;
+class Sampler;
 class DataAtlas;
 class Resource;
+class TextureSetLayout;
 
 using MipLevels = ValueWrapper<uint32_t, class MipLevelFlag>;
 using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
@@ -243,22 +246,6 @@ struct SP_PUBLIC ImageInfo : NamedMem, ImageInfoData {
 	String description() const;
 };
 
-struct SP_PUBLIC ImageData : ImageInfo {
-	using DataCallback = memory::callback<void(BytesView)>;
-
-	BytesView data;
-	memory::function<void(uint8_t *, uint64_t, const DataCallback &)> memCallback = nullptr;
-	std::function<void(uint8_t *, uint64_t, const DataCallback &)> stdCallback = nullptr;
-	Rc<ImageObject> image; // GL implementation-dependent object
-	Rc<DataAtlas> atlas;
-	const Resource *resource = nullptr; // owning resource;
-	core::AccessType targetAccess = core::AccessType::ShaderRead;
-	core::AttachmentLayout targetLayout = core::AttachmentLayout::ShaderReadOnlyOptimal;
-
-	size_t writeData(uint8_t *mem, size_t expected) const;
-};
-
-
 using ComponentMappingR = ValueWrapper<ComponentMapping, class ComponentMappingRFlag>;
 using ComponentMappingG = ValueWrapper<ComponentMapping, class ComponentMappingGFlag>;
 using ComponentMappingB = ValueWrapper<ComponentMapping, class ComponentMappingBFlag>;
@@ -337,6 +324,28 @@ struct SP_PUBLIC ImageViewInfo {
 		return false;
 	}
 #endif
+};
+
+struct SP_PUBLIC ImageViewData : ImageViewInfo, memory::AllocPool {
+	Rc<ImageView> view;
+	const Resource *resource = nullptr; // owning resource;
+};
+
+struct SP_PUBLIC ImageData : ImageInfo {
+	using DataCallback = memory::callback<void(BytesView)>;
+
+	BytesView data;
+	memory::function<void(uint8_t *, uint64_t, const DataCallback &)> memCallback = nullptr;
+	std::function<void(uint8_t *, uint64_t, const DataCallback &)> stdCallback = nullptr;
+	Rc<ImageObject> image; // GL implementation-dependent object
+	Rc<DataAtlas> atlas;
+	const Resource *resource = nullptr; // owning resource;
+	core::AccessType targetAccess = core::AccessType::ShaderRead;
+	core::AttachmentLayout targetLayout = core::AttachmentLayout::ShaderReadOnlyOptimal;
+
+	memory::vector<ImageViewData *> views;
+
+	size_t writeData(uint8_t *mem, size_t expected) const;
 };
 
 struct SP_PUBLIC FrameConstraints {
@@ -439,6 +448,22 @@ struct SP_PUBLIC SurfaceInfo {
 	bool isSupported(const SwapchainConfig &) const;
 
 	String description() const;
+};
+
+struct TextureSetLayoutInfo {
+	uint32_t imageCount = config::MaxTextureSetImages;
+	uint32_t imageCountIndexed = config::MaxTextureSetImagesIndexed;
+	uint32_t bufferCount = config::MaxBufferArrayObjects;
+	uint32_t bufferCountIndexed = config::MaxBufferArrayObjectsIndexed;
+	memory::vector<SamplerInfo> samplers;
+};
+
+struct TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
+	Rc<TextureSetLayout> layout;
+	memory::vector<Rc<Sampler>> compiledSamplers;
+	const ImageData *emptyImage = nullptr;
+	const ImageData *solidImage = nullptr;
+	const BufferData *emptyBuffer = nullptr;
 };
 
 SP_PUBLIC String getBufferFlagsDescription(BufferFlags fmt);

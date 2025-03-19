@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,9 +40,18 @@ struct Resource::ResourceData : memory::AllocPool {
 		compiled = false;
 		for (auto &it : buffers) {
 			it->buffer = nullptr;
+			it->atlas = nullptr;
+			it->memCallback = nullptr;
+			it->stdCallback = nullptr;
 		}
 		for (auto &it : images) {
+			for (auto &iit : it->views) {
+				iit->view = nullptr;
+			}
 			it->image = nullptr;
+			it->atlas = nullptr;
+			it->memCallback = nullptr;
+			it->stdCallback = nullptr;
 		}
 	}
 };
@@ -271,6 +280,9 @@ bool Resource::init(Builder && buf) {
 	buf._data = nullptr;
 	for (auto &it : _data->images) {
 		it->resource = this;
+		for (auto &iit : it->views) {
+			iit->resource = this;
+		}
 	}
 	for (auto &it : _data->buffers) {
 		it->resource = this;
@@ -679,6 +691,40 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return nullptr;
 	}
 	return p;
+}
+
+const ImageViewData *Resource::Builder::addImageView(const ImageData *data, ImageViewInfo &&info) {
+	auto image = getImage(data->key);
+	if (!image) {
+		log::error("Resource", "Fail to add image view: no image for key: ", data->key);
+		return nullptr;
+	}
+
+	for (auto &it : image->views) {
+		if (info == *it) {
+			log::error("Resource", "Fail to add image view: already exists: ", data->key);
+			return it;
+		}
+	}
+
+	return perform([&] {
+		auto view = new (_data->pool) ImageViewData;
+		if (info == ImageViewInfo()) {
+			view->setup(*image);
+		} else {
+			static_cast<ImageViewInfo &>(*view) = data->getViewInfo(info);
+		}
+		const_cast<ImageData *>(image)->views.emplace_back(view);
+		return view;
+	}, _data->pool);
+}
+
+const BufferData *Resource::Builder::getBuffer(StringView key) const {
+	return _data->buffers.get(key);
+}
+
+const ImageData *Resource::Builder::getImage(StringView key) const {
+	return _data->images.get(key);
 }
 
 bool Resource::Builder::empty() const {

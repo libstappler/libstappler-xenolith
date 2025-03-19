@@ -556,7 +556,7 @@ void Asset::replaceVersion(VersionData &data) {
 void Asset::addVersion(AssetDownloadData *data) {
 	_library->perform([this, data] (const Server &, const db::Transaction &t) {
 		auto id = _library->addVersion(t, _id, data->data);
-		_library->getApplication()->performOnMainThread([this, id, data] {
+		_library->getApplication()->performOnAppThread([this, id, data] {
 			std::unique_lock ctx(_mutex);
 			_downloadId = data->data.id = id;
 			_versions.emplace_back(data->data);

@@ -93,7 +93,7 @@ Controller::Data::~Data() { }
 
 bool Controller::Data::init() {
 	registerNetworkCallback(_application, this, [this] (NetworkCapabilities cap) {
-		_application->performOnMainThread([this, cap] {
+		_application->performOnAppThread([this, cap] {
 			_capabilities = cap;
 			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
 		}, this);
@@ -242,7 +242,7 @@ void *Controller::Data::getSharegroup(StringView name) {
 }
 
 void Controller::Data::onUploadProgress(Handle *handle, int64_t total, int64_t now) {
-	_application->performOnMainThread([handle, total, now] {
+	_application->performOnAppThread([handle, total, now] {
 		auto req = handle->getReqeust();
 		req->notifyOnUploadProgress(total, now);
 	});
@@ -250,7 +250,7 @@ void Controller::Data::onUploadProgress(Handle *handle, int64_t total, int64_t n
 }
 
 void Controller::Data::onDownloadProgress(Handle *handle, int64_t total, int64_t now) {
-	_application->performOnMainThread([handle, total, now] {
+	_application->performOnAppThread([handle, total, now] {
 		auto req = handle->getReqeust();
 		req->notifyOnDownloadProgress(total, now);
 	});
@@ -258,7 +258,7 @@ void Controller::Data::onDownloadProgress(Handle *handle, int64_t total, int64_t
 }
 
 bool Controller::Data::onComplete(Handle *handle, bool success) {
-	_application->performOnMainThread([handle, success] {
+	_application->performOnAppThread([handle, success] {
 		auto req = handle->getReqeust();
 		req->notifyOnComplete(success);
 	});

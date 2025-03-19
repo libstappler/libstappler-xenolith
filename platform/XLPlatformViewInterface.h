@@ -62,10 +62,15 @@ public:
 	core::Loop *getGlLoop() const { return _glLoop; }
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
+	void updateConfig();
+
 	void setReadyForNextFrame();
 
 	void setRenderOnDemand(bool value);
 	bool isRenderOnDemand() const;
+
+	void setFrameInterval(uint64_t);
+	uint64_t getFrameInterval() const;
 
 	void setContentPadding(const Padding &padding);
 

@@ -28,6 +28,12 @@ void ViewInterface::update(bool displayLink) {
 	_presentationEngine->update(displayLink);
 }
 
+void ViewInterface::updateConfig() {
+	_glLoop->performOnThread([this] {
+		_presentationEngine->deprecateSwapchain(false);
+	}, this, true);
+}
+
 void ViewInterface::setReadyForNextFrame() {
 	_glLoop->performOnThread([this] {
 		if (_presentationEngine) {
@@ -45,7 +51,19 @@ void ViewInterface::setRenderOnDemand(bool value) {
 }
 
 bool ViewInterface::isRenderOnDemand() const {
-	return _presentationEngine->isRenderOnDemand();
+	return _presentationEngine ? _presentationEngine->isRenderOnDemand() : false;
+}
+
+void ViewInterface::setFrameInterval(uint64_t value) {
+	_glLoop->performOnThread([this, value] {
+		if (_presentationEngine) {
+			_presentationEngine->setTargetFrameInterval(value);
+		}
+	}, this, true);
+}
+
+uint64_t ViewInterface::getFrameInterval() const {
+	return _presentationEngine ? _presentationEngine->getTargetFrameInterval() : 0;
 }
 
 void ViewInterface::setContentPadding(const Padding &padding) {

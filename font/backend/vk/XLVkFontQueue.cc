@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -624,7 +624,15 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 		_targetAtlas = allocator->preallocate(core::BufferInfo(atlas->getBufferData().size(),
 				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
-		(void) allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(&_targetImage, 1), makeSpanView(&_targetAtlas, 1));
+		Image *images[] = {
+			_targetImage
+		};
+
+		Buffer *buffers[] = {
+			_targetAtlas
+		};
+
+		(void) allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(images), makeSpanView(buffers));
 	} else {
 		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false, instance->data.image->getIndex());
 	}

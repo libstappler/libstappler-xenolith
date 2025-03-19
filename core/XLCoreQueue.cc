@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -722,7 +722,10 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 	}
 
 	if (hasTexturesArray || hasSamplersArray || hasAtlasArray) {
-		((PipelineLayoutData *)layout)->usesTextureSet = true;
+		if (layout->textureSetLayout == nullptr) {
+			log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
+				"] uses TextureSetLayout, that was not defined");
+		}
 	}
 }
 
@@ -812,6 +815,10 @@ const HashTable<ComputePipelineData *> &Queue::getComputePipelines() const {
 
 const HashTable<AttachmentData *> &Queue::getAttachments() const {
 	return _data->attachments;
+}
+
+const HashTable<TextureSetLayoutData *> &Queue::getTextureSetLayouts() const {
+	return _data->textureSets;
 }
 
 const HashTable<Rc<Resource>> &Queue::getLinkedResources() const {
@@ -1114,8 +1121,8 @@ bool PipelineLayoutBuilder::addSet(const Callback<void(DescriptorSetBuilder &)> 
 	return true;
 }
 
-void PipelineLayoutBuilder::setUsesTextureSet(bool value) {
-	_data->usesTextureSet = value;
+void PipelineLayoutBuilder::setTextureSetLayout(const TextureSetLayoutData *d) {
+	_data->textureSetLayout = d;
 }
 
 PipelineLayoutBuilder::PipelineLayoutBuilder(PipelineLayoutData *data)
@@ -1564,6 +1571,58 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 	return nullptr;
 }
 
+const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key, SpanView<SamplerInfo> samplers,
+		uint32_t images, uint32_t buffers, uint32_t imagesIndexed, uint32_t buffersIndexed) {
+	if (!_data) {
+		log::error("Resource", "Fail to add TextureSetLayout: ", key, ", not initialized");
+		return nullptr;
+	}
+
+	if (auto r = Resource_conditionalInsert<TextureSetLayoutData>(_data->textureSets, key, [&, this] () -> TextureSetLayoutData * {
+		auto layout = new (_data->pool) TextureSetLayoutData;
+		layout->key = key.pdup(_data->pool);
+		layout->imageCount = images;
+		layout->imageCountIndexed = imagesIndexed;
+		layout->bufferCount = buffers;
+		layout->bufferCountIndexed = buffersIndexed;
+		layout->samplers = samplers.vec<memory::PoolInterface>();
+		layout->compiledSamplers.resize(layout->samplers.size());
+
+		uint8_t empty = 0, solid = 255;
+		uint64_t emptyBuffer = maxOf<uint64_t>();
+
+		layout->emptyImage = _internalResource.getImage(EmptyTextureName);
+		if (!layout->emptyImage) {
+			layout->emptyImage = _internalResource.addImage(EmptyTextureName,
+				ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM),
+				BytesView(&empty, 1).pdup(_internalResource.getPool()));
+			_internalResource.addImageView(layout->emptyImage, ImageViewInfo());
+		}
+
+		layout->solidImage = _internalResource.getImage(SolidTextureName);
+		if (!layout->solidImage) {
+			layout->solidImage = _internalResource.addImage(SolidTextureName,
+				ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM, core::ImageHints::Opaque),
+				BytesView(&solid, 1).pdup(_internalResource.getPool()));
+			_internalResource.addImageView(layout->solidImage, ImageViewInfo());
+		}
+
+		layout->emptyBuffer = _internalResource.getBuffer(EmptyBufferName);
+		if (!layout->emptyBuffer) {
+			layout->emptyBuffer = _internalResource.addBuffer(EmptyBufferName,
+					BufferInfo(uint64_t(8), core::BufferUsage::StorageBuffer),
+					BytesView(reinterpret_cast<const uint8_t *>(&emptyBuffer), sizeof(uint64_t)).pdup(_internalResource.getPool()));
+		}
+
+		return layout;
+	}, _data->pool)) {
+		return r;
+	}
+
+	log::error("Resource", _data->key, ": TextureSetLayout already added: ", key);
+	return nullptr;
+}
+
 void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 	if (!_data) {
 		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", not initialized");
@@ -1625,6 +1684,10 @@ const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, Byt
 const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info,
 		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb, AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), cb, layout, access);
+}
+
+const ImageViewData *Queue::Builder::addImageView(const ImageData *data, ImageViewInfo &&view) {
+	return _internalResource.addImageView(data, move(view));
 }
 
 }

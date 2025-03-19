@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -95,6 +95,12 @@ public:
 	const ImageData * addImage(StringView key, ImageInfo &&img,
 			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+
+	// Add predefined image view
+	const ImageViewData *addImageView(const ImageData *, ImageViewInfo &&);
+
+	const BufferData *getBuffer(StringView key) const;
+	const ImageData *getImage(StringView key) const;
 
 	bool empty() const;
 
