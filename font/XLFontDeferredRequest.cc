@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +24,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontExtension> &ext,
+void DeferredRequest::runFontRenderer(thread::ThreadPool *queue, const Rc<FontExtension> &ext,
 		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {
 	auto data = Rc<DeferredRequest>::alloc(ext, req);
 	data->onTexture = sp::move(onTex);
 	data->onComplete = sp::move(onComp);
 
-	for (uint32_t i = 0; i < queue->getWorkersCount(); ++ i) {
-		queue->performAsync([data] () {
+	for (uint32_t i = 0; i < queue->getInfo().threadCount; ++ i) {
+		queue->perform([data] () {
 			data->runThread();
 		});
 	}

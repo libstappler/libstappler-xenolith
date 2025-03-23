@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -73,6 +73,10 @@ const Rc<ResourceCache> &Director::getResourceCache() const {
 }
 
 bool Director::acquireFrame(FrameRequest *req) {
+	if (!req) {
+		return false;
+	}
+
 	if (_nextScene) {
 		// handle scene transition
 		if (!req->getQueue() || req->getQueue() == _nextScene->getQueue()) {
@@ -106,12 +110,14 @@ bool Director::acquireFrame(FrameRequest *req) {
 
 	// break current stack frame, perform on next one
 	_mainLoop->performOnAppThread([this, req = Rc<core::FrameRequest>(req)] {
-		if (!_scene) {
+		if (!_scene || !req) {
 			return;
 		}
 
-		req->getPool()->perform([&, this] {
-			_scene->renderRequest(req);
+		auto pool = Rc<PoolRef>::alloc();
+
+		pool->perform([&, this] {
+			_scene->renderRequest(req, pool);
 
 			if (hasActiveInteractions()) {
 				if (_view) {
@@ -164,12 +170,13 @@ void Director::update(uint64_t t) {
 }
 
 void Director::end() {
-#if SP_REF_DEBUG
 	if (_scene) {
 		_scene->onFinished(this);
+		_scene->removeAllChildren(true);
+		_scene->cleanup();
 	}
-	_autorelease.clear();
 
+#if SP_REF_DEBUG
 	if (_scene) {
 		if (_scene->getReferenceCount() > 1) {
 			auto scene = _scene.get();
@@ -192,12 +199,8 @@ void Director::end() {
 		core::FrameHandle::DescribeActiveFrames();
 	}
 #else
-	if (_scene) {
-		_scene->onFinished(this);
-		_scene->removeAllChildren(true);
-		_scene->cleanup();
-		_scene = nullptr;
-	}
+	_scene = nullptr;
+#endif
 
 	if (!_scheduler->empty()) {
 		_scheduler->unscheduleAll();
@@ -209,7 +212,6 @@ void Director::end() {
 	_engine = nullptr;
 
 	_autorelease.clear();
-#endif
 }
 
 core::Loop *Director::getGlLoop() const {
@@ -244,7 +246,9 @@ void Director::runScene(Rc<Scene> &&scene) {
 		// now we on the main/view thread, call runWithQueue directly
 		if (success) {
 			auto &q = scene->getQueue();
-			view->runWithQueue(q);
+			view->performOnThread([view = view.get(), q] {
+				view->runWithQueue(q);
+			}, view, false);
 		}
 		release(linkId);
 	});
@@ -253,7 +257,7 @@ void Director::runScene(Rc<Scene> &&scene) {
 void Director::pushDrawStat(const DrawStat &stat) {
 	_mainLoop->performOnAppThread([this, stat] {
 		_drawStat = stat;
-	}, this);
+	}, this, false);
 }
 
 float Director::getFps() const {

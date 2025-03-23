@@ -42,12 +42,12 @@ static thread_local Application *tl_mainLoop = nullptr;
 XL_DECLARE_EVENT_CLASS(Application, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Application, onRemoteNotification)
 
-const Application *Application::getInstance() {
+Application *Application::getInstance() {
 	if (tl_mainLoop) {
 		return tl_mainLoop;
 	} else {
 		// Find application in thread hierarchy
-		return Thread::findSpecificThread<Application>();
+		return const_cast<Application *>(Thread::findSpecificThread<Application>());
 	}
 }
 

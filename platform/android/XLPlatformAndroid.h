@@ -29,7 +29,7 @@
 
 #if ANDROID
 
-#include <jni.h>
+#include "SPJni.h"
 #include <android/configuration.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
@@ -49,8 +49,8 @@ struct NativeBufferFormatSupport {
 };
 
 struct ActivityInfo {
-	static ActivityInfo get(AConfiguration *, JNIEnv *env, jclass activityClass, jobject activity,
-			const ActivityInfo *prev = nullptr);
+	static ActivityInfo get(AConfiguration *, const jni::Env &env, const jni::RefClass &activityClass,
+			const jni::Ref &activity, const ActivityInfo *prev = nullptr);
 
 	String bundleName;
 	String applicationName;
@@ -64,8 +64,6 @@ struct ActivityInfo {
 	Extent2 sizeInPixels;
 	Size2 sizeInDp;
 };
-
-void checkJniError(JNIEnv *env);
 
 void saveApplicationInfo(const Value &);
 Value loadApplicationInfo();

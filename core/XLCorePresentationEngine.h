@@ -76,7 +76,7 @@ public:
 		bool earlyPresent = false;
 	};
 
-	virtual ~PresentationEngine() = default;
+	virtual ~PresentationEngine();
 
 	virtual bool run();
 	virtual void end();
@@ -96,6 +96,8 @@ public:
 	bool isFrameValid(const PresentationFrame *) const;
 
 	Rc<FrameHandle> submitNextFrame(Rc<FrameRequest> &&);
+
+	bool waitUntilFramePresentation();
 
 	void scheduleNextImage(Function<void(PresentationFrame *, bool)> && = nullptr,
 			PresentationFrame::Flags frameFlags = PresentationFrame::None);
@@ -129,6 +131,12 @@ public:
 	virtual void handleFrameComplete(PresentationFrame *);
 
 protected:
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const override {
+		return true;
+	}
+#endif
+
 	virtual void acquireFrameData(PresentationFrame *, Function<void(core::PresentationFrame *)> &&) = 0;
 
 	void scheduleSwapchainRecreation();
@@ -182,6 +190,7 @@ protected:
 
 	bool _running = false;
 	bool _readyForNextFrame = false;
+	bool _waitUntilFrame = false;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;

@@ -152,15 +152,17 @@ public:
 
 	virtual void wakeup();
 
-	void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const;
+	void performOnGlThread(Function<void()> &&func, Ref *target = nullptr,
+			bool immediate = false, StringView tag = STAPPLER_LOCATION) const;
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-	void performOnAppThread(Function<void()> &&func, Ref *target = nullptr, bool onNextFrame = false) const;
+	void performOnAppThread(Function<void()> &&func, Ref *target = nullptr,
+			bool onNextFrame = false, StringView tag = STAPPLER_LOCATION);
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-    void performOnAppThread(Rc<Task> &&task, bool onNextFrame = false) const;
+    void performOnAppThread(Rc<Task> &&task, bool onNextFrame = false);
 
 	/* Performs action in this thread, task will be constructed in place */
 	void perform(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr) const;
@@ -218,7 +220,6 @@ protected:
 	const core::Device *_device = nullptr;
 
 	bool _extensionsInitialized = false;
-	bool _immediateUpdate = false;
 	bool _shouldSignalOnExit = false;
 
 	UpdateTime _time;

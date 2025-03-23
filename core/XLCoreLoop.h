@@ -57,8 +57,6 @@ public:
 	using DependencyEvent = core::DependencyEvent;
 	using LoopInfo = core::LoopInfo;
 
-	static constexpr uint32_t LoopThreadId = 2;
-
 	virtual ~Loop();
 
 	virtual bool init(event::Looper *, Instance *gl, LoopInfo &&);
@@ -86,7 +84,7 @@ public:
 	virtual void performInQueue(Rc<thread::Task> &&) const = 0;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
-	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const = 0;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION) const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 

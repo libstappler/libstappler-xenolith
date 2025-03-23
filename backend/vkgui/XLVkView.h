@@ -45,16 +45,10 @@ public:
 
 	virtual void handleFramePresented(core::PresentationFrame *);
 
+	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const;
+
 protected:
 	using xenolith::View::init;
-
-#if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override {
-		return false;
-	}
-#endif
-
-	virtual core::SurfaceInfo getSurfaceOptions() const;
 
 	bool _readyForNextFrame = false;
 

@@ -83,7 +83,7 @@ public:
 		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
 	}
 
-	virtual void handleComplete(bool success) {
+	virtual void handleComplete(bool success) override {
 		if (success) {
 			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
 				_callback(_image->getInfo(), BytesView(buf, size));
@@ -134,7 +134,7 @@ public:
 		static_cast<CommandBuffer &>(buf).cmdCopyBuffer(_buffer, _transferBuffer);
 	}
 
-	virtual void handleComplete(bool success) {
+	virtual void handleComplete(bool success) override {
 		if (success) {
 			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
 				_callback(_buffer->getInfo(), BytesView(buf, size));

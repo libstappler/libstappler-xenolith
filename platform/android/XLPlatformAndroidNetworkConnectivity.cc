@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -176,31 +176,32 @@ static NetworkCapabilities readCapabilities(JNIEnv *env, jmethodID hasCapability
 	return ret;
 }
 
-bool NetworkConnectivity::init(JNIEnv *env, ClassLoader *classLoader, jobject context, Function<void(NetworkCapabilities)> &&cb) {
+bool NetworkConnectivity::init(ClassLoader *classLoader, const jni::Ref &context, Function<void(NetworkCapabilities)> &&cb) {
 	sdkVersion = classLoader->sdkVersion;
 
-	jclass networkConnectivityClass = classLoader->findClass(env, Activity::NetworkConnectivityClassName);
-	if (networkConnectivityClass) {
-		env->RegisterNatives(networkConnectivityClass, methods, 6);
+	jni::Env env = context.getEnv();
 
-		jclass capabilitiesClass = env->FindClass("android/net/NetworkCapabilities");
+	auto networkConnectivityClass = classLoader->findClass(env, Activity::NetworkConnectivityClassName);
+	if (networkConnectivityClass) {
+		networkConnectivityClass.registerNatives(methods, 6);
+
+		auto capabilitiesClass = env.findClass("android/net/NetworkCapabilities");
 		if (capabilitiesClass) {
 			loadCapabilitiesFlags(env, capabilitiesClass, sdkVersion);
 
-			j_hasCapability = env->GetMethodID(capabilitiesClass, "hasCapability", "(I)Z");
+			j_hasCapability = capabilitiesClass.getMethodID("hasCapability", "(I)Z");
 		}
 
-		checkJniError(env);
+		env.checkErrors();
 
 		auto sig = toString("(Landroid/content/Context;J)L", Activity::NetworkConnectivityClassPath, ";");
-		jmethodID networkConnectivityCreate = env->GetStaticMethodID(networkConnectivityClass, "create", sig.data());
+
+		jmethodID networkConnectivityCreate = networkConnectivityClass.getStaticMethodID("create", sig.data());
 		if (networkConnectivityCreate) {
-			auto conn = env->CallStaticObjectMethod(networkConnectivityClass, networkConnectivityCreate, context, jlong(this));
+			auto conn = networkConnectivityClass.callStaticMethod<jobject>(networkConnectivityCreate, context, jlong(this));
 			if (conn) {
-				thiz = env->NewGlobalRef(conn);
-				clazz = reinterpret_cast<jclass>(env->NewGlobalRef(networkConnectivityClass));
-				env->DeleteLocalRef(conn);
-				env->DeleteLocalRef(networkConnectivityClass);
+				thiz = conn;
+				clazz = networkConnectivityClass;
 				callback = sp::move(cb);
 				if (callback) {
 					callback(capabilities);
@@ -208,31 +209,23 @@ bool NetworkConnectivity::init(JNIEnv *env, ClassLoader *classLoader, jobject co
 				return true;
 			}
 		} else {
-			checkJniError(env);
+			env.checkErrors();
 		}
-		env->DeleteLocalRef(networkConnectivityClass);
 	}
 	return false;
 }
 
-void NetworkConnectivity::finalize(JNIEnv *env) {
+void NetworkConnectivity::finalize() {
 	if (thiz && clazz) {
-		jmethodID networkConnectivityFinalize = env->GetMethodID(clazz, "finalize", "()V");
+		jmethodID networkConnectivityFinalize = clazz.getMethodID("finalize", "()V");
 		if (networkConnectivityFinalize) {
-			env->CallVoidMethod(thiz, networkConnectivityFinalize);
+			thiz.callMethod<void>(networkConnectivityFinalize);
 		}
 	}
 
 	j_hasCapability = nullptr;
-
-	if (thiz) {
-		env->DeleteGlobalRef(thiz);
-		thiz = nullptr;
-	}
-	if (clazz) {
-		env->DeleteGlobalRef(clazz);
-		thiz = nullptr;
-	}
+	thiz = nullptr;
+	clazz = nullptr;
 }
 
 void NetworkConnectivity::handleCreated(JNIEnv *env, jobject caps, jobject props) {

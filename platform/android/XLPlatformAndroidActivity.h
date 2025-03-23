@@ -140,7 +140,9 @@ public:
 	virtual void runTextInput(Rc<ActivityTextInputWrapper> &&, WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
 	virtual void cancelTextInput();
 
-	jobject getClipboardService() const { return _clipboardServce; }
+	jni::Local getDisplay() const;
+
+	const jni::Global &getClipboardService() const { return _clipboardServce; }
 
 	int32_t getSdkVersion() const { return _sdkVersion; }
 
@@ -150,12 +152,8 @@ protected:
 		AInputQueue *queue;
 	};
 
-	jclass getClass() const {
-		return _activity->env->GetObjectClass(_activity->clazz);
-	}
-
-	jmethodID getMethodID(jclass cl, StringView method, StringView params) const {
-		return _activity->env->GetMethodID(cl, method.data(), params.data());
+	jni::LocalClass getClass() const {
+		return jni::Ref(_activity->clazz, jni::Env::getEnv()).getClass();
 	}
 
 	void handleConfigurationChanged();
@@ -200,12 +198,11 @@ protected:
 	jmethodID _updateCursorMethod = nullptr;
 	jmethodID _cancelInputMethod = nullptr;
 
-	jobject _clipboardServce = nullptr;
+	jni::Global _clipboardServce = nullptr;
 
 	ActivityFlags _flags = ActivityFlags::None;
 	ANativeActivity *_activity = nullptr;
 	AConfiguration *_config = nullptr;
-	ANativeWindow *_window = nullptr;
 	Rc<ClassLoader> _classLoader;
 	Rc<NetworkConnectivity> _networkConnectivity;
 

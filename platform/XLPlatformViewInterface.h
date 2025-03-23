@@ -74,6 +74,8 @@ public:
 
 	void setContentPadding(const Padding &padding);
 
+	void waitUntilFrame();
+
 protected:
 	Rc<core::Loop> _glLoop;
 	Rc<core::PresentationEngine> _presentationEngine;

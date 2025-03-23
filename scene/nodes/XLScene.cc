@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -59,7 +59,7 @@ bool Scene::init(Queue::Builder &&builder, const core::FrameConstraints &constra
 	return true;
 }
 
-void Scene::renderRequest(const Rc<FrameRequest> &req) {
+void Scene::renderRequest(const Rc<FrameRequest> &req, PoolRef *pool) {
 	if (!_director) {
 		return;
 	}
@@ -68,7 +68,7 @@ void Scene::renderRequest(const Rc<FrameRequest> &req) {
 
 	FrameInfo info;
 	info.request = req;
-	info.pool = req->getPool();
+	info.pool = pool;
 
 	render(info);
 

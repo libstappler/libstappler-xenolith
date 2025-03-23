@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -165,7 +165,7 @@ void ViewImpl::run() {
 			}
 		}
 		return Status::Ok;
-	});
+	}, this);
 	_glLoop->getLooper()->performHandle(_pollHandle);
 }
 
@@ -204,10 +204,9 @@ void ViewImpl::cancelTextInput() {
 	}, this);
 }
 
-core::SurfaceInfo ViewImpl::getSurfaceOptions() const {
-	core::SurfaceInfo ret = vk::View::getSurfaceOptions();
-	_view->onSurfaceInfo(ret);
-	return ret;
+core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
+	_view->onSurfaceInfo(info);
+	return move(info);
 }
 
 void ViewImpl::mapWindow() {

@@ -72,4 +72,10 @@ void ViewInterface::setContentPadding(const Padding &padding) {
 	}, this, true);
 }
 
+void ViewInterface::waitUntilFrame() {
+	if (_presentationEngine) {
+		_presentationEngine->waitUntilFramePresentation();
+	}
+}
+
 }

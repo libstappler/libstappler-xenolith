@@ -174,10 +174,6 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 			}
 		}
 
-		if (!frame.isValid()) {
-			return false;
-		}
-
 		auto ret = doPrepareCommands(frame);
 		if (!ret.empty()) {
 			_buffers = sp::move(ret);

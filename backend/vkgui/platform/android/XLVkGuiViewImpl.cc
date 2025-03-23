@@ -55,6 +55,8 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
 	activity->setView(this);
 
+	_activity = activity;
+
 	return true;
 }
 
@@ -150,7 +152,7 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 	auto surface = Rc<vk::Surface>::create(instance, targetSurface);
 	ANativeWindow_acquire(_nativeWindow);
 
-	auto info = View::getSurfaceOptions();
+	auto info = View::getSurfaceOptions(surface->getSurfaceOptions(*_device.get()));
 	if ((info.currentTransform & core::SurfaceTransformFlags::Rotate90) != core::SurfaceTransformFlags::None ||
 		(info.currentTransform & core::SurfaceTransformFlags::Rotate270) != core::SurfaceTransformFlags::None) {
 		_identityExtent = Extent2(info.currentExtent.height, info.currentExtent.width);
@@ -158,8 +160,13 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 		_identityExtent = info.currentExtent;
 	}
 
+	auto display = _activity->getDisplay();
+	auto displayClass = display.getClass();
+	auto jgetRefreshRate = displayClass.getMethodID("getRefreshRate", "()F");
 
-	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface), move(constraints), 0);
+	auto rate = display.callMethod<jfloat>(jgetRefreshRate);
+
+	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface), move(constraints), uint64_t(1'000'000.0f / rate));
 	if (!engine) {
 		log::error("vk::ViewImpl", "Fail to create PresentationEngine");
 	}
@@ -225,9 +232,7 @@ void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
 	updateDecorations();
 }
 
-core::SurfaceInfo ViewImpl::getSurfaceOptions() const {
-	auto info = View::getSurfaceOptions();
-
+core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
 	if (_usePreRotation) {
 		// always use identity extent for pre-rotation;
 		info.currentExtent = _identityExtent;
@@ -427,7 +432,7 @@ void ViewImpl::updateDecorations() {
 		env->CallVoidMethod(decorViewObj, setSystemUiVisibility, updatedVisibility);
 	}
 
-	xenolith::platform::checkJniError(env);
+	//xenolith::platform::checkJniError(env);
 
 	env->DeleteLocalRef(windowObj);
 	env->DeleteLocalRef(decorViewObj);

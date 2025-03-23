@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +52,10 @@ void View::run() {
 }
 
 void View::end() {
+	if (!_presentationEngine) {
+		return;
+	}
+
 	auto engine = move(_presentationEngine);
 	_presentationEngine = nullptr;
 
@@ -65,7 +69,36 @@ void View::end() {
 		}
 		cb(*this);
 		_glLoop->performOnThread([this, engine = move(engine)] () mutable {
+#if SP_REF_DEBUG
+			if (engine->getReferenceCount() > 1) {
+				auto tmp = engine.get();
+				engine = nullptr;
+
+				tmp->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+					StringStream stream;
+					stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
+					for (auto &it : vec) {
+						stream << "\t" << it << "\n";
+					}
+					log::debug("core::PresentationEngine", stream.str());
+				});
+			}
 			engine = nullptr;
+
+			auto refcount = getReferenceCount();
+			if (refcount > 1) {
+				foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+					StringStream stream;
+					stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
+					for (auto &it : vec) {
+						stream << "\t" << it << "\n";
+					}
+					log::debug("View", stream.str());
+				});
+			}
+#else
+			engine = nullptr;
+#endif
 		}, this);
 	}, this);
 }
@@ -99,11 +132,11 @@ bool View::isOnThisThread() const {
 	return _glLoop->isOnThisThread();
 }
 
-void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate) {
+void View::performOnThread(Function<void()> &&func, Ref *target, bool immediate, StringView tag) {
 	if (immediate && isOnThisThread()) {
 		func();
 	} else {
-		_glLoop->getLooper()->performOnThread(sp::move(func), target);
+		_glLoop->getLooper()->performOnThread(sp::move(func), target, immediate, tag);
 	}
 }
 
@@ -112,6 +145,10 @@ Director *View::getDirector() const {
 }
 
 void View::handleInputEvent(const InputEventData &event) {
+	if (!_presentationEngine) {
+		return;
+	}
+
 	_mainLoop->performOnAppThread([this, event = event] () mutable {
 		if (event.isPointEvent()) {
 			event.point.density = _presentationEngine ? _presentationEngine->getFrameConstraints().density : _info.window.density;
@@ -138,6 +175,10 @@ void View::handleInputEvent(const InputEventData &event) {
 }
 
 void View::handleInputEvents(Vector<InputEventData> &&events) {
+	if (!_presentationEngine) {
+		return;
+	}
+
 	_mainLoop->performOnAppThread([this, events = sp::move(events)] () mutable {
 		for (auto &event : events) {
 			if (event.isPointEvent()) {

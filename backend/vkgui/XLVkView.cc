@@ -97,9 +97,8 @@ void View::handleFramePresented(core::PresentationFrame *frame) {
 
 }
 
-core::SurfaceInfo View::getSurfaceOptions() const {
-	// return _instance->getSurfaceOptions(_surface->getSurface(), _device->getPhysicalDevice());
-	return core::SurfaceInfo();
+core::SurfaceInfo View::getSurfaceOptions(core::SurfaceInfo &&opts) const {
+	return std::move(opts);
 }
 
 }

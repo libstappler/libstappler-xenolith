@@ -124,7 +124,7 @@ public:
 
 	virtual ~SwapchainImage();
 
-	virtual bool init(Swapchain *, uint64_t frameOrder, uint64_t presentWindow);
+	virtual bool init(Swapchain *, uint64_t frameOrder);
 	virtual bool init(Swapchain *, const Swapchain::SwapchainImageData &, Rc<Semaphore> &&);
 
 	virtual void cleanup() override;
@@ -140,7 +140,6 @@ public:
 	void setImage(Rc<Swapchain> &&, const Swapchain::SwapchainImageData &, const Rc<Semaphore> &);
 
 	uint64_t getOrder() const { return _order; }
-	uint64_t getPresentWindow() const { return _presentWindow; }
 
 	void setPresented();
 	bool isPresented() const { return _state == State::Presented; }
@@ -155,7 +154,6 @@ protected:
 	using core::ImageStorage::init;
 
 	uint64_t _order = 0;
-	uint64_t _presentWindow = 0;
 	State _state = State::Initial;
 	Rc<Swapchain> _swapchain;
 };

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct SP_PUBLIC DeferredRequest : Ref {
 	static void runFontRenderer(
-		event::Looper *,
+		thread::ThreadPool *,
 		const Rc<FontExtension> &,
 		const Vector<FontUpdateRequest> &req,
 		Function<void(uint32_t reqIdx, const CharTexture &texData)> &&,

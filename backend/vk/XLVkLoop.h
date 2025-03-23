@@ -60,7 +60,7 @@ public:
 	virtual void performInQueue(Rc<thread::Task> &&) const override;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const override;
 
-	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false) const override;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION) const override;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) override;
 

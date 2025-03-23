@@ -306,7 +306,10 @@ void PlatformApplication::threadInit() {
 
 	_appLooper = event::Looper::acquire(event::LooperInfo{
 		.name = StringView("Application"),
-		.workersCount = _info.appThreadsCount
+		.workersCount = _info.appThreadsCount,
+
+		// Disable ALooper for internal queue, it can not be stopped gracefully
+		.engineMask = event::QueueEngine::Any & ~event::QueueEngine::ALooper
 	});
 
 	_timer = _appLooper->scheduleTimer(event::TimerInfo{
@@ -377,47 +380,36 @@ bool PlatformApplication::worker() {
 void PlatformApplication::end()  {
 	stop();
 
-	if (!isOnThisThread()) {
-		performOnAppThread([this] {
-			_appLooper->wakeup(event::QueueWakeupInfo{
-				.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
-				.timeout = TimeInterval::seconds(1)
-			});
-		}, this);
-	} else {
-		_appLooper->wakeup(event::QueueWakeupInfo{
-			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
-			.timeout = TimeInterval::seconds(1)
-		});
-	}
+	_appLooper->wakeup(event::QueueWakeupInfo{
+		.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
+		.timeout = TimeInterval::seconds(1)
+	});
 }
 
 void PlatformApplication::wakeup() {
-	if (isOnThisThread()) {
-		_immediateUpdate = true;
-	} else {
-		performOnAppThread([this] {
-			_immediateUpdate = true;
-		}, this);
-	}
+	performOnAppThread([this] {
+		performUpdate();
+	}, this, true);
 }
 
-void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate) const {
-	_mainLooper->performOnThread(sp::move(func), target, immediate);
+void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate, StringView tag) const {
+	_mainLooper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
-void PlatformApplication::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame) const {
+void PlatformApplication::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame, StringView tag) {
 	if (isOnThisThread() && !onNextFrame) {
 		func();
 	} else {
-		_appLooper->performOnThread(sp::move(func), target);
+		waitRunning();
+		_appLooper->performOnThread(sp::move(func), target, !onNextFrame, tag);
 	}
 }
 
-void PlatformApplication::performOnAppThread(Rc<Task> &&task, bool onNextFrame) const {
+void PlatformApplication::performOnAppThread(Rc<Task> &&task, bool onNextFrame) {
 	if (isOnThisThread() && !onNextFrame) {
 		task->handleCompleted();
 	} else {
+		waitRunning();
 		_appLooper->performOnThread(sp::move(task));
 	}
 }
@@ -453,7 +445,7 @@ void PlatformApplication::handleDeviceStarted(const core::Loop &loop, const core
 		initializeExtensions();
 
 		_extensionsInitialized = true;
-	}, this);
+	}, this, false);
 }
 
 void PlatformApplication::handleDeviceFinalized(const core::Loop &loop, const core::Device &dev) {
@@ -489,7 +481,6 @@ void PlatformApplication::performUpdate() {
 	performAppUpdate(_time);
 
 	_lastUpdate = _clock;
-	_immediateUpdate = false;
 }
 
 }
@@ -523,7 +514,7 @@ void PlatformApplication::platformSignalExit() {
 			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
 			.timeout = TimeInterval::seconds(1)
 		});
-	}, this);
+	}, this, false);
 }
 
 }
@@ -549,7 +540,9 @@ void PlatformApplication::platformWaitExit() {
 	Thread::waitStopped();
 }
 
-void PlatformApplication::platformSignalExit() { }
+void PlatformApplication::platformSignalExit() {
+
+}
 
 }
 

@@ -115,10 +115,9 @@ SwapchainImage::~SwapchainImage() {
 	_signalSem = nullptr;
 }
 
-bool SwapchainImage::init(Swapchain *swapchain, uint64_t order, uint64_t presentWindow) {
+bool SwapchainImage::init(Swapchain *swapchain, uint64_t order) {
 	_swapchain = swapchain;
 	_order = order;
-	_presentWindow = presentWindow;
 	_state = State::Submitted;
 	_isSwapchainImage = true;
 	return true;

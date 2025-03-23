@@ -323,7 +323,7 @@ bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info)
 	}
 
 	looper->performOnThread([&] {
-		auto pool = memory::pool::create(_looper->getThreadPool());
+		auto pool = memory::pool::create(_looper->getThreadMemPool());
 
 		_internal = new (pool) vk::Loop::Internal(pool, this);
 		_internal->pool = pool;
@@ -370,13 +370,7 @@ void Loop::run() {
 }
 
 void Loop::stop() {
-	std::mutex mutex;
-	std::condition_variable condvar;
-	std::unique_lock lock(mutex);
-
 	_looper->performOnThread([&] {
-		std::unique_lock ulock(mutex);
-
 		_internal->_running = false;
 
 		_internal->updateTimerHandle->cancel();
@@ -395,11 +389,7 @@ void Loop::stop() {
 		_internal = nullptr;
 
 		memory::pool::destroy(mempool);
-
-		condvar.notify_all();
 	}, this);
-
-	condvar.wait(lock);
 }
 
 bool Loop::isRunning() const {
@@ -469,7 +459,7 @@ void Loop::performInQueue(Function<void()> &&func, Ref *target) const {
 	_looper->performAsync(sp::move(func), target);
 }
 
-void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate) const {
+void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate, StringView tag) const {
 	if (!_internal || !_internal->_running.load()) {
 		return;
 	}
@@ -481,7 +471,7 @@ void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate)
 		}
 	}
 
-	_looper->performOnThread(sp::move(func), target);
+	_looper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
 auto Loop::makeFrame(Rc<FrameRequest> &&req, uint64_t gen) -> Rc<FrameHandle> {

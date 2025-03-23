@@ -66,10 +66,10 @@ public:
 
 	virtual void handleFramePresented(core::PresentationFrame *) override;
 
+	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const override;
+
 protected:
 	//virtual bool recreateSwapchain(core::PresentMode) override;
-
-	virtual core::SurfaceInfo getSurfaceOptions() const override;
 
 	Rc<event::Handle> _pollHandle;
 	Rc<xenolith::platform::LinuxViewInterface> _view;

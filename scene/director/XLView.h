@@ -82,7 +82,7 @@ public:
 
 	bool isOnThisThread() const;
 
-	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false);
+	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION);
 
 	virtual void captureImage(StringView, const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,

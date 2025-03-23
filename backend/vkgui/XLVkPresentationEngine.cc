@@ -54,7 +54,7 @@ bool PresentationEngine::init(Device *dev, View *view, Rc<Surface> &&surface, co
 }
 
 bool PresentationEngine::run() {
-	auto info = _surface->getSurfaceOptions(*static_cast<Device *>(_device));
+	auto info = _view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _view->selectConfig(info);
 
 	createSwapchain(info, move(cfg), cfg.presentMode);
@@ -71,7 +71,8 @@ bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
 		return false;
 	}
 
-	auto info = _surface->getSurfaceOptions(*static_cast<Device *>(_device));
+
+	auto info = _view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _view->selectConfig(info);
 
 	if (!info.isSupported(cfg)) {
@@ -91,6 +92,7 @@ bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
 	}
 	if (ret) {
 		_nextPresentWindow = 0;
+		_readyForNextFrame = true;
 		XL_VKPRESENT_LOG("recreateSwapchain - scheduleNextImage");
 		// run frame, no present window, no wait on fences
 		scheduleNextImage();

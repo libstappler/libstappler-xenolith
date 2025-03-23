@@ -25,4 +25,14 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 
+namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
+
+#if ANDROID
+static constexpr bool UseExternalFenceSync = false;
+#else
+static constexpr bool UseExternalFenceSync = true;
+#endif
+
+}
+
 #endif /* XENOLITH_BACKEND_VK_XLVKCONFIG_H_ */

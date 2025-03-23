@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct NetworkConnectivity : public Ref {
-	jclass clazz = nullptr;
-	jobject thiz = nullptr;
+	jni::GlobalClass clazz = nullptr;
+	jni::Global thiz = nullptr;
 	NetworkCapabilities capabilities;
 	Function<void(NetworkCapabilities)> callback;
 
@@ -38,8 +38,8 @@ struct NetworkConnectivity : public Ref {
 
 	int32_t sdkVersion = 0;
 
-	bool init(JNIEnv *, ClassLoader *, jobject context, Function<void(NetworkCapabilities)> && = nullptr);
-	void finalize(JNIEnv *);
+	bool init(ClassLoader *, const jni::Ref &context, Function<void(NetworkCapabilities)> && = nullptr);
+	void finalize();
 
 	void handleCreated(JNIEnv *, jobject, jobject);
 	void handleFinalized(JNIEnv *);

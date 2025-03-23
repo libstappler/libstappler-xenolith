@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 class FontExtension;
 
 struct SP_PUBLIC RenderFontInput : public core::AttachmentInputData {
-	event::Looper *queue;
+	Rc<thread::ThreadPool> queue;
 	Rc<core::DynamicImage> image;
 	Rc<FontExtension> ext;
 	Vector<FontUpdateRequest> requests;

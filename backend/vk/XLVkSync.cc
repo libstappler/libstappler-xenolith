@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -76,12 +76,15 @@ bool Fence::init(Device &dev, core::FenceType type) {
 
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	if (false && type == core::FenceType::Default && dev.hasExternalFences()) {
-		_exportable = true;
-		fenceInfo.pNext = &exportInfo;
-	} else {
-		fenceInfo.pNext = nullptr;
+	fenceInfo.pNext = nullptr;
+
+	if constexpr (config::UseExternalFenceSync) {
+		if (dev.hasExternalFences()) {
+			_exportable = true;
+			fenceInfo.pNext = &exportInfo;
+		}
 	}
+
 	fenceInfo.flags = 0;
 
 	_state = Disabled;
@@ -100,10 +103,10 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 		return nullptr;
 	}
 
-	auto dev = static_cast<Device *>(_object.device);
+	if constexpr (config::UseExternalFenceSync) {
+		auto dev = static_cast<Device *>(_object.device);
 
-	int fd = -1;
-	if (dev->hasExternalFences()) {
+		int fd = -1;
 		VkFenceGetFdInfoKHR getFenceFdInfo;
 		getFenceFdInfo.sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR;
 		getFenceFdInfo.pNext = nullptr;
@@ -117,20 +120,18 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 				return nullptr;
 			}
 
-			auto refId = retain();
 			return PollFdHandle::create(loop.getLooper()->getQueue(), fd,
 					PollFlags::In | PollFlags::CloseFd,
-					[this, refId, completeCb = sp::move(cb), l = &loop] (int fd, PollFlags flags) -> Status {
+					[this, completeCb = sp::move(cb), l = &loop] (int fd, PollFlags flags) -> Status {
 				if (hasFlag(flags, PollFlags::In)) {
 					if (completeCb) {
 						completeCb();
 					}
 					setSignaled(*l);
-					release(refId);
 					return Status::Done;
 				}
 				return Status::Ok;
-			});
+			}, this);
 		} else if (status != VK_ERROR_FEATURE_NOT_PRESENT) {
 			log::error("Fence", "Fail to export fence fd");
 		}

@@ -28,7 +28,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static std::mutex s_dataMutex;
 
-static String Activity_getApplicatioName(JNIEnv *env, jclass activityClass, jobject activity) {
+static String Activity_getApplicatioName(const jni::RefClass &activityClass, const jni::Ref &activity) {
 	static jmethodID j_getApplicationInfo = nullptr;
 	static jfieldID j_labelRes = nullptr;
 	static jfieldID j_nonLocalizedLabel = nullptr;
@@ -37,171 +37,139 @@ static String Activity_getApplicatioName(JNIEnv *env, jclass activityClass, jobj
 
 	String ret;
 	if (!j_getApplicationInfo) {
-		j_getApplicationInfo = env->GetMethodID(activityClass, "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
+		j_getApplicationInfo = activityClass.getMethodID("getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
 	}
 
 	if (!j_getApplicationInfo) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jAppInfo = env->CallObjectMethod(activity, j_getApplicationInfo);
+	auto jAppInfo = activity.callMethod<jobject>(j_getApplicationInfo);
 	if (!jAppInfo) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jAppInfo_class = env->GetObjectClass(jAppInfo);
-	//auto jAppInfo_class = _activity->env->FindClass("android/content/pm/ApplicationInfo");
+	auto jAppInfo_class = jAppInfo.getClass();
 	if (!j_labelRes) {
-		j_labelRes = env->GetFieldID(jAppInfo_class, "labelRes", "I");
+		j_labelRes = jAppInfo_class.getFieldID("labelRes", "I");
 	}
 
 	if (!j_nonLocalizedLabel) {
-		j_nonLocalizedLabel = env->GetFieldID(jAppInfo_class, "nonLocalizedLabel", "Ljava/lang/CharSequence;");
+		j_nonLocalizedLabel = jAppInfo_class.getFieldID("nonLocalizedLabel", "Ljava/lang/CharSequence;");
 	}
 
-	auto labelRes = env->GetIntField(jAppInfo, j_labelRes);
+	auto labelRes = jAppInfo.getField<jint>(j_labelRes);
 	if (labelRes == 0) {
-		auto jNonLocalizedLabel = env->GetObjectField(jAppInfo, j_nonLocalizedLabel);
-		jclass clzCharSequence = env->GetObjectClass(jNonLocalizedLabel);
+		auto jNonLocalizedLabel = jAppInfo.getField<jobject>(j_nonLocalizedLabel);
+		auto clzCharSequence = jNonLocalizedLabel.getClass();
 		if (!j_toString) {
-			j_toString = env->GetMethodID(clzCharSequence, "toString", "()Ljava/lang/String;");
+			j_toString = clzCharSequence.getMethodID("toString", "()Ljava/lang/String;");
 		}
-		jobject s = env->CallObjectMethod(jNonLocalizedLabel, j_toString);
-		const char* cstr = env->GetStringUTFChars(static_cast<jstring>(s), NULL);
-		ret = cstr;
-		env->ReleaseStringUTFChars(static_cast<jstring>(s), cstr);
-		env->DeleteLocalRef(s);
-		env->DeleteLocalRef(jNonLocalizedLabel);
+		auto s = jNonLocalizedLabel.callMethod<jstring>(j_toString);
+		ret = s.getString().str<Interface>();
 	} else {
 		if (!j_getString) {
-			j_getString = env->GetMethodID(activityClass, "getString", "(I)Ljava/lang/String;");
+			j_getString = activityClass.getMethodID("getString", "(I)Ljava/lang/String;");
 		}
-		auto jAppName = static_cast<jstring>(env->CallObjectMethod(activity, j_getString, labelRes));
-		const char* cstr = env->GetStringUTFChars(jAppName, NULL);
-		ret = cstr;
-		env->ReleaseStringUTFChars(jAppName, cstr);
-		env->DeleteLocalRef(jAppName);
+		auto jAppName = activity.callMethod<jstring>(j_getString, labelRes);
+		ret = jAppName.getString().str<Interface>();
 	}
-	env->DeleteLocalRef(jAppInfo);
 	return ret;
 }
 
-static String Activity_getApplicatioVersion(JNIEnv *env, jclass activityClass, jobject activity, jstring jPackageName) {
+static String Activity_getApplicatioVersion(const jni::RefClass &activityClass,
+		const jni::Ref &activity, const jni::RefString &jPackageName) {
 	static jmethodID j_getPackageManager = nullptr;
 	static jmethodID j_getPackageInfo = nullptr;
 	static jfieldID j_versionName = nullptr;
 
 	String ret;
 	if (!j_getPackageManager) {
-		j_getPackageManager = env->GetMethodID(activityClass, "getPackageManager", "()Landroid/content/pm/PackageManager;");
+		j_getPackageManager = activityClass.getMethodID("getPackageManager", "()Landroid/content/pm/PackageManager;");
 	}
 	if (!j_getPackageManager) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jpm = env->CallObjectMethod(activity, j_getPackageManager);
+	auto jpm = activity.callMethod<jobject>(j_getPackageManager);
 	if (!jpm) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jpm_class = env->GetObjectClass(jpm);
-	//auto jpm_class = env->FindClass("android/content/pm/PackageManager");
+	auto jpm_class = jpm.getClass();
 	if (!j_getPackageInfo) {
-		j_getPackageInfo = env->GetMethodID(jpm_class, "getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
+		j_getPackageInfo = jpm_class.getMethodID("getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
 	}
+
 	if (!j_getPackageInfo) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jinfo = env->CallObjectMethod(jpm, j_getPackageInfo, jPackageName, 0);
+	auto jinfo = jpm.callMethod<jobject>(j_getPackageInfo, jPackageName, 0);
 	if (!jinfo) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jinfo_class = env->GetObjectClass(jinfo);
-	//auto jinfo_class = env->FindClass("android/content/pm/PackageInfo");
+	auto jinfo_class = jinfo.getClass();
 	if (!j_versionName) {
-		j_versionName = env->GetFieldID(jinfo_class, "versionName", "Ljava/lang/String;");
+		j_versionName = jinfo_class.getFieldID("versionName", "Ljava/lang/String;");
 	}
 	if (!j_versionName) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto jversion = reinterpret_cast<jstring>(env->GetObjectField(jinfo, j_versionName));
+	auto jversion = jinfo.getField<jstring>(j_versionName);
 	if (!jversion) {
-		checkJniError(env);
 		return String();
 	}
 
-	auto versionChars = env->GetStringUTFChars(jversion, NULL);
-	ret = versionChars;
-	env->ReleaseStringUTFChars(jversion, versionChars);
-
-	env->DeleteLocalRef(jversion);
-	env->DeleteLocalRef(jinfo);
-	env->DeleteLocalRef(jpm);
-	return ret;
+	return jversion.getString().str<Interface>();
 }
 
-static String Activity_getSystemAgent(JNIEnv *env) {
+static String Activity_getSystemAgent(const jni::Env &env) {
 	static jmethodID j_getProperty = nullptr;
-	String ret;
-	auto systemClass = env->FindClass("java/lang/System");
+	auto systemClass = env.findClass("java/lang/System");
 	if (systemClass) {
 		if (!j_getProperty) {
-			j_getProperty = env->GetStaticMethodID(systemClass, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
+			j_getProperty = systemClass.getStaticMethodID("getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
 		}
 		if (j_getProperty) {
-			auto jPropRequest = env->NewStringUTF("http.agent");
-			auto jUserAgent = static_cast<jstring>(env->CallStaticObjectMethod(systemClass, j_getProperty, jPropRequest));
+			auto jUserAgent = systemClass.callStaticMethod<jstring>(j_getProperty, env.newString("http.agent"));
 			if (jUserAgent) {
-				const char* cstr = env->GetStringUTFChars(jUserAgent, NULL);
-				ret = cstr;
-				env->ReleaseStringUTFChars(jUserAgent, cstr);
-				env->DeleteLocalRef(jUserAgent);
+				return jUserAgent.getString().str<Interface>();
 			} else {
-				checkJniError(env);
+				env.checkErrors();
 			}
 		} else {
-			checkJniError(env);
+			env.checkErrors();
 		}
 	} else {
-		checkJniError(env);
+		env.checkErrors();
 	}
-	return ret;
+	return String();
 }
 
-static String Activity_getUserAgent(JNIEnv *env, jobject activity) {
+static String Activity_getUserAgent(const jni::Env &env, const jni::Ref &activity) {
 	static jmethodID j_getDefaultUserAgent = nullptr;
-	String ret;
-	auto settingsClass = env->FindClass("android/webkit/WebSettings");
+	auto settingsClass = env.findClass("android/webkit/WebSettings");
 	if (settingsClass) {
 		if (!j_getDefaultUserAgent) {
-			j_getDefaultUserAgent = env->GetStaticMethodID(settingsClass, "getDefaultUserAgent", "(Landroid/content/Context;)Ljava/lang/String;");
+			j_getDefaultUserAgent = settingsClass.getStaticMethodID("getDefaultUserAgent", "(Landroid/content/Context;)Ljava/lang/String;");
 		}
 		if (j_getDefaultUserAgent) {
-			auto jUserAgent = static_cast<jstring>(env->CallStaticObjectMethod(settingsClass, j_getDefaultUserAgent, activity));
-			const char* cstr = env->GetStringUTFChars(jUserAgent, NULL);
-			ret = cstr;
-			env->ReleaseStringUTFChars(jUserAgent, cstr);
-			env->DeleteLocalRef(jUserAgent);
+			auto jUserAgent = settingsClass.callStaticMethod<jstring>(j_getDefaultUserAgent, activity);
+			return jUserAgent.getString().str<Interface>();
 		} else {
-			checkJniError(env);
+			env.checkErrors();
 		}
 	} else {
-		checkJniError(env);
+		env.checkErrors();
 	}
-	return ret;
+	return String();
 }
 
-ActivityInfo ActivityInfo::get(AConfiguration *conf, JNIEnv *env, jclass activityClass, jobject activity, const ActivityInfo *prev) {
+ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const jni::RefClass &activityClass,
+		const jni::Ref &activity, const ActivityInfo *prev) {
 	static jmethodID j_getPackageName = nullptr;
 	static jmethodID j_getResources = nullptr;
 	static jmethodID j_getDisplayMetrics = nullptr;
@@ -219,29 +187,26 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, JNIEnv *env, jclass activit
 			|| prev->applicationVersion.empty() || prev->systemAgent.empty() || prev->userAgent.empty()) {
 		do {
 			if (!j_getPackageName) {
-				j_getPackageName = env->GetMethodID(activityClass, "getPackageName", "()Ljava/lang/String;");
+				j_getPackageName = activityClass.getMethodID("getPackageName", "()Ljava/lang/String;");
 			}
 
 			if (!j_getPackageName) {
 				break;
 			}
 
-			jstring jPackageName = reinterpret_cast<jstring>(env->CallObjectMethod(activity, j_getPackageName));
+			auto jPackageName = activity.callMethod<jstring>(j_getPackageName);
 			if (!jPackageName) {
 				break;
 			}
 
 			if (activityInfo.bundleName.empty()) {
-				auto chars = env->GetStringUTFChars(jPackageName, NULL);
-				activityInfo.bundleName = chars;
-				env->ReleaseStringUTFChars(jPackageName, chars);
+				activityInfo.bundleName = jPackageName.getString().str<Interface>();
 			}
-
 			if (activityInfo.applicationName.empty()) {
-				activityInfo.applicationName = Activity_getApplicatioName(env, activityClass, activity);
+				activityInfo.applicationName = Activity_getApplicatioName(activityClass, activity);
 			}
 			if (activityInfo.applicationVersion.empty()) {
-				activityInfo.applicationVersion = Activity_getApplicatioVersion(env, activityClass, activity, jPackageName);
+				activityInfo.applicationVersion = Activity_getApplicatioVersion(activityClass, activity, jPackageName);
 			}
 			if (activityInfo.systemAgent.empty()) {
 				activityInfo.systemAgent = Activity_getSystemAgent(env);
@@ -249,36 +214,34 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, JNIEnv *env, jclass activit
 			if (activityInfo.userAgent.empty()) {
 				activityInfo.userAgent = Activity_getUserAgent(env, activity);
 			}
-
-			env->DeleteLocalRef(jPackageName);
 		} while (0);
 	}
 
 	int widthPixels = 0;
 	int heightPixels = 0;
-	float density = nan();
+	float displayDensity = nan();
 	if (!j_getResources) {
-		j_getResources = env->GetMethodID(activityClass, "getResources", "()Landroid/content/res/Resources;");
+		j_getResources =activityClass.getMethodID("getResources", "()Landroid/content/res/Resources;");
 	}
 
-	if (jobject resObj = reinterpret_cast<jstring>(env->CallObjectMethod(activity, j_getResources))) {
+	if (auto resObj = activity.callMethod<jobject>(j_getResources)) {
 		if (!j_getDisplayMetrics) {
-			j_getDisplayMetrics = env->GetMethodID(env->GetObjectClass(resObj), "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
+			j_getDisplayMetrics = resObj.getClass().getMethodID("getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
 		}
-		if (jobject dmObj = reinterpret_cast<jstring>(env->CallObjectMethod(resObj, j_getDisplayMetrics))) {
-			auto dmClass = env->GetObjectClass(dmObj);
+		if (auto dmObj = resObj.callMethod<jobject>(j_getDisplayMetrics)) {
+			auto dmClass = dmObj.getClass();
 			if (!j_density) {
-				j_density = env->GetFieldID(dmClass, "density", "F");
+				j_density = dmClass.getFieldID("density", "F");
 			}
 			if (!j_heightPixels) {
-				j_heightPixels = env->GetFieldID(dmClass, "heightPixels", "I");
+				j_heightPixels = dmClass.getFieldID("heightPixels", "I");
 			}
 			if (!j_widthPixels) {
-				j_widthPixels = env->GetFieldID(dmClass, "widthPixels", "I");
+				j_widthPixels = dmClass.getFieldID("widthPixels", "I");
 			}
-			density = env->GetFloatField(dmObj, j_density);
-			heightPixels = env->GetIntField(dmObj, j_heightPixels);
-			widthPixels = env->GetIntField(dmObj, j_widthPixels);
+			displayDensity = dmObj.getField<float>(j_density);
+			heightPixels = dmObj.getField<jint>(j_heightPixels);
+			widthPixels = dmObj.getField<jint>(j_widthPixels);
 		}
 	}
 
@@ -288,26 +251,26 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, JNIEnv *env, jclass activit
 	language = string::tolower<Interface>(language);
 	activityInfo.locale = language;
 
-	if (isnan(density)) {
+	if (isnan(displayDensity)) {
 		auto densityValue = AConfiguration_getDensity(conf);
 		switch (densityValue) {
-			case ACONFIGURATION_DENSITY_LOW: density = 0.75f; break;
-			case ACONFIGURATION_DENSITY_MEDIUM: density = 1.0f; break;
-			case ACONFIGURATION_DENSITY_TV: density = 1.5f; break;
-			case ACONFIGURATION_DENSITY_HIGH: density = 1.5f; break;
-			case 280: density = 2.0f; break;
-			case ACONFIGURATION_DENSITY_XHIGH: density = 2.0f; break;
-			case 360: density = 3.0f; break;
-			case 400: density = 3.0f; break;
-			case 420: density = 3.0f; break;
-			case ACONFIGURATION_DENSITY_XXHIGH: density = 3.0f; break;
-			case 560: density = 4.0f; break;
-			case ACONFIGURATION_DENSITY_XXXHIGH: density = 4.0f; break;
+			case ACONFIGURATION_DENSITY_LOW: displayDensity = 0.75f; break;
+			case ACONFIGURATION_DENSITY_MEDIUM: displayDensity = 1.0f; break;
+			case ACONFIGURATION_DENSITY_TV: displayDensity = 1.5f; break;
+			case ACONFIGURATION_DENSITY_HIGH: displayDensity = 1.5f; break;
+			case 280: displayDensity = 2.0f; break;
+			case ACONFIGURATION_DENSITY_XHIGH: displayDensity = 2.0f; break;
+			case 360: displayDensity = 3.0f; break;
+			case 400: displayDensity = 3.0f; break;
+			case 420: displayDensity = 3.0f; break;
+			case ACONFIGURATION_DENSITY_XXHIGH: displayDensity = 3.0f; break;
+			case 560: displayDensity = 4.0f; break;
+			case ACONFIGURATION_DENSITY_XXXHIGH: displayDensity = 4.0f; break;
 			default: break;
 		}
 	}
 
-	activityInfo.density = density;
+	activityInfo.density = displayDensity;
 
 	int32_t orientation = AConfiguration_getOrientation(conf);
 	int32_t width = AConfiguration_getScreenWidthDp(conf);
@@ -317,43 +280,19 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, JNIEnv *env, jclass activit
 	case ACONFIGURATION_ORIENTATION_ANY:
 	case ACONFIGURATION_ORIENTATION_SQUARE:
 		activityInfo.sizeInPixels = Extent2(widthPixels, heightPixels);
-		activityInfo.sizeInDp = Size2(widthPixels / density, heightPixels / density);
+		activityInfo.sizeInDp = Size2(widthPixels / displayDensity, heightPixels / displayDensity);
 		break;
 	case ACONFIGURATION_ORIENTATION_PORT:
 		activityInfo.sizeInPixels = Extent2(std::min(widthPixels, heightPixels), std::max(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::min(widthPixels, heightPixels) / density, std::max(widthPixels, heightPixels) / density);
+		activityInfo.sizeInDp = Size2(std::min(widthPixels, heightPixels) / displayDensity, std::max(widthPixels, heightPixels) / displayDensity);
 		break;
 	case ACONFIGURATION_ORIENTATION_LAND:
 		activityInfo.sizeInPixels = Extent2(std::max(widthPixels, heightPixels), std::min(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::max(widthPixels, heightPixels) / density, std::min(widthPixels, heightPixels) / density);
+		activityInfo.sizeInDp = Size2(std::max(widthPixels, heightPixels) / displayDensity, std::min(widthPixels, heightPixels) / displayDensity);
 		break;
 	}
 
 	return activityInfo;
-}
-
-void checkJniError(JNIEnv* env) {
-	if (env->ExceptionCheck()) {
-		// Read exception msg
-		jthrowable e = env->ExceptionOccurred();
-		env->ExceptionClear(); // clears the exception; e seems to remain valid
-		jclass clazz = env->GetObjectClass(e);
-		jclass classClass = env->GetObjectClass(clazz);
-		jmethodID getName = env->GetMethodID(classClass, "getName", "()Ljava/lang/String;");
-		jmethodID getMessage = env->GetMethodID(clazz, "getMessage", "()Ljava/lang/String;");
-		jstring message = reinterpret_cast<jstring>(env->CallObjectMethod(e, getMessage));
-		jstring exName = reinterpret_cast<jstring>(env->CallObjectMethod(clazz, getName));
-
-		const char *mstr = env->GetStringUTFChars(message, NULL);
-		log::error("JNI", "[", env->GetStringUTFChars(exName, NULL), "] ", mstr);
-
-		env->ReleaseStringUTFChars(message, mstr);
-		env->DeleteLocalRef(message);
-		env->DeleteLocalRef(exName);
-		env->DeleteLocalRef(classClass);
-		env->DeleteLocalRef(clazz);
-		env->DeleteLocalRef(e);
-	}
 }
 
 void saveApplicationInfo(const Value &value) {

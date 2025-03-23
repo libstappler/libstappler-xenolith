@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,17 +33,17 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct ClassLoader : Ref {
 	struct NativePaths {
-		jstring apkPath = nullptr;
-		jstring nativeLibraryDir = nullptr;
+		jni::LocalString apkPath = nullptr;
+		jni::LocalString nativeLibraryDir = nullptr;
 	};
 
-	jobject activityClassLoader = nullptr;
-	jclass activityClassLoaderClass = nullptr;
+	jni::Global activityClassLoader = nullptr;
+	jni::GlobalClass activityClassLoaderClass = nullptr;
 
-	jobject apkClassLoader = nullptr;
-	jclass apkClassLoaderClass = nullptr;
+	jni::Global apkClassLoader = nullptr;
+	jni::GlobalClass apkClassLoaderClass = nullptr;
 
-	jclass loaderClassClass = nullptr;
+	jni::GlobalClass loaderClassClass = nullptr;
 
 	jmethodID findClassMethod = nullptr;
 	jmethodID getMethodsMethod = nullptr;
@@ -63,18 +63,17 @@ struct ClassLoader : Ref {
 	~ClassLoader();
 
 	bool init(ANativeActivity *activity, int32_t sdk);
-	void finalize(JNIEnv *);
+	void finalize();
 
-	void foreachMethod(JNIEnv *, jclass, const Callback<void(JNIEnv *, StringView, jobject)> &);
-	void foreachField(JNIEnv *, jclass, const Callback<void(JNIEnv *, StringView, StringView, jobject)> &);
+	void foreachMethod(const jni::RefClass &, const Callback<void(StringView, const jni::Ref &)> &);
+	void foreachField(const jni::RefClass &, const Callback<void(StringView, StringView, const jni::Ref &)> &);
 
-	int getIntField(JNIEnv *, jobject origin, jobject field);
+	int getIntField(const jni::Ref &origin, const jni::Ref &field);
 
-	jclass findClass(JNIEnv *, StringView);
-	jclass findClass(JNIEnv *, jstring);
-	jstring getClassName(JNIEnv *, jclass);
-	NativePaths getNativePaths(JNIEnv *, jobject, jclass = nullptr);
-	jstring getCodeCachePath(JNIEnv *, jobject, jclass = nullptr);
+	jni::LocalClass findClass(const jni::Env &, StringView);
+	jni::LocalClass findClass(const jni::RefString &);
+	NativePaths getNativePaths(const jni::Ref &, const jni::RefClass & = nullptr);
+	jni::LocalString getCodeCachePath(const jni::Ref &, const jni::RefClass & = nullptr);
 };
 
 }

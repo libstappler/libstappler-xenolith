@@ -28,10 +28,9 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 bool PresentationFrame::init(PresentationEngine *e, FrameConstraints c,
-		uint64_t frameOrder, uint64_t presentWindow, Flags flags,
+		uint64_t frameOrder, Flags flags,
 		Function<void(PresentationFrame *, bool)> &&completeCallback) {
 	_frameOrder = frameOrder;
-	_presentWindow = presentWindow;
 	_flags = flags;
 
 	_engine = e;
@@ -42,7 +41,7 @@ bool PresentationFrame::init(PresentationEngine *e, FrameConstraints c,
 			return false;
 		}
 
-		_target = Rc<SwapchainImage>::create(_swapchain, frameOrder, presentWindow);
+		_target = Rc<SwapchainImage>::create(_swapchain, frameOrder);
 		if (!_target) {
 			return false;
 		}
@@ -161,9 +160,9 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 		}
 	}
 
-	_frameRequest = nullptr;
 	_swapchain = nullptr;
 	_target = nullptr;
+	_frameRequest = nullptr;
 
 	release(refId);
 }

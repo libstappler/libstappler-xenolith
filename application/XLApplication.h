@@ -39,7 +39,7 @@ public:
 	static EventHeader onRemoteNotification;
 
 	// thread-local
-	static const Application *getInstance();
+	static Application *getInstance();
 
 	virtual ~Application();
 

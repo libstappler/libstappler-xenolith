@@ -31,17 +31,17 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void ViewApplication::wakeup() {
 	if (isOnThisThread()) {
-		_immediateUpdate = true;
 		for (auto &it : _activeViews) {
 			it->setReadyForNextFrame();
 		}
+		Application::wakeup();
 	} else {
 		performOnAppThread([this] {
-			_immediateUpdate = true;
 			for (auto &it : _activeViews) {
 				it->setReadyForNextFrame();
 			}
-		}, this);
+			performUpdate();
+		}, this, true);
 	}
 }
 
@@ -54,14 +54,14 @@ bool ViewApplication::addView(ViewInfo &&info) {
 				info.onClosed = [this, tmp = sp::move(tmp)] (xenolith::View &view) {
 					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
-					}, this);
+					}, this, true);
 					tmp(view);
 				};
 			} else {
 				info.onClosed = [this] (xenolith::View &view) {
 					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
-					}, this);
+					}, this, true);
 				};
 			}
 

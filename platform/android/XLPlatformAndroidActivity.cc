@@ -29,11 +29,6 @@
 #include <sys/timerfd.h>
 #include <sys/eventfd.h>
 
-namespace STAPPLER_VERSIONIZED stappler::platform::i18n {
-	void loadJava(JavaVM *vm, int32_t sdk);
-	void finalizeJava();
-}
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static thread_local AppEnv tl_interface;
@@ -44,6 +39,35 @@ static JNIEnv *getEnv() {
 
 	s_vm->GetEnv(&ret, JNI_VERSION_1_6);
 	return reinterpret_cast<JNIEnv*>(ret);
+}
+
+static jni::Local Activity_getDisplay(ANativeActivity *activity, int sdk) {
+	jni::Env env(activity->env);
+	jni::Ref thiz(activity->clazz, activity->env);
+
+	auto cl = thiz.getClass();
+
+	if (sdk >= 30) {
+		auto getDisplayMethod = cl.getMethodID("getDisplay", "()Landroid/view/Display;");
+		auto display = thiz.callMethod<jobject>(getDisplayMethod);
+		if (display) {
+			return display;
+		}
+	}
+
+	auto getServiceMethod = cl.getMethodID("getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+	auto windowManagerFieldID = cl.getStaticFieldID("WINDOW_SERVICE", "Ljava/lang/String;");
+	auto windowManagerField = cl.getStaticField<jstring>(windowManagerFieldID);
+	jni::Local windowManager = thiz.callMethod<jobject>(getServiceMethod, windowManagerField);
+	if (windowManager) {
+		jni::LocalClass windowManagerClass = windowManager.getClass();
+		auto getDefaultDisplayMethod = windowManagerClass.getMethodID("getDefaultDisplay", "()Landroid/view/Display;");
+		auto display = windowManager.callMethod<jobject>(getDefaultDisplayMethod);
+		if (display) {
+			return display;
+		}
+	}
+	return nullptr;
 }
 
 AppEnv *AppEnv::getInerface() {
@@ -86,21 +110,22 @@ Activity::~Activity() {
 		_activity->env->DeleteGlobalRef(_clipboardServce);
 		_clipboardServce = nullptr;
 	}
+
 	if (_rootView) {
 		_rootView = nullptr;
 	}
 
 	if (_networkConnectivity) {
-		_networkConnectivity->finalize(_activity->env);
+		_networkConnectivity->finalize();
 		_networkConnectivity = nullptr;
 	}
 
 	if (_classLoader) {
-		_classLoader->finalize(_activity->env);
+		_classLoader->finalize();
 		_classLoader = nullptr;
 	}
 
-	stappler::platform::i18n::finalizeJava();
+	stappler::jni::Env::finalizeJava();
 	filesystem::platform::Android_terminateFilesystem();
 
 	if (_config) {
@@ -117,7 +142,7 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	AConfiguration_fromAssetManager(_config, _activity->assetManager);
 	_sdkVersion = AConfiguration_getSdkVersion(_config);
 
-	stappler::platform::i18n::loadJava(activity->vm, _sdkVersion);
+	stappler::jni::Env::loadJava(activity->vm, _sdkVersion);
 
 	if (_sdkVersion >= 29) {
 		// check for available surface formats
@@ -209,70 +234,65 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 		reinterpret_cast<Activity *>(a->instance)->handleWindowFocusChanged(focused);
 	};
 
-	auto activityClass = _activity->env->GetObjectClass(_activity->clazz);
-	auto setNativePointerMethod = _activity->env->GetMethodID(activityClass, "setNativePointer", "(J)V");
+	auto env = jni::Env(_activity->env);
+	jni::Ref thiz(_activity->clazz, _activity->env);
+
+	auto activityClass = thiz.getClass();
+	auto setNativePointerMethod = activityClass.getMethodID("setNativePointer", "(J)V");
 	if (setNativePointerMethod) {
-		_activity->env->CallVoidMethod(_activity->clazz, setNativePointerMethod, jlong(this));
+		thiz.callMethod<void>(setNativePointerMethod, jlong(this));
 	}
 
-	checkJniError(_activity->env);
+	env.checkErrors();
 
-	auto isEmulatorMethod = _activity->env->GetMethodID(activityClass, "isEmulator", "()Z");
-	if (isEmulatorMethod) {
-		isEmulator = _activity->env->CallBooleanMethod(_activity->clazz, isEmulatorMethod);
-		if (isEmulator) {
-			// emulators often do not support this format for swapchains
-			_formatSupport.R8G8B8A8_UNORM = false;
-			if (_formatSupport.R5G6B5_UNORM) {
-				s_getCommonFormat = core::ImageFormat::R5G6B5_UNORM_PACK16;
-			} else if (_formatSupport.R8G8B8_UNORM) {
-				s_getCommonFormat = core::ImageFormat::R8G8B8_UNORM;
+	do {
+		auto isEmulatorMethod = activityClass.getMethodID("isEmulator", "()Z");
+		if (isEmulatorMethod) {
+			isEmulator = thiz.callMethod<jboolean>(isEmulatorMethod);
+			if (isEmulator) {
+				// emulators often do not support this format for swapchains
+				_formatSupport.R8G8B8A8_UNORM = false;
+				if (_formatSupport.R5G6B5_UNORM) {
+					s_getCommonFormat = core::ImageFormat::R5G6B5_UNORM_PACK16;
+				} else if (_formatSupport.R8G8B8_UNORM) {
+					s_getCommonFormat = core::ImageFormat::R8G8B8_UNORM;
+				}
 			}
 		}
-	}
 
-	_startActivityMethod = _activity->env->GetMethodID(activityClass, "startActivity", "(Landroid/content/Intent;)V");
-	_runInputMethod = _activity->env->GetMethodID(activityClass, "runInput", "(Ljava/lang/String;III)V");
-	_updateInputMethod = _activity->env->GetMethodID(activityClass, "updateInput", "(Ljava/lang/String;III)V");
-	_updateCursorMethod = _activity->env->GetMethodID(activityClass, "updateCursor", "(II)V");
-	_cancelInputMethod = _activity->env->GetMethodID(activityClass, "cancelInput", "()V");
+		_startActivityMethod = activityClass.getMethodID("startActivity", "(Landroid/content/Intent;)V");
+		_runInputMethod = activityClass.getMethodID("runInput", "(Ljava/lang/String;III)V");
+		_updateInputMethod = activityClass.getMethodID("updateInput", "(Ljava/lang/String;III)V");
+		_updateCursorMethod = activityClass.getMethodID("updateCursor", "(II)V");
+		_cancelInputMethod = activityClass.getMethodID("cancelInput", "()V");
 
-	auto intentClass = _activity->env->FindClass("android/content/Intent");
-	auto uriClass = _activity->env->FindClass("android/net/Uri");
-	auto contextClass = _activity->env->FindClass("android/content/Context");
+		auto intentClass = env.findClass("android/content/Intent");
+		auto uriClass = env.findClass("android/net/Uri");
+		auto contextClass = env.findClass("android/content/Context");
 
-	_intentInitMethod = _activity->env->GetMethodID(intentClass, "<init>", "(Ljava/lang/String;Landroid/net/Uri;)V");
-	_intentAddFlagsMethod = _activity->env->GetMethodID(intentClass, "addFlags", "(I)Landroid/content/Intent;");
-	_intentActionView = _activity->env->GetStaticFieldID(intentClass, "ACTION_VIEW", "Ljava/lang/String;");
-	_uriParseMethod = _activity->env->GetStaticMethodID(uriClass, "parse", "(Ljava/lang/String;)Landroid/net/Uri;");
+		_intentInitMethod = intentClass.getMethodID("<init>", "(Ljava/lang/String;Landroid/net/Uri;)V");
+		_intentAddFlagsMethod = intentClass.getMethodID("addFlags", "(I)Landroid/content/Intent;");
+		_intentActionView = intentClass.getStaticFieldID("ACTION_VIEW", "Ljava/lang/String;");
+		_uriParseMethod = uriClass.getStaticMethodID("parse", "(Ljava/lang/String;)Landroid/net/Uri;");
 
-	auto getServiceMethod = _activity->env->GetMethodID(contextClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-	auto clipboardNameFieldID = _activity->env->GetStaticFieldID(contextClass, "CLIPBOARD_SERVICE", "Ljava/lang/String;");
-	auto clipboardNameField = (jstring)_activity->env->GetStaticObjectField(contextClass, clipboardNameFieldID);
+		auto getServiceMethod = contextClass.getMethodID("getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		auto clipboardNameField = contextClass.getStaticField<jstring>("CLIPBOARD_SERVICE");
 
-	auto clipboardService = _activity->env->CallObjectMethod(_activity->clazz, getServiceMethod, clipboardNameField);
-	if (clipboardService) {
-		_clipboardServce = _activity->env->NewGlobalRef(clipboardService);
-	}
+		_clipboardServce = thiz.callMethod<jobject>(getServiceMethod, clipboardNameField);
+	} while (0);
 
-	_activity->env->DeleteLocalRef(clipboardNameField);
-	_activity->env->DeleteLocalRef(uriClass);
-	_activity->env->DeleteLocalRef(intentClass);
-
-	checkJniError(_activity->env);
-
-	_activity->env->DeleteLocalRef(activityClass);
+	env.checkErrors();
 
 	_classLoader = Rc<ClassLoader>::create(_activity, _sdkVersion);
 
 	filesystem::platform::Android_initializeFilesystem(_activity->assetManager,
 			_activity->internalDataPath, _activity->externalDataPath, _classLoader ? _classLoader->apkPath : StringView());
 
-	_info = ActivityInfo::get(_config, _activity->env, getClass(), _activity->clazz);
+	_info = ActivityInfo::get(_config, env, activityClass, thiz);
 	_activity->instance = this;
 
 	if (_classLoader) {
-		_networkConnectivity = Rc<NetworkConnectivity>::create(_activity->env, _classLoader, _activity->clazz, [this] (NetworkCapabilities flags) {
+		_networkConnectivity = Rc<NetworkConnectivity>::create(_classLoader, thiz, [this] (NetworkCapabilities flags) {
 			setNetworkCapabilities(flags);
 		});
 
@@ -281,11 +301,11 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 		}
 
 		auto drawableClassName = toString(_info.bundleName, ".R$drawable");
-		auto cl = _classLoader->findClass(_activity->env, drawableClassName.data());
+		auto cl = _classLoader->findClass(env, drawableClassName);
 		if (cl) {
-			_classLoader->foreachField(_activity->env, cl, [&] (JNIEnv *env, StringView type, StringView name, jobject obj) {
+			_classLoader->foreachField(cl, [&] (StringView type, StringView name, const jni::Ref &obj) {
 				if (type == "int") {
-					_drawables.setInteger(_classLoader->getIntField(env, cl, obj), name);
+					_drawables.setInteger(_classLoader->getIntField(cl, obj), name);
 				}
 			});
 		}
@@ -306,7 +326,8 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	saveApplicationInfo(info);
 	_messageToken = loadMessageToken();
 
-	checkJniError(_activity->env);
+	env.checkErrors();
+
 	_refId = retain();
 	return true;
 }
@@ -385,11 +406,6 @@ void Activity::removeTokenCallback(void *key) {
 
 void Activity::setView(platform::ViewInterface *view) {
 	_rootView = view;
-	if (_window) {
-		_rootView->linkWithNativeWindow(_window);
-		ANativeWindow_release(_window);
-		_window = nullptr;
-	}
 }
 
 String Activity::getMessageToken() const {
@@ -443,7 +459,8 @@ void Activity::handleConfigurationChanged() {
 	AConfiguration_fromAssetManager(_config, _activity->assetManager);
 	_sdkVersion = AConfiguration_getSdkVersion(_config);
 
-	_info = ActivityInfo::get(_config, _activity->env, getClass(), _activity->clazz, &_info);
+	_info = ActivityInfo::get(_config, _activity->env, getClass(),
+			jni::Ref(_activity->clazz, _activity->env), &_info);
 
 	for (auto &it : _components) {
 		it->handleConfigurationChanged(this, _config);
@@ -500,8 +517,7 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 	if (_rootView) {
 		_rootView->linkWithNativeWindow(window);
 	} else {
-		_window = window;
-		ANativeWindow_acquire(_window);
+		abort();
 	}
 
 	_windowSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
@@ -519,8 +535,7 @@ void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
 void Activity::handleNativeWindowRedrawNeeded(ANativeWindow *window) {
 	log::format(log::Info, "NativeActivity", "NativeWindowRedrawNeeded: %p -- %p", _activity, window);
 	if (_rootView) {
-		_rootView->setReadyForNextFrame();
-		_rootView->update(true);
+		_rootView->waitUntilFrame();
 	}
 }
 
@@ -890,6 +905,10 @@ void Activity::runTextInput(Rc<ActivityTextInputWrapper> &&wrapper, WideStringVi
 
 void Activity::cancelTextInput() {
 	_activity->env->CallVoidMethod(_activity->clazz, _cancelInputMethod);
+}
+
+jni::Local Activity::getDisplay() const {
+	return Activity_getDisplay(_activity, _sdkVersion);
 }
 
 void Activity::transferInputEvent(const core::InputEventData &event) {

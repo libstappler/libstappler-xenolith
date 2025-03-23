@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -60,10 +60,10 @@ public:
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType) override;
 
+	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&opts) const override;
+
 protected:
 	using vk::View::init;
-
-	virtual core::SurfaceInfo getSurfaceOptions() const override;
 
 	void doSetDecorationTone(float);
     void doSetDecorationVisible(bool);

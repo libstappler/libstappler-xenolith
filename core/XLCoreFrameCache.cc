@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -326,7 +326,7 @@ void FrameCache::makeViews(const Rc<ImageStorage> &img, SpanView<ImageViewInfo> 
 			imageView->setReleaseCallback([loop = Rc<Loop>(_loop), id = imageView->getIndex()] {
 				loop->performOnThread([loop, id] {
 					loop->getFrameCache()->removeImageView(id);
-				});
+				}, nullptr, true);
 			});
 			img->addView(info, move(imageView));
 		}

@@ -80,7 +80,7 @@ public:
 	virtual ~PresentationFrame() = default;
 
 	bool init(PresentationEngine *, FrameConstraints,
-			uint64_t frameOrder, uint64_t presentWindow, Flags flags,
+			uint64_t frameOrder, Flags flags,
 			Function<void(PresentationFrame *, bool)> &&completeCallback = nullptr);
 
 	bool hasFlag(Flags f) const { return sp::hasFlag(_flags, f); }
@@ -93,7 +93,6 @@ public:
 	Swapchain *getSwapchain() const { return _swapchain; }
 
 	uint64_t getFrameOrder() const { return _frameOrder; }
-	uint64_t getPresentWindow() const { return _presentWindow; }
 
 	SwapchainImage *getSwapchainImage() const;
 
@@ -113,7 +112,6 @@ public:
 
 protected:
 	uint64_t _frameOrder = 0;
-	uint64_t _presentWindow = 0;
 	bool _active = true;
 	Flags _flags = None;
 	Rc<ImageStorage> _target;

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,17 +32,20 @@ ClassLoader::~ClassLoader() { }
 
 bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 	sdkVersion = sdk;
-	auto activityClass = activity->env->GetObjectClass(activity->clazz);
-	auto classClass = activity->env->GetObjectClass(activityClass);
-	auto getClassLoaderMethod = activity->env->GetMethodID(classClass,
-			"getClassLoader", "()Ljava/lang/ClassLoader;");
+
+	auto thiz = jni::Ref(activity->clazz, activity->env);
+	auto env = jni::Env(activity->env);
+
+	auto activityClass = thiz.getClass();
+	auto classClass = activityClass.getClass();
+	auto getClassLoaderMethod = classClass.getMethodID("getClassLoader", "()Ljava/lang/ClassLoader;");
 
 	auto path = stappler::filesystem::platform::Android_getApkPath();
-	auto codeCachePath = getCodeCachePath(activity->env, activity->clazz, activityClass);
-	auto paths = getNativePaths(activity->env, activity->clazz, activityClass);
+	auto codeCachePath = getCodeCachePath(thiz, activityClass);
+	auto paths = getNativePaths(thiz, activityClass);
 
-	apkPath = activity->env->GetStringUTFChars(paths.apkPath, NULL);
-	nativeLibraryDir = activity->env->GetStringUTFChars(paths.nativeLibraryDir, NULL);
+	apkPath = paths.apkPath.getString().str<Interface>();
+	nativeLibraryDir = paths.nativeLibraryDir.getString().str<Interface>();
 
 	filesystem::ftw(nativeLibraryDir, [] (StringView path, bool isFile) {
 		if (isFile) {
@@ -50,256 +53,174 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 		}
 	});
 
-	auto classLoader = activity->env->CallObjectMethod(activityClass, getClassLoaderMethod);
-
-	activity->env->DeleteLocalRef(activityClass);
+	auto classLoader = activityClass.callMethod<jobject>(getClassLoaderMethod);
 
 	if (!codeCachePath || !paths.apkPath) {
-		checkJniError(activity->env);
+		env.checkErrors();
 		return false;
 	}
 
 	if (classLoader) {
-		activityClassLoader = activity->env->NewGlobalRef(classLoader);
-		activity->env->DeleteLocalRef(classLoader);
+		activityClassLoader = classLoader;
+		activityClassLoaderClass = activityClassLoader.getClass();
 
-		auto classLoaderClass = activity->env->GetObjectClass(activityClassLoader);
-		activityClassLoaderClass = reinterpret_cast<jclass>(activity->env->NewGlobalRef(classLoaderClass));
-		activity->env->DeleteLocalRef(classLoaderClass);
+		auto className = activityClassLoaderClass.getClassName();
 
-		auto className = getClassName(activity->env, activityClassLoaderClass);
-		const char *mstr = activity->env->GetStringUTFChars(className, NULL);
-
-		log::info("JNI", "Activity: ClassLoader: ", mstr);
-		if (StringView(mstr) == StringView("java.lang.BootClassLoader")) {
+		log::info("JNI", "Activity: ClassLoader: ", className.getString());
+		if (className.getString() == StringView("java.lang.BootClassLoader")) {
 			// acquire new dex class loader
-			auto dexClassLoaderClass = activity->env->FindClass("dalvik/system/DexClassLoader");
+			auto dexClassLoaderClass = env.findClass("dalvik/system/DexClassLoader");
 			if (!dexClassLoaderClass) {
-				checkJniError(activity->env);
+				env.checkErrors();
 				return false;
 			}
 
-			jmethodID dexClassLoaderConstructor = activity->env->GetMethodID(dexClassLoaderClass, "<init>",
+			jmethodID dexClassLoaderConstructor = dexClassLoaderClass.getMethodID("<init>",
 					"(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/ClassLoader;)V");
 
-			auto dexLoader = activity->env->NewObject(dexClassLoaderClass, dexClassLoaderConstructor,
+			auto dexLoader = env.newObject(dexClassLoaderClass, dexClassLoaderConstructor,
 					paths.apkPath, codeCachePath, paths.nativeLibraryDir, activityClassLoader);
 			if (dexLoader) {
-				apkClassLoader = activity->env->NewGlobalRef(dexLoader);
-				activity->env->DeleteLocalRef(dexLoader);
+				apkClassLoader = dexLoader;
+				apkClassLoaderClass = apkClassLoader.getClass();
 
-				apkClassLoaderClass = reinterpret_cast<jclass>(activity->env->NewGlobalRef(dexClassLoaderClass));
-				activity->env->DeleteLocalRef(dexClassLoaderClass);
+				findClassMethod = apkClassLoaderClass.getMethodID("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
+				loaderClassClass = apkClassLoaderClass.getClass();
 
-				findClassMethod = activity->env->GetMethodID(apkClassLoaderClass, "loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
-
-				auto j_classClass = activity->env->GetObjectClass(apkClassLoaderClass);
-				loaderClassClass = reinterpret_cast<jclass>(activity->env->NewGlobalRef(j_classClass));
-				activity->env->DeleteLocalRef(j_classClass);
-
-				getMethodsMethod = activity->env->GetMethodID(loaderClassClass, "getMethods", "()[Ljava/lang/reflect/Method;");
-				getFieldsMethod = activity->env->GetMethodID(loaderClassClass, "getFields", "()[Ljava/lang/reflect/Field;");
+				getMethodsMethod = loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
+				getFieldsMethod = loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
 			} else {
-				checkJniError(activity->env);
+				env.checkErrors();
 				return false;
 			}
 		} else {
-			apkClassLoader = activity->env->NewGlobalRef(activityClassLoader);
-			apkClassLoaderClass = reinterpret_cast<jclass>(activity->env->NewGlobalRef(activityClassLoaderClass));
-			loaderClassClass = reinterpret_cast<jclass>(activity->env->NewGlobalRef(classClass));
-			findClassMethod = activity->env->GetMethodID(activityClassLoaderClass, "loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
-			getMethodsMethod = activity->env->GetMethodID(loaderClassClass, "getMethods", "()[Ljava/lang/reflect/Method;");
-			getFieldsMethod = activity->env->GetMethodID(loaderClassClass, "getFields", "()[Ljava/lang/reflect/Field;");
+			apkClassLoader = activityClassLoader;
+			apkClassLoaderClass = activityClassLoaderClass;
+			loaderClassClass = classClass;
+			findClassMethod = activityClassLoaderClass.getMethodID("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
+			getMethodsMethod = loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
+			getFieldsMethod = loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
 		}
 	}
 
 	if (loaderClassClass) {
-		getClassNameMethod = activity->env->GetMethodID(loaderClassClass, "getName", "()Ljava/lang/String;");
+		getClassNameMethod = loaderClassClass.getMethodID("getName", "()Ljava/lang/String;");
 	}
 
-	activity->env->DeleteLocalRef(classClass);
-
-	if (auto methodClass = findClass(activity->env, "java/lang/reflect/Method")) {
-		getMethodNameMethod = activity->env->GetMethodID(methodClass, "getName", "()Ljava/lang/String;");
-		activity->env->DeleteLocalRef(methodClass);
+	if (auto methodClass = findClass(env, "java/lang/reflect/Method")) {
+		getMethodNameMethod = methodClass.getMethodID("getName", "()Ljava/lang/String;");
 	}
 
-	if (auto fieldClass = findClass(activity->env, "java/lang/reflect/Field")) {
-		getFieldNameMethod = activity->env->GetMethodID(fieldClass, "getName", "()Ljava/lang/String;");
-		getFieldTypeMethod = activity->env->GetMethodID(fieldClass, "getType", "()Ljava/lang/Class;");
-		getFieldIntMethod = activity->env->GetMethodID(fieldClass, "getInt", "(Ljava/lang/Object;)I");
-		activity->env->DeleteLocalRef(fieldClass);
+	if (auto fieldClass = findClass(env, "java/lang/reflect/Field")) {
+		getFieldNameMethod = fieldClass.getMethodID("getName", "()Ljava/lang/String;");
+		getFieldTypeMethod = fieldClass.getMethodID("getType", "()Ljava/lang/Class;");
+		getFieldIntMethod = fieldClass.getMethodID("getInt", "(Ljava/lang/Object;)I");
 	}
 
-	checkJniError(activity->env);
-
+	env.checkErrors();
 	return true;
 }
 
-void ClassLoader::finalize(JNIEnv *env) {
-	if (activityClassLoader) {
-		env->DeleteGlobalRef(activityClassLoader);
-		activityClassLoader = nullptr;
-	}
-	if (activityClassLoaderClass) {
-		env->DeleteGlobalRef(activityClassLoaderClass);
-		activityClassLoaderClass = nullptr;
-	}
-	if (apkClassLoader) {
-		env->DeleteGlobalRef(apkClassLoader);
-		apkClassLoader = nullptr;
-	}
-	if (apkClassLoaderClass) {
-		env->DeleteGlobalRef(apkClassLoaderClass);
-		apkClassLoaderClass = nullptr;
-	}
+void ClassLoader::finalize() {
+	activityClassLoader = nullptr;
+	activityClassLoaderClass = nullptr;
+	apkClassLoader = nullptr;
+	apkClassLoaderClass = nullptr;
 	findClassMethod = nullptr;
 }
 
-void ClassLoader::foreachMethod(JNIEnv *env, jclass cl, const Callback<void(JNIEnv *, StringView, jobject)> &cb) {
-	jobjectArray jobjArray = static_cast<jobjectArray>(env->CallObjectMethod(cl, getMethodsMethod));
-	jsize len = env->GetArrayLength(jobjArray);
+void ClassLoader::foreachMethod(const jni::RefClass &cl, const Callback<void(StringView, const jni::Ref &)> &cb) {
+	jobjectArray jobjArray = static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getMethodsMethod));
+	jsize len = cl.getEnv()->GetArrayLength(jobjArray);
 
 	for (jsize i = 0 ; i < len ; i++) {
-		jobject methodObject = env->GetObjectArrayElement(jobjArray, i);
+		auto methodObject = jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
+		auto j_name = methodObject.callMethod<jstring>(getMethodNameMethod);
 
-		jstring j_name = static_cast<jstring>(env->CallObjectMethod(methodObject, getMethodNameMethod));
-		const char *str = env->GetStringUTFChars(j_name, 0);
-
-		cb(env, str, methodObject);
-
-		env->ReleaseStringUTFChars(j_name, str);
-		env->DeleteLocalRef(methodObject);
+		cb(j_name.getString(), methodObject);
 	}
 
-	env->DeleteLocalRef(jobjArray);
+	cl.getEnv()->DeleteLocalRef(jobjArray);
 }
 
-void ClassLoader::foreachField(JNIEnv *env, jclass cl, const Callback<void(JNIEnv *, StringView, StringView, jobject)> &cb) {
-	jobjectArray jobjArray = static_cast<jobjectArray>(env->CallObjectMethod(cl, getFieldsMethod));
-	jsize len = env->GetArrayLength(jobjArray);
+void ClassLoader::foreachField(const jni::RefClass &cl, const Callback<void(StringView, StringView, const jni::Ref &)> &cb) {
+	jobjectArray jobjArray = static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getFieldsMethod));
+	jsize len = cl.getEnv()->GetArrayLength(jobjArray);
 
 	for (jsize i = 0 ; i < len ; i++) {
-		jobject fieldObject = env->GetObjectArrayElement(jobjArray, i);
-		jobject fieldType = env->CallObjectMethod(fieldObject, getFieldTypeMethod);
+		auto fieldObject = jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
+		auto fieldType = fieldObject.callMethod<jobject>(getFieldTypeMethod);
 
-		jstring j_type = static_cast<jstring>(env->CallObjectMethod(fieldType, getClassNameMethod));
-		jstring j_name = static_cast<jstring>(env->CallObjectMethod(fieldObject, getFieldNameMethod));
+		auto j_type = fieldType.callMethod<jstring>(getClassNameMethod);
+		auto j_name = fieldObject.callMethod<jstring>(getFieldNameMethod);
 
-		const char *c_name = env->GetStringUTFChars(j_name, 0);
-		const char *c_type = env->GetStringUTFChars(j_type, 0);
-
-		cb(env, c_type, c_name, fieldObject);
-
-		env->ReleaseStringUTFChars(j_type, c_type);
-		env->ReleaseStringUTFChars(j_name, c_name);
-
-		env->DeleteLocalRef(j_type);
-		env->DeleteLocalRef(j_name);
-		env->DeleteLocalRef(fieldType);
-		env->DeleteLocalRef(fieldObject);
+		cb(j_type.getString(), j_name.getString(), fieldObject);
 	}
 
-	env->DeleteLocalRef(jobjArray);
+	cl.getEnv()->DeleteLocalRef(jobjArray);
 }
 
-int ClassLoader::getIntField(JNIEnv *env, jobject origin, jobject field) {
-	auto ret = env->CallIntMethod(field, getFieldIntMethod, origin);
-	return ret;
+int ClassLoader::getIntField(const jni::Ref &origin, const jni::Ref &field) {
+	return field.callMethod<jint>(getFieldIntMethod, origin);
 }
 
-jclass ClassLoader::findClass(JNIEnv *env, StringView data) {
-	auto tmp = env->NewStringUTF(data.data());
-	auto ret = findClass(env, tmp);
-	env->DeleteLocalRef(tmp);
-	return ret;
+jni::LocalClass ClassLoader::findClass(const jni::Env &env, StringView data) {
+	return findClass(env.newString(data));
 }
 
-jclass ClassLoader::findClass(JNIEnv *env, jstring name) {
-	auto ret = reinterpret_cast<jclass>(env->CallObjectMethod(apkClassLoader, findClassMethod, name, jboolean(1)));
-	checkJniError(env);
-	return ret;
+jni::LocalClass ClassLoader::findClass(const jni::RefString &str) {
+	return apkClassLoader.callMethod<jclass>(findClassMethod, str, jboolean(1));
 }
 
-jstring ClassLoader::getClassName(JNIEnv *env, jclass cl) {
-	jclass classClass = env->GetObjectClass(cl);
-	jmethodID getName = env->GetMethodID(classClass, "getName", "()Ljava/lang/String;");
-	jstring name = reinterpret_cast<jstring>(env->CallObjectMethod(cl, getName));
-	env->DeleteLocalRef(classClass);
-	return name;
-}
-
-ClassLoader::NativePaths ClassLoader::getNativePaths(JNIEnv *env, jobject context, jclass cl) {
+ClassLoader::NativePaths ClassLoader::getNativePaths(const jni::Ref &context, const jni::RefClass &icl) {
 	NativePaths ret;
-	bool hasClass = (cl != nullptr);
+	jni::RefClass cl = icl;
+	jni::LocalClass tmpClass;
 	if (!cl) {
-		cl = env->GetObjectClass(context);
+		tmpClass = context.getClass();
+		cl = tmpClass;
 	}
 
-	auto getPackageNameMethod = env->GetMethodID(cl, "getPackageName", "()Ljava/lang/String;");
-	auto getPackageManagerMethod = env->GetMethodID(cl, "getPackageManager", "()Landroid/content/pm/PackageManager;");
+	auto getPackageNameMethod = cl.getMethodID("getPackageName", "()Ljava/lang/String;");
+	auto getPackageManagerMethod = cl.getMethodID("getPackageManager", "()Landroid/content/pm/PackageManager;");
 
-	auto packageName = reinterpret_cast<jstring>(env->CallObjectMethod(context, getPackageNameMethod));
-	auto packageManager = env->CallObjectMethod(context, getPackageManagerMethod);
+	auto packageName = context.callMethod<jstring>(getPackageNameMethod);
+	auto packageManager = context.callMethod<jobject>(getPackageManagerMethod);
 
 	if (packageName && packageManager) {
-		auto packageManagerClass = env->GetObjectClass(packageManager);
-		//auto packageManagerClass = env->FindClass("android/content/pm/PackageManager");
-		auto getApplicationInfoMethod = env->GetMethodID(packageManagerClass, "getApplicationInfo",
+		auto packageManagerClass = packageManager.getClass();
+		auto getApplicationInfoMethod = packageManagerClass.getMethodID("getApplicationInfo",
 				"(Ljava/lang/String;I)Landroid/content/pm/ApplicationInfo;");
 
-		auto applicationInfo = env->CallObjectMethod(packageManager, getApplicationInfoMethod, packageName, 0);
+		auto applicationInfo = packageManager.callMethod<jobject>(getApplicationInfoMethod, packageName, 0);
 
 		if (applicationInfo) {
-			auto applicationInfoClass = env->GetObjectClass(applicationInfo);
-			auto publicSourceDirField = env->GetFieldID(applicationInfoClass, "publicSourceDir", "Ljava/lang/String;");
-			auto nativeLibraryDirField = env->GetFieldID(applicationInfoClass, "nativeLibraryDir", "Ljava/lang/String;");
+			auto applicationInfoClass = applicationInfo.getClass();
+			auto publicSourceDirField = applicationInfoClass.getFieldID("publicSourceDir", "Ljava/lang/String;");
+			auto nativeLibraryDirField = applicationInfoClass.getFieldID("nativeLibraryDir", "Ljava/lang/String;");
 
-			ret.apkPath = reinterpret_cast<jstring>(env->GetObjectField(applicationInfo, publicSourceDirField));
-			ret.nativeLibraryDir = reinterpret_cast<jstring>(env->GetObjectField(applicationInfo, nativeLibraryDirField));
-
-			env->DeleteLocalRef(applicationInfoClass);
-			env->DeleteLocalRef(applicationInfo);
+			ret.apkPath = applicationInfo.getField<jstring>(publicSourceDirField);
+			ret.nativeLibraryDir = applicationInfo.getField<jstring>(nativeLibraryDirField);
 		}
-
-		if (packageManagerClass) { env->DeleteLocalRef(packageManagerClass); }
 	}
-
-	checkJniError(env);
-
-	if (packageName) { env->DeleteLocalRef(packageName); }
-	if (packageManager) { env->DeleteLocalRef(packageManager); }
-
-	if (!hasClass) {
-		env->DeleteLocalRef(cl);
-	}
-
 	return ret;
 }
 
-jstring ClassLoader::getCodeCachePath(JNIEnv *env, jobject context, jclass cl) {
-	jstring codeCachePath = nullptr;
-	bool hasClass = (cl != nullptr);
+jni::LocalString ClassLoader::getCodeCachePath(const jni::Ref &context, const jni::RefClass &icl) {
+	jni::RefClass cl = icl;
+	jni::LocalClass tmpClass;
 	if (!cl) {
-		cl = env->GetObjectClass(context);
+		tmpClass = context.getClass();
+		cl = tmpClass;
 	}
 
-	auto getCodeCacheDirMethod = env->GetMethodID(cl, "getCodeCacheDir", "()Ljava/io/File;");
+	auto getCodeCacheDirMethod = cl.getMethodID("getCodeCacheDir", "()Ljava/io/File;");
 
-	auto codeCacheDir = env->CallObjectMethod(context, getCodeCacheDirMethod);
-	auto fileClass = env->GetObjectClass(codeCacheDir);
-	auto getAbsolutePathMethod = env->GetMethodID(fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+	auto codeCacheDir = context.callMethod<jobject>(getCodeCacheDirMethod);
+	auto fileClass = codeCacheDir.getClass();
+	auto getAbsolutePathMethod = fileClass.getMethodID("getAbsolutePath", "()Ljava/lang/String;");
 
-	codeCachePath = reinterpret_cast<jstring>(env->CallObjectMethod(codeCacheDir, getAbsolutePathMethod));
-
-	if (codeCacheDir) { env->DeleteLocalRef(codeCacheDir); }
-	if (fileClass) { env->DeleteLocalRef(fileClass); }
-
-	if (!hasClass) {
-		env->DeleteLocalRef(cl);
-	}
-
-	return codeCachePath;
+	return codeCacheDir.callMethod<jstring>(getAbsolutePathMethod);
 }
 
 }

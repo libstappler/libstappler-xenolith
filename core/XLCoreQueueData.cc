@@ -53,6 +53,7 @@ void QueueData::clear() {
 
 	for (auto &it : textureSets) {
 		it->layout = nullptr;
+		it->compiledSamplers.clear();
 	}
 
 	if (resource) {
