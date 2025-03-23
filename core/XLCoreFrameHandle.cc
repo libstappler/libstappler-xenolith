@@ -240,7 +240,7 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *r
 	auto task = acquireTask(ref, tag);
 	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
 		return cb(*this);
-	}, [this, tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
+	}, [tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (!success) {
 			task->invalidate();

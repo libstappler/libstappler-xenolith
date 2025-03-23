@@ -397,8 +397,8 @@ void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
 				taskData->task->handleComplete(success);
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
-			loop.performInQueue(Rc<thread::Task>::create([this, taskData] (const thread::Task &) -> bool {
-				auto buf = taskData->pool->recordBuffer(*taskData->device, [&, this] (CommandBuffer &buf) {
+			loop.performInQueue(Rc<thread::Task>::create([taskData] (const thread::Task &) -> bool {
+				auto buf = taskData->pool->recordBuffer(*taskData->device, [&] (CommandBuffer &buf) {
 					taskData->task->fillCommandBuffer(*taskData->device, buf);
 					return true;
 				});

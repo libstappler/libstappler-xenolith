@@ -5,3 +5,7 @@ stappler-build
 **/.cproject
 **/.project
 **/.settings
+**/compile_commands.json
+**/.cache
+**/.clangd
+**/.clang-format

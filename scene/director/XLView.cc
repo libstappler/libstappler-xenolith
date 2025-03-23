@@ -68,7 +68,7 @@ void View::end() {
 			_director->end();
 		}
 		cb(*this);
-		_glLoop->performOnThread([this, engine = move(engine)] () mutable {
+		_glLoop->performOnThread([engine = move(engine)] () mutable {
 #if SP_REF_DEBUG
 			if (engine->getReferenceCount() > 1) {
 				auto tmp = engine.get();

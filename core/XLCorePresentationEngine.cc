@@ -113,7 +113,7 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 				return;
 			}
 
-			frame->getRequest()->setOutput(a, [this, frame] (core::FrameAttachmentData &data, bool success, Ref *) {
+			frame->getRequest()->setOutput(a, [frame] (core::FrameAttachmentData &data, bool success, Ref *) {
 				// Called in GL Thread
 				XL_COREPRESENT_LOG("scheduleSwapchainImage: output on frame");
 				if (data.image && success) {
@@ -567,7 +567,7 @@ void PresentationEngine::runScheduledPresent(PresentationFrame *frame) {
 		_device->acquireQueue(QueueFlags::Present, *_loop,
 				[this, frame = Rc<PresentationFrame>(frame)](Loop&, const Rc<DeviceQueue> &queue) mutable {
 			presentSwapchainImage(Rc<DeviceQueue>(queue), frame);
-		}, [this, frame = Rc<PresentationFrame>(frame)] (Loop &) {
+		}, [frame = Rc<PresentationFrame>(frame)] (Loop &) {
 			frame->invalidate();
 		}, this);
 	}

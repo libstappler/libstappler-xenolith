@@ -151,7 +151,7 @@ void PresentationEngine::acquireFrameData(core::PresentationFrame *frame, Functi
 		XL_VKPRESENT_LOG("scheduleSwapchainImage: _director->acquireFrame");
 		if (_view->getDirector()->acquireFrame(frame->getRequest())) {
 			XL_VKPRESENT_LOG("scheduleSwapchainImage: frame acquired");
-			_view->performOnThread([this, frame = move(frame), cb = sp::move(cb)] () mutable {
+			_view->performOnThread([frame = move(frame), cb = sp::move(cb)] () mutable {
 				cb(frame);
 			}, this);
 		}

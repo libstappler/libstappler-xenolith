@@ -109,7 +109,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkResult result = VK_ERROR_UNKNOWN;
-	dev.makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+	dev.makeApiCall([&] (const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &swapchain);
