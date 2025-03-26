@@ -38,9 +38,20 @@ endef
 # module name resolution
 MODULE_xenolith_backend_vk := MODULE_XENOLITH_BACKEND_VK
 
-ifdef VULKAN_SDK_PREFIX
-MODULE_XENOLITH_BACKEND_VK_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)
+ifdef VULKAN_SDK
+ifdef WIN32
+MODULE_XENOLITH_BACKEND_VK_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK)/Include)
+else
+MODULE_XENOLITH_BACKEND_VK_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK)/include)
 endif
+endif
+
+
+ifdef WIN32
+MODULE_XENOLITH_BACKEND_VK_LIBS := -lvulkan-1
+MODULE_XENOLITH_BACKEND_VK_GENERAL_LDFLAGS := -L$(call sp_os_path,$(VULKAN_SDK)/Lib)
+endif
+
 
 ifdef MACOS
 

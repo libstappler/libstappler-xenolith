@@ -149,7 +149,7 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual Rc<LabelDeferredResult> runDeferred(event::Looper *, TextLayout *format, const Color4F &color);
+	virtual Rc<LabelDeferredResult> runDeferred(thread::ThreadPool *, TextLayout *format, const Color4F &color);
 
 	virtual void applyLayout(TextLayout *);
 

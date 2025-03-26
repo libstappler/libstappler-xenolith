@@ -142,7 +142,6 @@ bool Win32View::init(ViewInterface *view, Win32Library *win32, Win32ViewInfo &&i
 
 	if (_window) {
 		SetPropW(_window, L"Xenolith", this);
-		SetTimer(_window, 0, 1 /*(millisec)*/, nullptr);
 	}
 
 	return _window != nullptr;
@@ -167,23 +166,8 @@ void Win32View::mapWindow() {
 	ShowWindow(_window, SW_SHOWNORMAL);
 }
 
-void Win32View::schedule(uint64_t t) {
-	//log::verbose("Win32View", "schedule: ", t);
-	//SetTimer(_window, 1, t / 1000 + 1 /*(millisec)*/, nullptr);
-}
-
 void Win32View::wakeup() {
 	PostMessageW(_window, WM_USER, 0, 0);
-}
-
-void Win32View::handleTimer() {
-	if (_inSizeMove) {
-		_view->update(false);
-	} else {
-		_shouldUpdate = true;
-	}
-
-	SetTimer(_window, 0, 1 /*(millisec)*/, nullptr);
 }
 
 void Win32View::handleWakeup() {
@@ -196,7 +180,12 @@ void Win32View::handleWakeup() {
 
 bool Win32View::handleClose() {
 	_shouldQuit = true;
-	return _view != nullptr;
+	if (_view) {
+		_view->end();
+		return true;
+	} else {
+		return false;
+	}
 }
 
 bool Win32View::handleSize(uint32_t w, uint32_t h, bool maximized, bool minimized) {
@@ -209,7 +198,10 @@ bool Win32View::handleSize(uint32_t w, uint32_t h, bool maximized, bool minimize
 	if (w != _width || h != _height) {
 		_width = w;
 		_height = h;
-		_view->deprecateSwapchain(true);
+		auto e = _view->getPresentationEngine();
+		if (e) {
+			e->deprecateSwapchain(true);
+		}
 	}
 	if (_inSizeMove) {
 		_view->update(false);
@@ -338,7 +330,7 @@ void Win32View::handleKeyRepeat(core::InputKeyCode keyCode, int scancode, char32
 		for (int i = count; i >= 0; -- i) {
 			data.emplace_back(ev);
 		}
-		_view->handleInputEvents(move(data));
+		_view->handleInputEvents(sp::move(data));
 	}
 }
 
@@ -551,6 +543,11 @@ void Win32View::writeToClipboard(BytesView data, StringView contentType) {
     CloseClipboard();
 }
 
+core::FrameConstraints Win32View::exportConstraints(core::FrameConstraints &&c) const {
+	c.extent = Extent3(_width, _height, 1);
+	return move(c);
+}
+
 char32_t Win32View::makeKeyChar(char32_t c) {
 	if (c >= 0xd800 && c <= 0xdbff) {
 		_highSurrogate = c;
@@ -597,11 +594,9 @@ LRESULT Win32View::wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		break;
 	}
 	case WM_TIMER:
-		//XL_WIN32_LOG("WM_TIMER");
-		view->handleTimer();
 		break;
 	case WM_USER:
-		//XL_WIN32_LOG("WM_USER");
+		XL_WIN32_LOG("WM_USER");
 		view->handleWakeup();
 		break;
 	case WM_CLOSE:

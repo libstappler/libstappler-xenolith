@@ -23,6 +23,8 @@
 #ifndef XENOLITH_PLATFORM_WIN32_XLPLATFORMWIN32VIEW_H_
 #define XENOLITH_PLATFORM_WIN32_XLPLATFORMWIN32VIEW_H_
 
+#include "XLCoreInfo.h"
+#include "XLFrameContext.h"
 #include "XLPlatformWin32Library.h"
 #include "XLPlatformViewInterface.h"
 #include "SPPlatformUnistd.h"
@@ -58,8 +60,6 @@ public:
 
 	void mapWindow();
 
-	void schedule(uint64_t);
-
 	HWND getWindow() const { return _window; }
 	HMODULE getInstance() const { return _winInstance; }
 	Win32Library *getWin32() const { return _win32; }
@@ -76,7 +76,6 @@ public:
 
 	void wakeup();
 
-	void handleTimer();
 	void handleWakeup();
 	bool handleClose();
 	bool handleSize(uint32_t w, uint32_t h, bool maximized, bool minimized);
@@ -98,6 +97,8 @@ public:
 
 	void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
 	void writeToClipboard(BytesView, StringView contentType = StringView());
+
+	core::FrameConstraints exportConstraints(core::FrameConstraints &&) const;
 
 protected:
 	char32_t makeKeyChar(char32_t);

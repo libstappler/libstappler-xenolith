@@ -307,16 +307,6 @@ struct Loop::Internal final : memory::AllocPool {
 	Vector<Pair<Rc<core::MaterialInputData>, Vector<Rc<DependencyEvent>>>> _tmpMaterials;
 };
 
-struct Loop::Timer final {
-	Timer(uint64_t interval, Function<bool(Loop &)> &&cb, StringView t)
-	: interval(interval), callback(sp::move(cb)), tag(t) { }
-
-	uint64_t interval;
-	uint64_t value = 0;
-	Function<bool(Loop &)> callback; // return true if timer is complete and should be removed
-	StringView tag;
-};
-
 bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info) {
 	if (!core::Loop::init(looper, instance, move(info))) {
 		return false;

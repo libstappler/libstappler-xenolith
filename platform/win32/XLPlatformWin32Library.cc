@@ -21,6 +21,11 @@
  **/
 
 #include "XLPlatformWin32Library.h"
+#include "SPEventLooper.h"
+#include "platform/windows/SPEventPollIocp.h"
+#include <processthreadsapi.h>
+
+//#define WIL_SUPPRESS_EXCEPTIONS 1
 
 #define interface __STRUCT__
 #include <netlistmgr.h>
@@ -347,7 +352,25 @@ struct Win32Library::Data {
 	}
 };
 
+struct WinThread {
+	Rc<event::PollHandle> _pollHandle;
+	uint32_t _refCount = 0;
+
+	bool runPoll();
+	bool stopPoll();
+};
+
 static Win32Library *s_Win32Library = nullptr;
+
+thread_local WinThread tl_thread;
+
+bool WinThread::runPoll() {
+	return true;
+}
+
+bool WinThread::stopPoll() {
+	return true;
+}
 
 Win32Library *Win32Library::getInstance() {
 	return s_Win32Library;
@@ -367,9 +390,19 @@ bool Win32Library::init() {
 	s_Win32Library = this;
 	loadKeycodes();
 
+	CoInitialize(nullptr);
+
 	_data = new Data;
 
 	return true;
+}
+
+bool Win32Library::runPoll() {
+	return tl_thread.runPoll();
+}
+
+bool Win32Library::stopPoll() {
+	return tl_thread.stopPoll();
 }
 
 // based on https://github.com/glfw/glfw/blob/master/src/win32_monitor.c
@@ -466,7 +499,7 @@ Vector<Win32Display> Win32Library::pollMonitors() {
 void Win32Library::addNetworkConnectionCallback(void *key, Function<void(const NetworkCapabilities &)> &&cb) {
 	std::unique_lock lock(_data->_mutex);
 	cb(_data->capabilities);
-	_data->networkCallbacks.emplace(key, Data::StateCallback{move(cb), this});
+	_data->networkCallbacks.emplace(key, Data::StateCallback{sp::move(cb), this});
 }
 
 void Win32Library::removeNetworkConnectionCallback(void *key) {

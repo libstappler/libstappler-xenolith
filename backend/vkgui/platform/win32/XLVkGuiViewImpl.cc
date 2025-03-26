@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 #include "XLTextInputManager.h"
 #include "XLVkPlatform.h"
+#include "XLVkPresentationEngine.h"
 
 #define XL_WIN32_DEBUG 1
 
@@ -68,85 +69,50 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 		return false;
 	}
 
-	//_options.flattenFrameRate = true;
-	//_options.renderOnDemand = false;
-
-	return true;
-}
-
-void ViewImpl::threadInit() {
-	thread::ThreadInfo::setThreadInfo(_threadName);
-	_threadId = std::this_thread::get_id();
-
 	auto data = (InstanceSurfaceData *)_instance->getUserdata();
+
 	_view = Rc<xenolith::platform::Win32View>::create(this, data->win32, xenolith::platform::Win32ViewInfo{
-		_info.bundleId, _info.name, _info.rect,
+		_info.window.bundleId, _info.window.title, _info.window.rect,
 		[] (ViewInterface *view) {
 			((ViewImpl *)view)->captureWindow();
 		}, [] (ViewInterface *view) {
 			((ViewImpl *)view)->releaseWindow();
 		}, [] (ViewInterface *view) {
-			((ViewImpl *)view)->handlePaint();
+			((ViewImpl *)view)->waitUntilFrame();
 		}
 	});
-	if (_view) {
-		if (auto surface = WinView_createSurface(_instance, _view)) {
-			_surface = Rc<Surface>::create(_instance, surface, _view);
-		}
-		setFrameInterval(_view->getScreenFrameInterval());
+
+	if (!_view) {
+		return false;
 	}
 
-	View::threadInit();
-}
-
-void ViewImpl::threadDispose() {
-	View::threadDispose();
-
-	_surface = nullptr;
-	_view = nullptr;
-}
-
-bool ViewImpl::worker() {
-	MSG msg = { };
-
-	while (_shouldQuit.test_and_set()) {
-		if (_view->shouldUpdate()) {
-			update(false);
-		}
-
-		auto ret = PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE);
-		if (ret) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-
-			if (_view->shouldUpdate()) {
-				update(false);
-			}
-			if (_view->shouldQuit()) {
-				_view->dispose();
-				return false;
-			}
-		} else {
-			if (MsgWaitForMultipleObjects(0, NULL, FALSE, 1, QS_ALLEVENTS) == WAIT_TIMEOUT) {
-				update(false);
-			}
-			//WaitMessage();
-		}
+	auto surface = Rc<vk::Surface>::create(_instance, WinView_createSurface(_instance, _view), _view);
+	if (!surface) {
+		return false;
 	}
 
-	_view->dispose();
-	PostQuitMessage(0);
+	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface),
+			_view->exportConstraints(_info.exportConstraints()), _view->getScreenFrameInterval());
+	if (engine) {
+		setPresentationEngine(move(engine));
+		return true;
+	}
+
+	log::error("ViewImpl", "Fail to initalize PresentationEngine");
 	return false;
 }
 
-void ViewImpl::wakeup(std::unique_lock<Mutex> &lock) {
-	lock.unlock();
-	std::unique_lock lock2(_captureMutex);
-	if (_windowCaptured) {
-		_captureCondVar.notify_all();
-	} else {
-		_view->wakeup();
-	}
+void ViewImpl::run() {
+	View::run();
+
+	_view->getWin32()->runPoll();
+}
+
+void ViewImpl::end() {
+	_view->getWin32()->stopPoll();
+	_view = nullptr;
+
+	View::end();
 }
 
 void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
@@ -160,7 +126,7 @@ void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, T
 void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
 	performOnThread([this] {
 		_inputEnabled = true;
-		_mainLoop->performOnMainThread([&] () {
+		_mainLoop->performOnAppThread([&] () {
 			_director->getTextInputManager()->setInputEnabled(true);
 		}, this);
 	}, this);
@@ -169,86 +135,42 @@ void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, Text
 void ViewImpl::cancelTextInput() {
 	performOnThread([this] {
 		_inputEnabled = false;
-		_mainLoop->performOnMainThread([&] () {
+		_mainLoop->performOnAppThread([&] () {
 			_director->getTextInputManager()->setInputEnabled(false);
 		}, this);
 	}, this);
 }
 
-void ViewImpl::presentWithQueue(vk::DeviceQueue &queue, Rc<ImageStorage> &&image) {
-	vk::View::presentWithQueue(queue, move(image));
-}
-
 void ViewImpl::captureWindow() {
-	_tmpOptions = _options;
+	/*_tmpOptions = _options;
 	_options.presentImmediate = true;
 	_options.acquireImageImmediately = true;
 	_options.renderOnDemand = true;
-	_readyForNextFrame = false;
+	_readyForNextFrame = false;*/
 	std::unique_lock lock(_captureMutex);
 	_windowCaptured = true;
 }
 
 void ViewImpl::releaseWindow() {
-	_options = _tmpOptions;
+	//_options = _tmpOptions;
 	std::unique_lock lock(_captureMutex);
 	_windowCaptured = false;
 }
 
-void ViewImpl::handlePaint() {
-	// draw frame in blocking mode when resizeing
-
-	std::unique_lock lock(_captureMutex);
-	// wait until swaphain recreation
-	if (_swapchain->isDeprecated()) {
-		update(false);
-		while (_swapchain->isDeprecated()) {
-			auto status = _captureCondVar.wait_for(lock, std::chrono::milliseconds(32));
-			if (status == std::cv_status::timeout) {
-				return;
-			}
-			update(false);
-		}
-	}
-
-	auto c = _swapchain->getPresentedFramesCount();
-	update(false);
-	while (c == _swapchain->getPresentedFramesCount()) {
-		auto status = _captureCondVar.wait_for(lock, std::chrono::milliseconds(32));
-		if (status == std::cv_status::timeout) {
-			return;
-		}
-		update(false);
-	}
-}
-
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	performOnThread([this, cb = move(cb), ref = Rc<Ref>(ref)] () mutable {
-		_view->readFromClipboard([this, cb = move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnMainThread([cb = move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
+	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
+		_view->readFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
+			_mainLoop->performOnAppThread([cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
 				cb(view, ct);
 			}, this);
 		}, ref);
-	}, this);
+	}, this, true);
 }
 
 void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
 	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
 		_view->writeToClipboard(data, contentType);
-	}, this);
-}
-
-bool ViewImpl::pollInput(bool frameReady) {
-	/*MSG msg = { };
-	while (PeekMessageW(&msg, _view->getWindow(), 0, 0, PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}*/
-	if (_view->shouldQuit()) {
-		_shouldQuit.clear();
-		return false;
-	}
-	return true;
+	}, this, true);
 }
 
 void ViewImpl::mapWindow() {
@@ -256,18 +178,6 @@ void ViewImpl::mapWindow() {
 		_view->mapWindow();
 	}
 	View::mapWindow();
-}
-
-void ViewImpl::finalize() {
-	_view = nullptr;
-	View::finalize();
-}
-
-void ViewImpl::schedulePresent(SwapchainImage *img, uint64_t t) {
-	View::schedulePresent(img, t);
-	if (_view) {
-		_view->schedule(t);
-	}
 }
 
 Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&info) {

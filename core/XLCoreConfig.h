@@ -28,7 +28,12 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 
 /* Presentation Scheduler interval, used for non-blocking vkWaitForFence */
+
+#if WIN32
+static constexpr uint64_t PresentationSchedulerInterval = 1000; // Windows scheduler effective only at 1ms interval
+#else
 static constexpr uint64_t PresentationSchedulerInterval = 500; // 500 ms or 1/32 of 60fps frame
+#endif
 
 #if ANDROID
 

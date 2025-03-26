@@ -491,21 +491,21 @@ DeviceInfo::Features::Features() {
 }
 
 DeviceInfo::Features::Features(const Features &f) {
-	memcpy(this, &f, sizeof(Features));
+	memcpy((void *)this, &f, sizeof(Features));
 }
 
 DeviceInfo::Features &DeviceInfo::Features::operator=(const Features &f) {
-	memcpy(this, &f, sizeof(Features));
+	memcpy((void *)this, &f, sizeof(Features));
 	return *this;
 }
 
 DeviceInfo::Properties::Properties() { }
 
 DeviceInfo::Properties::Properties(const Properties &p) {
-	memcpy(this, &p, sizeof(Properties)); }
+	memcpy((void *)this, &p, sizeof(Properties)); }
 
 DeviceInfo::Properties &DeviceInfo::Properties::operator=(const Properties &p) {
-	memcpy(this, &p, sizeof(Properties));
+	memcpy((void *)this, &p, sizeof(Properties));
 	return *this;
 }
 

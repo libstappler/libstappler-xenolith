@@ -104,6 +104,7 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 	}
 
 	if constexpr (config::UseExternalFenceSync) {
+#if SP_POSIX
 		auto dev = static_cast<Device *>(_object.device);
 
 		int fd = -1;
@@ -135,6 +136,7 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 		} else if (status != VK_ERROR_FEATURE_NOT_PRESENT) {
 			log::error("Fence", "Fail to export fence fd");
 		}
+#endif
 	}
 	return nullptr;
 }

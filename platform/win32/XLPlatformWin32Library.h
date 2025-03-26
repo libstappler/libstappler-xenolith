@@ -53,6 +53,9 @@ public:
 
 	bool init();
 
+	bool runPoll();
+	bool stopPoll();
+
 	const core::InputKeyCode *getKeycodes() const { return _keycodes; }
 	const uint16_t *getScancodes() const { return _scancodes; }
 

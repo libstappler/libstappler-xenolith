@@ -21,6 +21,7 @@
  **/
 
 #include "XL2dVectorSprite.h"
+#include "SPThreadPool.h"
 #include "XLApplication.h"
 #include "XLTexture.h"
 #include "XL2dFrameContext.h"
@@ -30,16 +31,16 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(event::Looper *queue, Rc<VectorImageData> &&image,
+static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(thread::ThreadPool *queue, Rc<VectorImageData> &&image,
 		const VectorCanvasConfig &config, bool waitOnReady) {
 	auto result = new std::promise<Rc<VectorCanvasResult>>;
 	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
-	queue->performAsync([queue, image = move(image), config, ret, result] () mutable {
+	queue->perform([queue, image = move(image), config, ret, result] () mutable {
 		auto canvas = VectorCanvas::getInstance();
 		auto res = canvas->draw(config, move(image));
 		result->set_value(res);
 
-		queue->performOnThread([ret = move(ret), res = move(res), result] () mutable {
+		queue->performCompleted([ret = move(ret), res = move(res), result] () mutable {
 			ret->handleReady(move(res));
 			delete result;
 		}, queue);
@@ -450,7 +451,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		}
 
 		if (_deferred) {
-			_deferredResult = VectorSprite_runDeferredVectorCavas(_director->getApplication()->getAppLooper(),
+			_deferredResult = VectorSprite_runDeferredVectorCavas(_director->getApplication()->getAppLooper()->getThreadPool(),
 					move(imageData), config, _waitDeferred);
 			_result = nullptr;
 		} else {

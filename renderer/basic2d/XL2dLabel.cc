@@ -21,6 +21,7 @@
  **/
 
 #include "XL2dLabel.h"
+#include "SPThreadPool.h"
 #include "XL2dFrameContext.h"
 #include "XLFrameInfo.h"
 #include "XLEventListener.h"
@@ -336,14 +337,14 @@ const Label::DescriptionStyle &Label::getStyle() const {
 	return _style;
 }
 
-Rc<LabelDeferredResult> Label::runDeferred(event::Looper *queue, TextLayout *format, const Color4F &color) {
+Rc<LabelDeferredResult> Label::runDeferred(thread::ThreadPool *queue, TextLayout *format, const Color4F &color) {
 	auto result = new std::promise<Rc<LabelResult>>;
 	Rc<LabelDeferredResult> ret = Rc<LabelDeferredResult>::create(result->get_future());
-	queue->performAsync([queue, format = Rc<Label::TextLayout>(format), color, ret, result] () mutable {
+	queue->perform([queue, format = Rc<Label::TextLayout>(format), color, ret, result] () mutable {
 		auto res = Label::writeResult(format, color);
 		result->set_value(res);
 
-		queue->performOnThread([ret = move(ret), res = move(res), result] () mutable {
+		queue->performCompleted([ret = move(ret), res = move(res), result] () mutable {
 			ret->handleReady(move(res));
 			delete result;
 		}, queue);
@@ -557,7 +558,7 @@ void Label::updateVertexes(FrameInfo &frame) {
 	}
 
 	if (_deferred) {
-		_deferredResult = runDeferred(_director->getApplication()->getAppLooper(), _format, _displayedColor);
+		_deferredResult = runDeferred(_director->getApplication()->getAppLooper()->getThreadPool(), _format, _displayedColor);
 		_vertexes.clear();
 		_vertexColorDirty = false;
 	} else {

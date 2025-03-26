@@ -23,6 +23,12 @@
 
 #include "XLTextInputManager.h"
 
+#if WIN32
+#ifdef DELETE
+#undef DELETE
+#endif
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 TextInputHandler::~TextInputHandler() {

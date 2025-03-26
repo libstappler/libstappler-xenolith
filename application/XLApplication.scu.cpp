@@ -22,7 +22,6 @@
 
 #include "XLCommon.h"
 
-#include "XLApplicationPlatform.cc"
 #include "XLApplication.cc"
 #include "XLEvent.cc"
 #include "XLEventHandler.cc"

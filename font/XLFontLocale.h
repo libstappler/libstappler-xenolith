@@ -35,7 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 #endif
 
 // full localized string
-template <typename CharType, CharType ... Chars> auto operator "" _locale() {
+template <typename CharType, CharType ... Chars> auto operator ""_locale() {
 	return metastring::merge("@Locale:"_meta, metastring::metastring<Chars ...>());
 }
 
@@ -44,7 +44,7 @@ template <typename CharType, CharType ... Chars> auto operator "" _locale() {
 #endif
 
 // localized token
-inline String operator"" _token ( const char* str, std::size_t len) {
+inline String operator""_token ( const char* str, std::size_t len) {
 	String ret;
 	ret.reserve(len + 2);
 	ret.append("%");

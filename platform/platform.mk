@@ -27,7 +27,7 @@ MODULE_XENOLITH_PLATFORM_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/platform
 MODULE_XENOLITH_PLATFORM_DEPENDS_ON := xenolith_core
 
 ifdef WIN32
-MODULE_XENOLITH_PLATFORM_LIBS += -lgdi32 -lole32 -loleaut32 -lwinhttp
+MODULE_XENOLITH_PLATFORM_LIBS += -lgdi32 -lole32 -loleaut32 -lwinhttp -lUser32
 endif
 
 #spec

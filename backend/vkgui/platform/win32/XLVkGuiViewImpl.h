@@ -39,28 +39,21 @@ public:
 
 	virtual bool init(Application &loop, const core::Device &dev, ViewInfo &&);
 
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
+	virtual void run() override;
+	virtual void end() override;
 
 	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
 	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
 	virtual void runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
 	virtual void cancelTextInput() override;
 
-	virtual void presentWithQueue(vk::DeviceQueue &, Rc<ImageStorage> &&) override;
-
 	virtual bool isInputEnabled() const override { return _inputEnabled; }
 
 	vk::Device *getDevice() const { return _device; }
 
-	// minimal poll interval
-	virtual uint64_t getUpdateInterval() const override { return 1000; }
-
 	virtual void mapWindow() override;
 
 	virtual void linkWithNativeWindow(void *) override { }
-	virtual void stopNativeWindow() override { }
 
 	void captureWindow();
 	void releaseWindow();
@@ -71,16 +64,8 @@ public:
 	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) override;
 
 protected:
-	virtual void wakeup(std::unique_lock<Mutex> &) override;
-
-	virtual bool pollInput(bool frameReady) override;
-
-	virtual void finalize() override;
-
-	virtual void schedulePresent(SwapchainImage *, uint64_t) override;
 
 	Rc<xenolith::platform::Win32View> _view;
-	EngineOptions _tmpOptions;
 	bool _inputEnabled = false;
 	bool _windowCaptured = false;
 	std::mutex _captureMutex;

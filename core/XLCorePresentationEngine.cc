@@ -574,6 +574,7 @@ void PresentationEngine::runScheduledPresent(PresentationFrame *frame) {
 }
 
 void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame) {
+	XL_COREPRESENT_LOG("presentSwapchainImage");
 	if (frame->getSwapchain() == _swapchain && frame->getSwapchainImage()->isSubmitted()) {
 		presentWithQueue(*queue, frame);
 	}

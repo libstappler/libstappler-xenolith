@@ -23,6 +23,9 @@
 #include "XLPlatformApplication.h"
 #include "SPCommandLineParser.h"
 #include "SPEventTimerHandle.h"
+#include "SPMemPoolInterface.h"
+#include "SPThread.h"
+#include "SPTime.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -247,6 +250,8 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 		return false;
 	}
 
+	thread::ThreadInfo::setThreadPool(memory::pool::acquire());
+
 	_mainLooper = event::Looper::acquire(event::LooperInfo{
 		.workersCount = info.mainThreadsCount
 	});
@@ -318,7 +323,7 @@ void PlatformApplication::threadInit() {
 			data->performUpdate();
 		}),
 		.interval = _info.updateInterval,
-		.count = event::TimerInfo::Infinite - 1,
+		.count = event::TimerInfo::Infinite,
 	});
 
 	if (_info.initCallback) {
@@ -548,6 +553,37 @@ void PlatformApplication::platformSignalExit() {
 
 #endif
 
+
+#if WIN32
+
+#include "SPPlatformUnistd.h"
+#include <shellapi.h>
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+void PlatformApplication::openUrl(StringView url) const {
+	ShellExecute(0, 0, (wchar_t *)string::toUtf16<Interface>(url).data(), 0, 0 , SW_SHOW );
+}
+
+void PlatformApplication::platformInitialize() { }
+
+void PlatformApplication::platformWaitExit() {
+	_mainLooper->run(TimeInterval::seconds(1000000000));
+	Thread::waitStopped();
+}
+
+void PlatformApplication::platformSignalExit() {
+	_mainLooper->performOnThread([this] {
+		_mainLooper->wakeup(event::QueueWakeupInfo{
+			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
+			.timeout = TimeInterval::seconds(1)
+		});
+	}, this, false);
+}
+
+}
+
+#endif
 
 #if MACOS
 
