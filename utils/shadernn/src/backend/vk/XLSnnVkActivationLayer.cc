@@ -113,7 +113,7 @@ bool ActivationLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> ActivationLayer::LayerHandle::doPrepareCommands(FrameHandle &) {
+Vector<const core::CommandBuffer *> ActivationLayer::LayerHandle::doPrepareCommands(FrameHandle &) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -131,7 +131,7 @@ Vector<const vk::CommandBuffer *> ActivationLayer::LayerHandle::doPrepareCommand
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 }

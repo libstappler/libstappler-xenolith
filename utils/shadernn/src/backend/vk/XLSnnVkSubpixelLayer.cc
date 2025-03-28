@@ -102,7 +102,7 @@ bool SubpixelLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&c
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
+Vector<const core::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -121,7 +121,7 @@ Vector<const vk::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 }

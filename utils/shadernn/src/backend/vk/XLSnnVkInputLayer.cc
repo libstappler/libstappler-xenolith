@@ -138,7 +138,7 @@ void InputLayer::LayerHandle::doTransferInput(vk::CommandBuffer &buf, DeviceFram
 			0, makeSpanView(&outImageBarrier, 1));
 }
 
-Vector<const vk::CommandBuffer *> InputLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> InputLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -159,7 +159,7 @@ Vector<const vk::CommandBuffer *> InputLayer::LayerHandle::doPrepareCommands(Fra
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 InputBufferLayer::~InputBufferLayer() { }
@@ -268,7 +268,7 @@ bool InputBufferLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -296,7 +296,7 @@ Vector<const vk::CommandBuffer *> InputBufferLayer::LayerHandle::doPrepareComman
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 InputCsvIntLayer::~InputCsvIntLayer() { }
@@ -402,7 +402,7 @@ bool InputCsvIntLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -426,7 +426,7 @@ Vector<const vk::CommandBuffer *> InputCsvIntLayer::LayerHandle::doPrepareComman
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 }

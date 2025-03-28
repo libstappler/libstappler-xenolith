@@ -76,7 +76,7 @@ const core::AttachmentData *GenQueue::getActivationDataAttachment() const {
 }
 
 void GenQueue::run(Application *app, Extent3 e) {
-	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameContraints{e});
+	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameConstraints{e});
 
 	auto genInputData = Rc<GenerationDataInput>::alloc();
 	genInputData->data = GenerationData{UVec3{0, 0, 0}, maxOf<uint16_t>(), -1.2f, 1.2f};

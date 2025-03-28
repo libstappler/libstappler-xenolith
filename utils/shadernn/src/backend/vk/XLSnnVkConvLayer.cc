@@ -223,7 +223,7 @@ bool Conv2DLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb)
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> Conv2DLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
+Vector<const core::CommandBuffer *> Conv2DLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -242,7 +242,7 @@ Vector<const vk::CommandBuffer *> Conv2DLayer::LayerHandle::doPrepareCommands(Fr
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 }

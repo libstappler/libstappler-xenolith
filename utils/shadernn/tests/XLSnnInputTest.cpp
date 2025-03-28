@@ -88,7 +88,7 @@ void InputQueue::run(Application *app, StringView image) {
 		return;
 	}
 
-	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameContraints{frameExtent});
+	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameConstraints{frameExtent});
 
 	auto inputData = Rc<InputDataInput>::alloc();
 	inputData->norm = NormData{

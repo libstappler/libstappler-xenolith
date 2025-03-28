@@ -53,7 +53,7 @@ public:
 		virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
 
 	protected:
-		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 		const vk::ImageAttachmentHandle *_inputImage = nullptr;
 		const vk::ImageAttachmentHandle *_outputImage = nullptr;

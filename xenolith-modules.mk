@@ -21,8 +21,8 @@
 # current dir
 XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-XENOLITH_VERSION_API := 2
-XENOLITH_VERSION_REV := 4
+XENOLITH_VERSION_API := 3
+XENOLITH_VERSION_REV := 0
 XENOLITH_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(XENOLITH_MODULE_DIR)))
 
 TOOLKIT_MODULE_LIST += \

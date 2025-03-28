@@ -107,7 +107,7 @@ bool StatPercentLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> 
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -167,7 +167,7 @@ Vector<const vk::CommandBuffer *> StatPercentLayer::LayerHandle::doPrepareComman
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 void StatPercentLayer::LayerHandle::doSubmitted(FrameHandle &h, Function<void(bool)> &&cb, bool s, Rc<Fence> &&fence) {
@@ -273,7 +273,7 @@ bool StatAnalysisLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)>
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const vk::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
@@ -312,7 +312,7 @@ Vector<const vk::CommandBuffer *> StatAnalysisLayer::LayerHandle::doPrepareComma
 		}, true);
 		return true;
 	});
-	return Vector<const vk::CommandBuffer *>{buf};
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
 void StatAnalysisLayer::LayerHandle::doSubmitted(FrameHandle &h, Function<void(bool)> &&cb, bool s, Rc<Fence> &&fence) {

@@ -275,4 +275,12 @@ void View::setDecorationVisible(bool) {
 
 }
 
+void View::deprecateSwapchain() {
+	performOnThread([this] {
+		if (_presentationEngine) {
+			_presentationEngine->deprecateSwapchain(false);
+		}
+	}, this, false);
+}
+
 }

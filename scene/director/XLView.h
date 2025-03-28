@@ -120,6 +120,8 @@ public:
 
 	virtual void mapWindow() { }
 
+	virtual void deprecateSwapchain();
+
 protected:
 	bool _inBackground = false;
 	bool _hasFocus = true;

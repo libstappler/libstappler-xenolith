@@ -66,7 +66,7 @@ public:
 	protected:
 		void doTransferInput(vk::CommandBuffer &buf, DeviceFrameHandle &handle, InputDataInput *);
 
-		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 		const vk::ImageAttachmentHandle *_inputImage = nullptr;
 		const vk::ImageAttachmentHandle *_outputImage = nullptr;
@@ -103,7 +103,7 @@ public:
 		virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
 
 	protected:
-		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 		vk::BufferAttachmentHandle *_inputBuffer = nullptr;
 		vk::BufferAttachmentHandle *_outputBuffer = nullptr;
@@ -143,7 +143,7 @@ public:
 		virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
 
 	protected:
-		virtual Vector<const vk::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 		vk::BufferAttachmentHandle *_inputBuffer = nullptr;
 		vk::BufferAttachmentHandle *_outputBuffer = nullptr;

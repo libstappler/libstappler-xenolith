@@ -399,7 +399,7 @@ void ModelQueue::run(Application *app) {
 		frameExtent.height = _csvData->data.size();
 	}
 
-	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameContraints{frameExtent});
+	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameConstraints{frameExtent});
 
 	ModelSpecialization spec = _processor->specializeModel(_model, frameExtent);
 
@@ -551,7 +551,7 @@ void ModelQueue::onComplete(Application *app, BytesView data) {
 	if (_loadOffset < 60000) {
 		// 5  std::cout << iter << " Loss: " << loss << "\n";
 		_epochLoss += loss;
-		app->performOnMainThread([this, app] {
+		app->performOnAppThread([this, app] {
 			run(_app);
 		});
 	} else {
@@ -563,7 +563,7 @@ void ModelQueue::onComplete(Application *app, BytesView data) {
 		++ _epoch;
 
 		if (_epoch < _endEpoch) {
-			app->performOnMainThread([this, app] {
+			app->performOnAppThread([this, app] {
 				run(app);
 			});
 		} else {

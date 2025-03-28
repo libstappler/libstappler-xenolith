@@ -98,7 +98,7 @@ protected:
 	Vector<VkDescriptorPoolSize> _sizes;
 	Vector<Vector<DescriptorBindingInfo>> _descriptors;
 
-	Rc<TextureSetLayout> _textureSetLayout;
+	Rc<core::TextureSetLayout> _textureSetLayout;
 
 	uint32_t _maxSets = 0;
 	bool _updateAfterBind = false;
