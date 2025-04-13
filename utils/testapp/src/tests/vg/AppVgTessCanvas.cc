@@ -21,6 +21,7 @@
  **/
 
 #include "AppVgTessCanvas.h"
+#include "SPFilepath.h"
 #include "XLInputListener.h"
 #include "XLDirector.h"
 #include "XLView.h"
@@ -53,29 +54,48 @@ void VgTessCursor::updateState(VectorImage &image, State state) {
 	case Point:
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Point")
-			->setFillColor(Color::White)
-			.openForWriting([] (vg::PathWriter &writer) {
-				writer.addOval(Rect(16, 16, 32, 32));
-			}).setAntialiased(false);
+				->setFillColor(Color::White)
+				.openForWriting([](vg::PathWriter &writer) {
+			writer.addOval(Rect(16, 16, 32, 32));
+		}).setAntialiased(false);
 		break;
 	case Capture:
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Capture")
-			->setFillColor(Color::White)
-			.openForWriting([] (vg::PathWriter &writer) {
-				writer.moveTo(0, 24) .lineTo(4, 24) .lineTo(4, 4) .lineTo(24, 4) .lineTo(24, 0) .lineTo(0, 0)
-					.moveTo(0, 40) .lineTo(0, 64) .lineTo(24, 64) .lineTo(24, 60) .lineTo(4, 60) .lineTo(4, 40)
-					.moveTo(40, 64) .lineTo(64, 64) .lineTo(64, 40) .lineTo(60, 40) .lineTo(60, 60) .lineTo(40, 60)
-					.moveTo(40, 0) .lineTo(64, 0) .lineTo(64, 24) .lineTo(60, 24) .lineTo(60, 4) .lineTo(40, 4);
-			})
-			.setAntialiased(false);
+				->setFillColor(Color::White)
+				.openForWriting([](vg::PathWriter &writer) {
+			writer.moveTo(0, 24)
+					.lineTo(4, 24)
+					.lineTo(4, 4)
+					.lineTo(24, 4)
+					.lineTo(24, 0)
+					.lineTo(0, 0)
+					.moveTo(0, 40)
+					.lineTo(0, 64)
+					.lineTo(24, 64)
+					.lineTo(24, 60)
+					.lineTo(4, 60)
+					.lineTo(4, 40)
+					.moveTo(40, 64)
+					.lineTo(64, 64)
+					.lineTo(64, 40)
+					.lineTo(60, 40)
+					.lineTo(60, 60)
+					.lineTo(40, 60)
+					.moveTo(40, 0)
+					.lineTo(64, 0)
+					.lineTo(64, 24)
+					.lineTo(60, 24)
+					.lineTo(60, 4)
+					.lineTo(40, 4);
+		}).setAntialiased(false);
 		break;
 	case Target:
 		image.clear();
 		image.addPath("", "org.stappler.xenolith.tess.TessCursor.Target")
-			->setFillColor(Color::White)
-			.openForWriting([] (vg::PathWriter &writer) {
-				writer.moveTo(0.0f, 30.0f)
+				->setFillColor(Color::White)
+				.openForWriting([](vg::PathWriter &writer) {
+			writer.moveTo(0.0f, 30.0f)
 					.lineTo(0.0f, 34.0f)
 					.lineTo(30.0f, 34.0f)
 					.lineTo(30.0f, 64.0f)
@@ -87,8 +107,7 @@ void VgTessCursor::updateState(VectorImage &image, State state) {
 					.lineTo(34.0f, 0.0f)
 					.lineTo(30.0f, 0.0f)
 					.lineTo(30.0f, 30.0f);
-			})
-			.setAntialiased(false);
+		}).setAntialiased(false);
 		break;
 	}
 }
@@ -96,10 +115,10 @@ void VgTessCursor::updateState(VectorImage &image, State state) {
 bool VgTessPoint::init(const Vec2 &p, uint32_t index) {
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath("", "org.stappler.xenolith.tess.TessPoint")
-		->setFillColor(Color::White)
-		.openForWriting([] (vg::PathWriter &writer) {
-			writer.addOval(Rect(0, 0, 10, 10));
-		}).setAntialiased(false);
+			->setFillColor(Color::White)
+			.openForWriting([](vg::PathWriter &writer) {
+		writer.addOval(Rect(0, 0, 10, 10));
+	}).setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
 		return false;
@@ -153,12 +172,12 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 	_onContourUpdated = sp::move(cb);
 
 	auto inputListener = addInputListener(Rc<InputListener>::create());
-	inputListener->addTouchRecognizer([this] (const GestureData &ev) {
+	inputListener->addTouchRecognizer([this](const GestureData &ev) {
 		onTouch(*ev.input);
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseLeft}));
 
-	inputListener->addMoveRecognizer([this] (const GestureData &ev) {
+	inputListener->addMoveRecognizer([this](const GestureData &ev) {
 		onMouseMove(*ev.input);
 		return true;
 	});
@@ -169,15 +188,15 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 	keys.set(toInt(InputKeyCode::S));
 	keys.set(toInt(InputKeyCode::D));
 
-	inputListener->addKeyRecognizer([] (const GestureData &ev) {
-		std::cout << ev.event << " " << ev.input->data.key.keycode << " (" << ev.input->data.key.keysym << ")\n";
+	inputListener->addKeyRecognizer([](const GestureData &ev) {
+		std::cout << ev.event << " " << ev.input->data.key.keycode << " ("
+				  << ev.input->data.key.keysym << ")\n";
 
 		return true;
 	}, sp::move(keys));
 
-	inputListener->setPointerEnterCallback([this] (bool pointerEnter) {
-		return onPointerEnter(pointerEnter);
-	});
+	inputListener->setPointerEnterCallback(
+			[this](bool pointerEnter) { return onPointerEnter(pointerEnter); });
 
 	_cursor = addChild(Rc<VgTessCursor>::create());
 	_cursor->setColor(Color::Black);
@@ -199,10 +218,10 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 	_pathLines->setVisible(false);
 	_pathLines->setRenderingLevel(RenderingLevel::Transparent);
 
-	auto path = filesystem::writablePath<Interface>("path.cbor");
+	auto path = FileInfo("path.cbor", FileCategory::AppState);
 	filesystem::mkdir(filepath::root(path));
 	if (filesystem::exists(path)) {
-		auto loadArray = [&] (ContourData &c, const Value &val) {
+		auto loadArray = [&](ContourData &c, const Value &val) {
 			for (auto &it : val.asArray()) {
 				Vec2 point(it.getDouble(0), it.getDouble(1));
 				auto pt = Rc<VgTessPoint>::create(point, uint32_t(c.points.size()));
@@ -279,13 +298,9 @@ void VgTessCanvas::setSelectedContour(uint32_t n) {
 	_onContourUpdated();
 }
 
-uint32_t VgTessCanvas::getSelectedContour() const {
-	return _contourSelected;
-}
+uint32_t VgTessCanvas::getSelectedContour() const { return _contourSelected; }
 
-uint32_t VgTessCanvas::getContoursCount() const {
-	return uint32_t(_contours.size());
-}
+uint32_t VgTessCanvas::getContoursCount() const { return uint32_t(_contours.size()); }
 
 void VgTessCanvas::addContour() {
 	if (_contours.back().points.size() > 0) {
@@ -302,9 +317,7 @@ void VgTessCanvas::setStrokeWidth(float val) {
 	}
 }
 
-float VgTessCanvas::getStrokeWidth() const {
-	return _strokeWidth;
-}
+float VgTessCanvas::getStrokeWidth() const { return _strokeWidth; }
 
 void VgTessCanvas::onTouch(const InputEvent &ev) {
 	switch (ev.data.event) {
@@ -330,16 +343,13 @@ void VgTessCanvas::onTouch(const InputEvent &ev) {
 				&& (ev.currentTime - ev.originalTime) < TapIntervalAllowed.toMicros()) {
 			onActionTouch(ev);
 		} else {
-			 std::cout << "Distance: " << ev.currentLocation.distance(ev.originalLocation)
-					 << " Time: " << ev.currentTime - ev.originalTime << "\n";
+			std::cout << "Distance: " << ev.currentLocation.distance(ev.originalLocation)
+					  << " Time: " << ev.currentTime - ev.originalTime << "\n";
 		}
 		_capturedPoint = nullptr;
 		break;
-	case InputEventName::Cancel:
-		_capturedPoint = nullptr;
-		break;
-	default:
-		break;
+	case InputEventName::Cancel: _capturedPoint = nullptr; break;
+	default: break;
 	}
 }
 
@@ -394,7 +404,7 @@ void VgTessCanvas::onActionTouch(const InputEvent &ev) {
 
 					while (it != cIt->points.end()) {
 						(*it)->setIndex((*it)->getIndex() - 1);
-						++ it;
+						++it;
 					}
 
 					if (cIt->points.size() == 0 && _contours.size() != 0) {
@@ -404,10 +414,10 @@ void VgTessCanvas::onActionTouch(const InputEvent &ev) {
 					updatePoints();
 					return;
 				} else {
-					++ it;
+					++it;
 				}
 			}
-			++ cIt;
+			++cIt;
 		}
 	} else {
 		if (_contourSelected == 0 && _contours.empty()) {
@@ -425,7 +435,7 @@ void VgTessCanvas::onActionTouch(const InputEvent &ev) {
 	}
 }
 
-VgTessPoint * VgTessCanvas::getTouchedPoint(const Vec2 &pt) const {
+VgTessPoint *VgTessCanvas::getTouchedPoint(const Vec2 &pt) const {
 	for (auto &c : _contours) {
 		for (auto &it : c.points) {
 			if (it->isTouched(pt, 10)) {
@@ -460,22 +470,16 @@ void VgTessCanvas::updatePoints() {
 	for (const ContourData &contour : _contours) {
 		if (contour.points.size() > 2) {
 			for (auto &it : contour.points) {
-				pathFill->openForWriting([&] (vg::PathWriter &writer) {
-					writer.lineTo(it->getPoint());
-				});
-				pathLines->openForWriting([&] (vg::PathWriter &writer) {
-					writer.lineTo(it->getPoint());
-				});
+				pathFill->openForWriting(
+						[&](vg::PathWriter &writer) { writer.lineTo(it->getPoint()); });
+				pathLines->openForWriting(
+						[&](vg::PathWriter &writer) { writer.lineTo(it->getPoint()); });
 				it->setColor(getColorForIndex(contour.index));
 			}
 
-			pathFill->openForWriting([&] (vg::PathWriter &writer) {
-				writer.closePath();
-			});
-			pathLines->openForWriting([&] (vg::PathWriter &writer) {
-				writer.closePath();
-			});
-			++ nContours;
+			pathFill->openForWriting([&](vg::PathWriter &writer) { writer.closePath(); });
+			pathLines->openForWriting([&](vg::PathWriter &writer) { writer.closePath(); });
+			++nContours;
 		}
 	}
 
@@ -491,7 +495,7 @@ void VgTessCanvas::updatePoints() {
 }
 
 void VgTessCanvas::saveData() {
-	auto path = filesystem::writablePath<Interface>("path.cbor");
+	auto path = FileInfo("path.cbor", FileCategory::AppState);
 	filesystem::remove(path);
 
 	Value val;
@@ -503,12 +507,12 @@ void VgTessCanvas::saveData() {
 	for (const ContourData &contour : _contours) {
 		Value vals;
 		for (auto &it : contour.points) {
-			vals.addValue(Value({ Value(it->getPoint().x), Value(it->getPoint().y)}));
+			vals.addValue(Value({Value(it->getPoint().x), Value(it->getPoint().y)}));
 		}
 		c.addValue(move(vals));
 	}
 
-	data::save(val, path,data::EncodeFormat::Cbor);
+	data::save(val, path, data::EncodeFormat::Cbor);
 }
 
-}
+} // namespace stappler::xenolith::app

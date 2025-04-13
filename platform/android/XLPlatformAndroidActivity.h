@@ -187,6 +187,9 @@ protected:
 	virtual void updateView();
 	virtual bool handleBackButton();
 
+	memory::pool_t *_pool = nullptr;
+	memory::pool_t *_tmpPool = nullptr;
+
 	jmethodID _startActivityMethod = nullptr;
 	jmethodID _intentInitMethod = nullptr;
 	jmethodID _uriParseMethod = nullptr;

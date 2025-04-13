@@ -31,55 +31,56 @@
 namespace stappler::xenolith::shadernn {
 
 bool ModelProcessor::init() {
-	_layers.emplace("inputlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("inputlayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<InputLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("inputbufferlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("inputbufferlayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<InputBufferLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("inputcsvintlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("inputcsvintlayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<InputCsvIntLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("conv2d", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("conv2d",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<Conv2DLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("subpixel", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("subpixel",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<SubpixelLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("statpercentlayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("statpercentlayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<StatPercentLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("statanalysislayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("statanalysislayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<StatAnalysisLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("matrixmullayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("matrixmullayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<MatrixMulLayer>::create(m, tag, idx, data);
 	});
 
-	_layers.emplace("crossentropylosslayer", [] (Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
+	_layers.emplace("crossentropylosslayer",
+			[](Model *m, StringView tag, size_t idx, const Value &data) -> Rc<Layer> {
 		return Rc<CrossEntropyLossLayer>::create(m, tag, idx, data);
 	});
 
 	return true;
 }
 
-Rc<Model> ModelProcessor::load(FilePath modelPath, ModelFlags flags) {
-	Value data;
-	if (filesystem::exists(modelPath.get())) {
-		data = data::readFile<Interface>(modelPath.get());
-	} else if (modelPath.get().at(0) != '/') {
-		auto path = filesystem::currentDir<Interface>(modelPath.get());
-		if (filesystem::exists(path)) {
-			data = data::readFile<Interface>(path);
-		}
-	}
+Rc<Model> ModelProcessor::load(const FileInfo &modelPath, ModelFlags flags) {
+	Value data = data::readFile<Interface>(modelPath);
 	if (!data) {
 		return nullptr;
 	}
@@ -93,7 +94,7 @@ Rc<Model> ModelProcessor::load(FilePath modelPath, ModelFlags flags) {
 	String dataFilePath;
 	if (numNode.isString("bin_file_name")) {
 		auto dataFile = numNode.getString("bin_file_name");
-		dataFilePath = filepath::merge<Interface>(filepath::root(modelPath.get()), dataFile);
+		dataFilePath = filepath::merge<Interface>(filepath::root(modelPath.path), dataFile);
 	}
 
 	auto m = Rc<Model>::create(flags, data, numLayers, dataFilePath);
@@ -105,19 +106,16 @@ Rc<Model> ModelProcessor::load(FilePath modelPath, ModelFlags flags) {
 
 ModelSpecialization ModelProcessor::specializeModel(Model *model, Extent3 extent) {
 	Map<const Layer *, Extent3> inputs;
-	for (auto &it : model->getInputs()) {
-		inputs.emplace(it, extent);
-	}
+	for (auto &it : model->getInputs()) { inputs.emplace(it, extent); }
 	return specializeModel(model, sp::move(inputs));
 }
 
-ModelSpecialization ModelProcessor::specializeModel(Model *model, Map<const Layer *, Extent3> &&inputs) {
+ModelSpecialization ModelProcessor::specializeModel(Model *model,
+		Map<const Layer *, Extent3> &&inputs) {
 	ModelSpecialization ret;
 	ret.inputs = sp::move(inputs);
 
-	for (auto &it : ret.inputs) {
-		ret.attachments.emplace(it.first->getOutput(), it.second);
-	}
+	for (auto &it : ret.inputs) { ret.attachments.emplace(it.first->getOutput(), it.second); }
 
 	for (auto &it : model->getSortedLayers()) {
 		if (ret.inputs.find(it) == ret.inputs.end()) {
@@ -192,4 +190,4 @@ Rc<Layer> ModelProcessor::makeLayer(Model *m, StringView tag, size_t idx, Value 
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::shadernn

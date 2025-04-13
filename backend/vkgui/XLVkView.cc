@@ -60,45 +60,44 @@ bool View::init(Application &app, const Device &dev, ViewInfo &&info) {
 	return true;
 }
 
-void View::end() {
-	xenolith::View::end();
-}
+void View::end() { xenolith::View::end(); }
 
-void View::captureImage(StringView name, const Rc<core::ImageObject> &image, AttachmentLayout l) const {
-	auto str = name.str<Interface>();
+void View::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
+		AttachmentLayout l) const {
+	auto path = file.path.str<Interface>();
+	auto cat = file.category;
 	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l,
-		[str] (const ImageInfoData &info, BytesView view) mutable {
-			if (!StringView(str).ends_with(".png")) {
-				str = str + String(".png");
+			[path, cat](const ImageInfoData &info, BytesView view) mutable {
+		if (!StringView(path).ends_with(".png")) {
+			path = path + String(".png");
+		}
+		if (!view.empty()) {
+			auto fmt = core::getImagePixelFormat(info.format);
+			bitmap::PixelFormat pixelFormat = bitmap::PixelFormat::Auto;
+			switch (fmt) {
+			case core::PixelFormat::A: pixelFormat = bitmap::PixelFormat::A8; break;
+			case core::PixelFormat::IA: pixelFormat = bitmap::PixelFormat::IA88; break;
+			case core::PixelFormat::RGB: pixelFormat = bitmap::PixelFormat::RGB888; break;
+			case core::PixelFormat::RGBA: pixelFormat = bitmap::PixelFormat::RGBA8888; break;
+			default: break;
 			}
-			if (!view.empty()) {
-				auto fmt = core::getImagePixelFormat(info.format);
-				bitmap::PixelFormat pixelFormat = bitmap::PixelFormat::Auto;
-				switch (fmt) {
-				case core::PixelFormat::A: pixelFormat = bitmap::PixelFormat::A8; break;
-				case core::PixelFormat::IA: pixelFormat = bitmap::PixelFormat::IA88; break;
-				case core::PixelFormat::RGB: pixelFormat = bitmap::PixelFormat::RGB888; break;
-				case core::PixelFormat::RGBA: pixelFormat = bitmap::PixelFormat::RGBA8888; break;
-				default: break;
-				}
-				if (pixelFormat != bitmap::PixelFormat::Auto) {
-					Bitmap bmp(view.data(), info.extent.width, info.extent.height, pixelFormat);
-					bmp.save(str);
-				}
+			if (pixelFormat != bitmap::PixelFormat::Auto) {
+				Bitmap bmp(view.data(), info.extent.width, info.extent.height, pixelFormat);
+				bmp.save(FileInfo{path, cat});
 			}
-		});
+		}
+	});
 }
 
-void View::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, AttachmentLayout l) const {
+void View::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
+		const Rc<core::ImageObject> &image, AttachmentLayout l) const {
 	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l, sp::move(cb));
 }
 
-void View::handleFramePresented(core::PresentationFrame *frame) {
-
-}
+void View::handleFramePresented(core::PresentationFrame *frame) { }
 
 core::SurfaceInfo View::getSurfaceOptions(core::SurfaceInfo &&opts) const {
 	return std::move(opts);
 }
 
-}
+} // namespace stappler::xenolith::vk

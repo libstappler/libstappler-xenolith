@@ -54,8 +54,8 @@ class SP_PUBLIC AssetLibrary : public ApplicationExtension {
 public:
 	static EventHeader onLoaded;
 
-	using AssetCallback = Function<void (const Rc<Asset> &)>;
-	using AssetVecCallback = Function<void (const SpanView<Rc<Asset>> &)>;
+	using AssetCallback = Function<void(const Rc<Asset> &)>;
+	using AssetVecCallback = Function<void(const SpanView<Rc<Asset>> &)>;
 	using TaskCallback = Function<bool(const Server &, const db::Transaction &)>;
 
 	struct AssetRequest {
@@ -65,7 +65,10 @@ public:
 		Rc<Ref> ref;
 
 		AssetRequest(StringView url, AssetCallback &&cb, TimeInterval ttl, Rc<Ref> &&ref)
-		: url(AssetLibrary::getAssetUrl(url)), callback(sp::move(cb)), ttl(ttl), ref(sp::move(ref)) { }
+		: url(AssetLibrary::getAssetUrl(url))
+		, callback(sp::move(cb))
+		, ttl(ttl)
+		, ref(sp::move(ref)) { }
 	};
 
 	struct AssetMultiRequest {
@@ -77,21 +80,25 @@ public:
 		: vec(sp::move(vec)), callback(sp::move(cb)), ref(sp::move(ref)) { }
 	};
 
-	static String getAssetPath(int64_t);
 	static String getAssetUrl(StringView);
 
-	static Rc<ApplicationExtension> createLibrary(Application *, network::Controller *, const Value &dbParams);
+	static Rc<ApplicationExtension> createLibrary(Application *, network::Controller *,
+			StringView name, const FileInfo &root, const Value & = Value());
 
 	virtual ~AssetLibrary();
 
-	bool init(Application *, network::Controller *, const Value &dbParams);
+	bool init(Application *, network::Controller *, StringView name, const FileInfo &root,
+			const Value & = Value());
 
 	virtual void initialize(Application *) override;
 	virtual void invalidate(Application *) override;
 
 	virtual void update(Application *, const UpdateTime &t) override;
 
-	bool acquireAsset(StringView url, AssetCallback &&cb, TimeInterval ttl = TimeInterval(), Rc<Ref> && = nullptr);
+	String getAssetPath(int64_t);
+
+	bool acquireAsset(StringView url, AssetCallback &&cb, TimeInterval ttl = TimeInterval(),
+			Rc<Ref> && = nullptr);
 	bool acquireAssets(SpanView<AssetRequest>, AssetVecCallback && = nullptr, Rc<Ref> && = nullptr);
 
 	Asset *getLiveAsset(StringView) const;
@@ -114,7 +121,7 @@ protected:
 
 	void removeAsset(Asset *);
 
-	network::Handle * downloadAsset(Asset *);
+	network::Handle *downloadAsset(Asset *);
 
 	void cleanup();
 
@@ -124,6 +131,7 @@ protected:
 	Rc<AssetComponentContainer> _container;
 
 	bool _loaded = false;
+	String _rootPath;
 	Map<String, Vector<Pair<AssetCallback, Rc<Ref>>>> _callbacks;
 
 	Vector<Rc<Asset>> _liveAssets;
@@ -138,6 +146,6 @@ protected:
 	Vector<AssetMultiRequest> _tmpMultiRequest;
 };
 
-}
+} // namespace stappler::xenolith::storage
 
 #endif /* XENOLITH_RESOURCES_ASSETS_XLASSETLIBRARY_H_ */

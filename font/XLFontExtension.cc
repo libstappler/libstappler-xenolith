@@ -44,18 +44,18 @@ Rc<core::Queue> FontExtension::createFontQueue(core::Instance *instance, StringV
 	return Rc<vk::FontQueue>::create(name);
 }
 
-Rc<ApplicationExtension> FontExtension::createFontExtension(Rc<Application> &&app, Rc<core::Queue> &&loop) {
+Rc<ApplicationExtension> FontExtension::createFontExtension(Rc<Application> &&app,
+		Rc<core::Queue> &&loop) {
 	return Rc<FontExtension>::create(move(app), move(loop));
 }
 
-Rc<ApplicationExtension> FontExtension::createDefaultController(FontExtension *ext, StringView name) {
+Rc<ApplicationExtension> FontExtension::createDefaultController(FontExtension *ext,
+		StringView name) {
 	auto builder = ext->makeDefaultControllerBuilder(name);
 	return ext->acquireController(move(builder));
 }
 
-FontExtension::~FontExtension() {
-	_queue = nullptr;
-}
+FontExtension::~FontExtension() { _queue = nullptr; }
 
 bool FontExtension::init(Rc<Application> &&loop, Rc<core::Queue> &&q) {
 	_mainLoop = move(loop);
@@ -71,11 +71,9 @@ void FontExtension::initialize(Application *app) {
 		onActivated();
 	} else {
 		auto linkId = retain();
-		_glLoop->compileQueue(_queue, [this, linkId] (bool success) {
+		_glLoop->compileQueue(_queue, [this, linkId](bool success) {
 			if (success) {
-				_mainLoop->performOnAppThread([this] {
-					onActivated();
-				}, this);
+				_mainLoop->performOnAppThread([this] { onActivated(); }, this);
 			}
 			release(linkId);
 		});
@@ -90,9 +88,7 @@ void FontExtension::invalidate(Application *) {
 	_glLoop = nullptr;
 }
 
-void FontExtension::update(Application *, const UpdateTime &clock) {
-	_library->update();
-}
+void FontExtension::update(Application *, const UpdateTime &clock) { _library->update(); }
 
 static Bytes openResourceFont(FontLibrary::DefaultFontName name) {
 	auto d = FontLibrary::getFont(name);
@@ -103,19 +99,23 @@ static String getResourceFontName(FontLibrary::DefaultFontName name) {
 	return toString("resource:", FontLibrary::getFontName(name));
 }
 
-static const FontController::FontSource * makeResourceFontQuery(FontController::Builder &builder, FontLibrary::DefaultFontName name,
-		FontLayoutParameters params = FontLayoutParameters()) {
-	return builder.addFontSource( getResourceFontName(name), [name] { return openResourceFont(name); }, params);
+static const FontController::FontSource *makeResourceFontQuery(FontController::Builder &builder,
+		FontLibrary::DefaultFontName name, FontLayoutParameters params = FontLayoutParameters()) {
+	return builder.addFontSource(getResourceFontName(name),
+			[name] { return openResourceFont(name); }, params);
 }
 
 FontController::Builder FontExtension::makeDefaultControllerBuilder(StringView key) {
 	FontController::Builder ret(key);
 
 	auto res_RobotoFlex = makeResourceFontQuery(ret, DefaultFontName::RobotoFlex_VariableFont);
-	auto res_RobotoMono_Variable = makeResourceFontQuery(ret, DefaultFontName::RobotoMono_VariableFont);
-	auto res_RobotoMono_Italic_Variable = makeResourceFontQuery(ret, DefaultFontName::RobotoMono_Italic_VariableFont, FontLayoutParameters{
-		FontStyle::Italic, FontWeight::Normal, FontStretch::Normal});
-	auto res_DejaVuSans = ret.addFontSource( getResourceFontName(DefaultFontName::DejaVuSans), FontLibrary::getFont(DefaultFontName::DejaVuSans));
+	auto res_RobotoMono_Variable =
+			makeResourceFontQuery(ret, DefaultFontName::RobotoMono_VariableFont);
+	auto res_RobotoMono_Italic_Variable = makeResourceFontQuery(ret,
+			DefaultFontName::RobotoMono_Italic_VariableFont,
+			FontLayoutParameters{FontStyle::Italic, FontWeight::Normal, FontStretch::Normal});
+	auto res_DejaVuSans = ret.addFontSource(getResourceFontName(DefaultFontName::DejaVuSans),
+			FontLibrary::getFont(DefaultFontName::DejaVuSans));
 
 	ret.addFontFaceQuery("sans", res_RobotoFlex);
 	ret.addFontFaceQuery("sans", res_DejaVuSans);
@@ -137,16 +137,13 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 		std::atomic<size_t> pendingData = 0;
 		FontExtension *ext = nullptr;
 
-		ControllerBuilder(FontController::Builder &&b)
-		: builder(move(b)) {
+		ControllerBuilder(FontController::Builder &&b) : builder(move(b)) {
 			if (auto c = builder.getTarget()) {
 				controller = c;
 			}
 		}
 
-		void invalidate() {
-			controller = nullptr;
-		}
+		void invalidate() { controller = nullptr; }
 
 		void loadData() {
 			if (invalid) {
@@ -154,12 +151,12 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 				return;
 			}
 
-			ext->getMainLoop()->performOnAppThread([this] () {
-				for (const Pair<const String, FontController::FamilyQuery> &it : builder.getFamilyQueries()) {
-					Vector<Rc<FontFaceData>> d; d.reserve(it.second.sources.size());
-					for (auto &iit : it.second.sources) {
-						d.emplace_back(move(iit->data));
-					}
+			ext->getMainLoop()->performOnAppThread([this]() {
+				for (const Pair<const String, FontController::FamilyQuery> &it :
+						builder.getFamilyQueries()) {
+					Vector<Rc<FontFaceData>> d;
+					d.reserve(it.second.sources.size());
+					for (auto &iit : it.second.sources) { d.emplace_back(move(iit->data)); }
 					controller->addFont(it.second.family, sp::move(d), it.second.addInFront);
 				}
 
@@ -199,8 +196,10 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 	builder->pendingData = builder->builder.getDataQueries().size();
 
 	for (auto &it : builder->builder.getDataQueries()) {
-		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder] (const thread::Task &) mutable -> bool {
-			sourcePtr->data = _library->openFontData(name, sourcePtr->params, sourcePtr->preconfiguredParams, [&] () -> FontLibrary::FontData {
+		_mainLoop->perform([this, name = it.first, sourcePtr = &it.second, builder](
+								   const thread::Task &) mutable -> bool {
+			sourcePtr->data = _library->openFontData(name, sourcePtr->params,
+					sourcePtr->preconfiguredParams, [&]() -> FontLibrary::FontData {
 				if (sourcePtr->fontCallback) {
 					return FontLibrary::FontData(sp::move(sourcePtr->fontCallback));
 				} else if (!sourcePtr->fontExternalData.empty()) {
@@ -208,7 +207,8 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 				} else if (!sourcePtr->fontMemoryData.empty()) {
 					return FontLibrary::FontData(sp::move(sourcePtr->fontMemoryData));
 				} else if (!sourcePtr->fontFilePath.empty()) {
-					auto d = filesystem::readIntoMemory<Interface>(sourcePtr->fontFilePath);
+					auto d = filesystem::readIntoMemory<Interface>(
+							FileInfo{sourcePtr->fontFilePath});
 					if (!d.empty()) {
 						return FontLibrary::FontData(sp::move(d));
 					}
@@ -228,34 +228,34 @@ Rc<FontController> FontExtension::acquireController(FontController::Builder &&b)
 }
 
 Rc<core::DynamicImage> FontExtension::makeInitialImage(StringView name) const {
-	return Rc<core::DynamicImage>::create([name = name.str<Interface>()] (core::DynamicImage::Builder &builder) {
+	return Rc<core::DynamicImage>::create(
+			[name = name.str<Interface>()](core::DynamicImage::Builder &builder) {
 		builder.setImage(name,
-			core::ImageInfo(
-					Extent2(2, 2),
-					core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
-					core::PassType::Graphics,
-					core::ImageFormat::R8_UNORM
-			), [] (uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
-				if (ptr) {
-					ptr[0] = 0;
-					ptr[1] = 255;
-					ptr[2] = 255;
-					ptr[3] = 0;
-				} else {
-					Bytes bytes; bytes.reserve(4);
-					bytes.emplace_back(0);
-					bytes.emplace_back(255);
-					bytes.emplace_back(255);
-					bytes.emplace_back(0);
-					cb(bytes);
-				}
-			}, nullptr);
+				core::ImageInfo(Extent2(2, 2),
+						core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
+						core::PassType::Graphics, core::ImageFormat::R8_UNORM),
+				[](uint8_t *ptr, uint64_t, const core::ImageData::DataCallback &cb) {
+			if (ptr) {
+				ptr[0] = 0;
+				ptr[1] = 255;
+				ptr[2] = 255;
+				ptr[3] = 0;
+			} else {
+				Bytes bytes;
+				bytes.reserve(4);
+				bytes.emplace_back(0);
+				bytes.emplace_back(255);
+				bytes.emplace_back(255);
+				bytes.emplace_back(0);
+				cb(bytes);
+			}
+		}, nullptr);
 		return true;
 	});
 }
 
-void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font::FontUpdateRequest> &&data,
-		Rc<core::DependencyEvent> &&dep) {
+void FontExtension::updateImage(const Rc<core::DynamicImage> &image,
+		Vector<font::FontUpdateRequest> &&data, Rc<core::DependencyEvent> &&dep) {
 	if (!_mainLoop) {
 		return; // extension is disabled
 	}
@@ -285,9 +285,8 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image, Vector<font
 		break;
 	}
 
-	_glLoop->runRenderQueue(sp::move(req), 0, [app = Rc<Application>(_mainLoop)] (bool success) {
-		app->wakeup();
-	});
+	_glLoop->runRenderQueue(sp::move(req), 0,
+			[app = Rc<Application>(_mainLoop)](bool success) { app->wakeup(); });
 }
 
 void FontExtension::onActivated() {
@@ -300,4 +299,4 @@ void FontExtension::onActivated() {
 	_pendingImageQueries.clear();
 }
 
-}
+} // namespace stappler::xenolith::font

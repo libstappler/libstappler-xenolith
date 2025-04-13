@@ -250,8 +250,6 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 		return false;
 	}
 
-	thread::ThreadInfo::setThreadPool(memory::pool::acquire());
-
 	_mainLooper = event::Looper::acquire(event::LooperInfo{
 		.workersCount = info.mainThreadsCount
 	});

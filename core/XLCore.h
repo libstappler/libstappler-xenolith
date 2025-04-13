@@ -26,6 +26,7 @@
 #include "SPCommon.h"
 #include "SPMemory.h"
 #include "SPFilesystem.h"
+#include "SPString.h"
 #include "SPThreadTask.h"
 #include "SPSpanView.h"
 #include "SPLog.h"
@@ -109,27 +110,11 @@ inline constexpr uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, 
 
 // based on VK_MAKE_API_VERSION
 inline uint32_t XL_MAKE_API_VERSION(StringView version) {
-	uint32_t ver[4];
-	uint32_t i = 0;
-	version.split<StringView::Chars<'.'>>([&] (StringView str) {
-		if (i < 4) {
-			ver[i++] = uint32_t(str.readInteger(10).get(0));
-		}
-	});
-
-	uint32_t verCode = 0;
-	switch (i) {
-	case 0: verCode = XL_MAKE_API_VERSION(0, 0, 1, 0); break;
-	case 1: verCode = XL_MAKE_API_VERSION(0, ver[0], 0, 0); break;
-	case 2: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], 0); break;
-	case 3: verCode = XL_MAKE_API_VERSION(0, ver[0], ver[1], ver[2]); break;
-	case 4: verCode = XL_MAKE_API_VERSION(ver[0], ver[1], ver[2], ver[3]); break;
-	}
-	return verCode;
+	return SP_MAKE_API_VERSION(version);
 }
 
 inline String getVersionDescription(uint32_t version) {
-	return toString(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b11'1111'1111, ".", version & 0b1111'1111'1111);
+	return sp::getVersionDescription<Interface>(version);
 }
 
 SP_PUBLIC const char * getEngineName();

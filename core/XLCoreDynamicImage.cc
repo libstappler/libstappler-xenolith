@@ -22,6 +22,7 @@
  **/
 
 #include "XLCoreDynamicImage.h"
+#include "SPFilepath.h"
 #include "XLCoreMaterial.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -45,8 +46,8 @@ Rc<DynamicImageInstance> DynamicImage::getInstance() {
 	return _instance;
 }
 
-void DynamicImage::updateInstance(Loop &loop, const Rc<ImageObject> &obj, Rc<DataAtlas> &&atlas, Rc<Ref> &&userdata,
-		const Vector<Rc<DependencyEvent>> &deps) {
+void DynamicImage::updateInstance(Loop &loop, const Rc<ImageObject> &obj, Rc<DataAtlas> &&atlas,
+		Rc<Ref> &&userdata, const Vector<Rc<DependencyEvent>> &deps) {
 	auto newInstance = Rc<DynamicImageInstance>::alloc();
 	static_cast<ImageInfoData &>(newInstance->data) = obj->getInfo();
 	newInstance->data.image = obj;
@@ -63,9 +64,7 @@ void DynamicImage::updateInstance(Loop &loop, const Rc<ImageObject> &obj, Rc<Dat
 	_instance = newInstance;
 	_data.image = nullptr;
 
-	for (auto &it : _materialTrackers) {
-		it->updateDynamicImage(loop, this, deps);
-	}
+	for (auto &it : _materialTrackers) { it->updateDynamicImage(loop, this, deps); }
 }
 
 void DynamicImage::addTracker(const MaterialAttachment *a) {
@@ -116,7 +115,8 @@ void DynamicImage::acquireData(const Callback<void(BytesView)> &cb) {
 	}
 }
 
-const ImageData * DynamicImage::Builder::setImageByRef(StringView key, ImageInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
+const ImageData *DynamicImage::Builder::setImageByRef(StringView key, ImageInfo &&info,
+		BytesView data, Rc<DataAtlas> &&atlas) {
 	static_cast<ImageInfo &>(_data->_data) = info;
 	_data->_data.key = key;
 	_data->_data.data = data;
@@ -124,33 +124,34 @@ const ImageData * DynamicImage::Builder::setImageByRef(StringView key, ImageInfo
 	return &_data->_data;
 }
 
-const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&info, FilePath path, Rc<DataAtlas> &&atlas) {
+const ImageData *DynamicImage::Builder::setImage(StringView key, ImageInfo &&info,
+		const FileInfo &path, Rc<DataAtlas> &&atlas) {
 	String npath;
-	if (filesystem::exists(path.get())) {
-		npath = path.get().str<Interface>();
-	} else if (!filepath::isAbsolute(path.get())) {
-		npath = filesystem::currentDir<Interface>(path.get());
-		if (!filesystem::exists(npath)) {
-			npath.clear();
-		}
-	}
+	filesystem::enumeratePaths(path, filesystem::Access::Read,
+			[&](StringView resourcePath, FileFlags) {
+		npath = resourcePath.str<Interface>();
+		return false;
+	});
 
 	if (npath.empty()) {
-		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path.get());
+		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path);
 		return nullptr;
 	}
 
 	_data->_keyData = key.str<Interface>();
 	static_cast<ImageInfo &>(_data->_data) = info;
 	_data->_data.key = _data->_keyData;
-	_data->_data.stdCallback = [npath, format = info.format] (uint8_t *ptr, uint64_t size, const ImageData::DataCallback &dcb) {
+	_data->_data.stdCallback = [npath, format = info.format](uint8_t *ptr, uint64_t size,
+									   const ImageData::DataCallback &dcb) {
 		Resource::loadImageFileData(ptr, size, npath, format, dcb);
-	};;
+	};
+	;
 	_data->_data.atlas = move(atlas);
 	return &_data->_data;
 }
 
-const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&info, BytesView data, Rc<DataAtlas> &&atlas) {
+const ImageData *DynamicImage::Builder::setImage(StringView key, ImageInfo &&info, BytesView data,
+		Rc<DataAtlas> &&atlas) {
 	_data->_keyData = key.str<Interface>();
 	_data->_imageData = data.bytes<Interface>();
 	static_cast<ImageInfo &>(_data->_data) = info;
@@ -160,8 +161,9 @@ const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&in
 	return &_data->_data;
 }
 
-const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&info,
-		Function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &&cb, Rc<DataAtlas> &&atlas) {
+const ImageData *DynamicImage::Builder::setImage(StringView key, ImageInfo &&info,
+		Function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &&cb,
+		Rc<DataAtlas> &&atlas) {
 	_data->_keyData = key.str<Interface>();
 	static_cast<ImageInfo &>(_data->_data) = info;
 	_data->_data.key = _data->_keyData;
@@ -172,4 +174,4 @@ const ImageData * DynamicImage::Builder::setImage(StringView key, ImageInfo &&in
 
 DynamicImage::Builder::Builder(DynamicImage *data) : _data(data) { }
 
-}
+} // namespace stappler::xenolith::core

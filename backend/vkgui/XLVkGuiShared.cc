@@ -26,10 +26,10 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 static SharedSymbol s_vkGuiSharedSymbols[] = {
-	SharedSymbol{"platform::createView(Application&,core::Device const&,ViewInfo&&)",
-		(void *)platform::createView},
+	SharedSymbol{"platform::createView", platform::createView},
 };
 
-static SharedModule s_vkGuiSharedModule("xenolith_backend_vkgui", s_vkGuiSharedSymbols, sizeof(s_vkGuiSharedSymbols) / sizeof(SharedSymbol));
+static SharedModule s_vkGuiSharedModule(buildconfig::MODULE_XENOLITH_BACKEND_VKGUI_NAME,
+		s_vkGuiSharedSymbols, sizeof(s_vkGuiSharedSymbols) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::xenolith::vk

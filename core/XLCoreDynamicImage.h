@@ -79,7 +79,7 @@ protected:
 class SP_PUBLIC DynamicImage::Builder {
 public:
 	const ImageData * setImageByRef(StringView key, ImageInfo &&, BytesView data, Rc<DataAtlas> && = nullptr);
-	const ImageData * setImage(StringView key, ImageInfo &&, FilePath data, Rc<DataAtlas> && = nullptr);
+	const ImageData * setImage(StringView key, ImageInfo &&, const FileInfo &data, Rc<DataAtlas> && = nullptr);
 	const ImageData * setImage(StringView key, ImageInfo &&, BytesView data, Rc<DataAtlas> && = nullptr);
 	const ImageData * setImage(StringView key, ImageInfo &&,
 			Function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &&cb, Rc<DataAtlas> && = nullptr);

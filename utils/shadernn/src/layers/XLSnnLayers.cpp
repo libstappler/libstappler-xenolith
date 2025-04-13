@@ -20,6 +20,8 @@
  THE SOFTWARE.
  **/
 
+#include "stappler-buildconfig.h"
+
 #if MODULE_XENOLITH_SCENE
 
 #include "XLCommon.h"

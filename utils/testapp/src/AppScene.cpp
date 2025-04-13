@@ -22,6 +22,7 @@
 
 #include "AppScene.h"
 
+#include "SPFilepath.h"
 #include "XLVkAttachment.h"
 #include "XLDirector.h"
 #include "XL2dSprite.h"
@@ -43,15 +44,17 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 	// build presentation RenderQueue
 	core::Queue::Builder builder("Loader");
 	builder.addImage("xenolith-1-480.png",
-			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
-			FilePath("resources/xenolith-1-480.png"));
+			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled,
+					core::ImageHints::Opaque),
+			FileInfo("resources/xenolith-1-480.png"));
 	builder.addImage("xenolith-2-480.png",
-			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
-			FilePath("resources/xenolith-2-480.png"));
+			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled,
+					core::ImageHints::Opaque),
+			FileInfo("resources/xenolith-2-480.png"));
 
-	basic2d::vk::ShadowPass::RenderQueueInfo info{
-		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
-	};
+	basic2d::vk::ShadowPass::RenderQueueInfo info{app,
+		Extent2(constraints.extent.width, constraints.extent.height),
+		basic2d::vk::ShadowPass::Flags::None};
 
 	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
@@ -65,10 +68,8 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 
 	setContent(content);
 
-	filesystem::mkdir(filesystem::cachesPath<Interface>());
-
 	Rc<SceneLayout2d> l;
-	auto dataPath = filesystem::cachesPath<Interface>("org.stappler.xenolith.test.AppScene.cbor");
+	auto dataPath = FileInfo("org.stappler.xenolith.test.AppScene.cbor", FileCategory::AppCache);
 	if (auto d = data::readFile<Interface>(dataPath)) {
 		auto layoutName = getLayoutNameById(d.getString("id"));
 
@@ -88,17 +89,11 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 	return true;
 }
 
-void AppScene::onPresented(Director *dir) {
-	Scene2d::onPresented(dir);
-}
+void AppScene::onPresented(Director *dir) { Scene2d::onPresented(dir); }
 
-void AppScene::onFinished(Director *dir) {
-	Scene2d::onFinished(dir);
-}
+void AppScene::onFinished(Director *dir) { Scene2d::onFinished(dir); }
 
-void AppScene::update(const UpdateTime &time) {
-	Scene2d::update(time);
-}
+void AppScene::update(const UpdateTime &time) { Scene2d::update(time); }
 
 void AppScene::handleEnter(Scene *scene) {
 	Scene2d::handleEnter(scene);
@@ -110,9 +105,7 @@ void AppScene::handleExit() {
 	Scene2d::handleExit();
 }
 
-void AppScene::render(FrameInfo &info) {
-	Scene2d::render(info);
-}
+void AppScene::render(FrameInfo &info) { Scene2d::render(info); }
 
 void AppScene::runLayout(LayoutName l, Rc<SceneLayout2d> &&node) {
 	static_cast<SceneContent2d *>(_content)->replaceLayout(node);
@@ -120,13 +113,10 @@ void AppScene::runLayout(LayoutName l, Rc<SceneLayout2d> &&node) {
 }
 
 void AppScene::setActiveLayoutId(StringView name, Value &&data) {
-	Value sceneData({
-		pair("id", Value(name)),
-		pair("data", Value(move(data)))
-	});
+	Value sceneData({pair("id", Value(name)), pair("data", Value(move(data)))});
 
-	auto path = filesystem::cachesPath<Interface>("org.stappler.xenolith.test.AppScene.cbor");
+	auto path = FileInfo("org.stappler.xenolith.test.AppScene.cbor", FileCategory::AppCache);
 	data::save(sceneData, path, data::EncodeFormat::CborCompressed);
 }
 
-}
+} // namespace stappler::xenolith::app

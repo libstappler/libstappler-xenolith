@@ -28,16 +28,13 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 static SharedSymbol s_xenolithFontSymbols[] = {
-	SharedSymbol{"FontExtension::createFontExtension(Rc<Application>&&,Rc<core::Queue>&&)",
-		(void *)FontExtension::createFontExtension},
-	SharedSymbol{"FontExtension::createFontQueue(core::Instance*,StringView)",
-		(void *)FontExtension::createFontQueue},
-	SharedSymbol{"FontExtension::createDefaultController(FontExtension*,StringView)",
-		(void *)FontExtension::createDefaultController},
-	SharedSymbol{"locale::setLocale(StringView);",
-		(void *)locale::setLocale},
+	SharedSymbol{"FontExtension::createFontExtension", FontExtension::createFontExtension},
+	SharedSymbol{"FontExtension::createFontQueue", FontExtension::createFontQueue},
+	SharedSymbol{"FontExtension::createDefaultController", FontExtension::createDefaultController},
+	SharedSymbol{"locale::setLocale", locale::setLocale},
 };
 
-static SharedModule s_xenolithFontModule("xenolith_font", s_xenolithFontSymbols, sizeof(s_xenolithFontSymbols) / sizeof(SharedSymbol));
+static SharedModule s_xenolithFontModule(buildconfig::MODULE_XENOLITH_FONT_NAME,
+		s_xenolithFontSymbols, sizeof(s_xenolithFontSymbols) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::xenolith::font

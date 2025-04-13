@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class PresentationEngine final : public core::PresentationEngine {
+class SP_PUBLIC PresentationEngine final : public core::PresentationEngine {
 public:
 	virtual ~PresentationEngine() = default;
 

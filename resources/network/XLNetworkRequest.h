@@ -50,7 +50,7 @@ public:
 	bool init(StringView url);
 
 	// download to file with GET
-	bool init(StringView url, FilePath fileName);
+	bool init(StringView url, const FileInfo &fileName);
 
 	// perform query with specific method, actions with data defined with setSend*/setReceive*
 	bool init(Method method, StringView url);

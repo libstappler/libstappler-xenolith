@@ -58,10 +58,8 @@ void MnistTrainData::loadVectors(StringView ipath) {
 		vectorsData = (float *)malloc(dataSize * sizeof(float) * 10);
 		::memset(vectorsData, 0, dataSize * sizeof(float));
 		auto ptr = vectorsData;
-		for (size_t i = 0; i < dataSize; ++ i) {
-			for (size_t j = 0; j < 10; ++ j) {
-				ptr[j] = 0.0f;
-			}
+		for (size_t i = 0; i < dataSize; ++i) {
+			for (size_t j = 0; j < 10; ++j) { ptr[j] = 0.0f; }
 			ptr[buf[i]] = 1.0f;
 			ptr += 10;
 		}
@@ -98,9 +96,7 @@ void MnistTrainData::loadImages(StringView ipath) {
 
 		imagesData = (float *)malloc(dataSize * sizeof(float));
 		auto ptr = imagesData;
-		for (size_t i = 0; i < dataSize; ++ i) {
-			*ptr ++ = float(buf[i]) / 255.0f;
-		}
+		for (size_t i = 0; i < dataSize; ++i) { *ptr++ = float(buf[i]) / 255.0f; }
 
 		::free(buf);
 		::fclose(images);
@@ -109,9 +105,7 @@ void MnistTrainData::loadImages(StringView ipath) {
 
 void MnistTrainData::loadIndexes() {
 	indexes.resize(imagesHeader.images);
-	for (size_t i = 0; i < imagesHeader.images; ++ i) {
-		indexes[i] = i;
-	}
+	for (size_t i = 0; i < imagesHeader.images; ++i) { indexes[i] = i; }
 }
 
 void MnistTrainData::readImages(uint8_t *iptr, uint64_t size, size_t offset) {
@@ -119,10 +113,10 @@ void MnistTrainData::readImages(uint8_t *iptr, uint64_t size, size_t offset) {
 
 	float *ptr = (float *)iptr;
 
-	for (size_t i = 0; i < count; ++ i) {
-    	auto idx = indexes[offset + i];
-    	auto blockSize = imagesHeader.rows * imagesHeader.columns;
-    	::memcpy(ptr + i * blockSize, imagesData + idx * blockSize, blockSize * sizeof(float));
+	for (size_t i = 0; i < count; ++i) {
+		auto idx = indexes[offset + i];
+		auto blockSize = imagesHeader.rows * imagesHeader.columns;
+		::memcpy(ptr + i * blockSize, imagesData + idx * blockSize, blockSize * sizeof(float));
 	}
 }
 
@@ -131,10 +125,10 @@ void MnistTrainData::readLabels(uint8_t *iptr, uint64_t size, size_t offset) {
 
 	float *ptr = (float *)iptr;
 
-	for (size_t i = 0; i < count; ++ i) {
-    	auto idx = indexes[offset + i];
-    	auto blockSize = 10;
-    	::memcpy(ptr + i * blockSize, vectorsData + idx * blockSize, blockSize * sizeof(float));
+	for (size_t i = 0; i < count; ++i) {
+		auto idx = indexes[offset + i];
+		auto blockSize = 10;
+		::memcpy(ptr + i * blockSize, vectorsData + idx * blockSize, blockSize * sizeof(float));
 	}
 }
 
@@ -143,30 +137,30 @@ bool MnistTrainData::validateImages(const uint8_t *iptr, uint64_t size, size_t o
 
 	const float *ptr = (const float *)iptr;
 
-	for (size_t i = 0; i < count; ++ i) {
-    	auto idx = indexes[offset + i];
-    	auto blockSize = imagesHeader.rows * imagesHeader.columns;
+	for (size_t i = 0; i < count; ++i) {
+		auto idx = indexes[offset + i];
+		auto blockSize = imagesHeader.rows * imagesHeader.columns;
 
-    	auto sourcePtr = ptr + i * blockSize;
-    	auto targetPtr = imagesData + idx * blockSize;
+		auto sourcePtr = ptr + i * blockSize;
+		auto targetPtr = imagesData + idx * blockSize;
 
-    	if (::memcmp(sourcePtr, targetPtr, blockSize * sizeof(float)) != 0) {
-    		for (size_t j = 0; j < imagesHeader.rows; ++ j) {
-        		for (size_t k = 0; k < imagesHeader.columns; ++ k) {
-        			std::cout << " " << *(sourcePtr + (j * imagesHeader.rows) + k);
-        		}
-        		std::cout << "\n";
-    		}
-    		std::cout << "\n";
-    		for (size_t j = 0; j < imagesHeader.rows; ++ j) {
-        		for (size_t k = 0; k < imagesHeader.columns; ++ k) {
-        			std::cout << " " << *(targetPtr + (j * imagesHeader.rows) + k);
-        		}
-        		std::cout << "\n";
-    		}
-    		std::cout << "\n";
-    		return false;
-    	}
+		if (::memcmp(sourcePtr, targetPtr, blockSize * sizeof(float)) != 0) {
+			for (size_t j = 0; j < imagesHeader.rows; ++j) {
+				for (size_t k = 0; k < imagesHeader.columns; ++k) {
+					std::cout << " " << *(sourcePtr + (j * imagesHeader.rows) + k);
+				}
+				std::cout << "\n";
+			}
+			std::cout << "\n";
+			for (size_t j = 0; j < imagesHeader.rows; ++j) {
+				for (size_t k = 0; k < imagesHeader.columns; ++k) {
+					std::cout << " " << *(targetPtr + (j * imagesHeader.rows) + k);
+				}
+				std::cout << "\n";
+			}
+			std::cout << "\n";
+			return false;
+		}
 	}
 	return true;
 }
@@ -177,15 +171,13 @@ struct StdRandom {
 	static constexpr auto min() { return std::numeric_limits<unsigned int>::min(); };
 	static constexpr auto max() { return std::numeric_limits<unsigned int>::max(); };
 
-	unsigned int operator() () {
-		return rnd->next();
-	}
+	unsigned int operator()() { return rnd->next(); }
 
 	Random *rnd;
 };
 
 void MnistTrainData::shuffle(Random &rnd) {
-    std::shuffle(indexes.begin(), indexes.end(), StdRandom{&rnd});
+	std::shuffle(indexes.begin(), indexes.end(), StdRandom{&rnd});
 }
 
 MnistTrainData::MnistTrainData(StringView path) {
@@ -208,37 +200,33 @@ MnistTrainData::~MnistTrainData() {
 Rc<CsvData> ModelQueue::readCsv(StringView data) {
 	Rc<CsvData> ret = Rc<CsvData>::alloc();
 
-	auto readQuoted = [] (StringView &r) {
+	auto readQuoted = [](StringView &r) {
 		StringView tmp(r);
 
-		while (r.is("\"\"")) {
-			r += 2;
-		}
+		while (r.is("\"\"")) { r += 2; }
 
 		while (!r.empty() && !r.is('"')) {
 			r.skipUntil<StringView::Chars<'"', '\\'>>();
 			if (r.is('\\')) {
 				r += 2;
 			}
-			while (r.is("\"\"")) {
-				r += 2;
-			}
+			while (r.is("\"\"")) { r += 2; }
 		}
 
 		tmp = StringView(tmp.data(), r.data() - tmp.data());
 
 		if (r.is('"')) {
-			++ r;
+			++r;
 		}
 
 		return tmp;
 	};
 
-	auto readHeader = [&] (StringView &r) {
+	auto readHeader = [&](StringView &r) {
 		while (!r.empty() && !r.is('\n') && !r.is("\r")) {
 			r.skipChars<StringView::WhiteSpace>();
 			if (r.is('"')) {
-				++ r;
+				++r;
 				ret->fields.emplace_back(readQuoted(r).str<Interface>());
 				r.skipUntil<StringView::Chars<',', '\n', '\r'>>();
 			} else {
@@ -247,7 +235,7 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 				ret->fields.emplace_back(readQuoted(r).str<Interface>());
 			}
 			if (r.is(',')) {
-				++ r;
+				++r;
 			}
 		}
 		if (r.is('\n') || r.is('\r')) {
@@ -255,13 +243,15 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 		}
 	};
 
-	auto validateFloat = [] (StringView str) {
+	auto validateFloat = [](StringView str) {
 		if (str.empty()) {
 			return false;
 		}
 
 		StringView r(str);
-		if (r.is('-')) { ++ r; }
+		if (r.is('-')) {
+			++r;
+		}
 		r.skipChars<chars::Range<char, '0', '9'>, StringView::Chars<'.'>>();
 		if (!r.empty()) {
 			return false;
@@ -270,12 +260,12 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 		return true;
 	};
 
-	auto readLine = [&] (StringView &r) {
+	auto readLine = [&](StringView &r) {
 		Value ret;
 		while (!r.empty() && !r.is('\n') && !r.is("\r")) {
 			r.skipChars<StringView::WhiteSpace>();
 			if (r.is('"')) {
-				++ r;
+				++r;
 				auto data = readQuoted(r);
 				if (valid::validateNumber(data)) {
 					ret.addInteger(data.readInteger(10).get(0));
@@ -297,7 +287,7 @@ Rc<CsvData> ModelQueue::readCsv(StringView data) {
 				}
 			}
 			if (r.is(',')) {
-				++ r;
+				++r;
 			}
 		}
 		if (r.is('\n') || r.is('\r')) {
@@ -326,7 +316,7 @@ ModelQueue::~ModelQueue() { }
 
 bool ModelQueue::init(StringView modelPath, ModelFlags flags, StringView input) {
 	_processor = Rc<ModelProcessor>::create();
-	_model = _processor->load(FilePath(modelPath), flags);
+	_model = _processor->load(FileInfo(modelPath), flags);
 
 	if (!_model) {
 		return false;
@@ -345,7 +335,7 @@ bool ModelQueue::init(StringView modelPath, ModelFlags flags, StringView input) 
 			return false;
 		}
 	} else {
-		if (!bitmap::getImageSize(input, frameExtent.width, frameExtent.height)) {
+		if (!bitmap::getImageSize(FileInfo{input}, frameExtent.width, frameExtent.height)) {
 			log::error("InputQueue", "fail to read image: ", input);
 			return false;
 		}
@@ -357,19 +347,18 @@ bool ModelQueue::init(StringView modelPath, ModelFlags flags, StringView input) 
 	Map<Attachment *, const core::AttachmentData *> attachments;
 
 	auto modelInputs = _model->getInputs();
-	for (auto &it : modelInputs) {
-		inputs.emplace(it, it->makeInputAttachment(builder));
-	}
+	for (auto &it : modelInputs) { inputs.emplace(it, it->makeInputAttachment(builder)); }
 
 	size_t i = 0;
 	for (auto &it : _model->getSortedLayers()) {
 		auto output = it->getOutput();
-		auto attachment = it->makeOutputAttachment(builder, _model->getSortedLayers().size() == i + 1);
+		auto attachment =
+				it->makeOutputAttachment(builder, _model->getSortedLayers().size() == i + 1);
 		attachments.emplace(output, attachment);
 		if (_model->getSortedLayers().size() == i + 1) {
 			_outputAttachment = attachment;
 		}
-		++ i;
+		++i;
 	}
 
 	for (auto &it : _model->getSortedLayers()) {
@@ -378,7 +367,8 @@ bool ModelQueue::init(StringView modelPath, ModelFlags flags, StringView input) 
 			return false;
 		}
 		if (it->isInput()) {
-			_inputAttachments.emplace_back(static_cast<vk::shadernn::InputLayer *>(ret->pass.get())->getDataAttachment());
+			_inputAttachments.emplace_back(
+					static_cast<vk::shadernn::InputLayer *>(ret->pass.get())->getDataAttachment());
 		}
 	}
 
@@ -399,7 +389,8 @@ void ModelQueue::run(Application *app) {
 		frameExtent.height = _csvData->data.size();
 	}
 
-	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameConstraints{frameExtent});
+	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this),
+			core::FrameConstraints{frameExtent});
 
 	ModelSpecialization spec = _processor->specializeModel(_model, frameExtent);
 
@@ -408,7 +399,8 @@ void ModelQueue::run(Application *app) {
 			if (auto img = dynamic_cast<vk::ImageAttachment *>(a->attachment.get())) {
 				core::ImageInfoData info = img->getImageInfo();
 				info.extent = it.second;
-				log::debug("ModelQueue", "Specialize attachment ", it.first->getName(), " for extent ", info.extent);
+				log::debug("ModelQueue", "Specialize attachment ", it.first->getName(),
+						" for extent ", info.extent);
 				req->addImageSpecialization(img, move(info));
 			}
 		}
@@ -422,21 +414,27 @@ void ModelQueue::run(Application *app) {
 				Vec4(2.0f, 2.0f, 2.0f, 2.0f) // to -1.0 - 1.0
 			};
 			inputData->image.extent = frameExtent;
-			inputData->image.stdCallback = [path = _image] (uint8_t *ptr, uint64_t size, const core::ImageData::DataCallback &dcb) {
-				core::Resource::loadImageFileData(ptr, size, path, core::ImageFormat::R8G8B8A8_UNORM, dcb);
+			inputData->image.stdCallback = [path = _image](uint8_t *ptr, uint64_t size,
+												   const core::ImageData::DataCallback &dcb) {
+				core::Resource::loadImageFileData(ptr, size, path,
+						core::ImageFormat::R8G8B8A8_UNORM, dcb);
 			};
 
 			req->addInput(it, move(inputData));
 		} else if (_trainData) {
 			if (it->key == "input_samples_buffer") {
 				auto inputData = Rc<vk::shadernn::InputBufferDataInput>::alloc();
-				inputData->buffer.stdCallback = [data = _trainData, offset = _loadOffset] (uint8_t *ptr, uint64_t size, const core::BufferData::DataCallback &cb) {
+				inputData->buffer.stdCallback =
+						[data = _trainData, offset = _loadOffset](uint8_t *ptr, uint64_t size,
+								const core::BufferData::DataCallback &cb) {
 					data->readImages(ptr, size, offset);
 				};
 				req->addInput(it, move(inputData));
 			} else if (it->key == "input_labels_buffer") {
 				auto inputData = Rc<vk::shadernn::InputBufferDataInput>::alloc();
-				inputData->buffer.stdCallback = [data = _trainData, offset = _loadOffset] (uint8_t *ptr, uint64_t size, const core::BufferData::DataCallback &cb) {
+				inputData->buffer.stdCallback =
+						[data = _trainData, offset = _loadOffset](uint8_t *ptr, uint64_t size,
+								const core::BufferData::DataCallback &cb) {
 					data->readLabels(ptr, size, offset);
 				};
 				req->addInput(it, move(inputData));
@@ -448,32 +446,33 @@ void ModelQueue::run(Application *app) {
 		}
 	}
 
-	req->setOutput(getOutputAttachment(), [this, app, trainData = _trainData, csvData = _csvData] (core::FrameAttachmentData &data, bool success, Ref *) {
+	req->setOutput(getOutputAttachment(),
+			[this, app, trainData = _trainData, csvData = _csvData](core::FrameAttachmentData &data,
+					bool success, Ref *) {
 		if (data.image) {
-			app->getGlLoop()->captureImage([app] (core::ImageInfoData info, BytesView view) {
+			app->getGlLoop()->captureImage([app](core::ImageInfoData info, BytesView view) {
 				if (!view.empty()) {
 					Vector<Bitmap> planes;
-					for (size_t i = 0; i < info.extent.depth; ++ i) {
+					for (size_t i = 0; i < info.extent.depth; ++i) {
 						auto &b = planes.emplace_back(Bitmap());
-						b.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::RGBA8888, bitmap::AlphaFormat::Premultiplied);
+						b.alloc(info.extent.width, info.extent.height,
+								bitmap::PixelFormat::RGBA8888, bitmap::AlphaFormat::Premultiplied);
 					}
 
 					Vector<uint8_t *> ptrs;
-					for (auto &it : planes) {
-						ptrs.emplace_back(it.dataPtr());
-					}
+					for (auto &it : planes) { ptrs.emplace_back(it.dataPtr()); }
 
 					std::cout << view.size() << " ";
 
-					for (size_t i = 0; i < info.extent.width; ++ i) {
-						for (size_t j = 0; j < info.extent.height; ++ j) {
-							for (size_t k = 0; k < info.extent.depth; ++ k) {
-								for (size_t f = 0; f < 4; ++ f) {
+					for (size_t i = 0; i < info.extent.width; ++i) {
+						for (size_t j = 0; j < info.extent.height; ++j) {
+							for (size_t k = 0; k < info.extent.depth; ++k) {
+								for (size_t f = 0; f < 4; ++f) {
 									*ptrs[k] = uint8_t((view.readFloat32() + 1.0f) * 127.5f);
 									if (f == 3) {
 										//*ptrs[k] = 255;
 									}
-									ptrs[k] ++;
+									ptrs[k]++;
 								}
 							}
 						}
@@ -481,8 +480,8 @@ void ModelQueue::run(Application *app) {
 
 					std::cout << view.size() << "\n";
 
-					for (size_t i = 0; i < info.extent.depth; ++ i) {
-						planes[i].save(toString(i, "_", Time::now().toMicros(), ".png"));
+					for (size_t i = 0; i < info.extent.depth; ++i) {
+						planes[i].save(FileInfo{toString(i, "_", Time::now().toMicros(), ".png")});
 					}
 				}
 				app->end();
@@ -490,14 +489,16 @@ void ModelQueue::run(Application *app) {
 		} else if (auto buf = dynamic_cast<vk::BufferAttachmentHandle *>(data.handle.get())) {
 			if (trainData) {
 				auto target = buf->getBuffers().back().buffer;
-				app->getGlLoop()->captureBuffer([this, app] (const core::BufferInfo &info, BytesView view) {
+				app->getGlLoop()->captureBuffer(
+						[this, app](const core::BufferInfo &info, BytesView view) {
 					//front->synchronizeParameters(SpanView<float>((float *)view.data(), view.size() / sizeof(float)));
 					onComplete(app, view);
 				}, target);
 
 			} else if (csvData) {
 				auto target = buf->getBuffers().front().buffer;
-				app->getGlLoop()->captureBuffer([app, trainData] (core::BufferInfo info, BytesView view) {
+				app->getGlLoop()->captureBuffer(
+						[app, trainData](core::BufferInfo info, BytesView view) {
 					std::cout << view.size() / (sizeof(float) * 4) << "\n";
 					std::cout << "0";
 
@@ -514,21 +515,15 @@ void ModelQueue::run(Application *app) {
 							}
 							break;
 						}
-						case 1:
-							std::cout << ", " << view.readUnsigned32();
-							break;
+						case 1: std::cout << ", " << view.readUnsigned32(); break;
 						case 2:
-						case 3:
-							std::cout << ", " << view.readFloat32();
-							break;
-						default:
-							view.readUnsigned32();
-							break;
+						case 3: std::cout << ", " << view.readFloat32(); break;
+						default: view.readUnsigned32(); break;
 						}
-						++ i;
+						++i;
 						if (i > 3) {
 							i = 0;
-							std::cout << "\n" << row ++;
+							std::cout << "\n" << row++;
 						}
 					}
 					std::cout << "\n";
@@ -548,24 +543,20 @@ void ModelQueue::onComplete(Application *app, BytesView data) {
 	data.readFloat32();
 	auto loss = data.readFloat32();
 
-	if (_loadOffset < 60000) {
+	if (_loadOffset < 60'000) {
 		// 5  std::cout << iter << " Loss: " << loss << "\n";
 		_epochLoss += loss;
-		app->performOnAppThread([this, app] {
-			run(_app);
-		});
+		app->performOnAppThread([this, app] { run(_app); });
 	} else {
 		std::cout << _epoch << ": avg loss: " << _epochLoss / 600.0f << "\n";
 
 		_trainData->shuffle(_model->getRand());
 		_epochLoss = 0;
 		_loadOffset = 0;
-		++ _epoch;
+		++_epoch;
 
 		if (_epoch < _endEpoch) {
-			app->performOnAppThread([this, app] {
-				run(app);
-			});
+			app->performOnAppThread([this, app] { run(app); });
 		} else {
 			release(0);
 			app->end();
@@ -573,4 +564,4 @@ void ModelQueue::onComplete(Application *app, BytesView data) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::shadernn

@@ -26,10 +26,11 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 static SharedSymbol s_xenolithResourceNetwork[] = {
-	SharedSymbol{"Controller::createController(Application*,StringView,Bytes&&)",
-		(void *)Controller::createController},
+	SharedSymbol{"Controller::createController", Controller::createController},
 };
 
-static SharedModule s_xenolithResourceNetworkModule("xenolith_resources_network", s_xenolithResourceNetwork, sizeof(s_xenolithResourceNetwork) / sizeof(SharedSymbol));
+static SharedModule s_xenolithResourceNetworkModule(
+		buildconfig::MODULE_XENOLITH_RESOURCES_NETWORK_NAME, s_xenolithResourceNetwork,
+		sizeof(s_xenolithResourceNetwork) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::xenolith::network

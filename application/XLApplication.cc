@@ -74,7 +74,8 @@ void Application::addEventListener(const EventHandlerNode *listener) const {
 	if (it != _eventListeners.end()) {
 		it->second.insert(listener);
 	} else {
-		_eventListeners.emplace(listener->getEventID(), HashSet<const EventHandlerNode *>{listener});
+		_eventListeners.emplace(listener->getEventID(),
+				HashSet<const EventHandlerNode *>{listener});
 	}
 }
 
@@ -85,9 +86,7 @@ void Application::removeEventListner(const EventHandlerNode *listener) const {
 	}
 }
 
-void Application::removeAllEventListeners() const {
-	_eventListeners.clear();
-}
+void Application::removeAllEventListeners() const { _eventListeners.clear(); }
 
 void Application::dispatchEvent(const Event &ev) const {
 	if (_eventListeners.size() > 0) {
@@ -101,9 +100,7 @@ void Application::dispatchEvent(const Event &ev) const {
 				}
 			}
 
-			for (auto l : listenersToExecute) {
-				l->onEventRecieved(ev);
-			}
+			for (auto l : listenersToExecute) { l->onEventRecieved(ev); }
 		}
 	}
 }
@@ -115,39 +112,39 @@ void Application::updateMessageToken(BytesView tok) {
 	}
 }
 
-void Application::receiveRemoteNotification(Value &&val) {
-	onRemoteNotification(this, move(val));
-}
+void Application::receiveRemoteNotification(Value &&val) { onRemoteNotification(this, move(val)); }
 
 void Application::performAppUpdate(const UpdateTime &t) {
 	PlatformApplication::performAppUpdate(t);
 
-	for (auto &it : _extensions) {
-		it.second->update(this, t);
-	}
+	for (auto &it : _extensions) { it.second->update(this, t); }
 }
 
 void Application::loadExtensions() {
 	PlatformApplication::loadExtensions();
 
 #if MODULE_XENOLITH_FONT
-	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>("xenolith_font",
-			"locale::setLocale(StringView);");
+	auto setLocale = SharedModule::acquireTypedSymbol<decltype(&locale::setLocale)>(
+			buildconfig::MODULE_XENOLITH_FONT_NAME, "locale::setLocale");
 	if (setLocale) {
 		setLocale(_info.userLanguage);
 	}
 
-	auto createQueue = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>("xenolith_font",
-			"FontExtension::createFontQueue(core::Instance*,StringView)");
-	auto createFontExtension = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontExtension)>("xenolith_font",
-			"FontExtension::createFontExtension(Rc<Application>&&,Rc<core::Queue>&&)");
-	auto createFontController = SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createDefaultController)>("xenolith_font",
-			"FontExtension::createDefaultController(FontExtension*,StringView)");
+	auto createQueue =
+			SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontQueue)>(
+					buildconfig::MODULE_XENOLITH_FONT_NAME, "FontExtension::createFontQueue");
+	auto createFontExtension =
+			SharedModule::acquireTypedSymbol<decltype(&font::FontExtension::createFontExtension)>(
+					buildconfig::MODULE_XENOLITH_FONT_NAME, "FontExtension::createFontExtension");
+	auto createFontController = SharedModule::acquireTypedSymbol<
+			decltype(&font::FontExtension::createDefaultController)>(
+			buildconfig::MODULE_XENOLITH_FONT_NAME, "FontExtension::createDefaultController");
 
 	if (createFontExtension && createQueue && createFontController) {
 		auto lib = createFontExtension(this, createQueue(_instance, "ApplicationFontQueue"));
 
-		addExtension(createFontController((font::FontExtension *)lib.get(), "ApplicationFontController"));
+		addExtension(createFontController((font::FontExtension *)lib.get(),
+				"ApplicationFontController"));
 		addExtension(move(lib));
 	}
 #endif
@@ -156,17 +153,13 @@ void Application::loadExtensions() {
 void Application::initializeExtensions() {
 	PlatformApplication::initializeExtensions();
 
-	for (auto &it : _extensions) {
-		it.second->initialize(this);
-	}
+	for (auto &it : _extensions) { it.second->initialize(this); }
 
 	_resourceCache->initialize(*_glLoop);
 }
 
 void Application::finalizeExtensions() {
-	for (auto &it : _extensions) {
-		it.second->invalidate(this);
-	}
+	for (auto &it : _extensions) { it.second->invalidate(this); }
 
 	_resourceCache->invalidate();
 	_resourceCache = nullptr;
@@ -174,4 +167,4 @@ void Application::finalizeExtensions() {
 	PlatformApplication::finalizeExtensions();
 }
 
-}
+} // namespace stappler::xenolith

@@ -22,8 +22,8 @@
 
 #include "AppGeneralTemporaryResourceTest.h"
 #include "XLDirector.h"
-#include "XLResourceCache.h"
 #include "XLEventListener.h"
+#include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
 
@@ -45,19 +45,19 @@ bool GeneralTemporaryResourceTest::init() {
 	_sprite->setTextureAutofit(Autofit::Contain);
 	_sprite->setAnchorPoint(Anchor::Middle);
 
-	_slider = addChild(Rc<SliderWithLabel>::create("0.0", 0.0f, [this] (float val) {
-		setResourceTimeout(val);
-	}), ZOrder(2));
+	_slider = addChild(Rc<SliderWithLabel>::create("0.0", 0.0f,
+							   [this](float val) { setResourceTimeout(val); }),
+			ZOrder(2));
 	_slider->setPrefix("Timeout");
 	_slider->setAnchorPoint(Anchor::Middle);
 
-	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Show/hide", true, [this] (bool val) {
-		switchVisibility(val);
-	}), ZOrder(2));
+	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Show/hide", true,
+								 [this](bool val) { switchVisibility(val); }),
+			ZOrder(2));
 	_checkbox->setAnchorPoint(Anchor::Middle);
 
 	auto l = addComponent(Rc<EventListener>::create());
-	l->onEvent(TemporaryResource::onLoaded, [this] (const Event &ev) {
+	l->onEvent(TemporaryResource::onLoaded, [this](const Event &ev) {
 		if (ev.getObject() == _resource) {
 			if (ev.getBoolValue()) {
 				_label->setString("Loaded");
@@ -106,8 +106,9 @@ void GeneralTemporaryResourceTest::handleEnter(Scene *scene) {
 		}
 	} else {
 		auto tex = cache->addExternalImage(name,
-				core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled, core::ImageHints::Opaque),
-				FilePath("resources/xenolith-2-480.png"));
+				core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled,
+						core::ImageHints::Opaque),
+				FileInfo("resources/xenolith-2-480.png", FileCategory::Bundled));
 		if (tex) {
 			_sprite->setTexture(move(tex));
 		}
@@ -118,9 +119,7 @@ void GeneralTemporaryResourceTest::handleEnter(Scene *scene) {
 	}
 }
 
-void GeneralTemporaryResourceTest::handleExit() {
-	LayoutTest::handleExit();
-}
+void GeneralTemporaryResourceTest::handleExit() { LayoutTest::handleExit(); }
 
 void GeneralTemporaryResourceTest::setResourceTimeout(float val) {
 	_timeoutValue = val * 10.0f;
@@ -153,4 +152,4 @@ void GeneralTemporaryResourceTest::switchVisibility(bool val) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

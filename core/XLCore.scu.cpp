@@ -87,35 +87,32 @@
 #include "XLCorePresentationFrame.cc"
 #include "XLCorePresentationEngine.cc"
 
+#include "SPMetastring.h"
+
 #define XENOLITH_VERSION_VARIANT 0
 
-#ifndef XENOLITH_VERSION_API
-#define XENOLITH_VERSION_API 0
-#endif
-
-#ifndef XENOLITH_VERSION_REV
-#define XENOLITH_VERSION_REV 0
-#endif
-
-#ifndef XENOLITH_VERSION_BUILD
-#define XENOLITH_VERSION_BUILD 0
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
 
 const char * getEngineName() {
 	return "Stappler/Xenolith";
 }
 
 const char * getVersionString() {
-	return TOSTRING(XENOLITH_VERSION_VARIANT) "." TOSTRING(XENOLITH_VERSION_API) "." TOSTRING(XENOLITH_VERSION_REV) "." TOSTRING(XENOLITH_VERSION_BUILD);
+	static auto versionString = metastring::merge(metastring::numeric<size_t(XENOLITH_VERSION_VARIANT)>(),
+		metastring::metastring<'.'>(),
+		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_API)>(),
+		metastring::metastring<'.'>(),
+		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_REV)>(),
+		metastring::metastring<'.'>(),
+		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_BUILD)>(),
+		metastring::metastring<char(0)>()
+		).to_array();
+
+	return versionString.data();
 }
 
 uint32_t getVersionIndex() {
-	return SP_MAKE_API_VERSION(XENOLITH_VERSION_VARIANT, XENOLITH_VERSION_API, XENOLITH_VERSION_REV, XENOLITH_VERSION_BUILD);
+	return SP_MAKE_API_VERSION(XENOLITH_VERSION_VARIANT, buildconfig::XENOLITH_VERSION_API, buildconfig::XENOLITH_VERSION_REV, buildconfig::XENOLITH_VERSION_BUILD);
 }
 
 uint32_t getVersionVariant() {
@@ -123,15 +120,15 @@ uint32_t getVersionVariant() {
 }
 
 uint32_t getVersionApi() {
-	return XENOLITH_VERSION_API;
+	return buildconfig::XENOLITH_VERSION_API;
 }
 
 uint32_t getVersionRev() {
-	return XENOLITH_VERSION_REV;
+	return buildconfig::XENOLITH_VERSION_REV;
 }
 
 uint32_t getVersionBuild() {
-	return XENOLITH_VERSION_BUILD;
+	return buildconfig::XENOLITH_VERSION_BUILD;
 }
 
 }

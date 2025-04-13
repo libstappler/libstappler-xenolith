@@ -1659,7 +1659,7 @@ const BufferData * Queue::Builder::addBufferByRef(StringView key, BufferInfo &&i
 	return _internalResource.addBufferByRef(key, move(info), data, move(atlas), access);
 }
 
-const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, FilePath data, Rc<DataAtlas> &&atlas, AccessType access) {
+const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, const FileInfo &data, Rc<DataAtlas> &&atlas, AccessType access) {
 	return _internalResource.addBuffer(key, move(info), data, move(atlas), access);
 }
 
@@ -1675,7 +1675,7 @@ const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info,
 const ImageData * Queue::Builder::addImageByRef(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImageByRef(key, move(info), data, layout, access);
 }
-const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, FilePath data, AttachmentLayout layout, AccessType access) {
+const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, const FileInfo &data, AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), data, layout, access);
 }
 const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {

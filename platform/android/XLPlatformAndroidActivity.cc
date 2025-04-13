@@ -132,10 +132,22 @@ Activity::~Activity() {
 		AConfiguration_delete(_config);
 		_config = nullptr;
 	}
+
+	if (_pool) {
+		memory::pool::destroy(_pool);
+		_pool = nullptr;
+	}
+
+	sp::terminate();
 }
 
 bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	s_vm = activity->vm;
+
+	_pool = memory::pool::create(memory::app_root_pool);
+	_tmpPool = memory::pool::create(_pool);
+	memory::pool::context ctx(_pool);
+
 	_flags = flags;
 	_activity = activity;
 	_config = AConfiguration_new();
@@ -285,8 +297,9 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 
 	_classLoader = Rc<ClassLoader>::create(_activity, _sdkVersion);
 
-	filesystem::platform::Android_initializeFilesystem(_activity->assetManager,
-			_activity->internalDataPath, _activity->externalDataPath, _classLoader ? _classLoader->apkPath : StringView());
+	filesystem::platform::Android_initializeFilesystem(_activity->assetManager, thiz, _classLoader ? _classLoader->apkPath : StringView());
+
+	sp::initialize();
 
 	_info = ActivityInfo::get(_config, env, activityClass, thiz);
 	_activity->instance = this;
@@ -451,6 +464,8 @@ void Activity::addComponent(Rc<ActivityComponent> &&c) {
 }
 
 void Activity::handleConfigurationChanged() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onConfigurationChanged");
 	if (_config) {
 		AConfiguration_delete(_config);
@@ -468,6 +483,8 @@ void Activity::handleConfigurationChanged() {
 }
 
 void Activity::handleContentRectChanged(const ARect *r) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::format(log::Info, "NativeActivity", "ContentRectChanged: l=%d,t=%d,r=%d,b=%d", r->left, r->top, r->right, r->bottom);
 
 	if (_rootView) {
@@ -477,6 +494,8 @@ void Activity::handleContentRectChanged(const ARect *r) {
 }
 
 void Activity::handleInputQueueCreated(AInputQueue *queue) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onInputQueueCreated");
 	if ((_flags & ActivityFlags::CaptureInput) != ActivityFlags::None) {
 		auto it = _input.emplace(queue, InputLooperData { this, queue }).first;
@@ -488,6 +507,8 @@ void Activity::handleInputQueueCreated(AInputQueue *queue) {
 }
 
 void Activity::handleInputQueueDestroyed(AInputQueue *queue) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onInputQueueDestroyed");
 	if ((_flags & ActivityFlags::CaptureInput) != ActivityFlags::None) {
 		AInputQueue_detachLooper(queue);
@@ -496,6 +517,8 @@ void Activity::handleInputQueueDestroyed(AInputQueue *queue) {
 }
 
 void Activity::handleLowMemory() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onLowMemory");
 
 	for (auto &it : _components) {
@@ -504,11 +527,15 @@ void Activity::handleLowMemory() {
 }
 
 void *Activity::handleSaveInstanceState(size_t* outLen) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onSaveInstanceState");
 	return nullptr;
 }
 
 void Activity::handleNativeWindowCreated(ANativeWindow *window) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
     log::format(log::Info, "NativeActivity", "NativeWindowCreated: %p -- %p -- %d x %d", _activity, window,
 			ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
@@ -525,6 +552,8 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 }
 
 void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::format(log::Info, "NativeActivity", "NativeWindowDestroyed: %p -- %p", _activity, window);
 	if (_rootView) {
 		_rootView->end();
@@ -533,6 +562,8 @@ void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
 }
 
 void Activity::handleNativeWindowRedrawNeeded(ANativeWindow *window) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::format(log::Info, "NativeActivity", "NativeWindowRedrawNeeded: %p -- %p", _activity, window);
 	if (_rootView) {
 		_rootView->waitUntilFrame();
@@ -540,6 +571,8 @@ void Activity::handleNativeWindowRedrawNeeded(ANativeWindow *window) {
 }
 
 void Activity::handleNativeWindowResized(ANativeWindow *window) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::format(log::Info, "NativeActivity", "NativeWindowResized: %p -- %p -- %d x %d", _activity, window,
 			ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
@@ -552,6 +585,8 @@ void Activity::handleNativeWindowResized(ANativeWindow *window) {
 }
 
 void Activity::handlePause() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onPause");
 	core::InputEventData event = core::InputEventData::BoolEvent(core::InputEventName::Background, true);
 	transferInputEvent(event);
@@ -562,6 +597,8 @@ void Activity::handlePause() {
 }
 
 void Activity::handleStart() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onStart");
 
 	for (auto &it : _components) {
@@ -570,6 +607,8 @@ void Activity::handleStart() {
 }
 
 void Activity::handleResume() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::info("NativeActivity", "onResume");
 	core::InputEventData event = core::InputEventData::BoolEvent(core::InputEventName::Background, false);
 	transferInputEvent(event);
@@ -580,10 +619,14 @@ void Activity::handleResume() {
 }
 
 void Activity::handleStop() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	stappler::log::info("NativeActivity", "onStop");
 }
 
 void Activity::handleDestroy() {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	log::format(log::Info, "NativeActivity", "Destroy: %p", _activity);
 
 	for (auto &it : _components) {
@@ -597,15 +640,21 @@ void Activity::handleDestroy() {
 		_application->end();
 		_application->waitStopped();
 	}
+	ctx.pop();
+
 	release(_refId);
 }
 void Activity::handleWindowFocusChanged(int focused) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
 	stappler::log::info("NativeActivity", "onWindowFocusChanged");
 	core::InputEventData event = core::InputEventData::BoolEvent(core::InputEventName::FocusGain, focused != 0);
 	transferInputEvent(event);
 }
 
 int Activity::handleInputEventQueue(int fd, int events, AInputQueue *queue) {
+	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
+
     AInputEvent* event = NULL;
     while (AInputQueue_getEvent(queue, &event) >= 0) {
         if (AInputQueue_preDispatchEvent(queue, event)) {

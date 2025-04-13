@@ -40,22 +40,20 @@ using WindowInfo = platform::WindowInfo;
 
 struct SP_PUBLIC ViewInfo {
 	WindowInfo window;
-	Function<core::SwapchainConfig (const View &, const core::SurfaceInfo &)> selectConfig;
+	Function<core::SwapchainConfig(const View &, const core::SurfaceInfo &)> selectConfig;
 	Function<void(View &, const core::FrameConstraints &)> onCreated;
 	Function<void(View &)> onClosed;
 
 	core::FrameConstraints exportConstraints() {
-		return core::FrameConstraints{
-			.extent = Extent2(window.rect.width, window.rect.height),
+		return core::FrameConstraints{.extent = Extent2(window.rect.width, window.rect.height),
 			.contentPadding = window.decoration,
 			.transform = core::SurfaceTransformFlags::Identity,
-			.density = window.density
-		};
+			.density = window.density};
 	}
 };
 
 class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInterface {
-public:
+	public:
 	static constexpr size_t FrameAverageCount = 20;
 
 	using AttachmentLayout = core::AttachmentLayout;
@@ -82,9 +80,11 @@ public:
 
 	bool isOnThisThread() const;
 
-	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION);
+	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false,
+			StringView tag = STAPPLER_LOCATION);
 
-	virtual void captureImage(StringView, const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
+	virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
+			AttachmentLayout l) const = 0;
 	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,
 			const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 
@@ -122,7 +122,7 @@ public:
 
 	virtual void deprecateSwapchain();
 
-protected:
+	protected:
 	bool _inBackground = false;
 	bool _hasFocus = true;
 	bool _pointerInWindow = false;
@@ -135,6 +135,6 @@ protected:
 	uint64_t _backButtonCounter = 0;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_DIRECTOR_XLVIEW_H_ */

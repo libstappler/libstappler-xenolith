@@ -22,6 +22,8 @@
 
 #include "AppDelegate.h"
 #include "AppScene.h"
+#include "SPFilepath.h"
+#include "SPFilesystem.h"
 #include "XLPlatform.h"
 
 namespace stappler::xenolith::app {
@@ -31,16 +33,21 @@ XL_DECLARE_EVENT_CLASS(AppDelegate, onSwapchainConfig);
 AppDelegate::~AppDelegate() { }
 
 bool AppDelegate::init(ApplicationInfo &&info) {
+	// clang-format off
 	_storageParams = Value({
 		pair("driver", Value("sqlite")),
-		pair("dbname", Value(filesystem::cachesPath<Interface>("root.sqlite"))),
-		pair("serverName", Value("RootStorage"))
-	});
+		pair("dbname",
+				Value(filesystem::findWritablePath<Interface>("root.sqlite",
+						FileCategory::AppCache))),
+		pair("serverName", Value("RootStorage"))}
+	);
+	// clang-format on
 
 	return GuiApplication::init(move(info));
 }
 
 void AppDelegate::run() {
+	// clang-format off
 	addView(ViewInfo{
 		.window = WindowInfo {
 			.title = _info.applicationName,
@@ -59,6 +66,7 @@ void AppDelegate::run() {
 			end();
 		}
 	});
+	// clang-format on
 
 	GuiApplication::run();
 }
@@ -84,14 +92,15 @@ core::SwapchainConfig AppDelegate::selectConfig(const core::SurfaceInfo &info) {
 		}
 	}
 
-	if (std::find(info.presentModes.begin(), info.presentModes.end(), core::PresentMode::Immediate) != info.presentModes.end()) {
+	if (std::find(info.presentModes.begin(), info.presentModes.end(), core::PresentMode::Immediate)
+			!= info.presentModes.end()) {
 		ret.presentModeFast = core::PresentMode::Immediate;
 	}
 
 	auto it = info.formats.begin();
 	while (it != info.formats.end()) {
 		if (it->first != platform::getCommonFormat()) {
-			++ it;
+			++it;
 		} else {
 			break;
 		}
@@ -105,13 +114,16 @@ core::SwapchainConfig AppDelegate::selectConfig(const core::SurfaceInfo &info) {
 		ret.colorSpace = it->second;
 	}
 
-	if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Opaque) != core::CompositeAlphaFlags::None) {
+	if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Opaque)
+			!= core::CompositeAlphaFlags::None) {
 		ret.alpha = core::CompositeAlphaFlags::Opaque;
-	} else if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Inherit) != core::CompositeAlphaFlags::None) {
+	} else if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Inherit)
+			!= core::CompositeAlphaFlags::None) {
 		ret.alpha = core::CompositeAlphaFlags::Inherit;
 	}
 
-	ret.transfer = (info.supportedUsageFlags & core::ImageUsage::TransferDst) != core::ImageUsage::None;
+	ret.transfer =
+			(info.supportedUsageFlags & core::ImageUsage::TransferDst) != core::ImageUsage::None;
 
 	if (ret.presentMode == core::PresentMode::Mailbox) {
 		ret.imageCount = std::max(uint32_t(3), ret.imageCount);
@@ -144,16 +156,12 @@ void AppDelegate::loadExtensions() {
 		log::error("Application", "Fail to launch application: onBuildStorage failed");
 	}
 
-	_networkController = Rc<network::Controller>::alloc(static_cast<Application *>(this), "Application::Network");
+	_networkController = Rc<network::Controller>::alloc(static_cast<Application *>(this),
+			"Application::Network");
 
-	auto libpath = filesystem::writablePath<Interface>("library");
-	filesystem::mkdir(libpath);
-
-	_assetLibrary = Rc<storage::AssetLibrary>::create(static_cast<Application *>(this), _networkController, Value({
-		pair("driver", Value("sqlite")),
-		pair("dbname", Value(filesystem::cachesPath<Interface>("assets.sqlite"))),
-		pair("serverName", Value("AssetStorage"))
-	}));
+	_assetLibrary = storage::AssetLibrary::createLibrary(static_cast<Application *>(this),
+			_networkController, "AssetStorage", FileInfo{"assets", FileCategory::AppCache})
+							.get_cast<storage::AssetLibrary>();
 
 	addExtension(Rc<storage::Server>(_storageServer));
 	addExtension(Rc<network::Controller>(_networkController));
@@ -168,4 +176,4 @@ void AppDelegate::finalizeExtensions() {
 	_assetLibrary = nullptr;
 }
 
-}
+} // namespace stappler::xenolith::app

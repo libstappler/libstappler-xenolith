@@ -41,17 +41,14 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 	}
 
 	if (data.verbose) {
-		std::cout << " Current work dir: " << stappler::filesystem::currentDir<Interface>() << "\n";
-		std::cout << " Documents dir: " << stappler::filesystem::documentsPathReadOnly<Interface>() << "\n";
-		std::cout << " Cache dir: " << stappler::filesystem::cachesPathReadOnly<Interface>() << "\n";
-		std::cout << " Writable dir: " << stappler::filesystem::writablePathReadOnly<Interface>() << "\n";
-		std::cout << " Options: " << stappler::data::EncodeFormat::Pretty << data.encode() << "\n";
+		std::cerr << " Current work dir: " << stappler::filesystem::currentDir<Interface>() << "\n";
+		std::cerr << " Options: " << stappler::data::EncodeFormat::Pretty << data.encode() << "\n";
 	}
 
 	std::cout << "Stappler version: " << getStapplerVersionString() << "\n";
 	std::cout << "Xenolith version: " << xenolith::getVersionString() << "\n";
 
-	memory::pool::perform_temporary([&] {
+	perform_main([&] {
 		auto app = Rc<AppDelegate>::create(move(data));
 
 		app->run();

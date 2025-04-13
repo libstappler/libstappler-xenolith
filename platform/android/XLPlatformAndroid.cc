@@ -21,6 +21,7 @@
  **/
 
 #include "XLPlatformAndroid.h"
+#include "SPFilepath.h"
 
 #if ANDROID
 
@@ -28,7 +29,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static std::mutex s_dataMutex;
 
-static String Activity_getApplicatioName(const jni::RefClass &activityClass, const jni::Ref &activity) {
+static String Activity_getApplicatioName(const jni::RefClass &activityClass,
+		const jni::Ref &activity) {
 	static jmethodID j_getApplicationInfo = nullptr;
 	static jfieldID j_labelRes = nullptr;
 	static jfieldID j_nonLocalizedLabel = nullptr;
@@ -37,7 +39,8 @@ static String Activity_getApplicatioName(const jni::RefClass &activityClass, con
 
 	String ret;
 	if (!j_getApplicationInfo) {
-		j_getApplicationInfo = activityClass.getMethodID("getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;");
+		j_getApplicationInfo = activityClass.getMethodID("getApplicationInfo",
+				"()Landroid/content/pm/ApplicationInfo;");
 	}
 
 	if (!j_getApplicationInfo) {
@@ -55,7 +58,8 @@ static String Activity_getApplicatioName(const jni::RefClass &activityClass, con
 	}
 
 	if (!j_nonLocalizedLabel) {
-		j_nonLocalizedLabel = jAppInfo_class.getFieldID("nonLocalizedLabel", "Ljava/lang/CharSequence;");
+		j_nonLocalizedLabel =
+				jAppInfo_class.getFieldID("nonLocalizedLabel", "Ljava/lang/CharSequence;");
 	}
 
 	auto labelRes = jAppInfo.getField<jint>(j_labelRes);
@@ -85,7 +89,8 @@ static String Activity_getApplicatioVersion(const jni::RefClass &activityClass,
 
 	String ret;
 	if (!j_getPackageManager) {
-		j_getPackageManager = activityClass.getMethodID("getPackageManager", "()Landroid/content/pm/PackageManager;");
+		j_getPackageManager = activityClass.getMethodID("getPackageManager",
+				"()Landroid/content/pm/PackageManager;");
 	}
 	if (!j_getPackageManager) {
 		return String();
@@ -98,7 +103,8 @@ static String Activity_getApplicatioVersion(const jni::RefClass &activityClass,
 
 	auto jpm_class = jpm.getClass();
 	if (!j_getPackageInfo) {
-		j_getPackageInfo = jpm_class.getMethodID("getPackageInfo", "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
+		j_getPackageInfo = jpm_class.getMethodID("getPackageInfo",
+				"(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
 	}
 
 	if (!j_getPackageInfo) {
@@ -131,10 +137,12 @@ static String Activity_getSystemAgent(const jni::Env &env) {
 	auto systemClass = env.findClass("java/lang/System");
 	if (systemClass) {
 		if (!j_getProperty) {
-			j_getProperty = systemClass.getStaticMethodID("getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
+			j_getProperty = systemClass.getStaticMethodID("getProperty",
+					"(Ljava/lang/String;)Ljava/lang/String;");
 		}
 		if (j_getProperty) {
-			auto jUserAgent = systemClass.callStaticMethod<jstring>(j_getProperty, env.newString("http.agent"));
+			auto jUserAgent = systemClass.callStaticMethod<jstring>(j_getProperty,
+					env.newString("http.agent"));
 			if (jUserAgent) {
 				return jUserAgent.getString().str<Interface>();
 			} else {
@@ -154,10 +162,12 @@ static String Activity_getUserAgent(const jni::Env &env, const jni::Ref &activit
 	auto settingsClass = env.findClass("android/webkit/WebSettings");
 	if (settingsClass) {
 		if (!j_getDefaultUserAgent) {
-			j_getDefaultUserAgent = settingsClass.getStaticMethodID("getDefaultUserAgent", "(Landroid/content/Context;)Ljava/lang/String;");
+			j_getDefaultUserAgent = settingsClass.getStaticMethodID("getDefaultUserAgent",
+					"(Landroid/content/Context;)Ljava/lang/String;");
 		}
 		if (j_getDefaultUserAgent) {
-			auto jUserAgent = settingsClass.callStaticMethod<jstring>(j_getDefaultUserAgent, activity);
+			auto jUserAgent =
+					settingsClass.callStaticMethod<jstring>(j_getDefaultUserAgent, activity);
 			return jUserAgent.getString().str<Interface>();
 		} else {
 			env.checkErrors();
@@ -168,8 +178,8 @@ static String Activity_getUserAgent(const jni::Env &env, const jni::Ref &activit
 	return String();
 }
 
-ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const jni::RefClass &activityClass,
-		const jni::Ref &activity, const ActivityInfo *prev) {
+ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env,
+		const jni::RefClass &activityClass, const jni::Ref &activity, const ActivityInfo *prev) {
 	static jmethodID j_getPackageName = nullptr;
 	static jmethodID j_getResources = nullptr;
 	static jmethodID j_getDisplayMetrics = nullptr;
@@ -184,10 +194,12 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 	}
 
 	if (!prev || prev->bundleName.empty() || prev->applicationName.empty()
-			|| prev->applicationVersion.empty() || prev->systemAgent.empty() || prev->userAgent.empty()) {
+			|| prev->applicationVersion.empty() || prev->systemAgent.empty()
+			|| prev->userAgent.empty()) {
 		do {
 			if (!j_getPackageName) {
-				j_getPackageName = activityClass.getMethodID("getPackageName", "()Ljava/lang/String;");
+				j_getPackageName =
+						activityClass.getMethodID("getPackageName", "()Ljava/lang/String;");
 			}
 
 			if (!j_getPackageName) {
@@ -206,7 +218,8 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 				activityInfo.applicationName = Activity_getApplicatioName(activityClass, activity);
 			}
 			if (activityInfo.applicationVersion.empty()) {
-				activityInfo.applicationVersion = Activity_getApplicatioVersion(activityClass, activity, jPackageName);
+				activityInfo.applicationVersion =
+						Activity_getApplicatioVersion(activityClass, activity, jPackageName);
 			}
 			if (activityInfo.systemAgent.empty()) {
 				activityInfo.systemAgent = Activity_getSystemAgent(env);
@@ -221,12 +234,14 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 	int heightPixels = 0;
 	float displayDensity = nan();
 	if (!j_getResources) {
-		j_getResources =activityClass.getMethodID("getResources", "()Landroid/content/res/Resources;");
+		j_getResources =
+				activityClass.getMethodID("getResources", "()Landroid/content/res/Resources;");
 	}
 
 	if (auto resObj = activity.callMethod<jobject>(j_getResources)) {
 		if (!j_getDisplayMetrics) {
-			j_getDisplayMetrics = resObj.getClass().getMethodID("getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
+			j_getDisplayMetrics = resObj.getClass().getMethodID("getDisplayMetrics",
+					"()Landroid/util/DisplayMetrics;");
 		}
 		if (auto dmObj = resObj.callMethod<jobject>(j_getDisplayMetrics)) {
 			auto dmClass = dmObj.getClass();
@@ -254,19 +269,19 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 	if (isnan(displayDensity)) {
 		auto densityValue = AConfiguration_getDensity(conf);
 		switch (densityValue) {
-			case ACONFIGURATION_DENSITY_LOW: displayDensity = 0.75f; break;
-			case ACONFIGURATION_DENSITY_MEDIUM: displayDensity = 1.0f; break;
-			case ACONFIGURATION_DENSITY_TV: displayDensity = 1.5f; break;
-			case ACONFIGURATION_DENSITY_HIGH: displayDensity = 1.5f; break;
-			case 280: displayDensity = 2.0f; break;
-			case ACONFIGURATION_DENSITY_XHIGH: displayDensity = 2.0f; break;
-			case 360: displayDensity = 3.0f; break;
-			case 400: displayDensity = 3.0f; break;
-			case 420: displayDensity = 3.0f; break;
-			case ACONFIGURATION_DENSITY_XXHIGH: displayDensity = 3.0f; break;
-			case 560: displayDensity = 4.0f; break;
-			case ACONFIGURATION_DENSITY_XXXHIGH: displayDensity = 4.0f; break;
-			default: break;
+		case ACONFIGURATION_DENSITY_LOW: displayDensity = 0.75f; break;
+		case ACONFIGURATION_DENSITY_MEDIUM: displayDensity = 1.0f; break;
+		case ACONFIGURATION_DENSITY_TV: displayDensity = 1.5f; break;
+		case ACONFIGURATION_DENSITY_HIGH: displayDensity = 1.5f; break;
+		case 280: displayDensity = 2.0f; break;
+		case ACONFIGURATION_DENSITY_XHIGH: displayDensity = 2.0f; break;
+		case 360: displayDensity = 3.0f; break;
+		case 400: displayDensity = 3.0f; break;
+		case 420: displayDensity = 3.0f; break;
+		case ACONFIGURATION_DENSITY_XXHIGH: displayDensity = 3.0f; break;
+		case 560: displayDensity = 4.0f; break;
+		case ACONFIGURATION_DENSITY_XXXHIGH: displayDensity = 4.0f; break;
+		default: break;
 		}
 	}
 
@@ -283,12 +298,16 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 		activityInfo.sizeInDp = Size2(widthPixels / displayDensity, heightPixels / displayDensity);
 		break;
 	case ACONFIGURATION_ORIENTATION_PORT:
-		activityInfo.sizeInPixels = Extent2(std::min(widthPixels, heightPixels), std::max(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::min(widthPixels, heightPixels) / displayDensity, std::max(widthPixels, heightPixels) / displayDensity);
+		activityInfo.sizeInPixels =
+				Extent2(std::min(widthPixels, heightPixels), std::max(widthPixels, heightPixels));
+		activityInfo.sizeInDp = Size2(std::min(widthPixels, heightPixels) / displayDensity,
+				std::max(widthPixels, heightPixels) / displayDensity);
 		break;
 	case ACONFIGURATION_ORIENTATION_LAND:
-		activityInfo.sizeInPixels = Extent2(std::max(widthPixels, heightPixels), std::min(widthPixels, heightPixels));
-		activityInfo.sizeInDp = Size2(std::max(widthPixels, heightPixels) / displayDensity, std::min(widthPixels, heightPixels) / displayDensity);
+		activityInfo.sizeInPixels =
+				Extent2(std::max(widthPixels, heightPixels), std::min(widthPixels, heightPixels));
+		activityInfo.sizeInDp = Size2(std::max(widthPixels, heightPixels) / displayDensity,
+				std::min(widthPixels, heightPixels) / displayDensity);
 		break;
 	}
 
@@ -297,33 +316,30 @@ ActivityInfo ActivityInfo::get(AConfiguration *conf, const jni::Env &env, const 
 
 void saveApplicationInfo(const Value &value) {
 	std::unique_lock lock(s_dataMutex);
-	filesystem::mkdir(filesystem::documentsPath<Interface>());
-	auto path = filesystem::documentsPath<Interface>("application.cbor");
-	data::save(value, path, data::EncodeFormat::CborCompressed);
+	data::save(value, FileInfo{"application.cbor", FileCategory::AppState, FileFlags::Private},
+			data::EncodeFormat::CborCompressed);
 }
 
 Value loadApplicationInfo() {
 	std::unique_lock lock(s_dataMutex);
-	auto path = filesystem::documentsPath<Interface>("application.cbor");
-	return data::readFile<Interface>(path);
+	return data::readFile<Interface>(
+			FileInfo{"application.cbor", FileCategory::AppState, FileFlags::Private});
 }
 
 void saveMessageToken(StringView tok) {
 	std::unique_lock lock(s_dataMutex);
-	filesystem::mkdir(filesystem::documentsPath<Interface>());
-	auto path = filesystem::documentsPath<Interface>("token.cbor");
-	data::save(Value({
-		pair("token", Value(tok))
-	}), path, data::EncodeFormat::CborCompressed);
+	data::save(Value({pair("token", Value(tok))}),
+			FileInfo{"token.cbor", FileCategory::AppState, FileFlags::Private},
+			data::EncodeFormat::CborCompressed);
 }
 
 String loadMessageToken() {
 	std::unique_lock lock(s_dataMutex);
-	auto path = filesystem::documentsPath<Interface>("token.cbor");
-	auto d = data::readFile<Interface>(path);
+	auto d = data::readFile<Interface>(
+			FileInfo{"token.cbor", FileCategory::AppState, FileFlags::Private});
 	return d.getString("token");
 }
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif

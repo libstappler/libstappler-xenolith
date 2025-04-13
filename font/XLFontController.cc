@@ -22,6 +22,7 @@
 
 #include "XLFontController.h"
 
+#include "SPFilesystem.h"
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
 #include "XLFontExtension.h"
@@ -72,14 +73,13 @@ FontController::Builder &FontController::Builder::operator=(Builder &&other) {
 	return *this;
 }
 
-StringView FontController::Builder::getName() const {
-	return _data->name;
-}
+StringView FontController::Builder::getName() const { return _data->name; }
 FontController *FontController::Builder::getTarget() const {
 	return _data->target ? _data->target.get() : nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, BytesView data) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		BytesView data) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -92,7 +92,8 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Bytes && data) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		Bytes &&data) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -105,11 +106,15 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, FilePath data) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		const FileInfo &data) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontFilePath = data.get().str<Interface>();
+		filesystem::enumeratePaths(data, filesystem::Access::Read, [&](StringView path, FileFlags) {
+			it->second.fontFilePath = path.str<Interface>();
+			return false;
+		});
 		it->second.preconfiguredParams = false;
 		return &it->second;
 	}
@@ -118,7 +123,8 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Function<Bytes()> &&cb) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		Function<Bytes()> &&cb) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -131,7 +137,8 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, BytesView data, FontLayoutParameters params) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		BytesView data, FontLayoutParameters params) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -145,7 +152,8 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Bytes && data, FontLayoutParameters params) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		Bytes &&data, FontLayoutParameters params) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -159,11 +167,15 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, FilePath data, FontLayoutParameters params) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		const FileInfo &data, FontLayoutParameters params) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
-		it->second.fontFilePath = data.get().str<Interface>();
+		filesystem::enumeratePaths(data, filesystem::Access::Read, [&](StringView path, FileFlags) {
+			it->second.fontFilePath = path.str<Interface>();
+			return false;
+		});
 		it->second.params = params;
 		it->second.preconfiguredParams = true;
 		return &it->second;
@@ -173,7 +185,8 @@ const FontController::FontSource * FontController::Builder::addFontSource(String
 	return nullptr;
 }
 
-const FontController::FontSource * FontController::Builder::addFontSource(StringView name, Function<Bytes()> &&cb, FontLayoutParameters params) {
+const FontController::FontSource *FontController::Builder::addFontSource(StringView name,
+		Function<Bytes()> &&cb, FontLayoutParameters params) {
 	auto it = _data->dataQueries.find(name);
 	if (it == _data->dataQueries.end()) {
 		it = _data->dataQueries.emplace(name.str<Interface>(), FontSource()).first;
@@ -195,22 +208,28 @@ const FontController::FontSource *FontController::Builder::getFontSource(StringV
 	return nullptr;
 }
 
-const FontController::FamilyQuery * FontController::Builder::addFontFaceQuery(StringView family, const FontSource *source, bool front) {
+const FontController::FamilyQuery *FontController::Builder::addFontFaceQuery(StringView family,
+		const FontSource *source, bool front) {
 	XL_ASSERT(source, "Source should not be nullptr");
 
 	auto it = _data->familyQueries.find(family);
 	if (it == _data->familyQueries.end()) {
-		it = _data->familyQueries.emplace(family.str<Interface>(), FamilyQuery{family.str<Interface>()}).first;
+		it = _data->familyQueries
+					 .emplace(family.str<Interface>(), FamilyQuery{family.str<Interface>()})
+					 .first;
 	}
 
 	addSources(&it->second, Vector<const FontSource *>{source}, front);
 	return &it->second;
 }
 
-const FontController::FamilyQuery * FontController::Builder::addFontFaceQuery(StringView family, Vector<const FontSource *> &&sources, bool front) {
+const FontController::FamilyQuery *FontController::Builder::addFontFaceQuery(StringView family,
+		Vector<const FontSource *> &&sources, bool front) {
 	auto it = _data->familyQueries.find(family);
 	if (it == _data->familyQueries.end()) {
-		it = _data->familyQueries.emplace(family.str<Interface>(), FamilyQuery{family.str<Interface>()}).first;
+		it = _data->familyQueries
+					 .emplace(family.str<Interface>(), FamilyQuery{family.str<Interface>()})
+					 .first;
 	}
 
 	addSources(&it->second, sp::move(sources), front);
@@ -234,7 +253,8 @@ bool FontController::Builder::addAlias(StringView newAlias, StringView familyNam
 	}
 }
 
-Vector<const FontController::FamilyQuery *> FontController::Builder::getFontFamily(StringView family) const {
+Vector<const FontController::FamilyQuery *> FontController::Builder::getFontFamily(
+		StringView family) const {
 	Vector<const FontController::FamilyQuery *> families;
 	for (auto &it : _data->familyQueries) {
 		if (it.second.family == family) {
@@ -252,16 +272,16 @@ Map<String, FontController::FamilyQuery> &FontController::Builder::getFamilyQuer
 	return _data->familyQueries;
 }
 
-Map<String, String> &FontController::Builder::getAliases() {
-	return _data->aliases;
-}
+Map<String, String> &FontController::Builder::getAliases() { return _data->aliases; }
 
-void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSource *> &&sources, bool front) {
+void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSource *> &&sources,
+		bool front) {
 	if (query->sources.empty() || !front) {
 		query->sources.reserve(query->sources.size() + sources.size());
 		for (auto &iit : sources) {
 			XL_ASSERT(iit, "Source should not be nullptr");
-			if (std::find(query->sources.begin(), query->sources.end(), iit) == query->sources.end()) {
+			if (std::find(query->sources.begin(), query->sources.end(), iit)
+					== query->sources.end()) {
 				query->sources.emplace_back(iit);
 			}
 		}
@@ -271,7 +291,7 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 			if (std::find(sources.begin(), sources.end(), *iit) != sources.end()) {
 				iit = query->sources.erase(iit);
 			} else {
-				++ iit;
+				++iit;
 			}
 		}
 
@@ -280,7 +300,8 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 		auto insertIt = query->sources.begin();
 		for (auto &source : sources) {
 			XL_ASSERT(source, "Source should not be nullptr");
-			if (std::find(query->sources.begin(), query->sources.end(), source) == query->sources.end()) {
+			if (std::find(query->sources.begin(), query->sources.end(), source)
+					== query->sources.end()) {
 				query->sources.emplace(insertIt, source);
 			}
 		}
@@ -288,9 +309,7 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 	query->addInFront = front;
 }
 
-FontController::~FontController() {
-	invalidate(nullptr);
-}
+FontController::~FontController() { invalidate(nullptr); }
 
 bool FontController::init(const Rc<FontExtension> &ext, StringView name) {
 	_ext = ext;
@@ -307,7 +326,7 @@ void FontController::extend(const Callback<bool(FontController::Builder &)> &cb)
 
 void FontController::initialize(Application *app) {
 	_image = _ext->makeInitialImage(_name);
-	app->getGlLoop()->compileImage(_image, [app = Rc<Application>(app)] (bool success) { });
+	app->getGlLoop()->compileImage(_image, [app = Rc<Application>(app)](bool success) { });
 	_texture = Rc<Texture>::create(_image);
 }
 
@@ -353,9 +372,7 @@ void FontController::addFont(StringView family, Vector<Rc<FontFaceData>> &&data,
 				familyIt->second.data.emplace(familyIt->second.data.begin(), move(it));
 			}
 		} else {
-			for (auto &it : data) {
-				familyIt->second.data.emplace_back(move(it));
-			}
+			for (auto &it : data) { familyIt->second.data.emplace_back(move(it)); }
 		}
 	}
 
@@ -451,7 +468,8 @@ Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
 	}
 
 	// create layout
-	ret = Rc<FontFaceSet>::create(sp::move(cfgName), style.fontFamily, sp::move(spec), sp::move(data), _ext->getLibrary());
+	ret = Rc<FontFaceSet>::create(sp::move(cfgName), style.fontFamily, sp::move(spec),
+			sp::move(data), _ext->getLibrary());
 	_layouts.emplace(ret->getName(), ret);
 	ret->touch(_clock, style.persistent);
 	return ret;
@@ -470,12 +488,12 @@ Rc<FontFaceSet> FontController::getLayoutForString(const FontParameters &f, cons
 	return nullptr;
 }
 
-Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> &l, SpanView<CharLayoutData> chars) {
+Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> &l,
+		SpanView<CharLayoutData> chars) {
 	if (l->addTextureChars(chars)) {
 		if (!_dependency) {
-			_dependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
-				_ext->getQueue()
-			}, "FontController");
+			_dependency = Rc<core::DependencyEvent>::alloc(
+					core::DependencyEvent::QueueSet{_ext->getQueue()}, "FontController");
 		}
 		_dirty = true;
 		return _dependency;
@@ -513,18 +531,20 @@ void FontController::update(Application *, const UpdateTime &clock) {
 				}
 
 				auto lb = std::lower_bound(objects.begin(), objects.end(), iit,
-						[] (const FontUpdateRequest &l, FontFaceObject *r) {
+						[](const FontUpdateRequest &l, FontFaceObject *r) {
 					return l.object.get() < r;
 				});
 				if (lb == objects.end()) {
 					auto req = iit->getRequiredChars();
 					if (!req.empty()) {
-						objects.emplace_back(FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
+						objects.emplace_back(
+								FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
 					}
 				} else if (lb != objects.end() && lb->object != iit) {
 					auto req = iit->getRequiredChars();
 					if (!req.empty()) {
-						objects.emplace(lb, FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
+						objects.emplace(lb,
+								FontUpdateRequest{iit, sp::move(req), it.second->isPersistent()});
 					}
 				}
 			}
@@ -552,58 +572,79 @@ void FontController::setLoaded(bool value) {
 	}
 }
 
-void FontController::sendFontUpdatedEvent() {
-	onFontSourceUpdated(this);
-}
+void FontController::sendFontUpdatedEvent() { onFontSourceUpdated(this); }
 
 void FontController::setAliases(Map<String, String> &&aliases) {
 	if (_aliases.empty()) {
 		_aliases = sp::move(aliases);
 	} else {
-		for (auto &it : aliases) {
-			_aliases.insert_or_assign(it.first, it.second);
-		}
+		for (auto &it : aliases) { _aliases.insert_or_assign(it.first, it.second); }
 	}
 }
 
-FontSpecializationVector FontController::findSpecialization(const FamilySpec &family, const FontParameters &params, Vector<Rc<FontFaceData>> *dataList) {
-	auto getFontFaceScore = [] (const FontLayoutParameters &required, const FontLayoutParameters &existed) -> uint32_t {
+FontSpecializationVector FontController::findSpecialization(const FamilySpec &family,
+		const FontParameters &params, Vector<Rc<FontFaceData>> *dataList) {
+	auto getFontFaceScore = [](const FontLayoutParameters &required,
+									const FontLayoutParameters &existed) -> uint32_t {
 		uint32_t ret = 0;
 		// if no match - prefer normal variants
-		if (existed.fontStyle == FontStyle::Normal) { ret += 50; }
-		if (existed.fontWeight == FontWeight::Normal) { ret += 50; }
-		if (existed.fontStretch == FontStretch::Normal) { ret += 50; }
+		if (existed.fontStyle == FontStyle::Normal) {
+			ret += 50;
+		}
+		if (existed.fontWeight == FontWeight::Normal) {
+			ret += 50;
+		}
+		if (existed.fontStretch == FontStretch::Normal) {
+			ret += 50;
+		}
 
 		if ((required.fontStyle == FontStyle::Italic && existed.fontStyle == FontStyle::Italic)
-				|| (required.fontStyle == FontStyle::Normal && existed.fontStyle == FontStyle::Normal)) {
-			ret += 100000;
+				|| (required.fontStyle == FontStyle::Normal
+						&& existed.fontStyle == FontStyle::Normal)) {
+			ret += 100'000;
 		} else if (existed.fontStyle == FontStyle::Italic) {
 			if (required.fontStyle != FontStyle::Normal) {
-				ret += ((360 << 6) - std::abs(int(required.fontStyle.get()) - int(FontStyle::Oblique.get()))) / 2;
+				ret += ((360 << 6)
+							   - std::abs(int(required.fontStyle.get())
+									   - int(FontStyle::Oblique.get())))
+						/ 2;
 			}
 		} else if (required.fontStyle == FontStyle::Italic) {
 			if (existed.fontStyle != FontStyle::Normal) {
-				ret += ((360 << 6) - std::abs(int(FontStyle::Oblique.get()) - int(existed.fontStyle.get()))) / 2;
+				ret += ((360 << 6)
+							   - std::abs(int(FontStyle::Oblique.get())
+									   - int(existed.fontStyle.get())))
+						/ 2;
 			}
 		} else {
-			ret += (360 << 6) - std::abs(int(required.fontStyle.get()) - int(existed.fontStyle.get()));
+			ret += (360 << 6)
+					- std::abs(int(required.fontStyle.get()) - int(existed.fontStyle.get()));
 		}
 
-		if (existed.fontStyle == required.fontStyle && (existed.fontStyle == FontStyle::Oblique || existed.fontStyle  == FontStyle::Italic)) {
+		if (existed.fontStyle == required.fontStyle
+				&& (existed.fontStyle == FontStyle::Oblique
+						|| existed.fontStyle == FontStyle::Italic)) {
 
-		} else if ((existed.fontStyle == FontStyle::Oblique || existed.fontStyle == FontStyle::Italic)
-				&& (required.fontStyle == FontStyle::Oblique || required.fontStyle == FontStyle::Italic)) {
-			ret += 75000; // Oblique-Italic replacement
-		} else if (existed.fontStyle == required.fontStyle && existed.fontStyle == FontStyle::Normal) {
-			ret += 50000;
+		} else if ((existed.fontStyle == FontStyle::Oblique
+						   || existed.fontStyle == FontStyle::Italic)
+				&& (required.fontStyle == FontStyle::Oblique
+						|| required.fontStyle == FontStyle::Italic)) {
+			ret += 75'000; // Oblique-Italic replacement
+		} else if (existed.fontStyle == required.fontStyle
+				&& existed.fontStyle == FontStyle::Normal) {
+			ret += 50'000;
 		}
 
 		if (existed.fontGrade == required.fontGrade) {
-			ret += (400 - std::abs(int(required.fontGrade.get()) - int(existed.fontGrade.get()))) * 50;
+			ret += (400 - std::abs(int(required.fontGrade.get()) - int(existed.fontGrade.get())))
+					* 50;
 		}
 
-		ret += (1000 - std::abs(int(required.fontWeight.get()) - int(existed.fontWeight.get()))) * 100;
-		ret += ((250 << 1) - std::abs(int(required.fontStretch.get()) - int(existed.fontStretch.get()))) * 100;
+		ret += (1'000 - std::abs(int(required.fontWeight.get()) - int(existed.fontWeight.get())))
+				* 100;
+		ret += ((250 << 1)
+					   - std::abs(int(required.fontStretch.get()) - int(existed.fontStretch.get())))
+				* 100;
 		return ret;
 	};
 
@@ -623,11 +664,13 @@ FontSpecializationVector FontController::findSpecialization(const FamilySpec &fa
 			score = specScore;
 			ret = spec;
 		}
-		-- offset;
+		--offset;
 	}
 
 	if (dataList) {
-		std::sort(scores.begin(), scores.end(), [] (const Pair<FontFaceData *, uint32_t> &l, const Pair<FontFaceData *, uint32_t> &r) {
+		std::sort(scores.begin(), scores.end(),
+				[](const Pair<FontFaceData *, uint32_t> &l,
+						const Pair<FontFaceData *, uint32_t> &r) {
 			if (l.second == r.second) {
 				return l.first < r.first;
 			} else {
@@ -636,9 +679,7 @@ FontSpecializationVector FontController::findSpecialization(const FamilySpec &fa
 		});
 
 		dataList->reserve(scores.size());
-		for (auto &it : scores) {
-			dataList->emplace_back(it.first);
-		}
+		for (auto &it : scores) { dataList->emplace_back(it.first); }
 	}
 
 	return ret;
@@ -649,20 +690,22 @@ void FontController::removeUnusedLayouts() {
 	auto it = _layouts.begin();
 	while (it != _layouts.end()) {
 		if (it->second->isPersistent()) {
-			++ it;
+			++it;
 			continue;
 		}
 
-		if (/*_clock - it->second->getAccessTime() > _unusedInterval.toMicros() &&*/ it->second->getReferenceCount() == 1) {
+		if (/*_clock - it->second->getAccessTime() > _unusedInterval.toMicros() &&*/ it->second
+						->getReferenceCount()
+				== 1) {
 			auto c = it->second->getTexturesCount();
 			it = _layouts.erase(it);
 			if (c > 0) {
 				_dirty = true;
 			}
 		} else {
-			++ it;
+			++it;
 		}
 	}
 }
 
-}
+} // namespace stappler::xenolith::font

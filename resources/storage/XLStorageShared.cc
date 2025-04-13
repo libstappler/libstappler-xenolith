@@ -26,10 +26,11 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 static SharedSymbol s_xenolithResoureStorage[] = {
-	SharedSymbol{"Server::createServer(Application*,Value const&)",
-		(void *)Server::createServer},
+	SharedSymbol{"Server::createServer", Server::createServer},
 };
 
-static SharedModule s_xenolithResoureStorageModule("xenolith_resources_storage", s_xenolithResoureStorage, sizeof(s_xenolithResoureStorage) / sizeof(SharedSymbol));
+static SharedModule s_xenolithResoureStorageModule(
+		buildconfig::MODULE_XENOLITH_RESOURCES_STORAGE_NAME, s_xenolithResoureStorage,
+		sizeof(s_xenolithResoureStorage) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::xenolith::storage

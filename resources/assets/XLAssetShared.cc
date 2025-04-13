@@ -26,10 +26,11 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
 static SharedSymbol s_xenolithResoureAsset[] = {
-	SharedSymbol{"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)",
-		(void *)AssetLibrary::createLibrary},
+	SharedSymbol{"AssetLibrary::createLibrary", AssetLibrary::createLibrary},
 };
 
-static SharedModule s_xenolithResourceAssetModule("xenolith_resources_assets", s_xenolithResoureAsset, sizeof(s_xenolithResoureAsset) / sizeof(SharedSymbol));
+static SharedModule s_xenolithResourceAssetModule(
+		buildconfig::MODULE_XENOLITH_RESOURCES_ASSETS_NAME, s_xenolithResoureAsset,
+		sizeof(s_xenolithResoureAsset) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::xenolith::storage

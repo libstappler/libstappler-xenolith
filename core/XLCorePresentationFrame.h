@@ -41,12 +41,12 @@ class Swapchain;
 
 struct AttachmentData;
 
-struct SwapchainImageData {
+struct SP_PUBLIC SwapchainImageData {
 	Rc<ImageObject> image;
 	Map<ImageViewInfo, Rc<ImageView>> views;
 };
 
-struct SwapchainAcquiredImage : public Ref {
+struct SP_PUBLIC SwapchainAcquiredImage : public Ref {
 	uint32_t imageIndex;
 	const SwapchainImageData *data;
 	Rc<Semaphore> sem;
@@ -56,7 +56,7 @@ struct SwapchainAcquiredImage : public Ref {
 	: imageIndex(idx), data(d), sem(move(s)), swapchain(move(sw)) { }
 };
 
-class PresentationFrame : public Ref {
+class SP_PUBLIC PresentationFrame : public Ref {
 public:
 	enum Flags {
 		None,

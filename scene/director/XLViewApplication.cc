@@ -31,15 +31,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void ViewApplication::wakeup() {
 	if (isOnThisThread()) {
-		for (auto &it : _activeViews) {
-			it->setReadyForNextFrame();
-		}
+		for (auto &it : _activeViews) { it->setReadyForNextFrame(); }
 		Application::wakeup();
 	} else {
 		performOnAppThread([this] {
-			for (auto &it : _activeViews) {
-				it->setReadyForNextFrame();
-			}
+			for (auto &it : _activeViews) { it->setReadyForNextFrame(); }
 			performUpdate();
 		}, this, true);
 	}
@@ -47,18 +43,18 @@ void ViewApplication::wakeup() {
 
 bool ViewApplication::addView(ViewInfo &&info) {
 	_hasViews = true;
-	performOnGlThread([this, info = move(info)] () mutable {
+	performOnGlThread([this, info = move(info)]() mutable {
 		if (_device) {
 			if (info.onClosed) {
 				auto tmp = sp::move(info.onClosed);
-				info.onClosed = [this, tmp = sp::move(tmp)] (xenolith::View &view) {
+				info.onClosed = [this, tmp = sp::move(tmp)](xenolith::View &view) {
 					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
 					}, this, true);
 					tmp(view);
 				};
 			} else {
-				info.onClosed = [this] (xenolith::View &view) {
+				info.onClosed = [this](xenolith::View &view) {
 					performOnAppThread([this, view = Rc<xenolith::View>(&view)] {
 						_activeViews.erase(view);
 					}, this, true);
@@ -66,13 +62,11 @@ bool ViewApplication::addView(ViewInfo &&info) {
 			}
 
 #if MODULE_XENOLITH_BACKEND_VKGUI
-			auto createView = SharedModule::acquireTypedSymbol<decltype(&vk::platform::createView)>("xenolith_backend_vkgui",
-					"platform::createView(Application&,core::Device const&,ViewInfo&&)");
+			auto createView = SharedModule::acquireTypedSymbol<decltype(&vk::platform::createView)>(
+					buildconfig::MODULE_XENOLITH_BACKEND_VKGUI_NAME, "platform::createView");
 			if (createView) {
 				auto v = createView(*this, *_device, move(info));
-				performOnAppThread([this, v] {
-					_activeViews.emplace(v.get());
-				}, this);
+				performOnAppThread([this, v] { _activeViews.emplace(v.get()); }, this);
 			}
 #endif
 		} else {
@@ -85,11 +79,9 @@ bool ViewApplication::addView(ViewInfo &&info) {
 void ViewApplication::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
 	Application::handleDeviceStarted(loop, dev);
 
-	for (auto &it : _tmpViews) {
-		addView(move(it));
-	}
+	for (auto &it : _tmpViews) { addView(move(it)); }
 
 	_tmpViews.clear();
 }
 
-}
+} // namespace stappler::xenolith

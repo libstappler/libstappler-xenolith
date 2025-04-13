@@ -21,6 +21,8 @@
  **/
 
 #include "XLAssetLibrary.h"
+#include "SPFilepath.h"
+#include "SPFilesystem.h"
 #include "XLApplication.h"
 #include "XLAsset.h"
 #include "XLStorageComponent.h"
@@ -107,7 +109,7 @@ AssetComponent::AssetComponent(AssetComponentContainer *c, ComponentLoader &load
 void AssetComponent::handleChildInit(const Server &serv, const db::Transaction &t) {
 	Component::handleChildInit(serv, t);
 
-	filesystem::mkdir(filesystem::cachesPath<Interface>("assets"));
+	filesystem::mkdir(FileInfo("assets", FileCategory::AppState));
 
 	Time time = Time::now();
 	Vector<Rc<Asset>> assetsVec;
@@ -120,14 +122,13 @@ void AssetComponent::handleChildInit(const Server &serv, const db::Transaction &
 		auto &asset = assetsVec.emplace_back(Rc<Asset>::alloc(_container->getLibrary(), it));
 		asset->touch(time);
 
-		_assets.update(t, it, db::Value({
-			pair("touch", db::Value(asset->getTouch().toMicros()))
-		}));
+		_assets.update(t, it, db::Value({pair("touch", db::Value(asset->getTouch().toMicros()))}));
 	}
 
 	cleanup(t);
 
-	_container->getLibrary()->getApplication()->performOnAppThread([assetsVec = sp::move(assetsVec), lib = _container->getLibrary()] () mutable {
+	_container->getLibrary()->getApplication()->performOnAppThread(
+			[assetsVec = sp::move(assetsVec), lib = _container->getLibrary()]() mutable {
 		lib->handleLibraryLoaded(sp::move(assetsVec));
 	}, _container->getLibrary());
 }
@@ -135,18 +136,17 @@ void AssetComponent::handleChildInit(const Server &serv, const db::Transaction &
 void AssetComponent::cleanup(const db::Transaction &t) {
 	Time time = Time::now();
 	if (auto iface = dynamic_cast<db::sql::SqlHandle *>(t.getAdapter().getBackendInterface())) {
-		iface->performSimpleSelect(toString("SELECT __oid, url FROM ", _assets.getName(),
-				" WHERE download == 0 AND ttl != 0 AND (touch + ttl) < ",
-				time.toMicros(), ";"), [&] (db::Result &res) {
+		auto query = toString("SELECT __oid, url FROM ", _assets.getName(),
+				" WHERE download == 0 AND ttl != 0 AND (touch + ttl) < ", time.toMicros(), ";");
+		iface->performSimpleSelect(query, [&](db::Result &res) {
 			for (auto it : res) {
-				auto path = AssetLibrary::getAssetPath(it.toInteger(0));
-				filesystem::remove(path, true, true);
+				auto path = _container->getLibrary()->getAssetPath(it.toInteger(0));
+				filesystem::remove(FileInfo{path}, true, true);
 			}
 		});
 
 		iface->performSimpleQuery(toString("DELETE FROM ", _assets.getName(),
-				" WHERE download == 0 AND ttl != 0 AND touch + ttl * 2 < ",
-				time.toMicros(), ";"));
+				" WHERE download == 0 AND ttl != 0 AND touch + ttl * 2 < ", time.toMicros(), ";"));
 	}
 }
 
@@ -160,26 +160,27 @@ db::Value AssetComponent::getAsset(const db::Transaction &t, StringView url) con
 	return db::Value();
 }
 
-db::Value AssetComponent::createAsset(const db::Transaction &t, StringView url, TimeInterval ttl) const {
-	return _assets.create(t, db::Value({
-		pair("url", db::Value(url)),
-		pair("ttl", db::Value(ttl)),
-	}));
+db::Value AssetComponent::createAsset(const db::Transaction &t, StringView url,
+		TimeInterval ttl) const {
+	return _assets.create(t,
+			db::Value({
+				pair("url", db::Value(url)),
+				pair("ttl", db::Value(ttl)),
+			}));
 }
 
 void AssetComponent::updateAssetTtl(const db::Transaction &t, int64_t id, TimeInterval ttl) const {
-	_assets.update(t, id, db::Value({
-		pair("ttl", db::Value(ttl)),
-	}), db::UpdateFlags::NoReturn);
-}
-
-String AssetLibrary::getAssetPath(int64_t id) {
-	return toString(filesystem::cachesPath<Interface>("assets"), "/", id);
+	_assets.update(t, id,
+			db::Value({
+				pair("ttl", db::Value(ttl)),
+			}),
+			db::UpdateFlags::NoReturn);
 }
 
 String AssetLibrary::getAssetUrl(StringView url) {
-	if (url.starts_with("%") || url.starts_with("app://") || url.starts_with("http://") || url.starts_with("https://")
-			 || url.starts_with("ftp://") || url.starts_with("ftps://")) {
+	if (url.starts_with("%") || url.starts_with("app://") || url.starts_with("http://")
+			|| url.starts_with("https://") || url.starts_with("ftp://")
+			|| url.starts_with("ftps://")) {
 		return url.str<Interface>();
 	} else if (url.starts_with("/")) {
 		return filepath::canonical<Interface>(url);
@@ -188,15 +189,27 @@ String AssetLibrary::getAssetUrl(StringView url) {
 	}
 }
 
-Rc<ApplicationExtension> AssetLibrary::createLibrary(Application *app, network::Controller *c, const Value &dbParams) {
-	return Rc<storage::AssetLibrary>::create(app, c, dbParams);
+Rc<ApplicationExtension> AssetLibrary::createLibrary(Application *app, network::Controller *c,
+		StringView name, const FileInfo &root, const Value &dbParams) {
+	return Rc<storage::AssetLibrary>::create(app, c, name, root, dbParams);
 }
 
-AssetLibrary::~AssetLibrary() {
-	_server = nullptr;
-}
+AssetLibrary::~AssetLibrary() { _server = nullptr; }
 
-bool AssetLibrary::init(Application *app, network::Controller *c, const Value &dbParams) {
+bool AssetLibrary::init(Application *app, network::Controller *c, StringView name,
+		const FileInfo &root, const Value &dbParams) {
+	_rootPath = filesystem::findWritablePath<Interface>(root);
+
+	db::Value targetDbParams = dbParams;
+	if (!dbParams.hasValue("driver")) {
+		targetDbParams.setString("sqlite", "driver");
+	}
+	if (!dbParams.hasValue("dbname")) {
+		targetDbParams.setString(filepath::merge<Interface>(_rootPath, "assets.sqlite"), "dbname");
+	}
+
+	targetDbParams.setString(name, "serverName");
+
 	_application = app; // always before server initialization
 	_controller = c;
 	_container = Rc<AssetComponentContainer>::create("AssetLibrary", this);
@@ -205,9 +218,7 @@ bool AssetLibrary::init(Application *app, network::Controller *c, const Value &d
 	return true;
 }
 
-void AssetLibrary::initialize(Application *) {
-
-}
+void AssetLibrary::initialize(Application *) { }
 
 void AssetLibrary::invalidate(Application *app) {
 	UpdateTime t;
@@ -225,21 +236,28 @@ void AssetLibrary::update(Application *, const UpdateTime &t) {
 	auto it = _liveAssets.begin();
 	while (it != _liveAssets.end()) {
 		if ((*it)->isStorageDirty()) {
-			_server->perform([this, value = (*it)->encode(), id = (*it)->getId()] (const Server &, const db::Transaction &t) {
-				_container->getComponent()->getAssets().update(t, id, db::Value(value), db::UpdateFlags::NoReturn);
+			_server->perform(
+					[this, value = (*it)->encode(), id = (*it)->getId()](const Server &,
+							const db::Transaction &t) {
+				_container->getComponent()->getAssets().update(t, id, db::Value(value),
+						db::UpdateFlags::NoReturn);
 				return true;
-			}, this);
+			},
+					this);
 			(*it)->setStorageDirty(false);
 		}
 		if ((*it)->getReferenceCount() == 1) {
 			it = _liveAssets.erase(it);
 		} else {
-			++ it;
+			++it;
 		}
 	}
 }
 
-bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterval ttl, Rc<Ref> &&ref) {
+String AssetLibrary::getAssetPath(int64_t id) { return toString(_rootPath, "/", id); }
+
+bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterval ttl,
+		Rc<Ref> &&ref) {
 	if (!_loaded) {
 		_tmpRequests.push_back(AssetRequest(iurl, sp::move(cb), ttl, sp::move(ref)));
 		return true;
@@ -257,9 +275,11 @@ bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterva
 	if (it != _callbacks.end()) {
 		it->second.emplace_back(sp::move(cb), sp::move(ref));
 	} else {
-		_callbacks.emplace(url, Vector<Pair<AssetCallback, Rc<Ref>>>({pair(sp::move(cb), sp::move(ref))}));
+		_callbacks.emplace(url,
+				Vector<Pair<AssetCallback, Rc<Ref>>>({pair(sp::move(cb), sp::move(ref))}));
 
-		_server->perform([this, url = sp::move(url), ttl] (const Server &, const db::Transaction &t) {
+		_server->perform(
+				[this, url = sp::move(url), ttl](const Server &, const db::Transaction &t) {
 			Rc<Asset> asset;
 			if (auto data = _container->getComponent()->getAsset(t, url)) {
 				if (data.getInteger("ttl") != int64_t(ttl.toMicros())) {
@@ -280,14 +300,14 @@ bool AssetLibrary::acquireAsset(StringView iurl, AssetCallback &&cb, TimeInterva
 	return true;
 }
 
-bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&icb, Rc<Ref> &&ref) {
+bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&icb,
+		Rc<Ref> &&ref) {
 	if (!_loaded) {
 		if (!icb && !ref) {
-			for (auto &it : vec) {
-				_tmpRequests.emplace_back(sp::move(it));
-			}
+			for (auto &it : vec) { _tmpRequests.emplace_back(sp::move(it)); }
 		} else {
-			_tmpMultiRequest.emplace_back(AssetMultiRequest(vec.vec<Interface>(), sp::move(icb), sp::move(ref)));
+			_tmpMultiRequest.emplace_back(
+					AssetMultiRequest(vec.vec<Interface>(), sp::move(icb), sp::move(ref)));
 		}
 		return true;
 	}
@@ -315,7 +335,7 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 			if (cbit != _callbacks.end()) {
 				cbit->second.emplace_back(it.callback, ref);
 				if (cb && retVec) {
-					cbit->second.emplace_back([cb, retVec, assetCount] (Asset *a) {
+					cbit->second.emplace_back([cb, retVec, assetCount](Asset *a) {
 						retVec->emplace_back(a);
 						if (retVec->size() == assetCount) {
 							(*cb)(*retVec);
@@ -328,7 +348,7 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 				Vector<Pair<AssetCallback, Rc<Ref>>> vec;
 				vec.emplace_back(it.callback, ref);
 				if (cb && retVec) {
-					vec.emplace_back([cb, retVec, assetCount] (Asset *a) {
+					vec.emplace_back([cb, retVec, assetCount](Asset *a) {
 						retVec->emplace_back(a);
 						if (retVec->size() == assetCount) {
 							(*cb)(*retVec);
@@ -355,7 +375,7 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 		return true;
 	}
 
-	_server->perform([this, requests] (const Server &, const db::Transaction &t) {
+	_server->perform([this, requests](const Server &, const db::Transaction &t) {
 		db::Vector<int64_t> ids;
 		for (auto &it : *requests) {
 			Rc<Asset> asset;
@@ -381,36 +401,40 @@ bool AssetLibrary::acquireAssets(SpanView<AssetRequest> vec, AssetVecCallback &&
 	return true;
 }
 
-int64_t AssetLibrary::addVersion(const db::Transaction &t, int64_t assetId, const Asset::VersionData &data) {
-	auto version = _container->getComponent()->getVersions().create(t, db::Value({
-		pair("asset", db::Value(assetId)),
-		pair("etag", db::Value(data.etag)),
-		pair("ctime", db::Value(data.ctime)),
-		pair("size", db::Value(data.size)),
-		pair("type", db::Value(data.contentType)),
-	}));
+int64_t AssetLibrary::addVersion(const db::Transaction &t, int64_t assetId,
+		const Asset::VersionData &data) {
+	auto version = _container->getComponent()->getVersions().create(t,
+			db::Value({
+				pair("asset", db::Value(assetId)),
+				pair("etag", db::Value(data.etag)),
+				pair("ctime", db::Value(data.ctime)),
+				pair("size", db::Value(data.size)),
+				pair("type", db::Value(data.contentType)),
+			}));
 	return version.getInteger("__oid");
 }
 
 void AssetLibrary::eraseVersion(int64_t id) {
-	_server->perform([this, id] (const Server &serv, const db::Transaction &t) {
+	_server->perform([this, id](const Server &serv, const db::Transaction &t) {
 		return _container->getComponent()->getVersions().remove(t, id);
 	});
 }
 
 void AssetLibrary::setAssetDownload(int64_t id, bool value) {
-	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) -> bool {
-		return _container->getComponent()->getAssets().update(t, id, db::Value({
-			pair("download", db::Value(value))
-		})) ? true : false;
+	_server->perform([this, id, value](const Server &serv, const db::Transaction &t) -> bool {
+		return _container->getComponent()->getAssets().update(t, id,
+					   db::Value({pair("download", db::Value(value))}))
+				? true
+				: false;
 	});
 }
 
 void AssetLibrary::setVersionComplete(int64_t id, bool value) {
-	_server->perform([this, id, value] (const Server &serv, const db::Transaction &t) -> bool {
-		return _container->getComponent()->getVersions().update(t, id, db::Value({
-			pair("complete", db::Value(value))
-		})) ? true : false;
+	_server->perform([this, id, value](const Server &serv, const db::Transaction &t) -> bool {
+		return _container->getComponent()->getVersions().update(t, id,
+					   db::Value({pair("complete", db::Value(value))}))
+				? true
+				: false;
 	});
 }
 
@@ -420,7 +444,7 @@ void AssetLibrary::cleanup() {
 		return;
 	}
 
-	_server->perform([this] (const storage::Server &serv, const db::Transaction &t) {
+	_server->perform([this](const storage::Server &serv, const db::Transaction &t) {
 		_container->getComponent()->cleanup(t);
 		return true;
 	}, this);
@@ -460,9 +484,7 @@ void AssetLibrary::handleLibraryLoaded(Vector<Rc<Asset>> &&assets) {
 
 		auto iit = _callbacks.find(url);
 		if (iit != _callbacks.end()) {
-			for (auto &cb : iit->second) {
-				cb.first(it);
-			}
+			for (auto &cb : iit->second) { cb.first(it); }
 		}
 	}
 
@@ -500,4 +522,4 @@ void AssetLibrary::handleAssetLoaded(Rc<Asset> &&asset) {
 	}, this);
 }
 
-}
+} // namespace stappler::xenolith::storage

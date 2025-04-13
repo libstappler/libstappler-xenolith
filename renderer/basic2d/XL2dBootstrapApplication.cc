@@ -20,6 +20,7 @@
  THE SOFTWARE.
  **/
 
+#include "SPFilepath.h"
 #include "XLCommon.h"
 #include "XLPlatform.h"
 
@@ -61,15 +62,15 @@ bool BootstrapScene::init(Application *app, const core::FrameConstraints &constr
 	auto color = Color4F::WHITE;
 	color.a = 0.5f;
 
-	auto light = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.3f), 1.5f, color);
-	auto ambient = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, color);
+	auto light = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.3f),
+			1.5f, color);
+	auto ambient = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient,
+			Vec2(0.0f, 0.0f), 1.5f, color);
 
 	content->setGlobalLight(Color4F::WHITE);
 	content->removeAllLights();
 	content->addLight(move(light));
 	content->addLight(move(ambient));
-
-	filesystem::mkdir(filesystem::cachesPath<Interface>());
 
 	return true;
 }
@@ -85,16 +86,26 @@ XL_DECLARE_EVENT_CLASS(BootstrapApplication, onSwapchainConfig);
 bool BootstrapApplication::init(ApplicationInfo &&info) {
 	_initInfo = move(info);
 
+	String dbPath;
+	filesystem::enumerateWritablePaths(FileInfo{"root.sqlite", FileCategory::AppCache},
+			[&](StringView path, FileFlags) {
+		dbPath = path.str<Interface>();
+		return false;
+	});
+
+	// clang-format off
 	_storageParams = Value({
 		pair("driver", Value("sqlite")),
-		pair("dbname", Value(filesystem::cachesPath<Interface>("root.sqlite"))),
+		pair("dbname", Value(dbPath)),
 		pair("serverName", Value("RootStorage"))
 	});
+	// clang-format on
 
 	return GuiApplication::init(ApplicationInfo(_initInfo));
 }
 
 void BootstrapApplication::run() {
+	// clang-format off
 	addView(ViewInfo{
 		.window = platform::WindowInfo{
 			.title = _info.applicationName,
@@ -115,7 +126,7 @@ void BootstrapApplication::run() {
 			end();
 		}
 	});
-
+	// clang-format on
 	GuiApplication::run();
 }
 
@@ -124,7 +135,8 @@ void BootstrapApplication::setPreferredPresentMode(core::PresentMode mode) {
 	_preferredPresentMode = mode;
 }
 
-Rc<Scene> BootstrapApplication::createSceneForView(vk::View &view, const core::FrameConstraints &constraints) {
+Rc<Scene> BootstrapApplication::createSceneForView(vk::View &view,
+		const core::FrameConstraints &constraints) {
 #if MODULE_XENOLITH_RENDERER_BASIC2D
 	return Rc<BootstrapScene>::create(this, constraints);
 #else
@@ -132,11 +144,10 @@ Rc<Scene> BootstrapApplication::createSceneForView(vk::View &view, const core::F
 #endif
 }
 
-void BootstrapApplication::finalizeView(vk::View &view) {
+void BootstrapApplication::finalizeView(vk::View &view) { }
 
-}
-
-core::SwapchainConfig BootstrapApplication::selectConfig(const vk::View &, const core::SurfaceInfo &info) {
+core::SwapchainConfig BootstrapApplication::selectConfig(const vk::View &,
+		const core::SurfaceInfo &info) {
 	std::unique_lock<Mutex> lock(_configMutex);
 	core::SwapchainConfig ret;
 	ret.extent = info.currentExtent;
@@ -152,14 +163,15 @@ core::SwapchainConfig BootstrapApplication::selectConfig(const vk::View &, const
 		}
 	}
 
-	if (std::find(info.presentModes.begin(), info.presentModes.end(), core::PresentMode::Immediate) != info.presentModes.end()) {
+	if (std::find(info.presentModes.begin(), info.presentModes.end(), core::PresentMode::Immediate)
+			!= info.presentModes.end()) {
 		ret.presentModeFast = core::PresentMode::Immediate;
 	}
 
 	auto it = info.formats.begin();
 	while (it != info.formats.end()) {
 		if (it->first != xenolith::platform::getCommonFormat()) {
-			++ it;
+			++it;
 		} else {
 			break;
 		}
@@ -173,13 +185,16 @@ core::SwapchainConfig BootstrapApplication::selectConfig(const vk::View &, const
 		ret.colorSpace = it->second;
 	}
 
-	if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Opaque) != core::CompositeAlphaFlags::None) {
+	if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Opaque)
+			!= core::CompositeAlphaFlags::None) {
 		ret.alpha = core::CompositeAlphaFlags::Opaque;
-	} else if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Inherit) != core::CompositeAlphaFlags::None) {
+	} else if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Inherit)
+			!= core::CompositeAlphaFlags::None) {
 		ret.alpha = core::CompositeAlphaFlags::Inherit;
 	}
 
-	ret.transfer = (info.supportedUsageFlags & core::ImageUsage::TransferDst) != core::ImageUsage::None;
+	ret.transfer =
+			(info.supportedUsageFlags & core::ImageUsage::TransferDst) != core::ImageUsage::None;
 
 	if (ret.presentMode == core::PresentMode::Mailbox) {
 		ret.imageCount = std::max(uint32_t(3), ret.imageCount);
@@ -207,8 +222,8 @@ void BootstrapApplication::loadExtensions() {
 	}
 
 #if MODULE_XENOLITH_RESOURCES_STORAGE
-	auto createServer = SharedModule::acquireTypedSymbol<decltype(&storage::Server::createServer)>("xenolith_resources_storage",
-			"Server::createServer(Application*,Value const&)");
+	auto createServer = SharedModule::acquireTypedSymbol<decltype(&storage::Server::createServer)>(
+			buildconfig::MODULE_XENOLITH_RESOURCES_STORAGE_NAME, "Server::createServer");
 
 	if (createServer) {
 		_storageServer = createServer(static_cast<Application *>(this), _storageParams);
@@ -222,8 +237,10 @@ void BootstrapApplication::loadExtensions() {
 #endif
 
 #if MODULE_XENOLITH_RESOURCES_NETWORK
-	auto createController = SharedModule::acquireTypedSymbol<decltype(&network::Controller::createController)>("xenolith_resources_network",
-			"Controller::createController(Application*,StringView,Bytes&&)");
+	auto createController =
+			SharedModule::acquireTypedSymbol<decltype(&network::Controller::createController)>(
+					buildconfig::MODULE_XENOLITH_RESOURCES_NETWORK_NAME,
+					"Controller::createController");
 	if (createController) {
 		_networkController = createController(static_cast<Application *>(this), "Root", Bytes());
 		if (_networkController) {
@@ -234,14 +251,16 @@ void BootstrapApplication::loadExtensions() {
 
 #if MODULE_XENOLITH_RESOURCES_ASSETS
 	if (_networkController) {
-		auto createLibrary = SharedModule::acquireTypedSymbol<decltype(&storage::AssetLibrary::createLibrary)>("xenolith_resources_assets",
-				"AssetLibrary::createLibrary(Application*,network::Controller*,Value const&)");
+		auto createLibrary =
+				SharedModule::acquireTypedSymbol< decltype(&storage::AssetLibrary::createLibrary)>(
+						buildconfig::MODULE_XENOLITH_RESOURCES_ASSETS_NAME,
+						"AssetLibrary::createLibrary");
 		if (createLibrary) {
-			_assetLibrary = createLibrary(static_cast<Application *>(this), static_cast<network::Controller *>(_networkController.get()), Value({
-				pair("driver", Value("sqlite")),
-				pair("dbname", Value(filesystem::cachesPath<Interface>("assets.sqlite"))),
-				pair("serverName", Value("AssetStorage"))
-			}));
+			String assetsPath;
+
+			_assetLibrary = createLibrary(static_cast<Application *>(this),
+					static_cast<network::Controller *>(_networkController.get()), "AssetLibrary",
+					FileInfo{"assets", FileCategory::AppCache}, Value());
 			if (_assetLibrary) {
 				addExtension(Rc<xenolith::ApplicationExtension>(_assetLibrary));
 			}
@@ -266,4 +285,4 @@ void BootstrapApplication::finalizeExtensions() {
 #endif
 }
 
-}
+} // namespace stappler::xenolith::basic2d

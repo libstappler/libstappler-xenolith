@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-struct WindowInfo {
+struct SP_PUBLIC WindowInfo {
 	String title;
 	String bundleId;
 	URect rect = URect(0, 0, 1024, 768);
@@ -38,7 +38,7 @@ struct WindowInfo {
 	float density = 0.0f;
 };
 
-class ViewInterface : public Ref {
+class SP_PUBLIC ViewInterface : public Ref {
 public:
 	virtual ~ViewInterface() { }
 

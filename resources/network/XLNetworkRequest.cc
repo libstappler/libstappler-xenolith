@@ -20,6 +20,7 @@
  THE SOFTWARE.
  **/
 
+#include "SPFilepath.h"
 #include "XLNetworkController.h"
 #include "SPNetworkContext.h"
 #include "XLNetworkRequest.h"
@@ -30,13 +31,13 @@ bool Handle::init(StringView url) {
 	return NetworkHandle::init(Method::Get, url);
 }
 
-bool Handle::init(StringView url, FilePath fileName) {
+bool Handle::init(StringView url, const FileInfo &fileName) {
     if (!init(Method::Get, url)) {
         return false;
     }
 
-    if (!fileName.get().empty()) {
-    	setReceiveFile(fileName.get(), false);
+    if (!fileName.path.empty()) {
+    	setReceiveFile(fileName, false);
     }
     return true;
 }
@@ -61,7 +62,8 @@ bool Handle::prepare(Context *ctx) {
 	ctx->headers = curl_slist_append(ctx->headers, toString("X-ApplicationVersion: ", appInfo.applicationVersion).data());
 
 	if (!_sharegroup.empty() && ctx->share) {
-		setCookieFile(filesystem::writablePath<Interface>(toString("network.", _controller->getName(), ".", _sharegroup, ".cookies")));
+		auto cookieFile = toString("network.", _controller->getName(), ".", _sharegroup, ".cookies");
+		setCookieFile(FileInfo{cookieFile, FileCategory::AppCache});
 	}
 
 	if (!_controller->getApplication()->getInfo().userAgent.empty()) {
@@ -83,7 +85,7 @@ bool Handle::finalize(Context *ctx, bool ret) {
 	} else {
 		auto &f = getReceiveDataSource();
 		if (auto str = std::get_if<String>(&f)) {
-			filesystem::remove(*str);
+			filesystem::remove(FileInfo{*str});
 		}
 	}
 

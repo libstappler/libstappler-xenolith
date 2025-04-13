@@ -21,6 +21,7 @@
  **/
 
 #include "XLPlatformAndroidClassLoader.h"
+#include "SPFilepath.h"
 
 #if ANDROID
 
@@ -38,7 +39,8 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 
 	auto activityClass = thiz.getClass();
 	auto classClass = activityClass.getClass();
-	auto getClassLoaderMethod = classClass.getMethodID("getClassLoader", "()Ljava/lang/ClassLoader;");
+	auto getClassLoaderMethod =
+			classClass.getMethodID("getClassLoader", "()Ljava/lang/ClassLoader;");
 
 	auto path = stappler::filesystem::platform::Android_getApkPath();
 	auto codeCachePath = getCodeCachePath(thiz, activityClass);
@@ -47,10 +49,11 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 	apkPath = paths.apkPath.getString().str<Interface>();
 	nativeLibraryDir = paths.nativeLibraryDir.getString().str<Interface>();
 
-	filesystem::ftw(nativeLibraryDir, [] (StringView path, bool isFile) {
-		if (isFile) {
+	filesystem::ftw(FileInfo{nativeLibraryDir}, [](const FileInfo &path, FileType type) {
+		if (type == FileType::File) {
 			log::info("NativeClassLoader", path);
 		}
+		return true;
 	});
 
 	auto classLoader = activityClass.callMethod<jobject>(getClassLoaderMethod);
@@ -75,8 +78,11 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 				return false;
 			}
 
-			jmethodID dexClassLoaderConstructor = dexClassLoaderClass.getMethodID("<init>",
-					"(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/ClassLoader;)V");
+			jmethodID dexClassLoaderConstructor =
+					dexClassLoaderClass
+							.getMethodID("<init>",
+									"(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/"
+									"lang/" "ClassLoader;)V");
 
 			auto dexLoader = env.newObject(dexClassLoaderClass, dexClassLoaderConstructor,
 					paths.apkPath, codeCachePath, paths.nativeLibraryDir, activityClassLoader);
@@ -84,11 +90,14 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 				apkClassLoader = dexLoader;
 				apkClassLoaderClass = apkClassLoader.getClass();
 
-				findClassMethod = apkClassLoaderClass.getMethodID("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
+				findClassMethod = apkClassLoaderClass.getMethodID("loadClass",
+						"(Ljava/lang/String;Z)Ljava/lang/Class;");
 				loaderClassClass = apkClassLoaderClass.getClass();
 
-				getMethodsMethod = loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
-				getFieldsMethod = loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
+				getMethodsMethod =
+						loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
+				getFieldsMethod =
+						loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
 			} else {
 				env.checkErrors();
 				return false;
@@ -97,9 +106,12 @@ bool ClassLoader::init(ANativeActivity *activity, int32_t sdk) {
 			apkClassLoader = activityClassLoader;
 			apkClassLoaderClass = activityClassLoaderClass;
 			loaderClassClass = classClass;
-			findClassMethod = activityClassLoaderClass.getMethodID("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
-			getMethodsMethod = loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
-			getFieldsMethod = loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
+			findClassMethod = activityClassLoaderClass.getMethodID("loadClass",
+					"(Ljava/lang/String;Z)Ljava/lang/Class;");
+			getMethodsMethod =
+					loaderClassClass.getMethodID("getMethods", "()[Ljava/lang/reflect/Method;");
+			getFieldsMethod =
+					loaderClassClass.getMethodID("getFields", "()[Ljava/lang/reflect/Field;");
 		}
 	}
 
@@ -129,12 +141,15 @@ void ClassLoader::finalize() {
 	findClassMethod = nullptr;
 }
 
-void ClassLoader::foreachMethod(const jni::RefClass &cl, const Callback<void(StringView, const jni::Ref &)> &cb) {
-	jobjectArray jobjArray = static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getMethodsMethod));
+void ClassLoader::foreachMethod(const jni::RefClass &cl,
+		const Callback<void(StringView, const jni::Ref &)> &cb) {
+	jobjectArray jobjArray =
+			static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getMethodsMethod));
 	jsize len = cl.getEnv()->GetArrayLength(jobjArray);
 
-	for (jsize i = 0 ; i < len ; i++) {
-		auto methodObject = jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
+	for (jsize i = 0; i < len; i++) {
+		auto methodObject =
+				jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
 		auto j_name = methodObject.callMethod<jstring>(getMethodNameMethod);
 
 		cb(j_name.getString(), methodObject);
@@ -143,12 +158,15 @@ void ClassLoader::foreachMethod(const jni::RefClass &cl, const Callback<void(Str
 	cl.getEnv()->DeleteLocalRef(jobjArray);
 }
 
-void ClassLoader::foreachField(const jni::RefClass &cl, const Callback<void(StringView, StringView, const jni::Ref &)> &cb) {
-	jobjectArray jobjArray = static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getFieldsMethod));
+void ClassLoader::foreachField(const jni::RefClass &cl,
+		const Callback<void(StringView, StringView, const jni::Ref &)> &cb) {
+	jobjectArray jobjArray =
+			static_cast<jobjectArray>(cl.getEnv()->CallObjectMethod(cl, getFieldsMethod));
 	jsize len = cl.getEnv()->GetArrayLength(jobjArray);
 
-	for (jsize i = 0 ; i < len ; i++) {
-		auto fieldObject = jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
+	for (jsize i = 0; i < len; i++) {
+		auto fieldObject =
+				jni::Local(cl.getEnv()->GetObjectArrayElement(jobjArray, i), cl.getEnv());
 		auto fieldType = fieldObject.callMethod<jobject>(getFieldTypeMethod);
 
 		auto j_type = fieldType.callMethod<jstring>(getClassNameMethod);
@@ -172,7 +190,8 @@ jni::LocalClass ClassLoader::findClass(const jni::RefString &str) {
 	return apkClassLoader.callMethod<jclass>(findClassMethod, str, jboolean(1));
 }
 
-ClassLoader::NativePaths ClassLoader::getNativePaths(const jni::Ref &context, const jni::RefClass &icl) {
+ClassLoader::NativePaths ClassLoader::getNativePaths(const jni::Ref &context,
+		const jni::RefClass &icl) {
 	NativePaths ret;
 	jni::RefClass cl = icl;
 	jni::LocalClass tmpClass;
@@ -182,7 +201,8 @@ ClassLoader::NativePaths ClassLoader::getNativePaths(const jni::Ref &context, co
 	}
 
 	auto getPackageNameMethod = cl.getMethodID("getPackageName", "()Ljava/lang/String;");
-	auto getPackageManagerMethod = cl.getMethodID("getPackageManager", "()Landroid/content/pm/PackageManager;");
+	auto getPackageManagerMethod =
+			cl.getMethodID("getPackageManager", "()Landroid/content/pm/PackageManager;");
 
 	auto packageName = context.callMethod<jstring>(getPackageNameMethod);
 	auto packageManager = context.callMethod<jobject>(getPackageManagerMethod);
@@ -192,12 +212,15 @@ ClassLoader::NativePaths ClassLoader::getNativePaths(const jni::Ref &context, co
 		auto getApplicationInfoMethod = packageManagerClass.getMethodID("getApplicationInfo",
 				"(Ljava/lang/String;I)Landroid/content/pm/ApplicationInfo;");
 
-		auto applicationInfo = packageManager.callMethod<jobject>(getApplicationInfoMethod, packageName, 0);
+		auto applicationInfo =
+				packageManager.callMethod<jobject>(getApplicationInfoMethod, packageName, 0);
 
 		if (applicationInfo) {
 			auto applicationInfoClass = applicationInfo.getClass();
-			auto publicSourceDirField = applicationInfoClass.getFieldID("publicSourceDir", "Ljava/lang/String;");
-			auto nativeLibraryDirField = applicationInfoClass.getFieldID("nativeLibraryDir", "Ljava/lang/String;");
+			auto publicSourceDirField =
+					applicationInfoClass.getFieldID("publicSourceDir", "Ljava/lang/String;");
+			auto nativeLibraryDirField =
+					applicationInfoClass.getFieldID("nativeLibraryDir", "Ljava/lang/String;");
 
 			ret.apkPath = applicationInfo.getField<jstring>(publicSourceDirField);
 			ret.nativeLibraryDir = applicationInfo.getField<jstring>(nativeLibraryDirField);
@@ -223,6 +246,6 @@ jni::LocalString ClassLoader::getCodeCachePath(const jni::Ref &context, const jn
 	return codeCacheDir.callMethod<jstring>(getAbsolutePathMethod);
 }
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif

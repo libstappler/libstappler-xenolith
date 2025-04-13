@@ -74,7 +74,7 @@ public:
 
 	Rc<Texture> addExternalImageByRef(StringView key, core::ImageInfo &&, BytesView data,
 			TimeInterval = TimeInterval(), TemporaryResourceFlags flags = TemporaryResourceFlags::None);
-	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&, FilePath data,
+	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&, const FileInfo &data,
 			TimeInterval = TimeInterval(), TemporaryResourceFlags flags = TemporaryResourceFlags::None);
 	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&, BytesView data,
 			TimeInterval = TimeInterval(), TemporaryResourceFlags flags = TemporaryResourceFlags::None);

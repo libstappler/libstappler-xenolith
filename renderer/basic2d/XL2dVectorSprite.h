@@ -46,7 +46,7 @@ public:
 	virtual bool init(Size2);
 	virtual bool init(StringView) override;
 	virtual bool init(BytesView);
-	virtual bool init(FilePath);
+	virtual bool init(const FileInfo &);
 
     virtual Rc<VectorPathRef> addPath(StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
     virtual Rc<VectorPathRef> addPath(const VectorPath & path, StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);

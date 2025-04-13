@@ -36,36 +36,31 @@ bool InputQueue::init() {
 	Queue::Builder builder("Input");
 
 	auto imageAttachment = builder.addAttachemnt("ImageAttachment",
-			[&] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+			[&](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		return Rc<vk::ImageAttachment>::create(attachmentBuilder,
-			ImageInfo(Extent2(1024, 1024),
-					ImageUsage::Storage | ImageUsage::TransferSrc,
-					ImageTiling::Optimal, ImageFormat::R8G8B8A8_UNORM, PassType::Compute),
-			ImageAttachment::AttachmentInfo{
-				.initialLayout = AttachmentLayout::Ignored,
-				.finalLayout = AttachmentLayout::Ignored,
-				.clearOnLoad = true,
-				.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)}
-		);
+				ImageInfo(Extent2(1'024, 1'024), ImageUsage::Storage | ImageUsage::TransferSrc,
+						ImageTiling::Optimal, ImageFormat::R8G8B8A8_UNORM, PassType::Compute),
+				ImageAttachment::AttachmentInfo{.initialLayout = AttachmentLayout::Ignored,
+					.finalLayout = AttachmentLayout::Ignored,
+					.clearOnLoad = true,
+					.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)});
 	});
 
 	auto outputAttachment = builder.addAttachemnt("OutputAttachment",
-			[&] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+			[&](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsOutput();
 		return Rc<vk::ImageAttachment>::create(attachmentBuilder,
-			ImageInfo(Extent3(1024, 1024, 1), ImageType::Image3D,
-					ImageUsage::Storage | ImageUsage::TransferSrc,
-					ImageTiling::Optimal, ImageFormat::R16G16B16A16_SFLOAT, PassType::Compute),
-			ImageAttachment::AttachmentInfo{
-				.initialLayout = AttachmentLayout::Ignored,
-				.finalLayout = AttachmentLayout::Ignored,
-				.clearOnLoad = true,
-				.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)}
-		);
+				ImageInfo(Extent3(1'024, 1'024, 1), ImageType::Image3D,
+						ImageUsage::Storage | ImageUsage::TransferSrc, ImageTiling::Optimal,
+						ImageFormat::R16G16B16A16_SFLOAT, PassType::Compute),
+				ImageAttachment::AttachmentInfo{.initialLayout = AttachmentLayout::Ignored,
+					.finalLayout = AttachmentLayout::Ignored,
+					.clearOnLoad = true,
+					.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)});
 	});
 
 	_inputLayer = builder.addPass("InputLayer", PassType::Compute, RenderOrdering(0),
-			[&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<InputLayer>::create(builder, passBuilder, imageAttachment, outputAttachment);
 	});
 
@@ -83,12 +78,13 @@ const core::AttachmentData *InputQueue::getDataAttachment() const {
 
 void InputQueue::run(Application *app, StringView image) {
 	Extent3 frameExtent(1, 1, 1);
-	if (!bitmap::getImageSize(image, frameExtent.width, frameExtent.height)) {
+	if (!bitmap::getImageSize(FileInfo{image}, frameExtent.width, frameExtent.height)) {
 		log::error("InputQueue", "fail to read image: ", image);
 		return;
 	}
 
-	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this), core::FrameConstraints{frameExtent});
+	auto req = Rc<core::FrameRequest>::create(Rc<core::Queue>(this),
+			core::FrameConstraints{frameExtent});
 
 	auto inputData = Rc<InputDataInput>::alloc();
 	inputData->norm = NormData{
@@ -96,25 +92,28 @@ void InputQueue::run(Application *app, StringView image) {
 		Vec4(2.0f, 2.0f, 2.0f, 2.0f) // to -1.0 - 1.0
 	};
 	inputData->image.extent = frameExtent;
-	inputData->image.stdCallback = [path = image.str<Interface>()] (uint8_t *ptr, uint64_t size, const core::ImageData::DataCallback &dcb) {
+	inputData->image.stdCallback = [path = image.str<Interface>()](uint8_t *ptr, uint64_t size,
+										   const core::ImageData::DataCallback &dcb) {
 		core::Resource::loadImageFileData(ptr, size, path, core::ImageFormat::R8G8B8A8_UNORM, dcb);
 	};
 
 	req->addInput(getDataAttachment(), move(inputData));
 
-	req->setOutput(getOutputAttachment(), [app] (core::FrameAttachmentData &data, bool success, Ref *) {
-		app->getGlLoop()->captureImage([app] (core::ImageInfoData info, BytesView view) {
+	req->setOutput(getOutputAttachment(),
+			[app](core::FrameAttachmentData &data, bool success, Ref *) {
+		app->getGlLoop()->captureImage([app](core::ImageInfoData info, BytesView view) {
 			if (!view.empty()) {
 				Bitmap bmp;
-				bmp.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::RGBA8888, bitmap::AlphaFormat::Premultiplied);
+				bmp.alloc(info.extent.width, info.extent.height, bitmap::PixelFormat::RGBA8888,
+						bitmap::AlphaFormat::Premultiplied);
 
 				std::cout << view.size() << "\n";
 				auto data = bmp.dataPtr();
-				for (size_t i = 0; i < info.extent.width; ++ i) {
-					for (size_t j = 0; j < info.extent.height; ++ j) {
-						for (size_t k = 0; k < info.extent.depth; ++ k) {
-							for (size_t f = 0; f < 4; ++ f) {
-								*(data ++) = uint8_t((view.readFloat16() + 1.0f) * 127.5f);
+				for (size_t i = 0; i < info.extent.width; ++i) {
+					for (size_t j = 0; j < info.extent.height; ++j) {
+						for (size_t k = 0; k < info.extent.depth; ++k) {
+							for (size_t f = 0; f < 4; ++f) {
+								*(data++) = uint8_t((view.readFloat16() + 1.0f) * 127.5f);
 							}
 						}
 					}
@@ -130,4 +129,4 @@ void InputQueue::run(Application *app, StringView image) {
 	app->getGlLoop()->runRenderQueue(move(req), 0);
 }
 
-}
+} // namespace stappler::xenolith::vk::shadernn

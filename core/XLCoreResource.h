@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef XENOLITH_CORE_XLCORERESOURCE_H_
 #define XENOLITH_CORE_XLCORERESOURCE_H_
 
+#include "SPFilepath.h"
 #include "XLCoreInfo.h"
 #include "XLCoreObject.h"
 
@@ -76,7 +77,7 @@ public:
 
 	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&, FilePath data,
+	const BufferData * addBuffer(StringView key, BufferInfo &&, const FileInfo &data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
@@ -86,9 +87,9 @@ public:
 
 	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, FilePath data,
+	const ImageData * addImage(StringView key, ImageInfo &&img, const FileInfo &data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, SpanView<FilePath> data,
+	const ImageData * addImage(StringView key, ImageInfo &&img, SpanView<FileInfo> data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
 	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);

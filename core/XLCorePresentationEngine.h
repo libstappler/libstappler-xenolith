@@ -34,7 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class PresentationFrame;
 
-class PresentationEngine : public Ref {
+class SP_PUBLIC PresentationEngine : public Ref {
 public:
 	static constexpr size_t FrameAverageCount = 20;
 

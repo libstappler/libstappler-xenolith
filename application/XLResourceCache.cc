@@ -155,7 +155,7 @@ Rc<Texture> ResourceCache::addExternalImageByRef(StringView key, core::ImageInfo
 	return nullptr;
 }
 
-Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&info, FilePath data, TimeInterval ival, TemporaryResourceFlags flags) {
+Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&info, const FileInfo &data, TimeInterval ival, TemporaryResourceFlags flags) {
 	auto it = _temporaries.find(key);
 	if (it != _temporaries.end()) {
 		if (auto tex = it->second->acquireTexture(key)) {

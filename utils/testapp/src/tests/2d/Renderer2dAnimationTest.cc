@@ -21,6 +21,7 @@
  **/
 
 #include "Renderer2dAnimationTest.h"
+#include "SPFilepath.h"
 #include "XL2dSprite.h"
 #include "XLAction.h"
 
@@ -36,9 +37,12 @@ bool Renderer2dAnimationTest::init() {
 	_sprite->setAnchorPoint(Anchor::Middle);
 	_sprite->setSamplerIndex(SamplerIndex::DefaultFilterNearest);
 
-	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Use linear filtration", false, [this] (bool val) {
-		_sprite->setSamplerIndex(val ? SamplerIndex::DefaultFilterLinear : SamplerIndex::DefaultFilterNearest);
-	}), ZOrder(2));
+	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Use linear filtration", false,
+								 [this](bool val) {
+		_sprite->setSamplerIndex(
+				val ? SamplerIndex::DefaultFilterLinear : SamplerIndex::DefaultFilterNearest);
+	}),
+			ZOrder(2));
 	_checkbox->setAnchorPoint(Anchor::Middle);
 
 	return true;
@@ -56,25 +60,22 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 	} else {
 		core::Resource::Builder builder(name);
 
-		StringView dirPath = "resources/anim";
+		Vector<FileInfo> paths;
 
-		Vector<FilePath> paths;
-		auto animPath = filesystem::loadableResourcePath<Interface>(dirPath);
-		if (animPath.empty()) {
-			log::error("Renderer2dAnimationTest", "Fail to find resource path for: ", dirPath);
-			return;
-		}
-
-		filesystem::ftw(animPath, [&] (StringView path, bool isFile) {
-			if (isFile) {
-				paths.emplace_back(FilePath(path.pdup(builder.getPool())));
+		filesystem::ftw(FileInfo{"resources/anim", FileCategory::Bundled},
+				[&](const FileInfo &path, FileType type) {
+			if (type == FileType::File) {
+				paths.emplace_back(FileInfo(path.path.pdup(builder.getPool()), path.category));
 			}
+			return true;
 		});
 
 		std::sort(paths.begin(), paths.end());
 
-		if (auto d = builder.addImage(name, core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageType::Image3D,
-				core::ImageUsage::Sampled), makeSpanView(paths))) {
+		if (auto d = builder.addImage(name,
+					core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageType::Image3D,
+							core::ImageUsage::Sampled),
+					makeSpanView(paths))) {
 			if (auto tmp = cache->addTemporaryResource(Rc<core::Resource>::create(move(builder)))) {
 				_sprite->setTexture(Rc<Texture>::create(d, tmp));
 				_resource = tmp;
@@ -82,7 +83,8 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 		}
 	}
 
-	_sprite->runAction(Rc<RepeatForever>::create(Rc<ActionProgress>::create(5.0f, [this] (float value) {
+	_sprite->runAction(
+			Rc<RepeatForever>::create(Rc<ActionProgress>::create(5.0f, [this](float value) {
 		Texture *tex = _sprite->getTexture();
 		auto maxLayer = float(tex->getImageData()->arrayLayers.get());
 
@@ -90,9 +92,7 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 	})));
 }
 
-void Renderer2dAnimationTest::handleExit() {
-	LayoutTest::handleExit();
-}
+void Renderer2dAnimationTest::handleExit() { LayoutTest::handleExit(); }
 
 void Renderer2dAnimationTest::handleContentSizeDirty() {
 	LayoutTest::handleContentSizeDirty();
@@ -106,4 +106,4 @@ void Renderer2dAnimationTest::handleContentSizeDirty() {
 	_checkbox->setPosition(Vec2(_contentSize.width / 2.0f - 80.0f, 64.0f));
 }
 
-}
+} // namespace stappler::xenolith::app

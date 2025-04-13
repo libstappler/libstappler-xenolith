@@ -81,20 +81,24 @@ public:
 		StringView getName() const;
 		FontController *getTarget() const;
 
-		const FontSource * addFontSource(StringView name, BytesView data);
-		const FontSource * addFontSource(StringView name, Bytes && data);
-		const FontSource * addFontSource(StringView name, FilePath data);
-		const FontSource * addFontSource(StringView name, Function<Bytes()> &&cb);
+		const FontSource *addFontSource(StringView name, BytesView data);
+		const FontSource *addFontSource(StringView name, Bytes &&data);
+		const FontSource *addFontSource(StringView name, const FileInfo &data);
+		const FontSource *addFontSource(StringView name, Function<Bytes()> &&cb);
 
-		const FontSource * addFontSource(StringView name, BytesView data, FontLayoutParameters);
-		const FontSource * addFontSource(StringView name, Bytes && data, FontLayoutParameters);
-		const FontSource * addFontSource(StringView name, FilePath data, FontLayoutParameters);
-		const FontSource * addFontSource(StringView name, Function<Bytes()> &&cb, FontLayoutParameters);
+		const FontSource *addFontSource(StringView name, BytesView data, FontLayoutParameters);
+		const FontSource *addFontSource(StringView name, Bytes &&data, FontLayoutParameters);
+		const FontSource *addFontSource(StringView name, const FileInfo &data,
+				FontLayoutParameters);
+		const FontSource *addFontSource(StringView name, Function<Bytes()> &&cb,
+				FontLayoutParameters);
 
 		const FontSource *getFontSource(StringView) const;
 
-		const FamilyQuery * addFontFaceQuery(StringView family, const FontSource *, bool front = false);
-		const FamilyQuery * addFontFaceQuery(StringView family, Vector<const FontSource *> &&, bool front = false);
+		const FamilyQuery *addFontFaceQuery(StringView family, const FontSource *,
+				bool front = false);
+		const FamilyQuery *addFontFaceQuery(StringView family, Vector<const FontSource *> &&,
+				bool front = false);
 
 		bool addAlias(StringView newAlias, StringView familyName);
 
@@ -153,7 +157,8 @@ protected:
 
 	void setAliases(Map<String, String> &&);
 
-	FontSpecializationVector findSpecialization(const FamilySpec &, const FontParameters &, Vector<Rc<FontFaceData>> *);
+	FontSpecializationVector findSpecialization(const FamilySpec &, const FontParameters &,
+			Vector<Rc<FontFaceData>> *);
 	void removeUnusedLayouts();
 
 	bool _loaded = false;
@@ -175,6 +180,6 @@ protected:
 	mutable std::shared_mutex _layoutSharedMutex;
 };
 
-}
+} // namespace stappler::xenolith::font
 
 #endif /* XENOLITH_FONT_XLFONTCONTROLLER_H_ */

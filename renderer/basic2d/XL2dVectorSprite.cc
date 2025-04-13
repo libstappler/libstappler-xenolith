@@ -115,7 +115,7 @@ bool VectorSprite::init(BytesView data) {
 	return false;
 }
 
-bool VectorSprite::init(FilePath path) {
+bool VectorSprite::init(const FileInfo &path) {
 	if (auto image = Rc<VectorImage>::create(path)) {
 		return init(move(image));
 	}

@@ -35,13 +35,13 @@ struct ModelSpecialization {
 
 class ModelProcessor : public Ref {
 public:
-	using LayerConstructor = Rc<Layer> (*) (Model *, StringView tag, size_t idx, const Value &);
+	using LayerConstructor = Rc<Layer> (*)(Model *, StringView tag, size_t idx, const Value &);
 
 	virtual ~ModelProcessor() = default;
 
 	bool init();
 
-	Rc<Model> load(FilePath modelPath, ModelFlags);
+	Rc<Model> load(const FileInfo &modelPath, ModelFlags);
 
 	ModelSpecialization specializeModel(Model *, Extent3);
 	ModelSpecialization specializeModel(Model *, Map<const Layer *, Extent3> &&inputs);
@@ -54,6 +54,6 @@ protected:
 	Map<String, LayerConstructor> _layers;
 };
 
-}
+} // namespace stappler::xenolith::shadernn
 
 #endif /* SRC_PROCESSOR_XLSNNMODELPROCESSOR_H_ */

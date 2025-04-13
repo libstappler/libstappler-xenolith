@@ -21,6 +21,7 @@
  **/
 
 #include "XLAsset.h"
+#include "SPFilepath.h"
 #include "XLAssetLibrary.h"
 #include "XLNetworkRequest.h"
 #include "XLApplication.h"
@@ -32,7 +33,7 @@
 #endif
 
 #ifndef CURL_WRITEFUNC_ERROR
-#define CURL_WRITEFUNC_ERROR 0xFFFFFFFF
+#define CURL_WRITEFUNC_ERROR 0xFFFF'FFFF
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
@@ -44,11 +45,10 @@ AssetLock::~AssetLock() {
 	_asset = nullptr;
 }
 
-StringView AssetLock::getCachePath() const {
-	return _asset->getCachePath();
-}
+StringView AssetLock::getCachePath() const { return _asset->getCachePath(); }
 
-AssetLock::AssetLock(Rc<Asset> &&asset, const AssetVersionData &data, Function<void(const AssetVersionData &)> &&cb, Ref *owner)
+AssetLock::AssetLock(Rc<Asset> &&asset, const AssetVersionData &data,
+		Function<void(const AssetVersionData &)> &&cb, Ref *owner)
 : _lockedVersion(data), _releaseFunction(sp::move(cb)), _asset(sp::move(asset)), _owner(owner) { }
 
 Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
@@ -74,11 +74,11 @@ Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
 		}
 	}
 
-	_path = AssetLibrary::getAssetPath(_id);
+	_path = _library->getAssetPath(_id);
 	_cache = toString(_path, "/cache");
 
-	filesystem::mkdir(_path);
-	filesystem::mkdir(_cache);
+	filesystem::mkdir(FileInfo{_path});
+	filesystem::mkdir(FileInfo{_cache});
 
 	if (versions) {
 		parseVersions(*versions);
@@ -89,18 +89,15 @@ Asset::Asset(AssetLibrary *lib, const db::Value &val) : _library(lib) {
 	}
 }
 
-Asset::~Asset() {
-	_library->removeAsset(this);
-}
+Asset::~Asset() { _library->removeAsset(this); }
 
 Rc<AssetLock> Asset::lockVersion(int64_t id, Ref *owner) {
 	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == id && it.complete) {
-			++ it.locked;
-			auto ret = new (std::nothrow) AssetLock(this, it, [this] (const VersionData &data) {
-				releaseLock(data);
-			}, owner);
+			++it.locked;
+			auto ret = new (std::nothrow) AssetLock(this, it,
+					[this](const VersionData &data) { releaseLock(data); }, owner);
 			auto ref = Rc<AssetLock>(ret);
 			ret->release(0);
 			return ref;
@@ -112,11 +109,10 @@ Rc<AssetLock> Asset::lockVersion(int64_t id, Ref *owner) {
 Rc<AssetLock> Asset::lockReadableVersion(Ref *owner) {
 	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
-		if (it.complete && filesystem::exists(it.path)) {
-			++ it.locked;
-			auto ret = new (std::nothrow) AssetLock(this, it, [this] (const VersionData &data) {
-				releaseLock(data);
-			}, owner);
+		if (it.complete && filesystem::exists(FileInfo{it.path})) {
+			++it.locked;
+			auto ret = new (std::nothrow) AssetLock(this, it,
+					[this](const VersionData &data) { releaseLock(data); }, owner);
 			auto ref = Rc<AssetLock>(ret);
 			ret->release(0);
 			return ref;
@@ -148,11 +144,11 @@ bool Asset::download() {
 	do {
 		auto it = _versions.begin();
 		while (it != _versions.end()) {
-			if (it->complete && !filesystem::exists(it->path)) {
+			if (it->complete && !filesystem::exists(FileInfo{it->path})) {
 				dropVersion(*it);
 				it = _versions.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	} while (0);
@@ -167,12 +163,12 @@ bool Asset::download() {
 				it = _versions.erase(it);
 			}
 		} else {
-			++ it;
+			++it;
 		}
 	}
 
 	if (!_versions.empty()) {
-		if (filesystem::exists(_versions.front().path)) {
+		if (filesystem::exists(FileInfo{_versions.front().path})) {
 			return startNewDownload(_versions.front().ctime, _versions.front().etag);
 		}
 	}
@@ -194,7 +190,7 @@ void Asset::clear() {
 			dropVersion(*it);
 			it = _versions.erase(it);
 		} else {
-			++ it;
+			++it;
 		}
 	}
 	setDirty(Flags(CacheDataUpdated | DownloadFailed));
@@ -249,9 +245,9 @@ Value Asset::encode() const {
 	});
 }
 
-const AssetVersionData * Asset::getReadableVersion() const {
+const AssetVersionData *Asset::getReadableVersion() const {
 	for (auto &it : _versions) {
-		if (it.complete && filesystem::exists(it.path)) {
+		if (it.complete && filesystem::exists(FileInfo{it.path})) {
 			return &it;
 		}
 	}
@@ -291,7 +287,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 		if (iit != paths.end()) {
 			_library->eraseVersion(data.id);
 		} else {
-			if (filesystem::exists(versionPath)) {
+			if (filesystem::exists(FileInfo{versionPath})) {
 				auto &v = _versions.emplace_back(move(data));
 				v.path = sp::move(versionPath);
 				v.download = true;
@@ -303,18 +299,18 @@ void Asset::parseVersions(const db::Value &downloads) {
 		}
 	}
 
-	filesystem::ftw(_path, [&, this] (StringView path, bool isFile) {
-		if (!isFile && path != _cache && path != _path) {
-			auto it = paths.find(path);
+	filesystem::ftw(FileInfo{_path}, [&, this](const FileInfo &path, FileType type) {
+		// assume that paths is absolute
+		if (type != FileType::File && path.path != _cache && path.path != _path) {
+			auto it = paths.find(path.path);
 			if (it == paths.end()) {
-				pathsToRemove.emplace(path.str<Interface>());
+				pathsToRemove.emplace(path.path.str<Interface>());
 			}
 		}
+		return true;
 	}, 1);
 
-	for (auto &it : pathsToRemove) {
-		filesystem::remove(it, true, true);
-	}
+	for (auto &it : pathsToRemove) { filesystem::remove(FileInfo{it}, true, true); }
 
 	bool localFound = false;
 	bool pendingFound = false;
@@ -324,7 +320,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 		if (it->complete) {
 			if (!localFound) {
 				localFound = true;
-				++ it;
+				++it;
 			} else {
 				_library->eraseVersion(it->id);
 				it = _versions.erase(it);
@@ -332,7 +328,7 @@ void Asset::parseVersions(const db::Value &downloads) {
 		} else {
 			if (!pendingFound) {
 				pendingFound = true;
-				++ it;
+				++it;
 			} else {
 				_library->eraseVersion(it->id);
 				it = _versions.erase(it);
@@ -348,23 +344,21 @@ struct AssetDownloadData : Ref {
 	bool valid = true;
 	float progress = 0.0f;
 
-	AssetDownloadData(Rc<Asset> &&a)
-	: asset(move(a)) { }
+	AssetDownloadData(Rc<Asset> &&a) : asset(move(a)) { }
 
-	AssetDownloadData(Rc<Asset> &&a, Asset::VersionData &data)
-	: asset(move(a)), data(data) { }
+	AssetDownloadData(Rc<Asset> &&a, Asset::VersionData &data) : asset(move(a)), data(data) { }
 };
 
 bool Asset::startNewDownload(Time ctime, StringView etag) {
 	auto data = Rc<AssetDownloadData>::alloc(this);
 
-	auto req = Rc<network::Request>::create([&, this] (network::Handle &handle) {
+	auto req = Rc<network::Request>::create([&, this](network::Handle &handle) {
 		handle.init(network::Method::Get, _url);
 
 		handle.setMTime(ctime.toMicros());
 		handle.setETag(etag);
 
-		handle.setHeaderCallback([data = data.get()] (StringView key, StringView value) {
+		handle.setHeaderCallback([data = data.get()](StringView key, StringView value) {
 			if (key == "last-modified") {
 				data->data.ctime = std::max(Time::fromHttp(value), data->data.ctime);
 			} else if (key == "x-filemodificationtime") {
@@ -381,7 +375,7 @@ bool Asset::startNewDownload(Time ctime, StringView etag) {
 				data->data.contentType = value.str<Interface>();
 			}
 		});
-		handle.setReceiveCallback([this, data = data.get()] (char *bytes, size_t size) {
+		handle.setReceiveCallback([this, data = data.get()](char *bytes, size_t size) {
 			if (!data->valid) {
 				return size_t(CURL_WRITEFUNC_ERROR);
 			}
@@ -402,7 +396,8 @@ bool Asset::startNewDownload(Time ctime, StringView etag) {
 		return true;
 	}, data);
 
-	req->setDownloadProgress([this, data = data.get()] (const network::Request &, int64_t total, int64_t now) {
+	req->setDownloadProgress(
+			[this, data = data.get()](const network::Request &, int64_t total, int64_t now) {
 		data->progress = float(now) / float(total);
 		setDownloadProgress(data->data.id, data->progress);
 	});
@@ -410,7 +405,8 @@ bool Asset::startNewDownload(Time ctime, StringView etag) {
 	_download = true;
 	_library->setAssetDownload(_id, _download);
 
-	req->perform(_library->getController(), [this, data = data.get()] (const network::Request &req, bool success) {
+	req->perform(_library->getController(),
+			[this, data = data.get()](const network::Request &req, bool success) {
 		if (data->inputFile) {
 			fclose(data->inputFile);
 			data->inputFile = nullptr;
@@ -432,17 +428,17 @@ bool Asset::startNewDownload(Time ctime, StringView etag) {
 
 bool Asset::resumeDownload(VersionData &d) {
 	filesystem::Stat stat;
-	if (!filesystem::stat(d.path, stat)) {
+	if (!filesystem::stat(FileInfo{d.path}, stat)) {
 		return false;
 	}
 
 	auto data = Rc<AssetDownloadData>::alloc(this, d);
 
-	auto req = Rc<network::Request>::create([&, this] (network::Handle &handle) {
+	auto req = Rc<network::Request>::create([&, this](network::Handle &handle) {
 		handle.init(network::Method::Get, _url);
 
 		handle.setResumeOffset(stat.size);
-		handle.setHeaderCallback([data = data.get()] (StringView key, StringView value) {
+		handle.setHeaderCallback([data = data.get()](StringView key, StringView value) {
 			if (key == "last-modified") {
 				if (Time::fromHttp(value) > data->data.ctime) {
 					data->valid = false;
@@ -453,7 +449,7 @@ bool Asset::resumeDownload(VersionData &d) {
 				}
 			}
 		});
-		handle.setReceiveCallback([data = data.get()] (char *bytes, size_t size) {
+		handle.setReceiveCallback([data = data.get()](char *bytes, size_t size) {
 			if (!data->valid) {
 				return size_t(CURL_WRITEFUNC_ERROR);
 			}
@@ -470,7 +466,8 @@ bool Asset::resumeDownload(VersionData &d) {
 		return true;
 	}, data);
 
-	req->setDownloadProgress([this, data = data.get()] (const network::Request &, int64_t total, int64_t now) {
+	req->setDownloadProgress(
+			[this, data = data.get()](const network::Request &, int64_t total, int64_t now) {
 		data->progress = float(now) / float(total);
 		setDownloadProgress(data->data.id, data->progress);
 	});
@@ -479,7 +476,8 @@ bool Asset::resumeDownload(VersionData &d) {
 	_download = true;
 	_library->setAssetDownload(_id, _download);
 
-	req->perform(_library->getController(), [this, data = data.get()] (const network::Request &req, bool success) {
+	req->perform(_library->getController(),
+			[this, data = data.get()](const network::Request &req, bool success) {
 		if (data->inputFile) {
 			fclose(data->inputFile);
 			data->inputFile = nullptr;
@@ -511,7 +509,8 @@ void Asset::setDownloadComplete(VersionData &data, bool success) {
 		for (auto &it : _versions) {
 			if (it.id == data.id) {
 				replaceVersion(data);
-				setDirty(Flags(Update::DownloadCompleted | Update::DownloadSuccessful | Update::CacheDataUpdated));
+				setDirty(Flags(Update::DownloadCompleted | Update::DownloadSuccessful
+						| Update::CacheDataUpdated));
 				_library->setVersionComplete(data.id, true);
 				return;
 			}
@@ -524,7 +523,7 @@ void Asset::setDownloadComplete(VersionData &data, bool success) {
 				it = _versions.erase(it);
 				setDirty(Flags(Update::DownloadCompleted | Update::DownloadFailed));
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	}
@@ -554,7 +553,7 @@ void Asset::replaceVersion(VersionData &data) {
 }
 
 void Asset::addVersion(AssetDownloadData *data) {
-	_library->perform([this, data] (const Server &, const db::Transaction &t) {
+	_library->perform([this, data](const Server &, const db::Transaction &t) {
 		auto id = _library->addVersion(t, _id, data->data);
 		_library->getApplication()->performOnAppThread([this, id, data] {
 			std::unique_lock ctx(_mutex);
@@ -568,7 +567,7 @@ void Asset::addVersion(AssetDownloadData *data) {
 
 void Asset::dropVersion(const VersionData &data) {
 	if (!data.locked) {
-		filesystem::remove(data.path, true, true);
+		filesystem::remove(FileInfo{data.path}, true, true);
 	}
 	_library->eraseVersion(data.id);
 }
@@ -577,12 +576,12 @@ void Asset::releaseLock(const VersionData &data) {
 	std::unique_lock ctx(_mutex);
 	for (auto &it : _versions) {
 		if (it.id == data.id) {
-			-- it.locked;
+			--it.locked;
 			return;
 		}
 	}
 
-	filesystem::remove(data.path, true, true);
+	filesystem::remove(FileInfo{data.path}, true, true);
 }
 
-}
+} // namespace stappler::xenolith::storage
