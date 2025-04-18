@@ -64,9 +64,11 @@ enum class ConnectivityType {
 ConnectivityType ShouldAttemptToConnectToInternet(NLM_CONNECTIVITY connectivity,
 		INetworkListManager *networkListManager) {
 	// check internet connectivity
-	if (WI_IsAnyFlagSet(connectivity, NLM_CONNECTIVITY_IPV4_INTERNET | NLM_CONNECTIVITY_IPV6_INTERNET)) {
+	if (WI_IsAnyFlagSet(connectivity,
+				NLM_CONNECTIVITY_IPV4_INTERNET | NLM_CONNECTIVITY_IPV6_INTERNET)) {
 		return ConnectivityType::Normal;
-	} else if (WI_IsAnyFlagSet(connectivity, NLM_CONNECTIVITY_IPV4_LOCALNETWORK | NLM_CONNECTIVITY_IPV6_LOCALNETWORK)) {
+	} else if (WI_IsAnyFlagSet(connectivity,
+					   NLM_CONNECTIVITY_IPV4_LOCALNETWORK | NLM_CONNECTIVITY_IPV6_LOCALNETWORK)) {
 		// we are local connected, check if we're behind a captive portal before attempting to connect to the Internet.
 		//
 		// note: being behind a captive portal means connectivity is local and there is at least one interface(network)
@@ -74,17 +76,14 @@ ConnectivityType ShouldAttemptToConnectToInternet(NLM_CONNECTIVITY connectivity,
 
 		bool localConnectedBehindCaptivePortal = false;
 		wil::com_ptr<IEnumNetworks> enumConnectedNetworks;
-		THROW_IF_FAILED(
-				networkListManager->GetNetworks(NLM_ENUM_NETWORK_CONNECTED,
-						enumConnectedNetworks.put()));
+		THROW_IF_FAILED(networkListManager->GetNetworks(NLM_ENUM_NETWORK_CONNECTED,
+				enumConnectedNetworks.put()));
 
 		// Enumeration returns S_FALSE when there are no more items.
 		wil::com_ptr<INetwork> networkConnection;
-		while (THROW_IF_FAILED(
-				enumConnectedNetworks->Next(1, networkConnection.put(),
-						nullptr)) == S_OK) {
-			wil::com_ptr<IPropertyBag> networkProperties =
-					networkConnection.query<IPropertyBag>();
+		while (THROW_IF_FAILED(enumConnectedNetworks->Next(1, networkConnection.put(), nullptr))
+				== S_OK) {
+			wil::com_ptr<IPropertyBag> networkProperties = networkConnection.query<IPropertyBag>();
 
 			// these might fail if there's no value
 			wil::unique_variant variantInternetConnectivityV4;
@@ -96,19 +95,15 @@ ConnectivityType ShouldAttemptToConnectToInternet(NLM_CONNECTIVITY connectivity,
 
 			// read the VT_UI4 from the VARIANT and cast it to a NLM_INTERNET_CONNECTIVITY
 			// If there is no value, then assume no special treatment.
-			NLM_INTERNET_CONNECTIVITY v4Connectivity =
-					static_cast<NLM_INTERNET_CONNECTIVITY>(
-							variantInternetConnectivityV6.vt == VT_UI4 ?
-									variantInternetConnectivityV4.ulVal : 0);
-			NLM_INTERNET_CONNECTIVITY v6Connectivity =
-					static_cast<NLM_INTERNET_CONNECTIVITY>(
-							variantInternetConnectivityV6.vt == VT_UI4 ?
-									variantInternetConnectivityV6.ulVal : 0);
+			NLM_INTERNET_CONNECTIVITY v4Connectivity = static_cast<NLM_INTERNET_CONNECTIVITY>(
+					variantInternetConnectivityV6.vt == VT_UI4 ? variantInternetConnectivityV4.ulVal
+															   : 0);
+			NLM_INTERNET_CONNECTIVITY v6Connectivity = static_cast<NLM_INTERNET_CONNECTIVITY>(
+					variantInternetConnectivityV6.vt == VT_UI4 ? variantInternetConnectivityV6.ulVal
+															   : 0);
 
-			if (WI_IsFlagSet(v4Connectivity,
-					NLM_INTERNET_CONNECTIVITY_WEBHIJACK)
-					|| WI_IsFlagSet(v6Connectivity,
-							NLM_INTERNET_CONNECTIVITY_WEBHIJACK)) {
+			if (WI_IsFlagSet(v4Connectivity, NLM_INTERNET_CONNECTIVITY_WEBHIJACK)
+					|| WI_IsFlagSet(v6Connectivity, NLM_INTERNET_CONNECTIVITY_WEBHIJACK)) {
 				// at least one connected interface is behind a captive portal
 				// we should assume that the device is behind it
 				localConnectedBehindCaptivePortal = true;
@@ -125,32 +120,27 @@ ConnectivityType ShouldAttemptToConnectToInternet(NLM_CONNECTIVITY connectivity,
 }
 
 bool SendHttpGetRequest() {
-	wil::unique_winhttp_hinternet session(
-			WinHttpOpen(L"NetworkListManagerSample.exe",
-					WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
-					WINHTTP_NO_PROXY_BYPASS, 0));
+	wil::unique_winhttp_hinternet session(WinHttpOpen(L"NetworkListManagerSample.exe",
+			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0));
 
 	if (!session) {
 		return false;
 	}
 
-	wil::unique_winhttp_hinternet connect(
-			WinHttpConnect(session.get(), L"www.msftconnecttest.com",
-					INTERNET_DEFAULT_HTTP_PORT, 0));
+	wil::unique_winhttp_hinternet connect(WinHttpConnect(session.get(), L"www.msftconnecttest.com",
+			INTERNET_DEFAULT_HTTP_PORT, 0));
 	if (!connect) {
 		return false;
 	}
 
-	wil::unique_winhttp_hinternet request(
-			WinHttpOpenRequest(connect.get(), L"GET", L"/connecttest.txt",
-					nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
-					0));
+	wil::unique_winhttp_hinternet request(WinHttpOpenRequest(connect.get(), L"GET",
+			L"/connecttest.txt", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0));
 	if (!request) {
 		return false;
 	}
 
 	if (!WinHttpSendRequest(request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+				WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
 		return false;
 	}
 
@@ -158,21 +148,16 @@ bool SendHttpGetRequest() {
 		return false;
 	}
 
-	DWORD statusCode { 0 };
+	DWORD statusCode{0};
 	DWORD headerBytes = sizeof(statusCode);
-	if (WinHttpQueryHeaders(request.get(),
-			WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, NULL,
-			&statusCode, &headerBytes, WINHTTP_NO_HEADER_INDEX)) {
+	if (WinHttpQueryHeaders(request.get(), WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+				NULL, &statusCode, &headerBytes, WINHTTP_NO_HEADER_INDEX)) {
 		if (statusCode >= 200 && statusCode < 300) {
-			DWORD bytesRead { 0 };
-			if (WinHttpQueryDataAvailable(request.get(), &bytesRead)
-					&& bytesRead > 0) {
-				std::unique_ptr<BYTE[]> readBuffer = std::make_unique<BYTE[]>(
-						bytesRead);
-				if (WinHttpReadData(request.get(), readBuffer.get(), bytesRead,
-						&bytesRead)) {
-					std::wcout << "Received " << bytesRead
-							<< " bytes in response." << std::endl;
+			DWORD bytesRead{0};
+			if (WinHttpQueryDataAvailable(request.get(), &bytesRead) && bytesRead > 0) {
+				std::unique_ptr<BYTE[]> readBuffer = std::make_unique<BYTE[]>(bytesRead);
+				if (WinHttpReadData(request.get(), readBuffer.get(), bytesRead, &bytesRead)) {
+					std::wcout << "Received " << bytesRead << " bytes in response." << std::endl;
 					return true;
 				} else {
 					return false;
@@ -188,10 +173,12 @@ bool SendHttpGetRequest() {
 	}
 }
 
-void EvaluateCostAndConnect(stappler::xenolith::platform::NetworkCapabilities &ret, INetworkListManager *networkListManager) {
-	wil::com_ptr<INetworkCostManager> netCostManager = wil::com_query < INetworkCostManager > (networkListManager);
+void EvaluateCostAndConnect(stappler::xenolith::platform::NetworkCapabilities &ret,
+		INetworkListManager *networkListManager) {
+	wil::com_ptr<INetworkCostManager> netCostManager =
+			wil::com_query< INetworkCostManager >(networkListManager);
 
-	DWORD cost { 0 };
+	DWORD cost{0};
 	THROW_IF_FAILED(netCostManager->GetCost(&cost, nullptr));
 	const auto nlmConnectionCost = static_cast<NLM_CONNECTION_COST>(cost);
 
@@ -236,13 +223,15 @@ void EvaluateCostAndConnect(stappler::xenolith::platform::NetworkCapabilities &r
 	}
 }
 
-stappler::xenolith::platform::NetworkCapabilities EvaluateAndReportConnectivity(NLM_CONNECTIVITY connectivity, INetworkListManager *networkListManager) {
-	stappler::xenolith::platform::NetworkCapabilities ret = stappler::xenolith::platform::NetworkCapabilities::None;
-	ConnectivityType connectivityType = Utility::ShouldAttemptToConnectToInternet(connectivity, networkListManager);
+stappler::xenolith::platform::NetworkCapabilities EvaluateAndReportConnectivity(
+		NLM_CONNECTIVITY connectivity, INetworkListManager *networkListManager) {
+	stappler::xenolith::platform::NetworkCapabilities ret =
+			stappler::xenolith::platform::NetworkCapabilities::None;
+	ConnectivityType connectivityType =
+			Utility::ShouldAttemptToConnectToInternet(connectivity, networkListManager);
 
 	switch (connectivityType) {
-	case ConnectivityType::Disconnected:
-		break;
+	case ConnectivityType::Disconnected: break;
 	case ConnectivityType::Normal:
 		ret |= stappler::xenolith::platform::NetworkCapabilities::Internet;
 		break;
@@ -255,7 +244,8 @@ stappler::xenolith::platform::NetworkCapabilities EvaluateAndReportConnectivity(
 		break;
 	}
 
-	if (connectivityType == ConnectivityType::Disconnected || connectivityType == ConnectivityType::CaptivePortal) {
+	if (connectivityType == ConnectivityType::Disconnected
+			|| connectivityType == ConnectivityType::CaptivePortal) {
 		Utility::EvaluateCostAndConnect(ret, networkListManager);
 	} else {
 		std::wcout << "Not attempting to connect to the Internet." << std::endl;
@@ -264,52 +254,53 @@ stappler::xenolith::platform::NetworkCapabilities EvaluateAndReportConnectivity(
 	return ret;
 }
 
-using unique_connectionpoint_token = wil::unique_com_token<IConnectionPoint, DWORD, decltype(&IConnectionPoint::Unadvise), &IConnectionPoint::Unadvise>;
+using unique_connectionpoint_token = wil::unique_com_token<IConnectionPoint, DWORD,
+		decltype(&IConnectionPoint::Unadvise), &IConnectionPoint::Unadvise>;
 
-unique_connectionpoint_token FindConnectionPointAndAdvise(REFIID itf, IUnknown *source, IUnknown *sink) {
-	wil::com_ptr<IConnectionPointContainer> container = wil::com_query<
-			IConnectionPointContainer>(source);
+unique_connectionpoint_token FindConnectionPointAndAdvise(REFIID itf, IUnknown *source,
+		IUnknown *sink) {
+	wil::com_ptr<IConnectionPointContainer> container =
+			wil::com_query< IConnectionPointContainer>(source);
 	wil::com_ptr<IConnectionPoint> connectionPoint;
 	THROW_IF_FAILED(container->FindConnectionPoint(itf, connectionPoint.put()));
 
-	unique_connectionpoint_token token { connectionPoint.get() };
+	unique_connectionpoint_token token{connectionPoint.get()};
 	THROW_IF_FAILED(connectionPoint->Advise(sink, token.put()));
 	return token;
 }
 
 // typename T is the connection point interface we are connecting to.
-template<typename T>
+template <typename T>
 unique_connectionpoint_token FindConnectionPointAndAdvise(IUnknown *source, IUnknown *sink) {
 	return FindConnectionPointAndAdvise(__uuidof(T), source, sink);
 }
 
-class NetworkConnectivityListener final : public Microsoft::WRL::RuntimeClass<
-		Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>,
-		INetworkListManagerEvents> {
+class NetworkConnectivityListener final
+: public Microsoft::WRL::RuntimeClass<
+		  Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>,
+		  INetworkListManagerEvents> {
 public:
-	NetworkConnectivityListener(std::function<void(stappler::xenolith::platform::NetworkCapabilities)> &&cb,
-			INetworkListManager *networkListManager) :
-			m_networkListManager(networkListManager), m_callback(move(cb)) {
-	}
+	NetworkConnectivityListener(
+			std::function<void(stappler::xenolith::platform::NetworkCapabilities)> &&cb,
+			INetworkListManager *networkListManager)
+	: m_networkListManager(networkListManager), m_callback(move(cb)) { }
 
-	NetworkConnectivityListener(const NetworkConnectivityListener&) = delete;
-	NetworkConnectivityListener& operator=(const NetworkConnectivityListener&) = delete;
+	NetworkConnectivityListener(const NetworkConnectivityListener &) = delete;
+	NetworkConnectivityListener &operator=(const NetworkConnectivityListener &) = delete;
 
-	IFACEMETHODIMP ConnectivityChanged(NLM_CONNECTIVITY connectivity) noexcept
-			override
-	try {
-		m_callback(Utility::EvaluateAndReportConnectivity(connectivity, m_networkListManager.get()));
+	IFACEMETHODIMP ConnectivityChanged(NLM_CONNECTIVITY connectivity) noexcept override try {
+		m_callback(
+				Utility::EvaluateAndReportConnectivity(connectivity, m_networkListManager.get()));
 		return S_OK;
 	}
-	CATCH_RETURN()
-	;
+	CATCH_RETURN();
 
 private:
 	wil::com_ptr<INetworkListManager> m_networkListManager;
 	std::function<void(stappler::xenolith::platform::NetworkCapabilities)> m_callback;
 };
 
-}
+} // namespace Utility
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -319,26 +310,25 @@ struct Win32Library::Data {
 	Utility::unique_connectionpoint_token token;
 	NetworkCapabilities capabilities;
 
-    struct StateCallback {
-    	Function<void(const NetworkCapabilities &)> callback;
-    	Rc<Ref> ref;
-    };
+	struct StateCallback {
+		Function<void(const NetworkCapabilities &)> callback;
+		Rc<Ref> ref;
+	};
 
-    Map<void *, StateCallback> networkCallbacks;
+	Map<void *, StateCallback> networkCallbacks;
 
 	Data() : networkListManager(wil::CoCreateInstance<NetworkListManager, INetworkListManager>()) {
-		token = FindConnectionPointAndAdvise < INetworkListManagerEvents
-					> (networkListManager.get(),
-							Microsoft::WRL::Make<Utility::NetworkConnectivityListener>(
-									[this] (NetworkCapabilities caps) {
-												updateCapabilities(caps);
-											},
-									networkListManager.get()).Get());
+		token = FindConnectionPointAndAdvise< INetworkListManagerEvents >(networkListManager.get(),
+				Microsoft::WRL::Make<Utility::NetworkConnectivityListener>(
+						[this](NetworkCapabilities caps) { updateCapabilities(caps); },
+						networkListManager.get())
+						.Get());
 
-		NLM_CONNECTIVITY connectivity { NLM_CONNECTIVITY_DISCONNECTED };
+		NLM_CONNECTIVITY connectivity{NLM_CONNECTIVITY_DISCONNECTED};
 		THROW_IF_FAILED(networkListManager->GetConnectivity(&connectivity));
 
-		capabilities = Utility::EvaluateAndReportConnectivity(connectivity, networkListManager.get());
+		capabilities =
+				Utility::EvaluateAndReportConnectivity(connectivity, networkListManager.get());
 	}
 
 	void updateCapabilities(NetworkCapabilities caps) {
@@ -346,9 +336,7 @@ struct Win32Library::Data {
 		capabilities = caps;
 		std::wcout << L"INetworkListManagerEvents::ConnectivityChanged" << std::endl;
 
-		for (auto &it : networkCallbacks) {
-			it.second.callback(capabilities);
-		}
+		for (auto &it : networkCallbacks) { it.second.callback(capabilities); }
 	}
 };
 
@@ -364,17 +352,11 @@ static Win32Library *s_Win32Library = nullptr;
 
 thread_local WinThread tl_thread;
 
-bool WinThread::runPoll() {
-	return true;
-}
+bool WinThread::runPoll() { return true; }
 
-bool WinThread::stopPoll() {
-	return true;
-}
+bool WinThread::stopPoll() { return true; }
 
-Win32Library *Win32Library::getInstance() {
-	return s_Win32Library;
-}
+Win32Library *Win32Library::getInstance() { return s_Win32Library; }
 
 Win32Library::~Win32Library() {
 	if (_data) {
@@ -390,20 +372,14 @@ bool Win32Library::init() {
 	s_Win32Library = this;
 	loadKeycodes();
 
-	CoInitialize(nullptr);
-
 	_data = new Data;
 
 	return true;
 }
 
-bool Win32Library::runPoll() {
-	return tl_thread.runPoll();
-}
+bool Win32Library::runPoll() { return tl_thread.runPoll(); }
 
-bool Win32Library::stopPoll() {
-	return tl_thread.stopPoll();
-}
+bool Win32Library::stopPoll() { return tl_thread.stopPoll(); }
 
 // based on https://github.com/glfw/glfw/blob/master/src/win32_monitor.c
 
@@ -414,8 +390,9 @@ static Win32Display createMonitor(DISPLAY_DEVICEW *adapter, DISPLAY_DEVICEW *dis
 	} else {
 		ret.name = WideString((const char16_t *)adapter->DeviceString);
 	}
-	if (ret.name.empty())
+	if (ret.name.empty()) {
 		return ret;
+	}
 
 	ZeroMemory(&ret.dm, sizeof(ret.dm));
 	ret.dm.dmSize = sizeof(ret.dm);
@@ -454,21 +431,25 @@ Vector<Win32Display> Win32Library::pollMonitors() {
 		ZeroMemory(&adapter, sizeof(adapter));
 		adapter.cb = sizeof(adapter);
 
-		if (!EnumDisplayDevicesW(NULL, adapterIndex, &adapter, 0))
+		if (!EnumDisplayDevicesW(NULL, adapterIndex, &adapter, 0)) {
 			break;
+		}
 
-		if (!(adapter.StateFlags & DISPLAY_DEVICE_ACTIVE))
+		if (!(adapter.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
 			continue;
+		}
 
 		for (displayIndex = 0;; displayIndex++) {
 			ZeroMemory(&display, sizeof(display));
 			display.cb = sizeof(display);
 
-			if (!EnumDisplayDevicesW(adapter.DeviceName, displayIndex, &display, 0))
+			if (!EnumDisplayDevicesW(adapter.DeviceName, displayIndex, &display, 0)) {
 				break;
+			}
 
-			if (!(display.StateFlags & DISPLAY_DEVICE_ACTIVE))
+			if (!(display.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
 				continue;
+			}
 
 			auto monitor = createMonitor(&adapter, &display);
 			if (!monitor.name.empty()) {
@@ -496,7 +477,8 @@ Vector<Win32Display> Win32Library::pollMonitors() {
 	return ret;
 }
 
-void Win32Library::addNetworkConnectionCallback(void *key, Function<void(const NetworkCapabilities &)> &&cb) {
+void Win32Library::addNetworkConnectionCallback(void *key,
+		Function<void(const NetworkCapabilities &)> &&cb) {
 	std::unique_lock lock(_data->_mutex);
 	cb(_data->capabilities);
 	_data->networkCallbacks.emplace(key, Data::StateCallback{sp::move(cb), this});
@@ -642,4 +624,4 @@ void Win32Library::loadKeycodes() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::platform
