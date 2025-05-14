@@ -562,6 +562,7 @@ struct SP_PUBLIC DeviceTable {
 #endif /* defined(VK_NVX_binary_import) */
 #if defined(VK_NVX_image_view_handle)
 	const PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX = nullptr;
+	const PFN_vkGetImageViewHandle64NVX vkGetImageViewHandle64NVX = nullptr;
 	const PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX = nullptr;
 #endif /* defined(VK_NVX_image_view_handle) */
 #if defined(VK_AMD_draw_indirect_count)

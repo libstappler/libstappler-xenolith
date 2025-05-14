@@ -614,6 +614,7 @@ DeviceTable::DeviceTable(PFN_vkGetDeviceProcAddr addr, VkDevice device)
 #endif /* defined(VK_NVX_binary_import) */
 #if defined(VK_NVX_image_view_handle)
 , vkGetImageViewHandleNVX((PFN_vkGetImageViewHandleNVX)addr(device, "vkGetImageViewHandleNVX"))
+, vkGetImageViewHandle64NVX((PFN_vkGetImageViewHandle64NVX)addr(device, "vkGetImageViewHandle64NVX"))
 , vkGetImageViewAddressNVX((PFN_vkGetImageViewAddressNVX)addr(device, "vkGetImageViewAddressNVX"))
 #endif /* defined(VK_NVX_image_view_handle) */
 #if defined(VK_AMD_draw_indirect_count)
@@ -5369,6 +5370,17 @@ static uint32_t xl_hook_tl_deviceHookTable_vkGetImageViewHandleNVX(VkDevice devi
 	if (tl_deviceHookTable.preCall) { tl_deviceHookTable.preCall(tl_deviceHookTable.ctx, "vkGetImageViewHandleNVX", (PFN_vkVoidFunction)__fn); }
 	auto ret = __fn(device, pInfo);
 	if (tl_deviceHookTable.postCall) { tl_deviceHookTable.postCall(tl_deviceHookTable.ctx, "vkGetImageViewHandleNVX", (PFN_vkVoidFunction)__fn); }
+	return ret;
+}
+
+static uint64_t xl_hook_tl_deviceHookTable_vkGetImageViewHandle64NVX(VkDevice device, const VkImageViewHandleInfoNVX* pInfo) {
+	auto __fn = tl_deviceHookTable.table->vkGetImageViewHandle64NVX;
+	if (tl_deviceHookTable.replace && tl_deviceHookTable.replace->vkGetImageViewHandle64NVX) {
+		__fn = tl_deviceHookTable.replace->vkGetImageViewHandle64NVX;
+	}
+	if (tl_deviceHookTable.preCall) { tl_deviceHookTable.preCall(tl_deviceHookTable.ctx, "vkGetImageViewHandle64NVX", (PFN_vkVoidFunction)__fn); }
+	auto ret = __fn(device, pInfo);
+	if (tl_deviceHookTable.postCall) { tl_deviceHookTable.postCall(tl_deviceHookTable.ctx, "vkGetImageViewHandle64NVX", (PFN_vkVoidFunction)__fn); }
 	return ret;
 }
 
@@ -10431,6 +10443,7 @@ static PFN_vkVoidFunction getDeviceHookAddr(VkDevice instance, const char* pName
 #endif /* defined(VK_NVX_binary_import) */
 #if defined(VK_NVX_image_view_handle)
 	if (strcmp(pName, "vkGetImageViewHandleNVX") == 0) { return (PFN_vkVoidFunction)&xl_hook_tl_deviceHookTable_vkGetImageViewHandleNVX; }
+	if (strcmp(pName, "vkGetImageViewHandle64NVX") == 0) { return (PFN_vkVoidFunction)&xl_hook_tl_deviceHookTable_vkGetImageViewHandle64NVX; }
 	if (strcmp(pName, "vkGetImageViewAddressNVX") == 0) { return (PFN_vkVoidFunction)&xl_hook_tl_deviceHookTable_vkGetImageViewAddressNVX; }
 #endif /* defined(VK_NVX_image_view_handle) */
 #if defined(VK_AMD_draw_indirect_count)

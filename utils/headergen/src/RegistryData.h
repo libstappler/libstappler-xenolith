@@ -86,6 +86,11 @@ struct VkRegistryExtension {
 	Vector<VkRegistryRequire> commands;
 };
 
+struct VkRegistryEnum {
+	StringView name;
+	StringView type;
+};
+
 struct RegistryData {
 	bool load();
 	StringView getRootType(VkRegistryCommand &cmd);
@@ -106,6 +111,7 @@ struct RegistryData {
 
 	Vector<VkRegistryFeature> features;
 	Vector<VkRegistryExtension> extensions;
+	Vector<VkRegistryEnum> enums;
 
 	Vector<StringView> loaderCommands;
 	Vector<StringView> instanceCommands;
