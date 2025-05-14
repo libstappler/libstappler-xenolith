@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -67,9 +68,7 @@ void FrameContext2d::onEnter(Scene *scene) {
 	}
 }
 
-void FrameContext2d::onExit() {
-	FrameContext::onExit();
-}
+void FrameContext2d::onExit() { FrameContext::onExit(); }
 
 Rc<FrameContextHandle> FrameContext2d::makeHandle(FrameInfo &frame) {
 	auto h = Rc<FrameContextHandle2d>::alloc();
@@ -84,6 +83,8 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 
 	frame.resolvedInputs.emplace(_vertexAttachmentData);
 	frame.resolvedInputs.emplace(_lightAttachmentData);
+	frame.resolvedInputs.emplace(_particleEmitterAttachmentData);
+	frame.resolvedInputs.emplace(_particleVertexAttachmentData);
 
 	if (_materialDependency) {
 		handle->waitDependencies.emplace_back(_materialDependency);
@@ -91,11 +92,13 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 
 	frame.director->getGlLoop()->performOnThread(
 			[this, req = frame.request, q = _queue, dir = frame.director,
-			 h = Rc<FrameContextHandle2d>(h)] () mutable {
-
+					h = Rc<FrameContextHandle2d>(h)]() mutable {
 		req->addInput(_vertexAttachmentData, Rc<FrameContextHandle2d>(h));
 		req->addInput(_lightAttachmentData, Rc<FrameContextHandle2d>(h));
-	}, this);
+		req->addInput(_particleEmitterAttachmentData, Rc<FrameContextHandle2d>(h));
+		req->addInput(_particleVertexAttachmentData, Rc<FrameContextHandle2d>(h));
+	},
+			this);
 
 	FrameContext::submitHandle(frame, handle);
 }
@@ -115,15 +118,18 @@ bool FrameContext2d::initWithQueue(core::Queue *queue) {
 			_vertexAttachmentData = it;
 		} else if (it->key == LightDataAttachmentName) {
 			_lightAttachmentData = it;
+		} else if (it->key == ParticleEmittersAttachment) {
+			_particleEmitterAttachmentData = it;
+		} else if (it->key == ParticleVertexesAttachment) {
+			_particleVertexAttachmentData = it;
 		}
 	}
 
-	return _materialAttachmentData && _vertexAttachmentData && _lightAttachmentData;
+	return _materialAttachmentData && _vertexAttachmentData && _lightAttachmentData
+			&& _particleEmitterAttachmentData && _particleVertexAttachmentData;
 }
 
-bool StateData::init() {
-	return true;
-}
+bool StateData::init() { return true; }
 
 bool StateData::init(StateData *data) {
 	if (data) {
@@ -133,4 +139,4 @@ bool StateData::init(StateData *data) {
 	return true;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

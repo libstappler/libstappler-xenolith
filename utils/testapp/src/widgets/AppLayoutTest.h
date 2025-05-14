@@ -24,7 +24,10 @@
 #define TEST_SRC_WIDGETS_APPLAYOUTTEST_H_
 
 #include "AppTests.h"
+#include "XL2dLabel.h"
+#include "XL2dLayer.h"
 #include "XL2dSceneLayout.h"
+#include "XL2dVectorSprite.h"
 
 namespace stappler::xenolith::app {
 
@@ -66,6 +69,6 @@ protected:
 	Label *_infoLabel = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_WIDGETS_APPLAYOUTTEST_H_ */

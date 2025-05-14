@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -43,18 +44,21 @@
 #include "XL2dLinearProgress.cc"
 #include "XL2dRoundedProgress.cc"
 
-#include "XL2dScrollController.cc"
-#include "XL2dScrollItemHandle.cc"
-#include "XL2dScrollViewBase.cc"
-#include "XL2dScrollView.cc"
+#include "scroll/XL2dScrollController.cc"
+#include "scroll/XL2dScrollItemHandle.cc"
+#include "scroll/XL2dScrollViewBase.cc"
+#include "scroll/XL2dScrollView.cc"
 
-#include "XL2dLinearGradient.cc"
 #include "XL2dBootstrapApplication.cc"
+
+#include "particle/XL2dParticleSystem.cc"
+#include "particle/XL2dParticleEmitter.cc"
 
 #ifdef MODULE_XENOLITH_BACKEND_VK
 #include "backend/vk/XL2dVkMaterial.cc"
 #include "backend/vk/XL2dVkVertexPass.cc"
 #include "backend/vk/XL2dVkShadow.cc"
+#include "backend/vk/XL2dVkParticlePass.cc"
 #include "backend/vk/XL2dVkShadowPass.cc"
 #endif
 
@@ -64,7 +68,8 @@ ImagePlacementResult ImagePlacementInfo::resolve(const Size2 &viewSize, const Si
 	ImagePlacementResult result;
 
 	// find texture fragment size on image
-	result.imageFragmentSize = Size2(imageSize.width * textureRect.size.width, imageSize.height * textureRect.size.height);
+	result.imageFragmentSize = Size2(imageSize.width * textureRect.size.width,
+			imageSize.height * textureRect.size.height);
 
 	// write defaults
 	result.viewRect = Rect(Vec2::ZERO, viewSize);
@@ -75,31 +80,33 @@ ImagePlacementResult ImagePlacementInfo::resolve(const Size2 &viewSize, const Si
 	// find scale from view to image
 	switch (autofit) {
 	case Autofit::None:
-		result.scale = (result.imageFragmentSize.width / viewSize.width + result.imageFragmentSize.height / viewSize.height) / 2.0f;
+		result.scale = (result.imageFragmentSize.width / viewSize.width
+							   + result.imageFragmentSize.height / viewSize.height)
+				/ 2.0f;
 		return result;
 		break;
-	case Autofit::Width:
-		result.scale = result.imageFragmentSize.width / viewSize.width;
-		break;
-	case Autofit::Height:
-		result.scale = result.imageFragmentSize.height / viewSize.height;
-		break;
+	case Autofit::Width: result.scale = result.imageFragmentSize.width / viewSize.width; break;
+	case Autofit::Height: result.scale = result.imageFragmentSize.height / viewSize.height; break;
 	case Autofit::Contain:
-		result.scale = std::max(result.imageFragmentSize.width / viewSize.width, result.imageFragmentSize.height / viewSize.height);
+		result.scale = std::max(result.imageFragmentSize.width / viewSize.width,
+				result.imageFragmentSize.height / viewSize.height);
 		break;
 	case Autofit::Cover:
-		result.scale = std::min(result.imageFragmentSize.width / viewSize.width, result.imageFragmentSize.height / viewSize.height);
+		result.scale = std::min(result.imageFragmentSize.width / viewSize.width,
+				result.imageFragmentSize.height / viewSize.height);
 		break;
 	}
 
-	auto imageSizeInView = Size2(result.imageFragmentSize.width / result.scale, result.imageFragmentSize.height / result.scale);
+	auto imageSizeInView = Size2(result.imageFragmentSize.width / result.scale,
+			result.imageFragmentSize.height / result.scale);
 	if (imageSizeInView.width < viewSize.width) {
 		// reduce view size to fit image
 		result.viewRect.size.width -= (viewSize.width - imageSizeInView.width);
 		result.viewRect.origin.x = (viewSize.width - imageSizeInView.width) * autofitPos.x;
 	} else if (imageSizeInView.width > viewSize.width) {
 		// truncate image to fit view
-		result.imageRect.origin.x = (result.imageFragmentSize.width - viewSize.width * result.scale) * autofitPos.x;
+		result.imageRect.origin.x =
+				(result.imageFragmentSize.width - viewSize.width * result.scale) * autofitPos.x;
 		result.imageRect.size.width = viewSize.width * result.scale;
 	}
 
@@ -109,18 +116,18 @@ ImagePlacementResult ImagePlacementInfo::resolve(const Size2 &viewSize, const Si
 		result.viewRect.origin.y = (viewSize.height - imageSizeInView.height) * autofitPos.y;
 	} else if (imageSizeInView.height > viewSize.height) {
 		// truncate image to fit view
-		result.imageRect.origin.y = (result.imageFragmentSize.height - viewSize.height * result.scale) * autofitPos.y;
+		result.imageRect.origin.y =
+				(result.imageFragmentSize.height - viewSize.height * result.scale) * autofitPos.y;
 		result.imageRect.size.height = viewSize.height * result.scale;
 	}
 
 	// adjust texture rect to image rect
-	result.textureRect = Rect(
-		textureRect.origin.x + result.imageRect.origin.x / imageSize.width,
-		textureRect.origin.y + result.imageRect.origin.y / imageSize.height,
-		result.imageRect.size.width / imageSize.width,
-		result.imageRect.size.height / imageSize.height);
+	result.textureRect = Rect(textureRect.origin.x + result.imageRect.origin.x / imageSize.width,
+			textureRect.origin.y + result.imageRect.origin.y / imageSize.height,
+			result.imageRect.size.width / imageSize.width,
+			result.imageRect.size.height / imageSize.height);
 
 	return result;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

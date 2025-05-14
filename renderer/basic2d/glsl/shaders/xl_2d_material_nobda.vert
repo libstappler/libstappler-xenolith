@@ -35,13 +35,13 @@ layout (location = 4) out vec2 fragPosition;
 
 layout (push_constant) uniform pcb {
 	uint materialIdx;
-	uint padding0;
-	uint padding1;
-	uint padding2;
-	uint padding3;
-	float padding4;
-	vec2 padding5_1;
-	vec2 padding5_2;
+	uint padding4;
+	uint padding8;
+	uint padding12;
+	uint padding16;
+	float padding20;
+	vec2 padding24;
+	vec2 padding32;
 } pushConstants;
 
 uint hash(uint k, uint capacity) {

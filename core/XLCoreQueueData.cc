@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,18 +28,12 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 void QueueData::clear() {
-	for (auto &it : programs) {
-		it->program = nullptr;
-	}
+	for (auto &it : programs) { it->program = nullptr; }
 
 	for (auto &it : passes) {
 		for (auto &subpass : it->subpasses) {
-			for (auto &pipeline : subpass->graphicPipelines) {
-				pipeline->pipeline = nullptr;
-			}
-			for (auto &pipeline : subpass->computePipelines) {
-				pipeline->pipeline = nullptr;
-			}
+			for (auto &pipeline : subpass->graphicPipelines) { pipeline->pipeline = nullptr; }
+			for (auto &pipeline : subpass->computePipelines) { pipeline->pipeline = nullptr; }
 		}
 
 		it->pass->invalidate();
@@ -46,9 +41,7 @@ void QueueData::clear() {
 		it->impl = nullptr;
 	}
 
-	for (auto &it : attachments) {
-		it->attachment = nullptr;
-	}
+	for (auto &it : attachments) { it->attachment = nullptr; }
 
 
 	for (auto &it : textureSets) {
@@ -70,44 +63,6 @@ void QueueData::clear() {
 }
 
 
-StringView getDescriptorTypeName(DescriptorType type) {
-	switch (type) {
-	case DescriptorType::Sampler: return StringView("Sampler"); break;
-	case DescriptorType::CombinedImageSampler: return StringView("CombinedImageSampler"); break;
-	case DescriptorType::SampledImage: return StringView("SampledImage"); break;
-	case DescriptorType::StorageImage: return StringView("StorageImage"); break;
-	case DescriptorType::UniformTexelBuffer: return StringView("UniformTexelBuffer"); break;
-	case DescriptorType::StorageTexelBuffer: return StringView("StorageTexelBuffer"); break;
-	case DescriptorType::UniformBuffer: return StringView("UniformBuffer"); break;
-	case DescriptorType::StorageBuffer: return StringView("StorageBuffer"); break;
-	case DescriptorType::UniformBufferDynamic: return StringView("UniformBufferDynamic"); break;
-	case DescriptorType::StorageBufferDynamic: return StringView("StorageBufferDynamic"); break;
-	case DescriptorType::InputAttachment: return StringView("InputAttachment"); break;
-	default: break;
-	}
-	return StringView("Unknown");
-}
-
-String getProgramStageDescription(ProgramStage fmt) {
-	StringStream stream;
-	if ((fmt & ProgramStage::Vertex) != ProgramStage::None) { stream << " Vertex"; }
-	if ((fmt & ProgramStage::TesselationControl) != ProgramStage::None) { stream << " TesselationControl"; }
-	if ((fmt & ProgramStage::TesselationEvaluation) != ProgramStage::None) { stream << " TesselationEvaluation"; }
-	if ((fmt & ProgramStage::Geometry) != ProgramStage::None) { stream << " Geometry"; }
-	if ((fmt & ProgramStage::Fragment) != ProgramStage::None) { stream << " Fragment"; }
-	if ((fmt & ProgramStage::Compute) != ProgramStage::None) { stream << " Compute"; }
-	if ((fmt & ProgramStage::RayGen) != ProgramStage::None) { stream << " RayGen"; }
-	if ((fmt & ProgramStage::AnyHit) != ProgramStage::None) { stream << " AnyHit"; }
-	if ((fmt & ProgramStage::ClosestHit) != ProgramStage::None) { stream << " ClosestHit"; }
-	if ((fmt & ProgramStage::MissHit) != ProgramStage::None) { stream << " MissHit"; }
-	if ((fmt & ProgramStage::AnyHit) != ProgramStage::None) { stream << " AnyHit"; }
-	if ((fmt & ProgramStage::Intersection) != ProgramStage::None) { stream << " Intersection"; }
-	if ((fmt & ProgramStage::Callable) != ProgramStage::None) { stream << " Callable"; }
-	if ((fmt & ProgramStage::Task) != ProgramStage::None) { stream << " Task"; }
-	if ((fmt & ProgramStage::Mesh) != ProgramStage::None) { stream << " Mesh"; }
-	return stream.str();
-}
-
 void ProgramData::inspect(SpanView<uint32_t> data) {
 	SpvReflectShaderModule shader;
 
@@ -116,7 +71,9 @@ void ProgramData::inspect(SpanView<uint32_t> data) {
 	switch (shader.spirv_execution_model) {
 	case SpvExecutionModelVertex: stage = ProgramStage::Vertex; break;
 	case SpvExecutionModelTessellationControl: stage = ProgramStage::TesselationControl; break;
-	case SpvExecutionModelTessellationEvaluation: stage = ProgramStage::TesselationEvaluation; break;
+	case SpvExecutionModelTessellationEvaluation:
+		stage = ProgramStage::TesselationEvaluation;
+		break;
 	case SpvExecutionModelGeometry: stage = ProgramStage::Geometry; break;
 	case SpvExecutionModelFragment: stage = ProgramStage::Fragment; break;
 	case SpvExecutionModelGLCompute: stage = ProgramStage::Compute; break;
@@ -134,7 +91,8 @@ void ProgramData::inspect(SpanView<uint32_t> data) {
 
 	bindings.reserve(shader.descriptor_binding_count);
 	for (auto &it : makeSpanView(shader.descriptor_bindings, shader.descriptor_binding_count)) {
-		bindings.emplace_back(ProgramDescriptorBinding({it.set, it.binding, DescriptorType(it.descriptor_type), it.count}));
+		bindings.emplace_back(ProgramDescriptorBinding(
+				{it.set, it.binding, DescriptorType(it.descriptor_type), it.count}));
 	}
 
 	constants.reserve(shader.push_constant_block_count);
@@ -144,7 +102,8 @@ void ProgramData::inspect(SpanView<uint32_t> data) {
 
 	entryPoints.reserve(shader.entry_point_count);
 	for (auto &it : makeSpanView(shader.entry_points, shader.entry_point_count)) {
-		entryPoints.emplace_back(ProgramEntryPointBlock({it.id, memory::string(it.name), it.local_size.x, it.local_size.y, it.local_size.z}));
+		entryPoints.emplace_back(ProgramEntryPointBlock({it.id, memory::string(it.name),
+			it.local_size.x, it.local_size.y, it.local_size.z}));
 	}
 
 	spvReflectDestroyShaderModule(&shader);
@@ -162,4 +121,4 @@ bool GraphicPipelineInfo::isSolid() const {
 	return false;
 }
 
-}
+} // namespace stappler::xenolith::core

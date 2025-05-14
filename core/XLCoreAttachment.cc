@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,8 @@ DependencyEvent::~DependencyEvent() { }
 
 DependencyEvent::DependencyEvent(QueueSet &&q, StringView str) : _queues(sp::move(q)), _tag(str) { }
 
-DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il, StringView str) : _queues(sp::move(il)), _tag(str) { }
+DependencyEvent::DependencyEvent(InitializerList<Rc<Queue>> &&il, StringView str)
+: _queues(sp::move(il)), _tag(str) { }
 
 bool DependencyEvent::signal(Queue *q, bool success) {
 	if (!success) {
@@ -50,67 +52,43 @@ bool DependencyEvent::signal(Queue *q, bool success) {
 	return _queues.empty();
 }
 
-bool DependencyEvent::isSignaled() const {
-	return _queues.empty();
-}
+bool DependencyEvent::isSignaled() const { return _queues.empty(); }
 
-bool DependencyEvent::isSuccessful() const {
-	return _success;
-}
+bool DependencyEvent::isSuccessful() const { return _success; }
 
-void DependencyEvent::addQueue(Rc<Queue> &&q) {
-	_queues.emplace(move(q));
-}
+void DependencyEvent::addQueue(Rc<Queue> &&q) { _queues.emplace(move(q)); }
 
 bool Attachment::init(AttachmentBuilder &builder) {
 	_data = builder.getAttachmentData();
 	return true;
 }
 
-void Attachment::clear() {
+void Attachment::clear() { }
 
-}
+StringView Attachment::getName() const { return _data->key; }
 
-StringView Attachment::getName() const {
-	return _data->key;
-}
+uint64_t Attachment::getId() const { return _data->id; }
 
-uint64_t Attachment::getId() const {
-	return _data->id;
-}
+AttachmentUsage Attachment::getUsage() const { return _data->usage; }
 
-AttachmentUsage Attachment::getUsage() const {
-	return _data->usage;
-}
-
-bool Attachment::isTransient() const {
-	return _data->transient;
-}
-
-void Attachment::setInputCallback(Function<void(FrameQueue &, const Rc<AttachmentHandle> &, Function<void(bool)> &&)> &&input) {
-	_inputCallback = sp::move(input);
-}
-
-void Attachment::setValidateInputCallback(ValidateInputCallback &&cb) {
-	_validateInputCallback = sp::move(cb);
-}
+bool Attachment::isTransient() const { return _data->transient; }
 
 void Attachment::setFrameHandleCallback(FrameHandleCallback &&cb) {
 	_frameHandleCallback = sp::move(cb);
 }
 
-void Attachment::acquireInput(FrameQueue &frame, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
-	if (_inputCallback) {
-		_inputCallback(frame, a, sp::move(cb));
+void Attachment::acquireInput(FrameQueue &frame, AttachmentHandle &a, Function<void(bool)> &&cb) {
+	if (_data->inputAcquisitionCallback) {
+		_data->inputAcquisitionCallback(frame, a, sp::move(cb));
 	} else {
 		// wait for input on handle
 		frame.getFrame()->waitForInput(frame, a, sp::move(cb));
 	}
 }
 
-bool Attachment::validateInput(const Rc<AttachmentInputData> &data) const {
-	if (_validateInputCallback) {
-		return _validateInputCallback(*this, data);
+bool Attachment::validateInput(const AttachmentInputData *data) const {
+	if (_data->inputValidationCallback) {
+		return _data->inputValidationCallback(data);
 	}
 	return true;
 }
@@ -124,9 +102,7 @@ Rc<AttachmentHandle> Attachment::makeFrameHandle(const FrameQueue &queue) {
 
 Vector<const QueuePassData *> Attachment::getRenderPasses() const {
 	Vector<const PassData *> ret;
-	for (auto &it : _data->passes) {
-		ret.emplace_back(it->pass);
-	}
+	for (auto &it : _data->passes) { ret.emplace_back(it->pass); }
 	return ret;
 }
 
@@ -166,7 +142,7 @@ const QueuePassData *Attachment::getPrevRenderPass(const PassData *pass) const {
 		if (it->pass == pass) {
 			break;
 		}
-		++ idx;
+		++idx;
 	}
 	if (idx == 0) {
 		return nullptr;
@@ -174,9 +150,7 @@ const QueuePassData *Attachment::getPrevRenderPass(const PassData *pass) const {
 	return _data->passes.at(idx - 1)->pass;
 }
 
-void Attachment::setCompiled(Device &dev) {
-
-}
+void Attachment::setCompiled(Device &dev) { }
 
 bool BufferAttachment::init(AttachmentBuilder &builder, const BufferInfo &info) {
 	_info = info;
@@ -210,12 +184,11 @@ bool BufferAttachment::init(AttachmentBuilder &builder, Vector<const BufferData 
 	return false;
 }
 
-void BufferAttachment::clear() {
-	Attachment::clear();
-}
+void BufferAttachment::clear() { Attachment::clear(); }
 
 Vector<BufferObject *> BufferAttachment::getStaticBuffers() const {
-	Vector<BufferObject *> ret; ret.reserve(_staticBuffers.size());
+	Vector<BufferObject *> ret;
+	ret.reserve(_staticBuffers.size());
 	for (auto &it : _staticBuffers) {
 		if (it->buffer) {
 			ret.emplace_back(it->buffer);
@@ -240,7 +213,8 @@ bool ImageAttachment::init(AttachmentBuilder &builder, const ImageData *data, At
 	if (Attachment::init(builder)) {
 		_imageInfo = *data; // copy info
 		if ((_imageInfo.hints & ImageHints::Static) != ImageHints::Static) {
-			log::error("ImageAttachment", "Image ", data->key, " is not defined as ImageHint::Static to be used as static image attachment");
+			log::error("ImageAttachment", "Image ", data->key,
+					" is not defined as ImageHint::Static to be used as static image attachment");
 		}
 		_staticImage = data;
 		_attachmentInfo = move(a);
@@ -250,20 +224,17 @@ bool ImageAttachment::init(AttachmentBuilder &builder, const ImageData *data, At
 	return false;
 }
 
-void ImageAttachment::addImageUsage(ImageUsage usage) {
-	_imageInfo.usage |= usage;
-}
+void ImageAttachment::addImageUsage(ImageUsage usage) { _imageInfo.usage |= usage; }
 
 bool ImageAttachment::isCompatible(const ImageInfo &image) const {
 	return _imageInfo.isCompatible(image);
 }
 
-ImageViewInfo ImageAttachment::getImageViewInfo(const ImageInfoData &info, const AttachmentPassData &passAttachment) const {
+ImageViewInfo ImageAttachment::getImageViewInfo(const ImageInfoData &info,
+		const AttachmentPassData &passAttachment) const {
 	bool allowSwizzle = true;
 	AttachmentUsage usage = AttachmentUsage::None;
-	for (auto &subpassAttachment : passAttachment.subpasses) {
-		usage |= subpassAttachment->usage;
-	}
+	for (auto &subpassAttachment : passAttachment.subpasses) { usage |= subpassAttachment->usage; }
 
 	if ((usage & AttachmentUsage::Input) != AttachmentUsage::None
 			|| (usage & AttachmentUsage::Output) != AttachmentUsage::None
@@ -280,7 +251,7 @@ ImageViewInfo ImageAttachment::getImageViewInfo(const ImageInfoData &info, const
 Vector<ImageViewInfo> ImageAttachment::getImageViews(const ImageInfoData &info) const {
 	Vector<ImageViewInfo> ret;
 
-	auto addView = [&] (const ImageViewInfo &info) {
+	auto addView = [&](const ImageViewInfo &info) {
 		auto it = std::find(ret.begin(), ret.end(), info);
 		if (it == ret.end()) {
 			ret.emplace_back(info);
@@ -336,39 +307,32 @@ bool AttachmentHandle::init(Attachment &attachment, const FrameQueue &frame) {
 	return init(&attachment, frame);
 }
 
-void AttachmentHandle::setQueueData(FrameAttachmentData &data) {
-	_queueData = &data;
-}
-
-void AttachmentHandle::setInputCallback(InputCallback &&cb) {
-	_inputCallback = sp::move(cb);
-}
+void AttachmentHandle::setQueueData(FrameAttachmentData &data) { _queueData = &data; }
 
 // returns true for immediate setup, false if seyup job was scheduled
-bool AttachmentHandle::setup(FrameQueue &, Function<void(bool)> &&) {
-	return true;
-}
+bool AttachmentHandle::setup(FrameQueue &, Function<void(bool)> &&) { return true; }
 
-void AttachmentHandle::finalize(FrameQueue &, bool successful) {
+void AttachmentHandle::finalize(FrameQueue &, bool successful) { }
 
-}
-
-void AttachmentHandle::submitInput(FrameQueue &q, Rc<AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void AttachmentHandle::submitInput(FrameQueue &q, Rc<AttachmentInputData> &&data,
+		Function<void(bool)> &&cb) {
 	_input = move(data);
 
 	if (_input->waitDependencies.empty()) {
 		auto ret = true;
-		if (_inputCallback) {
-			_inputCallback(*this, q, _input, sp::move(cb));
+		if (_attachment->getData()->inputSubmissionCallback) {
+			_attachment->getData()->inputSubmissionCallback(q, *this, _input, sp::move(cb));
 		} else {
 			cb(ret);
 		}
 	} else {
-		q.getFrame()->waitForDependencies(_input->waitDependencies, [this, cb = sp::move(cb), q = Rc<FrameQueue>(&q)] (FrameHandle &, bool success) mutable {
+		q.getFrame()->waitForDependencies(_input->waitDependencies,
+				[this, cb = sp::move(cb), q = Rc<FrameQueue>(&q)](FrameHandle &,
+						bool success) mutable {
 			if (!success) {
 				cb(success);
-			} else if (_inputCallback) {
-				_inputCallback(*this, *q, _input, sp::move(cb));
+			} else if (_attachment->getData()->inputSubmissionCallback) {
+				_attachment->getData()->inputSubmissionCallback(*q, *this, _input, sp::move(cb));
 			} else {
 				cb(success);
 			}
@@ -384,12 +348,14 @@ bool AttachmentHandle::isOutput() const {
 	return (_attachment->getUsage() & AttachmentUsage::Output) != AttachmentUsage::None;
 }
 
-uint32_t AttachmentHandle::getDescriptorArraySize(const PassHandle &, const PipelineDescriptor &d, bool isExternal) const {
+uint32_t AttachmentHandle::getDescriptorArraySize(const PassHandle &,
+		const PipelineDescriptor &d) const {
 	return d.count;
 }
 
-bool AttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d, uint32_t, bool isExternal) const {
+bool AttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d, uint32_t,
+		const DescriptorData &) const {
 	return false;
 }
 
-}
+} // namespace stappler::xenolith::core

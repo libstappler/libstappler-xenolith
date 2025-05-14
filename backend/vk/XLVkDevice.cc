@@ -1,27 +1,29 @@
 /**
-Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLVkDevice.h"
+#include "XLVk.h"
 #include "XLVkPipeline.h"
 #include "XLVkTextureSet.h"
 #include "XLVkLoop.h"
@@ -41,7 +43,8 @@ class ReadImageTask : public core::DeviceQueueTask {
 public:
 	virtual ~ReadImageTask() = default;
 
-	bool init(const Rc<Image> &img, core::AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
+	bool init(const Rc<Image> &img, core::AttachmentLayout l,
+			Function<void(const ImageInfoData &, BytesView)> &&cb) {
 		if (!DeviceQueueTask::init(vk::getQueueFlags(img->getInfo().type))) {
 			return false;
 		}
@@ -59,33 +62,36 @@ public:
 		auto &info = _image->getInfo();
 		auto &extent = info.extent;
 
-		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
-			core::ForceBufferUsage(core::BufferUsage::TransferDst),
-			size_t(extent.width * extent.height * extent.depth * core::getFormatBlockSize(info.format)),
-			_image->getInfo().type
-		));
+		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination,
+				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferDst),
+						size_t(extent.width * extent.height * extent.depth
+								* core::getFormatBlockSize(info.format)),
+						_image->getInfo().type));
 		return true;
 	}
 
 	virtual void fillCommandBuffer(core::Device &dev, core::CommandBuffer &cbuf) override {
 		auto &buf = static_cast<CommandBuffer &>(cbuf);
 
-		auto inImageBarrier = ImageMemoryBarrier(_image,
-			VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-			VkImageLayout(_layout), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		auto inImageBarrier =
+				ImageMemoryBarrier(_image, VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+						VkImageLayout(_layout), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0, makeSpanView(&inImageBarrier, 1));
 
 		buf.cmdCopyImageToBuffer(_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transferBuffer, 0);
 
-		BufferMemoryBarrier bufferOutBarrier(_transferBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT);
+		BufferMemoryBarrier bufferOutBarrier(_transferBuffer, VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_HOST_READ_BIT);
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+				makeSpanView(&bufferOutBarrier, 1));
 	}
 
 	virtual void handleComplete(bool success) override {
 		if (success) {
-			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+			_transferBuffer->map([&](uint8_t *buf, VkDeviceSize size) {
 				_callback(_image->getInfo(), BytesView(buf, size));
 			});
 		} else {
@@ -121,11 +127,9 @@ public:
 
 		auto &info = _buffer->getInfo();
 
-		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination, BufferInfo(
-			core::ForceBufferUsage(core::BufferUsage::TransferDst),
-			size_t(info.size),
-			info.type
-		));
+		_transferBuffer = _mempool->spawn(AllocationUsage::HostTransitionDestination,
+				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferDst),
+						size_t(info.size), info.type));
 
 		return true;
 	}
@@ -136,7 +140,7 @@ public:
 
 	virtual void handleComplete(bool success) override {
 		if (success) {
-			_transferBuffer->map([&] (uint8_t *buf, VkDeviceSize size) {
+			_transferBuffer->map([&](uint8_t *buf, VkDeviceSize size) {
 				_callback(_buffer->getInfo(), BytesView(buf, size));
 			});
 		} else {
@@ -170,12 +174,16 @@ bool DeviceFrameHandle::init(Loop &loop, Device &device, Rc<FrameRequest> &&req,
 	return true;
 }
 
-const Rc<DeviceMemoryPool> &DeviceFrameHandle::getMemPool(void *key) {
+DeviceMemoryPool *DeviceFrameHandle::getMemPool(void *key) {
 	std::unique_lock<Mutex> lock(_mutex);
 	// experimental: multiple pools feature is disabled, advanced memory mapping protection can replace it completely
 	auto v = _memPools.find((void *)nullptr);
 	if (v == _memPools.end()) {
-		v = _memPools.emplace((void *)nullptr, Rc<DeviceMemoryPool>::create(_allocator, _request->isPersistentMapping())).first;
+		v = _memPools
+					.emplace((void *)nullptr,
+							Rc<DeviceMemoryPool>::create(_allocator,
+									_request->isPersistentMapping()))
+					.first;
 	}
 	return v->second;
 }
@@ -201,29 +209,37 @@ Device::~Device() {
 	XL_VKDEVICE_LOG("~Device");
 }
 
-bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &features, const Vector<StringView> &extensions) {
-	Set<uint32_t> uniqueQueueFamilies = { info.graphicsFamily.index, info.presentFamily.index, info.transferFamily.index, info.computeFamily.index };
+bool Device::init(const vk::Instance *inst, DeviceInfo &&info, const Features &features,
+		const Vector<StringView> &extensions) {
+	Set<uint32_t> uniqueQueueFamilies = {info.graphicsFamily.index, info.presentFamily.index,
+		info.transferFamily.index, info.computeFamily.index};
 
-	auto emplaceQueueFamily = [&, this] (DeviceInfo::QueueFamilyInfo &info, uint32_t count, core::QueueFlags preferred) {
+	auto emplaceQueueFamily = [&, this](DeviceInfo::QueueFamilyInfo &info, uint32_t count,
+									  core::QueueFlags preferred) {
 		for (auto &it : _families) {
 			if (it.index == info.index) {
 				it.preferred |= preferred;
-				it.count = std::min(it.count + count, std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
+				it.count = std::min(it.count + count,
+						std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
 				return;
 			}
 		}
-		count = std::min(count, std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
-		_families.emplace_back(core::DeviceQueueFamily({ info.index, count, preferred, info.flags, info.minImageTransferGranularity}));
+		count = std::min(count,
+				std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
+		_families.emplace_back(core::DeviceQueueFamily(
+				{info.index, count, preferred, info.flags, info.minImageTransferGranularity}));
 	};
 
 	_presentMask = info.presentFamily.presentSurfaceMask;
 
 	info.presentFamily.count = 1;
 
-	emplaceQueueFamily(info.graphicsFamily, std::thread::hardware_concurrency(), core::QueueFlags::Graphics);
+	emplaceQueueFamily(info.graphicsFamily, std::thread::hardware_concurrency(),
+			core::QueueFlags::Graphics);
 	emplaceQueueFamily(info.presentFamily, 1, core::QueueFlags::Present);
 	emplaceQueueFamily(info.transferFamily, 2, core::QueueFlags::Transfer);
-	emplaceQueueFamily(info.computeFamily, std::thread::hardware_concurrency(), core::QueueFlags::Compute);
+	emplaceQueueFamily(info.computeFamily, std::thread::hardware_concurrency(),
+			core::QueueFlags::Compute);
 
 	if (!setup(inst, info.device, info.properties, _families, features, extensions)) {
 		return false;
@@ -243,7 +259,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	for (auto &it : _families) {
 		it.queues.reserve(it.count);
 		it.pools.reserve(it.count);
-		for (uint32_t i = 0; i < it.count; ++ i) {
+		for (uint32_t i = 0; i < it.count; ++i) {
 			VkQueue queue = VK_NULL_HANDLE;
 			getTable()->vkGetDeviceQueue(_device, it.index, i, &queue);
 
@@ -257,18 +273,21 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	do {
 		VkFormatProperties properties;
 
-		auto addDepthFormat = [&, this] (VkFormat fmt) {
+		auto addDepthFormat = [&, this](VkFormat fmt) {
 			_vkInstance->vkGetPhysicalDeviceFormatProperties(_info.device, fmt, &properties);
 			_formats.emplace(fmt, properties);
-			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
+			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+					!= 0) {
 				_depthFormats.emplace_back(core::ImageFormat(fmt));
 			}
 		};
 
-		auto addColorFormat = [&, this] (VkFormat fmt) {
+		auto addColorFormat = [&, this](VkFormat fmt) {
 			_vkInstance->vkGetPhysicalDeviceFormatProperties(_info.device, fmt, &properties);
 			_formats.emplace(fmt, properties);
-			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0 && (properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) != 0) {
+			if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0
+					&& (properties.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT)
+							!= 0) {
 				_colorFormats.emplace_back(core::ImageFormat(fmt));
 			}
 		};
@@ -290,15 +309,11 @@ bool Device::init(const vk::Instance *inst, DeviceInfo && info, const Features &
 	return true;
 }
 
-VkPhysicalDevice Device::getPhysicalDevice() const {
-	return _info.device;
-}
+VkPhysicalDevice Device::getPhysicalDevice() const { return _info.device; }
 
 void Device::end() {
 	for (auto &it : _families) {
-		for (auto &b : it.pools) {
-			b->invalidate();
-		}
+		for (auto &b : it.pools) { b->invalidate(); }
 		it.pools.clear();
 	}
 
@@ -309,13 +324,13 @@ void Device::end() {
 static thread_local uint64_t s_vkFnCallStart = 0;
 #endif
 
-const DeviceTable * Device::getTable() const {
+const DeviceTable *Device::getTable() const {
 #if VK_HOOK_DEBUG
-	setDeviceHookThreadContext([] (void *ctx, const char *name, PFN_vkVoidFunction fn) {
+	setDeviceHookThreadContext([](void *ctx, const char *name, PFN_vkVoidFunction fn) {
 		s_vkFnCallStart = platform::device::_clock();
-	}, [] (void *ctx, const char *name, PFN_vkVoidFunction fn) {
+	}, [](void *ctx, const char *name, PFN_vkVoidFunction fn) {
 		auto dt = platform::device::_clock() - s_vkFnCallStart;
-		if (dt > 200000) {
+		if (dt > 200'000) {
 			log::debug("Vk-Call-Timeout", name, ": ", dt);
 		}
 	}, _original, nullptr, (void *)this);
@@ -342,37 +357,41 @@ bool Device::supportsUpdateAfterBind(DescriptorType type) const {
 		return _info.features.deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind;
 		break;
 	case DescriptorType::UniformTexelBuffer:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingUniformTexelBufferUpdateAfterBind;
+		return _info.features.deviceDescriptorIndexing
+				.descriptorBindingUniformTexelBufferUpdateAfterBind;
 		break;
 	case DescriptorType::StorageTexelBuffer:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingStorageTexelBufferUpdateAfterBind;
+		return _info.features.deviceDescriptorIndexing
+				.descriptorBindingStorageTexelBufferUpdateAfterBind;
 		break;
 	case DescriptorType::UniformBuffer:
 	case DescriptorType::UniformBufferDynamic:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind;
+		return _info.features.deviceDescriptorIndexing
+				.descriptorBindingUniformBufferUpdateAfterBind;
 		break;
 	case DescriptorType::StorageBuffer:
 	case DescriptorType::StorageBufferDynamic:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind;
+		return _info.features.deviceDescriptorIndexing
+				.descriptorBindingStorageBufferUpdateAfterBind;
 		break;
 	case DescriptorType::InputAttachment:
 	case DescriptorType::Attachment:
-	case DescriptorType::Unknown:
-		return false;
-		break;
+	case DescriptorType::Unknown: return false; break;
 	}
 	return false;
 }
 
-Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass, SpanView<Rc<core::ImageView>> views) {
+Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass,
+		SpanView<Rc<core::ImageView>> views) {
 	return Rc<Framebuffer>::create(*this, (RenderPass *)pass->impl.get(), views);
 }
 
 auto Device::makeImage(const ImageInfoData &imageInfo) -> Rc<ImageStorage> {
-	bool isTransient = (imageInfo.usage & core::ImageUsage::TransientAttachment) != core::ImageUsage::None;
+	bool isTransient =
+			(imageInfo.usage & core::ImageUsage::TransientAttachment) != core::ImageUsage::None;
 
-	auto img = _allocator->spawnPersistent(
-			isTransient ? AllocationUsage::DeviceLocalLazilyAllocated : AllocationUsage::DeviceLocal,
+	auto img = _allocator->spawnPersistent(isTransient ? AllocationUsage::DeviceLocalLazilyAllocated
+													   : AllocationUsage::DeviceLocal,
 			imageInfo, false);
 
 	return Rc<ImageStorage>::create(move(img));
@@ -383,7 +402,8 @@ Rc<core::Semaphore> Device::makeSemaphore() {
 	return ret;
 }
 
-Rc<core::ImageView> Device::makeImageView(const Rc<core::ImageObject> &img, const ImageViewInfo &info) {
+Rc<core::ImageView> Device::makeImageView(const Rc<core::ImageObject> &img,
+		const ImageViewInfo &info) {
 	auto ret = Rc<ImageView>::create(*this, (Image *)img.get(), info);
 	return ret;
 }
@@ -409,13 +429,15 @@ bool Device::hasBufferDeviceAddresses() const {
 }
 
 bool Device::hasExternalFences() const {
-	return hasFlag(_info.features.flags, ExtensionFlags::ExternalFenceFd)
-			&& (_info.features.fenceSyncFd.externalFenceFeatures & VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT);
+	return _info.features.optionals[toInt(OptionalDeviceExtension::ExternalFenceFd)]
+			&& (_info.features.fenceSyncFd.externalFenceFeatures
+					& VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT);
 }
 
 bool Device::isPortabilityMode() const {
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	return _info.features.devicePortability.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;
+	return _info.features.devicePortability.sType
+			== VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;
 #else
 	return false;
 #endif
@@ -429,7 +451,8 @@ void Device::waitIdle() const {
 	core::Device::waitIdle();
 }
 
-void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, Function<void(bool)> &&cb) {
+void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
+		Function<void(bool)> &&cb) {
 	struct CompileImageTask : public Ref {
 		Function<void(bool)> callback;
 		Rc<core::DynamicImage> image;
@@ -449,15 +472,19 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 	task->loop = (Loop *)&loop;
 	task->device = this;
 
-	loop.performInQueue([this, task] () {
+	loop.performInQueue([this, task]() {
 		// make transfer buffer
 
-		task->image->acquireData([&] (BytesView view) {
-			task->transferBuffer = task->device->getAllocator()->spawnPersistent(AllocationUsage::HostTransitionSource,
-					BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), core::PassType::Transfer), view);
+		task->image->acquireData([&](BytesView view) {
+			task->transferBuffer = task->device->getAllocator()->spawnPersistent(
+					AllocationUsage::HostTransitionSource,
+					BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
+							core::PassType::Transfer),
+					view);
 		});
 
-		task->resultImage = task->device->getAllocator()->spawnPersistent(AllocationUsage::DeviceLocal, task->image->getInfo(), false);
+		task->resultImage = task->device->getAllocator()->spawnPersistent(
+				AllocationUsage::DeviceLocal, task->image->getInfo(), false);
 
 		if (!task->transferBuffer) {
 			task->loop->performOnThread([task] {
@@ -468,23 +495,29 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 		}
 
 		task->loop->performOnThread([this, task] {
-			task->device->acquireQueue(core::QueueFlags::Transfer, *task->loop, [this, task] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+			task->device->acquireQueue(core::QueueFlags::Transfer, *task->loop,
+					[this, task](core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
 				task->fence = ref_cast<Fence>(task->loop->acquireFence(core::FenceType::Default));
-				task->pool = ref_cast<CommandPool>(task->device->acquireCommandPool(core::QueueFlags::Transfer));
+				task->pool = ref_cast<CommandPool>(
+						task->device->acquireCommandPool(core::QueueFlags::Transfer));
 				task->queue = ref_cast<DeviceQueue>(queue);
 
 				auto refId = task->retain();
-				task->fence->addRelease([task, refId] (bool) {
+				task->fence->addRelease([task, refId](bool) {
 					task->device->releaseCommandPool(*task->loop, move(task->pool));
-					task->transferBuffer->dropPendingBarrier(); // hold reference while commands is active
+					task->transferBuffer
+							->dropPendingBarrier(); // hold reference while commands is active
 					task->release(refId);
 				}, this, "TextureSetLayout::compileImage transferBuffer->dropPendingBarrier");
 
-				loop.performInQueue(Rc<thread::Task>::create([this, task] (const thread::Task &) -> bool {
-					auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
+				loop.performInQueue(
+						Rc<thread::Task>::create([this, task](const thread::Task &) -> bool {
+					auto buf = task->pool->recordBuffer(*task->device, Vector<Rc<DescriptorPool>>(),
+							[&, this](CommandBuffer &buf) {
 						auto f = getQueueFamily(task->resultImage->getInfo().type);
-						buf.writeImageTransfer(task->pool->getFamilyIdx(), f ? f->index : VK_QUEUE_FAMILY_IGNORED,
-								task->transferBuffer, task->resultImage);
+						buf.writeImageTransfer(task->pool->getFamilyIdx(),
+								f ? f->index : VK_QUEUE_FAMILY_IGNORED, task->transferBuffer,
+								task->resultImage);
 						return true;
 					});
 
@@ -492,7 +525,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 						return true;
 					}
 					return false;
-				}, [task] (const thread::Task &, bool success) {
+				}, [task](const thread::Task &, bool success) {
 					if (task->queue) {
 						task->device->releaseQueue(move(task->queue));
 					}
@@ -506,7 +539,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 					task->fence = nullptr;
 					task->release(0);
 				}));
-			}, [task] (core::Loop &) {
+			}, [task](core::Loop &) {
 				task->callback(false);
 				task->release(0);
 			});
@@ -514,8 +547,8 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img, F
 	}, (Loop *)&loop);
 }
 
-void Device::readImage(Loop &loop, const Rc<Image> &image,
-		core::AttachmentLayout l, Function<void(const ImageInfoData &, BytesView)> &&cb) {
+void Device::readImage(Loop &loop, const Rc<Image> &image, core::AttachmentLayout l,
+		Function<void(const ImageInfoData &, BytesView)> &&cb) {
 	if (!image) {
 		log::error("vk::Device", "readImage: Image is null");
 		return;
@@ -524,7 +557,8 @@ void Device::readImage(Loop &loop, const Rc<Image> &image,
 	runTask(loop, Rc<ReadImageTask>::create(image, l, sp::move(cb)));
 }
 
-void Device::readBuffer(Loop &loop, const Rc<Buffer> &buf, Function<void(const BufferInfo &, BytesView)> &&cb) {
+void Device::readBuffer(Loop &loop, const Rc<Buffer> &buf,
+		Function<void(const BufferInfo &, BytesView)> &&cb) {
 	if (!buf) {
 		log::error("vk::Device", "readBuffer: Buffer is null");
 		return;
@@ -534,27 +568,24 @@ void Device::readBuffer(Loop &loop, const Rc<Buffer> &buf, Function<void(const B
 }
 
 bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Properties &prop,
-		const Vector<core::DeviceQueueFamily> &queueFamilies, const Features &f, const Vector<StringView> &ext) {
+		const Vector<core::DeviceQueueFamily> &queueFamilies, const Features &f,
+		const Vector<StringView> &ext) {
 	_enabledFeatures = f;
 
 	Vector<const char *> requiredExtension;
 	requiredExtension.reserve(ext.size());
-	for (auto &it : ext) {
-		requiredExtension.emplace_back(it.data());
-	}
+	for (auto &it : ext) { requiredExtension.emplace_back(it.data()); }
 
 	Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
 	uint32_t maxQueues = 0;
-	for (auto &it : queueFamilies) {
-		maxQueues = std::max(it.count, maxQueues);
-	}
+	for (auto &it : queueFamilies) { maxQueues = std::max(it.count, maxQueues); }
 
 	Vector<float> queuePriority;
 	queuePriority.resize(maxQueues, 1.0f);
 
-	for (auto & queueFamily : queueFamilies) {
-		VkDeviceQueueCreateInfo queueCreateInfo = { };
+	for (auto &queueFamily : queueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		queueCreateInfo.queueFamilyIndex = queueFamily.index;
 		queueCreateInfo.queueCount = queueFamily.count;
@@ -562,7 +593,7 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
-	VkDeviceCreateInfo deviceCreateInfo = { };
+	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
@@ -580,29 +611,29 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 		deviceCreateInfo.pNext = &_enabledFeatures.device11;
 	} else
 #endif
-	if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_2) {
+			if (prop.device10.properties.apiVersion >= VK_API_VERSION_1_2) {
 		_enabledFeatures.device12.pNext = next;
 		_enabledFeatures.device11.pNext = &_enabledFeatures.device12;
 		_enabledFeatures.device10.pNext = &_enabledFeatures.device11;
 		deviceCreateInfo.pNext = &_enabledFeatures.device11;
 	} else {
-		if ((_enabledFeatures.flags & ExtensionFlags::Storage16Bit) != ExtensionFlags::None) {
+		if (_enabledFeatures.optionals[toInt(OptionalDeviceExtension::Storage16Bit)]) {
 			_enabledFeatures.device16bitStorage.pNext = next;
 			next = &_enabledFeatures.device16bitStorage;
 		}
-		if ((_enabledFeatures.flags & ExtensionFlags::Storage8Bit) != ExtensionFlags::None) {
+		if (_enabledFeatures.optionals[toInt(OptionalDeviceExtension::Storage8Bit)]) {
 			_enabledFeatures.device8bitStorage.pNext = next;
 			next = &_enabledFeatures.device8bitStorage;
 		}
-		if ((_enabledFeatures.flags & ExtensionFlags::ShaderFloat16) != ExtensionFlags::None || (_enabledFeatures.flags & ExtensionFlags::ShaderInt8) != ExtensionFlags::None) {
+		if (_enabledFeatures.optionals[toInt(OptionalDeviceExtension::ShaderFloat16Int8)]) {
 			_enabledFeatures.deviceShaderFloat16Int8.pNext = next;
 			next = &_enabledFeatures.deviceShaderFloat16Int8;
 		}
-		if ((_enabledFeatures.flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
+		if (_enabledFeatures.optionals[toInt(OptionalDeviceExtension::DescriptorIndexing)]) {
 			_enabledFeatures.deviceDescriptorIndexing.pNext = next;
 			next = &_enabledFeatures.deviceDescriptorIndexing;
 		}
-		if ((_enabledFeatures.flags & ExtensionFlags::DeviceAddress) != ExtensionFlags::None) {
+		if (_enabledFeatures.optionals[toInt(OptionalDeviceExtension::DeviceAddress)]) {
 			_enabledFeatures.deviceBufferDeviceAddress.pNext = next;
 			next = &_enabledFeatures.deviceBufferDeviceAddress;
 		}
@@ -615,7 +646,8 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 	deviceCreateInfo.ppEnabledExtensionNames = requiredExtension.data();
 
 	if constexpr (s_enableValidationLayers) {
-		deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(sizeof(s_validationLayers) / sizeof(const char *));
+		deviceCreateInfo.enabledLayerCount =
+				static_cast<uint32_t>(sizeof(s_validationLayers) / sizeof(const char *));
 		deviceCreateInfo.ppEnabledLayerNames = s_validationLayers;
 	} else {
 		deviceCreateInfo.enabledLayerCount = 0;
@@ -636,4 +668,4 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 	return true;
 }
 
-}
+} // namespace stappler::xenolith::vk

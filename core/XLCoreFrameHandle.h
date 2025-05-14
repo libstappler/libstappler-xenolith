@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -96,14 +97,17 @@ public:
 
 	// thread tasks within frame should not be performed directly on loop's queue to preserve FrameHandle object
 	virtual void performInQueue(Function<void(FrameHandle &)> &&, Ref *, StringView tag);
-	virtual void performInQueue(Function<bool(FrameHandle &)> &&, Function<void(FrameHandle &, bool)> &&, Ref *, StringView tag);
+	virtual void performInQueue(Function<bool(FrameHandle &)> &&,
+			Function<void(FrameHandle &, bool)> &&, Ref *, StringView tag);
 
 	// thread tasks within frame should not be performed directly on loop's queue to preserve FrameHandle object
-	virtual void performOnGlThread(Function<void(FrameHandle &)> &&, Ref *, bool immediate, StringView tag);
+	virtual void performOnGlThread(Function<void(FrameHandle &)> &&, Ref *, bool immediate,
+			StringView tag);
 
 	// required tasks should be completed before onComplete call
 	virtual void performRequiredTask(Function<bool(FrameHandle &)> &&, Ref *, StringView tag);
-	virtual void performRequiredTask(Function<bool(FrameHandle &)> &&, Function<void(FrameHandle &, bool)> &&, Ref *, StringView tag);
+	virtual void performRequiredTask(Function<bool(FrameHandle &)> &&,
+			Function<void(FrameHandle &, bool)> &&, Ref *, StringView tag);
 
 	virtual bool isSubmitted() const { return _submitted; }
 	virtual bool isValid() const;
@@ -123,9 +127,10 @@ public:
 	virtual bool onOutputAttachment(FrameAttachmentData &);
 	virtual void onOutputAttachmentInvalidated(FrameAttachmentData &);
 
-	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(FrameHandle &, bool)> &&);
+	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &,
+			Function<void(FrameHandle &, bool)> &&);
 
-	virtual void waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb);
+	virtual void waitForInput(FrameQueue &queue, AttachmentHandle &a, Function<void(bool)> &&cb);
 
 	virtual void signalDependencies(bool success);
 
@@ -140,9 +145,7 @@ protected:
 	virtual void onComplete();
 
 #if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override {
-		return false;
-	}
+	virtual bool isRetainTrackerEnabled() const override { return false; }
 #endif
 
 	Loop *_loop = nullptr; // loop can not die until frames are performed
@@ -168,6 +171,6 @@ protected:
 	Function<void(FrameHandle &)> _complete;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREFRAMEHANDLE_H_ */

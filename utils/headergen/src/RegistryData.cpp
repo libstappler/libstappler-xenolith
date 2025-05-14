@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -403,7 +404,7 @@ VkRegistryCommand *RegistryData::getCommand(StringView cmd) {
 
 void RegistryData::parse() {
 	VkRegistryReader reader;
-	html::parse<VkRegistryReader, StringView, VkRegistryReaderTag>(reader, StringView(data.data(), data.size()), true, false);
+	html::parse<VkRegistryReader, StringView, VkRegistryReaderTag>(reader, StringView(data.data(), data.size()), true);
 
 	for (auto &it : reader._types) {
 		if (it.category == "handle" || it.category == "struct" || it.category == "bitmask") {
@@ -450,8 +451,8 @@ void RegistryData::parse() {
 		}
 	}
 
-	features = move(reader._features);
-	extensions = move(reader._extensions);
+	features = std::move(reader._features);
+	extensions = std::move(reader._extensions);
 
 	for (auto &ext : extensions) {
 		if (ext.supported == "disabled") {
@@ -817,8 +818,8 @@ void RegistryData::write() {
 	std::cout << "--- DEVICE ---\n" << deviceHeader.weak() << "\n";
 
 	auto headerPath = filesystem::currentDir<Interface>("gen/XLVkTable.h");
-	filesystem::mkdir(filepath::root(headerPath));
-	filesystem::remove(headerPath);
+	filesystem::mkdir(FileInfo(filepath::root(headerPath)));
+	filesystem::remove(FileInfo(headerPath));
 
 	std::ofstream headerFile(headerPath.data());
 	headerFile << FILE_HEADER_STRING
@@ -836,8 +837,8 @@ void RegistryData::write() {
 		<< "\n}\n\n#endif // XENOLITH_BACKEND_VK_XLVKTABLE_H_\n";
 
 	auto sourcePath = filesystem::currentDir<Interface>("gen/XLVkTable.cc");
-	filesystem::mkdir(filepath::root(sourcePath));
-	filesystem::remove(sourcePath);
+	filesystem::mkdir(FileInfo(filepath::root(sourcePath)));
+	filesystem::remove(FileInfo(sourcePath));
 
 	std::ofstream sourceFile(sourcePath.data());
 	sourceFile << FILE_HEADER_STRING

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,9 +37,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-Director::Director() {
-	memset(&_drawStat, 0, sizeof(DrawStat));
-}
+Director::Director() { memset(&_drawStat, 0, sizeof(DrawStat)); }
 
 Director::~Director() { }
 
@@ -84,7 +83,7 @@ bool Director::acquireFrame(FrameRequest *req) {
 			_nextScene = nullptr;
 			_scene->setFrameConstraints(_constraints);
 			updateGeneralTransform();
-			_scene->onPresented(this);
+			_scene->handlePresented(this);
 		}
 	}
 
@@ -94,7 +93,8 @@ bool Director::acquireFrame(FrameRequest *req) {
 	}
 
 	if (req->getQueue() && _scene->getQueue() != req->getQueue()) {
-		log::error("xenolith::Director", "Scene render queue is not the same, as in FrameRequest, can't render with it");
+		log::error("xenolith::Director",
+				"Scene render queue is not the same, as in FrameRequest, can't render with it");
 		return false;
 	}
 
@@ -142,21 +142,21 @@ void Director::update(uint64_t t) {
 	_time.global = t;
 	_time.app = t - _startTime;
 
-    // If we are debugging our code, prevent big delta time
-    if (_time.delta && _time.delta > config::MaxDirectorDeltaTime) {
-    	_time.delta = config::MaxDirectorDeltaTime;
-    }
+	// If we are debugging our code, prevent big delta time
+	if (_time.delta && _time.delta > config::MaxDirectorDeltaTime) {
+		_time.delta = config::MaxDirectorDeltaTime;
+	}
 
-    _time.dt = float(_time.delta) / 1'000'000;
+	_time.dt = float(_time.delta) / 1'000'000;
 
 	if (_nextScene) {
 		if (_scene) {
-			_scene->onFinished(this);
+			_scene->handleFinished(this);
 		}
 		_scene = _nextScene;
 
 		_scene->setFrameConstraints(_constraints);
-		_scene->onPresented(this);
+		_scene->handlePresented(this);
 		_nextScene = nullptr;
 	}
 
@@ -171,7 +171,7 @@ void Director::update(uint64_t t) {
 
 void Director::end() {
 	if (_scene) {
-		_scene->onFinished(this);
+		_scene->handleFinished(this);
 		_scene->removeAllChildren(true);
 		_scene->cleanup();
 	}
@@ -182,12 +182,11 @@ void Director::end() {
 			auto scene = _scene.get();
 			_scene = nullptr;
 
-			scene->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+			scene->foreachBacktrace(
+					[](uint64_t id, Time time, const std::vector<std::string> &vec) {
 				StringStream stream;
 				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-				for (auto &it : vec) {
-					stream << "\t" << it << "\n";
-				}
+				for (auto &it : vec) { stream << "\t" << it << "\n"; }
 				log::debug("Director", stream.str());
 			});
 		} else {
@@ -214,9 +213,7 @@ void Director::end() {
 	_autorelease.clear();
 }
 
-core::Loop *Director::getGlLoop() const {
-	return _mainLoop->getGlLoop();
-}
+core::Loop *Director::getGlLoop() const { return _mainLoop->getGlLoop(); }
 
 void Director::setFrameConstraints(const core::FrameConstraints &c) {
 	if (_constraints != c) {
@@ -242,22 +239,19 @@ void Director::runScene(Rc<Scene> &&scene) {
 	_nextScene = scene;
 
 	// compile render queue
-	getGlLoop()->compileQueue(queue, [this, scene = move(scene), linkId, view = Rc<View>(_view)] (bool success) mutable {
+	getGlLoop()->compileQueue(queue,
+			[this, scene = move(scene), linkId, view = Rc<View>(_view)](bool success) mutable {
 		// now we on the main/view thread, call runWithQueue directly
 		if (success) {
 			auto &q = scene->getQueue();
-			view->performOnThread([view = view.get(), q] {
-				view->runWithQueue(q);
-			}, view, false);
+			view->performOnThread([view = view.get(), q] { view->runWithQueue(q); }, view, false);
 		}
 		release(linkId);
 	});
 }
 
 void Director::pushDrawStat(const DrawStat &stat) {
-	_mainLoop->performOnAppThread([this, stat] {
-		_drawStat = stat;
-	}, this, false);
+	_mainLoop->performOnAppThread([this, stat] { _drawStat = stat; }, this, false);
 }
 
 float Director::getFps() const {
@@ -277,13 +271,9 @@ float Director::getDeviceFrameTime() const {
 	return _engine ? _engine->getLastDeviceFrameTime() / 1000.0f : 1.0f;
 }
 
-void Director::autorelease(Ref *ref) {
-	_autorelease.emplace_back(ref);
-}
+void Director::autorelease(Ref *ref) { _autorelease.emplace_back(ref); }
 
-void Director::invalidate() {
-
-}
+void Director::invalidate() { }
 
 void Director::updateGeneralTransform() {
 	auto transform = core::getPureTransform(_constraints.transform);
@@ -300,7 +290,8 @@ void Director::updateGeneralTransform() {
 	default: proj = Mat4::IDENTITY; break;
 	}
 
-	if ((_constraints.transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
+	if ((_constraints.transform & core::SurfaceTransformFlags::PreRotated)
+			!= core::SurfaceTransformFlags::None) {
 		switch (transform) {
 		case core::SurfaceTransformFlags::Rotate90:
 		case core::SurfaceTransformFlags::Rotate270:
@@ -322,7 +313,10 @@ void Director::updateGeneralTransform() {
 
 	switch (transform) {
 	case core::SurfaceTransformFlags::Rotate90: proj.m[13] = -1.0f; break;
-	case core::SurfaceTransformFlags::Rotate180: proj.m[12] = 1.0f; proj.m[13] = -1.0f; break;
+	case core::SurfaceTransformFlags::Rotate180:
+		proj.m[12] = 1.0f;
+		proj.m[13] = -1.0f;
+		break;
 	case core::SurfaceTransformFlags::Rotate270: proj.m[12] = 1.0f; break;
 	case core::SurfaceTransformFlags::Mirror: break;
 	case core::SurfaceTransformFlags::MirrorRotate90: break;
@@ -338,4 +332,4 @@ bool Director::hasActiveInteractions() {
 	return !_actionManager->empty() || _inputDispatcher->hasActiveInput();
 }
 
-}
+} // namespace stappler::xenolith

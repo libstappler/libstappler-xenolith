@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -59,7 +60,7 @@ protected:
 
 // dummy class for attachment input
 struct SP_PUBLIC AttachmentInputData : public Ref {
-	virtual ~AttachmentInputData() { }
+	virtual ~AttachmentInputData() = default;
 
 	Vector<Rc<DependencyEvent>> waitDependencies;
 };
@@ -73,11 +74,9 @@ public:
 	using AttachmentHandle = core::AttachmentHandle;
 	using AttachmentBuilder = core::AttachmentBuilder;
 
-	using InputCallback = Function<void(FrameQueue &, const Rc<AttachmentHandle> &, Function<void(bool)> &&)>;
 	using FrameHandleCallback = Function<Rc<AttachmentHandle>(Attachment &, const FrameQueue &)>;
-	using ValidateInputCallback = Function<bool(const Attachment &, const Rc<AttachmentInputData> &)>;
 
-	virtual ~Attachment() { }
+	virtual ~Attachment() = default;
 
 	virtual bool init(AttachmentBuilder &builder);
 	virtual void clear();
@@ -88,17 +87,12 @@ public:
 	AttachmentUsage getUsage() const;
 	bool isTransient() const;
 
-	// Set callback for frame to acquire input for this
-	void setInputCallback(InputCallback &&);
-
-	void setValidateInputCallback(ValidateInputCallback &&);
-
 	void setFrameHandleCallback(FrameHandleCallback &&);
 
 	// Run input callback for frame and handle
-	void acquireInput(FrameQueue &, const Rc<AttachmentHandle> &, Function<void(bool)> &&);
+	void acquireInput(FrameQueue &, AttachmentHandle &, Function<void(bool)> &&);
 
-	virtual bool validateInput(const Rc<AttachmentInputData> &) const;
+	bool validateInput(const AttachmentInputData *) const;
 
 	virtual bool isCompatible(const ImageInfo &) const { return false; }
 
@@ -117,14 +111,12 @@ public:
 protected:
 	const AttachmentData *_data = nullptr;
 
-	InputCallback _inputCallback;
 	FrameHandleCallback _frameHandleCallback;
-	ValidateInputCallback _validateInputCallback;
 };
 
 class SP_PUBLIC BufferAttachment : public Attachment {
 public:
-	virtual ~BufferAttachment() { }
+	virtual ~BufferAttachment() = default;
 
 	virtual bool init(AttachmentBuilder &builder, const BufferInfo &);
 
@@ -151,7 +143,7 @@ protected:
 
 class SP_PUBLIC ImageAttachment : public Attachment {
 public:
-	virtual ~ImageAttachment() { }
+	virtual ~ImageAttachment() = default;
 
 	struct AttachmentInfo {
 		AttachmentLayout initialLayout = AttachmentLayout::Ignored;
@@ -185,7 +177,8 @@ public:
 
 	virtual bool isCompatible(const ImageInfo &) const override;
 
-	virtual ImageViewInfo getImageViewInfo(const ImageInfoData &info, const AttachmentPassData &) const;
+	virtual ImageViewInfo getImageViewInfo(const ImageInfoData &info,
+			const AttachmentPassData &) const;
 	virtual Vector<ImageViewInfo> getImageViews(const ImageInfoData &info) const;
 
 	virtual void setCompiled(Device &) override;
@@ -201,7 +194,7 @@ protected:
 
 class SP_PUBLIC GenericAttachment : public Attachment {
 public:
-	virtual ~GenericAttachment() { }
+	virtual ~GenericAttachment() = default;
 
 	virtual bool init(AttachmentBuilder &builder) override;
 
@@ -216,17 +209,14 @@ public:
 	using FrameHandle = core::FrameHandle;
 	using Attachment = core::Attachment;
 
-	using InputCallback = Function<void(AttachmentHandle &, FrameQueue &, AttachmentInputData *, Function<void(bool)> &&)>;
-
-	virtual ~AttachmentHandle() { }
+	virtual ~AttachmentHandle() = default;
 
 	virtual bool init(const Rc<Attachment> &, const FrameQueue &);
 	virtual bool init(Attachment &, const FrameQueue &);
-	virtual void setQueueData(FrameAttachmentData &);
-	virtual FrameAttachmentData *getQueueData() const { return _queueData; }
 
-	// Set callback for frame to acquire input for this
-	virtual void setInputCallback(InputCallback &&);
+	virtual void setQueueData(FrameAttachmentData &);
+
+	virtual FrameAttachmentData *getQueueData() const { return _queueData; }
 
 	virtual bool isAvailable(const FrameQueue &) const { return true; }
 
@@ -237,23 +227,26 @@ public:
 
 	virtual bool isInput() const;
 	virtual bool isOutput() const;
+
 	virtual const Rc<Attachment> &getAttachment() const { return _attachment; }
-	StringView getName() const { return _attachment->getName(); }
 
 	virtual void submitInput(FrameQueue &, Rc<AttachmentInputData> &&, Function<void(bool)> &&cb);
 
-	virtual uint32_t getDescriptorArraySize(const PassHandle &, const PipelineDescriptor &, bool isExternal) const;
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const;
+	virtual uint32_t getDescriptorArraySize(const PassHandle &, const PipelineDescriptor &) const;
+
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
+			const DescriptorData &) const;
+
+	StringView getName() const { return _attachment->getName(); }
 
 	AttachmentInputData *getInput() const { return _input; }
 
 protected:
-	InputCallback _inputCallback;
 	Rc<AttachmentInputData> _input;
 	Rc<Attachment> _attachment;
 	FrameAttachmentData *_queueData = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREATTACHMENT_H_ */

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@
 #define XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKMATERIAL_H_
 
 #include "XL2d.h"
+#include "XLCoreInfo.h"
 #include "XLVkAttachment.h"
 #include "XLVkQueuePass.h"
 
@@ -35,7 +37,8 @@ class SP_PUBLIC MaterialAttachment : public core::MaterialAttachment {
 public:
 	virtual ~MaterialAttachment();
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const core::TextureSetLayoutData *);
+	virtual bool init(AttachmentBuilder &builder, const BufferInfo &,
+			const core::TextureSetLayoutData *);
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 
@@ -49,8 +52,8 @@ public:
 
 	virtual bool init(const Rc<Attachment> &, const FrameQueue &) override;
 
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-			uint32_t, bool isExternal) const override;
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
+			const DescriptorData &) const override;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
@@ -63,6 +66,6 @@ protected:
 	mutable Rc<core::MaterialSet> _materials;
 };
 
-}
+} // namespace stappler::xenolith::basic2d::vk
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKMATERIAL_H_ */

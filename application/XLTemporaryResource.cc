@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,8 @@ TemporaryResource::~TemporaryResource() {
 	}
 }
 
-bool TemporaryResource::init(Rc<core::Resource> &&res, TimeInterval timeout, TemporaryResourceFlags flags) {
+bool TemporaryResource::init(Rc<core::Resource> &&res, TimeInterval timeout,
+		TemporaryResourceFlags flags) {
 	_atime = sp::platform::clock(ClockType::Monotonic);
 	_timeout = timeout;
 	_resource = move(res);
@@ -51,12 +53,8 @@ bool TemporaryResource::init(Rc<core::Resource> &&res, TimeInterval timeout, Tem
 }
 
 void TemporaryResource::invalidate() {
-	for (auto &it : _textures) {
-		it.second->invalidate();
-	}
-	for (auto &it : _meshIndexes) {
-		it.second->invalidate();
-	}
+	for (auto &it : _textures) { it.second->invalidate(); }
+	for (auto &it : _meshIndexes) { it.second->invalidate(); }
 
 	_owners.clear();
 	_resource = nullptr;
@@ -88,8 +86,8 @@ void TemporaryResource::setLoaded(bool val) {
 	if (val) {
 		_requested = true;
 		for (auto &it : _callbacks) {
-			it.second(true);
-			-- _users;
+			it.second(it.first, true);
+			--_users;
 		}
 		_callbacks.clear();
 		if (_loaded != val) {
@@ -105,24 +103,20 @@ void TemporaryResource::setLoaded(bool val) {
 	_atime = sp::platform::clock(ClockType::Monotonic);
 }
 
-void TemporaryResource::setRequested(bool val) {
-	_requested = val;
-}
+void TemporaryResource::setRequested(bool val) { _requested = val; }
 
-void TemporaryResource::setTimeout(TimeInterval ival) {
-	_timeout = ival;
-}
+void TemporaryResource::setTimeout(TimeInterval ival) { _timeout = ival; }
 
-bool TemporaryResource::load(Ref *ref, Function<void(bool)> &&cb) {
+bool TemporaryResource::load(Ref *ref, Function<void(Ref *, bool)> &&cb) {
 	_atime = sp::platform::clock(ClockType::Monotonic);
 	if (_loaded) {
 		if (cb) {
-			cb(false);
+			cb(ref, false);
 		}
 		return false;
 	} else {
 		_callbacks.emplace_back(pair(ref, sp::move(cb)));
-		++ _users;
+		++_users;
 		return true;
 	}
 }
@@ -147,12 +141,12 @@ void TemporaryResource::handleEnter(ResourceOwner *owner, ResourceObject *res) {
 		}
 	}
 
-	++ _users;
+	++_users;
 }
 
 void TemporaryResource::handleExit(ResourceOwner *, ResourceObject *) {
 	_atime = sp::platform::clock(ClockType::Monotonic);
-	-- _users;
+	--_users;
 }
 
 bool TemporaryResource::clear() {
@@ -164,9 +158,7 @@ bool TemporaryResource::clear() {
 	}
 
 	if (!ids.empty()) {
-		for (auto &it : _owners) {
-			it->revokeImages(ids);
-		}
+		for (auto &it : _owners) { it->revokeImages(ids); }
 	}
 	_textures.clear();
 	_meshIndexes.clear();
@@ -176,9 +168,7 @@ bool TemporaryResource::clear() {
 	return (_flags & TemporaryResourceFlags::RemoveOnClear) != TemporaryResourceFlags::None;
 }
 
-StringView TemporaryResource::getName() const {
-	return _resource->getName();
-}
+StringView TemporaryResource::getName() const { return _resource->getName(); }
 
 bool TemporaryResource::isDeprecated(const UpdateTime &time) const {
 	if (_users > 0 || !_loaded) {
@@ -194,4 +184,4 @@ bool TemporaryResource::isDeprecated(const UpdateTime &time) const {
 	return false;
 }
 
-}
+} // namespace stappler::xenolith

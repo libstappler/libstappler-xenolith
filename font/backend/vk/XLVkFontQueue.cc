@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -65,7 +66,8 @@ public:
 	virtual ~FontAttachmentHandle();
 
 	virtual bool setup(FrameQueue &, Function<void(bool)> &&) override;
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	Extent2 getImageExtent() const { return _imageExtent; }
 	const Rc<font::RenderFontInput> &getInput() const { return _input; }
@@ -73,9 +75,15 @@ public:
 	const Rc<Buffer> &getPersistentTargetBuffer() const { return _persistentTargetBuffer; }
 	const Rc<core::DataAtlas> &getAtlas() const { return _atlas; }
 	const Rc<RenderFontPersistentBufferUserdata> &getUserdata() const { return _userdata; }
-	const Vector<VkBufferImageCopy> &getCopyFromTmpBufferData() const { return _copyFromTmpBufferData; }
-	const Map<Buffer *, Vector<VkBufferImageCopy>> &getCopyFromPersistentBufferData() const { return _copyFromPersistentBufferData; }
-	const Vector<VkBufferCopy> &getCopyToPersistentBufferData() const { return _copyToPersistentBufferData; }
+	const Vector<VkBufferImageCopy> &getCopyFromTmpBufferData() const {
+		return _copyFromTmpBufferData;
+	}
+	const Map<Buffer *, Vector<VkBufferImageCopy>> &getCopyFromPersistentBufferData() const {
+		return _copyFromPersistentBufferData;
+	}
+	const Vector<VkBufferCopy> &getCopyToPersistentBufferData() const {
+		return _copyToPersistentBufferData;
+	}
 
 protected:
 	void doSubmitInput(FrameHandle &, Function<void(bool)> &&cb, Rc<font::RenderFontInput> &&d);
@@ -137,7 +145,7 @@ public:
 	virtual core::QueueFlags getQueueOps() const override;
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
-	virtual void finalize(FrameQueue &, bool successful)  override;
+	virtual void finalize(FrameQueue &, bool successful) override;
 
 protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
@@ -160,13 +168,15 @@ bool FontQueue::init(StringView name) {
 	using namespace core;
 	Queue::Builder builder(name);
 
-	auto attachment = builder.addAttachemnt("RenderFontQueueAttachment", [] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+	auto attachment = builder.addAttachemnt("RenderFontQueueAttachment",
+			[](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsInput();
 		attachmentBuilder.defineAsOutput();
 		return Rc<FontAttachment>::create(attachmentBuilder);
 	});
 
-	builder.addPass("RenderFontQueuePass", PassType::Transfer, RenderOrdering(0), [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+	builder.addPass("RenderFontQueuePass", PassType::Transfer, RenderOrdering(0),
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<FontRenderPass>::create(passBuilder, attachment);
 	});
 
@@ -187,21 +197,27 @@ FontAttachmentHandle::~FontAttachmentHandle() { }
 
 bool FontAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)> &&) {
 	auto dev = static_cast<Device *>(handle.getFrame()->getDevice());
-	_optimalTextureAlignment = std::max(dev->getInfo().properties.device10.properties.limits.optimalBufferCopyOffsetAlignment, VkDeviceSize(4));
-	_optimalRowAlignment = std::max(dev->getInfo().properties.device10.properties.limits.optimalBufferCopyRowPitchAlignment, VkDeviceSize(4));
+	_optimalTextureAlignment = std::max(
+			dev->getInfo().properties.device10.properties.limits.optimalBufferCopyOffsetAlignment,
+			VkDeviceSize(4));
+	_optimalRowAlignment = std::max(
+			dev->getInfo().properties.device10.properties.limits.optimalBufferCopyRowPitchAlignment,
+			VkDeviceSize(4));
 	return true;
 }
 
 static Extent2 FontAttachmentHandle_buildTextureData(Vector<SpanView<VkBufferImageCopy>> requests) {
-	memory::vector<VkBufferImageCopy *> layoutData; layoutData.reserve(requests.size());
+	memory::vector<VkBufferImageCopy *> layoutData;
+	layoutData.reserve(requests.size());
 
 	float totalSquare = 0.0f;
 
 	for (auto &v : requests) {
 		for (auto &d : v) {
 			auto it = std::lower_bound(layoutData.begin(), layoutData.end(), &d,
-					[] (const VkBufferImageCopy * l, const VkBufferImageCopy * r) -> bool {
-				if (l->imageExtent.height == r->imageExtent.height && l->imageExtent.width == r->imageExtent.width) {
+					[](const VkBufferImageCopy *l, const VkBufferImageCopy *r) -> bool {
+				if (l->imageExtent.height == r->imageExtent.height
+						&& l->imageExtent.width == r->imageExtent.width) {
 					return l->bufferImageHeight < r->bufferImageHeight;
 				} else if (l->imageExtent.height == r->imageExtent.height) {
 					return l->imageExtent.width > r->imageExtent.width;
@@ -215,13 +231,25 @@ static Extent2 FontAttachmentHandle_buildTextureData(Vector<SpanView<VkBufferIma
 	}
 
 	font::EmplaceCharInterface iface({
-		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.x; }, // x
-		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.y; }, // y
-		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageExtent.width; }, // width
-		[] (void *ptr) -> uint16_t { return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageExtent.height; }, // height
-		[] (void *ptr, uint16_t value) { (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.x = value; }, // x
-		[] (void *ptr, uint16_t value) { (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.y = value; }, // y
-		[] (void *ptr, uint16_t value) { }, // tex
+		[](void *ptr) -> uint16_t {
+		return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.x;
+	}, // x
+		[](void *ptr) -> uint16_t {
+		return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.y;
+	}, // y
+		[](void *ptr) -> uint16_t {
+		return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageExtent.width;
+	}, // width
+		[](void *ptr) -> uint16_t {
+		return (reinterpret_cast<VkBufferImageCopy *>(ptr))->imageExtent.height;
+	}, // height
+		[](void *ptr, uint16_t value) {
+		(reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.x = value;
+	}, // x
+		[](void *ptr, uint16_t value) {
+		(reinterpret_cast<VkBufferImageCopy *>(ptr))->imageOffset.y = value;
+	}, // y
+		[](void *ptr, uint16_t value) {}, // tex
 	});
 
 	auto span = makeSpanView(reinterpret_cast<void **>(layoutData.data()), layoutData.size());
@@ -229,22 +257,26 @@ static Extent2 FontAttachmentHandle_buildTextureData(Vector<SpanView<VkBufferIma
 	return font::emplaceChars(iface, span, totalSquare);
 }
 
-void FontAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void FontAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data,
+		Function<void(bool)> &&cb) {
 	auto d = data.cast<font::RenderFontInput>();
 	if (!d || q.isFinalized()) {
 		cb(false);
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb), d = sp::move(d)] (FrameHandle &handle, bool success) mutable {
-		handle.performInQueue([this, cb = sp::move(cb), d = sp::move(d)] (FrameHandle &handle) mutable -> bool {
+	q.getFrame()->waitForDependencies(data->waitDependencies,
+			[this, cb = sp::move(cb), d = sp::move(d)](FrameHandle &handle, bool success) mutable {
+		handle.performInQueue(
+				[this, cb = sp::move(cb), d = sp::move(d)](FrameHandle &handle) mutable -> bool {
 			doSubmitInput(handle, sp::move(cb), sp::move(d));
 			return true;
 		}, nullptr, "RenderFontAttachmentHandle::submitInput");
 	});
 }
 
-void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool)> &&cb, Rc<font::RenderFontInput> &&d) {
+void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool)> &&cb,
+		Rc<font::RenderFontInput> &&d) {
 	_counter = uint32_t(d->requests.size());
 	_input = d;
 	if (auto instance = d->image->getInstance()) {
@@ -256,9 +288,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 	// process persistent chars
 	bool underlinePersistent = false;
 	uint32_t totalCount = 0;
-	for (auto &it : _input->requests) {
-		totalCount += it.chars.size();
-	}
+	for (auto &it : _input->requests) { totalCount += it.chars.size(); }
 
 	_textureTarget.resize(totalCount + 1); // used in addPersistentCopy
 
@@ -269,10 +299,10 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 			if (it.persistent) {
 				for (auto &c : it.chars) {
 					if (addPersistentCopy(it.object->getId(), c)) {
-						++ processedPersistent;
+						++processedPersistent;
 						c = 0;
 					} else {
-						++ extraPersistent;
+						++extraPersistent;
 					}
 				}
 			}
@@ -300,12 +330,11 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 	}
 
 	auto frame = static_cast<DeviceFrameHandle *>(&handle);
-	auto &memPool = frame->getMemPool(&handle);
+	auto memPool = frame->getMemPool(&handle);
 
-	_frontBuffer = memPool->spawn(AllocationUsage::HostTransitionSource, core::BufferInfo(
-		core::ForceBufferUsage(core::BufferUsage::TransferSrc),
-		size_t(Allocator::PageSize * 2)
-	));
+	_frontBuffer = memPool->spawn(AllocationUsage::HostTransitionSource,
+			core::BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
+					size_t(Allocator::PageSize * 2)));
 
 	_copyFromTmpBufferData.resize(totalCount - processedPersistent + (underlinePersistent ? 0 : 1));
 
@@ -316,10 +345,10 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		if (!_userdata) {
 			_userdata = Rc<RenderFontPersistentBufferUserdata>::alloc();
 			_userdata->mempool = Rc<DeviceMemoryPool>::create(memPool->getAllocator(), false);
-			_userdata->buffers.emplace_back(_userdata->mempool->spawn(AllocationUsage::DeviceLocal, core::BufferInfo(
-					core::ForceBufferUsage(core::BufferUsage::TransferSrc | core::BufferUsage::TransferDst),
-					size_t(Allocator::PageSize * 2)
-				)));
+			_userdata->buffers.emplace_back(_userdata->mempool->spawn(AllocationUsage::DeviceLocal,
+					core::BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc
+											 | core::BufferUsage::TransferDst),
+							size_t(Allocator::PageSize * 2))));
 			_persistentTargetBuffer = _userdata->buffers.back();
 		} else {
 			auto tmp = move(_userdata);
@@ -334,7 +363,8 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 		}
 	}
 
-	font::DeferredRequest::runFontRenderer(_input->queue, _input->ext, _input->requests, [this] (uint32_t reqIdx, const font::CharTexture &texData) {
+	font::DeferredRequest::runFontRenderer(_input->queue, _input->ext, _input->requests,
+			[this](uint32_t reqIdx, const font::CharTexture &texData) {
 		pushCopyTexture(reqIdx, texData);
 	}, [this, handle = Rc<FrameHandle>(&handle), underlinePersistent] {
 		writeAtlasData(*handle, underlinePersistent);
@@ -349,26 +379,21 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 		if (offset + 1 <= Allocator::PageSize * 2) {
 			uint8_t whiteColor = 255;
 			_frontBuffer->setData(BytesView(&whiteColor, 1), offset);
-			auto objectId = font::CharId::getCharId(font::CharId::SourceMax, char16_t(0), font::CharAnchor::BottomLeft);
+			auto objectId = font::CharId::getCharId(font::CharId::SourceMax, char16_t(0),
+					font::CharAnchor::BottomLeft);
 			auto texOffset = _textureTargetOffset.fetch_add(1);
-			_copyFromTmpBufferData[_copyFromTmpBufferData.size() - 1] = VkBufferImageCopy({
-				VkDeviceSize(offset),
-				uint32_t(texOffset),
-				uint32_t(objectId),
-				VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}),
-				VkOffset3D({0, 0, 0}),
-				VkExtent3D({1, 1, 1})
-			});
+			_copyFromTmpBufferData[_copyFromTmpBufferData.size() - 1] = VkBufferImageCopy(
+					{VkDeviceSize(offset), uint32_t(texOffset), uint32_t(objectId),
+						VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}),
+						VkOffset3D({0, 0, 0}), VkExtent3D({1, 1, 1})});
 
 			auto targetOffset = _persistentTargetBuffer->reserveBlock(1, _optimalTextureAlignment);
 			_textureTarget[texOffset] = RenderFontCharTextureData{0, 0, 1, 1};
-			_copyToPersistentBufferData[_copyToPersistentBufferData.size() - 1] = VkBufferCopy({
-				offset, targetOffset, 1
-			});
-			_copyPersistentCharData[_copyPersistentCharData.size() - 1] = RenderFontCharPersistentData{
-				RenderFontCharTextureData{0, 0, 1, 1},
-				objectId, 0, uint32_t(targetOffset)
-			};
+			_copyToPersistentBufferData[_copyToPersistentBufferData.size() - 1] =
+					VkBufferCopy({offset, targetOffset, 1});
+			_copyPersistentCharData[_copyPersistentCharData.size() - 1] =
+					RenderFontCharPersistentData{RenderFontCharTextureData{0, 0, 1, 1}, objectId, 0,
+						uint32_t(targetOffset)};
 		}
 	}
 
@@ -386,26 +411,23 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 	memory::pool::perform_temporary([&] {
 		// TODO - use GPU rectangle placement
 		commands.emplace_back(_copyFromTmpBufferData);
-		for (auto &it : _copyFromPersistentBufferData) {
-			commands.emplace_back(it.second);
-		}
+		for (auto &it : _copyFromPersistentBufferData) { commands.emplace_back(it.second); }
 
 		_imageExtent = FontAttachmentHandle_buildTextureData(commands);
 
 		auto atlas = Rc<core::DataAtlas>::create(core::DataAtlas::ImageAtlas,
-				uint32_t(_copyFromTmpBufferData.size() * 4), uint32_t(sizeof(font::FontAtlasValue)), _imageExtent);
+				uint32_t(_copyFromTmpBufferData.size() * 4), uint32_t(sizeof(font::FontAtlasValue)),
+				_imageExtent);
 
 		for (auto &c : commands) {
-			for (auto &it : c) {
-				pushAtlasTexture(atlas, const_cast<VkBufferImageCopy &>(it));
-			}
+			for (auto &it : c) { pushAtlasTexture(atlas, const_cast<VkBufferImageCopy &>(it)); }
 		}
 
 		atlas->compile();
 		_atlas = move(atlas);
 	});
 
-	handle.performOnGlThread([this] (FrameHandle &handle) {
+	handle.performOnGlThread([this](FrameHandle &handle) {
 		_onInput(true);
 		_onInput = nullptr;
 	}, this, false, "RenderFontAttachmentHandle::writeAtlasData");
@@ -432,14 +454,10 @@ bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char16_t c) {
 		}
 
 		auto texTarget = _textureTargetOffset.fetch_add(1);
-		bufIt->second.emplace_back(VkBufferImageCopy{
-			VkDeviceSize(it->second.offset),
-			uint32_t(texTarget),
-			uint32_t(objId),
-			VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}),
-			VkOffset3D({0, 0, 0}),
-			VkExtent3D({it->second.texture.width, it->second.texture.height, 1})
-		});
+		bufIt->second.emplace_back(VkBufferImageCopy{VkDeviceSize(it->second.offset),
+			uint32_t(texTarget), uint32_t(objId),
+			VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}), VkOffset3D({0, 0, 0}),
+			VkExtent3D({it->second.texture.width, it->second.texture.height, 1})});
 
 		_textureTarget[texTarget] = it->second.texture;
 		return true;
@@ -463,34 +481,30 @@ void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharText
 	if (texData.pitch >= 0) {
 		_frontBuffer->setData(BytesView(ptr, texData.pitch * texData.bitmapRows), offset);
 	} else {
-		for (size_t i = 0; i < texData.bitmapRows; ++ i) {
+		for (size_t i = 0; i < texData.bitmapRows; ++i) {
 			_frontBuffer->setData(BytesView(ptr, -texData.pitch), offset + i * (-texData.pitch));
 			ptr += texData.pitch;
 		}
 	}
 
-	auto objectId = font::CharId::getCharId(texData.fontID, texData.charID, font::CharAnchor::BottomLeft);
+	auto objectId =
+			font::CharId::getCharId(texData.fontID, texData.charID, font::CharAnchor::BottomLeft);
 	auto texOffset = _textureTargetOffset.fetch_add(1);
-	_copyFromTmpBufferData[_copyFromTmpOffset.fetch_add(1)] = VkBufferImageCopy({
-		VkDeviceSize(offset),
-		uint32_t(texOffset),
-		uint32_t(objectId),
-		VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}),
-		VkOffset3D({0, 0, 0}),
-		VkExtent3D({texData.bitmapWidth, texData.bitmapRows, 1})
-	});
-	_textureTarget[texOffset] = RenderFontCharTextureData{texData.x, texData.y, texData.width, texData.height};
+	_copyFromTmpBufferData[_copyFromTmpOffset.fetch_add(1)] =
+			VkBufferImageCopy({VkDeviceSize(offset), uint32_t(texOffset), uint32_t(objectId),
+				VkImageSubresourceLayers({VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}),
+				VkOffset3D({0, 0, 0}), VkExtent3D({texData.bitmapWidth, texData.bitmapRows, 1})});
+	_textureTarget[texOffset] =
+			RenderFontCharTextureData{texData.x, texData.y, texData.width, texData.height};
 
 	if (_input->requests[reqIdx].persistent) {
 		auto targetIdx = _copyToPersistentOffset.fetch_add(1);
 		auto targetOffset = _persistentTargetBuffer->reserveBlock(size, _optimalTextureAlignment);
-		_copyToPersistentBufferData[targetIdx] = VkBufferCopy({
-			offset, targetOffset, VkDeviceSize(size)
-		});
+		_copyToPersistentBufferData[targetIdx] =
+				VkBufferCopy({offset, targetOffset, VkDeviceSize(size)});
 		_copyPersistentCharData[targetIdx] = RenderFontCharPersistentData{
 			RenderFontCharTextureData{texData.x, texData.y, texData.width, texData.height},
-			objectId, 0, uint32_t(targetOffset)
-		};
+			objectId, 0, uint32_t(targetOffset)};
 	}
 }
 
@@ -566,12 +580,12 @@ bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
 				case core::QueueFlags::Compute:
 				case core::QueueFlags::Transfer:
 				case core::QueueFlags::Graphics:
-					if ((it.transferGranularity.width == 1 || it.transferGranularity.height == 1) && toInt(_queueOps) < toInt(it.preferred)) {
+					if ((it.transferGranularity.width == 1 || it.transferGranularity.height == 1)
+							&& toInt(_queueOps) < toInt(it.preferred)) {
 						_queueOps = it.preferred;
 					}
 					break;
-				default:
-					break;
+				default: break;
 				}
 			}
 		}
@@ -580,13 +594,12 @@ bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
 	return true;
 }
 
-core::QueueFlags FontRenderPassHandle::getQueueOps() const {
-	return _queueOps;
-}
+core::QueueFlags FontRenderPassHandle::getQueueOps() const { return _queueOps; }
 
 
 bool FontRenderPassHandle::prepare(FrameQueue &handle, Function<void(bool)> &&cb) {
-	if (auto a = handle.getAttachment(static_cast<FontRenderPass *>(_queuePass.get())->getRenderFontAttachment())) {
+	if (auto a = handle.getAttachment(
+				static_cast<FontRenderPass *>(_queuePass.get())->getRenderFontAttachment())) {
 		_fontAttachment = static_cast<FontAttachmentHandle *>(a->handle.get());
 	}
 	return QueuePassHandle::prepare(handle, sp::move(cb));
@@ -624,31 +637,31 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 		_targetAtlas = allocator->preallocate(core::BufferInfo(atlas->getBufferData().size(),
 				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
-		Image *images[] = {
-			_targetImage
-		};
+		Image *images[] = {_targetImage};
 
-		Buffer *buffers[] = {
-			_targetAtlas
-		};
+		Buffer *buffers[] = {_targetAtlas};
 
-		(void) allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(images), makeSpanView(buffers));
+		(void)allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(images),
+				makeSpanView(buffers));
 	} else {
-		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false, instance->data.image->getIndex());
+		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false,
+				instance->data.image->getIndex());
 	}
 
 	auto frame = static_cast<DeviceFrameHandle *>(&handle);
-	auto &memPool = frame->getMemPool(&handle);
+	auto memPool = frame->getMemPool(&handle);
 
 	Rc<Buffer> stageAtlas;
 
 	if (_targetAtlas) {
 		stageAtlas = memPool->spawn(AllocationUsage::HostTransitionSource,
-				core::BufferInfo(atlas->getBufferData().size(), core::ForceBufferUsage(core::BufferUsage::TransferSrc)));
+				core::BufferInfo(atlas->getBufferData().size(),
+						core::ForceBufferUsage(core::BufferUsage::TransferSrc)));
 		stageAtlas->setData(atlas->getBufferData());
 	}
 
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(),
+			[&, this](CommandBuffer &buf) {
 		Vector<BufferMemoryBarrier> persistentBarriers;
 		for (auto &it : copyFromPersistent) {
 			if (auto b = it.first->getPendingBarrier()) {
@@ -657,12 +670,11 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 			}
 		}
 
-		ImageMemoryBarrier inputBarrier(_targetImage,
-			0, VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		ImageMemoryBarrier inputBarrier(_targetImage, 0, VK_ACCESS_MEMORY_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-				persistentBarriers, makeSpanView(&inputBarrier, 1));
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0, persistentBarriers, makeSpanView(&inputBarrier, 1));
 
 		// Uncomment to clear image before drawing
 		/*buf.cmdClearColorImage(_targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Color::Black);
@@ -680,25 +692,29 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 
 		// copy from temporary buffer
 		if (!copyFromTmp.empty()) {
-			buf.cmdCopyBufferToImage(_fontAttachment->getTmpBuffer(), _targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyFromTmp);
+			buf.cmdCopyBufferToImage(_fontAttachment->getTmpBuffer(), _targetImage,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyFromTmp);
 		}
 
 		// copy from persistent buffers
 		for (auto &it : copyFromPersistent) {
-			buf.cmdCopyBufferToImage(it.first, _targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, it.second);
+			buf.cmdCopyBufferToImage(it.first, _targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					it.second);
 		}
 
 		if (!copyToPersistent.empty()) {
 			if (auto b = _fontAttachment->getPersistentTargetBuffer()->getPendingBarrier()) {
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-						makeSpanView(b, 1));
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(b, 1));
 			}
 
-			buf.cmdCopyBuffer(_fontAttachment->getTmpBuffer(), _fontAttachment->getPersistentTargetBuffer(), copyToPersistent);
-			_fontAttachment->getPersistentTargetBuffer()->setPendingBarrier(BufferMemoryBarrier(_fontAttachment->getPersistentTargetBuffer(),
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
-				QueueFamilyTransfer(), 0, _fontAttachment->getPersistentTargetBuffer()->getReservedSize()
-			));
+			buf.cmdCopyBuffer(_fontAttachment->getTmpBuffer(),
+					_fontAttachment->getPersistentTargetBuffer(), copyToPersistent);
+			_fontAttachment->getPersistentTargetBuffer()->setPendingBarrier(BufferMemoryBarrier(
+					_fontAttachment->getPersistentTargetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT,
+					VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
+					QueueFamilyTransfer(), 0,
+					_fontAttachment->getPersistentTargetBuffer()->getReservedSize()));
 		}
 
 		auto sourceLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -716,30 +732,31 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 				auto &frame = static_cast<DeviceFrameHandle &>(handle);
 				auto memPool = frame.getMemPool(&handle);
 
-				_outBuffer = memPool->spawn(AllocationUsage::HostTransitionDestination, core::BufferInfo(
-					core::ForceBufferUsage(core::BufferUsage::TransferDst),
-					size_t(extent.width * extent.height * extent.depth),
-					core::PassType::Transfer
-				));
+				_outBuffer = memPool->spawn(AllocationUsage::HostTransitionDestination,
+						core::BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferDst),
+								size_t(extent.width * extent.height * extent.depth),
+								core::PassType::Transfer));
 
-				ImageMemoryBarrier reverseBarrier(_targetImage,
-					VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
-					sourceLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&reverseBarrier, 1));
+				ImageMemoryBarrier reverseBarrier(_targetImage, VK_ACCESS_MEMORY_WRITE_BIT,
+						VK_ACCESS_MEMORY_READ_BIT, sourceLayout,
+						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&reverseBarrier, 1));
 
 				sourceLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 				buf.cmdCopyImageToBuffer(_targetImage, sourceLayout, _outBuffer, 0);
 
-				BufferMemoryBarrier bufferOutBarrier(_outBuffer,
-						VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT);
+				BufferMemoryBarrier bufferOutBarrier(_outBuffer, VK_ACCESS_MEMORY_WRITE_BIT,
+						VK_ACCESS_MEMORY_READ_BIT);
 
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, makeSpanView(&bufferOutBarrier, 1));
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT,
+						0, makeSpanView(&bufferOutBarrier, 1));
 			}
 
-			ImageMemoryBarrier outputBarrier(_targetImage,
-				VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
-				sourceLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex});
+			ImageMemoryBarrier outputBarrier(_targetImage, VK_ACCESS_MEMORY_WRITE_BIT,
+					VK_ACCESS_MEMORY_READ_BIT, sourceLayout,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex});
 
 			if (q->index != _pool->getFamilyIdx()) {
 				_targetImage->setPendingBarrier(outputBarrier);
@@ -747,20 +764,22 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 
 			if (_targetAtlas && !_device->hasBufferDeviceAddresses()) {
 				BufferMemoryBarrier outputBufferBarrier[] = {
-					BufferMemoryBarrier(_targetAtlas,
-						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-						QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex}, 0, _targetAtlas->getSize()),
+					BufferMemoryBarrier(_targetAtlas, VK_ACCESS_TRANSFER_WRITE_BIT,
+							VK_ACCESS_SHADER_READ_BIT,
+							QueueFamilyTransfer{srcQueueFamilyIndex, dstQueueFamilyIndex}, 0,
+							_targetAtlas->getSize()),
 				};
 
 				if (q->index != _pool->getFamilyIdx()) {
 					_targetAtlas->setPendingBarrier(outputBufferBarrier[0]);
 				}
 
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-						makeSpanView(outputBufferBarrier, 1), makeSpanView(&outputBarrier, 1));
-			} else {
-				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, makeSpanView(outputBufferBarrier, 1),
 						makeSpanView(&outputBarrier, 1));
+			} else {
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, makeSpanView(&outputBarrier, 1));
 			}
 		}
 		return true;
@@ -769,7 +788,8 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 	return Vector<const core::CommandBuffer *>{buf};
 }
 
-void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func,
+		bool success, Rc<Fence> &&fence) {
 	if (success) {
 		submitResult(frame);
 	}
@@ -778,7 +798,8 @@ void FontRenderPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> 
 	frame.signalDependencies(success);
 }
 
-void FontRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+void FontRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func,
+		bool success) {
 	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
@@ -796,12 +817,12 @@ void FontRenderPassHandle::submitResult(FrameHandle &frame) {
 			Rc<Ref>(_fontAttachment->getUserdata()), sig);
 
 	if (input->output) {
-		_outBuffer->map([&, this] (uint8_t *ptr, VkDeviceSize size) {
+		_outBuffer->map([&, this](uint8_t *ptr, VkDeviceSize size) {
 			input->output(_targetImage->getInfo(), BytesView(ptr, size));
 		});
 	}
 }
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif

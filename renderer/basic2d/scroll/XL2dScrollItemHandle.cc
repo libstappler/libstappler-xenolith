@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -59,17 +60,11 @@ void ScrollItemHandle::onNodeRemoved(ScrollController *c, Item &item, size_t ind
 	}
 }
 
-void ScrollItemHandle::setInsertCallback(Callback &&cb) {
-	_insertCallback = sp::move(cb);
-}
+void ScrollItemHandle::setInsertCallback(Callback &&cb) { _insertCallback = sp::move(cb); }
 
-void ScrollItemHandle::setUpdateCallback(Callback &&cb) {
-	_updateCallback = sp::move(cb);
-}
+void ScrollItemHandle::setUpdateCallback(Callback &&cb) { _updateCallback = sp::move(cb); }
 
-void ScrollItemHandle::setRemoveCallback(Callback &&cb) {
-	_removeCallback = sp::move(cb);
-}
+void ScrollItemHandle::setRemoveCallback(Callback &&cb) { _removeCallback = sp::move(cb); }
 
 void ScrollItemHandle::resize(float newSize, bool forward) {
 	if (auto item = _controller->getItem(_itemIndex)) {
@@ -84,16 +79,10 @@ void ScrollItemHandle::forceResize(float newSize, bool forward) {
 	}
 }
 
-void ScrollItemHandle::setLocked(bool value) {
-	_isLocked = value;
-}
+void ScrollItemHandle::setLocked(bool value) { _isLocked = value; }
 
-bool ScrollItemHandle::isLocked() const {
-	return _isLocked;
-}
+bool ScrollItemHandle::isLocked() const { return _isLocked; }
 
-bool ScrollItemHandle::isConnected() const {
-	return _controller != nullptr;
-}
+bool ScrollItemHandle::isConnected() const { return _controller != nullptr; }
 
-}
+} // namespace stappler::xenolith::basic2d

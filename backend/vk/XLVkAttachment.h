@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKATTACHMENT_H_
 #define XENOLITH_BACKEND_VK_XLVKATTACHMENT_H_
 
+#include "XLCoreInfo.h"
 #include "XLVkSync.h"
 #include "XLCoreAttachment.h"
 #include "XLVkDeviceQueue.h"
@@ -32,14 +34,14 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class SP_PUBLIC BufferAttachment : public core::BufferAttachment {
 public:
-	virtual ~BufferAttachment() { }
+	virtual ~BufferAttachment() = default;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
 class SP_PUBLIC ImageAttachment : public core::ImageAttachment {
 public:
-	virtual ~ImageAttachment() { }
+	virtual ~ImageAttachment() = default;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
@@ -54,14 +56,17 @@ public:
 		bool dirty = true;
 	};
 
-	virtual ~BufferAttachmentHandle();
+	virtual ~BufferAttachmentHandle() = default;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &);
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const override;
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
+			const DescriptorData &) const override;
 
 	void clearBufferViews();
-	void addBufferView(Buffer *buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE, bool dirty = true);
-	void addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE, bool dirty = true);
+	void addBufferView(Buffer *buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE,
+			bool dirty = true);
+	void addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset = 0,
+			VkDeviceSize size = VK_WHOLE_SIZE, bool dirty = true);
 
 	SpanView<BufferView> getBuffers() const { return _buffers; }
 
@@ -71,21 +76,24 @@ protected:
 
 class SP_PUBLIC ImageAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~ImageAttachmentHandle() { }
+	virtual ~ImageAttachmentHandle() = default;
 
 	const Rc<core::ImageStorage> &getImage() const;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorImageInfo &);
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t, bool isExternal) const override;
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
+			const DescriptorData &) const override;
 };
 
 class SP_PUBLIC TexelAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~TexelAttachmentHandle();
+	virtual ~TexelAttachmentHandle() = default;
 
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferViewInfo &) { return false; }
+	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferViewInfo &) {
+		return false;
+	}
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKATTACHMENT_H_ */

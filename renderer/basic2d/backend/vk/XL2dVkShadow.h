@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +36,6 @@ public:
 
 	virtual bool init(AttachmentBuilder &) override;
 
-	virtual bool validateInput(const Rc<core::AttachmentInputData> &) const override;
-
 protected:
 	using BufferAttachment::init;
 
@@ -47,10 +46,11 @@ class SP_PUBLIC ShadowLightDataAttachmentHandle : public BufferAttachmentHandle 
 public:
 	virtual ~ShadowLightDataAttachmentHandle();
 
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-			uint32_t, bool isExternal) const override;
+	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
+			const DescriptorData &) const override;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
@@ -69,6 +69,6 @@ protected:
 	ShadowData _shadowData;
 };
 
-}
+} // namespace stappler::xenolith::basic2d::vk
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKSHADOW_H_ */

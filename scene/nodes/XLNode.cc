@@ -1,24 +1,25 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLNode.h"
@@ -34,9 +35,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-void ActionStorage::addAction(Rc<Action> &&a) {
-	actionToStart.emplace_back(move(a));
-}
+void ActionStorage::addAction(Rc<Action> &&a) { actionToStart.emplace_back(move(a)); }
 
 void ActionStorage::removeAction(Action *a) {
 	auto it = std::find(actionToStart.begin(), actionToStart.end(), a);
@@ -45,9 +44,7 @@ void ActionStorage::removeAction(Action *a) {
 	}
 }
 
-void ActionStorage::removeAllActions() {
-	actionToStart.clear();
-}
+void ActionStorage::removeAllActions() { actionToStart.clear(); }
 
 void ActionStorage::removeActionByTag(uint32_t tag) {
 	auto it = actionToStart.begin();
@@ -56,7 +53,7 @@ void ActionStorage::removeActionByTag(uint32_t tag) {
 			actionToStart.erase(it);
 			return;
 		}
-		++ it;
+		++it;
 	}
 }
 
@@ -69,7 +66,7 @@ void ActionStorage::removeAllActionsByTag(uint32_t tag) {
 				continue;
 			}
 		}
-		++ it;
+		++it;
 	}
 }
 
@@ -86,9 +83,11 @@ String MaterialInfo::description() const {
 	StringStream stream;
 
 	stream << "{" << images[0] << "," << images[1] << "," << images[2] << "," << images[3] << "},"
-			<< "{" << samplers[0] << "," << samplers[1] << "," << samplers[2] << "," << samplers[3] << "},"
-			<< "{" << colorModes[0].toInt() << "," << colorModes[1].toInt() << "," << colorModes[2].toInt() << "," << colorModes[3].toInt() << "},"
-			<< "," << pipeline.description();
+		   << "{" << samplers[0] << "," << samplers[1] << "," << samplers[2] << "," << samplers[3]
+		   << "},"
+		   << "{" << colorModes[0].toInt() << "," << colorModes[1].toInt() << ","
+		   << colorModes[2].toInt() << "," << colorModes[3].toInt() << "},"
+		   << "," << pipeline.description();
 
 	return stream.str();
 }
@@ -123,9 +122,7 @@ Mat4 Node::getChainNodeToParentTransform(Node *parent, Node *node, bool withPare
 
 	Mat4 ret = node->getNodeToParentTransform();
 	auto p = node->getParent();
-	for (; p != parent; p = p->getParent()) {
-		ret = ret * p->getNodeToParentTransform();
-	}
+	for (; p != parent; p = p->getParent()) { ret = ret * p->getNodeToParentTransform(); }
 	if (withParent && p == parent) {
 		ret = ret * p->getNodeToParentTransform();
 	}
@@ -139,9 +136,7 @@ Mat4 Node::getChainParentToNodeTransform(Node *parent, Node *node, bool withPare
 
 	Mat4 ret = node->getParentToNodeTransform();
 	auto p = node->getParent();
-	for (; p != parent; p = p->getParent()) {
-		ret = p->getParentToNodeTransform() * ret;
-	}
+	for (; p != parent; p = p->getParent()) { ret = p->getParentToNodeTransform() * ret; }
 	if (withParent && p == parent) {
 		ret = p->getParentToNodeTransform() * ret;
 	}
@@ -151,18 +146,16 @@ Mat4 Node::getChainParentToNodeTransform(Node *parent, Node *node, bool withPare
 Node::Node() { }
 
 Node::~Node() {
-	for (auto &child : _children) {
-		child->_parent = nullptr;
-	}
+	for (auto &child : _children) { child->_parent = nullptr; }
 
 	// stopAllActions();
 
-	XLASSERT(!_running, "Node still marked as running on node destruction! Was base class onExit() called in derived class onExit() implementations?");
+	XLASSERT(!_running,
+			"Node still marked as running on node destruction! Was base class onExit() called in "
+			"derived class onExit() implementations?");
 }
 
-bool Node::init() {
-	return true;
-}
+bool Node::init() { return true; }
 
 void Node::setLocalZOrder(ZOrder z) {
 	if (_zOrder == z) {
@@ -352,17 +345,15 @@ void Node::setRotation(const Quaternion &quat) {
 	_transformInverseDirty = _transformCacheDirty = _transformDirty = true;
 }
 
-void Node::addChildNode(Node *child) {
-	addChildNode(child, child->_zOrder, child->_tag);
-}
+void Node::addChildNode(Node *child) { addChildNode(child, child->_zOrder, child->_tag); }
 
 void Node::addChildNode(Node *child, ZOrder localZOrder) {
 	addChildNode(child, localZOrder, child->_tag);
 }
 
 void Node::addChildNode(Node *child, ZOrder localZOrder, uint64_t tag) {
-	XLASSERT( child != nullptr, "Argument must be non-nil");
-	XLASSERT( child->_parent == nullptr, "child already added. It can't be added again");
+	XLASSERT(child != nullptr, "Argument must be non-nil");
+	XLASSERT(child->_parent == nullptr, "child already added. It can't be added again");
 
 	if constexpr (config::NodePreallocateChilds > 1) {
 		if (_children.empty()) {
@@ -391,8 +382,8 @@ void Node::addChildNode(Node *child, ZOrder localZOrder, uint64_t tag) {
 	}
 }
 
-Node* Node::getChildByTag(uint64_t tag) const {
-	XLASSERT( tag != InvalidTag, "Invalid tag");
+Node *Node::getChildByTag(uint64_t tag) const {
+	XLASSERT(tag != InvalidTag, "Invalid tag");
 	for (const auto &child : _children) {
 		if (child && child->_tag == tag) {
 			return child;
@@ -438,7 +429,7 @@ void Node::removeChild(Node *child, bool cleanup) {
 }
 
 void Node::removeChildByTag(uint64_t tag, bool cleanup) {
-	XLASSERT( tag != InvalidTag, "Invalid tag");
+	XLASSERT(tag != InvalidTag, "Invalid tag");
 
 	Node *child = this->getChildByTag(tag);
 	if (child == nullptr) {
@@ -464,15 +455,15 @@ void Node::removeAllChildren(bool cleanup) {
 	_children.clear();
 }
 
-void Node::reorderChild(Node * child, ZOrder localZOrder) {
-	XLASSERT( child != nullptr, "Child must be non-nil");
+void Node::reorderChild(Node *child, ZOrder localZOrder) {
+	XLASSERT(child != nullptr, "Child must be non-nil");
 	_reorderChildDirty = true;
 	child->setLocalZOrder(localZOrder);
 }
 
 void Node::sortAllChildren() {
 	if (_reorderChildDirty && !_children.empty()) {
-		std::sort(std::begin(_children), std::end(_children), [&] (const Node *l, const Node *r) {
+		std::sort(std::begin(_children), std::end(_children), [&](const Node *l, const Node *r) {
 			return l->getLocalZOrder() < r->getLocalZOrder();
 		});
 		handleReorderChildDirty();
@@ -481,7 +472,7 @@ void Node::sortAllChildren() {
 }
 
 void Node::runActionObject(Action *action) {
-	XLASSERT( action != nullptr, "Argument must be non-nil");
+	XLASSERT(action != nullptr, "Argument must be non-nil");
 
 	if (_actionManager) {
 		_actionManager->addAction(action, this, !_running);
@@ -535,7 +526,7 @@ void Node::stopAllActionsByTag(uint32_t tag) {
 	}
 }
 
-Action* Node::getActionByTag(uint32_t tag) {
+Action *Node::getActionByTag(uint32_t tag) {
 	XLASSERT(tag != Action::INVALID_TAG, "Invalid tag");
 	if (_actionManager) {
 		return _actionManager->getActionByTag(tag, this);
@@ -554,18 +545,16 @@ size_t Node::getNumberOfRunningActions() const {
 	return 0;
 }
 
-void Node::setTag(uint64_t tag) {
-	_tag = tag;
-}
+void Node::setTag(uint64_t tag) { _tag = tag; }
 
 bool Node::addComponentItem(Component *com) {
 	XLASSERT(com != nullptr, "Argument must be non-nil");
 	XLASSERT(com->getOwner() == nullptr, "Component already added. It can't be added again");
 
 	_components.push_back(com);
-	if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
-		com->handleAdded(this);
-	}
+
+	com->handleAdded(this);
+
 	if (this->isRunning() && hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
 		com->handleEnter(_scene);
 	}
@@ -580,12 +569,13 @@ bool Node::removeComponent(Component *com) {
 
 	for (auto iter = _components.begin(); iter != _components.end(); ++iter) {
 		if ((*iter) == com) {
-			if (this->isRunning() && hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+			if (this->isRunning()
+					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
-			if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
-				com->handleRemoved();
-			}
+
+			com->handleRemoved();
+
 			_components.erase(iter);
 			return true;
 		}
@@ -601,7 +591,8 @@ bool Node::removeComponentByTag(uint64_t tag) {
 	for (auto iter = _components.begin(); iter != _components.end(); ++iter) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
-			if (this->isRunning() && hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+			if (this->isRunning()
+					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
 			if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
@@ -623,7 +614,8 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 	while (iter != _components.end()) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
-			if (this->isRunning() && hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+			if (this->isRunning()
+					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
 			if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
@@ -631,7 +623,7 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 			}
 			iter = _components.erase(iter);
 		} else {
-			++ iter;
+			++iter;
 		}
 	}
 	return false;
@@ -642,14 +634,14 @@ void Node::removeAllComponents() {
 	_components.clear();
 
 	for (auto iter : tmp) {
-		if (this->isRunning() && hasFlag(iter->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+		if (this->isRunning()
+				&& hasFlag(iter->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
 			iter->handleExit();
 		}
 		if (hasFlag(iter->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
 			iter->handleRemoved();
 		}
 	}
-
 }
 
 bool Node::addInputListenerItem(InputListener *input) {
@@ -707,9 +699,7 @@ void Node::handleEnter(Scene *scene) {
 		_actionManager = _director->getActionManager();
 
 		if (_actionStorage) {
-			for (auto &it : _actionStorage->actionToStart) {
-				runActionObject(it);
-			}
+			for (auto &it : _actionStorage->actionToStart) { runActionObject(it); }
 			_actionStorage = nullptr;
 		}
 	}
@@ -725,13 +715,9 @@ void Node::handleEnter(Scene *scene) {
 		}
 	}
 
-	for (auto &it : _inputEvents) {
-		it->onEnter(scene);
-	}
+	for (auto &it : _inputEvents) { it->onEnter(scene); }
 
-	for (auto &child : _children) {
-		child->handleEnter(scene);
-	}
+	for (auto &child : _children) { child->handleEnter(scene); }
 
 	if (_scheduled) {
 		_scheduler->scheduleUpdate(this, 0, _paused);
@@ -752,13 +738,9 @@ void Node::handleExit() {
 		_scheduled = true; // -re-enable after restart;
 	}
 
-	for (auto &child : _children) {
-		child->handleExit();
-	}
+	for (auto &child : _children) { child->handleExit(); }
 
-	for (auto &it : _inputEvents) {
-		it->onExit();
-	}
+	for (auto &it : _inputEvents) { it->onExit(); }
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
@@ -814,15 +796,19 @@ void Node::handleGlobalTransformDirty(const Mat4 &parentTransform) {
 	Vec3 scale;
 	parentTransform.decompose(&scale, nullptr, nullptr);
 
-	if (_scale.x != 1.f) { scale.x *= _scale.x; }
-	if (_scale.y != 1.f) { scale.y *= _scale.y; }
-	if (_scale.z != 1.f) { scale.z *= _scale.z; }
+	if (_scale.x != 1.f) {
+		scale.x *= _scale.x;
+	}
+	if (_scale.y != 1.f) {
+		scale.y *= _scale.y;
+	}
+	if (_scale.z != 1.f) {
+		scale.z *= _scale.z;
+	}
 
 	auto density = std::min(std::min(scale.x, scale.y), scale.z);
 	if (density != _inputDensity) {
-		for (auto &it : _inputEvents) {
-			it->setDensity(density);
-		}
+		for (auto &it : _inputEvents) { it->setDensity(density); }
 		_inputDensity = density;
 	}
 }
@@ -848,9 +834,7 @@ void Node::cleanup() {
 		this->unscheduleUpdate();
 	}
 
-	for (auto &child : _children) {
-		child->cleanup();
-	}
+	for (auto &child : _children) { child->cleanup(); }
 
 	this->removeAllComponents();
 
@@ -888,11 +872,9 @@ void Node::pause() {
 	}
 }
 
-void Node::update(const UpdateTime &time) {
+void Node::update(const UpdateTime &time) { }
 
-}
-
-const Mat4& Node::getNodeToParentTransform() const {
+const Mat4 &Node::getNodeToParentTransform() const {
 	if (_transformCacheDirty) {
 		// Translate values
 		float x = _position.x;
@@ -901,7 +883,8 @@ const Mat4& Node::getNodeToParentTransform() const {
 
 		bool needsSkewMatrix = (_skew.x || _skew.y);
 
-		Vec2 anchorPointInPoints(_contentSize.width * _anchorPoint.x, _contentSize.height * _anchorPoint.y);
+		Vec2 anchorPointInPoints(_contentSize.width * _anchorPoint.x,
+				_contentSize.height * _anchorPoint.y);
 		Vec2 anchorPoint(anchorPointInPoints.x * _scale.x, anchorPointInPoints.y * _scale.y);
 
 		// caculate real position
@@ -922,25 +905,34 @@ const Mat4& Node::getNodeToParentTransform() const {
 		_transform.translate(-anchorPoint.x, -anchorPoint.y, 0);
 
 		if (_scale.x != 1.f) {
-			_transform.m[0] *= _scale.x; _transform.m[1] *= _scale.x; _transform.m[2] *= _scale.x;
+			_transform.m[0] *= _scale.x;
+			_transform.m[1] *= _scale.x;
+			_transform.m[2] *= _scale.x;
 		}
 		if (_scale.y != 1.f) {
-			_transform.m[4] *= _scale.y; _transform.m[5] *= _scale.y; _transform.m[6] *= _scale.y;
+			_transform.m[4] *= _scale.y;
+			_transform.m[5] *= _scale.y;
+			_transform.m[6] *= _scale.y;
 		}
 		if (_scale.z != 1.f) {
-			_transform.m[8] *= _scale.z; _transform.m[9] *= _scale.z; _transform.m[10] *= _scale.z;
+			_transform.m[8] *= _scale.z;
+			_transform.m[9] *= _scale.z;
+			_transform.m[10] *= _scale.z;
 		}
 
 		// If skew is needed, apply skew and then anchor point
 		if (needsSkewMatrix) {
-			Mat4 skewMatrix(1, (float) tanf(_skew.y), 0, 0, (float) tanf(_skew.x), 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+			Mat4 skewMatrix(1, (float)tanf(_skew.y), 0, 0, (float)tanf(_skew.x), 1, 0, 0, 0, 0, 1,
+					0, 0, 0, 0, 1);
 
 			_transform = _transform * skewMatrix;
 
 			// adjust anchor point
 			if (anchorPointInPoints != Vec2::ZERO) {
-				_transform.m[12] += _transform.m[0] * -anchorPointInPoints.x + _transform.m[4] * -anchorPointInPoints.y;
-				_transform.m[13] += _transform.m[1] * -anchorPointInPoints.x + _transform.m[5] * -anchorPointInPoints.y;
+				_transform.m[12] += _transform.m[0] * -anchorPointInPoints.x
+						+ _transform.m[4] * -anchorPointInPoints.y;
+				_transform.m[13] += _transform.m[1] * -anchorPointInPoints.x
+						+ _transform.m[5] * -anchorPointInPoints.y;
 			}
 		}
 
@@ -950,7 +942,7 @@ const Mat4& Node::getNodeToParentTransform() const {
 	return _transform;
 }
 
-void Node::setNodeToParentTransform(const Mat4& transform) {
+void Node::setNodeToParentTransform(const Mat4 &transform) {
 	_transform = transform;
 	_transformCacheDirty = false;
 	_transformDirty = true;
@@ -975,9 +967,7 @@ Mat4 Node::getNodeToWorldTransform() const {
 	return t;
 }
 
-Mat4 Node::getWorldToNodeTransform() const {
-	return getNodeToWorldTransform().getInversed();
-}
+Mat4 Node::getWorldToNodeTransform() const { return getNodeToWorldTransform().getInversed(); }
 
 Vec2 Node::convertToNodeSpace(const Vec2 &worldPoint) const {
 	Mat4 tmp = getWorldToNodeTransform();
@@ -991,11 +981,13 @@ Vec2 Node::convertToWorldSpace(const Vec2 &nodePoint) const {
 
 Vec2 Node::convertToNodeSpaceAR(const Vec2 &worldPoint) const {
 	Vec2 nodePoint(convertToNodeSpace(worldPoint));
-	return nodePoint - Vec2(_contentSize.width * _anchorPoint.x, _contentSize.height * _anchorPoint.y);
+	return nodePoint
+			- Vec2(_contentSize.width * _anchorPoint.x, _contentSize.height * _anchorPoint.y);
 }
 
 Vec2 Node::convertToWorldSpaceAR(const Vec2 &nodePoint) const {
-	return convertToWorldSpace(nodePoint + Vec2(_contentSize.width * _anchorPoint.x, _contentSize.height * _anchorPoint.y));
+	return convertToWorldSpace(nodePoint
+			+ Vec2(_contentSize.width * _anchorPoint.x, _contentSize.height * _anchorPoint.y));
 }
 
 void Node::setCascadeOpacityEnabled(bool cascadeOpacityEnabled) {
@@ -1029,9 +1021,7 @@ void Node::setOpacity(float opacity) {
 	updateCascadeOpacity();
 }
 
-void Node::setOpacity(OpacityValue value) {
-	setOpacity(value.get() / 255.0f);
-}
+void Node::setOpacity(OpacityValue value) { setOpacity(value.get() / 255.0f); }
 
 void Node::updateDisplayedOpacity(float parentOpacity) {
 	_displayedColor.a = _realColor.a * parentOpacity;
@@ -1039,13 +1029,11 @@ void Node::updateDisplayedOpacity(float parentOpacity) {
 	updateColor();
 
 	if (_cascadeOpacityEnabled) {
-		for (const auto &child : _children) {
-			child->updateDisplayedOpacity(_displayedColor.a);
-		}
+		for (const auto &child : _children) { child->updateDisplayedOpacity(_displayedColor.a); }
 	}
 }
 
-void Node::setColor(const Color4F& color, bool withOpacity) {
+void Node::setColor(const Color4F &color, bool withOpacity) {
 	if (withOpacity && _realColor.a != color.a) {
 		_displayedColor = _realColor = color;
 
@@ -1066,9 +1054,7 @@ void Node::updateDisplayedColor(const Color4F &parentColor) {
 	updateColor();
 
 	if (_cascadeColorEnabled) {
-		for (const auto &child : _children) {
-			child->updateDisplayedColor(_displayedColor);
-		}
+		for (const auto &child : _children) { child->updateDisplayedColor(_displayedColor); }
 	}
 }
 
@@ -1086,9 +1072,7 @@ void Node::updateCascadeOpacity() {
 void Node::disableCascadeOpacity() {
 	_displayedColor.a = _realColor.a;
 
-	for (const auto &child : _children) {
-		child->updateDisplayedOpacity(1.0f);
-	}
+	for (const auto &child : _children) { child->updateDisplayedOpacity(1.0f); }
 }
 
 void Node::updateCascadeColor() {
@@ -1101,27 +1085,19 @@ void Node::updateCascadeColor() {
 }
 
 void Node::disableCascadeColor() {
-	for (const auto &child : _children) {
-		child->updateDisplayedColor(Color4F::WHITE);
-	}
+	for (const auto &child : _children) { child->updateDisplayedColor(Color4F::WHITE); }
 }
 
-void Node::draw(FrameInfo &info, NodeFlags flags) {
-
-}
+void Node::draw(FrameInfo &info, NodeFlags flags) { }
 
 bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	VisitInfo visitInfo;
-	visitInfo.visitNodesBelow = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
-		for (auto &it : nodes) {
-			it->visitGeometry(*visitInfo.frameInfo, visitInfo.flags);
-		}
+	visitInfo.visitNodesBelow = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+		for (auto &it : nodes) { it->visitGeometry(*visitInfo.frameInfo, visitInfo.flags); }
 	};
 
-	visitInfo.visitNodesAbove = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
-		for (auto &it : nodes) {
-			it->visitGeometry(*visitInfo.frameInfo, visitInfo.flags);
-		}
+	visitInfo.visitNodesAbove = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+		for (auto &it : nodes) { it->visitGeometry(*visitInfo.frameInfo, visitInfo.flags); }
 	};
 
 	visitInfo.node = this;
@@ -1132,40 +1108,34 @@ bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	VisitInfo visitInfo;
 
-	visitInfo.visitBegin = [] (const VisitInfo &visitInfo) {
+	visitInfo.visitBegin = [](const VisitInfo &visitInfo) {
 		for (auto &it : visitInfo.visitableComponents) {
 			it->handleVisitBegin(*visitInfo.frameInfo);
 		}
 	};
 
-	visitInfo.visitNodesBelow = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+	visitInfo.visitNodesBelow = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
 		for (auto &it : visitInfo.visitableComponents) {
 			it->handleVisitNodesBelow(*visitInfo.frameInfo, nodes, visitInfo.flags);
 		}
 
-		for (auto &it : nodes) {
-			it->visitDraw(*visitInfo.frameInfo, visitInfo.flags);
-		}
+		for (auto &it : nodes) { it->visitDraw(*visitInfo.frameInfo, visitInfo.flags); }
 	};
 
-	visitInfo.visitSelf = [] (const VisitInfo &visitInfo, Node *node) {
+	visitInfo.visitSelf = [](const VisitInfo &visitInfo, Node *node) {
 		node->visitSelf(*visitInfo.frameInfo, visitInfo.flags, visitInfo.visibleByCamera);
 	};
 
-	visitInfo.visitNodesAbove = [] (const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
+	visitInfo.visitNodesAbove = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
 		for (auto &it : visitInfo.visitableComponents) {
 			it->handleVisitNodesAbove(*visitInfo.frameInfo, nodes, visitInfo.flags);
 		}
 
-		for (auto &it : nodes) {
-			it->visitDraw(*visitInfo.frameInfo, visitInfo.flags);
-		}
+		for (auto &it : nodes) { it->visitDraw(*visitInfo.frameInfo, visitInfo.flags); }
 	};
 
-	visitInfo.visitEnd = [] (const VisitInfo &visitInfo) {
-		for (auto &it : visitInfo.visitableComponents) {
-			it->handleVisitEnd(*visitInfo.frameInfo);
-		}
+	visitInfo.visitEnd = [](const VisitInfo &visitInfo) {
+		for (auto &it : visitInfo.visitableComponents) { it->handleVisitEnd(*visitInfo.frameInfo); }
 	};
 
 	visitInfo.node = this;
@@ -1202,8 +1172,7 @@ bool Node::isTouchedNodeSpace(const Vec2 &point, float padding) {
 	}
 
 	const Size2 &size = getContentSize();
-	if (point.x > -padding && point.y > -padding
-			&& point.x < size.width + padding
+	if (point.x > -padding && point.y > -padding && point.x < size.width + padding
 			&& point.y < size.height + padding) {
 		return true;
 	} else {
@@ -1211,13 +1180,9 @@ bool Node::isTouchedNodeSpace(const Vec2 &point, float padding) {
 	}
 }
 
-void Node::setEnterCallback(Function<void(Scene *)> &&cb) {
-	_enterCallback = sp::move(cb);
-}
+void Node::setEnterCallback(Function<void(Scene *)> &&cb) { _enterCallback = sp::move(cb); }
 
-void Node::setExitCallback(Function<void()> &&cb) {
-	_exitCallback = sp::move(cb);
-}
+void Node::setExitCallback(Function<void()> &&cb) { _exitCallback = sp::move(cb); }
 
 void Node::setContentSizeDirtyCallback(Function<void()> &&cb) {
 	_contentSizeDirtyCallback = sp::move(cb);
@@ -1286,7 +1251,8 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 	}
 }
 
-bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &visitInfo, bool useContext) {
+bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &visitInfo,
+		bool useContext) {
 	if (!_visible) {
 		return false;
 	}
@@ -1390,9 +1356,7 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 		visitInfo.visitEnd(visitInfo);
 	}
 
-	for (auto &it : components) {
-		info.popComponent(it);
-	}
+	for (auto &it : components) { info.popComponent(it); }
 
 	if (_depthIndex > 0.0f) {
 		info.depthStack.pop_back();
@@ -1422,18 +1386,14 @@ float Node::getMaxDepthIndex() const {
 	return val;
 }
 
-void Node::retainFocus() {
-	++ _focus;
-}
+void Node::retainFocus() { ++_focus; }
 
 void Node::releaseFocus() {
 	if (_focus > 0) {
-		-- _focus;
+		--_focus;
 	}
 }
 
-void Node::clearFocus() {
-	_focus = 0;
-}
+void Node::clearFocus() { _focus = 0; }
 
-}
+} // namespace stappler::xenolith

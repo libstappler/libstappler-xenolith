@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -54,9 +55,7 @@ FrameExternalTask::~FrameExternalTask() {
 	}
 }
 
-void FrameExternalTask::invalidate() {
-	_success = true;
-}
+void FrameExternalTask::invalidate() { _success = true; }
 
 bool FrameExternalTask::init(FrameHandle &frame, uint32_t idx, Ref *ref, StringView tag) {
 	_frame = &frame;
@@ -67,9 +66,7 @@ bool FrameExternalTask::init(FrameHandle &frame, uint32_t idx, Ref *ref, StringV
 	return true;
 }
 
-uint32_t FrameHandle::GetActiveFramesCount() {
-	return s_frameCount.load();
-}
+uint32_t FrameHandle::GetActiveFramesCount() { return s_frameCount.load(); }
 
 void FrameHandle::DescribeActiveFrames() {
 	s_frameMutex.lock();
@@ -86,12 +83,11 @@ void FrameHandle::DescribeActiveFrames() {
 		StringStream stream;
 		stream << "\n";
 		for (auto &it : s_activeFrames) {
-			stream << "\tFrame: " << it->getOrder() << " refcount: " << it->getReferenceCount() << "; success: " << it->isValidFlag() << "; backtrace:\n";
-			it->foreachBacktrace([&] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+			stream << "\tFrame: " << it->getOrder() << " refcount: " << it->getReferenceCount()
+				   << "; success: " << it->isValidFlag() << "; backtrace:\n";
+			it->foreachBacktrace([&](uint64_t id, Time time, const std::vector<std::string> &vec) {
 				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-				for (auto &it : vec) {
-					stream << "\t" << it << "\n";
-				}
+				for (auto &it : vec) { stream << "\t" << it << "\n"; }
 			});
 		}
 		stappler::log::debug("FrameHandle", stream.str());
@@ -105,7 +101,7 @@ FrameHandle::~FrameHandle() {
 	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "Destroy");
 #if DEBUG
 	s_frameMutex.lock();
-	-- s_frameCount;
+	--s_frameCount;
 	s_activeFrames.erase(this);
 	s_frameMutex.unlock();
 #endif
@@ -121,7 +117,7 @@ bool FrameHandle::init(Loop &loop, Device &dev, Rc<FrameRequest> &&req, uint64_t
 #if DEBUG
 	s_frameMutex.lock();
 	s_activeFrames.emplace(this);
-	++ s_frameCount;
+	++s_frameCount;
 	s_frameMutex.unlock();
 #endif
 
@@ -148,14 +144,10 @@ void FrameHandle::update(bool init) {
 
 	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "update");
 
-	for (auto &it : _queues) {
-		it->update();
-	}
+	for (auto &it : _queues) { it->update(); }
 }
 
-const Rc<Queue> &FrameHandle::getQueue() const {
-	return _request->getQueue();
-}
+const Rc<Queue> &FrameHandle::getQueue() const { return _request->getQueue(); }
 
 const FrameConstraints &FrameHandle::getFrameConstraints() const {
 	return _request->getFrameConstraints();
@@ -202,45 +194,50 @@ Rc<FrameExternalTask> FrameHandle::acquireTask(Ref *ref, StringView tag) {
 
 void FrameHandle::performInQueue(Function<void(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
+	_loop->performInQueue(
+			Rc<thread::Task>::create([this, cb = sp::move(cb)](const thread::Task &) -> bool {
 		cb(*this);
 		return true;
-	}, [=, this] (const thread::Task &, bool) {
+	}, [=, this](const thread::Task &, bool) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		release(linkId);
 	}, ref));
 }
 
-void FrameHandle::performInQueue(Function<bool(FrameHandle &)> &&perform, Function<void(FrameHandle &, bool)> &&complete,
-		Ref *ref, StringView tag) {
+void FrameHandle::performInQueue(Function<bool(FrameHandle &)> &&perform,
+		Function<void(FrameHandle &, bool)> &&complete, Ref *ref, StringView tag) {
 	auto linkId = retain();
-	_loop->performInQueue(Rc<thread::Task>::create([this, perform = sp::move(perform)] (const thread::Task &) -> bool {
+	_loop->performInQueue(Rc<thread::Task>::create(
+			[this, perform = sp::move(perform)](const thread::Task &) -> bool {
 		return perform(*this);
-	}, [=, this, complete = sp::move(complete)] (const thread::Task &, bool success) {
-		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
+	}, [=, this, complete = sp::move(complete)](const thread::Task &, bool success) {
+		XL_FRAME_PROFILE(complete(*this, success), tag, 1'000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		release(linkId);
 	}, ref));
 }
 
-void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref, bool immediate, StringView tag) {
+void FrameHandle::performOnGlThread(Function<void(FrameHandle &)> &&cb, Ref *ref, bool immediate,
+		StringView tag) {
 	if (immediate && _loop->isOnThisThread()) {
-		XL_FRAME_PROFILE(cb(*this), tag, 1000);
+		XL_FRAME_PROFILE(cb(*this), tag, 1'000);
 	} else {
 		auto linkId = retain();
-		_loop->performOnThread([=, this, cb = sp::move(cb)] () {
-			XL_FRAME_PROFILE(cb(*this);, tag, 1000);
+		_loop->performOnThread([=, this, cb = sp::move(cb)]() {
+			XL_FRAME_PROFILE(cb(*this);, tag, 1'000);
 			XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 			release(linkId);
 		}, ref);
 	}
 }
 
-void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *ref, StringView tag) {
+void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *ref,
+		StringView tag) {
 	auto task = acquireTask(ref, tag);
-	_loop->performInQueue(Rc<thread::Task>::create([this, cb = sp::move(cb)] (const thread::Task &) -> bool {
+	_loop->performInQueue(
+			Rc<thread::Task>::create([this, cb = sp::move(cb)](const thread::Task &) -> bool {
 		return cb(*this);
-	}, [tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
+	}, [tag = tag.str<Interface>(), task = task.get()](const thread::Task &, bool success) {
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (!success) {
 			task->invalidate();
@@ -249,28 +246,30 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *r
 	}, task));
 }
 
-void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform, Function<void(FrameHandle &, bool)> &&complete,
-		Ref *ref, StringView tag) {
+void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform,
+		Function<void(FrameHandle &, bool)> &&complete, Ref *ref, StringView tag) {
 	auto task = acquireTask(ref, tag);
-	_loop->performInQueue(Rc<thread::Task>::create([this, perform = sp::move(perform)] (const thread::Task &) -> bool {
-		return perform(*this);
-	}, [this, complete = sp::move(complete), tag = tag.str<Interface>(), task = task.get()] (const thread::Task &, bool success) {
-		XL_FRAME_PROFILE(complete(*this, success), tag, 1000);
+	_loop->performInQueue(Rc<thread::Task>::create(
+			[this, perform = sp::move(perform)](
+					const thread::Task &) -> bool { return perform(*this); },
+			[this, complete = sp::move(complete), tag = tag.str<Interface>(),
+					task = task.get()](const thread::Task &, bool success) {
+		XL_FRAME_PROFILE(complete(*this, success), tag, 1'000);
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (!success) {
 			task->invalidate();
 			log::error("FrameHandle", "Async task failed: ", tag);
 		}
-	}, task));
+	},
+			task));
 }
 
 bool FrameHandle::isValid() const {
-	return _valid && (!_request->getPresentationFrame() || _request->getPresentationFrame()->isValid());
+	return _valid
+			&& (!_request->getPresentationFrame() || _request->getPresentationFrame()->isValid());
 }
 
-bool FrameHandle::isPersistentMapping() const {
-	return _request->isPersistentMapping();
-}
+bool FrameHandle::isPersistentMapping() const { return _request->isPersistentMapping(); }
 
 Rc<AttachmentInputData> FrameHandle::getInputData(const AttachmentData *attachment) {
 	return _request->getInputData(attachment);
@@ -315,9 +314,7 @@ void FrameHandle::invalidate() {
 			}
 		}
 	} else {
-		_loop->performOnThread([this] {
-			invalidate();
-		}, this);
+		_loop->performOnThread([this] { invalidate(); }, this);
 	}
 }
 
@@ -334,9 +331,7 @@ bool FrameHandle::setup() {
 	});
 
 	if (!_valid) {
-		for (auto &it : _queues) {
-			it->invalidate();
-		}
+		for (auto &it : _queues) { it->invalidate(); }
 	}
 
 	if (_request) {
@@ -347,7 +342,7 @@ bool FrameHandle::setup() {
 }
 
 void FrameHandle::onQueueSubmitted(FrameQueue &queue) {
-	++ _queuesSubmitted;
+	++_queuesSubmitted;
 	if (_queuesSubmitted == _queues.size()) {
 		_submitted = true;
 		if (auto f = _request->getPresentationFrame()) {
@@ -358,14 +353,14 @@ void FrameHandle::onQueueSubmitted(FrameQueue &queue) {
 
 void FrameHandle::onQueueComplete(FrameQueue &queue) {
 	_submissionTime += queue.getSubmissionTime();
-	++ _queuesCompleted;
+	++_queuesCompleted;
 	tryComplete();
 }
 
 void FrameHandle::releaseTask(FrameExternalTask *task, bool success) {
-	_loop->performOnThread([this, success, tag = task->getTag()] () {
+	_loop->performOnThread([this, success, tag = task->getTag()]() {
 		if (success) {
-			++ _tasksCompleted;
+			++_tasksCompleted;
 			tryComplete();
 		} else {
 			log::info("FrameHandle", "Task '", tag, "' failed, invalidate frame");
@@ -382,26 +377,25 @@ void FrameHandle::onOutputAttachmentInvalidated(FrameAttachmentData &data) {
 	_request->onOutputInvalidated(*_loop, data);
 }
 
-void FrameHandle::waitForDependencies(const Vector<Rc<DependencyEvent>> &events, Function<void(FrameHandle &, bool)> &&cb) {
+void FrameHandle::waitForDependencies(const Vector<Rc<DependencyEvent>> &events,
+		Function<void(FrameHandle &, bool)> &&cb) {
 	auto linkId = retain();
-	_loop->waitForDependencies(events, [this, cb = sp::move(cb), linkId] (bool success) {
+	_loop->waitForDependencies(events, [this, cb = sp::move(cb), linkId](bool success) {
 		cb(*this, success);
 		release(linkId);
 	});
 }
 
-void FrameHandle::waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
+void FrameHandle::waitForInput(FrameQueue &queue, AttachmentHandle &a, Function<void(bool)> &&cb) {
 	_request->waitForInput(queue, a, sp::move(cb));
 }
 
 void FrameHandle::signalDependencies(bool success) {
-	for (auto &it : _queues) {
-		_request->signalDependencies(*_loop, it->getQueue(), _valid);
-	}
+	for (auto &it : _queues) { _request->signalDependencies(*_loop, it->getQueue(), _valid); }
 }
 
 void FrameHandle::onQueueInvalidated(FrameQueue &) {
-	++ _queuesCompleted;
+	++_queuesCompleted;
 	invalidate();
 }
 
@@ -431,10 +425,8 @@ void FrameHandle::onComplete() {
 
 		_request->finalize(*_loop, attachments, _valid);
 
-		for (auto &it : _queues) {
-			_request->signalDependencies(*_loop, it->getQueue(), _valid);
-		}
+		for (auto &it : _queues) { _request->signalDependencies(*_loop, it->getQueue(), _valid); }
 	}
 }
 
-}
+} // namespace stappler::xenolith::core

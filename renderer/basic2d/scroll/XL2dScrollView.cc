@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -59,7 +60,7 @@ void ScrollView::Overscroll::handleContentSizeDirty() {
 
 void ScrollView::Overscroll::update(const UpdateTime &time) {
 	VectorSprite::update(time);
-	if (TimeInterval(time.global - _delayStart) > TimeInterval::microseconds(250000)) {
+	if (TimeInterval(time.global - _delayStart) > TimeInterval::microseconds(250'000)) {
 		decrementProgress(time.dt);
 	}
 }
@@ -98,20 +99,17 @@ void ScrollView::Overscroll::incrementProgress(float dt) {
 	_delayStart = Time::now().toMicros();
 }
 
-void ScrollView::Overscroll::decrementProgress(float dt) {
-	setProgress(_progress - (dt * 2.5f));
-}
+void ScrollView::Overscroll::decrementProgress(float dt) { setProgress(_progress - (dt * 2.5f)); }
 
-void ScrollView::Overscroll::updateProgress(VectorImage *) {
-
-}
+void ScrollView::Overscroll::updateProgress(VectorImage *) { }
 
 bool ScrollView::init(Layout l) {
 	if (!ScrollViewBase::init(l)) {
 		return false;
 	}
 
-	_indicator = addChild(Rc<LayerRounded>::create(Color4F(1.0f, 1.0f, 1.0f, 0.0f), 2.0f), ZOrder(1));
+	_indicator =
+			addChild(Rc<LayerRounded>::create(Color4F(1.0f, 1.0f, 1.0f, 0.0f), 2.0f), ZOrder(1));
 	_indicator->setAnchorPoint(Vec2(1, 0));
 
 	_overflowFront = addChild(Rc<Overscroll>::create());
@@ -126,32 +124,36 @@ bool ScrollView::init(Layout l) {
 void ScrollView::handleContentSizeDirty() {
 	ScrollViewBase::handleContentSizeDirty();
 	if (isVertical()) {
-		_overflowFront->setAnchorPoint(Vec2(0, 1)); // top
+		_overflowFront->setAnchorPoint(Vec2(0.0f, 1.0f)); // top
 		_overflowFront->setDirection(Overscroll::Direction::Top);
 		_overflowFront->setPosition(Vec2(0, _contentSize.height - _overscrollFrontOffset));
 		_overflowFront->setContentSize(Size2(_contentSize.width,
-				std::min(_contentSize.width * Overscroll::OverscrollScale, Overscroll::OverscrollMaxHeight)));
+				std::min(_contentSize.width * Overscroll::OverscrollScale,
+						Overscroll::OverscrollMaxHeight)));
 
-		_overflowBack->setAnchorPoint(Vec2(0, 0)); // bottom
+		_overflowBack->setAnchorPoint(Vec2(0.0f, 0.0f)); // bottom
 		_overflowBack->setDirection(Overscroll::Direction::Bottom);
 		_overflowBack->setPosition(Vec2(0, _overscrollBackOffset));
 		_overflowBack->setContentSize(Size2(_contentSize.width,
-				std::min(_contentSize.width * Overscroll::OverscrollScale, Overscroll::OverscrollMaxHeight)));
+				std::min(_contentSize.width * Overscroll::OverscrollScale,
+						Overscroll::OverscrollMaxHeight)));
 
 	} else {
 		_overflowFront->setAnchorPoint(Vec2(0, 0)); // left
 		_overflowFront->setDirection(Overscroll::Direction::Left);
 		_overflowFront->setPosition(Vec2(_overscrollFrontOffset, 0));
-		_overflowFront->setContentSize(Size2(
-				std::min(_contentSize.height * Overscroll::OverscrollScale, Overscroll::OverscrollMaxHeight),
-				_contentSize.height));
+		_overflowFront->setContentSize(
+				Size2(std::min(_contentSize.height * Overscroll::OverscrollScale,
+							  Overscroll::OverscrollMaxHeight),
+						_contentSize.height));
 
 		_overflowBack->setAnchorPoint(Vec2(1, 0)); // right
 		_overflowBack->setDirection(Overscroll::Direction::Right);
 		_overflowBack->setPosition(Vec2(_contentSize.width - _overscrollBackOffset, 0));
-		_overflowBack->setContentSize(Size2(
-				std::min(_contentSize.height * Overscroll::OverscrollScale, Overscroll::OverscrollMaxHeight),
-				_contentSize.height));
+		_overflowBack->setContentSize(
+				Size2(std::min(_contentSize.height * Overscroll::OverscrollScale,
+							  Overscroll::OverscrollMaxHeight),
+						_contentSize.height));
 	}
 	updateIndicatorPosition();
 }
@@ -161,26 +163,20 @@ void ScrollView::setOverscrollColor(const Color4F &val, bool withOpacity) {
 	_overflowBack->setColor(val, withOpacity);
 }
 
-Color4F ScrollView::getOverscrollColor() const {
-	return _overflowFront->getColor();
-}
+Color4F ScrollView::getOverscrollColor() const { return _overflowFront->getColor(); }
 
 void ScrollView::setOverscrollVisible(bool value) {
 	_overflowFront->setVisible(value);
 	_overflowBack->setVisible(value);
 }
 
-bool ScrollView::isOverscrollVisible() const {
-	return _overflowFront->isVisible();
-}
+bool ScrollView::isOverscrollVisible() const { return _overflowFront->isVisible(); }
 
 void ScrollView::setIndicatorColor(const Color4B &val, bool withOpacity) {
 	_indicator->setPathColor(val, withOpacity);
 }
 
-Color4F ScrollView::getIndicatorColor() const {
-	return _indicator->getColor();
-}
+Color4F ScrollView::getIndicatorColor() const { return _indicator->getColor(); }
 
 void ScrollView::setIndicatorVisible(bool value) {
 	_indicatorVisible = value;
@@ -191,9 +187,7 @@ void ScrollView::setIndicatorVisible(bool value) {
 	}
 }
 
-bool ScrollView::isIndicatorVisible() const {
-	return _indicatorVisible;
-}
+bool ScrollView::isIndicatorVisible() const { return _indicatorVisible; }
 
 void ScrollView::doSetScrollPosition(float pos) {
 	ScrollViewBase::doSetScrollPosition(pos);
@@ -241,11 +235,14 @@ void ScrollView::updateIndicatorPosition() {
 	const float scrollHeight = _contentSize.height;
 	const float scrollLength = getScrollLength();
 
-	updateIndicatorPosition(_indicator, (isVertical()?scrollHeight:scrollWidth) / scrollLength,
-			(_scrollPosition - getScrollMinPosition()) / (getScrollMaxPosition() - getScrollMinPosition()), true, 20.0f);
+	updateIndicatorPosition(_indicator, (isVertical() ? scrollHeight : scrollWidth) / scrollLength,
+			(_scrollPosition - getScrollMinPosition())
+					/ (getScrollMaxPosition() - getScrollMinPosition()),
+			true, 20.0f);
 }
 
-void ScrollView::updateIndicatorPosition(Node *indicator, float size, float value, bool actions, float min) {
+void ScrollView::updateIndicatorPosition(Node *indicator, float size, float value, bool actions,
+		float min) {
 	if (!_indicatorVisible) {
 		return;
 	}
@@ -280,7 +277,8 @@ void ScrollView::updateIndicatorPosition(Node *indicator, float size, float valu
 			float r = scrollHeight - h - 4 - paddingLocal.top - paddingLocal.bottom;
 
 			indicator->setContentSize(Size2(3, h));
-			indicator->setPosition(Vec2(scrollWidth - 2, paddingLocal.bottom + 2 + r * (1.0f - value)));
+			indicator->setPosition(
+					Vec2(scrollWidth - 2, paddingLocal.bottom + 2 + r * (1.0f - value)));
 			indicator->setAnchorPoint(Vec2(1, 0));
 		} else {
 			float h = (scrollWidth - 4 - paddingLocal.left - paddingLocal.right) * size;
@@ -295,9 +293,11 @@ void ScrollView::updateIndicatorPosition(Node *indicator, float size, float valu
 		}
 		if (actions) {
 			if (indicator->getOpacity() != 1.0f) {
-				Action* a = indicator->getActionByTag(19);
+				Action *a = indicator->getActionByTag(19);
 				if (!a) {
-					indicator->runAction(Rc<FadeTo>::create(progress(0.1f, 0.0f, indicator->getOpacity()), 1.0f), 19);
+					indicator->runAction(
+							Rc<FadeTo>::create(progress(0.1f, 0.0f, indicator->getOpacity()), 1.0f),
+							19);
 				}
 			}
 
@@ -312,8 +312,8 @@ void ScrollView::updateIndicatorPosition(Node *indicator, float size, float valu
 
 void ScrollView::setPadding(const Padding &p) {
 	if (p != _paddingGlobal) {
-		float offset = (isVertical()?_paddingGlobal.top:_paddingGlobal.left);
-		float newOffset = (isVertical()?p.top:p.left);
+		float offset = (isVertical() ? _paddingGlobal.top : _paddingGlobal.left);
+		float newOffset = (isVertical() ? p.top : p.left);
 		ScrollViewBase::setPadding(p);
 
 		if (offset != newOffset) {
@@ -328,9 +328,7 @@ void ScrollView::setOverscrollFrontOffset(float value) {
 		_contentSizeDirty = true;
 	}
 }
-float ScrollView::getOverscrollFrontOffset() const {
-	return _overscrollFrontOffset;
-}
+float ScrollView::getOverscrollFrontOffset() const { return _overscrollFrontOffset; }
 
 void ScrollView::setOverscrollBackOffset(float value) {
 	if (_overscrollBackOffset != value) {
@@ -338,30 +336,20 @@ void ScrollView::setOverscrollBackOffset(float value) {
 		_contentSizeDirty = true;
 	}
 }
-float ScrollView::getOverscrollBackOffset() const {
-	return _overscrollBackOffset;
-}
+float ScrollView::getOverscrollBackOffset() const { return _overscrollBackOffset; }
 
 void ScrollView::setIndicatorIgnorePadding(bool value) {
 	if (_indicatorIgnorePadding != value) {
 		_indicatorIgnorePadding = value;
 	}
 }
-bool ScrollView::isIndicatorIgnorePadding() const {
-	return _indicatorIgnorePadding;
-}
+bool ScrollView::isIndicatorIgnorePadding() const { return _indicatorIgnorePadding; }
 
-void ScrollView::setTapCallback(const TapCallback &cb) {
-	_tapCallback = cb;
-}
+void ScrollView::setTapCallback(const TapCallback &cb) { _tapCallback = cb; }
 
-const ScrollView::TapCallback &ScrollView::getTapCallback() const {
-	return _tapCallback;
-}
+const ScrollView::TapCallback &ScrollView::getTapCallback() const { return _tapCallback; }
 
-void ScrollView::setAnimationCallback(const AnimationCallback &cb) {
-	_animationCallback = cb;
-}
+void ScrollView::setAnimationCallback(const AnimationCallback &cb) { _animationCallback = cb; }
 
 const ScrollView::AnimationCallback &ScrollView::getAnimationCallback() const {
 	return _animationCallback;
@@ -372,14 +360,9 @@ void ScrollView::update(const UpdateTime &time) {
 	auto factor = std::min(64.0f, _adjustValue);
 
 	switch (_adjust) {
-	case Adjust::Front:
-		newpos += (45.0f + progress(0.0f, 200.0f, factor / 32.0f)) * time.dt;
-		break;
-	case Adjust::Back:
-		newpos -= (45.0f + progress(0.0f, 200.0f, factor / 32.0f)) * time.dt;
-		break;
-	default:
-		break;
+	case Adjust::Front: newpos += (45.0f + progress(0.0f, 200.0f, factor / 32.0f)) * time.dt; break;
+	case Adjust::Back: newpos -= (45.0f + progress(0.0f, 200.0f, factor / 32.0f)) * time.dt; break;
+	default: break;
 	}
 
 	if (newpos != getScrollPosition()) {
@@ -413,8 +396,13 @@ void ScrollView::runAdjustPosition(float newPos, float factor) {
 				t = progress(0.15f, 0.45f, (dist - 20.0f) / 200.0f);
 			}
 			_root->stopAllActionsByTag("ScrollViewAdjust"_tag);
-			auto a = Rc<Sequence>::create(Rc<EaseQuadraticActionInOut>::create(Rc<MoveTo>::create(t,
-					isVertical()?Vec2(_root->getPosition().x, newPos + _scrollSize):Vec2(-newPos, _root->getPosition().y))),
+			auto a = Rc<Sequence>::create(
+					Rc<EaseActionTyped>::create(
+							Rc<MoveTo>::create(t,
+									isVertical()
+											? Vec2(_root->getPosition().x, newPos + _scrollSize)
+											: Vec2(-newPos, _root->getPosition().y)),
+							EaseActionTyped::Type::QuadEaseInOut),
 					[this] { _adjustValue = nan(); });
 			_root->runAction(a, "ScrollViewAdjust"_tag);
 		}
@@ -425,7 +413,7 @@ void ScrollView::runAdjust(float pos, float factor) {
 	auto scrollSize = getScrollSize();
 
 	float newPos = nan();
-	if (scrollSize < 64.0f +  48.0f) {
+	if (scrollSize < 64.0f + 48.0f) {
 		newPos = ((pos - 64.0f) + (pos - scrollSize + 48.0f)) / 2.0f;
 	} else if (pos < scrollPos + 64.0f) {
 		newPos = pos - 64.0f;
@@ -445,9 +433,7 @@ void ScrollView::scheduleAdjust(Adjust a, float val) {
 			unscheduleUpdate();
 			_adjustValue = nan();
 			break;
-		default:
-			scheduleUpdate();
-			break;
+		default: scheduleUpdate(); break;
 		}
 	}
 }
@@ -467,7 +453,7 @@ void ScrollView::load(const Value &d) {
 	}
 }
 
-ScrollController::Item * ScrollView::getItemForNode(Node *node) const {
+ScrollController::Item *ScrollView::getItemForNode(Node *node) const {
 	auto &items = _controller->getItems();
 	for (auto &it : items) {
 		if (it.node && it.node == node) {
@@ -477,18 +463,20 @@ ScrollController::Item * ScrollView::getItemForNode(Node *node) const {
 	return nullptr;
 }
 
-Rc<ActionProgress> ScrollView::resizeNode(Node *node, float newSize, float duration, Function<void()> &&cb) {
+Rc<ActionProgress> ScrollView::resizeNode(Node *node, float newSize, float duration,
+		Function<void()> &&cb) {
 	return resizeNode(getItemForNode(node), newSize, duration, sp::move(cb));
 }
 
-Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float newSize, float duration, Function<void()> &&cb) {
+Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float newSize,
+		float duration, Function<void()> &&cb) {
 	if (!item) {
 		return nullptr;
 	}
 
 	auto &items = _controller->getItems();
 
-	float sourceSize = isVertical()?item->size.height:item->size.width;
+	float sourceSize = isVertical() ? item->size.height : item->size.width;
 	float tergetSize = newSize;
 
 	struct ItemRects {
@@ -505,23 +493,15 @@ Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float ne
 	for (auto &it : items) {
 		if (it.node && &it == item) {
 			offset += sourceSize - tergetSize;
-			vec.emplace_back(ItemRects{
-				getNodeScrollPosition(it.pos),
-				getNodeScrollSize(it.size),
-				getNodeScrollPosition(it.pos),
-				tergetSize,
-				&it});
+			vec.emplace_back(ItemRects{getNodeScrollPosition(it.pos), getNodeScrollSize(it.size),
+				getNodeScrollPosition(it.pos), tergetSize, &it});
 		} else if (offset != 0.0f) {
-			vec.emplace_back(ItemRects{
-				getNodeScrollPosition(it.pos),
-				getNodeScrollSize(it.size),
-				getNodeScrollPosition(it.pos) - offset,
-				getNodeScrollSize(it.size),
-				&it});
+			vec.emplace_back(ItemRects{getNodeScrollPosition(it.pos), getNodeScrollSize(it.size),
+				getNodeScrollPosition(it.pos) - offset, getNodeScrollSize(it.size), &it});
 		}
 	}
 
-	auto ret = Rc<ActionProgress>::create(duration, [this, vec] (float p) {
+	auto ret = Rc<ActionProgress>::create(duration, [this, vec](float p) {
 		for (auto &it : vec) {
 			if (isVertical()) {
 				it.item->pos.y = progress(it.startPos, it.targetPos, p);
@@ -531,13 +511,14 @@ Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float ne
 				it.item->size.width = progress(it.startSize, it.targetSize, p);
 			}
 			if (it.item->node) {
-				updateScrollNode(it.item->node, it.item->pos, it.item->size, it.item->zIndex, it.item->name);
+				updateScrollNode(it.item->node, it.item->pos, it.item->size, it.item->zIndex,
+						it.item->name);
 			}
 		}
 		_controller->onScrollPosition(true);
-	}, [] () {
+	}, []() {
 
-	}, [cb = sp::move(cb)] () {
+	}, [cb = sp::move(cb)]() {
 		if (cb) {
 			cb();
 		}
@@ -545,11 +526,13 @@ Rc<ActionProgress> ScrollView::resizeNode(ScrollController::Item *item, float ne
 	return ret;
 }
 
-Rc<ActionProgress> ScrollView::removeNode(Node *node, float duration, Function<void()> &&cb, bool disable) {
+Rc<ActionProgress> ScrollView::removeNode(Node *node, float duration, Function<void()> &&cb,
+		bool disable) {
 	return removeNode(getItemForNode(node), duration, sp::move(cb), disable);
 }
 
-Rc<ActionProgress> ScrollView::removeNode(ScrollController::Item *item, float duration, Function<void()> &&cb, bool disable) {
+Rc<ActionProgress> ScrollView::removeNode(ScrollController::Item *item, float duration,
+		Function<void()> &&cb, bool disable) {
 	return resizeNode(item, 0.0f, duration, [item, cb = sp::move(cb), disable] {
 		if (item->node) {
 			if (item->node->isRunning()) {
@@ -567,4 +550,4 @@ Rc<ActionProgress> ScrollView::removeNode(ScrollController::Item *item, float du
 	});
 }
 
-}
+} // namespace stappler::xenolith::basic2d

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -61,6 +62,7 @@
 #define XL_FRAME_PROFILE(fn, tag, max) \
 	do { XL_PROFILE_BEGIN(frame, "gl::FrameHandle", tag, max); fn; XL_PROFILE_END(frame); } while (0);
 
+#include "XLCoreEnum.cc"
 #include "XLCoreInfo.cc"
 #include "XLCoreQueueData.cc"
 #include "XLCoreResource.cc"
@@ -93,44 +95,35 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-const char * getEngineName() {
-	return "Stappler/Xenolith";
-}
+const char *getEngineName() { return "Stappler/Xenolith"; }
 
-const char * getVersionString() {
-	static auto versionString = metastring::merge(metastring::numeric<size_t(XENOLITH_VERSION_VARIANT)>(),
-		metastring::metastring<'.'>(),
-		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_API)>(),
-		metastring::metastring<'.'>(),
-		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_REV)>(),
-		metastring::metastring<'.'>(),
-		metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_BUILD)>(),
-		metastring::metastring<char(0)>()
-		).to_array();
+const char *getVersionString() {
+	static auto versionString = metastring::merge(
+			metastring::numeric<size_t(XENOLITH_VERSION_VARIANT)>(), metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_API)>(),
+			metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_REV)>(),
+			metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::XENOLITH_VERSION_BUILD)>(),
+			metastring::metastring<char(0)>())
+										.to_array();
 
 	return versionString.data();
 }
 
 uint32_t getVersionIndex() {
-	return SP_MAKE_API_VERSION(XENOLITH_VERSION_VARIANT, buildconfig::XENOLITH_VERSION_API, buildconfig::XENOLITH_VERSION_REV, buildconfig::XENOLITH_VERSION_BUILD);
+	return SP_MAKE_API_VERSION(XENOLITH_VERSION_VARIANT, buildconfig::XENOLITH_VERSION_API,
+			buildconfig::XENOLITH_VERSION_REV, buildconfig::XENOLITH_VERSION_BUILD);
 }
 
-uint32_t getVersionVariant() {
-	return XENOLITH_VERSION_VARIANT;
-}
+uint32_t getVersionVariant() { return XENOLITH_VERSION_VARIANT; }
 
-uint32_t getVersionApi() {
-	return buildconfig::XENOLITH_VERSION_API;
-}
+uint32_t getVersionApi() { return buildconfig::XENOLITH_VERSION_API; }
 
-uint32_t getVersionRev() {
-	return buildconfig::XENOLITH_VERSION_REV;
-}
+uint32_t getVersionRev() { return buildconfig::XENOLITH_VERSION_REV; }
 
-uint32_t getVersionBuild() {
-	return buildconfig::XENOLITH_VERSION_BUILD;
-}
+uint32_t getVersionBuild() { return buildconfig::XENOLITH_VERSION_BUILD; }
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_CORE_XLCORE_CPP_ */

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,22 +31,19 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 Menu::~Menu() { }
 
 bool Menu::init() {
-	if (!Surface::init(SurfaceStyle(
-			ShapeFamily::RoundedCorners,
-			ShapeStyle::ExtraSmall,
-			Elevation::Level2,
-			NodeStyle::SurfaceTonalElevated))) {
+	if (!Surface::init(SurfaceStyle(ShapeFamily::RoundedCorners, ShapeStyle::ExtraSmall,
+				Elevation::Level2, NodeStyle::SurfaceTonalElevated))) {
 		return false;
 	}
 
-	_menuListener = addComponent(Rc<DataListener<MenuSource>>::create([this] (SubscriptionFlags flags) {
-		handleSourceDirty();
-	}));
+	_menuListener = addComponent(Rc<DataListener<MenuSource>>::create(
+			[this](SubscriptionFlags flags) { handleSourceDirty(); }));
 
 	_scroll = addChild(Rc<ScrollView>::create(ScrollView::Vertical), ZOrder(1));
-	_scroll->setAnchorPoint(Vec2(0, 1));
+	_scroll->setAnchorPoint(Vec2(0.0f, 1.0f));
 
-	auto comp = _scroll->addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	auto comp = _scroll->addComponent(
+			Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
 	comp->enableScissor(Padding(-2.0f));
 
 	_controller = _scroll->setController(Rc<ScrollController>::create());
@@ -63,13 +61,9 @@ bool Menu::init(MenuSource *source) {
 	return true;
 }
 
-void Menu::setMenuSource(MenuSource *source) {
-	_menuListener->setSubscription(source);
-}
+void Menu::setMenuSource(MenuSource *source) { _menuListener->setSubscription(source); }
 
-MenuSource *Menu::getMenuSource() const {
-	return _menuListener->getSubscription();
-}
+MenuSource *Menu::getMenuSource() const { return _menuListener->getSubscription(); }
 
 void Menu::setEnabled(bool value) {
 	_scroll->setEnabled(value);
@@ -83,9 +77,7 @@ void Menu::setEnabled(bool value) {
 	}
 }
 
-bool Menu::isEnabled() const {
-	return _scroll->isEnabled();
-}
+bool Menu::isEnabled() const { return _scroll->isEnabled(); }
 
 void Menu::rebuildMenu() {
 	_controller->clear();
@@ -98,11 +90,11 @@ void Menu::rebuildMenu() {
 	auto &menuItems = _menuListener->getSubscription()->getItems();
 	for (auto &item : menuItems) {
 		if (item->getType() == MenuSourceItem::Type::Separator) {
-			_controller->addItem([this, item] (const ScrollController::Item &) -> Rc<Node> {
+			_controller->addItem([this, item](const ScrollController::Item &) -> Rc<Node> {
 				return createSeparator(this, item);
 			}, MenuVerticalPadding);
 		} else if (item->getType() == MenuSourceItem::Type::Button) {
-			_controller->addItem([this, item] (const ScrollController::Item &) -> Rc<Node> {
+			_controller->addItem([this, item](const ScrollController::Item &) -> Rc<Node> {
 				return createButton(this, static_cast<MenuSourceButton *>(item.get()));
 			}, MenuItemHeight);
 		} else if (item->getType() == MenuSourceItem::Type::Custom) {
@@ -110,7 +102,8 @@ void Menu::rebuildMenu() {
 			const auto &func = customItem->getFactoryFunction();
 			if (func) {
 				float height = customItem->getHeight(this, _contentSize.width);
-				_controller->addItem([this, func, item, customItem] (const ScrollController::Item &) -> Rc<Node> {
+				_controller->addItem(
+						[this, func, item, customItem](const ScrollController::Item &) -> Rc<Node> {
 					return func(this, customItem);
 				}, height);
 			}
@@ -139,13 +132,9 @@ void Menu::layoutSubviews() {
 	_scroll->setContentSize(Size2(size.width, size.height));
 }
 
-void Menu::setMenuButtonCallback(const ButtonCallback &cb) {
-	_callback = cb;
-}
+void Menu::setMenuButtonCallback(const ButtonCallback &cb) { _callback = cb; }
 
-const Menu::ButtonCallback & Menu::getMenuButtonCallback() {
-	return _callback;
-}
+const Menu::ButtonCallback &Menu::getMenuButtonCallback() { return _callback; }
 
 void Menu::onMenuButtonPressed(MenuButton *button) {
 	if (_callback) {
@@ -153,13 +142,11 @@ void Menu::onMenuButtonPressed(MenuButton *button) {
 	}
 }
 
-ScrollView *Menu::getScroll() const {
-	return _scroll;
-}
+ScrollView *Menu::getScroll() const { return _scroll; }
 
 void Menu::handleSourceDirty() {
 	_controller->clear();
 	rebuildMenu();
 }
 
-}
+} // namespace stappler::xenolith::material2d

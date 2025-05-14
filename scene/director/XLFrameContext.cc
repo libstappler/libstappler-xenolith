@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 FrameContext::~FrameContext() { }
 
-bool FrameContext::init() {
-	return true;
-}
+bool FrameContext::init() { return true; }
 
 void FrameContext::onEnter(Scene *scene) {
 	_scene = scene;
@@ -44,9 +43,7 @@ void FrameContext::onExit() {
 }
 
 SP_COVERAGE_TRIVIAL
-Rc<FrameContextHandle> FrameContext::makeHandle(FrameInfo &) {
-	return nullptr;
-}
+Rc<FrameContextHandle> FrameContext::makeHandle(FrameInfo &) { return nullptr; }
 
 void FrameContext::submitHandle(FrameInfo &info, FrameContextHandle *handle) {
 	submitMaterials(info);
@@ -69,13 +66,14 @@ core::MaterialId FrameContext::getMaterial(const MaterialInfo &info) const {
 	return 0;
 }
 
-core::MaterialId FrameContext::acquireMaterial(const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
-	auto pipeline = getPipelineForMaterial(info, images);
+core::MaterialId FrameContext::acquireMaterial(const core::PipelineFamilyInfo *family,
+		const MaterialInfo &info, Vector<core::MaterialImage> &&images, Ref *data, bool revokable) {
+	auto pipeline = getPipelineForMaterial(family, info, images);
 	if (!pipeline) {
 		return 0;
 	}
 
-	for (uint32_t idx = 0; idx < uint32_t(images.size()); ++ idx) {
+	for (uint32_t idx = 0; idx < uint32_t(images.size()); ++idx) {
 		if (images[idx].image != nullptr) {
 			auto &image = images[idx];
 			image.info = getImageViewForMaterial(pipeline, info, idx, images[idx].image);
@@ -126,15 +124,22 @@ void FrameContext::readMaterials(core::MaterialAttachment *a) {
 				break;
 			}
 
-			auto &sp = _layouts.emplace_back(PipelineLayoutData({layout}));
+			_layouts.emplace(layout);
 
-			for (auto &pipeline : layout->graphicPipelines) {
-				auto hash = pipeline->material.hash();
-				auto it = sp.pipelines.find(hash);
-				if (it == sp.pipelines.end()) {
-					it = sp.pipelines.emplace(hash, Vector<const core::GraphicPipelineData *>()).first;
+			for (auto &family : layout->families) {
+				auto sp = _families.emplace(family, PipelineLayoutData({family, family->layout}))
+								  .first;
+
+				for (auto &pipeline : family->graphicPipelines) {
+					auto hash = pipeline->material.hash();
+					auto it = sp->second.pipelines.find(hash);
+					if (it == sp->second.pipelines.end()) {
+						it = sp->second.pipelines
+									 .emplace(hash, Vector<const core::GraphicPipelineData *>())
+									 .first;
+					}
+					it->second.emplace_back(pipeline);
 				}
-				it->second.emplace_back(pipeline);
 			}
 		}
 
@@ -155,7 +160,7 @@ MaterialInfo FrameContext::getMaterialInfo(const Rc<core::Material> &material) c
 			ret.samplers[idx] = it.sampler;
 			ret.colorModes[idx] = it.info.getColorMode();
 		}
-		++ idx;
+		++idx;
 	}
 
 	ret.pipeline = material->getPipeline()->material;
@@ -165,9 +170,10 @@ MaterialInfo FrameContext::getMaterialInfo(const Rc<core::Material> &material) c
 void FrameContext::addPendingMaterial(Rc<core::Material> &&material) {
 	_pendingMaterialsToAdd.emplace_back(move(material));
 	if (!_materialDependency) {
-		_materialDependency = Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{
-			Rc<core::Queue>(_materialAttachment->getCompiler())
-		}, "Material");
+		_materialDependency =
+				Rc<core::DependencyEvent>::alloc(core::DependencyEvent::QueueSet{Rc<core::Queue>(
+														 _materialAttachment->getCompiler())},
+						"Material");
 	}
 }
 
@@ -198,25 +204,51 @@ core::ImageViewInfo FrameContext::getImageViewForMaterial(const core::GraphicPip
 	return core::ImageViewInfo(*image, pipeline->material.getImageViewType(), info.colorModes[idx]);
 }
 
-auto FrameContext::getPipelineForMaterial(const MaterialInfo &info, SpanView<core::MaterialImage> images) const -> const core::GraphicPipelineData * {
-	auto hash = info.pipeline.hash();
-	for (auto &it : _layouts) {
-		auto hashIt = it.pipelines.find(hash);
-		if (hashIt != it.pipelines.end()) {
-			for (auto &pipeline : hashIt->second) {
-				if (pipeline->material == info.pipeline && isPipelineMatch(pipeline, info, images)) {
-					return pipeline;
+auto FrameContext::getPipelineForMaterial(const core::PipelineFamilyInfo *family,
+		const MaterialInfo &info, SpanView<core::MaterialImage> images) const
+		-> const core::GraphicPipelineData * {
+	if (!family) {
+		for (auto &it : _layouts) {
+			auto pipeline = getPipelineForMaterial(it->defaultFamily, info, images);
+			if (pipeline) {
+				return pipeline;
+			}
+		}
+	} else {
+		auto hash = info.pipeline.hash();
+		auto it = _families.find(family);
+		if (it != _families.end()) {
+			auto hashIt = it->second.pipelines.find(hash);
+			if (hashIt != it->second.pipelines.end()) {
+				for (auto &pipeline : hashIt->second) {
+					if (pipeline->material == info.pipeline
+							&& isPipelineMatch(pipeline, family, info, images)) {
+						return pipeline;
+					}
 				}
 			}
 		}
+		log::warn("Scene", "No pipeline for attachment '", _materialAttachment->getName(),
+				"': ", info.pipeline.description(), " : ", info.pipeline.data());
 	}
-	log::warn("Scene", "No pipeline for attachment '", _materialAttachment->getName(), "': ",
-			info.pipeline.description(), " : ", info.pipeline.data());
 	return nullptr;
 }
 
-bool FrameContext::isPipelineMatch(const core::GraphicPipelineData *data, const MaterialInfo &info, SpanView<core::MaterialImage> images) const {
-	return true; // TODO: true match
+bool FrameContext::isPipelineMatch(const core::GraphicPipelineData *data,
+		const core::PipelineFamilyInfo *family, const MaterialInfo &info,
+		SpanView<core::MaterialImage> images) const {
+	if (family) {
+		if (data->family == family) {
+			return true; // TODO: true match
+		}
+	} else {
+		for (auto &it : _layouts) {
+			if (data->family == it->defaultFamily) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void FrameContext::submitMaterials(const FrameInfo &info) {
@@ -236,9 +268,7 @@ void FrameContext::submitMaterials(const FrameInfo &info) {
 				app->wakeup();
 			};
 
-			for (auto &it : req->materialsToRemove) {
-				emplace_ordered(_revokedIds, it);
-			}
+			for (auto &it : req->materialsToRemove) { emplace_ordered(_revokedIds, it); }
 
 			info.director->getGlLoop()->compileMaterials(move(req), events);
 		}
@@ -253,7 +283,7 @@ void FrameContext::revokeImages(SpanView<uint64_t> vec) {
 #ifdef COVERAGE
 	listMaterials();
 #endif
-	auto shouldRevoke = [&, this] (const ContextMaterialInfo &iit) {
+	auto shouldRevoke = [&, this](const ContextMaterialInfo &iit) {
 		for (auto &id : vec) {
 			if (iit.info.hasImage(id)) {
 				emplace_ordered(_pendingMaterialsToRemove, iit.id);
@@ -270,13 +300,13 @@ void FrameContext::revokeImages(SpanView<uint64_t> vec) {
 				if (shouldRevoke(*iit)) {
 					iit = it.second.erase(iit);
 				} else {
-					++ iit;
+					++iit;
 				}
 			} else {
-				++ iit;
+				++iit;
 			}
 		}
 	}
 }
 
-}
+} // namespace stappler::xenolith

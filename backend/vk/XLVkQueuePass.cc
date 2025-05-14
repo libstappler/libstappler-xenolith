@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,15 +42,9 @@ bool QueuePass::init(QueuePassBuilder &passBuilder) {
 	if (core::QueuePass::init(passBuilder)) {
 		switch (getType()) {
 		case core::PassType::Graphics:
-		case core::PassType::Generic:
-			_queueOps = core::QueueFlags::Graphics;
-			break;
-		case core::PassType::Compute:
-			_queueOps = core::QueueFlags::Compute;
-			break;
-		case core::PassType::Transfer:
-			_queueOps = core::QueueFlags::Transfer;
-			break;
+		case core::PassType::Generic: _queueOps = core::QueueFlags::Graphics; break;
+		case core::PassType::Compute: _queueOps = core::QueueFlags::Compute; break;
+		case core::PassType::Transfer: _queueOps = core::QueueFlags::Transfer; break;
 		}
 		return true;
 	}
@@ -65,11 +60,11 @@ Rc<core::QueuePassHandle> QueuePass::makeFrameHandle(const FrameQueue &queue) {
 	return Rc<vk::QueuePassHandle>::create(*this, queue);
 }
 
-VkRect2D QueuePassHandle::rotateScissor(const core::FrameConstraints &constraints, const URect &scissor) {
+VkRect2D QueuePassHandle::rotateScissor(const core::FrameConstraints &constraints,
+		const URect &scissor) {
 	VkRect2D scissorRect{
-		{ int32_t(scissor.x), int32_t(constraints.extent.height - scissor.y - scissor.height) },
-		{ scissor.width, scissor.height }
-	};
+		{int32_t(scissor.x), int32_t(constraints.extent.height - scissor.y - scissor.height)},
+		{scissor.width, scissor.height}};
 
 	switch (core::getPureTransform(constraints.transform)) {
 	case core::SurfaceTransformFlags::Rotate90:
@@ -77,9 +72,7 @@ VkRect2D QueuePassHandle::rotateScissor(const core::FrameConstraints &constraint
 		scissorRect.offset.x = scissor.y;
 		std::swap(scissorRect.extent.width, scissorRect.extent.height);
 		break;
-	case core::SurfaceTransformFlags::Rotate180:
-		scissorRect.offset.y = scissor.y;
-		break;
+	case core::SurfaceTransformFlags::Rotate180: scissorRect.offset.y = scissor.y; break;
 	case core::SurfaceTransformFlags::Rotate270:
 		scissorRect.offset.y = constraints.extent.height - scissor.x - scissor.width;
 		scissorRect.offset.x = constraints.extent.width - scissor.y - scissor.height;
@@ -102,9 +95,7 @@ VkRect2D QueuePassHandle::rotateScissor(const core::FrameConstraints &constraint
 	return scissorRect;
 }
 
-QueuePassHandle::~QueuePassHandle() {
-	invalidate();
-}
+QueuePassHandle::~QueuePassHandle() { invalidate(); }
 
 void QueuePassHandle::invalidate() {
 	if (_pool) {
@@ -135,8 +126,9 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 
 	prepareSubpasses(q);
 
-	for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++ i) {
-		_descriptors.emplace_back(static_cast<RenderPass *>(_data->impl.get())->acquireDescriptorPool(*_device, i));
+	for (uint32_t i = 0; i < _data->pipelineLayouts.size(); ++i) {
+		_descriptors.emplace_back(
+				static_cast<RenderPass *>(_data->impl.get())->acquireDescriptorPool(*_device, i));
 	}
 
 	// If updateAfterBind feature supported for all renderpass bindings
@@ -144,14 +136,15 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	// (ordering for bind|update is not defined in this case)
 
 	if (_data->hasUpdateAfterBind) {
-		q.getFrame()->performInQueue([this] (FrameHandle &frame) {
+		q.getFrame()->performInQueue([this](FrameHandle &frame) {
 			for (auto &it : _descriptors) {
-				if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, it, true)) {
+				if (!static_cast<RenderPass *>(_data->impl.get())
+								->writeDescriptors(*this, it, true)) {
 					return false;
 				}
 			}
 			return true;
-		}, [this] (FrameHandle &frame, bool success) {
+		}, [this](FrameHandle &frame, bool success) {
 			if (!success) {
 				_valid = false;
 				log::error("VK-Error", "Fail to doPrepareDescriptors");
@@ -167,7 +160,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		_descriptorsReady = true;
 	}
 
-	q.getFrame()->performInQueue([this] (FrameHandle &frame) {
+	q.getFrame()->performInQueue([this](FrameHandle &frame) {
 		for (auto &it : _descriptors) {
 			if (!static_cast<RenderPass *>(_data->impl.get())->writeDescriptors(*this, it, false)) {
 				return false;
@@ -180,7 +173,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 			return true;
 		}
 		return false;
-	}, [this, cb] (FrameHandle &frame, bool success) {
+	}, [this, cb](FrameHandle &frame, bool success) {
 		if (!success) {
 			log::error("VK-Error", "Fail to doPrepareCommands");
 			_valid = false;
@@ -195,10 +188,12 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	return false;
 }
 
-void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
+void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(bool)> &&onSubmited,
+		Function<void(bool)> &&onComplete) {
 	if (!_pool) {
 		onSubmited(true);
-		q.getFrame()->performInQueue([onComplete = sp::move(onComplete)] (FrameHandle &frame) mutable {
+		q.getFrame()->performInQueue(
+				[onComplete = sp::move(onComplete)](FrameHandle &frame) mutable {
 			onComplete(true);
 			return true;
 		}, this, "QueuePassHandle::complete");
@@ -211,16 +206,17 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 	_fence->setFrame(f->getOrder());
 	_fence->setTag(getName());
 
-	_fence->addRelease([dev = _device, pool = _pool, loop = q.getLoop()] (bool success) {
+	_fence->addRelease([dev = _device, pool = _pool, loop = q.getLoop()](bool success) {
 		dev->releaseCommandPool(*loop, Rc<CommandPool>(pool));
 	}, nullptr, "QueuePassHandle::submit dev->releaseCommandPool");
 
-	_fence->addRelease([this, func = sp::move(onComplete), q = &q] (bool success) mutable {
+	_fence->addRelease([this, func = sp::move(onComplete), q = &q](bool success) mutable {
 		doComplete(*q, sp::move(func), success);
 	}, this, "QueuePassHandle::submit onComplete");
 
 	for (auto &pool : _descriptors) {
-		_fence->addRelease([pool, pass = static_cast<RenderPass *>(_data->impl.get())] (bool success) mutable {
+		_fence->addRelease(
+				[pool, pass = static_cast<RenderPass *>(_data->impl.get())](bool success) mutable {
 			pass->releaseDescriptorPool(move(pool));
 		}, _data->impl.get(), "QueuePassHandle::pass->releaseDescriptorPool");
 	}
@@ -230,43 +226,44 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 	auto ops = getQueueOps();
 
 	_device->acquireQueue(ops, *f.get(),
-			[this, onSubmited = sp::move(onSubmited)] (FrameHandle &frame, const Rc<core::DeviceQueue> &queue) mutable {
+			[this, onSubmited = sp::move(onSubmited)](FrameHandle &frame,
+					const Rc<core::DeviceQueue> &queue) mutable {
 		_queue = static_cast<DeviceQueue *>(queue.get());
 
-		frame.performInQueue([this, onSubmited = sp::move(onSubmited)] (FrameHandle &frame) mutable {
+		frame.performInQueue([this, onSubmited = sp::move(onSubmited)](FrameHandle &frame) mutable {
 			if (!doSubmit(frame, sp::move(onSubmited))) {
 				return false;
 			}
 			return true;
 		}, this, "QueuePassHandle::submit");
-	}, [this] (FrameHandle &frame) {
+	},
+			[this](FrameHandle &frame) {
 		_sync = nullptr;
 		invalidate();
 	}, this);
 }
 
-void QueuePassHandle::finalize(FrameQueue &, bool success) {
-
-}
+void QueuePassHandle::finalize(FrameQueue &, bool success) { }
 
 core::QueueFlags QueuePassHandle::getQueueOps() const {
 	return (static_cast<vk::QueuePass *>(_queuePass.get()))->getQueueOps();
 }
 
 Vector<const core::CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&, this](CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		auto queue = handle.getFrameQueue(_data->queue->queue);
 		pass->perform(*this, buf, [&, this] {
 			size_t i = 0;
 			for (auto &it : _data->subpasses) {
 				if (it->commandsCallback != nullptr) {
-					it->commandsCallback(*it, *queue, buf);
+					it->commandsCallback(*queue, *it, buf);
 				}
 				if (i + 2 < _data->subpasses.size()) {
 					buf.cmdNextSubpass();
 				}
-				++ i;
+				++i;
 			}
 		});
 		return true;
@@ -277,7 +274,9 @@ Vector<const core::CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHand
 bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited) {
 	auto success = _queue->submit(*_sync, *_pool, *_fence, _buffers, _queueIdleFlags);
 	_pool = nullptr;
-	frame.performOnGlThread([this, success, onSubmited = sp::move(onSubmited), queue = move(_queue), armedTime = _fence->getArmedTime()] (FrameHandle &frame) mutable {
+	frame.performOnGlThread(
+			[this, success, onSubmited = sp::move(onSubmited), queue = move(_queue),
+					armedTime = _fence->getArmedTime()](FrameHandle &frame) mutable {
 		_queueData->submitTime = armedTime;
 
 		if (queue) {
@@ -293,15 +292,15 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 			log::error("VK-Error", "Fail to vkQueueSubmit: ", success);
 		}
 		_sync = nullptr;
-	}, nullptr, false, "QueuePassHandle::doSubmit");
+	},
+			nullptr, false, "QueuePassHandle::doSubmit");
 	return success == Status::Ok;
 }
 
-void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&func, bool success,
+		Rc<Fence> &&fence) {
 	auto queue = handle.getFrameQueue(_data->queue->queue);
-	for (auto &it : _data->submittedCallbacks) {
-		it(*_data, *queue, success);
-	}
+	for (auto &it : _data->submittedCallbacks) { it(*queue, *_data, success); }
 
 	func(success);
 
@@ -309,20 +308,19 @@ void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&fu
 }
 
 void QueuePassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
-	for (auto &it : _data->completeCallbacks) {
-		it(*_data, queue, success);
-	}
+	for (auto &it : _data->completeCallbacks) { it(queue, *_data, success); }
 
 	func(success);
 }
 
-void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
-		Vector<ImageMemoryBarrier> &outputImageBarriers, Vector<BufferMemoryBarrier> &outputBufferBarriers) {
+void QueuePassHandle::doFinalizeTransfer(core::MaterialSet *materials,
+		Vector<ImageMemoryBarrier> &outputImageBarriers,
+		Vector<BufferMemoryBarrier> &outputBufferBarriers) {
 	if (!materials) {
 		return;
 	}
 
-	auto b = static_cast<Buffer *>(materials->getBuffer().get());
+	auto b = static_cast<Buffer *>(materials->getBuffer());
 	if (!b) {
 		return;
 	}
@@ -334,12 +332,12 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 
 	for (auto &it : materials->getLayouts()) {
 		if (it.set) {
-			it.set.get_cast<TextureSet>()->foreachPendingImageBarriers([&] (const ImageMemoryBarrier &b) {
-				outputImageBarriers.emplace_back(b);
-			}, true);
-			it.set.get_cast<TextureSet>()->foreachPendingBufferBarriers([&] (const BufferMemoryBarrier &b) {
-				outputBufferBarriers.emplace_back(b);
-			}, true);
+			it.set.get_cast<TextureSet>()->foreachPendingImageBarriers(
+					[&](const ImageMemoryBarrier &b) { outputImageBarriers.emplace_back(b); },
+					true);
+			it.set.get_cast<TextureSet>()->foreachPendingBufferBarriers(
+					[&](const BufferMemoryBarrier &b) { outputBufferBarriers.emplace_back(b); },
+					true);
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
 			log::error("QueuePassHandle", "No set for material layout");
@@ -347,19 +345,22 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet * materials,
 	}
 }
 
-auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::MaterialSet> &data, const Vector<Rc<core::Material>> &materials,
-		SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove) -> MaterialBuffers {
+auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::MaterialSet> &data,
+		const Vector<Rc<core::Material>> &materials, SpanView<core::MaterialId> dynamicMaterials,
+		SpanView<core::MaterialId> materialsToRemove) -> MaterialBuffers {
 	MaterialBuffers ret;
 
 	// update list of materials in set
-	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove, [&, this] (const core::MaterialImage &image) -> Rc<core::ImageView> {
+	auto updated = data->updateMaterials(materials, dynamicMaterials, materialsToRemove,
+			[&, this](const core::MaterialImage &image) -> Rc<core::ImageView> {
 		for (auto &it : image.image->views) {
 			if (*it == image.info || it->view->getInfo() == image.info) {
 				return it->view;
 			}
 		}
 
-		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()), image.info);
+		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()),
+				image.info);
 	});
 	if (updated.empty()) {
 		return MaterialBuffers();
@@ -368,7 +369,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 	auto layout = data->getTargetLayout();
 
 	for (auto &it : data->getLayouts()) {
-		frame.performRequiredTask([layout, data, target = &it] (FrameHandle &handle) {
+		frame.performRequiredTask([layout, data, target = &it](FrameHandle &handle) {
 			auto dev = static_cast<Device *>(handle.getDevice());
 
 			target->set = ref_cast<TextureSet>(layout->layout->acquireSet(*dev));
@@ -379,28 +380,29 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, const Rc<core::Materia
 
 	auto &bufferInfo = data->getInfo();
 
-	auto &pool = static_cast<DeviceFrameHandle &>(frame).getMemPool(&frame);
+	auto pool = static_cast<DeviceFrameHandle &>(frame).getMemPool(&frame);
 
 	ret.stagingBuffer = pool->spawn(AllocationUsage::HostTransitionSource,
 			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), bufferInfo.size));
 	ret.targetBuffer = pool->spawnPersistent(AllocationUsage::DeviceLocal, bufferInfo);
 
-	ret.stagingBuffer->map([&] (uint8_t *mapped, VkDeviceSize) {
+	ret.stagingBuffer->map([&](uint8_t *mapped, VkDeviceSize) {
 		uint32_t idx = 0;
 		ret.ordering.reserve(data->getMaterials().size());
 
 		uint8_t *target = mapped;
 		for (auto &it : data->getMaterials()) {
 			data->encode(target, it.second.get());
-	 		target += data->getObjectSize();
-	 		ret.ordering.emplace(it.first, idx);
-	 		++ idx;
+			target += data->getObjectSize();
+			ret.ordering.emplace(it.first, idx);
+			++idx;
 		}
 	});
 	return ret;
 }
 
-vk::ComputePipeline *QueuePassHandle::getComputePipelineByName(uint32_t subpass, StringView name) const {
+vk::ComputePipeline *QueuePassHandle::getComputePipelineByName(uint32_t subpass,
+		StringView name) const {
 	if (_data->subpasses.size() > subpass) {
 		auto pipelineIt = _data->subpasses[subpass]->computePipelines.find(name);
 		if (pipelineIt != _data->subpasses[subpass]->computePipelines.end()) {
@@ -410,9 +412,11 @@ vk::ComputePipeline *QueuePassHandle::getComputePipelineByName(uint32_t subpass,
 	return nullptr;
 }
 
-vk::ComputePipeline *QueuePassHandle::getComputePipelineBySubName(uint32_t subpass, StringView subname) const {
+vk::ComputePipeline *QueuePassHandle::getComputePipelineBySubName(uint32_t subpass,
+		StringView subname) const {
 	if (_data->subpasses.size() > subpass) {
-		auto pipelineIt = _data->subpasses[subpass]->computePipelines.find(toString(_data->key, "_", subname));
+		auto pipelineIt = _data->subpasses[subpass]->computePipelines.find(
+				toString(_data->key, "_", subname));
 		if (pipelineIt != _data->subpasses[subpass]->computePipelines.end()) {
 			return static_cast<vk::ComputePipeline *>((*pipelineIt)->pipeline.get());
 		}
@@ -420,7 +424,8 @@ vk::ComputePipeline *QueuePassHandle::getComputePipelineBySubName(uint32_t subpa
 	return nullptr;
 }
 
-vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineByName(uint32_t subpass, StringView name) const {
+vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineByName(uint32_t subpass,
+		StringView name) const {
 	if (_data->subpasses.size() > subpass) {
 		auto pipelineIt = _data->subpasses[subpass]->graphicPipelines.find(name);
 		if (pipelineIt != _data->subpasses[subpass]->graphicPipelines.end()) {
@@ -430,9 +435,11 @@ vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineByName(uint32_t subpass,
 	return nullptr;
 }
 
-vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineBySubName(uint32_t subpass, StringView subname) const {
+vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineBySubName(uint32_t subpass,
+		StringView subname) const {
 	if (_data->subpasses.size() > subpass) {
-		auto pipelineIt = _data->subpasses[subpass]->graphicPipelines.find(toString(_data->key, "_", subname));
+		auto pipelineIt = _data->subpasses[subpass]->graphicPipelines.find(
+				toString(_data->key, "_", subname));
 		if (pipelineIt != _data->subpasses[subpass]->graphicPipelines.end()) {
 			return static_cast<vk::GraphicPipeline *>((*pipelineIt)->pipeline.get());
 		}
@@ -440,7 +447,8 @@ vk::GraphicPipeline *QueuePassHandle::getGraphicPipelineBySubName(uint32_t subpa
 	return nullptr;
 }
 
-QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBarrier(Device *dev, Image *image, ImageAttachmentHandle &handle) const {
+QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBarrier(Device *dev,
+		Image *image, ImageAttachmentHandle &handle) const {
 	ImageInputOutputBarrier ret;
 
 	auto attachmentData = handle.getAttachment()->getData();
@@ -456,7 +464,7 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 			current = it;
 			break;
 		}
-		++ passIdx;
+		++passIdx;
 	}
 
 	if (passIdx > 0) {
@@ -467,9 +475,11 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 	}
 
 	if (prev) {
-		bool hasLayoutTransition = current->initialLayout != prev->finalLayout && current->initialLayout != core::AttachmentLayout::Ignored;
+		bool hasLayoutTransition = current->initialLayout != prev->finalLayout
+				&& current->initialLayout != core::AttachmentLayout::Ignored;
 		bool hasReadWriteTransition = false;
-		if (core::hasReadAccess(current->dependency.initialAccessMask) && core::hasWriteAccess(prev->dependency.finalAccessMask)) {
+		if (core::hasReadAccess(current->dependency.initialAccessMask)
+				&& core::hasWriteAccess(prev->dependency.finalAccessMask)) {
 			hasReadWriteTransition = true;
 		}
 
@@ -479,7 +489,8 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 			auto currentQueue = dev->getQueueFamily(current->pass->type);
 			if (prevQueue != currentQueue) {
 				hasOwnershipTransfer = true;
-				ret.input.familyTransfer = QueueFamilyTransfer{prevQueue->index, currentQueue->index};
+				ret.input.familyTransfer =
+						QueueFamilyTransfer{prevQueue->index, currentQueue->index};
 			}
 		}
 
@@ -489,9 +500,8 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 			ret.input.newLayout = VkImageLayout(current->initialLayout);
 			ret.input.srcAccessMask = VkAccessFlags(prev->dependency.finalAccessMask);
 			ret.input.dstAccessMask = VkAccessFlags(current->dependency.initialAccessMask);
-			ret.input.subresourceRange = VkImageSubresourceRange{
-				image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
-			};
+			ret.input.subresourceRange = VkImageSubresourceRange{image->getAspectMask(), 0,
+				VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
 			ret.inputFrom = prev->dependency.finalUsageStage;
 			ret.inputTo = current->dependency.initialUsageStage;
 		}
@@ -503,9 +513,8 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 			ret.input.newLayout = VkImageLayout(current->initialLayout);
 			ret.input.srcAccessMask = 0;
 			ret.input.dstAccessMask = VkAccessFlags(current->dependency.initialAccessMask);
-			ret.input.subresourceRange = VkImageSubresourceRange{
-				image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
-			};
+			ret.input.subresourceRange = VkImageSubresourceRange{image->getAspectMask(), 0,
+				VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
 			ret.inputFrom = core::PipelineStage::AllCommands;
 			ret.inputTo = current->dependency.initialUsageStage;
 		}
@@ -516,15 +525,15 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 			auto nextQueue = dev->getQueueFamily(next->pass->type);
 			auto currentQueue = dev->getQueueFamily(current->pass->type);
 			if (nextQueue != currentQueue) {
-				ret.output.familyTransfer = QueueFamilyTransfer{currentQueue->index, nextQueue->index};
+				ret.output.familyTransfer =
+						QueueFamilyTransfer{currentQueue->index, nextQueue->index};
 				ret.output.image = image;
 				ret.output.oldLayout = VkImageLayout(current->finalLayout);
 				ret.output.newLayout = VkImageLayout(next->initialLayout);
 				ret.output.srcAccessMask = VkAccessFlags(current->dependency.finalAccessMask);
 				ret.output.dstAccessMask = VkAccessFlags(next->dependency.initialAccessMask);
-				ret.output.subresourceRange = VkImageSubresourceRange{
-					image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
-				};
+				ret.output.subresourceRange = VkImageSubresourceRange{image->getAspectMask(), 0,
+					VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
 				ret.outputFrom = current->dependency.finalUsageStage;
 				ret.outputTo = next->dependency.initialUsageStage;
 			}
@@ -534,8 +543,9 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 	return ret;
 }
 
-QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputBarrier(Device *dev, Buffer *buffer, BufferAttachmentHandle &handle,
-		VkDeviceSize offset, VkDeviceSize size) const {
+QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputBarrier(Device *dev,
+		Buffer *buffer, BufferAttachmentHandle &handle, VkDeviceSize offset,
+		VkDeviceSize size) const {
 	BufferInputOutputBarrier ret;
 
 	auto attachmentData = handle.getAttachment()->getData();
@@ -551,7 +561,7 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 			current = it;
 			break;
 		}
-		++ passIdx;
+		++passIdx;
 	}
 
 	if (passIdx > 0) {
@@ -563,7 +573,8 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 
 	if (prev) {
 		bool hasReadWriteTransition = false;
-		if (core::hasReadAccess(current->dependency.initialAccessMask) && core::hasWriteAccess(prev->dependency.finalAccessMask)) {
+		if (core::hasReadAccess(current->dependency.initialAccessMask)
+				&& core::hasWriteAccess(prev->dependency.finalAccessMask)) {
 			hasReadWriteTransition = true;
 		}
 
@@ -573,7 +584,8 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 			auto currentQueue = dev->getQueueFamily(current->pass->type);
 			if (prevQueue != currentQueue) {
 				hasOwnershipTransfer = true;
-				ret.input.familyTransfer = QueueFamilyTransfer{prevQueue->index, currentQueue->index};
+				ret.input.familyTransfer =
+						QueueFamilyTransfer{prevQueue->index, currentQueue->index};
 			}
 		}
 
@@ -593,7 +605,8 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 			auto nextQueue = dev->getQueueFamily(next->pass->type);
 			auto currentQueue = dev->getQueueFamily(current->pass->type);
 			if (nextQueue != currentQueue) {
-				ret.output.familyTransfer = QueueFamilyTransfer{currentQueue->index, nextQueue->index};
+				ret.output.familyTransfer =
+						QueueFamilyTransfer{currentQueue->index, nextQueue->index};
 				ret.output.buffer = buffer;
 				ret.output.srcAccessMask = VkAccessFlags(current->dependency.finalAccessMask);
 				ret.output.dstAccessMask = VkAccessFlags(next->dependency.initialAccessMask);
@@ -608,8 +621,6 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 	return ret;
 }
 
-void QueuePassHandle::setQueueIdleFlags(core::DeviceIdleFlags flags) {
-	_queueIdleFlags = flags;
-}
+void QueuePassHandle::setQueueIdleFlags(core::DeviceIdleFlags flags) { _queueIdleFlags = flags; }
 
-}
+} // namespace stappler::xenolith::vk

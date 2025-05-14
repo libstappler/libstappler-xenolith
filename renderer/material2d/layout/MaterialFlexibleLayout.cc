@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,9 +32,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-void FlexibleLayout::NodeParams::setPosition(float x, float y) {
-	setPosition(Vec2(x, y));
-}
+void FlexibleLayout::NodeParams::setPosition(float x, float y) { setPosition(Vec2(x, y)); }
 
 void FlexibleLayout::NodeParams::setPosition(const Vec2 &pos) {
 	position = pos;
@@ -169,13 +168,9 @@ void FlexibleLayout::setFlexibleMaxHeight(float height) {
 	}
 }
 
-float FlexibleLayout::getFlexibleMinHeight() const {
-	return _targetFlexibleMinHeight;
-}
+float FlexibleLayout::getFlexibleMinHeight() const { return _targetFlexibleMinHeight; }
 
-float FlexibleLayout::getFlexibleMaxHeight() const {
-	return _targetFlexibleMaxHeight;
-}
+float FlexibleLayout::getFlexibleMaxHeight() const { return _targetFlexibleMaxHeight; }
 
 void FlexibleLayout::setFlexibleBaseNode(bool val) {
 	if (_flexibleBaseNode != val) {
@@ -184,9 +179,7 @@ void FlexibleLayout::setFlexibleBaseNode(bool val) {
 	}
 }
 
-bool FlexibleLayout::isFlexibleBaseNode() const {
-	return _flexibleBaseNode;
-}
+bool FlexibleLayout::isFlexibleBaseNode() const { return _flexibleBaseNode; }
 
 void FlexibleLayout::setFlexibleHeightFunction(const HeightFunction &cb) {
 	_flexibleHeightFunction = cb;
@@ -208,11 +201,13 @@ void FlexibleLayout::updateFlexParams() {
 	auto size = _contentSize;
 	size.height -= _decorationPadding.bottom;
 	float decor = tracked ? _decorationPadding.top : 0.0f;
-	float flexSize = _realFlexibleMinHeight + (_realFlexibleMaxHeight + decor - _realFlexibleMinHeight) * _flexibleLevel;
+	float flexSize = _realFlexibleMinHeight
+			+ (_realFlexibleMaxHeight + decor - _realFlexibleMinHeight) * _flexibleLevel;
 
 	if (flexSize >= _realFlexibleMaxHeight && tracked) {
 		float tmpDecor = (flexSize - _realFlexibleMaxHeight);
-		decorParams.setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(), tmpDecor));
+		decorParams.setContentSize(
+				Size2(_contentSize.width - _decorationPadding.horizontal(), tmpDecor));
 		size.height -= tmpDecor;
 		flexSize = _realFlexibleMaxHeight;
 		decorParams.setPosition(Vec2(_decorationPadding.left, _contentSize.height));
@@ -226,9 +221,11 @@ void FlexibleLayout::updateFlexParams() {
 		}
 	}
 
-	flexibleNodeParams.setPosition(_decorationPadding.left, size.height + _decorationPadding.bottom);
-	flexibleNodeParams.setAnchorPoint(Vec2(0, 1));
-	flexibleNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(), flexSize + _flexibleExtraSpace));
+	flexibleNodeParams.setPosition(_decorationPadding.left,
+			size.height + _decorationPadding.bottom);
+	flexibleNodeParams.setAnchorPoint(Vec2(0.0f, 1.0f));
+	flexibleNodeParams.setContentSize(
+			Size2(size.width - _decorationPadding.horizontal(), flexSize + _flexibleExtraSpace));
 	flexibleNodeParams.setVisible(flexSize > 0.0f);
 
 	if (tracked && _sceneContent) {
@@ -247,13 +244,15 @@ void FlexibleLayout::updateFlexParams() {
 	float baseNodeOffset = getCurrentFlexibleHeight();
 	Padding baseNodePadding(padding.setTop(getCurrentFlexibleMax() + _baseNodePadding));
 
-	baseNodeParams.setAnchorPoint(Vec2(0, 0));
+	baseNodeParams.setAnchorPoint(Vec2::ZERO);
 	baseNodeParams.setPosition(_decorationPadding.left, _decorationPadding.bottom);
 
 	if (_flexibleBaseNode) {
-		baseNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(), size.height + decor));
+		baseNodeParams.setContentSize(
+				Size2(size.width - _decorationPadding.horizontal(), size.height + decor));
 	} else {
-		baseNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(), size.height + decor - getCurrentFlexibleMax() - 0.0f));
+		baseNodeParams.setContentSize(Size2(size.width - _decorationPadding.horizontal(),
+				size.height + decor - getCurrentFlexibleMax() - 0.0f));
 		baseNodePadding = padding.setTop(4.0f);
 		baseNodeOffset = 0.0f;
 	}
@@ -274,7 +273,8 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 	clearFlexibleExpand(0.25f);
 	if (!finished && delta != 0.0f) {
 		const auto distanceFromStart = _baseNode->getDistanceFromStart();
-		const auto trigger = _safeTrigger ? ( _realFlexibleMaxHeight - _realFlexibleMinHeight) : 8.0f;
+		const auto trigger =
+				_safeTrigger ? (_realFlexibleMaxHeight - _realFlexibleMinHeight) : 8.0f;
 		if (isnan(distanceFromStart) || distanceFromStart > trigger || delta < 0) {
 			stopActionByTag(FlexibleLayout::AutoCompleteTag());
 			float height = getCurrentFlexibleHeight();
@@ -296,11 +296,13 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 		if (_flexibleAutoComplete) {
 			if (_flexibleLevel < 1.0f && _flexibleLevel > 0.0f) {
 				auto distanceFromStart = _baseNode->getDistanceFromStart();
-				bool open =  (_flexibleLevel > 0.5) || (!isnan(distanceFromStart) && distanceFromStart < (_realFlexibleMaxHeight - _realFlexibleMinHeight));
-				auto a = Rc<ActionProgress>::create(progress(0.0f, 0.3f, open?_flexibleLevel:(1.0f - _flexibleLevel)), open?1.0f:0.0f,
-						[this] (float p) {
-					setFlexibleLevel(p);
-				});
+				bool open = (_flexibleLevel > 0.5)
+						|| (!isnan(distanceFromStart)
+								&& distanceFromStart
+										< (_realFlexibleMaxHeight - _realFlexibleMinHeight));
+				auto a = Rc<ActionProgress>::create(
+						progress(0.0f, 0.3f, open ? _flexibleLevel : (1.0f - _flexibleLevel)),
+						open ? 1.0f : 0.0f, [this](float p) { setFlexibleLevel(p); });
 				a->setSourceProgress(_flexibleLevel);
 				a->setTag(FlexibleLayout::AutoCompleteTag());
 				if (open) {
@@ -313,9 +315,7 @@ void FlexibleLayout::onScroll(float delta, bool finished) {
 	}
 }
 
-float FlexibleLayout::getFlexibleLevel() const {
-	return _flexibleLevel;
-}
+float FlexibleLayout::getFlexibleLevel() const { return _flexibleLevel; }
 
 void FlexibleLayout::setFlexibleLevel(float value) {
 	if (value > 1.0f) {
@@ -338,13 +338,11 @@ void FlexibleLayout::setFlexibleLevelAnimated(float value, float duration) {
 		setFlexibleLevel(value);
 	} else {
 		if (_flexibleLevel != value) {
-			auto a = Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(
-					duration, _flexibleLevel, value,
-					[this] (float progress) {
-				setFlexibleLevel(progress);
-			}), EasingType::Emphasized), [this, value] {
-				setFlexibleLevel(value);
-			});
+			auto a = Rc<Sequence>::create(
+					makeEasing(Rc<ActionProgress>::create(duration, _flexibleLevel, value,
+									   [this](float progress) { setFlexibleLevel(progress); }),
+							EasingType::Emphasized),
+					[this, value] { setFlexibleLevel(value); });
 			a->setTag("FlexibleLevel"_tag);
 			runAction(a);
 		}
@@ -354,7 +352,8 @@ void FlexibleLayout::setFlexibleLevelAnimated(float value, float duration) {
 void FlexibleLayout::setFlexibleHeight(float height) {
 	float size = getCurrentFlexibleMax() - _realFlexibleMinHeight;
 	if (size > 0.0f) {
-		float value = (height - _realFlexibleMinHeight) / (getCurrentFlexibleMax() - _realFlexibleMinHeight);
+		float value = (height - _realFlexibleMinHeight)
+				/ (getCurrentFlexibleMax() - _realFlexibleMinHeight);
 		setFlexibleLevel(value);
 	} else {
 		setFlexibleLevel(1.0f);
@@ -367,16 +366,18 @@ void FlexibleLayout::setBaseNodePadding(float val) {
 		_contentSizeDirty = true;
 	}
 }
-float FlexibleLayout::getBaseNodePadding() const {
-	return _baseNodePadding;
-}
+float FlexibleLayout::getBaseNodePadding() const { return _baseNodePadding; }
 
 float FlexibleLayout::getCurrentFlexibleHeight() const {
-	return (getCurrentFlexibleMax() - _realFlexibleMinHeight) * _flexibleLevel + _realFlexibleMinHeight;
+	return (getCurrentFlexibleMax() - _realFlexibleMinHeight) * _flexibleLevel
+			+ _realFlexibleMinHeight;
 }
 
 float FlexibleLayout::getCurrentFlexibleMax() const {
-	return _realFlexibleMaxHeight + (((_viewDecoration & ViewDecorationFlags::Tracked) != ViewDecorationFlags::None)?_decorationPadding.top:0);
+	return _realFlexibleMaxHeight
+			+ (((_viewDecoration & ViewDecorationFlags::Tracked) != ViewDecorationFlags::None)
+							? _decorationPadding.top
+							: 0);
 }
 
 void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
@@ -388,7 +389,8 @@ void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 
 			if (auto prevL = dynamic_cast<FlexibleLayout *>(prev)) {
 				if (auto prevBar = prevL->getAppBar()) {
-					if (prevBar->getNavButtonIcon() == IconName::Dynamic_Nav && _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
+					if (prevBar->getNavButtonIcon() == IconName::Dynamic_Nav
+							&& _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
 						auto p = prevBar->getNavNode()->getLeadingIconProgress();
 						if (p >= 1.0f) {
 							nav->setLeadingIconProgress(1.0f);
@@ -396,9 +398,7 @@ void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 							nav->setLeadingIconProgress(1.0f, 0.25f);
 						}
 						if (!_appBar->getNavCallback()) {
-							_appBar->setNavCallback([this] {
-								onBackButton();
-							});
+							_appBar->setNavCallback([this] { onBackButton(); });
 						}
 					}
 					return;
@@ -408,9 +408,7 @@ void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 			if (_appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
 				_appBar->getNavNode()->setLeadingIconProgress(1.0f, 0.25f);
 				if (!_appBar->getNavCallback()) {
-					_appBar->setNavCallback([this] {
-						onBackButton();
-					});
+					_appBar->setNavCallback([this] { onBackButton(); });
 				}
 			}
 		}
@@ -423,7 +421,8 @@ void FlexibleLayout::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2
 	if (_appBar) {
 		if (auto overlayL = dynamic_cast<FlexibleLayout *>(overlay)) {
 			if (auto overlayBar = overlayL->getAppBar()) {
-				if (overlayBar->getNavButtonIcon() == IconName::Dynamic_Nav && _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
+				if (overlayBar->getNavButtonIcon() == IconName::Dynamic_Nav
+						&& _appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
 					auto p = overlayBar->getNavNode()->getLeadingIconProgress();
 					if (l->getPrevLayout() == nullptr) {
 						auto nav = _appBar->getNavNode();
@@ -436,9 +435,7 @@ void FlexibleLayout::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2
 	}
 }
 
-void FlexibleLayout::onDecorNode(const NodeParams &p) {
-	p.apply(_decorationTop);
-}
+void FlexibleLayout::onDecorNode(const NodeParams &p) { p.apply(_decorationTop); }
 
 void FlexibleLayout::onFlexibleNode(const NodeParams &p) {
 	if (_flexibleNode) {
@@ -456,13 +453,9 @@ void FlexibleLayout::onBaseNode(const NodeParams &p, const Padding &padding, flo
 	}
 }
 
-void FlexibleLayout::setSafeTrigger(bool value) {
-	_safeTrigger = value;
-}
+void FlexibleLayout::setSafeTrigger(bool value) { _safeTrigger = value; }
 
-bool FlexibleLayout::isSafeTrigger() const {
-	return _safeTrigger;
-}
+bool FlexibleLayout::isSafeTrigger() const { return _safeTrigger; }
 
 void FlexibleLayout::expandFlexibleNode(float extraSpace, float duration) {
 	stopActionByTag("FlexibleExtraSpace"_tag);
@@ -470,18 +463,20 @@ void FlexibleLayout::expandFlexibleNode(float extraSpace, float duration) {
 	if (duration > 0.0f) {
 		auto prevSpace = _flexibleExtraSpace;
 		if (extraSpace > prevSpace) {
-			auto a = makeEasing(Rc<ActionProgress>::create(
-					duration, [this, extraSpace, prevSpace] (float p) {
+			auto a = makeEasing(Rc<ActionProgress>::create(duration,
+										[this, extraSpace, prevSpace](float p) {
 				_flexibleExtraSpace = progress(prevSpace, extraSpace, p);
 				updateFlexParams();
-			}), EasingType::Emphasized);
+			}),
+					EasingType::Emphasized);
 			runAction(a, "FlexibleExtraSpace"_tag);
 		} else {
-			auto a = makeEasing(Rc<ActionProgress>::create(
-					duration, [this, extraSpace, prevSpace] (float p) {
+			auto a = makeEasing(Rc<ActionProgress>::create(duration,
+										[this, extraSpace, prevSpace](float p) {
 				_flexibleExtraSpace = progress(prevSpace, extraSpace, p);
 				updateFlexParams();
-			}), EasingType::Emphasized);
+			}),
+					EasingType::Emphasized);
 			runAction(a, "FlexibleExtraSpace"_tag);
 		}
 	} else {
@@ -500,11 +495,12 @@ void FlexibleLayout::clearFlexibleExpand(float duration) {
 		if (!a) {
 			stopActionByTag("FlexibleExtraSpace"_tag);
 			auto prevSpace = _flexibleExtraSpace;
-			auto a = makeEasing(Rc<ActionProgress>::create(
-					duration, [this, prevSpace] (float p) {
+			auto a = makeEasing(Rc<ActionProgress>::create(duration,
+										[this, prevSpace](float p) {
 				_flexibleExtraSpace = progress(prevSpace, 0.0f, p);
 				updateFlexParams();
-			}), EasingType::Emphasized);
+			}),
+					EasingType::Emphasized);
 			runAction(a, "FlexibleExtraClear"_tag);
 		}
 	} else {
@@ -524,4 +520,4 @@ DecorationStatus FlexibleLayout::getDecorationStatus() const {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

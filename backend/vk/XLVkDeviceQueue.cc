@@ -1,24 +1,25 @@
 /**
-Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLVkDeviceQueue.h"
@@ -44,18 +45,21 @@ bool DeviceQueue::init(Device &device, VkQueue queue, uint32_t index, core::Queu
 
 Status DeviceQueue::waitIdle() {
 	VkResult result;
-	static_cast<Device *>(_device)->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+	static_cast<Device *>(_device)->makeApiCall(
+			[&, this](const DeviceTable &table, VkDevice device) {
 		result = table.vkQueueWaitIdle(_queue);
 	});
 	return getStatus(result);
 }
 
-Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPool, core::Fence &fence, SpanView<const core::CommandBuffer *> buffers,
+Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPool,
+		core::Fence &fence, SpanView<const core::CommandBuffer *> buffers,
 		core::DeviceIdleFlags idle) {
 	Vector<VkSemaphore> waitSem;
 	Vector<VkPipelineStageFlags> waitStages;
 	Vector<VkSemaphore> signalSem;
-	Vector<VkCommandBuffer> vkBuffers; vkBuffers.reserve(buffers.size());
+	Vector<VkCommandBuffer> vkBuffers;
+	vkBuffers.reserve(buffers.size());
 
 	for (auto &it : buffers) {
 		if (it) {
@@ -103,16 +107,16 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 
 #if XL_VKAPI_DEBUG
 	auto t = sp::platform::clock(ClockType::Monotonic);
-	fence.addRelease([frameIdx = _frameIdx, t] (bool success) {
-		XL_VKAPI_LOG("[", frameIdx,  "] vkQueueSubmit [complete]",
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
+	fence.addRelease([frameIdx = _frameIdx, t](bool success) {
+		XL_VKAPI_LOG("[", frameIdx, "] vkQueueSubmit [complete]", " [",
+				sp::platform::clock(ClockType::Monotonic) - t, "]");
 	}, nullptr, "DeviceQueue::submit");
 #endif
 
 	VkResult result;
 	auto dev = static_cast<Device *>(_device);
 
-	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+	dev->makeApiCall([&, this](const DeviceTable &table, VkDevice device) {
 		if (hasFlag(idle, core::DeviceIdleFlags::PreDevice)) {
 			table.vkDeviceWaitIdle(dev->getDevice());
 		} else if (hasFlag(idle, core::DeviceIdleFlags::PreQueue)) {
@@ -120,11 +124,13 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 		}
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		result = table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
-		XL_VKAPI_LOG("[", _frameIdx,  "] vkQueueSubmit: ", result, " ", (void *)_queue,
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
+		result =
+				table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
+		XL_VKAPI_LOG("[", _frameIdx, "] vkQueueSubmit: ", result, " ", (void *)_queue, " [",
+				sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
-		result = table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
+		result =
+				table.vkQueueSubmit(_queue, 1, &submitInfo, static_cast<Fence &>(fence).getFence());
 #endif
 
 		if (hasFlag(idle, core::DeviceIdleFlags::PostDevice)) {
@@ -141,14 +147,18 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 				if (it.semaphore) {
 					it.semaphore->setWaited(true);
 					if (it.image && !it.image->isSemaphorePersistent()) {
-						fence.addRelease([img = it.image, sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
+						fence.addRelease(
+								[img = it.image, sem = it.semaphore.get(),
+										t = it.semaphore->getTimeline()](bool success) {
 							sem->setInUse(false, t);
 							img->releaseSemaphore(sem);
-						}, it.image, "DeviceQueue::submit::!isSemaphorePersistent");
+						},
+								it.image, "DeviceQueue::submit::!isSemaphorePersistent");
 					} else {
-						fence.addRelease([sem = it.semaphore.get(), t = it.semaphore->getTimeline()] (bool success) {
-							sem->setInUse(false, t);
-						}, it.semaphore, "DeviceQueue::submit::isSemaphorePersistent");
+						fence.addRelease(
+								[sem = it.semaphore.get(), t = it.semaphore->getTimeline()](
+										bool success) { sem->setInUse(false, t); },
+								it.semaphore, "DeviceQueue::submit::isSemaphorePersistent");
 					}
 					fence.autorelease(it.semaphore.get());
 					if (commandPool) {
@@ -172,9 +182,7 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 		fence.setArmed(*this);
 
 		if (sync) {
-			for (auto &it : sync->images) {
-				it.image->setLayout(it.newLayout);
-			}
+			for (auto &it : sync->images) { it.image->setLayout(it.newLayout); }
 		}
 	}
 	return getStatus(result);
@@ -182,36 +190,60 @@ Status DeviceQueue::doSubmit(const FrameSync *sync, core::CommandPool *commandPo
 
 ImageMemoryBarrier::ImageMemoryBarrier(Image *image, VkAccessFlags src, VkAccessFlags dst,
 		VkImageLayout old, VkImageLayout _new)
-: srcAccessMask(src), dstAccessMask(dst), oldLayout(old), newLayout(_new)
-, image(image), subresourceRange(VkImageSubresourceRange{
-	image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
-}) { }
+: srcAccessMask(src)
+, dstAccessMask(dst)
+, oldLayout(old)
+, newLayout(_new)
+, image(image)
+, subresourceRange(VkImageSubresourceRange{image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0,
+	  VK_REMAINING_ARRAY_LAYERS}) { }
 
 ImageMemoryBarrier::ImageMemoryBarrier(Image *image, VkAccessFlags src, VkAccessFlags dst,
 		VkImageLayout old, VkImageLayout _new, VkImageSubresourceRange range)
-: srcAccessMask(src), dstAccessMask(dst), oldLayout(old), newLayout(_new)
-, image(image), subresourceRange(range) { }
+: srcAccessMask(src)
+, dstAccessMask(dst)
+, oldLayout(old)
+, newLayout(_new)
+, image(image)
+, subresourceRange(range) { }
 
 ImageMemoryBarrier::ImageMemoryBarrier(Image *image, VkAccessFlags src, VkAccessFlags dst,
 		VkImageLayout old, VkImageLayout _new, QueueFamilyTransfer transfer)
-: srcAccessMask(src), dstAccessMask(dst), oldLayout(old), newLayout(_new), familyTransfer(transfer)
-, image(image), subresourceRange(VkImageSubresourceRange{
-	image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS
-}) { }
+: srcAccessMask(src)
+, dstAccessMask(dst)
+, oldLayout(old)
+, newLayout(_new)
+, familyTransfer(transfer)
+, image(image)
+, subresourceRange(VkImageSubresourceRange{image->getAspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0,
+	  VK_REMAINING_ARRAY_LAYERS}) { }
 
 ImageMemoryBarrier::ImageMemoryBarrier(Image *image, VkAccessFlags src, VkAccessFlags dst,
-	 VkImageLayout old, VkImageLayout _new, QueueFamilyTransfer transfer, VkImageSubresourceRange range)
-: srcAccessMask(src), dstAccessMask(dst), oldLayout(old), newLayout(_new), familyTransfer(transfer)
-, image(image), subresourceRange(range) { }
+		VkImageLayout old, VkImageLayout _new, QueueFamilyTransfer transfer,
+		VkImageSubresourceRange range)
+: srcAccessMask(src)
+, dstAccessMask(dst)
+, oldLayout(old)
+, newLayout(_new)
+, familyTransfer(transfer)
+, image(image)
+, subresourceRange(range) { }
 
 ImageMemoryBarrier::ImageMemoryBarrier(const VkImageMemoryBarrier &barrier)
-: srcAccessMask(barrier.srcAccessMask), dstAccessMask(barrier.dstAccessMask)
-, oldLayout(barrier.oldLayout), newLayout(barrier.newLayout)
+: srcAccessMask(barrier.srcAccessMask)
+, dstAccessMask(barrier.dstAccessMask)
+, oldLayout(barrier.oldLayout)
+, newLayout(barrier.newLayout)
 , familyTransfer(QueueFamilyTransfer{barrier.srcQueueFamilyIndex, barrier.dstQueueFamilyIndex})
-, image(nullptr), subresourceRange(barrier.subresourceRange) { }
+, image(nullptr)
+, subresourceRange(barrier.subresourceRange) { }
 
 BufferMemoryBarrier::BufferMemoryBarrier(Buffer *buf, VkAccessFlags src, VkAccessFlags dst)
 : srcAccessMask(src), dstAccessMask(dst), buffer(buf) { }
+
+BufferMemoryBarrier::BufferMemoryBarrier(Buffer *buf, VkAccessFlags src, VkAccessFlags dst,
+		VkDeviceSize offset, VkDeviceSize size)
+: srcAccessMask(src), dstAccessMask(dst), buffer(buf), offset(offset), size(size) { }
 
 BufferMemoryBarrier::BufferMemoryBarrier(Buffer *buf, VkAccessFlags src, VkAccessFlags dst,
 		QueueFamilyTransfer transfer)
@@ -219,35 +251,41 @@ BufferMemoryBarrier::BufferMemoryBarrier(Buffer *buf, VkAccessFlags src, VkAcces
 
 BufferMemoryBarrier::BufferMemoryBarrier(Buffer *buf, VkAccessFlags src, VkAccessFlags dst,
 		QueueFamilyTransfer transfer, VkDeviceSize offset, VkDeviceSize size)
-: srcAccessMask(src), dstAccessMask(dst), familyTransfer(transfer),
-  buffer(buf), offset(offset), size(size) { }
+: srcAccessMask(src)
+, dstAccessMask(dst)
+, familyTransfer(transfer)
+, buffer(buf)
+, offset(offset)
+, size(size) { }
 
 BufferMemoryBarrier::BufferMemoryBarrier(const VkBufferMemoryBarrier &barrier)
-: srcAccessMask(barrier.srcAccessMask), dstAccessMask(barrier.dstAccessMask)
+: srcAccessMask(barrier.srcAccessMask)
+, dstAccessMask(barrier.dstAccessMask)
 , familyTransfer(QueueFamilyTransfer{barrier.srcQueueFamilyIndex, barrier.dstQueueFamilyIndex})
-, buffer(nullptr), offset(barrier.offset), size(barrier.size) { }
+, buffer(nullptr)
+, offset(barrier.offset)
+, size(barrier.size) { }
 
 
 DescriptorImageInfo::~DescriptorImageInfo() { }
 
-DescriptorImageInfo::DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-: DescriptorInfo(desc, index, external) { }
+DescriptorImageInfo::DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index)
+: DescriptorInfo(desc, index) { }
 
 DescriptorBufferInfo::~DescriptorBufferInfo() { }
 
-DescriptorBufferInfo::DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-: DescriptorInfo(desc, index, external) { }
+DescriptorBufferInfo::DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index)
+: DescriptorInfo(desc, index) { }
 
 DescriptorBufferViewInfo::~DescriptorBufferViewInfo() { }
 
-DescriptorBufferViewInfo::DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index, bool external)
-: DescriptorInfo(desc, index, external) { }
+DescriptorBufferViewInfo::DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index)
+: DescriptorInfo(desc, index) { }
 
-CommandBuffer::~CommandBuffer() {
-	invalidate();
-}
+CommandBuffer::~CommandBuffer() { invalidate(); }
 
-bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCommandBuffer buffer, Vector<Rc<DescriptorPool>> &&descriptors) {
+bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCommandBuffer buffer,
+		Vector<Rc<DescriptorPool>> &&descriptors) {
 	_pool = pool;
 	_table = table;
 	_buffer = buffer;
@@ -261,72 +299,68 @@ void CommandBuffer::invalidate() {
 	_usedDescriptors.clear();
 }
 
-void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
-		SpanView<ImageMemoryBarrier> imageBarriers) {
-	Vector<VkImageMemoryBarrier> images; images.reserve(imageBarriers.size());
+void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags,
+		VkDependencyFlags deps, SpanView<ImageMemoryBarrier> imageBarriers) {
+	Vector<VkImageMemoryBarrier> images;
+	images.reserve(imageBarriers.size());
 	for (auto &it : imageBarriers) {
-		images.emplace_back(VkImageMemoryBarrier{
-			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
-			it.srcAccessMask, it.dstAccessMask,
-			it.oldLayout, it.newLayout,
+		images.emplace_back(VkImageMemoryBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
+			it.srcAccessMask, it.dstAccessMask, it.oldLayout, it.newLayout,
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
-			it.image->getImage(), it.subresourceRange
-		});
+			it.image->getImage(), it.subresourceRange});
 		bindImage(it.image);
 	}
 
-	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, 0, nullptr, uint32_t(images.size()), images.data());
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, 0, nullptr,
+			uint32_t(images.size()), images.data());
 }
 
-void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
-		SpanView<BufferMemoryBarrier> bufferBarriers) {
-	Vector<VkBufferMemoryBarrier> buffers; buffers.reserve(bufferBarriers.size());
+void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags,
+		VkDependencyFlags deps, SpanView<BufferMemoryBarrier> bufferBarriers) {
+	Vector<VkBufferMemoryBarrier> buffers;
+	buffers.reserve(bufferBarriers.size());
 	for (auto &it : bufferBarriers) {
-		buffers.emplace_back(VkBufferMemoryBarrier{
-			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-			it.srcAccessMask, it.dstAccessMask,
-			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
-			it.buffer->getBuffer(), it.offset, it.size
-		});
+		buffers.emplace_back(VkBufferMemoryBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
+			it.srcAccessMask, it.dstAccessMask, it.familyTransfer.srcQueueFamilyIndex,
+			it.familyTransfer.dstQueueFamilyIndex, it.buffer->getBuffer(), it.offset, it.size});
 		bindBuffer(it.buffer);
 	}
 
-	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr, uint32_t(buffers.size()), buffers.data(), 0, nullptr);
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 0, nullptr,
+			uint32_t(buffers.size()), buffers.data(), 0, nullptr);
 }
 
-void CommandBuffer::cmdGlobalBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
-		VkAccessFlags src, VkAccessFlags dst) {
+void CommandBuffer::cmdGlobalBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags,
+		VkDependencyFlags deps, VkAccessFlags src, VkAccessFlags dst) {
 	VkMemoryBarrier barrier;
 	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 	barrier.pNext = nullptr;
 	barrier.srcAccessMask = src;
 	barrier.dstAccessMask = dst;
 
-	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 1, &barrier, 0, nullptr, 0, nullptr);
+	_table->vkCmdPipelineBarrier(_buffer, srcFlags, dstFlags, deps, 1, &barrier, 0, nullptr, 0,
+			nullptr);
 }
 
-void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags, VkDependencyFlags deps,
-		SpanView<BufferMemoryBarrier> bufferBarriers, SpanView<ImageMemoryBarrier> imageBarriers) {
-	Vector<VkBufferMemoryBarrier> buffers; buffers.reserve(bufferBarriers.size());
+void CommandBuffer::cmdPipelineBarrier(VkPipelineStageFlags srcFlags, VkPipelineStageFlags dstFlags,
+		VkDependencyFlags deps, SpanView<BufferMemoryBarrier> bufferBarriers,
+		SpanView<ImageMemoryBarrier> imageBarriers) {
+	Vector<VkBufferMemoryBarrier> buffers;
+	buffers.reserve(bufferBarriers.size());
 	for (auto &it : bufferBarriers) {
-		buffers.emplace_back(VkBufferMemoryBarrier{
-			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-			it.srcAccessMask, it.dstAccessMask,
-			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
-			it.buffer->getBuffer(), it.offset, it.size
-		});
+		buffers.emplace_back(VkBufferMemoryBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
+			it.srcAccessMask, it.dstAccessMask, it.familyTransfer.srcQueueFamilyIndex,
+			it.familyTransfer.dstQueueFamilyIndex, it.buffer->getBuffer(), it.offset, it.size});
 		bindBuffer(it.buffer);
 	}
 
-	Vector<VkImageMemoryBarrier> images; images.reserve(imageBarriers.size());
+	Vector<VkImageMemoryBarrier> images;
+	images.reserve(imageBarriers.size());
 	for (auto &it : imageBarriers) {
-		images.emplace_back(VkImageMemoryBarrier{
-			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
-			it.srcAccessMask, it.dstAccessMask,
-			it.oldLayout, it.newLayout,
+		images.emplace_back(VkImageMemoryBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
+			it.srcAccessMask, it.dstAccessMask, it.oldLayout, it.newLayout,
 			it.familyTransfer.srcQueueFamilyIndex, it.familyTransfer.dstQueueFamilyIndex,
-			it.image->getImage(), it.subresourceRange
-		});
+			it.image->getImage(), it.subresourceRange});
 		bindImage(it.image);
 	}
 
@@ -339,7 +373,8 @@ void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst) {
 	cmdCopyBuffer(src, dst, makeSpanView(&copy, 1));
 }
 
-void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
+void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, VkDeviceSize srcOffset,
+		VkDeviceSize dstOffset, VkDeviceSize size) {
 	VkBufferCopy copy{srcOffset, dstOffset, size};
 	cmdCopyBuffer(src, dst, makeSpanView(&copy, 1));
 }
@@ -348,10 +383,12 @@ void CommandBuffer::cmdCopyBuffer(Buffer *src, Buffer *dst, SpanView<VkBufferCop
 	bindBuffer(src);
 	bindBuffer(dst);
 
-	_table->vkCmdCopyBuffer(_buffer, src->getBuffer(), dst->getBuffer(), uint32_t(copy.size()), copy.data());
+	_table->vkCmdCopyBuffer(_buffer, src->getBuffer(), dst->getBuffer(), uint32_t(copy.size()),
+			copy.data());
 }
 
-void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, VkFilter filter) {
+void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst,
+		VkImageLayout dstLayout, VkFilter filter) {
 	auto sourceExtent = src->getInfo().extent;
 	auto targetExtent = dst->getInfo().extent;
 
@@ -361,17 +398,22 @@ void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst
 			VkOffset3D{0, 0, 0},
 			VkImageSubresourceLayers{dst->getAspectMask(), 0, 0, dst->getInfo().arrayLayers.get()},
 			VkOffset3D{0, 0, 0},
-			VkExtent3D{targetExtent.width, targetExtent.height, targetExtent.depth}
-		};
+			VkExtent3D{targetExtent.width, targetExtent.height, targetExtent.depth}};
 
 		_table->vkCmdCopyImage(_buffer, src->getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				dst->getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 	} else {
 		VkImageBlit blit{
-			VkImageSubresourceLayers{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, src->getInfo().arrayLayers.get()},
-			{ VkOffset3D{0, 0, 0}, VkOffset3D{int32_t(sourceExtent.width), int32_t(sourceExtent.height), int32_t(sourceExtent.depth)} },
-			VkImageSubresourceLayers{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, dst->getInfo().arrayLayers.get()},
-			{ VkOffset3D{0, 0, 0}, VkOffset3D{int32_t(targetExtent.width), int32_t(targetExtent.height), int32_t(targetExtent.depth)} },
+			VkImageSubresourceLayers{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0,
+				src->getInfo().arrayLayers.get()},
+			{VkOffset3D{0, 0, 0},
+				VkOffset3D{int32_t(sourceExtent.width), int32_t(sourceExtent.height),
+					int32_t(sourceExtent.depth)}},
+			VkImageSubresourceLayers{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0,
+				dst->getInfo().arrayLayers.get()},
+			{VkOffset3D{0, 0, 0},
+				VkOffset3D{int32_t(targetExtent.width), int32_t(targetExtent.height),
+					int32_t(targetExtent.depth)}},
 		};
 
 		_table->vkCmdBlitImage(_buffer, src->getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -379,23 +421,29 @@ void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst
 	}
 }
 
-void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, const VkImageCopy &copy) {
+void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst,
+		VkImageLayout dstLayout, const VkImageCopy &copy) {
 	bindImage(src);
 	bindImage(dst);
 
-	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, 1, &copy);
+	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, 1,
+			&copy);
 }
 
-void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst, VkImageLayout dstLayout, SpanView<VkImageCopy> copy) {
+void CommandBuffer::cmdCopyImage(Image *src, VkImageLayout srcLayout, Image *dst,
+		VkImageLayout dstLayout, SpanView<VkImageCopy> copy) {
 	bindImage(src);
 	bindImage(dst);
 
-	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout, uint32_t(copy.size()), copy.data());
+	_table->vkCmdCopyImage(_buffer, src->getImage(), srcLayout, dst->getImage(), dstLayout,
+			uint32_t(copy.size()), copy.data());
 }
 
-void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout, VkDeviceSize offset) {
+void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout,
+		VkDeviceSize offset) {
 	auto &extent = img->getInfo().extent;
-	VkImageSubresourceLayers copyLayers({ img->getAspectMask(), 0, 0, img->getInfo().arrayLayers.get() });
+	VkImageSubresourceLayers copyLayers(
+			{img->getAspectMask(), 0, 0, img->getInfo().arrayLayers.get()});
 
 	VkBufferImageCopy copyRegion{offset, 0, 0, copyLayers, VkOffset3D{0, 0, 0},
 		VkExtent3D{extent.width, extent.height, extent.depth}};
@@ -403,16 +451,20 @@ void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout 
 	cmdCopyBufferToImage(buf, img, layout, makeSpanView(&copyRegion, 1));
 }
 
-void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout, SpanView<VkBufferImageCopy> copy) {
+void CommandBuffer::cmdCopyBufferToImage(Buffer *buf, Image *img, VkImageLayout layout,
+		SpanView<VkBufferImageCopy> copy) {
 	bindBuffer(buf);
 	bindImage(img);
 
-	_table->vkCmdCopyBufferToImage(_buffer, buf->getBuffer(), img->getImage(), layout, uint32_t(copy.size()), copy.data());
+	_table->vkCmdCopyBufferToImage(_buffer, buf->getBuffer(), img->getImage(), layout,
+			uint32_t(copy.size()), copy.data());
 }
 
-void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf, VkDeviceSize offset) {
+void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf,
+		VkDeviceSize offset) {
 	auto &extent = img->getInfo().extent;
-	VkImageSubresourceLayers copyLayers({ img->getAspectMask(), 0, 0, img->getInfo().arrayLayers.get() });
+	VkImageSubresourceLayers copyLayers(
+			{img->getAspectMask(), 0, 0, img->getInfo().arrayLayers.get()});
 
 	VkBufferImageCopy copyRegion{offset, 0, 0, copyLayers, VkOffset3D{0, 0, 0},
 		VkExtent3D{extent.width, extent.height, extent.depth}};
@@ -420,11 +472,13 @@ void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffe
 	cmdCopyImageToBuffer(img, layout, buf, makeSpanView(&copyRegion, 1));
 }
 
-void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf, SpanView<VkBufferImageCopy> copy) {
+void CommandBuffer::cmdCopyImageToBuffer(Image *img, VkImageLayout layout, Buffer *buf,
+		SpanView<VkBufferImageCopy> copy) {
 	bindBuffer(buf);
 	bindImage(img);
 
-	_table->vkCmdCopyImageToBuffer(_buffer, img->getImage(), layout, buf->getBuffer(), uint32_t(copy.size()), copy.data());
+	_table->vkCmdCopyImageToBuffer(_buffer, img->getImage(), layout, buf->getBuffer(),
+			uint32_t(copy.size()), copy.data());
 }
 
 void CommandBuffer::cmdClearColorImage(Image *image, VkImageLayout layout, const Color4F &color) {
@@ -434,25 +488,24 @@ void CommandBuffer::cmdClearColorImage(Image *image, VkImageLayout layout, const
 	clearColorEmpty.float32[2] = color.b;
 	clearColorEmpty.float32[3] = color.a;
 
-	VkImageSubresourceRange range{ image->getAspectMask(), 0, image->getInfo().mipLevels.get(), 0, image->getInfo().arrayLayers.get() };
+	VkImageSubresourceRange range{image->getAspectMask(), 0, image->getInfo().mipLevels.get(), 0,
+		image->getInfo().arrayLayers.get()};
 
 	bindImage(image);
-	_table->vkCmdClearColorImage(_buffer, image->getImage(), layout,
-			&clearColorEmpty, 1, &range);
+	_table->vkCmdClearColorImage(_buffer, image->getImage(), layout, &clearColorEmpty, 1, &range);
 }
 
-void CommandBuffer::cmdBeginRenderPass(RenderPass *pass, Framebuffer *fb, VkSubpassContents subpass, bool alt) {
+void CommandBuffer::cmdBeginRenderPass(RenderPass *pass, Framebuffer *fb, VkSubpassContents subpass,
+		bool alt) {
 	auto &clearValues = pass->getClearValues();
 	auto currentExtent = fb->getExtent();
 
-	VkRenderPassBeginInfo renderPassInfo {
-		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr
-	};
+	VkRenderPassBeginInfo renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.pNext = nullptr;
 	renderPassInfo.renderPass = pass->getRenderPass(alt);
 	renderPassInfo.framebuffer = fb->getFramebuffer();
-	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = VkExtent2D{currentExtent.width, currentExtent.height};
 	renderPassInfo.clearValueCount = uint32_t(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
@@ -483,7 +536,8 @@ void CommandBuffer::cmdSetScissor(uint32_t firstScissor, SpanView<VkRect2D> scis
 
 void CommandBuffer::cmdBindPipeline(GraphicPipeline *pipeline) {
 	if (pipeline != _boundGraphicPipeline) {
-		_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipeline());
+		_table->vkCmdBindPipeline(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipeline->getPipeline());
 		_boundGraphicPipeline = pipeline;
 	}
 }
@@ -495,13 +549,17 @@ void CommandBuffer::cmdBindPipeline(ComputePipeline *pipeline) {
 	}
 }
 
-void CommandBuffer::cmdBindPipelineWithDescriptors(const core::GraphicPipelineData *data, uint32_t firstSet) {
-	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), _availableDescriptors[data->layout->index], firstSet);
+void CommandBuffer::cmdBindPipelineWithDescriptors(const core::GraphicPipelineData *data,
+		uint32_t firstSet) {
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()),
+			_availableDescriptors[data->layout->index], firstSet);
 	cmdBindPipeline(static_cast<GraphicPipeline *>(data->pipeline.get()));
 }
 
-void CommandBuffer::cmdBindPipelineWithDescriptors(const core::ComputePipelineData *data, uint32_t firstSet) {
-	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()), _availableDescriptors[data->layout->index], firstSet);
+void CommandBuffer::cmdBindPipelineWithDescriptors(const core::ComputePipelineData *data,
+		uint32_t firstSet) {
+	cmdBindDescriptorSets(static_cast<RenderPass *>(data->subpass->pass->impl.get()),
+			_availableDescriptors[data->layout->index], firstSet);
 	cmdBindPipeline(static_cast<ComputePipeline *>(data->pipeline.get()));
 }
 
@@ -513,21 +571,20 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, uint32_t index, uint
 	cmdBindDescriptorSets(pass, _availableDescriptors[index], firstSet);
 }
 
-void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorPool> &pool, uint32_t firstSet) {
-	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
+void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorPool> &pool,
+		uint32_t firstSet) {
+	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE
+																  : VK_PIPELINE_BIND_POINT_GRAPHICS;
 	auto sets = pool->getSets();
 
 	auto targetLayout = pool->getLayout();
 
-	Vector<VkDescriptorSet> bindSets; bindSets.reserve(sets.size());
-	for (auto &it : sets) {
-		bindSets.emplace_back(it->set);
-	}
+	Vector<VkDescriptorSet> bindSets;
+	bindSets.reserve(sets.size());
+	for (auto &it : sets) { bindSets.emplace_back(it->set); }
 
 	auto doBindSets = [&] {
-		for (auto &it : sets) {
-			_descriptorSets.emplace(it);
-		}
+		for (auto &it : sets) { _descriptorSets.emplace(it); }
 
 		_boundLayout = targetLayout;
 
@@ -548,8 +605,10 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorP
 	}
 }
 
-void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
-	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
+void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescriptorSet> sets,
+		uint32_t firstSet) {
+	auto bindPoint = (pass->getType() == core::PassType::Compute) ? VK_PIPELINE_BIND_POINT_COMPUTE
+																  : VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	if (!_boundLayout) {
 		log::error("vk::CommandBuffer", "Try to rebind sets when no layout is bound");
@@ -561,38 +620,47 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescripto
 	}
 }
 
-void CommandBuffer::cmdBindGraphicDescriptorSets(VkPipelineLayout layout, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
+void CommandBuffer::cmdBindGraphicDescriptorSets(VkPipelineLayout layout,
+		SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	_table->vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet,
 			uint32_t(sets.size()), sets.data(), 0, nullptr);
 }
 
-void CommandBuffer::cmdBindComputeDescriptorSets(VkPipelineLayout layout, SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
+void CommandBuffer::cmdBindComputeDescriptorSets(VkPipelineLayout layout,
+		SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	_table->vkCmdBindDescriptorSets(_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, firstSet,
 			uint32_t(sets.size()), sets.data(), 0, nullptr);
 }
 
-void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) {
+void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
+		uint32_t firstInstance) {
 	_table->vkCmdDraw(_buffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
 		int32_t vertexOffset, uint32_t firstInstance) {
-	_table->vkCmdDrawIndexed(_buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	_table->vkCmdDrawIndexed(_buffer, indexCount, instanceCount, firstIndex, vertexOffset,
+			firstInstance);
 }
 
-void CommandBuffer::cmdPushConstants(PipelineLayout *layout, VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
-	_table->vkCmdPushConstants(_buffer, layout->getLayout(), stageFlags, offset, uint32_t(data.size()), data.data());
+void CommandBuffer::cmdPushConstants(PipelineLayout *layout, VkShaderStageFlags stageFlags,
+		uint32_t offset, BytesView data) {
+	_table->vkCmdPushConstants(_buffer, layout->getLayout(), stageFlags, offset,
+			uint32_t(data.size()), data.data());
 }
 
-void CommandBuffer::cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset, BytesView data) {
+void CommandBuffer::cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset,
+		BytesView data) {
 	XLASSERT(_boundLayout, "cmdPushConstants without bound layout");
-	_table->vkCmdPushConstants(_buffer, _boundLayout->getLayout(), stageFlags, offset, uint32_t(data.size()), data.data());
+	_table->vkCmdPushConstants(_buffer, _boundLayout->getLayout(), stageFlags, offset,
+			uint32_t(data.size()), data.data());
 }
 
 void CommandBuffer::cmdFillBuffer(Buffer *buffer, uint32_t data) {
 	cmdFillBuffer(buffer, 0, VK_WHOLE_SIZE, data);
 }
 
-void CommandBuffer::cmdFillBuffer(Buffer *buffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data) {
+void CommandBuffer::cmdFillBuffer(Buffer *buffer, VkDeviceSize dstOffset, VkDeviceSize size,
+		uint32_t data) {
 	bindBuffer(buffer);
 	_table->vkCmdFillBuffer(_buffer, buffer->getBuffer(), dstOffset, size, data);
 }
@@ -601,32 +669,36 @@ void CommandBuffer::cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint
 	_table->vkCmdDispatch(_buffer, groupCountX, groupCountY, groupCountZ);
 }
 
-void CommandBuffer::cmdDispatchPipeline(ComputePipeline *pipeline, uint32_t countX, uint32_t countY, uint32_t countZ) {
-	cmdBindPipeline(pipeline);
-	cmdDispatch((countX - 1) / pipeline->getLocalX() + 1,
-			(countY - 1) / pipeline->getLocalY() + 1,
-			(countZ - 1) / pipeline->getLocalZ() + 1);
+void CommandBuffer::cmdDispatchPipeline(const core::ComputePipelineData *pipeline, uint32_t countX,
+		uint32_t countY, uint32_t countZ) {
+	cmdBindPipelineWithDescriptors(pipeline);
+	cmdDispatch((countX - 1) / pipeline->pipeline->getLocalX() + 1,
+			(countY - 1) / pipeline->pipeline->getLocalY() + 1,
+			(countZ - 1) / pipeline->pipeline->getLocalZ() + 1);
 }
 
 uint32_t CommandBuffer::cmdNextSubpass() {
 	if (_withinRenderpass) {
 		_table->vkCmdNextSubpass(_buffer, VK_SUBPASS_CONTENTS_INLINE);
-		++ _currentSubpass;
+		++_currentSubpass;
 		return _currentSubpass;
 	}
 	return 0;
 }
 
-void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &buffer, const Rc<Image> &image) {
+void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily,
+		const Rc<Buffer> &buffer, const Rc<Image> &image) {
 	ImageMemoryBarrier inImageBarrier(image, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, makeSpanView(&inImageBarrier, 1));
+	cmdPipelineBarrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			makeSpanView(&inImageBarrier, 1));
 
 	auto sourceFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	auto targetFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-	if (image->getInfo().type != core::PassType::Generic && sourceFamily != VK_QUEUE_FAMILY_IGNORED && targetFamily != VK_QUEUE_FAMILY_IGNORED) {
+	if (image->getInfo().type != core::PassType::Generic && sourceFamily != VK_QUEUE_FAMILY_IGNORED
+			&& targetFamily != VK_QUEUE_FAMILY_IGNORED) {
 		if (sourceFamily != targetFamily) {
 			sourceFamilyIndex = sourceFamily;
 			targetFamilyIndex = targetFamily;
@@ -635,11 +707,13 @@ void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFam
 
 	cmdCopyBufferToImage(buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
 
-	ImageMemoryBarrier outImageBarrier(image, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		QueueFamilyTransfer{sourceFamilyIndex, targetFamilyIndex});
+	ImageMemoryBarrier outImageBarrier(image, VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			QueueFamilyTransfer{sourceFamilyIndex, targetFamilyIndex});
 
-	cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, makeSpanView(&outImageBarrier, 1));
+	cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+			makeSpanView(&outImageBarrier, 1));
 
 	if (targetFamilyIndex != VK_QUEUE_FAMILY_IGNORED) {
 		image->setPendingBarrier(outImageBarrier);
@@ -656,7 +730,8 @@ void CommandBuffer::bindBuffer(core::BufferObject *buffer) {
 bool CommandBuffer::updateBoundSets(SpanView<VkDescriptorSet> sets, uint32_t firstSet) {
 	auto size = sets.size() + firstSet;
 	if (size <= _boundSets.size()) {
-		if (memcmp(_boundSets.data() + firstSet, sets.data(), sizeof(VkDescriptorSet) * sets.size()) == 0) {
+		if (memcmp(_boundSets.data() + firstSet, sets.data(), sizeof(VkDescriptorSet) * sets.size())
+				== 0) {
 			return true;
 		}
 	}
@@ -666,7 +741,8 @@ bool CommandBuffer::updateBoundSets(SpanView<VkDescriptorSet> sets, uint32_t fir
 	return false;
 }
 
-static void CommandPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
+static void CommandPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr,
+		void *) {
 	auto d = static_cast<Device *>(dev);
 	auto target = (VkCommandPool)ptr.get();
 	if (target) {
@@ -685,21 +761,23 @@ bool CommandPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c, bool
 	poolInfo.queueFamilyIndex = familyIdx;
 	poolInfo.flags = 0; // transient ? VK_COMMAND_POOL_CREATE_TRANSIENT_BIT : 0;
 
-	if (dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool) == VK_SUCCESS) {
-		return core::CommandPool::init(dev, CommandPool_destroy, core::ObjectType::CommandPool, core::ObjectHandle(_commandPool));
+	if (dev.getTable()->vkCreateCommandPool(dev.getDevice(), &poolInfo, nullptr, &_commandPool)
+			== VK_SUCCESS) {
+		return core::CommandPool::init(dev, CommandPool_destroy, core::ObjectType::CommandPool,
+				core::ObjectHandle(_commandPool));
 	}
 
 	return false;
 }
 
-const core::CommandBuffer *CommandPool::recordBuffer(core::Device &dev, const Callback<bool(core::CommandBuffer &)> &cb) {
-	return recordBuffer(static_cast<Device &>(dev), Vector<Rc<DescriptorPool>>(), [&] (CommandBuffer &buf) {
-		return cb(buf);
-	});
+const core::CommandBuffer *CommandPool::recordBuffer(core::Device &dev,
+		const Callback<bool(core::CommandBuffer &)> &cb) {
+	return recordBuffer(static_cast<Device &>(dev), Vector<Rc<DescriptorPool>>(),
+			[&](CommandBuffer &buf) { return cb(buf); });
 }
 
-const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
-		const Callback<bool(CommandBuffer &)> &cb,
+const CommandBuffer *CommandPool::recordBuffer(Device &dev,
+		Vector<Rc<DescriptorPool>> &&descriptors, const Callback<bool(CommandBuffer &)> &cb,
 		VkCommandBufferUsageFlagBits flags, Level level) {
 	if (!_commandPool) {
 		return nullptr;
@@ -720,7 +798,7 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<Descriptor
 		return nullptr;
 	}
 
-	VkCommandBufferBeginInfo beginInfo { };
+	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.pNext = nullptr;
 	beginInfo.flags = flags;
@@ -752,7 +830,8 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev, Vector<Rc<Descriptor
 
 void CommandPool::freeDefaultBuffers(Device &dev, Vector<VkCommandBuffer> &vec) {
 	if (_commandPool) {
-		dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, static_cast<uint32_t>(vec.size()), vec.data());
+		dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool,
+				static_cast<uint32_t>(vec.size()), vec.data());
 	}
 	vec.clear();
 }
@@ -764,11 +843,13 @@ void CommandPool::reset(Device &dev, bool release) {
 		Vector<VkCommandBuffer> buffersToFree;
 		for (auto &it : _buffers) {
 			if (it) {
-				buffersToFree.emplace_back(static_cast<const CommandBuffer *>(it.get())->getBuffer());
+				buffersToFree.emplace_back(
+						static_cast<const CommandBuffer *>(it.get())->getBuffer());
 			}
 		}
 		if (buffersToFree.size() > 0) {
-			dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool, static_cast<uint32_t>(buffersToFree.size()), buffersToFree.data());
+			dev.getTable()->vkFreeCommandBuffers(dev.getDevice(), _commandPool,
+					static_cast<uint32_t>(buffersToFree.size()), buffersToFree.data());
 		}
 
 		if (dev.isPortabilityMode()) {
@@ -781,9 +862,7 @@ void CommandPool::reset(Device &dev, bool release) {
 	core::CommandPool::reset(dev, release);
 }
 
-void CommandPool::autorelease(Rc<Ref> &&ref) {
-	_autorelease.emplace_back(move(ref));
-}
+void CommandPool::autorelease(Rc<Ref> &&ref) { _autorelease.emplace_back(move(ref)); }
 
 void CommandPool::recreatePool(Device &dev) {
 	if (_commandPool) {
@@ -805,4 +884,4 @@ void CommandPool::recreatePool(Device &dev) {
 	_invalidated = false;
 }
 
-}
+} // namespace stappler::xenolith::vk

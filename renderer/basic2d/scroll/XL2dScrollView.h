@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEW_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEW_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEW_H_
+#define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEW_H_
 
 #include "XL2dScrollViewBase.h"
 #include "XL2dScrollController.h"
@@ -56,7 +57,7 @@ public:
 		virtual bool init(Direction);
 		virtual void handleContentSizeDirty() override;
 		virtual void update(const UpdateTime &time) override;
-		virtual void handleEnter(Scene*) override;
+		virtual void handleEnter(Scene *) override;
 		virtual void handleExit() override;
 
 		virtual void setDirection(Direction);
@@ -128,11 +129,15 @@ public:
 	virtual void load(const Value &);
 
 public:
-	virtual Rc<ActionProgress> resizeNode(Node *, float newSize, float duration, Function<void()> &&cb = nullptr);
-	virtual Rc<ActionProgress> resizeNode(ScrollController::Item *, float newSize, float duration, Function<void()> &&cb = nullptr);
+	virtual Rc<ActionProgress> resizeNode(Node *, float newSize, float duration,
+			Function<void()> &&cb = nullptr);
+	virtual Rc<ActionProgress> resizeNode(ScrollController::Item *, float newSize, float duration,
+			Function<void()> &&cb = nullptr);
 
-	virtual Rc<ActionProgress> removeNode(Node *, float duration, Function<void()> &&cb = nullptr, bool disable = false);
-	virtual Rc<ActionProgress> removeNode(ScrollController::Item *, float duration, Function<void()> &&cb = nullptr, bool disable = false);
+	virtual Rc<ActionProgress> removeNode(Node *, float duration, Function<void()> &&cb = nullptr,
+			bool disable = false);
+	virtual Rc<ActionProgress> removeNode(ScrollController::Item *, float duration,
+			Function<void()> &&cb = nullptr, bool disable = false);
 
 protected:
 	virtual void doSetScrollPosition(float pos) override;
@@ -143,9 +148,10 @@ protected:
 	virtual void onAnimationFinished() override;
 
 	virtual void updateIndicatorPosition();
-	virtual void updateIndicatorPosition(Node *indicator, float size, float value, bool actions, float min);
+	virtual void updateIndicatorPosition(Node *indicator, float size, float value, bool actions,
+			float min);
 
-	virtual ScrollController::Item * getItemForNode(Node *) const;
+	virtual ScrollController::Item *getItemForNode(Node *) const;
 
 	Overscroll *_overflowFront = nullptr;
 	Overscroll *_overflowBack = nullptr;
@@ -165,6 +171,6 @@ protected:
 	float _indicatorOpacity = 0.5f;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEW_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEW_H_ */

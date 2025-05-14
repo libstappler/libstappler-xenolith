@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +25,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 }
 
@@ -35,7 +38,9 @@ static uint32_t s_InstanceVersion = 0;
 static Vector<VkLayerProperties> s_InstanceAvailableLayers;
 static Vector<VkExtensionProperties> s_InstanceAvailableExtensions;
 
-Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb, Dso &&vulkanModule, Instance::TerminateCallback &&termCb) const {
+Rc<Instance> FunctionTable::createInstance(
+		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb,
+		Dso &&vulkanModule, Instance::TerminateCallback &&termCb) const {
 	VulkanInstanceInfo info = loadInfo();
 	VulkanInstanceData data;
 
@@ -52,7 +57,7 @@ Rc<Instance> FunctionTable::createInstance(const Callback<bool(VulkanInstanceDat
 		return nullptr;
 	}
 
-	return doCreateInstance(data, sp::move(vulkanModule), sp::move(termCb));
+	return doCreateInstance(data, info, sp::move(vulkanModule), sp::move(termCb));
 }
 
 VulkanInstanceInfo FunctionTable::loadInfo() const {
@@ -79,7 +84,8 @@ VulkanInstanceInfo FunctionTable::loadInfo() const {
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
 		s_InstanceAvailableExtensions.resize(extensionCount);
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, s_InstanceAvailableExtensions.data());
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount,
+				s_InstanceAvailableExtensions.data());
 	}
 
 	ret.targetVersion = s_InstanceVersion;
@@ -190,8 +196,12 @@ bool FunctionTable::validateData(VulkanInstanceData &data, const VulkanInstanceI
 	return true;
 }
 
-Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vulkanModule, Instance::TerminateCallback &&cb) const {
-	Vector<StringView> enabledOptionals;
+Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
+		const VulkanInstanceInfo &info, Dso &&vulkanModule,
+		Instance::TerminateCallback &&cb) const {
+	Instance::OptVec enabledOptionals;
+
+	uint32_t optIdx = 0;
 	for (auto &opt : s_optionalExtension) {
 		if (!opt) {
 			break;
@@ -199,14 +209,21 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 		bool found = false;
 		for (auto &it : data.extensionsToEnable) {
 			if (strcmp(it, opt) == 0) {
-				enabledOptionals.emplace_back(StringView(opt));
+				enabledOptionals.set(optIdx);
 				found = true;
 				break;
 			}
 		}
 		if (!found) {
-			data.extensionsToEnable.emplace_back(opt);
+			for (auto &extension : info.availableExtensions) {
+				if (strcmp(opt, extension.extensionName) == 0) {
+					enabledOptionals.set(optIdx);
+					data.extensionsToEnable.emplace_back(opt);
+					break;
+				}
+			}
 		}
+		++optIdx;
 	}
 
 	const char *debugExt = nullptr;
@@ -229,7 +246,8 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 
 	VkInstance instance = VK_NULL_HANDLE;
 
-	VkApplicationInfo appInfo{}; vk::sanitizeVkStruct(appInfo);
+	VkApplicationInfo appInfo{};
+	vk::sanitizeVkStruct(appInfo);
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext = nullptr;
 	appInfo.pApplicationName = data.applicationName.data();
@@ -238,7 +256,8 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 	appInfo.engineVersion = xenolith::getVersionIndex();
 	appInfo.apiVersion = data.targetVulkanVersion;
 
-	VkInstanceCreateInfo createInfo{}; vk::sanitizeVkStruct(createInfo);
+	VkInstanceCreateInfo createInfo{};
+	vk::sanitizeVkStruct(createInfo);
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pNext = nullptr;
 #if MACOS
@@ -255,11 +274,15 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 	if (validationEnabled) {
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		debugCreateInfo.pfnUserCallback = s_debugMessageCallback;
 		createInfo.pNext = &debugCreateInfo;
-	} else{
+	} else {
 		createInfo.pNext = nullptr;
 	}
 
@@ -271,7 +294,8 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 		validationExt.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
 		validationExt.pNext = createInfo.pNext;
 
-		VkValidationFeatureEnableEXT feature = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+		VkValidationFeatureEnableEXT feature =
+				VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
 
 		validationExt.enabledValidationFeatureCount = 1;
 		validationExt.pEnabledValidationFeatures = &feature;
@@ -289,29 +313,25 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 		return nullptr;
 	}
 
-	auto vkInstance = Rc<vk::Instance>::alloc(instance,
-			vkGetInstanceProcAddr,
-			data.targetVulkanVersion,
-			sp::move(enabledOptionals),
-			sp::move(vulkanModule),
-			sp::move(cb),
-			sp::move(data.checkPresentationSupport),
-			validationEnabled && (debugExt != nullptr),
-			sp::move(data.userdata));
+	auto vkInstance = Rc<vk::Instance>::alloc(instance, vkGetInstanceProcAddr,
+			data.targetVulkanVersion, sp::move(enabledOptionals), sp::move(vulkanModule),
+			sp::move(cb), sp::move(data.checkPresentationSupport),
+			validationEnabled && (debugExt != nullptr), sp::move(data.userdata));
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;
 		out << "\n\tVulkan: " << getVersionDescription(s_InstanceVersion) << "\n\tLayers:\n";
 		for (const auto &layerProperties : s_InstanceAvailableLayers) {
 			out << "\t\t" << layerProperties.layerName << " ("
-					<< getVersionDescription(layerProperties.specVersion) << "/"
-					<< getVersionDescription(layerProperties.implementationVersion)
-					<< ")\t - " << layerProperties.description << "\n";
+				<< getVersionDescription(layerProperties.specVersion) << "/"
+				<< getVersionDescription(layerProperties.implementationVersion) << ")\t - "
+				<< layerProperties.description << "\n";
 		}
 
 		out << "\tExtensions:\n";
 		for (const auto &extension : s_InstanceAvailableExtensions) {
-			out << "\t\t" << extension.extensionName << ": " << getVersionDescription(extension.specVersion) << "\n";
+			out << "\t\t" << extension.extensionName << ": "
+				<< getVersionDescription(extension.specVersion) << "\n";
 		}
 
 		vkInstance->printDevicesInfo(out);
@@ -322,4 +342,4 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data, Dso &&vul
 	return vkInstance;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform

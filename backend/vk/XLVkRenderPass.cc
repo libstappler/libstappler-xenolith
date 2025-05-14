@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,9 +32,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-DescriptorBinding::~DescriptorBinding() {
-	data.clear();
-}
+DescriptorBinding::~DescriptorBinding() { data.clear(); }
 
 DescriptorBinding::DescriptorBinding(VkDescriptorType type, uint32_t count) : type(type) {
 	data.resize(count, DescriptorData{core::ObjectHandle::zero(), nullptr});
@@ -41,24 +40,28 @@ DescriptorBinding::DescriptorBinding(VkDescriptorType type, uint32_t count) : ty
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferInfo &&info) {
 	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{core::ObjectHandle(info.buffer->getBuffer()), move(info.buffer)};
+	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
 	return ret;
 }
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorImageInfo &&info) {
 	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{core::ObjectHandle(info.imageView->getImageView()), move(info.imageView)};
+	data[idx] = DescriptorData{info.imageView->getObjectData().handle, move(info.imageView)};
 	return ret;
 }
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferViewInfo &&info) {
 	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{core::ObjectHandle(info.buffer->getBuffer()), move(info.buffer)};
+	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
 	return ret;
 }
 
-bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::ImageView>> imageViews) {
-	Vector<VkImageView> views; views.reserve(imageViews.size());
+const DescriptorData &DescriptorBinding::get(uint32_t idx) const { return data[idx]; }
+
+bool Framebuffer::init(Device &dev, RenderPass *renderPass,
+		SpanView<Rc<core::ImageView>> imageViews) {
+	Vector<VkImageView> views;
+	views.reserve(imageViews.size());
 	_viewIds.reserve(imageViews.size());
 	_imageViews.reserve(imageViews.size());
 	_renderPass = renderPass;
@@ -71,12 +74,13 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 		_imageViews.emplace_back(it);
 
 		if (extent != it->getFramebufferExtent()) {
-			log::error("Framebuffer", "Invalid extent for framebuffer image: ", it->getFramebufferExtent());
+			log::error("Framebuffer",
+					"Invalid extent for framebuffer image: ", it->getFramebufferExtent());
 			return false;
 		}
 	}
 
-	VkFramebufferCreateInfo framebufferInfo { };
+	VkFramebufferCreateInfo framebufferInfo{};
 	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebufferInfo.renderPass = renderPass->getRenderPass();
 	framebufferInfo.attachmentCount = uint32_t(views.size());
@@ -85,10 +89,13 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 	framebufferInfo.height = extent.height;
 	framebufferInfo.layers = extent.depth;
 
-	if (dev.getTable()->vkCreateFramebuffer(dev.getDevice(), &framebufferInfo, nullptr, &_framebuffer) == VK_SUCCESS) {
+	if (dev.getTable()->vkCreateFramebuffer(dev.getDevice(), &framebufferInfo, nullptr,
+				&_framebuffer)
+			== VK_SUCCESS) {
 		_extent = Extent2(extent.width, extent.height);
 		_layerCount = extent.depth;
-		return core::Framebuffer::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
+		return core::Framebuffer::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyFramebuffer(d->getDevice(), (VkFramebuffer)ptr.get(), nullptr);
 		}, core::ObjectType::Framebuffer, ObjectHandle(_framebuffer));
@@ -96,12 +103,10 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass, SpanView<Rc<core::Im
 	return false;
 }
 
-PipelineLayout::~PipelineLayout() {
-	invalidate();
-}
+PipelineLayout::~PipelineLayout() { invalidate(); }
 
 bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uint32_t index) {
-	auto cleanup = [&] () {
+	auto cleanup = [&]() {
 		for (VkDescriptorSetLayout &set : _layouts) {
 			dev.getTable()->vkDestroyDescriptorSetLayout(dev.getDevice(), set, nullptr);
 		}
@@ -109,10 +114,9 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 		return false;
 	};
 
-	auto incrementSize = [&] (VkDescriptorType type, uint32_t count) {
-		auto lb = std::lower_bound(_sizes.begin(), _sizes.end(), type, [] (const VkDescriptorPoolSize &l, VkDescriptorType r) {
-			return l.type < r;
-		});
+	auto incrementSize = [&](VkDescriptorType type, uint32_t count) {
+		auto lb = std::lower_bound(_sizes.begin(), _sizes.end(), type,
+				[](const VkDescriptorPoolSize &l, VkDescriptorType r) { return l.type < r; });
 		if (lb == _sizes.end()) {
 			_sizes.emplace_back(VkDescriptorPoolSize({type, count}));
 		} else if (lb->type == type) {
@@ -123,14 +127,15 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 	};
 
 	for (auto &setData : data.sets) {
-		++ _maxSets;
+		++_maxSets;
 
 		Vector<DescriptorBindingInfo> descriptors;
 
 		bool hasFlags = false;
 		Vector<VkDescriptorBindingFlags> flags;
 		VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
-		Vector<VkDescriptorSetLayoutBinding> bindings; bindings.reserve(setData->descriptors.size());
+		Vector<VkDescriptorSetLayoutBinding> bindings;
+		bindings.reserve(setData->descriptors.size());
 		uint32_t bindingIdx = 0;
 		for (auto &binding : setData->descriptors) {
 			if (binding->updateAfterBind) {
@@ -150,16 +155,18 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 			b.stageFlags = VkShaderStageFlags(binding->stages);
 			if (binding->type == core::DescriptorType::Sampler) {
 				// do nothing
-				log::warn("vk::RenderPass", "gl::DescriptorType::Sampler is not supported for descriptors");
+				log::warn("vk::RenderPass",
+						"gl::DescriptorType::Sampler is not supported for descriptors");
 			} else {
 				incrementSize(VkDescriptorType(binding->type), binding->count);
 				b.pImmutableSamplers = nullptr;
 			}
 			bindings.emplace_back(b);
-			descriptors.emplace_back(DescriptorBindingInfo{VkDescriptorType(binding->type), binding->count});
-			++ bindingIdx;
+			descriptors.emplace_back(
+					DescriptorBindingInfo{VkDescriptorType(binding->type), binding->count});
+			++bindingIdx;
 		}
-		VkDescriptorSetLayoutCreateInfo layoutInfo { };
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.pNext = nullptr;
 		layoutInfo.bindingCount = uint32_t(bindings.size());
@@ -170,20 +177,25 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 			layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 
 			VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlags;
-			bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+			bindingFlags.sType =
+					VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
 			bindingFlags.pNext = nullptr;
 			bindingFlags.bindingCount = uint32_t(flags.size());
 			bindingFlags.pBindingFlags = flags.data();
 			layoutInfo.pNext = &bindingFlags;
 
-			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr, &setLayout) == VK_SUCCESS) {
+			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr,
+						&setLayout)
+					== VK_SUCCESS) {
 				_descriptors.emplace_back(sp::move(descriptors));
 				_layouts.emplace_back(setLayout);
 			} else {
 				return cleanup();
 			}
 		} else {
-			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr, &setLayout) == VK_SUCCESS) {
+			if (dev.getTable()->vkCreateDescriptorSetLayout(dev.getDevice(), &layoutInfo, nullptr,
+						&setLayout)
+					== VK_SUCCESS) {
 				_descriptors.emplace_back(sp::move(descriptors));
 				_layouts.emplace_back(setLayout);
 			} else {
@@ -194,7 +206,7 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 
 	Vector<VkPushConstantRange> ranges;
 
-	auto addRange = [&] (VkShaderStageFlags flags, uint32_t offset, uint32_t size) {
+	auto addRange = [&](VkShaderStageFlags flags, uint32_t offset, uint32_t size) {
 		for (auto &it : ranges) {
 			if (it.stageFlags == flags) {
 				if (offset < it.offset) {
@@ -214,21 +226,24 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 	for (auto &pipeline : data.graphicPipelines) {
 		for (auto &shader : pipeline->shaders) {
 			for (auto &constantBlock : shader.data->constants) {
-				addRange(VkShaderStageFlags(shader.data->stage), constantBlock.offset, constantBlock.size);
+				addRange(VkShaderStageFlags(shader.data->stage), constantBlock.offset,
+						constantBlock.size);
 			}
 		}
 	}
 
 	for (auto &pipeline : data.computePipelines) {
 		for (auto &constantBlock : pipeline->shader.data->constants) {
-			addRange(VkShaderStageFlags(pipeline->shader.data->stage), constantBlock.offset, constantBlock.size);
+			addRange(VkShaderStageFlags(pipeline->shader.data->stage), constantBlock.offset,
+					constantBlock.size);
 		}
 	}
 
 	Vector<VkDescriptorSetLayout> layouts(_layouts);
 
 	if (data.textureSetLayout && data.textureSetLayout->layout) {
-		layouts.emplace_back(data.textureSetLayout->layout.get_cast<TextureSetLayout>()->getLayout());
+		layouts.emplace_back(
+				data.textureSetLayout->layout.get_cast<TextureSetLayout>()->getLayout());
 	}
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo;
@@ -240,24 +255,26 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 	pipelineLayoutInfo.pushConstantRangeCount = uint32_t(ranges.size());
 	pipelineLayoutInfo.pPushConstantRanges = ranges.data();
 
-	if (dev.getTable()->vkCreatePipelineLayout(dev.getDevice(), &pipelineLayoutInfo, nullptr, &_layout) == VK_SUCCESS) {
+	if (dev.getTable()->vkCreatePipelineLayout(dev.getDevice(), &pipelineLayoutInfo, nullptr,
+				&_layout)
+			== VK_SUCCESS) {
 		_index = index;
-		return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle layout, void *layouts) {
+		return core::Object::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle layout, void *layouts) {
 			auto d = ((Device *)dev);
 
 			for (VkDescriptorSetLayout &set : *(decltype(&_layouts))layouts) {
 				d->getTable()->vkDestroyDescriptorSetLayout(d->getDevice(), set, nullptr);
 			}
 
-			d->getTable()->vkDestroyPipelineLayout(d->getDevice(), (VkPipelineLayout)layout.get(), nullptr);
+			d->getTable()->vkDestroyPipelineLayout(d->getDevice(), (VkPipelineLayout)layout.get(),
+					nullptr);
 		}, core::ObjectType::PipelineLayout, ObjectHandle(_layout), &_layouts);
 	}
 	return cleanup();
 }
 
-DescriptorPool::~DescriptorPool() {
-	invalidate();
-}
+DescriptorPool::~DescriptorPool() { invalidate(); }
 
 bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	auto sizes = layout->getSizes();
@@ -274,7 +291,8 @@ bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	poolInfo.pPoolSizes = sizes.data();
 	poolInfo.maxSets = layout->getMaxSets();
 
-	if (dev.getTable()->vkCreateDescriptorPool(dev.getDevice(), &poolInfo, nullptr, &_pool) != VK_SUCCESS) {
+	if (dev.getTable()->vkCreateDescriptorPool(dev.getDevice(), &poolInfo, nullptr, &_pool)
+			!= VK_SUCCESS) {
 		return false;
 	}
 
@@ -287,9 +305,11 @@ bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
 	allocInfo.pSetLayouts = layouts.data();
 
-	Vector<VkDescriptorSet> sets; sets.resize(layouts.size());
+	Vector<VkDescriptorSet> sets;
+	sets.resize(layouts.size());
 
-	if (dev.getTable()->vkAllocateDescriptorSets(dev.getDevice(), &allocInfo, sets.data()) != VK_SUCCESS) {
+	if (dev.getTable()->vkAllocateDescriptorSets(dev.getDevice(), &allocInfo, sets.data())
+			!= VK_SUCCESS) {
 		sets.clear();
 		dev.getTable()->vkDestroyDescriptorPool(dev.getDevice(), _pool, nullptr);
 		_pool = VK_NULL_HANDLE;
@@ -302,18 +322,18 @@ bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 		auto set = Rc<DescriptorSetBindings>::alloc();
 		auto info = layout->getDescriptorsInfo(setIndex);
 		set->set = it;
-		for (auto &d : info) {
-			set->bindings.emplace_back(d.type, d.count);
-		}
+		for (auto &d : info) { set->bindings.emplace_back(d.type, d.count); }
 		_sets.emplace_back(move(set));
-		++ setIndex;
+		++setIndex;
 	}
 
 	_layout = layout;
 	_layoutIndex = layout->getIndex();
-	return core::Object::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle pool, void *ptr) {
+	return core::Object::init(dev,
+			[](core::Device *dev, core::ObjectType, ObjectHandle pool, void *ptr) {
 		auto d = ((Device *)dev);
-		d->getTable()->vkDestroyDescriptorPool(d->getDevice(), (VkDescriptorPool)pool.get(), nullptr);
+		d->getTable()->vkDestroyDescriptorPool(d->getDevice(), (VkDescriptorPool)pool.get(),
+				nullptr);
 	}, core::ObjectType::PipelineLayout, ObjectHandle(_pool));
 }
 
@@ -337,18 +357,10 @@ bool RenderPass::init(Device &dev, QueuePassData &data) {
 	_type = data.pass->getType();
 	_name = data.key.str<Interface>();
 	switch (_type) {
-	case core::PassType::Graphics:
-		return initGraphicsPass(dev, data);
-		break;
-	case core::PassType::Compute:
-		return initComputePass(dev, data);
-		break;
-	case core::PassType::Transfer:
-		return initTransferPass(dev, data);
-		break;
-	case core::PassType::Generic:
-		return initGenericPass(dev, data);
-		break;
+	case core::PassType::Graphics: return initGraphicsPass(dev, data); break;
+	case core::PassType::Compute: return initComputePass(dev, data); break;
+	case core::PassType::Transfer: return initTransferPass(dev, data); break;
+	case core::PassType::Generic: return initGenericPass(dev, data); break;
 	}
 
 	return false;
@@ -385,7 +397,8 @@ void RenderPass::releaseDescriptorPool(Rc<DescriptorPool> &&pool) {
 	vec.emplace_back(move(pool));
 }
 
-bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool *pool, bool async) const {
+bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool *pool,
+		bool async) const {
 	auto dev = (Device *)_object.device;
 	auto table = dev->getTable();
 	auto data = handle.getData();
@@ -396,7 +409,8 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 
 	Vector<VkWriteDescriptorSet> writes;
 
-	auto writeDescriptor = [&] (DescriptorSetBindings *set, const PipelineDescriptor &desc, uint32_t currentDescriptor, bool external) {
+	auto writeDescriptor = [&](DescriptorSetBindings *set, const PipelineDescriptor &desc,
+								   uint32_t currentDescriptor) {
 		auto a = handle.getAttachmentHandle(desc.attachment->attachment);
 		if (!a) {
 			return false;
@@ -418,9 +432,9 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 		writeData.pBufferInfo = VK_NULL_HANDLE;
 		writeData.pTexelBufferView = VK_NULL_HANDLE;
 
-		auto c = a->getDescriptorArraySize(handle, desc, external);
-		for (uint32_t i = 0; i < c; ++ i) {
-			if (a->isDescriptorDirty(handle, desc, i, external)) {
+		auto c = a->getDescriptorArraySize(handle, desc);
+		for (uint32_t i = 0; i < c; ++i) {
+			if (a->isDescriptorDirty(handle, desc, i, set->bindings[currentDescriptor].get(i))) {
 				switch (desc.type) {
 				case DescriptorType::Sampler:
 				case DescriptorType::CombinedImageSampler:
@@ -433,11 +447,12 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					if (localImages) {
 						auto h = (ImageAttachmentHandle *)a;
 
-						DescriptorImageInfo info(&desc, i, external);
+						DescriptorImageInfo info(&desc, i);
 						if (!h->writeDescriptor(handle, info)) {
 							return false;
 						} else {
-							localImages->emplace_back(VkDescriptorImageInfo{info.sampler, info.imageView->getImageView(), info.layout});
+							localImages->emplace_back(VkDescriptorImageInfo{info.sampler,
+								info.imageView->getImageView(), info.layout});
 							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
 								handle.autorelease(ref);
 							}
@@ -452,7 +467,7 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					if (localViews) {
 						auto h = (TexelAttachmentHandle *)a;
 
-						DescriptorBufferViewInfo info(&desc, i, external);
+						DescriptorBufferViewInfo info(&desc, i);
 						if (h->writeDescriptor(handle, info)) {
 							localViews->emplace_back(info.target);
 							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
@@ -473,11 +488,12 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					if (localBuffers) {
 						auto h = (BufferAttachmentHandle *)a;
 
-						DescriptorBufferInfo info(&desc, i, external);
+						DescriptorBufferInfo info(&desc, i);
 						if (!h->writeDescriptor(handle, info)) {
 							return false;
 						} else {
-							localBuffers->emplace_back(VkDescriptorBufferInfo{info.buffer->getBuffer(), info.offset, info.range});
+							localBuffers->emplace_back(VkDescriptorBufferInfo{
+								info.buffer->getBuffer(), info.offset, info.range});
 							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
 								handle.autorelease(ref);
 							}
@@ -485,10 +501,9 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					}
 					break;
 				case DescriptorType::Unknown:
-				case DescriptorType::Attachment:
-					break;
+				case DescriptorType::Attachment: break;
 				}
-				++ writeData.descriptorCount;
+				++writeData.descriptorCount;
 			} else {
 				if (writeData.descriptorCount > 0) {
 					if (localImages) {
@@ -546,29 +561,32 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 		uint32_t currentDescriptor = 0;
 		for (auto &it : descriptorSetData->descriptors) {
 			if (it->updateAfterBind != async) {
-				++ currentDescriptor;
+				++currentDescriptor;
 				continue;
 			}
-			if (!writeDescriptor(set, *it, currentDescriptor, false)) {
+			if (!writeDescriptor(set, *it, currentDescriptor)) {
 				return false;
 			}
-			++ currentDescriptor;
+			++currentDescriptor;
 		}
-		++ currentSet;
+		++currentSet;
 	}
 
 	if (!writes.empty()) {
-		table->vkUpdateDescriptorSets(dev->getDevice(), uint32_t(writes.size()), writes.data(), 0, nullptr);
+		table->vkUpdateDescriptorSets(dev->getDevice(), uint32_t(writes.size()), writes.data(), 0,
+				nullptr);
 	}
 
 	return true;
 }
 
-void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, const Callback<void()> &cb, bool writeBarriers) {
+void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf,
+		const Callback<void()> &cb, bool writeBarriers) {
 	bool useAlternative = false;
 	for (auto &it : _variableAttachments) {
 		if (auto aHandle = handle.getAttachmentHandle(it->attachment)) {
-			if (aHandle->getQueueData()->image && !aHandle->getQueueData()->image->isSwapchainImage()) {
+			if (aHandle->getQueueData()->image
+					&& !aHandle->getQueueData()->image->isSwapchainImage()) {
 				useAlternative = true;
 				break;
 			}
@@ -592,7 +610,8 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 			case core::AttachmentType::Image:
 				if (auto h = dynamic_cast<ImageAttachmentHandle *>(it.second->handle.get())) {
 					if (auto img = static_cast<Image *>(it.second->image->getImage().get())) {
-						auto b = handle.getImageInputOutputBarrier(static_cast<Device *>(_object.device), img, *h);
+						auto b = handle.getImageInputOutputBarrier(
+								static_cast<Device *>(_object.device), img, *h);
 						if (auto pending = img->getPendingBarrier()) {
 							b.input = *pending;
 							img->dropPendingBarrier();
@@ -607,7 +626,9 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 			case core::AttachmentType::Buffer:
 				if (auto h = dynamic_cast<BufferAttachmentHandle *>(it.second->handle.get())) {
 					for (auto &it : h->getBuffers()) {
-						auto b = handle.getBufferInputOutputBarrier(static_cast<Device *>(_object.device), it.buffer, *h, it.offset, it.size);
+						auto b = handle.getBufferInputOutputBarrier(
+								static_cast<Device *>(_object.device), it.buffer, *h, it.offset,
+								it.size);
 						if (auto pending = it.buffer->getPendingBarrier()) {
 							b.input = *pending;
 							it.buffer->dropPendingBarrier();
@@ -619,8 +640,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 					}
 				}
 				break;
-			default:
-				break;
+			default: break;
 			}
 		}
 
@@ -649,13 +669,16 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 		}
 
 		if ((!imageBarriersData.empty() || !bufferBarriersData.empty())
-				&& (fromStage != core::PipelineStage::None) && (toStage != core::PipelineStage::None)) {
-			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage), 0, bufferBarriers, imageBarriers);
+				&& (fromStage != core::PipelineStage::None)
+				&& (toStage != core::PipelineStage::None)) {
+			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage),
+					0, bufferBarriers, imageBarriers);
 		}
 	}
 
 	if (_data->renderPass) {
-		buf.cmdBeginRenderPass(this, (Framebuffer *)handle.getFramebuffer().get(), VK_SUBPASS_CONTENTS_INLINE, useAlternative);
+		buf.cmdBeginRenderPass(this, (Framebuffer *)handle.getFramebuffer().get(),
+				VK_SUBPASS_CONTENTS_INLINE, useAlternative);
 
 		cb();
 
@@ -687,7 +710,8 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf, cons
 		}
 
 		if (!imageBarriersData.empty() || !bufferBarriersData.empty()) {
-			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage), 0, bufferBarriers, imageBarriers);
+			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage),
+					0, bufferBarriers, imageBarriers);
 		}
 	}
 }
@@ -707,7 +731,8 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 
 		bool mayAlias = false;
 		for (auto &u : desc->subpasses) {
-			if (u->usage == core::AttachmentUsage::InputOutput || u->usage == core::AttachmentUsage::InputDepthStencil) {
+			if (u->usage == core::AttachmentUsage::InputOutput
+					|| u->usage == core::AttachmentUsage::InputDepthStencil) {
 				mayAlias = true;
 			}
 		}
@@ -715,19 +740,25 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 		auto imageAttachment = (core::ImageAttachment *)desc->attachment->attachment.get();
 		auto &info = imageAttachment->getImageInfo();
 
-		attachmentAlternative.flags = attachment.flags = (mayAlias ? VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT : 0);
+		attachmentAlternative.flags = attachment.flags =
+				(mayAlias ? VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT : 0);
 		attachmentAlternative.format = attachment.format = VkFormat(info.format);
 		attachmentAlternative.samples = attachment.samples = VkSampleCountFlagBits(info.samples);
 		attachmentAlternative.loadOp = attachment.loadOp = VkAttachmentLoadOp(desc->loadOp);
 		attachmentAlternative.storeOp = attachment.storeOp = VkAttachmentStoreOp(desc->storeOp);
-		attachmentAlternative.stencilLoadOp = attachment.stencilLoadOp = VkAttachmentLoadOp(desc->stencilLoadOp);
-		attachmentAlternative.stencilStoreOp = attachment.stencilStoreOp = VkAttachmentStoreOp(desc->stencilStoreOp);
-		attachmentAlternative.initialLayout = attachment.initialLayout = VkImageLayout(desc->initialLayout);
-		attachmentAlternative.finalLayout = attachment.finalLayout = VkImageLayout(desc->finalLayout);
+		attachmentAlternative.stencilLoadOp = attachment.stencilLoadOp =
+				VkAttachmentLoadOp(desc->stencilLoadOp);
+		attachmentAlternative.stencilStoreOp = attachment.stencilStoreOp =
+				VkAttachmentStoreOp(desc->stencilStoreOp);
+		attachmentAlternative.initialLayout = attachment.initialLayout =
+				VkImageLayout(desc->initialLayout);
+		attachmentAlternative.finalLayout = attachment.finalLayout =
+				VkImageLayout(desc->finalLayout);
 
 		if (desc->finalLayout == core::AttachmentLayout::PresentSrc) {
 			hasAlternative = true;
-			attachmentAlternative.finalLayout = VkImageLayout(core::AttachmentLayout::TransferSrcOptimal);
+			attachmentAlternative.finalLayout =
+					VkImageLayout(core::AttachmentLayout::TransferSrcOptimal);
 			_variableAttachments.emplace(desc);
 		}
 
@@ -740,7 +771,8 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 		switch (fmt) {
 		case core::PixelFormat::D:
 			if (desc->loadOp == core::AttachmentLoadOp::Clear) {
-				auto c = ((core::ImageAttachment *)desc->attachment->attachment.get())->getClearColor();
+				auto c = ((core::ImageAttachment *)desc->attachment->attachment.get())
+								 ->getClearColor();
 				VkClearValue clearValue;
 				clearValue.depthStencil.depth = c.r;
 				_clearValues.emplace_back(clearValue);
@@ -796,7 +828,7 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 			uint32_t initialSubpass = desc->subpasses.front()->subpass->index;
 			uint32_t finalSubpass = desc->subpasses.back()->subpass->index;
 
-			for (size_t i = initialSubpass + 1; i < finalSubpass; ++ i) {
+			for (size_t i = initialSubpass + 1; i < finalSubpass; ++i) {
 				bool found = false;
 				for (auto &u : desc->subpasses) {
 					if (u->subpass->index == i) {
@@ -899,8 +931,12 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 
 	for (auto &it : data.dependencies) {
 		VkSubpassDependency dependency{};
-		dependency.srcSubpass = (it.srcSubpass == core::SubpassDependency::External) ? VK_SUBPASS_EXTERNAL : it.srcSubpass;
-		dependency.dstSubpass = (it.dstSubpass == core::SubpassDependency::External) ? VK_SUBPASS_EXTERNAL : it.dstSubpass;
+		dependency.srcSubpass = (it.srcSubpass == core::SubpassDependency::External)
+				? VK_SUBPASS_EXTERNAL
+				: it.srcSubpass;
+		dependency.dstSubpass = (it.dstSubpass == core::SubpassDependency::External)
+				? VK_SUBPASS_EXTERNAL
+				: it.dstSubpass;
 		dependency.srcStageMask = VkPipelineStageFlags(it.srcStage);
 		dependency.srcAccessMask = VkAccessFlags(it.srcAccess);
 		dependency.dstStageMask = VkPipelineStageFlags(it.dstStage);
@@ -922,7 +958,9 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 	renderPassInfo.dependencyCount = uint32_t(_subpassDependencies.size());
 	renderPassInfo.pDependencies = _subpassDependencies.data();
 
-	if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr, &pass.renderPass) != VK_SUCCESS) {
+	if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr,
+				&pass.renderPass)
+			!= VK_SUCCESS) {
 		return pass.cleanup(dev);
 	}
 
@@ -930,7 +968,9 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 		renderPassInfo.attachmentCount = uint32_t(_attachmentDescriptionsAlternative.size());
 		renderPassInfo.pAttachments = _attachmentDescriptionsAlternative.data();
 
-		if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr, &pass.renderPassAlternative) != VK_SUCCESS) {
+		if (dev.getTable()->vkCreateRenderPass(dev.getDevice(), &renderPassInfo, nullptr,
+					&pass.renderPassAlternative)
+				!= VK_SUCCESS) {
 			return pass.cleanup(dev);
 		}
 	}
@@ -938,7 +978,8 @@ bool RenderPass::initGraphicsPass(Device &dev, QueuePassData &data) {
 	if (initDescriptors(dev, data, pass)) {
 		auto l = new Data(move(pass));
 		_data = l;
-		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
+		return core::RenderPass::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 			auto d = ((Device *)dev);
 			auto l = (Data *)ptr;
 			l->cleanup(*d);
@@ -954,7 +995,8 @@ bool RenderPass::initComputePass(Device &dev, QueuePassData &data) {
 	if (initDescriptors(dev, data, pass)) {
 		auto l = new Data(move(pass));
 		_data = l;
-		return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
+		return core::RenderPass::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 			auto d = ((Device *)dev);
 			auto l = (Data *)ptr;
 			l->cleanup(*d);
@@ -969,7 +1011,8 @@ bool RenderPass::initTransferPass(Device &dev, QueuePassData &) {
 	// init nothing - no descriptors or render pass implementation needed
 	auto l = new Data();
 	_data = l;
-	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
+	return core::RenderPass::init(dev,
+			[](core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 		auto d = ((Device *)dev);
 		auto l = (Data *)ptr;
 		l->cleanup(*d);
@@ -981,7 +1024,8 @@ bool RenderPass::initGenericPass(Device &dev, QueuePassData &) {
 	// init nothing - no descriptors or render pass implementation needed
 	auto l = new Data();
 	_data = l;
-	return core::RenderPass::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
+	return core::RenderPass::init(dev,
+			[](core::Device *dev, core::ObjectType, ObjectHandle, void *ptr) {
 		auto d = ((Device *)dev);
 		auto l = (Data *)ptr;
 		l->cleanup(*d);
@@ -999,7 +1043,7 @@ bool RenderPass::initDescriptors(Device &dev, const QueuePassData &data, Data &p
 			pass.layouts.clear();
 			return false;
 		}
-		++ index;
+		++index;
 	}
 
 	_descriptorPools.resize(pass.layouts.size());
@@ -1008,10 +1052,10 @@ bool RenderPass::initDescriptors(Device &dev, const QueuePassData &data, Data &p
 	index = 0;
 	for (auto &it : pass.layouts) {
 		_descriptorPools[index].emplace_back(Rc<DescriptorPool>::create(dev, it));
-		++ index;
+		++index;
 	}
 
 	return true;
 }
 
-}
+} // namespace stappler::xenolith::vk

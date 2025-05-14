@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@
 #define XENOLITH_RENDERER_BASIC2D_XL2DCOMMANDLIST_H_
 
 #include "XL2dVertexArray.h"
+#include "XL2dParticleSystem.h"
 #include "XLNodeInfo.h"
 #include "XLFrameContext.h"
 
@@ -32,6 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 enum class CommandType : uint16_t {
 	CommandGroup,
 	VertexArray,
+	ParticleEmitter,
 	Deferred,
 };
 
@@ -46,6 +49,11 @@ struct SP_PUBLIC CmdInfo {
 
 struct SP_PUBLIC CmdVertexArray : CmdInfo {
 	SpanView<InstanceVertexData> vertexes;
+};
+
+struct SP_PUBLIC CmdParticleEmitter : CmdInfo {
+	Rc<ParticleSystemData> data;
+	Mat4 transform;
 };
 
 struct SP_PUBLIC CmdDeferred : CmdInfo {
@@ -87,15 +95,18 @@ public:
 	virtual ~CommandList();
 	bool init(const Rc<PoolRef> &);
 
-	void pushVertexArray(Rc<VertexData> &&, const Mat4 &,
-			CmdInfo &&info, CommandFlags = CommandFlags::None);
+	void pushVertexArray(Rc<VertexData> &&, const Mat4 &, CmdInfo &&info,
+			CommandFlags = CommandFlags::None);
 
 	// data should be preallocated from frame's pool
 	void pushVertexArray(const Callback<SpanView<InstanceVertexData>(memory::pool_t *)> &,
 			CmdInfo &&info, CommandFlags = CommandFlags::None);
 
-	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view, const Mat4 &model, bool normalized,
-			CmdInfo &&info, CommandFlags = CommandFlags::None);
+	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view,
+			const Mat4 &model, bool normalized, CmdInfo &&info, CommandFlags = CommandFlags::None);
+
+	void pushParticleEmitter(Rc<ParticleSystemData> &&, const Mat4 &, CmdInfo &&info,
+			CommandFlags = CommandFlags::None);
 
 	const Command *getFirst() const { return _first; }
 	const Command *getLast() const { return _last; }
@@ -114,10 +125,14 @@ protected:
 };
 
 struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
+	virtual ~FrameContextHandle2d();
+
 	ShadowLightInput lights;
 	Rc<CommandList> commands;
+
+	memory::map<uint64_t, Rc<ParticleSystemData>> particleEmitters;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DCOMMANDLIST_H_ */

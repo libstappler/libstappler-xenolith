@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +38,7 @@ class MaterialAttachment;
 using MaterialId = uint32_t;
 
 struct SP_PUBLIC MaterialInputData : AttachmentInputData {
-	const MaterialAttachment * attachment;
+	const MaterialAttachment *attachment;
 	Vector<Rc<Material>> materialsToAddOrUpdate;
 	Vector<MaterialId> materialsToRemove;
 	Vector<MaterialId> dynamicMaterialsToUpdate;
@@ -63,8 +64,8 @@ public:
 
 	virtual ~MaterialSet();
 
-	bool init(const BufferInfo &, const EncodeCallback &callback,
-			uint32_t objectSize, uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment * = nullptr);
+	bool init(const BufferInfo &, const EncodeCallback &callback, uint32_t objectSize,
+			uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment * = nullptr);
 	bool init(const Rc<MaterialSet> &);
 
 	bool encode(uint8_t *, const Material *);
@@ -73,7 +74,8 @@ public:
 
 	Vector<Rc<Material>> updateMaterials(const Rc<MaterialInputData> &,
 			const Callback<Rc<ImageView>(const MaterialImage &)> &);
-	Vector<Rc<Material>> updateMaterials(const Vector<Rc<Material>> &materials, SpanView<MaterialId> dynamic, SpanView<MaterialId> remove,
+	Vector<Rc<Material>> updateMaterials(const Vector<Rc<Material>> &materials,
+			SpanView<MaterialId> dynamic, SpanView<MaterialId> remove,
 			const Callback<Rc<ImageView>(const MaterialImage &)> &);
 
 	const BufferInfo &getInfo() const { return _info; }
@@ -83,12 +85,12 @@ public:
 	const HashMap<MaterialId, Rc<Material>> &getMaterials() const { return _materials; }
 
 	void setBuffer(Rc<BufferObject> &&, HashMap<MaterialId, uint32_t> &&);
-	Rc<BufferObject> getBuffer() const { return _buffer; }
-	const HashMap<MaterialId, uint32_t> & getOrdering() const { return _ordering; }
+	BufferObject *getBuffer() const { return _buffer; }
+	const HashMap<MaterialId, uint32_t> &getOrdering() const { return _ordering; }
 
 	Vector<MaterialLayout> &getLayouts() { return _layouts; }
 	const MaterialLayout *getLayout(uint32_t) const;
-	const Material * getMaterialById(MaterialId) const;
+	const Material *getMaterialById(MaterialId) const;
 	uint32_t getMaterialOrder(MaterialId) const;
 
 	const TextureSetLayoutData *getTargetLayout() const;
@@ -127,14 +129,17 @@ public:
 
 	// view for image must be empty
 	bool init(MaterialId, const PipelineData *, Vector<MaterialImage> &&, Rc<Ref> && = Rc<Ref>());
-	bool init(MaterialId, const PipelineData *, const Rc<DynamicImageInstance> &, Rc<Ref> && = Rc<Ref>());
-	bool init(MaterialId, const PipelineData *, const ImageData *, Rc<Ref> && = Rc<Ref>(), bool ownedData = false);
-	bool init(MaterialId, const PipelineData *, const ImageData *, ColorMode, Rc<Ref> && = Rc<Ref>(), bool ownedData = false);
+	bool init(MaterialId, const PipelineData *, const Rc<DynamicImageInstance> &,
+			Rc<Ref> && = Rc<Ref>());
+	bool init(MaterialId, const PipelineData *, const ImageData *, Rc<Ref> && = Rc<Ref>(),
+			bool ownedData = false);
+	bool init(MaterialId, const PipelineData *, const ImageData *, ColorMode,
+			Rc<Ref> && = Rc<Ref>(), bool ownedData = false);
 	bool init(const Material *, Rc<ImageObject> &&, Rc<DataAtlas> &&, Rc<Ref> && = Rc<Ref>());
 	bool init(const Material *, Vector<MaterialImage> &&);
 
 	MaterialId getId() const { return _id; }
-	const PipelineData * getPipeline() const { return _pipeline; }
+	const PipelineData *getPipeline() const { return _pipeline; }
 	const Vector<MaterialImage> &getImages() const { return _images; }
 
 	uint32_t getLayoutIndex() const { return _layoutIndex; }
@@ -162,8 +167,8 @@ class SP_PUBLIC MaterialAttachment : public BufferAttachment {
 public:
 	virtual ~MaterialAttachment();
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const TextureSetLayoutData *, MaterialSet::EncodeCallback &&,
-			uint32_t materialObjectSize);
+	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const TextureSetLayoutData *,
+			MaterialSet::EncodeCallback &&, uint32_t materialObjectSize);
 
 	void addPredefinedMaterials(Vector<Rc<Material>> &&);
 
@@ -208,7 +213,6 @@ protected:
 	mutable Map<Rc<DynamicImage>, DynamicImageTracker> _dynamicTrackers;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREMATERIAL_H_ */
-

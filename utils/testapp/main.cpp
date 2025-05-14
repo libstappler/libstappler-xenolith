@@ -48,14 +48,14 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 	std::cout << "Stappler version: " << getStapplerVersionString() << "\n";
 	std::cout << "Xenolith version: " << xenolith::getVersionString() << "\n";
 
-	perform_main([&] {
+	return perform_main([&] {
 		auto app = Rc<AppDelegate>::create(move(data));
 
 		app->run();
 		app->waitStopped();
+		return 0;
 	});
 
-	return 0;
 }
 
 }

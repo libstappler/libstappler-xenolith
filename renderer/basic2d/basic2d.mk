@@ -1,4 +1,5 @@
 # Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,10 @@ MODULE_XENOLITH_RENDERER_BASIC2D_PRECOMPILED_HEADERS :=
 MODULE_XENOLITH_RENDERER_BASIC2D_SRCS_DIRS :=
 MODULE_XENOLITH_RENDERER_BASIC2D_SRCS_OBJS := $(XENOLITH_MODULE_DIR)/renderer/basic2d/XL2d.cpp
 MODULE_XENOLITH_RENDERER_BASIC2D_INCLUDES_DIRS := 
-MODULE_XENOLITH_RENDERER_BASIC2D_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/renderer/basic2d
+MODULE_XENOLITH_RENDERER_BASIC2D_INCLUDES_OBJS := \
+	$(XENOLITH_MODULE_DIR)/renderer/basic2d \
+	$(XENOLITH_MODULE_DIR)/renderer/basic2d/scroll \
+	$(XENOLITH_MODULE_DIR)/renderer/basic2d/particle
 MODULE_XENOLITH_RENDERER_BASIC2D_DEPENDS_ON := xenolith_renderer_basic2d_shaders
 
 MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_COPY_INCLUDES := \

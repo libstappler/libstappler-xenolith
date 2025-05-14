@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -75,7 +76,8 @@ public:
 	bool onOutputReady(Loop &, FrameAttachmentData &);
 	void onOutputInvalidated(Loop &, FrameAttachmentData &);
 
-	void finalize(Loop &, HashMap<const AttachmentData *, FrameAttachmentData *> &attachments, bool success);
+	void finalize(Loop &, HashMap<const AttachmentData *, FrameAttachmentData *> &attachments,
+			bool success);
 	void signalDependencies(Loop &, Queue *, bool success);
 
 	Rc<AttachmentInputData> getInputData(const AttachmentData *attachment);
@@ -84,13 +86,15 @@ public:
 
 	Rc<ImageStorage> getRenderTarget(const AttachmentData *);
 
-	PresentationFrame *getPresentationFrame() const { return _presentationFrame ? _presentationFrame.get() : nullptr; }
+	PresentationFrame *getPresentationFrame() const {
+		return _presentationFrame ? _presentationFrame.get() : nullptr;
+	}
 
 	const Rc<Queue> &getQueue() const { return _queue; }
 
 	Set<Rc<Queue>> getQueueList() const;
 
-	const FrameConstraints & getFrameConstraints() const { return _constraints; }
+	const FrameConstraints &getFrameConstraints() const { return _constraints; }
 
 	bool isPersistentMapping() const { return _persistentMappings; }
 
@@ -101,13 +105,11 @@ public:
 
 	FrameRequest() = default;
 
-	void waitForInput(FrameQueue &, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb);
+	void waitForInput(FrameQueue &, AttachmentHandle &a, Function<void(bool)> &&cb);
 
 	const FrameOutputBinding *getOutputBinding(const AttachmentData *) const;
 
-	void autorelease(Ref *ref) {
-		_autorelease.emplace_front(ref);
-	}
+	void autorelease(Ref *ref) { _autorelease.emplace_front(ref); }
 
 protected:
 	FrameRequest(const FrameRequest &) = delete;
@@ -118,8 +120,12 @@ protected:
 	Rc<Queue> _queue;
 	FrameConstraints _constraints;
 	Map<const AttachmentData *, Rc<AttachmentInputData>> _input;
-	bool _readyForSubmit = true; // if true, do not wait synchronization with other active frames in emitter
-	bool _persistentMappings = true; // true; // true; // try to map per-frame GPU memory persistently
+
+	// if true, do not wait synchronization with other active frames in emitter
+	bool _readyForSubmit = true;
+
+	// try to map per-frame GPU memory persistently
+	bool _persistentMappings = true;
 	uint64_t _sceneId = 0;
 
 	Map<const ImageAttachment *, ImageInfoData> _imageSpecialization;
@@ -139,6 +145,6 @@ protected:
 	std::forward_list<Rc<Ref>> _autorelease;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREFRAMEREQUEST_H_ */

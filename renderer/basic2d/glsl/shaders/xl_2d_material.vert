@@ -36,11 +36,11 @@ layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer Dat
 
 layout (push_constant) uniform pcb {
 	uint materialIdx;
-	uint padding0;
-	uint padding1;
-	uint padding2;
-	uint padding3;
-	float padding4;
+	uint padding4;
+	uint padding8;
+	uint padding12;
+	uint padding16;
+	float padding20;
 	DataAtlasIndexDBA atlasBuffer;
 } pushConstants;
 

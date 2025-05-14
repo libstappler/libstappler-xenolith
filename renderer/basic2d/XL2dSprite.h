@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +28,7 @@
 #include "XLResourceCache.h"
 #include "XLNode.h"
 #include "XL2dVertexArray.h"
-#include "XL2dLinearGradient.h"
+#include "XLLinearGradient.h"
 #include "XL2dCommandList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -41,8 +42,14 @@ public:
 	virtual bool init(StringView);
 	virtual bool init(Rc<Texture> &&);
 
+	// set texture immediately
 	virtual void setTexture(StringView);
 	virtual void setTexture(Rc<Texture> &&);
+
+	// schedule texture swapping
+	virtual void scheduleTextureUpdate(StringView);
+	virtual void scheduleTextureUpdate(Rc<Texture> &&);
+
 	const Rc<Texture> &getTexture() const;
 
 	virtual void setLinearGradient(Rc<LinearGradient> &&);
@@ -88,12 +95,8 @@ public:
 	virtual void setTextureAutofitPosition(const Vec2 &);
 	virtual const Vec2 &getTextureAutofitPosition() const { return _texturePlacement.autofitPos; }
 
-	/** Семплеры определяются во время старта цикла графики (gl::Loop) и неизменны в последствии
-	 * По умолчанию, семплер с индексом 0 использует фильтр nearest, 1 - linear.
-	 * Разработчики приложений могут определять свою схему для семплеров,
-	 * но рекомендуем следовать соглашению в отношении 0 и 1
-	 *
-	 * Если семплер с указанным индексом не определён в движке - поведение не определено
+	/** Используются смплеры, определённые для TextureSetLayout в используемой core::Queue
+	 * Если семплер с указанным индексом не определён - поведение не определено
 	 */
 	virtual void setSamplerIndex(SamplerIndex);
 	virtual SamplerIndex getSamplerIndex() const { return _samplerIdx; }
@@ -109,7 +112,7 @@ public:
 	virtual float getOutlineOffset() const { return _outlineOffset; }
 
 	virtual void setOutlineColor(const Color4F &);
-	virtual const Color4F &getOutlineColor() const {return _outlineColor; }
+	virtual const Color4F &getOutlineColor() const { return _outlineColor; }
 
 protected:
 	using Node::init;
@@ -131,6 +134,8 @@ protected:
 	virtual bool checkVertexDirty() const;
 
 	virtual CmdInfo buildCmdInfo(const FrameInfo &) const;
+
+	virtual void doScheduleTextureUpdate(Rc<Texture> &&);
 
 	String _textureName;
 	Rc<Texture> _texture;
@@ -160,6 +165,9 @@ protected:
 	RenderingLevel _renderingLevel = RenderingLevel::Default;
 	RenderingLevel _realRenderingLevel = RenderingLevel::Default;
 	core::MaterialId _materialId = 0;
+
+	// if not defined - use pipeline matching algorithm
+	const core::PipelineFamilyInfo *_pipelineFamily = nullptr;
 	CommandFlags _commandFlags = CommandFlags::None;
 
 	Color4F _outlineColor = Color4F::WHITE;
@@ -172,8 +180,10 @@ protected:
 	Function<void()> _textureLoadedCallback;
 
 	Rc<LinearGradient> _linearGradient;
+
+	Component *_textureUpdateComponent = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DSPRITE_H_ */

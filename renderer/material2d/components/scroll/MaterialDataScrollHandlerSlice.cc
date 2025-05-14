@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,9 +42,7 @@ bool DataScrollHandlerSlice::init(DataScroll *s, DataCallback &&cb) {
 	return true;
 }
 
-void DataScrollHandlerSlice::setDataCallback(DataCallback &&cb) {
-	_dataCallback = sp::move(cb);
-}
+void DataScrollHandlerSlice::setDataCallback(DataCallback &&cb) { _dataCallback = sp::move(cb); }
 
 DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
 	DataScroll::ItemMap ret;
@@ -51,13 +50,12 @@ DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
 	auto origin = getOrigin(t);
 
 	if (t == DataScroll::Request::Front) {
-		for (auto it = data.rbegin(); it != data.rend(); it ++) {
+		for (auto it = data.rbegin(); it != data.rend(); it++) {
 			auto item = onItem(sp::move(it->second), origin);
 
-			item->setPosition(
-					(_layout == DataScroll::Layout::Vertical)
-						?Vec2(origin.x, origin.y - item->getContentSize().height)
-						:Vec2(origin.x - item->getContentSize().height, origin.y));
+			item->setPosition((_layout == DataScroll::Layout::Vertical)
+							? Vec2(origin.x, origin.y - item->getContentSize().height)
+							: Vec2(origin.x - item->getContentSize().height, origin.y));
 
 			if (_layout == DataScroll::Layout::Vertical) {
 				origin.y -= item->getContentSize().height;
@@ -84,19 +82,13 @@ DataScroll::ItemMap DataScrollHandlerSlice::run(Request t, DataMap &&data) {
 }
 
 Vec2 DataScrollHandlerSlice::getOrigin(Request t) const {
-	Vec2 origin = Vec2(0, 0);
+	Vec2 origin = Vec2::ZERO;
 
 	switch (t) {
-	case DataScroll::Request::Reset:
-		origin = Vec2(0, 0);
-		break;
+	case DataScroll::Request::Reset: origin = Vec2::ZERO; break;
 	case DataScroll::Request::Update:
-	case DataScroll::Request::Front:
-		origin = _originFront;
-		break;
-	case DataScroll::Request::Back:
-		origin = _originBack;
-		break;
+	case DataScroll::Request::Front: origin = _originFront; break;
+	case DataScroll::Request::Back: origin = _originBack; break;
 	}
 
 	return origin;
@@ -109,4 +101,4 @@ Rc<DataScroll::Item> DataScrollHandlerSlice::onItem(Value &&d, const Vec2 &o) {
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::material2d

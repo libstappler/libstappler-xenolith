@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCROLLITEMHANDLE_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLITEMHANDLE_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLITEMHANDLE_H_
+#define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLITEMHANDLE_H_
 
 #include "XLComponent.h"
 #include "XL2dScrollController.h"
@@ -63,6 +64,6 @@ protected:
 	bool _isLocked = false;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCROLLITEMHANDLE_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLITEMHANDLE_H_ */

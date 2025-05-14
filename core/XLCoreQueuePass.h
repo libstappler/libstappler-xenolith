@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -87,6 +88,11 @@ public:
 	virtual const Rc<QueuePass> &getQueuePass() const { return _queuePass; }
 	virtual const Rc<Framebuffer> &getFramebuffer() const;
 
+	// Check if render pass can be performed for frame
+	// `isAvailable` should be called before `prepare`, but after all pass resources
+	// are acquired
+	// If true - pass will be processed as usual
+	// If false - pass will be skipped and immediately set to Complete state
 	virtual bool isAvailable(const FrameQueue &) const;
 
 	virtual bool isSubmitted() const;
@@ -105,7 +111,8 @@ public:
 	// If submission were successful, you should call onSubmited callback with 'true'
 	// If submission failed, call onSubmited with 'false'
 	// If submission were successful, onComplete should be called when execution completes
-	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete);
+	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited,
+			Function<void(bool)> &&onComplete);
 
 	// after submit
 	virtual void finalize(FrameQueue &, bool successful);
@@ -127,6 +134,6 @@ protected:
 	mutable Vector<Rc<Ref>> _autorelease;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREQUEUEPASS_H_ */

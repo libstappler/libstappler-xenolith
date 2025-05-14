@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class SP_PUBLIC VertexAttachment : public BufferAttachment {
 public:
-	virtual ~VertexAttachment();
+	virtual ~VertexAttachment() = default;
 
 	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const AttachmentData *);
 
@@ -46,11 +47,12 @@ protected:
 
 class SP_PUBLIC VertexAttachmentHandle : public BufferAttachmentHandle {
 public:
-	virtual ~VertexAttachmentHandle();
+	virtual ~VertexAttachmentHandle() = default;
 
 	virtual bool setup(FrameQueue &, Function<void(bool)> &&) override;
 
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	const Vector<VertexSpan> &getVertexData() const { return _spans; }
 	const Vector<VertexSpan> &getShadowSolidData() const { return _shadowSolidSpans; }
@@ -66,14 +68,12 @@ public:
 
 	bool empty() const;
 
-	void loadData(Rc<FrameContextHandle2d> &&data,
-			Rc<Buffer> && indexes, Rc<Buffer> &&vertexes, Rc<Buffer> &&transforms,
-			Vector<VertexSpan> &&spans, Vector<VertexSpan> &&shadowSolidSpans, Vector<VertexSpan> &&shadowSdfSpans,
+	void loadData(Rc<FrameContextHandle2d> &&data, Rc<Buffer> &&indexes, Rc<Buffer> &&vertexes,
+			Rc<Buffer> &&transforms, Vector<VertexSpan> &&spans,
+			Vector<VertexSpan> &&shadowSolidSpans, Vector<VertexSpan> &&shadowSdfSpans,
 			float maxShadowValue);
 
 protected:
-	virtual bool isGpuTransform() const { return false; }
-
 	Rc<FrameContextHandle2d> _commands;
 	Rc<Buffer> _indexes;
 	Rc<Buffer> _vertexes;
@@ -93,7 +93,7 @@ public:
 
 	static core::ImageFormat selectDepthFormat(SpanView<core::ImageFormat> formats);
 
-	virtual ~VertexPass() { }
+	virtual ~VertexPass() = default;
 
 	const AttachmentData *getVertexes() const { return _vertexes; }
 	const AttachmentData *getMaterials() const { return _materials; }
@@ -122,11 +122,12 @@ protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
 	virtual void prepareRenderPass(CommandBuffer &);
-	virtual void prepareMaterialCommands(core::MaterialSet * materials, CommandBuffer &);
+	virtual void prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &);
 	virtual void finalizeRenderPass(CommandBuffer &);
 
 	void clearDynamicState(CommandBuffer &buf);
-	void applyDynamicState(const FrameContextHandle2d *commands, CommandBuffer &buf, uint32_t stateId);
+	void applyDynamicState(const FrameContextHandle2d *commands, CommandBuffer &buf,
+			uint32_t stateId);
 
 	const VertexAttachmentHandle *_vertexBuffer = nullptr;
 	const MaterialAttachmentHandle *_materialBuffer = nullptr;
@@ -135,6 +136,6 @@ protected:
 	DrawStateValues _dynamicState;
 };
 
-}
+} // namespace stappler::xenolith::basic2d::vk
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKVERTEXPASS_H_ */

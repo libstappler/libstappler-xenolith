@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -58,9 +59,7 @@ bool MultiViewLayout::Generator::init(const SequenceViewCallback &seq) {
 	return true;
 }
 
-bool MultiViewLayout::Generator::isViewLocked(ScrollView *, int64_t index) {
-	return !_enabled;
-}
+bool MultiViewLayout::Generator::isViewLocked(ScrollView *, int64_t index) { return !_enabled; }
 
 Rc<ScrollView> MultiViewLayout::Generator::makeIndexView(int64_t viewIndex) {
 	if (_makeViewSeq) {
@@ -95,13 +94,9 @@ Rc<ScrollView> MultiViewLayout::Generator::makePrevView(ScrollView *view, int64_
 	return nullptr;
 }
 
-bool MultiViewLayout::Generator::isInfinite() const {
-	return _viewCount == maxOf<size_t>();
-}
+bool MultiViewLayout::Generator::isInfinite() const { return _viewCount == maxOf<size_t>(); }
 
-int64_t MultiViewLayout::Generator::getViewCount() const {
-	return _viewCount;
-}
+int64_t MultiViewLayout::Generator::getViewCount() const { return _viewCount; }
 
 void MultiViewLayout::Generator::setViewSelectedCallback(const ViewCallback &cb) {
 	_viewSelectedCallback = cb;
@@ -135,7 +130,8 @@ void MultiViewLayout::Generator::onApplyView(ScrollView *current, int64_t id) {
 		_applyViewCallback(current, id);
 	}
 }
-void MultiViewLayout::Generator::onApplyProgress(ScrollView *current, ScrollView *n, float progress) {
+void MultiViewLayout::Generator::onApplyProgress(ScrollView *current, ScrollView *n,
+		float progress) {
 	if (_applyProgressCallback) {
 		_applyProgressCallback(current, n, progress);
 	}
@@ -157,7 +153,7 @@ bool MultiViewLayout::init(Generator *gen) {
 	}
 
 	_swipeListener = addInputListener(Rc<InputListener>::create());
-	_swipeListener->addSwipeRecognizer([this] (const GestureSwipe &s) -> bool {
+	_swipeListener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		if (s.event == GestureEvent::Began) {
 			if (beginSwipe(s.delta)) {
 				_swipeListener->setExclusiveForTouch(s.getId());
@@ -198,38 +194,32 @@ void MultiViewLayout::setGenerator(Generator *gen) {
 	_generator = gen;
 }
 
-MultiViewLayout::Generator *MultiViewLayout::getGenerator() const {
-	return _generator;
-}
+MultiViewLayout::Generator *MultiViewLayout::getGenerator() const { return _generator; }
 
-int64_t MultiViewLayout::getCurrentIndex() const {
-	return _currentViewIndex;
-}
+int64_t MultiViewLayout::getCurrentIndex() const { return _currentViewIndex; }
 
 void MultiViewLayout::showNextView(float val) {
 	setFlexibleLevelAnimated(1.0f, val);
-	auto a = Rc<ActionProgress>::create(val, [this] (float time) {
+	auto a = Rc<ActionProgress>::create(val, [this](float time) {
 		_swipeProgress = _contentSize.width * time * -1.0f;
 		onSwipeProgress();
-	}, [] () {
+	}, []() {
 
-	}, [this] () {
-		endSwipeProgress(Vec2(0.0f, 0.0f), Vec2(0.0f, 0.0f));
-	});
-	runAction(Rc<EaseQuadraticActionInOut>::create(a), "ListAction"_tag);
+	}, [this]() { endSwipeProgress(Vec2(0.0f, 0.0f), Vec2(0.0f, 0.0f)); });
+	runAction(Rc<EaseActionTyped>::create(a, EaseActionTyped::Type::QuadEaseInOut),
+			"ListAction"_tag);
 }
 
 void MultiViewLayout::showPrevView(float val) {
 	setFlexibleLevelAnimated(1.0f, val);
-	auto a = Rc<ActionProgress>::create(val, [this] (float time) {
+	auto a = Rc<ActionProgress>::create(val, [this](float time) {
 		_swipeProgress = _contentSize.width * time;
 		onSwipeProgress();
-	}, [] () {
+	}, []() {
 
-	}, [this] () {
-		endSwipeProgress(Vec2(0.0f, 0.0f), Vec2(0.0f, 0.0f));
-	});
-	runAction(Rc<EaseQuadraticActionInOut>::create(a), "ListAction"_tag);
+	}, [this]() { endSwipeProgress(Vec2(0.0f, 0.0f), Vec2(0.0f, 0.0f)); });
+	runAction(Rc<EaseActionTyped>::create(a, EaseActionTyped::Type::QuadEaseInOut),
+			"ListAction"_tag);
 }
 
 void MultiViewLayout::showIndexView(int64_t idx, float val) {
@@ -344,7 +334,8 @@ bool MultiViewLayout::setSwipeProgress(const Vec2 &delta) {
 		if (_currentViewIndex == 0 && _swipeProgress + diff > 0.0f) {
 			_swipeProgress = 0.0f;
 			onSwipeProgress();
-		} else if (_currentViewIndex == _generator->getViewCount() - 1 && _swipeProgress + diff < 0.0f) {
+		} else if (_currentViewIndex == _generator->getViewCount() - 1
+				&& _swipeProgress + diff < 0.0f) {
 			_swipeProgress = 0.0f;
 			onSwipeProgress();
 		} else {
@@ -373,7 +364,7 @@ bool MultiViewLayout::endSwipeProgress(const Vec2 &delta, const Vec2 &velocity) 
 	}*/
 
 	float v = fabsf(velocity.x);
-	float a = 5000;
+	float a = 5'000;
 	float t = v / a;
 	float dx = v * t - (a * t * t) / 2;
 
@@ -386,23 +377,22 @@ bool MultiViewLayout::endSwipeProgress(const Vec2 &delta, const Vec2 &velocity) 
 	Rc<ActionInterval> action;
 	if (pos > _contentSize.width / 2 && _prevView) {
 		action = Rc<Sequence>::create(
-				ActionAcceleratedMove::createBounce(5000, from, Vec2(_contentSize.width, yPos), Vec2(velocity.x, 0),
-						200000, std::bind(&MultiViewLayout::onSwipeAction, this, std::placeholders::_1)),
-				[this] {
-			setPrevView(_currentViewIndex - 1);
-		});
+				ActionAcceleratedMove::createBounce(5'000, from, Vec2(_contentSize.width, yPos),
+						Vec2(velocity.x, 0), 200'000,
+						std::bind(&MultiViewLayout::onSwipeAction, this, std::placeholders::_1)),
+				[this] { setPrevView(_currentViewIndex - 1); });
 	} else if (pos < -_contentSize.width / 2 && _nextView) {
 		action = Rc<Sequence>::create(
-				ActionAcceleratedMove::createBounce(5000, from, Vec2(-_contentSize.width, yPos), Vec2(velocity.x, 0),
-						200000, std::bind(&MultiViewLayout::onSwipeAction, this, std::placeholders::_1)),
-				[this] {
-			setNextView(_currentViewIndex + 1);
-		});
+				ActionAcceleratedMove::createBounce(5'000, from, Vec2(-_contentSize.width, yPos),
+						Vec2(velocity.x, 0), 200'000,
+						std::bind(&MultiViewLayout::onSwipeAction, this, std::placeholders::_1)),
+				[this] { setNextView(_currentViewIndex + 1); });
 	} else {
 		if (from != Vec2(0, yPos)) {
-			action = Rc<Sequence>::create(
-					ActionAcceleratedMove::createBounce(5000, from, Vec2(0, yPos), Vec2(velocity.x, 0), 50000,
-							std::bind(&MultiViewLayout::onSwipeAction, this, std::placeholders::_1)),
+			action = Rc<Sequence>::create(ActionAcceleratedMove::createBounce(5'000, from,
+												  Vec2(0, yPos), Vec2(velocity.x, 0), 50'000,
+												  std::bind(&MultiViewLayout::onSwipeAction, this,
+														  std::placeholders::_1)),
 					[this] {
 				_swipeProgress = 0;
 				onSwipeProgress();
@@ -481,9 +471,9 @@ void MultiViewLayout::applyViewProgress(ScrollView *current, ScrollView *n, floa
 void MultiViewLayout::onBaseNode(const NodeParams &params, const Padding &padding, float offset) {
 	FlexibleLayout::onBaseNode(params, padding, offset);
 
-	if (_swipeProgress != 0.0f)  {
+	if (_swipeProgress != 0.0f) {
 		_currentView->setPositionX(_swipeProgress);
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

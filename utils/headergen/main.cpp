@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -107,7 +108,7 @@ static IconData &exportIcon(Map<String, IconData> &icons, StringView name, vg::V
 
 auto LICENSE_STRING =
 R"Text(/**
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -131,13 +132,19 @@ THE SOFTWARE.
 // Generated with headergen
 )Text";
 
-static void makeMaterialIconSource(StringView path, const Map<String, IconData> &icons) {
+static void makeMaterialIconSource(FileInfo path, const Map<String, IconData> &icons) {
 	StringStream sourceFile;
 
 	sourceFile << LICENSE_STRING <<
 R"Text(
+///@ SP_EXCLUDE
+
 #include "XLCommon.h"
 #include "XLIcons.h"
+
+#include "XLIconImage.cc"
+
+// clang-format off
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -165,6 +172,12 @@ StringView getIconName(IconName name) {
 	switch (name) {
 	case IconName::None: return "Nnne"; break;
 	case IconName::Empty: return "Empty"; break;
+	case IconName::Stappler_CursorIcon: return "Stappler_CursorIcon"; break;
+	case IconName::Stappler_SelectioinStartIcon: return "Stappler_SelectioinStartIcon"; break;
+	case IconName::Stappler_SelectioinEndIcon: return "Stappler_SelectioinEndIcon"; break;
+	case IconName::Dynamic_Loader: return "Dynamic_Loader"; break;
+	case IconName::Dynamic_Nav: return "Dynamic_Nav"; break;
+	case IconName::Dynamic_DownloadProgress: return "Dynamic_DownloadProgress"; break;
 )Text";
 
 	for (auto &it : icons) {
@@ -181,6 +194,12 @@ bool getIconData(IconName name, const Callback<void(BytesView)> &cb) {
 	switch (name) {
 	case IconName::None: break;
 	case IconName::Empty: break;
+	case IconName::Stappler_CursorIcon: break;
+	case IconName::Stappler_SelectioinStartIcon: break;
+	case IconName::Stappler_SelectioinEndIcon: break;
+	case IconName::Dynamic_Loader: break;
+	case IconName::Dynamic_Nav: break;
+	case IconName::Dynamic_DownloadProgress: break;
 )Text";
 
 	for (auto &it : icons) {
@@ -201,7 +220,7 @@ R"Text(	default: break;
 	filesystem::write(path, sourceFile.str());
 }
 
-static void makeMaterialIconHeader(StringView path, const Map<String, IconData> &icons) {
+static void makeMaterialIconHeader(FileInfo path, const Map<String, IconData> &icons) {
 	StringStream headerFile;
 
 	headerFile << LICENSE_STRING <<
@@ -210,12 +229,21 @@ R"Text(
 #define XENOLITH_RESOURCES_ICONS_XLICONS_H_
 
 #include "XLCommon.h"
+#include "SPVectorImage.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 enum class IconName : uint16_t {
 	None = 0,
 	Empty,
+
+	Stappler_CursorIcon,
+	Stappler_SelectioinStartIcon,
+	Stappler_SelectioinEndIcon,
+
+	Dynamic_Loader,
+	Dynamic_Nav,
+	Dynamic_DownloadProgress,
 
 )Text";
 	for (auto &it : icons) {
@@ -226,8 +254,10 @@ enum class IconName : uint16_t {
 R"Text(	Max
 };
 
-StringView getIconName(IconName);
-bool getIconData(IconName, const Callback<void(BytesView)> &);
+SP_PUBLIC StringView getIconName(IconName);
+SP_PUBLIC bool getIconData(IconName, const Callback<void(BytesView)> &);
+
+SP_PUBLIC void drawIcon(vg::VectorImage &, IconName, float progress);
 
 }
 
@@ -237,20 +267,26 @@ bool getIconData(IconName, const Callback<void(BytesView)> &);
 	filesystem::write(path, headerFile.str());
 }
 
-static int exportMaterialIcons(StringView path) {
+static int exportMaterialIcons(const FileInfo path) {
 	size_t i = 0;
 	Map<String, IconData> icons;
 
-	filesystem::ftw(path, [&] (StringView filePath, bool isFile) {
-		if (isFile) {
-			auto subpath = filepath::replace<Interface>(filePath, path, "");
+	filesystem::ftw(path, [&] (const FileInfo &subpath, FileType type) {
+		if (type == FileType::File) {
 			auto name = filepath::name(filepath::root(subpath));
 			//std::cout << name << "\n";
 			if (name == "materialicons" || name == "materialiconsoutlined") {
 				if (filepath::fullExtension(subpath) == "svg" && filepath::name(subpath) == "24px") {
 					StringStream iconName;
 					bool empty = true;
-					filepath::split(filepath::root(subpath), [&] (StringView substr) {
+					auto p = filepath::root(subpath.path);
+					if (p.starts_with(path.path)) {
+						p += path.path.size();
+						if (p.is('/')) {
+							++ p;
+						}
+					}
+					filepath::split(p, [&] (StringView substr) {
 						if (substr == "materialicons") {
 							iconName << "_solid";
 						} else if (substr == "materialiconsoutlined") {
@@ -266,19 +302,20 @@ static int exportMaterialIcons(StringView path) {
 					});
 
 					vg::VectorImage image;
-					if (image.init(FilePath(filePath))) {
+					if (image.init(FileInfo(subpath))) {
 						auto &ic = exportIcon(icons, iconName.str(), image);
 
 						std::cout << "[" << i << "] " << ic.title << " - " << subpath << " " << ic.nbytes << " - " << ic.ncompressed << "\n";
 						++ i;
 					} else {
-						std::cout << "Fail to open: " << filePath << "\n";
+						std::cout << "Fail to open: " << subpath << "\n";
 					}
 				}
 			} else if (name != "materialiconssharp" && name != "materialiconsround" && name != "materialiconstwotone") {
 				std::cout << name << " " << subpath << "\n";
 			}
 		}
+		return true;
 	});
 
 	size_t full = 0;
@@ -295,8 +332,8 @@ static int exportMaterialIcons(StringView path) {
 
 	std::cout << full << " " << compressed << "\n";
 
-	auto headerPath = filesystem::currentDir<Interface>("gen/XLIcons.h");
-	auto sourcePath = filesystem::currentDir<Interface>("gen/XLIcons.cpp");
+	auto headerPath = FileInfo("gen/XLIcons.h");
+	auto sourcePath = FileInfo("gen/XLIcons.cpp");
 	filesystem::mkdir(filepath::root(headerPath));
 	filesystem::remove(headerPath);
 	filesystem::remove(sourcePath);
@@ -307,7 +344,7 @@ static int exportMaterialIcons(StringView path) {
 	return 0;
 }
 
-SP_EXTERN_C int _spMain(argc, argv) {
+SP_EXTERN_C int main(int argc, const char **argv) {
 	Value opts;
 	Vector<String> args;
 	data::parseCommandLineOptions<Interface, Value>(opts, argc, argv,
@@ -325,73 +362,75 @@ SP_EXTERN_C int _spMain(argc, argv) {
 		std::cout << " Options: " << data::EncodeFormat::Pretty << opts << "\n";
 	}
 
-	if (args.size() <= 1 || args.at(1) == "registry") {
-		RegistryData registryData;
-		if (registryData.load()) {
-			registryData.write();
-		}
-	} else if (args.at(1) == "icons") {
-		auto exportIcon = [] (StringView path) {
-			auto name = filepath::name(path);
-			auto target = filepath::merge<Interface>(filepath::root(path), toString(name, ".lzimg"));
-			auto targetH = filepath::merge<Interface>(filepath::root(path), toString(name, ".h"));
-			auto b = filesystem::readIntoMemory<Interface>(path);
-
-			Bitmap bmp(b);
-			bmp.convert(bitmap::PixelFormat::RGBA8888);
-
-			std::cout << "Image: " << filepath::name(path) << ": " << bmp.width() << " x " << bmp.height() << "\n";
-
-			Value val{
-				pair("width", Value(bmp.width())),
-				pair("height", Value(bmp.height())),
-				pair("data", Value(bmp.data()))
-			};
-
-			data::save(val, target, data::EncodeFormat::CborCompressed);
-			auto bytes = data::write(val, data::EncodeFormat::CborCompressed);
-
-			size_t counter = 16;
-
-			StringStream stream;
-			stream << "icon = {" << std::hex;\
-			for (auto &it : bytes) {
-				++ counter;
-				if (counter >= 16) {
-					stream << "\n\t";
-					counter = 0;
-				} else {
-					stream << " ";
-				}
-				stream << "0x" << uint32_t(it) << ",";
+	return perform_main([&] {
+		if (args.size() <= 1 || args.at(1) == "registry") {
+			RegistryData registryData;
+			if (registryData.load()) {
+				registryData.write();
 			}
-			stream << "\n}\n";
-
-			filesystem::write(targetH, stream.str());
-		};
-
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-close-symbolic.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-maximize-symbolic.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-minimize-symbolic.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-restore-symbolic.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-close-symbolic-active.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-maximize-symbolic-active.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-minimize-symbolic-active.png")));
-		exportIcon(filepath::reconstructPath<Interface>(
-				filesystem::currentDir<Interface>("../../resources/images/window-restore-symbolic-active.png")));
-	} else if (args.at(1) == "material" && args.size() > 2) {
-		auto path = args.at(2);
-		return exportMaterialIcons(path);
-	}
-
-	return 0;
+		} else if (args.at(1) == "icons") {
+			auto exportIcon = [] (StringView path) {
+				auto name = filepath::name(path);
+				auto target = filepath::merge<Interface>(filepath::root(path), toString(name, ".lzimg"));
+				auto targetH = filepath::merge<Interface>(filepath::root(path), toString(name, ".h"));
+				auto b = filesystem::readIntoMemory<Interface>(path);
+	
+				Bitmap bmp(b);
+				bmp.convert(bitmap::PixelFormat::RGBA8888);
+	
+				std::cout << "Image: " << filepath::name(path) << ": " << bmp.width() << " x " << bmp.height() << "\n";
+	
+				Value val{
+					pair("width", Value(bmp.width())),
+					pair("height", Value(bmp.height())),
+					pair("data", Value(bmp.data()))
+				};
+	
+				data::save(val, FileInfo(target), data::EncodeFormat::CborCompressed);
+				auto bytes = data::write(val, data::EncodeFormat::CborCompressed);
+	
+				size_t counter = 16;
+	
+				StringStream stream;
+				stream << "icon = {" << std::hex;\
+				for (auto &it : bytes) {
+					++ counter;
+					if (counter >= 16) {
+						stream << "\n\t";
+						counter = 0;
+					} else {
+						stream << " ";
+					}
+					stream << "0x" << uint32_t(it) << ",";
+				}
+				stream << "\n}\n";
+	
+				filesystem::write(FileInfo(targetH), stream.str());
+			};
+	
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-close-symbolic.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-maximize-symbolic.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-minimize-symbolic.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-restore-symbolic.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-close-symbolic-active.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-maximize-symbolic-active.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-minimize-symbolic-active.png")));
+			exportIcon(filepath::reconstructPath<Interface>(
+					filesystem::currentDir<Interface>("../../resources/images/window-restore-symbolic-active.png")));
+		} else if (args.at(1) == "material" && args.size() > 2) {
+			auto path = args.at(2);
+			return exportMaterialIcons(FileInfo(path));
+		}
+	
+		return 0;
+	});
 }
 
 }

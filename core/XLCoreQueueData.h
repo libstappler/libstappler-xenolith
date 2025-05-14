@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,8 @@
 #ifndef XENOLITH_CORE_XLCOREQUEUEDATA_H_
 #define XENOLITH_CORE_XLCOREQUEUEDATA_H_
 
+#include "SPMemFunction.h"
+#include "SPMemPoolInterface.h"
 #include "XLCorePipelineInfo.h"
 #include "XLCoreResource.h"
 
@@ -60,6 +63,9 @@ struct AttachmentPassData;
 struct AttachmentData;
 struct QueuePassData;
 struct QueueData;
+struct PipelineFamilyInfo;
+
+struct AttachmentInputData;
 
 struct FramePassData;
 struct FrameAttachmentData;
@@ -106,37 +112,74 @@ struct SP_PUBLIC ProgramData : ProgramInfo {
 	void inspect(SpanView<uint32_t>);
 };
 
+struct SpecializationConstant {
+	using ValueCallback =
+			memory::function<SpecializationConstant(const Device &, const PipelineLayoutData &)>;
+
+	enum Type {
+		Int,
+		Float,
+		Callback
+	};
+
+	Type type = Int;
+	union {
+		int intValue;
+		float floatValue;
+		ValueCallback *function;
+	};
+
+	SpecializationConstant(int val) : type(Int), intValue(val) { }
+	SpecializationConstant(uint32_t val) : type(Int), intValue(val) { }
+	SpecializationConstant(float val) : type(Float), floatValue(val) { }
+	SpecializationConstant(ValueCallback &&cb) : type(Callback) {
+		auto pool = memory::pool::acquire();
+		memory::pool::perform([&] { function = new (pool) ValueCallback(move(cb)); }, pool);
+	}
+};
+
 struct SP_PUBLIC SpecializationInfo {
 	const ProgramData *data = nullptr;
 	memory::vector<SpecializationConstant> constants;
 
 	SpecializationInfo() = default;
-	SpecializationInfo(const ProgramData *);
-	SpecializationInfo(const ProgramData *, SpanView<SpecializationConstant>);
+	SpecializationInfo(const ProgramData *program);
+	SpecializationInfo(const ProgramData *program, SpanView<SpecializationConstant> constants);
 };
 
 struct SP_PUBLIC GraphicPipelineInfo : NamedMem {
 	memory::vector<SpecializationInfo> shaders;
 	DynamicState dynamicState = DynamicState::Default;
 	PipelineMaterialInfo material;
+	const SubpassData *subpass = nullptr;
+	const PipelineLayoutData *layout = nullptr;
+	const PipelineFamilyInfo *family = nullptr;
 
 	bool isSolid() const;
 };
 
 struct SP_PUBLIC GraphicPipelineData : GraphicPipelineInfo {
-	const SubpassData *subpass = nullptr;
-	const PipelineLayoutData *layout = nullptr;
 	Rc<GraphicPipeline> pipeline; // GL implementation-dependent object
 };
 
 struct SP_PUBLIC ComputePipelineInfo : NamedMem {
 	SpecializationInfo shader;
+	const SubpassData *subpass = nullptr;
+	const PipelineLayoutData *layout = nullptr;
+	const PipelineFamilyInfo *family = nullptr;
 };
 
 struct SP_PUBLIC ComputePipelineData : ComputePipelineInfo {
-	const SubpassData *subpass = nullptr;
-	const PipelineLayoutData *layout = nullptr;
 	Rc<ComputePipeline> pipeline; // GL implementation-dependent object
+};
+
+struct SP_PUBLIC PipelineFamilyInfo : NamedMem {
+	const PipelineLayoutData *layout = nullptr;
+};
+
+struct SP_PUBLIC PipelineFamilyData : PipelineFamilyInfo {
+	memory::vector<const GraphicPipelineData *> graphicPipelines;
+	memory::vector<const ComputePipelineData *> computePipelines;
 };
 
 struct SP_PUBLIC PipelineDescriptor : NamedMem {
@@ -163,25 +206,29 @@ struct SP_PUBLIC SubpassDependency {
 	AccessType dstAccess;
 	bool byRegion;
 
-	uint64_t value() const {
-		return uint64_t(srcSubpass) << 32 | uint64_t(dstSubpass);
-	}
+	uint64_t value() const { return uint64_t(srcSubpass) << 32 | uint64_t(dstSubpass); }
 };
 
-inline bool operator < (const SubpassDependency &l, const SubpassDependency &r) { return l.value() < r.value(); }
-inline bool operator == (const SubpassDependency &l, const SubpassDependency &r) { return l.value() == r.value(); }
-inline bool operator != (const SubpassDependency &l, const SubpassDependency &r) { return l.value() != r.value(); }
+inline bool operator<(const SubpassDependency &l, const SubpassDependency &r) {
+	return l.value() < r.value();
+}
+inline bool operator==(const SubpassDependency &l, const SubpassDependency &r) {
+	return l.value() == r.value();
+}
+inline bool operator!=(const SubpassDependency &l, const SubpassDependency &r) {
+	return l.value() != r.value();
+}
 
 struct SP_PUBLIC AttachmentDependencyInfo {
-	// when and how within renderpass/subpass attachment will be used for a first time
+	// when and how attachment will be used for a first time within renderpass/subpass
 	PipelineStage initialUsageStage = PipelineStage::None;
 	AccessType initialAccessMask = AccessType::None;
 
-	// when and how within renderpass/subpass attachment will be used for a last time
+	// when and how attachment will be used for a last time within renderpass/subpass
 	PipelineStage finalUsageStage = PipelineStage::None;
 	AccessType finalAccessMask = AccessType::None;
 
-	// FrameRenderPassState, after which attachment can be used on next renderpass
+	// FrameRenderPassState, after which attachment can be used by next renderpass
 	// Or Initial if no dependencies
 	FrameRenderPassState requiredRenderPassState = FrameRenderPassState::Initial;
 
@@ -234,6 +281,14 @@ struct SP_PUBLIC AttachmentPassData : NamedMem {
 };
 
 struct SP_PUBLIC AttachmentData : NamedMem {
+	using InputAcquisitionCallback =
+			memory::function<void(FrameQueue &, AttachmentHandle &, Function<void(bool)> &&)>;
+
+	using InputSubmissionCallback = memory::function<void(FrameQueue &, AttachmentHandle &,
+			AttachmentInputData *, Function<void(bool)> &&)>;
+
+	using InputValidationCallback = memory::function<bool(const AttachmentInputData *)>;
+
 	const QueueData *queue = nullptr;
 	uint64_t id = 0;
 	AttachmentOps ops = AttachmentOps::Undefined;
@@ -241,6 +296,11 @@ struct SP_PUBLIC AttachmentData : NamedMem {
 	AttachmentUsage usage = AttachmentUsage::None;
 	FrameRenderPassState outputState = FrameRenderPassState::Submitted;
 	memory::vector<AttachmentPassData *> passes;
+
+	InputAcquisitionCallback inputAcquisitionCallback;
+	InputSubmissionCallback inputSubmissionCallback;
+	InputValidationCallback inputValidationCallback;
+
 	Rc<Attachment> attachment;
 	bool transient = false;
 };
@@ -257,7 +317,10 @@ struct SP_PUBLIC PipelineLayoutData : NamedMem {
 
 	const TextureSetLayoutData *textureSetLayout = nullptr;
 
+	const PipelineFamilyData *defaultFamily = nullptr;
+
 	memory::vector<DescriptorSetData *> sets;
+	memory::vector<const PipelineFamilyData *> families;
 	memory::vector<const GraphicPipelineData *> graphicPipelines;
 	memory::vector<const ComputePipelineData *> computePipelines;
 };
@@ -282,8 +345,9 @@ struct SP_PUBLIC SubpassData : NamedMem {
 	const AttachmentSubpassData *depthStencil = nullptr;
 	mutable memory::vector<uint32_t> preserve;
 
-	memory::function<void(const SubpassData &, FrameQueue &)> prepareCallback = nullptr;
-	memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> commandsCallback = nullptr;
+	memory::function<void(FrameQueue &, const SubpassData &)> prepareCallback = nullptr;
+	memory::function<void(FrameQueue &, const SubpassData &, CommandBuffer &)> commandsCallback =
+			nullptr;
 };
 
 /** RenderOrdering defines order of execution for render passes between interdependent passes
@@ -300,7 +364,8 @@ struct SP_PUBLIC QueuePassRequirements {
 	FrameRenderPassState lockedState = FrameRenderPassState::Initial;
 
 	QueuePassRequirements() = default;
-	QueuePassRequirements(const QueuePassData &d, FrameRenderPassState required, FrameRenderPassState locked)
+	QueuePassRequirements(const QueuePassData &d, FrameRenderPassState required,
+			FrameRenderPassState locked)
 	: data(&d), requiredState(required), lockedState(locked) { }
 };
 
@@ -337,8 +402,12 @@ struct SP_PUBLIC QueuePassData : NamedMem {
 	Rc<QueuePass> pass;
 	Rc<RenderPass> impl;
 
-	memory::vector<memory::function<void(const QueuePassData &, FrameQueue &, bool)>> submittedCallbacks;
-	memory::vector<memory::function<void(const QueuePassData &, FrameQueue &, bool)>> completeCallbacks;
+	memory::function<bool(const FrameQueue &, const QueuePassData &)> checkAvailable;
+
+	memory::vector<memory::function<void(FrameQueue &, const QueuePassData &, bool)>>
+			submittedCallbacks;
+	memory::vector<memory::function<void(FrameQueue &, const QueuePassData &, bool)>>
+			completeCallbacks;
 };
 
 struct SP_PUBLIC QueueData : NamedMem {
@@ -371,9 +440,6 @@ struct SP_PUBLIC QueueData : NamedMem {
 	void clear();
 };
 
-SP_PUBLIC StringView getDescriptorTypeName(DescriptorType);
-SP_PUBLIC String getProgramStageDescription(ProgramStage fmt);
-
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREQUEUEDATA_H_ */

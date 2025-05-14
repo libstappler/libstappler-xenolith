@@ -1,24 +1,25 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLScene.h"
@@ -41,9 +42,7 @@ static void Scene_findUnresolvedInputs(const memory::vector<core::AttachmentData
 	}
 }
 
-Scene::~Scene() {
-	_queue = nullptr;
-}
+Scene::~Scene() { _queue = nullptr; }
 
 bool Scene::init(Queue::Builder &&builder, const core::FrameConstraints &constraints) {
 	if (!Node::init()) {
@@ -64,7 +63,8 @@ void Scene::renderRequest(const Rc<FrameRequest> &req, PoolRef *pool) {
 		return;
 	}
 
-	Size2 scaledExtent(_constraints.extent.width / _constraints.density, _constraints.extent.height / _constraints.density);
+	Size2 scaledExtent(_constraints.extent.width / _constraints.density,
+			_constraints.extent.height / _constraints.density);
 
 	FrameInfo info;
 	info.request = req;
@@ -101,13 +101,9 @@ void Scene::render(FrameInfo &info) {
 	eventDispatcher->commitStorage(move(info.input));
 }
 
-void Scene::handleEnter(Scene *scene) {
-	Node::handleEnter(scene);
-}
+void Scene::handleEnter(Scene *scene) { Node::handleEnter(scene); }
 
-void Scene::handleExit() {
-	Node::handleExit();
-}
+void Scene::handleExit() { Node::handleExit(); }
 
 void Scene::handleContentSizeDirty() {
 	Node::handleContentSizeDirty();
@@ -133,7 +129,7 @@ void Scene::setContent(SceneContent *content) {
 	}
 }
 
-void Scene::onPresented(Director *dir) {
+void Scene::handlePresented(Director *dir) {
 	_director = dir;
 	if (getContentSize() == Size2::ZERO) {
 		setContentSize(_constraints.getScreenSize() / _constraints.density);
@@ -146,7 +142,7 @@ void Scene::onPresented(Director *dir) {
 	handleEnter(this);
 }
 
-void Scene::onFinished(Director *dir) {
+void Scene::handleFinished(Director *dir) {
 	handleExit();
 
 	if (_director == dir) {
@@ -161,21 +157,13 @@ void Scene::onFinished(Director *dir) {
 	}
 }
 
-void Scene::onFrameStarted(FrameRequest &req) {
-	req.setSceneId(retain());
-}
+void Scene::handleFrameStarted(FrameRequest &req) { req.setSceneId(retain()); }
 
-void Scene::onFrameEnded(FrameRequest &req) {
-	release(req.getSceneId());
-}
+void Scene::handleFrameEnded(FrameRequest &req) { release(req.getSceneId()); }
 
-void Scene::onFrameAttached(const FrameHandle *frame) {
+void Scene::handleFrameAttached(const FrameHandle *frame) { }
 
-}
-
-void Scene::onFrameDetached(const FrameHandle *frame) {
-
-}
+void Scene::handleFrameDetached(const FrameHandle *frame) { }
 
 void Scene::setFrameConstraints(const core::FrameConstraints &constraints) {
 	if (_constraints != constraints) {
@@ -193,7 +181,7 @@ void Scene::setFrameConstraints(const core::FrameConstraints &constraints) {
 	}
 }
 
-const Size2& Scene::getContentSize() const {
+const Size2 &Scene::getContentSize() const {
 	return _content ? _content->getContentSize() : _contentSize;
 }
 
@@ -209,23 +197,13 @@ void Scene::setClipContent(bool value) {
 	}
 }
 
-bool Scene::isClipContent() const {
-	return _content ? _content->isScissorEnabled() : false;
-}
+bool Scene::isClipContent() const { return _content ? _content->isScissorEnabled() : false; }
 
 auto Scene::makeQueue(Queue::Builder &&builder) -> Rc<Queue> {
-	builder.setBeginCallback([this] (FrameRequest &frame) {
-		onFrameStarted(frame);
-	});
-	builder.setEndCallback([this] (FrameRequest &frame) {
-		onFrameEnded(frame);
-	});
-	builder.setAttachCallback([this] (const FrameHandle *frame) {
-		onFrameAttached(frame);
-	});
-	builder.setDetachCallback([this] (const FrameHandle *frame) {
-		onFrameDetached(frame);
-	});
+	builder.setBeginCallback([this](FrameRequest &frame) { handleFrameStarted(frame); });
+	builder.setEndCallback([this](FrameRequest &frame) { handleFrameEnded(frame); });
+	builder.setAttachCallback([this](const FrameHandle *frame) { handleFrameAttached(frame); });
+	builder.setDetachCallback([this](const FrameHandle *frame) { handleFrameDetached(frame); });
 
 	return Rc<Queue>::create(move(builder));
 }
@@ -235,10 +213,11 @@ void Scene::updateContentNode(SceneContent *content) {
 		auto padding = _constraints.contentPadding / _constraints.density;
 
 		content->setPosition(Vec2(padding.left, padding.bottom));
-		content->setContentSize(Size2(_contentSize.width - padding.horizontal(), _contentSize.height - padding.vertical()));
+		content->setContentSize(Size2(_contentSize.width - padding.horizontal(),
+				_contentSize.height - padding.vertical()));
 		content->setAnchorPoint(Anchor::BottomLeft);
 		content->setDecorationPadding(padding);
 	}
 }
 
-}
+} // namespace stappler::xenolith

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,9 @@
  THE SOFTWARE.
  **/
 
-#include "XL2dLinearGradient.h"
+#include "XLLinearGradient.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 LinearGradientData::LinearGradientData(const LinearGradientData &other)
 : start(other.start), end(other.end), steps(other.steps) { }
@@ -39,11 +39,13 @@ bool LinearGradient::init(const Vec2 &start, const Vec2 &end, Vector<GradientSte
 	return true;
 }
 
-bool LinearGradient::init(const Vec2 &origin, float angle, float distance, Vector<GradientStep> &&steps) {
+bool LinearGradient::init(const Vec2 &origin, float angle, float distance,
+		Vector<GradientStep> &&steps) {
 	return init(origin, origin + Vec2::forAngle(angle) * distance, sp::move(steps));
 }
 
-bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<GradientStep> &&steps) {
+bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end,
+		Vector<GradientStep> &&steps) {
 	if (steps.empty()) {
 		return false;
 	}
@@ -59,9 +61,8 @@ bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<G
 	_data->end = end;
 	_data->steps = sp::move(steps);
 
-	std::sort(_data->steps.begin(), _data->steps.end(), [] (const GradientStep &l, const GradientStep &r) {
-		return l.value < r.value;
-	});
+	std::sort(_data->steps.begin(), _data->steps.end(),
+			[](const GradientStep &l, const GradientStep &r) { return l.value < r.value; });
 	/*if (_data->steps.front().value > 0.0f) {
 		_data->steps.insert(_data->steps.begin(), GradientStep{0.0f, _data->steps.front().color});
 	}
@@ -72,20 +73,15 @@ bool LinearGradient::updateWithData(const Vec2 &start, const Vec2 &end, Vector<G
 	return true;
 }
 
-bool LinearGradient::updateWithData(const Vec2 &origin, float angle, float distance, Vector<GradientStep> &&steps) {
+bool LinearGradient::updateWithData(const Vec2 &origin, float angle, float distance,
+		Vector<GradientStep> &&steps) {
 	return updateWithData(origin, origin + Vec2::forAngle(angle) * distance, sp::move(steps));
 }
 
-const Vec2 &LinearGradient::getStart() const {
-	return _data->start;
-}
-const Vec2 &LinearGradient::getEnd() const {
-	return _data->end;
-}
+const Vec2 &LinearGradient::getStart() const { return _data->start; }
+const Vec2 &LinearGradient::getEnd() const { return _data->end; }
 
-const Vector<GradientStep> &LinearGradient::getSteps() const {
-	return _data->steps;
-}
+const Vector<GradientStep> &LinearGradient::getSteps() const { return _data->steps; }
 
 Rc<LinearGradientData> LinearGradient::pop() {
 	_copyOnWrite = true;
@@ -93,13 +89,11 @@ Rc<LinearGradientData> LinearGradient::pop() {
 }
 
 // duplicate data, user can modify new data
-Rc<LinearGradientData> LinearGradient::dup() {
-	return Rc<LinearGradientData>::alloc(*_data);
-}
+Rc<LinearGradientData> LinearGradient::dup() { return Rc<LinearGradientData>::alloc(*_data); }
 
 void LinearGradient::copy() {
 	_data = Rc<LinearGradientData>::alloc(*_data);
 	_copyOnWrite = false;
 }
 
-}
+} // namespace stappler::xenolith

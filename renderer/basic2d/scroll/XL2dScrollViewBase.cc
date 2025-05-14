@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,14 +35,14 @@ bool ScrollViewBase::init(Layout layout) {
 	_layout = layout;
 
 	_inputListener = addInputListener(Rc<InputListener>::create());
-	_inputListener->addTapRecognizer([this] (const GestureTap &tap) {
+	_inputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			onTap(tap.count, tap.pos);
 		}
 		return false;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}));
 
-	_inputListener->addPressRecognizer([this] (const GesturePress &s) -> bool {
+	_inputListener->addPressRecognizer([this](const GesturePress &s) -> bool {
 		switch (s.event) {
 		case GestureEvent::Began: return onPressBegin(s.pos); break;
 		case GestureEvent::Activated: return onLongPress(s.pos, s.time, s.tickCount); break;
@@ -51,10 +52,14 @@ bool ScrollViewBase::init(Layout layout) {
 		return false;
 	}, TimeInterval::milliseconds(425), true);
 
-	_inputListener->addSwipeRecognizer([this] (const GestureSwipe &s) -> bool {
+	_inputListener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		switch (s.event) {
-		case GestureEvent::Began: return onSwipeEventBegin(s.getId(), s.midpoint, s.delta, s.velocity); break;
-		case GestureEvent::Activated: return onSwipeEvent(s.getId(), s.midpoint, s.delta, s.velocity); break;
+		case GestureEvent::Began:
+			return onSwipeEventBegin(s.getId(), s.midpoint, s.delta, s.velocity);
+			break;
+		case GestureEvent::Activated:
+			return onSwipeEvent(s.getId(), s.midpoint, s.delta, s.velocity);
+			break;
 		case GestureEvent::Ended:
 		case GestureEvent::Cancelled:
 			return onSwipeEventEnd(s.getId(), s.midpoint, s.delta, s.velocity);
@@ -63,13 +68,13 @@ bool ScrollViewBase::init(Layout layout) {
 		return false;
 	}, TapDistanceAllowed, true);
 
-	_inputListener->addScrollRecognizer([this] (const GestureScroll &w) -> bool {
+	_inputListener->addScrollRecognizer([this](const GestureScroll &w) -> bool {
 		auto pos = getScrollPosition();
 		onSwipeBegin();
 		if (_layout == Vertical) {
-			onDelta(- w.amount.y * 5.0f / _globalScale.y);
+			onDelta(-w.amount.y * 5.0f / _globalScale.y);
 		} else {
-			onDelta(- w.amount.x * 5.0f / _globalScale.x);
+			onDelta(-w.amount.x * 5.0f / _globalScale.x);
 		}
 		onScroll(getScrollPosition() - pos, false);
 		return true;
@@ -78,8 +83,8 @@ bool ScrollViewBase::init(Layout layout) {
 	setCascadeOpacityEnabled(true);
 
 	_root = addChild(Rc<Node>::create());
-	_root->setPosition(Vec2(0, 0));
-	_root->setAnchorPoint((_layout == Vertical)?Vec2(0, 1):Vec2(0, 0));
+	_root->setPosition(Vec2::ZERO);
+	_root->setAnchorPoint((_layout == Vertical) ? Vec2(0.0f, 1.0f) : Vec2::ZERO);
 	_root->setCascadeOpacityEnabled(true);
 	_root->setContentSizeDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
 	_root->setTransformDirtyCallback(std::bind(&ScrollViewBase::onPosition, this));
@@ -142,34 +147,30 @@ void ScrollViewBase::handleTransformDirty(const Mat4 &parentTransform) {
 	Vec3 scale;
 	parentTransform.decompose(&scale, nullptr, nullptr);
 
-	if (_scale.x != 1.f) { scale.x *= _scale.x; }
-	if (_scale.y != 1.f) { scale.y *= _scale.y; }
-	if (_scale.z != 1.f) { scale.z *= _scale.z; }
+	if (_scale.x != 1.f) {
+		scale.x *= _scale.x;
+	}
+	if (_scale.y != 1.f) {
+		scale.y *= _scale.y;
+	}
+	if (_scale.z != 1.f) {
+		scale.z *= _scale.z;
+	}
 
 	_globalScale = Vec2(scale.x, scale.y);
 }
 
-void ScrollViewBase::setEnabled(bool value) {
-	_inputListener->setEnabled(value);
-}
-bool ScrollViewBase::isEnabled() const {
-	return _inputListener->isEnabled();
-}
-bool ScrollViewBase::isInMotion() const {
-	return _movement == Movement::Manual;
-}
-bool ScrollViewBase::isMoved() const {
-	return _movement != Movement::None;
-}
+void ScrollViewBase::setEnabled(bool value) { _inputListener->setEnabled(value); }
+bool ScrollViewBase::isEnabled() const { return _inputListener->isEnabled(); }
+bool ScrollViewBase::isInMotion() const { return _movement == Movement::Manual; }
+bool ScrollViewBase::isMoved() const { return _movement != Movement::None; }
 
-void ScrollViewBase::setScrollCallback(const ScrollCallback & cb) {
-	_scrollCallback = cb;
-}
+void ScrollViewBase::setScrollCallback(const ScrollCallback &cb) { _scrollCallback = cb; }
 const ScrollViewBase::ScrollCallback &ScrollViewBase::getScrollCallback() const {
 	return _scrollCallback;
 }
 
-void ScrollViewBase::setOverscrollCallback(const OverscrollCallback & cb) {
+void ScrollViewBase::setOverscrollCallback(const OverscrollCallback &cb) {
 	_overscrollCallback = cb;
 }
 const ScrollViewBase::OverscrollCallback &ScrollViewBase::getOverscrollCallback() const {
@@ -197,9 +198,7 @@ void ScrollViewBase::setController(ScrollController *c) {
 		}
 	}
 }
-ScrollController *ScrollViewBase::getController() {
-	return _controller;
-}
+ScrollController *ScrollViewBase::getController() { return _controller; }
 
 void ScrollViewBase::setPadding(const Padding &p) {
 	if (p != _paddingGlobal) {
@@ -207,9 +206,7 @@ void ScrollViewBase::setPadding(const Padding &p) {
 		_contentSizeDirty = true;
 	}
 }
-const Padding &ScrollViewBase::getPadding() const {
-	return _paddingGlobal;
-}
+const Padding &ScrollViewBase::getPadding() const { return _paddingGlobal; }
 
 void ScrollViewBase::setSpaceLimit(float value, float padding) {
 	if (_scrollSpaceLimit != value || _scrollSpacePadding != padding) {
@@ -218,12 +215,8 @@ void ScrollViewBase::setSpaceLimit(float value, float padding) {
 		_contentSizeDirty = true;
 	}
 }
-float ScrollViewBase::getSpaceLimit() const {
-	return _scrollSpaceLimit;
-}
-float ScrollViewBase::getSpacePadding() const {
-	return _scrollSpacePadding;
-}
+float ScrollViewBase::getSpaceLimit() const { return _scrollSpaceLimit; }
+float ScrollViewBase::getSpacePadding() const { return _scrollSpacePadding; }
 
 float ScrollViewBase::getScrollableAreaOffset() const {
 	if (_controller) {
@@ -262,11 +255,11 @@ Vec2 ScrollViewBase::getAnchorPointForNode() const {
 }
 
 float ScrollViewBase::getNodeScrollSize(Size2 size) const {
-	return (isVertical())?(size.height):(size.width);
+	return (isVertical()) ? (size.height) : (size.width);
 }
 
 float ScrollViewBase::getNodeScrollPosition(Vec2 pos) const {
-	return (isVertical())?(pos.y):(pos.x);
+	return (isVertical()) ? (pos.y) : (pos.x);
 }
 
 bool ScrollViewBase::addScrollNode(Node *node, Vec2 pos, Size2 size, ZOrder z, StringView name) {
@@ -282,11 +275,11 @@ bool ScrollViewBase::addScrollNode(Node *node, Vec2 pos, Size2 size, ZOrder z, S
 void ScrollViewBase::updateScrollNode(Node *node, Vec2 pos, Size2 size, ZOrder z, StringView name) {
 	auto p = node->getParent();
 	if (p == _root || p == nullptr) {
-		auto cs = Size2(isnan(size.width)?_root->getContentSize().width:size.width,
-				isnan(size.height)?_root->getContentSize().height:size.height);
+		auto cs = Size2(isnan(size.width) ? _root->getContentSize().width : size.width,
+				isnan(size.height) ? _root->getContentSize().height : size.height);
 
 		node->setContentSize(cs);
-		node->setPosition((isVertical()?Vec2(pos.x,-pos.y):pos));
+		node->setPosition((isVertical() ? Vec2(pos.x, -pos.y) : pos));
 		node->setAnchorPoint(getAnchorPointForNode());
 		if (z != ZOrder(0)) {
 			node->setLocalZOrder(z);
@@ -311,21 +304,17 @@ float ScrollViewBase::getDistanceFromStart() const {
 	}
 }
 
-void ScrollViewBase::setScrollMaxVelocity(float value) {
-	_maxVelocity = value;
-}
-float ScrollViewBase::getScrollMaxVelocity() const {
-	return _maxVelocity;
-}
+void ScrollViewBase::setScrollMaxVelocity(float value) { _maxVelocity = value; }
+float ScrollViewBase::getScrollMaxVelocity() const { return _maxVelocity; }
 
 
-Node * ScrollViewBase::getFrontNode() const {
+Node *ScrollViewBase::getFrontNode() const {
 	if (_controller) {
 		return _controller->getFrontNode();
 	}
 	return nullptr;
 }
-Node * ScrollViewBase::getBackNode() const {
+Node *ScrollViewBase::getBackNode() const {
 	if (_controller) {
 		return _controller->getBackNode();
 	}
@@ -335,12 +324,12 @@ Node * ScrollViewBase::getBackNode() const {
 float ScrollViewBase::getScrollMinPosition() const {
 	auto pos = getScrollableAreaOffset();
 	if (!isnan(pos)) {
-		return pos - (isVertical()?_paddingGlobal.top:_paddingGlobal.left);
+		return pos - (isVertical() ? _paddingGlobal.top : _paddingGlobal.left);
 	}
 	if (_controller) {
 		float min = _controller->getScrollMin();
 		if (!isnan(min)) {
-			return min - (isVertical()?_paddingGlobal.top:_paddingGlobal.left);
+			return min - (isVertical() ? _paddingGlobal.top : _paddingGlobal.left);
 		}
 	}
 	return std::numeric_limits<float>::quiet_NaN();
@@ -350,8 +339,9 @@ float ScrollViewBase::getScrollMaxPosition() const {
 	auto pos = getScrollableAreaOffset();
 	auto size = getScrollableAreaSize();
 	if (!isnan(pos) && !isnan(size)) {
-		pos -= (isVertical()?_paddingGlobal.top:_paddingGlobal.left);
-		size += (isVertical()?(_paddingGlobal.top + _paddingGlobal.bottom):(_paddingGlobal.left + _paddingGlobal.right));
+		pos -= (isVertical() ? _paddingGlobal.top : _paddingGlobal.left);
+		size += (isVertical() ? (_paddingGlobal.top + _paddingGlobal.bottom)
+							  : (_paddingGlobal.left + _paddingGlobal.right));
 		if (size > _scrollSize) {
 			return pos + size - _scrollSize;
 		} else {
@@ -362,9 +352,12 @@ float ScrollViewBase::getScrollMaxPosition() const {
 		float min = _controller->getScrollMin();
 		float max = _controller->getScrollMax();
 		if (!isnan(max) && !isnan(min)) {
-			return std::max(min, max - _scrollSize + (isVertical()?_paddingGlobal.bottom:_paddingGlobal.right));
+			return std::max(min,
+					max - _scrollSize
+							+ (isVertical() ? _paddingGlobal.bottom : _paddingGlobal.right));
 		} else if (!isnan(max)) {
-			return max - _scrollSize + (isVertical()?_paddingGlobal.bottom:_paddingGlobal.right);
+			return max - _scrollSize
+					+ (isVertical() ? _paddingGlobal.bottom : _paddingGlobal.right);
 		}
 	}
 
@@ -374,17 +367,19 @@ float ScrollViewBase::getScrollMaxPosition() const {
 float ScrollViewBase::getScrollLength() const {
 	float size = getScrollableAreaSize();
 	if (!isnan(size)) {
-		return size + (isVertical()?(_paddingGlobal.top + _paddingGlobal.bottom):(_paddingGlobal.left + _paddingGlobal.right));
+		return size
+				+ (isVertical() ? (_paddingGlobal.top + _paddingGlobal.bottom)
+								: (_paddingGlobal.left + _paddingGlobal.right));
 	}
 
 	float min = getScrollMinPosition();
 	float max = getScrollMaxPosition();
 
 	if (!isnan(min) && !isnan(max)) {
-		float trueMax = max - (isVertical()?_paddingGlobal.bottom:_paddingGlobal.right);
-		float trueMin = min + (isVertical()?_paddingGlobal.top:_paddingGlobal.left);
+		float trueMax = max - (isVertical() ? _paddingGlobal.bottom : _paddingGlobal.right);
+		float trueMin = min + (isVertical() ? _paddingGlobal.top : _paddingGlobal.left);
 		if (trueMax > trueMin) {
-			return max  - min + _scrollSize;
+			return max - min + _scrollSize;
 		} else {
 			return _scrollSize;
 		}
@@ -393,9 +388,7 @@ float ScrollViewBase::getScrollLength() const {
 	}
 }
 
-float ScrollViewBase::getScrollSize() const {
-	return _scrollSize;
-}
+float ScrollViewBase::getScrollSize() const { return _scrollSize; }
 
 void ScrollViewBase::setScrollRelativePosition(float value) {
 	if (!isnan(value)) {
@@ -417,8 +410,8 @@ void ScrollViewBase::setScrollRelativePosition(float value) {
 	}
 
 	auto &padding = getPadding();
-	auto paddingFront = (isVertical())?padding.top:padding.left;
-	auto paddingBack = (isVertical())?padding.bottom:padding.right;
+	auto paddingFront = (isVertical()) ? padding.top : padding.left;
+	auto paddingBack = (isVertical()) ? padding.bottom : padding.right;
 
 	if (!isnan(areaSize) && !isnan(areaOffset) && areaSize > 0) {
 		float liveSize = areaSize + paddingFront + paddingBack - size;
@@ -444,8 +437,8 @@ float ScrollViewBase::getScrollRelativePosition(float pos) const {
 	float size = getScrollSize();
 
 	auto &padding = getPadding();
-	auto paddingFront = (isVertical())?padding.top:padding.left;
-	auto paddingBack = (isVertical())?padding.bottom:padding.right;
+	auto paddingFront = (isVertical()) ? padding.top : padding.left;
+	auto paddingBack = (isVertical()) ? padding.bottom : padding.right;
 
 	if (!isnan(areaSize) && !isnan(areaOffset)) {
 		float liveSize = areaSize + paddingFront + paddingBack - size;
@@ -478,7 +471,8 @@ float ScrollViewBase::getScrollPosition() const {
 }
 
 Vec2 ScrollViewBase::getPointForScrollPosition(float pos) {
-	return (isVertical())?Vec2(_root->getPosition().x, pos + _scrollSize):Vec2(-pos, _root->getPosition().y);
+	return (isVertical()) ? Vec2(_root->getPosition().x, pos + _scrollSize)
+						  : Vec2(-pos, _root->getPosition().y);
 }
 
 void ScrollViewBase::onDelta(float delta) {
@@ -514,11 +508,11 @@ void ScrollViewBase::onDelta(float delta) {
 void ScrollViewBase::onOverscrollPerformed(float velocity, float pos, float boundary) {
 	if (_movement == Movement::Auto) {
 		if (_movementAction) {
-			auto n = (pos < boundary)?1.0f:-1.0f;
+			auto n = (pos < boundary) ? 1.0f : -1.0f;
 
 			auto vel = _movementAction->getCurrentVelocity();
 			auto normal = _movementAction->getNormal();
-			if (n * (isVertical()?normal.y:-normal.x) > 0) {
+			if (n * (isVertical() ? normal.y : -normal.x) > 0) {
 				velocity = vel;
 			} else {
 				velocity = -vel;
@@ -537,7 +531,7 @@ void ScrollViewBase::onOverscrollPerformed(float velocity, float pos, float boun
 			return;
 		}
 		if ((pos < boundary && velocity < 0) || (pos > boundary && velocity > 0)) {
-			velocity = - fabs(velocity);
+			velocity = -fabs(velocity);
 		} else {
 			velocity = fabs(velocity);
 		}
@@ -547,19 +541,19 @@ void ScrollViewBase::onOverscrollPerformed(float velocity, float pos, float boun
 		Vec2 boundaryPos = getPointForScrollPosition(boundary);
 		Vec2 currentPos = getPointForScrollPosition(pos);
 
-		auto a = ActionAcceleratedMove::createBounce(5000, currentPos, boundaryPos, velocity, std::max(25000.0f, fabsf(velocity) * 50));
+		auto a = ActionAcceleratedMove::createBounce(5'000, currentPos, boundaryPos, velocity,
+				std::max(25000.0f, fabsf(velocity) * 50));
 		if (a) {
 			_controller->dropAnimationPadding();
 			_movement = Movement::Overscroll;
-			_animationAction = Rc<Sequence>::create(a, [this] {
-				onAnimationFinished();
-			});
+			_animationAction = Rc<Sequence>::create(a, [this] { onAnimationFinished(); });
 			_root->runAction(_animationAction);
 		}
 	}
 }
 
-bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 &delta, const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 &delta,
+		const Vec2 &velocity) {
 	if (_layout == Layout::Vertical) {
 		if (std::abs(delta.x) < std::abs(delta.y)) {
 			_inputListener->setExclusiveForTouch(id);
@@ -574,7 +568,7 @@ bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 
 		}
 	}
 
-	auto cs = (_layout == Vertical)?(_contentSize.height):(_contentSize.width);
+	auto cs = (_layout == Vertical) ? (_contentSize.height) : (_contentSize.width);
 	auto length = getScrollLength();
 	if (!isnan(length) && cs >= length) {
 		return false;
@@ -591,20 +585,22 @@ bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 
 	return true;
 }
 
-bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delta, const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delta,
+		const Vec2 &velocity) {
 	if (_layout == Vertical) {
 		return onSwipe(delta.y / _globalScale.y, velocity.y / _globalScale.y, false);
 	} else {
-		return onSwipe(- delta.x / _globalScale.x, - velocity.x / _globalScale.x, false);
+		return onSwipe(-delta.x / _globalScale.x, -velocity.x / _globalScale.x, false);
 	}
 }
 
-bool ScrollViewBase::onSwipeEventEnd(uint32_t id, const Vec2 &loc, const Vec2 &d, const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEventEnd(uint32_t id, const Vec2 &loc, const Vec2 &d,
+		const Vec2 &velocity) {
 	_movement = Movement::None;
 	if (_layout == Vertical) {
 		return onSwipe(0, velocity.y / _globalScale.y, true);
 	} else {
-		return onSwipe(0, - velocity.x / _globalScale.x, true);
+		return onSwipe(0, -velocity.x / _globalScale.x, true);
 	}
 }
 
@@ -627,7 +623,7 @@ bool ScrollViewBase::onSwipe(float delta, float velocity, bool ended) {
 	} else {
 		float pos = getScrollPosition();
 
-		float acceleration = (velocity > 0)?-5000.0f:5000.0f;
+		float acceleration = (velocity > 0) ? -5000.0f : 5000.0f;
 		if (!isnan(_maxVelocity)) {
 			if (velocity > fabs(_maxVelocity)) {
 				velocity = fabs(_maxVelocity);
@@ -662,9 +658,7 @@ bool ScrollViewBase::onSwipe(float delta, float velocity, bool ended) {
 
 		if (auto a = onSwipeFinalizeAction(velocity)) {
 			_movement = Movement::Auto;
-			_animationAction = Rc<Sequence>::create(a, [this] {
-				onAnimationFinished();
-			});
+			_animationAction = Rc<Sequence>::create(a, [this] { onAnimationFinished(); });
 			_root->runAction(_animationAction);
 		} else {
 			onScroll(0, true);
@@ -678,12 +672,11 @@ Rc<ActionInterval> ScrollViewBase::onSwipeFinalizeAction(float velocity) {
 		return nullptr;
 	}
 
-	float acceleration = (velocity > 0)?-5000.0f:5000.0f;
-	float boundary = (velocity > 0)?_scrollMax:_scrollMin;
+	float acceleration = (velocity > 0) ? -5000.0f : 5000.0f;
+	float boundary = (velocity > 0) ? _scrollMax : _scrollMin;
 
-	Vec2 normal = (isVertical())
-			?(Vec2(0.0f, (velocity > 0)?1.0f:-1.0f))
-			:(Vec2((velocity > 0)?-1.0f:1.0f, 0.0f));
+	Vec2 normal = (isVertical()) ? (Vec2(0.0f, (velocity > 0) ? 1.0f : -1.0f))
+								 : (Vec2((velocity > 0) ? -1.0f : 1.0f, 0.0f));
 
 	Rc<ActionInterval> a;
 
@@ -710,19 +703,20 @@ Rc<ActionInterval> ScrollViewBase::onSwipeFinalizeAction(float velocity) {
 		}
 
 		if ((velocity > 0 && pos + path > boundary) || (velocity < 0 && pos + path < boundary)) {
-			_movementAction = ActionAcceleratedMove::createAccelerationTo(from, to, fabsf(velocity), -fabsf(acceleration));
+			_movementAction = ActionAcceleratedMove::createAccelerationTo(from, to, fabsf(velocity),
+					-fabsf(acceleration));
 
-			auto overscrollPath = path + ((velocity < 0)?(distance):(-distance));
+			auto overscrollPath = path + ((velocity < 0) ? (distance) : (-distance));
 			if (overscrollPath) {
-				a = Rc<Sequence>::create(_movementAction, [this, overscrollPath] {
-					onOverscroll(overscrollPath);
-				});
+				a = Rc<Sequence>::create(_movementAction,
+						[this, overscrollPath] { onOverscroll(overscrollPath); });
 			}
 		}
 	}
 
 	if (!_movementAction) {
-		_movementAction = ActionAcceleratedMove::createDecceleration(normal, _root->getPosition().xy(), fabs(velocity), fabsf(acceleration));
+		_movementAction = ActionAcceleratedMove::createDecceleration(normal,
+				_root->getPosition().xy(), fabs(velocity), fabsf(acceleration));
 	}
 
 	if (!a) {
@@ -830,14 +824,16 @@ void ScrollViewBase::updateScrollBounds() {
 		if (isVertical()) {
 			auto pos = _root->getPosition().y - _scrollSize;
 			_scrollSize = _contentSize.height;
-			_root->setAnchorPoint(Vec2(0, 1));
-			_root->setContentSize(Size2(_contentSize.width - _paddingGlobal.left - _paddingGlobal.right, 0));
+			_root->setAnchorPoint(Vec2(0.0f, 1.0f));
+			_root->setContentSize(
+					Size2(_contentSize.width - _paddingGlobal.left - _paddingGlobal.right, 0));
 			_root->setPositionY(pos + _scrollSize);
 			_root->setPositionX(_paddingGlobal.left);
 		} else {
 			_scrollSize = _contentSize.width;
-			_root->setAnchorPoint(Vec2(0, 0));
-			_root->setContentSize(Size2(0, _contentSize.height - _paddingGlobal.top - _paddingGlobal.bottom));
+			_root->setAnchorPoint(Vec2::ZERO);
+			_root->setContentSize(
+					Size2(0, _contentSize.height - _paddingGlobal.top - _paddingGlobal.bottom));
 			_root->setPositionY(_paddingGlobal.bottom);
 		}
 	}
@@ -880,9 +876,7 @@ void ScrollViewBase::onOverscroll(float delta) {
 	}
 }
 
-void ScrollViewBase::setScrollDirty(bool value) {
-	_scrollDirty = value;
-}
+void ScrollViewBase::setScrollDirty(bool value) { _scrollDirty = value; }
 
 bool ScrollViewBase::onPressBegin(const Vec2 &) {
 	_root->stopAllActions();
@@ -890,19 +884,11 @@ bool ScrollViewBase::onPressBegin(const Vec2 &) {
 	return false;
 }
 
-bool ScrollViewBase::onLongPress(const Vec2 &, const TimeInterval &time, int count) {
-	return true;
-}
-bool ScrollViewBase::onPressEnd(const Vec2 &, const TimeInterval &) {
-	return true;
-}
-bool ScrollViewBase::onPressCancel(const Vec2 &, const TimeInterval &) {
-	return true;
-}
+bool ScrollViewBase::onLongPress(const Vec2 &, const TimeInterval &time, int count) { return true; }
+bool ScrollViewBase::onPressEnd(const Vec2 &, const TimeInterval &) { return true; }
+bool ScrollViewBase::onPressCancel(const Vec2 &, const TimeInterval &) { return true; }
 
-void ScrollViewBase::onTap(int count, const Vec2 &loc) {
-
-}
+void ScrollViewBase::onTap(int count, const Vec2 &loc) { }
 
 Vec2 ScrollViewBase::convertFromScrollableSpace(const Vec2 &pos) {
 	return _root->getNodeToParentTransform().transformPoint(pos);
@@ -922,4 +908,4 @@ Vec2 ScrollViewBase::convertToScrollableSpace(Node *node, Vec2 pos) {
 	return tmp.transformPoint(pos);
 }
 
-}
+} // namespace stappler::xenolith::basic2d

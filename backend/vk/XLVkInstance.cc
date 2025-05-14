@@ -1,34 +1,42 @@
 /**
  Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLVkInstance.h"
+#include "XLVk.h"
+#include "XLVkInfo.h"
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
+#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-SPUNUSED static VkResult s_createDebugUtilsMessengerEXT(VkInstance instance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) getInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+SPUNUSED static VkResult s_createDebugUtilsMessengerEXT(VkInstance instance,
+		const PFN_vkGetInstanceProcAddr getInstanceProcAddr,
+		const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+		const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger) {
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)getInstanceProcAddr(instance,
+			"vkCreateDebugUtilsMessengerEXT");
 	if (func != nullptr) {
 		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
 	} else {
@@ -36,25 +44,35 @@ SPUNUSED static VkResult s_createDebugUtilsMessengerEXT(VkInstance instance, con
 	}
 }
 
-SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-	if (pCallbackData->pMessageIdName && strcmp(pCallbackData->pMessageIdName, "VUID-VkSwapchainCreateInfoKHR-imageExtent-01274") == 0) {
+SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData) {
+	if (pCallbackData->pMessageIdName
+			&& strcmp(pCallbackData->pMessageIdName,
+					   "VUID-VkSwapchainCreateInfoKHR-imageExtent-01274")
+					== 0) {
 		// this is normal for multithreaded engine
 		messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 	}
-	if (pCallbackData->pMessageIdName && strcmp(pCallbackData->pMessageIdName, "Loader Message") == 0) {
+	if (pCallbackData->pMessageIdName
+			&& strcmp(pCallbackData->pMessageIdName, "Loader Message") == 0) {
 		if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
 			if (StringView(pCallbackData->pMessage).starts_with("Instance Extension: ")
 					|| StringView(pCallbackData->pMessage).starts_with("Device Extension: ")) {
 				return VK_FALSE;
 			}
-			log::verbose("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::verbose("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-			log::info("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::info("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			log::warn("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::warn("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			log::error("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ", pCallbackData->pMessage);
+			log::error("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ",
+					pCallbackData->pMessage);
 		}
 		return VK_FALSE;
 	} else {
@@ -67,42 +85,52 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(VkDebugUti
 				return VK_FALSE;
 			}
 			log::verbose("Vk-Validation-Verbose", "[",
-				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
-				"] ", pCallbackData->pMessage);
+					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
 			log::info("Vk-Validation-Info", "[",
-				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
-				"] ", pCallbackData->pMessage);
+					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 			log::warn("Vk-Validation-Warning", "[",
-				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
-				"] ", pCallbackData->pMessage);
+					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
+					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 			log::error("Vk-Validation-Error", "[",
-				pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)",
-				"] ", pCallbackData->pMessage);
+					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
+					pCallbackData->pMessage);
 		}
 		return VK_FALSE;
 	}
 }
 
-Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr, uint32_t targetVersion,
-		Vector<StringView> &&optionals, Dso &&vulkanModule, TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled, Rc<Ref> &&userdata)
-: core::Instance(sp::move(vulkanModule), sp::move(terminate), sp::move(userdata)), InstanceTable(getInstanceProcAddr, inst),  _instance(inst)
+Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr,
+		uint32_t targetVersion, OptVec &&optionals, Dso &&vulkanModule,
+		TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled,
+		Rc<Ref> &&userdata)
+: core::Instance(sp::move(vulkanModule), sp::move(terminate), sp::move(userdata))
+, InstanceTable(getInstanceProcAddr, inst)
+, _instance(inst)
 , _version(targetVersion)
 , _optionals(sp::move(optionals))
 , _checkPresentSupport(sp::move(present)) {
 	if (validationEnabled) {
-		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = { };
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debugCreateInfo.pNext = nullptr;
-		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 
 		debugCreateInfo.pfnUserCallback = s_debugMessageCallback;
 		debugCreateInfo.pUserData = this;
 
-		if (s_createDebugUtilsMessengerEXT(_instance, vkGetInstanceProcAddr, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+		if (s_createDebugUtilsMessengerEXT(_instance, vkGetInstanceProcAddr, &debugCreateInfo,
+					nullptr, &debugMessenger)
+				!= VK_SUCCESS) {
 			log::warn("Vk", "failed to set up debug messenger!");
 		}
 	}
@@ -120,9 +148,7 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 			_availableDevices.emplace_back(core::DeviceProperties{
 				String(it.properties.device10.properties.deviceName),
 				it.properties.device10.properties.apiVersion,
-				it.properties.device10.properties.driverVersion,
-				it.supportsPresentation()
-			});
+				it.properties.device10.properties.driverVersion, it.supportsPresentation()});
 		}
 	} else {
 		log::info("Vk", "No devices available on this instance");
@@ -149,7 +175,7 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		return nullptr;
 	}
 
-	auto isDeviceSupported = [&] (const DeviceInfo &dev) {
+	auto isDeviceSupported = [&](const DeviceInfo &dev) {
 		if (data->deviceSupportCallback) {
 			if (!data->deviceSupportCallback(dev)) {
 				return false;
@@ -162,21 +188,21 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		return true;
 	};
 
-	auto getDeviceExtensions = [&] (const DeviceInfo &dev) {
+	auto getDeviceExtensions = [&](const DeviceInfo &dev) {
 		Vector<StringView> requiredExtensions;
 		if (data->deviceExtensionsCallback) {
 			requiredExtensions = data->deviceExtensionsCallback(dev);
 		}
 
 		for (auto &ext : s_requiredDeviceExtensions) {
-			if (ext && !isPromotedExtension(dev.properties.device10.properties.apiVersion, StringView(ext))) {
+			if (ext
+					&& !isPromotedExtension(dev.properties.device10.properties.apiVersion,
+							StringView(ext))) {
 				requiredExtensions.emplace_back(ext);
 			}
 		}
 
-		for (auto &ext : dev.optionalExtensions) {
-			requiredExtensions.emplace_back(ext);
-		}
+		for (auto &ext : dev.optionalExtensions) { requiredExtensions.emplace_back(ext); }
 
 		for (auto &ext : dev.promotedExtensions) {
 			if (!isPromotedExtension(dev.properties.device10.properties.apiVersion, ext)) {
@@ -187,11 +213,13 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		return requiredExtensions;
 	};
 
-	auto isExtensionsSupported = [&] (const DeviceInfo &dev, const Vector<StringView> &requiredExtensions) {
+	auto isExtensionsSupported = [&](const DeviceInfo &dev,
+										 const Vector<StringView> &requiredExtensions) {
 		if (!requiredExtensions.empty()) {
 			bool found = true;
 			for (auto &req : requiredExtensions) {
-				auto iit = std::find(dev.availableExtensions.begin(), dev.availableExtensions.end(), req);
+				auto iit = std::find(dev.availableExtensions.begin(), dev.availableExtensions.end(),
+						req);
 				if (iit == dev.availableExtensions.end()) {
 					found = false;
 					break;
@@ -204,7 +232,7 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		return true;
 	};
 
-	auto buildFeaturesList = [&] (const DeviceInfo &dev, DeviceInfo::Features &features) {
+	auto buildFeaturesList = [&](const DeviceInfo &dev, DeviceInfo::Features &features) {
 		if (data->deviceFeaturesCallback) {
 			features = data->deviceFeaturesCallback(dev);
 		}
@@ -217,7 +245,7 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 
 		features.enableFromFeatures(DeviceInfo::Features::getOptional());
 		features.disableFromFeatures(dev.features);
-		features.flags = dev.features.flags;
+		features.optionals = dev.features.optionals;
 		return true;
 	};
 
@@ -240,8 +268,10 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 				continue;
 			}
 
-			if (it.features.canEnable(targetFeatures, it.properties.device10.properties.apiVersion)) {
-				return Rc<vk::Device>::create(this, DeviceInfo(it), targetFeatures, requiredExtensions);
+			if (it.features.canEnable(targetFeatures,
+						it.properties.device10.properties.apiVersion)) {
+				return Rc<vk::Device>::create(this, DeviceInfo(it), targetFeatures,
+						requiredExtensions);
 			}
 		}
 	} else if (info.deviceIdx < _devices.size()) {
@@ -253,7 +283,8 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 
 		auto requiredExtensions = getDeviceExtensions(dev);
 		if (!isExtensionsSupported(dev, requiredExtensions)) {
-			log::error("vk::Instance", "Fail to create device: required extensions is not available");
+			log::error("vk::Instance",
+					"Fail to create device: required extensions is not available");
 			return nullptr;
 		}
 
@@ -264,7 +295,8 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		}
 
 		if (dev.features.canEnable(targetFeatures, dev.properties.device10.properties.apiVersion)) {
-			return Rc<vk::Device>::create(this, DeviceInfo(dev), targetFeatures, requiredExtensions);
+			return Rc<vk::Device>::create(this, DeviceInfo(dev), targetFeatures,
+					requiredExtensions);
 		}
 	}
 
@@ -292,7 +324,8 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
 	if (formatCount != 0) {
-		Vector<VkSurfaceFormatKHR> formats; formats.resize(formatCount);
+		Vector<VkSurfaceFormatKHR> formats;
+		formats.resize(formatCount);
 
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, formats.data());
 
@@ -304,32 +337,49 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 
 	if (presentModeCount != 0) {
 		ret.presentModes.reserve(presentModeCount);
-		Vector<VkPresentModeKHR> modes; modes.resize(presentModeCount);
+		Vector<VkPresentModeKHR> modes;
+		modes.resize(presentModeCount);
 
 		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, modes.data());
 
-		for (auto &it : modes) {
-			ret.presentModes.emplace_back(getGlPresentMode(it));
-		}
+		for (auto &it : modes) { ret.presentModes.emplace_back(getGlPresentMode(it)); }
 
-		std::sort(ret.presentModes.begin(), ret.presentModes.end(), [&] (core::PresentMode l, core::PresentMode r) {
-			return toInt(l) > toInt(r);
-		});
+		std::sort(ret.presentModes.begin(), ret.presentModes.end(),
+				[&](core::PresentMode l, core::PresentMode r) { return toInt(l) > toInt(r); });
 	}
 
-	VkSurfaceCapabilitiesKHR caps;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &caps);
+	VkSurfaceCapabilities2KHR caps;
+	caps.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+	caps.pNext = nullptr;
 
-	ret.minImageCount = caps.minImageCount;
-	ret.maxImageCount = caps.maxImageCount;
-	ret.currentExtent = Extent2(caps.currentExtent.width, caps.currentExtent.height);
-	ret.minImageExtent = Extent2(caps.minImageExtent.width, caps.minImageExtent.height);
-	ret.maxImageExtent = Extent2(caps.maxImageExtent.width, caps.maxImageExtent.height);
-	ret.maxImageArrayLayers = caps.maxImageArrayLayers;
-	ret.supportedTransforms = core::SurfaceTransformFlags(caps.supportedTransforms);
-	ret.currentTransform = core::SurfaceTransformFlags(caps.currentTransform);
-	ret.supportedCompositeAlpha = core::CompositeAlphaFlags(caps.supportedCompositeAlpha);
-	ret.supportedUsageFlags = core::ImageUsage(caps.supportedUsageFlags);
+	// index into s_optionalExtension
+	if (_optionals[0]) {
+		VkPhysicalDeviceSurfaceInfo2KHR info;
+		info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
+		info.surface = surface;
+		info.pNext = nullptr;
+
+		vkGetPhysicalDeviceSurfaceCapabilities2KHR(device, &info, &caps);
+	} else {
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &caps.surfaceCapabilities);
+	}
+
+
+	ret.minImageCount = caps.surfaceCapabilities.minImageCount;
+	ret.maxImageCount = caps.surfaceCapabilities.maxImageCount;
+	ret.currentExtent = Extent2(caps.surfaceCapabilities.currentExtent.width,
+			caps.surfaceCapabilities.currentExtent.height);
+	ret.minImageExtent = Extent2(caps.surfaceCapabilities.minImageExtent.width,
+			caps.surfaceCapabilities.minImageExtent.height);
+	ret.maxImageExtent = Extent2(caps.surfaceCapabilities.maxImageExtent.width,
+			caps.surfaceCapabilities.maxImageExtent.height);
+	ret.maxImageArrayLayers = caps.surfaceCapabilities.maxImageArrayLayers;
+	ret.supportedTransforms =
+			core::SurfaceTransformFlags(caps.surfaceCapabilities.supportedTransforms);
+	ret.currentTransform = core::SurfaceTransformFlags(caps.surfaceCapabilities.currentTransform);
+	ret.supportedCompositeAlpha =
+			core::CompositeAlphaFlags(caps.surfaceCapabilities.supportedCompositeAlpha);
+	ret.supportedUsageFlags = core::ImageUsage(caps.surfaceCapabilities.supportedUsageFlags);
 	return ret;
 }
 
@@ -339,14 +389,12 @@ VkExtent2D Instance::getSurfaceExtent(VkSurfaceKHR surface, VkPhysicalDevice dev
 	return capabilities.currentExtent;
 }
 
-VkInstance Instance::getInstance() const {
-	return _instance;
-}
+VkInstance Instance::getInstance() const { return _instance; }
 
 void Instance::printDevicesInfo(std::ostream &out) const {
 	out << "\n";
 
-	auto getDeviceTypeString = [&] (VkPhysicalDeviceType type) -> const char * {
+	auto getDeviceTypeString = [&](VkPhysicalDeviceType type) -> const char * {
 		switch (type) {
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU"; break;
 		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU"; break;
@@ -358,45 +406,73 @@ void Instance::printDevicesInfo(std::ostream &out) const {
 	};
 
 	for (auto &device : _devices) {
-		out << "\tDevice: " << device.device << " " << getDeviceTypeString(device.properties.device10.properties.deviceType)
-				<< ": " << device.properties.device10.properties.deviceName
-				<< " (API: " << getVersionDescription(device.properties.device10.properties.apiVersion)
-				<< ", Driver: " << getVersionDescription(device.properties.device10.properties.driverVersion) << ")\n";
+		out << "\tDevice: " << device.device << " "
+			<< getDeviceTypeString(device.properties.device10.properties.deviceType) << ": "
+			<< device.properties.device10.properties.deviceName
+			<< " (API: " << getVersionDescription(device.properties.device10.properties.apiVersion)
+			<< ", Driver: "
+			<< getVersionDescription(device.properties.device10.properties.driverVersion) << ")\n";
 
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device.device, &queueFamilyCount, nullptr);
 
 		Vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device.device, &queueFamilyCount, queueFamilies.data());
+		vkGetPhysicalDeviceQueueFamilyProperties(device.device, &queueFamilyCount,
+				queueFamilies.data());
 
 		int i = 0;
-		for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
+		for (const VkQueueFamilyProperties &queueFamily : queueFamilies) {
 			bool empty = true;
 			out << "\t\t[" << i << "] Queue family; Flags: ";
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "Graphics";
 			}
 			if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "Compute";
 			}
 			if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "Transfer";
 			}
 			if (queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "SparseBinding";
 			}
 			if (queueFamily.queueFlags & VK_QUEUE_PROTECTED_BIT) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "Protected";
 			}
 
-			VkBool32 presentSupport = _checkPresentSupport ? _checkPresentSupport(this, device.device, i) : false;
+			VkBool32 presentSupport =
+					_checkPresentSupport ? _checkPresentSupport(this, device.device, i) : false;
 			if (presentSupport) {
-				if (!empty) { out << ", "; } else { empty = false; }
+				if (!empty) {
+					out << ", ";
+				} else {
+					empty = false;
+				}
 				out << "Present";
 			}
 
@@ -407,7 +483,8 @@ void Instance::printDevicesInfo(std::ostream &out) const {
 	}
 }
 
-void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &features, ExtensionFlags flags, uint32_t api) const {
+void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &features,
+		const DeviceInfo::OptVec &flags, uint32_t api) const {
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 	if ((flags & ExtensionFlags::Portability) != ExtensionFlags::None) {
@@ -415,7 +492,7 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 		next = &features.devicePortability;
 	}
 #endif
-	features.flags = flags;
+	features.optionals = flags;
 #if VK_VERSION_1_3
 	if (api >= VK_API_VERSION_1_3) {
 		features.device13.pNext = next;
@@ -434,7 +511,7 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 		features.updateFrom13();
 	} else
 #endif
-	if (api >= VK_API_VERSION_1_2) {
+			if (api >= VK_API_VERSION_1_2) {
 		features.device12.pNext = next;
 		features.device11.pNext = &features.device12;
 		features.device10.pNext = &features.device11;
@@ -449,23 +526,23 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 
 		features.updateFrom12();
 	} else {
-		if ((flags & ExtensionFlags::Storage16Bit) != ExtensionFlags::None) {
+		if (flags[toInt(OptionalDeviceExtension::Storage16Bit)]) {
 			features.device16bitStorage.pNext = next;
 			next = &features.device16bitStorage;
 		}
-		if ((flags & ExtensionFlags::Storage8Bit) != ExtensionFlags::None) {
+		if (flags[toInt(OptionalDeviceExtension::Storage8Bit)]) {
 			features.device8bitStorage.pNext = next;
 			next = &features.device8bitStorage;
 		}
-		if ((flags & ExtensionFlags::ShaderFloat16) != ExtensionFlags::None || (flags & ExtensionFlags::ShaderInt8) != ExtensionFlags::None) {
+		if (flags[toInt(OptionalDeviceExtension::ShaderFloat16Int8)]) {
 			features.deviceShaderFloat16Int8.pNext = next;
 			next = &features.deviceShaderFloat16Int8;
 		}
-		if ((flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
+		if (flags[toInt(OptionalDeviceExtension::DescriptorIndexing)]) {
 			features.deviceDescriptorIndexing.pNext = next;
 			next = &features.deviceDescriptorIndexing;
 		}
-		if ((flags & ExtensionFlags::DeviceAddress) != ExtensionFlags::None) {
+		if (flags[toInt(OptionalDeviceExtension::DeviceAddress)]) {
 			features.deviceBufferDeviceAddress.pNext = next;
 			next = &features.deviceBufferDeviceAddress;
 		}
@@ -490,7 +567,8 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 	vkGetPhysicalDeviceExternalFenceProperties(device, &fenceInfo, &features.fenceSyncFd);
 }
 
-void Instance::getDeviceProperties(const VkPhysicalDevice &device, DeviceInfo::Properties &properties, ExtensionFlags flags, uint32_t api) const {
+void Instance::getDeviceProperties(const VkPhysicalDevice &device,
+		DeviceInfo::Properties &properties, const DeviceInfo::OptVec &flags, uint32_t api) const {
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 	if ((flags & ExtensionFlags::Portability) != ExtensionFlags::None) {
@@ -498,11 +576,11 @@ void Instance::getDeviceProperties(const VkPhysicalDevice &device, DeviceInfo::P
 		next = &properties.devicePortability;
 	}
 #endif
-	if ((flags & ExtensionFlags::Maintenance3) != ExtensionFlags::None) {
+	if (flags[toInt(OptionalDeviceExtension::Maintenance3)]) {
 		properties.deviceMaintenance3.pNext = next;
 		next = &properties.deviceMaintenance3;
 	}
-	if ((flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
+	if (flags[toInt(OptionalDeviceExtension::DescriptorIndexing)]) {
 		properties.deviceDescriptorIndexing.pNext = next;
 		next = &properties.deviceDescriptorIndexing;
 	}
@@ -541,15 +619,19 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 		queueInfo[i].flags = getQueueFlags(queueFamily.queueFlags, presentSupport);
 		queueInfo[i].count = queueFamily.queueCount;
 		queueInfo[i].used = 0;
-		queueInfo[i].minImageTransferGranularity = Extent3(queueFamily.minImageTransferGranularity.width,
-				queueFamily.minImageTransferGranularity.height, queueFamily.minImageTransferGranularity.depth);
+		queueInfo[i].minImageTransferGranularity =
+				Extent3(queueFamily.minImageTransferGranularity.width,
+						queueFamily.minImageTransferGranularity.height,
+						queueFamily.minImageTransferGranularity.depth);
 		queueInfo[i].presentSurfaceMask = presentSupport;
 
-		if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) && graphicsFamily == maxOf<uint32_t>()) {
+		if ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				&& graphicsFamily == maxOf<uint32_t>()) {
 			graphicsFamily = i;
 		}
 
-		if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) && transferFamily == maxOf<uint32_t>()) {
+		if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				&& transferFamily == maxOf<uint32_t>()) {
 			transferFamily = i;
 		}
 
@@ -561,13 +643,14 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 			presentFamily = i;
 		}
 
-		i ++;
+		i++;
 	}
 
 	// try to select different families for transfer and compute (for more concurrency)
 	if (computeFamily == graphicsFamily) {
 		for (auto &it : queueInfo) {
-			if (it.index != graphicsFamily && ((it.flags & core::QueueFlags::Compute) != core::QueueFlags::None)) {
+			if (it.index != graphicsFamily
+					&& ((it.flags & core::QueueFlags::Compute) != core::QueueFlags::None)) {
 				computeFamily = it.index;
 			}
 		}
@@ -592,7 +675,8 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 	// try to map present with graphics
 	if (presentFamily != graphicsFamily) {
-		if ((queueInfo[graphicsFamily].flags & core::QueueFlags::Present) != core::QueueFlags::None) {
+		if ((queueInfo[graphicsFamily].flags & core::QueueFlags::Present)
+				!= core::QueueFlags::None) {
 			presentFamily = graphicsFamily;
 		}
 	}
@@ -611,7 +695,8 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
 	Vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
+			availableExtensions.data());
 
 	// we need only API version for now
 	VkPhysicalDeviceProperties deviceProperties;
@@ -652,7 +737,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	}
 
 	// check for optionals
-	ExtensionFlags extensionFlags = ExtensionFlags::None;
+	DeviceInfo::OptVec extensionFlags;
 	Vector<StringView> enabledOptionals;
 	Vector<StringView> promotedOptionals;
 	for (auto &extensionName : s_optionalDeviceExtensions) {
@@ -660,30 +745,30 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 			break;
 		}
 
-		checkIfExtensionAvailable(deviceProperties.apiVersion,
-				extensionName, availableExtensions, enabledOptionals, promotedOptionals, extensionFlags);
+		checkIfExtensionAvailable(deviceProperties.apiVersion, extensionName, availableExtensions,
+				enabledOptionals, promotedOptionals, extensionFlags);
 	}
 
 	ret.device = device;
 	ret.graphicsFamily = queueInfo[graphicsFamily];
-	ret.presentFamily = (presentFamily == maxOf<uint32_t>()) ? DeviceInfo::QueueFamilyInfo() : queueInfo[presentFamily];
+	ret.presentFamily = (presentFamily == maxOf<uint32_t>()) ? DeviceInfo::QueueFamilyInfo()
+															 : queueInfo[presentFamily];
 	ret.transferFamily = queueInfo[transferFamily];
 	ret.computeFamily = queueInfo[computeFamily];
 	ret.optionalExtensions = sp::move(enabledOptionals);
 	ret.promotedExtensions = sp::move(promotedOptionals);
 
 	ret.availableExtensions.reserve(availableExtensions.size());
-	for (auto &it : availableExtensions) {
-		ret.availableExtensions.emplace_back(it.extensionName);
-	}
+	for (auto &it : availableExtensions) { ret.availableExtensions.emplace_back(it.extensionName); }
 
 	getDeviceProperties(device, ret.properties, extensionFlags, deviceProperties.apiVersion);
 	getDeviceFeatures(device, ret.features, extensionFlags, deviceProperties.apiVersion);
 
 	auto requiredFeatures = DeviceInfo::Features::getRequired();
-	ret.requiredFeaturesExists = ret.features.canEnable(requiredFeatures, deviceProperties.apiVersion);
+	ret.requiredFeaturesExists =
+			ret.features.canEnable(requiredFeatures, deviceProperties.apiVersion);
 
 	return ret;
 }
 
-}
+} // namespace stappler::xenolith::vk

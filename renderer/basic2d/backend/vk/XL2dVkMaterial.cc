@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +27,10 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 MaterialAttachment::~MaterialAttachment() { }
 
-bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info, const core::TextureSetLayoutData *layout) {
-	return core::MaterialAttachment::init(builder, info, layout, [] (uint8_t *target, const core::Material *m) {
+bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
+		const core::TextureSetLayoutData *layout) {
+	return core::MaterialAttachment::init(builder, info, layout,
+			[](uint8_t *target, const core::Material *m) {
 		auto &images = m->getImages();
 		if (!images.empty()) {
 			MaterialData material;
@@ -41,10 +44,12 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX;
 					material.atlasIdx = buffer->getDescriptor();
 
-					auto indexSize = buffer->getSize() / (image.image->atlas->getObjectSize() + sizeof(uint32_t) * 2);
+					auto indexSize = buffer->getSize()
+							/ (image.image->atlas->getObjectSize() + sizeof(uint32_t) * 2);
 					auto pow2index = std::countr_zero(indexSize);
 
-					material.flags |= (pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
+					material.flags |=
+							(pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
 					if (buffer->getDeviceAddress() != 0) {
 						material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
 					}
@@ -71,11 +76,20 @@ bool MaterialAttachmentHandle::init(const Rc<Attachment> &a, const FrameQueue &h
 }
 
 bool MaterialAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &desc,
-		uint32_t, bool isExternal) const {
-	return _materials && _materials->getGeneration() != desc.boundGeneration;
+		uint32_t, const DescriptorData &data) const {
+	if (_materials && _materials->getGeneration() != desc.boundGeneration) {
+		return true;
+	}
+
+	auto b = _materials->getBuffer();
+	if (b) {
+		return data.data == b || data.object == b->getObjectData().handle;
+	}
+	return false;
 }
 
-bool MaterialAttachmentHandle::writeDescriptor(const core::QueuePassHandle &handle, DescriptorBufferInfo &info) {
+bool MaterialAttachmentHandle::writeDescriptor(const core::QueuePassHandle &handle,
+		DescriptorBufferInfo &info) {
 	if (!_materials) {
 		return false;
 	}
@@ -84,7 +98,7 @@ bool MaterialAttachmentHandle::writeDescriptor(const core::QueuePassHandle &hand
 	if (!b) {
 		return false;
 	}
-	info.buffer = static_cast<Buffer *>(b.get());
+	info.buffer = static_cast<Buffer *>(b);
 	info.offset = 0;
 	info.range = info.buffer->getSize();
 	info.descriptor->boundGeneration = _materials->getGeneration();
@@ -102,4 +116,4 @@ const Rc<core::MaterialSet> MaterialAttachmentHandle::getSet() const {
 	return _materials;
 }
 
-}
+} // namespace stappler::xenolith::basic2d::vk

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,27 +33,37 @@
 #include "glsl/include/XL2dGlslVertexData.h"
 #include "glsl/include/XL2dGlslShadowData.h"
 #include "glsl/include/XL2dGlslSdfData.h"
+#include "glsl/include/XL2dGlslParticle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-using Vertex = glsl::Vertex;
-using MaterialData = glsl::MaterialData;
-using TransformData = glsl::TransformData;
-using ShadowData = glsl::ShadowData;
+using glsl::Vertex;
+using glsl::MaterialData;
+using glsl::TransformData;
+using glsl::ShadowData;
 
-using DataAtlasIndex = glsl::DataAtlasIndex;
-using AmbientLightData = glsl::AmbientLightData;
-using DirectLightData = glsl::DirectLightData;
+using glsl::DataAtlasIndex;
+using glsl::AmbientLightData;
+using glsl::DirectLightData;
 
-using Sdf2DObjectData = glsl::Sdf2DObjectData;
-using Circle2DIndex = glsl::Circle2DIndex;
-using Triangle2DIndex = glsl::Triangle2DIndex;
-using Rect2DIndex = glsl::Rect2DIndex;
-using RoundedRect2DIndex = glsl::RoundedRect2DIndex;
-using Polygon2DIndex = glsl::Polygon2DIndex;
+using glsl::Sdf2DObjectData;
+using glsl::Circle2DIndex;
+using glsl::Triangle2DIndex;
+using glsl::Rect2DIndex;
+using glsl::RoundedRect2DIndex;
+using glsl::Polygon2DIndex;
 
-using Autofit = font::Autofit;
-using SamplerIndex = core::SamplerIndex;
+using font::Autofit;
+using core::SamplerIndex;
+
+using glsl::ParticleIndirectCommand;
+using glsl::ParticleFloatParam;
+using glsl::ParticleVec2Param;
+using glsl::ParticleEmissionPoints;
+using glsl::ParticleEmitterData;
+using glsl::ParticleData;
+using glsl::ParticleVertex;
+using glsl::ParticlePushConstantBlock;
 
 struct Triangle {
 	Vertex a;
@@ -196,6 +207,6 @@ struct SP_PUBLIC ShadowLightInput {
 	Size2 getShadowSize(Size2 frameSize) const;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2D_H_ */

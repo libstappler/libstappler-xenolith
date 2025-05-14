@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,16 +39,16 @@ bool MenuSeparator::init(Menu *menu, MenuSourceItem *item) {
 	_color->setOpacity(OpacityValue(32));
 	_color->setColor(Color::Black);
 	_color->setAnchorPoint(Vec2(0, 0.5f));
-	_color->setPosition(Vec2(0, 0));
+	_color->setPosition(Vec2::ZERO);
 
 	_contentSizeDirty = true;
 
-	_itemListener = addComponent(Rc<DataListener<MenuSourceItem>>::create([this] (SubscriptionFlags flags) {
-		handleSourceDirty();
-	}));
+	_itemListener = addComponent(Rc<DataListener<MenuSourceItem>>::create(
+			[this](SubscriptionFlags flags) { handleSourceDirty(); }));
 	_itemListener->setSubscription(item);
 
-	addComponent(Rc<StyleMonitor>::create([this] (const ColorScheme *scheme, const SurfaceStyleData &data) {
+	addComponent(Rc<StyleMonitor>::create(
+			[this](const ColorScheme *scheme, const SurfaceStyleData &data) {
 		_color->setColor(scheme->get(ColorRole::Outline));
 	}));
 
@@ -71,7 +72,7 @@ void MenuSeparator::setTopLevel(bool value) {
 void MenuSeparator::handleSourceDirty() {
 	_color->setContentSize(Size2(_contentSize.width, 2));
 	if (_topLevel) {
-		_color->setAnchorPoint(Vec2(0, 1));
+		_color->setAnchorPoint(Vec2(0.0f, 1.0f));
 		_color->setPosition(Vec2(0, _contentSize.height));
 	} else {
 		_color->setAnchorPoint(Vec2(0, 0.5f));
@@ -79,4 +80,4 @@ void MenuSeparator::handleSourceDirty() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

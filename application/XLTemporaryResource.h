@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,7 +56,7 @@ public:
 	// Загружает ресурс в память, вызывает функцию по завершению со значением true
 	// Если ресурс уже загружен, вызывает функцию немедленно со значением false
 	// Возвращает true если загрузка начата и false есть ресурс уже загружен
-	bool load(Ref *, Function<void(bool)> &&);
+	bool load(Ref *, Function<void(Ref *, bool)> &&);
 
 	void handleEnter(ResourceOwner *, ResourceObject *);
 	void handleExit(ResourceOwner *, ResourceObject *);
@@ -89,9 +90,9 @@ protected:
 	Map<const core::ImageData *, Rc<Texture>> _textures;
 	Map<const core::BufferData *, Rc<MeshIndex>> _meshIndexes;
 	Set<Rc<ResourceOwner>> _owners;
-	Vector<Pair<Rc<Ref>, Function<void(bool)>>> _callbacks;
+	Vector<Pair<Rc<Ref>, Function<void(Ref *, bool)>>> _callbacks;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLTEMPORARYRESOURCE_H_ */

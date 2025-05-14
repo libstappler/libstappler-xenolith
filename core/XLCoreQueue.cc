@@ -1,28 +1,30 @@
 /**
-Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLCoreQueue.h"
 #include "XLCoreAttachment.h"
+#include "XLCoreQueueData.h"
 #include "XLCoreResource.h"
 #include "XLCoreDevice.h"
 #include "XLCoreQueuePass.h"
@@ -30,7 +32,8 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 template <typename T>
-static T * Resource_conditionalInsert(HashTable<T *> &vec, StringView key, const Callback<T *()> &cb, memory::pool_t *pool);
+static T *Resource_conditionalInsert(HashTable<T *> &vec, StringView key, const Callback<T *()> &cb,
+		memory::pool_t *pool);
 
 static void Queue_buildLoadStore(QueueData *data) {
 	for (auto &attachment : data->attachments) {
@@ -43,18 +46,14 @@ static void Queue_buildLoadStore(QueueData *data) {
 		bool hasColor = false;
 		bool hasStencil = false;
 		switch (img->getImageInfo().format) {
-		case ImageFormat::S8_UINT:
-			hasStencil = true;
-			break;
+		case ImageFormat::S8_UINT: hasStencil = true; break;
 		case ImageFormat::D16_UNORM_S8_UINT:
 		case ImageFormat::D24_UNORM_S8_UINT:
 		case ImageFormat::D32_SFLOAT_S8_UINT:
 			hasColor = true;
 			hasStencil = true;
 			break;
-		default:
-			hasColor = true;
-			break;
+		default: hasColor = true; break;
 		}
 
 		for (auto &descriptor : attachment->passes) {
@@ -92,11 +91,8 @@ static void Queue_buildLoadStore(QueueData *data) {
 					case AttachmentLayout::DepthAttachmentStencilReadOnlyOptimal:
 					case AttachmentLayout::DepthAttachmentOptimal:
 					case AttachmentLayout::StencilAttachmentOptimal:
-					case AttachmentLayout::General:
-						hasWriters = true;
-						break;
-					default:
-						break;
+					case AttachmentLayout::General: hasWriters = true; break;
+					default: break;
 					}
 				}
 
@@ -108,15 +104,10 @@ static void Queue_buildLoadStore(QueueData *data) {
 					break;
 				case AttachmentLayout::ColorAttachmentOptimal:
 				case AttachmentLayout::DepthAttachmentStencilReadOnlyOptimal:
-				case AttachmentLayout::DepthAttachmentOptimal:
-					colorReadOnly = false;
-					break;
+				case AttachmentLayout::DepthAttachmentOptimal: colorReadOnly = false; break;
 				case AttachmentLayout::DepthReadOnlyStencilAttachmentOptimal:
-				case AttachmentLayout::StencilAttachmentOptimal:
-					stencilReadOnly = false;
-					break;
-				default:
-					break;
+				case AttachmentLayout::StencilAttachmentOptimal: stencilReadOnly = false; break;
+				default: break;
 				}
 
 				if (hasWriters) {
@@ -144,18 +135,20 @@ static void Queue_buildLoadStore(QueueData *data) {
 		}
 	};
 
-	auto dataWasWritten = [] (AttachmentData *data, uint32_t idx) -> Pair<bool, bool> {
+	auto dataWasWritten = [](AttachmentData *data, uint32_t idx) -> Pair<bool, bool> {
 		if ((data->usage & AttachmentUsage::Input) != AttachmentUsage::None) {
-			if ((data->ops & (AttachmentOps::WritesColor | AttachmentOps::WritesStencil)) != AttachmentOps::Undefined) {
+			if ((data->ops & (AttachmentOps::WritesColor | AttachmentOps::WritesStencil))
+					!= AttachmentOps::Undefined) {
 				return pair(true, true);
 			}
 		}
 
 		bool colorWasWritten = (data->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined;
-		bool stencilWasWritten = (data->ops & AttachmentOps::WritesStencil) != AttachmentOps::Undefined;
+		bool stencilWasWritten =
+				(data->ops & AttachmentOps::WritesStencil) != AttachmentOps::Undefined;
 
 		auto &descriptors = data->passes;
-		for (size_t i = 0; i < idx; ++ i) {
+		for (size_t i = 0; i < idx; ++i) {
 			auto desc = descriptors[i];
 			if ((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined) {
 				colorWasWritten = true;
@@ -168,18 +161,20 @@ static void Queue_buildLoadStore(QueueData *data) {
 		return pair(colorWasWritten, stencilWasWritten);
 	};
 
-	auto dataWillBeRead = [] (AttachmentData *data, uint32_t idx) -> Pair<bool, bool> {
+	auto dataWillBeRead = [](AttachmentData *data, uint32_t idx) -> Pair<bool, bool> {
 		if ((data->usage & AttachmentUsage::Output) != AttachmentUsage::None) {
-			if ((data->ops & (AttachmentOps::ReadColor | AttachmentOps::ReadStencil)) != AttachmentOps::Undefined) {
+			if ((data->ops & (AttachmentOps::ReadColor | AttachmentOps::ReadStencil))
+					!= AttachmentOps::Undefined) {
 				return pair(true, true);
 			}
 		}
 
 		bool colorWillBeRead = (data->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined;
-		bool stencilWillBeRead = (data->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined;
+		bool stencilWillBeRead =
+				(data->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined;
 
 		auto &descriptors = data->passes;
-		for (size_t i = idx + 1; i < descriptors.size(); ++ i) {
+		for (size_t i = idx + 1; i < descriptors.size(); ++i) {
 			auto desc = descriptors[i];
 			if ((desc->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined) {
 				colorWillBeRead = true;
@@ -211,14 +206,18 @@ static void Queue_buildLoadStore(QueueData *data) {
 				switch (fmt) {
 				case PixelFormat::DS:
 				case PixelFormat::S:
-					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
-					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
+					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+															: AttachmentLoadOp::DontCare;
+					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+																   : AttachmentLoadOp::DontCare;
 					desc->storeOp = AttachmentStoreOp::DontCare;
 					desc->stencilStoreOp = AttachmentStoreOp::DontCare;
 					break;
 				default:
-					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
-					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
+					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+															: AttachmentLoadOp::DontCare;
+					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+																   : AttachmentLoadOp::DontCare;
 					desc->storeOp = AttachmentStoreOp::DontCare;
 					desc->stencilStoreOp = AttachmentStoreOp::DontCare;
 					break;
@@ -241,15 +240,18 @@ static void Queue_buildLoadStore(QueueData *data) {
 						desc->loadOp = AttachmentLoadOp::DontCare;
 					}
 				} else {
-					bool isRead = ((desc->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined);
-					bool isWrite = ((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
+					bool isRead =
+							((desc->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined);
+					bool isWrite =
+							((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
 					if (isRead && !isWrite) {
-						log::error("Gl-Error", "Attachment's color component '", attachment->key, "' is read in renderpass ",
-								desc->pass->key, " before written");
+						log::error("Gl-Error", "Attachment's color component '", attachment->key,
+								"' is read in renderpass ", desc->pass->key, " before written");
 					}
 
 					auto img = (ImageAttachment *)attachment->attachment.get();
-					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
+					desc->loadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+															: AttachmentLoadOp::DontCare;
 				}
 
 				if (wasWritten.second) {
@@ -259,14 +261,17 @@ static void Queue_buildLoadStore(QueueData *data) {
 						desc->stencilLoadOp = AttachmentLoadOp::DontCare;
 					}
 				} else {
-					bool isRead = ((desc->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined);
-					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil) != AttachmentOps::Undefined);
+					bool isRead =
+							((desc->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined);
+					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil)
+							!= AttachmentOps::Undefined);
 					if (isRead && !isWrite) {
-						log::error("Gl-Error", "Attachment's stencil component '", attachment->key, "' is read in renderpass ",
-								desc->pass->key, " before written");
+						log::error("Gl-Error", "Attachment's stencil component '", attachment->key,
+								"' is read in renderpass ", desc->pass->key, " before written");
 					}
 					auto img = (ImageAttachment *)attachment->attachment.get();
-					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear : AttachmentLoadOp::DontCare;
+					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
+																   : AttachmentLoadOp::DontCare;
 				}
 
 				if (willBeRead.first) {
@@ -276,11 +281,13 @@ static void Queue_buildLoadStore(QueueData *data) {
 						desc->storeOp = AttachmentStoreOp::DontCare;
 					}
 				} else {
-					bool isRead = ((desc->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined);
-					bool isWrite = ((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
+					bool isRead =
+							((desc->ops & AttachmentOps::ReadColor) != AttachmentOps::Undefined);
+					bool isWrite =
+							((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
 					if (!isRead && isWrite) {
-						log::error("Gl-Error", "Attachment's color component '", attachment->key, "' is written in renderpass ",
-								desc->pass->key, " but never read");
+						log::error("Gl-Error", "Attachment's color component '", attachment->key,
+								"' is written in renderpass ", desc->pass->key, " but never read");
 					}
 					desc->storeOp = AttachmentStoreOp::DontCare;
 				}
@@ -292,16 +299,18 @@ static void Queue_buildLoadStore(QueueData *data) {
 						desc->stencilStoreOp = AttachmentStoreOp::DontCare;
 					}
 				} else {
-					bool isRead = ((desc->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined);
-					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil) != AttachmentOps::Undefined);
+					bool isRead =
+							((desc->ops & AttachmentOps::ReadStencil) != AttachmentOps::Undefined);
+					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil)
+							!= AttachmentOps::Undefined);
 					if (!isRead && isWrite) {
-						log::error("Gl-Error", "Attachment's stencil component '", attachment->key, "' is writen in renderpass ",
-								desc->pass->key, " but never read");
+						log::error("Gl-Error", "Attachment's stencil component '", attachment->key,
+								"' is writen in renderpass ", desc->pass->key, " but never read");
 					}
 					desc->stencilStoreOp = AttachmentStoreOp::DontCare;
 				}
 			}
-			++ descIndex;
+			++descIndex;
 		}
 
 		if (attachment->type != AttachmentType::Image) {
@@ -357,7 +366,9 @@ static void Queue_buildDescriptors(QueueData *data, Device &dev) {
 				}
 				if (subpass->depthStencil) {
 					if (subpass->depthStencil->pass->attachment->type == AttachmentType::Image) {
-						auto desc = (ImageAttachment *)subpass->depthStencil->pass->attachment->attachment.get();
+						auto desc =
+								(ImageAttachment *)
+										subpass->depthStencil->pass->attachment->attachment.get();
 						desc->addImageUsage(ImageUsage::DepthStencilAttachment);
 					}
 				}
@@ -372,8 +383,7 @@ static void Queue_buildDescriptors(QueueData *data, Device &dev) {
 				case AttachmentLayout::General:
 				case AttachmentLayout::ShaderReadOnlyOptimal:
 				case AttachmentLayout::Preinitialized:
-				case AttachmentLayout::Ignored:
-					break;
+				case AttachmentLayout::Ignored: break;
 				case AttachmentLayout::PresentSrc:
 					// in alternative mode, images can be presented via transfer
 					desc->addImageUsage(ImageUsage::TransferSrc);
@@ -417,29 +427,32 @@ static void Queue_buildDescriptors(QueueData *data, Device &dev) {
 }
 
 static void Queue_addRequiredPass(QueuePassData &pass, const QueuePassData &required,
-		const AttachmentData &attachment, const AttachmentPassData &desc, FrameRenderPassState defaultSync) {
-	auto requiredState = (desc.dependency.requiredRenderPassState == FrameRenderPassState::Initial) ?
-			defaultSync : desc.dependency.requiredRenderPassState;
+		const AttachmentData &attachment, const AttachmentPassData &desc,
+		FrameRenderPassState defaultSync) {
+	auto requiredState = (desc.dependency.requiredRenderPassState == FrameRenderPassState::Initial)
+			? defaultSync
+			: desc.dependency.requiredRenderPassState;
 	auto lockedState = desc.dependency.lockedRenderPassState;
 	if (requiredState == FrameRenderPassState::Initial) {
 		return;
 	}
 
 	auto lb = std::lower_bound(pass.required.begin(), pass.required.end(), &required,
-			[&] (const QueuePassRequirements &l, const QueuePassData *r) {
-		return l.data < r;
-	});
+			[&](const QueuePassRequirements &l, const QueuePassData *r) { return l.data < r; });
 	if (lb == pass.required.end()) {
 		pass.required.emplace_back(QueuePassRequirements(required, requiredState, lockedState));
 	} else if (lb->data != &required) {
 		pass.required.emplace(lb, QueuePassRequirements(required, requiredState, lockedState));
 	} else {
-		lb->requiredState = FrameRenderPassState(std::max(toInt(lb->requiredState), toInt(requiredState)));
-		lb->lockedState = FrameRenderPassState(std::min(toInt(lb->lockedState), toInt(lockedState)));
+		lb->requiredState =
+				FrameRenderPassState(std::max(toInt(lb->requiredState), toInt(requiredState)));
+		lb->lockedState =
+				FrameRenderPassState(std::min(toInt(lb->lockedState), toInt(lockedState)));
 	}
 }
 
-static void Queue_addDirectDependency(QueueData *data, const AttachmentPassData &source, const AttachmentPassData &target) {
+static void Queue_addDirectDependency(QueueData *data, const AttachmentPassData &source,
+		const AttachmentPassData &target) {
 	if (target.dependency.initialUsageStage == PipelineStage::None) {
 		// no pipeline stage specified for synchronization
 		return;
@@ -455,12 +468,9 @@ static void Queue_addDirectDependency(QueueData *data, const AttachmentPassData 
 		}
 	}
 
-	auto &it = data->passDependencies.emplace_back(QueuePassDependency{
-		source.pass,
-		target.pass,
-		memory::vector<const AttachmentData *>{ source.attachment },
-		target.dependency.initialUsageStage
-	});
+	auto &it = data->passDependencies.emplace_back(QueuePassDependency{source.pass, target.pass,
+		memory::vector<const AttachmentData *>{source.attachment},
+		target.dependency.initialUsageStage});
 
 	const_cast<QueuePassData *>(it.source)->sourceQueueDependencies.emplace_back(&it);
 	const_cast<QueuePassData *>(it.target)->targetQueueDependencies.emplace_back(&it);
@@ -472,14 +482,15 @@ static void Queue_buildRequirements(QueueData *data, Device &dev) {
 			auto &desc = a->attachment->passes;
 			auto it = desc.begin();
 			while (it != desc.end() && (*it)->pass != passIt) {
-				Queue_addRequiredPass(*passIt, *(*it)->pass, *a->attachment, **it, data->defaultSyncPassState);
+				Queue_addRequiredPass(*passIt, *(*it)->pass, *a->attachment, **it,
+						data->defaultSyncPassState);
 
 				if ((*(it + 1))->pass == passIt) {
 					// direct dependency
 					Queue_addDirectDependency(data, *(*it), **(it + 1));
 				}
 
-				++ it;
+				++it;
 			}
 		}
 	}
@@ -502,21 +513,15 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 	switch (fmt) {
 	case ImageFormat::D16_UNORM:
 	case ImageFormat::X8_D24_UNORM_PACK32:
-	case ImageFormat::D32_SFLOAT:
-		hasDepth = true;
-		break;
-	case ImageFormat::S8_UINT:
-		hasStencil = true;
-		break;
+	case ImageFormat::D32_SFLOAT: hasDepth = true; break;
+	case ImageFormat::S8_UINT: hasStencil = true; break;
 	case ImageFormat::D16_UNORM_S8_UINT:
 	case ImageFormat::D24_UNORM_S8_UINT:
 	case ImageFormat::D32_SFLOAT_S8_UINT:
 		hasDepth = true;
 		hasStencil = true;
 		break;
-	default:
-		hasColor = true;
-		break;
+	default: hasColor = true; break;
 	}
 
 	switch (attachemnt->usage) {
@@ -528,12 +533,12 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 		case AttachmentLayout::StencilReadOnlyOptimal:
 		case AttachmentLayout::DepthStencilReadOnlyOptimal:
 		case AttachmentLayout::ShaderReadOnlyOptimal:
-		case AttachmentLayout::General:
-			break;
+		case AttachmentLayout::General: break;
 		case AttachmentLayout::Ignored:
 			if (hasColor) {
 				attachemnt->layout = AttachmentLayout::ShaderReadOnlyOptimal;
-			} else if ((!separateDepthStencil && (hasDepth || hasStencil)) || (hasDepth && hasStencil)) {
+			} else if ((!separateDepthStencil && (hasDepth || hasStencil))
+					|| (hasDepth && hasStencil)) {
 				attachemnt->layout = AttachmentLayout::DepthStencilReadOnlyOptimal;
 			} else if (hasDepth) {
 				attachemnt->layout = AttachmentLayout::DepthReadOnlyOptimal;
@@ -545,7 +550,8 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 			break;
 		default:
 			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+					"' in renderpass ", attachemnt->pass->pass->key, ":",
+					attachemnt->subpass->index);
 			break;
 		}
 		break;
@@ -553,27 +559,25 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 	case AttachmentUsage::Resolve:
 		switch (attachemnt->layout) {
 		case AttachmentLayout::ColorAttachmentOptimal:
-		case AttachmentLayout::General:
-			break;
+		case AttachmentLayout::General: break;
 		case AttachmentLayout::Ignored:
 			attachemnt->layout = AttachmentLayout::ColorAttachmentOptimal;
 			break;
 		default:
 			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+					"' in renderpass ", attachemnt->pass->pass->key, ":",
+					attachemnt->subpass->index);
 			break;
 		}
 		break;
 	case AttachmentUsage::InputOutput:
 		switch (attachemnt->layout) {
-		case AttachmentLayout::General:
-			break;
-		case AttachmentLayout::Ignored:
-			attachemnt->layout = AttachmentLayout::General;
-			break;
+		case AttachmentLayout::General: break;
+		case AttachmentLayout::Ignored: attachemnt->layout = AttachmentLayout::General; break;
 		default:
 			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+					"' in renderpass ", attachemnt->pass->pass->key, ":",
+					attachemnt->subpass->index);
 			break;
 		}
 		break;
@@ -587,8 +591,7 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 		case AttachmentLayout::DepthReadOnlyStencilAttachmentOptimal:
 		case AttachmentLayout::DepthAttachmentStencilReadOnlyOptimal:
 		case AttachmentLayout::DepthStencilReadOnlyOptimal:
-		case AttachmentLayout::General:
-			break;
+		case AttachmentLayout::General: break;
 		case AttachmentLayout::Ignored:
 			if ((!separateDepthStencil && (hasDepth || hasStencil)) || (hasDepth && hasStencil)) {
 				attachemnt->layout = AttachmentLayout::DepthStencilAttachmentOptimal;
@@ -602,7 +605,8 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 			break;
 		default:
 			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+					"' in renderpass ", attachemnt->pass->pass->key, ":",
+					attachemnt->subpass->index);
 			break;
 		}
 		break;
@@ -611,42 +615,45 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 		case AttachmentLayout::DepthReadOnlyStencilAttachmentOptimal:
 		case AttachmentLayout::DepthAttachmentStencilReadOnlyOptimal:
 		case AttachmentLayout::DepthStencilReadOnlyOptimal:
-		case AttachmentLayout::General:
-			break;
-		case AttachmentLayout::Ignored:
-			attachemnt->layout = AttachmentLayout::General;
-			break;
+		case AttachmentLayout::General: break;
+		case AttachmentLayout::Ignored: attachemnt->layout = AttachmentLayout::General; break;
 		default:
 			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+					"' in renderpass ", attachemnt->pass->pass->key, ":",
+					attachemnt->subpass->index);
 			break;
 		}
 		break;
 	default:
 		log::error("Gl-Error", "Invalid usage for attachment '", attachemnt->key,
-					"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
+				"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
 		break;
 	}
 }
 
 static void Queue_sortRefs(AttachmentPassData *attachemnt, Device &dev) {
 	std::sort(attachemnt->subpasses.begin(), attachemnt->subpasses.end(),
-			[&] (const AttachmentSubpassData *l, const AttachmentSubpassData *r) {
+			[&](const AttachmentSubpassData *l, const AttachmentSubpassData *r) {
 		return l->subpass->index < r->subpass->index;
 	});
 
 	for (auto &it : attachemnt->subpasses) {
 		Queue_updateLayout(it, dev);
 
-		attachemnt->dependency.requiredRenderPassState = FrameRenderPassState(std::max(toInt(attachemnt->dependency.requiredRenderPassState),
-				toInt(it->dependency.requiredRenderPassState)));
+		attachemnt->dependency.requiredRenderPassState =
+				FrameRenderPassState(std::max(toInt(attachemnt->dependency.requiredRenderPassState),
+						toInt(it->dependency.requiredRenderPassState)));
 	}
 
 	if (!attachemnt->subpasses.empty()) {
-		attachemnt->dependency.initialUsageStage = attachemnt->subpasses.front()->dependency.initialUsageStage;
-		attachemnt->dependency.initialAccessMask = attachemnt->subpasses.front()->dependency.initialAccessMask;
-		attachemnt->dependency.finalUsageStage = attachemnt->subpasses.back()->dependency.finalUsageStage;
-		attachemnt->dependency.finalAccessMask = attachemnt->subpasses.back()->dependency.finalAccessMask;
+		attachemnt->dependency.initialUsageStage =
+				attachemnt->subpasses.front()->dependency.initialUsageStage;
+		attachemnt->dependency.initialAccessMask =
+				attachemnt->subpasses.front()->dependency.initialAccessMask;
+		attachemnt->dependency.finalUsageStage =
+				attachemnt->subpasses.back()->dependency.finalUsageStage;
+		attachemnt->dependency.finalAccessMask =
+				attachemnt->subpasses.back()->dependency.finalAccessMask;
 	}
 }
 
@@ -660,21 +667,20 @@ static void Queue_sortDescriptors(AttachmentData *attachemnt, Device &dev) {
 			priorities.emplace(pass->ordering.get());
 		} else {
 			log::error("Gl-Error", "Duplicate render pass priority '", pass->ordering.get(),
-				"' for attachment '", attachemnt->key, "', render ordering can be invalid");
+					"' for attachment '", attachemnt->key, "', render ordering can be invalid");
 		}
 	}
 
 	std::sort(attachemnt->passes.begin(), attachemnt->passes.end(),
-			[&] (const AttachmentPassData *l, const AttachmentPassData *r) {
+			[&](const AttachmentPassData *l, const AttachmentPassData *r) {
 		return l->pass->ordering < r->pass->ordering;
 	});
 
-	for (auto &it : attachemnt->passes) {
-		Queue_sortRefs(it, dev);
-	}
+	for (auto &it : attachemnt->passes) { Queue_sortRefs(it, dev); }
 }
 
-static void Queue_validateShaderPipelineLayout(StringView pipelineName, const PipelineLayoutData *layout, const ProgramInfo *info) {
+static void Queue_validateShaderPipelineLayout(StringView pipelineName,
+		const PipelineLayoutData *layout, const ProgramInfo *info) {
 	bool hasTexturesArray = false;
 	bool hasSamplersArray = false;
 	bool hasAtlasArray = false;
@@ -690,9 +696,10 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 				if (d->type == DescriptorType::Unknown) {
 					d->type = binding.type;
 				} else if (d->type != binding.type) {
-					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
-						"] descriptor type conflict: (code)", getDescriptorTypeName(d->type), " vs. (shader)",
-						getDescriptorTypeName(binding.type));
+					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set,
+							":", desc, "] descriptor type conflict: (code)",
+							getDescriptorTypeName(d->type), " vs. (shader)",
+							getDescriptorTypeName(binding.type));
 				}
 				d->stages |= info->stage;
 				if (!d->countIsPredefined) {
@@ -700,12 +707,13 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 						d->count = std::max(binding.count, d->count);
 					}
 				} else if (binding.count < maxOf<uint32_t>() && binding.count > d->count) {
-					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
-							"] descriptor requires ", binding.count, " objects, but only ", d->count, "defined with addDescriptorArray");
+					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set,
+							":", desc, "] descriptor requires ", binding.count,
+							" objects, but only ", d->count, "defined with addDescriptorArray");
 				}
 			} else {
-				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
-						"] descriptor target not found");
+				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":",
+						desc, "] descriptor target not found");
 			}
 		} else {
 			if (desc == 0 && binding.type == DescriptorType::Sampler) {
@@ -715,8 +723,8 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 			} else if (desc == 2 && binding.type == DescriptorType::StorageBuffer) {
 				hasAtlasArray = true;
 			} else {
-				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":", desc,
-						"] descriptor set not found");
+				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":",
+						desc, "] descriptor set not found");
 			}
 		}
 	}
@@ -724,7 +732,7 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName, const Pi
 	if (hasTexturesArray || hasSamplersArray || hasAtlasArray) {
 		if (layout->textureSetLayout == nullptr) {
 			log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
-				"] uses TextureSetLayout, that was not defined");
+					"] uses TextureSetLayout, that was not defined");
 		}
 	}
 }
@@ -741,7 +749,7 @@ Queue::~Queue() {
 	}
 }
 
-bool Queue::init(Builder && buf) {
+bool Queue::init(Builder &&buf) {
 	Rc<Resource> res;
 	if (!buf._internalResource.empty()) {
 		res = Rc<Resource>::create(move(buf._internalResource));
@@ -751,9 +759,7 @@ bool Queue::init(Builder && buf) {
 		_data->queue = this;
 		buf._data = nullptr;
 
-		for (auto &it : _data->passes) {
-			it->pass->_data = it;
-		}
+		for (auto &it : _data->passes) { it->pass->_data = it; }
 
 		if (res) {
 			_data->resource = res;
@@ -765,16 +771,12 @@ bool Queue::init(Builder && buf) {
 	return false;
 }
 
-bool Queue::isCompiled() const {
-	return _data->compiled;
-}
+bool Queue::isCompiled() const { return _data->compiled; }
 
 void Queue::setCompiled(Device &dev, Function<void()> &&cb) {
 	_data->compiled = true;
 
-	for (auto &attachment : _data->attachments) {
-		attachment->attachment->setCompiled(dev);
-	}
+	for (auto &attachment : _data->attachments) { attachment->attachment->setCompiled(dev); }
 
 	_data->releaseCallback = sp::move(cb);
 }
@@ -789,21 +791,13 @@ bool Queue::isCompatible(const ImageInfo &info) const {
 	return false;
 }
 
-StringView Queue::getName() const {
-	return _data->key;
-}
+StringView Queue::getName() const { return _data->key; }
 
-FrameRenderPassState Queue::getDefaultSyncPassState() const {
-	return _data->defaultSyncPassState;
-}
+FrameRenderPassState Queue::getDefaultSyncPassState() const { return _data->defaultSyncPassState; }
 
-const HashTable<ProgramData *> &Queue::getPrograms() const {
-	return _data->programs;
-}
+const HashTable<ProgramData *> &Queue::getPrograms() const { return _data->programs; }
 
-const HashTable<QueuePassData *> &Queue::getPasses() const {
-	return _data->passes;
-}
+const HashTable<QueuePassData *> &Queue::getPasses() const { return _data->passes; }
 
 const HashTable<GraphicPipelineData *> &Queue::getGraphicPipelines() const {
 	return _data->graphicPipelines;
@@ -813,25 +807,17 @@ const HashTable<ComputePipelineData *> &Queue::getComputePipelines() const {
 	return _data->computePipelines;
 }
 
-const HashTable<AttachmentData *> &Queue::getAttachments() const {
-	return _data->attachments;
-}
+const HashTable<AttachmentData *> &Queue::getAttachments() const { return _data->attachments; }
 
 const HashTable<TextureSetLayoutData *> &Queue::getTextureSetLayouts() const {
 	return _data->textureSets;
 }
 
-const HashTable<Rc<Resource>> &Queue::getLinkedResources() const {
-	return _data->linked;
-}
+const HashTable<Rc<Resource>> &Queue::getLinkedResources() const { return _data->linked; }
 
-Rc<Resource> Queue::getInternalResource() const {
-	return _data->resource;
-}
+Rc<Resource> Queue::getInternalResource() const { return _data->resource; }
 
-const memory::vector<AttachmentData *> &Queue::getInputAttachments() const {
-	return _data->input;
-}
+const memory::vector<AttachmentData *> &Queue::getInputAttachments() const { return _data->input; }
 
 const memory::vector<AttachmentData *> &Queue::getOutputAttachments() const {
 	return _data->output;
@@ -853,13 +839,9 @@ const Attachment *Queue::getOutputAttachment(std::type_index name) const {
 	return nullptr;
 }
 
-const QueuePassData *Queue::getPass(StringView key) const {
-	return _data->passes.get(key);
-}
+const QueuePassData *Queue::getPass(StringView key) const { return _data->passes.get(key); }
 
-const ProgramData *Queue::getProgram(StringView key) const {
-	return _data->programs.get(key);
-}
+const ProgramData *Queue::getProgram(StringView key) const { return _data->programs.get(key); }
 
 const GraphicPipelineData *Queue::getGraphicPipeline(StringView key) const {
 	return _data->graphicPipelines.get(key);
@@ -874,10 +856,9 @@ const AttachmentData *Queue::getAttachment(StringView key) const {
 }
 
 Vector<AttachmentData *> Queue::getOutput() const {
-	Vector<AttachmentData *> ret; ret.reserve(_data->output.size());
-	for (auto &it : _data->output) {
-		ret.emplace_back(it);
-	}
+	Vector<AttachmentData *> ret;
+	ret.reserve(_data->output.size());
+	for (auto &it : _data->output) { ret.emplace_back(it); }
 	return ret;
 }
 
@@ -917,7 +898,7 @@ AttachmentData *Queue::getTransferImageOutput() const {
 
 uint64_t Queue::incrementOrder() {
 	auto ret = _data->order;
-	++ _data->order;
+	++_data->order;
 	return ret;
 }
 
@@ -928,9 +909,7 @@ bool Queue::prepare(Device &dev) {
 		if (!it->data.empty()) {
 			it->inspect(it->data);
 		} else if (it->callback) {
-			it->callback(dev, [&] (SpanView<uint32_t> data) {
-				it->inspect(data);
-			});
+			it->callback(dev, [&](SpanView<uint32_t> data) { it->inspect(data); });
 		}
 	}
 
@@ -938,12 +917,14 @@ bool Queue::prepare(Device &dev) {
 		for (auto &subpass : pass->subpasses) {
 			for (auto &pipeline : subpass->graphicPipelines) {
 				for (auto &shaderSpec : pipeline->shaders) {
-					Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout, shaderSpec.data);
+					Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout,
+							shaderSpec.data);
 				}
 			}
 
 			for (auto &pipeline : subpass->computePipelines) {
-				Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout, pipeline->shader.data);
+				Queue_validateShaderPipelineLayout(pipeline->key, pipeline->layout,
+						pipeline->shader.data);
 			}
 		}
 	}
@@ -959,16 +940,12 @@ bool Queue::prepare(Device &dev) {
 	}
 
 	// fill attachment descriptors
-	for (auto &attachment : _data->attachments) {
-		Queue_sortDescriptors(attachment, dev);
-	}
+	for (auto &attachment : _data->attachments) { Queue_sortDescriptors(attachment, dev); }
 
 	Queue_buildLoadStore(_data);
 	Queue_buildDescriptors(_data, dev);
 
-	for (auto &it : _data->passes) {
-		it->pass->prepare(dev);
-	}
+	for (auto &it : _data->passes) { it->pass->prepare(dev); }
 
 	Queue_buildRequirements(_data, dev);
 
@@ -999,9 +976,85 @@ void Queue::detachFrame(FrameHandle *frame) {
 	}
 }
 
-void AttachmentBuilder::setType(AttachmentType type) {
-	_data->type = type;
+void Queue::describe(const Callback<void(StringView)> &out) {
+	out << "Queue '" << getName() << "':\nInput attachments:\n";
+	for (auto &it : _data->input) {
+		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << ")\n";
+	}
+	out << "Output attachments:\n";
+	for (auto &it : _data->output) {
+		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << ")\n";
+	}
+
+	out << "Attachments:\n";
+	for (auto &it : _data->attachments) {
+		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << "):\n";
+		for (auto &iit : it->passes) {
+			out << "\t\t" << iit->key << " for pass '" << iit->pass->key << "':\n";
+			for (auto &sub : iit->subpasses) {
+				out << "\t\t\t" << sub->key << " for subpass '" << sub->subpass->key << "' ["
+					<< sub->subpass->index << "]\n";
+			}
+		}
+	}
+	out << "Passes:\n";
+	for (auto &it : _data->passes) {
+		out << "\t" << it->key << " (" << typeid(*it->pass.get()) << "):\n";
+		for (auto &sub : it->subpasses) {
+			out << "\t\t" << it->key << " [" << sub->index << "]\n";
+			if (!sub->graphicPipelines.empty()) {
+				out << "\t\t\tGraphicPipelines:\n";
+				for (auto &p : sub->graphicPipelines) {
+					out << "\t\t\t\t" << p->key << " with layout: " << p->layout->key << "\n";
+				}
+			}
+			if (!sub->computePipelines.empty()) {
+				out << "\t\t\tComputePipelines:\n";
+				for (auto &p : sub->computePipelines) {
+					out << "\t\t\t\t" << p->key << " with layout: " << p->layout->key << "\n";
+				}
+			}
+			if (!sub->inputImages.empty()) {
+				out << "\t\t\tInputImages:\n";
+				for (auto &p : sub->inputImages) { out << "\t\t\t\t" << p->key << "\n"; }
+			}
+			if (!sub->outputImages.empty()) {
+				out << "\t\t\tOutputImages:\n";
+				for (auto &p : sub->outputImages) { out << "\t\t\t\t" << p->key << "\n"; }
+			}
+			if (!sub->resolveImages.empty()) {
+				out << "\t\t\tResolveImages:\n";
+				for (auto &p : sub->resolveImages) { out << "\t\t\t\t" << p->key << "\n"; }
+			}
+			if (sub->depthStencil) {
+				out << "\t\t\tDepthStencil:\n";
+				out << "\t\t\t\t" << sub->depthStencil->key << "\n";
+			}
+		}
+		if (!it->pipelineLayouts.empty()) {
+			out << "\tPipelineLayout:\n";
+			for (auto &l : it->pipelineLayouts) {
+				out << "\t\t" << l->key << ":\n";
+				if (l->textureSetLayout) {
+					out << "\t\t\t[tex]: samplers: " << l->textureSetLayout->samplers.size()
+						<< " images: " << l->textureSetLayout->imageCount << "/"
+						<< l->textureSetLayout->imageCountIndexed
+						<< " buffers: " << l->textureSetLayout->bufferCount << "/"
+						<< l->textureSetLayout->bufferCountIndexed << "\n";
+				}
+				for (auto &s : l->sets) {
+					out << "\t\t\t[" << s->index << "]:\n";
+					for (auto &d : s->descriptors) {
+						out << "\t\t\t\t[" << d->index << "] " << d->type << "[" << d->count
+							<< "]\n";
+					}
+				}
+			}
+		}
+	}
 }
+
+void AttachmentBuilder::setType(AttachmentType type) { _data->type = type; }
 
 void AttachmentBuilder::defineAsInput(AttachmentOps ops) {
 	_data->usage |= AttachmentUsage::Input;
@@ -1022,39 +1075,36 @@ void AttachmentBuilder::defineAsOutput(FrameRenderPassState pass) {
 	defineAsOutput(AttachmentOps::ReadColor | AttachmentOps::ReadStencil, pass);
 }
 
+
+void AttachmentBuilder::setInputAcquisitionCallback(AttachmentData::InputAcquisitionCallback &&cb) {
+	_data->inputAcquisitionCallback = sp::move(cb);
+}
+
+void AttachmentBuilder::setInputSubmissionCallback(AttachmentData::InputSubmissionCallback &&cb) {
+	_data->inputSubmissionCallback = sp::move(cb);
+}
+
+void AttachmentBuilder::setInputValidationCallback(AttachmentData::InputValidationCallback &&cb) {
+	_data->inputValidationCallback = sp::move(cb);
+}
+
 AttachmentBuilder::AttachmentBuilder(AttachmentData *data) : _data(data) { }
 
-void AttachmentPassBuilder::setAttachmentOps(AttachmentOps ops) {
-	_data->ops = ops;
-}
+void AttachmentPassBuilder::setAttachmentOps(AttachmentOps ops) { _data->ops = ops; }
 
-void AttachmentPassBuilder::setInitialLayout(AttachmentLayout l) {
-	_data->initialLayout = l;
-}
+void AttachmentPassBuilder::setInitialLayout(AttachmentLayout l) { _data->initialLayout = l; }
 
-void AttachmentPassBuilder::setFinalLayout(AttachmentLayout l) {
-	_data->finalLayout = l;
-}
+void AttachmentPassBuilder::setFinalLayout(AttachmentLayout l) { _data->finalLayout = l; }
 
-void AttachmentPassBuilder::setLoadOp(AttachmentLoadOp op) {
-	_data->loadOp = op;
-}
+void AttachmentPassBuilder::setLoadOp(AttachmentLoadOp op) { _data->loadOp = op; }
 
-void AttachmentPassBuilder::setStoreOp(AttachmentStoreOp op) {
-	_data->storeOp = op;
-}
+void AttachmentPassBuilder::setStoreOp(AttachmentStoreOp op) { _data->storeOp = op; }
 
-void AttachmentPassBuilder::setStencilLoadOp(AttachmentLoadOp op) {
-	_data->stencilLoadOp = op;
-}
+void AttachmentPassBuilder::setStencilLoadOp(AttachmentLoadOp op) { _data->stencilLoadOp = op; }
 
-void AttachmentPassBuilder::setStencilStoreOp(AttachmentStoreOp op) {
-	_data->stencilStoreOp = op;
-}
+void AttachmentPassBuilder::setStencilStoreOp(AttachmentStoreOp op) { _data->stencilStoreOp = op; }
 
-void AttachmentPassBuilder::setColorMode(const ColorMode &mode) {
-	_data->colorMode = mode;
-}
+void AttachmentPassBuilder::setColorMode(const ColorMode &mode) { _data->colorMode = mode; }
 
 void AttachmentPassBuilder::setDependency(const AttachmentDependencyInfo &dep) {
 	_data->dependency = dep;
@@ -1062,7 +1112,8 @@ void AttachmentPassBuilder::setDependency(const AttachmentDependencyInfo &dep) {
 
 AttachmentPassBuilder::AttachmentPassBuilder(AttachmentPassData *data) : _data(data) { }
 
-bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, DescriptorType type, AttachmentLayout layout) {
+bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, DescriptorType type,
+		AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1081,7 +1132,8 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, D
 	return true;
 }
 
-bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count, DescriptorType type, AttachmentLayout layout) {
+bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count,
+		DescriptorType type, AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1101,8 +1153,7 @@ bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachme
 	return true;
 }
 
-DescriptorSetBuilder::DescriptorSetBuilder(DescriptorSetData *data)
-: _data(data) { }
+DescriptorSetBuilder::DescriptorSetBuilder(DescriptorSetData *data) : _data(data) { }
 
 bool PipelineLayoutBuilder::addSet(const Callback<void(DescriptorSetBuilder &)> &cb) {
 	auto pool = _data->pass->queue->pool;
@@ -1125,11 +1176,20 @@ void PipelineLayoutBuilder::setTextureSetLayout(const TextureSetLayoutData *d) {
 	_data->textureSetLayout = d;
 }
 
-PipelineLayoutBuilder::PipelineLayoutBuilder(PipelineLayoutData *data)
-: _data(data) { }
+const PipelineFamilyData *PipelineLayoutBuilder::addPipelineFamily(StringView key) {
+	auto pool = _data->pass->queue->pool;
+	auto family = new (pool) PipelineFamilyData;
+	family->key = key.pdup(pool);
+	family->layout = _data;
+	_data->families.emplace_back(family);
+	return family;
+}
 
-bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency,
-		AttachmentLayout layout, AttachmentOps ops, BlendInfo blendInfo) {
+PipelineLayoutBuilder::PipelineLayoutBuilder(PipelineLayoutData *data) : _data(data) { }
+
+bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
+		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops,
+		BlendInfo blendInfo) {
 	auto pool = _data->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1149,7 +1209,8 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDe
 	return true;
 }
 
-bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency, BlendInfo blendInfo) {
+bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
+		AttachmentDependencyInfo dependency, BlendInfo blendInfo) {
 	auto pool = _data->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1167,8 +1228,8 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment, AttachmentDe
 	return true;
 }
 
-bool SubpassBuilder::addInput(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency,
-		AttachmentLayout layout, AttachmentOps ops) {
+bool SubpassBuilder::addInput(const AttachmentPassData *attachment,
+		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops) {
 	auto pool = _data->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1216,8 +1277,8 @@ bool SubpassBuilder::addResolve(const AttachmentPassData *color, const Attachmen
 	return true;
 }
 
-bool SubpassBuilder::setDepthStencil(const AttachmentPassData *attachment, AttachmentDependencyInfo dependency,
-		AttachmentLayout layout, AttachmentOps ops) {
+bool SubpassBuilder::setDepthStencil(const AttachmentPassData *attachment,
+		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops) {
 	auto pool = _data->pass->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1236,8 +1297,8 @@ bool SubpassBuilder::setDepthStencil(const AttachmentPassData *attachment, Attac
 	return true;
 }
 
-const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key, const PipelineLayoutData *layout,
-		SpecializationInfo &&spec) {
+const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key,
+		const PipelineFamilyData *family, SpecializationInfo &&spec) {
 	auto it = _data->computePipelines.find(key);
 	if (it != _data->computePipelines.end()) {
 		log::error("Resource", _data->key, ": Pipeline '", key, "' already added");
@@ -1250,24 +1311,30 @@ const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key, co
 	auto pipeline = new (pool) ComputePipelineData;
 	pipeline->key = key.pdup(pool);
 	pipeline->shader = move(spec);
-	pipeline->layout = layout;
+	pipeline->layout = family->layout;
 	pipeline->subpass = _data;
 
+	const_cast<PipelineFamilyData *>(family)->computePipelines.emplace_back(pipeline);
+	pipeline->family = family;
+
 	_data->computePipelines.emplace(pipeline);
-	((PipelineLayoutData *)pipeline->layout)->computePipelines.emplace_back(pipeline);
+	const_cast<PipelineLayoutData *>(pipeline->layout)->computePipelines.emplace_back(pipeline);
 
 	return pipeline;
 }
 
-void SubpassBuilder::setPrepareCallback(memory::function<void(const SubpassData &, FrameQueue &)> &&cb) {
+void SubpassBuilder::setPrepareCallback(
+		memory::function<void(FrameQueue &, const SubpassData &)> &&cb) {
 	_data->prepareCallback = move(cb);
 }
 
-void SubpassBuilder::setCommandsCallback(memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> &&cb) {
+void SubpassBuilder::setCommandsCallback(
+		memory::function<void(FrameQueue &, const SubpassData &, CommandBuffer &)> &&cb) {
 	_data->commandsCallback = move(cb);
 }
 
-GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key, const PipelineLayoutData *layout) {
+GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key,
+		const PipelineFamilyData *family) {
 	auto it = _data->graphicPipelines.find(key);
 	if (it != _data->graphicPipelines.end()) {
 		log::error("Resource", _data->key, ": Pipeline '", key, "' already added");
@@ -1279,8 +1346,9 @@ GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key, const Pipel
 
 	auto pipeline = new (pool) GraphicPipelineData;
 	pipeline->key = key.pdup(pool);
-	pipeline->layout = layout;
 	pipeline->subpass = _data;
+	pipeline->layout = family->layout;
+	pipeline->family = family;
 
 	return pipeline;
 }
@@ -1290,7 +1358,10 @@ void SubpassBuilder::finalizePipeline(GraphicPipelineData *data) {
 
 	_data->graphicPipelines.emplace(data);
 
-	((PipelineLayoutData *)data->layout)->graphicPipelines.emplace_back(data);
+	const_cast<PipelineFamilyData *>(static_cast<const PipelineFamilyData *>(data->family))
+			->graphicPipelines.emplace_back(data);
+
+	const_cast<PipelineLayoutData *>(data->layout)->graphicPipelines.emplace_back(data);
 }
 
 void SubpassBuilder::erasePipeline(GraphicPipelineData *data) {
@@ -1302,19 +1373,19 @@ bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f, DynamicState stat
 	return true;
 }
 
-bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f, const Vector<SpecializationInfo> &programs) {
+bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f,
+		const Vector<SpecializationInfo> &programs) {
 	for (auto &it : programs) {
 		auto p = _data->pass->queue->programs.get(it.data->key);
 		if (!p) {
-			log::error("PipelineRequest", _data->key, ": Shader not found in request: ", it.data->key);
+			log::error("PipelineRequest", _data->key,
+					": Shader not found in request: ", it.data->key);
 			return false;
 		}
 	}
 
 	f.shaders.reserve(programs.size());
-	for (auto &it : programs) {
-		f.shaders.emplace_back(move(it));
-	}
+	for (auto &it : programs) { f.shaders.emplace_back(move(it)); }
 	return true;
 }
 
@@ -1325,7 +1396,8 @@ bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f, const PipelineMat
 
 SubpassBuilder::SubpassBuilder(SubpassData *data) : _data(data) { }
 
-const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(StringView str, const Callback<void(PipelineLayoutBuilder &)> &cb) {
+const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(StringView str,
+		const Callback<void(PipelineLayoutBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1334,6 +1406,13 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(StringView str,
 	layout->pass = _data;
 	layout->index = uint32_t(_data->pipelineLayouts.size());
 
+	auto defaultFamily = new (pool) PipelineFamilyData;
+	defaultFamily->key = layout->key;
+	defaultFamily->layout = layout;
+
+	layout->defaultFamily = defaultFamily;
+	layout->families.emplace_back(defaultFamily);
+
 	PipelineLayoutBuilder builder(layout);
 	cb(builder);
 
@@ -1341,7 +1420,8 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(StringView str,
 	return layout;
 }
 
-const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &cb) {
+const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(
+		const Callback<void(PipelineLayoutBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1350,6 +1430,13 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<
 	layout->pass = _data;
 	layout->index = uint32_t(_data->pipelineLayouts.size());
 
+	auto defaultFamily = new (pool) PipelineFamilyData;
+	defaultFamily->key = layout->key;
+	defaultFamily->layout = layout;
+
+	layout->defaultFamily = defaultFamily;
+	layout->families.emplace_back(defaultFamily);
+
 	PipelineLayoutBuilder builder(layout);
 	cb(builder);
 
@@ -1357,7 +1444,7 @@ const PipelineLayoutData * QueuePassBuilder::addDescriptorLayout(const Callback<
 	return layout;
 }
 
-const SubpassData * QueuePassBuilder::addSubpass(const Callback<void(SubpassBuilder &)> &cb) {
+const SubpassData *QueuePassBuilder::addSubpass(const Callback<void(SubpassBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1373,23 +1460,26 @@ const SubpassData * QueuePassBuilder::addSubpass(const Callback<void(SubpassBuil
 	return subpass;
 }
 
-bool QueuePassBuilder::addSubpassDependency(const SubpassData *src, PipelineStage srcStage, AccessType srcAccess,
-		const SubpassData *dst, PipelineStage dstStage, AccessType dstAccess, bool byRegion) {
-	_data->dependencies.emplace_back(SubpassDependency{src->index, srcStage, srcAccess, dst->index, dstStage, dstAccess, byRegion});
+bool QueuePassBuilder::addSubpassDependency(const SubpassData *src, PipelineStage srcStage,
+		AccessType srcAccess, const SubpassData *dst, PipelineStage dstStage, AccessType dstAccess,
+		bool byRegion) {
+	_data->dependencies.emplace_back(SubpassDependency{src->index, srcStage, srcAccess, dst->index,
+		dstStage, dstAccess, byRegion});
 	return true;
 }
 
 const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data) {
-	return addAttachment(data, [] (AttachmentPassBuilder &builder) { });
+	return addAttachment(data, [](AttachmentPassBuilder &builder) { });
 }
 
-const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data, const AttachmentDependencyInfo &deps) {
-	return addAttachment(data, [&] (AttachmentPassBuilder &builder) {
-		builder.setDependency(deps);
-	});
+const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data,
+		const AttachmentDependencyInfo &deps) {
+	return addAttachment(data,
+			[&](AttachmentPassBuilder &builder) { builder.setDependency(deps); });
 }
 
-const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data, const Callback<void(AttachmentPassBuilder &)> &cb) {
+const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data,
+		const Callback<void(AttachmentPassBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
 	memory::pool::context ctx(pool);
 
@@ -1414,21 +1504,27 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 	return a;
 }
 
-StringView QueuePassBuilder::getName() const {
-	return _data->key;
+StringView QueuePassBuilder::getName() const { return _data->key; }
+
+void QueuePassBuilder::setAvailabilityChecker(
+		memory::function<bool(const FrameQueue &, const QueuePassData &)> &&cb) {
+	_data->checkAvailable = move(cb);
 }
 
-void QueuePassBuilder::addSubmittedCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&cb) {
+void QueuePassBuilder::addSubmittedCallback(
+		memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&cb) {
 	_data->submittedCallbacks.emplace_back(move(cb));
 }
 
-void QueuePassBuilder::addCompleteCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&cb) {
+void QueuePassBuilder::addCompleteCallback(
+		memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&cb) {
 	_data->submittedCallbacks.emplace_back(move(cb));
 }
 
 QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 
-Queue::Builder::Builder(StringView name) : _internalResource(memory::pool::create((memory::pool_t *)nullptr), toString(name, "_resource")) {
+Queue::Builder::Builder(StringView name)
+: _internalResource(memory::pool::create((memory::pool_t *)nullptr), toString(name, "_resource")) {
 	auto p = _internalResource.getPool();
 	memory::pool::perform([&] {
 		_data = new (p) QueueData;
@@ -1451,7 +1547,8 @@ void Queue::Builder::setDefaultSyncPassState(FrameRenderPassState val) {
 	_data->defaultSyncPassState = val;
 }
 
-const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &cb) {
+const AttachmentData *Queue::Builder::addAttachemnt(StringView name,
+		const Callback<Rc<Attachment>(AttachmentBuilder &)> &cb) {
 	auto it = _data->attachments.find(name);
 	if (it == _data->attachments.end()) {
 		AttachmentData *ret = nullptr;
@@ -1474,7 +1571,8 @@ const AttachmentData *Queue::Builder::addAttachemnt(StringView name, const Callb
 	return nullptr;
 }
 
-const QueuePassData *Queue::Builder::addPass(StringView name, PassType type, RenderOrdering ordering, const Callback<Rc<QueuePass>(QueuePassBuilder &)> &cb) {
+const QueuePassData *Queue::Builder::addPass(StringView name, PassType type,
+		RenderOrdering ordering, const Callback<Rc<QueuePass>(QueuePassBuilder &)> &cb) {
 	auto it = _data->passes.find(name);
 	if (it == _data->passes.end()) {
 		QueuePassData *ret = nullptr;
@@ -1498,13 +1596,15 @@ const QueuePassData *Queue::Builder::addPass(StringView name, PassType type, Ren
 	return nullptr;
 }
 
-const ProgramData * Queue::Builder::addProgram(StringView key, SpanView<uint32_t> data, const ProgramInfo *info) {
+const ProgramData *Queue::Builder::addProgram(StringView key, SpanView<uint32_t> data,
+		const ProgramInfo *info) {
 	if (!_data) {
 		log::error("Resource", "Fail to add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key,
+				[&, this]() -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->data = data.pdup(_data->pool);
@@ -1522,13 +1622,15 @@ const ProgramData * Queue::Builder::addProgram(StringView key, SpanView<uint32_t
 	return nullptr;
 }
 
-const ProgramData * Queue::Builder::addProgramByRef(StringView key, SpanView<uint32_t> data, const ProgramInfo *info) {
+const ProgramData *Queue::Builder::addProgramByRef(StringView key, SpanView<uint32_t> data,
+		const ProgramInfo *info) {
 	if (!_data) {
 		log::error("Resource", "Fail tom add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key,
+				[&, this]() -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->data = data;
@@ -1546,14 +1648,16 @@ const ProgramData * Queue::Builder::addProgramByRef(StringView key, SpanView<uin
 	return nullptr;
 }
 
-const ProgramData * Queue::Builder::addProgram(StringView key, const memory::function<void(Device &, const ProgramData::DataCallback &)> &cb,
+const ProgramData *Queue::Builder::addProgram(StringView key,
+		const memory::function<void(Device &, const ProgramData::DataCallback &)> &cb,
 		const ProgramInfo *info) {
 	if (!_data) {
 		log::error("Resource", "Fail to add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key, [&, this] () -> ProgramData * {
+	if (auto r = Resource_conditionalInsert<ProgramData>(_data->programs, key,
+				[&, this]() -> ProgramData * {
 		auto program = new (_data->pool) ProgramData;
 		program->key = key.pdup(_data->pool);
 		program->callback = cb;
@@ -1571,14 +1675,16 @@ const ProgramData * Queue::Builder::addProgram(StringView key, const memory::fun
 	return nullptr;
 }
 
-const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key, SpanView<SamplerInfo> samplers,
-		uint32_t images, uint32_t buffers, uint32_t imagesIndexed, uint32_t buffersIndexed) {
+const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key,
+		SpanView<SamplerInfo> samplers, uint32_t images, uint32_t buffers, uint32_t imagesIndexed,
+		uint32_t buffersIndexed) {
 	if (!_data) {
 		log::error("Resource", "Fail to add TextureSetLayout: ", key, ", not initialized");
 		return nullptr;
 	}
 
-	if (auto r = Resource_conditionalInsert<TextureSetLayoutData>(_data->textureSets, key, [&, this] () -> TextureSetLayoutData * {
+	if (auto r = Resource_conditionalInsert<TextureSetLayoutData>(_data->textureSets, key,
+				[&, this]() -> TextureSetLayoutData * {
 		auto layout = new (_data->pool) TextureSetLayoutData;
 		layout->key = key.pdup(_data->pool);
 		layout->imageCount = images;
@@ -1594,16 +1700,18 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key, 
 		layout->emptyImage = _internalResource.getImage(EmptyTextureName);
 		if (!layout->emptyImage) {
 			layout->emptyImage = _internalResource.addImage(EmptyTextureName,
-				ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM),
-				BytesView(&empty, 1).pdup(_internalResource.getPool()));
+					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled,
+							core::ImageFormat::R8_UNORM),
+					BytesView(&empty, 1).pdup(_internalResource.getPool()));
 			_internalResource.addImageView(layout->emptyImage, ImageViewInfo());
 		}
 
 		layout->solidImage = _internalResource.getImage(SolidTextureName);
 		if (!layout->solidImage) {
 			layout->solidImage = _internalResource.addImage(SolidTextureName,
-				ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM, core::ImageHints::Opaque),
-				BytesView(&solid, 1).pdup(_internalResource.getPool()));
+					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM,
+							core::ImageHints::Opaque),
+					BytesView(&solid, 1).pdup(_internalResource.getPool()));
 			_internalResource.addImageView(layout->solidImage, ImageViewInfo());
 		}
 
@@ -1611,7 +1719,8 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key, 
 		if (!layout->emptyBuffer) {
 			layout->emptyBuffer = _internalResource.addBuffer(EmptyBufferName,
 					BufferInfo(uint64_t(8), core::BufferUsage::StorageBuffer),
-					BytesView(reinterpret_cast<const uint8_t *>(&emptyBuffer), sizeof(uint64_t)).pdup(_internalResource.getPool()));
+					BytesView(reinterpret_cast<const uint8_t *>(&emptyBuffer), sizeof(uint64_t))
+							.pdup(_internalResource.getPool()));
 		}
 
 		return layout;
@@ -1625,15 +1734,18 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key, 
 
 void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 	if (!_data) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", not initialized");
+		log::error("Resource", "Fail to add linked resource: ", res->getName(),
+				", not initialized");
 		return;
 	}
 	if (res->getOwner() != nullptr) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", it's owned by ", res->getOwner()->getName());
+		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", it's owned by ",
+				res->getOwner()->getName());
 		return;
 	}
 	if (!res->isCompiled()) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", resource is not compiled");
+		log::error("Resource", "Fail to add linked resource: ", res->getName(),
+				", resource is not compiled");
 		return;
 	}
 	_data->linked.emplace(res);
@@ -1655,34 +1767,42 @@ void Queue::Builder::setDetachCallback(Function<void(const FrameHandle *)> &&cb)
 	_data->detachCallback = sp::move(cb);
 }
 
-const BufferData * Queue::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
+const BufferData *Queue::Builder::addBufferByRef(StringView key, BufferInfo &&info, BytesView data,
+		Rc<DataAtlas> &&atlas, AccessType access) {
 	return _internalResource.addBufferByRef(key, move(info), data, move(atlas), access);
 }
 
-const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, const FileInfo &data, Rc<DataAtlas> &&atlas, AccessType access) {
+const BufferData *Queue::Builder::addBuffer(StringView key, BufferInfo &&info, const FileInfo &data,
+		Rc<DataAtlas> &&atlas, AccessType access) {
 	return _internalResource.addBuffer(key, move(info), data, move(atlas), access);
 }
 
-const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
+const BufferData *Queue::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data,
+		Rc<DataAtlas> &&atlas, AccessType access) {
 	return _internalResource.addBuffer(key, move(info), data, move(atlas), access);
 }
 
-const BufferData * Queue::Builder::addBuffer(StringView key, BufferInfo &&info,
-		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb, Rc<DataAtlas> &&atlas, AccessType access) {
+const BufferData *Queue::Builder::addBuffer(StringView key, BufferInfo &&info,
+		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
+		Rc<DataAtlas> &&atlas, AccessType access) {
 	return _internalResource.addBuffer(key, move(info), cb, move(atlas), access);
 }
 
-const ImageData * Queue::Builder::addImageByRef(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {
+const ImageData *Queue::Builder::addImageByRef(StringView key, ImageInfo &&info, BytesView data,
+		AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImageByRef(key, move(info), data, layout, access);
 }
-const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, const FileInfo &data, AttachmentLayout layout, AccessType access) {
+const ImageData *Queue::Builder::addImage(StringView key, ImageInfo &&info, const FileInfo &data,
+		AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), data, layout, access);
 }
-const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info, BytesView data, AttachmentLayout layout, AccessType access) {
+const ImageData *Queue::Builder::addImage(StringView key, ImageInfo &&info, BytesView data,
+		AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), data, layout, access);
 }
-const ImageData * Queue::Builder::addImage(StringView key, ImageInfo &&info,
-		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb, AttachmentLayout layout, AccessType access) {
+const ImageData *Queue::Builder::addImage(StringView key, ImageInfo &&info,
+		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
+		AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), cb, layout, access);
 }
 
@@ -1690,4 +1810,4 @@ const ImageViewData *Queue::Builder::addImageView(const ImageData *data, ImageVi
 	return _internalResource.addImageView(data, move(view));
 }
 
-}
+} // namespace stappler::xenolith::core

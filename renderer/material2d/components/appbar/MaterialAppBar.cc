@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
+bool AppBar::init(AppBarLayout layout, const SurfaceStyle &style) {
 	if (!Surface::init(style)) {
 		return false;
 	}
@@ -36,12 +37,11 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_layout = layout;
 
 	_inputListener = addInputListener(Rc<InputListener>::create());
-	_inputListener->addTouchRecognizer([this] (const GestureData &) -> bool {
-		return isSwallowTouches();
-	});
-	_inputListener->addPressRecognizer([this] (const GesturePress &press) -> bool {
+	_inputListener->addTouchRecognizer(
+			[this](const GestureData &) -> bool { return isSwallowTouches(); });
+	_inputListener->addPressRecognizer([this](const GesturePress &press) -> bool {
 		if (_barCallback) {
-			if (press.event  == GestureEvent::Ended) {
+			if (press.event == GestureEvent::Ended) {
 				_barCallback();
 			}
 			return true;
@@ -50,7 +50,8 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	}, TimeInterval::milliseconds(425), true);
 	_inputListener->setSwallowEvents(InputListener::EventMaskTouch);
 
-	_actionMenuSourceListener = addComponent(Rc<DataListener<MenuSource>>::create(std::bind(&AppBar::layoutSubviews, this)));
+	_actionMenuSourceListener = addComponent(
+			Rc<DataListener<MenuSource>>::create(std::bind(&AppBar::layoutSubviews, this)));
 
 	_navButton = addChild(Rc<Button>::create(NodeStyle::Text), ZOrder(1));
 	_navButton->setTapCallback(std::bind(&AppBar::handleNavTapped, this));
@@ -64,17 +65,18 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle & style) {
 	_label->setAnchorPoint(Anchor::MiddleLeft);
 
 	_scissorNode = addChild(Rc<Node>::create());
-	_scissorNode->setPosition(Vec2(0, 0));
+	_scissorNode->setPosition(Vec2::ZERO);
 	_scissorNode->setAnchorPoint(Anchor::BottomLeft);
 
 	_iconsComposer = addChild(Rc<Node>::create(), ZOrder(1));
-	_iconsComposer->setPosition(Vec2(0, 0));
+	_iconsComposer->setPosition(Vec2::ZERO);
 	_iconsComposer->setAnchorPoint(Anchor::BottomLeft);
 	_iconsComposer->setCascadeOpacityEnabled(true);
 
 	updateDefaultHeight();
 
-	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	_scissorComponent =
+			addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
 	_scissorComponent->enableScissor();
 
 	return true;
@@ -93,30 +95,22 @@ void AppBar::setLayout(AppBarLayout layout) {
 	}
 }
 
-void AppBar::setTitle(StringView str) {
-	_label->setString(str);
-}
+void AppBar::setTitle(StringView str) { _label->setString(str); }
 
-StringView AppBar::getTitle() const {
-	return _label->getString8();
-}
+StringView AppBar::getTitle() const { return _label->getString8(); }
 
 void AppBar::setNavButtonIcon(IconName name, float progress) {
 	_navButton->setLeadingIconName(name, progress);
 	_contentSizeDirty = true;
 }
 
-IconName AppBar::getNavButtonIcon() const {
-	return _navButton->getLeadingIconName();
-}
+IconName AppBar::getNavButtonIcon() const { return _navButton->getLeadingIconName(); }
 
 void AppBar::setMaxActionIcons(size_t value) {
 	_maxActionIcons = value;
 	_contentSizeDirty = true;
 }
-size_t AppBar::getMaxActionIcons() const {
-	return _maxActionIcons;
-}
+size_t AppBar::getMaxActionIcons() const { return _maxActionIcons; }
 
 void AppBar::setActionMenuSource(MenuSource *source) {
 	if (_actionMenuSourceListener->getSubscription() != source) {
@@ -158,17 +152,20 @@ void AppBar::replaceActionMenuSource(MenuSource *source, size_t maxIcons) {
 	_replaceProgress = 0.0f;
 	updateProgress();
 
-	runAction(Rc<ActionProgress>::create(0.15f, [this] (float p) {
+	runAction(Rc<ActionProgress>::create(0.15f,
+					  [this](float p) {
 		_replaceProgress = p;
 		updateProgress();
-	}, nullptr, [this] () {
+	}, nullptr,
+					  [this]() {
 		_replaceProgress = 1.0f;
 		updateProgress();
 		_contentSizeDirty = true;
-	}), "replaceActionMenuSource"_tag);
+	}),
+			"replaceActionMenuSource"_tag);
 }
 
-MenuSource * AppBar::getActionMenuSource() const {
+MenuSource *AppBar::getActionMenuSource() const {
 	return _actionMenuSourceListener->getSubscription();
 }
 
@@ -184,16 +181,10 @@ void AppBar::setBasicHeight(float value) {
 	}
 }
 
-float AppBar::getBasicHeight() const {
-	return _basicHeight;
-}
+float AppBar::getBasicHeight() const { return _basicHeight; }
 
-void AppBar::setNavCallback(Function<void()> &&cb) {
-	_navCallback = sp::move(cb);
-}
-const Function<void()> & AppBar::getNavCallback() const {
-	return _navCallback;
-}
+void AppBar::setNavCallback(Function<void()> &&cb) { _navCallback = sp::move(cb); }
+const Function<void()> &AppBar::getNavCallback() const { return _navCallback; }
 
 void AppBar::setSwallowTouches(bool value) {
 	if (value) {
@@ -207,17 +198,11 @@ bool AppBar::isSwallowTouches() const {
 	return _inputListener->isSwallowAllEvents(InputListener::EventMaskTouch);
 }
 
-Button *AppBar::getNavNode() const {
-	return _navButton;
-}
+Button *AppBar::getNavNode() const { return _navButton; }
 
-void AppBar::setBarCallback(Function<void()> &&cb) {
-	_barCallback = sp::move(cb);
-}
+void AppBar::setBarCallback(Function<void()> &&cb) { _barCallback = sp::move(cb); }
 
-const Function<void()> & AppBar::getBarCallback() const {
-	return _barCallback;
-}
+const Function<void()> &AppBar::getBarCallback() const { return _barCallback; }
 
 void AppBar::handleNavTapped() {
 	if (_navCallback) {
@@ -234,10 +219,12 @@ void AppBar::updateProgress() {
 	}
 
 	if (_iconsComposer) {
-		_iconsComposer->setPositionY(progress(_iconsComposer->getContentSize().height, 0.0f, _replaceProgress));
+		_iconsComposer->setPositionY(
+				progress(_iconsComposer->getContentSize().height, 0.0f, _replaceProgress));
 	}
 	if (_prevComposer) {
-		_prevComposer->setPositionY(progress(0.0f, -_prevComposer->getContentSize().height, _replaceProgress));
+		_prevComposer->setPositionY(
+				progress(0.0f, -_prevComposer->getContentSize().height, _replaceProgress));
 		_prevComposer->setOpacity(1.0f - _replaceProgress);
 	}
 }
@@ -259,14 +246,15 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 				auto btnSrc = dynamic_cast<MenuSourceButton *>(item.get());
 				if (btnSrc->getNameIcon() != IconName::None) {
 					if (iconsCount < maxIcons) {
-						auto btn = composer->addChild(Rc<Button>::create(NodeStyle::Text), ZOrder(0), iconsCount);
+						auto btn = composer->addChild(Rc<Button>::create(NodeStyle::Text),
+								ZOrder(0), iconsCount);
 						btn->setMenuSourceButton(btnSrc);
 						btn->setIconSize(24.0f);
 						btn->setFollowContentSize(false);
 						btn->setSwallowEvents(true);
 						btn->setNodeMask(Button::LeadingIcon);
 						icons.push_back(btn);
-						iconsCount ++;
+						iconsCount++;
 					} else {
 						extMenuSource->addItem(item);
 					}
@@ -277,7 +265,8 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 
 	if (extMenuSource->count() > 0) {
 		auto btn = Rc<Button>::create();
-		auto source = Rc<MenuSourceButton>::create(StringView(), IconName::Navigation_more_vert_solid, move(extMenuSource));
+		auto source = Rc<MenuSourceButton>::create(StringView(),
+				IconName::Navigation_more_vert_solid, move(extMenuSource));
 		btn->setMenuSourceButton(move(source));
 		btn->setFollowContentSize(false);
 		btn->setSwallowEvents(true);
@@ -293,7 +282,8 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 		if (icons.back()->getLeadingIconName() == IconName::Navigation_more_vert_solid) {
 			hasExtMenu = true;
 		}
-		auto pos = composer->getContentSize().width - 56 * (icons.size() - 1) - (hasExtMenu?8:36);
+		auto pos =
+				composer->getContentSize().width - 56 * (icons.size() - 1) - (hasExtMenu ? 8 : 36);
 		for (auto &it : icons) {
 			it->setContentSize(Size2(48, std::min(48.0f, getRealHeight())));
 			it->setAnchorPoint(Vec2(0.5, 0.5));
@@ -307,7 +297,7 @@ float AppBar::updateMenu(Node *composer, MenuSource *source, size_t maxIcons) {
 	}
 
 	if (icons.size() > 0) {
-		return (56 * (icons.size()) - (hasExtMenu?24:0));
+		return (56 * (icons.size()) - (hasExtMenu ? 24 : 0));
 	}
 	return 0;
 }
@@ -318,7 +308,8 @@ void AppBar::layoutSubviews() {
 	updateProgress();
 
 	_iconsComposer->setContentSize(_scissorNode->getContentSize());
-	auto iconWidth = updateMenu(_iconsComposer, _actionMenuSourceListener->getSubscription(), _maxActionIcons);
+	auto iconWidth = updateMenu(_iconsComposer, _actionMenuSourceListener->getSubscription(),
+			_maxActionIcons);
 	if (_replaceProgress != 1.0f && _iconWidth != 0.0f) {
 		_iconWidth = std::max(iconWidth, _iconWidth);
 	} else {
@@ -326,7 +317,8 @@ void AppBar::layoutSubviews() {
 	}
 
 	float baseline = getBaseLine();
-	if (_navButton->getLeadingIconName() != IconName::Empty && _navButton->getLeadingIconName() != IconName::None) {
+	if (_navButton->getLeadingIconName() != IconName::Empty
+			&& _navButton->getLeadingIconName() != IconName::None) {
 		_navButton->setContentSize(Size2(48.0f, 48.0f));
 		_navButton->setAnchorPoint(Anchor::Middle);
 		_navButton->setPosition(Vec2(32.0f, baseline));
@@ -349,16 +341,17 @@ void AppBar::layoutSubviews() {
 	case AppBarLayout::Small:
 		_label->setAnchorPoint(Anchor::MiddleLeft);
 		_label->setAlignment(Label::TextAlign::Left);
-		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline) : Vec2(64.0f, baseline));
+		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline)
+																   : Vec2(64.0f, baseline));
 		break;
 	case AppBarLayout::Minified:
 		_label->setRole(TypescaleRole::TitleMedium);
 		_label->setAnchorPoint(Anchor::MiddleLeft);
 		_label->setAlignment(Label::TextAlign::Left);
-		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline) : Vec2(64.0f, baseline));
+		_label->setPosition((getNavButtonIcon() == IconName::None) ? Vec2(16.0f, baseline)
+																   : Vec2(64.0f, baseline));
 		break;
-	default:
-		break;
+	default: break;
 	}
 }
 
@@ -387,16 +380,12 @@ void AppBar::updateDefaultHeight() {
 	case AppBarLayout::CenterAligned:
 	case AppBarLayout::Small:
 	case AppBarLayout::Medium:
-	case AppBarLayout::Large:
-		_defaultHeight = 56.0f;
-		break;
-	case AppBarLayout::Minified:
-		_defaultHeight = 32.0f;
-		break;
+	case AppBarLayout::Large: _defaultHeight = 56.0f; break;
+	case AppBarLayout::Minified: _defaultHeight = 32.0f; break;
 	}
 
 	_minHeight = 0.0f;
 	_maxHeight = getRealHeight();
 }
 
-}
+} // namespace stappler::xenolith::material2d

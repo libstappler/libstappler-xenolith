@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,13 +56,15 @@ public:
 
 		const AttachmentData *shadowSdfAttachment = nullptr;
 		const AttachmentData *lightsAttachment = nullptr;
+		const AttachmentData *particleAttachment = nullptr;
 	};
 
 	static bool makeRenderQueue(Queue::Builder &, RenderQueueInfo &);
 
 	virtual ~ShadowPass() { }
 
-	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, const PassCreateInfo &info);
+	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder,
+			const PassCreateInfo &info);
 
 	const AttachmentData *getLightsData() const { return _lightsData; }
 	const AttachmentData *getSdf() const { return _sdf; }
@@ -75,9 +78,10 @@ protected:
 
 	Flags _flags = Flags::None;
 
-	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder, core::SubpassBuilder &subpassBuilder,
-			const core::PipelineLayoutData *layout2d, ResourceCache *cache,
-			const core::AttachmentPassData *colorAttachment, const core::AttachmentPassData *shadowAttachment,
+	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder,
+			core::SubpassBuilder &subpassBuilder, const core::PipelineLayoutData *layout2d,
+			ResourceCache *cache, const core::AttachmentPassData *colorAttachment,
+			const core::AttachmentPassData *shadowAttachment,
 			const core::AttachmentPassData *depth2dAttachment);
 
 	// shadows
@@ -95,13 +99,13 @@ public:
 
 protected:
 	virtual void prepareRenderPass(CommandBuffer &) override;
-	virtual void prepareMaterialCommands(core::MaterialSet * materials, CommandBuffer &buf) override;
+	virtual void prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &buf) override;
 
 	// shadows
 	const ShadowLightDataAttachmentHandle *_shadowData = nullptr;
 	const ImageAttachmentHandle *_sdfImage = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::basic2d::vk
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKSHADOWPASS_H_ */

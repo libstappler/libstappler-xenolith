@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,8 +42,8 @@ bool NavigationDrawer::init() {
 	}
 
 	_navigation = setNode(Rc<Menu>::create(), ZOrder(1));
-	_navigation->setAnchorPoint(Vec2(0, 0));
-	_navigation->setMenuButtonCallback([this] (MenuButton *b) {
+	_navigation->setAnchorPoint(Vec2::ZERO);
+	_navigation->setMenuButtonCallback([this](MenuButton *b) {
 		if (!b->getMenuSourceButton()->getNextMenu()) {
 			hide();
 		}
@@ -59,9 +60,7 @@ bool NavigationDrawer::init() {
 	_navigation->setEnabled(false);
 	_listener->setEnabled(false);
 
-	setNodeWidthCallback([] (const Size2 &size) {
-		return std::min(size.width - 56, 64.0f * 5.0f);
-	});
+	setNodeWidthCallback([](const Size2 &size) { return std::min(size.width - 56, 64.0f * 5.0f); });
 
 	return true;
 }
@@ -74,25 +73,17 @@ void NavigationDrawer::handleContentSizeDirty() {
 	}
 }
 
-Menu *NavigationDrawer::getNavigationMenu() const {
-	return _navigation;
-}
+Menu *NavigationDrawer::getNavigationMenu() const { return _navigation; }
 
-MenuSource *NavigationDrawer::getMenuSource() const {
-	return _navigation->getMenuSource();
-}
+MenuSource *NavigationDrawer::getMenuSource() const { return _navigation->getMenuSource(); }
 void NavigationDrawer::setMenuSource(MenuSource *source) {
 	_listener->setEnabled(source != nullptr);
 	_navigation->setMenuSource(source);
 }
 
-void NavigationDrawer::setStyle(const SurfaceStyle &style) {
-	_navigation->setStyle(style);
-}
+void NavigationDrawer::setStyle(const SurfaceStyle &style) { _navigation->setStyle(style); }
 
-void NavigationDrawer::setStatusBarColor(const Color &color) {
-	_statusBarLayer->setColor(color);
-}
+void NavigationDrawer::setStatusBarColor(const Color &color) { _statusBarLayer->setColor(color); }
 
 void NavigationDrawer::onNodeEnabled(bool value) {
 	Sidebar::onNodeEnabled(value);
@@ -105,4 +96,4 @@ void NavigationDrawer::onNodeVisible(bool value) {
 	onNavigation(this, value);
 }
 
-}
+} // namespace stappler::xenolith::material2d

@@ -1,24 +1,25 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLComponent.h"
@@ -32,21 +33,14 @@ uint64_t Component::GetNextComponentId() {
 	return s_value.fetch_add(1);
 }
 
-Component::Component()
-: _owner(nullptr), _enabled(true) { }
+Component::Component() : _owner(nullptr), _enabled(true) { }
 
 Component::~Component() { }
 
-bool Component::init() {
-	return true;
-}
+bool Component::init() { return true; }
 
-void Component::handleAdded(Node *owner) {
-	_owner = owner;
-}
-void Component::handleRemoved() {
-	_owner = nullptr;
-}
+void Component::handleAdded(Node *owner) { _owner = owner; }
+void Component::handleRemoved() { _owner = nullptr; }
 
 void Component::handleEnter(Scene *sc) {
 	_running = true;
@@ -79,25 +73,15 @@ void Component::handleContentSizeDirty() { }
 void Component::handleTransformDirty(const Mat4 &) { }
 void Component::handleReorderChildDirty() { }
 
-bool Component::isRunning() const {
-	return _running;
-}
+bool Component::isRunning() const { return _running; }
 
-bool Component::isEnabled() const {
-	return _enabled;
-}
+bool Component::isEnabled() const { return _enabled; }
 
-void Component::setEnabled(bool b) {
-	_enabled = b;
-}
+void Component::setEnabled(bool b) { _enabled = b; }
 
-void Component::setComponentFlags(ComponentFlags flags) {
-	_componentFlags = flags;
-}
+void Component::setComponentFlags(ComponentFlags flags) { _componentFlags = flags; }
 
-bool Component::isScheduled() const {
-	return _scheduled;
-}
+bool Component::isScheduled() const { return _scheduled; }
 
 void Component::scheduleUpdate() {
 	if (!_scheduled) {
@@ -117,13 +101,9 @@ void Component::unscheduleUpdate() {
 	}
 }
 
-void Component::setFrameTag(uint64_t tag) {
-	_frameTag = tag;
-}
+void Component::setFrameTag(uint64_t tag) { _frameTag = tag; }
 
-CallbackComponent::CallbackComponent() {
-	_componentFlags = ComponentFlags::None;
-}
+CallbackComponent::CallbackComponent() { _componentFlags = ComponentFlags::None; }
 
 void CallbackComponent::handleAdded(Node *owner) {
 	Component::handleAdded(owner);
@@ -134,11 +114,10 @@ void CallbackComponent::handleAdded(Node *owner) {
 }
 
 void CallbackComponent::handleRemoved() {
-	Component::handleRemoved();
-
 	if (_handleRemoved) {
-		_handleRemoved(this);
+		_handleRemoved(this, _owner);
 	}
+	Component::handleRemoved();
 }
 
 void CallbackComponent::handleEnter(Scene *scene) {
@@ -165,7 +144,8 @@ void CallbackComponent::handleVisitBegin(FrameInfo &info) {
 	}
 }
 
-void CallbackComponent::handleVisitNodesBelow(FrameInfo &info, SpanView<Rc<Node>> nodes, NodeFlags flags) {
+void CallbackComponent::handleVisitNodesBelow(FrameInfo &info, SpanView<Rc<Node>> nodes,
+		NodeFlags flags) {
 	Component::handleVisitNodesBelow(info, nodes, flags);
 
 	if (_handleVisitNodesBelow) {
@@ -181,7 +161,8 @@ void CallbackComponent::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags f
 	}
 }
 
-void CallbackComponent::handleVisitNodesAbove(FrameInfo &info, SpanView<Rc<Node>> nodes, NodeFlags flags) {
+void CallbackComponent::handleVisitNodesAbove(FrameInfo &info, SpanView<Rc<Node>> nodes,
+		NodeFlags flags) {
 	Component::handleVisitNodesAbove(info, nodes, flags);
 
 	if (_handleVisitNodesAbove) {
@@ -234,7 +215,7 @@ void CallbackComponent::setAddedCallback(Function<void(CallbackComponent *, Node
 	updateFlags();
 }
 
-void CallbackComponent::setRemovedCallback(Function<void(CallbackComponent *)> &&cb) {
+void CallbackComponent::setRemovedCallback(Function<void(CallbackComponent *, Node *)> &&cb) {
 	_handleRemoved = sp::move(cb);
 	updateFlags();
 }
@@ -249,22 +230,28 @@ void CallbackComponent::setExitCallback(Function<void(CallbackComponent *)> &&cb
 	updateFlags();
 }
 
-void CallbackComponent::setVisitBeginCallback(Function<void(CallbackComponent *, FrameInfo &)> &&cb) {
+void CallbackComponent::setVisitBeginCallback(
+		Function<void(CallbackComponent *, FrameInfo &)> &&cb) {
 	_handleVisitBegin = sp::move(cb);
 	updateFlags();
 }
 
-void CallbackComponent::setVisitNodesBelowCallback(Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> &&cb) {
+void CallbackComponent::setVisitNodesBelowCallback(
+		Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)>
+				&&cb) {
 	_handleVisitNodesBelow = sp::move(cb);
 	updateFlags();
 }
 
-void CallbackComponent::setVisitSelfCallback(Function<void(CallbackComponent *, FrameInfo &, Node *, NodeFlags flags)> &&cb) {
+void CallbackComponent::setVisitSelfCallback(
+		Function<void(CallbackComponent *, FrameInfo &, Node *, NodeFlags flags)> &&cb) {
 	_handleVisitSelf = sp::move(cb);
 	updateFlags();
 }
 
-void CallbackComponent::setVisitNodesAboveCallback(Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> &&cb) {
+void CallbackComponent::setVisitNodesAboveCallback(
+		Function<void(CallbackComponent *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)>
+				&&cb) {
 	_handleVisitNodesAbove = sp::move(cb);
 	updateFlags();
 }
@@ -274,7 +261,8 @@ void CallbackComponent::setVisitEndCallback(Function<void(CallbackComponent *, F
 	updateFlags();
 }
 
-void CallbackComponent::setUpdateCallback(Function<void(CallbackComponent *, const UpdateTime &)> &&cb) {
+void CallbackComponent::setUpdateCallback(
+		Function<void(CallbackComponent *, const UpdateTime &)> &&cb) {
 	_handleUpdate = sp::move(cb);
 	updateFlags();
 }
@@ -284,7 +272,8 @@ void CallbackComponent::setContentSizeDirtyCallback(Function<void(CallbackCompon
 	updateFlags();
 }
 
-void CallbackComponent::setTransformDirtyCallback(Function<void(CallbackComponent *, const Mat4 &)> &&cb) {
+void CallbackComponent::setTransformDirtyCallback(
+		Function<void(CallbackComponent *, const Mat4 &)> &&cb) {
 	_handleTransformDirty = sp::move(cb);
 	updateFlags();
 }
@@ -332,4 +321,4 @@ void CallbackComponent::updateFlags() {
 	}
 }
 
-}
+} // namespace stappler::xenolith

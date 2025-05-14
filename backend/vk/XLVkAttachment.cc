@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +29,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-BufferAttachmentHandle::~BufferAttachmentHandle() { }
-
-bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &info) {
+bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &,
+		DescriptorBufferInfo &info) {
 	if (info.index < _buffers.size()) {
 		auto &v = _buffers[info.index];
 		info.buffer = v.buffer;
@@ -41,24 +41,28 @@ bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &, Desc
 	return false;
 }
 
-bool BufferAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t idx, bool isExternal) const {
+bool BufferAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
+		uint32_t idx, const DescriptorData &data) const {
 	if (idx < _buffers.size()) {
-		return _buffers[idx].dirty;
+		return _buffers[idx].dirty || _buffers[idx].buffer != data.data
+				|| _buffers[idx].buffer->getObjectData().handle != data.object;
 	}
 	return false;
 }
 
-void BufferAttachmentHandle::clearBufferViews() {
-	_buffers.clear();
-}
-void BufferAttachmentHandle::addBufferView(Buffer *buffer, VkDeviceSize offset, VkDeviceSize size, bool dirty) {
+void BufferAttachmentHandle::clearBufferViews() { _buffers.clear(); }
+
+void BufferAttachmentHandle::addBufferView(Buffer *buffer, VkDeviceSize offset, VkDeviceSize size,
+		bool dirty) {
 	addBufferView(Rc<Buffer>(buffer), offset, size, dirty);
 }
-void BufferAttachmentHandle::addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset, VkDeviceSize size, bool dirty) {
-	auto s = buffer->getSize();
-	_buffers.emplace_back(BufferView{move(buffer), offset, min(VkDeviceSize(s - offset), size), dirty});
-}
 
+void BufferAttachmentHandle::addBufferView(Rc<Buffer> &&buffer, VkDeviceSize offset,
+		VkDeviceSize size, bool dirty) {
+	auto s = buffer->getSize();
+	_buffers.emplace_back(
+			BufferView{move(buffer), offset, min(VkDeviceSize(s - offset), size), dirty});
+}
 
 auto BufferAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentHandle> {
 	if (_frameHandleCallback) {
@@ -66,9 +70,7 @@ auto BufferAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<Attachment
 		if (isStatic()) {
 			if (auto b = dynamic_cast<BufferAttachmentHandle *>(ret.get())) {
 				auto statics = getStaticBuffers();
-				for (auto &it : statics) {
-					b->addBufferView(static_cast<Buffer *>(it));
-				}
+				for (auto &it : statics) { b->addBufferView(static_cast<Buffer *>(it)); }
 			}
 		}
 		return ret;
@@ -76,9 +78,7 @@ auto BufferAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<Attachment
 		auto ret = Rc<BufferAttachmentHandle>::create(this, queue);
 		if (isStatic()) {
 			auto statics = getStaticBuffers();
-			for (auto &it : statics) {
-				ret->addBufferView(static_cast<Buffer *>(it));
-			}
+			for (auto &it : statics) { ret->addBufferView(static_cast<Buffer *>(it)); }
 		}
 		return ret;
 	}
@@ -92,11 +92,10 @@ auto ImageAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentH
 	}
 }
 
-const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const {
-	return _queueData->image;
-}
+const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const { return _queueData->image; }
 
-bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue, DescriptorImageInfo &info) {
+bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
+		DescriptorImageInfo &info) {
 	auto image = _queueData->image;
 	if (!image) {
 		return false;
@@ -114,8 +113,9 @@ bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue, 
 	return false;
 }
 
-bool ImageAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d, uint32_t, bool isExternal) const {
+bool ImageAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d,
+		uint32_t, const DescriptorData &) const {
 	return getImage();
 }
 
-}
+} // namespace stappler::xenolith::vk

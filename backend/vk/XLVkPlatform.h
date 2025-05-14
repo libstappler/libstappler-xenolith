@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +41,8 @@ struct SP_PUBLIC VulkanInstanceData {
 	StringView applicationName;
 	Vector<const char *> layersToEnable;
 	Vector<const char *> extensionsToEnable;
-	Function<uint32_t(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx)> checkPresentationSupport;
+	Function<uint32_t(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx)>
+			checkPresentationSupport;
 	Rc<Ref> userdata;
 };
 
@@ -48,13 +50,14 @@ class SP_PUBLIC FunctionTable final : public vk::LoaderTable {
 public:
 	using LoaderTable::LoaderTable;
 
-	Rc<Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
+	Rc<Instance> createInstance(
+			const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &,
+			Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 
-	explicit operator bool () const {
-		return vkGetInstanceProcAddr != nullptr
-			&& vkCreateInstance != nullptr
-			&& vkEnumerateInstanceExtensionProperties != nullptr
-			&& vkEnumerateInstanceLayerProperties != nullptr;
+	explicit operator bool() const {
+		return vkGetInstanceProcAddr != nullptr && vkCreateInstance != nullptr
+				&& vkEnumerateInstanceExtensionProperties != nullptr
+				&& vkEnumerateInstanceLayerProperties != nullptr;
 	}
 
 private:
@@ -62,11 +65,13 @@ private:
 	bool prepareData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
 	bool validateData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
 
-	Rc<Instance> doCreateInstance(VulkanInstanceData &, Dso &&vulkanModule, Instance::TerminateCallback &&) const;
+	Rc<Instance> doCreateInstance(VulkanInstanceData &, const VulkanInstanceInfo &,
+			Dso &&vulkanModule, Instance::TerminateCallback &&) const;
 };
 
-SP_PUBLIC Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
+SP_PUBLIC Rc<core::Instance> createInstance(
+		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif /* XENOLITH_BACKEND_VK_XLVKPLATFORM_H_ */

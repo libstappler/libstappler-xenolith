@@ -89,9 +89,9 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 	return true;
 }
 
-void AppScene::onPresented(Director *dir) { Scene2d::onPresented(dir); }
+void AppScene::handlePresented(Director *dir) { Scene2d::handlePresented(dir); }
 
-void AppScene::onFinished(Director *dir) { Scene2d::onFinished(dir); }
+void AppScene::handleFinished(Director *dir) { Scene2d::handleFinished(dir); }
 
 void AppScene::update(const UpdateTime &time) { Scene2d::update(time); }
 

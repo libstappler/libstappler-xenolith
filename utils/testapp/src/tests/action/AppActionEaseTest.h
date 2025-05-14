@@ -27,14 +27,17 @@
 #include "AppSlider.h"
 #include "AppButton.h"
 #include "XLActionEase.h"
+#include "XLInterpolation.h"
+#include "XLCurveBuffer.h"
 
 namespace stappler::xenolith::app {
 
 class ActionEaseNode : public Node {
 public:
-	virtual ~ActionEaseNode() { }
+	virtual ~ActionEaseNode() = default;
 
-	bool init(StringView, Function<Rc<ActionInterval>(Rc<ActionInterval> &&)> &&);
+	bool init(StringView, Function<Rc<ActionInterval>(Rc<ActionInterval> &&)> &&,
+			Function<void()> &&onActivated = nullptr);
 
 	virtual void handleContentSizeDirty() override;
 
@@ -49,6 +52,7 @@ protected:
 	Layer *_layer = nullptr;
 	Label *_label = nullptr;
 	Function<Rc<ActionInterval>(Rc<ActionInterval> &&)> _callback;
+	Function<void()> _activated;
 };
 
 class ActionEaseTest : public LayoutTest {
@@ -59,7 +63,7 @@ public:
 		In,
 	};
 
-	virtual ~ActionEaseTest() { }
+	virtual ~ActionEaseTest() = default;
 
 	virtual bool init() override;
 
@@ -71,13 +75,21 @@ protected:
 	Rc<ActionInterval> makeAction(interpolation::Type, Rc<ActionInterval> &&) const;
 	interpolation::Type getSelectedType(interpolation::Type) const;
 
+	void setSelected(interpolation::Type);
+
 	Mode _mode = Mode::InOut;
+	interpolation::Type _selectedType = interpolation::Type::Linear;
+	interpolation::Type _selectedSubType = interpolation::Type::Linear;
 	SliderWithLabel *_slider = nullptr;
 	ButtonWithLabel *_button = nullptr;
 	ButtonWithLabel *_modeButton = nullptr;
+	Label *_selectedLabel = nullptr;
+	Sprite *_curveSprite = nullptr;
 	Vector<ActionEaseNode *> _nodes;
+
+	Rc<CurveBuffer> _curveBuffer;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_ACTION_APPACTIONEASETEST_H_ */

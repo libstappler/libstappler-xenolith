@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +28,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-FrameOutputBinding::FrameOutputBinding(const AttachmentData *a, CompleteCallback &&cb, Rc<Ref> &&ref)
+FrameOutputBinding::FrameOutputBinding(const AttachmentData *a, CompleteCallback &&cb,
+		Rc<Ref> &&ref)
 : attachment(a), callback(sp::move(cb)), handle(sp::move(ref)) { }
 
 FrameOutputBinding::~FrameOutputBinding() { }
@@ -47,7 +49,8 @@ FrameRequest::~FrameRequest() {
 	_pool = nullptr;
 }
 
-bool FrameRequest::init(const Rc<PresentationFrame> &pFrame, const Rc<Queue> &q, const FrameConstraints &constraints) {
+bool FrameRequest::init(const Rc<PresentationFrame> &pFrame, const Rc<Queue> &q,
+		const FrameConstraints &constraints) {
 	if (init(q)) {
 		_presentationFrame = pFrame;
 		_constraints = constraints;
@@ -87,9 +90,7 @@ void FrameRequest::addSignalDependencies(Vector<Rc<DependencyEvent>> &&deps) {
 	if (_signalDependencies.empty()) {
 		_signalDependencies = sp::move(deps);
 	} else {
-		for (auto &it : deps) {
-			_signalDependencies.emplace_back(sp::move(it));
-		}
+		for (auto &it : deps) { _signalDependencies.emplace_back(sp::move(it)); }
 	}
 }
 
@@ -118,7 +119,8 @@ bool FrameRequest::addInput(const AttachmentData *a, Rc<AttachmentInputData> &&d
 	if (a && a->attachment->validateInput(data)) {
 		auto wIt = _waitForInputs.find(a);
 		if (wIt != _waitForInputs.end()) {
-			wIt->second.handle->submitInput(*wIt->second.queue, sp::move(data), sp::move(wIt->second.callback));
+			wIt->second.handle->submitInput(*wIt->second.queue, sp::move(data),
+					sp::move(wIt->second.callback));
 		} else {
 			_input.emplace(a, sp::move(data));
 		}
@@ -197,7 +199,8 @@ void FrameRequest::onOutputInvalidated(Loop &loop, FrameAttachmentData &data) {
 	}
 }
 
-void FrameRequest::finalize(Loop &loop, HashMap<const AttachmentData *, FrameAttachmentData *> &attachments, bool success) {
+void FrameRequest::finalize(Loop &loop,
+		HashMap<const AttachmentData *, FrameAttachmentData *> &attachments, bool success) {
 	_waitForInputs.clear();
 
 	if (!success) {
@@ -240,17 +243,16 @@ Rc<ImageStorage> FrameRequest::getRenderTarget(const AttachmentData *a) {
 	return nullptr;
 }
 
-Set<Rc<Queue>> FrameRequest::getQueueList() const {
-	return Set<Rc<Queue>>{_queue};
-}
+Set<Rc<Queue>> FrameRequest::getQueueList() const { return Set<Rc<Queue>>{_queue}; }
 
-void FrameRequest::waitForInput(FrameQueue &queue, const Rc<AttachmentHandle> &a, Function<void(bool)> &&cb) {
-	auto it = _waitForInputs.find(a->getAttachment()->getData());
+void FrameRequest::waitForInput(FrameQueue &queue, AttachmentHandle &a, Function<void(bool)> &&cb) {
+	auto it = _waitForInputs.find(a.getAttachment()->getData());
 	if (it != _waitForInputs.end()) {
 		it->second.callback(false);
 		it->second.callback = sp::move(cb);
 	} else {
-		_waitForInputs.emplace(a->getAttachment()->getData(), WaitInputData{&queue, a, sp::move(cb)});
+		_waitForInputs.emplace(a.getAttachment()->getData(),
+				WaitInputData{&queue, &a, sp::move(cb)});
 	}
 }
 
@@ -262,4 +264,4 @@ const FrameOutputBinding *FrameRequest::getOutputBinding(const AttachmentData *a
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::core

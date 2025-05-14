@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +25,8 @@
 #define XENOLITH_RENDERER_BASIC2D_XL2DFRAMECONTEXT_H_
 
 #include "XLFrameContext.h"
+#include "XLLinearGradient.h"
 #include "XL2dCommandList.h"
-#include "XL2dLinearGradient.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -34,6 +35,8 @@ public:
 	static constexpr StringView MaterialAttachmentName = "MaterialInput2d";
 	static constexpr StringView VertexAttachmentName = "VertexInput2d";
 	static constexpr StringView LightDataAttachmentName = "ShadowLightDataAttachment";
+	static constexpr StringView ParticleEmittersAttachment = "ParticleEmitters";
+	static constexpr StringView ParticleVertexesAttachment = "ParticleVertexes";
 
 	virtual ~FrameContext2d() { }
 
@@ -49,6 +52,8 @@ protected:
 	const core::AttachmentData *_materialAttachmentData = nullptr;
 	const core::AttachmentData *_vertexAttachmentData = nullptr;
 	const core::AttachmentData *_lightAttachmentData = nullptr;
+	const core::AttachmentData *_particleEmitterAttachmentData = nullptr;
+	const core::AttachmentData *_particleVertexAttachmentData = nullptr;
 
 	bool _init = false;
 };
@@ -65,6 +70,6 @@ struct SP_PUBLIC StateData : public Ref {
 	Color4F outlineColor;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DFRAMECONTEXT_H_ */

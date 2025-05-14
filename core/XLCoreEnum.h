@@ -1,29 +1,31 @@
 /**
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #ifndef XENOLITH_CORE_XLCOREENUM_H_
 #define XENOLITH_CORE_XLCOREENUM_H_
 
 #include "SPCommon.h"
+#include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -60,32 +62,32 @@ enum class AttachmentType {
 // VkPipelineStageFlagBits
 enum class PipelineStage {
 	None,
-	TopOfPipe = 0x00000001,
-	DrawIndirect = 0x00000002,
-	VertexInput = 0x00000004,
-	VertexShader = 0x00000008,
-	TesselationControl = 0x00000010,
-	TesselationEvaluation = 0x00000020,
-	GeometryShader = 0x00000040,
-	FragmentShader = 0x00000080,
-	EarlyFragmentTest = 0x00000100,
-	LateFragmentTest = 0x00000200,
-	ColorAttachmentOutput = 0x00000400,
-	ComputeShader = 0x00000800,
-	Transfer = 0x00001000,
-	BottomOfPipe = 0x00002000,
-	Host = 0x00004000,
-	AllGraphics = 0x00008000,
-	AllCommands = 0x00010000,
-	TransformFeedback = 0x01000000,
-	ConditionalRendering = 0x00040000,
-	AccelerationStructureBuild = 0x02000000,
-	RayTracingShader = 0x00200000,
-	ShadingRateImage = 0x00400000,
-	TaskShader = 0x00080000,
-	MeshShader = 0x00100000,
-	FragmentDensityProcess = 0x00800000,
-	CommandPreprocess = 0x00020000,
+	TopOfPipe = 0x0000'0001,
+	DrawIndirect = 0x0000'0002,
+	VertexInput = 0x0000'0004,
+	VertexShader = 0x0000'0008,
+	TesselationControl = 0x0000'0010,
+	TesselationEvaluation = 0x0000'0020,
+	GeometryShader = 0x0000'0040,
+	FragmentShader = 0x0000'0080,
+	EarlyFragmentTest = 0x0000'0100,
+	LateFragmentTest = 0x0000'0200,
+	ColorAttachmentOutput = 0x0000'0400,
+	ComputeShader = 0x0000'0800,
+	Transfer = 0x0000'1000,
+	BottomOfPipe = 0x0000'2000,
+	Host = 0x0000'4000,
+	AllGraphics = 0x0000'8000,
+	AllCommands = 0x0001'0000,
+	TransformFeedback = 0x0100'0000,
+	ConditionalRendering = 0x0004'0000,
+	AccelerationStructureBuild = 0x0200'0000,
+	RayTracingShader = 0x0020'0000,
+	ShadingRateImage = 0x0040'0000,
+	TaskShader = 0x0008'0000,
+	MeshShader = 0x0010'0000,
+	FragmentDensityProcess = 0x0080'0000,
+	CommandPreprocess = 0x0002'0000,
 };
 
 SP_DEFINE_ENUM_AS_MASK(PipelineStage);
@@ -93,34 +95,34 @@ SP_DEFINE_ENUM_AS_MASK(PipelineStage);
 // VkAccessFlag
 enum class AccessType {
 	None,
-    IndirectCommandRead = 0x00000001,
-    IndexRead = 0x00000002,
-    VertexAttributeRead = 0x00000004,
-    UniformRead = 0x00000008,
-    InputAttachmantRead = 0x00000010,
-    ShaderRead = 0x00000020,
-	ShaderWrite = 0x00000040,
-    ColorAttachmentRead = 0x00000080,
-    ColorAttachmentWrite = 0x00000100,
-    DepthStencilAttachmentRead = 0x00000200,
-	DepthStencilAttachmentWrite = 0x00000400,
-    TransferRead = 0x00000800,
-    TransferWrite = 0x00001000,
-    HostRead = 0x00002000,
-    HostWrite = 0x00004000,
-    MemoryRead = 0x00008000,
-    MemoryWrite = 0x00010000,
-	TransformFeedbackWrite = 0x02000000,
-	TransformFeedbackCounterRead = 0x04000000,
-	TransformFeedbackCounterWrite = 0x08000000,
-	ConditionalRenderingRead = 0x00100000,
-	ColorAttachmentReadNonCoherent = 0x00080000,
-	AccelerationStructureRead = 0x00200000,
-	AccelerationStructureWrite = 0x00400000,
-	ShadingRateImageRead = 0x00800000,
-	FragmentDensityMapRead = 0x01000000,
-	CommandPreprocessRead = 0x00020000,
-	CommandPreprocessWrite = 0x00040000,
+	IndirectCommandRead = 0x0000'0001,
+	IndexRead = 0x0000'0002,
+	VertexAttributeRead = 0x0000'0004,
+	UniformRead = 0x0000'0008,
+	InputAttachmantRead = 0x0000'0010,
+	ShaderRead = 0x0000'0020,
+	ShaderWrite = 0x0000'0040,
+	ColorAttachmentRead = 0x0000'0080,
+	ColorAttachmentWrite = 0x0000'0100,
+	DepthStencilAttachmentRead = 0x0000'0200,
+	DepthStencilAttachmentWrite = 0x0000'0400,
+	TransferRead = 0x0000'0800,
+	TransferWrite = 0x0000'1000,
+	HostRead = 0x0000'2000,
+	HostWrite = 0x0000'4000,
+	MemoryRead = 0x0000'8000,
+	MemoryWrite = 0x0001'0000,
+	TransformFeedbackWrite = 0x0200'0000,
+	TransformFeedbackCounterRead = 0x0400'0000,
+	TransformFeedbackCounterWrite = 0x0800'0000,
+	ConditionalRenderingRead = 0x0010'0000,
+	ColorAttachmentReadNonCoherent = 0x0008'0000,
+	AccelerationStructureRead = 0x0020'0000,
+	AccelerationStructureWrite = 0x0040'0000,
+	ShadingRateImageRead = 0x0080'0000,
+	FragmentDensityMapRead = 0x0100'0000,
+	CommandPreprocessRead = 0x0002'0000,
+	CommandPreprocessWrite = 0x0004'0000,
 };
 
 SP_DEFINE_ENUM_AS_MASK(AccessType);
@@ -182,20 +184,20 @@ enum class DescriptorType : uint32_t {
 // mapping to VkShaderStageFlagBits
 enum class ProgramStage {
 	None,
-	Vertex = 0x00000001,
-	TesselationControl = 0x00000002,
-	TesselationEvaluation = 0x00000004,
-	Geometry = 0x00000008,
-	Fragment = 0x00000010,
-	Compute = 0x00000020,
-	RayGen = 0x00000100,
-	AnyHit = 0x00000200,
-	ClosestHit = 0x00000400,
-	MissHit = 0x00000800,
-	Intersection = 0x00001000,
-	Callable = 0x00002000,
-	Task = 0x00000040,
-	Mesh = 0x00000080,
+	Vertex = 0x0000'0001,
+	TesselationControl = 0x0000'0002,
+	TesselationEvaluation = 0x0000'0004,
+	Geometry = 0x0000'0008,
+	Fragment = 0x0000'0010,
+	Compute = 0x0000'0020,
+	RayGen = 0x0000'0100,
+	AnyHit = 0x0000'0200,
+	ClosestHit = 0x0000'0400,
+	MissHit = 0x0000'0800,
+	Intersection = 0x0000'1000,
+	Callable = 0x0000'2000,
+	Task = 0x0000'0040,
+	Mesh = 0x0000'0080,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ProgramStage);
@@ -211,13 +213,13 @@ enum class AttachmentLayout : uint32_t {
 	TransferSrcOptimal = 6,
 	TransferDstOptimal = 7,
 	Preinitialized = 8,
-	DepthReadOnlyStencilAttachmentOptimal = 1000117000,
-	DepthAttachmentStencilReadOnlyOptimal = 1000117001,
-	DepthAttachmentOptimal = 1000241000,
-	DepthReadOnlyOptimal = 1000241001,
-	StencilAttachmentOptimal = 1000241002,
-	StencilReadOnlyOptimal = 1000241003,
-	PresentSrc = 1000001002,
+	DepthReadOnlyStencilAttachmentOptimal = 1'000'117'000,
+	DepthAttachmentStencilReadOnlyOptimal = 1'000'117'001,
+	DepthAttachmentOptimal = 1'000'241'000,
+	DepthReadOnlyOptimal = 1'000'241'001,
+	StencilAttachmentOptimal = 1'000'241'002,
+	StencilReadOnlyOptimal = 1'000'241'003,
+	PresentSrc = 1'000'001'002,
 	Ignored = maxOf<uint32_t>()
 };
 
@@ -226,37 +228,6 @@ enum class PassType {
 	Compute,
 	Transfer,
 	Generic
-};
-
-// engine-defined specialization constants for shaders
-enum class PredefinedConstant {
-	SamplersArraySize,
-	SamplersDescriptorIdx,
-	TexturesArraySize,
-	TexturesDescriptorIdx,
-	BuffersArraySize,
-	BuffersDescriptorIdx,
-	CurrentSamplerIdx,
-};
-
-struct SpecializationConstant {
-	enum Type {
-		Int,
-		Float,
-		Predefined
-	};
-
-	Type type = Int;
-	union {
-		int intValue;
-		float floatValue;
-		PredefinedConstant predefinedValue;
-	};
-
-	SpecializationConstant(int val) : type(Int), intValue(val) { }
-	SpecializationConstant(uint32_t val) : type(Int), intValue(val) { }
-	SpecializationConstant(float val) : type(Float), floatValue(val) { }
-	SpecializationConstant(PredefinedConstant val) : type(Predefined), predefinedValue(val) { }
 };
 
 enum class DynamicState {
@@ -272,10 +243,10 @@ SP_DEFINE_ENUM_AS_MASK(DynamicState)
 // Mapping to VkBufferCreateFlagBits
 enum class BufferFlags {
 	None,
-	SparceBinding = 0x00000001,
-	SparceResidency = 0x00000002,
-	SparceAliased = 0x00000004,
-	Protected = 0x00000008,
+	SparceBinding = 0x0000'0001,
+	SparceResidency = 0x0000'0002,
+	SparceAliased = 0x0000'0004,
+	Protected = 0x0000'0008,
 };
 
 SP_DEFINE_ENUM_AS_MASK(BufferFlags)
@@ -284,23 +255,23 @@ SP_DEFINE_ENUM_AS_MASK(BufferFlags)
 // Mapping to VkBufferUsageFlagBits
 enum class BufferUsage {
 	None,
-	TransferSrc = 0x00000001,
-	TransferDst = 0x00000002,
-	UniformTexelBuffer = 0x00000004,
-	StorageTexelBuffer = 0x00000008,
-	UniformBuffer = 0x00000010,
-	StorageBuffer = 0x00000020,
-	IndexBuffer = 0x00000040,
-	VertexBuffer = 0x00000080,
-	IndirectBuffer = 0x00000100,
-	ShaderDeviceAddress = 0x00020000,
+	TransferSrc = 0x0000'0001,
+	TransferDst = 0x0000'0002,
+	UniformTexelBuffer = 0x0000'0004,
+	StorageTexelBuffer = 0x0000'0008,
+	UniformBuffer = 0x0000'0010,
+	StorageBuffer = 0x0000'0020,
+	IndexBuffer = 0x0000'0040,
+	VertexBuffer = 0x0000'0080,
+	IndirectBuffer = 0x0000'0100,
+	ShaderDeviceAddress = 0x0002'0000,
 
-	TransformFeedback = 0x00000800,
-	TransformFeedbackCounter = 0x00001000,
-	ConditionalRendering = 0x00000200,
-	AccelerationStructureBuildInputReadOnly = 0x00080000,
-	AccelerationStructureStorage = 0x00100000,
-	ShaderBindingTable = 0x00000400,
+	TransformFeedback = 0x0000'0800,
+	TransformFeedbackCounter = 0x0000'1000,
+	ConditionalRendering = 0x0000'0200,
+	AccelerationStructureBuildInputReadOnly = 0x0008'0000,
+	AccelerationStructureStorage = 0x0010'0000,
+	ShaderBindingTable = 0x0000'0400,
 };
 
 SP_DEFINE_ENUM_AS_MASK(BufferUsage)
@@ -309,18 +280,18 @@ SP_DEFINE_ENUM_AS_MASK(BufferUsage)
 // Mapping to VkImageCreateFlagBits
 enum ImageFlags {
 	None,
-	SparceBinding = 0x00000001,
-	SparceResidency = 0x00000002,
-	SparceAliased = 0x00000004,
-	MutableFormat = 0x00000008,
-	CubeCompatible = 0x00000010,
-	Alias = 0x00000400,
-	SplitInstanceBindRegions = 0x00000040,
-	Array2dCompatible = 0x00000020,
-	BlockTexelViewCompatible = 0x00000080,
-	ExtendedUsage = 0x00000100,
-	Protected = 0x00000800,
-	Disjoint = 0x00000200,
+	SparceBinding = 0x0000'0001,
+	SparceResidency = 0x0000'0002,
+	SparceAliased = 0x0000'0004,
+	MutableFormat = 0x0000'0008,
+	CubeCompatible = 0x0000'0010,
+	Alias = 0x0000'0400,
+	SplitInstanceBindRegions = 0x0000'0040,
+	Array2dCompatible = 0x0000'0020,
+	BlockTexelViewCompatible = 0x0000'0080,
+	ExtendedUsage = 0x0000'0100,
+	Protected = 0x0000'0800,
+	Disjoint = 0x0000'0200,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ImageFlags)
@@ -329,13 +300,13 @@ SP_DEFINE_ENUM_AS_MASK(ImageFlags)
 // Mapping to VkSampleCountFlagBits
 enum class SampleCount {
 	None,
-	X1 = 0x00000001,
-	X2 = 0x00000002,
-	X4 = 0x00000004,
-	X8 = 0x00000008,
-	X16 = 0x00000010,
-	X32 = 0x00000020,
-	X64 = 0x00000040,
+	X1 = 0x0000'0001,
+	X2 = 0x0000'0002,
+	X4 = 0x0000'0004,
+	X8 = 0x0000'0008,
+	X16 = 0x0000'0010,
+	X32 = 0x0000'0020,
+	X64 = 0x0000'0040,
 };
 
 SP_DEFINE_ENUM_AS_MASK(SampleCount)
@@ -350,8 +321,8 @@ enum class ImageType {
 
 // Mapping to VkImageViewType
 enum class ImageViewType {
-    ImageView1D = 0,
-    ImageView2D = 1,
+	ImageView1D = 0,
+	ImageView2D = 1,
 	ImageView3D = 2,
 	ImageViewCube = 3,
 	ImageView1DArray = 4,
@@ -546,97 +517,97 @@ enum class ImageFormat {
 	ASTC_12x10_SRGB_BLOCK = 182,
 	ASTC_12x12_UNORM_BLOCK = 183,
 	ASTC_12x12_SRGB_BLOCK = 184,
-	G8B8G8R8_422_UNORM = 1000156000,
-	B8G8R8G8_422_UNORM = 1000156001,
-	G8_B8_R8_3PLANE_420_UNORM = 1000156002,
-	G8_B8R8_2PLANE_420_UNORM = 1000156003,
-	G8_B8_R8_3PLANE_422_UNORM = 1000156004,
-	G8_B8R8_2PLANE_422_UNORM = 1000156005,
-	G8_B8_R8_3PLANE_444_UNORM = 1000156006,
-	R10X6_UNORM_PACK16 = 1000156007,
-	R10X6G10X6_UNORM_2PACK16 = 1000156008,
-	R10X6G10X6B10X6A10X6_UNORM_4PACK16 = 1000156009,
-	G10X6B10X6G10X6R10X6_422_UNORM_4PACK16 = 1000156010,
-	B10X6G10X6R10X6G10X6_422_UNORM_4PACK16 = 1000156011,
-	G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16 = 1000156012,
-	G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16 = 1000156013,
-	G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16 = 1000156014,
-	G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16 = 1000156015,
-	G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16 = 1000156016,
-	R12X4_UNORM_PACK16 = 1000156017,
-	R12X4G12X4_UNORM_2PACK16 = 1000156018,
-	R12X4G12X4B12X4A12X4_UNORM_4PACK16 = 1000156019,
-	G12X4B12X4G12X4R12X4_422_UNORM_4PACK16 = 1000156020,
-	B12X4G12X4R12X4G12X4_422_UNORM_4PACK16 = 1000156021,
-	G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16 = 1000156022,
-	G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16 = 1000156023,
-	G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16 = 1000156024,
-	G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16 = 1000156025,
-	G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16 = 1000156026,
-	G16B16G16R16_422_UNORM = 1000156027,
-	B16G16R16G16_422_UNORM = 1000156028,
-	G16_B16_R16_3PLANE_420_UNORM = 1000156029,
-	G16_B16R16_2PLANE_420_UNORM = 1000156030,
-	G16_B16_R16_3PLANE_422_UNORM = 1000156031,
-	G16_B16R16_2PLANE_422_UNORM = 1000156032,
-	G16_B16_R16_3PLANE_444_UNORM = 1000156033,
-	PVRTC1_2BPP_UNORM_BLOCK_IMG = 1000054000,
-	PVRTC1_4BPP_UNORM_BLOCK_IMG = 1000054001,
-	PVRTC2_2BPP_UNORM_BLOCK_IMG = 1000054002,
-	PVRTC2_4BPP_UNORM_BLOCK_IMG = 1000054003,
-	PVRTC1_2BPP_SRGB_BLOCK_IMG = 1000054004,
-	PVRTC1_4BPP_SRGB_BLOCK_IMG = 1000054005,
-	PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
-	PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
-	ASTC_4x4_SFLOAT_BLOCK_EXT = 1000066000,
-	ASTC_5x4_SFLOAT_BLOCK_EXT = 1000066001,
-	ASTC_5x5_SFLOAT_BLOCK_EXT = 1000066002,
-	ASTC_6x5_SFLOAT_BLOCK_EXT = 1000066003,
-	ASTC_6x6_SFLOAT_BLOCK_EXT = 1000066004,
-	ASTC_8x5_SFLOAT_BLOCK_EXT = 1000066005,
-	ASTC_8x6_SFLOAT_BLOCK_EXT = 1000066006,
-	ASTC_8x8_SFLOAT_BLOCK_EXT = 1000066007,
-	ASTC_10x5_SFLOAT_BLOCK_EXT = 1000066008,
-	ASTC_10x6_SFLOAT_BLOCK_EXT = 1000066009,
-	ASTC_10x8_SFLOAT_BLOCK_EXT = 1000066010,
-	ASTC_10x10_SFLOAT_BLOCK_EXT = 1000066011,
-	ASTC_12x10_SFLOAT_BLOCK_EXT = 1000066012,
-	ASTC_12x12_SFLOAT_BLOCK_EXT = 1000066013,
-	G8_B8R8_2PLANE_444_UNORM_EXT = 1000330000,
-	G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT = 1000330001,
-	G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT = 1000330002,
-	G16_B16R16_2PLANE_444_UNORM_EXT = 1000330003,
-	A4R4G4B4_UNORM_PACK16_EXT = 1000340000,
-	A4B4G4R4_UNORM_PACK16_EXT = 1000340001,
+	G8B8G8R8_422_UNORM = 1'000'156'000,
+	B8G8R8G8_422_UNORM = 1'000'156'001,
+	G8_B8_R8_3PLANE_420_UNORM = 1'000'156'002,
+	G8_B8R8_2PLANE_420_UNORM = 1'000'156'003,
+	G8_B8_R8_3PLANE_422_UNORM = 1'000'156'004,
+	G8_B8R8_2PLANE_422_UNORM = 1'000'156'005,
+	G8_B8_R8_3PLANE_444_UNORM = 1'000'156'006,
+	R10X6_UNORM_PACK16 = 1'000'156'007,
+	R10X6G10X6_UNORM_2PACK16 = 1'000'156'008,
+	R10X6G10X6B10X6A10X6_UNORM_4PACK16 = 1'000'156'009,
+	G10X6B10X6G10X6R10X6_422_UNORM_4PACK16 = 1'000'156'010,
+	B10X6G10X6R10X6G10X6_422_UNORM_4PACK16 = 1'000'156'011,
+	G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16 = 1'000'156'012,
+	G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16 = 1'000'156'013,
+	G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16 = 1'000'156'014,
+	G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16 = 1'000'156'015,
+	G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16 = 1'000'156'016,
+	R12X4_UNORM_PACK16 = 1'000'156'017,
+	R12X4G12X4_UNORM_2PACK16 = 1'000'156'018,
+	R12X4G12X4B12X4A12X4_UNORM_4PACK16 = 1'000'156'019,
+	G12X4B12X4G12X4R12X4_422_UNORM_4PACK16 = 1'000'156'020,
+	B12X4G12X4R12X4G12X4_422_UNORM_4PACK16 = 1'000'156'021,
+	G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16 = 1'000'156'022,
+	G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16 = 1'000'156'023,
+	G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16 = 1'000'156'024,
+	G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16 = 1'000'156'025,
+	G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16 = 1'000'156'026,
+	G16B16G16R16_422_UNORM = 1'000'156'027,
+	B16G16R16G16_422_UNORM = 1'000'156'028,
+	G16_B16_R16_3PLANE_420_UNORM = 1'000'156'029,
+	G16_B16R16_2PLANE_420_UNORM = 1'000'156'030,
+	G16_B16_R16_3PLANE_422_UNORM = 1'000'156'031,
+	G16_B16R16_2PLANE_422_UNORM = 1'000'156'032,
+	G16_B16_R16_3PLANE_444_UNORM = 1'000'156'033,
+	PVRTC1_2BPP_UNORM_BLOCK_IMG = 1'000'054'000,
+	PVRTC1_4BPP_UNORM_BLOCK_IMG = 1'000'054'001,
+	PVRTC2_2BPP_UNORM_BLOCK_IMG = 1'000'054'002,
+	PVRTC2_4BPP_UNORM_BLOCK_IMG = 1'000'054'003,
+	PVRTC1_2BPP_SRGB_BLOCK_IMG = 1'000'054'004,
+	PVRTC1_4BPP_SRGB_BLOCK_IMG = 1'000'054'005,
+	PVRTC2_2BPP_SRGB_BLOCK_IMG = 1'000'054'006,
+	PVRTC2_4BPP_SRGB_BLOCK_IMG = 1'000'054'007,
+	ASTC_4x4_SFLOAT_BLOCK_EXT = 1'000'066'000,
+	ASTC_5x4_SFLOAT_BLOCK_EXT = 1'000'066'001,
+	ASTC_5x5_SFLOAT_BLOCK_EXT = 1'000'066'002,
+	ASTC_6x5_SFLOAT_BLOCK_EXT = 1'000'066'003,
+	ASTC_6x6_SFLOAT_BLOCK_EXT = 1'000'066'004,
+	ASTC_8x5_SFLOAT_BLOCK_EXT = 1'000'066'005,
+	ASTC_8x6_SFLOAT_BLOCK_EXT = 1'000'066'006,
+	ASTC_8x8_SFLOAT_BLOCK_EXT = 1'000'066'007,
+	ASTC_10x5_SFLOAT_BLOCK_EXT = 1'000'066'008,
+	ASTC_10x6_SFLOAT_BLOCK_EXT = 1'000'066'009,
+	ASTC_10x8_SFLOAT_BLOCK_EXT = 1'000'066'010,
+	ASTC_10x10_SFLOAT_BLOCK_EXT = 1'000'066'011,
+	ASTC_12x10_SFLOAT_BLOCK_EXT = 1'000'066'012,
+	ASTC_12x12_SFLOAT_BLOCK_EXT = 1'000'066'013,
+	G8_B8R8_2PLANE_444_UNORM_EXT = 1'000'330'000,
+	G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT = 1'000'330'001,
+	G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT = 1'000'330'002,
+	G16_B16R16_2PLANE_444_UNORM_EXT = 1'000'330'003,
+	A4R4G4B4_UNORM_PACK16_EXT = 1'000'340'000,
+	A4B4G4R4_UNORM_PACK16_EXT = 1'000'340'001,
 };
 
 // VkColorSpaceKHR
 enum class ColorSpace {
 	SRGB_NONLINEAR_KHR = 0,
-	DISPLAY_P3_NONLINEAR_EXT = 1000104001,
-	EXTENDED_SRGB_LINEAR_EXT = 1000104002,
-	DISPLAY_P3_LINEAR_EXT = 1000104003,
-	DCI_P3_NONLINEAR_EXT = 1000104004,
-	BT709_LINEAR_EXT = 1000104005,
-	BT709_NONLINEAR_EXT = 1000104006,
-	BT2020_LINEAR_EXT = 1000104007,
-	HDR10_ST2084_EXT = 1000104008,
-	DOLBYVISION_EXT = 1000104009,
-	HDR10_HLG_EXT = 1000104010,
-	ADOBERGB_LINEAR_EXT = 1000104011,
-	ADOBERGB_NONLINEAR_EXT = 1000104012,
-	PASS_THROUGH_EXT = 1000104013,
-	EXTENDED_SRGB_NONLINEAR_EXT = 1000104014,
-	DISPLAY_NATIVE_AMD = 1000213000,
+	DISPLAY_P3_NONLINEAR_EXT = 1'000'104'001,
+	EXTENDED_SRGB_LINEAR_EXT = 1'000'104'002,
+	DISPLAY_P3_LINEAR_EXT = 1'000'104'003,
+	DCI_P3_NONLINEAR_EXT = 1'000'104'004,
+	BT709_LINEAR_EXT = 1'000'104'005,
+	BT709_NONLINEAR_EXT = 1'000'104'006,
+	BT2020_LINEAR_EXT = 1'000'104'007,
+	HDR10_ST2084_EXT = 1'000'104'008,
+	DOLBYVISION_EXT = 1'000'104'009,
+	HDR10_HLG_EXT = 1'000'104'010,
+	ADOBERGB_LINEAR_EXT = 1'000'104'011,
+	ADOBERGB_NONLINEAR_EXT = 1'000'104'012,
+	PASS_THROUGH_EXT = 1'000'104'013,
+	EXTENDED_SRGB_NONLINEAR_EXT = 1'000'104'014,
+	DISPLAY_NATIVE_AMD = 1'000'213'000,
 };
 
 // VkCompositeAlphaFlagBitsKHR
 enum class CompositeAlphaFlags {
 	None = 0,
-	Opaque = 0x00000001,
-	Premultiplied = 0x00000002,
-	Postmultiplied = 0x00000004,
-	Inherit = 0x00000008,
+	Opaque = 0x0000'0001,
+	Premultiplied = 0x0000'0002,
+	Postmultiplied = 0x0000'0004,
+	Inherit = 0x0000'0008,
 };
 
 SP_DEFINE_ENUM_AS_MASK(CompositeAlphaFlags)
@@ -650,14 +621,14 @@ enum class ImageTiling {
 // mapping to VkImageUsageFlagBits
 enum class ImageUsage {
 	None,
-	TransferSrc = 0x00000001,
-	TransferDst = 0x00000002,
-    Sampled = 0x00000004,
-    Storage = 0x00000008,
-    ColorAttachment = 0x00000010,
-    DepthStencilAttachment = 0x00000020,
-    TransientAttachment = 0x00000040,
-    InputAttachment = 0x00000080,
+	TransferSrc = 0x0000'0001,
+	TransferDst = 0x0000'0002,
+	Sampled = 0x0000'0004,
+	Storage = 0x0000'0008,
+	ColorAttachment = 0x0000'0010,
+	DepthStencilAttachment = 0x0000'0020,
+	TransientAttachment = 0x0000'0040,
+	InputAttachment = 0x0000'0080,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ImageUsage);
@@ -710,7 +681,7 @@ enum class ComponentMapping : uint32_t {
 enum class Filter {
 	Nearest = 0,
 	Linear = 1,
-	Cubic = 1000015000
+	Cubic = 1'000'015'000
 };
 
 // VkSamplerMipmapMode
@@ -761,11 +732,11 @@ enum class BlendOp : uint8_t {
 };
 
 enum class ColorComponentFlags {
-	R = 0x00000001,
-	G = 0x00000002,
-	B = 0x00000004,
-	A = 0x00000008,
-	All = 0x0000000F
+	R = 0x0000'0001,
+	G = 0x0000'0002,
+	B = 0x0000'0004,
+	A = 0x0000'0008,
+	All = 0x0000'000F
 };
 
 enum class StencilOp : uint8_t {
@@ -783,17 +754,17 @@ SP_DEFINE_ENUM_AS_MASK(ColorComponentFlags)
 
 enum class SurfaceTransformFlags {
 	None,
-	Identity = 0x00000001,
-	Rotate90 = 0x00000002,
-	Rotate180 = 0x00000004,
-	Rotate270 = 0x00000008,
-	Mirror = 0x00000010,
-	MirrorRotate90 = 0x00000020,
-	MirrorRotate180 = 0x00000040,
-	MirrorRotate270 = 0x00000080,
-	Inherit = 0x00000100,
-	PreRotated = 0x01000000,
-	TransformMask = 0x000001FF,
+	Identity = 0x0000'0001,
+	Rotate90 = 0x0000'0002,
+	Rotate180 = 0x0000'0004,
+	Rotate270 = 0x0000'0008,
+	Mirror = 0x0000'0010,
+	MirrorRotate90 = 0x0000'0020,
+	MirrorRotate180 = 0x0000'0040,
+	MirrorRotate270 = 0x0000'0080,
+	Inherit = 0x0000'0100,
+	PreRotated = 0x0100'0000,
+	TransformMask = 0x0000'01FF,
 };
 
 SP_DEFINE_ENUM_AS_MASK(SurfaceTransformFlags)
@@ -880,6 +851,19 @@ enum class SemaphoreType {
 	Timeline,
 };
 
+SP_PUBLIC StringView getDescriptorTypeName(DescriptorType);
+SP_PUBLIC void getProgramStageDescription(const CallbackStream &, ProgramStage fmt);
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, DescriptorType t) {
+	stream << xenolith::core::getDescriptorTypeName(t);
+	return stream;
 }
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, ProgramStage t) {
+	getProgramStageDescription(stream, t);
+	return stream;
+}
+
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREENUM_H_ */

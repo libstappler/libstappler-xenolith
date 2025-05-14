@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCROLLCONTROLLER_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLCONTROLLER_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLCONTROLLER_H_
+#define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLCONTROLLER_H_
 
 #include "XLComponent.h"
 #include "XL2d.h"
@@ -85,9 +86,12 @@ public:
 	virtual bool rebuildObjects();
 
 	virtual size_t size() const;
-	virtual size_t addItem(NodeFunction &&, Size2 size, Vec2 pos, ZOrder zIndex = ZOrder(0), StringView tag = StringView());
-	virtual size_t addItem(NodeFunction &&, float size, float pos, ZOrder zIndex = ZOrder(0), StringView tag = StringView());
-	virtual size_t addItem(NodeFunction &&, float size = 0.0f, ZOrder zIndex = ZOrder(0), StringView tag = StringView());
+	virtual size_t addItem(NodeFunction &&, Size2 size, Vec2 pos, ZOrder zIndex = ZOrder(0),
+			StringView tag = StringView());
+	virtual size_t addItem(NodeFunction &&, float size, float pos, ZOrder zIndex = ZOrder(0),
+			StringView tag = StringView());
+	virtual size_t addItem(NodeFunction &&, float size = 0.0f, ZOrder zIndex = ZOrder(0),
+			StringView tag = StringView());
 
 	virtual size_t addPlaceholder(Size2 size, Vec2 pos);
 	virtual size_t addPlaceholder(float size, float pos);
@@ -104,9 +108,9 @@ public:
 
 	virtual void setScrollRelativeValue(float value);
 
-	Node * getNodeByName(StringView) const;
-	Node * getFrontNode() const;
-	Node * getBackNode() const;
+	Node *getNodeByName(StringView) const;
+	Node *getFrontNode() const;
+	Node *getBackNode() const;
 	Vector<Rc<Node>> getNodes() const;
 
 	float getNextItemPosition() const;
@@ -124,7 +128,8 @@ public:
 	const RebuildCallback &getRebuildCallback() const;
 
 protected:
-	virtual void onNextObject(Item &, float pos, float size); /// insert new object at specified position
+	virtual void onNextObject(Item &, float pos,
+			float size); /// insert new object at specified position
 
 	virtual void addScrollNode(Item &);
 	virtual void updateScrollNode(Item &);
@@ -156,6 +161,6 @@ protected:
 	RebuildCallback _callback;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCROLLCONTROLLER_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLCONTROLLER_H_ */

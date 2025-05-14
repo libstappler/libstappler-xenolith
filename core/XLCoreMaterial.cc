@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +30,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-MaterialSet::~MaterialSet() {
-	clear();
-}
+MaterialSet::~MaterialSet() { clear(); }
 
-bool MaterialSet::init(const BufferInfo &info, const EncodeCallback &callback,
-		uint32_t objectSize, uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment *owner) {
+bool MaterialSet::init(const BufferInfo &info, const EncodeCallback &callback, uint32_t objectSize,
+		uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment *owner) {
 	_info = info;
 	_encodeCallback = callback;
 	_objectSize = objectSize;
@@ -57,9 +56,7 @@ bool MaterialSet::init(const Rc<MaterialSet> &other) {
 	_owner = other->_owner;
 	_buffer = other->_buffer;
 
-	for (auto &it : _layouts) {
-		it.set = nullptr;
-	}
+	for (auto &it : _layouts) { it.set = nullptr; }
 
 	return true;
 }
@@ -75,13 +72,17 @@ void MaterialSet::clear() { }
 
 Vector<Rc<Material>> MaterialSet::updateMaterials(const Rc<MaterialInputData> &data,
 		const Callback<Rc<ImageView>(const MaterialImage &)> &cb) {
-	return updateMaterials(data->materialsToAddOrUpdate, data->dynamicMaterialsToUpdate, data->materialsToRemove, cb);
+	return updateMaterials(data->materialsToAddOrUpdate, data->dynamicMaterialsToUpdate,
+			data->materialsToRemove, cb);
 }
 
-Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &materials, SpanView<MaterialId> dynamicMaterials,
-		SpanView<MaterialId> materialsToRemove, const Callback<Rc<ImageView>(const MaterialImage &)> &cb) {
-	Vector<MaterialId> updatedIds; updatedIds.reserve(materials.size() + dynamicMaterials.size());
-	Vector<Rc<Material>> ret; ret.reserve(materials.size());
+Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &materials,
+		SpanView<MaterialId> dynamicMaterials, SpanView<MaterialId> materialsToRemove,
+		const Callback<Rc<ImageView>(const MaterialImage &)> &cb) {
+	Vector<MaterialId> updatedIds;
+	updatedIds.reserve(materials.size() + dynamicMaterials.size());
+	Vector<Rc<Material>> ret;
+	ret.reserve(materials.size());
 
 	for (auto &it : materialsToRemove) {
 		auto mIt = _materials.find(it);
@@ -101,7 +102,8 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 		bool isImagesValid = true;
 
 		if (!materialsToRemove.empty()) {
-			auto it = std::find(materialsToRemove.begin(), materialsToRemove.end(), material->getId());
+			auto it = std::find(materialsToRemove.begin(), materialsToRemove.end(),
+					material->getId());
 			if (it != materialsToRemove.end()) {
 				continue;
 			}
@@ -189,7 +191,7 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 						it.image = &v->data;
 					}
 					it.view = nullptr;
-					++ i;
+					++i;
 				}
 
 				auto mat = Rc<Material>::create(material, sp::move(images));
@@ -220,7 +222,8 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 	return ret;
 }
 
-void MaterialSet::setBuffer(Rc<BufferObject> &&buffer, std::unordered_map<MaterialId, uint32_t> &&ordering) {
+void MaterialSet::setBuffer(Rc<BufferObject> &&buffer,
+		std::unordered_map<MaterialId, uint32_t> &&ordering) {
 	_buffer = sp::move(buffer);
 	_ordering = sp::move(ordering);
 }
@@ -232,7 +235,7 @@ const MaterialLayout *MaterialSet::getLayout(uint32_t idx) const {
 	return nullptr;
 }
 
-const Material * MaterialSet::getMaterialById(MaterialId idx) const {
+const Material *MaterialSet::getMaterialById(MaterialId idx) const {
 	auto it = _materials.find(idx);
 	if (it != _materials.end()) {
 		return it->second.get();
@@ -255,7 +258,7 @@ const TextureSetLayoutData *MaterialSet::getTargetLayout() const {
 void MaterialSet::removeMaterial(Material *oldMaterial) {
 	auto &oldSet = _layouts[oldMaterial->getLayoutIndex()];
 	for (auto &oIt : oldMaterial->_images) {
-		-- oldSet.imageSlots[oIt.descriptor].refCount;
+		--oldSet.imageSlots[oIt.descriptor].refCount;
 		if (oldSet.imageSlots[oIt.descriptor].refCount == 0) {
 			oldSet.imageSlots[oIt.descriptor].image = nullptr;
 		}
@@ -285,7 +288,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				}
 			}
 			if (!hasAlias) {
-				-- oldSet.imageSlots[oIt.descriptor].refCount;
+				--oldSet.imageSlots[oIt.descriptor].refCount;
 				if (oldSet.imageSlots[oIt.descriptor].refCount == 0) {
 					oldSet.imageSlots[oIt.descriptor].image = nullptr;
 				}
@@ -296,7 +299,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				if (atlasBuffer && atlasBuffer->getDeviceAddress() == 0) {
 					auto descIdx = atlasBuffer->getDescriptor();
 					if (descIdx < oldSet.bufferSlots.size()) {
-						-- oldSet.bufferSlots[descIdx].refCount;
+						--oldSet.bufferSlots[descIdx].refCount;
 						if (oldSet.bufferSlots[descIdx].refCount == 0) {
 							oldSet.bufferSlots[descIdx].buffer = nullptr;
 						}
@@ -324,7 +327,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		if (!isAlias) {
 			uniqueImages.emplace_back(pair(&it, Vector<uint32_t>({imageIdx})));
 		}
-		++ imageIdx;
+		++imageIdx;
 
 		if (it.image->atlas) {
 			auto &atlasBuffer = it.image->atlas->getBuffer();
@@ -334,15 +337,17 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		}
 	}
 
-	auto emplaceMaterial = [&, this] (uint32_t setIdx, MaterialLayout &set, Vector<uint32_t> &imageLocations, Vector<uint32_t> &bufferLocations) {
+	auto emplaceMaterial = [&, this](uint32_t setIdx, MaterialLayout &set,
+								   Vector<uint32_t> &imageLocations,
+								   Vector<uint32_t> &bufferLocations) {
 		if (imageLocations.empty()) {
-			for (uint32_t imageIdx = 0; imageIdx < uniqueImages.size(); ++ imageIdx) {
+			for (uint32_t imageIdx = 0; imageIdx < uniqueImages.size(); ++imageIdx) {
 				imageLocations.emplace_back(imageIdx);
 			}
 		}
 
 		if (!uniqueBuffers.empty() && bufferLocations.empty()) {
-			for (uint32_t bufferIdx = 0; bufferIdx < uniqueBuffers.size(); ++ bufferIdx) {
+			for (uint32_t bufferIdx = 0; bufferIdx < uniqueBuffers.size(); ++bufferIdx) {
 				bufferLocations.emplace_back(bufferIdx);
 			}
 		}
@@ -368,23 +373,23 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				newImages[iIt].descriptor = loc;
 			}
 
-			++ imageIdx;
+			++imageIdx;
 		}
 
 		uint32_t bufferIdx = 0;
 		for (auto &it : uniqueBuffers) {
 			auto loc = bufferLocations[bufferIdx];
 			if (set.bufferSlots[loc].buffer) {
-				++ set.bufferSlots[loc].refCount;
+				++set.bufferSlots[loc].refCount;
 			} else {
 				// fill slot with new ImageView
 				set.bufferSlots[loc].buffer = it;
 				set.bufferSlots[loc].buffer->setLocation(setIdx, loc);
-				++ set.bufferSlots[loc].refCount;
+				++set.bufferSlots[loc].refCount;
 				set.usedBufferSlots = std::max(set.usedBufferSlots, loc + 1);
 			}
 
-			++ bufferIdx;
+			++bufferIdx;
 		}
 
 		newMaterial->setLayoutIndex(setIdx);
@@ -394,7 +399,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			// remove non-aliased images
 			for (auto &oIt : *oldImages) {
 				if (oIt.view) {
-					-- oldSet.imageSlots[oIt.descriptor].refCount;
+					--oldSet.imageSlots[oIt.descriptor].refCount;
 					if (oldSet.imageSlots[oIt.descriptor].refCount == 0) {
 						oldSet.imageSlots[oIt.descriptor].image = nullptr;
 					}
@@ -404,11 +409,13 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		}
 	};
 
-	auto tryToEmplaceSet = [&] (uint32_t setIndex, MaterialLayout &set) -> bool {
+	auto tryToEmplaceSet = [&](uint32_t setIndex, MaterialLayout &set) -> bool {
 		uint32_t emplacedImages = 0;
 		uint32_t emplacedBuffers = 0;
-		Vector<uint32_t> imagePositions; imagePositions.resize(uniqueImages.size(), maxOf<uint32_t>());
-		Vector<uint32_t> bufferPositions; bufferPositions.resize(uniqueBuffers.size(), maxOf<uint32_t>());
+		Vector<uint32_t> imagePositions;
+		imagePositions.resize(uniqueImages.size(), maxOf<uint32_t>());
+		Vector<uint32_t> bufferPositions;
+		bufferPositions.resize(uniqueBuffers.size(), maxOf<uint32_t>());
 
 		imageIdx = 0;
 		// for each unique image, find it's potential place in set
@@ -416,29 +423,31 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			uint32_t location = 0;
 			for (auto &it : set.imageSlots) {
 				// check if image can alias with existed
-				if (it.image && it.image->getImage() == uit.first->image->image && it.image->getInfo() == uit.first->info) {
+				if (it.image && it.image->getImage() == uit.first->image->image
+						&& it.image->getInfo() == uit.first->info) {
 					if (imagePositions[imageIdx] == maxOf<uint32_t>()) {
-						++ emplacedImages; // mark as emplaced only if not emplaced already
+						++emplacedImages; // mark as emplaced only if not emplaced already
 					}
 					imagePositions[imageIdx] = location;
 					break; // stop searching - best variant
 				} else if (!it.image || it.refCount == 0) {
 					// only if not emplaced
 					if (imagePositions[imageIdx] == maxOf<uint32_t>()) {
-						if (std::find(imagePositions.begin(), imagePositions.end(), location) == imagePositions.end()) {
-							++ emplacedImages;
+						if (std::find(imagePositions.begin(), imagePositions.end(), location)
+								== imagePositions.end()) {
+							++emplacedImages;
 							imagePositions[imageIdx] = location;
 						}
 					}
 					// continue searching for possible alias
 				}
-				++ location;
+				++location;
 				if (location > set.usedImageSlots + uniqueImages.size()) {
 					break;
 				}
 			}
 
-			++ imageIdx;
+			++imageIdx;
 		}
 
 		imageIdx = 0;
@@ -447,26 +456,27 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			for (auto &it : set.bufferSlots) {
 				if (it.buffer && it.buffer == uit) {
 					if (bufferPositions[imageIdx] == maxOf<uint32_t>()) {
-						++ emplacedBuffers; // mark as emplaced only if not emplaced already
+						++emplacedBuffers; // mark as emplaced only if not emplaced already
 					}
 					bufferPositions[imageIdx] = location;
 					break; // stop searching - best variant
 				} else if (!it.buffer || it.refCount == 0) {
 					// only if not emplaced
 					if (bufferPositions[imageIdx] == maxOf<uint32_t>()) {
-						if (std::find(bufferPositions.begin(), bufferPositions.end(), location) == bufferPositions.end()) {
-							++ emplacedBuffers;
+						if (std::find(bufferPositions.begin(), bufferPositions.end(), location)
+								== bufferPositions.end()) {
+							++emplacedBuffers;
 							bufferPositions[imageIdx] = location;
 						}
 					}
 					// continue searching for possible alias
 				}
-				++ location;
+				++location;
 				if (location > set.usedBufferSlots + uniqueBuffers.size()) {
 					break;
 				}
 			}
-			++ imageIdx;
+			++imageIdx;
 		}
 
 		// if all images emplaced, perform actual emplace and return
@@ -495,7 +505,7 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 		}
 
 		// or continue to search for appropriate set
-		++ setIndex;
+		++setIndex;
 	}
 
 	// no available set, create new one;
@@ -520,7 +530,8 @@ Material::~Material() {
 	}
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<MaterialImage> &&images, Rc<Ref> &&data) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<MaterialImage> &&images,
+		Rc<Ref> &&data) {
 	_id = id;
 	_pipeline = pipeline;
 	_images = sp::move(images);
@@ -528,28 +539,21 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<Material
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const Rc<DynamicImageInstance> &image, Rc<Ref> &&data) {
+bool Material::init(MaterialId id, const PipelineData *pipeline,
+		const Rc<DynamicImageInstance> &image, Rc<Ref> &&data) {
 	_id = id;
 	_pipeline = pipeline;
-	_images = Vector<MaterialImage>({
-		MaterialImage{
-			.image = &image->data,
-			.dynamic = image
-		}
-	});
+	_images = Vector<MaterialImage>({MaterialImage{.image = &image->data, .dynamic = image}});
 	_data = move(data);
 	_atlas = image->data.atlas;
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, Rc<Ref> &&data, bool ownedData) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image,
+		Rc<Ref> &&data, bool ownedData) {
 	_id = id;
 	_pipeline = pipeline;
-	_images = Vector<MaterialImage>({
-		MaterialImage({
-			image
-		})
-	});
+	_images = Vector<MaterialImage>({MaterialImage({image})});
 	_atlas = image->atlas;
 	if (ownedData) {
 		_ownedData = image;
@@ -558,20 +562,17 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData
 	return true;
 }
 
-bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image, ColorMode mode, Rc<Ref> &&data, bool ownedData) {
+bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData *image,
+		ColorMode mode, Rc<Ref> &&data, bool ownedData) {
 	_id = id;
 	_pipeline = pipeline;
 
-	MaterialImage img({
-		image
-	});
+	MaterialImage img({image});
 
 	img.info.setup(*image);
 	img.info.setup(mode);
 
-	_images = Vector<MaterialImage>({
-		move(img)
-	});
+	_images = Vector<MaterialImage>({move(img)});
 	_atlas = image->atlas;
 	if (ownedData) {
 		_ownedData = image;
@@ -580,7 +581,8 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, const ImageData
 	return true;
 }
 
-bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtlas> &&atlas, Rc<Ref> &&data) {
+bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtlas> &&atlas,
+		Rc<Ref> &&data) {
 	_id = master->getId();
 	_pipeline = master->getPipeline();
 
@@ -592,17 +594,13 @@ bool Material::init(const Material *master, Rc<ImageObject> &&image, Rc<DataAtla
 		}
 	}
 
-	auto ownedData = new ImageData;
+	auto ownedData = new (std::nothrow) ImageData;
 	static_cast<ImageInfoData &>(*ownedData) = image->getInfo();
 	ownedData->image = move(image);
 	ownedData->atlas = move(atlas);
 	_ownedData = ownedData;
 
-	_images = Vector<MaterialImage>({
-		MaterialImage({
-			_ownedData
-		})
-	});
+	_images = Vector<MaterialImage>({MaterialImage({_ownedData})});
 	_data = move(data);
 	return true;
 }
@@ -621,15 +619,11 @@ bool Material::init(const Material *master, Vector<MaterialImage> &&images) {
 	return true;
 }
 
-void Material::setLayoutIndex(uint32_t idx) {
-	_layoutIndex = idx;
-}
+void Material::setLayoutIndex(uint32_t idx) { _layoutIndex = idx; }
 
 MaterialAttachment::~MaterialAttachment() {
 	std::unique_lock<Mutex> lock(_dynamicMutex);
-	for (auto &it : _dynamicTrackers) {
-		it.first->removeTracker(this);
-	}
+	for (auto &it : _dynamicTrackers) { it.first->removeTracker(this); }
 }
 
 bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
@@ -645,22 +639,16 @@ bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info
 }
 
 void MaterialAttachment::addPredefinedMaterials(Vector<Rc<Material>> &&materials) {
-	for (auto &it : materials) {
-		it->_id = _attachmentMaterialId.fetch_add(1);
-	}
+	for (auto &it : materials) { it->_id = _attachmentMaterialId.fetch_add(1); }
 
 	if (_predefinedMaterials.empty()) {
 		_predefinedMaterials = sp::move(materials);
 	} else {
-		for (auto &it : materials) {
-			_predefinedMaterials.emplace_back(move(it));
-		}
+		for (auto &it : materials) { _predefinedMaterials.emplace_back(move(it)); }
 	}
 }
 
-const Rc<MaterialSet> &MaterialAttachment::getMaterials() const {
-	return _data;
-}
+const Rc<MaterialSet> &MaterialAttachment::getMaterials() const { return _data; }
 
 void MaterialAttachment::setMaterials(const Rc<MaterialSet> &data) const {
 	auto tmp = _data;
@@ -683,7 +671,7 @@ void MaterialAttachment::addDynamicTracker(MaterialId id, const Rc<DynamicImage>
 	std::unique_lock<Mutex> lock(_dynamicMutex);
 	auto it = _dynamicTrackers.find(image);
 	if (it != _dynamicTrackers.end()) {
-		++ it->second.refCount;
+		++it->second.refCount;
 	} else {
 		it = _dynamicTrackers.emplace(image, DynamicImageTracker{1}).first;
 		image->addTracker(this);
@@ -691,7 +679,7 @@ void MaterialAttachment::addDynamicTracker(MaterialId id, const Rc<DynamicImage>
 
 	auto iit = it->second.materials.find(id);
 	if (iit != it->second.materials.end()) {
-		++ iit->second;
+		++iit->second;
 	} else {
 		it->second.materials.emplace(id, 1);
 	}
@@ -703,12 +691,12 @@ void MaterialAttachment::removeDynamicTracker(MaterialId id, const Rc<DynamicIma
 	if (it != _dynamicTrackers.end()) {
 		auto iit = it->second.materials.find(id);
 		if (iit != it->second.materials.end()) {
-			-- iit->second;
+			--iit->second;
 			if (iit->second == 0) {
 				it->second.materials.erase(iit);
 			}
 		}
-		-- it->second.refCount;
+		--it->second.refCount;
 		if (it->second.refCount == 0) {
 			_dynamicTrackers.erase(it);
 			image->removeTracker(this);
@@ -716,7 +704,8 @@ void MaterialAttachment::removeDynamicTracker(MaterialId id, const Rc<DynamicIma
 	}
 }
 
-void MaterialAttachment::updateDynamicImage(Loop &loop, const DynamicImage *image, const Vector<Rc<DependencyEvent>> &deps) const {
+void MaterialAttachment::updateDynamicImage(Loop &loop, const DynamicImage *image,
+		const Vector<Rc<DependencyEvent>> &deps) const {
 	auto input = Rc<MaterialInputData>::alloc();
 	input->attachment = this;
 	std::unique_lock<Mutex> lock(_dynamicMutex);
@@ -726,9 +715,7 @@ void MaterialAttachment::updateDynamicImage(Loop &loop, const DynamicImage *imag
 			input->dynamicMaterialsToUpdate.emplace_back(materialIt.first);
 		}
 	}
-	for (auto &it : deps) {
-		it->addQueue(getCompiler());
-	}
+	for (auto &it : deps) { it->addQueue(getCompiler()); }
 	loop.compileMaterials(move(input), deps);
 }
 
@@ -736,12 +723,8 @@ MaterialId MaterialAttachment::getNextMaterialId() const {
 	return _attachmentMaterialId.fetch_add(1);
 }
 
-void MaterialAttachment::setCompiler(Queue *c) {
-	_compiler = c;
-}
+void MaterialAttachment::setCompiler(Queue *c) { _compiler = c; }
 
-Queue *MaterialAttachment::getCompiler() const {
-	return _compiler;
-}
+Queue *MaterialAttachment::getCompiler() const { return _compiler; }
 
-}
+} // namespace stappler::xenolith::core

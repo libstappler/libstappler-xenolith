@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,8 +29,6 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::shaders {
 
 extern SpanView<uint32_t> MaterialFrag;
-extern SpanView<uint32_t> MaterialTex2dArrayFrag;
-extern SpanView<uint32_t> MaterialTex3dFrag;
 extern SpanView<uint32_t> MaterialVert;
 extern SpanView<uint32_t> MaterialNoBdaVert;
 extern SpanView<uint32_t> PseudoSdfFrag;
@@ -37,6 +36,8 @@ extern SpanView<uint32_t> PseudoSdfVert;
 extern SpanView<uint32_t> PseudoSdfShadowFrag;
 extern SpanView<uint32_t> PseudoSdfShadowVert;
 
-}
+extern SpanView<uint32_t> ParticleUpdateComp;
+
+} // namespace stappler::xenolith::basic2d::shaders
 
 #endif /* XENOLITH_RENDERER_BASIC2D_GLSL_XL2DSHADERS_H_ */

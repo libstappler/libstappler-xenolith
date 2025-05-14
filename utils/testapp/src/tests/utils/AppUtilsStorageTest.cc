@@ -38,17 +38,18 @@ public:
 	: Component(loader, "UtilsStorageTest") {
 		using namespace db;
 
-		loader.exportScheme(_users.define({
-			Field::Text("name", MinLength(2), MaxLength(32), Transform::Identifier, Flags::Indexed),
-			Field::Password("password", MinLength(2), MaxLength(32), PasswordSalt(DbPasswordSalt))
-		}));
+		loader.exportScheme(_users.define({Field::Text("name", MinLength(2), MaxLength(32),
+												   Transform::Identifier, Flags::Indexed),
+			Field::Password("password", MinLength(2), MaxLength(32),
+					PasswordSalt(DbPasswordSalt))}));
 	}
 
 	virtual void handleChildInit(const storage::Server &serv, const db::Transaction &t) override {
 		std::cout << "handleChildInit\n";
 		Component::handleChildInit(serv, t);
 	}
-	virtual void handleChildRelease(const storage::Server &serv, const db::Transaction &t) override {
+	virtual void handleChildRelease(const storage::Server &serv,
+			const db::Transaction &t) override {
 		std::cout << "handleChildRelease\n";
 		Component::handleChildRelease(serv, t);
 	}
@@ -81,8 +82,10 @@ public:
 	virtual void handleComponentsUnloaded(const storage::Server &serv) override;
 
 	bool getAll(Function<void(Value &&)> &&, Ref *ref);
-	bool createUser(StringView name, StringView password, Function<void(Value &&)> &&, Ref * = nullptr);
-	bool checkUser(StringView name, StringView password, Function<void(Value &&)> &&, Ref * = nullptr);
+	bool createUser(StringView name, StringView password, Function<void(Value &&)> &&,
+			Ref * = nullptr);
+	bool checkUser(StringView name, StringView password, Function<void(Value &&)> &&,
+			Ref * = nullptr);
 
 protected:
 	using storage::ComponentContainer::init;
@@ -97,7 +100,7 @@ bool UtilsStorageTestComponentContainer::init() {
 void UtilsStorageTestComponentContainer::handleStorageInit(storage::ComponentLoader &loader) {
 	std::cout << "handleStorageInit\n";
 	ComponentContainer::handleStorageInit(loader);
-	_component = new UtilsStorageTestComponent(loader);
+	_component = new (std::nothrow) UtilsStorageTestComponent(loader);
 }
 void UtilsStorageTestComponentContainer::handleStorageDisposed(const db::Transaction &t) {
 	_component = nullptr;
@@ -115,62 +118,77 @@ void UtilsStorageTestComponentContainer::handleComponentsUnloaded(const storage:
 }
 
 bool UtilsStorageTestComponentContainer::getAll(Function<void(Value &&)> &&cb, Ref *ref) {
-	return perform([this, cb = sp::move(cb), ref] (const storage::Server &serv, const db::Transaction &t) mutable {
+	return perform(
+			[this, cb = sp::move(cb), ref](const storage::Server &serv,
+					const db::Transaction &t) mutable {
 		db::Value val;
 		auto users = _component->getUsers().select(t, db::Query());
-		for (auto &it : users.asArray()) {
-			val.addString(it.getString("name"));
-		}
+		for (auto &it : users.asArray()) { val.addString(it.getString("name")); }
 
-		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
-			cb(move(val));
-		}, ref);
+		serv.getApplication()->performOnAppThread(
+				[cb = sp::move(cb), val = Value(val)]() mutable { cb(move(val)); }, ref);
 
 		return true;
-	}, ref);
+	},
+			ref);
 }
 
-bool UtilsStorageTestComponentContainer::createUser(StringView name, StringView password, Function<void(Value &&)> &&cb, Ref *ref) {
-	return perform([this, cb = sp::move(cb), name = name.str<Interface>(), password = password.str<Interface>(), ref] (const storage::Server &serv, const db::Transaction &t) mutable {
+bool UtilsStorageTestComponentContainer::createUser(StringView name, StringView password,
+		Function<void(Value &&)> &&cb, Ref *ref) {
+	return perform(
+			[this, cb = sp::move(cb), name = name.str<Interface>(),
+					password = password.str<Interface>(),
+					ref](const storage::Server &serv, const db::Transaction &t) mutable {
 		db::Value val;
-		auto u = _component->getUsers().select(t, db::Query().select("name", db::Value(name))).getValue(0);
+		auto u = _component->getUsers()
+						 .select(t, db::Query().select("name", db::Value(name)))
+						 .getValue(0);
 		if (u) {
-			val = _component->getUsers().update(t, u, db::Value({
-				pair("password", db::Value(password)),
-			}));
+			val = _component->getUsers().update(t, u,
+					db::Value({
+						pair("password", db::Value(password)),
+					}));
 		} else {
-			val = _component->getUsers().create(t, db::Value({
-				pair("name", db::Value(name)),
-				pair("password", db::Value(password)),
-			}));
+			val = _component->getUsers().create(t,
+					db::Value({
+						pair("name", db::Value(name)),
+						pair("password", db::Value(password)),
+					}));
 		}
 
-		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
-			cb(move(val));
-		}, ref);
+		serv.getApplication()->performOnAppThread(
+				[cb = sp::move(cb), val = Value(val)]() mutable { cb(move(val)); }, ref);
 
 		return true;
-	}, ref);
+	},
+			ref);
 }
 
-bool UtilsStorageTestComponentContainer::checkUser(StringView name, StringView password, Function<void(Value &&)> &&cb, Ref *ref) {
-	return perform([this, cb = sp::move(cb), name = name.str<Interface>(), password = password.str<Interface>(), ref] (const storage::Server &serv, const db::Transaction &t) mutable {
+bool UtilsStorageTestComponentContainer::checkUser(StringView name, StringView password,
+		Function<void(Value &&)> &&cb, Ref *ref) {
+	return perform(
+			[this, cb = sp::move(cb), name = name.str<Interface>(),
+					password = password.str<Interface>(),
+					ref](const storage::Server &serv, const db::Transaction &t) mutable {
 		db::Value val;
-		auto u = _component->getUsers().select(t, db::Query().select("name", db::Value(name))).getValue(0);
+		auto u = _component->getUsers()
+						 .select(t, db::Query().select("name", db::Value(name)))
+						 .getValue(0);
 		if (u) {
-			if (!valid::validatePassord(password, u.getBytes("password"), UtilsStorageTestComponent::DbPasswordSalt)) {
+			if (!valid::validatePassord(password, u.getBytes("password"),
+						UtilsStorageTestComponent::DbPasswordSalt)) {
 				val = db::Value("invalid_password");
 			} else {
 				val = move(u);
 			}
 		}
 
-		serv.getApplication()->performOnAppThread([cb = sp::move(cb), val = Value(val)] () mutable {
-			cb(move(val));
-		}, ref);
+		serv.getApplication()->performOnAppThread(
+				[cb = sp::move(cb), val = Value(val)]() mutable { cb(move(val)); }, ref);
 
 		return true;
-	}, ref);
+	},
+			ref);
 }
 
 bool UtilsStorageTest::init() {
@@ -211,7 +229,8 @@ bool UtilsStorageTest::init() {
 		_inputKey->setSupportingText("");
 		_inputValue->setSupportingText("");
 
-		_container->createUser(string::toUtf8<Interface>(key), string::toUtf8<Interface>(value), [this] (Value &&val) {
+		_container->createUser(string::toUtf8<Interface>(key), string::toUtf8<Interface>(value),
+				[this](Value &&val) {
 			StringStream out;
 			out << data::EncodeFormat::Pretty << val << "\n";
 			_result->setString(out.str());
@@ -238,14 +257,16 @@ bool UtilsStorageTest::init() {
 		_inputKey->setSupportingText("");
 		_inputValue->setSupportingText("");
 
-		_container->checkUser(string::toUtf8<Interface>(key), string::toUtf8<Interface>(value), [this] (Value &&val) {
+		_container->checkUser(string::toUtf8<Interface>(key), string::toUtf8<Interface>(value),
+				[this](Value &&val) {
 			StringStream out;
 			out << data::EncodeFormat::Pretty << val << "\n";
 			_result->setString(out.str());
 		}, this);
 	});
 
-	_result = _background->addChild(Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
+	_result = _background->addChild(
+			Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
 	_result->setFontFamily("default");
 	_result->setString("null");
 	_result->setAnchorPoint(Anchor::MiddleTop);
@@ -282,7 +303,7 @@ void UtilsStorageTest::handleEnter(Scene *scene) {
 
 	serv->addComponentContainer(_container);
 
-	_container->getAll([this] (Value &&val) {
+	_container->getAll([this](Value &&val) {
 		StringStream out;
 		out << data::EncodeFormat::Pretty << val << "\n";
 		_result->setString(out.str());
@@ -297,4 +318,4 @@ void UtilsStorageTest::handleExit() {
 	LayoutTest::handleExit();
 }
 
-}
+} // namespace stappler::xenolith::app

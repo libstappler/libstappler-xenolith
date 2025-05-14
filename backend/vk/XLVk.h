@@ -1,30 +1,34 @@
 /**
-Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
+
+// clang-format off
 
 #ifndef XENOLITH_BACKEND_VK_XLVK_H_
 #define XENOLITH_BACKEND_VK_XLVK_H_
 
 #include "XLCommon.h"
+#include <vulkan/vulkan_core.h>
 
 #if LINUX
 #define VK_USE_PLATFORM_XCB_KHR 1
@@ -86,11 +90,12 @@ SPUNUSED static  const char * const s_validationLayers[] = {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-using BufferInfo = core::BufferInfo;
-using ImageInfo = core::ImageInfo;
-using ImageInfoData = core::ImageInfoData;
-using ImageViewInfo = core::ImageViewInfo;
-using SamplerInfo = core::SamplerInfo;
+using core::BufferInfo;
+using core::ImageInfo;
+using core::ImageInfoData;
+using core::ImageViewInfo;
+using core::SamplerInfo;
+using core::DescriptorData;
 
 class Instance;
 
@@ -102,7 +107,13 @@ static const char * const s_requiredExtension[] = {
 	nullptr
 };
 
+enum class OptionalInstanceExtension {
+	SurfaceCapabilities2,
+	Max
+};
+
 static const char * const s_optionalExtension[] = {
+	VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
 	nullptr
 };
 
@@ -112,6 +123,22 @@ static const char * const s_requiredDeviceExtensions[] = {
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
 	nullptr
+};
+
+enum class OptionalDeviceExtension {
+	Maintenance3,
+	DescriptorIndexing,
+	DrawIndirectCount,
+	Storage16Bit,
+	Storage8Bit,
+	ShaderFloat16Int8,
+	DeviceAddress,
+	MemoryBudget,
+	GetMemoryRequirements2,
+	DedicatedAllocation,
+	ExternalFenceFd,
+	Portability,
+	Max
 };
 
 static const char * const s_optionalDeviceExtensions[] = {
@@ -133,30 +160,12 @@ static const char * const s_optionalDeviceExtensions[] = {
 	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 	VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
 	VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
+	// VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME,
 #if __APPLE__
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
 	nullptr
 };
-
-enum class ExtensionFlags {
-	None,
-	Maintenance3 = 1 << 0,
-	DescriptorIndexing = 1 << 1,
-	DrawIndirectCount = 1 << 2,
-	Storage16Bit =  1 << 3,
-	Storage8Bit = 1 << 4,
-	DeviceAddress = 1 << 5,
-	ShaderFloat16 = 1 << 6,
-	ShaderInt8 = 1 << 7,
-	MemoryBudget = 1 << 8,
-	GetMemoryRequirements2 = 1 << 9,
-	DedicatedAllocation = 1 << 10,
-	ExternalFenceFd = 1 << 11,
-	Portability = 1 << 12,
-};
-
-SP_DEFINE_ENUM_AS_MASK(ExtensionFlags);
 
 static const char * const s_promotedVk11Extensions[] = {
 	VK_KHR_16BIT_STORAGE_EXTENSION_NAME,
@@ -240,6 +249,20 @@ static const char * const s_promotedVk13Extensions[] = {
 	nullptr
 };
 
+static const char * const s_promotedVk14Extensions[] = {
+    VK_KHR_LOAD_STORE_OP_NONE_EXTENSION_NAME,
+    VK_KHR_SHADER_SUBGROUP_ROTATE_EXTENSION_NAME,
+    VK_KHR_SHADER_FLOAT_CONTROLS_2_EXTENSION_NAME,
+    VK_KHR_SHADER_EXPECT_ASSUME_EXTENSION_NAME,
+    VK_KHR_LINE_RASTERIZATION_EXTENSION_NAME,
+    VK_KHR_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME,
+    VK_KHR_INDEX_TYPE_UINT8_EXTENSION_NAME,
+    VK_KHR_MAP_MEMORY_2_EXTENSION_NAME,
+    VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
+    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+	nullptr
+};
+
 SP_PUBLIC core::QueueFlags getQueueFlags(VkQueueFlags, bool present);
 SP_PUBLIC core::QueueFlags getQueueFlags(core::PassType);
 SP_PUBLIC VkShaderStageFlagBits getVkStageBits(core::ProgramStage);
@@ -250,8 +273,10 @@ SP_PUBLIC StringView getVkResultName(VkResult res);
 
 SP_PUBLIC String getVkMemoryPropertyFlags(VkMemoryPropertyFlags);
 
-SP_PUBLIC bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vector<VkExtensionProperties> &available,
-		Vector<StringView> &optionals, Vector<StringView> &promoted, ExtensionFlags &flags);
+SP_PUBLIC bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name,
+		const Vector<VkExtensionProperties> &available,
+		Vector<StringView> &optionals, Vector<StringView> &promoted,
+		std::bitset<toInt(OptionalDeviceExtension::Max)> &flags);
 
 SP_PUBLIC bool isPromotedExtension(uint32_t apiVersion, StringView name);
 

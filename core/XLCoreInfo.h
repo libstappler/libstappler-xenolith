@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +35,12 @@ class Sampler;
 class DataAtlas;
 class Resource;
 class TextureSetLayout;
+
+#if (XL_USE_64_BIT_PTR_DEFINES == 1)
+using ObjectHandle = ValueWrapper<void *, class ObjectHandleFlag>;
+#else
+using ObjectHandle = ValueWrapper<uint64_t, class ObjectHandleFlag>;
+#endif
 
 using MipLevels = ValueWrapper<uint32_t, class MipLevelFlag>;
 using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
@@ -82,8 +89,8 @@ struct SP_PUBLIC BufferInfo : NamedMem {
 
 	BufferInfo() = default;
 
-	template<typename ... Args>
-	BufferInfo(Args && ... args) {
+	template <typename... Args>
+	BufferInfo(Args &&...args) {
 		define(std::forward<Args>(args)...);
 	}
 
@@ -98,12 +105,12 @@ struct SP_PUBLIC BufferInfo : NamedMem {
 	void setup(StringView n) { key = n; }
 
 	template <typename T>
-	void define(T && t) {
+	void define(T &&t) {
 		setup(std::forward<T>(t));
 	}
 
-	template <typename T, typename ... Args>
-	void define(T && t, Args && ... args) {
+	template <typename T, typename... Args>
+	void define(T &&t, Args &&...args) {
 		define(std::forward<T>(t));
 		define(std::forward<Args>(args)...);
 	}
@@ -152,45 +159,75 @@ struct SP_PUBLIC ImageInfoData {
 	SP_THREE_WAY_COMPARISON_TYPE(ImageInfoData)
 #else
 	constexpr bool operator==(const ImageInfoData &other) const {
-		return format == other.format
-			&& flags == other.flags
-			&& imageType == other.imageType
-			&& extent == other.extent
-			&& mipLevels == other.mipLevels
-			&& arrayLayers == other.arrayLayers
-			&& samples == other.samples
-			&& tiling == other.tiling
-			&& usage == other.usage
-			&& type == other.type
-			&& hints == other.hints
-			;
+		return format == other.format && flags == other.flags && imageType == other.imageType
+				&& extent == other.extent && mipLevels == other.mipLevels
+				&& arrayLayers == other.arrayLayers && samples == other.samples
+				&& tiling == other.tiling && usage == other.usage && type == other.type
+				&& hints == other.hints;
 	}
 	constexpr bool operator!=(const ImageInfoData &other) const {
-		return format != other.format
-			|| flags != other.flags
-			|| imageType != other.imageType
-			|| extent != other.extent
-			|| mipLevels != other.mipLevels
-			|| arrayLayers != other.arrayLayers
-			|| samples != other.samples
-			|| tiling != other.tiling
-			|| usage != other.usage
-			|| type != other.type
-			|| hints != other.hints
-			;
+		return format != other.format || flags != other.flags || imageType != other.imageType
+				|| extent != other.extent || mipLevels != other.mipLevels
+				|| arrayLayers != other.arrayLayers || samples != other.samples
+				|| tiling != other.tiling || usage != other.usage || type != other.type
+				|| hints != other.hints;
 	}
 	constexpr bool operator<(const ImageInfoData &other) const {
-		if (format < other.format) { return true; } else if (format > other.format) { return false; }
-		if (flags < other.flags) { return true; } else if (flags > other.flags) { return false; }
-		if (imageType < other.imageType) { return true; } else if (imageType > other.imageType) { return false; }
-		if (extent < other.extent) { return true; } else if (extent > other.extent) { return false; }
-		if (mipLevels < other.mipLevels) { return true; } else if (mipLevels > other.mipLevels) { return false; }
-		if (arrayLayers < other.arrayLayers) { return true; } else if (arrayLayers > other.arrayLayers) { return false; }
-		if (samples < other.samples) { return true; } else if (samples > other.samples) { return false; }
-		if (tiling < other.tiling) { return true; } else if (tiling > other.tiling) { return false; }
-		if (usage < other.usage) { return true; } else if (usage > other.usage) { return false; }
-		if (type < other.type) { return true; } else if (type > other.type) { return false; }
-		if (hints < other.hints) { return true; } else if (hints > other.hints) { return false; }
+		if (format < other.format) {
+			return true;
+		} else if (format > other.format) {
+			return false;
+		}
+		if (flags < other.flags) {
+			return true;
+		} else if (flags > other.flags) {
+			return false;
+		}
+		if (imageType < other.imageType) {
+			return true;
+		} else if (imageType > other.imageType) {
+			return false;
+		}
+		if (extent < other.extent) {
+			return true;
+		} else if (extent > other.extent) {
+			return false;
+		}
+		if (mipLevels < other.mipLevels) {
+			return true;
+		} else if (mipLevels > other.mipLevels) {
+			return false;
+		}
+		if (arrayLayers < other.arrayLayers) {
+			return true;
+		} else if (arrayLayers > other.arrayLayers) {
+			return false;
+		}
+		if (samples < other.samples) {
+			return true;
+		} else if (samples > other.samples) {
+			return false;
+		}
+		if (tiling < other.tiling) {
+			return true;
+		} else if (tiling > other.tiling) {
+			return false;
+		}
+		if (usage < other.usage) {
+			return true;
+		} else if (usage > other.usage) {
+			return false;
+		}
+		if (type < other.type) {
+			return true;
+		} else if (type > other.type) {
+			return false;
+		}
+		if (hints < other.hints) {
+			return true;
+		} else if (hints > other.hints) {
+			return false;
+		}
 		return false;
 	}
 #endif
@@ -199,17 +236,13 @@ struct SP_PUBLIC ImageInfoData {
 struct SP_PUBLIC ImageInfo : NamedMem, ImageInfoData {
 	ImageInfo() = default;
 
-	template<typename ... Args>
-	ImageInfo(Args && ... args) {
+	template <typename... Args>
+	ImageInfo(Args &&...args) {
 		define(std::forward<Args>(args)...);
 	}
 
-	void setup(Extent1 value) {
-		extent = Extent3(value.get(), 1, 1);
-	}
-	void setup(Extent2 value) {
-		extent = Extent3(value.width, value.height, 1);
-	}
+	void setup(Extent1 value) { extent = Extent3(value.get(), 1, 1); }
+	void setup(Extent2 value) { extent = Extent3(value.width, value.height, 1); }
 	void setup(Extent3 value) {
 		extent = value;
 		if (extent.depth > 1 && imageType != ImageType::Image3D) {
@@ -231,12 +264,12 @@ struct SP_PUBLIC ImageInfo : NamedMem, ImageInfoData {
 	void setup(StringView value) { key = value; }
 
 	template <typename T>
-	void define(T && t) {
+	void define(T &&t) {
 		setup(std::forward<T>(t));
 	}
 
-	template <typename T, typename ... Args>
-	void define(T && t, Args && ... args) {
+	template <typename T, typename... Args>
+	void define(T &&t, Args &&...args) {
 		define(std::forward<T>(t));
 		define(std::forward<Args>(args)...);
 	}
@@ -267,8 +300,8 @@ struct SP_PUBLIC ImageViewInfo {
 	ImageViewInfo &operator=(const ImageViewInfo &) = default;
 	ImageViewInfo &operator=(ImageViewInfo &&) = default;
 
-	template<typename ... Args>
-	ImageViewInfo(Args && ... args) {
+	template <typename... Args>
+	ImageViewInfo(Args &&...args) {
 		define(std::forward<Args>(args)...);
 	}
 
@@ -288,12 +321,12 @@ struct SP_PUBLIC ImageViewInfo {
 	ColorMode getColorMode() const;
 
 	template <typename T>
-	void define(T && t) {
+	void define(T &&t) {
 		setup(std::forward<T>(t));
 	}
 
-	template <typename T, typename ... Args>
-	void define(T && t, Args && ... args) {
+	template <typename T, typename... Args>
+	void define(T &&t, Args &&...args) {
 		define(std::forward<T>(t));
 		define(std::forward<Args>(args)...);
 	}
@@ -305,22 +338,56 @@ struct SP_PUBLIC ImageViewInfo {
 	SP_THREE_WAY_COMPARISON_TYPE(ImageViewInfo)
 #else
 	constexpr bool operator==(const ImageViewInfo &other) const {
-		return format == other.format && type == other.type && r == other.r && g == other.g && b == other.b && a == other.a
-				&& baseArrayLayer == other.baseArrayLayer && layerCount == other.layerCount;
+		return format == other.format && type == other.type && r == other.r && g == other.g
+				&& b == other.b && a == other.a && baseArrayLayer == other.baseArrayLayer
+				&& layerCount == other.layerCount;
 	}
 	constexpr bool operator!=(const ImageViewInfo &other) const {
-		return format != other.format || type != other.type || r != other.r || g != other.g || b != other.b || a != other.a
-				|| baseArrayLayer != other.baseArrayLayer || layerCount != other.layerCount;
+		return format != other.format || type != other.type || r != other.r || g != other.g
+				|| b != other.b || a != other.a || baseArrayLayer != other.baseArrayLayer
+				|| layerCount != other.layerCount;
 	}
 	constexpr bool operator<(const ImageViewInfo &other) const {
-		if (format < other.format) { return true; } else if (format > other.format) { return false; }
-		if (type < other.type) { return true; } else if (type > other.type) { return false; }
-		if (r < other.r) { return true; } else if (r > other.r) { return false; }
-		if (g < other.g) { return true; } else if (g > other.g) { return false; }
-		if (b < other.b) { return true; } else if (b > other.b) { return false; }
-		if (a < other.a) { return true; } else if (a > other.a) { return false; }
-		if (baseArrayLayer < other.baseArrayLayer) { return true; } else if (baseArrayLayer > other.baseArrayLayer) { return false; }
-		if (layerCount < other.layerCount) { return true; } else if (layerCount > other.layerCount) { return false; }
+		if (format < other.format) {
+			return true;
+		} else if (format > other.format) {
+			return false;
+		}
+		if (type < other.type) {
+			return true;
+		} else if (type > other.type) {
+			return false;
+		}
+		if (r < other.r) {
+			return true;
+		} else if (r > other.r) {
+			return false;
+		}
+		if (g < other.g) {
+			return true;
+		} else if (g > other.g) {
+			return false;
+		}
+		if (b < other.b) {
+			return true;
+		} else if (b > other.b) {
+			return false;
+		}
+		if (a < other.a) {
+			return true;
+		} else if (a > other.a) {
+			return false;
+		}
+		if (baseArrayLayer < other.baseArrayLayer) {
+			return true;
+		} else if (baseArrayLayer > other.baseArrayLayer) {
+			return false;
+		}
+		if (layerCount < other.layerCount) {
+			return true;
+		} else if (layerCount > other.layerCount) {
+			return false;
+		}
 		return false;
 	}
 #endif
@@ -355,7 +422,8 @@ struct SP_PUBLIC FrameConstraints {
 	float density = 1.0f;
 
 	Size2 getScreenSize() const {
-		if ((transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
+		if ((transform & core::SurfaceTransformFlags::PreRotated)
+				!= core::SurfaceTransformFlags::None) {
 			switch (core::getPureTransform(transform)) {
 			case SurfaceTransformFlags::Rotate90:
 			case SurfaceTransformFlags::Rotate270:
@@ -363,8 +431,7 @@ struct SP_PUBLIC FrameConstraints {
 			case SurfaceTransformFlags::MirrorRotate270:
 				return Size2(extent.height, extent.width);
 				break;
-			default:
-				break;
+			default: break;
 			}
 		}
 		return Size2(extent.width, extent.height);
@@ -395,14 +462,12 @@ struct SP_PUBLIC FrameConstraints {
 			out.left = contentPadding.right;
 			out.right = contentPadding.left;
 			break;
-		case SurfaceTransformFlags::MirrorRotate90:
-			break;
+		case SurfaceTransformFlags::MirrorRotate90: break;
 		case SurfaceTransformFlags::MirrorRotate180:
 			out.top = contentPadding.bottom;
 			out.bottom = contentPadding.top;
 			break;
-		case SurfaceTransformFlags::MirrorRotate270:
-			break;
+		case SurfaceTransformFlags::MirrorRotate270: break;
 		default: break;
 		}
 		return out;
@@ -466,6 +531,11 @@ struct TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
 	const BufferData *emptyBuffer = nullptr;
 };
 
+struct SP_PUBLIC DescriptorData {
+	ObjectHandle object;
+	Rc<Ref> data;
+};
+
 SP_PUBLIC String getBufferFlagsDescription(BufferFlags fmt);
 SP_PUBLIC String getBufferUsageDescription(BufferUsage fmt);
 SP_PUBLIC String getImageFlagsDescription(ImageFlags fmt);
@@ -492,8 +562,8 @@ SP_PUBLIC bool hasWriteAccess(AccessType);
 
 SP_PUBLIC String getQueueFlagsDesc(QueueFlags);
 
-SP_PUBLIC std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const ImageInfoData &value);
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREINFO_H_ */

@@ -1,24 +1,25 @@
 /**
-Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #ifndef XENOLITH_CORE_XLCOREQUEUE_H_
@@ -115,6 +116,8 @@ public:
 	void attachFrame(FrameHandle *);
 	void detachFrame(FrameHandle *);
 
+	void describe(const Callback<void(StringView)> &);
+
 protected:
 	QueueData *_data = nullptr;
 };
@@ -123,10 +126,15 @@ class SP_PUBLIC AttachmentBuilder final {
 public:
 	void setType(AttachmentType type);
 
-	void defineAsInput(AttachmentOps ops = AttachmentOps::WritesColor | AttachmentOps::WritesStencil);
+	void defineAsInput(
+			AttachmentOps ops = AttachmentOps::WritesColor | AttachmentOps::WritesStencil);
 	void defineAsOutput(AttachmentOps ops = AttachmentOps::ReadColor | AttachmentOps::ReadStencil,
 			FrameRenderPassState pass = FrameRenderPassState::Submitted);
 	void defineAsOutput(FrameRenderPassState pass);
+
+	void setInputAcquisitionCallback(AttachmentData::InputAcquisitionCallback &&);
+	void setInputSubmissionCallback(AttachmentData::InputSubmissionCallback &&);
+	void setInputValidationCallback(AttachmentData::InputValidationCallback &&);
 
 	const AttachmentData *getAttachmentData() const { return _data; }
 
@@ -165,11 +173,13 @@ public:
 	// add single descriptor
 	// compiler CAN inspect shaders to modify descriptors count, if descriptor is actually an array
 	// if descriptor array size defined by spec constant - use addDescriptorArray instead
-	bool addDescriptor(const AttachmentPassData *, DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
+	bool addDescriptor(const AttachmentPassData *, DescriptorType = DescriptorType::Unknown,
+			AttachmentLayout = AttachmentLayout::Ignored);
 
 	// add descriptor array with predefined descriptors count
 	// compiler can not modify size of this array
-	bool addDescriptorArray(const AttachmentPassData *, uint32_t count, DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
+	bool addDescriptorArray(const AttachmentPassData *, uint32_t count,
+			DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
 
 protected:
 	friend class PipelineLayoutBuilder;
@@ -184,6 +194,8 @@ public:
 	bool addSet(const Callback<void(DescriptorSetBuilder &)> &);
 	void setTextureSetLayout(const TextureSetLayoutData *);
 
+	const PipelineFamilyData *addPipelineFamily(StringView);
+
 protected:
 	friend class QueuePassBuilder;
 
@@ -194,21 +206,23 @@ protected:
 
 class SP_PUBLIC SubpassBuilder final {
 public:
-	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
-			AttachmentOps = AttachmentOps::Undefined, BlendInfo = BlendInfo());
+	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo,
+			AttachmentLayout = AttachmentLayout::Ignored, AttachmentOps = AttachmentOps::Undefined,
+			BlendInfo = BlendInfo());
 	bool addColor(const AttachmentPassData *, AttachmentDependencyInfo, BlendInfo);
-	bool addInput(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
-			AttachmentOps = AttachmentOps::Undefined);
+	bool addInput(const AttachmentPassData *, AttachmentDependencyInfo,
+			AttachmentLayout = AttachmentLayout::Ignored, AttachmentOps = AttachmentOps::Undefined);
 
 	bool addResolve(const AttachmentPassData *color, const AttachmentPassData *resolve,
 			AttachmentDependencyInfo colorDep, AttachmentDependencyInfo resolveDep);
 
-	bool setDepthStencil(const AttachmentPassData *, AttachmentDependencyInfo, AttachmentLayout = AttachmentLayout::Ignored,
-			AttachmentOps = AttachmentOps::Undefined);
+	bool setDepthStencil(const AttachmentPassData *, AttachmentDependencyInfo,
+			AttachmentLayout = AttachmentLayout::Ignored, AttachmentOps = AttachmentOps::Undefined);
 
-	template <typename ... Args>
-	const GraphicPipelineData * addGraphicPipeline(StringView key, const PipelineLayoutData *layout, Args && ...args) {
-		if (auto p = emplacePipeline(key, layout)) {
+	template <typename... Args>
+	const GraphicPipelineData *addGraphicPipeline(StringView key, const PipelineFamilyData *family,
+			Args &&...args) {
+		if (auto p = emplacePipeline(key, family)) {
 			if (setPipelineOptions(*p, std::forward<Args>(args)...)) {
 				finalizePipeline(p);
 				return p;
@@ -218,15 +232,18 @@ public:
 		return nullptr;
 	}
 
-	const ComputePipelineData *addComputePipeline(StringView key, const PipelineLayoutData *layout, SpecializationInfo &&);
+	const ComputePipelineData *addComputePipeline(StringView key, const PipelineFamilyData *family,
+			SpecializationInfo &&);
 
-	void setPrepareCallback(memory::function<void(const SubpassData &, FrameQueue &)> &&);
-	void setCommandsCallback(memory::function<void(const SubpassData &, FrameQueue &, CommandBuffer &)> &&);
+	void setPrepareCallback(memory::function<void(FrameQueue &, const SubpassData &)> &&);
+
+	void setCommandsCallback(
+			memory::function<void(FrameQueue &, const SubpassData &, CommandBuffer &)> &&);
 
 protected:
 	friend class QueuePassBuilder;
 
-	GraphicPipelineData *emplacePipeline(StringView key, const PipelineLayoutData *);
+	GraphicPipelineData *emplacePipeline(StringView key, const PipelineFamilyData *);
 	void finalizePipeline(GraphicPipelineData *);
 	void erasePipeline(GraphicPipelineData *);
 
@@ -235,12 +252,12 @@ protected:
 	bool setPipelineOption(GraphicPipelineData &f, const PipelineMaterialInfo &);
 
 	template <typename T>
-	bool setPipelineOptions(GraphicPipelineData &f, T && t) {
+	bool setPipelineOptions(GraphicPipelineData &f, T &&t) {
 		return setPipelineOption(f, std::forward<T>(t));
 	}
 
-	template <typename T, typename ... Args>
-	bool setPipelineOptions(GraphicPipelineData &f, T && t, Args && ... args) {
+	template <typename T, typename... Args>
+	bool setPipelineOptions(GraphicPipelineData &f, T &&t, Args &&...args) {
 		if (!setPipelineOption(f, std::forward<T>(t))) {
 			return false;
 		}
@@ -254,22 +271,31 @@ protected:
 
 class SP_PUBLIC QueuePassBuilder final {
 public:
-	const PipelineLayoutData * addDescriptorLayout(StringView, const Callback<void(PipelineLayoutBuilder &)> &);
-	const PipelineLayoutData * addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &);
+	const PipelineLayoutData *addDescriptorLayout(StringView,
+			const Callback<void(PipelineLayoutBuilder &)> &);
+	const PipelineLayoutData *addDescriptorLayout(const Callback<void(PipelineLayoutBuilder &)> &);
 
-	const SubpassData * addSubpass(const Callback<void(SubpassBuilder &)> &);
+	const SubpassData *addSubpass(const Callback<void(SubpassBuilder &)> &);
 
 	bool addSubpassDependency(const SubpassData *src, PipelineStage srcStage, AccessType srcAccess,
-			const SubpassData *dst, PipelineStage dstStage, AccessType dstAccess, bool byRegion = true);
+			const SubpassData *dst, PipelineStage dstStage, AccessType dstAccess,
+			bool byRegion = true);
 
 	const AttachmentPassData *addAttachment(const AttachmentData *);
-	const AttachmentPassData *addAttachment(const AttachmentData *, const AttachmentDependencyInfo &);
-	const AttachmentPassData *addAttachment(const AttachmentData *, const Callback<void(AttachmentPassBuilder &)> &);
+	const AttachmentPassData *addAttachment(const AttachmentData *,
+			const AttachmentDependencyInfo &);
+	const AttachmentPassData *addAttachment(const AttachmentData *,
+			const Callback<void(AttachmentPassBuilder &)> &);
 
 	StringView getName() const;
 
-	void addSubmittedCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&);
-	void addCompleteCallback(memory::function<void(const QueuePassData &, FrameQueue &, bool success)> &&);
+	void setAvailabilityChecker(
+			memory::function<bool(const FrameQueue &, const QueuePassData &)> &&);
+
+	void addSubmittedCallback(
+			memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&);
+	void addCompleteCallback(
+			memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&);
 
 protected:
 	friend class Queue::Builder;
@@ -289,18 +315,23 @@ public:
 
 	void setDefaultSyncPassState(FrameRenderPassState);
 
-	const AttachmentData *addAttachemnt(StringView name, const Callback<Rc<Attachment>(AttachmentBuilder &)> &);
+	const AttachmentData *addAttachemnt(StringView name,
+			const Callback<Rc<Attachment>(AttachmentBuilder &)> &);
 
-	const QueuePassData * addPass(StringView name, PassType, RenderOrdering, const Callback<Rc<QueuePass>(QueuePassBuilder &)> &);
+	const QueuePassData *addPass(StringView name, PassType, RenderOrdering,
+			const Callback<Rc<QueuePass>(QueuePassBuilder &)> &);
 
 	// add program, copy all data
-	const ProgramData * addProgram(StringView key, SpanView<uint32_t>, const ProgramInfo * = nullptr);
+	const ProgramData *addProgram(StringView key, SpanView<uint32_t>,
+			const ProgramInfo * = nullptr);
 
 	// add program, take shader data by ref, data should exists for all resource lifetime
-	const ProgramData * addProgramByRef(StringView key, SpanView<uint32_t>, const ProgramInfo * = nullptr);
+	const ProgramData *addProgramByRef(StringView key, SpanView<uint32_t>,
+			const ProgramInfo * = nullptr);
 
 	// add program, data will be acquired with callback when needed
-	const ProgramData * addProgram(StringView key, const memory::function<void(Device &, const ProgramData::DataCallback &)> &,
+	const ProgramData *addProgram(StringView key,
+			const memory::function<void(Device &, const ProgramData::DataCallback &)> &,
 			const ProgramInfo * = nullptr);
 
 	const TextureSetLayoutData *addTextureSetLayout(StringView key, SpanView<SamplerInfo>,
@@ -318,25 +349,29 @@ public:
 	void setAttachCallback(Function<void(const FrameHandle *)> &&);
 	void setDetachCallback(Function<void(const FrameHandle *)> &&);
 
-	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
+	const BufferData *addBufferByRef(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&, const FileInfo &data,
+	const BufferData *addBuffer(StringView key, BufferInfo &&, const FileInfo &data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data,
+	const BufferData *addBuffer(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&,
+	const BufferData *addBuffer(StringView key, BufferInfo &&,
 			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 
-	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, const FileInfo &data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img,
+	const ImageData *addImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addImage(StringView key, ImageInfo &&img, const FileInfo &data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addImage(StringView key, ImageInfo &&img,
 			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
 
 	const ImageViewData *addImageView(const ImageData *, ImageViewInfo &&);
 
@@ -366,6 +401,6 @@ inline auto Queue::getOutputAttachment() const -> const T * {
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_GL_RENDERQUEUE_XLRENDERQUEUEQUEUE_H_ */

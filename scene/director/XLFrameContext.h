@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,7 @@
 #ifndef XENOLITH_SCENE_DIRECTOR_XLFRAMECONTEXT_H_
 #define XENOLITH_SCENE_DIRECTOR_XLFRAMECONTEXT_H_
 
+#include "XLCoreQueueData.h"
 #include "XLResourceOwner.h"
 #include "XLCoreQueue.h"
 #include "XLCoreMaterial.h"
@@ -50,13 +52,15 @@ public:
 	virtual void submitHandle(FrameInfo &, FrameContextHandle *);
 
 	virtual core::MaterialId getMaterial(const MaterialInfo &) const;
-	virtual core::MaterialId acquireMaterial(const MaterialInfo &, Vector<core::MaterialImage> &&images, Ref *data, bool revokable);
+	virtual core::MaterialId acquireMaterial(const core::PipelineFamilyInfo *family,
+			const MaterialInfo &, Vector<core::MaterialImage> &&images, Ref *data, bool revokable);
 
 	virtual void revokeImages(SpanView<uint64_t>);
 
 protected:
 	struct PipelineLayoutData {
-		const core::PipelineLayoutData *layout;
+		const core::PipelineFamilyInfo *family = nullptr;
+		const core::PipelineLayoutData *layout = nullptr;
 		HashMap<size_t, Vector<const core::GraphicPipelineData *>> pipelines;
 	};
 
@@ -76,8 +80,12 @@ protected:
 	virtual core::ImageViewInfo getImageViewForMaterial(const core::GraphicPipelineData *pipeline,
 			const MaterialInfo &, uint32_t idx, const core::ImageData *) const;
 
-	virtual const core::GraphicPipelineData *getPipelineForMaterial(const MaterialInfo &, SpanView<core::MaterialImage> images) const;
-	virtual bool isPipelineMatch(const core::GraphicPipelineData *, const MaterialInfo &, SpanView<core::MaterialImage> images) const;
+	virtual const core::GraphicPipelineData *getPipelineForMaterial(
+			const core::PipelineFamilyInfo *, const MaterialInfo &,
+			SpanView<core::MaterialImage> images) const;
+	virtual bool isPipelineMatch(const core::GraphicPipelineData *,
+			const core::PipelineFamilyInfo *, const MaterialInfo &,
+			SpanView<core::MaterialImage> images) const;
 
 	virtual void submitMaterials(const FrameInfo &);
 
@@ -85,7 +93,8 @@ protected:
 	Rc<core::Queue> _queue;
 
 	const core::MaterialAttachment *_materialAttachment = nullptr;
-	Vector<PipelineLayoutData> _layouts;
+	Set<const core::PipelineLayoutData *> _layouts;
+	Map<const core::PipelineFamilyInfo *, PipelineLayoutData> _families;
 
 	HashMap<uint64_t, Vector<ContextMaterialInfo>> _materials;
 
@@ -99,6 +108,8 @@ protected:
 };
 
 struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
+	virtual ~FrameContextHandle() = default;
+
 	Rc<Director> director; // allow to access director from rendering pipeline (to send stats)
 	FrameContext *context = nullptr;
 
@@ -138,6 +149,6 @@ public:
 	virtual StateId rebuildState(FrameContextHandle &) = 0;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_DIRECTOR_XLFRAMECONTEXT_H_ */

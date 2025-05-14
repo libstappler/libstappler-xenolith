@@ -1,27 +1,29 @@
 /**
-Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLVkInfo.h"
+#include "XLVk.h"
 #include "XLVkInstance.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
@@ -66,18 +68,17 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 	ret.deviceDescriptorIndexing.runtimeDescriptorArray = VK_TRUE;
 	ret.deviceBufferDeviceAddress.bufferDeviceAddress = VK_TRUE;
 
-	ret.flags = ExtensionFlags::Maintenance3
-		| ExtensionFlags::DescriptorIndexing
-		| ExtensionFlags::DrawIndirectCount
-		| ExtensionFlags::Storage16Bit
-		| ExtensionFlags::Storage8Bit
-		| ExtensionFlags::DeviceAddress
-		| ExtensionFlags::ShaderFloat16
-		| ExtensionFlags::ShaderInt8
-		| ExtensionFlags::MemoryBudget
-		| ExtensionFlags::DedicatedAllocation
-		| ExtensionFlags::GetMemoryRequirements2
-		| ExtensionFlags::ExternalFenceFd;
+	ret.optionals.set(toInt(OptionalDeviceExtension::Maintenance3));
+	ret.optionals.set(toInt(OptionalDeviceExtension::DescriptorIndexing));
+	ret.optionals.set(toInt(OptionalDeviceExtension::DrawIndirectCount));
+	ret.optionals.set(toInt(OptionalDeviceExtension::Storage16Bit));
+	ret.optionals.set(toInt(OptionalDeviceExtension::Storage8Bit));
+	ret.optionals.set(toInt(OptionalDeviceExtension::ShaderFloat16Int8));
+	ret.optionals.set(toInt(OptionalDeviceExtension::MemoryBudget));
+	ret.optionals.set(toInt(OptionalDeviceExtension::DedicatedAllocation));
+	ret.optionals.set(toInt(OptionalDeviceExtension::GetMemoryRequirements2));
+	ret.optionals.set(toInt(OptionalDeviceExtension::ExternalFenceFd));
+
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 	ret.devicePortability.constantAlphaColorBlendFactors = VK_TRUE;
@@ -85,7 +86,7 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 	ret.devicePortability.imageViewFormatSwizzle = VK_TRUE;
 	ret.devicePortability.shaderSampleRateInterpolationFunctions = VK_TRUE;
 
-	ret.flags = ExtensionFlags::Portability;
+	ret.optionals.set(toInt(OptionalDeviceExtension::Portability));
 #endif
 
 	ret.updateTo12();
@@ -93,8 +94,8 @@ DeviceInfo::Features DeviceInfo::Features::getOptional() {
 }
 
 bool DeviceInfo::Features::canEnable(const Features &features, uint32_t version) const {
-	auto doCheck = [] (SpanView<VkBool32> src, SpanView<VkBool32> trg) {
-		for (size_t i = 0; i < src.size(); ++ i) {
+	auto doCheck = [](SpanView<VkBool32> src, SpanView<VkBool32> trg) {
+		for (size_t i = 0; i < src.size(); ++i) {
 			if (trg[i] && !src[i]) {
 				return false;
 			}
@@ -102,9 +103,10 @@ bool DeviceInfo::Features::canEnable(const Features &features, uint32_t version)
 		return true;
 	};
 
-	if (!doCheck(
-			SpanView<VkBool32>(&device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
-			SpanView<VkBool32>(&features.device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)))) {
+	if (!doCheck(SpanView<VkBool32>(&device10.features.robustBufferAccess,
+						 sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
+				SpanView<VkBool32>(&features.device10.features.robustBufferAccess,
+						sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)))) {
 		return false;
 	}
 
@@ -112,55 +114,65 @@ bool DeviceInfo::Features::canEnable(const Features &features, uint32_t version)
 		SpanView<VkBool32>(&source.field, (sizeof(type) - offsetof(type, field)) / sizeof(VkBool32))
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors,
+						 VkPhysicalDevicePortabilitySubsetFeaturesKHR),
+				SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors,
+						VkPhysicalDevicePortabilitySubsetFeaturesKHR))) {
 		return false;
 	}
 #endif
 
 #if VK_VERSION_1_2
 	if (version >= VK_API_VERSION_1_2) {
-		if (!doCheck(
-				SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features),
-				SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features))) {
+		if (!doCheck(SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess,
+							 VkPhysicalDeviceVulkan11Features),
+					SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess,
+							VkPhysicalDeviceVulkan11Features))) {
 			return false;
 		}
 
-		if (!doCheck(
-				SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features),
-				SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features))) {
+		if (!doCheck(SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge,
+							 VkPhysicalDeviceVulkan12Features),
+					SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge,
+							VkPhysicalDeviceVulkan12Features))) {
 			return false;
 		}
 	}
 #endif
 
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess,
+						 VkPhysicalDevice16BitStorageFeaturesKHR),
+				SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess,
+						VkPhysicalDevice16BitStorageFeaturesKHR))) {
 		return false;
 	}
 
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess,
+						 VkPhysicalDevice8BitStorageFeaturesKHR),
+				SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess,
+						VkPhysicalDevice8BitStorageFeaturesKHR))) {
 		return false;
 	}
 
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
-			SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing,
+						 shaderInputAttachmentArrayDynamicIndexing,
+						 VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
+				SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing,
+						shaderInputAttachmentArrayDynamicIndexing,
+						VkPhysicalDeviceDescriptorIndexingFeaturesEXT))) {
 		return false;
 	}
 
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress,
+						 VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
+				SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress,
+						VkPhysicalDeviceBufferDeviceAddressFeaturesKHR))) {
 		return false;
 	}
-	if (!doCheck(
-			SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR))) {
+	if (!doCheck(SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16,
+						 VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
+				SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16,
+						VkPhysicalDeviceShaderFloat16Int8FeaturesKHR))) {
 		return false;
 	}
 #undef SP_VK_BOOL_ARRAY
@@ -169,110 +181,126 @@ bool DeviceInfo::Features::canEnable(const Features &features, uint32_t version)
 }
 
 void DeviceInfo::Features::enableFromFeatures(const Features &features) {
-	auto doCheck = [] (SpanView<VkBool32> src, SpanView<VkBool32> trg) {
-		for (size_t i = 0; i < src.size(); ++ i) {
+	auto doCheck = [](SpanView<VkBool32> src, SpanView<VkBool32> trg) {
+		for (size_t i = 0; i < src.size(); ++i) {
 			if (trg[i]) {
 				const_cast<VkBool32 &>(src[i]) = trg[i];
 			}
 		}
 	};
 
-	doCheck(
-			SpanView<VkBool32>(&device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
-			SpanView<VkBool32>(&features.device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
+	doCheck(SpanView<VkBool32>(&device10.features.robustBufferAccess,
+					sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
+			SpanView<VkBool32>(&features.device10.features.robustBufferAccess,
+					sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
 
 #define SP_VK_BOOL_ARRAY(source, field, type) \
 		SpanView<VkBool32>(&source.field, (sizeof(type) - offsetof(type, field)) / sizeof(VkBool32))
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	doCheck(
-			SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors,
+					VkPhysicalDevicePortabilitySubsetFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors,
+					VkPhysicalDevicePortabilitySubsetFeaturesKHR));
 #endif
 
 #if VK_VERSION_1_2
-	doCheck(
-			SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features),
-			SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features));
+	doCheck(SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features),
+			SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess,
+					VkPhysicalDeviceVulkan11Features));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features),
-			SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features));
+	doCheck(SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features),
+			SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge,
+					VkPhysicalDeviceVulkan12Features));
 #endif
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess,
+					VkPhysicalDevice16BitStorageFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess,
+					VkPhysicalDevice16BitStorageFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess,
+					VkPhysicalDevice8BitStorageFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess,
+					VkPhysicalDevice8BitStorageFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
-			SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
+	doCheck(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing,
+					VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
+			SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing,
+					shaderInputAttachmentArrayDynamicIndexing,
+					VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress,
+					VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress,
+					VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16,
+					VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16,
+					VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
 #undef SP_VK_BOOL_ARRAY
 }
 
 void DeviceInfo::Features::disableFromFeatures(const Features &features) {
-	auto doCheck = [] (SpanView<VkBool32> src, SpanView<VkBool32> trg) {
-		for (size_t i = 0; i < src.size(); ++ i) {
+	auto doCheck = [](SpanView<VkBool32> src, SpanView<VkBool32> trg) {
+		for (size_t i = 0; i < src.size(); ++i) {
 			if (!trg[i]) {
 				const_cast<VkBool32 &>(src[i]) = trg[i];
 			}
 		}
 	};
 
-	doCheck(
-			SpanView<VkBool32>(&device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
-			SpanView<VkBool32>(&features.device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
+	doCheck(SpanView<VkBool32>(&device10.features.robustBufferAccess,
+					sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)),
+			SpanView<VkBool32>(&features.device10.features.robustBufferAccess,
+					sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
 
 #define SP_VK_BOOL_ARRAY(source, field, type) \
 		SpanView<VkBool32>(&source.field, (sizeof(type) - offsetof(type, field)) / sizeof(VkBool32))
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	doCheck(
-			SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors,
+					VkPhysicalDevicePortabilitySubsetFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.devicePortability, constantAlphaColorBlendFactors,
+					VkPhysicalDevicePortabilitySubsetFeaturesKHR));
 #endif
 
 #if VK_VERSION_1_2
-	doCheck(
-			SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features),
-			SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features));
+	doCheck(SP_VK_BOOL_ARRAY(device11, storageBuffer16BitAccess, VkPhysicalDeviceVulkan11Features),
+			SP_VK_BOOL_ARRAY(features.device11, storageBuffer16BitAccess,
+					VkPhysicalDeviceVulkan11Features));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features),
-			SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features));
+	doCheck(SP_VK_BOOL_ARRAY(device12, samplerMirrorClampToEdge, VkPhysicalDeviceVulkan12Features),
+			SP_VK_BOOL_ARRAY(features.device12, samplerMirrorClampToEdge,
+					VkPhysicalDeviceVulkan12Features));
 #endif
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess,
+					VkPhysicalDevice16BitStorageFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.device16bitStorage, storageBuffer16BitAccess,
+					VkPhysicalDevice16BitStorageFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess,
+					VkPhysicalDevice8BitStorageFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.device8bitStorage, storageBuffer8BitAccess,
+					VkPhysicalDevice8BitStorageFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
-			SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
+	doCheck(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing,
+					VkPhysicalDeviceDescriptorIndexingFeaturesEXT),
+			SP_VK_BOOL_ARRAY(features.deviceDescriptorIndexing,
+					shaderInputAttachmentArrayDynamicIndexing,
+					VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress,
+					VkPhysicalDeviceBufferDeviceAddressFeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.deviceBufferDeviceAddress, bufferDeviceAddress,
+					VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
 
-	doCheck(
-			SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
-			SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
+	doCheck(SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16,
+					VkPhysicalDeviceShaderFloat16Int8FeaturesKHR),
+			SP_VK_BOOL_ARRAY(features.deviceShaderFloat16Int8, shaderFloat16,
+					VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
 #undef SP_VK_BOOL_ARRAY
 }
 
@@ -286,121 +314,134 @@ void DeviceInfo::Features::updateFrom13() {
 void DeviceInfo::Features::updateFrom12() {
 #if VK_VERSION_1_2
 	if (device11.storageBuffer16BitAccess == VK_TRUE) {
-		flags |= ExtensionFlags::Storage16Bit;
+		optionals.set(toInt(OptionalDeviceExtension::Storage16Bit));
 	} else {
-		flags &= (~ExtensionFlags::Storage16Bit);
+		optionals.reset(toInt(OptionalDeviceExtension::Storage16Bit));
 	}
 
 	device16bitStorage.storageBuffer16BitAccess = device11.storageBuffer16BitAccess;
-	device16bitStorage.uniformAndStorageBuffer16BitAccess = device11.uniformAndStorageBuffer16BitAccess;
+	device16bitStorage.uniformAndStorageBuffer16BitAccess =
+			device11.uniformAndStorageBuffer16BitAccess;
 	device16bitStorage.storagePushConstant16 = device11.storagePushConstant16;
 	device16bitStorage.storageInputOutput16 = device11.storageInputOutput16;
 
 	if (device12.drawIndirectCount == VK_TRUE) {
-		flags |= ExtensionFlags::DrawIndirectCount;
+		optionals.set(toInt(OptionalDeviceExtension::DrawIndirectCount));
 	} else {
-		flags &= (~ExtensionFlags::DrawIndirectCount);
+		optionals.reset(toInt(OptionalDeviceExtension::DrawIndirectCount));
 	}
 
 	if (device12.storageBuffer8BitAccess == VK_TRUE) {
-		flags |= ExtensionFlags::Storage8Bit;
+		optionals.set(toInt(OptionalDeviceExtension::Storage8Bit));
 	} else {
-		flags &= (~ExtensionFlags::Storage8Bit);
+		optionals.reset(toInt(OptionalDeviceExtension::Storage8Bit));
 	}
 
 	device8bitStorage.storageBuffer8BitAccess = device12.storageBuffer8BitAccess;
-	device8bitStorage.uniformAndStorageBuffer8BitAccess = device12.uniformAndStorageBuffer8BitAccess;
+	device8bitStorage.uniformAndStorageBuffer8BitAccess =
+			device12.uniformAndStorageBuffer8BitAccess;
 	device8bitStorage.storagePushConstant8 = device12.storagePushConstant8;
 
 	deviceShaderFloat16Int8.shaderFloat16 = device12.shaderFloat16;
 	deviceShaderFloat16Int8.shaderInt8 = device12.shaderInt8;
 
-	if (device12.shaderFloat16 == VK_TRUE) {
-		flags |= ExtensionFlags::ShaderFloat16;
+	if (device12.shaderFloat16 == VK_TRUE && device12.shaderInt8 == VK_TRUE) {
+		optionals.set(toInt(OptionalDeviceExtension::ShaderFloat16Int8));
 	} else {
-		flags &= (~ExtensionFlags::ShaderFloat16);
-	}
-
-	if (device12.shaderInt8 == VK_TRUE) {
-		flags |= ExtensionFlags::ShaderInt8;
-	} else {
-		flags &= (~ExtensionFlags::ShaderInt8);
+		optionals.reset(toInt(OptionalDeviceExtension::ShaderFloat16Int8));
 	}
 
 	if (device12.descriptorIndexing == VK_TRUE) {
-		flags |= ExtensionFlags::DescriptorIndexing;
+		optionals.set(toInt(OptionalDeviceExtension::DescriptorIndexing));
 	} else {
-		flags &= (~ExtensionFlags::DescriptorIndexing);
+		optionals.reset(toInt(OptionalDeviceExtension::DescriptorIndexing));
 	}
 
-	deviceDescriptorIndexing.shaderInputAttachmentArrayDynamicIndexing = device12.shaderInputAttachmentArrayDynamicIndexing;
-	deviceDescriptorIndexing.shaderUniformTexelBufferArrayDynamicIndexing = device12.shaderUniformTexelBufferArrayDynamicIndexing;
-	deviceDescriptorIndexing.shaderStorageTexelBufferArrayDynamicIndexing = device12.shaderStorageTexelBufferArrayDynamicIndexing;
-	deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing = device12.shaderUniformBufferArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing = device12.shaderSampledImageArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing = device12.shaderStorageBufferArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexing = device12.shaderStorageImageArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexing = device12.shaderInputAttachmentArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderUniformTexelBufferArrayNonUniformIndexing = device12.shaderUniformTexelBufferArrayNonUniformIndexing;
-	deviceDescriptorIndexing.shaderStorageTexelBufferArrayNonUniformIndexing = device12.shaderStorageTexelBufferArrayNonUniformIndexing;
-	deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind = device12.descriptorBindingUniformBufferUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind = device12.descriptorBindingSampledImageUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind = device12.descriptorBindingStorageImageUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind = device12.descriptorBindingStorageBufferUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingUniformTexelBufferUpdateAfterBind = device12.descriptorBindingUniformTexelBufferUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingStorageTexelBufferUpdateAfterBind = device12.descriptorBindingStorageTexelBufferUpdateAfterBind;
-	deviceDescriptorIndexing.descriptorBindingUpdateUnusedWhilePending = device12.descriptorBindingUpdateUnusedWhilePending;
-	deviceDescriptorIndexing.descriptorBindingPartiallyBound = device12.descriptorBindingPartiallyBound;
-	deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount = device12.descriptorBindingVariableDescriptorCount;
+	deviceDescriptorIndexing.shaderInputAttachmentArrayDynamicIndexing =
+			device12.shaderInputAttachmentArrayDynamicIndexing;
+	deviceDescriptorIndexing.shaderUniformTexelBufferArrayDynamicIndexing =
+			device12.shaderUniformTexelBufferArrayDynamicIndexing;
+	deviceDescriptorIndexing.shaderStorageTexelBufferArrayDynamicIndexing =
+			device12.shaderStorageTexelBufferArrayDynamicIndexing;
+	deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing =
+			device12.shaderUniformBufferArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing =
+			device12.shaderSampledImageArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing =
+			device12.shaderStorageBufferArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexing =
+			device12.shaderStorageImageArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexing =
+			device12.shaderInputAttachmentArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderUniformTexelBufferArrayNonUniformIndexing =
+			device12.shaderUniformTexelBufferArrayNonUniformIndexing;
+	deviceDescriptorIndexing.shaderStorageTexelBufferArrayNonUniformIndexing =
+			device12.shaderStorageTexelBufferArrayNonUniformIndexing;
+	deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind =
+			device12.descriptorBindingUniformBufferUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind =
+			device12.descriptorBindingSampledImageUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind =
+			device12.descriptorBindingStorageImageUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind =
+			device12.descriptorBindingStorageBufferUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingUniformTexelBufferUpdateAfterBind =
+			device12.descriptorBindingUniformTexelBufferUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingStorageTexelBufferUpdateAfterBind =
+			device12.descriptorBindingStorageTexelBufferUpdateAfterBind;
+	deviceDescriptorIndexing.descriptorBindingUpdateUnusedWhilePending =
+			device12.descriptorBindingUpdateUnusedWhilePending;
+	deviceDescriptorIndexing.descriptorBindingPartiallyBound =
+			device12.descriptorBindingPartiallyBound;
+	deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount =
+			device12.descriptorBindingVariableDescriptorCount;
 	deviceDescriptorIndexing.runtimeDescriptorArray = device12.runtimeDescriptorArray;
 
 	if (device12.bufferDeviceAddress == VK_TRUE) {
-		flags |= ExtensionFlags::DeviceAddress;
+		optionals.set(toInt(OptionalDeviceExtension::DeviceAddress));
 	} else {
-		flags &= (~ExtensionFlags::DeviceAddress);
+		optionals.reset(toInt(OptionalDeviceExtension::DeviceAddress));
 	}
 
 	deviceBufferDeviceAddress.bufferDeviceAddress = device12.bufferDeviceAddress;
-	deviceBufferDeviceAddress.bufferDeviceAddressCaptureReplay = device12.bufferDeviceAddressCaptureReplay;
-	deviceBufferDeviceAddress.bufferDeviceAddressMultiDevice = device12.bufferDeviceAddressMultiDevice;
+	deviceBufferDeviceAddress.bufferDeviceAddressCaptureReplay =
+			device12.bufferDeviceAddressCaptureReplay;
+	deviceBufferDeviceAddress.bufferDeviceAddressMultiDevice =
+			device12.bufferDeviceAddressMultiDevice;
 #endif
 }
 
 void DeviceInfo::Features::updateTo12(bool updateFlags) {
 	if (updateFlags) {
-		if ((flags & ExtensionFlags::Storage16Bit) != ExtensionFlags::None) {
+		if (optionals[toInt(OptionalDeviceExtension::Storage16Bit)]) {
 			if (device16bitStorage.storageBuffer16BitAccess == VK_TRUE) {
-				flags |= ExtensionFlags::Storage16Bit;
+				optionals.set(toInt(OptionalDeviceExtension::Storage16Bit));
 			} else {
-				flags &= (~ExtensionFlags::Storage16Bit);
+				optionals.reset(toInt(OptionalDeviceExtension::Storage16Bit));
 			}
 		}
-		if ((flags & ExtensionFlags::Storage8Bit) != ExtensionFlags::None) {
+		if (optionals[toInt(OptionalDeviceExtension::Storage8Bit)]) {
 			if (device8bitStorage.storageBuffer8BitAccess == VK_TRUE) {
-				flags |= ExtensionFlags::Storage8Bit;
+				optionals.set(toInt(OptionalDeviceExtension::Storage8Bit));
 			} else {
-				flags &= (~ExtensionFlags::Storage8Bit);
+				optionals.reset(toInt(OptionalDeviceExtension::Storage8Bit));
 			}
 		}
 
-		if ((flags & ExtensionFlags::ShaderFloat16) != ExtensionFlags::None || (flags & ExtensionFlags::ShaderInt8) != ExtensionFlags::None) {
-			if (deviceShaderFloat16Int8.shaderInt8 == VK_TRUE) {
-				flags |= ExtensionFlags::ShaderInt8;
+		if (optionals[toInt(OptionalDeviceExtension::ShaderFloat16Int8)]) {
+			if (deviceShaderFloat16Int8.shaderInt8 == VK_TRUE
+					&& deviceShaderFloat16Int8.shaderFloat16 == VK_TRUE) {
+				optionals.set(toInt(OptionalDeviceExtension::ShaderFloat16Int8));
 			} else {
-				flags &= (~ExtensionFlags::ShaderInt8);
-			}
-			if (deviceShaderFloat16Int8.shaderFloat16 == VK_TRUE) {
-				flags |= ExtensionFlags::ShaderFloat16;
-			} else {
-				flags &= (~ExtensionFlags::ShaderFloat16);
+				optionals.reset(toInt(OptionalDeviceExtension::ShaderFloat16Int8));
 			}
 		}
 
-		if ((flags & ExtensionFlags::DeviceAddress) != ExtensionFlags::None) {
+		if (optionals[toInt(OptionalDeviceExtension::DeviceAddress)]) {
 			if (deviceBufferDeviceAddress.bufferDeviceAddress == VK_TRUE) {
-				flags |= ExtensionFlags::DeviceAddress;
+				optionals.set(toInt(OptionalDeviceExtension::DeviceAddress));
 			} else {
-				flags &= (~ExtensionFlags::DeviceAddress);
+				optionals.reset(toInt(OptionalDeviceExtension::DeviceAddress));
 			}
 		}
 	}
@@ -411,62 +452,84 @@ void DeviceInfo::Features::updateTo12(bool updateFlags) {
 	device11.storagePushConstant16 = device16bitStorage.storageBuffer16BitAccess;
 	device11.storageInputOutput16 = device16bitStorage.storageBuffer16BitAccess;
 
-	if ((flags & ExtensionFlags::DrawIndirectCount) != ExtensionFlags::None) {
+	if (optionals[toInt(OptionalDeviceExtension::DrawIndirectCount)]) {
 		device12.drawIndirectCount = VK_TRUE;
 	}
 
 	device12.storageBuffer8BitAccess = device8bitStorage.storageBuffer8BitAccess;
-	device12.uniformAndStorageBuffer8BitAccess = device8bitStorage.uniformAndStorageBuffer8BitAccess;
+	device12.uniformAndStorageBuffer8BitAccess =
+			device8bitStorage.uniformAndStorageBuffer8BitAccess;
 	device12.storagePushConstant8 = device8bitStorage.storagePushConstant8;
 
 	device12.shaderFloat16 = deviceShaderFloat16Int8.shaderFloat16;
 	device12.shaderInt8 = deviceShaderFloat16Int8.shaderInt8;
 
-	if ((flags & ExtensionFlags::DescriptorIndexing) != ExtensionFlags::None) {
+	if (optionals[toInt(OptionalDeviceExtension::DescriptorIndexing)]) {
 		device12.descriptorIndexing = VK_TRUE;
 	}
 
-	device12.shaderInputAttachmentArrayDynamicIndexing = deviceDescriptorIndexing.shaderInputAttachmentArrayDynamicIndexing;
-	device12.shaderUniformTexelBufferArrayDynamicIndexing = deviceDescriptorIndexing.shaderUniformTexelBufferArrayDynamicIndexing;
-	device12.shaderStorageTexelBufferArrayDynamicIndexing = deviceDescriptorIndexing.shaderStorageTexelBufferArrayDynamicIndexing;
-	device12.shaderUniformBufferArrayNonUniformIndexing = deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing;
-	device12.shaderSampledImageArrayNonUniformIndexing = deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing;
-	device12.shaderStorageBufferArrayNonUniformIndexing = deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing;
-	device12.shaderStorageImageArrayNonUniformIndexing = deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexing;
-	device12.shaderInputAttachmentArrayNonUniformIndexing = deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexing;
-	device12.shaderUniformTexelBufferArrayNonUniformIndexing = deviceDescriptorIndexing.shaderUniformTexelBufferArrayNonUniformIndexing;
-	device12.shaderStorageTexelBufferArrayNonUniformIndexing = deviceDescriptorIndexing.shaderStorageTexelBufferArrayNonUniformIndexing;
-	device12.descriptorBindingUniformBufferUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind;
-	device12.descriptorBindingSampledImageUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind;
-	device12.descriptorBindingStorageImageUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind;
-	device12.descriptorBindingStorageBufferUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind;
-	device12.descriptorBindingUniformTexelBufferUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingUniformTexelBufferUpdateAfterBind;
-	device12.descriptorBindingStorageTexelBufferUpdateAfterBind = deviceDescriptorIndexing.descriptorBindingStorageTexelBufferUpdateAfterBind;
-	device12.descriptorBindingUpdateUnusedWhilePending = deviceDescriptorIndexing.descriptorBindingUpdateUnusedWhilePending;
-	device12.descriptorBindingPartiallyBound = deviceDescriptorIndexing.descriptorBindingPartiallyBound;
-	device12.descriptorBindingVariableDescriptorCount = deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount;
+	device12.shaderInputAttachmentArrayDynamicIndexing =
+			deviceDescriptorIndexing.shaderInputAttachmentArrayDynamicIndexing;
+	device12.shaderUniformTexelBufferArrayDynamicIndexing =
+			deviceDescriptorIndexing.shaderUniformTexelBufferArrayDynamicIndexing;
+	device12.shaderStorageTexelBufferArrayDynamicIndexing =
+			deviceDescriptorIndexing.shaderStorageTexelBufferArrayDynamicIndexing;
+	device12.shaderUniformBufferArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing;
+	device12.shaderSampledImageArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing;
+	device12.shaderStorageBufferArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing;
+	device12.shaderStorageImageArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexing;
+	device12.shaderInputAttachmentArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexing;
+	device12.shaderUniformTexelBufferArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderUniformTexelBufferArrayNonUniformIndexing;
+	device12.shaderStorageTexelBufferArrayNonUniformIndexing =
+			deviceDescriptorIndexing.shaderStorageTexelBufferArrayNonUniformIndexing;
+	device12.descriptorBindingUniformBufferUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind;
+	device12.descriptorBindingSampledImageUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind;
+	device12.descriptorBindingStorageImageUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind;
+	device12.descriptorBindingStorageBufferUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind;
+	device12.descriptorBindingUniformTexelBufferUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingUniformTexelBufferUpdateAfterBind;
+	device12.descriptorBindingStorageTexelBufferUpdateAfterBind =
+			deviceDescriptorIndexing.descriptorBindingStorageTexelBufferUpdateAfterBind;
+	device12.descriptorBindingUpdateUnusedWhilePending =
+			deviceDescriptorIndexing.descriptorBindingUpdateUnusedWhilePending;
+	device12.descriptorBindingPartiallyBound =
+			deviceDescriptorIndexing.descriptorBindingPartiallyBound;
+	device12.descriptorBindingVariableDescriptorCount =
+			deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount;
 	device12.runtimeDescriptorArray = deviceDescriptorIndexing.runtimeDescriptorArray;
 
 	device12.bufferDeviceAddress = deviceBufferDeviceAddress.bufferDeviceAddress;
-	device12.bufferDeviceAddressCaptureReplay = deviceBufferDeviceAddress.bufferDeviceAddressCaptureReplay;
-	device12.bufferDeviceAddressMultiDevice = deviceBufferDeviceAddress.bufferDeviceAddressMultiDevice;
+	device12.bufferDeviceAddressCaptureReplay =
+			deviceBufferDeviceAddress.bufferDeviceAddressCaptureReplay;
+	device12.bufferDeviceAddressMultiDevice =
+			deviceBufferDeviceAddress.bufferDeviceAddressMultiDevice;
 #endif
 }
 
 void DeviceInfo::Features::clear() {
-	auto doClear = [] (SpanView<VkBool32> src) {
-		for (size_t i = 0; i < src.size(); ++ i) {
-			const_cast<VkBool32 &>(src[i]) = VK_FALSE;
-		}
+	auto doClear = [](SpanView<VkBool32> src) {
+		for (size_t i = 0; i < src.size(); ++i) { const_cast<VkBool32 &>(src[i]) = VK_FALSE; }
 	};
 
-	doClear(SpanView<VkBool32>(&device10.features.robustBufferAccess, sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
+	doClear(SpanView<VkBool32>(&device10.features.robustBufferAccess,
+			sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32)));
 
 #define SP_VK_BOOL_ARRAY(source, field, type) \
 		SpanView<VkBool32>(&source.field, (sizeof(type) - offsetof(type, field)) / sizeof(VkBool32))
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	doClear(SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors, VkPhysicalDevicePortabilitySubsetFeaturesKHR));
+	doClear(SP_VK_BOOL_ARRAY(devicePortability, constantAlphaColorBlendFactors,
+			VkPhysicalDevicePortabilitySubsetFeaturesKHR));
 #endif
 
 #if VK_VERSION_1_2
@@ -478,21 +541,22 @@ void DeviceInfo::Features::clear() {
 	doClear(SP_VK_BOOL_ARRAY(device13, robustImageAccess, VkPhysicalDeviceVulkan13Features));
 #endif
 
-	doClear(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess, VkPhysicalDevice16BitStorageFeaturesKHR));
-	doClear(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess, VkPhysicalDevice8BitStorageFeaturesKHR));
-	doClear(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing, VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
-	doClear(SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress, VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
-	doClear(SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16, VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
+	doClear(SP_VK_BOOL_ARRAY(device16bitStorage, storageBuffer16BitAccess,
+			VkPhysicalDevice16BitStorageFeaturesKHR));
+	doClear(SP_VK_BOOL_ARRAY(device8bitStorage, storageBuffer8BitAccess,
+			VkPhysicalDevice8BitStorageFeaturesKHR));
+	doClear(SP_VK_BOOL_ARRAY(deviceDescriptorIndexing, shaderInputAttachmentArrayDynamicIndexing,
+			VkPhysicalDeviceDescriptorIndexingFeaturesEXT));
+	doClear(SP_VK_BOOL_ARRAY(deviceBufferDeviceAddress, bufferDeviceAddress,
+			VkPhysicalDeviceBufferDeviceAddressFeaturesKHR));
+	doClear(SP_VK_BOOL_ARRAY(deviceShaderFloat16Int8, shaderFloat16,
+			VkPhysicalDeviceShaderFloat16Int8FeaturesKHR));
 #undef SP_VK_BOOL_ARRAY
 }
 
-DeviceInfo::Features::Features() {
-	clear();
-}
+DeviceInfo::Features::Features() { clear(); }
 
-DeviceInfo::Features::Features(const Features &f) {
-	memcpy((void *)this, &f, sizeof(Features));
-}
+DeviceInfo::Features::Features(const Features &f) { memcpy((void *)this, &f, sizeof(Features)); }
 
 DeviceInfo::Features &DeviceInfo::Features::operator=(const Features &f) {
 	memcpy((void *)this, &f, sizeof(Features));
@@ -502,7 +566,8 @@ DeviceInfo::Features &DeviceInfo::Features::operator=(const Features &f) {
 DeviceInfo::Properties::Properties() { }
 
 DeviceInfo::Properties::Properties(const Properties &p) {
-	memcpy((void *)this, &p, sizeof(Properties)); }
+	memcpy((void *)this, &p, sizeof(Properties));
+}
 
 DeviceInfo::Properties &DeviceInfo::Properties::operator=(const Properties &p) {
 	memcpy((void *)this, &p, sizeof(Properties));
@@ -511,17 +576,27 @@ DeviceInfo::Properties &DeviceInfo::Properties::operator=(const Properties &p) {
 
 DeviceInfo::DeviceInfo() { }
 
-DeviceInfo::DeviceInfo(VkPhysicalDevice dev, QueueFamilyInfo gr, QueueFamilyInfo pres, QueueFamilyInfo tr, QueueFamilyInfo comp,
-		Vector<StringView> &&optionals, Vector<StringView> &&promoted)
-: device(dev), graphicsFamily(gr), presentFamily(pres), transferFamily(tr), computeFamily(comp)
-, optionalExtensions(sp::move(optionals)), promotedExtensions(sp::move(promoted)) { }
+DeviceInfo::DeviceInfo(VkPhysicalDevice dev, QueueFamilyInfo gr, QueueFamilyInfo pres,
+		QueueFamilyInfo tr, QueueFamilyInfo comp, Vector<StringView> &&optionals,
+		Vector<StringView> &&promoted)
+: device(dev)
+, graphicsFamily(gr)
+, presentFamily(pres)
+, transferFamily(tr)
+, computeFamily(comp)
+, optionalExtensions(sp::move(optionals))
+, promotedExtensions(sp::move(promoted)) { }
 
 bool DeviceInfo::supportsPresentation() const {
 	// transferFamily and computeFamily can be same as graphicsFamily
-	bool supportsGraphics = (graphicsFamily.flags & core::QueueFlags::Graphics) != core::QueueFlags::None;
-	bool supportsPresent = (presentFamily.flags & core::QueueFlags::Present) != core::QueueFlags::None;
-	bool supportsTransfer = (transferFamily.flags & core::QueueFlags::Transfer) != core::QueueFlags::None;
-	bool supportsCompute = (computeFamily.flags & core::QueueFlags::Compute) != core::QueueFlags::None;
+	bool supportsGraphics =
+			(graphicsFamily.flags & core::QueueFlags::Graphics) != core::QueueFlags::None;
+	bool supportsPresent =
+			(presentFamily.flags & core::QueueFlags::Present) != core::QueueFlags::None;
+	bool supportsTransfer =
+			(transferFamily.flags & core::QueueFlags::Transfer) != core::QueueFlags::None;
+	bool supportsCompute =
+			(computeFamily.flags & core::QueueFlags::Compute) != core::QueueFlags::None;
 	if (supportsGraphics && supportsPresent && supportsTransfer && supportsCompute
 			&& requiredFeaturesExists && requiredExtensionsExists) {
 		return true;
@@ -557,66 +632,103 @@ String DeviceInfo::description() const {
 		stream << "Compute: [Not available];\n";
 	}
 
-	stream << "\t\t[Limits: Samplers]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetSamplers
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindSamplers << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorSamplers
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindSamplers << ");"
-			"\n";
+	stream << "\t\t[Limits: Samplers]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetSamplers << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindSamplers
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorSamplers << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindSamplers
+		   << ");" "\n";
 
-	stream << "\t\t[Limits: UniformBuffers]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetUniformBuffers
-			<< " dyn: " << properties.device10.properties.limits.maxDescriptorSetUniformBuffersDynamic
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindUniformBuffers
-			<< " dyn: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindUniformBuffersDynamic << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorUniformBuffers
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindUniformBuffers << ");"
-			<< (properties.deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexingNative ? StringView(" NonUniformIndexingNative;") : StringView())
-			<< "\n";
+	stream << "\t\t[Limits: UniformBuffers]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetUniformBuffers << " dyn: "
+		   << properties.device10.properties.limits.maxDescriptorSetUniformBuffersDynamic
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindUniformBuffers
+		   << " dyn: "
+		   << properties.deviceDescriptorIndexing
+					  .maxDescriptorSetUpdateAfterBindUniformBuffersDynamic
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorUniformBuffers
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindUniformBuffers
+		   << ");"
+		   << (properties.deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexingNative
+							  ? StringView(" NonUniformIndexingNative;")
+							  : StringView())
+		   << "\n";
 
-	stream << "\t\t[Limits: StorageBuffers]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetStorageBuffers
-			<< " dyn: " << properties.device10.properties.limits.maxDescriptorSetStorageBuffersDynamic
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindStorageBuffers
-			<< " dyn: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindStorageBuffersDynamic << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorStorageBuffers
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindStorageBuffers << ");"
-			<< (properties.deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexingNative ? StringView(" NonUniformIndexingNative;") : StringView())
-			<< "\n";
+	stream << "\t\t[Limits: StorageBuffers]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetStorageBuffers << " dyn: "
+		   << properties.device10.properties.limits.maxDescriptorSetStorageBuffersDynamic
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindStorageBuffers
+		   << " dyn: "
+		   << properties.deviceDescriptorIndexing
+					  .maxDescriptorSetUpdateAfterBindStorageBuffersDynamic
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorStorageBuffers
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindStorageBuffers
+		   << ");"
+		   << (properties.deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexingNative
+							  ? StringView(" NonUniformIndexingNative;")
+							  : StringView())
+		   << "\n";
 
-	stream << "\t\t[Limits: SampledImages]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetSampledImages
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindSampledImages << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorSampledImages
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindSampledImages << ");"
-			<< (properties.deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexingNative ? StringView(" NonUniformIndexingNative;") : StringView())
-			<< "\n";
+	stream << "\t\t[Limits: SampledImages]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetSampledImages << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindSampledImages
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorSampledImages
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindSampledImages
+		   << ");"
+		   << (properties.deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexingNative
+							  ? StringView(" NonUniformIndexingNative;")
+							  : StringView())
+		   << "\n";
 
-	stream << "\t\t[Limits: StorageImages]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetStorageImages
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindStorageImages << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorStorageImages
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindStorageImages << ");"
-			<< (properties.deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexingNative ? StringView(" NonUniformIndexingNative;") : StringView())
-			<< "\n";
+	stream << "\t\t[Limits: StorageImages]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetStorageImages << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindStorageImages
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorStorageImages
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindStorageImages
+		   << ");"
+		   << (properties.deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexingNative
+							  ? StringView(" NonUniformIndexingNative;")
+							  : StringView())
+		   << "\n";
 
-	stream << "\t\t[Limits: InputAttachments]"
-			" PerSet: " << properties.device10.properties.limits.maxDescriptorSetInputAttachments
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindInputAttachments << ");"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageDescriptorInputAttachments
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageDescriptorUpdateAfterBindInputAttachments << ");"
-			<< (properties.deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexingNative ? StringView(" NonUniformIndexingNative;") : StringView())
-			<< "\n";
+	stream << "\t\t[Limits: InputAttachments]" " PerSet: "
+		   << properties.device10.properties.limits.maxDescriptorSetInputAttachments
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxDescriptorSetUpdateAfterBindInputAttachments
+		   << ");" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageDescriptorInputAttachments
+		   << " (updatable: "
+		   << properties.deviceDescriptorIndexing
+					  .maxPerStageDescriptorUpdateAfterBindInputAttachments
+		   << ");"
+		   << (properties.deviceDescriptorIndexing
+									  .shaderInputAttachmentArrayNonUniformIndexingNative
+							  ? StringView(" NonUniformIndexingNative;")
+							  : StringView())
+		   << "\n";
 
-	stream << "\t\t[Limits: Resources]"
-			" PerStage: " << properties.device10.properties.limits.maxPerStageResources
-			<< " (updatable: " << properties.deviceDescriptorIndexing.maxPerStageUpdateAfterBindResources << ");"
-			"\n";
-	stream << "\t\t[Limits: Allocations] " << properties.device10.properties.limits.maxMemoryAllocationCount << " blocks, "
-			<< properties.device10.properties.limits.maxSamplerAllocationCount << " samplers;\n";
-	stream << "\t\t[Limits: Ranges] Uniform: " << properties.device10.properties.limits.maxUniformBufferRange << ", Storage: "
-			<< properties.device10.properties.limits.maxStorageBufferRange << ";\n";
-	stream << "\t\t[Limits: DrawIndirectCount] " << properties.device10.properties.limits.maxDrawIndirectCount << ";\n";
+	stream << "\t\t[Limits: Resources]" " PerStage: "
+		   << properties.device10.properties.limits.maxPerStageResources << " (updatable: "
+		   << properties.deviceDescriptorIndexing.maxPerStageUpdateAfterBindResources << ");" "\n";
+	stream << "\t\t[Limits: Allocations] "
+		   << properties.device10.properties.limits.maxMemoryAllocationCount << " blocks, "
+		   << properties.device10.properties.limits.maxSamplerAllocationCount << " samplers;\n";
+	stream << "\t\t[Limits: Ranges] Uniform: "
+		   << properties.device10.properties.limits.maxUniformBufferRange
+		   << ", Storage: " << properties.device10.properties.limits.maxStorageBufferRange << ";\n";
+	stream << "\t\t[Limits: DrawIndirectCount] "
+		   << properties.device10.properties.limits.maxDrawIndirectCount << ";\n";
 
 	/*uint32_t extensionCount;
 	instance->vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -634,14 +746,28 @@ String DeviceInfo::description() const {
 
 core::QueueFlags getQueueFlags(VkQueueFlags flags, bool present) {
 	core::QueueFlags ret = core::QueueFlags::None;
-	if ((flags & VK_QUEUE_GRAPHICS_BIT) != 0) { ret |= core::QueueFlags::Graphics; }
-	if ((flags & VK_QUEUE_COMPUTE_BIT) != 0) { ret |= core::QueueFlags::Compute; }
-	if ((flags & VK_QUEUE_TRANSFER_BIT) != 0) { ret |= core::QueueFlags::Transfer; }
-	if ((flags & VK_QUEUE_SPARSE_BINDING_BIT) != 0) { ret |= core::QueueFlags::SparceBinding; }
-	if ((flags & VK_QUEUE_PROTECTED_BIT) != 0) { ret |= core::QueueFlags::Protected; }
-	if ((flags & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0) { ret |= core::QueueFlags::VideoDecode; }
+	if ((flags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+		ret |= core::QueueFlags::Graphics;
+	}
+	if ((flags & VK_QUEUE_COMPUTE_BIT) != 0) {
+		ret |= core::QueueFlags::Compute;
+	}
+	if ((flags & VK_QUEUE_TRANSFER_BIT) != 0) {
+		ret |= core::QueueFlags::Transfer;
+	}
+	if ((flags & VK_QUEUE_SPARSE_BINDING_BIT) != 0) {
+		ret |= core::QueueFlags::SparceBinding;
+	}
+	if ((flags & VK_QUEUE_PROTECTED_BIT) != 0) {
+		ret |= core::QueueFlags::Protected;
+	}
+	if ((flags & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0) {
+		ret |= core::QueueFlags::VideoDecode;
+	}
 #if VK_ENABLE_BETA_EXTENSIONS
-	if ((flags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) != 0) { ret |= core::QueueFlags::VideoEncode; }
+	if ((flags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) != 0) {
+		ret |= core::QueueFlags::VideoEncode;
+	}
 #endif
 
 	if (present) {
@@ -860,24 +986,56 @@ StringView getVkFormatName(VkFormat fmt) {
 	case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM: return "G8_B8_R8_3PLANE_444_UNORM"; break;
 	case VK_FORMAT_R10X6_UNORM_PACK16: return "R10X6_UNORM_PACK16"; break;
 	case VK_FORMAT_R10X6G10X6_UNORM_2PACK16: return "R10X6G10X6_UNORM_2PACK16"; break;
-	case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16: return "R10X6G10X6B10X6A10X6_UNORM_4PACK16"; break;
-	case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16: return "G10X6B10X6G10X6R10X6_422_UNORM_4PACK16"; break;
-	case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16: return "B10X6G10X6R10X6G10X6_422_UNORM_4PACK16"; break;
-	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16: return "G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16"; break;
-	case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16: return "G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16"; break;
-	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16: return "G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16"; break;
-	case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16: return "G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16"; break;
-	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16: return "G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16"; break;
+	case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+		return "R10X6G10X6B10X6A10X6_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+		return "G10X6B10X6G10X6R10X6_422_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+		return "B10X6G10X6R10X6G10X6_422_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+		return "G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+		return "G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+		return "G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+		return "G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+		return "G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16";
+		break;
 	case VK_FORMAT_R12X4_UNORM_PACK16: return "R12X4_UNORM_PACK16"; break;
 	case VK_FORMAT_R12X4G12X4_UNORM_2PACK16: return "R12X4G12X4_UNORM_2PACK16"; break;
-	case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16: return "R12X4G12X4B12X4A12X4_UNORM_4PACK16"; break;
-	case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16: return "G12X4B12X4G12X4R12X4_422_UNORM_4PACK16"; break;
-	case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16: return "B12X4G12X4R12X4G12X4_422_UNORM_4PACK16"; break;
-	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16: return "G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16"; break;
-	case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16: return "G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16"; break;
-	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16: return "G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16"; break;
-	case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16: return "G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16"; break;
-	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16: return "G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16"; break;
+	case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+		return "R12X4G12X4B12X4A12X4_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+		return "G12X4B12X4G12X4R12X4_422_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+		return "B12X4G12X4R12X4G12X4_422_UNORM_4PACK16";
+		break;
+	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+		return "G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+		return "G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+		return "G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+		return "G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16";
+		break;
+	case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+		return "G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16";
+		break;
 	case VK_FORMAT_G16B16G16R16_422_UNORM: return "G16B16G16R16_422_UNORM"; break;
 	case VK_FORMAT_B16G16R16G16_422_UNORM: return "B16G16R16G16_422_UNORM"; break;
 	case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM: return "G16_B16_R16_3PLANE_420_UNORM"; break;
@@ -959,7 +1117,9 @@ StringView getVkResultName(VkResult res) {
 	case VK_ERROR_OUT_OF_POOL_MEMORY: return "VK_ERROR_OUT_OF_POOL_MEMORY"; break;
 	case VK_ERROR_INVALID_EXTERNAL_HANDLE: return "VK_ERROR_INVALID_EXTERNAL_HANDLE"; break;
 	case VK_ERROR_FRAGMENTATION: return "VK_ERROR_FRAGMENTATION"; break;
-	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: return "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS"; break;
+	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:
+		return "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";
+		break;
 #if VK_VERSION_1_3
 	case VK_PIPELINE_COMPILE_REQUIRED: return "VK_PIPELINE_COMPILE_REQUIRED"; break;
 #endif
@@ -970,11 +1130,15 @@ StringView getVkResultName(VkResult res) {
 	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: return "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR"; break;
 	case VK_ERROR_VALIDATION_FAILED_EXT: return "VK_ERROR_VALIDATION_FAILED_EXT"; break;
 	case VK_ERROR_INVALID_SHADER_NV: return "VK_ERROR_INVALID_SHADER_NV"; break;
-	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT"; break;
+	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
+		return "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT";
+		break;
 #if VK_VERSION_1_3
 	case VK_ERROR_NOT_PERMITTED_KHR: return "VK_ERROR_NOT_PERMITTED_KHR"; break;
 #endif
-	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT"; break;
+	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
+		return "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";
+		break;
 	case VK_THREAD_IDLE_KHR: return "VK_THREAD_IDLE_KHR"; break;
 	case VK_THREAD_DONE_KHR: return "VK_THREAD_DONE_KHR"; break;
 	case VK_OPERATION_DEFERRED_KHR: return "VK_OPERATION_DEFERRED_KHR"; break;
@@ -987,95 +1151,97 @@ StringView getVkResultName(VkResult res) {
 
 String getVkMemoryPropertyFlags(VkMemoryPropertyFlags flags) {
 	StringStream ret;
-	if (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) { ret << " DEVICE_LOCAL"; }
-	if (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { ret << " HOST_VISIBLE"; }
-	if (flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { ret << " HOST_COHERENT"; }
-	if (flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { ret << " HOST_CACHED"; }
-	if (flags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) { ret << " LAZILY_ALLOCATED"; }
-	if (flags & VK_MEMORY_PROPERTY_PROTECTED_BIT) { ret << " PROTECTED"; }
-	if (flags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD) { ret << " DEVICE_COHERENT_AMD"; }
-	if (flags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD) { ret << " DEVICE_UNCACHED_AMD"; }
+	if (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+		ret << " DEVICE_LOCAL";
+	}
+	if (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+		ret << " HOST_VISIBLE";
+	}
+	if (flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+		ret << " HOST_COHERENT";
+	}
+	if (flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) {
+		ret << " HOST_CACHED";
+	}
+	if (flags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+		ret << " LAZILY_ALLOCATED";
+	}
+	if (flags & VK_MEMORY_PROPERTY_PROTECTED_BIT) {
+		ret << " PROTECTED";
+	}
+	if (flags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD) {
+		ret << " DEVICE_COHERENT_AMD";
+	}
+	if (flags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD) {
+		ret << " DEVICE_UNCACHED_AMD";
+	}
 	return ret.str();
 }
 
-static ExtensionFlags getFlagForExtension(const char *name) {
-	if (strcmp(name, VK_KHR_MAINTENANCE3_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::Maintenance3;
-	} else if (strcmp(name, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::DescriptorIndexing;
-	} else if (strcmp(name, VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::DrawIndirectCount;
-	} else if (strcmp(name, VK_KHR_16BIT_STORAGE_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::Storage16Bit;
-	} else if (strcmp(name, VK_KHR_8BIT_STORAGE_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::Storage8Bit;
-	} else if (strcmp(name, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::DeviceAddress;
-	} else if (strcmp(name, VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::ShaderInt8 | ExtensionFlags::ShaderFloat16;
-	} else if (strcmp(name, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::MemoryBudget;
-	} else if (strcmp(name, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::GetMemoryRequirements2;
-	} else if (strcmp(name, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::DedicatedAllocation;
-	} else if (strcmp(name, VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::ExternalFenceFd;
-#if __APPLE__
-	} else if (strcmp(name, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0) {
-		return ExtensionFlags::Portability;
-#endif
+static uint32_t getIndexForExtension(const char *name) {
+	uint32_t ret = 0;
+	for (auto &it : s_optionalDeviceExtensions) {
+		if (it && strcmp(name, it) == 0) {
+			return ret;
+		}
+		++ret;
 	}
-	return ExtensionFlags::None;
+	return maxOf<uint32_t>();
 }
 
-bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name, const Vector<VkExtensionProperties> &available,
-		Vector<StringView> &optionals, Vector<StringView> &promoted, ExtensionFlags &flags) {
-	auto flag = getFlagForExtension(name);
-	if (flag == ExtensionFlags::None) {
-		log::error("Vk", "Extension is not registered as optional: %s", name);
+bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name,
+		const Vector<VkExtensionProperties> &available, Vector<StringView> &optionals,
+		Vector<StringView> &promoted, std::bitset<toInt(OptionalDeviceExtension::Max)> &flags) {
+	auto index = getIndexForExtension(name);
+	if (index == maxOf<uint32_t>()) {
+		log::error("Vk", "Extension is not registered as optional: ", name);
 		return false;
 	}
 
+#if VK_VERSION_1_4
+	if (apiVersion >= VK_API_VERSION_1_4) {
+		for (auto &it : s_promotedVk14Extensions) {
+			if (it && strcmp(name, it) == 0) {
+				flags.set(index);
+				promoted.emplace_back(StringView(name));
+				return true;
+			}
+		}
+	}
+#endif
 #if VK_VERSION_1_3
 	if (apiVersion >= VK_API_VERSION_1_3) {
 		for (auto &it : s_promotedVk13Extensions) {
-			if (it) {
-				if (strcmp(name, it) == 0) {
-					flags |= flag;
-					promoted.emplace_back(StringView(name));
-					return true;
-				}
+			if (it && strcmp(name, it) == 0) {
+				flags.set(index);
+				promoted.emplace_back(StringView(name));
+				return true;
 			}
 		}
 	}
 #endif
 	if (apiVersion >= VK_API_VERSION_1_2) {
 		for (auto &it : s_promotedVk12Extensions) {
-			if (it) {
-				if (strcmp(name, it) == 0) {
-					flags |= flag;
-					promoted.emplace_back(StringView(name));
-					return true;
-				}
+			if (it && strcmp(name, it) == 0) {
+				flags.set(index);
+				promoted.emplace_back(StringView(name));
+				return true;
 			}
 		}
 	}
 	if (apiVersion >= VK_API_VERSION_1_1) {
 		for (auto &it : s_promotedVk11Extensions) {
-			if (it) {
-				if (strcmp(name, it) == 0) {
-					flags |= flag;
-					promoted.emplace_back(StringView(name));
-					return true;
-				}
+			if (it && strcmp(name, it) == 0) {
+				flags.set(index);
+				promoted.emplace_back(StringView(name));
+				return true;
 			}
 		}
 	}
 
 	for (auto &it : available) {
 		if (strcmp(name, it.extensionName) == 0) {
-			flags |= flag;
+			flags.set(index);
 			optionals.emplace_back(StringView(name));
 			return true;
 		}
@@ -1355,8 +1521,7 @@ size_t getFormatBlockSize(VkFormat format) {
 	case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM_EXT: return 6; break;
 	case VK_FORMAT_A4R4G4B4_UNORM_PACK16_EXT: return 2; break;
 	case VK_FORMAT_A4B4G4R4_UNORM_PACK16_EXT: return 2; break;
-	default:
-		break;
+	default: break;
 	}
 	return 0;
 }
@@ -1407,13 +1572,18 @@ Status getStatus(VkResult res) {
 	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: return Status::ErrorIncompatibleDisplay; break;
 	case VK_ERROR_VALIDATION_FAILED_EXT: return Status::ErrorValidationFailed; break;
 	case VK_ERROR_INVALID_SHADER_NV: return Status::ErrorInvalidShader; break;
-	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return Status::ErrorInvalidDrmFormat; break;
+	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
+		return Status::ErrorInvalidDrmFormat;
+		break;
 #if VK_VERSION_1_3
 	case VK_ERROR_NOT_PERMITTED_KHR: return Status::ErrorNotPermitted; break;
 #endif
 	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return Status::ErrorFullscreenLost; break;
 	case VK_THREAD_IDLE_KHR: return Status::ThreadIdle; break;
-	case VK_THREAD_DONE_KHR: return Status::ThreadDone;; break;
+	case VK_THREAD_DONE_KHR:
+		return Status::ThreadDone;
+		;
+		break;
 	case VK_OPERATION_DEFERRED_KHR: return Status::OperationDeferred; break;
 	case VK_OPERATION_NOT_DEFERRED_KHR: return Status::OperationNotDeferred; break;
 	default: break;
@@ -1421,9 +1591,9 @@ Status getStatus(VkResult res) {
 	return Status::ErrorUnknown;
 }
 
-std::ostream &operator<< (std::ostream &stream, VkResult res) {
+std::ostream &operator<<(std::ostream &stream, VkResult res) {
 	stream << STAPPLER_VERSIONIZED_NAMESPACE::xenolith::vk::getVkResultName(res);
 	return stream;
 }
 
-}
+} // namespace stappler::xenolith::vk

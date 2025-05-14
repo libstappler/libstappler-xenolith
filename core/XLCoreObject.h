@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,22 +26,7 @@
 
 #include "XLCoreInfo.h"
 
-// check if 64-bit pointer is available for Vulkan
-#ifndef XL_USE_64_BIT_PTR_DEFINES
-#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__) ) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
-	#define XL_USE_64_BIT_PTR_DEFINES 1
-#else
-	#define XL_USE_64_BIT_PTR_DEFINES 0
-#endif
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
-
-#if (XL_USE_64_BIT_PTR_DEFINES == 1)
-using ObjectHandle = ValueWrapper<void *, class ObjectHandleFlag>;
-#else
-using ObjectHandle = ValueWrapper<uint64_t, class ObjectHandleFlag>;
-#endif
 
 class TextureSet;
 class ImageView;
@@ -62,7 +48,7 @@ struct SubpassData;
 struct PipelineDescriptor;
 
 struct SP_PUBLIC ObjectData {
-	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
+	using ClearCallback = void (*)(Device *, ObjectType, ObjectHandle, void *);
 
 	ObjectType type;
 	Device *device = nullptr;
@@ -74,7 +60,7 @@ struct SP_PUBLIC ObjectData {
 class SP_PUBLIC Object : public NamedRef {
 public:
 	using ObjectHandle = core::ObjectHandle;
-	using ClearCallback = void (*) (Device *, ObjectType, ObjectHandle, void *);
+	using ClearCallback = void (*)(Device *, ObjectType, ObjectHandle, void *);
 
 	virtual ~Object();
 
@@ -252,7 +238,8 @@ class SP_PUBLIC ImageView : public Object {
 public:
 	virtual ~ImageView();
 
-	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr, void *p = nullptr) override;
+	virtual bool init(Device &, ClearCallback, ObjectType, ObjectHandle ptr,
+			void *p = nullptr) override;
 
 	void setReleaseCallback(Function<void()> &&);
 	void runReleaseCallback();
@@ -478,6 +465,6 @@ protected:
 	Vector<Rc<Ref>> _autorelease;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREOBJECT_H_ */

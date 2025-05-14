@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEWBASE_H_
+#define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEWBASE_H_
 
 #include "XL2d.h"
 #include "XLNode.h"
@@ -34,9 +35,9 @@ class ActionAcceleratedMove;
 
 class SP_PUBLIC ScrollViewBase : public Node {
 public:
-	using ScrollFilterCallback = std::function<float (float delta)>;
-	using ScrollCallback = std::function<void (float delta, bool finished)>;
-	using OverscrollCallback = std::function<void (float delta)>;
+	using ScrollFilterCallback = std::function<float(float delta)>;
+	using ScrollCallback = std::function<void(float delta, bool finished)>;
+	using OverscrollCallback = std::function<void(float delta)>;
 
 	enum Layout {
 		Vertical,
@@ -65,10 +66,10 @@ public:
 	virtual bool isInMotion() const;
 	virtual bool isMoved() const;
 
-	virtual void setScrollCallback(const ScrollCallback & cb);
+	virtual void setScrollCallback(const ScrollCallback &cb);
 	virtual const ScrollCallback &getScrollCallback() const;
 
-	virtual void setOverscrollCallback(const OverscrollCallback & cb);
+	virtual void setOverscrollCallback(const OverscrollCallback &cb);
 	virtual const OverscrollCallback &getOverscrollCallback() const;
 
 	virtual Node *getRoot() const { return _root; }
@@ -111,8 +112,8 @@ public:
 	virtual void setScrollMaxVelocity(float value);
 	virtual float getScrollMaxVelocity() const;
 
-	virtual Node * getFrontNode() const;
-	virtual Node * getBackNode() const;
+	virtual Node *getFrontNode() const;
+	virtual Node *getBackNode() const;
 
 	virtual Vec2 convertFromScrollableSpace(const Vec2 &);
 	virtual Vec2 convertToScrollableSpace(const Vec2 &);
@@ -209,6 +210,6 @@ protected:
 	Padding _paddingGlobal;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCROLLVIEWBASE_H_ */
+#endif /* XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEWBASE_H_ */

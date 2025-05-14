@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +29,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-Object::~Object() {
-	invalidate();
-}
+Object::~Object() { invalidate(); }
 
-bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle handle, void *extra) {
+bool Object::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle handle,
+		void *extra) {
 	_object.device = &dev;
 	_object.callback = cb;
 	_object.type = type;
@@ -69,10 +69,9 @@ bool RenderPass::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHand
 }
 
 uint64_t Framebuffer::getViewHash(SpanView<Rc<ImageView>> views) {
-	Vector<uint64_t> ids; ids.reserve(views.size());
-	for (auto &it : views) {
-		ids.emplace_back(it->getIndex());
-	}
+	Vector<uint64_t> ids;
+	ids.reserve(views.size());
+	for (auto &it : views) { ids.emplace_back(it->getIndex()); }
 	return getViewHash(ids);
 }
 
@@ -86,9 +85,9 @@ uint64_t Framebuffer::getHash() const {
 
 inline uint32_t hash(uint32_t k, uint32_t capacity) {
 	k ^= k >> 16;
-	k *= 0x85ebca6b;
+	k *= 0x85eb'ca6b;
 	k ^= k >> 13;
-	k *= 0xc2b2ae35;
+	k *= 0xc2b2'ae35;
 	k ^= k >> 16;
 	return k & (capacity - 1);
 }
@@ -105,7 +104,8 @@ void DataAtlas::compile() {
 	auto bufferObjectSize = sizeof(uint32_t) * 2 + _objectSize;
 	auto bufferObjectCount = math::npot(uint32_t(_intNames.size()));
 
-	Bytes dataStorage; dataStorage.resize(bufferObjectCount * bufferObjectSize, uint8_t(0xFFU));
+	Bytes dataStorage;
+	dataStorage.resize(bufferObjectCount * bufferObjectSize, uint8_t(0xFFU));
 
 	auto bufferData = dataStorage.data();
 
@@ -116,10 +116,11 @@ void DataAtlas::compile() {
 		while (true) {
 			auto targetObject = bufferData + slot * bufferObjectSize;
 			uint32_t prev = *reinterpret_cast<uint32_t *>(targetObject);
-			if (prev == 0xffffffffU || prev == objectKey) {
+			if (prev == 0xffff'ffffU || prev == objectKey) {
 				memcpy(targetObject, &objectKey, sizeof(uint32_t));
 				memcpy(targetObject + sizeof(uint32_t), &it.second, sizeof(uint32_t));
-				memcpy(targetObject + sizeof(uint32_t) * 2, _data.data() + _objectSize * uint32_t(it.second), _objectSize);
+				memcpy(targetObject + sizeof(uint32_t) * 2,
+						_data.data() + _objectSize * uint32_t(it.second), _objectSize);
 				break;
 			}
 			slot = (slot + 1) & (bufferObjectCount - 1);
@@ -147,10 +148,11 @@ const uint8_t *DataAtlas::getObjectByName(uint32_t id) const {
 		auto bufferData = _bufferData.data();
 
 		while (true) {
-			uint32_t prev = *reinterpret_cast<const uint32_t *>(bufferData + slot * bufferObjectSize);
+			uint32_t prev =
+					*reinterpret_cast<const uint32_t *>(bufferData + slot * bufferObjectSize);
 			if (prev == id) {
 				return bufferData + slot * bufferObjectSize + sizeof(uint32_t) * 2;
-			} else if (prev == 0xffffffffU) {
+			} else if (prev == 0xffff'ffffU) {
 				break;
 			}
 			slot = (slot + 1) & (size - 1);
@@ -186,7 +188,7 @@ const uint8_t *DataAtlas::getObjectByOrder(uint32_t order) const {
 void DataAtlas::addObject(uint32_t id, void *data) {
 	auto off = _data.size();
 	_data.resize(off + _objectSize);
-	memcpy(_data.data() + off, data,  _objectSize);
+	memcpy(_data.data() + off, data, _objectSize);
 
 	_intNames.emplace(id, off / _objectSize);
 }
@@ -194,14 +196,12 @@ void DataAtlas::addObject(uint32_t id, void *data) {
 void DataAtlas::addObject(StringView name, void *data) {
 	auto off = _data.size();
 	_data.resize(off + _objectSize);
-	memcpy(_data.data() + off, data,  _objectSize);
+	memcpy(_data.data() + off, data, _objectSize);
 
 	_stringNames.emplace(name.str<Interface>(), off / _objectSize);
 }
 
-void DataAtlas::setBuffer(Rc<BufferObject> &&index) {
-	_buffer = move(index);
-}
+void DataAtlas::setBuffer(Rc<BufferObject> &&index) { _buffer = move(index); }
 
 static std::atomic<uint64_t> s_ImageViewCurrentIndex = 1;
 
@@ -214,7 +214,8 @@ bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHan
 	}
 	return false;
 }
-bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p, uint64_t idx) {
+bool ImageObject::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandle ptr, void *p,
+		uint64_t idx) {
 	if (Object::init(dev, cb, type, ptr, p)) {
 		_index = idx;
 		return true;
@@ -241,9 +242,7 @@ bool ImageView::init(Device &dev, ClearCallback cb, ObjectType type, ObjectHandl
 	return false;
 }
 
-void ImageView::setReleaseCallback(Function<void()> &&cb) {
-	_releaseCallback = sp::move(cb);
-}
+void ImageView::setReleaseCallback(Function<void()> &&cb) { _releaseCallback = sp::move(cb); }
 
 void ImageView::runReleaseCallback() {
 	if (_releaseCallback) {
@@ -253,29 +252,20 @@ void ImageView::runReleaseCallback() {
 	}
 }
 
-Extent3 ImageView::getExtent() const {
-	return _image->getInfo().extent;
-}
+Extent3 ImageView::getExtent() const { return _image->getInfo().extent; }
 
-uint32_t ImageView::getLayerCount() const {
-	return _info.layerCount.get();
-}
+uint32_t ImageView::getLayerCount() const { return _info.layerCount.get(); }
 
 Extent3 ImageView::getFramebufferExtent() const {
-	return Extent3(_image->getInfo().extent.width, _image->getInfo().extent.height, getLayerCount());
+	return Extent3(_image->getInfo().extent.width, _image->getInfo().extent.height,
+			getLayerCount());
 }
 
-void CommandBuffer::bindImage(ImageObject *image) {
-	_images.emplace(image);
-}
+void CommandBuffer::bindImage(ImageObject *image) { _images.emplace(image); }
 
-void CommandBuffer::bindBuffer(BufferObject *buffer) {
-	_buffers.emplace(buffer);
-}
+void CommandBuffer::bindBuffer(BufferObject *buffer) { _buffers.emplace(buffer); }
 
-void CommandBuffer::bindFramebuffer(Framebuffer *fb) {
-	_framebuffers.emplace(fb);
-}
+void CommandBuffer::bindFramebuffer(Framebuffer *fb) { _framebuffers.emplace(fb); }
 
 String Shader::inspectShader(SpanView<uint32_t> data) {
 	SpvReflectShaderModule shader;
@@ -286,7 +276,9 @@ String Shader::inspectShader(SpanView<uint32_t> data) {
 	switch (shader.spirv_execution_model) {
 	case SpvExecutionModelVertex: stage = ProgramStage::Vertex; break;
 	case SpvExecutionModelTessellationControl: stage = ProgramStage::TesselationControl; break;
-	case SpvExecutionModelTessellationEvaluation: stage = ProgramStage::TesselationEvaluation; break;
+	case SpvExecutionModelTessellationEvaluation:
+		stage = ProgramStage::TesselationEvaluation;
+		break;
 	case SpvExecutionModelGeometry: stage = ProgramStage::Geometry; break;
 	case SpvExecutionModelFragment: stage = ProgramStage::Fragment; break;
 	case SpvExecutionModelGLCompute: stage = ProgramStage::Compute; break;
@@ -302,13 +294,14 @@ String Shader::inspectShader(SpanView<uint32_t> data) {
 	default: break;
 	}
 
-	StringStream out;
+	StringStream d;
+	auto out = makeCallback(d);
 
-	out << "[" << getProgramStageDescription(stage) << "]\n";
+	out << "[" << stage << "]\n";
 
 	for (auto &it : makeSpanView(shader.descriptor_bindings, shader.descriptor_binding_count)) {
 		out << "\tBinging: [" << it.set << ":" << it.binding << "] "
-				<< getDescriptorTypeName(DescriptorType(it.descriptor_type)) << "\n";
+			<< getDescriptorTypeName(DescriptorType(it.descriptor_type)) << "\n";
 	}
 
 	for (auto &it : makeSpanView(shader.push_constant_blocks, shader.push_constant_block_count)) {
@@ -317,20 +310,14 @@ String Shader::inspectShader(SpanView<uint32_t> data) {
 
 	spvReflectDestroyShaderModule(&shader);
 
-	return out.str();
+	return d.str();
 }
 
-String Shader::inspect(SpanView<uint32_t> data) {
-	return inspectShader(data);
-}
+String Shader::inspect(SpanView<uint32_t> data) { return inspectShader(data); }
 
-void Semaphore::setSignaled(bool value) {
-	_signaled = value;
-}
+void Semaphore::setSignaled(bool value) { _signaled = value; }
 
-void Semaphore::setWaited(bool value) {
-	_waited = value;
-}
+void Semaphore::setWaited(bool value) { _waited = value; }
 
 void Semaphore::setInUse(bool value, uint64_t timeline) {
 	if (timeline == _timeline) {
@@ -343,15 +330,13 @@ bool Semaphore::reset() {
 		_signaled = false;
 		_waited = false;
 		_inUse = false;
-		++ _timeline;
+		++_timeline;
 		return true;
 	}
 	return false;
 }
 
-Fence::~Fence() {
-	doRelease(false);
-}
+Fence::~Fence() { doRelease(false); }
 
 void Fence::clear() {
 	if (_releaseFn) {
@@ -362,9 +347,7 @@ void Fence::clear() {
 	}
 }
 
-void Fence::setFrame(uint64_t f) {
-	_frame = f;
-}
+void Fence::setFrame(uint64_t f) { _frame = f; }
 
 void Fence::setFrame(Function<bool()> &&schedule, Function<void()> &&release, uint64_t f) {
 	_frame = f;
@@ -372,13 +355,9 @@ void Fence::setFrame(Function<bool()> &&schedule, Function<void()> &&release, ui
 	_releaseFn = sp::move(release);
 }
 
-void Fence::setScheduleCallback(Function<bool()> &&schedule) {
-	_scheduleFn = sp::move(schedule);
-}
+void Fence::setScheduleCallback(Function<bool()> &&schedule) { _scheduleFn = sp::move(schedule); }
 
-void Fence::setReleaseCallback(Function<bool()> &&release) {
-	_releaseFn = sp::move(release);
-}
+void Fence::setReleaseCallback(Function<bool()> &&release) { _releaseFn = sp::move(release); }
 
 void Fence::setArmed(DeviceQueue &q) {
 	std::unique_lock<Mutex> lock(_mutex);
@@ -394,9 +373,7 @@ void Fence::setArmed() {
 	_armedTime = sp::platform::clock(ClockType::Monotonic);
 }
 
-void Fence::setTag(StringView tag) {
-	_tag = tag;
-}
+void Fence::setTag(StringView tag) { _tag = tag; }
 
 void Fence::addRelease(Function<void(bool)> &&cb, Ref *ref, StringView tag) {
 	std::unique_lock<Mutex> lock(_mutex);
@@ -478,15 +455,12 @@ bool Fence::check(Loop &loop, bool lockfree) {
 			return check(loop, false);
 		}
 		return false;
-	default:
-		break;
+	default: break;
 	}
 	return false;
 }
 
-void Fence::autorelease(Rc<Ref> &&ref) {
-	_autorelease.emplace_back(move(ref));
-}
+void Fence::autorelease(Rc<Ref> &&ref) { _autorelease.emplace_back(move(ref)); }
 
 void Fence::setSignaled(Loop &loop) {
 	_state = Signaled;
@@ -500,10 +474,10 @@ void Fence::setSignaled(Loop &loop) {
 
 void Fence::scheduleReset(Loop &loop) {
 	if (_releaseFn) {
-		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
+		loop.performInQueue(Rc<thread::Task>::create([this](const thread::Task &) {
 			doResetFence();
 			return true;
-		}, [this] (const thread::Task &, bool success) {
+		}, [this](const thread::Task &, bool success) {
 			auto releaseFn = sp::move(_releaseFn);
 			_releaseFn = nullptr;
 			releaseFn();
@@ -515,10 +489,10 @@ void Fence::scheduleReset(Loop &loop) {
 
 void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 	if (_releaseFn) {
-		loop.performInQueue(Rc<thread::Task>::create([this] (const thread::Task &) {
+		loop.performInQueue(Rc<thread::Task>::create([this](const thread::Task &) {
 			doResetFence();
 			return true;
-		}, [this, s] (const thread::Task &, bool success) {
+		}, [this, s](const thread::Task &, bool success) {
 			doRelease(s);
 
 			auto releaseFn = sp::move(_releaseFn);
@@ -556,4 +530,4 @@ void Fence::doRelease(bool success) {
 	autorelease.clear();
 }
 
-}
+} // namespace stappler::xenolith::core

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -61,9 +62,7 @@ void ScrollController::handleContentSizeDirty() {
 		float tmpPos = _scroll->getScrollPosition();
 		float relPos = _scroll->getScrollRelativePosition();
 		if (!rebuildObjects()) {
-			for (auto &it : _nodes) {
-				updateScrollNode(it);
-			}
+			for (auto &it : _nodes) { updateScrollNode(it); }
 		} else {
 			if (!isnan(relPos) && tmpPos == _scroll->getScrollPosition()) {
 				onScrollPosition();
@@ -72,9 +71,7 @@ void ScrollController::handleContentSizeDirty() {
 		}
 		_savedSize = defSize;
 	} else {
-		for (auto &it : _nodes) {
-			updateScrollNode(it);
-		}
+		for (auto &it : _nodes) { updateScrollNode(it); }
 	}
 }
 
@@ -126,28 +123,16 @@ void ScrollController::onScrollPosition(bool force) {
 	} while (_infoDirty || force);
 }
 
-void ScrollController::onScroll(float delta, bool eneded) {
+void ScrollController::onScroll(float delta, bool eneded) { }
 
-}
+void ScrollController::onOverscroll(float delta) { }
 
-void ScrollController::onOverscroll(float delta) {
+Node *ScrollController::getRoot() const { return _root; }
 
-}
+ScrollViewBase *ScrollController::getScroll() const { return _scroll; }
 
-Node *ScrollController::getRoot() const {
-	return _root;
-}
-
-ScrollViewBase *ScrollController::getScroll() const {
-	return _scroll;
-}
-
-float ScrollController::getScrollMin() {
-	return _currentMin;
-}
-float ScrollController::getScrollMax() {
-	return _currentMax;
-}
+float ScrollController::getScrollMin() { return _currentMin; }
+float ScrollController::getScrollMax() { return _currentMax; }
 
 void ScrollController::clear() {
 	for (auto &it : _nodes) {
@@ -165,9 +150,7 @@ void ScrollController::clear() {
 	_currentMax = 0.0f;
 }
 
-void ScrollController::update(float position, float size) {
-	reset(position, size);
-}
+void ScrollController::update(float position, float size) { reset(position, size); }
 
 void ScrollController::reset(float origPosition, float origSize) {
 	float windowBegin = nan();
@@ -264,18 +247,21 @@ void ScrollController::onNextObject(Item &h, float pos, float size) {
 	}
 }
 
-size_t ScrollController::addItem(NodeFunction &&fn, Size2 size, Vec2 vec, ZOrder z, StringView tag) {
+size_t ScrollController::addItem(NodeFunction &&fn, Size2 size, Vec2 vec, ZOrder z,
+		StringView tag) {
 	_nodes.emplace_back(sp::move(fn), vec, size, z, tag);
 	_infoDirty = true;
 	return _nodes.size() - 1;
 }
 
-size_t ScrollController::addItem(NodeFunction &&fn, float size, float pos, ZOrder z, StringView tag) {
+size_t ScrollController::addItem(NodeFunction &&fn, float size, float pos, ZOrder z,
+		StringView tag) {
 	if (!_scroll) {
 		return std::numeric_limits<size_t>::max();
 	}
 
-	_nodes.emplace_back(sp::move(fn), _scroll->getPositionForNode(pos), _scroll->getContentSizeForNode(size), z, tag);
+	_nodes.emplace_back(sp::move(fn), _scroll->getPositionForNode(pos),
+			_scroll->getContentSizeForNode(size), z, tag);
 	_infoDirty = true;
 	return _nodes.size() - 1;
 }
@@ -287,31 +273,27 @@ size_t ScrollController::addItem(NodeFunction &&fn, float size, ZOrder zIndex, S
 
 	auto pos = 0.0f;
 	if (!_nodes.empty()) {
-		pos = _scroll->getNodeScrollPosition(_nodes.back().pos) + _scroll->getNodeScrollSize(_nodes.back().size);
+		pos = _scroll->getNodeScrollPosition(_nodes.back().pos)
+				+ _scroll->getNodeScrollSize(_nodes.back().size);
 	}
 
 	return addItem(sp::move(fn), size, pos, zIndex, tag);
 }
 
 size_t ScrollController::addPlaceholder(Size2 size, Vec2 pos) {
-	return addItem([] (const Item &item) -> Rc<Node> {
-		return Rc<Node>::create();
-	}, size, pos);
+	return addItem([](const Item &item) -> Rc<Node> { return Rc<Node>::create(); }, size, pos);
 }
 size_t ScrollController::addPlaceholder(float size, float pos) {
-	return addItem([] (const Item &item) -> Rc<Node>  {
-		return Rc<Node>::create();
-	}, size, pos);
+	return addItem([](const Item &item) -> Rc<Node> { return Rc<Node>::create(); }, size, pos);
 }
 size_t ScrollController::addPlaceholder(float size) {
-	return addItem([] (const Item &item) -> Rc<Node>  {
-		return Rc<Node>::create();
-	}, size);
+	return addItem([](const Item &item) -> Rc<Node> { return Rc<Node>::create(); }, size);
 }
 
 float ScrollController::getNextItemPosition() const {
 	if (!_nodes.empty()) {
-		return _scroll->getNodeScrollPosition(_nodes.back().pos) + _scroll->getNodeScrollSize(_nodes.back().size);
+		return _scroll->getNodeScrollPosition(_nodes.back().pos)
+				+ _scroll->getNodeScrollSize(_nodes.back().size);
 	}
 	return 0.0f;
 }
@@ -321,9 +303,7 @@ void ScrollController::setKeepNodes(bool value) {
 		_keepNodes = value;
 	}
 }
-bool ScrollController::isKeepNodes() const {
-	return _keepNodes;
-}
+bool ScrollController::isKeepNodes() const { return _keepNodes; }
 
 const ScrollController::Item *ScrollController::getItem(size_t n) {
 	if (n < _nodes.size()) {
@@ -368,18 +348,14 @@ size_t ScrollController::getItemIndex(Node *node) {
 	return std::numeric_limits<size_t>::max();
 }
 
-const Vector<ScrollController::Item> &ScrollController::getItems() const {
-	return _nodes;
-}
+const Vector<ScrollController::Item> &ScrollController::getItems() const { return _nodes; }
 
 Vector<ScrollController::Item> &ScrollController::getItems() {
 	_infoDirty = true;
 	return _nodes;
 }
 
-size_t ScrollController::size() const {
-	return _nodes.size();
-}
+size_t ScrollController::size() const { return _nodes.size(); }
 
 bool ScrollController::setScrollableArea(float offset, float size) {
 	if (_scrollAreaOffset != offset || _scrollAreaSize != size) {
@@ -395,13 +371,9 @@ bool ScrollController::setScrollableArea(float offset, float size) {
 	return false;
 }
 
-float ScrollController::getScrollableAreaOffset() const {
-	return _scrollAreaOffset;
-}
+float ScrollController::getScrollableAreaOffset() const { return _scrollAreaOffset; }
 
-float ScrollController::getScrollableAreaSize() const {
-	return _scrollAreaSize;
-}
+float ScrollController::getScrollableAreaSize() const { return _scrollAreaSize; }
 
 bool ScrollController::rebuildObjects() {
 	if (_callback) {
@@ -432,8 +404,8 @@ void ScrollController::setScrollRelativeValue(float value) {
 	float size = _scroll->getScrollSize();
 
 	auto &padding = _scroll->getPadding();
-	auto paddingFront = (_scroll->isVertical())?padding.top:padding.left;
-	auto paddingBack = (_scroll->isVertical())?padding.bottom:padding.right;
+	auto paddingFront = (_scroll->isVertical()) ? padding.top : padding.left;
+	auto paddingBack = (_scroll->isVertical()) ? padding.bottom : padding.right;
 
 	if (!isnan(areaSize) && !isnan(areaOffset)) {
 		float liveSize = areaSize - size + paddingFront + paddingBack;
@@ -485,7 +457,7 @@ Vector<Rc<Node>> ScrollController::getNodes() const {
 	return ret;
 }
 
-Node * ScrollController::getNodeByName(StringView str) const {
+Node *ScrollController::getNodeByName(StringView str) const {
 	if (str.empty()) {
 		return nullptr;
 	}
@@ -497,7 +469,7 @@ Node * ScrollController::getNodeByName(StringView str) const {
 	return nullptr;
 }
 
-Node * ScrollController::getFrontNode() const {
+Node *ScrollController::getFrontNode() const {
 	Node *ret = nullptr;
 	float pos = _currentMax;
 	if (!_nodes.empty() && _scroll) {
@@ -512,11 +484,11 @@ Node * ScrollController::getFrontNode() const {
 	return ret;
 }
 
-Node * ScrollController::getBackNode() const {
+Node *ScrollController::getBackNode() const {
 	Node *ret = nullptr;
 	float pos = _currentMin;
 	if (!_nodes.empty() && _scroll) {
-		for (auto it = _nodes.rbegin(); it != _nodes.rend(); it ++) {
+		for (auto it = _nodes.rbegin(); it != _nodes.rend(); it++) {
 			auto &item = *it;
 			auto npos = _scroll->getNodeScrollPosition(item.pos);
 			auto size = _scroll->getNodeScrollSize(item.size);
@@ -537,12 +509,14 @@ void ScrollController::resizeItem(const Item *item, float newSize, bool forward)
 		for (auto &it : items) {
 			if (&it == item) {
 				offset += (newSize - _scroll->getNodeScrollSize(it.size));
-				it.size =  _scroll->isVertical()?Size2(it.size.width, newSize):Size2(newSize, it.size.height);
+				it.size = _scroll->isVertical() ? Size2(it.size.width, newSize)
+												: Size2(newSize, it.size.height);
 				if (it.node) {
 					_scroll->updateScrollNode(it.node, it.pos, it.size, it.zIndex, it.name);
 				}
 			} else if (offset != 0.0f) {
-				it.pos = _scroll->isVertical()?Vec2(it.pos.x, it.pos.y + offset):Vec2(it.pos.x + offset, it.pos.y);
+				it.pos = _scroll->isVertical() ? Vec2(it.pos.x, it.pos.y + offset)
+											   : Vec2(it.pos.x + offset, it.pos.y);
 				if (it.node) {
 					_scroll->updateScrollNode(it.node, it.pos, it.size, it.zIndex, it.name);
 				}
@@ -550,16 +524,19 @@ void ScrollController::resizeItem(const Item *item, float newSize, bool forward)
 		}
 	} else {
 		float offset = 0.0f;
-		for (auto it = items.rbegin(); it != items.rend(); ++ it) {
+		for (auto it = items.rbegin(); it != items.rend(); ++it) {
 			if (&(*it) == item) {
 				offset += (newSize - _scroll->getNodeScrollSize(it->size));
-				it->size = _scroll->isVertical()?Size2(it->size.width, newSize):Size2(newSize, it->size.height);
-				it->pos = _scroll->isVertical()?Vec2(it->pos.x, it->pos.y - offset):Vec2(it->pos.x - offset, it->pos.y);
+				it->size = _scroll->isVertical() ? Size2(it->size.width, newSize)
+												 : Size2(newSize, it->size.height);
+				it->pos = _scroll->isVertical() ? Vec2(it->pos.x, it->pos.y - offset)
+												: Vec2(it->pos.x - offset, it->pos.y);
 				if (it->node) {
 					_scroll->updateScrollNode(it->node, it->pos, it->size, it->zIndex, it->name);
 				}
 			} else if (offset != 0.0f) {
-				it->pos = _scroll->isVertical()?Vec2(it->pos.x, it->pos.y - offset):Vec2(it->pos.x - offset, it->pos.y);
+				it->pos = _scroll->isVertical() ? Vec2(it->pos.x, it->pos.y - offset)
+												: Vec2(it->pos.x - offset, it->pos.y);
 				if (it->node) {
 					_scroll->updateScrollNode(it->node, it->pos, it->size, it->zIndex, it->name);
 				}
@@ -596,12 +573,10 @@ void ScrollController::updateAnimationPadding(float value) {
 	}
 }
 
-void ScrollController::setRebuildCallback(const RebuildCallback &cb) {
-	_callback = cb;
-}
+void ScrollController::setRebuildCallback(const RebuildCallback &cb) { _callback = cb; }
 
 const ScrollController::RebuildCallback &ScrollController::getRebuildCallback() const {
 	return _callback;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

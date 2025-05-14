@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +36,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 constexpr static float TAB_MIN_WIDTH = 72.0f;
 constexpr static float TAB_MAX_WIDTH = 264.0f;
 
-void TabBarButton::initialize(const TabButtonCallback &cb, TabBar::ButtonStyle style, bool swallow, bool wrapped) {
+void TabBarButton::initialize(const TabButtonCallback &cb, TabBar::ButtonStyle style, bool swallow,
+		bool wrapped) {
 	_tabButtonCallback = cb;
 	setSwallowEvents(swallow);
 
@@ -46,7 +48,8 @@ void TabBarButton::initialize(const TabButtonCallback &cb, TabBar::ButtonStyle s
 	_labelText->setTextTransform(font::TextTransform::Uppercase);
 }
 
-bool TabBarButton::init(MenuSourceButton *btn, const TabButtonCallback &cb, TabBar::ButtonStyle style, bool swallow, bool wrapped) {
+bool TabBarButton::init(MenuSourceButton *btn, const TabButtonCallback &cb,
+		TabBar::ButtonStyle style, bool swallow, bool wrapped) {
 	if (!Button::init(NodeStyle::Text, ColorRole::Secondary)) {
 		return false;
 	}
@@ -60,7 +63,8 @@ bool TabBarButton::init(MenuSourceButton *btn, const TabButtonCallback &cb, TabB
 	return true;
 }
 
-bool TabBarButton::init(MenuSource *source, const TabButtonCallback &cb, TabBar::ButtonStyle style, bool swallow, bool wrapped) {
+bool TabBarButton::init(MenuSource *source, const TabButtonCallback &cb, TabBar::ButtonStyle style,
+		bool swallow, bool wrapped) {
 	if (!Button::init(NodeStyle::Text, ColorRole::Secondary)) {
 		return false;
 	}
@@ -95,9 +99,11 @@ void TabBarButton::layoutContent() {
 		_leadingIcon->setVisible(false);
 		_labelText->setVisible(true);
 		_labelText->setAlignment(font::TextAlign::Center);
-		_labelText->setFontWeight(_selected?font::FontWeight::SemiBold:font::FontWeight::Regular);
+		_labelText->setFontWeight(
+				_selected ? font::FontWeight::SemiBold : font::FontWeight::Regular);
 		_labelText->setFontSize(14);
-		_labelText->setWidth(_contentSize.width - (_wrapped?32.0f:16.0f) - (_floatingMenuSource?16.0f:0.0f));
+		_labelText->setWidth(_contentSize.width - (_wrapped ? 32.0f : 16.0f)
+				- (_floatingMenuSource ? 16.0f : 0.0f));
 		_labelText->tryUpdateLabel();
 		if (_labelText->getLinesCount() > 1) {
 			_labelText->setFontSize(12);
@@ -107,8 +113,11 @@ void TabBarButton::layoutContent() {
 			_leadingIcon->setIconName(IconName::Navigation_arrow_drop_down_solid);
 			_leadingIcon->setAnchorPoint(Vec2(1.0f, 0.5f));
 			_labelText->setAnchorPoint(Vec2(0.5f, 0.5f));
-			_labelText->setPosition(Vec2((_contentSize.width) / 2.0f - 8.0f, _contentSize.height / 2.0f));
-			_leadingIcon->setPosition(Vec2(_labelText->getPosition().x + _labelText->getContentSize().width / 2.0f, _contentSize.height / 2.0f));
+			_labelText->setPosition(
+					Vec2((_contentSize.width) / 2.0f - 8.0f, _contentSize.height / 2.0f));
+			_leadingIcon->setPosition(
+					Vec2(_labelText->getPosition().x + _labelText->getContentSize().width / 2.0f,
+							_contentSize.height / 2.0f));
 			_leadingIcon->setAnchorPoint(Vec2(0.0f, 0.5f));
 		} else {
 			_labelText->setAnchorPoint(Vec2(0.5f, 0.5f));
@@ -121,12 +130,15 @@ void TabBarButton::layoutContent() {
 		_labelText->setAlignment(font::TextAlign::Center);
 
 		_leadingIcon->setAnchorPoint(Vec2(0.5f, 0.5f));
-		_leadingIcon->setPosition(Vec2(_contentSize.width / 2.0f, (_contentSize.height / 2.0f - 3.0f) + 13.0f));
-		_labelText->setFontWeight(_selected?font::FontWeight::SemiBold:font::FontWeight::Regular);
+		_leadingIcon->setPosition(
+				Vec2(_contentSize.width / 2.0f, (_contentSize.height / 2.0f - 3.0f) + 13.0f));
+		_labelText->setFontWeight(
+				_selected ? font::FontWeight::SemiBold : font::FontWeight::Regular);
 		_labelText->setFontSize(12);
-		_labelText->setWidth(_contentSize.width - (_wrapped?30.0f:14.0f));
+		_labelText->setWidth(_contentSize.width - (_wrapped ? 30.0f : 14.0f));
 		_labelText->setAnchorPoint(Vec2(0.5f, 0.5f));
-		_labelText->setPosition(Vec2(_contentSize.width / 2.0f, (_contentSize.height / 2.0f - 3.0f) - 13.0f));
+		_labelText->setPosition(
+				Vec2(_contentSize.width / 2.0f, (_contentSize.height / 2.0f - 3.0f) - 13.0f));
 		_labelText->setMaxLines(1);
 		_labelText->setAdjustValue(4);
 		break;
@@ -142,9 +154,8 @@ bool TabBar::init(MenuSource *source, ButtonStyle button, BarStyle bar, Alignmen
 	_buttonStyle = button;
 	_barStyle = bar;
 
-	_source = addComponent(Rc<DataListener<MenuSource>>::create([this] (SubscriptionFlags flags) {
-		onMenuSource();
-	}));
+	_source = addComponent(Rc<DataListener<MenuSource>>::create(
+			[this](SubscriptionFlags flags) { onMenuSource(); }));
 	_source->setSubscription(source);
 
 	if (_source && _source->getSubscription()) {
@@ -172,12 +183,14 @@ bool TabBar::init(MenuSource *source, ButtonStyle button, BarStyle bar, Alignmen
 
 	_left = addChild(Rc<IconSprite>::create(IconName::Navigation_chevron_left_solid));
 	auto leftListener = _left->addInputListener(Rc<InputListener>::create());
-	leftListener->addTouchRecognizer([] (const GestureData &) -> bool { return true; }, InputListener::makeButtonMask({InputMouseButton::Touch}));
+	leftListener->addTouchRecognizer([](const GestureData &) -> bool { return true; },
+			InputListener::makeButtonMask({InputMouseButton::Touch}));
 	leftListener->setSwallowEvents(InputListener::EventMaskTouch);
 
 	_right = addChild(Rc<IconSprite>::create(IconName::Navigation_chevron_right_solid));
 	auto rightListener = _right->addInputListener(Rc<InputListener>::create());
-	rightListener->addTouchRecognizer([] (const GestureData &) -> bool { return true; }, InputListener::makeButtonMask({InputMouseButton::Touch}));
+	rightListener->addTouchRecognizer([](const GestureData &) -> bool { return true; },
+			InputListener::makeButtonMask({InputMouseButton::Touch}));
 	rightListener->setSwallowEvents(InputListener::EventMaskTouch);
 
 	return true;
@@ -200,7 +213,8 @@ void TabBar::handleContentSizeDirty() {
 	}
 
 	float width = 0.0f;
-	Vector<ItemData> itemWidth; itemWidth.reserve(_buttonCount);
+	Vector<ItemData> itemWidth;
+	itemWidth.reserve(_buttonCount);
 
 	if (_source && _source->getSubscription()) {
 		auto &items = _source->getSubscription()->getItems();
@@ -348,18 +362,14 @@ void TabBar::setMenuSource(MenuSource *source) {
 	}
 }
 
-MenuSource *TabBar::getMenuSource() const {
-	return _source->getSubscription();
-}
+MenuSource *TabBar::getMenuSource() const { return _source->getSubscription(); }
 
 void TabBar::setAccentColor(const ColorRole &color) {
 	if (_accentColor != color) {
 		_accentColor = color;
 	}
 }
-ColorRole TabBar::getAccentColor() const {
-	return _accentColor;
-}
+ColorRole TabBar::getAccentColor() const { return _accentColor; }
 
 void TabBar::setButtonStyle(const ButtonStyle &btn) {
 	if (_buttonStyle != btn) {
@@ -367,9 +377,7 @@ void TabBar::setButtonStyle(const ButtonStyle &btn) {
 		_contentSizeDirty = true;
 	}
 }
-const TabBar::ButtonStyle & TabBar::getButtonStyle() const {
-	return _buttonStyle;
-}
+const TabBar::ButtonStyle &TabBar::getButtonStyle() const { return _buttonStyle; }
 
 void TabBar::setBarStyle(const BarStyle &bar) {
 	if (_barStyle != bar) {
@@ -377,9 +385,7 @@ void TabBar::setBarStyle(const BarStyle &bar) {
 		_contentSizeDirty = true;
 	}
 }
-const TabBar::BarStyle & TabBar::getBarStyle() const {
-	return _barStyle;
-}
+const TabBar::BarStyle &TabBar::getBarStyle() const { return _barStyle; }
 
 void TabBar::setAlignment(const Alignment &a) {
 	if (_alignment != a) {
@@ -387,16 +393,14 @@ void TabBar::setAlignment(const Alignment &a) {
 		_contentSizeDirty = true;
 	}
 }
-const TabBar::Alignment & TabBar::getAlignment() const {
-	return _alignment;
-}
+const TabBar::Alignment &TabBar::getAlignment() const { return _alignment; }
 
 void TabBar::onMenuSource() {
 	_buttonCount = 0;
 	auto &items = _source->getSubscription()->getItems();
 	for (auto &item : items) {
 		if (dynamic_cast<MenuSourceButton *>(item.get())) {
-			++ _buttonCount;
+			++_buttonCount;
 		}
 	}
 	_contentSizeDirty = true;
@@ -408,7 +412,7 @@ float TabBar::getItemSize(const String &name, bool extended, bool selected) cons
 		return TAB_MIN_WIDTH;
 	} else if (_buttonStyle == ButtonStyle::Title) {
 		auto desc = TypescaleLabel::getTypescaleRoleStyle(TypescaleRole::BodyLarge, _inputDensity);
-		desc.font.fontWeight = selected?font::FontWeight::SemiBold:font::FontWeight::Regular;
+		desc.font.fontWeight = selected ? font::FontWeight::SemiBold : font::FontWeight::Regular;
 
 		float width = Label::getStringWidth(fc, desc, name, true) + 32.0f;
 		if (extended) {
@@ -418,7 +422,7 @@ float TabBar::getItemSize(const String &name, bool extended, bool selected) cons
 	} else {
 		auto desc = TypescaleLabel::getTypescaleRoleStyle(TypescaleRole::BodyLarge, _inputDensity);
 		desc.font.fontSize = font::FontSize(12);
-		desc.font.fontWeight = selected?font::FontWeight::SemiBold:font::FontWeight::Regular;
+		desc.font.fontWeight = selected ? font::FontWeight::SemiBold : font::FontWeight::Regular;
 
 		float width = Label::getStringWidth(fc, desc, name, true);
 		if (width > 72.0f) {
@@ -432,11 +436,11 @@ float TabBar::getItemSize(const String &name, bool extended, bool selected) cons
 Rc<Node> TabBar::onItem(MenuSourceButton *btn, bool wrapped) {
 	Rc<TabBarButton> ret = nullptr;
 	if (btn) {
-		ret = Rc<TabBarButton>::create(btn, [this] (Button *b, MenuSourceButton *btn) {
+		ret = Rc<TabBarButton>::create(btn, [this](Button *b, MenuSourceButton *btn) {
 			onTabButton(b, btn);
 		}, _buttonStyle, _barStyle == BarStyle::Layout, wrapped);
 	} else {
-		ret = Rc<TabBarButton>::create(_extra, [this] (Button *b, MenuSourceButton *btn) {
+		ret = Rc<TabBarButton>::create(_extra, [this](Button *b, MenuSourceButton *btn) {
 			onTabButton(b, btn);
 		}, _buttonStyle, _barStyle == BarStyle::Layout, wrapped);
 	}
@@ -461,7 +465,7 @@ void TabBar::onTabButton(Button *b, MenuSourceButton *btn) {
 		if (btn == it) {
 			break;
 		}
-		++ idx;
+		++idx;
 	}
 	if (idx != _selectedIndex) {
 		auto &cb = btn->getCallback();
@@ -509,19 +513,18 @@ void TabBar::setSelectedTabIndex(size_t idx) {
 			_layer->setContentSize(Size2(pos.second, 2.0f));
 
 			_layer->stopAllActionsByTag("TabBarAction"_tag);
-			auto spawn = Rc<EaseQuarticActionOut>::create(Rc<FadeTo>::create(0.15f, 1.0f));
+			auto spawn = Rc<EaseActionTyped>::create(Rc<FadeTo>::create(0.15f, 1.0f),
+					EaseActionTyped::Type::QuartEaseOut);
 			_layer->runAction(spawn, "TabBarAction"_tag);
 		} else {
 			_layer->setVisible(true);
 			_layer->setOpacity(1.0f);
 			_layer->stopAllActionsByTag("TabBarAction"_tag);
-			auto spawn = Rc<EaseQuarticActionOut>::create(
-					Rc<Spawn>::create(
-							Rc<MoveTo>::create(0.35f, Vec2(pos.first, 0.0f)),
+			auto spawn = Rc<EaseActionTyped>::create(
+					Rc<Spawn>::create(Rc<MoveTo>::create(0.35f, Vec2(pos.first, 0.0f)),
 							Rc<ResizeTo>::create(0.35f, Size2(pos.second, 2.0f)),
-							Rc<FadeTo>::create(0.15f, 1.0f)
-					)
-			);
+							Rc<FadeTo>::create(0.15f, 1.0f)),
+					EaseActionTyped::Type::QuartEaseOut);
 			_layer->runAction(spawn, "TabBarAction"_tag);
 
 			float scrollPos = _scroll->getScrollPosition();
@@ -539,7 +542,8 @@ void TabBar::setSelectedTabIndex(size_t idx) {
 					onScrollPositionProgress(1.0f);
 					_scroll->runAdjustPosition(pos.first + pos.second - _scroll->getScrollSize());
 				} else {
-					_scroll->runAdjustPosition(pos.first + pos.second - _scroll->getScrollSize() + _positions[idx + 1].second / 2.0f);
+					_scroll->runAdjustPosition(pos.first + pos.second - _scroll->getScrollSize()
+							+ _positions[idx + 1].second / 2.0f);
 				}
 			}
 		}
@@ -560,15 +564,13 @@ void TabBar::setSelectedIndex(size_t nidx) {
 				} else {
 					b->setSelected(false);
 				}
-				++ idx;
+				++idx;
 			}
 		}
 	}
 }
 
-size_t TabBar::getSelectedIndex() const {
-	return _selectedIndex;
-}
+size_t TabBar::getSelectedIndex() const { return _selectedIndex; }
 
 void TabBar::setProgress(float prog) {
 	if (_layer->getActionByTag("TabBarAction"_tag) == nullptr) {
@@ -577,7 +579,8 @@ void TabBar::setProgress(float prog) {
 				auto &origin = _positions[_selectedIndex];
 				auto &next = _positions[_selectedIndex + 1];
 				_layer->setPositionX(progress(origin.first, next.first, prog));
-				_layer->setContentSize(Size2(progress(origin.second, next.second, prog), _layer->getContentSize().height));
+				_layer->setContentSize(Size2(progress(origin.second, next.second, prog),
+						_layer->getContentSize().height));
 			}
 		} else if (prog < 0.0f) {
 			prog = -prog;
@@ -585,7 +588,8 @@ void TabBar::setProgress(float prog) {
 				auto &origin = _positions[_selectedIndex];
 				auto &next = _positions[_selectedIndex - 1];
 				_layer->setPositionX(progress(origin.first, next.first, prog));
-				_layer->setContentSize(Size2(progress(origin.second, next.second, prog), _layer->getContentSize().height));
+				_layer->setContentSize(Size2(progress(origin.second, next.second, prog),
+						_layer->getContentSize().height));
 			}
 		}
 	}
@@ -603,4 +607,4 @@ void TabBar::applyStyle(StyleContainer *c, const SurfaceStyleData &style) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

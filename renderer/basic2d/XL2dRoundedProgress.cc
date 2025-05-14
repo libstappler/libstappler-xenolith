@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,8 +39,8 @@ bool RoundedProgress::init(Layout l) {
 	setCascadeOpacityEnabled(true);
 
 	_bar = addChild(Rc<LayerRounded>::create(Color::Black, 0.0f), ZOrder(1));
-	_bar->setPosition(Vec2(0, 0));
-	_bar->setAnchorPoint(Vec2(0, 0));
+	_bar->setPosition(Vec2::ZERO);
+	_bar->setAnchorPoint(Vec2::ZERO);
 	_bar->setOpacity(1.0f);
 
 	return true;
@@ -52,9 +53,7 @@ void RoundedProgress::setLayout(Layout l) {
 	}
 }
 
-RoundedProgress::Layout RoundedProgress::getLayout() const {
-	return _layout;
-}
+RoundedProgress::Layout RoundedProgress::getLayout() const { return _layout; }
 
 void RoundedProgress::setInverted(bool value) {
 	if (_inverted != value) {
@@ -63,9 +62,7 @@ void RoundedProgress::setInverted(bool value) {
 	}
 }
 
-bool RoundedProgress::isInverted() const {
-	return _inverted;
-}
+bool RoundedProgress::isInverted() const { return _inverted; }
 
 void RoundedProgress::handleContentSizeDirty() {
 	LayerRounded::handleContentSizeDirty();
@@ -91,7 +88,7 @@ void RoundedProgress::handleContentSizeDirty() {
 		float diff = _contentSize.width - width;
 
 		_bar->setContentSize(Size2(width, _contentSize.height));
-		_bar->setPosition(Vec2(diff * (_inverted?(1.0f - _progress):_progress), 0));
+		_bar->setPosition(Vec2(diff * (_inverted ? (1.0f - _progress) : _progress), 0));
 	} else {
 		float height = _contentSize.height * _barScale;
 		if (height < _contentSize.width) {
@@ -104,7 +101,7 @@ void RoundedProgress::handleContentSizeDirty() {
 		float diff = _contentSize.height - height;
 
 		_bar->setContentSize(Size2(_contentSize.width, height));
-		_bar->setPosition(Vec2(0.0f, diff * (_inverted?(1.0f - _progress):_progress)));
+		_bar->setPosition(Vec2(0.0f, diff * (_inverted ? (1.0f - _progress) : _progress)));
 	}
 }
 
@@ -125,7 +122,7 @@ void RoundedProgress::setProgress(float value, float anim) {
 			_contentSizeDirty = true;
 		} else {
 			stopActionByTag(129);
-			auto a = Rc<ActionProgress>::create(anim, value, [this] (float time) {
+			auto a = Rc<ActionProgress>::create(anim, value, [this](float time) {
 				_progress = time;
 				_contentSizeDirty = true;
 			});
@@ -136,9 +133,7 @@ void RoundedProgress::setProgress(float value, float anim) {
 	}
 }
 
-float RoundedProgress::getProgress() const {
-	return _progress;
-}
+float RoundedProgress::getProgress() const { return _progress; }
 
 void RoundedProgress::setBarScale(float value) {
 	if (_barScale != value) {
@@ -147,24 +142,14 @@ void RoundedProgress::setBarScale(float value) {
 	}
 }
 
-float RoundedProgress::getBarScale() const {
-	return _barScale;
-}
+float RoundedProgress::getBarScale() const { return _barScale; }
 
-void RoundedProgress::setLineColor(const Color4F &c) {
-	setColor(c);
-}
+void RoundedProgress::setLineColor(const Color4F &c) { setColor(c); }
 
-void RoundedProgress::setLineOpacity(float o) {
-	setOpacity(o);
-}
+void RoundedProgress::setLineOpacity(float o) { setOpacity(o); }
 
-void RoundedProgress::setBarColor(const Color4F &c) {
-	_bar->setColor(c);
-}
+void RoundedProgress::setBarColor(const Color4F &c) { _bar->setColor(c); }
 
-void RoundedProgress::setBarOpacity(float o) {
-	_bar->setOpacity(o);
-}
+void RoundedProgress::setBarOpacity(float o) { _bar->setOpacity(o); }
 
-}
+} // namespace stappler::xenolith::basic2d

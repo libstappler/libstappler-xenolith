@@ -21,7 +21,7 @@
  **/
 
 #include "AppVgLinearGradientTest.h"
-#include "XL2dLinearGradient.h"
+#include "XLLinearGradient.h"
 
 namespace stappler::xenolith::app {
 
@@ -38,9 +38,7 @@ bool VgLinearGradientTest::init() {
 	updateAngle(0.5f);
 
 	_sliderAngle = addChild(Rc<SliderWithLabel>::create(toString("Angle: ", _angle),
-			(_angle + 180.0_to_rad) / 360.0_to_rad, [this] (float val) {
-		updateAngle(val);
-	}));
+			(_angle + 180.0_to_rad) / 360.0_to_rad, [this](float val) { updateAngle(val); }));
 	_sliderAngle->setAnchorPoint(Anchor::TopLeft);
 	_sliderAngle->setContentSize(Size2(128.0f, 32.0f));
 
@@ -71,14 +69,15 @@ void VgLinearGradientTest::updateAngle(float val) {
 	Vec2 start = center - angle * 0.5f;
 	Vec2 end = center + angle * 0.5f;
 
-	auto g = Rc<LinearGradient>::create(start, end, Vector<GradientStep>{
-		GradientStep{0.0f, 1.0f, Color::Blue_500},
-		GradientStep{0.45f, 0.0f, Color::Red_500},
-		GradientStep{0.55f, 0.0f, Color::Blue_500},
-		GradientStep{1.0f, 1.0f, Color::Red_500},
-	});
+	auto g = Rc<LinearGradient>::create(start, end,
+			Vector<GradientStep>{
+				GradientStep{0.0f, 1.0f, Color::Blue_500},
+				GradientStep{0.45f, 0.0f, Color::Red_500},
+				GradientStep{0.55f, 0.0f, Color::Blue_500},
+				GradientStep{1.0f, 1.0f, Color::Red_500},
+			});
 
 	_sprite->setLinearGradient(move(g));
 }
 
-}
+} // namespace stappler::xenolith::app

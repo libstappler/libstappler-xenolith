@@ -36,8 +36,8 @@ public:
 
 	virtual bool init(Application *, const core::FrameConstraints &constraints) override;
 
-	virtual void onPresented(Director *) override;
-	virtual void onFinished(Director *) override;
+	virtual void handlePresented(Director *) override;
+	virtual void handleFinished(Director *) override;
 
 	virtual void update(const UpdateTime &) override;
 	virtual void handleEnter(Scene *) override;
@@ -53,6 +53,6 @@ protected:
 	using Scene::init;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* SRC_APPSCENE_H_ */

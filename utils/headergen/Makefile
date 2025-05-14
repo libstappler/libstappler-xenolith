@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-STAPPLER_BUILD_ROOT ?= ../../build/make
+STAPPLER_BUILD_ROOT ?= ../../../build/make
 
 LOCAL_OUTDIR ?= stappler-build
 LOCAL_EXECUTABLE := headergen
@@ -43,4 +43,4 @@ LOCAL_MODULES ?= \
 	stappler_bitmap \
 	stappler_vg
 
-include $(STAPPLER_BUILD_ROOT)/build/make/universal.mk
+include $(STAPPLER_BUILD_ROOT)/universal.mk

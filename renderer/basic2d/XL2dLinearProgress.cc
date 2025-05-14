@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,12 +33,12 @@ bool LinearProgress::init() {
 	}
 
 	_line = addChild(Rc<Layer>::create());
-	_line->setPosition(Vec2(0, 0));
-	_line->setAnchorPoint(Vec2(0, 0));
+	_line->setPosition(Vec2::ZERO);
+	_line->setAnchorPoint(Vec2::ZERO);
 
 	_bar = addChild(Rc<Layer>::create());
-	_bar->setPosition(Vec2(0, 0));
-	_bar->setAnchorPoint(Vec2(0, 0));
+	_bar->setPosition(Vec2::ZERO);
+	_bar->setAnchorPoint(Vec2::ZERO);
 
 	setCascadeOpacityEnabled(true);
 
@@ -67,9 +68,7 @@ void LinearProgress::setAnimated(bool value) {
 		updateAnimations();
 	}
 }
-bool LinearProgress::isAnimated() const {
-	return _animated;
-}
+bool LinearProgress::isAnimated() const { return _animated; }
 
 void LinearProgress::setProgress(float value) {
 	if (_progress != value) {
@@ -77,15 +76,13 @@ void LinearProgress::setProgress(float value) {
 		_contentSizeDirty = true;
 	}
 }
-float LinearProgress::getProgress() const {
-	return _progress;
-}
+float LinearProgress::getProgress() const { return _progress; }
 
 void LinearProgress::layoutSubviews() {
 	_line->setContentSize(_contentSize);
 	if (!_animated) {
 		auto barSize = Size2(_progress * _contentSize.width, _contentSize.height);
-		_bar->setPosition(Vec2(0, 0));
+		_bar->setPosition(Vec2::ZERO);
 		_bar->setContentSize(barSize);
 	} else {
 		const float sep = 0.60f;
@@ -120,9 +117,8 @@ void LinearProgress::layoutSubviews() {
 void LinearProgress::updateAnimations() {
 	if (_running) {
 		if (_animated) {
-			auto a = Rc<RepeatForever>::create(Rc<ActionProgress>::create(2.0f, 1.0f, [this] (float time) {
-				setProgress(time);
-			}));
+			auto a = Rc<RepeatForever>::create(Rc<ActionProgress>::create(2.0f, 1.0f,
+					[this](float time) { setProgress(time); }));
 			a->setTag(2);
 			runAction(a);
 		} else {
@@ -131,20 +127,12 @@ void LinearProgress::updateAnimations() {
 	}
 }
 
-void LinearProgress::setLineColor(const Color &c) {
-	_line->setColor(c);
-}
+void LinearProgress::setLineColor(const Color &c) { _line->setColor(c); }
 
-void LinearProgress::setLineOpacity(float op) {
-	_line->setOpacity(op);
-}
+void LinearProgress::setLineOpacity(float op) { _line->setOpacity(op); }
 
-void LinearProgress::setBarColor(const Color &c) {
-	_bar->setColor(c);
-}
+void LinearProgress::setBarColor(const Color &c) { _bar->setColor(c); }
 
-void LinearProgress::setBarOpacity(float op) {
-	_bar->setOpacity(op);
-}
+void LinearProgress::setBarOpacity(float op) { _bar->setOpacity(op); }
 
-}
+} // namespace stappler::xenolith::basic2d

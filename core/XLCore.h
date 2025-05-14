@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +34,7 @@
 #include "SPHashTable.h"
 #include "SPPlatform.h"
 
+#include "SPVec1.h"
 #include "SPVec2.h"
 #include "SPVec3.h"
 #include "SPVec4.h"
@@ -54,6 +56,17 @@
 #define XLASSERT(cond, msg) XL_ASSERT(cond, msg)
 #else
 #define XLASSERT(cond, msg)
+#endif
+#endif
+
+// check if 64-bit pointer is available for Vulkan
+#ifndef XL_USE_64_BIT_PTR_DEFINES
+#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__)) \
+		|| defined(_M_X64) || defined(__ia64) || defined(_M_IA64) || defined(__aarch64__) \
+		|| defined(__powerpc64__)
+#define XL_USE_64_BIT_PTR_DEFINES 1
+#else
+#define XL_USE_64_BIT_PTR_DEFINES 0
 #endif
 #endif
 
@@ -81,6 +94,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 // Import std memory model as default
 using namespace mem_std;
 
+using geom::Vec1;
 using geom::Vec2;
 using geom::Vec3;
 using geom::Vec4;
@@ -102,24 +116,24 @@ using geom::Color4F;
 using geom::ColorHCT;
 using geom::ColorMask;
 using geom::Padding;
+
 namespace Anchor = geom::Anchor;
 
-inline constexpr uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
-   return SP_MAKE_API_VERSION(variant, major, minor, patch);
+inline constexpr uint32_t XL_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor,
+		uint32_t patch) {
+	return SP_MAKE_API_VERSION(variant, major, minor, patch);
 }
 
 // based on VK_MAKE_API_VERSION
-inline uint32_t XL_MAKE_API_VERSION(StringView version) {
-	return SP_MAKE_API_VERSION(version);
-}
+inline uint32_t XL_MAKE_API_VERSION(StringView version) { return SP_MAKE_API_VERSION(version); }
 
 inline String getVersionDescription(uint32_t version) {
 	return sp::getVersionDescription<Interface>(version);
 }
 
-SP_PUBLIC const char * getEngineName();
+SP_PUBLIC const char *getEngineName();
 
-SP_PUBLIC const char * getVersionString();
+SP_PUBLIC const char *getVersionString();
 
 SP_PUBLIC uint32_t getVersionIndex();
 
@@ -133,7 +147,7 @@ SP_PUBLIC uint32_t getVersionRev();
 
 SP_PUBLIC uint32_t getVersionBuild();
 
-}
+} // namespace stappler::xenolith
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::profiling {
 
@@ -162,7 +176,7 @@ SP_PUBLIC void store(ProfileData &);
 #define XL_PROFILE_END(name)
 #endif
 
-}
+} // namespace stappler::xenolith::profiling
 
 #include "XLCoreEnum.h"
 #include "XLCorePipelineInfo.h"

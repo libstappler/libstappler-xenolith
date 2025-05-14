@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +72,7 @@ bool AssetComponentContainer::init(StringView name, AssetLibrary *l) {
 
 void AssetComponentContainer::handleStorageInit(storage::ComponentLoader &loader) {
 	ComponentContainer::handleStorageInit(loader);
-	_component = new AssetComponent(this, loader, "AssetComponent");
+	_component = new (std::nothrow) AssetComponent(this, loader, "AssetComponent");
 }
 
 void AssetComponentContainer::handleStorageDisposed(const db::Transaction &t) {

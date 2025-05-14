@@ -1,27 +1,29 @@
 /**
-Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #include "XLVkPipeline.h"
+#include "SPLog.h"
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
 #include "XLVkTextureSet.h"
@@ -44,49 +46,6 @@ static BytesView Shader_emplaceConstant(Bytes &data, int constant) {
 	return Shader_emplaceConstant(data, BytesView((const uint8_t *)&constant, sizeof(int)));
 }
 
-static BytesView Pipeline_emplaceConstant(Bytes &data, BytesView constant) {
-	auto originalSize = data.size();
-	auto constantSize = constant.size();
-	data.resize(originalSize + constantSize);
-	memcpy(data.data() + originalSize, constant.data(), constantSize);
-	return BytesView(data.data() + originalSize, constantSize);
-}
-
-static BytesView Pipeline_emplaceConstant(const core::PipelineLayoutData *layout, Bytes &data, core::PredefinedConstant c) {
-	uint32_t intData = 0;
-	switch (c) {
-	case core::PredefinedConstant::SamplersArraySize:
-		if (layout->textureSetLayout && layout->textureSetLayout->layout) {
-			return Pipeline_emplaceConstant(data, BytesView(
-					(const uint8_t *)&layout->textureSetLayout->layout->getSamplersCount(), sizeof(uint32_t)));
-		}
-		break;
-	case core::PredefinedConstant::SamplersDescriptorIdx:
-		intData = 0;
-		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::TexturesArraySize:
-		return Pipeline_emplaceConstant(data, BytesView(
-				(const uint8_t *)&layout->textureSetLayout->layout->getImageCount(), sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::TexturesDescriptorIdx:
-		intData = 1;
-		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::BuffersArraySize:
-		return Pipeline_emplaceConstant(data, BytesView(
-				(const uint8_t *)&layout->textureSetLayout->layout->getBuffersCount(), sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::BuffersDescriptorIdx:
-		intData = 2;
-		return Pipeline_emplaceConstant(data, BytesView((const uint8_t *)&intData, sizeof(uint32_t)));
-		break;
-	case core::PredefinedConstant::CurrentSamplerIdx:
-		break;
-	}
-	return BytesView();
-}
-
 bool Shader::init(Device &dev, const ProgramData &data) {
 	_stage = data.stage;
 	_name = data.key.str<Interface>();
@@ -95,9 +54,8 @@ bool Shader::init(Device &dev, const ProgramData &data) {
 		return setup(dev, data, data.data);
 	} else if (data.callback != nullptr) {
 		bool ret = false;
-		data.callback(dev, [&, this] (SpanView<uint32_t> shaderData) {
-			ret = setup(dev, data, shaderData);
-		});
+		data.callback(dev,
+				[&, this](SpanView<uint32_t> shaderData) { ret = setup(dev, data, shaderData); });
 		return ret;
 	}
 
@@ -105,16 +63,20 @@ bool Shader::init(Device &dev, const ProgramData &data) {
 }
 
 bool Shader::setup(Device &dev, const ProgramData &programData, SpanView<uint32_t> data) {
-	VkShaderModuleCreateInfo createInfo{}; sanitizeVkStruct(createInfo);
+	VkShaderModuleCreateInfo createInfo{};
+	sanitizeVkStruct(createInfo);
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	createInfo.codeSize = data.size() * sizeof(uint32_t);
 	createInfo.flags = 0;
 	createInfo.pCode = data.data();
 
-	if (dev.getTable()->vkCreateShaderModule(dev.getDevice(), &createInfo, nullptr, &_shaderModule) == VK_SUCCESS) {
-		return core::Shader::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
+	if (dev.getTable()->vkCreateShaderModule(dev.getDevice(), &createInfo, nullptr, &_shaderModule)
+			== VK_SUCCESS) {
+		return core::Shader::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
-			d->getTable()->vkDestroyShaderModule(d->getDevice(), (VkShaderModule)ptr.get(), nullptr);
+			d->getTable()->vkDestroyShaderModule(d->getDevice(), (VkShaderModule)ptr.get(),
+					nullptr);
 		}, core::ObjectType::ShaderModule, ObjectHandle(_shaderModule));
 	}
 	return false;
@@ -136,8 +98,10 @@ bool GraphicPipeline::comparePipelineOrdering(const PipelineInfo &l, const Pipel
 	}
 }
 
-bool GraphicPipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const Queue &queue) {
-	VkPipelineVertexInputStateCreateInfo vertexInputInfo{}; sanitizeVkStruct(vertexInputInfo);
+bool GraphicPipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass,
+		const Queue &queue) {
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	sanitizeVkStruct(vertexInputInfo);
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.pNext = nullptr;
 	vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -145,14 +109,16 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	vertexInputInfo.vertexAttributeDescriptionCount = 0;
 	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
 
-	VkPipelineInputAssemblyStateCreateInfo inputAssembly{}; sanitizeVkStruct(inputAssembly);
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	sanitizeVkStruct(inputAssembly);
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.pNext = nullptr;
 	inputAssembly.flags = 0;
 	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-	VkViewport viewport{}; sanitizeVkStruct(viewport);
+	VkViewport viewport{};
+	sanitizeVkStruct(viewport);
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
 	viewport.width = 0.0f;
@@ -160,13 +126,15 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
-	VkRect2D scissor{}; sanitizeVkStruct(scissor);
+	VkRect2D scissor{};
+	sanitizeVkStruct(scissor);
 	scissor.offset.x = 0;
 	scissor.offset.y = 0;
 	scissor.extent.width = 0;
 	scissor.extent.height = 0;
 
-	VkPipelineViewportStateCreateInfo viewportState{}; sanitizeVkStruct(viewportState);
+	VkPipelineViewportStateCreateInfo viewportState{};
+	sanitizeVkStruct(viewportState);
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.pNext = nullptr;
 	viewportState.flags = 0;
@@ -175,7 +143,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	viewportState.scissorCount = 1;
 	viewportState.pScissors = &scissor;
 
-	VkPipelineRasterizationStateCreateInfo rasterizer{}; sanitizeVkStruct(rasterizer);
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	sanitizeVkStruct(rasterizer);
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.pNext = nullptr;
 	rasterizer.flags = 0;
@@ -190,7 +159,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		rasterizer.lineWidth = params.material.getLineWidth();
 	} else if (params.material.getLineWidth() < 0.0f) {
 		rasterizer.polygonMode = VK_POLYGON_MODE_POINT;
-		rasterizer.lineWidth = - params.material.getLineWidth();
+		rasterizer.lineWidth = -params.material.getLineWidth();
 	}
 
 	rasterizer.cullMode = VK_CULL_MODE_NONE;
@@ -200,7 +169,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	rasterizer.depthBiasClamp = 0.0f; // Optional
 	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
-	VkPipelineMultisampleStateCreateInfo multisampling{}; sanitizeVkStruct(multisampling);
+	VkPipelineMultisampleStateCreateInfo multisampling{};
+	sanitizeVkStruct(multisampling);
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.pNext = nullptr;
 	multisampling.flags = 0;
@@ -212,7 +182,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
 	Vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
-	for (size_t i = 0; i < pass.outputImages.size(); ++ i) {
+	for (size_t i = 0; i < pass.outputImages.size(); ++i) {
 		core::BlendInfo blend;
 		if (pass.outputImages[i]->blendInfo.enabled) {
 			blend = pass.outputImages[i]->blendInfo;
@@ -232,7 +202,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		});
 	}
 
-	VkPipelineColorBlendStateCreateInfo colorBlending{}; sanitizeVkStruct(colorBlending);
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	sanitizeVkStruct(colorBlending);
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	colorBlending.pNext = nullptr;
 	colorBlending.flags = 0;
@@ -255,14 +226,16 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		dynamicStates.emplace_back(VK_DYNAMIC_STATE_SCISSOR);
 	}
 
-	VkPipelineDynamicStateCreateInfo dynamicState{}; sanitizeVkStruct(dynamicState);
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	sanitizeVkStruct(dynamicState);
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.pNext = nullptr;
 	dynamicState.flags = 0;
 	dynamicState.dynamicStateCount = uint32_t(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data();
 
-	Vector<VkPipelineShaderStageCreateInfo> shaderStages; shaderStages.reserve(params.shaders.size());
+	Vector<VkPipelineShaderStageCreateInfo> shaderStages;
+	shaderStages.reserve(params.shaders.size());
 
 	struct SpecInfo {
 		VkSpecializationInfo specInfo;
@@ -274,13 +247,14 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	size_t constants = 0;
 	for (auto &shader : params.shaders) {
 		if (!shader.constants.empty()) {
-			++ constants;
+			++constants;
 		}
 	}
 	specs.reserve(constants);
 
 	for (auto &shader : params.shaders) {
-		VkPipelineShaderStageCreateInfo info; sanitizeVkStruct(info);
+		VkPipelineShaderStageCreateInfo info;
+		sanitizeVkStruct(info);
 		info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		info.pNext = nullptr;
 		info.flags = 0;
@@ -316,12 +290,26 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 					data = Shader_emplaceConstant(spec.data, it.floatValue);
 					entry.size = data.size();
 					break;
-				case core::SpecializationConstant::Predefined:
-					data = Pipeline_emplaceConstant(params.layout, spec.data, it.predefinedValue);
-					entry.size = data.size();
-					break;
+				case core::SpecializationConstant::Callback: {
+					auto val = (*it.function)(dev, *params.layout);
+					switch (val.type) {
+					case core::SpecializationConstant::Int:
+						data = Shader_emplaceConstant(spec.data, val.intValue);
+						entry.size = data.size();
+						break;
+					case core::SpecializationConstant::Float:
+						data = Shader_emplaceConstant(spec.data, val.floatValue);
+						entry.size = data.size();
+						break;
+					default:
+						log::error("GraphicPipeline",
+										"Invalid SpecializationConstant::Callback result, callback "
+										"should " "not return another callback");
+						break;
+					}
 				}
-				++ idx;
+				}
+				++idx;
 			}
 
 			spec.specInfo.mapEntryCount = uint32_t(spec.entries.size());
@@ -335,7 +323,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		shaderStages.emplace_back(info);
 	}
 
-	VkPipelineDepthStencilStateCreateInfo depthState; sanitizeVkStruct(depthState);
+	VkPipelineDepthStencilStateCreateInfo depthState;
+	sanitizeVkStruct(depthState);
 	depthState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthState.pNext = nullptr;
 	depthState.flags = 0;
@@ -403,7 +392,8 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 		}
 	}
 
-	VkGraphicsPipelineCreateInfo pipelineInfo{}; sanitizeVkStruct(pipelineInfo);
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	sanitizeVkStruct(pipelineInfo);
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
@@ -418,16 +408,20 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = (dynamicStates.size() > 0) ? &dynamicState : nullptr; // Optional
 
-	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index)->getLayout();
+	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()
+								  ->getPipelineLayout(params.layout->index)
+								  ->getLayout();
 	pipelineInfo.renderPass = pass.pass->impl.cast<RenderPass>()->getRenderPass();
 	pipelineInfo.subpass = pass.index;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 
-	auto err = dev.getTable()->vkCreateGraphicsPipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline);
+	auto err = dev.getTable()->vkCreateGraphicsPipelines(dev.getDevice(), VK_NULL_HANDLE, 1,
+			&pipelineInfo, nullptr, &_pipeline);
 	if (err == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
-		return core::GraphicPipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
+		return core::GraphicPipeline::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyPipeline(d->getDevice(), (VkPipeline)ptr.get(), nullptr);
 		}, core::ObjectType::Pipeline, ObjectHandle(_pipeline));
@@ -435,12 +429,15 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 	return false;
 }
 
-bool ComputePipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass, const Queue &) {
+bool ComputePipeline::init(Device &dev, const PipelineData &params, const SubpassData &pass,
+		const Queue &) {
 	VkComputePipelineCreateInfo pipelineInfo;
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
-	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()->getPipelineLayout(params.layout->index)->getLayout();
+	pipelineInfo.layout = pass.pass->impl.cast<RenderPass>()
+								  ->getPipelineLayout(params.layout->index)
+								  ->getLayout();
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = 0;
 
@@ -495,12 +492,26 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 				data = Shader_emplaceConstant(spec.data, it.floatValue);
 				entry.size = data.size();
 				break;
-			case core::SpecializationConstant::Predefined:
-				data = Pipeline_emplaceConstant(params.layout, spec.data, it.predefinedValue);
-				entry.size = data.size();
-				break;
+			case core::SpecializationConstant::Callback: {
+				auto val = (*it.function)(dev, *params.layout);
+				switch (val.type) {
+				case core::SpecializationConstant::Int:
+					data = Shader_emplaceConstant(spec.data, val.intValue);
+					entry.size = data.size();
+					break;
+				case core::SpecializationConstant::Float:
+					data = Shader_emplaceConstant(spec.data, val.floatValue);
+					entry.size = data.size();
+					break;
+				default:
+					log::error("GraphicPipeline",
+										"Invalid SpecializationConstant::Callback result, callback "
+										"should " "not return another callback");
+					break;
+				}
 			}
-			++ idx;
+			}
+			++idx;
 		}
 
 		spec.specInfo.mapEntryCount = uint32_t(spec.entries.size());
@@ -512,10 +523,12 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 		pipelineInfo.stage.pSpecializationInfo = nullptr;
 	}
 
-	auto err = dev.getTable()->vkCreateComputePipelines(dev.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline);
+	auto err = dev.getTable()->vkCreateComputePipelines(dev.getDevice(), VK_NULL_HANDLE, 1,
+			&pipelineInfo, nullptr, &_pipeline);
 	if (err == VK_SUCCESS) {
 		_name = params.key.str<Interface>();
-		return core::ComputePipeline::init(dev, [] (core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
+		return core::ComputePipeline::init(dev,
+				[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *) {
 			auto d = ((Device *)dev);
 			d->getTable()->vkDestroyPipeline(d->getDevice(), (VkPipeline)ptr.get(), nullptr);
 		}, core::ObjectType::Pipeline, ObjectHandle(_pipeline));
@@ -523,4 +536,4 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 	return false;
 }
 
-}
+} // namespace stappler::xenolith::vk

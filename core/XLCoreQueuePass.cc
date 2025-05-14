@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,25 +34,15 @@ bool QueuePass::init(QueuePassBuilder &builder) {
 	return true;
 }
 
-void QueuePass::invalidate() {
+void QueuePass::invalidate() { }
 
-}
+StringView QueuePass::getName() const { return _data->key; }
 
-StringView QueuePass::getName() const {
-	return _data->key;
-}
+RenderOrdering QueuePass::getOrdering() const { return _data->ordering; }
 
-RenderOrdering QueuePass::getOrdering() const {
-	return _data->ordering;
-}
+size_t QueuePass::getSubpassCount() const { return _data->subpasses.size(); }
 
-size_t QueuePass::getSubpassCount() const {
-	return _data->subpasses.size();
-}
-
-PassType QueuePass::getType() const {
-	return _data->type;
-}
+PassType QueuePass::getType() const { return _data->type; }
 
 Rc<QueuePassHandle> QueuePass::makeFrameHandle(const FrameQueue &handle) {
 	if (_frameHandleCallback) {
@@ -64,9 +55,7 @@ void QueuePass::setFrameHandleCallback(FrameHandleCallback &&cb) {
 	_frameHandleCallback = sp::move(cb);
 }
 
-void QueuePass::prepare(Device &device) {
-
-}
+void QueuePass::prepare(Device &device) { }
 
 QueuePassHandle::~QueuePassHandle() { }
 
@@ -76,23 +65,18 @@ bool QueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
 	return true;
 }
 
-void QueuePassHandle::setQueueData(FramePassData &data) {
-	_queueData = &data;
-}
+void QueuePassHandle::setQueueData(FramePassData &data) { _queueData = &data; }
 
-const FramePassData *QueuePassHandle::getQueueData() const {
-	return _queueData;
-}
+const FramePassData *QueuePassHandle::getQueueData() const { return _queueData; }
 
-StringView QueuePassHandle::getName() const {
-	return _data->key;
-}
+StringView QueuePassHandle::getName() const { return _data->key; }
 
-const Rc<Framebuffer> &QueuePassHandle::getFramebuffer() const {
-	return _queueData->framebuffer;
-}
+const Rc<Framebuffer> &QueuePassHandle::getFramebuffer() const { return _queueData->framebuffer; }
 
 bool QueuePassHandle::isAvailable(const FrameQueue &handle) const {
+	if (_data->checkAvailable) {
+		return _data->checkAvailable(handle, *_data);
+	}
 	return true;
 }
 
@@ -113,13 +97,10 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	return true;
 }
 
-void QueuePassHandle::submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
+void QueuePassHandle::submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited,
+		Function<void(bool)> &&onComplete) { }
 
-}
-
-void QueuePassHandle::finalize(FrameQueue &, bool successful) {
-
-}
+void QueuePassHandle::finalize(FrameQueue &, bool successful) { }
 
 AttachmentHandle *QueuePassHandle::getAttachmentHandle(const AttachmentData *a) const {
 	auto it = _queueData->attachmentMap.find(a);
@@ -150,9 +131,9 @@ const AttachmentPassData *QueuePassHandle::getAttachemntData(const AttachmentDat
 void QueuePassHandle::prepareSubpasses(FrameQueue &q) {
 	for (auto &subpass : _queuePass->getData()->subpasses) {
 		if (subpass->prepareCallback) {
-			subpass->prepareCallback(*subpass, q);
+			subpass->prepareCallback(q, *subpass);
 		}
 	}
 }
 
-}
+} // namespace stappler::xenolith::core

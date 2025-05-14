@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -1053,7 +1054,7 @@ ServerComponentLoader::ServerComponentLoader(Server::ServerData *data, const db:
 , _transaction(&t) {
 	memory::pool::context ctx(_pool);
 
-	_components = new ServerComponentData;
+	_components = new (std::nothrow) ServerComponentData;
 	_components->pool = _pool;
 }
 

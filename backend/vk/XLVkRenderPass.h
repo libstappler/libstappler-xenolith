@@ -1,29 +1,31 @@
 /**
-Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #ifndef XENOLITH_BACKEND_VK_XLVKRENDERPASSIMPL_H_
 #define XENOLITH_BACKEND_VK_XLVKRENDERPASSIMPL_H_
 
+#include "XLCoreInfo.h"
 #include "XLVk.h"
 #include "XLVkDeviceQueue.h"
 #include "XLCoreQueuePass.h"
@@ -34,11 +36,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 class Device;
 class RenderPass;
 class QueuePassHandle;
-
-struct SP_PUBLIC DescriptorData {
-	core::ObjectHandle object;
-	Rc<Ref> data;
-};
 
 struct SP_PUBLIC DescriptorBinding {
 	VkDescriptorType type;
@@ -51,6 +48,8 @@ struct SP_PUBLIC DescriptorBinding {
 	Rc<Ref> write(uint32_t, DescriptorBufferInfo &&);
 	Rc<Ref> write(uint32_t, DescriptorImageInfo &&);
 	Rc<Ref> write(uint32_t, DescriptorBufferViewInfo &&);
+
+	const DescriptorData &get(uint32_t) const;
 };
 
 struct SP_PUBLIC DescriptorSetBindings : public Ref {
@@ -87,7 +86,9 @@ public:
 	VkPipelineLayout getLayout() const { return _layout; }
 	SpanView<VkDescriptorSetLayout> getLayouts() const { return _layouts; }
 	SpanView<VkDescriptorPoolSize> getSizes() const { return _sizes; }
-	SpanView<DescriptorBindingInfo> getDescriptorsInfo(uint32_t idx) const { return _descriptors[idx]; }
+	SpanView<DescriptorBindingInfo> getDescriptorsInfo(uint32_t idx) const {
+		return _descriptors[idx];
+	}
 	uint32_t getMaxSets() const { return _maxSets; }
 	bool haveUpdateAfterBind() const { return _updateAfterBind; }
 
@@ -151,7 +152,8 @@ public:
 	// 			   false - without updateAfterBindFlag
 	virtual bool writeDescriptors(const QueuePassHandle &, DescriptorPool *pool, bool async) const;
 
-	virtual void perform(const QueuePassHandle &, CommandBuffer &buf, const Callback<void()> &, bool writeBarriers = false);
+	virtual void perform(const QueuePassHandle &, CommandBuffer &buf, const Callback<void()> &,
+			bool writeBarriers = false);
 
 protected:
 	using core::RenderPass::init;
@@ -178,6 +180,6 @@ protected:
 	Vector<Vector<Rc<DescriptorPool>>> _descriptorPools;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKRENDERPASSIMPL_H_ */

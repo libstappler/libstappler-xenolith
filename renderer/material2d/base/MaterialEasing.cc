@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,31 +22,38 @@
  **/
 
 #include "MaterialEasing.h"
+#include "XLActionEase.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-Rc<ActionEase> makeEasing(Rc<ActionInterval> &&action, EasingType type) {
+Rc<ActionEaseCommon> makeEasing(Rc<ActionInterval> &&action, EasingType type) {
 	switch (type) {
 	case EasingType::Standard:
-		return Rc<EaseBezierAction>::create(move(action), 0.2f, 0.0f, 0.0f, 1.0f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.2f, 0.0f}, {0.0f, 1.0f}});
 		break;
 	case EasingType::StandardAccelerate:
-		return Rc<EaseBezierAction>::create(move(action), 0.3f, 0.0f, 1.0f, 1.0f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.3f, 0.0f}, {1.0f, 1.0f}});
 		break;
 	case EasingType::StandardDecelerate:
-		return Rc<EaseBezierAction>::create(move(action), 0.0f, 0.0f, 0.0f, 1.0f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.0f, 0.0f}, {0.0f, 1.0f}});
 		break;
 	case EasingType::Emphasized:
-		return Rc<EaseBezierAction>::create(move(action), 0.2f, 0.0f, 0.0f, 1.0f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.2f, 0.0f}, {0.0f, 1.0f}});
 		break;
 	case EasingType::EmphasizedAccelerate:
-		return Rc<EaseBezierAction>::create(move(action), 0.3f, 0.0f, 0.8f, 0.15f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.3f, 0.0f}, {0.8f, 0.15f}});
 		break;
 	case EasingType::EmphasizedDecelerate:
-		return Rc<EaseBezierAction>::create(move(action), 0.05f, 0.7f, 0.1f, 1.0f);
+		return Rc<EaseActionTyped>::create(move(action),
+				EaseBezierInfo{{0.05f, 0.7f}, {0.1f, 1.0f}});
 		break;
 	}
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::material2d

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +20,12 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DLINEARGRADIENT_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DLINEARGRADIENT_H_
+#ifndef XENOLITH_SCENE_XLLINEARGRADIENT_H_
+#define XENOLITH_SCENE_XLLINEARGRADIENT_H_
 
-#include "XL2d.h"
+#include "XLNodeInfo.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct SP_PUBLIC GradientStep {
 	float value = 0.0f;
@@ -82,6 +82,6 @@ protected:
 	Rc<LinearGradientData> _data;
 };
 
-}
+} // namespace stappler::xenolith
 
-#endif /* XENOLITH_RENDERER_BASIC2D_XL2DDYNAMICLINEARGRADIENT_H_ */
+#endif /* XENOLITH_SCENE_XLLINEARGRADIENT_H_ */

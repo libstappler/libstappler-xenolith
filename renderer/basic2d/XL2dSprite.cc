@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,7 @@
 
 #include "XL2dSprite.h"
 
+#include "XLComponent.h"
 #include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
@@ -33,17 +35,16 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 Sprite::Sprite() {
-	_blendInfo = core::BlendInfo(core::BlendFactor::SrcAlpha, core::BlendFactor::OneMinusSrcAlpha, core::BlendOp::Add,
-			core::BlendFactor::Zero, core::BlendFactor::One, core::BlendOp::Add);
+	_blendInfo = core::BlendInfo(core::BlendFactor::SrcAlpha, core::BlendFactor::OneMinusSrcAlpha,
+			core::BlendOp::Add, core::BlendFactor::Zero, core::BlendFactor::One,
+			core::BlendOp::Add);
 	_materialInfo.setBlendInfo(_blendInfo);
 	_materialInfo.setDepthInfo(core::DepthInfo(false, true, core::CompareOp::Less));
 }
 
 Sprite::~Sprite() { }
 
-bool Sprite::init() {
-	return Sprite::init(core::SolidTextureName);
-}
+bool Sprite::init() { return Sprite::init(core::SolidTextureName); }
 
 bool Sprite::init(StringView textureName) {
 	if (!Node::init()) {
@@ -138,17 +139,35 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 	}
 }
 
-const Rc<Texture> &Sprite::getTexture() const {
-	return _texture;
+void Sprite::scheduleTextureUpdate(StringView textureName) {
+	if (!_running || textureName.empty() || textureName.empty()) {
+		setTexture(move(textureName));
+	} else if (!_texture || _texture->getName() != textureName) {
+		if (auto &cache = _director->getResourceCache()) {
+			if (auto tex = cache->acquireTexture(textureName)) {
+				if (tex->isLoaded()) {
+					setTexture(move(tex));
+				} else {
+					doScheduleTextureUpdate(move(tex));
+				}
+			}
+		}
+	}
 }
 
-void Sprite::setLinearGradient(Rc<LinearGradient> &&g) {
-	_linearGradient = move(g);
+void Sprite::scheduleTextureUpdate(Rc<Texture> &&tex) {
+	if (tex->isLoaded() || !_texture || !tex) {
+		setTexture(move(tex));
+	} else if (_texture->getName() != tex->getName()) {
+		doScheduleTextureUpdate(move(tex));
+	}
 }
 
-const Rc<LinearGradient> &Sprite::getLinearGradient() const {
-	return _linearGradient;
-}
+const Rc<Texture> &Sprite::getTexture() const { return _texture; }
+
+void Sprite::setLinearGradient(Rc<LinearGradient> &&g) { _linearGradient = move(g); }
+
+const Rc<LinearGradient> &Sprite::getLinearGradient() const { return _linearGradient; }
 
 void Sprite::setTextureRect(const Rect &rect) {
 	if (!_texturePlacement.textureRect.equals(rect)) {
@@ -199,9 +218,11 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 		auto info = getMaterialInfo();
 		_materialId = frame.currentContext->context->getMaterial(info);
 		if (_materialId == 0) {
-			_materialId = frame.currentContext->context->acquireMaterial(info, getMaterialImages(), nullptr, isMaterialRevokable());
+			_materialId = frame.currentContext->context->acquireMaterial(_pipelineFamily, info,
+					getMaterialImages(), nullptr, isMaterialRevokable());
 			if (_materialId == 0) {
-				log::warn("Sprite", "Material for sprite with texture '", _texture->getName(), "' not found");
+				log::warn("Sprite", "Material for sprite with texture '", _texture->getName(),
+						"' not found");
 			}
 		}
 		_materialDirty = false;
@@ -221,7 +242,8 @@ void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
 			state = *context->getState(stateId);
 		}
 
-		auto newData = Rc<StateData>::create(dynamic_cast<StateData *>(state.data ? state.data.get() : nullptr));
+		auto newData = Rc<StateData>::create(
+				dynamic_cast<StateData *>(state.data ? state.data.get() : nullptr));
 		auto transform = frame.modelTransformStack.back();
 		transform.scale(_contentSize.width, _contentSize.height, 1.0f);
 
@@ -305,9 +327,7 @@ void Sprite::setBlendInfo(const core::BlendInfo &info) {
 	}
 }
 
-void Sprite::setTextureLayer(float value) {
-	_textureLayer = value;
-}
+void Sprite::setTextureLayer(float value) { _textureLayer = value; }
 
 void Sprite::setLineWidth(float value) {
 	if (_materialInfo.getLineWidth() != value) {
@@ -358,13 +378,9 @@ void Sprite::setTextureLoadedCallback(Function<void()> &&cb) {
 	_textureLoadedCallback = sp::move(cb);
 }
 
-void Sprite::setOutlineOffset(float val) {
-	_outlineOffset = val;
-}
+void Sprite::setOutlineOffset(float val) { _outlineOffset = val; }
 
-void Sprite::setOutlineColor(const Color4F &color) {
-	_outlineColor = color;
-}
+void Sprite::setOutlineColor(const Color4F &color) { _outlineColor = color; }
 
 void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	auto data = _vertexes.pop();
@@ -399,9 +415,7 @@ Vector<core::MaterialImage> Sprite::getMaterialImages() const {
 	return ret;
 }
 
-bool Sprite::isMaterialRevokable() const {
-	return _texture && _texture->getTemporary();
-}
+bool Sprite::isMaterialRevokable() const { return _texture && _texture->getTemporary(); }
 
 void Sprite::updateColor() {
 	if (_tmpColor != _displayedColor) {
@@ -415,9 +429,7 @@ void Sprite::updateColor() {
 	}
 }
 
-void Sprite::updateVertexesColor() {
-	_vertexes.updateColor(_displayedColor);
-}
+void Sprite::updateVertexesColor() { _vertexes.updateColor(_displayedColor); }
 
 void Sprite::initVertexes() {
 	_vertexes.init(4, 6);
@@ -427,12 +439,15 @@ void Sprite::initVertexes() {
 void Sprite::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 
-	auto placementResult = _texturePlacement.resolve(_contentSize, Size2(_texture->getExtent().width, _texture->getExtent().height));
+	auto placementResult = _texturePlacement.resolve(_contentSize,
+			Size2(_texture->getExtent().width, _texture->getExtent().height));
 
 	_vertexes.addQuad()
-		.setGeometry(Vec4(placementResult.viewRect.origin.x, placementResult.viewRect.origin.y, 0.0f, 1.0f), placementResult.viewRect.size)
-		.setTextureRect(placementResult.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
-		.setColor(_displayedColor);
+			.setGeometry(Vec4(placementResult.viewRect.origin.x, placementResult.viewRect.origin.y,
+								 0.0f, 1.0f),
+					placementResult.viewRect.size)
+			.setTextureRect(placementResult.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
+			.setColor(_displayedColor);
 	_textureScale = placementResult.scale;
 	_vertexColorDirty = false;
 }
@@ -443,8 +458,7 @@ void Sprite::updateBlendAndDepth() {
 
 	_realRenderingLevel = getRealRenderingLevel();
 	switch (_realRenderingLevel) {
-	case RenderingLevel::Default:
-		break;
+	case RenderingLevel::Default: break;
 	case RenderingLevel::Solid:
 		shouldWriteDepth = true;
 		shouldBlendColors = false;
@@ -485,7 +499,8 @@ void Sprite::updateBlendAndDepth() {
 			_materialDirty = true;
 		}
 	}
-	if (_realRenderingLevel == RenderingLevel::Surface || _realRenderingLevel == RenderingLevel::Transparent) {
+	if (_realRenderingLevel == RenderingLevel::Surface
+			|| _realRenderingLevel == RenderingLevel::Transparent) {
 		if (depth.compare != toInt(core::CompareOp::LessOrEqual)) {
 			depth.compare = toInt(core::CompareOp::LessOrEqual);
 			_materialDirty = true;
@@ -539,15 +554,9 @@ RenderingLevel Sprite::getRealRenderingLevel() const {
 					level = RenderingLevel::Solid;
 				}
 				break;
-			case core::ComponentMapping::Zero:
-				level = RenderingLevel::Transparent;
-				break;
-			case core::ComponentMapping::One:
-				level = RenderingLevel::Solid;
-				break;
-			default:
-				level = RenderingLevel::Transparent;
-				break;
+			case core::ComponentMapping::Zero: level = RenderingLevel::Transparent; break;
+			case core::ComponentMapping::One: level = RenderingLevel::Solid; break;
+			default: level = RenderingLevel::Transparent; break;
 			}
 		}
 		level = std::max(level, parentLevel);
@@ -555,9 +564,7 @@ RenderingLevel Sprite::getRealRenderingLevel() const {
 	return level;
 }
 
-bool Sprite::checkVertexDirty() const {
-	return _vertexesDirty;
-}
+bool Sprite::checkVertexDirty() const { return _vertexesDirty; }
 
 CmdInfo Sprite::buildCmdInfo(const FrameInfo &frame) const {
 	auto handle = static_cast<const FrameContextHandle2d *>(frame.currentContext);
@@ -565,4 +572,31 @@ CmdInfo Sprite::buildCmdInfo(const FrameInfo &frame) const {
 		_displayedColor.a > 0.0f ? frame.depthStack.back() : 0.0f, _textureLayer};
 }
 
+void Sprite::doScheduleTextureUpdate(Rc<Texture> &&tex) {
+	auto comp = Rc<CallbackComponent>::create();
+	comp->setUserdata(tex);
+
+	comp->setEnterCallback([](CallbackComponent *comp, Scene *) {
+		auto tex = static_cast<Texture *>(comp->getUserdata());
+
+		auto tmp = tex->getTemporary();
+
+		tmp->load(comp, [](Ref *c, bool) {
+			auto comp = static_cast<CallbackComponent *>(c);
+			if (auto owner = comp->getOwner()) {
+				auto tex = static_cast<Texture *>(comp->getUserdata());
+				auto sprite = static_cast<Sprite *>(owner);
+
+				sprite->setTexture(tex);
+			}
+		});
+	});
+
+	if (_textureUpdateComponent) {
+		removeComponent(_textureUpdateComponent);
+	}
+
+	_textureUpdateComponent = addComponent(comp);
 }
+
+} // namespace stappler::xenolith::basic2d

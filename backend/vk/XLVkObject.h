@@ -1,24 +1,25 @@
 /**
-Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
 **/
 
 #ifndef XENOLITH_BACKEND_VK_XLVKOBJECT_H_
@@ -67,9 +68,13 @@ public:
 
 	VkDeviceSize getBlockOffset() const { return _memBlock.offset; }
 
-	bool isMappable() const { return _usage != AllocationUsage::DeviceLocal && _usage != AllocationUsage::DeviceLocalLazilyAllocated; }
+	bool isMappable() const {
+		return _usage != AllocationUsage::DeviceLocal
+				&& _usage != AllocationUsage::DeviceLocalLazilyAllocated;
+	}
 
-	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>(),
+	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0,
+			VkDeviceSize size = maxOf<VkDeviceSize>(),
 			DeviceMemoryAccess = DeviceMemoryAccess::Full);
 
 	void invalidateMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
@@ -101,8 +106,10 @@ public:
 	bool init(Device &dev, VkImage, const ImageInfoData &, uint32_t);
 
 	// owning image wrapping
-	bool init(Device &dev, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
-	bool init(Device &dev, uint64_t, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
+	bool init(Device &dev, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&,
+			Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
+	bool init(Device &dev, uint64_t, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&,
+			Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
 
 	VkImage getImage() const { return _image; }
 	DeviceMemory *getMemory() const { return _memory; }
@@ -127,7 +134,8 @@ class SP_PUBLIC Buffer : public core::BufferObject {
 public:
 	virtual ~Buffer() { }
 
-	bool init(Device &dev, VkBuffer, const BufferInfo &, Rc<DeviceMemory> &&, VkDeviceSize memoryOffset);
+	bool init(Device &dev, VkBuffer, const BufferInfo &, Rc<DeviceMemory> &&,
+			VkDeviceSize memoryOffset);
 
 	VkBuffer getBuffer() const { return _buffer; }
 	DeviceMemory *getMemory() const { return _memory; }
@@ -138,16 +146,21 @@ public:
 
 	bool bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
 
-	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>(),
+	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, VkDeviceSize offset = 0,
+			VkDeviceSize size = maxOf<VkDeviceSize>(),
 			DeviceMemoryAccess = DeviceMemoryAccess::Full);
+
+	bool map(const Callback<void(uint8_t *, VkDeviceSize)> &, DeviceMemoryAccess);
 
 	uint8_t *getPersistentMappedRegion(bool invalidate = true);
 
 	void invalidateMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
 	void flushMappedRegion(VkDeviceSize offset = 0, VkDeviceSize size = maxOf<VkDeviceSize>());
 
-	bool setData(BytesView, VkDeviceSize offset = 0, DeviceMemoryAccess = DeviceMemoryAccess::Flush);
-	Bytes getData(VkDeviceSize size = maxOf<VkDeviceSize>(), VkDeviceSize offset = 0, DeviceMemoryAccess = DeviceMemoryAccess::Invalidate);
+	bool setData(BytesView, VkDeviceSize offset = 0,
+			DeviceMemoryAccess = DeviceMemoryAccess::Flush);
+	Bytes getData(VkDeviceSize size = maxOf<VkDeviceSize>(), VkDeviceSize offset = 0,
+			DeviceMemoryAccess = DeviceMemoryAccess::Invalidate);
 
 	// returns maxOf<uint64_t>() on overflow
 	uint64_t reserveBlock(uint64_t blockSize, uint64_t alignment);
@@ -193,6 +206,6 @@ protected:
 	VkSampler _sampler = VK_NULL_HANDLE;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKOBJECT_H_ */
