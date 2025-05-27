@@ -4,7 +4,7 @@ plugins {
 }
 
 tasks.register('prepareAndroidMk', Exec) {
-    workingDir "${buildDir}/../../.."
+    workingDir rootProject.getRootDir().getPath() + "/.."
     commandLine 'make', 'android-export'
 }
 
@@ -12,13 +12,13 @@ preBuild.dependsOn prepareAndroidMk
 clean.dependsOn prepareAndroidMk
 
 android {
-    compileSdk 34
-    ndkVersion '26.3.11579264'
+    compileSdk 35
+    ndkVersion '28.1.13356709'
 
     defaultConfig {
         applicationId = 'org.stappler.xenolith.test'
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 36
 	    externalNativeBuild {
 			ndkBuild {
 				arguments "NDK_APPLICATION_MK:=Application.mk"

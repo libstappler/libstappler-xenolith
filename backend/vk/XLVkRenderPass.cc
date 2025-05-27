@@ -22,6 +22,8 @@
  THE SOFTWARE.
  **/
 
+#include "XLCoreEnum.h"
+#include "XLCoreInfo.h"
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
 #include "XLVkQueuePass.h"
@@ -386,7 +388,11 @@ Rc<DescriptorPool> RenderPass::acquireDescriptorPool(Device &dev, uint32_t idx) 
 		return ret;
 	} else {
 		lock.unlock();
-		return Rc<DescriptorPool>::create(dev, _data->layouts[idx]);
+		if (_data->layouts[idx]->getMaxSets() > 0) {
+			return Rc<DescriptorPool>::create(dev, _data->layouts[idx]);
+		} else {
+			return nullptr;
+		}
 	}
 }
 
@@ -606,42 +612,48 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf,
 		bool hasPendings = false;
 
 		for (auto &it : handle.getQueueData()->attachments) {
-			switch (it.first->attachment->type) {
-			case core::AttachmentType::Image:
-				if (auto h = dynamic_cast<ImageAttachmentHandle *>(it.second->handle.get())) {
-					if (auto img = static_cast<Image *>(it.second->image->getImage().get())) {
-						auto b = handle.getImageInputOutputBarrier(
-								static_cast<Device *>(_object.device), img, *h);
-						if (auto pending = img->getPendingBarrier()) {
-							b.input = *pending;
-							img->dropPendingBarrier();
-							hasPendings = true;
-						}
-						if (b.input || b.output) {
-							imageBarriersData.emplace_back(move(b));
-						}
+			it.second->handle->enumerateAttachmentObjects(
+					[&](core::Object *obj, const core::SubresourceRangeInfo &range) {
+				switch (range.type) {
+				case core::ObjectType::Buffer: {
+					auto buf = static_cast<Buffer *>(obj);
+					auto b = handle.getBufferInputOutputBarrier(
+							static_cast<Device *>(_object.device), buf, *it.second->handle,
+							range.buffer.offset, range.buffer.size);
+					if (auto pending = buf->getPendingBarrier()) {
+						b.input = *pending;
+						buf->dropPendingBarrier();
+						hasPendings = true;
 					}
-				}
-				break;
-			case core::AttachmentType::Buffer:
-				if (auto h = dynamic_cast<BufferAttachmentHandle *>(it.second->handle.get())) {
-					for (auto &it : h->getBuffers()) {
-						auto b = handle.getBufferInputOutputBarrier(
-								static_cast<Device *>(_object.device), it.buffer, *h, it.offset,
-								it.size);
-						if (auto pending = it.buffer->getPendingBarrier()) {
-							b.input = *pending;
-							it.buffer->dropPendingBarrier();
-							hasPendings = true;
-						}
-						if (b.input || b.output) {
-							bufferBarriersData.emplace_back(move(b));
-						}
+					if (b.input || b.output) {
+						bufferBarriersData.emplace_back(move(b));
 					}
+					break;
 				}
-				break;
-			default: break;
-			}
+				case core::ObjectType::Image: {
+					auto img = static_cast<Image *>(obj);
+					auto b = handle.getImageInputOutputBarrier(
+							static_cast<Device *>(_object.device), img, *it.second->handle,
+							VkImageSubresourceRange{
+								VkImageAspectFlags(range.image.aspectMask),
+								range.image.baseMipLevel,
+								range.image.levelCount,
+								range.image.baseArrayLayer,
+								range.image.layerCount,
+							});
+					if (auto pending = img->getPendingBarrier()) {
+						b.input = *pending;
+						img->dropPendingBarrier();
+						hasPendings = true;
+					}
+					if (b.input || b.output) {
+						imageBarriersData.emplace_back(move(b));
+					}
+					break;
+				}
+				default: break;
+				}
+			});
 		}
 
 		for (auto &it : imageBarriersData) {
@@ -1051,7 +1063,9 @@ bool RenderPass::initDescriptors(Device &dev, const QueuePassData &data, Data &p
 	// preallocate one pool for each layout
 	index = 0;
 	for (auto &it : pass.layouts) {
-		_descriptorPools[index].emplace_back(Rc<DescriptorPool>::create(dev, it));
+		if (it->getMaxSets() > 0) {
+			_descriptorPools[index].emplace_back(Rc<DescriptorPool>::create(dev, it));
+		}
 		++index;
 	}
 

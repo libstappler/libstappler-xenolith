@@ -27,7 +27,6 @@
 #include "XLVkInfo.h"
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
-#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -619,6 +618,7 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 		queueInfo[i].flags = getQueueFlags(queueFamily.queueFlags, presentSupport);
 		queueInfo[i].count = queueFamily.queueCount;
 		queueInfo[i].used = 0;
+		queueInfo[i].timestampValidBits = queueFamily.timestampValidBits;
 		queueInfo[i].minImageTransferGranularity =
 				Extent3(queueFamily.minImageTransferGranularity.width,
 						queueFamily.minImageTransferGranularity.height,

@@ -26,26 +26,27 @@
 
 #include "XL2dVkMaterial.h"
 #include "XL2dCommandList.h"
+#include "XL2dVkParticlePass.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-class SP_PUBLIC VertexAttachment : public BufferAttachment {
+class SP_PUBLIC VertexAttachment : public core::GenericAttachment {
 public:
 	virtual ~VertexAttachment() = default;
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const AttachmentData *);
+	virtual bool init(AttachmentBuilder &builder, const AttachmentData *);
 
 	const AttachmentData *getMaterials() const { return _materials; }
 
 protected:
-	using BufferAttachment::init;
+	using GenericAttachment::init;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 
 	const AttachmentData *_materials = nullptr;
 };
 
-class SP_PUBLIC VertexAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC VertexAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~VertexAttachmentHandle() = default;
 
@@ -54,11 +55,12 @@ public:
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
 			Function<void(bool)> &&) override;
 
-	const Vector<VertexSpan> &getVertexData() const { return _spans; }
-	const Vector<VertexSpan> &getShadowSolidData() const { return _shadowSolidSpans; }
-	const Vector<VertexSpan> &getShadowSdfData() const { return _shadowSdfSpans; }
-	const Rc<Buffer> &getVertexes() const { return _vertexes; }
+	SpanView<VertexSpan> getVertexData() const { return _spans; }
+	SpanView<VertexSpan> getShadowSolidData() const { return _shadowSolidSpans; }
+	SpanView<VertexSpan> getShadowSdfData() const { return _shadowSdfSpans; }
 	const Rc<Buffer> &getIndexes() const { return _indexes; }
+	const Rc<Buffer> &getVertexes() const { return _vertexes; }
+	const Rc<Buffer> &getTransforms() const { return _transforms; }
 
 	float getMaxShadowValue() const { return _maxShadowValue; }
 
@@ -97,6 +99,7 @@ public:
 
 	const AttachmentData *getVertexes() const { return _vertexes; }
 	const AttachmentData *getMaterials() const { return _materials; }
+	const AttachmentData *getParticles() const { return _particles; }
 
 	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
 
@@ -110,16 +113,22 @@ protected:
 
 	const AttachmentData *_vertexes = nullptr;
 	const AttachmentData *_materials = nullptr;
+	const AttachmentData *_particles = nullptr;
 };
 
 class SP_PUBLIC VertexPassHandle : public QueuePassHandle {
 public:
+	static constexpr uint32_t TimestampBeginTag = 0;
+	static constexpr uint32_t TimestampEndTag = 1;
+
 	virtual ~VertexPassHandle() { }
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 
 protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
+
+	virtual void doProcessQueries(FrameQueue &, SpanView<Rc<core::QueryPool>> queries) override;
 
 	virtual void prepareRenderPass(CommandBuffer &);
 	virtual void prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &);
@@ -131,6 +140,7 @@ protected:
 
 	const VertexAttachmentHandle *_vertexBuffer = nullptr;
 	const MaterialAttachmentHandle *_materialBuffer = nullptr;
+	const ParticleEmitterAttachmentHandle *_particles = nullptr;
 
 	StateId _dynamicStateId = maxOf<StateId>();
 	DrawStateValues _dynamicState;

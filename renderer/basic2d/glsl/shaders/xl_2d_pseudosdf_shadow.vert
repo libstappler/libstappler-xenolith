@@ -3,19 +3,26 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 #include "XL2dGlslVertexData.h"
 
-layout (set = 0, binding = 0) readonly buffer Vertices {
-	Vertex vertices[];
-} vertexBuffer[2];
+layout (location = 0) out vec2 fragTexCoord;
 
-layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec2 fragTexCoord;
+const vec4 positions[4] = {
+	vec4(-1.0, -1.0, 0.0, 1.0),
+	vec4(-1.0, 1.0, 0.0, 1.0),
+	vec4(1.0, 1.0, 0.0, 1.0),
+	vec4(1.0, -1.0, 0.0, 1.0),
+};
+
+const vec2 texs[4] = {
+	vec2(0.0f, 0.0),
+	vec2(0.0, 1.0),
+	vec2(1.0, 1.0),
+	vec2(1.0, 0.0),
+};
 
 void main() {
-	gl_Position = vertexBuffer[0].vertices[gl_VertexIndex].pos;
-	fragColor = vertexBuffer[0].vertices[gl_VertexIndex].color;
-	fragTexCoord = vertexBuffer[0].vertices[gl_VertexIndex].tex;
+	gl_Position = positions[gl_VertexIndex % 4];
+	fragTexCoord = texs[gl_VertexIndex % 4];
 }

@@ -24,8 +24,6 @@
 #ifndef XENOLITH_CORE_XLCOREQUEUEDATA_H_
 #define XENOLITH_CORE_XLCOREQUEUEDATA_H_
 
-#include "SPMemFunction.h"
-#include "SPMemPoolInterface.h"
 #include "XLCorePipelineInfo.h"
 #include "XLCoreResource.h"
 
@@ -398,6 +396,7 @@ struct SP_PUBLIC QueuePassData : NamedMem {
 	PassType type = PassType::Graphics;
 	RenderOrdering ordering = RenderOrderingLowest;
 	bool hasUpdateAfterBind = false;
+	uint32_t acquireTimestamps = 0;
 
 	Rc<QueuePass> pass;
 	Rc<RenderPass> impl;

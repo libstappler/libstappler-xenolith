@@ -25,6 +25,8 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKDEVICEQUEUE_H_
 #define XENOLITH_BACKEND_VK_XLVKDEVICEQUEUE_H_
 
+#include "XLCoreEnum.h"
+#include "XLCoreObject.h"
 #include "XLVkInstance.h"
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
@@ -50,6 +52,7 @@ class CommandBuffer;
 class DeviceMemoryPool;
 class PipelineLayout;
 class DescriptorPool;
+class QueryPool;
 struct DescriptorSetBindings;
 
 using PipelineDescriptor = core::PipelineDescriptor;
@@ -89,49 +92,71 @@ struct SP_PUBLIC QueueFamilyTransfer {
 struct SP_PUBLIC ImageMemoryBarrier {
 	ImageMemoryBarrier() = default;
 
-	ImageMemoryBarrier(Image *, VkAccessFlags src, VkAccessFlags dst, VkImageLayout old,
-			VkImageLayout _new);
-	ImageMemoryBarrier(Image *, VkAccessFlags src, VkAccessFlags dst, VkImageLayout old,
-			VkImageLayout _new, VkImageSubresourceRange);
-	ImageMemoryBarrier(Image *, VkAccessFlags src, VkAccessFlags dst, VkImageLayout old,
-			VkImageLayout _new, QueueFamilyTransfer);
-	ImageMemoryBarrier(Image *, VkAccessFlags src, VkAccessFlags dst, VkImageLayout old,
-			VkImageLayout _new, QueueFamilyTransfer, VkImageSubresourceRange);
+	ImageMemoryBarrier(Image *, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new);
+	ImageMemoryBarrier(Image *, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, VkImageSubresourceRange);
+	ImageMemoryBarrier(Image *, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, QueueFamilyTransfer);
+	ImageMemoryBarrier(Image *, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, QueueFamilyTransfer, VkImageSubresourceRange);
+
+	ImageMemoryBarrier(VkImage, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, VkImageAspectFlags);
+	ImageMemoryBarrier(VkImage, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, VkImageSubresourceRange);
+	ImageMemoryBarrier(VkImage, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, QueueFamilyTransfer, VkImageAspectFlags);
+	ImageMemoryBarrier(VkImage, XAccessFlags src, XAccessFlags dst, XImageLayout old,
+			XImageLayout _new, QueueFamilyTransfer, VkImageSubresourceRange);
+
 	ImageMemoryBarrier(const VkImageMemoryBarrier &);
 
 	explicit operator bool() const {
 		return srcAccessMask != 0 || dstAccessMask != 0 || oldLayout != VK_IMAGE_LAYOUT_UNDEFINED
-				|| newLayout != VK_IMAGE_LAYOUT_UNDEFINED || image != nullptr;
+				|| newLayout != VK_IMAGE_LAYOUT_UNDEFINED || vkimage != nullptr;
 	}
 
-	VkAccessFlags srcAccessMask = 0;
-	VkAccessFlags dstAccessMask = 0;
-	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VkImageLayout newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	XAccessFlags srcAccessMask = 0;
+	XAccessFlags dstAccessMask = 0;
+	XImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	XImageLayout newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	QueueFamilyTransfer familyTransfer;
-	Image *image = nullptr;
+	VkImage vkimage = VK_NULL_HANDLE;
 	VkImageSubresourceRange subresourceRange;
+	Image *image = nullptr;
 };
 
 struct SP_PUBLIC BufferMemoryBarrier {
 	BufferMemoryBarrier() = default;
-	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst);
-	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst, VkDeviceSize, VkDeviceSize);
-	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst, QueueFamilyTransfer);
-	BufferMemoryBarrier(Buffer *, VkAccessFlags src, VkAccessFlags dst, QueueFamilyTransfer,
-			VkDeviceSize, VkDeviceSize);
+
+	BufferMemoryBarrier(Buffer *, XAccessFlags src, XAccessFlags dst);
+	BufferMemoryBarrier(Buffer *, XAccessFlags src, XAccessFlags dst, VkDeviceSize off,
+			VkDeviceSize size);
+	BufferMemoryBarrier(Buffer *, XAccessFlags src, XAccessFlags dst, QueueFamilyTransfer);
+	BufferMemoryBarrier(Buffer *, XAccessFlags src, XAccessFlags dst, QueueFamilyTransfer,
+			VkDeviceSize off, VkDeviceSize size);
+
+	BufferMemoryBarrier(VkBuffer, XAccessFlags src, XAccessFlags dst);
+	BufferMemoryBarrier(VkBuffer, XAccessFlags src, XAccessFlags dst, VkDeviceSize off,
+			VkDeviceSize size);
+	BufferMemoryBarrier(VkBuffer, XAccessFlags src, XAccessFlags dst, QueueFamilyTransfer);
+	BufferMemoryBarrier(VkBuffer, XAccessFlags src, XAccessFlags dst, QueueFamilyTransfer,
+			VkDeviceSize off, VkDeviceSize size);
+
 	BufferMemoryBarrier(const VkBufferMemoryBarrier &);
 
 	explicit operator bool() const {
-		return srcAccessMask != 0 || dstAccessMask != 0 || buffer != nullptr;
+		return srcAccessMask != 0 || dstAccessMask != 0 || vkbuffer != nullptr;
 	}
 
-	VkAccessFlags srcAccessMask = 0;
-	VkAccessFlags dstAccessMask = 0;
+	XAccessFlags srcAccessMask = 0;
+	XAccessFlags dstAccessMask = 0;
 	QueueFamilyTransfer familyTransfer;
-	Buffer *buffer = nullptr;
+	VkBuffer vkbuffer = VK_NULL_HANDLE;
 	VkDeviceSize offset = 0;
 	VkDeviceSize size = VK_WHOLE_SIZE;
+	Buffer *buffer = nullptr;
 };
 
 struct SP_PUBLIC DescriptorInfo {
@@ -148,7 +173,7 @@ struct SP_PUBLIC DescriptorImageInfo : public DescriptorInfo {
 
 	Rc<ImageView> imageView;
 	VkSampler sampler = VK_NULL_HANDLE;
-	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	XImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
 struct SP_PUBLIC DescriptorBufferInfo : public DescriptorInfo {
@@ -168,41 +193,51 @@ struct SP_PUBLIC DescriptorBufferViewInfo : public DescriptorInfo {
 	VkBufferView target = VK_NULL_HANDLE;
 };
 
+struct CommandBufferInfo {
+	static constexpr VkCommandBufferUsageFlagBits DefaultFlags =
+			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VkCommandBufferUsageFlagBits usageFlags = DefaultFlags;
+	BufferLevel level = BufferLevel::Primary;
+	uint32_t timestampQueries = 0;
+};
+
 class SP_PUBLIC CommandBuffer : public core::CommandBuffer {
 public:
 	virtual ~CommandBuffer();
 
 	bool init(const CommandPool *, const DeviceTable *, VkCommandBuffer,
-			Vector<Rc<DescriptorPool>> &&descriptors);
+			Vector<Rc<DescriptorPool>> &&descriptors, CommandBufferInfo &&info);
 	void invalidate();
 
-	void cmdPipelineBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
+	void cmdPipelineBarrier(XPipelineStage, XPipelineStage, VkDependencyFlags,
 			SpanView<ImageMemoryBarrier>);
-	void cmdPipelineBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
+	void cmdPipelineBarrier(XPipelineStage, XPipelineStage, VkDependencyFlags,
 			SpanView<BufferMemoryBarrier>);
-	void cmdPipelineBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
+	void cmdPipelineBarrier(XPipelineStage, XPipelineStage, VkDependencyFlags,
 			SpanView<BufferMemoryBarrier>, SpanView<ImageMemoryBarrier>);
-	void cmdGlobalBarrier(VkPipelineStageFlags, VkPipelineStageFlags, VkDependencyFlags,
-			VkAccessFlags src, VkAccessFlags dst);
+	void cmdGlobalBarrier(XPipelineStage, XPipelineStage, VkDependencyFlags, XAccessFlags src,
+			XAccessFlags dst);
 
 	void cmdCopyBuffer(Buffer *src, Buffer *dst);
 	void cmdCopyBuffer(Buffer *src, Buffer *dst, VkDeviceSize srcOffset, VkDeviceSize dstOffset,
 			VkDeviceSize size);
 	void cmdCopyBuffer(Buffer *src, Buffer *dst, SpanView<VkBufferCopy>);
+	void cmdCopyBuffer(VkBuffer src, VkBuffer dst, SpanView<VkBufferCopy>);
 
-	void cmdCopyImage(Image *src, VkImageLayout, Image *dst, VkImageLayout,
+	void cmdCopyImage(Image *src, XImageLayout, Image *dst, XImageLayout,
 			VkFilter filter = VK_FILTER_LINEAR);
-	void cmdCopyImage(Image *src, VkImageLayout, Image *dst, VkImageLayout,
-			const VkImageCopy &copy);
-	void cmdCopyImage(Image *src, VkImageLayout, Image *dst, VkImageLayout, SpanView<VkImageCopy>);
+	void cmdCopyImage(Image *src, XImageLayout, Image *dst, XImageLayout, const VkImageCopy &copy);
+	void cmdCopyImage(Image *src, XImageLayout, Image *dst, XImageLayout, SpanView<VkImageCopy>);
 
-	void cmdCopyBufferToImage(Buffer *, Image *, VkImageLayout, VkDeviceSize offset);
-	void cmdCopyBufferToImage(Buffer *, Image *, VkImageLayout, SpanView<VkBufferImageCopy>);
+	void cmdCopyBufferToImage(Buffer *, Image *, XImageLayout, VkDeviceSize offset);
+	void cmdCopyBufferToImage(Buffer *, Image *, XImageLayout, SpanView<VkBufferImageCopy>);
+	void cmdCopyBufferToImage(VkBuffer, VkImage, XImageLayout, SpanView<VkBufferImageCopy>);
 
-	void cmdCopyImageToBuffer(Image *, VkImageLayout, Buffer *buf, VkDeviceSize offset);
-	void cmdCopyImageToBuffer(Image *, VkImageLayout, Buffer *buf, SpanView<VkBufferImageCopy>);
+	void cmdCopyImageToBuffer(Image *, XImageLayout, Buffer *buf, VkDeviceSize offset);
+	void cmdCopyImageToBuffer(Image *, XImageLayout, Buffer *buf, SpanView<VkBufferImageCopy>);
 
-	void cmdClearColorImage(Image *, VkImageLayout, const Color4F &);
+	void cmdClearColorImage(Image *, XImageLayout, const Color4F &);
 
 	void cmdBeginRenderPass(RenderPass *pass, Framebuffer *fb, VkSubpassContents subpass,
 			bool alt = false);
@@ -233,9 +268,11 @@ public:
 	void cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
 			int32_t vertexOffset, uint32_t firstInstance);
 
-	void cmdPushConstants(PipelineLayout *layout, VkShaderStageFlags stageFlags, uint32_t offset,
+	void cmdDrawIndirect(Buffer *, uint64_t offset, uint32_t count, uint32_t stride);
+
+	void cmdPushConstants(PipelineLayout *layout, XPipelineStage stageFlags, uint32_t offset,
 			BytesView);
-	void cmdPushConstants(VkShaderStageFlags stageFlags, uint32_t offset, BytesView);
+	void cmdPushConstants(XPipelineStage stageFlags, uint32_t offset, BytesView);
 
 	void cmdFillBuffer(Buffer *, uint32_t data);
 	void cmdFillBuffer(Buffer *, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data);
@@ -247,45 +284,66 @@ public:
 	void cmdDispatchPipeline(const core::ComputePipelineData *, uint32_t countX,
 			uint32_t countY = 1, uint32_t countZ = 1);
 
+	uint32_t cmdWriteTimestamp(XPipelineStage stage, uint32_t tag);
+
 	uint32_t cmdNextSubpass();
 
 	VkCommandBuffer getBuffer() const { return _buffer; }
 
 	uint32_t getCurrentSubpass() const { return _currentSubpass; }
-	uint32_t getBoundLayoutIndex() const { return _boundLayoutIndex; }
-	PipelineLayout *getBoundLayout() const { return _boundLayout; }
+
+	uint32_t getBoundLayoutIndex(VkPipelineBindPoint) const;
+	PipelineLayout *getBoundLayout(VkPipelineBindPoint) const;
+
+	uint32_t getBoundLayoutIndex(core::PassType) const;
+	PipelineLayout *getBoundLayout(core::PassType) const;
 
 	void writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &,
 			const Rc<Image> &);
 
+	uint64_t bindBufferAddress(NotNull<core::BufferObject *>);
+
 	virtual void bindBuffer(core::BufferObject *) override;
 
+	bool isNextTimestampAvailable() const;
+
 protected:
-	bool updateBoundSets(SpanView<VkDescriptorSet>, uint32_t firstSet);
+	struct BindPoint {
+		VkPipelineBindPoint point;
+		uint32_t boundLayoutIndex = 0;
+		Rc<PipelineLayout> boundLayout;
+		Vector<VkDescriptorSet> boundSets;
+	};
+
+	bool updateBoundSets(BindPoint &point, SpanView<VkDescriptorSet>, uint32_t firstSet);
+
+	BindPoint *getBindPoint(VkPipelineBindPoint);
+	const BindPoint *getBindPoint(VkPipelineBindPoint) const;
+
+	BindPoint *getBindPoint(core::PassType);
+	const BindPoint *getBindPoint(core::PassType) const;
+
+	CommandBufferInfo _info;
 
 	Vector<Rc<DescriptorPool>> _availableDescriptors;
 	Set<Rc<DescriptorPool>> _usedDescriptors;
-
-	Rc<PipelineLayout> _boundLayout;
 
 	const DeviceTable *_table = nullptr;
 	VkCommandBuffer _buffer = VK_NULL_HANDLE;
 
 	Set<Rc<DescriptorSetBindings>> _descriptorSets;
 	Set<Rc<DeviceMemoryPool>> _memPool;
-	Vector<VkDescriptorSet> _boundSets;
+
+	std::array<BindPoint, 2> _bindPoints;
 
 	const GraphicPipeline *_boundGraphicPipeline = nullptr;
 	const ComputePipeline *_boundComputePipeline = nullptr;
+
+	Rc<QueryPool> _timestampQueryPool;
 };
 
 class SP_PUBLIC CommandPool : public core::CommandPool {
 public:
-	static constexpr VkCommandBufferUsageFlagBits DefaultFlags =
-			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	using Level = BufferLevel;
-
 	virtual ~CommandPool() = default;
 
 	bool init(Device &dev, uint32_t familyIdx, core::QueueFlags c = core::QueueFlags::Graphics,
@@ -297,11 +355,10 @@ public:
 			const Callback<bool(core::CommandBuffer &)> &) override;
 
 	const CommandBuffer *recordBuffer(Device &dev, Vector<Rc<DescriptorPool>> &&descriptors,
-			const Callback<bool(CommandBuffer &)> &, VkCommandBufferUsageFlagBits = DefaultFlags,
-			Level = Level::Primary);
+			const Callback<bool(CommandBuffer &)> &, CommandBufferInfo && = CommandBufferInfo());
 
 	void freeDefaultBuffers(Device &dev, Vector<VkCommandBuffer> &);
-	void reset(Device &dev, bool release = false);
+	virtual void reset(core::Device &dev) override;
 
 	void autorelease(Rc<Ref> &&);
 
@@ -309,6 +366,22 @@ protected:
 	void recreatePool(Device &dev);
 
 	VkCommandPool _commandPool = VK_NULL_HANDLE;
+};
+
+class SP_PUBLIC QueryPool : public core::QueryPool {
+public:
+	virtual ~QueryPool() = default;
+
+	bool init(Device &dev, uint32_t familyIdx, core::QueueFlags c, const core::QueryPoolInfo &);
+
+	virtual void reset(core::Device &dev) override;
+
+	VkQueryPool getPool() const { return _queryPool; }
+
+	Status getResults(Device &dev, const Callback<void(SpanView<uint64_t>, uint32_t tag)> &);
+
+protected:
+	VkQueryPool _queryPool = VK_NULL_HANDLE;
 };
 
 } // namespace stappler::xenolith::vk

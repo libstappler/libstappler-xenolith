@@ -41,6 +41,8 @@ void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_
 
 	auto applicationInfo = a->makeApplicationInfo();
 
+	//applicationInfo.validation = false;
+
 	a->runApplication(Rc<app::AppDelegate>::create(move(applicationInfo)));
 }
 

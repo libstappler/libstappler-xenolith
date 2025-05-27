@@ -22,87 +22,86 @@
  **/
 
 #include "XL2dVkMaterial.h"
+#include "XLCoreAttachment.h"
+#include "XLCoreEnum.h"
+#include "XLCoreMaterial.h"
+#include "XLVkAllocator.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
-
-MaterialAttachment::~MaterialAttachment() { }
-
-bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
-		const core::TextureSetLayoutData *layout) {
-	return core::MaterialAttachment::init(builder, info, layout,
-			[](uint8_t *target, const core::Material *m) {
-		auto &images = m->getImages();
-		if (!images.empty()) {
-			MaterialData material;
-			auto &image = images.front();
-			material.samplerImageIdx = image.descriptor | (image.sampler << 16);
-			material.setIdx = image.set;
-			material.flags = 0;
-			material.atlasIdx = 0;
-			if (image.image->atlas) {
-				if (auto &buffer = image.image->atlas->getBuffer()) {
-					material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX;
-					material.atlasIdx = buffer->getDescriptor();
-
-					auto indexSize = buffer->getSize()
-							/ (image.image->atlas->getObjectSize() + sizeof(uint32_t) * 2);
-					auto pow2index = std::countr_zero(indexSize);
-
-					material.flags |=
-							(pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
-					if (buffer->getDeviceAddress() != 0) {
-						material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
-					}
-				}
-			}
-			memcpy(target, &material, sizeof(MaterialData));
-			return true;
-		}
-		return false;
-	}, sizeof(MaterialData));
-}
 
 auto MaterialAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<AttachmentHandle> {
 	return Rc<MaterialAttachmentHandle>::create(this, handle);
 }
 
-MaterialAttachmentHandle::~MaterialAttachmentHandle() { }
+void MaterialAttachment::setCompiled(core::Device &cdev) {
+	if (!_pool) {
+		auto &dev = static_cast<Device &>(cdev);
+
+		_pool = Rc<DeviceMemoryPool>::create(dev.getAllocator(), false);
+	}
+
+	core::MaterialAttachment::setCompiled(cdev);
+}
+
+Bytes MaterialAttachment::getMaterialData(NotNull<core::Material *> m) const {
+	Bytes ret;
+	ret.resize(getMaterialSize(m));
+
+	auto &images = m->getImages();
+	if (!images.empty()) {
+		MaterialData material;
+		auto &image = images.front();
+		material.samplerImageIdx = image.descriptor | (image.sampler << 16);
+		material.setIdx = image.set;
+		material.flags = 0;
+		material.atlasIdx = 0;
+		if (image.image->atlas) {
+			if (auto &buffer = image.image->atlas->getBuffer()) {
+				material.flags |= XL_GLSL_MATERIAL_FLAG_HAS_ATLAS_INDEX;
+				material.atlasIdx = buffer->getDescriptor();
+
+				auto indexSize = buffer->getSize()
+						/ (image.image->atlas->getObjectSize() + sizeof(uint32_t) * 2);
+				auto pow2index = std::countr_zero(indexSize);
+
+				material.flags |= (pow2index << XL_GLSL_MATERIAL_FLAG_ATLAS_POW2_INDEX_BIT_OFFSET);
+				if (buffer->getDeviceAddress() != 0) {
+					material.flags |= XL_GLSL_MATERIAL_FLAG_ATLAS_IS_BDA;
+				}
+			}
+		}
+		memcpy(ret.data(), &material, sizeof(MaterialData));
+	}
+	return ret;
+}
+
+Rc<core::BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(
+		NotNull<core::Material *> m) const {
+	Rc<Buffer> buf;
+	auto lastPass = getLastRenderPass();
+	if (!lastPass) {
+		log::warn("MaterialAttachment", "Attachment '", _data->key,
+				"' was not attached to any RenderPass");
+		buf = _pool->spawn(AllocationUsage::DeviceLocal,
+				BufferInfo(core::BufferUsage::ShaderDeviceAddress, getMaterialSize(m)));
+	} else {
+		buf = _pool->spawn(AllocationUsage::DeviceLocal,
+				BufferInfo(core::BufferUsage::ShaderDeviceAddress, getMaterialSize(m),
+						lastPass->type));
+	}
+	setMaterialBuffer(m, buf);
+	return buf;
+}
+
+size_t MaterialAttachment::getMaterialSize(NotNull<core::Material *>) const {
+	return sizeof(MaterialData);
+}
 
 bool MaterialAttachmentHandle::init(const Rc<Attachment> &a, const FrameQueue &handle) {
-	if (BufferAttachmentHandle::init(a, handle)) {
+	if (core::AttachmentHandle::init(a, handle)) {
 		return true;
 	}
 	return false;
-}
-
-bool MaterialAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &desc,
-		uint32_t, const DescriptorData &data) const {
-	if (_materials && _materials->getGeneration() != desc.boundGeneration) {
-		return true;
-	}
-
-	auto b = _materials->getBuffer();
-	if (b) {
-		return data.data == b || data.object == b->getObjectData().handle;
-	}
-	return false;
-}
-
-bool MaterialAttachmentHandle::writeDescriptor(const core::QueuePassHandle &handle,
-		DescriptorBufferInfo &info) {
-	if (!_materials) {
-		return false;
-	}
-
-	auto b = _materials->getBuffer();
-	if (!b) {
-		return false;
-	}
-	info.buffer = static_cast<Buffer *>(b);
-	info.offset = 0;
-	info.range = info.buffer->getSize();
-	info.descriptor->boundGeneration = _materials->getGeneration();
-	return true;
 }
 
 const MaterialAttachment *MaterialAttachmentHandle::getMaterialAttachment() const {

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +28,7 @@
 #include "XLVkSync.h"
 #include "XLVkObject.h"
 #include "XLCoreQueuePass.h"
+#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -39,10 +41,10 @@ class ImageAttachmentHandle;
 class BufferAttachmentHandle;
 class DescriptorPool;
 
-struct SP_PUBLIC MaterialBuffers {
-	Rc<Buffer> stagingBuffer;
-	Rc<Buffer> targetBuffer;
-	HashMap<core::MaterialId, uint32_t> ordering;
+struct SP_PUBLIC MaterialTransferData {
+	Rc<core::Material> material;
+	Rc<Buffer> source;
+	Rc<Buffer> target;
 };
 
 class SP_PUBLIC QueuePass : public core::QueuePass {
@@ -86,13 +88,16 @@ public:
 	void invalidate();
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
-	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) override;
+	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited,
+			Function<void(bool)> &&onComplete) override;
 	virtual void finalize(FrameQueue &, bool) override;
 
 	virtual core::QueueFlags getQueueOps() const;
 
-	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, ImageAttachmentHandle &) const;
-	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *, BufferAttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
+	ImageInputOutputBarrier getImageInputOutputBarrier(Device *, Image *, core::AttachmentHandle &,
+			const VkImageSubresourceRange &) const;
+	BufferInputOutputBarrier getBufferInputOutputBarrier(Device *, Buffer *,
+			core::AttachmentHandle &, VkDeviceSize offset, VkDeviceSize size) const;
 
 	void setQueueIdleFlags(core::DeviceIdleFlags);
 
@@ -105,11 +110,16 @@ protected:
 	// called before OnComplete event sended to FrameHandle (so, before any finalization)
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool);
 
-	virtual void doFinalizeTransfer(core::MaterialSet * materials,
-		Vector<ImageMemoryBarrier> &outputImageBarriers, Vector<BufferMemoryBarrier> &outputBufferBarriers);
+	virtual void doProcessQueries(FrameQueue &, SpanView<Rc<core::QueryPool>> queries);
 
-	virtual MaterialBuffers updateMaterials(FrameHandle &iframe, const Rc<core::MaterialSet> &data,
-			const Vector<Rc<core::Material>> &materials, SpanView<core::MaterialId> dynamicMaterials, SpanView<core::MaterialId> materialsToRemove);
+	virtual void doFinalizeTransfer(core::MaterialSet *materials,
+			Vector<ImageMemoryBarrier> &outputImageBarriers,
+			Vector<BufferMemoryBarrier> &outputBufferBarriers);
+
+	virtual Vector<MaterialTransferData> updateMaterials(FrameHandle &iframe,
+			NotNull<core::MaterialSet *> data, SpanView<Rc<core::Material>> materials,
+			SpanView<core::MaterialId> dynamicMaterials,
+			SpanView<core::MaterialId> materialsToRemove);
 
 	vk::ComputePipeline *getComputePipelineByName(uint32_t subpass, StringView) const;
 	vk::ComputePipeline *getComputePipelineBySubName(uint32_t subpass, StringView) const;
@@ -134,6 +144,6 @@ protected:
 	core::FrameConstraints _constraints;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKQUEUEPASS_H_ */

@@ -287,8 +287,6 @@ public:
 	const AttachmentPassData *addAttachment(const AttachmentData *,
 			const Callback<void(AttachmentPassBuilder &)> &);
 
-	StringView getName() const;
-
 	void setAvailabilityChecker(
 			memory::function<bool(const FrameQueue &, const QueuePassData &)> &&);
 
@@ -296,6 +294,10 @@ public:
 			memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&);
 	void addCompleteCallback(
 			memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&);
+
+	void setAcquireTimestamps(uint32_t);
+
+	StringView getName() const;
 
 protected:
 	friend class Queue::Builder;

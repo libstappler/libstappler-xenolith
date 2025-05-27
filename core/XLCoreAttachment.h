@@ -24,6 +24,7 @@
 #ifndef XENOLITH_CORE_XLCOREATTACHMENT_H_
 #define XENOLITH_CORE_XLCOREATTACHMENT_H_
 
+#include "XLCoreEnum.h"
 #include "XLCoreQueueData.h"
 #include "XLCoreInfo.h"
 #include "XLCoreImageStorage.h"
@@ -236,6 +237,9 @@ public:
 
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
 			const DescriptorData &) const;
+
+	virtual void enumerateAttachmentObjects(
+			const Callback<void(Object *, const SubresourceRangeInfo &)> &);
 
 	StringView getName() const { return _attachment->getName(); }
 

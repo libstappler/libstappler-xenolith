@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +30,7 @@ vec4 applyGradient(in vec4 outColor, in uint offset, in uint count) {
 #define GRAD_STEPS(n) vertexBuffer[0].vertices[offset + 2 + n].pos.z
 #define GRAD_FACTOR(n) vertexBuffer[0].vertices[offset + 2 + n].pos.w
 
-	Vertex start = vertexBuffer[0].vertices[offset];
+	/*Vertex start = vertexBuffer[0].vertices[offset];
 	Vertex end = vertexBuffer[0].vertices[offset + 1];
 
 	float grad_loc;
@@ -75,13 +76,13 @@ vec4 applyGradient(in vec4 outColor, in uint offset, in uint count) {
     float a1 = outColor.a;
     float a2 = gradColor.a;
     outColor = outColor * gradColor * (1.0 - gradFactor) + gradFactor * (outColor * (1.0 - a2) + gradColor * a2);
-    outColor.a = (1.0 - gradFactor) * a1 * a2 + gradFactor * a1;
+    outColor.a = (1.0 - gradFactor) * a1 * a2 + gradFactor * a1;*/
 
 #undef GRAD_COLORS
 #undef GRAD_STEPS
 #undef GRAD_FACTOR
 
-    return outColor;
+	return outColor;
 }
 
 #endif /* XENOLITH_RENDERER_BASIC2D_GLSL_INCLUDE_XL2DGLSLGRADIENT_H_ */

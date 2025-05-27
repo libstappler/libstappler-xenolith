@@ -358,4 +358,7 @@ bool AttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescr
 	return false;
 }
 
+void AttachmentHandle::enumerateAttachmentObjects(
+		const Callback<void(Object *, const SubresourceRangeInfo &)> &) { }
+
 } // namespace stappler::xenolith::core

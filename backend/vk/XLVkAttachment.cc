@@ -23,6 +23,7 @@
  **/
 
 #include "XLVkAttachment.h"
+#include "XLCoreEnum.h"
 #include "XLVkDevice.h"
 #include "XLVkTextureSet.h"
 #include "XLCoreFrameQueue.h"
@@ -48,6 +49,13 @@ bool BufferAttachmentHandle::isDescriptorDirty(const PassHandle &, const Pipelin
 				|| _buffers[idx].buffer->getObjectData().handle != data.object;
 	}
 	return false;
+}
+
+void BufferAttachmentHandle::enumerateAttachmentObjects(
+		const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &cb) {
+	for (auto &it : _buffers) {
+		cb(it.buffer, core::SubresourceRangeInfo(core::ObjectType::Buffer, it.offset, it.size));
+	}
 }
 
 void BufferAttachmentHandle::clearBufferViews() { _buffers.clear(); }
@@ -92,7 +100,7 @@ auto ImageAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentH
 	}
 }
 
-const Rc<core::ImageStorage> &ImageAttachmentHandle::getImage() const { return _queueData->image; }
+core::ImageStorage *ImageAttachmentHandle::getImage() const { return _queueData->image; }
 
 bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
 		DescriptorImageInfo &info) {
@@ -116,6 +124,13 @@ bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
 bool ImageAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d,
 		uint32_t, const DescriptorData &) const {
 	return getImage();
+}
+
+void ImageAttachmentHandle::enumerateAttachmentObjects(
+		const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &cb) {
+	auto img = getImage();
+	cb(img->getImage(),
+			core::SubresourceRangeInfo(core::ObjectType::Image, img->getImage()->getAspects()));
 }
 
 } // namespace stappler::xenolith::vk

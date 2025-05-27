@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,17 +33,18 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class MaterialCompilationAttachment : public core::GenericAttachment {
 public:
-	virtual ~MaterialCompilationAttachment();
+	virtual ~MaterialCompilationAttachment() = default;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
 class MaterialCompilationAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~MaterialCompilationAttachmentHandle();
+	virtual ~MaterialCompilationAttachmentHandle() = default;
 
 	virtual bool setup(FrameQueue &handle, Function<void(bool)> &&) override;
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	virtual const Rc<core::MaterialInputData> &getInputData() const { return _inputData; }
 	virtual const Rc<core::MaterialSet> &getOriginalSet() const { return _originalSet; }
@@ -54,7 +56,7 @@ protected:
 
 class MaterialCompilationRenderPass : public QueuePass {
 public:
-	virtual ~MaterialCompilationRenderPass();
+	virtual ~MaterialCompilationRenderPass() = default;
 
 	virtual bool init(QueuePassBuilder &, const AttachmentData *);
 
@@ -70,7 +72,7 @@ protected:
 
 class MaterialCompilationPassHandle : public QueuePassHandle {
 public:
-	virtual ~MaterialCompilationPassHandle();
+	virtual ~MaterialCompilationPassHandle() = default;
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
 	virtual void finalize(FrameQueue &, bool successful) override;
@@ -91,13 +93,15 @@ bool MaterialCompiler::init() {
 
 	Queue::Builder builder("MaterialCompiler");
 
-	auto attachment = builder.addAttachemnt("MaterialAttachment", [&] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+	auto attachment = builder.addAttachemnt("MaterialAttachment",
+			[&](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsInput();
 		attachmentBuilder.defineAsOutput();
 		return Rc<MaterialCompilationAttachment>::create(attachmentBuilder);
 	});
 
-	builder.addPass("MaterialRenderPass", PassType::Transfer, RenderOrdering(0), [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+	builder.addPass("MaterialRenderPass", PassType::Transfer, RenderOrdering(0),
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<MaterialCompilationRenderPass>::create(passBuilder, attachment);
 	});
 
@@ -116,13 +120,9 @@ bool MaterialCompiler::inProgress(const MaterialAttachment *a) const {
 	return false;
 }
 
-void MaterialCompiler::setInProgress(const MaterialAttachment *a) {
-	_inProgress.emplace(a);
-}
+void MaterialCompiler::setInProgress(const MaterialAttachment *a) { _inProgress.emplace(a); }
 
-void MaterialCompiler::dropInProgress(const MaterialAttachment *a) {
-	_inProgress.erase(a);
-}
+void MaterialCompiler::dropInProgress(const MaterialAttachment *a) { _inProgress.erase(a); }
 
 bool MaterialCompiler::hasRequest(const MaterialAttachment *a) const {
 	auto it = _requests.find(a);
@@ -153,9 +153,7 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 		it->second.remove.emplace(rem);
 	}
 
-	for (auto &rem : req->dynamicMaterialsToUpdate) {
-		it->second.dynamic.emplace(rem);
-	}
+	for (auto &rem : req->dynamicMaterialsToUpdate) { it->second.dynamic.emplace(rem); }
 
 	for (auto &m : req->materialsToAddOrUpdate) {
 		auto materialId = m->getId();
@@ -174,9 +172,7 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 	if (it->second.deps.empty()) {
 		it->second.deps = sp::move(deps);
 	} else {
-		for (auto &iit : deps) {
-			it->second.deps.emplace_back(move(iit));
-		}
+		for (auto &iit : deps) { it->second.deps.emplace_back(move(iit)); }
 	}
 
 	if (it->second.callback) {
@@ -189,11 +185,10 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 	}
 }
 
-void MaterialCompiler::clearRequests() {
-	_requests.clear();
-}
+void MaterialCompiler::clearRequests() { _requests.clear(); }
 
-auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input, Vector<Rc<core::DependencyEvent>> &&deps) -> Rc<FrameRequest> {
+auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input,
+		Vector<Rc<core::DependencyEvent>> &&deps) -> Rc<FrameRequest> {
 	auto req = Rc<FrameRequest>::create(this);
 	req->addInput(_attachment, move(input));
 	req->addSignalDependencies(sp::move(deps));
@@ -205,7 +200,7 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 	auto targetAttachment = req->attachment;
 
 	auto h = loop.makeFrame(makeRequest(sp::move(req), sp::move(deps)), 0);
-	h->setCompleteCallback([this, targetAttachment] (FrameHandle &handle) {
+	h->setCompleteCallback([this, targetAttachment](FrameHandle &handle) {
 		auto reqIt = _requests.find(targetAttachment);
 		if (reqIt != _requests.end()) {
 			if (handle.getLoop()->isRunning()) {
@@ -217,9 +212,7 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 					req->materialsToAddOrUpdate.emplace_back(m.second);
 				}
 				req->materialsToRemove.reserve(reqIt->second.remove.size());
-				for (auto &m : reqIt->second.remove) {
-					req->materialsToRemove.emplace_back(m);
-				}
+				for (auto &m : reqIt->second.remove) { req->materialsToRemove.emplace_back(m); }
 				req->dynamicMaterialsToUpdate.reserve(reqIt->second.dynamic.size());
 				for (auto &m : reqIt->second.dynamic) {
 					req->dynamicMaterialsToUpdate.emplace_back(m);
@@ -227,7 +220,8 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 				req->callback = sp::move(reqIt->second.callback);
 				_requests.erase(reqIt);
 
-				runMaterialCompilationFrame(*handle.getLoop(), move(req), Vector<Rc<core::DependencyEvent>>(deps));
+				runMaterialCompilationFrame(*handle.getLoop(), move(req),
+						Vector<Rc<core::DependencyEvent>>(deps));
 			} else {
 				clearRequests();
 				dropInProgress(targetAttachment);
@@ -239,26 +233,25 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 	h->update(true);
 }
 
-MaterialCompilationAttachment::~MaterialCompilationAttachment() { }
-
-auto MaterialCompilationAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<AttachmentHandle> {
+auto MaterialCompilationAttachment::makeFrameHandle(const FrameQueue &handle)
+		-> Rc<AttachmentHandle> {
 	return Rc<MaterialCompilationAttachmentHandle>::create(this, handle);
 }
-
-MaterialCompilationAttachmentHandle::~MaterialCompilationAttachmentHandle() { }
 
 bool MaterialCompilationAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)> &&cb) {
 	return true;
 }
 
-void MaterialCompilationAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void MaterialCompilationAttachmentHandle::submitInput(FrameQueue &q,
+		Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
 	auto d = data.cast<core::MaterialInputData>();
 	if (!d || q.isFinalized()) {
 		cb(false);
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) {
-		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle) {
+	q.getFrame()->waitForDependencies(data->waitDependencies,
+			[this, d = sp::move(d), cb = sp::move(cb)](FrameHandle &handle, bool success) {
+		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)](FrameHandle &handle) {
 			_inputData = d;
 			_originalSet = _inputData->attachment->getMaterials();
 			cb(true);
@@ -266,9 +259,8 @@ void MaterialCompilationAttachmentHandle::submitInput(FrameQueue &q, Rc<core::At
 	});
 }
 
-MaterialCompilationRenderPass::~MaterialCompilationRenderPass() { }
-
-bool MaterialCompilationRenderPass::init(QueuePassBuilder &passBuilder, const AttachmentData *attachment) {
+bool MaterialCompilationRenderPass::init(QueuePassBuilder &passBuilder,
+		const AttachmentData *attachment) {
 	passBuilder.addAttachment(attachment);
 
 	if (!QueuePass::init(passBuilder)) {
@@ -280,14 +272,14 @@ bool MaterialCompilationRenderPass::init(QueuePassBuilder &passBuilder, const At
 	return true;
 }
 
-auto MaterialCompilationRenderPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHandle> {
+auto MaterialCompilationRenderPass::makeFrameHandle(const FrameQueue &handle)
+		-> Rc<QueuePassHandle> {
 	return Rc<MaterialCompilationPassHandle>::create(*this, handle);
 }
 
-MaterialCompilationPassHandle::~MaterialCompilationPassHandle() { }
-
 bool MaterialCompilationPassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb) {
-	if (auto a = frame.getAttachment(static_cast<MaterialCompilationRenderPass *>(_queuePass.get())->getMaterialAttachment())) {
+	if (auto a = frame.getAttachment(static_cast<MaterialCompilationRenderPass *>(_queuePass.get())
+						->getMaterialAttachment())) {
 		_materialAttachment = static_cast<MaterialCompilationAttachmentHandle *>(a->handle.get());
 	}
 
@@ -302,11 +294,12 @@ void MaterialCompilationPassHandle::finalize(FrameQueue &handle, bool successful
 	QueuePassHandle::finalize(handle, successful);
 }
 
-Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(FrameHandle &handle) {
+Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareCommands(
+		FrameHandle &handle) {
 	auto &inputData = _materialAttachment->getInputData();
-	auto buffers = updateMaterials(handle, _outputData, inputData->materialsToAddOrUpdate,
+	auto buffers = updateMaterials(handle, _outputData.get(), inputData->materialsToAddOrUpdate,
 			inputData->dynamicMaterialsToUpdate, inputData->materialsToRemove);
-	if (!buffers.targetBuffer) {
+	if (buffers.empty()) {
 		return Vector<const core::CommandBuffer *>();
 	}
 
@@ -331,35 +324,30 @@ Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareComm
 		targetStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 	}
 
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
-		buf.cmdCopyBuffer(buffers.stagingBuffer, buffers.targetBuffer);
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&, this](CommandBuffer &buf) {
+		Vector<BufferMemoryBarrier> barriers;
+		for (auto &it : buffers) {
+			buf.cmdCopyBuffer(it.source, it.target);
 
-		if (q->index == _pool->getFamilyIdx()) {
-			BufferMemoryBarrier bufferBarrier(buffers.targetBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetStages, 0, makeSpanView(&bufferBarrier, 1));
-		} else {
-			BufferMemoryBarrier bufferBarrier(buffers.targetBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-					QueueFamilyTransfer{_pool->getFamilyIdx(), q->index}, 0, VK_WHOLE_SIZE);
-			buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetStages, 0, makeSpanView(&bufferBarrier, 1));
-			buffers.targetBuffer->setPendingBarrier(bufferBarrier);
+			if (q->index == _pool->getFamilyIdx()) {
+				barriers.emplace_back(BufferMemoryBarrier(it.target, VK_ACCESS_TRANSFER_WRITE_BIT,
+						VK_ACCESS_SHADER_READ_BIT));
+			} else {
+				barriers.emplace_back(BufferMemoryBarrier(it.target, VK_ACCESS_TRANSFER_WRITE_BIT,
+						VK_ACCESS_SHADER_READ_BIT,
+						QueueFamilyTransfer{_pool->getFamilyIdx(), q->index}, 0, VK_WHOLE_SIZE));
+				it.target->setPendingBarrier(barriers.back());
+			}
 		}
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetStages, 0, barriers);
 		return true;
 	});
-
-	if (buf) {
-		auto tmpBuffer = new Rc<Buffer>(move(buffers.targetBuffer));
-		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(sp::move(buffers.ordering));
-		handle.performOnGlThread([data = _outputData, tmpBuffer, tmpOrder] (FrameHandle &) {
-			data->setBuffer(sp::move(*tmpBuffer), sp::move(*tmpOrder));
-			delete tmpBuffer;
-			delete tmpOrder;
-		}, nullptr, true, "MaterialCompilationRenderPassHandle::doPrepareCommands");
-		return Vector<const core::CommandBuffer *>{buf};
-	}
-	return Vector<const core::CommandBuffer *>();
+	return Vector<const core::CommandBuffer *>{buf};
 }
 
-void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func,
+		bool success, Rc<Fence> &&fence) {
 	if (success) {
 		_materialAttachment->getInputData()->attachment->setMaterials(_outputData);
 	}
@@ -368,7 +356,8 @@ void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<voi
 	frame.signalDependencies(success);
 }
 
-void MaterialCompilationPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+void MaterialCompilationPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func,
+		bool success) {
 	if (auto &cb = _materialAttachment->getInputData()->callback) {
 		cb();
 	}
@@ -376,4 +365,4 @@ void MaterialCompilationPassHandle::doComplete(FrameQueue &queue, Function<void(
 	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
-}
+} // namespace stappler::xenolith::vk

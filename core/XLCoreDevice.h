@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +86,7 @@ public:
 	virtual Rc<Semaphore> makeSemaphore();
 	virtual Rc<ImageView> makeImageView(const Rc<ImageObject> &, const ImageViewInfo &);
 	virtual Rc<CommandPool> makeCommandPool(uint32_t family, QueueFlags flags);
+	virtual Rc<QueryPool> makeQueryPool(uint32_t family, QueueFlags flags, const QueryPoolInfo &);
 	virtual Rc<TextureSet> makeTextureSet(const TextureSetLayout &);
 
 	uint32_t getPresentatonMask() const { return _presentMask; }
@@ -107,10 +109,11 @@ public:
 	// - false if frame is not valid or no queue family with requested capabilities exists
 	//
 	// Acquired DeviceQueue must be released with releaseQueue
-	bool acquireQueue(QueueFlags, FrameHandle &, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
-			Function<void(FrameHandle &)> && invalidate, Rc<Ref> && = nullptr);
-	bool acquireQueue(QueueFlags, Loop &, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
-			Function<void(Loop &)> && invalidate, Rc<Ref> && = nullptr);
+	bool acquireQueue(QueueFlags, FrameHandle &,
+			Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&acquire,
+			Function<void(FrameHandle &)> &&invalidate, Rc<Ref> && = nullptr);
+	bool acquireQueue(QueueFlags, Loop &, Function<void(Loop &, const Rc<DeviceQueue> &)> &&acquire,
+			Function<void(Loop &)> &&invalidate, Rc<Ref> && = nullptr);
 	void releaseQueue(Rc<DeviceQueue> &&);
 
 	// Запросить DeviceQueue синхронно, если возможно
@@ -120,6 +123,11 @@ public:
 	Rc<CommandPool> acquireCommandPool(uint32_t familyIndex);
 	void releaseCommandPool(core::Loop &, Rc<CommandPool> &&);
 	void releaseCommandPoolUnsafe(Rc<CommandPool> &&);
+
+	Rc<QueryPool> acquireQueryPool(QueueFlags, const QueryPoolInfo &);
+	Rc<QueryPool> acquireQueryPool(uint32_t familyIndex, const QueryPoolInfo &);
+	void releaseQueryPool(core::Loop &, Rc<QueryPool> &&);
+	void releaseQueryPoolUnsafe(Rc<QueryPool> &&);
 
 	void runTask(Loop &loop, Rc<DeviceQueueTask> &&);
 
@@ -155,6 +163,6 @@ protected:
 	mutable Vector<Rc<Semaphore>> _invalidatedSemaphores;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREDEVICE_H_ */

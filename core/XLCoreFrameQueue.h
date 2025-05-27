@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -54,6 +55,7 @@ struct SP_PUBLIC FramePassData {
 	bool waitForResult = false;
 
 	uint64_t submitTime = 0;
+	uint64_t deviceTime = 0;
 };
 
 struct SP_PUBLIC FrameAttachmentData {
@@ -99,9 +101,14 @@ public:
 	const Rc<Queue> &getQueue() const { return _queue; }
 	Loop *getLoop() const;
 
-	const HashMap<const QueuePassData *, FramePassData> &getRenderPasses() const { return _renderPasses; }
-	const HashMap<const AttachmentData *, FrameAttachmentData> &getAttachments() const { return _attachments; }
+	const HashMap<const QueuePassData *, FramePassData> &getRenderPasses() const {
+		return _renderPasses;
+	}
+	const HashMap<const AttachmentData *, FrameAttachmentData> &getAttachments() const {
+		return _attachments;
+	}
 	uint64_t getSubmissionTime() const { return _submissionTime; }
+	uint64_t getDeviceTime() const { return _deviceTime; }
 
 	const FrameAttachmentData *getAttachment(const AttachmentData *) const;
 	const FramePassData *getRenderPass(const QueuePassData *) const;
@@ -116,7 +123,8 @@ protected:
 	void onAttachmentSetupComplete(FrameAttachmentData &);
 	void onAttachmentInput(FrameAttachmentData &);
 	void onAttachmentAcquire(FrameAttachmentData &);
-	void onAttachmentRelease(FrameAttachmentData &, FrameAttachmentState state = FrameAttachmentState::ResourcesReleased);
+	void onAttachmentRelease(FrameAttachmentData &,
+			FrameAttachmentState state = FrameAttachmentState::ResourcesReleased);
 
 	bool isRenderPassReady(const FramePassData &) const;
 	bool isRenderPassReadyForState(const FramePassData &, FrameRenderPassState) const;
@@ -130,7 +138,8 @@ protected:
 	void onRenderPassComplete(FramePassData &);
 
 	Rc<FrameSync> makeRenderPassSync(FramePassData &) const;
-	PipelineStage getWaitStageForAttachment(FramePassData &data, const AttachmentHandle *handle) const;
+	PipelineStage getWaitStageForAttachment(FramePassData &data,
+			const AttachmentHandle *handle) const;
 
 	void onComplete();
 	void onFinalized();
@@ -164,10 +173,11 @@ protected:
 
 	uint32_t _finalizedObjects = 0;
 	uint64_t _submissionTime = 0;
+	uint64_t _deviceTime = 0;
 
 	Vector<Pair<FramePassData *, FrameRenderPassState>> _awaitPasses;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREFRAMEQUEUE_H_ */

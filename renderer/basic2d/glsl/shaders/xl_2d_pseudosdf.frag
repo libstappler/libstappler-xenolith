@@ -3,7 +3,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 
 #include "XL2dGlslVertexData.h"
 
@@ -16,7 +15,7 @@ layout (constant_id = 0) const int PSEUDOSDF_MODE = PSEUDOSDF_MODE_SOLID;
 layout (location = 0) in vec4 fragColor;
 layout (location = 0) out vec4 outColor;
 
-layout(input_attachment_index = 0, set = 0, binding = 2) uniform subpassInput inputSdf;
+layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput inputSdf;
 
 void main() {
 	if (PSEUDOSDF_MODE != PSEUDOSDF_MODE_BACKREAD) {

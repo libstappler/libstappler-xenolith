@@ -62,6 +62,9 @@ public:
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
 			const DescriptorData &) const override;
 
+	virtual void enumerateAttachmentObjects(
+			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
+
 	void clearBufferViews();
 	void addBufferView(Buffer *buffer, VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE,
 			bool dirty = true);
@@ -78,11 +81,14 @@ class SP_PUBLIC ImageAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~ImageAttachmentHandle() = default;
 
-	const Rc<core::ImageStorage> &getImage() const;
+	core::ImageStorage *getImage() const;
 
 	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorImageInfo &);
 	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
 			const DescriptorData &) const override;
+
+	virtual void enumerateAttachmentObjects(
+			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
 };
 
 class SP_PUBLIC TexelAttachmentHandle : public core::AttachmentHandle {

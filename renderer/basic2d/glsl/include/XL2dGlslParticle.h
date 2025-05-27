@@ -29,15 +29,20 @@
 namespace STAPPLER_VERSIONIZED stappler::glsl {
 #endif
 
+struct ParticleConstantData {
+	uvec2 outVerticesPointer;
+	uvec2 outCommandPointer;
+	uvec2 emitterPointer;
+	uvec2 particlesPointer;
+	uint nframes;
+	float dt;
+};
+
 struct ParticleIndirectCommand {
-	uint indexCount;
+	uint vertexCount;
 	uint instanceCount;
-	uint firstIndex;
-	int vertexOffset;
+	uint firstVertex;
 	uint firstInstance;
-	uint padding20;
-	uint padding24;
-	uint padding28;
 };
 
 struct ParticleFloatParam {
@@ -50,39 +55,30 @@ struct ParticleVec2Param {
 	vec2 rnd;
 };
 
-struct ParticleVertex {
-	vec2 pos;
-	vec2 tex;
-	vec4 color;
-};
-
 struct ParticleEmissionPoints {
 	uint count;
-	uint offset;
-	vec2 singlePoint;
+	uint padding4;
 };
 
 struct ParticleEmitterData {
 	// [0-15]
 	// 0 - points
-	uint emissionType;
-	uint padding4;
 	uint count;
-	// 0 - localCoords;
+	uint emissionType;
+	uvec2 emissionData;
+
+	// [16-31]	// 0 - localCoords;
 	// 1 - alignWithVelocity;
 	// 2 - orderByLifetime
 	// 3 - useLifetimeMax
 	uint flags;
-
-	// [16-31]
-	vec2 origin;
 	float explosiveness;
-	float frameInterval;
+	vec2 origin;
 
 	// [32-47]
+	float frameInterval;
 	vec2 sizeNormal;
 	float sizeValue;
-	float padding44;
 
 	// [48-63]
 	vec4 color;
@@ -169,13 +165,6 @@ struct ParticleData {
 	float tangentialAcceleration; // ускорение перпендикулярно движению, dp в секунду^2
 
 	// [128]
-};
-
-struct ParticlePushConstantBlock {
-	uint emitterIndex; // 0
-	uint vertexOffset; // 1
-	uint indexOffset; // 2
-	uint nframes;
 };
 
 #ifndef SP_GLSL

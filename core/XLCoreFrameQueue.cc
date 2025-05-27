@@ -792,6 +792,7 @@ void FrameQueue::onRenderPassComplete(FramePassData &data) {
 	auto t = sp::platform::clock(ClockType::Monotonic) - data.submitTime;
 
 	_submissionTime += t;
+	_deviceTime += data.deviceTime;
 	if (_finalized) {
 		invalidate(data);
 		return;

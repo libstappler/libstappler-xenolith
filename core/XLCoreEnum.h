@@ -633,6 +633,20 @@ enum class ImageUsage {
 
 SP_DEFINE_ENUM_AS_MASK(ImageUsage);
 
+// VkImageAspectFlagBits
+enum class ImageAspects : uint32_t {
+	None,
+	Color = 0x0000'0001,
+	Depth = 0x0000'0002,
+	Stencil = 0x0000'0004,
+	Metadata = 0x0000'0008,
+	Plane0 = 0x0000'0010,
+	Plane1 = 0x0000'0020,
+	Plane2 = 0x0000'0040,
+};
+
+SP_DEFINE_ENUM_AS_MASK(ImageAspects);
+
 enum class PresentMode : uint32_t {
 	Unsupported,
 	Immediate,
@@ -815,6 +829,31 @@ enum class PixelFormat {
 	DS, // depth-stencil
 	S // stencil
 };
+
+// VkQueryType
+enum class QueryType : uint32_t {
+	Occlusion = 0,
+	PipelineStatistics = 1,
+	Timestamp = 2,
+};
+
+// VkQueryPipelineStatisticFlagBits
+enum class QueryPipelineStatisticFlags : uint32_t {
+	None = 0,
+	InputAssemblyVertices = 0x0000'0001,
+	InputAssemblyPrimitives = 0x0000'0002,
+	VertexShaderInvocations = 0x0000'0004,
+	GeometryShaderInvocations = 0x0000'0008,
+	GeometryShaderPrimitives = 0x0000'0010,
+	ClippingInvocations = 0x0000'0020,
+	ClippingPrimitives = 0x0000'0040,
+	FragmentShaderInvocations = 0x0000'0080,
+	TesselationControlShaderPatches = 0x0000'0100,
+	TesselationEvaluationShaderInvocations = 0x0000'0200,
+	ComputeShaderInvocations = 0x0000'0400,
+};
+
+SP_DEFINE_ENUM_AS_MASK(QueryPipelineStatisticFlags)
 
 // VkQueueFlagBits
 enum class QueueFlags : uint32_t {

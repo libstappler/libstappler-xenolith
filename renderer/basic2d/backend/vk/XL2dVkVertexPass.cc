@@ -22,15 +22,20 @@
  **/
 
 #include "XL2dVkVertexPass.h"
+#include "XLCoreAttachment.h"
+#include "XLCoreEnum.h"
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
 #include "XLDirector.h"
+#include "XLVkDeviceQueue.h"
 #include "XLVkRenderPass.h"
 #include "XLVkTextureSet.h"
 #include "XLVkPipeline.h"
 #include "XL2dFrameContext.h"
 #include "XLLinearGradient.h"
+#include "backend/vk/XL2dVkParticlePass.h"
+#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
@@ -235,10 +240,12 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 
 		_vertexes = devPool->spawn(AllocationUsage::DeviceLocalHostVisible,
 				BufferInfo(StringView("VertexBuffer"), core::BufferUsage::StorageBuffer,
+						core::BufferUsage::ShaderDeviceAddress,
 						(dynamicData->globalWritePlan.vertexes + 8) * sizeof(Vertex)));
 
 		_transforms = devPool->spawn(AllocationUsage::DeviceLocalHostVisible,
 				BufferInfo(StringView("TransformBuffer"), core::BufferUsage::StorageBuffer,
+						core::BufferUsage::ShaderDeviceAddress,
 						(dynamicData->globalWritePlan.transforms + 1) * sizeof(TransformData)));
 
 		if (!_vertexes || !_indexes || !_transforms) {
@@ -974,9 +981,8 @@ void VertexMaterialVertexProcessor::finalize(DynamicData *data) {
 	_callback(true);
 }
 
-bool VertexAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
-		const AttachmentData *m) {
-	if (BufferAttachment::init(builder, info)) {
+bool VertexAttachment::init(AttachmentBuilder &builder, const AttachmentData *m) {
+	if (core::GenericAttachment::init(builder)) {
 		_materials = m;
 		return true;
 	}
@@ -1034,9 +1040,6 @@ void VertexAttachmentHandle::loadData(Rc<FrameContextHandle2d> &&data, Rc<Buffer
 	_shadowSdfSpans = sp::move(shadowSdfSpans);
 
 	_maxShadowValue = maxShadowValue;
-
-	addBufferView(_vertexes);
-	addBufferView(_transforms);
 }
 
 const Rc<FrameContextHandle2d> &VertexAttachmentHandle::getCommands() const { return _commands; }
@@ -1085,10 +1088,22 @@ bool VertexPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		_vertexBuffer = static_cast<const VertexAttachmentHandle *>(vertexBuffer->handle.get());
 	}
 
+	if (auto particleBuffer = q.getAttachment(pass->getParticles())) {
+		_particles =
+				static_cast<const ParticleEmitterAttachmentHandle *>(particleBuffer->handle.get());
+	}
+
 	return QueuePassHandle::prepare(q, sp::move(cb));
 }
 
 Vector<const core::CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHandle &handle) {
+	CommandBufferInfo info;
+
+	auto queue = _device->getQueueFamily(_pool->getFamilyIdx());
+	if (queue->timestampValidBits > 0 && _data->acquireTimestamps > 0) {
+		info.timestampQueries = _data->acquireTimestamps;
+	}
+
 	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
 			[&, this](CommandBuffer &buf) {
 		auto materials = _materialBuffer->getSet().get();
@@ -1111,12 +1126,38 @@ Vector<const core::CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHan
 
 		finalizeRenderPass(buf);
 		return true;
-	});
+	}, move(info));
 
 	return Vector<const core::CommandBuffer *>{buf};
 }
 
-void VertexPassHandle::prepareRenderPass(CommandBuffer &) { }
+void VertexPassHandle::doProcessQueries(FrameQueue &, SpanView<Rc<core::QueryPool>> queries) {
+	for (auto &q : queries) {
+		if (q->getInfo().type == core::QueryType::Timestamp) {
+			uint64_t begin = 0;
+			uint64_t end = 0;
+			q.get_cast<QueryPool>()->getResults(*_device,
+					[&](SpanView<uint64_t> values, uint32_t tag) {
+				if (tag == TimestampBeginTag) {
+					begin = values.front();
+				} else if (tag == TimestampEndTag) {
+					end = values.front();
+				}
+			});
+			if (begin && end && begin < end) {
+				auto nticks = end - begin;
+				auto mksec = nticks
+						* _device->getInfo().properties.device10.properties.limits.timestampPeriod
+						/ 1000.0f;
+				_queueData->deviceTime = static_cast<uint64_t>(std::ceil(mksec));
+			}
+		}
+	}
+}
+
+void VertexPassHandle::prepareRenderPass(CommandBuffer &buf) {
+	buf.cmdWriteTimestamp(core::PipelineStage::TopOfPipe, TimestampBeginTag);
+}
 
 void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &buf) {
 	auto commands = _vertexBuffer->getCommands();
@@ -1135,19 +1176,14 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 	uint32_t boundTextureSetIndex = maxOf<uint32_t>();
 
-	struct MaterialDataFrag {
-		uint32_t materialIdx = 0;
-		uint32_t imageIdx = 0;
-		uint32_t samplerIdx = 0;
-		uint32_t gradientOffset = 0;
-		uint32_t gradientCount = 0;
-		float outlineOffset = 0;
-		uint64_t atlasBuffer = 0;
-	};
+	VertexConstantData pcb;
+	pcb.vertexPointer =
+			UVec2::convertFromPacked(buf.bindBufferAddress(_vertexBuffer->getVertexes().get()));
+	pcb.transformPointer =
+			UVec2::convertFromPacked(buf.bindBufferAddress(_vertexBuffer->getTransforms().get()));
+	pcb.outlineOffset = 0.0f;
 
-	MaterialDataFrag fragData;
-
-	auto &spans = _vertexBuffer->getVertexData();
+	auto spans = _vertexBuffer->getVertexData();
 
 	// Use commented code to debug drawing command-by-command
 	//static size_t ctrl = 0;
@@ -1170,22 +1206,23 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		//}
 
 		//++ i;
-		fragData.materialIdx = materials->getMaterialOrder(materialVertexSpan.material);
-		const core::Material *material = materials->getMaterialById(materialVertexSpan.material);
+
+		auto material = _materialBuffer->getSet()->getMaterialById(materialVertexSpan.material);
 		if (!material) {
 			return;
 		}
 
-		fragData.imageIdx = material->getImages().front().descriptor;
-		fragData.samplerIdx = material->getImages().front().sampler;
-		fragData.gradientOffset = materialVertexSpan.gradientOffset;
-		fragData.gradientCount = materialVertexSpan.gradientCount;
-		fragData.outlineOffset = materialVertexSpan.outlineOffset;
+		pcb.materialPointer =
+				UVec2::convertFromPacked(buf.bindBufferAddress(material->getBuffer()));
+		pcb.imageIdx = material->getImages().front().descriptor;
+		pcb.samplerIdx = material->getImages().front().sampler;
+		pcb.gradientOffset = materialVertexSpan.gradientOffset;
+		pcb.gradientCount = materialVertexSpan.gradientCount;
+		pcb.outlineOffset = materialVertexSpan.outlineOffset;
 
 		if (auto a = material->getAtlas()) {
-			if (auto ref = a->getBuffer()->getDeviceAddress()) {
-				fragData.atlasBuffer = ref;
-			}
+			pcb.atlasPointer =
+					UVec2::convertFromPacked(buf.bindBufferAddress(a->getBuffer().get()));
 		}
 
 		auto textureSetIndex = material->getLayoutIndex();
@@ -1201,7 +1238,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 				// rebind texture set at last index
 				buf.cmdBindDescriptorSets(static_cast<RenderPass *>(_data->impl.get()),
-						makeSpanView(&set, 1), 1);
+						makeSpanView(&set, 1), pipeline->layout->sets.size());
 				boundTextureSetIndex = textureSetIndex;
 			} else {
 				stappler::log::error("MaterialRenderPassHandle",
@@ -1212,28 +1249,54 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 		applyDynamicState(commands, buf, materialVertexSpan.state);
 
-		buf.cmdPushConstants(pass->getPipelineLayout(0),
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&fragData), sizeof(MaterialDataFrag)));
+		if (materialVertexSpan.particleSystemId > 0) {
+			VertexConstantData pcbParticle = pcb;
 
-		buf.cmdDrawIndexed(materialVertexSpan.indexCount, // indexCount
-				materialVertexSpan.instanceCount, // instanceCount
-				materialVertexSpan.firstIndex, // firstIndex
-				materialVertexSpan.vertexOffset, // vertexOffset
-				materialVertexSpan.firstInstance // uint32_t  firstInstance
-		);
+			pcbParticle.vertexPointer =
+					UVec2::convertFromPacked(_particles->getVertices()->getDeviceAddress());
+
+			buf.cmdPushConstants(pass->getPipelineLayout(0),
+					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+					BytesView(reinterpret_cast<const uint8_t *>(&pcbParticle),
+							sizeof(VertexConstantData)));
+
+			auto emitterIdx = _particles->getEmitterIndex(materialVertexSpan.particleSystemId);
+
+			buf.cmdDrawIndirect(_particles->getCommands(),
+					emitterIdx * sizeof(ParticleIndirectCommand), 1,
+					sizeof(ParticleIndirectCommand));
+		} else {
+			buf.cmdPushConstants(pass->getPipelineLayout(0),
+					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+					BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(VertexConstantData)));
+
+			buf.cmdDrawIndexed(materialVertexSpan.indexCount, // indexCount
+					materialVertexSpan.instanceCount, // instanceCount
+					materialVertexSpan.firstIndex, // firstIndex
+					materialVertexSpan.vertexOffset, // vertexOffset
+					materialVertexSpan.firstInstance // uint32_t  firstInstance
+			);
+		}
 	};
 
 	for (auto &materialVertexSpan : spans) { drawSpan(materialVertexSpan); }
 }
 
-void VertexPassHandle::finalizeRenderPass(CommandBuffer &) { }
+void VertexPassHandle::finalizeRenderPass(CommandBuffer &buf) {
+	buf.cmdWriteTimestamp(core::PipelineStage::BottomOfPipe, TimestampEndTag);
+}
 
 void VertexPassHandle::clearDynamicState(CommandBuffer &buf) {
 	auto currentExtent = getFramebuffer()->getExtent();
 
-	VkViewport viewport{0.0f, 0.0f, float(currentExtent.width), float(currentExtent.height), 0.0f,
-		1.0f};
+	VkViewport viewport{
+		0.0f,
+		0.0f,
+		float(currentExtent.width),
+		float(currentExtent.height),
+		0.0f,
+		1.0f,
+	};
 	buf.cmdSetViewport(0, makeSpanView(&viewport, 1));
 
 	VkRect2D scissorRect{{0, 0}, {currentExtent.width, currentExtent.height}};

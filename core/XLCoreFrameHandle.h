@@ -74,6 +74,7 @@ public:
 	uint64_t getOrder() const { return _order; }
 	uint64_t getGen() const { return _gen; }
 	uint64_t getSubmissionTime() const { return _submissionTime; }
+	uint64_t getDeviceTime() const { return _deviceTime; }
 	Loop *getLoop() const { return _loop; }
 	Device *getDevice() const { return _device; }
 
@@ -158,6 +159,7 @@ protected:
 	uint64_t _gen = 0;
 	uint64_t _order = 0;
 	uint64_t _submissionTime = 0;
+	uint64_t _deviceTime = 0;
 	std::atomic<uint32_t> _tasksRequired = 0;
 	uint32_t _tasksCompleted = 0;
 	uint32_t _queuesSubmitted = 0;

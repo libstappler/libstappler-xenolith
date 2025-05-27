@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +23,9 @@
  **/
 
 #include "XLVkTransferQueue.h"
+#include "XLCoreEnum.h"
 #include "XLVkDevice.h"
+#include "XLVkDeviceQueue.h"
 #include "XLVkObject.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameRequest.h"
@@ -41,7 +44,8 @@ public:
 	virtual ~TransferAttachmentHandle();
 
 	virtual bool setup(FrameQueue &, Function<void(bool)> &&) override;
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	const Rc<TransferResource> &getResource() const { return _resource; }
 
@@ -81,13 +85,15 @@ bool TransferQueue::init() {
 	using namespace core;
 	Queue::Builder builder("Transfer");
 
-	auto attachment = builder.addAttachemnt("TransferAttachment", [&] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+	auto attachment = builder.addAttachemnt("TransferAttachment",
+			[&](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsInput();
 		attachmentBuilder.defineAsOutput();
 		return Rc<TransferAttachment>::create(attachmentBuilder);
 	});
 
-	builder.addPass("TransferRenderPass", PassType::Transfer, RenderOrdering(0), [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+	builder.addPass("TransferRenderPass", PassType::Transfer, RenderOrdering(0),
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<TransferPass>::create(passBuilder, attachment);
 	});
 
@@ -98,7 +104,7 @@ bool TransferQueue::init() {
 	return false;
 }
 
-auto TransferQueue::makeRequest(Rc<TransferResource> &&req)-> Rc<FrameRequest> {
+auto TransferQueue::makeRequest(Rc<TransferResource> &&req) -> Rc<FrameRequest> {
 	auto ret = Rc<FrameRequest>::create(this);
 	ret->addInput(_attachment, move(req));
 	return ret;
@@ -117,7 +123,7 @@ TransferResource::ImageAllocInfo::ImageAllocInfo(core::ImageData *d) {
 	info.flags = data->flags;
 	info.imageType = VkImageType(data->imageType);
 	info.format = VkFormat(data->format);
-	info.extent = VkExtent3D({ data->extent.width, data->extent.height, data->extent.depth });
+	info.extent = VkExtent3D({data->extent.width, data->extent.height, data->extent.depth});
 	info.mipLevels = data->mipLevels.get();
 	info.arrayLayers = data->arrayLayers.get();
 	info.samples = VkSampleCountFlagBits(data->samples);
@@ -174,7 +180,8 @@ void TransferResource::invalidate(Device &dev) {
 	_alloc = nullptr;
 }
 
-bool TransferResource::init(const Rc<Allocator> &alloc, const Rc<core::Resource> &res, Function<void(bool)> &&cb) {
+bool TransferResource::init(const Rc<Allocator> &alloc, const Rc<core::Resource> &res,
+		Function<void(bool)> &&cb) {
 	_alloc = alloc;
 	_resource = res;
 	if (cb) {
@@ -183,7 +190,8 @@ bool TransferResource::init(const Rc<Allocator> &alloc, const Rc<core::Resource>
 	return true;
 }
 
-bool TransferResource::init(const Rc<Allocator> &alloc, Rc<core::Resource> &&res, Function<void(bool)> &&cb) {
+bool TransferResource::init(const Rc<Allocator> &alloc, Rc<core::Resource> &&res,
+		Function<void(bool)> &&cb) {
 	_alloc = alloc;
 	_resource = move(res);
 	if (cb) {
@@ -200,10 +208,11 @@ bool TransferResource::initialize(AllocationUsage usage) {
 	auto dev = _alloc->getDevice();
 	auto table = _alloc->getDevice()->getTable();
 
-	auto cleanup = [&, this] (StringView reason) {
+	auto cleanup = [&, this](StringView reason) {
 		_resource->clear();
 		invalidate(*_alloc->getDevice());
-		log::error("DeviceResourceTransfer", "Fail to init transfer for ", _resource->getName(), ": ", reason);
+		log::error("DeviceResourceTransfer", "Fail to init transfer for ", _resource->getName(),
+				": ", reason);
 		return false;
 	};
 
@@ -211,13 +220,9 @@ bool TransferResource::initialize(AllocationUsage usage) {
 	_buffers.reserve(_resource->getBuffers().size());
 	_images.reserve(_resource->getImages().size());
 
-	for (auto &it : _resource->getBuffers()) {
-		_buffers.emplace_back(it);
-	}
+	for (auto &it : _resource->getBuffers()) { _buffers.emplace_back(it); }
 
-	for (auto &it : _resource->getImages()) {
-		_images.emplace_back(it);
-	}
+	for (auto &it : _resource->getImages()) { _images.emplace_back(it); }
 
 	// pre-create objects
 	auto mask = _alloc->getInitialTypeMask();
@@ -256,7 +261,8 @@ bool TransferResource::initialize(AllocationUsage usage) {
 	auto allocMemType = _alloc->findMemoryType(mask, _targetUsage);
 
 	if (!allocMemType) {
-		log::error("Vk-Error", "Fail to find memory type for static resource: ", _resource->getName());
+		log::error("Vk-Error",
+				"Fail to find memory type for static resource: ", _resource->getName());
 		return cleanup("Memory type not found");
 	}
 
@@ -277,7 +283,8 @@ bool TransferResource::initialize(AllocationUsage usage) {
 		}
 	}
 
-	_requiredMemory = math::align<VkDeviceSize>(_requiredMemory, _alloc->getBufferImageGranularity());
+	_requiredMemory =
+			math::align<VkDeviceSize>(_requiredMemory, _alloc->getBufferImageGranularity());
 
 	for (auto &it : _images) {
 		if (!it.req.requiresDedicated && !it.req.prefersDedicated) {
@@ -313,9 +320,10 @@ bool TransferResource::allocate() {
 	auto dev = _alloc->getDevice();
 	auto table = _alloc->getDevice()->getTable();
 
-	auto cleanup = [&, this] (StringView reason) {
+	auto cleanup = [&, this](StringView reason) {
 		invalidate(*_alloc->getDevice());
-		log::error("DeviceResourceTransfer", "Fail to allocate memory for ", _resource->getName(), ": ", reason);
+		log::error("DeviceResourceTransfer", "Fail to allocate memory for ", _resource->getName(),
+				": ", reason);
 		return false;
 	};
 
@@ -325,8 +333,10 @@ bool TransferResource::allocate() {
 		allocInfo.allocationSize = _requiredMemory;
 		allocInfo.memoryTypeIndex = _memType->idx;
 
-		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &_memory) != VK_SUCCESS) {
-			log::error("Vk-Error", "Fail to allocate memory for static resource: ", _resource->getName());
+		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &_memory)
+				!= VK_SUCCESS) {
+			log::error("Vk-Error",
+					"Fail to allocate memory for static resource: ", _resource->getName());
 			return cleanup("Fail to allocate memory");
 		}
 	}
@@ -390,21 +400,23 @@ bool TransferResource::upload() {
 bool TransferResource::compile() {
 	Rc<DeviceMemory> mem;
 	if (_memory) {
-		mem = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
-			_requiredMemory, 1, _memType->idx, false
-		}, _memory, _targetUsage);
+		mem = Rc<DeviceMemory>::create(_alloc,
+				DeviceMemoryInfo{_requiredMemory, 1, _memType->idx, false}, _memory, _targetUsage);
 	}
 
 	for (auto &it : _images) {
 		Rc<Image> img;
 		if (it.dedicated) {
-			auto dedicated = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
-				it.req.requirements.size, it.req.requirements.alignment, it.dedicatedMemType, true
-			}, it.dedicated, _targetUsage);
-			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, move(dedicated), Rc<core::DataAtlas>(it.data->atlas));
+			auto dedicated = Rc<DeviceMemory>::create(_alloc,
+					DeviceMemoryInfo{it.req.requirements.size, it.req.requirements.alignment,
+						it.dedicatedMemType, true},
+					it.dedicated, _targetUsage);
+			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, move(dedicated),
+					Rc<core::DataAtlas>(it.data->atlas));
 			it.dedicated = VK_NULL_HANDLE;
 		} else {
-			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, Rc<DeviceMemory>(mem), Rc<core::DataAtlas>(it.data->atlas));
+			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, Rc<DeviceMemory>(mem),
+					Rc<core::DataAtlas>(it.data->atlas));
 		}
 		if (it.barrier) {
 			img->setPendingBarrier(it.barrier.value());
@@ -420,13 +432,15 @@ bool TransferResource::compile() {
 	for (auto &it : _buffers) {
 		Rc<Buffer> buf;
 		if (it.dedicated) {
-			auto dedicated = Rc<DeviceMemory>::create(_alloc, DeviceMemoryInfo{
-				it.req.requirements.size, it.req.requirements.alignment, it.dedicatedMemType, true
-			}, it.dedicated, _targetUsage);
+			auto dedicated = Rc<DeviceMemory>::create(_alloc,
+					DeviceMemoryInfo{it.req.requirements.size, it.req.requirements.alignment,
+						it.dedicatedMemType, true},
+					it.dedicated, _targetUsage);
 			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, move(dedicated), 0);
 			it.dedicated = VK_NULL_HANDLE;
 		} else {
-			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data, Rc<DeviceMemory>(mem), it.offset);
+			buf = Rc<Buffer>::create(*_alloc->getDevice(), it.buffer, *it.data,
+					Rc<DeviceMemory>(mem), it.offset);
 		}
 		if (it.barrier) {
 			buf->setPendingBarrier(it.barrier.value());
@@ -470,37 +484,27 @@ static VkImageAspectFlagBits getFormatAspectFlags(VkFormat fmt, bool separateDep
 			return VkImageAspectFlagBits(VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 		}
 		break;
-	default:
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-		break;
+	default: return VK_IMAGE_ASPECT_COLOR_BIT; break;
 	}
 }
 
-bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
-		Vector<VkImageMemoryBarrier> &outputImageBarriers, Vector<VkBufferMemoryBarrier> &outputBufferBarriers) {
+bool TransferResource::prepareCommands(uint32_t idx, CommandBuffer &buf,
+		Vector<ImageMemoryBarrier> &outputImageBarriers,
+		Vector<BufferMemoryBarrier> &outputBufferBarriers) {
 	auto dev = _alloc->getDevice();
-	auto table = _alloc->getDevice()->getTable();
 
-	Vector<VkImageMemoryBarrier> inputImageBarriers;
+	Vector<ImageMemoryBarrier> inputImageBarriers;
 	for (auto &it : _stagingBuffer.copyData) {
 		if (it.targetImage) {
-			inputImageBarriers.emplace_back(VkImageMemoryBarrier({
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
-				VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-				it.targetImage->image, VkImageSubresourceRange({
-					VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
-					0, it.targetImage->data->mipLevels.get(), 0, it.targetImage->data->arrayLayers.get()
-				})
-			}));
+			inputImageBarriers.emplace_back(ImageMemoryBarrier(it.targetImage->image,
+					VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false))));
 		}
 	}
 
-	table->vkCmdPipelineBarrier(buf, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			0, nullptr,
-			0, nullptr, // bufferBarriers.size(), bufferBarriers.data(),
-			uint32_t(inputImageBarriers.size()), inputImageBarriers.data());
+	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			inputImageBarriers);
 
 	for (auto &it : _stagingBuffer.copyData) {
 		if (it.targetBuffer) {
@@ -508,20 +512,23 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 			copyRegion.srcOffset = it.sourceOffet;
 			copyRegion.dstOffset = 0;
 			copyRegion.size = it.sourceSize;
-			table->vkCmdCopyBuffer(buf, _stagingBuffer.buffer.buffer, it.targetBuffer->buffer, 1, &copyRegion);
+			buf.cmdCopyBuffer(_stagingBuffer.buffer.buffer, it.targetBuffer->buffer,
+					makeSpanView(&copyRegion, 1));
 		} else if (it.targetImage) {
 			VkBufferImageCopy copyRegion{};
 			copyRegion.bufferOffset = it.sourceOffet;
-			copyRegion.bufferRowLength = 0; // If either of these values is zero, that aspect of the buffer memory
-			copyRegion.bufferImageHeight = 0; // is considered to be tightly packed according to the imageExtent
-			copyRegion.imageSubresource = VkImageSubresourceLayers({
-				VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)), 0, 0, it.targetImage->data->arrayLayers.get()
-			});
+			copyRegion.bufferRowLength =
+					0; // If either of these values is zero, that aspect of the buffer memory
+			copyRegion.bufferImageHeight =
+					0; // is considered to be tightly packed according to the imageExtent
+			copyRegion.imageSubresource = VkImageSubresourceLayers(
+					{VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
+						0, 0, it.targetImage->data->arrayLayers.get()});
 			copyRegion.imageOffset = VkOffset3D({0, 0, 0});
 			copyRegion.imageExtent = it.targetImage->info.extent;
 
-			table->vkCmdCopyBufferToImage(buf, _stagingBuffer.buffer.buffer, it.targetImage->image,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+			buf.cmdCopyBufferToImage(_stagingBuffer.buffer.buffer, it.targetImage->image,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, makeSpanView(&copyRegion, 1));
 		}
 	}
 
@@ -536,16 +543,14 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 					dstQueueFamilyIndex = q->index;
 				}
 
-				auto &ref = outputImageBarriers.emplace_back(VkImageMemoryBarrier({
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VkAccessFlags(it.targetImage->data->targetAccess),
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageLayout(it.targetImage->data->targetLayout),
-					srcQueueFamilyIndex, dstQueueFamilyIndex,
-					it.targetImage->image, VkImageSubresourceRange({
-						VkImageAspectFlags(getFormatAspectFlags(it.targetImage->info.format, false)),
-						0, it.targetImage->data->mipLevels.get(), 0, it.targetImage->data->arrayLayers.get()
-					})
-				}));
+				auto &ref = outputImageBarriers.emplace_back(
+						ImageMemoryBarrier(it.targetImage->image, VK_ACCESS_TRANSFER_WRITE_BIT,
+								VkAccessFlags(it.targetImage->data->targetAccess),
+								VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+								VkImageLayout(it.targetImage->data->targetLayout),
+								QueueFamilyTransfer(srcQueueFamilyIndex, dstQueueFamilyIndex),
+								VkImageAspectFlags(
+										getFormatAspectFlags(it.targetImage->info.format, false))));
 
 				if (q->index != idx) {
 					it.targetImage->barrier.emplace(ref);
@@ -561,12 +566,10 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 					dstQueueFamilyIndex = q->index;
 				}
 
-				auto &ref = outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
-					VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VkAccessFlags(it.targetBuffer->data->targetAccess),
-					srcQueueFamilyIndex, dstQueueFamilyIndex,
-					it.targetBuffer->buffer, 0, VK_WHOLE_SIZE
-				}));
+				auto &ref = outputBufferBarriers.emplace_back(
+						BufferMemoryBarrier(it.targetBuffer->buffer, VK_ACCESS_TRANSFER_WRITE_BIT,
+								VkAccessFlags(it.targetBuffer->data->targetAccess),
+								QueueFamilyTransfer(srcQueueFamilyIndex, dstQueueFamilyIndex)));
 
 				if (q->index != idx) {
 					it.targetBuffer->barrier.emplace(ref);
@@ -578,22 +581,22 @@ bool TransferResource::prepareCommands(uint32_t idx, VkCommandBuffer buf,
 	return true;
 }
 
-bool TransferResource::transfer(const Rc<DeviceQueue> &queue, const Rc<CommandPool> &pool, const Rc<Fence> &fence) {
+bool TransferResource::transfer(const Rc<DeviceQueue> &queue, const Rc<CommandPool> &pool,
+		const Rc<Fence> &fence) {
 	auto dev = _alloc->getDevice();
-	auto table = _alloc->getDevice()->getTable();
-	auto buf = pool->recordBuffer(*dev, Vector<Rc<DescriptorPool>>(), [&, this] (CommandBuffer &buf) {
-		Vector<VkImageMemoryBarrier> outputImageBarriers;
-		Vector<VkBufferMemoryBarrier> outputBufferBarriers;
+	auto buf =
+			pool->recordBuffer(*dev, Vector<Rc<DescriptorPool>>(), [&, this](CommandBuffer &buf) {
+		Vector<ImageMemoryBarrier> outputImageBarriers;
+		Vector<BufferMemoryBarrier> outputBufferBarriers;
 
-		if (!prepareCommands(queue->getIndex(), buf.getBuffer(), outputImageBarriers, outputBufferBarriers)) {
+		if (!prepareCommands(queue->getIndex(), buf, outputImageBarriers, outputBufferBarriers)) {
 			return false;
 		}
 
-		table->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
-			0, nullptr,
-			uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
-			uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+						| VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				0, outputBufferBarriers, outputImageBarriers);
 		return true;
 	});
 
@@ -620,7 +623,8 @@ void TransferResource::dropStaging(StagingBuffer &buffer) const {
 bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, BufferAllocInfo &it) {
 	auto dev = alloc->getDevice();
 	auto table = alloc->getDevice()->getTable();
-	auto type = alloc->findMemoryType(it.req.requirements.memoryTypeBits, AllocationUsage::DeviceLocal);
+	auto type =
+			alloc->findMemoryType(it.req.requirements.memoryTypeBits, AllocationUsage::DeviceLocal);
 	if (!type) {
 		return false;
 	}
@@ -637,8 +641,10 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, BufferAlloc
 	allocInfo.allocationSize = it.req.requirements.size;
 	allocInfo.memoryTypeIndex = type->idx;
 
-	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated) != VK_SUCCESS) {
-		log::error("Vk-Error", "Fail to allocate memory for static resource: ", _resource->getName());
+	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated)
+			!= VK_SUCCESS) {
+		log::error("Vk-Error",
+				"Fail to allocate memory for static resource: ", _resource->getName());
 		return false;
 	}
 
@@ -650,7 +656,8 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, BufferAlloc
 bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, ImageAllocInfo &it) {
 	auto dev = alloc->getDevice();
 	auto table = alloc->getDevice()->getTable();
-	auto type = alloc->findMemoryType(it.req.requirements.memoryTypeBits, AllocationUsage::DeviceLocal);
+	auto type =
+			alloc->findMemoryType(it.req.requirements.memoryTypeBits, AllocationUsage::DeviceLocal);
 	if (!type) {
 		return false;
 	}
@@ -667,8 +674,10 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, ImageAllocI
 	allocInfo.allocationSize = it.req.requirements.size;
 	allocInfo.memoryTypeIndex = type->idx;
 
-	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated) != VK_SUCCESS) {
-		log::error("Vk-Error", "Fail to allocate memory for static resource: ", _resource->getName());
+	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated)
+			!= VK_SUCCESS) {
+		log::error("Vk-Error",
+				"Fail to allocate memory for static resource: ", _resource->getName());
 		return false;
 	}
 
@@ -682,8 +691,8 @@ size_t TransferResource::writeData(uint8_t *mem, BufferAllocInfo &info) {
 }
 
 size_t TransferResource::writeData(uint8_t *mem, ImageAllocInfo &info) {
-	uint64_t expectedSize = getFormatBlockSize(info.data->format)
-			* info.data->extent.width * info.data->extent.height * info.data->extent.depth * info.data->arrayLayers.get();
+	uint64_t expectedSize = getFormatBlockSize(info.data->format) * info.data->extent.width
+			* info.data->extent.height * info.data->extent.depth * info.data->arrayLayers.get();
 	return info.data->writeData(mem, expectedSize);
 }
 
@@ -694,7 +703,8 @@ size_t TransferResource::preTransferData() {
 	uint8_t *generalMem = nullptr;
 	if (_memType->isHostVisible()) {
 		void *targetMem = nullptr;
-		if (table->vkMapMemory(dev->getDevice(), _memory, 0, VK_WHOLE_SIZE, 0, &targetMem) != VK_SUCCESS) {
+		if (table->vkMapMemory(dev->getDevice(), _memory, 0, VK_WHOLE_SIZE, 0, &targetMem)
+				!= VK_SUCCESS) {
 			log::error("Vk-Error", "Fail to map internal memory: ", _resource->getName());
 			return maxOf<size_t>();
 		}
@@ -705,9 +715,11 @@ size_t TransferResource::preTransferData() {
 	size_t stagingSize = 0;
 
 	for (auto &it : _images) {
-		if (it.dedicated && _alloc->getType(it.dedicatedMemType)->isHostVisible() && it.info.tiling != VK_IMAGE_TILING_OPTIMAL) {
+		if (it.dedicated && _alloc->getType(it.dedicatedMemType)->isHostVisible()
+				&& it.info.tiling != VK_IMAGE_TILING_OPTIMAL) {
 			void *targetMem = nullptr;
-			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem) != VK_SUCCESS) {
+			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem)
+					!= VK_SUCCESS) {
 				log::error("Vk-Error", "Fail to map dedicated memory: ", _resource->getName());
 				return maxOf<size_t>();
 			}
@@ -722,12 +734,13 @@ size_t TransferResource::preTransferData() {
 				range.size = VK_WHOLE_SIZE;
 				table->vkFlushMappedMemoryRanges(dev->getDevice(), 1, &range);
 			}
-		} else if (it.info.tiling == VK_IMAGE_TILING_OPTIMAL || it.dedicated || generalMem == nullptr) {
+		} else if (it.info.tiling == VK_IMAGE_TILING_OPTIMAL || it.dedicated
+				|| generalMem == nullptr) {
 			it.useStaging = true;
 			stagingSize = math::align<VkDeviceSize>(stagingSize, alignment);
 			it.stagingOffset = stagingSize;
-			stagingSize += getFormatBlockSize(it.info.format)
-					* it.info.extent.width * it.info.extent.height * it.info.extent.depth * it.info.arrayLayers;
+			stagingSize += getFormatBlockSize(it.info.format) * it.info.extent.width
+					* it.info.extent.height * it.info.extent.depth * it.info.arrayLayers;
 		} else {
 			writeData(generalMem + it.offset, it);
 		}
@@ -736,7 +749,8 @@ size_t TransferResource::preTransferData() {
 	for (auto &it : _buffers) {
 		if (it.dedicated && _alloc->getType(it.dedicatedMemType)->isHostVisible()) {
 			void *targetMem = nullptr;
-			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem) != VK_SUCCESS) {
+			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem)
+					!= VK_SUCCESS) {
 				log::error("Vk-Error", "Fail to map dedicated memory: ", _resource->getName());
 				return maxOf<size_t>();
 			}
@@ -787,8 +801,10 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 	buffer.buffer.info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	buffer.buffer.info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (table->vkCreateBuffer(dev->getDevice(), &buffer.buffer.info, nullptr, &buffer.buffer.buffer) != VK_SUCCESS) {
-		log::error("Vk-Error", "Fail to create staging buffer for static resource: ", _resource->getName());
+	if (table->vkCreateBuffer(dev->getDevice(), &buffer.buffer.info, nullptr, &buffer.buffer.buffer)
+			!= VK_SUCCESS) {
+		log::error("Vk-Error",
+				"Fail to create staging buffer for static resource: ", _resource->getName());
 		return false;
 	}
 
@@ -798,14 +814,16 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 	mask &= buffer.buffer.req.requirements.memoryTypeBits;
 
 	if (mask == 0) {
-		log::error("Vk-Error", "Fail to find staging memory mask for static resource: ", _resource->getName());
+		log::error("Vk-Error",
+				"Fail to find staging memory mask for static resource: ", _resource->getName());
 		return false;
 	}
 
 	auto type = _alloc->findMemoryType(mask, AllocationUsage::HostTransitionSource);
 
 	if (!type) {
-		log::error("Vk-Error", "Fail to find staging memory type for static resource: ", _resource->getName());
+		log::error("Vk-Error",
+				"Fail to find staging memory type for static resource: ", _resource->getName());
 		return false;
 	}
 
@@ -824,12 +842,15 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 		allocInfo.allocationSize = buffer.buffer.req.requirements.size;
 		allocInfo.memoryTypeIndex = buffer.memoryTypeIndex;
 
-		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated) != VK_SUCCESS) {
-			log::error("Vk-Error", "Fail to allocate staging memory for static resource: ", _resource->getName());
+		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated)
+				!= VK_SUCCESS) {
+			log::error("Vk-Error",
+					"Fail to allocate staging memory for static resource: ", _resource->getName());
 			return false;
 		}
 
-		table->vkBindBufferMemory(dev->getDevice(), buffer.buffer.buffer, buffer.buffer.dedicated, 0);
+		table->vkBindBufferMemory(dev->getDevice(), buffer.buffer.buffer, buffer.buffer.dedicated,
+				0);
 	} else {
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -837,12 +858,15 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 		allocInfo.allocationSize = buffer.buffer.req.requirements.size;
 		allocInfo.memoryTypeIndex = buffer.memoryTypeIndex;
 
-		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated) != VK_SUCCESS) {
-			log::error("Vk-Error", "Fail to allocate staging memory for static resource: ", _resource->getName());
+		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated)
+				!= VK_SUCCESS) {
+			log::error("Vk-Error",
+					"Fail to allocate staging memory for static resource: ", _resource->getName());
 			return false;
 		}
 
-		table->vkBindBufferMemory(dev->getDevice(), buffer.buffer.buffer, buffer.buffer.dedicated, 0);
+		table->vkBindBufferMemory(dev->getDevice(), buffer.buffer.buffer, buffer.buffer.dedicated,
+				0);
 	}
 
 	return true;
@@ -855,14 +879,17 @@ bool TransferResource::writeStaging(StagingBuffer &buffer) {
 	uint8_t *stagingMem = nullptr;
 	do {
 		void *targetMem = nullptr;
-		if (table->vkMapMemory(dev->getDevice(), buffer.buffer.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem) != VK_SUCCESS) {
+		if (table->vkMapMemory(dev->getDevice(), buffer.buffer.dedicated, 0, VK_WHOLE_SIZE, 0,
+					&targetMem)
+				!= VK_SUCCESS) {
 			return false;
 		}
 		stagingMem = (uint8_t *)targetMem;
 	} while (0);
 
 	if (!stagingMem) {
-		log::error("Vk-Error", "Fail to map staging memory for static resource: ", _resource->getName());
+		log::error("Vk-Error",
+				"Fail to map staging memory for static resource: ", _resource->getName());
 		return false;
 	}
 
@@ -903,29 +930,29 @@ auto TransferAttachment::makeFrameHandle(const FrameQueue &handle) -> Rc<Attachm
 
 TransferAttachmentHandle::~TransferAttachmentHandle() { }
 
-bool TransferAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)> &&) {
-	return true;
-}
+bool TransferAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)> &&) { return true; }
 
-void TransferAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void TransferAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data,
+		Function<void(bool)> &&cb) {
 	_resource = data.cast<TransferResource>();
 	if (!_resource || q.isFinalized()) {
 		cb(false);
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb)] (FrameHandle &handle, bool success) {
+	q.getFrame()->waitForDependencies(data->waitDependencies,
+			[this, cb = sp::move(cb)](FrameHandle &handle, bool success) {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
 		}
 
-		handle.performInQueue([this] (FrameHandle &frame) -> bool {
+		handle.performInQueue([this](FrameHandle &frame) -> bool {
 			if (_resource->initialize()) {
 				return true;
 			}
 			return false;
-		}, [cb = sp::move(cb)] (FrameHandle &frame, bool success) {
+		}, [cb = sp::move(cb)](FrameHandle &frame, bool success) {
 			cb(success);
 		}, nullptr, "TransferAttachmentHandle::submitInput");
 	});
@@ -961,18 +988,20 @@ Vector<const core::CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(
 		return Vector<const core::CommandBuffer *>();
 	}
 
-	auto table = _device->getTable();
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
-		Vector<VkImageMemoryBarrier> outputImageBarriers;
-		Vector<VkBufferMemoryBarrier> outputBufferBarriers;
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&, this](CommandBuffer &buf) {
+		Vector<ImageMemoryBarrier> outputImageBarriers;
+		Vector<BufferMemoryBarrier> outputBufferBarriers;
 
-		if (!transfer->getResource()->prepareCommands(_pool->getFamilyIdx(), buf.getBuffer(), outputImageBarriers, outputBufferBarriers)) {
+		if (!transfer->getResource()->prepareCommands(_pool->getFamilyIdx(), buf,
+					outputImageBarriers, outputBufferBarriers)) {
 			return false;
 		}
 
 		VkPipelineStageFlags targetMask = 0;
 		if ((_pool->getClass() & core::QueueFlags::Graphics) != core::QueueFlags::None) {
-			targetMask |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			targetMask |=
+					VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
 		if ((_pool->getClass() & core::QueueFlags::Compute) != core::QueueFlags::None) {
 			targetMask |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
@@ -981,17 +1010,17 @@ Vector<const core::CommandBuffer *> TransferRenderPassHandle::doPrepareCommands(
 			targetMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		}
 
-		table->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, targetMask, 0,
-			0, nullptr,
-			uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
-			uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
+		buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, targetMask, 0, outputBufferBarriers,
+				outputImageBarriers);
+
 		return true;
 	});
 
 	return Vector<const core::CommandBuffer *>{buf};
 }
 
-void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func,
+		bool success) {
 	if (success) {
 		auto pass = static_cast<TransferPass *>(_queuePass.get());
 		TransferAttachmentHandle *transfer = nullptr;
@@ -1006,4 +1035,4 @@ void TransferRenderPassHandle::doComplete(FrameQueue &queue, Function<void(bool)
 	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
-}
+} // namespace stappler::xenolith::vk

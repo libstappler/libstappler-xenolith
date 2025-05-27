@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -46,10 +47,12 @@ public:
 	void dropInProgress(const MaterialAttachment *);
 
 	bool hasRequest(const MaterialAttachment *) const;
-	void appendRequest(const MaterialAttachment *, Rc<MaterialInputData> &&, Vector<Rc<core::DependencyEvent>> &&deps);
+	void appendRequest(const MaterialAttachment *, Rc<MaterialInputData> &&,
+			Vector<Rc<core::DependencyEvent>> &&deps);
 	void clearRequests();
 
-	Rc<FrameRequest> makeRequest(Rc<MaterialInputData> &&, Vector<Rc<core::DependencyEvent>> &&deps);
+	Rc<FrameRequest> makeRequest(Rc<MaterialInputData> &&,
+			Vector<Rc<core::DependencyEvent>> &&deps);
 	void runMaterialCompilationFrame(core::Loop &loop, Rc<MaterialInputData> &&req,
 			Vector<Rc<core::DependencyEvent>> &&deps);
 
@@ -69,6 +72,6 @@ protected:
 	Map<const MaterialAttachment *, MaterialRequest> _requests;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLMATERIALCOMPILER_H_ */

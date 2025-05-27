@@ -440,9 +440,19 @@ Allocator::MemNode Allocator::alloc(MemType *type, uint64_t in_size, bool persis
 
 	MemNode ret;
 	VkMemoryAllocateInfo allocInfo{};
+	VkMemoryAllocateFlagsInfoKHR flagsInfo;
+
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = size;
 	allocInfo.memoryTypeIndex = type->idx;
+
+	if (_device->hasBufferDeviceAddresses()) {
+		flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+		flagsInfo.pNext = allocInfo.pNext;
+		flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+		allocInfo.pNext = &flagsInfo;
+	}
 
 	VkResult result = VK_ERROR_UNKNOWN;
 	_device->makeApiCall([&](const DeviceTable &table, VkDevice device) {
@@ -1010,14 +1020,6 @@ bool DeviceMemoryPool::init(const Rc<Allocator> &alloc, bool persistentMapping) 
 }
 
 Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info) {
-	if ((info.usage & core::BufferUsage::ShaderDeviceAddress) != core::BufferUsage::None) {
-		log::
-				error("DeviceMemoryPool",
-						"BDA feature is not available for device memory pools. Use dedicated "
-						"persistent " "allocation instead.");
-		return nullptr;
-	}
-
 	auto buffer = _allocator->preallocate(info);
 	auto requirements = _allocator->getBufferMemoryRequirements(buffer->getBuffer());
 
@@ -1111,6 +1113,12 @@ Allocator::MemBlock DeviceMemoryPool::alloc(MemData *mem, VkDeviceSize in_size,
 
 	Allocator::MemNode *node = nullptr;
 
+	// try unused blocks
+	Allocator::MemBlock block = tryReuse(mem, in_size, alignment, allocType);
+	if (block.mem) {
+		return block;
+	}
+
 	size_t alignedOffset = 0;
 	for (auto &it : mem->mem) {
 		alignedOffset = math::align<VkDeviceSize>(it.offset, alignment);
@@ -1145,10 +1153,10 @@ Allocator::MemBlock DeviceMemoryPool::alloc(MemData *mem, VkDeviceSize in_size,
 		node->offset = alignedOffset + size;
 		node->lastAllocation = allocType;
 		return Allocator::MemBlock({node->mem, alignedOffset, size, mem->type->idx, node->ptr,
-			node->mappingProtection});
+			node->mappingProtection, allocType});
 	}
 
-	return Allocator::MemBlock();
+	return block;
 }
 
 void DeviceMemoryPool::free(Allocator::MemBlock &&block) {
@@ -1162,6 +1170,24 @@ void DeviceMemoryPool::clear(MemData *mem) {
 	_allocator->free(mem->type, mem->mem);
 	mem->mem.clear();
 	mem->freed.clear();
+}
+
+Allocator::MemBlock DeviceMemoryPool::tryReuse(MemData *mem, VkDeviceSize size,
+		VkDeviceSize alignment, AllocationType allocType) {
+	auto targetAlignment = std::countr_zero(alignment);
+
+	auto fIt = mem->freed.begin();
+	while (fIt != mem->freed.end()) {
+		auto sourceAlignment = std::countr_zero(fIt->offset);
+		if (fIt->allocType == allocType && sourceAlignment >= targetAlignment
+				&& fIt->size >= size) {
+			auto ret = std::move(*fIt);
+			mem->freed.erase(fIt);
+			return ret;
+		}
+	}
+
+	return Allocator::MemBlock();
 }
 
 } // namespace stappler::xenolith::vk

@@ -108,6 +108,7 @@ struct SP_PUBLIC DeviceInfo {
 		uint32_t index = 0;
 		uint32_t count = 0;
 		uint32_t used = 0;
+		uint32_t timestampValidBits = 0;
 		Extent3 minImageTransferGranularity;
 		uint32_t presentSurfaceMask;
 	};

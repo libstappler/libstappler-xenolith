@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,62 +31,154 @@ const ColorMode ColorMode::SolidColor = ColorMode();
 const ColorMode ColorMode::IntensityChannel(core::ComponentMapping::R, core::ComponentMapping::One);
 const ColorMode ColorMode::AlphaChannel(core::ComponentMapping::One, core::ComponentMapping::R);
 
+
+SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t) : type(t), buffer{0, maxOf<uint64_t>()} { }
+
+SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t, uint64_t offset, uint64_t size)
+: type(t), buffer{offset, size} { }
+
+// assume image data
+SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t, ImageAspects a)
+: type(t), image{a, 0, maxOf<uint32_t>(), 0, maxOf<uint32_t>()} { }
+
+SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t, ImageAspects a, uint32_t ml, uint32_t nml,
+		uint32_t al, uint32_t nal)
+: type(t), image{a, ml, nml, al, nal} { }
+
 String getBufferFlagsDescription(BufferFlags fmt) {
 	StringStream stream;
-	if ((fmt & BufferFlags::SparceBinding) != BufferFlags::None) { stream << " SparceBinding"; }
-	if ((fmt & BufferFlags::SparceResidency) != BufferFlags::None) { stream << " SparceResidency"; }
-	if ((fmt & BufferFlags::SparceAliased) != BufferFlags::None) { stream << " SparceAliased"; }
-	if ((fmt & BufferFlags::Protected) != BufferFlags::None) { stream << " Protected"; }
+	if ((fmt & BufferFlags::SparceBinding) != BufferFlags::None) {
+		stream << " SparceBinding";
+	}
+	if ((fmt & BufferFlags::SparceResidency) != BufferFlags::None) {
+		stream << " SparceResidency";
+	}
+	if ((fmt & BufferFlags::SparceAliased) != BufferFlags::None) {
+		stream << " SparceAliased";
+	}
+	if ((fmt & BufferFlags::Protected) != BufferFlags::None) {
+		stream << " Protected";
+	}
 	return stream.str();
 }
 
 String getBufferUsageDescription(BufferUsage fmt) {
 	StringStream stream;
-	if ((fmt & BufferUsage::TransferSrc) != BufferUsage::None) { stream << " TransferSrc"; }
-	if ((fmt & BufferUsage::TransferDst) != BufferUsage::None) { stream << " TransferDst"; }
-	if ((fmt & BufferUsage::UniformTexelBuffer) != BufferUsage::None) { stream << " UniformTexelBuffer"; }
-	if ((fmt & BufferUsage::StorageTexelBuffer) != BufferUsage::None) { stream << " StorageTexelBuffer"; }
-	if ((fmt & BufferUsage::UniformBuffer) != BufferUsage::None) { stream << " UniformBuffer"; }
-	if ((fmt & BufferUsage::StorageBuffer) != BufferUsage::None) { stream << " StorageBuffer"; }
-	if ((fmt & BufferUsage::IndexBuffer) != BufferUsage::None) { stream << " IndexBuffer"; }
-	if ((fmt & BufferUsage::VertexBuffer) != BufferUsage::None) { stream << " VertexBuffer"; }
-	if ((fmt & BufferUsage::IndirectBuffer) != BufferUsage::None) { stream << " IndirectBuffer"; }
-	if ((fmt & BufferUsage::ShaderDeviceAddress) != BufferUsage::None) { stream << " ShaderDeviceAddress"; }
-	if ((fmt & BufferUsage::TransformFeedback) != BufferUsage::None) { stream << " TransformFeedback"; }
-	if ((fmt & BufferUsage::TransformFeedbackCounter) != BufferUsage::None) { stream << " TransformFeedbackCounter"; }
-	if ((fmt & BufferUsage::ConditionalRendering) != BufferUsage::None) { stream << " ConditionalRendering"; }
-	if ((fmt & BufferUsage::AccelerationStructureBuildInputReadOnly) != BufferUsage::None) { stream << " AccelerationStructureBuildInputReadOnly"; }
-	if ((fmt & BufferUsage::AccelerationStructureStorage) != BufferUsage::None) { stream << " AccelerationStructureStorage"; }
-	if ((fmt & BufferUsage::ShaderBindingTable) != BufferUsage::None) { stream << " ShaderBindingTable"; }
+	if ((fmt & BufferUsage::TransferSrc) != BufferUsage::None) {
+		stream << " TransferSrc";
+	}
+	if ((fmt & BufferUsage::TransferDst) != BufferUsage::None) {
+		stream << " TransferDst";
+	}
+	if ((fmt & BufferUsage::UniformTexelBuffer) != BufferUsage::None) {
+		stream << " UniformTexelBuffer";
+	}
+	if ((fmt & BufferUsage::StorageTexelBuffer) != BufferUsage::None) {
+		stream << " StorageTexelBuffer";
+	}
+	if ((fmt & BufferUsage::UniformBuffer) != BufferUsage::None) {
+		stream << " UniformBuffer";
+	}
+	if ((fmt & BufferUsage::StorageBuffer) != BufferUsage::None) {
+		stream << " StorageBuffer";
+	}
+	if ((fmt & BufferUsage::IndexBuffer) != BufferUsage::None) {
+		stream << " IndexBuffer";
+	}
+	if ((fmt & BufferUsage::VertexBuffer) != BufferUsage::None) {
+		stream << " VertexBuffer";
+	}
+	if ((fmt & BufferUsage::IndirectBuffer) != BufferUsage::None) {
+		stream << " IndirectBuffer";
+	}
+	if ((fmt & BufferUsage::ShaderDeviceAddress) != BufferUsage::None) {
+		stream << " ShaderDeviceAddress";
+	}
+	if ((fmt & BufferUsage::TransformFeedback) != BufferUsage::None) {
+		stream << " TransformFeedback";
+	}
+	if ((fmt & BufferUsage::TransformFeedbackCounter) != BufferUsage::None) {
+		stream << " TransformFeedbackCounter";
+	}
+	if ((fmt & BufferUsage::ConditionalRendering) != BufferUsage::None) {
+		stream << " ConditionalRendering";
+	}
+	if ((fmt & BufferUsage::AccelerationStructureBuildInputReadOnly) != BufferUsage::None) {
+		stream << " AccelerationStructureBuildInputReadOnly";
+	}
+	if ((fmt & BufferUsage::AccelerationStructureStorage) != BufferUsage::None) {
+		stream << " AccelerationStructureStorage";
+	}
+	if ((fmt & BufferUsage::ShaderBindingTable) != BufferUsage::None) {
+		stream << " ShaderBindingTable";
+	}
 	return stream.str();
 }
 
 String getImageFlagsDescription(ImageFlags fmt) {
 	StringStream stream;
-	if ((fmt & ImageFlags::SparceBinding) != ImageFlags::None) { stream << " SparceBinding"; }
-	if ((fmt & ImageFlags::SparceResidency) != ImageFlags::None) { stream << " SparceResidency"; }
-	if ((fmt & ImageFlags::SparceAliased) != ImageFlags::None) { stream << " SparceAliased"; }
-	if ((fmt & ImageFlags::MutableFormat) != ImageFlags::None) { stream << " MutableFormat"; }
-	if ((fmt & ImageFlags::CubeCompatible) != ImageFlags::None) { stream << " CubeCompatible"; }
-	if ((fmt & ImageFlags::Alias) != ImageFlags::None) { stream << " Alias"; }
-	if ((fmt & ImageFlags::SplitInstanceBindRegions) != ImageFlags::None) { stream << " SplitInstanceBindRegions"; }
-	if ((fmt & ImageFlags::Array2dCompatible) != ImageFlags::None) { stream << " Array2dCompatible"; }
-	if ((fmt & ImageFlags::BlockTexelViewCompatible) != ImageFlags::None) { stream << " BlockTexelViewCompatible"; }
-	if ((fmt & ImageFlags::ExtendedUsage) != ImageFlags::None) { stream << " ExtendedUsage"; }
-	if ((fmt & ImageFlags::Protected) != ImageFlags::None) { stream << " Protected"; }
-	if ((fmt & ImageFlags::Disjoint) != ImageFlags::None) { stream << " Disjoint"; }
+	if ((fmt & ImageFlags::SparceBinding) != ImageFlags::None) {
+		stream << " SparceBinding";
+	}
+	if ((fmt & ImageFlags::SparceResidency) != ImageFlags::None) {
+		stream << " SparceResidency";
+	}
+	if ((fmt & ImageFlags::SparceAliased) != ImageFlags::None) {
+		stream << " SparceAliased";
+	}
+	if ((fmt & ImageFlags::MutableFormat) != ImageFlags::None) {
+		stream << " MutableFormat";
+	}
+	if ((fmt & ImageFlags::CubeCompatible) != ImageFlags::None) {
+		stream << " CubeCompatible";
+	}
+	if ((fmt & ImageFlags::Alias) != ImageFlags::None) {
+		stream << " Alias";
+	}
+	if ((fmt & ImageFlags::SplitInstanceBindRegions) != ImageFlags::None) {
+		stream << " SplitInstanceBindRegions";
+	}
+	if ((fmt & ImageFlags::Array2dCompatible) != ImageFlags::None) {
+		stream << " Array2dCompatible";
+	}
+	if ((fmt & ImageFlags::BlockTexelViewCompatible) != ImageFlags::None) {
+		stream << " BlockTexelViewCompatible";
+	}
+	if ((fmt & ImageFlags::ExtendedUsage) != ImageFlags::None) {
+		stream << " ExtendedUsage";
+	}
+	if ((fmt & ImageFlags::Protected) != ImageFlags::None) {
+		stream << " Protected";
+	}
+	if ((fmt & ImageFlags::Disjoint) != ImageFlags::None) {
+		stream << " Disjoint";
+	}
 	return stream.str();
 }
 
 String getSampleCountDescription(SampleCount fmt) {
 	StringStream stream;
-	if ((fmt & SampleCount::X1) != SampleCount::None) { stream << " x1"; }
-	if ((fmt & SampleCount::X2) != SampleCount::None) { stream << " x2"; }
-	if ((fmt & SampleCount::X4) != SampleCount::None) { stream << " x4"; }
-	if ((fmt & SampleCount::X8) != SampleCount::None) { stream << " x8"; }
-	if ((fmt & SampleCount::X16) != SampleCount::None) { stream << " x16"; }
-	if ((fmt & SampleCount::X32) != SampleCount::None) { stream << " x32"; }
-	if ((fmt & SampleCount::X64) != SampleCount::None) { stream << " x64"; }
+	if ((fmt & SampleCount::X1) != SampleCount::None) {
+		stream << " x1";
+	}
+	if ((fmt & SampleCount::X2) != SampleCount::None) {
+		stream << " x2";
+	}
+	if ((fmt & SampleCount::X4) != SampleCount::None) {
+		stream << " x4";
+	}
+	if ((fmt & SampleCount::X8) != SampleCount::None) {
+		stream << " x8";
+	}
+	if ((fmt & SampleCount::X16) != SampleCount::None) {
+		stream << " x16";
+	}
+	if ((fmt & SampleCount::X32) != SampleCount::None) {
+		stream << " x32";
+	}
+	if ((fmt & SampleCount::X64) != SampleCount::None) {
+		stream << " x64";
+	}
 	return stream.str();
 }
 
@@ -171,16 +264,32 @@ StringView getImageFormatName(ImageFormat fmt) {
 	case ImageFormat::A8B8G8R8_UINT_PACK32: return StringView("A8B8G8R8_UINT_PACK32"); break;
 	case ImageFormat::A8B8G8R8_SINT_PACK32: return StringView("A8B8G8R8_SINT_PACK32"); break;
 	case ImageFormat::A8B8G8R8_SRGB_PACK32: return StringView("A8B8G8R8_SRGB_PACK32"); break;
-	case ImageFormat::A2R10G10B10_UNORM_PACK32: return StringView("A2R10G10B10_UNORM_PACK32"); break;
-	case ImageFormat::A2R10G10B10_SNORM_PACK32: return StringView("A2R10G10B10_SNORM_PACK32"); break;
-	case ImageFormat::A2R10G10B10_USCALED_PACK32: return StringView("A2R10G10B10_USCALED_PACK32"); break;
-	case ImageFormat::A2R10G10B10_SSCALED_PACK32: return StringView("A2R10G10B10_SSCALED_PACK32"); break;
+	case ImageFormat::A2R10G10B10_UNORM_PACK32:
+		return StringView("A2R10G10B10_UNORM_PACK32");
+		break;
+	case ImageFormat::A2R10G10B10_SNORM_PACK32:
+		return StringView("A2R10G10B10_SNORM_PACK32");
+		break;
+	case ImageFormat::A2R10G10B10_USCALED_PACK32:
+		return StringView("A2R10G10B10_USCALED_PACK32");
+		break;
+	case ImageFormat::A2R10G10B10_SSCALED_PACK32:
+		return StringView("A2R10G10B10_SSCALED_PACK32");
+		break;
 	case ImageFormat::A2R10G10B10_UINT_PACK32: return StringView("A2R10G10B10_UINT_PACK32"); break;
 	case ImageFormat::A2R10G10B10_SINT_PACK32: return StringView("A2R10G10B10_SINT_PACK32"); break;
-	case ImageFormat::A2B10G10R10_UNORM_PACK32: return StringView("A2B10G10R10_UNORM_PACK32"); break;
-	case ImageFormat::A2B10G10R10_SNORM_PACK32: return StringView("A2B10G10R10_SNORM_PACK32"); break;
-	case ImageFormat::A2B10G10R10_USCALED_PACK32: return StringView("A2B10G10R10_USCALED_PACK32"); break;
-	case ImageFormat::A2B10G10R10_SSCALED_PACK32: return StringView("A2B10G10R10_SSCALED_PACK32"); break;
+	case ImageFormat::A2B10G10R10_UNORM_PACK32:
+		return StringView("A2B10G10R10_UNORM_PACK32");
+		break;
+	case ImageFormat::A2B10G10R10_SNORM_PACK32:
+		return StringView("A2B10G10R10_SNORM_PACK32");
+		break;
+	case ImageFormat::A2B10G10R10_USCALED_PACK32:
+		return StringView("A2B10G10R10_USCALED_PACK32");
+		break;
+	case ImageFormat::A2B10G10R10_SSCALED_PACK32:
+		return StringView("A2B10G10R10_SSCALED_PACK32");
+		break;
 	case ImageFormat::A2B10G10R10_UINT_PACK32: return StringView("A2B10G10R10_UINT_PACK32"); break;
 	case ImageFormat::A2B10G10R10_SINT_PACK32: return StringView("A2B10G10R10_SINT_PACK32"); break;
 	case ImageFormat::R16_UNORM: return StringView("R16_UNORM"); break;
@@ -262,10 +371,18 @@ StringView getImageFormatName(ImageFormat fmt) {
 	case ImageFormat::BC7_SRGB_BLOCK: return StringView("BC7_SRGB_BLOCK"); break;
 	case ImageFormat::ETC2_R8G8B8_UNORM_BLOCK: return StringView("ETC2_R8G8B8_UNORM_BLOCK"); break;
 	case ImageFormat::ETC2_R8G8B8_SRGB_BLOCK: return StringView("ETC2_R8G8B8_SRGB_BLOCK"); break;
-	case ImageFormat::ETC2_R8G8B8A1_UNORM_BLOCK: return StringView("ETC2_R8G8B8A1_UNORM_BLOCK"); break;
-	case ImageFormat::ETC2_R8G8B8A1_SRGB_BLOCK: return StringView("ETC2_R8G8B8A1_SRGB_BLOCK"); break;
-	case ImageFormat::ETC2_R8G8B8A8_UNORM_BLOCK: return StringView("ETC2_R8G8B8A8_UNORM_BLOCK"); break;
-	case ImageFormat::ETC2_R8G8B8A8_SRGB_BLOCK: return StringView("ETC2_R8G8B8A8_SRGB_BLOCK"); break;
+	case ImageFormat::ETC2_R8G8B8A1_UNORM_BLOCK:
+		return StringView("ETC2_R8G8B8A1_UNORM_BLOCK");
+		break;
+	case ImageFormat::ETC2_R8G8B8A1_SRGB_BLOCK:
+		return StringView("ETC2_R8G8B8A1_SRGB_BLOCK");
+		break;
+	case ImageFormat::ETC2_R8G8B8A8_UNORM_BLOCK:
+		return StringView("ETC2_R8G8B8A8_UNORM_BLOCK");
+		break;
+	case ImageFormat::ETC2_R8G8B8A8_SRGB_BLOCK:
+		return StringView("ETC2_R8G8B8A8_SRGB_BLOCK");
+		break;
 	case ImageFormat::EAC_R11_UNORM_BLOCK: return StringView("EAC_R11_UNORM_BLOCK"); break;
 	case ImageFormat::EAC_R11_SNORM_BLOCK: return StringView("EAC_R11_SNORM_BLOCK"); break;
 	case ImageFormat::EAC_R11G11_UNORM_BLOCK: return StringView("EAC_R11G11_UNORM_BLOCK"); break;
@@ -300,66 +417,178 @@ StringView getImageFormatName(ImageFormat fmt) {
 	case ImageFormat::ASTC_12x12_SRGB_BLOCK: return StringView("ASTC_12x12_SRGB_BLOCK"); break;
 	case ImageFormat::G8B8G8R8_422_UNORM: return StringView("G8B8G8R8_422_UNORM"); break;
 	case ImageFormat::B8G8R8G8_422_UNORM: return StringView("B8G8R8G8_422_UNORM"); break;
-	case ImageFormat::G8_B8_R8_3PLANE_420_UNORM: return StringView("G8_B8_R8_3PLANE_420_UNORM"); break;
-	case ImageFormat::G8_B8R8_2PLANE_420_UNORM: return StringView("G8_B8R8_2PLANE_420_UNORM"); break;
-	case ImageFormat::G8_B8_R8_3PLANE_422_UNORM: return StringView("G8_B8_R8_3PLANE_422_UNORM"); break;
-	case ImageFormat::G8_B8R8_2PLANE_422_UNORM: return StringView("G8_B8R8_2PLANE_422_UNORM"); break;
-	case ImageFormat::G8_B8_R8_3PLANE_444_UNORM: return StringView("G8_B8_R8_3PLANE_444_UNORM"); break;
+	case ImageFormat::G8_B8_R8_3PLANE_420_UNORM:
+		return StringView("G8_B8_R8_3PLANE_420_UNORM");
+		break;
+	case ImageFormat::G8_B8R8_2PLANE_420_UNORM:
+		return StringView("G8_B8R8_2PLANE_420_UNORM");
+		break;
+	case ImageFormat::G8_B8_R8_3PLANE_422_UNORM:
+		return StringView("G8_B8_R8_3PLANE_422_UNORM");
+		break;
+	case ImageFormat::G8_B8R8_2PLANE_422_UNORM:
+		return StringView("G8_B8R8_2PLANE_422_UNORM");
+		break;
+	case ImageFormat::G8_B8_R8_3PLANE_444_UNORM:
+		return StringView("G8_B8_R8_3PLANE_444_UNORM");
+		break;
 	case ImageFormat::R10X6_UNORM_PACK16: return StringView("R10X6_UNORM_PACK16"); break;
-	case ImageFormat::R10X6G10X6_UNORM_2PACK16: return StringView("R10X6G10X6_UNORM_2PACK16"); break;
-	case ImageFormat::R10X6G10X6B10X6A10X6_UNORM_4PACK16: return StringView("R10X6G10X6B10X6A10X6_UNORM_4PACK16"); break;
-	case ImageFormat::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16: return StringView("G10X6B10X6G10X6R10X6_422_UNORM_4PACK16"); break;
-	case ImageFormat::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16: return StringView("B10X6G10X6R10X6G10X6_422_UNORM_4PACK16"); break;
-	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16: return StringView("G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16"); break;
-	case ImageFormat::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16: return StringView("G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16"); break;
-	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16: return StringView("G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16"); break;
-	case ImageFormat::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16: return StringView("G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16"); break;
-	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16: return StringView("G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16"); break;
+	case ImageFormat::R10X6G10X6_UNORM_2PACK16:
+		return StringView("R10X6G10X6_UNORM_2PACK16");
+		break;
+	case ImageFormat::R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+		return StringView("R10X6G10X6B10X6A10X6_UNORM_4PACK16");
+		break;
+	case ImageFormat::G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+		return StringView("G10X6B10X6G10X6R10X6_422_UNORM_4PACK16");
+		break;
+	case ImageFormat::B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+		return StringView("B10X6G10X6R10X6G10X6_422_UNORM_4PACK16");
+		break;
+	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+		return StringView("G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16");
+		break;
+	case ImageFormat::G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+		return StringView("G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16");
+		break;
+	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+		return StringView("G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16");
+		break;
+	case ImageFormat::G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+		return StringView("G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16");
+		break;
+	case ImageFormat::G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+		return StringView("G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16");
+		break;
 	case ImageFormat::R12X4_UNORM_PACK16: return StringView("R12X4_UNORM_PACK16"); break;
-	case ImageFormat::R12X4G12X4_UNORM_2PACK16: return StringView("R12X4G12X4_UNORM_2PACK16"); break;
-	case ImageFormat::R12X4G12X4B12X4A12X4_UNORM_4PACK16: return StringView("R12X4G12X4B12X4A12X4_UNORM_4PACK16"); break;
-	case ImageFormat::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16: return StringView("G12X4B12X4G12X4R12X4_422_UNORM_4PACK16"); break;
-	case ImageFormat::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16: return StringView("B12X4G12X4R12X4G12X4_422_UNORM_4PACK16"); break;
-	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16: return StringView("G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16"); break;
-	case ImageFormat::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16: return StringView("G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16"); break;
-	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16: return StringView("G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16"); break;
-	case ImageFormat::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16: return StringView("G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16"); break;
-	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16: return StringView("G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16"); break;
+	case ImageFormat::R12X4G12X4_UNORM_2PACK16:
+		return StringView("R12X4G12X4_UNORM_2PACK16");
+		break;
+	case ImageFormat::R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+		return StringView("R12X4G12X4B12X4A12X4_UNORM_4PACK16");
+		break;
+	case ImageFormat::G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+		return StringView("G12X4B12X4G12X4R12X4_422_UNORM_4PACK16");
+		break;
+	case ImageFormat::B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+		return StringView("B12X4G12X4R12X4G12X4_422_UNORM_4PACK16");
+		break;
+	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+		return StringView("G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16");
+		break;
+	case ImageFormat::G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+		return StringView("G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16");
+		break;
+	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+		return StringView("G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16");
+		break;
+	case ImageFormat::G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+		return StringView("G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16");
+		break;
+	case ImageFormat::G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+		return StringView("G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16");
+		break;
 	case ImageFormat::G16B16G16R16_422_UNORM: return StringView("G16B16G16R16_422_UNORM"); break;
 	case ImageFormat::B16G16R16G16_422_UNORM: return StringView("B16G16R16G16_422_UNORM"); break;
-	case ImageFormat::G16_B16_R16_3PLANE_420_UNORM: return StringView("G16_B16_R16_3PLANE_420_UNORM"); break;
-	case ImageFormat::G16_B16R16_2PLANE_420_UNORM: return StringView("G16_B16R16_2PLANE_420_UNORM"); break;
-	case ImageFormat::G16_B16_R16_3PLANE_422_UNORM: return StringView("G16_B16_R16_3PLANE_422_UNORM"); break;
-	case ImageFormat::G16_B16R16_2PLANE_422_UNORM: return StringView("G16_B16R16_2PLANE_422_UNORM"); break;
-	case ImageFormat::G16_B16_R16_3PLANE_444_UNORM: return StringView("G16_B16_R16_3PLANE_444_UNORM"); break;
-	case ImageFormat::PVRTC1_2BPP_UNORM_BLOCK_IMG: return StringView("PVRTC1_2BPP_UNORM_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC1_4BPP_UNORM_BLOCK_IMG: return StringView("PVRTC1_4BPP_UNORM_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC2_2BPP_UNORM_BLOCK_IMG: return StringView("PVRTC2_2BPP_UNORM_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC2_4BPP_UNORM_BLOCK_IMG: return StringView("PVRTC2_4BPP_UNORM_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC1_2BPP_SRGB_BLOCK_IMG: return StringView("PVRTC1_2BPP_SRGB_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC1_4BPP_SRGB_BLOCK_IMG: return StringView("PVRTC1_4BPP_SRGB_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC2_2BPP_SRGB_BLOCK_IMG: return StringView("PVRTC2_2BPP_SRGB_BLOCK_IMG"); break;
-	case ImageFormat::PVRTC2_4BPP_SRGB_BLOCK_IMG: return StringView("PVRTC2_4BPP_SRGB_BLOCK_IMG"); break;
-	case ImageFormat::ASTC_4x4_SFLOAT_BLOCK_EXT: return StringView("ASTC_4x4_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_5x4_SFLOAT_BLOCK_EXT: return StringView("ASTC_5x4_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_5x5_SFLOAT_BLOCK_EXT: return StringView("ASTC_5x5_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_6x5_SFLOAT_BLOCK_EXT: return StringView("ASTC_6x5_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_6x6_SFLOAT_BLOCK_EXT: return StringView("ASTC_6x6_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_8x5_SFLOAT_BLOCK_EXT: return StringView("ASTC_8x5_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_8x6_SFLOAT_BLOCK_EXT: return StringView("ASTC_8x6_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_8x8_SFLOAT_BLOCK_EXT: return StringView("ASTC_8x8_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_10x5_SFLOAT_BLOCK_EXT: return StringView("ASTC_10x5_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_10x6_SFLOAT_BLOCK_EXT: return StringView("ASTC_10x6_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_10x8_SFLOAT_BLOCK_EXT: return StringView("ASTC_10x8_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_10x10_SFLOAT_BLOCK_EXT: return StringView("ASTC_10x10_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_12x10_SFLOAT_BLOCK_EXT: return StringView("ASTC_12x10_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::ASTC_12x12_SFLOAT_BLOCK_EXT: return StringView("ASTC_12x12_SFLOAT_BLOCK_EXT"); break;
-	case ImageFormat::G8_B8R8_2PLANE_444_UNORM_EXT: return StringView("G8_B8R8_2PLANE_444_UNORM_EXT"); break;
-	case ImageFormat::G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT: return StringView("G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT"); break;
-	case ImageFormat::G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT: return StringView("G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT"); break;
-	case ImageFormat::G16_B16R16_2PLANE_444_UNORM_EXT: return StringView("G16_B16R16_2PLANE_444_UNORM_EXT"); break;
-	case ImageFormat::A4R4G4B4_UNORM_PACK16_EXT: return StringView("A4R4G4B4_UNORM_PACK16_EXT"); break;
-	case ImageFormat::A4B4G4R4_UNORM_PACK16_EXT: return StringView("A4B4G4R4_UNORM_PACK16_EXT"); break;
+	case ImageFormat::G16_B16_R16_3PLANE_420_UNORM:
+		return StringView("G16_B16_R16_3PLANE_420_UNORM");
+		break;
+	case ImageFormat::G16_B16R16_2PLANE_420_UNORM:
+		return StringView("G16_B16R16_2PLANE_420_UNORM");
+		break;
+	case ImageFormat::G16_B16_R16_3PLANE_422_UNORM:
+		return StringView("G16_B16_R16_3PLANE_422_UNORM");
+		break;
+	case ImageFormat::G16_B16R16_2PLANE_422_UNORM:
+		return StringView("G16_B16R16_2PLANE_422_UNORM");
+		break;
+	case ImageFormat::G16_B16_R16_3PLANE_444_UNORM:
+		return StringView("G16_B16_R16_3PLANE_444_UNORM");
+		break;
+	case ImageFormat::PVRTC1_2BPP_UNORM_BLOCK_IMG:
+		return StringView("PVRTC1_2BPP_UNORM_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC1_4BPP_UNORM_BLOCK_IMG:
+		return StringView("PVRTC1_4BPP_UNORM_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC2_2BPP_UNORM_BLOCK_IMG:
+		return StringView("PVRTC2_2BPP_UNORM_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC2_4BPP_UNORM_BLOCK_IMG:
+		return StringView("PVRTC2_4BPP_UNORM_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC1_2BPP_SRGB_BLOCK_IMG:
+		return StringView("PVRTC1_2BPP_SRGB_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC1_4BPP_SRGB_BLOCK_IMG:
+		return StringView("PVRTC1_4BPP_SRGB_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC2_2BPP_SRGB_BLOCK_IMG:
+		return StringView("PVRTC2_2BPP_SRGB_BLOCK_IMG");
+		break;
+	case ImageFormat::PVRTC2_4BPP_SRGB_BLOCK_IMG:
+		return StringView("PVRTC2_4BPP_SRGB_BLOCK_IMG");
+		break;
+	case ImageFormat::ASTC_4x4_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_4x4_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_5x4_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_5x4_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_5x5_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_5x5_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_6x5_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_6x5_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_6x6_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_6x6_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_8x5_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_8x5_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_8x6_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_8x6_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_8x8_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_8x8_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_10x5_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_10x5_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_10x6_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_10x6_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_10x8_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_10x8_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_10x10_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_10x10_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_12x10_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_12x10_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::ASTC_12x12_SFLOAT_BLOCK_EXT:
+		return StringView("ASTC_12x12_SFLOAT_BLOCK_EXT");
+		break;
+	case ImageFormat::G8_B8R8_2PLANE_444_UNORM_EXT:
+		return StringView("G8_B8R8_2PLANE_444_UNORM_EXT");
+		break;
+	case ImageFormat::G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT:
+		return StringView("G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT");
+		break;
+	case ImageFormat::G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT:
+		return StringView("G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT");
+		break;
+	case ImageFormat::G16_B16R16_2PLANE_444_UNORM_EXT:
+		return StringView("G16_B16R16_2PLANE_444_UNORM_EXT");
+		break;
+	case ImageFormat::A4R4G4B4_UNORM_PACK16_EXT:
+		return StringView("A4R4G4B4_UNORM_PACK16_EXT");
+		break;
+	case ImageFormat::A4B4G4R4_UNORM_PACK16_EXT:
+		return StringView("A4B4G4R4_UNORM_PACK16_EXT");
+		break;
 	}
 	return StringView("Unknown");
 }
@@ -412,7 +641,9 @@ StringView getColorSpaceName(ColorSpace fmt) {
 	case ColorSpace::ADOBERGB_LINEAR_EXT: return StringView("ADOBERGB_LINEAR_EXT"); break;
 	case ColorSpace::ADOBERGB_NONLINEAR_EXT: return StringView("ADOBERGB_NONLINEAR_EXT"); break;
 	case ColorSpace::PASS_THROUGH_EXT: return StringView("PASS_THROUGH_EXT"); break;
-	case ColorSpace::EXTENDED_SRGB_NONLINEAR_EXT: return StringView("EXTENDED_SRGB_NONLINEAR_EXT"); break;
+	case ColorSpace::EXTENDED_SRGB_NONLINEAR_EXT:
+		return StringView("EXTENDED_SRGB_NONLINEAR_EXT");
+		break;
 	case ColorSpace::DISPLAY_NATIVE_AMD: return StringView("DISPLAY_NATIVE_AMD"); break;
 	}
 	return StringView();
@@ -420,38 +651,82 @@ StringView getColorSpaceName(ColorSpace fmt) {
 
 String getCompositeAlphaFlagsDescription(CompositeAlphaFlags fmt) {
 	StringStream stream;
-	if ((fmt & CompositeAlphaFlags::Opaque) != CompositeAlphaFlags::None) { stream << " Opaque"; }
-	if ((fmt & CompositeAlphaFlags::Premultiplied) != CompositeAlphaFlags::None) { stream << " Premultiplied"; }
-	if ((fmt & CompositeAlphaFlags::Postmultiplied) != CompositeAlphaFlags::None) { stream << " Postmultiplied"; }
-	if ((fmt & CompositeAlphaFlags::Inherit) != CompositeAlphaFlags::None) { stream << " Inherit"; }
+	if ((fmt & CompositeAlphaFlags::Opaque) != CompositeAlphaFlags::None) {
+		stream << " Opaque";
+	}
+	if ((fmt & CompositeAlphaFlags::Premultiplied) != CompositeAlphaFlags::None) {
+		stream << " Premultiplied";
+	}
+	if ((fmt & CompositeAlphaFlags::Postmultiplied) != CompositeAlphaFlags::None) {
+		stream << " Postmultiplied";
+	}
+	if ((fmt & CompositeAlphaFlags::Inherit) != CompositeAlphaFlags::None) {
+		stream << " Inherit";
+	}
 	return stream.str();
 }
 
 String getSurfaceTransformFlagsDescription(SurfaceTransformFlags fmt) {
 	StringStream stream;
-	if ((fmt & SurfaceTransformFlags::Identity) != SurfaceTransformFlags::None) { stream << " Identity"; }
-	if ((fmt & SurfaceTransformFlags::Rotate90) != SurfaceTransformFlags::None) { stream << " Rotate90"; }
-	if ((fmt & SurfaceTransformFlags::Rotate180) != SurfaceTransformFlags::None) { stream << " Rotate180"; }
-	if ((fmt & SurfaceTransformFlags::Rotate270) != SurfaceTransformFlags::None) { stream << " Rotate270"; }
-	if ((fmt & SurfaceTransformFlags::Mirror) != SurfaceTransformFlags::None) { stream << " Mirror"; }
-	if ((fmt & SurfaceTransformFlags::MirrorRotate90) != SurfaceTransformFlags::None) { stream << " MirrorRotate90"; }
-	if ((fmt & SurfaceTransformFlags::MirrorRotate180) != SurfaceTransformFlags::None) { stream << " MirrorRotate180"; }
-	if ((fmt & SurfaceTransformFlags::MirrorRotate270) != SurfaceTransformFlags::None) { stream << " MirrorRotate270"; }
-	if ((fmt & SurfaceTransformFlags::Inherit) != SurfaceTransformFlags::None) { stream << " Inherit"; }
-	if ((fmt & SurfaceTransformFlags::PreRotated) != SurfaceTransformFlags::None) { stream << " PreRotated"; }
+	if ((fmt & SurfaceTransformFlags::Identity) != SurfaceTransformFlags::None) {
+		stream << " Identity";
+	}
+	if ((fmt & SurfaceTransformFlags::Rotate90) != SurfaceTransformFlags::None) {
+		stream << " Rotate90";
+	}
+	if ((fmt & SurfaceTransformFlags::Rotate180) != SurfaceTransformFlags::None) {
+		stream << " Rotate180";
+	}
+	if ((fmt & SurfaceTransformFlags::Rotate270) != SurfaceTransformFlags::None) {
+		stream << " Rotate270";
+	}
+	if ((fmt & SurfaceTransformFlags::Mirror) != SurfaceTransformFlags::None) {
+		stream << " Mirror";
+	}
+	if ((fmt & SurfaceTransformFlags::MirrorRotate90) != SurfaceTransformFlags::None) {
+		stream << " MirrorRotate90";
+	}
+	if ((fmt & SurfaceTransformFlags::MirrorRotate180) != SurfaceTransformFlags::None) {
+		stream << " MirrorRotate180";
+	}
+	if ((fmt & SurfaceTransformFlags::MirrorRotate270) != SurfaceTransformFlags::None) {
+		stream << " MirrorRotate270";
+	}
+	if ((fmt & SurfaceTransformFlags::Inherit) != SurfaceTransformFlags::None) {
+		stream << " Inherit";
+	}
+	if ((fmt & SurfaceTransformFlags::PreRotated) != SurfaceTransformFlags::None) {
+		stream << " PreRotated";
+	}
 	return stream.str();
 }
 
 String getImageUsageDescription(ImageUsage fmt) {
 	StringStream stream;
-	if ((fmt & ImageUsage::TransferSrc) != ImageUsage::None) { stream << " TransferSrc"; }
-	if ((fmt & ImageUsage::TransferDst) != ImageUsage::None) { stream << " TransferDst"; }
-	if ((fmt & ImageUsage::Sampled) != ImageUsage::None) { stream << " Sampled"; }
-	if ((fmt & ImageUsage::Storage) != ImageUsage::None) { stream << " Storage"; }
-	if ((fmt & ImageUsage::ColorAttachment) != ImageUsage::None) { stream << " ColorAttachment"; }
-	if ((fmt & ImageUsage::DepthStencilAttachment) != ImageUsage::None) { stream << " DepthStencilAttachment"; }
-	if ((fmt & ImageUsage::TransientAttachment) != ImageUsage::None) { stream << " TransientAttachment"; }
-	if ((fmt & ImageUsage::InputAttachment) != ImageUsage::None) { stream << " InputAttachment"; }
+	if ((fmt & ImageUsage::TransferSrc) != ImageUsage::None) {
+		stream << " TransferSrc";
+	}
+	if ((fmt & ImageUsage::TransferDst) != ImageUsage::None) {
+		stream << " TransferDst";
+	}
+	if ((fmt & ImageUsage::Sampled) != ImageUsage::None) {
+		stream << " Sampled";
+	}
+	if ((fmt & ImageUsage::Storage) != ImageUsage::None) {
+		stream << " Storage";
+	}
+	if ((fmt & ImageUsage::ColorAttachment) != ImageUsage::None) {
+		stream << " ColorAttachment";
+	}
+	if ((fmt & ImageUsage::DepthStencilAttachment) != ImageUsage::None) {
+		stream << " DepthStencilAttachment";
+	}
+	if ((fmt & ImageUsage::TransientAttachment) != ImageUsage::None) {
+		stream << " TransientAttachment";
+	}
+	if ((fmt & ImageUsage::InputAttachment) != ImageUsage::None) {
+		stream << " InputAttachment";
+	}
 	return stream.str();
 }
 
@@ -483,7 +758,8 @@ String BufferInfo::description() const {
 
 size_t BufferData::writeData(uint8_t *mem, size_t expected) const {
 	if (size > expected) {
-		log::error("core::BufferData", "Not enoudh space for buffer: ", size, " required, ", expected, " allocated");
+		log::error("core::BufferData", "Not enoudh space for buffer: ", size, " required, ",
+				expected, " allocated");
 		return 0;
 	}
 
@@ -493,14 +769,14 @@ size_t BufferData::writeData(uint8_t *mem, size_t expected) const {
 		return outsize;
 	} else if (memCallback) {
 		size_t outsize = size;
-		memCallback(mem, expected, [&, this] (BytesView data) {
+		memCallback(mem, expected, [&, this](BytesView data) {
 			outsize = data.size();
 			memcpy(mem, data.data(), size);
 		});
 		return outsize;
 	} else if (stdCallback) {
 		size_t outsize = size;
-		stdCallback(mem, expected, [&, this] (BytesView data) {
+		stdCallback(mem, expected, [&, this](BytesView data) {
 			outsize = data.size();
 			memcpy(mem, data.data(), size);
 		});
@@ -521,8 +797,9 @@ ImageViewInfo ImageInfoData::getViewInfo(const ImageViewInfo &info) const {
 }
 
 bool ImageInfo::isCompatible(const ImageInfo &img) const {
-	if (img.format == format && img.flags == flags && img.imageType == imageType && img.mipLevels == img.mipLevels
-			&& img.arrayLayers == arrayLayers && img.samples == samples && img.tiling == tiling && img.usage == usage) {
+	if (img.format == format && img.flags == flags && img.imageType == imageType
+			&& img.mipLevels == img.mipLevels && img.arrayLayers == arrayLayers
+			&& img.samples == samples && img.tiling == tiling && img.usage == usage) {
 		return true;
 	}
 	return true;
@@ -530,7 +807,8 @@ bool ImageInfo::isCompatible(const ImageInfo &img) const {
 
 String ImageInfo::description() const {
 	StringStream stream;
-	stream << "ImageInfo: " << getImageFormatName(format) << " (" << getImageTypeName(imageType) << "); ";
+	stream << "ImageInfo: " << getImageFormatName(format) << " (" << getImageTypeName(imageType)
+		   << "); ";
 	stream << extent.width << " x " << extent.height << " x " << extent.depth << "; Flags:";
 
 	if (flags != ImageFlags::None) {
@@ -540,7 +818,8 @@ String ImageInfo::description() const {
 	}
 
 	stream << "; MipLevels: " << mipLevels.get() << "; ArrayLayers: " << arrayLayers.get()
-			<< "; Samples:" << getSampleCountDescription(samples) << "; Tiling: " << getImageTilingName(tiling) << "; Usage:";
+		   << "; Samples:" << getSampleCountDescription(samples)
+		   << "; Tiling: " << getImageTilingName(tiling) << "; Usage:";
 
 	if (usage != ImageUsage::None) {
 		stream << getImageUsageDescription(usage);
@@ -552,9 +831,11 @@ String ImageInfo::description() const {
 }
 
 size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
-	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth * arrayLayers.get();
+	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth
+			* arrayLayers.get();
 	if (expectedSize > expected) {
-		log::error("core::ImageData", "Not enoudh space for image: ", expectedSize, " required, ", expected, " allocated");
+		log::error("core::ImageData", "Not enoudh space for image: ", expectedSize, " required, ",
+				expected, " allocated");
 		return 0;
 	}
 
@@ -565,7 +846,7 @@ size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
 	} else if (memCallback) {
 		size_t size = expectedSize;
 		size_t writeSize = 0;
-		memCallback(mem, expectedSize, [&] (BytesView data) {
+		memCallback(mem, expectedSize, [&](BytesView data) {
 			writeSize += data.size();
 			memcpy(mem, data.data(), size);
 			mem += data.size();
@@ -574,7 +855,7 @@ size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
 	} else if (stdCallback) {
 		size_t size = expectedSize;
 		size_t writeSize = 0;
-		stdCallback(mem, expectedSize, [&] (BytesView data) {
+		stdCallback(mem, expectedSize, [&](BytesView data) {
 			writeSize += data.size();
 			memcpy(mem, data.data(), size);
 			mem += data.size();
@@ -584,9 +865,7 @@ size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
 	return 0;
 }
 
-void ImageViewInfo::setup(const ImageViewInfo &value) {
-	*this = value;
-}
+void ImageViewInfo::setup(const ImageViewInfo &value) { *this = value; }
 
 void ImageViewInfo::setup(const ImageInfoData &value) {
 	format = value.format;
@@ -663,26 +942,20 @@ ColorMode ImageViewInfo::getColorMode() const {
 	switch (f) {
 	case PixelFormat::Unknown: return ColorMode(); break;
 	case PixelFormat::A:
-		if (r == ComponentMapping::One
-				&& g == ComponentMapping::One
-				&& b == ComponentMapping::One
+		if (r == ComponentMapping::One && g == ComponentMapping::One && b == ComponentMapping::One
 				&& a == ComponentMapping::R) {
 			return ColorMode();
 		}
 		break;
 	case PixelFormat::IA:
-		if (r == ComponentMapping::R
-				&& g == ComponentMapping::R
-				&& b == ComponentMapping::R
+		if (r == ComponentMapping::R && g == ComponentMapping::R && b == ComponentMapping::R
 				&& a == ComponentMapping::G) {
 			return ColorMode();
 		}
 		break;
 	case PixelFormat::RGB:
-		if (r == ComponentMapping::Identity
-				&& g == ComponentMapping::Identity
-				&& b == ComponentMapping::Identity
-				&& a == ComponentMapping::One) {
+		if (r == ComponentMapping::Identity && g == ComponentMapping::Identity
+				&& b == ComponentMapping::Identity && a == ComponentMapping::One) {
 			return ColorMode();
 		}
 		break;
@@ -690,10 +963,8 @@ ColorMode ImageViewInfo::getColorMode() const {
 	case PixelFormat::D:
 	case PixelFormat::DS:
 	case PixelFormat::S:
-		if (r == ComponentMapping::Identity
-				&& g == ComponentMapping::Identity
-				&& b == ComponentMapping::Identity
-				&& a == ComponentMapping::Identity) {
+		if (r == ComponentMapping::Identity && g == ComponentMapping::Identity
+				&& b == ComponentMapping::Identity && a == ComponentMapping::Identity) {
 			return ColorMode();
 		}
 		break;
@@ -703,7 +974,8 @@ ColorMode ImageViewInfo::getColorMode() const {
 
 bool ImageViewInfo::isCompatible(const ImageInfo &info) const {
 	// not perfect, multi-planar format not tracked, bun enough for now
-	if (format != ImageFormat::Undefined && getFormatBlockSize(info.format) != getFormatBlockSize(format)) {
+	if (format != ImageFormat::Undefined
+			&& getFormatBlockSize(info.format) != getFormatBlockSize(format)) {
 		return false;
 	}
 
@@ -751,7 +1023,8 @@ bool ImageViewInfo::isCompatible(const ImageInfo &info) const {
 		return false;
 	}
 
-	if (layerCount.get() != maxOf<uint32_t>() && baseArrayLayer.get() + layerCount.get() > info.arrayLayers.get()) {
+	if (layerCount.get() != maxOf<uint32_t>()
+			&& baseArrayLayer.get() + layerCount.get() > info.arrayLayers.get()) {
 		return false;
 	}
 
@@ -760,7 +1033,8 @@ bool ImageViewInfo::isCompatible(const ImageInfo &info) const {
 
 String ImageViewInfo::description() const {
 	StringStream stream;
-	stream << "ImageViewInfo: " << getImageFormatName(format) << " (" << getImageViewTypeName(type) << "); ";
+	stream << "ImageViewInfo: " << getImageFormatName(format) << " (" << getImageViewTypeName(type)
+		   << "); ";
 	stream << "ArrayLayers: " << baseArrayLayer.get() << " (" << layerCount.get() << "); ";
 	stream << "R -> " << getComponentMappingName(r) << "; ";
 	stream << "G -> " << getComponentMappingName(g) << "; ";
@@ -777,7 +1051,8 @@ String SwapchainConfig::description() const {
 		stream << " (" << getPresentModeName(presentModeFast) << ")";
 	}
 	stream << "\n";
-	stream << "\tSurface format: (" << getImageFormatName(imageFormat) << ":" << getColorSpaceName(colorSpace) << ")\n";
+	stream << "\tSurface format: (" << getImageFormatName(imageFormat) << ":"
+		   << getColorSpaceName(colorSpace) << ")\n";
 	stream << "\tTransform:" << getSurfaceTransformFlagsDescription(transform) << "\n";
 	stream << "\tAlpha:" << getCompositeAlphaFlagsDescription(alpha) << "\n";
 	stream << "\tImage count: " << imageCount << "\n";
@@ -786,18 +1061,21 @@ String SwapchainConfig::description() const {
 }
 
 bool SurfaceInfo::isSupported(const SwapchainConfig &cfg) const {
-	if (std::find(presentModes.begin(), presentModes.end(), cfg.presentMode) == presentModes.end()) {
+	if (std::find(presentModes.begin(), presentModes.end(), cfg.presentMode)
+			== presentModes.end()) {
 		log::error("Vk-Error", "SurfaceInfo: presentMode is not supported");
 		return false;
 	}
 
-	if (cfg.presentModeFast != PresentMode::Unsupported && std::find(presentModes.begin(), presentModes.end(),
-			cfg.presentModeFast) == presentModes.end()) {
+	if (cfg.presentModeFast != PresentMode::Unsupported
+			&& std::find(presentModes.begin(), presentModes.end(), cfg.presentModeFast)
+					== presentModes.end()) {
 		log::error("Vk-Error", "SurfaceInfo: presentModeFast is not supported");
 		return false;
 	}
 
-	if (std::find(formats.begin(), formats.end(), pair(cfg.imageFormat, cfg.colorSpace)) == formats.end()) {
+	if (std::find(formats.begin(), formats.end(), pair(cfg.imageFormat, cfg.colorSpace))
+			== formats.end()) {
 		log::error("Vk-Error", "SurfaceInfo: imageFormat or colorSpace is not supported");
 		return false;
 	}
@@ -818,7 +1096,8 @@ bool SurfaceInfo::isSupported(const SwapchainConfig &cfg) const {
 	}
 
 	if (cfg.extent.width < minImageExtent.width || cfg.extent.width > maxImageExtent.width
-			|| cfg.extent.height < minImageExtent.height || cfg.extent.height > maxImageExtent.height) {
+			|| cfg.extent.height < minImageExtent.height
+			|| cfg.extent.height > maxImageExtent.height) {
 		log::error("Vk-Error", "SurfaceInfo: extent is not supported");
 		return false;
 	}
@@ -835,26 +1114,28 @@ String SurfaceInfo::description() const {
 	StringStream stream;
 	stream << "\nSurfaceInfo:\n";
 	stream << "\tImageCount: " << minImageCount << "-" << maxImageCount << "\n";
-	stream << "\tExtent: " << currentExtent.width << "x" << currentExtent.height
-			<< " (" << minImageExtent.width << "x" << minImageExtent.height
-			<< " - " << maxImageExtent.width << "x" << maxImageExtent.height << ")\n";
+	stream << "\tExtent: " << currentExtent.width << "x" << currentExtent.height << " ("
+		   << minImageExtent.width << "x" << minImageExtent.height << " - " << maxImageExtent.width
+		   << "x" << maxImageExtent.height << ")\n";
 	stream << "\tMax Layers: " << maxImageArrayLayers << "\n";
 
-	stream << "\tSupported transforms:" << getSurfaceTransformFlagsDescription(supportedTransforms) << "\n";
-	stream << "\tCurrent transforms:" << getSurfaceTransformFlagsDescription(currentTransform) << "\n";
-	stream << "\tSupported Alpha:" << getCompositeAlphaFlagsDescription(supportedCompositeAlpha) << "\n";
+	stream << "\tSupported transforms:" << getSurfaceTransformFlagsDescription(supportedTransforms)
+		   << "\n";
+	stream << "\tCurrent transforms:" << getSurfaceTransformFlagsDescription(currentTransform)
+		   << "\n";
+	stream << "\tSupported Alpha:" << getCompositeAlphaFlagsDescription(supportedCompositeAlpha)
+		   << "\n";
 	stream << "\tSupported Usage:" << getImageUsageDescription(supportedUsageFlags) << "\n";
 
 	stream << "\tSurface format:";
 	for (auto it : formats) {
-		stream << " (" << getImageFormatName(it.first) << ":" << getColorSpaceName(it.second) << ")";
+		stream << " (" << getImageFormatName(it.first) << ":" << getColorSpaceName(it.second)
+			   << ")";
 	}
 	stream << "\n";
 
 	stream << "\tPresent modes:";
-	for (auto &it : presentModes) {
-		stream << " " << getPresentModeName(it);
-	}
+	for (auto &it : presentModes) { stream << " " << getPresentModeName(it); }
 	stream << "\n";
 	return stream.str();
 }
@@ -1139,9 +1420,7 @@ PixelFormat getImagePixelFormat(ImageFormat format) {
 	case ImageFormat::EAC_R11_UNORM_BLOCK:
 	case ImageFormat::EAC_R11_SNORM_BLOCK:
 	case ImageFormat::R10X6_UNORM_PACK16:
-	case ImageFormat::R12X4_UNORM_PACK16:
-		return PixelFormat::A;
-		break;
+	case ImageFormat::R12X4_UNORM_PACK16: return PixelFormat::A; break;
 
 	case ImageFormat::R4G4_UNORM_PACK8:
 	case ImageFormat::R8G8_UNORM:
@@ -1167,9 +1446,7 @@ PixelFormat getImagePixelFormat(ImageFormat format) {
 	case ImageFormat::EAC_R11G11_UNORM_BLOCK:
 	case ImageFormat::EAC_R11G11_SNORM_BLOCK:
 	case ImageFormat::R10X6G10X6_UNORM_2PACK16:
-	case ImageFormat::R12X4G12X4_UNORM_2PACK16:
-		return PixelFormat::IA;
-		break;
+	case ImageFormat::R12X4G12X4_UNORM_2PACK16: return PixelFormat::IA; break;
 
 	case ImageFormat::R4G4B4A4_UNORM_PACK16:
 	case ImageFormat::B4G4R4A4_UNORM_PACK16:
@@ -1231,9 +1508,7 @@ PixelFormat getImagePixelFormat(ImageFormat format) {
 	case ImageFormat::R10X6G10X6B10X6A10X6_UNORM_4PACK16:
 	case ImageFormat::R12X4G12X4B12X4A12X4_UNORM_4PACK16:
 	case ImageFormat::A4R4G4B4_UNORM_PACK16_EXT:
-	case ImageFormat::A4B4G4R4_UNORM_PACK16_EXT:
-		return PixelFormat::RGBA;
-		break;
+	case ImageFormat::A4B4G4R4_UNORM_PACK16_EXT: return PixelFormat::RGBA; break;
 
 	case ImageFormat::R5G6B5_UNORM_PACK16:
 	case ImageFormat::B5G6R5_UNORM_PACK16:
@@ -1300,25 +1575,17 @@ PixelFormat getImagePixelFormat(ImageFormat format) {
 	case ImageFormat::G8_B8R8_2PLANE_444_UNORM_EXT:
 	case ImageFormat::G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT:
 	case ImageFormat::G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT:
-	case ImageFormat::G16_B16R16_2PLANE_444_UNORM_EXT:
-		return PixelFormat::RGB;
-		break;
+	case ImageFormat::G16_B16R16_2PLANE_444_UNORM_EXT: return PixelFormat::RGB; break;
 
 	case ImageFormat::D16_UNORM:
 	case ImageFormat::D32_SFLOAT:
-	case ImageFormat::X8_D24_UNORM_PACK32:
-		return PixelFormat::D;
-		break;
+	case ImageFormat::X8_D24_UNORM_PACK32: return PixelFormat::D; break;
 
-	case ImageFormat::S8_UINT:
-		return PixelFormat::S;
-		break;
+	case ImageFormat::S8_UINT: return PixelFormat::S; break;
 
 	case ImageFormat::D16_UNORM_S8_UINT:
 	case ImageFormat::D24_UNORM_S8_UINT:
-	case ImageFormat::D32_SFLOAT_S8_UINT:
-		return PixelFormat::DS;
-		break;
+	case ImageFormat::D32_SFLOAT_S8_UINT: return PixelFormat::DS; break;
 
 	case ImageFormat::E5B9G9R9_UFLOAT_PACK32:
 	case ImageFormat::BC2_UNORM_BLOCK:
@@ -1382,9 +1649,7 @@ PixelFormat getImagePixelFormat(ImageFormat format) {
 	case ImageFormat::ASTC_10x8_SFLOAT_BLOCK_EXT:
 	case ImageFormat::ASTC_10x10_SFLOAT_BLOCK_EXT:
 	case ImageFormat::ASTC_12x10_SFLOAT_BLOCK_EXT:
-	case ImageFormat::ASTC_12x12_SFLOAT_BLOCK_EXT:
-		return PixelFormat::Unknown;
-		break;
+	case ImageFormat::ASTC_12x12_SFLOAT_BLOCK_EXT: return PixelFormat::Unknown; break;
 	}
 	return PixelFormat::Unknown;
 }
@@ -1394,11 +1659,8 @@ bool isStencilFormat(ImageFormat format) {
 	case ImageFormat::S8_UINT:
 	case ImageFormat::D16_UNORM_S8_UINT:
 	case ImageFormat::D24_UNORM_S8_UINT:
-	case ImageFormat::D32_SFLOAT_S8_UINT:
-		return true;
-		break;
-	default:
-		break;
+	case ImageFormat::D32_SFLOAT_S8_UINT: return true; break;
+	default: break;
 	}
 	return false;
 }
@@ -1410,11 +1672,8 @@ bool isDepthFormat(ImageFormat format) {
 	case ImageFormat::D16_UNORM_S8_UINT:
 	case ImageFormat::D24_UNORM_S8_UINT:
 	case ImageFormat::D32_SFLOAT_S8_UINT:
-	case ImageFormat::X8_D24_UNORM_PACK32:
-		return true;
-		break;
-	default:
-		break;
+	case ImageFormat::X8_D24_UNORM_PACK32: return true; break;
+	default: break;
 	}
 	return false;
 }
@@ -1435,52 +1694,39 @@ ImageViewType getImageViewType(ImageType imageType, ArrayLayers arrayLayers) {
 			return ImageViewType::ImageView2D;
 		}
 		break;
-	case ImageType::Image3D:
-		return ImageViewType::ImageView3D;
-		break;
+	case ImageType::Image3D: return ImageViewType::ImageView3D; break;
 	}
 	return ImageViewType::ImageView2D;
 }
 
 bool hasReadAccess(AccessType access) {
-	if ((access & (
-			AccessType::IndirectCommandRead
-			| AccessType::IndexRead
-			| AccessType::VertexAttributeRead
-			| AccessType::UniformRead
-			| AccessType::InputAttachmantRead
-			| AccessType::ShaderRead
-			| AccessType::ColorAttachmentRead
-			| AccessType::DepthStencilAttachmentRead
-			| AccessType::TransferRead
-			| AccessType::HostRead
-			| AccessType::MemoryRead
-			| AccessType::ColorAttachmentReadNonCoherent
-			| AccessType::TransformFeedbackCounterRead
-			| AccessType::ConditionalRenderingRead
-			| AccessType::AccelerationStructureRead
-			| AccessType::ShadingRateImageRead
-			| AccessType::FragmentDensityMapRead
-			| AccessType::CommandPreprocessRead
-			)) != AccessType::None) {
+	if ((access
+				& (AccessType::IndirectCommandRead | AccessType::IndexRead
+						| AccessType::VertexAttributeRead | AccessType::UniformRead
+						| AccessType::InputAttachmantRead | AccessType::ShaderRead
+						| AccessType::ColorAttachmentRead | AccessType::DepthStencilAttachmentRead
+						| AccessType::TransferRead | AccessType::HostRead | AccessType::MemoryRead
+						| AccessType::ColorAttachmentReadNonCoherent
+						| AccessType::TransformFeedbackCounterRead
+						| AccessType::ConditionalRenderingRead
+						| AccessType::AccelerationStructureRead | AccessType::ShadingRateImageRead
+						| AccessType::FragmentDensityMapRead | AccessType::CommandPreprocessRead))
+			!= AccessType::None) {
 		return true;
 	}
 	return false;
 }
 
 bool hasWriteAccess(AccessType access) {
-	if ((access & (
-			AccessType::ShaderWrite
-			| AccessType::ColorAttachmentWrite
-			| AccessType::DepthStencilAttachmentWrite
-			| AccessType::TransferWrite
-			| AccessType::HostWrite
-			| AccessType::MemoryWrite
-			| AccessType::TransformFeedbackWrite
-			| AccessType::TransformFeedbackCounterWrite
-			| AccessType::AccelerationStructureWrite
-			| AccessType::CommandPreprocessWrite
-			)) != AccessType::None) {
+	if ((access
+				& (AccessType::ShaderWrite | AccessType::ColorAttachmentWrite
+						| AccessType::DepthStencilAttachmentWrite | AccessType::TransferWrite
+						| AccessType::HostWrite | AccessType::MemoryWrite
+						| AccessType::TransformFeedbackWrite
+						| AccessType::TransformFeedbackCounterWrite
+						| AccessType::AccelerationStructureWrite
+						| AccessType::CommandPreprocessWrite))
+			!= AccessType::None) {
 		return true;
 	}
 	return false;
@@ -1488,47 +1734,68 @@ bool hasWriteAccess(AccessType access) {
 
 String getQueueFlagsDesc(QueueFlags flags) {
 	StringStream stream;
-	if ((flags & QueueFlags::Graphics) != QueueFlags::None) { stream << " Graphics"; }
-	if ((flags & QueueFlags::Compute) != QueueFlags::None) { stream << " Compute"; }
-	if ((flags & QueueFlags::Transfer) != QueueFlags::None) { stream << " Transfer"; }
-	if ((flags & QueueFlags::SparceBinding) != QueueFlags::None) { stream << " SparceBinding"; }
-	if ((flags & QueueFlags::Protected) != QueueFlags::None) { stream << " Protected"; }
-	if ((flags & QueueFlags::VideoDecode) != QueueFlags::None) { stream << " VideoDecode"; }
-	if ((flags & QueueFlags::VideoEncode) != QueueFlags::None) { stream << " VideoEncode"; }
-	if ((flags & QueueFlags::Present) != QueueFlags::None) { stream << " Present"; }
+	if ((flags & QueueFlags::Graphics) != QueueFlags::None) {
+		stream << " Graphics";
+	}
+	if ((flags & QueueFlags::Compute) != QueueFlags::None) {
+		stream << " Compute";
+	}
+	if ((flags & QueueFlags::Transfer) != QueueFlags::None) {
+		stream << " Transfer";
+	}
+	if ((flags & QueueFlags::SparceBinding) != QueueFlags::None) {
+		stream << " SparceBinding";
+	}
+	if ((flags & QueueFlags::Protected) != QueueFlags::None) {
+		stream << " Protected";
+	}
+	if ((flags & QueueFlags::VideoDecode) != QueueFlags::None) {
+		stream << " VideoDecode";
+	}
+	if ((flags & QueueFlags::VideoEncode) != QueueFlags::None) {
+		stream << " VideoEncode";
+	}
+	if ((flags & QueueFlags::Present) != QueueFlags::None) {
+		stream << " Present";
+	}
 	return stream.str();
 }
 
-std::ostream & operator<<(std::ostream &stream, const ImageInfoData &value) {
+std::ostream &operator<<(std::ostream &stream, const ImageInfoData &value) {
 	stream << "ImageInfoData: " << value.extent << " Layers:" << value.arrayLayers.get();
 	return stream;
 }
 
 String PipelineMaterialInfo::data() const {
 	BytesView view(reinterpret_cast<const uint8_t *>(this), sizeof(PipelineMaterialInfo));
-	return toString(
-		base16::encode<Interface>(view.sub(0, sizeof(BlendInfo))), "'",
-		base16::encode<Interface>(view.sub(sizeof(BlendInfo), sizeof(DepthInfo))), "'",
-		base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo), sizeof(DepthBounds))), "'",
-		base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo) + sizeof(DepthBounds), sizeof(StencilInfo))), "'",
-		base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo) + sizeof(DepthBounds) + sizeof(StencilInfo), sizeof(StencilInfo))), "'",
-		base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo) + sizeof(DepthBounds) + sizeof(StencilInfo) * 2))
-	);
+	return toString(base16::encode<Interface>(view.sub(0, sizeof(BlendInfo))), "'",
+			base16::encode<Interface>(view.sub(sizeof(BlendInfo), sizeof(DepthInfo))), "'",
+			base16::encode<Interface>(
+					view.sub(sizeof(BlendInfo) + sizeof(DepthInfo), sizeof(DepthBounds))),
+			"'",
+			base16::encode<Interface>(
+					view.sub(sizeof(BlendInfo) + sizeof(DepthInfo) + sizeof(DepthBounds),
+							sizeof(StencilInfo))),
+			"'",
+			base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo)
+							+ sizeof(DepthBounds) + sizeof(StencilInfo),
+					sizeof(StencilInfo))),
+			"'",
+			base16::encode<Interface>(view.sub(sizeof(BlendInfo) + sizeof(DepthInfo)
+					+ sizeof(DepthBounds) + sizeof(StencilInfo) * 2)));
 }
 
 String PipelineMaterialInfo::description() const {
 	StringStream stream;
-	stream << "{" << blend.enabled << "," << blend.srcColor << "," << blend.dstColor << "," << blend.opColor << ","
-			<< blend.srcAlpha << "," << blend.dstAlpha << "," << blend.opAlpha << "," << blend.writeMask
-			<< "},{" << depth.writeEnabled << "," << depth.testEnabled << "," << depth.compare
-			<< "},{" << bounds.enabled << "," << bounds.min << "," << bounds.max
-			<< "},{" << stencil << "}";
+	stream << "{" << blend.enabled << "," << blend.srcColor << "," << blend.dstColor << ","
+		   << blend.opColor << "," << blend.srcAlpha << "," << blend.dstAlpha << ","
+		   << blend.opAlpha << "," << blend.writeMask << "},{" << depth.writeEnabled << ","
+		   << depth.testEnabled << "," << depth.compare << "},{" << bounds.enabled << ","
+		   << bounds.min << "," << bounds.max << "},{" << stencil << "}";
 	return stream.str();
 }
 
-PipelineMaterialInfo::PipelineMaterialInfo() {
-	memset(this, 0, sizeof(PipelineMaterialInfo));
-}
+PipelineMaterialInfo::PipelineMaterialInfo() { memset(this, 0, sizeof(PipelineMaterialInfo)); }
 
 void PipelineMaterialInfo::setBlendInfo(const BlendInfo &info) {
 	if (info.isEnabled()) {
@@ -1588,33 +1855,19 @@ void PipelineMaterialInfo::setLineWidth(float width) {
 	}
 }
 
-void PipelineMaterialInfo::setImageViewType(ImageViewType type) {
-	imageViewType = type;
-}
+void PipelineMaterialInfo::setImageViewType(ImageViewType type) { imageViewType = type; }
 
-void PipelineMaterialInfo::_setup(const BlendInfo &info) {
-	setBlendInfo(info);
-}
+void PipelineMaterialInfo::_setup(const BlendInfo &info) { setBlendInfo(info); }
 
-void PipelineMaterialInfo::_setup(const DepthInfo &info) {
-	setDepthInfo(info);
-}
+void PipelineMaterialInfo::_setup(const DepthInfo &info) { setDepthInfo(info); }
 
-void PipelineMaterialInfo::_setup(const DepthBounds &b) {
-	setDepthBounds(b);
-}
+void PipelineMaterialInfo::_setup(const DepthBounds &b) { setDepthBounds(b); }
 
-void PipelineMaterialInfo::_setup(const StencilInfo &info) {
-	enableStencil(info);
-}
+void PipelineMaterialInfo::_setup(const StencilInfo &info) { enableStencil(info); }
 
-void PipelineMaterialInfo::_setup(LineWidth width) {
-	setLineWidth(width.get());
-}
+void PipelineMaterialInfo::_setup(LineWidth width) { setLineWidth(width.get()); }
 
-void PipelineMaterialInfo::_setup(ImageViewType type) {
-	setImageViewType(type);
-}
+void PipelineMaterialInfo::_setup(ImageViewType type) { setImageViewType(type); }
 
 StringView getInputKeyCodeName(InputKeyCode code) {
 	switch (code) {
@@ -1718,7 +1971,9 @@ StringView getInputKeyCodeName(InputKeyCode code) {
 	case InputKeyCode::LEFT_BRACKET: return StringView("LEFT_BRACKET"); break;
 	case InputKeyCode::BACKSLASH: return StringView("BACKSLASH"); break;
 	case InputKeyCode::RIGHT_BRACKET: return StringView("RIGHT_BRACKET"); break;
-	case InputKeyCode::GRAVE_ACCENT: return StringView("GRAVE_ACCENT"); break;
+	case InputKeyCode::GRAVE_ACCENT:
+		return StringView("GRAVE_ACCENT");
+		break;
 
 		/* Function keys */
 	case InputKeyCode::F1: return StringView("F1"); break;
@@ -1941,26 +2196,66 @@ StringView getInputButtonName(InputMouseButton btn) {
 
 String getInputModifiersNames(InputModifier mod) {
 	StringStream out;
-	if ((mod & InputModifier::Shift) != InputModifier::None) { out << " Shift"; }
-	if ((mod & InputModifier::CapsLock) != InputModifier::None) { out << " CapsLock"; }
-	if ((mod & InputModifier::Ctrl) != InputModifier::None) { out << " Ctrl"; }
-	if ((mod & InputModifier::Alt) != InputModifier::None) { out << " Alt"; }
-	if ((mod & InputModifier::NumLock) != InputModifier::None) { out << " NumLock"; }
-	if ((mod & InputModifier::Mod3) != InputModifier::None) { out << " Mod3"; }
-	if ((mod & InputModifier::Mod4) != InputModifier::None) { out << " Mod4"; }
-	if ((mod & InputModifier::Mod5) != InputModifier::None) { out << " Mod5"; }
-	if ((mod & InputModifier::LayoutAlternative) != InputModifier::None) { out << " LayoutAlternative"; }
-	if ((mod & InputModifier::ShiftL) != InputModifier::None) { out << " ShiftL"; }
-	if ((mod & InputModifier::ShiftR) != InputModifier::None) { out << " ShiftR"; }
-	if ((mod & InputModifier::CtrlL) != InputModifier::None) { out << " CtrlL"; }
-	if ((mod & InputModifier::CtrlR) != InputModifier::None) { out << " CtrlR"; }
-	if ((mod & InputModifier::AltL) != InputModifier::None) { out << " AltL"; }
-	if ((mod & InputModifier::AltR) != InputModifier::None) { out << " AltR"; }
-	if ((mod & InputModifier::Mod3L) != InputModifier::None) { out << " Mod3L"; }
-	if ((mod & InputModifier::Mod3L) != InputModifier::None) { out << " Mod3L"; }
-	if ((mod & InputModifier::Mod4L) != InputModifier::None) { out << " Mod4L"; }
-	if ((mod & InputModifier::Mod4R) != InputModifier::None) { out << " Mod4R"; }
-	if ((mod & InputModifier::ScrollLock) != InputModifier::None) { out << " ScrollLock"; }
+	if ((mod & InputModifier::Shift) != InputModifier::None) {
+		out << " Shift";
+	}
+	if ((mod & InputModifier::CapsLock) != InputModifier::None) {
+		out << " CapsLock";
+	}
+	if ((mod & InputModifier::Ctrl) != InputModifier::None) {
+		out << " Ctrl";
+	}
+	if ((mod & InputModifier::Alt) != InputModifier::None) {
+		out << " Alt";
+	}
+	if ((mod & InputModifier::NumLock) != InputModifier::None) {
+		out << " NumLock";
+	}
+	if ((mod & InputModifier::Mod3) != InputModifier::None) {
+		out << " Mod3";
+	}
+	if ((mod & InputModifier::Mod4) != InputModifier::None) {
+		out << " Mod4";
+	}
+	if ((mod & InputModifier::Mod5) != InputModifier::None) {
+		out << " Mod5";
+	}
+	if ((mod & InputModifier::LayoutAlternative) != InputModifier::None) {
+		out << " LayoutAlternative";
+	}
+	if ((mod & InputModifier::ShiftL) != InputModifier::None) {
+		out << " ShiftL";
+	}
+	if ((mod & InputModifier::ShiftR) != InputModifier::None) {
+		out << " ShiftR";
+	}
+	if ((mod & InputModifier::CtrlL) != InputModifier::None) {
+		out << " CtrlL";
+	}
+	if ((mod & InputModifier::CtrlR) != InputModifier::None) {
+		out << " CtrlR";
+	}
+	if ((mod & InputModifier::AltL) != InputModifier::None) {
+		out << " AltL";
+	}
+	if ((mod & InputModifier::AltR) != InputModifier::None) {
+		out << " AltR";
+	}
+	if ((mod & InputModifier::Mod3L) != InputModifier::None) {
+		out << " Mod3L";
+	}
+	if ((mod & InputModifier::Mod3L) != InputModifier::None) {
+		out << " Mod3L";
+	}
+	if ((mod & InputModifier::Mod4L) != InputModifier::None) {
+		out << " Mod4L";
+	}
+	if ((mod & InputModifier::Mod4R) != InputModifier::None) {
+		out << " Mod4R";
+	}
+	if ((mod & InputModifier::ScrollLock) != InputModifier::None) {
+		out << " ScrollLock";
+	}
 	return out.str();
 }
 
@@ -1969,20 +2264,23 @@ String getInputModifiersNames(InputModifier mod) {
 const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
 
 #endif
-}
+} // namespace stappler::xenolith::core
 
 namespace std {
 
-std::ostream &operator<<(std::ostream &stream, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode code) {
+std::ostream &operator<<(std::ostream &stream,
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputKeyCode code) {
 	stream << "InputKeyCode(" << STAPPLER_VERSIONIZED_NAMESPACE::toInt(code) << ", "
-			<< getInputKeyCodeName(code) << ", " << getInputKeyCodeKeyName(code) << ")";
+		   << getInputKeyCodeName(code) << ", " << getInputKeyCodeKeyName(code) << ")";
 	return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName name) {
-	stream << "InputEventName(" << STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::getInputEventName(name) << ")";
+std::ostream &operator<<(std::ostream &stream,
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::InputEventName name) {
+	stream << "InputEventName("
+		   << STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::getInputEventName(name) << ")";
 	return stream;
 }
 
 
-}
+} // namespace std

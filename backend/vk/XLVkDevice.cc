@@ -226,8 +226,8 @@ bool Device::init(const vk::Instance *inst, DeviceInfo &&info, const Features &f
 		}
 		count = std::min(count,
 				std::min(info.count, uint32_t(std::thread::hardware_concurrency())));
-		_families.emplace_back(core::DeviceQueueFamily(
-				{info.index, count, preferred, info.flags, info.minImageTransferGranularity}));
+		_families.emplace_back(core::DeviceQueueFamily({info.index, count, preferred, info.flags,
+			info.timestampValidBits, info.minImageTransferGranularity}));
 	};
 
 	_presentMask = info.presentFamily.presentSurfaceMask;
@@ -410,6 +410,11 @@ Rc<core::ImageView> Device::makeImageView(const Rc<core::ImageObject> &img,
 
 Rc<core::CommandPool> Device::makeCommandPool(uint32_t family, core::QueueFlags flags) {
 	return Rc<CommandPool>::create(*this, family, flags);
+}
+
+Rc<core::QueryPool> Device::makeQueryPool(uint32_t family, core::QueueFlags flags,
+		const core::QueryPoolInfo &info) {
+	return Rc<QueryPool>::create(*this, family, flags, info);
 }
 
 Rc<core::TextureSet> Device::makeTextureSet(const core::TextureSetLayout &layout) {

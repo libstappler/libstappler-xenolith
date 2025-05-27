@@ -267,8 +267,12 @@ float Director::getSpf() const {
 	return _view->getPresentationEngine()->getLastFrameTime() / 1000.0f;
 }
 
-float Director::getDeviceFrameTime() const {
-	return _engine ? _engine->getLastDeviceFrameTime() / 1000.0f : 1.0f;
+float Director::getFenceFrameTime() const {
+	return _engine ? _engine->getLastFenceFrameTime() / 1000.0f : 1.0f;
+}
+
+float Director::getTimestampFrameTime() const {
+	return _engine ? _engine->getLastTimestampFrameTime() / 1000.0f : 1.0f;
 }
 
 void Director::autorelease(Ref *ref) { _autorelease.emplace_back(ref); }

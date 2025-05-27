@@ -74,7 +74,7 @@ void ParticleEmitter::pushCommands(FrameInfo &frame, NodeFlags flags) {
 
 	handle->particleEmitters.emplace(_system->getId(), particleSystem);
 
-	handle->commands->pushParticleEmitter(move(particleSystem), targetTransform,
+	handle->commands->pushParticleEmitter(_system->getId(), move(particleSystem), targetTransform,
 			buildCmdInfo(frame), _commandFlags);
 }
 

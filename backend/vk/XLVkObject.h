@@ -118,8 +118,6 @@ public:
 	const ImageMemoryBarrier *getPendingBarrier() const;
 	void dropPendingBarrier();
 
-	VkImageAspectFlags getAspectMask() const;
-
 	bool bindMemory(Rc<DeviceMemory> &&, VkDeviceSize = 0);
 
 protected:

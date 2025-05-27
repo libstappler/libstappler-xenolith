@@ -54,8 +54,6 @@ public:
 		Flags flags;
 		Color4F backgroundColor = Color4F::WHITE;
 
-		const AttachmentData *shadowSdfAttachment = nullptr;
-		const AttachmentData *lightsAttachment = nullptr;
 		const AttachmentData *particleAttachment = nullptr;
 	};
 
@@ -98,7 +96,6 @@ public:
 	virtual bool prepare(FrameQueue &q, Function<void(bool)> &&cb) override;
 
 protected:
-	virtual void prepareRenderPass(CommandBuffer &) override;
 	virtual void prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &buf) override;
 
 	// shadows

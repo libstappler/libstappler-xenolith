@@ -54,6 +54,7 @@ struct SP_PUBLIC CmdVertexArray : CmdInfo {
 struct SP_PUBLIC CmdParticleEmitter : CmdInfo {
 	Rc<ParticleSystemData> data;
 	Mat4 transform;
+	uint64_t id = 0;
 };
 
 struct SP_PUBLIC CmdDeferred : CmdInfo {
@@ -105,7 +106,7 @@ public:
 	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view,
 			const Mat4 &model, bool normalized, CmdInfo &&info, CommandFlags = CommandFlags::None);
 
-	void pushParticleEmitter(Rc<ParticleSystemData> &&, const Mat4 &, CmdInfo &&info,
+	void pushParticleEmitter(uint64_t id, Rc<ParticleSystemData> &&, const Mat4 &, CmdInfo &&info,
 			CommandFlags = CommandFlags::None);
 
 	const Command *getFirst() const { return _first; }

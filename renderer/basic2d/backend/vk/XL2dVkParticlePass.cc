@@ -26,6 +26,7 @@
 #include "XL2dCommandList.h"
 #include "XL2dParticleSystem.h"
 #include "XL2dFrameContext.h"
+#include "XLCoreAttachment.h"
 #include "XLCoreEnum.h"
 #include "XLCoreInfo.h"
 #include "XLCoreQueueData.h"
@@ -35,11 +36,27 @@
 #include "XLVkDevice.h"
 #include "XLVkDeviceQueue.h"
 #include "glsl/XL2dShaders.h"
+#include "glsl/include/XL2dGlslParticle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
+uint32_t ParticleEmitterAttachmentHandle::getEmitterIndex(uint64_t id) const {
+	auto it = _emittersIndex.find(id);
+	if (it != _emittersIndex.end()) {
+		return it->second;
+	}
+	return maxOf<uint32_t>();
+}
+
+void ParticleEmitterAttachmentHandle::enumerateAttachmentObjects(
+		const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &cb) {
+	using namespace core;
+	cb(_vertices.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _vertices->getSize()));
+	cb(_commands.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _commands->getSize()));
+}
+
 Vector<uint64_t> ParticlePersistentData::updateEmitters(DeviceMemoryPool *pool,
-		const memory::map<uint64_t, Rc<ParticleSystemData>> &data) {
+		const memory::map<uint64_t, Rc<ParticleSystemData>> &data, uint64_t clock) {
 	Vector<uint64_t> ret;
 	auto it = _emitters.begin();
 	while (it != _emitters.end()) {
@@ -59,54 +76,14 @@ Vector<uint64_t> ParticlePersistentData::updateEmitters(DeviceMemoryPool *pool,
 		auto v = _emitters.find(it.first);
 		if (v == _emitters.end()) {
 			emplace_ordered(ret, it.first);
-			addEmitter(pool, it.first, it.second);
+			addEmitter(pool, it.first, it.second, clock);
 		}
 	}
 
 	return ret;
 }
 
-static constexpr uint32_t ParticlePersistentData_getFirstParticleIndex() {
-	VkDeviceSize emitterBufferSize = sizeof(ParticleEmitterData) + sizeof(ParticleEmissionPoints);
-	return (emitterBufferSize - 1) / sizeof(ParticleData) + 1;
-}
-
-static VkDeviceSize ParticlePersistentData_getBufferSize(ParticleSystemData *s) {
-	uint32_t firstParticle = ParticlePersistentData_getFirstParticleIndex();
-
-	auto bufferSize = (firstParticle + s->data.count) * sizeof(ParticleData);
-
-	ParticleEmissionPoints emissionPoints;
-
-	if (s->data.emissionType == 0) {
-		if (s->emissionPoints.size() > 1) {
-			bufferSize += s->emissionPoints.size() * sizeof(float) * 2;
-		}
-	}
-	return bufferSize;
-}
-
-static void ParticlePersistentData_fillBufferPrefix(uint8_t *ptr, ParticleSystemData *s) {
-	uint32_t firstParticle = ParticlePersistentData_getFirstParticleIndex();
-	auto particleBufferSize = (firstParticle + s->data.count) * sizeof(ParticleData);
-
-	memcpy(ptr, &s->data, sizeof(ParticleEmitterData));
-
-	ParticleEmissionPoints emissionPoints;
-	if (s->data.emissionType == 0) {
-		if (s->emissionPoints.size() == 1) {
-			emissionPoints.singlePoint = s->emissionPoints.front();
-			emissionPoints.offset = 0;
-		} else {
-			emissionPoints.offset = particleBufferSize / sizeof(float);
-		}
-	}
-	memcpy(ptr + sizeof(ParticleEmitterData), &emissionPoints, sizeof(ParticleEmissionPoints));
-}
-
-static void ParticlePersistentData_fillBufferSuffix(uint8_t *ptr, ParticleSystemData *s,
-		uint32_t particleCount) {
-
+static void ParticlePersistentData_initParticles(uint8_t *ptr, uint32_t particleCount) {
 	// initialize randomizer
 	Vector<glsl::pcg16_state_t> randomdata;
 	randomdata.resize(particleCount);
@@ -118,137 +95,139 @@ static void ParticlePersistentData_fillBufferSuffix(uint8_t *ptr, ParticleSystem
 
 	auto particle = reinterpret_cast<ParticleData *>(ptr);
 
-	for (size_t i = 0; i < s->data.count; ++i) {
+	for (size_t i = 0; i < particleCount; ++i) {
 		auto &init = randomdata[i];
 
 		// Note - do not set values directly, use GLSL-compatible function
 		glsl::pcg16_srandom_r(particle->rng, init.state, init.inc);
 		++particle;
 	}
-
-	if (s->emissionPoints.size() > 1) {
-		memcpy(particle, s->emissionPoints.data(), s->emissionPoints.size() * sizeof(float) * 2);
-	}
-}
-
-static void ParticlePersistentData_fillBuffer(uint8_t *ptr, ParticleSystemData *s,
-		uint32_t particleOffset) {
-	uint32_t firstParticle = ParticlePersistentData_getFirstParticleIndex();
-	ParticlePersistentData_fillBufferPrefix(ptr, s);
-	ParticlePersistentData_fillBufferSuffix(ptr + firstParticle * sizeof(ParticleData), s,
-			s->data.count);
 }
 
 void ParticlePersistentData::updateEmitter(DeviceMemoryPool *pool, EmitterData &e,
 		ParticleSystemData *s) {
-	if (e.systemData->data.count == s->data.count
-			&& e.systemData->data.emissionType == s->data.emissionType
-			&& e.systemData->emissionPoints == s->emissionPoints) {
-		// update only emitter data
-		auto stagingBuffer = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
-						sizeof(ParticleEmitterData)));
-
-		e.systemData = s;
-
-		stagingBuffer->map([&](uint8_t *ptr, VkDeviceSize) {
-			memcpy(ptr, &s->data, sizeof(ParticleEmitterData));
-		}, DeviceMemoryAccess::Flush);
-
-		_staging.emplace_back(
-				StagingData{pool, stagingBuffer, 0, e.buffer, 0, sizeof(ParticleEmitterData)});
+	uint32_t patchCount = 0;
+	uint32_t persistCount = 0;
+	if (e.systemData->data.count < s->data.count) {
+		patchCount = s->data.count - e.systemData->data.count;
+		persistCount = e.systemData->data.count;
 	} else {
-		auto bufferSize = ParticlePersistentData_getBufferSize(s);
-
-		auto targetBuffer = pool->spawnPersistent(AllocationUsage::DeviceLocal,
-				BufferInfo(core::BufferUsage::StorageBuffer, bufferSize));
-
-		VkDeviceSize particlesOffet =
-				ParticlePersistentData_getFirstParticleIndex() * sizeof(ParticleData);
-		VkDeviceSize prefixSize = sizeof(ParticleEmitterData) + sizeof(ParticleEmissionPoints);
-		VkDeviceSize suffixOffset = prefixSize;
-		VkDeviceSize particlesSize = 0;
-
-		uint32_t newParticles = 0;
-		if (s->data.count > e.systemData->data.count) {
-			newParticles = s->data.count - e.systemData->data.count;
-			suffixOffset += e.systemData->data.count * sizeof(ParticleData);
-			particlesSize = e.systemData->data.count * sizeof(ParticleData);
-		} else {
-			suffixOffset += s->data.count * sizeof(ParticleData);
-			particlesSize = s->data.count * sizeof(ParticleData);
-		}
-
-		VkDeviceSize suffixSize = newParticles * sizeof(ParticleData);
-
-		if (s->emissionPoints.size() > 1) {
-			suffixSize += s->emissionPoints.size() * sizeof(float) * 2;
-		}
-
-		auto stagingPrefix = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), prefixSize));
-
-		auto stagingSuffix = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), suffixSize));
-
-		stagingPrefix->map([&](uint8_t *ptr, VkDeviceSize) {
-			ParticlePersistentData_fillBufferPrefix(ptr, s);
-		}, DeviceMemoryAccess::Flush);
-
-		stagingSuffix->map([&](uint8_t *ptr, VkDeviceSize) {
-			ParticlePersistentData_fillBufferSuffix(ptr, s, newParticles);
-		}, DeviceMemoryAccess::Flush);
-
-		_staging.emplace_back(StagingData{pool, stagingPrefix, 0, targetBuffer, 0, prefixSize});
-		_staging.emplace_back(
-				StagingData{pool, stagingSuffix, 0, targetBuffer, suffixOffset, suffixSize});
-		_staging.emplace_back(StagingData{nullptr, e.buffer, particlesOffet, targetBuffer,
-			particlesOffet, particlesSize});
-
-		e.buffer = targetBuffer;
-		e.systemData = s;
+		persistCount = s->data.count;
 	}
+
+	auto newEmitterData = spawnEmitter(pool, e.id, s, patchCount, e.clock);
+
+	_staging.emplace_back(StagingData{
+		nullptr,
+		e.particles,
+		0,
+		newEmitterData.particles,
+		0,
+		persistCount * sizeof(ParticleData),
+	});
+
+	e = move(newEmitterData);
 }
 
-void ParticlePersistentData::addEmitter(DeviceMemoryPool *pool, uint64_t id,
-		ParticleSystemData *s) {
-	auto bufferSize = ParticlePersistentData_getBufferSize(s);
+void ParticlePersistentData::addEmitter(DeviceMemoryPool *pool, uint64_t id, ParticleSystemData *s,
+		uint64_t clock) {
+	_emitters.emplace(id, spawnEmitter(pool, id, s, s->data.count, clock));
+}
 
-	auto targetBuffer = pool->spawnPersistent(AllocationUsage::DeviceLocal,
-			BufferInfo(core::BufferUsage::StorageBuffer, bufferSize));
+ParticlePersistentData::EmitterData ParticlePersistentData::spawnEmitter(DeviceMemoryPool *pool,
+		uint64_t id, ParticleSystemData *s, uint32_t initParticles, uint64_t clock) {
+	auto addStaging = [&](Buffer *buf, VkDeviceSize size, VkDeviceSize offset) {
+		auto stage = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
+				BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), size));
 
-	auto stagingBuffer = pool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc), bufferSize));
+		_staging.emplace_back(StagingData{
+			pool,
+			move(stage),
+			0,
+			buf,
+			offset,
+			size,
+		});
 
-	stagingBuffer->map([&](uint8_t *ptr, VkDeviceSize) {
-		ParticlePersistentData_fillBuffer(ptr, s, 0);
+		return stage;
+	};
+
+	auto alloc = pool->getAllocator();
+
+	auto emitterBuffer = alloc->preallocate(
+			BufferInfo(core::BufferUsage::ShaderDeviceAddress, sizeof(ParticleEmitterData)));
+	auto particlesBuffer = alloc->preallocate(BufferInfo(core::BufferUsage::ShaderDeviceAddress,
+			sizeof(ParticleData) * s->data.count));
+
+	Rc<Buffer> emissionData;
+	if (s->data.emissionType == 0) {
+		emissionData = alloc->preallocate(BufferInfo(core::BufferUsage::ShaderDeviceAddress,
+				sizeof(ParticleEmissionPoints) + s->emissionPoints.size() * sizeof(Vec2)));
+	}
+
+	Buffer *buffers[] = {emitterBuffer.get(), particlesBuffer.get(), emissionData.get()};
+
+	alloc->emplaceObjects(AllocationUsage::DeviceLocal, SpanView<Image *>(), makeSpanView(buffers));
+
+	s->data.emissionData = UVec2::convertFromPacked(emissionData->getDeviceAddress());
+
+	addStaging(emitterBuffer, emitterBuffer->getSize(), 0)
+			->map([&](uint8_t *ptr, VkDeviceSize size) { ::memcpy(ptr, &s->data, size); },
+					DeviceMemoryAccess::Flush);
+
+	if (initParticles > 0) {
+		auto fullSize = particlesBuffer->getSize();
+		auto patchSize = sizeof(ParticleData) * initParticles;
+		auto offset = fullSize - patchSize;
+
+		addStaging(particlesBuffer, patchSize, offset)->map([&](uint8_t *ptr, VkDeviceSize size) {
+			ParticlePersistentData_initParticles(ptr, initParticles);
+		}, DeviceMemoryAccess::Flush);
+	}
+
+	addStaging(emissionData, emissionData->getSize(), 0)->map([&](uint8_t *ptr, VkDeviceSize size) {
+		auto points = reinterpret_cast<ParticleEmissionPoints *>(ptr);
+		points->count = static_cast<uint32_t>(s->emissionPoints.size());
+		ptr += sizeof(ParticleEmissionPoints);
+		memcpy(ptr, s->emissionPoints.data(), s->emissionPoints.size() * sizeof(Vec2));
 	}, DeviceMemoryAccess::Flush);
 
-	_emitters.emplace(id, EmitterData{id, targetBuffer, s});
-	_staging.emplace_back(StagingData{pool, stagingBuffer, 0, targetBuffer, 0, bufferSize});
+	return EmitterData{
+		id,
+		clock,
+		move(emitterBuffer),
+		move(particlesBuffer),
+		move(emissionData),
+		Vector<Rc<Buffer>>(),
+		s,
+	};
 }
 
 bool ParticleEmitterAttachment::init(AttachmentBuilder &builder) {
-	if (!vk::BufferAttachment::init(builder,
-				BufferInfo(core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
-						core::PassType::Compute))) {
+	if (!core::GenericAttachment::init(builder)) {
 		return false;
 	}
 
 	builder.setInputValidationCallback([](const core::AttachmentInputData *) { return true; });
 
+	_frameHandleCallback = [&](Attachment &a, const FrameQueue &q) -> Rc<AttachmentHandle> {
+		return Rc<ParticleEmitterAttachmentHandle>::create(a, q);
+	};
+
 	builder.setInputSubmissionCallback(
-			[this](FrameQueue &q, AttachmentHandle &a, core::AttachmentInputData *d,
-					Function<void(bool)> &&cb) { handleInput(q, a, d, sp::move(cb)); });
+			[&](FrameQueue &q, AttachmentHandle &handle, core::AttachmentInputData *d,
+					Function<void(bool)> &&cb) {
+		handleInput(q, static_cast<ParticleEmitterAttachmentHandle &>(handle), d, sp::move(cb));
+	});
+
 
 	return true;
 }
 
-void ParticleEmitterAttachment::handleInput(FrameQueue &q, AttachmentHandle &handle,
+void ParticleEmitterAttachment::handleInput(FrameQueue &q, ParticleEmitterAttachmentHandle &handle,
 		core::AttachmentInputData *d, Function<void(bool)> &&complete) {
 	auto ctx = static_cast<FrameContextHandle2d *>(d);
 	auto dFrame = q.getFrame().get_cast<DeviceFrameHandle>();
-	auto &bufHandle = static_cast<BufferAttachmentHandle &>(handle);
 
 	if (!d) {
 		complete(false);
@@ -257,41 +236,7 @@ void ParticleEmitterAttachment::handleInput(FrameQueue &q, AttachmentHandle &han
 	Vector<uint64_t> ids;
 
 	if (!ctx->particleEmitters.empty()) {
-		ids = _data->updateEmitters(dFrame->getMemPool(nullptr), ctx->particleEmitters);
-	}
-
-	for (auto &it : _data->getEmitters()) {
-		bufHandle.addBufferView(it.second.buffer, 0, it.second.buffer->getSize(),
-				exists_ordered(ids, it.first));
-	}
-
-	complete(true);
-}
-
-bool ParticleVertexAttachment::init(AttachmentBuilder &builder) {
-	if (!vk::BufferAttachment::init(builder,
-				BufferInfo(core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
-						core::PassType::Compute))) {
-		return false;
-	}
-
-	builder.setInputValidationCallback([](const core::AttachmentInputData *) { return true; });
-
-	builder.setInputSubmissionCallback(
-			[this](FrameQueue &q, AttachmentHandle &a, core::AttachmentInputData *d,
-					Function<void(bool)> &&cb) { handleInput(q, a, d, sp::move(cb)); });
-
-	return true;
-}
-
-void ParticleVertexAttachment::handleInput(FrameQueue &q, AttachmentHandle &handle,
-		core::AttachmentInputData *d, Function<void(bool)> &&complete) {
-	auto ctx = static_cast<FrameContextHandle2d *>(d);
-	auto dFrame = q.getFrame().get_cast<DeviceFrameHandle>();
-	auto &bufHandle = static_cast<BufferAttachmentHandle &>(handle);
-
-	if (!ctx) {
-		complete(false);
+		ids = _data->updateEmitters(dFrame->getMemPool(nullptr), ctx->particleEmitters, ctx->clock);
 	}
 
 	if (!ctx->particleEmitters.empty()) {
@@ -303,18 +248,22 @@ void ParticleVertexAttachment::handleInput(FrameQueue &q, AttachmentHandle &hand
 
 		auto vertexBuffer = alloc->spawn(AllocationUsage::DeviceLocal,
 				BufferInfo(core::BufferUsage::StorageBuffer, core::BufferUsage::TransferDst,
-						sizeof(ParticleVertex) * nVertexes * 4));
-		auto indexBuffer = alloc->spawn(AllocationUsage::DeviceLocal,
-				BufferInfo(core::BufferUsage::StorageBuffer, core::BufferUsage::IndexBuffer,
-						core::BufferUsage::TransferDst, sizeof(uint32_t) * nVertexes * 6));
+						sizeof(Vertex) * nVertexes * 6));
 		auto indirectBuffer = alloc->spawn(AllocationUsage::DeviceLocal,
 				BufferInfo(core::BufferUsage::StorageBuffer, core::BufferUsage::IndirectBuffer,
 						core::BufferUsage::TransferDst,
 						sizeof(ParticleIndirectCommand) * ctx->particleEmitters.size()));
 
-		bufHandle.addBufferView(vertexBuffer);
-		bufHandle.addBufferView(indexBuffer);
-		bufHandle.addBufferView(indirectBuffer);
+		handle._vertices = vertexBuffer;
+		handle._commands = indirectBuffer;
+
+		handle._data = _data;
+
+		uint32_t index = 0;
+		for (auto &it : _data->getEmitters()) {
+			handle._emittersIndex.emplace(it.first, index);
+			++index;
+		}
 	}
 
 	complete(true);
@@ -324,26 +273,14 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 		const AttachmentData *outVertexes) {
 	using namespace core;
 
-	_vertexes = outVertexes;
+	_emitters = outVertexes;
 
-	_emitters = queueBuilder.addAttachemnt(FrameContext2d::ParticleEmittersAttachment,
-			[&](AttachmentBuilder &builder) -> Rc<Attachment> {
-		builder.defineAsInput();
-
-		return Rc<ParticleEmitterAttachment>::create(builder);
-	});
-
-	passBuilder.addAttachment(_emitters);
-	passBuilder.addAttachment(_vertexes,
+	passBuilder.addAttachment(_emitters,
 			AttachmentDependencyInfo::make(PipelineStage::ComputeShader, AccessType::ShaderWrite));
 
 	auto layout = passBuilder.addDescriptorLayout("ParticleLayout",
-			[&, this](PipelineLayoutBuilder &layoutBuilder) {
+			[](PipelineLayoutBuilder &layoutBuilder) {
 		// Vertex input attachment - per-frame vertex list
-		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
-			setBuilder.addDescriptor(passBuilder.addAttachment(_emitters));
-			setBuilder.addDescriptor(passBuilder.addAttachment(_vertexes));
-		});
 	});
 
 	// clang-format off
@@ -353,12 +290,7 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 
 		subpassBuilder.addComputePipeline(UpdatePipelineName, layout->defaultFamily,
 			SpecializationInfo(
-				particleUpdateComp,
-				Vector<SpecializationConstant>{
-					SpecializationConstant([](const core::Device &dev, const PipelineLayoutData &) -> SpecializationConstant {
-						return SpecializationConstant(getMaxEmitterCount(dev));
-					})
-				}
+				particleUpdateComp
 			)
 		);
 
@@ -368,8 +300,12 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 	});
 	// clang-format on
 
-	passBuilder.setAvailabilityChecker(
-			[](const FrameQueue &, const QueuePassData &) { return false; });
+	passBuilder.setAvailabilityChecker([this](const FrameQueue &queue, const QueuePassData &) {
+		auto fHandle = queue.getAttachment(_emitters);
+		auto aHandle = fHandle->handle.get_cast<ParticleEmitterAttachmentHandle>();
+
+		return aHandle->hasInput();
+	});
 
 	if (!QueuePass::init(passBuilder)) {
 		return false;
@@ -378,85 +314,89 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 	return true;
 }
 
-uint32_t ParticlePass::getMaxEmitterCount(const core::Device &coreDevice) {
-	auto &dev = static_cast<const vk::Device &>(coreDevice);
-	auto maxBuffers =
-			dev.getInfo().properties.device10.properties.limits.maxPerStageDescriptorStorageBuffers;
-	return (maxBuffers - 3) / 2;
-}
-
 void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::FrameQueue &queue,
 		core::CommandBuffer &cbuf) {
 	auto dFrame = queue.getFrame().get_cast<DeviceFrameHandle>();
+	auto memPool = dFrame->getMemPool(nullptr);
+
 	auto &buf = static_cast<vk::CommandBuffer &>(cbuf);
 	auto it = subpass.computePipelines.find(UpdatePipelineName);
 	if (it == subpass.computePipelines.end()) {
 		return;
 	}
 
-	auto memPool = dFrame->getMemPool(nullptr);
+	auto fHandle = queue.getAttachment(_emitters);
+
+	auto attachment = _emitters->attachment.get_cast<ParticleEmitterAttachment>();
+	auto aHandle = fHandle->handle.get_cast<ParticleEmitterAttachmentHandle>();
+	auto ctx = static_cast<FrameContextHandle2d *>(aHandle->getInput());
+	auto data = attachment->getData();
+
 	auto transferIndirectBuffer = memPool->spawn(AllocationUsage::DeviceLocalHostVisible,
 			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
-					sizeof(ParticleIndirectCommand) * _data->getEmitters().size()));
+					sizeof(ParticleIndirectCommand) * data->getEmitters().size()));
 
 	transferIndirectBuffer->map([&](uint8_t *buf, VkDeviceSize bufSize) {
 		auto target = reinterpret_cast<ParticleIndirectCommand *>(buf);
 
-		uint32_t firstIndex = 0;
 		uint32_t vertexOffset = 0;
 
-		for (auto &e : _data->getEmitters()) {
-			target->indexCount = 0;
+		for (auto &e : data->getEmitters()) {
+			target->vertexCount = 0;
 			target->instanceCount = 1;
-			target->firstIndex = firstIndex;
-			target->vertexOffset = vertexOffset;
+			target->firstVertex = vertexOffset;
 			target->firstInstance = 0;
-			target->padding20 = 0;
-			target->padding24 = 0;
-			target->padding28 = 0;
 
-			vertexOffset += e.second.systemData->data.count * 4;
-			firstIndex += e.second.systemData->data.count * 6;
+			vertexOffset += e.second.systemData->data.count * 6;
 
 			++target;
 		}
 	}, DeviceMemoryAccess::Flush);
 
-	ParticlePushConstantBlock pcb;
-	pcb.emitterIndex = 0;
-	pcb.vertexOffset = 0;
-	pcb.indexOffset = 0;
-	pcb.nframes = 1;
-
-	auto vertexHandle = queue.getAttachment(_vertexes)->handle.get_cast<BufferAttachmentHandle>();
-
 	Vector<BufferMemoryBarrier> barriers;
 
-	auto indirectBuffer = vertexHandle->getBuffers().at(2).buffer.get();
+	auto indirectBuffer = aHandle->getCommands();
 
 	buf.cmdCopyBuffer(transferIndirectBuffer, indirectBuffer);
 
 	barriers.emplace_back(BufferMemoryBarrier(indirectBuffer, VK_ACCESS_TRANSFER_WRITE_BIT,
 			VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT));
 
-	for (auto it : _data->getStaging()) {
+	for (auto it : data->getStaging()) {
 		buf.cmdCopyBuffer(it.source, it.target, it.sourceOffset, it.targetOffset, it.size);
 		barriers.emplace_back(BufferMemoryBarrier(it.target, VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT, it.targetOffset, it.size));
+				VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT, it.targetOffset, it.size));
 	}
 
 	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
 			barriers);
 
+	ParticleConstantData pcb;
+
 	buf.cmdBindPipelineWithDescriptors((*it), 0);
 
-	for (auto &e : _data->getEmitters()) {
-		pcb.vertexOffset += e.second.systemData->data.count * 4;
-		pcb.indexOffset += e.second.systemData->data.count * 6;
+	uint64_t vertexAddress = buf.bindBufferAddress(aHandle->getVertices());
+	uint64_t commandsAddress = buf.bindBufferAddress(aHandle->getCommands());
+
+	for (auto &e : data->getEmitters()) {
+		auto dt = float(ctx->clock - e.second.clock) / 1'000'000;
+
+		auto v = dt / e.second.systemData->data.frameInterval;
+
+		pcb.nframes = static_cast<uint32_t>(std::ceil(v));
+		pcb.dt = pcb.nframes * e.second.systemData->data.frameInterval;
+
+		pcb.outVerticesPointer = UVec2::convertFromPacked(vertexAddress);
+		pcb.outCommandPointer = UVec2::convertFromPacked(commandsAddress);
+		pcb.emitterPointer = UVec2::convertFromPacked(e.second.emitter->getDeviceAddress());
+		pcb.particlesPointer = UVec2::convertFromPacked(e.second.particles->getDeviceAddress());
+
 		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
-				BytesView((const uint8_t *)&pcb, sizeof(ParticlePushConstantBlock)));
+				BytesView((const uint8_t *)&pcb, sizeof(ParticleConstantData)));
 		buf.cmdDispatchPipeline(*it, e.second.systemData->data.count);
-		++pcb.emitterIndex;
+
+		e.second.clock += static_cast<uint64_t>(
+				pcb.nframes * e.second.systemData->data.frameInterval * 1'000'000);
 	}
 }
 

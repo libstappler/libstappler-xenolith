@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,11 +53,9 @@ public:
 
 	const uint32_t &getImageCount() const { return _imageCount; }
 	const uint32_t &getSamplersCount() const { return _samplersCount; }
-	const uint32_t &getBuffersCount() const { return _bufferCount; }
 
 	const ImageData *getEmptyImage() const { return _emptyImage; }
 	const ImageData *getSolidImage() const { return _solidImage; }
-	const BufferData *getEmptyBuffer() const { return _emptyBuffer; }
 
 	Rc<TextureSet> acquireSet(Device &dev);
 	void releaseSet(Rc<TextureSet> &&);
@@ -66,7 +65,6 @@ public:
 protected:
 	bool _partiallyBound = false;
 	uint32_t _imageCount = 0;
-	uint32_t _bufferCount = 0;
 	uint32_t _samplersCount = 0;
 
 	mutable Mutex _mutex;
@@ -75,9 +73,8 @@ protected:
 
 	const ImageData *_emptyImage = nullptr;
 	const ImageData *_solidImage = nullptr;
-	const BufferData *_emptyBuffer = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCORETEXTURESET_H_ */

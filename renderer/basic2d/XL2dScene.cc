@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -76,9 +77,7 @@ bool Scene2d::FpsDisplay::init(font::FontController *fontController) {
 		_label->setAnchorPoint(Anchor::BottomLeft);
 		_label->setColor(Color::Black, true);
 		_label->setFontSize(16);
-		_label->setContentSizeDirtyCallback([this] {
-			setContentSize(_label->getContentSize());
-		});
+		_label->setContentSizeDirtyCallback([this] { setContentSize(_label->getContentSize()); });
 		_label->setPersistentLayout(true);
 		_label->addCommandFlags(CommandFlags::DoNotCount);
 	}
@@ -93,44 +92,44 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 	if (_director) {
 		auto fps = _director->getAvgFps();
 		auto spf = _director->getSpf();
-		auto local = _director->getDeviceFrameTime();
+		auto fenceTime = _director->getFenceFrameTime();
+		auto timestampTime = _director->getTimestampFrameTime();
 		auto stat = _director->getDrawStat();
 		auto tm = _director->getDirectorFrameTime();
-		auto vertex = stat.vertexInputTime / float(1000);
+		auto vertex = stat.vertexInputTime / float(1'000);
 
 		if (_label) {
 			String str;
 			switch (_mode) {
 			case Fps:
-				str = toString(std::setprecision(3),
-					"FPS: ", fps, " SPF: ", spf, "\nGPU: ", local, "\nDir: ", tm, " Ver: ", vertex,
-					"\nF12 to switch");
+				str = toString(std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
+						"\nGPU: ", fenceTime, " (", timestampTime, ")", "\nDir: ", tm,
+						" Ver: ", vertex, "\nF12 to switch");
 				break;
 			case Vertexes:
-				str = toString(std::setprecision(3),
-					"V:", stat.vertexes, " T:", stat.triangles, "\nZ:", stat.zPaths, " C:", stat.drawCalls, " M: ", stat.materials, "\n",
-					stat.solidCmds, "/", stat.surfaceCmds, "/", stat.transparentCmds,
-					"\nF12 to switch");
+				str = toString(std::setprecision(3), "V:", stat.vertexes, " T:", stat.triangles,
+						"\nZ:", stat.zPaths, " C:", stat.drawCalls, " M: ", stat.materials, "\n",
+						stat.solidCmds, "/", stat.surfaceCmds, "/", stat.transparentCmds,
+						"\nF12 to switch");
 				break;
 			case Cache:
-				str = toString(std::setprecision(3),
-					"Cache:", stat.cachedFramebuffers, "/", stat.cachedImages, "/", stat.cachedImageViews,
-					"\nF12 to switch");
+				str = toString(std::setprecision(3), "Cache:", stat.cachedFramebuffers, "/",
+						stat.cachedImages, "/", stat.cachedImageViews, "\nF12 to switch");
 				break;
 			case Full:
-				str = toString(std::setprecision(3),
-					"FPS: ", fps, " SPF: ", spf, "\nGPU: ", local, "\nDir: ", tm, " Ver: ", vertex, "\n",
-					"V:", stat.vertexes, " T:", stat.triangles, "\nZ:", stat.zPaths, " C:", stat.drawCalls, " M: ", stat.materials, "\n",
-					stat.solidCmds, "/", stat.surfaceCmds, "/", stat.transparentCmds, "\n",
-					"Cache:", stat.cachedFramebuffers, "/", stat.cachedImages, "/", stat.cachedImageViews,
-					"\nF12 to switch");
+				str = toString(std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
+						"\nGPU: ", fenceTime, " (", timestampTime, ")", "\nDir: ", tm,
+						" Ver: ", vertex, "\n", "V:", stat.vertexes, " T:", stat.triangles,
+						"\nZ:", stat.zPaths, " C:", stat.drawCalls, " M: ", stat.materials, "\n",
+						stat.solidCmds, "/", stat.surfaceCmds, "/", stat.transparentCmds, "\n",
+						"Cache:", stat.cachedFramebuffers, "/", stat.cachedImages, "/",
+						stat.cachedImageViews, "\nF12 to switch");
 				break;
-			default:
-				break;
+			default: break;
 			}
 			_label->setString(str);
 		}
-		++ _frames;
+		++_frames;
 	}
 }
 
@@ -166,15 +165,16 @@ void Scene2d::FpsDisplay::show() {
 }
 
 bool Scene2d::init(Application *app, const core::FrameConstraints &constraints) {
-	return init(app, [] (Queue::Builder &) { }, constraints);
+	return init(app, [](Queue::Builder &) { }, constraints);
 }
 
-bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
+bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb,
+		const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
-	basic2d::vk::ShadowPass::RenderQueueInfo info{
-		app, Extent2(constraints.extent.width, constraints.extent.height), basic2d::vk::ShadowPass::Flags::None
-	};
+	basic2d::vk::ShadowPass::RenderQueueInfo info{app,
+		Extent2(constraints.extent.width, constraints.extent.height),
+		basic2d::vk::ShadowPass::Flags::None};
 
 	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
@@ -197,9 +197,7 @@ bool Scene2d::init(Queue::Builder &&builder, const core::FrameConstraints &const
 	return true;
 }
 
-void Scene2d::update(const UpdateTime &time) {
-	xenolith::Scene::update(time);
-}
+void Scene2d::update(const UpdateTime &time) { xenolith::Scene::update(time); }
 
 void Scene2d::handleContentSizeDirty() {
 	xenolith::Scene::handleContentSizeDirty();
@@ -219,9 +217,7 @@ void Scene2d::setFpsVisible(bool value) {
 	}
 }
 
-bool Scene2d::isFpsVisible() const {
-	return _fps->isVisible();
-}
+bool Scene2d::isFpsVisible() const { return _fps->isVisible(); }
 
 void Scene2d::setContent(SceneContent *content) {
 	xenolith::Scene::setContent(content);
@@ -231,38 +227,45 @@ void Scene2d::setContent(SceneContent *content) {
 
 void Scene2d::initialize() {
 	_listener = addInputListener(Rc<InputListener>::create());
-	_listener->addKeyRecognizer([this] (const GestureData &ev) {
+	_listener->addKeyRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
 			_fps->incrementMode();
 		}
 		return true;
 	}, InputListener::makeKeyMask({InputKeyCode::F12}));
 
-	_listener->addKeyRecognizer([this] (const GestureData &ev) {
-		_pointerReal->setVisible(ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
-		_pointerVirtual->setVisible(ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
-		_pointerCenter->setVisible(ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
+	_listener->addKeyRecognizer([this](const GestureData &ev) {
+		_pointerReal->setVisible(
+				ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
+		_pointerVirtual->setVisible(
+				ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
+		_pointerCenter->setVisible(
+				ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
 		return true;
 	}, InputListener::makeKeyMask({InputKeyCode::LEFT_CONTROL}));
 
-	_listener->addTapRecognizer([this] (const GestureTap &ev) {
+	_listener->addTapRecognizer([this](const GestureTap &ev) {
 		if (_fps->isTouched(ev.input->currentLocation)) {
 			_fps->incrementMode();
 		}
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
 
-	_listener->addTouchRecognizer([this] (const GestureData &ev) {
+	_listener->addTouchRecognizer([this](const GestureData &ev) {
 		if ((ev.input->data.modifiers & InputModifier::Ctrl) == InputModifier::None) {
 			if (_data1.event != InputEventName::End && _data1.event != InputEventName::Cancel) {
 
-				updateInputEventData(_data1, ev.input->data, _content->convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
-				updateInputEventData(_data2, ev.input->data, _content->convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
+				updateInputEventData(_data1, ev.input->data,
+						_content->convertToWorldSpace(_pointerReal->getPosition().xy()),
+						maxOf<uint32_t>() - 1);
+				updateInputEventData(_data2, ev.input->data,
+						_content->convertToWorldSpace(_pointerVirtual->getPosition().xy()),
+						maxOf<uint32_t>() - 2);
 
 				_data1.event = InputEventName::Cancel;
 				_data2.event = InputEventName::Cancel;
 
-				Vector<InputEventData> events{ _data1, _data2 };
+				Vector<InputEventData> events{_data1, _data2};
 
 				_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
 			}
@@ -273,17 +276,21 @@ void Scene2d::initialize() {
 			_listener->setExclusiveForTouch(ev.input->data.id);
 		}
 
-		updateInputEventData(_data1, ev.input->data, _content->convertToWorldSpace(_pointerReal->getPosition().xy()), maxOf<uint32_t>() - 1);
-		updateInputEventData(_data2, ev.input->data, _content->convertToWorldSpace(_pointerVirtual->getPosition().xy()), maxOf<uint32_t>() - 2);
+		updateInputEventData(_data1, ev.input->data,
+				_content->convertToWorldSpace(_pointerReal->getPosition().xy()),
+				maxOf<uint32_t>() - 1);
+		updateInputEventData(_data2, ev.input->data,
+				_content->convertToWorldSpace(_pointerVirtual->getPosition().xy()),
+				maxOf<uint32_t>() - 2);
 
-		Vector<InputEventData> events{ _data1, _data2 };
+		Vector<InputEventData> events{_data1, _data2};
 
 		_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
 
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}));
 
-	_listener->addTapRecognizer([this] (const GestureTap &tap) {
+	_listener->addTapRecognizer([this](const GestureTap &tap) {
 		if ((tap.input->data.modifiers & InputModifier::Shift) != InputModifier::None
 				&& (tap.input->data.modifiers & InputModifier::Ctrl) != InputModifier::None) {
 			_pointerCenter->setPosition(_content->convertToNodeSpace(tap.input->currentLocation));
@@ -291,7 +298,7 @@ void Scene2d::initialize() {
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}), 1);
 
-	_listener->addMoveRecognizer([this] (const GestureData &ev) {
+	_listener->addMoveRecognizer([this](const GestureData &ev) {
 		auto pos = _content->convertToNodeSpace(ev.input->currentLocation);
 		auto diff = pos - _pointerCenter->getPosition().xy();
 
@@ -329,16 +336,17 @@ void Scene2d::addContentNodes(SceneContent *root) {
 	if (root) {
 		auto mainLoop = Application::getInstance();
 
-		_fps = root->addChild(Rc<FpsDisplay>::create(mainLoop->getExtension<font::FontController>()), Node::ZOrderMax);
+		_fps = root->addChild(
+				Rc<FpsDisplay>::create(mainLoop->getExtension<font::FontController>()),
+				Node::ZOrderMax);
 #if NDEBUG
 		_fps->setVisible(false);
 #endif
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
-				writer.addCircle(12, 12, 12);
-			});
+			image->addPath()->openForWriting(
+					[](vg::PathWriter &writer) { writer.addCircle(12, 12, 12); });
 
 			_pointerReal = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerReal->setAnchorPoint(Anchor::Middle);
@@ -349,9 +357,8 @@ void Scene2d::addContentNodes(SceneContent *root) {
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
-				writer.addCircle(12, 12, 12);
-			});
+			image->addPath()->openForWriting(
+					[](vg::PathWriter &writer) { writer.addCircle(12, 12, 12); });
 
 			_pointerVirtual = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerVirtual->setAnchorPoint(Anchor::Middle);
@@ -362,9 +369,8 @@ void Scene2d::addContentNodes(SceneContent *root) {
 
 		do {
 			auto image = Rc<VectorImage>::create(Size2(24, 24));
-			image->addPath()->openForWriting([] (vg::PathWriter &writer) {
-				writer.addCircle(12, 12, 12);
-			});
+			image->addPath()->openForWriting(
+					[](vg::PathWriter &writer) { writer.addCircle(12, 12, 12); });
 
 			_pointerCenter = root->addChild(Rc<VectorSprite>::create(move(image)), ZOrder::max());
 			_pointerCenter->setAnchorPoint(Anchor::Middle);
@@ -375,7 +381,8 @@ void Scene2d::addContentNodes(SceneContent *root) {
 	}
 }
 
-void Scene2d::updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 sourcePosition, uint32_t id) {
+void Scene2d::updateInputEventData(InputEventData &data, const InputEventData &source,
+		Vec2 sourcePosition, uint32_t id) {
 	auto pos = _inverse.transformPoint(sourcePosition);
 
 	data = source;
@@ -386,4 +393,4 @@ void Scene2d::updateInputEventData(InputEventData &data, const InputEventData &s
 	data.modifiers |= InputModifier::Unmanaged;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +31,15 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class DeviceQueue;
 class CommandPool;
+class QueryPool;
+
+struct SP_PUBLIC QueryPoolInfo {
+	QueryType type = QueryType::Timestamp;
+	uint32_t queryCount = 0;
+	QueryPipelineStatisticFlags statFlags = QueryPipelineStatisticFlags::None;
+
+	auto operator<=>(const QueryPoolInfo &) const = default;
+};
 
 struct SP_PUBLIC DeviceQueueFamily {
 	using FrameHandle = core::FrameHandle;
@@ -44,9 +54,12 @@ struct SP_PUBLIC DeviceQueueFamily {
 		Rc<Loop> loop;
 		Rc<Ref> ref;
 
-		Waiter(Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&a, Function<void(FrameHandle &)> &&r,
-				FrameHandle *h, Rc<Ref> &&ref)
-		: acquireForFrame(sp::move(a)), releaseForFrame(sp::move(r)), handle(h), ref(sp::move(ref)) { }
+		Waiter(Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&a,
+				Function<void(FrameHandle &)> &&r, FrameHandle *h, Rc<Ref> &&ref)
+		: acquireForFrame(sp::move(a))
+		, releaseForFrame(sp::move(r))
+		, handle(h)
+		, ref(sp::move(ref)) { }
 
 		Waiter(Function<void(Loop &, const Rc<DeviceQueue> &)> &&a, Function<void(Loop &)> &&r,
 				Loop *h, Rc<Ref> &&ref)
@@ -57,9 +70,11 @@ struct SP_PUBLIC DeviceQueueFamily {
 	uint32_t count;
 	QueueFlags preferred = QueueFlags::None;
 	QueueFlags flags = QueueFlags::None;
+	uint32_t timestampValidBits = 0;
 	Extent3 transferGranularity;
 	Vector<Rc<DeviceQueue>> queues;
 	Vector<Rc<CommandPool>> pools;
+	Map<QueryPoolInfo, Vector<Rc<QueryPool>>> queries;
 	Vector<Waiter> waiters;
 };
 
@@ -69,11 +84,12 @@ public:
 
 	bool init(Device &, uint32_t, QueueFlags);
 
-	Status submit(const FrameSync &, CommandPool &,
-			Fence &, SpanView<const CommandBuffer *>, DeviceIdleFlags = DeviceIdleFlags::None);
+	Status submit(const FrameSync &, CommandPool &, Fence &, SpanView<const CommandBuffer *>,
+			DeviceIdleFlags = DeviceIdleFlags::None);
 
 	Status submit(Fence &, const CommandBuffer *, DeviceIdleFlags = DeviceIdleFlags::None);
-	Status submit(Fence &, SpanView<const CommandBuffer *>, DeviceIdleFlags = DeviceIdleFlags::None);
+	Status submit(Fence &, SpanView<const CommandBuffer *>,
+			DeviceIdleFlags = DeviceIdleFlags::None);
 
 	virtual Status waitIdle();
 
@@ -90,8 +106,10 @@ public:
 	void reset();
 
 protected:
-	virtual Status doSubmit(const FrameSync *, CommandPool *, Fence &, SpanView<const CommandBuffer *>,
-			DeviceIdleFlags = DeviceIdleFlags::None) { return Status::ErrorNotImplemented; }
+	virtual Status doSubmit(const FrameSync *, CommandPool *, Fence &,
+			SpanView<const CommandBuffer *>, DeviceIdleFlags = DeviceIdleFlags::None) {
+		return Status::ErrorNotImplemented;
+	}
 
 	Device *_device = nullptr;
 	uint32_t _index = 0;
@@ -108,9 +126,10 @@ public:
 	QueueFlags getClass() const { return _class; }
 	uint32_t getFamilyIdx() const { return _familyIdx; }
 
-	virtual void reset(Device &dev, bool release = false);
+	virtual void reset(Device &dev);
 
-	virtual const CommandBuffer * recordBuffer(Device &dev, const Callback<bool(CommandBuffer &)> &) {
+	virtual const CommandBuffer *recordBuffer(Device &dev,
+			const Callback<bool(CommandBuffer &)> &) {
 		return nullptr;
 	}
 
@@ -126,7 +145,27 @@ protected:
 	Vector<Rc<CommandBuffer>> _buffers;
 };
 
+class SP_PUBLIC QueryPool : public Object {
+public:
+	virtual ~QueryPool() = default;
 
-}
+	const QueryPoolInfo &getInfo() const { return _info; }
+	uint32_t getFamilyIdx() const { return _familyIdx; }
+
+	uint32_t getUsedQueries() const { return _usedQueries; }
+
+	uint32_t armNextQuery(uint32_t tag);
+
+	virtual void reset(Device &);
+
+protected:
+	QueryPoolInfo _info;
+	uint32_t _familyIdx = 0;
+
+	uint32_t _usedQueries = 0;
+	Vector<uint32_t> _tags;
+};
+
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREDEVICEQUEUE_H_ */

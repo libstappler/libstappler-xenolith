@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_samplerless_texture_functions : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 #include "SPGlslInit.h"
 #include "XL2dGlslVertexData.h"
@@ -10,18 +11,10 @@ layout (constant_id = 0) const int SAMPLERS_ARRAY_SIZE = 2;
 layout (constant_id = 1) const int IMAGES_ARRAY_SIZE = 128;
 layout (constant_id = 2) const int IMAGE_TYPE = 0;
 
-layout (set = 0, binding = 0) readonly buffer Vertices {
-	Vertex vertices[];
-} vertexBuffer[2];
-
-layout (set = 0, binding = 1) readonly buffer Materials {
-	MaterialData materials[];
-};
-
-layout (set = 1, binding = 0) uniform sampler immutableSamplers[SAMPLERS_ARRAY_SIZE];
-layout (set = 1, binding = 1) uniform texture2D images2d[IMAGES_ARRAY_SIZE];
-layout (set = 1, binding = 1) uniform texture2DArray images2dArray[IMAGES_ARRAY_SIZE];
-layout (set = 1, binding = 1) uniform texture3D images3d[IMAGES_ARRAY_SIZE];
+layout (set = 0, binding = 0) uniform sampler immutableSamplers[SAMPLERS_ARRAY_SIZE];
+layout (set = 0, binding = 1) uniform texture2D images2d[IMAGES_ARRAY_SIZE];
+layout (set = 0, binding = 1) uniform texture2DArray images2dArray[IMAGES_ARRAY_SIZE];
+layout (set = 0, binding = 1) uniform texture3D images3d[IMAGES_ARRAY_SIZE];
 
 #include "XL2dGlslGradient.h"
 
@@ -30,20 +23,14 @@ layout (location = 1) in vec4 fragTexCoord;
 layout (location = 2) in vec4 shadowColor;
 layout (location = 3) in vec4 outlineColor;
 layout (location = 4) in vec2 fragPosition;
+layout (location = 5) in flat uvec4 tex;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out vec4 outShadow;
 
-layout (push_constant) uniform pcb {
-	uint materialIdx; // 0
-	uint imageIdx; // 1
-	uint samplerIdx; // 2
-	uint gradientOffset; // 3
-	uint gradientCount; // 4
-	float outlineOffset; // 5
-	uint padding24; // 6
-	uint padding28; // 7
-} pushConstants;
+layout (std430, push_constant) uniform pcb {
+	VertexConstantData pushConstants;
+};
 
 vec4 getSample(in sampler2D s, vec2 coord) {
 	return texture(s, coord);
@@ -54,18 +41,40 @@ vec4 getSample(in sampler2D s, vec2 coord) {
 #define SAMPLER2DARR(image, sampler) sampler2DArray( images2dArray[image], immutableSamplers[sampler] )
 #define SAMPLER3D(image, sampler) sampler3D( images3d[image], immutableSamplers[sampler] )
 
+#define SAMPLE_PC 0
+
+#if SAMPLE_PC == 0
 #define SAMPLER2D_PC SAMPLER2D(pushConstants.imageIdx, pushConstants.samplerIdx)
 #define SAMPLER2DARR_PC SAMPLER2DARR(pushConstants.imageIdx, pushConstants.samplerIdx)
 #define SAMPLER3D_PC SAMPLER3D(pushConstants.imageIdx, pushConstants.samplerIdx)
+#endif
+
+#if SAMPLE_PC == 1
+#define SAMPLER2D_PC SAMPLER2D(tex.x, tex.y)
+#define SAMPLER2DARR_PC SAMPLER2DARR(tex.x, tex.y)
+#define SAMPLER3D_PC SAMPLER3D(tex.x, tex.y)
+#endif
+
+#if SAMPLE_PC == 2
+#define SAMPLER2D_PC SAMPLER2D(texImage, texSampler)
+#define SAMPLER2DARR_PC SAMPLER2DARR(texImage, texSampler)
+#define SAMPLER3D_PC SAMPLER3D(texImage, texSampler)
+#endif
+
+#if SAMPLE_PC == 3
+#define SAMPLER2D_PC SAMPLER2D(materials[pushConstants.materialIdx].samplerImageIdx & 0xFFFF, 0)
+#define SAMPLER2DARR_PC SAMPLER2DARR(materials[pushConstants.materialIdx].samplerImageIdx & 0xFFFF, 0)
+#define SAMPLER3D_PC SAMPLER3D(materials[pushConstants.materialIdx].samplerImageIdx & 0xFFFF, 0)
+#endif
 
 vec2 getTextureSize_pc() {
 	vec2 size;
 	if (IMAGE_TYPE == 1) {
-		size = textureSize(images2dArray[pushConstants.imageIdx], 0).xy;
+		size = textureSize(images2dArray[tex.x], 0).xy;
 	} else if (IMAGE_TYPE == 2) {
-		size = textureSize(images3d[pushConstants.imageIdx], 0).xy;
+		size = textureSize(images3d[tex.x], 0).xy;
 	} else {
-		size = textureSize(images2d[pushConstants.imageIdx], 0);
+		size = textureSize(images2d[tex.x], 0);
 	}
 	return size;
 }
@@ -114,9 +123,9 @@ void main() {
 		outColor = fragColor * textureColor;
 	}
 
-	if (pushConstants.gradientCount > 0) {
+	/*if (pushConstants.gradientCount > 0) {
 		outColor = applyGradient(outColor, pushConstants.gradientOffset, pushConstants.gradientCount);
-	}
+	}*/
 
 	outShadow = shadowColor;
 }

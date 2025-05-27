@@ -28,6 +28,7 @@
 #define XENOLITH_BACKEND_VK_XLVK_H_
 
 #include "XLCommon.h"
+#include "XLCoreEnum.h"
 #include <vulkan/vulkan_core.h>
 
 #if LINUX
@@ -249,6 +250,7 @@ static const char * const s_promotedVk13Extensions[] = {
 	nullptr
 };
 
+#if defined(VK_VERSION_1_4)
 static const char * const s_promotedVk14Extensions[] = {
     VK_KHR_LOAD_STORE_OP_NONE_EXTENSION_NAME,
     VK_KHR_SHADER_SUBGROUP_ROTATE_EXTENSION_NAME,
@@ -262,6 +264,58 @@ static const char * const s_promotedVk14Extensions[] = {
     VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 	nullptr
 };
+#endif
+
+// clang-format on
+
+template <typename VkType, typename CoreType>
+struct XType {
+	constexpr ~XType() = default;
+
+	constexpr XType() : value(0) { }
+	constexpr XType(VkType v) : value(v) { }
+	constexpr XType(CoreType v) : value(VkType(v)) { }
+
+	constexpr XType(const XType &) = default;
+	constexpr XType &operator=(const XType &) = default;
+
+	constexpr operator VkType() const { return value; }
+	constexpr operator CoreType() const { return CoreType(value); }
+
+	constexpr auto operator<=>(const XType &) const = default;
+
+	constexpr auto operator==(int v) const { return value == VkType(v); }
+	constexpr auto operator!=(int v) const { return value != VkType(v); }
+	constexpr auto operator==(VkType v) const { return value == v; }
+	constexpr auto operator!=(VkType v) const { return value != v; }
+	constexpr auto operator==(CoreType v) const { return value == VkType(v); }
+	constexpr auto operator!=(CoreType v) const { return value != VkType(v); }
+
+	constexpr inline XType operator|(const XType &r) { return XType(value | r.value); }
+	constexpr inline XType operator&(const XType &r) { return XType(value & r.value); }
+	constexpr inline XType operator^(const XType &r) { return XType(value ^ r.value); }
+
+	constexpr inline XType &operator|=(const XType &r) {
+		value |= r.value;
+		return *this;
+	}
+	constexpr inline XType &operator&=(const XType &r) {
+		value &= r.value;
+		return *this;
+	}
+	constexpr inline XType &operator^=(const XType &r) {
+		value ^= r.value;
+		return *this;
+	}
+
+	constexpr XType operator~() const { return XType(~value); }
+
+	VkType value;
+};
+
+using XAccessFlags = XType<VkAccessFlags, core::AccessType>;
+using XImageLayout = XType<VkImageLayout, core::AttachmentLayout>;
+using XPipelineStage = XType<VkPipelineStageFlags, core::PipelineStage>;
 
 SP_PUBLIC core::QueueFlags getQueueFlags(VkQueueFlags, bool present);
 SP_PUBLIC core::QueueFlags getQueueFlags(core::PassType);
@@ -274,9 +328,8 @@ SP_PUBLIC StringView getVkResultName(VkResult res);
 SP_PUBLIC String getVkMemoryPropertyFlags(VkMemoryPropertyFlags);
 
 SP_PUBLIC bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name,
-		const Vector<VkExtensionProperties> &available,
-		Vector<StringView> &optionals, Vector<StringView> &promoted,
-		std::bitset<toInt(OptionalDeviceExtension::Max)> &flags);
+		const Vector<VkExtensionProperties> &available, Vector<StringView> &optionals,
+		Vector<StringView> &promoted, std::bitset<toInt(OptionalDeviceExtension::Max)> &flags);
 
 SP_PUBLIC bool isPromotedExtension(uint32_t apiVersion, StringView name);
 
@@ -291,8 +344,8 @@ SP_PUBLIC void sanitizeVkStruct(T &t) {
 
 SP_PUBLIC Status getStatus(VkResult res);
 
-SP_PUBLIC std::ostream &operator<< (std::ostream &stream, VkResult res);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, VkResult res);
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVK_H_ */

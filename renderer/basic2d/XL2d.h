@@ -37,6 +37,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
+using glsl::VertexConstantData;
+using glsl::PSDFConstantData;
+
 using glsl::Vertex;
 using glsl::MaterialData;
 using glsl::TransformData;
@@ -62,8 +65,7 @@ using glsl::ParticleVec2Param;
 using glsl::ParticleEmissionPoints;
 using glsl::ParticleEmitterData;
 using glsl::ParticleData;
-using glsl::ParticleVertex;
-using glsl::ParticlePushConstantBlock;
+using glsl::ParticleConstantData;
 
 struct Triangle {
 	Vertex a;
@@ -89,6 +91,7 @@ struct VertexSpan {
 	uint32_t gradientOffset = 0;
 	uint32_t gradientCount = 0;
 	float outlineOffset = 0;
+	uint64_t particleSystemId = 0;
 };
 
 struct alignas(16) VertexData : public Ref {

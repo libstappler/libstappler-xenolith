@@ -46,11 +46,11 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 	builder.addImage("xenolith-1-480.png",
 			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled,
 					core::ImageHints::Opaque),
-			FileInfo("resources/xenolith-1-480.png"));
+			FileInfo("resources/xenolith-1-480.png", FileCategory::Bundled));
 	builder.addImage("xenolith-2-480.png",
 			core::ImageInfo(core::ImageFormat::R8G8B8A8_UNORM, core::ImageUsage::Sampled,
 					core::ImageHints::Opaque),
-			FileInfo("resources/xenolith-2-480.png"));
+			FileInfo("resources/xenolith-2-480.png", FileCategory::Bundled));
 
 	basic2d::vk::ShadowPass::RenderQueueInfo info{app,
 		Extent2(constraints.extent.width, constraints.extent.height),

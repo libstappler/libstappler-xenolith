@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +46,8 @@ public:
 	virtual ~RenderQueueAttachmentHandle();
 
 	virtual bool setup(FrameQueue &handle, Function<void(bool)> &&) override;
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	StringView getTargetQueueName() const { return _targetQueueName; }
 	const Rc<core::Queue> &getRenderQueue() const { return _input->queue; }
@@ -81,9 +83,7 @@ public:
 
 	virtual Rc<QueuePassHandle> makeFrameHandle(const FrameQueue &) override;
 
-	const AttachmentData *getAttachment() const {
-		return _attachment;
-	}
+	const AttachmentData *getAttachment() const { return _attachment; }
 
 protected:
 	using QueuePass::init;
@@ -98,33 +98,34 @@ public:
 	virtual bool init(QueuePass &, const FrameQueue &) override;
 
 	virtual bool prepare(FrameQueue &, Function<void(bool)> &&) override;
-	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) override;
+	virtual void submit(FrameQueue &, Rc<FrameSync> &&, Function<void(bool)> &&onSubmited,
+			Function<void(bool)> &&onComplete) override;
 
 	virtual void finalize(FrameQueue &, bool successful) override;
 
 protected:
-	virtual bool prepareMaterials(FrameHandle &frame, VkCommandBuffer buf,
-			const Rc<core::MaterialAttachment> &attachment, Vector<VkBufferMemoryBarrier> &outputBufferBarriers);
+	virtual bool prepareMaterials(FrameHandle &frame, CommandBuffer &buf,
+			core::MaterialAttachment *attachment, Vector<BufferMemoryBarrier> &barriers);
 
 	Rc<TransferResource> _resource;
 	Rc<core::Queue> _queue;
 	RenderQueueAttachmentHandle *_attachment;
 };
 
-RenderQueueCompiler::~RenderQueueCompiler() { }
-
 bool RenderQueueCompiler::init(Device &dev, TransferQueue *transfer, MaterialCompiler *compiler) {
 	using namespace core;
 
 	Queue::Builder builder("RenderQueueCompiler");
 
-	auto attachment = builder.addAttachemnt("RenderQueueAttachment", [&] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+	auto attachment = builder.addAttachemnt("RenderQueueAttachment",
+			[&](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsInput();
 		attachmentBuilder.defineAsOutput();
 		return Rc<RenderQueueAttachment>::create(attachmentBuilder);
 	});
 
-	builder.addPass("RenderQueueRenderPass", PassType::Transfer, RenderOrdering(0), [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+	builder.addPass("RenderQueueRenderPass", PassType::Transfer, RenderOrdering(0),
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<RenderQueuePass>::create(passBuilder, attachment);
 	});
 
@@ -164,7 +165,8 @@ bool RenderQueueAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)>
 	return true;
 }
 
-void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data,
+		Function<void(bool)> &&cb) {
 	_input = (RenderQueueInput *)data.get();
 	_targetQueueName = _input->queue->getName().str<Interface>();
 
@@ -173,25 +175,27 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 		return;
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, cb = sp::move(cb)] (FrameHandle &handle, bool success) {
+	q.getFrame()->waitForDependencies(data->waitDependencies,
+			[this, cb = sp::move(cb)](FrameHandle &handle, bool success) {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
 		}
 
 		if (_input->queue->getInternalResource()) {
-			handle.performInQueue([this] (FrameHandle &frame) -> bool {
+			handle.performInQueue(
+					[this](FrameHandle &frame) -> bool {
 				runShaders(frame);
-				_resource = Rc<TransferResource>::create(_device->getAllocator(), _input->queue->getInternalResource());
+				_resource = Rc<TransferResource>::create(_device->getAllocator(),
+						_input->queue->getInternalResource());
 				if (_resource->initialize()) {
 					return true;
 				}
 				return false;
-			}, [cb = sp::move(cb)] (FrameHandle &frame, bool success) {
-				cb(success);
-			}, nullptr, "RenderQueueAttachmentHandle::submitInput _input->queue->getInternalResource");
+			}, [cb = sp::move(cb)](FrameHandle &frame, bool success) { cb(success); }, nullptr,
+					"RenderQueueAttachmentHandle::submitInput _input->queue->getInternalResource");
 		} else {
-			handle.performOnGlThread([this, cb = sp::move(cb)] (FrameHandle &frame) {
+			handle.performOnGlThread([this, cb = sp::move(cb)](FrameHandle &frame) {
 				cb(true);
 				runShaders(frame);
 			}, this, true, "RenderQueueAttachmentHandle::submitInput");
@@ -215,15 +219,18 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 
 		uint32_t i = 0;
 		for (auto &iit : it->samplers) {
-			frame.performRequiredTask([this, req = iit, ref, i] (FrameHandle &frame) {
+			frame.performRequiredTask(
+					[this, req = iit, ref, i](FrameHandle &frame) {
 				if (ref->setSampler(i, Rc<Sampler>::create(*_device, req))) {
 					if (_layoutsInQueue.fetch_sub(1) == 1) {
 						runPasses(frame);
 					}
 				}
 				return true;
-			}, this, toString("RenderQueueAttachmentHandle::runShaders - compile samplers: ", _targetQueueName, "::", it->key));
-			++ i;
+			}, this,
+					toString("RenderQueueAttachmentHandle::runShaders - compile samplers: ",
+							_targetQueueName, "::", it->key));
+			++i;
 		}
 	}
 
@@ -235,17 +242,19 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 		if (auto p = _device->getProgram(it->key)) {
 			it->program = p;
 		} else {
-			++ tasksCount;
-			++ _programsInQueue;
+			++tasksCount;
+			++_programsInQueue;
 			programs.emplace_back(it);
 		}
 	}
 
 	for (auto &it : programs) {
-		frame.performRequiredTask([this, req = it] (FrameHandle &frame) {
+		frame.performRequiredTask(
+				[this, req = it](FrameHandle &frame) {
 			auto ret = Rc<Shader>::create(*_device, *req);
 			if (!ret) {
-				log::error("RenderQueueAttachmentHandle", "Fail to compile shader program ", req->key);
+				log::error("RenderQueueAttachmentHandle", "Fail to compile shader program ",
+						req->key);
 				return false;
 			} else {
 				req->program = _device->addProgram(ret);
@@ -254,10 +263,13 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 				}
 			}
 			return true;
-		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile shader: ", _targetQueueName, "::", it->key));
+		}, this,
+				toString("RenderQueueAttachmentHandle::runShaders - compile shader: ",
+						_targetQueueName, "::", it->key));
 	}
 
-	if (_input->queue->getTextureSetLayouts().size() == 0 && _input->queue->getPasses().size() > 0) {
+	if (_input->queue->getTextureSetLayouts().size() == 0
+			&& _input->queue->getPasses().size() > 0) {
 		runPasses(frame);
 	}
 
@@ -268,7 +280,8 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 
 void RenderQueueAttachmentHandle::runPasses(FrameHandle &frame) {
 	for (auto &it : _input->queue->getPasses()) {
-		frame.performRequiredTask([this, req = it] (FrameHandle &frame) -> bool {
+		frame.performRequiredTask(
+				[this, req = it](FrameHandle &frame) -> bool {
 			auto ret = Rc<RenderPass>::create(*_device, *req);
 			if (!ret) {
 				log::error("RenderQueueAttachmentHandle", "Fail to compile render pass ", req->key);
@@ -280,12 +293,15 @@ void RenderQueueAttachmentHandle::runPasses(FrameHandle &frame) {
 				}
 			}
 			return true;
-		}, this, toString("RenderQueueAttachmentHandle::runShaders - compile pass: ", _targetQueueName, "::", it->key));
+		}, this,
+				toString("RenderQueueAttachmentHandle::runShaders - compile pass: ",
+						_targetQueueName, "::", it->key));
 	}
 }
 
 void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
-	[[maybe_unused]] size_t tasksCount = _pipelinesInQueue.load();
+	[[maybe_unused]]
+	size_t tasksCount = _pipelinesInQueue.load();
 	for (auto &pit : _input->queue->getPasses()) {
 		for (auto &sit : pit->subpasses) {
 			_pipelinesInQueue += sit->graphicPipelines.size() + sit->computePipelines.size();
@@ -296,34 +312,47 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 	for (auto &pit : _input->queue->getPasses()) {
 		for (auto &sit : pit->subpasses) {
 			for (auto &it : sit->graphicPipelines) {
-				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
-					auto ret = Rc<GraphicPipeline>::create(*_device, *pipeline, *pass, *_input->queue);
+				frame.performRequiredTask(
+						[this, pass = sit, pipeline = it](FrameHandle &frame) -> bool {
+					auto ret =
+							Rc<GraphicPipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ", pipeline->key);
+						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ",
+								pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
 					}
 					return true;
-				}, this, toString("RenderQueueAttachmentHandle::runPipelines - compile graphic pipeline: ", _targetQueueName, "::", it->key));
+				}, this,
+						toString(
+								"RenderQueueAttachmentHandle::runPipelines - compile " "graphic " "pipeline: ",
+								_targetQueueName, "::", it->key));
 			}
 			for (auto &it : sit->computePipelines) {
-				frame.performRequiredTask([this, pass = sit, pipeline = it] (FrameHandle &frame) -> bool {
-					auto ret = Rc<ComputePipeline>::create(*_device, *pipeline, *pass, *_input->queue);
+				frame.performRequiredTask(
+						[this, pass = sit, pipeline = it](FrameHandle &frame) -> bool {
+					auto ret =
+							Rc<ComputePipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ", pipeline->key);
+						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ",
+								pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
 					}
 					return true;
-				}, this, toString("RenderQueueAttachmentHandle::runPipelines - compile compute pipeline: ", _targetQueueName, "::", it->key));
+				}, this,
+						toString(
+								"RenderQueueAttachmentHandle::runPipelines - compile " "compute " "pipeline: ",
+								_targetQueueName, "::", it->key));
 			}
 		}
 	}
 }
 
-bool RenderQueueAttachmentHandle::SamplersCompilationData::setSampler(uint32_t i, Rc<Sampler> &&sampler) {
+bool RenderQueueAttachmentHandle::SamplersCompilationData::setSampler(uint32_t i,
+		Rc<Sampler> &&sampler) {
 	layout->compiledSamplers[i] = move(sampler);
 	if (samplersInProcess.fetch_sub(1) == 1) {
 		layout->layout = Rc<TextureSetLayout>::create(*device, *layout);
@@ -364,7 +393,8 @@ bool RenderQueuePassHandle::init(QueuePass &pass, const FrameQueue &queue) {
 }
 
 bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb) {
-	if (auto a = frame.getAttachment(static_cast<RenderQueuePass *>(_queuePass.get())->getAttachment())) {
+	if (auto a = frame.getAttachment(
+				static_cast<RenderQueuePass *>(_queuePass.get())->getAttachment())) {
 		_attachment = static_cast<RenderQueueAttachmentHandle *>(a->handle.get());
 	}
 
@@ -377,7 +407,8 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 	for (auto &it : _queue->getAttachments()) {
 		if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
 
-			v->setCompiler(static_cast<RenderQueueCompiler *>(_data->queue->queue)->getMaterialCompiler());
+			v->setCompiler(
+					static_cast<RenderQueueCompiler *>(_data->queue->queue)->getMaterialCompiler());
 
 			if (!v->getPredefinedMaterials().empty()) {
 				hasMaterials = true;
@@ -388,20 +419,24 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 
 	if (res || hasMaterials) {
 		_resource = res;
-		_pool = static_cast<CommandPool *>(_device->acquireCommandPool(core::QueueFlags::Transfer).get());
+		_pool = static_cast<CommandPool *>(
+				_device->acquireCommandPool(core::QueueFlags::Transfer).get());
 		if (!_pool) {
 			invalidate();
 			return false;
 		}
 
-		frame.getFrame()->performInQueue([this, hasMaterials] (FrameHandle &frame) {
-			auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
-				Vector<VkImageMemoryBarrier> outputImageBarriers;
-				Vector<VkBufferMemoryBarrier> outputBufferBarriers;
+		frame.getFrame()->performInQueue([this, hasMaterials](FrameHandle &frame) {
+			auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+					[&, this](CommandBuffer &buf) {
+				Vector<ImageMemoryBarrier> outputImageBarriers;
+				Vector<BufferMemoryBarrier> outputBufferBarriers;
 
 				if (_resource) {
-					if (!_resource->prepareCommands(_pool->getFamilyIdx(), buf.getBuffer(), outputImageBarriers, outputBufferBarriers)) {
-						log::error("vk::RenderQueueCompiler", "Fail to compile resource for ", _queue->getName());
+					if (!_resource->prepareCommands(_pool->getFamilyIdx(), buf, outputImageBarriers,
+								outputBufferBarriers)) {
+						log::error("vk::RenderQueueCompiler", "Fail to compile resource for ",
+								_queue->getName());
 						return false;
 					}
 					_resource->compile();
@@ -410,19 +445,19 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				if (hasMaterials) {
 					for (auto &it : _queue->getAttachments()) {
 						if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
-							if (!prepareMaterials(frame, buf.getBuffer(), v, outputBufferBarriers)) {
-								log::error("vk::RenderQueueCompiler", "Fail to compile predefined materials for ", _queue->getName());
+							if (!prepareMaterials(frame, buf, v, outputBufferBarriers)) {
+								log::error("vk::RenderQueueCompiler",
+										"Fail to compile predefined materials for ",
+										_queue->getName());
 								return false;
 							}
 						}
 					}
 				}
 
-				_device->getTable()->vkCmdPipelineBarrier(buf.getBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-					0, nullptr,
-					uint32_t(outputBufferBarriers.size()), outputBufferBarriers.data(),
-					uint32_t(outputImageBarriers.size()), outputImageBarriers.data());
+				buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, outputBufferBarriers,
+						outputImageBarriers);
 				return true;
 			});
 
@@ -430,7 +465,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				_buffers.emplace_back(buf);
 			}
 			return true;
-		}, [this, cb = sp::move(cb)] (FrameHandle &frame, bool success) {
+		}, [this, cb = sp::move(cb)](FrameHandle &frame, bool success) {
 			if (success) {
 				_commandsReady = true;
 				_descriptorsReady = true;
@@ -440,15 +475,15 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 			cb(success);
 		}, this, "RenderPass::doPrepareCommands _attachment->getTransferResource");
 	} else {
-		frame.getFrame()->performOnGlThread([cb = sp::move(cb)] (FrameHandle &frame) {
-			cb(true);
-		}, this, false, "RenderPass::doPrepareCommands");
+		frame.getFrame()->performOnGlThread([cb = sp::move(cb)](FrameHandle &frame) { cb(true); },
+				this, false, "RenderPass::doPrepareCommands");
 	}
 
 	return false;
 }
 
-void RenderQueuePassHandle::submit(FrameQueue &queue, Rc<FrameSync> &&sync, Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
+void RenderQueuePassHandle::submit(FrameQueue &queue, Rc<FrameSync> &&sync,
+		Function<void(bool)> &&onSubmited, Function<void(bool)> &&onComplete) {
 	if (_buffers.empty()) {
 		onSubmited(true);
 		onComplete(true);
@@ -482,43 +517,34 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 		}
 	}
 
-	_attachment->getRenderQueue()->setCompiled(*_device, [loop = Rc<core::Loop>(frame.getLoop()),
-			passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
-		loop->performOnThread([loop, passIds = sp::move(passIds), attachmentIds = sp::move(attachmentIds)] () mutable {
+	_attachment->getRenderQueue()->setCompiled(*_device,
+			[loop = Rc<core::Loop>(frame.getLoop()), passIds = sp::move(passIds),
+					attachmentIds = sp::move(attachmentIds)]() mutable {
+		loop->performOnThread([loop, passIds = sp::move(passIds),
+									  attachmentIds = sp::move(attachmentIds)]() mutable {
 			auto &cache = loop->getFrameCache();
-			for (auto &id : passIds) {
-				cache->removeRenderPass(id);
-			}
-			for (auto &id : attachmentIds) {
-				cache->removeAttachment(id);
-			}
+			for (auto &id : passIds) { cache->removeRenderPass(id); }
+			for (auto &id : attachmentIds) { cache->removeAttachment(id); }
 			cache->removeUnreachableFramebuffers();
 		});
 	});
 }
 
-bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, VkCommandBuffer buf,
-		const Rc<core::MaterialAttachment> &attachment, Vector<VkBufferMemoryBarrier> &outputBufferBarriers) {
-	auto table = _device->getTable();
-	auto &initial = attachment->getPredefinedMaterials();
+bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, CommandBuffer &buf,
+		core::MaterialAttachment *attachment, Vector<BufferMemoryBarrier> &barriers) {
+	auto initial = attachment->getPredefinedMaterials();
 	if (initial.empty()) {
 		return true;
 	}
 
+	// mark attachment as compiled to allow material preparation on it
+	// note that in this case setCompiled will be called twice
+	attachment->setCompiled(*_device);
+
 	auto data = attachment->allocateSet(*_device);
 
-	auto buffers = updateMaterials(iframe, data, initial, SpanView<core::MaterialId>(), SpanView<core::MaterialId>());
-
-	VkBufferCopy indexesCopy;
-	indexesCopy.srcOffset = 0;
-	indexesCopy.dstOffset = 0;
-	indexesCopy.size = buffers.stagingBuffer->getSize();
-
-	auto stagingBuf = buffers.stagingBuffer->getBuffer();
-	auto targetBuf = buffers.targetBuffer->getBuffer();
-
-	Vector<VkImageMemoryBarrier> outputImageBarriers;
-	table->vkCmdCopyBuffer(buf, stagingBuf, targetBuf, 1, &indexesCopy);
+	auto buffers = updateMaterials(iframe, data.get(), initial, SpanView<core::MaterialId>(),
+			SpanView<core::MaterialId>());
 
 	core::QueueFlags ops = core::QueueFlags::None;
 	for (auto &it : attachment->getRenderPasses()) {
@@ -526,35 +552,25 @@ bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, VkCommandBuffe
 	}
 
 	if (auto q = _device->getQueueFamily(ops)) {
-		if (q->index == _pool->getFamilyIdx()) {
-			outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
-				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-				buffers.targetBuffer->getBuffer(), 0, VK_WHOLE_SIZE
-			}));
-		} else {
-			auto &b = outputBufferBarriers.emplace_back(VkBufferMemoryBarrier({
-				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-				_pool->getFamilyIdx(), q->index,
-				buffers.targetBuffer->getBuffer(), 0, VK_WHOLE_SIZE
-			}));
-			buffers.targetBuffer->setPendingBarrier(b);
+		for (auto &it : buffers) {
+			buf.cmdCopyBuffer(it.source, it.target);
+
+			if (q->index == _pool->getFamilyIdx()) {
+				barriers.emplace_back(BufferMemoryBarrier(it.target, VK_ACCESS_TRANSFER_WRITE_BIT,
+						VK_ACCESS_SHADER_READ_BIT));
+			} else {
+				barriers.emplace_back(BufferMemoryBarrier(it.target, VK_ACCESS_TRANSFER_WRITE_BIT,
+						VK_ACCESS_SHADER_READ_BIT,
+						QueueFamilyTransfer{_pool->getFamilyIdx(), q->index}, 0, VK_WHOLE_SIZE));
+				it.target->setPendingBarrier(barriers.back());
+			}
 		}
-
-		auto tmpBuffer = new Rc<Buffer>(move(buffers.targetBuffer));
-		auto tmpOrder = new HashMap<core::MaterialId, uint32_t>(sp::move(buffers.ordering));
-		iframe.performOnGlThread([attachment, data, tmpBuffer, tmpOrder] (FrameHandle &) {
-			data->setBuffer(sp::move(*tmpBuffer), sp::move(*tmpOrder));
-			attachment->setMaterials(data);
-			delete tmpBuffer;
-			delete tmpOrder;
-		}, nullptr, false, "RenderQueueRenderPassHandle::prepareMaterials");
-
-		return true;
 	}
-	return false;
+
+	iframe.performOnGlThread([attachment, data](FrameHandle &) { attachment->setMaterials(data); },
+			nullptr, false, "RenderQueueRenderPassHandle::prepareMaterials");
+
+	return true;
 }
 
-}
+} // namespace stappler::xenolith::vk

@@ -93,6 +93,7 @@ public:
 		uint32_t type = 0; // memory type index
 		void *ptr = nullptr;
 		Mutex *mappingProtection = nullptr;
+		AllocationType allocType = AllocationType::Unknown;
 
 		explicit operator bool() const { return mem != VK_NULL_HANDLE; }
 	};
@@ -219,7 +220,7 @@ public:
 	Rc<Buffer> spawnPersistent(AllocationUsage, const BufferInfo &);
 
 	Device *getDevice() const;
-	const Rc<Allocator> &getAllocator() const { return _allocator; }
+	Allocator *getAllocator() const { return _allocator; }
 
 	Mutex &getMutex() { return _mutex; }
 
@@ -229,6 +230,9 @@ public:
 
 protected:
 	void clear(MemData *);
+
+	Allocator::MemBlock tryReuse(MemData *, VkDeviceSize size, VkDeviceSize alignment,
+			AllocationType allocType);
 
 	Mutex _mutex;
 	bool _persistentMapping = false;

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +43,28 @@ namespace STAPPLER_VERSIONIZED stappler::glsl {
 
 #define XL_GLSL_FLAG_DEFAULT (XL_GLSL_FLAG_POSITION_MASK_X | XL_GLSL_FLAG_POSITION_MASK_Y)
 
+struct VertexConstantData {
+	uvec2 vertexPointer; // 0-8
+	uvec2 transformPointer; // 8-16
+	uvec2 materialPointer; // 16-24
+	uvec2 atlasPointer; // 24-32
+	uint imageIdx; // 32-36
+	uint samplerIdx; // 36-40
+	float outlineOffset; // 40-44
+	uint gradientOffset; // 44-48
+	uint gradientCount; // 48-52
+};
+
+struct PSDFConstantData {
+	uvec2 vertexPointer; // 0-8
+	uvec2 transformPointer; // 8-16
+	uvec2 shadowDataPointer; // 16-24
+
+	float pseudoSdfInset;
+	float pseudoSdfOffset;
+	float pseudoSdfMax;
+};
+
 struct Vertex {
 	vec4 pos;
 	vec4 color;
@@ -68,27 +91,25 @@ struct TransformData {
 	uint flags;
 
 #ifndef SP_GLSL
-	TransformData() :
-	transform(mat4::IDENTITY),
-	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	instanceColor(vec4::ONE),
-	outlineColor(vec4::ONE),
-	shadowValue(0.0f),
-	textureLayer(0.0f),
-	padding1(0.0f),
-	flags(XL_GLSL_FLAG_DEFAULT)
-	{ }
+	TransformData()
+	: transform(mat4::IDENTITY)
+	, offset(vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	, instanceColor(vec4::ONE)
+	, outlineColor(vec4::ONE)
+	, shadowValue(0.0f)
+	, textureLayer(0.0f)
+	, padding1(0.0f)
+	, flags(XL_GLSL_FLAG_DEFAULT) { }
 
-	TransformData(const mat4 &m) :
-	transform(m),
-	offset(vec4(0.0f, 0.0f, 0.0f, 1.0f)),
-	instanceColor(vec4::ONE),
-	outlineColor(vec4::ONE),
-	shadowValue(0.0f),
-	textureLayer(0.0f),
-	padding1(0.0f),
-	flags(XL_GLSL_FLAG_DEFAULT)
-	{ }
+	TransformData(const mat4 &m)
+	: transform(m)
+	, offset(vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	, instanceColor(vec4::ONE)
+	, outlineColor(vec4::ONE)
+	, shadowValue(0.0f)
+	, textureLayer(0.0f)
+	, padding1(0.0f)
+	, flags(XL_GLSL_FLAG_DEFAULT) { }
 #endif
 };
 
@@ -100,12 +121,10 @@ struct DataAtlasIndex {
 };
 
 SP_GLSL_INLINE vec4 makeMask(uint value) {
-	return vec4(
-		((value & XL_GLSL_FLAG_POSITION_MASK_X) != 0) ? 1.0 : 0.0,
-		((value & XL_GLSL_FLAG_POSITION_MASK_Y) != 0) ? 1.0 : 0.0,
-		((value & XL_GLSL_FLAG_POSITION_MASK_Z) != 0) ? 1.0 : 0.0,
-		((value & XL_GLSL_FLAG_POSITION_MASK_W) != 0) ? 1.0 : 0.0
-	);
+	return vec4(((value & XL_GLSL_FLAG_POSITION_MASK_X) != 0) ? 1.0 : 0.0,
+			((value & XL_GLSL_FLAG_POSITION_MASK_Y) != 0) ? 1.0 : 0.0,
+			((value & XL_GLSL_FLAG_POSITION_MASK_Z) != 0) ? 1.0 : 0.0,
+			((value & XL_GLSL_FLAG_POSITION_MASK_W) != 0) ? 1.0 : 0.0);
 }
 
 #ifndef SP_GLSL

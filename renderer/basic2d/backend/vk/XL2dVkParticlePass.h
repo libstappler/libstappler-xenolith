@@ -30,11 +30,17 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
+class ParticleEmitterAttachmentHandle;
+
 class SP_PUBLIC ParticlePersistentData : public Ref {
 public:
 	struct EmitterData {
 		uint64_t id = 0;
-		Rc<Buffer> buffer;
+		mutable uint64_t clock = 0;
+		Rc<Buffer> emitter;
+		Rc<Buffer> particles;
+		Rc<Buffer> emissionData;
+		Vector<Rc<Buffer>> extraData;
 		Rc<ParticleSystemData> systemData;
 	};
 
@@ -51,42 +57,60 @@ public:
 	virtual ~ParticlePersistentData() = default;
 
 	Vector<uint64_t> updateEmitters(DeviceMemoryPool *,
-			const memory::map<uint64_t, Rc<ParticleSystemData>> &data);
+			const memory::map<uint64_t, Rc<ParticleSystemData>> &data, uint64_t clock);
 
 	void updateEmitter(DeviceMemoryPool *, EmitterData &, ParticleSystemData *);
-	void addEmitter(DeviceMemoryPool *, uint64_t id, ParticleSystemData *);
+	void addEmitter(DeviceMemoryPool *, uint64_t id, ParticleSystemData *, uint64_t clock);
 
 	const Map<uint64_t, EmitterData> &getEmitters() const { return _emitters; }
 
 	SpanView<StagingData> getStaging() const { return _staging; }
 
 protected:
+	EmitterData spawnEmitter(DeviceMemoryPool *, uint64_t id, ParticleSystemData *,
+			uint32_t initParticles, uint64_t clock);
+
 	mutable Vector<StagingData> _staging;
 	Map<uint64_t, EmitterData> _emitters;
 };
 
-class SP_PUBLIC ParticleEmitterAttachment : public BufferAttachment {
+class SP_PUBLIC ParticleEmitterAttachment : public core::GenericAttachment {
 public:
 	virtual ~ParticleEmitterAttachment() = default;
 
 	virtual bool init(AttachmentBuilder &builder);
 
+	ParticlePersistentData *getData() const { return _data; }
+
 protected:
-	void handleInput(FrameQueue &, AttachmentHandle &, core::AttachmentInputData *,
+	void handleInput(FrameQueue &, ParticleEmitterAttachmentHandle &, core::AttachmentInputData *,
 			Function<void(bool)> &&);
 
 	Rc<ParticlePersistentData> _data;
 };
 
-class SP_PUBLIC ParticleVertexAttachment : public BufferAttachment {
+class SP_PUBLIC ParticleEmitterAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~ParticleVertexAttachment() = default;
+	virtual ~ParticleEmitterAttachmentHandle() = default;
 
-	virtual bool init(AttachmentBuilder &builder);
+	Buffer *getVertices() const { return _vertices; }
+	Buffer *getCommands() const { return _commands; }
+
+	uint32_t getEmitterIndex(uint64_t) const;
+
+	virtual void enumerateAttachmentObjects(
+			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
+
+	bool hasInput() const { return !_emittersIndex.empty(); }
 
 protected:
-	void handleInput(FrameQueue &, AttachmentHandle &, core::AttachmentInputData *,
-			Function<void(bool)> &&);
+	friend class ParticleEmitterAttachment;
+
+	Rc<Buffer> _vertices;
+	Rc<Buffer> _commands;
+
+	Rc<ParticlePersistentData> _data;
+	Map<uint64_t, uint32_t> _emittersIndex;
 };
 
 class SP_PUBLIC ParticlePass : public QueuePass {
@@ -101,17 +125,11 @@ public:
 			const AttachmentData *);
 
 	const AttachmentData *getEmitters() const { return _emitters; }
-	const AttachmentData *getVertexes() const { return _vertexes; }
 
 protected:
-	static uint32_t getMaxEmitterCount(const core::Device &);
-
 	void recordCommandBuffer(const core::SubpassData &, core::FrameQueue &, core::CommandBuffer &);
 
 	const AttachmentData *_emitters = nullptr;
-	const AttachmentData *_vertexes = nullptr;
-
-	Rc<ParticlePersistentData> _data;
 };
 
 } // namespace stappler::xenolith::basic2d::vk

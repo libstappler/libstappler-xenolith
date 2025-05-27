@@ -979,16 +979,19 @@ void Queue::detachFrame(FrameHandle *frame) {
 void Queue::describe(const Callback<void(StringView)> &out) {
 	out << "Queue '" << getName() << "':\nInput attachments:\n";
 	for (auto &it : _data->input) {
-		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << ")\n";
+		auto aPtr = it->attachment.get();
+		out << "\t" << it->key << " (" << typeid(*aPtr) << ")\n";
 	}
 	out << "Output attachments:\n";
 	for (auto &it : _data->output) {
-		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << ")\n";
+		auto aPtr = it->attachment.get();
+		out << "\t" << it->key << " (" << typeid(*aPtr) << ")\n";
 	}
 
 	out << "Attachments:\n";
 	for (auto &it : _data->attachments) {
-		out << "\t" << it->key << " (" << typeid(*it->attachment.get()) << "):\n";
+		auto aPtr = it->attachment.get();
+		out << "\t" << it->key << " (" << typeid(*aPtr) << "):\n";
 		for (auto &iit : it->passes) {
 			out << "\t\t" << iit->key << " for pass '" << iit->pass->key << "':\n";
 			for (auto &sub : iit->subpasses) {
@@ -999,7 +1002,8 @@ void Queue::describe(const Callback<void(StringView)> &out) {
 	}
 	out << "Passes:\n";
 	for (auto &it : _data->passes) {
-		out << "\t" << it->key << " (" << typeid(*it->pass.get()) << "):\n";
+		auto passPtr = it->pass.get();
+		out << "\t" << it->key << " (" << typeid(*passPtr) << "):\n";
 		for (auto &sub : it->subpasses) {
 			out << "\t\t" << it->key << " [" << sub->index << "]\n";
 			if (!sub->graphicPipelines.empty()) {
@@ -1174,6 +1178,7 @@ bool PipelineLayoutBuilder::addSet(const Callback<void(DescriptorSetBuilder &)> 
 
 void PipelineLayoutBuilder::setTextureSetLayout(const TextureSetLayoutData *d) {
 	_data->textureSetLayout = d;
+	const_cast<TextureSetLayoutData *>(_data->textureSetLayout)->bindingLayouts.emplace_back(_data);
 }
 
 const PipelineFamilyData *PipelineLayoutBuilder::addPipelineFamily(StringView key) {
@@ -1504,8 +1509,6 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 	return a;
 }
 
-StringView QueuePassBuilder::getName() const { return _data->key; }
-
 void QueuePassBuilder::setAvailabilityChecker(
 		memory::function<bool(const FrameQueue &, const QueuePassData &)> &&cb) {
 	_data->checkAvailable = move(cb);
@@ -1520,6 +1523,10 @@ void QueuePassBuilder::addCompleteCallback(
 		memory::function<void(FrameQueue &, const QueuePassData &, bool success)> &&cb) {
 	_data->submittedCallbacks.emplace_back(move(cb));
 }
+
+void QueuePassBuilder::setAcquireTimestamps(uint32_t t) { _data->acquireTimestamps = t; }
+
+StringView QueuePassBuilder::getName() const { return _data->key; }
 
 QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 

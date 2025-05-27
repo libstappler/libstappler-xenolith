@@ -36,6 +36,7 @@ class Device;
 class Attachment;
 class Queue;
 class CommandPool;
+class QueryPool;
 class DeviceQueue;
 
 struct GraphicPipelineInfo;
@@ -227,6 +228,8 @@ public:
 
 	ImageViewInfo getViewInfo(const ImageViewInfo &) const;
 
+	ImageAspects getAspects() const;
+
 protected:
 	ImageInfoData _info;
 	Rc<DataAtlas> _atlas;
@@ -321,17 +324,19 @@ public:
 	virtual void bindBuffer(BufferObject *);
 	virtual void bindFramebuffer(Framebuffer *);
 
+	SpanView<Rc<QueryPool>> getQueryPools() const { return _queryPools; }
+
 	const CommandPool *getCommandPool() const { return _pool; }
 
 protected:
 	const CommandPool *_pool = nullptr;
 	uint32_t _currentSubpass = 0;
-	uint32_t _boundLayoutIndex = 0;
 	bool _withinRenderpass = false;
 
 	Set<Rc<ImageObject>> _images;
 	Set<Rc<BufferObject>> _buffers;
 	Set<Rc<Framebuffer>> _framebuffers;
+	Vector<Rc<QueryPool>> _queryPools;
 };
 
 struct SP_PUBLIC MaterialImageSlot {
@@ -339,17 +344,9 @@ struct SP_PUBLIC MaterialImageSlot {
 	uint32_t refCount = 0;
 };
 
-struct SP_PUBLIC MaterialBufferSlot {
-	Rc<BufferObject> buffer;
-	uint32_t refCount = 0;
-};
-
 struct SP_PUBLIC MaterialLayout {
 	Vector<MaterialImageSlot> imageSlots;
 	uint32_t usedImageSlots = 0;
-
-	Vector<MaterialBufferSlot> bufferSlots;
-	uint32_t usedBufferSlots = 0;
 
 	Rc<TextureSet> set;
 };
@@ -417,11 +414,16 @@ public:
 	uint64_t getArmedTime() const { return _armedTime; }
 
 	bool isArmed() const { return _state == Armed; }
+
+	void bindQueries(NotNull<QueryPool *>);
+
 	void setArmed(DeviceQueue &);
 	void setArmed();
 
 	void setTag(StringView);
 	StringView getTag() const { return _tag; }
+
+	void addQueryCallback(Function<void(bool, SpanView<Rc<QueryPool>>)> &&, Ref *, StringView tag);
 
 	// function will be called and ref will be released on fence's signal
 	void addRelease(Function<void(bool)> &&, Ref *, StringView tag);
@@ -440,7 +442,7 @@ protected:
 
 	void scheduleReset(Loop &);
 	void scheduleReleaseReset(Loop &, bool s);
-	void doRelease(bool success);
+	void doRelease(Loop *loop, bool success);
 
 	virtual Status doCheckFence(bool lockfree) = 0;
 	virtual void doResetFence() = 0;
@@ -463,6 +465,7 @@ protected:
 	Function<bool()> _scheduleFn;
 	Function<void()> _releaseFn;
 	Vector<Rc<Ref>> _autorelease;
+	Vector<Rc<QueryPool>> _queries;
 };
 
 } // namespace stappler::xenolith::core

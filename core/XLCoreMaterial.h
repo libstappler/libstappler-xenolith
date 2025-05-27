@@ -25,6 +25,7 @@
 #ifndef XENOLITH_CORE_XLCOREMATERIAL_H_
 #define XENOLITH_CORE_XLCOREMATERIAL_H_
 
+#include "XLCoreObject.h"
 #include "XLCoreResource.h"
 #include "XLCoreAttachment.h"
 #include "XLCoreDynamicImage.h"
@@ -60,62 +61,47 @@ struct SP_PUBLIC MaterialImage {
 class SP_PUBLIC MaterialSet final : public Ref {
 public:
 	using ImageSlot = MaterialImageSlot;
-	using EncodeCallback = Function<bool(uint8_t *, const Material *)>;
 
-	virtual ~MaterialSet();
+	virtual ~MaterialSet() = default;
 
-	bool init(const BufferInfo &, const EncodeCallback &callback, uint32_t objectSize,
-			uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment * = nullptr);
+	bool init(uint32_t imagesInSet, const MaterialAttachment * = nullptr);
 	bool init(const Rc<MaterialSet> &);
-
-	bool encode(uint8_t *, const Material *);
-
-	void clear();
 
 	Vector<Rc<Material>> updateMaterials(const Rc<MaterialInputData> &,
 			const Callback<Rc<ImageView>(const MaterialImage &)> &);
-	Vector<Rc<Material>> updateMaterials(const Vector<Rc<Material>> &materials,
+	Vector<Rc<Material>> updateMaterials(SpanView<Rc<Material>> materials,
 			SpanView<MaterialId> dynamic, SpanView<MaterialId> remove,
 			const Callback<Rc<ImageView>(const MaterialImage &)> &);
 
-	const BufferInfo &getInfo() const { return _info; }
-	uint32_t getObjectSize() const { return _objectSize; }
 	uint32_t getImagesInSet() const { return _imagesInSet; }
 	uint64_t getGeneration() const { return _generation; }
 	const HashMap<MaterialId, Rc<Material>> &getMaterials() const { return _materials; }
 
-	void setBuffer(Rc<BufferObject> &&, HashMap<MaterialId, uint32_t> &&);
-	BufferObject *getBuffer() const { return _buffer; }
-	const HashMap<MaterialId, uint32_t> &getOrdering() const { return _ordering; }
+	const MaterialAttachment *getOwner() const { return _owner; }
 
 	Vector<MaterialLayout> &getLayouts() { return _layouts; }
 	const MaterialLayout *getLayout(uint32_t) const;
 	const Material *getMaterialById(MaterialId) const;
-	uint32_t getMaterialOrder(MaterialId) const;
 
 	const TextureSetLayoutData *getTargetLayout() const;
+
+	void foreachUpdated(const Callback<void(MaterialId, NotNull<Material *>)> &, bool clear);
 
 protected:
 	void removeMaterial(Material *oldMaterial);
 	void emplaceMaterialImages(Material *oldMaterial, Material *newMaterial,
 			const Callback<Rc<ImageView>(const MaterialImage &)> &);
 
-	BufferInfo _info;
-	EncodeCallback _encodeCallback;
-	uint32_t _objectSize = 0;
 	uint32_t _imagesInSet = 16;
-	uint32_t _buffersInSet = 16;
 
 	uint32_t _generation = 1;
 	HashMap<MaterialId, Rc<Material>> _materials;
-	HashMap<MaterialId, uint32_t> _ordering;
 
 	// describes image location in descriptor sets
 	// all images from same material must be in one set
 	Vector<MaterialLayout> _layouts;
-
-	Rc<BufferObject> _buffer;
 	const MaterialAttachment *_owner = nullptr;
+	Vector<MaterialId> _updatedMaterials;
 };
 
 class SP_PUBLIC Material final : public Ref {
@@ -143,14 +129,18 @@ public:
 	const Vector<MaterialImage> &getImages() const { return _images; }
 
 	uint32_t getLayoutIndex() const { return _layoutIndex; }
-	void setLayoutIndex(uint32_t);
 
-	const Rc<DataAtlas> &getAtlas() const { return _atlas; }
+	DataAtlas *getAtlas() const { return _atlas; }
+	BufferObject *getBuffer() const { return _buffer; }
+
 	const ImageData *getOwnedData() const { return _ownedData; }
 
 protected:
 	friend class MaterialSet;
-	friend class MaterialAttachment; // for id replacement
+	friend class MaterialAttachment;
+
+	void setLayoutIndex(uint32_t);
+	void setBuffer(Rc<BufferObject> &&);
 
 	bool _dirty = true;
 	MaterialId _id = 0;
@@ -158,26 +148,30 @@ protected:
 	const PipelineData *_pipeline;
 	Vector<MaterialImage> _images;
 	Rc<DataAtlas> _atlas;
+	Rc<BufferObject> _buffer;
 	Rc<Ref> _data;
 	const ImageData *_ownedData = nullptr;
 };
 
 // this attachment should provide material data buffer for rendering
-class SP_PUBLIC MaterialAttachment : public BufferAttachment {
+class SP_PUBLIC MaterialAttachment : public GenericAttachment {
 public:
 	virtual ~MaterialAttachment();
 
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &, const TextureSetLayoutData *,
-			MaterialSet::EncodeCallback &&, uint32_t materialObjectSize);
+	virtual bool init(AttachmentBuilder &builder, const TextureSetLayoutData *);
 
 	void addPredefinedMaterials(Vector<Rc<Material>> &&);
 
 	const Rc<MaterialSet> &getMaterials() const;
 	void setMaterials(const Rc<MaterialSet> &) const;
 
-	const Vector<Rc<Material>> &getPredefinedMaterials() const { return _predefinedMaterials; }
+	SpanView<Rc<Material>> getPredefinedMaterials() const { return _predefinedMaterials; }
 
 	const TextureSetLayoutData *getTargetLayout() const { return _targetLayout; }
+
+	virtual Bytes getMaterialData(NotNull<Material *>) const;
+
+	virtual Rc<BufferObject> allocateMaterialPersistentBuffer(NotNull<Material *>) const;
 
 	virtual Rc<MaterialSet> allocateSet(const Device &) const;
 	virtual Rc<MaterialSet> cloneSet(const Rc<MaterialSet> &) const;
@@ -194,7 +188,9 @@ public:
 	Queue *getCompiler() const;
 
 protected:
-	using BufferAttachment::init;
+	using GenericAttachment::init;
+
+	void setMaterialBuffer(NotNull<Material *>, Rc<BufferObject> &&) const;
 
 	struct DynamicImageTracker {
 		uint32_t refCount;
@@ -204,9 +200,7 @@ protected:
 	Queue *_compiler = nullptr;
 	const TextureSetLayoutData *_targetLayout = nullptr;
 	mutable std::atomic<MaterialId> _attachmentMaterialId = 1;
-	uint32_t _materialObjectSize = 0;
-	MaterialSet::EncodeCallback _encodeCallback;
-	mutable Rc<MaterialSet> _data;
+	mutable Rc<MaterialSet> _materialSet;
 	Vector<Rc<Material>> _predefinedMaterials;
 
 	mutable Mutex _dynamicMutex;

@@ -230,6 +230,7 @@ bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfoData &
 void Image::setPendingBarrier(const ImageMemoryBarrier &barrier) {
 	_barrier = barrier;
 	_barrier->image = this;
+	_barrier->vkimage = _image;
 }
 
 const ImageMemoryBarrier *Image::getPendingBarrier() const {
@@ -241,18 +242,6 @@ const ImageMemoryBarrier *Image::getPendingBarrier() const {
 }
 
 void Image::dropPendingBarrier() { _barrier.reset(); }
-
-VkImageAspectFlags Image::getAspectMask() const {
-	switch (core::getImagePixelFormat(_info.format)) {
-	case core::PixelFormat::D: return VK_IMAGE_ASPECT_DEPTH_BIT; break;
-	case core::PixelFormat::DS:
-		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		break;
-	case core::PixelFormat::S: return VK_IMAGE_ASPECT_STENCIL_BIT; break;
-	default: return VK_IMAGE_ASPECT_COLOR_BIT; break;
-	}
-	return VK_IMAGE_ASPECT_NONE_KHR;
-}
 
 bool Image::bindMemory(Rc<DeviceMemory> &&mem, VkDeviceSize offset) {
 	auto dev = (Device *)_object.device;
@@ -304,6 +293,7 @@ bool Buffer::init(Device &dev, VkBuffer buffer, const BufferInfo &info, Rc<Devic
 void Buffer::setPendingBarrier(const BufferMemoryBarrier &barrier) {
 	_barrier = barrier;
 	_barrier->buffer = this;
+	_barrier->vkbuffer = _buffer;
 }
 
 const BufferMemoryBarrier *Buffer::getPendingBarrier() const {

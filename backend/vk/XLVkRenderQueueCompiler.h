@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +38,7 @@ struct SP_PUBLIC RenderQueueInput : public core::AttachmentInputData {
 
 class SP_PUBLIC RenderQueueCompiler : public core::Queue {
 public:
-	virtual ~RenderQueueCompiler();
+	virtual ~RenderQueueCompiler() = default;
 
 	bool init(Device &, TransferQueue *, MaterialCompiler *);
 
@@ -54,6 +55,6 @@ protected:
 	const AttachmentData *_attachment;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKRENDERQUEUECOMPILER_H_ */

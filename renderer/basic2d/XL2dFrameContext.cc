@@ -72,6 +72,7 @@ void FrameContext2d::onExit() { FrameContext::onExit(); }
 
 Rc<FrameContextHandle> FrameContext2d::makeHandle(FrameInfo &frame) {
 	auto h = Rc<FrameContextHandle2d>::alloc();
+	h->clock = frame.director->getUpdateTime().app;
 	h->director = frame.director;
 	h->context = this;
 	h->commands = Rc<CommandList>::create(frame.pool);
@@ -84,7 +85,6 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 	frame.resolvedInputs.emplace(_vertexAttachmentData);
 	frame.resolvedInputs.emplace(_lightAttachmentData);
 	frame.resolvedInputs.emplace(_particleEmitterAttachmentData);
-	frame.resolvedInputs.emplace(_particleVertexAttachmentData);
 
 	if (_materialDependency) {
 		handle->waitDependencies.emplace_back(_materialDependency);
@@ -96,7 +96,6 @@ void FrameContext2d::submitHandle(FrameInfo &frame, FrameContextHandle *handle) 
 		req->addInput(_vertexAttachmentData, Rc<FrameContextHandle2d>(h));
 		req->addInput(_lightAttachmentData, Rc<FrameContextHandle2d>(h));
 		req->addInput(_particleEmitterAttachmentData, Rc<FrameContextHandle2d>(h));
-		req->addInput(_particleVertexAttachmentData, Rc<FrameContextHandle2d>(h));
 	},
 			this);
 
@@ -120,13 +119,11 @@ bool FrameContext2d::initWithQueue(core::Queue *queue) {
 			_lightAttachmentData = it;
 		} else if (it->key == ParticleEmittersAttachment) {
 			_particleEmitterAttachmentData = it;
-		} else if (it->key == ParticleVertexesAttachment) {
-			_particleVertexAttachmentData = it;
 		}
 	}
 
 	return _materialAttachmentData && _vertexAttachmentData && _lightAttachmentData
-			&& _particleEmitterAttachmentData && _particleVertexAttachmentData;
+			&& _particleEmitterAttachmentData;
 }
 
 bool StateData::init() { return true; }

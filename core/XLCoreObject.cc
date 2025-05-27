@@ -227,6 +227,16 @@ ImageViewInfo ImageObject::getViewInfo(const ImageViewInfo &info) const {
 	return _info.getViewInfo(info);
 }
 
+ImageAspects ImageObject::getAspects() const {
+	switch (core::getImagePixelFormat(_info.format)) {
+	case core::PixelFormat::D: return ImageAspects::Depth; break;
+	case core::PixelFormat::DS: return ImageAspects::Depth | ImageAspects::Stencil; break;
+	case core::PixelFormat::S: return ImageAspects::Stencil; break;
+	default: return ImageAspects::Color; break;
+	}
+	return ImageAspects::None;
+}
+
 ImageView::~ImageView() {
 	if (_releaseCallback) {
 		_releaseCallback();
@@ -261,11 +271,23 @@ Extent3 ImageView::getFramebufferExtent() const {
 			getLayerCount());
 }
 
-void CommandBuffer::bindImage(ImageObject *image) { _images.emplace(image); }
+void CommandBuffer::bindImage(ImageObject *image) {
+	if (image) {
+		_images.emplace(image);
+	}
+}
 
-void CommandBuffer::bindBuffer(BufferObject *buffer) { _buffers.emplace(buffer); }
+void CommandBuffer::bindBuffer(BufferObject *buffer) {
+	if (buffer) {
+		_buffers.emplace(buffer);
+	}
+}
 
-void CommandBuffer::bindFramebuffer(Framebuffer *fb) { _framebuffers.emplace(fb); }
+void CommandBuffer::bindFramebuffer(Framebuffer *fb) {
+	if (fb) {
+		_framebuffers.emplace(fb);
+	}
+}
 
 String Shader::inspectShader(SpanView<uint32_t> data) {
 	SpvReflectShaderModule shader;
@@ -336,7 +358,7 @@ bool Semaphore::reset() {
 	return false;
 }
 
-Fence::~Fence() { doRelease(false); }
+Fence::~Fence() { doRelease(nullptr, false); }
 
 void Fence::clear() {
 	if (_releaseFn) {
@@ -359,6 +381,8 @@ void Fence::setScheduleCallback(Function<bool()> &&schedule) { _scheduleFn = sp:
 
 void Fence::setReleaseCallback(Function<bool()> &&release) { _releaseFn = sp::move(release); }
 
+void Fence::bindQueries(NotNull<QueryPool *> q) { _queries.emplace_back(q); }
+
 void Fence::setArmed(DeviceQueue &q) {
 	std::unique_lock<Mutex> lock(_mutex);
 	_state = Armed;
@@ -375,6 +399,11 @@ void Fence::setArmed() {
 
 void Fence::setTag(StringView tag) { _tag = tag; }
 
+void Fence::addQueryCallback(Function<void(bool, SpanView<Rc<QueryPool>>)> &&cb, Ref *ref,
+		StringView tag) {
+	addRelease([this, cb = sp::move(cb)](bool success) { cb(success, _queries); }, ref, tag);
+}
+
 void Fence::addRelease(Function<void(bool)> &&cb, Ref *ref, StringView tag) {
 	std::unique_lock<Mutex> lock(_mutex);
 	_release.emplace_back(ReleaseHandle({sp::move(cb), ref, tag}));
@@ -385,8 +414,8 @@ bool Fence::schedule(Loop &loop) {
 	if (_state != Armed) {
 		lock.unlock();
 		if (_releaseFn) {
-			loop.performOnThread([this] {
-				doRelease(false);
+			loop.performOnThread([this, loop = &loop] {
+				doRelease(loop, false);
 
 				if (_releaseFn) {
 					auto releaseFn = sp::move(_releaseFn);
@@ -398,7 +427,7 @@ bool Fence::schedule(Loop &loop) {
 				}
 			}, this, true);
 		} else {
-			doRelease(false);
+			doRelease(&loop, false);
 			_scheduleFn = nullptr;
 		}
 		return false;
@@ -465,7 +494,7 @@ void Fence::autorelease(Rc<Ref> &&ref) { _autorelease.emplace_back(move(ref)); }
 void Fence::setSignaled(Loop &loop) {
 	_state = Signaled;
 	if (loop.isOnThisThread()) {
-		doRelease(true);
+		doRelease(&loop, true);
 		scheduleReset(loop);
 	} else {
 		scheduleReleaseReset(loop, true);
@@ -492,8 +521,8 @@ void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 		loop.performInQueue(Rc<thread::Task>::create([this](const thread::Task &) {
 			doResetFence();
 			return true;
-		}, [this, s](const thread::Task &, bool success) {
-			doRelease(s);
+		}, [this, s, loop = &loop](const thread::Task &, bool success) {
+			doRelease(loop, s);
 
 			auto releaseFn = sp::move(_releaseFn);
 			_releaseFn = nullptr;
@@ -501,11 +530,11 @@ void Fence::scheduleReleaseReset(Loop &loop, bool s) {
 		}, this));
 	} else {
 		doResetFence();
-		doRelease(s);
+		doRelease(&loop, s);
 	}
 }
 
-void Fence::doRelease(bool success) {
+void Fence::doRelease(Loop *loop, bool success) {
 	if (_queue) {
 		_queue->releaseFence(*this);
 		_queue = nullptr;
@@ -526,6 +555,14 @@ void Fence::doRelease(bool success) {
 		XL_PROFILE_END(total);
 		_release.clear();
 	}
+
+	if (loop) {
+		for (auto &it : _queries) { _object.device->releaseQueryPool(*loop, move(it)); }
+	} else {
+		_queries.clear();
+	}
+
+
 	_tag = StringView();
 	autorelease.clear();
 }

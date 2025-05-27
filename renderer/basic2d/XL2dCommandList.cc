@@ -241,14 +241,15 @@ void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, 
 	});
 }
 
-void CommandList::pushParticleEmitter(Rc<ParticleSystemData> &&data, const Mat4 &t, CmdInfo &&info,
-		CommandFlags flags) {
+void CommandList::pushParticleEmitter(uint64_t id, Rc<ParticleSystemData> &&data, const Mat4 &t,
+		CmdInfo &&info, CommandFlags flags) {
 	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::ParticleEmitter, flags);
 		auto cmdData = reinterpret_cast<CmdParticleEmitter *>(cmd->data);
 
 		cmdData->data = move(data);
 		cmdData->transform = t;
+		cmdData->id = id;
 
 		while (!info.zPath.empty() && info.zPath.back() == ZOrder(0)) { info.zPath.pop_back(); }
 
@@ -262,6 +263,7 @@ void CommandList::pushParticleEmitter(Rc<ParticleSystemData> &&data, const Mat4 
 		addCommand(cmd);
 	});
 }
+
 void CommandList::addCommand(Command *cmd) {
 	if (!_last) {
 		_first = cmd;

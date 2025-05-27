@@ -22,14 +22,15 @@
  **/
 
 #include "XL2dVkShadow.h"
+#include "XLCoreAttachment.h"
+#include "XLCoreEnum.h"
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
 #include "XLCoreFrameCache.h"
 #include "XLCoreFrameRequest.h"
+#include "XLCoreInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
-
-ShadowLightDataAttachmentHandle::~ShadowLightDataAttachmentHandle() { }
 
 void ShadowLightDataAttachmentHandle::submitInput(FrameQueue &q,
 		Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
@@ -50,32 +51,10 @@ void ShadowLightDataAttachmentHandle::submitInput(FrameQueue &q,
 
 		_input = move(d);
 		_data = devFrame->getMemPool(devFrame)->spawn(AllocationUsage::DeviceLocalHostVisible,
-				BufferInfo(static_cast<BufferAttachment *>(_attachment.get())->getInfo(),
+				BufferInfo(core::ForceBufferUsage(core::BufferUsage::ShaderDeviceAddress),
 						sizeof(ShadowData)));
 		cb(true);
 	});
-}
-
-bool ShadowLightDataAttachmentHandle::isDescriptorDirty(const PassHandle &,
-		const PipelineDescriptor &, uint32_t, const DescriptorData &data) const {
-	if (_data) {
-		return true;
-	}
-	return false;
-}
-
-bool ShadowLightDataAttachmentHandle::writeDescriptor(const core::QueuePassHandle &,
-		DescriptorBufferInfo &info) {
-	switch (info.index) {
-	case 0:
-		info.buffer = _data;
-		info.offset = 0;
-		info.range = _data->getSize();
-		return true;
-		break;
-	default: break;
-	}
-	return false;
 }
 
 void ShadowLightDataAttachmentHandle::allocateBuffer(DeviceFrameHandle *devFrame, uint32_t gridSize,
@@ -157,12 +136,8 @@ uint32_t ShadowLightDataAttachmentHandle::getLightsCount() const {
 	return _input->lights.ambientLightCount + _input->lights.directLightCount;
 }
 
-
-ShadowLightDataAttachment::~ShadowLightDataAttachment() { }
-
 bool ShadowLightDataAttachment::init(AttachmentBuilder &builder) {
-	if (!BufferAttachment::init(builder,
-				BufferInfo(core::BufferUsage::UniformBuffer, size_t(sizeof(ShadowData))))) {
+	if (!core::GenericAttachment::init(builder)) {
 		return false;
 	}
 

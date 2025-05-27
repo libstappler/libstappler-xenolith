@@ -36,7 +36,6 @@ public:
 	static constexpr StringView VertexAttachmentName = "VertexInput2d";
 	static constexpr StringView LightDataAttachmentName = "ShadowLightDataAttachment";
 	static constexpr StringView ParticleEmittersAttachment = "ParticleEmitters";
-	static constexpr StringView ParticleVertexesAttachment = "ParticleVertexes";
 
 	virtual ~FrameContext2d() { }
 
@@ -53,7 +52,6 @@ protected:
 	const core::AttachmentData *_vertexAttachmentData = nullptr;
 	const core::AttachmentData *_lightAttachmentData = nullptr;
 	const core::AttachmentData *_particleEmitterAttachmentData = nullptr;
-	const core::AttachmentData *_particleVertexAttachmentData = nullptr;
 
 	bool _init = false;
 };

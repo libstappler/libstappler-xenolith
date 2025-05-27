@@ -134,7 +134,7 @@ public:
 		bool cleanup(Device &dev);
 	};
 
-	virtual ~RenderPass() { }
+	virtual ~RenderPass() = default;
 
 	virtual bool init(Device &dev, QueuePassData &);
 

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -88,8 +89,8 @@ void PresentationEngine::scheduleNextImage(Function<void(PresentationFrame *, bo
 		frameFlags = PresentationFrame::None;
 	}
 
-	scheduleSwapchainImage(Rc<PresentationFrame>::create(this, _constraints,
-			_frameOrder, frameFlags, sp::move(cb)));
+	scheduleSwapchainImage(Rc<PresentationFrame>::create(this, _constraints, _frameOrder,
+			frameFlags, sp::move(cb)));
 
 	_readyForNextFrame = false;
 }
@@ -101,19 +102,21 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 
 	XL_COREPRESENT_LOG("scheduleSwapchainImage");
 
-	acquireFrameData(frame, [this] (core::PresentationFrame *frame) mutable {
+	acquireFrameData(frame, [this](core::PresentationFrame *frame) mutable {
 		if (isRunning() && frame->getSwapchain() == _swapchain) {
 			XL_COREPRESENT_LOG("scheduleSwapchainImage: setup frame request");
 			auto a = frame->setupOutputAttachment();
 			if (!a) {
 				if (frame->getRequest()->getQueue()) {
 					log::error("core::PresentationEngine", "Fail to run view with queue '",
-							frame->getRequest()->getQueue()->getName(),  "': no usable output attachments found");
+							frame->getRequest()->getQueue()->getName(),
+							"': no usable output attachments found");
 				}
 				return;
 			}
 
-			frame->getRequest()->setOutput(a, [frame] (core::FrameAttachmentData &data, bool success, Ref *) {
+			frame->getRequest()->setOutput(a,
+					[frame](core::FrameAttachmentData &data, bool success, Ref *) {
 				// Called in GL Thread
 				XL_COREPRESENT_LOG("scheduleSwapchainImage: output on frame");
 				if (data.image && success) {
@@ -178,33 +181,31 @@ void PresentationEngine::end() {
 
 	Vector<Rc<Ref>> releaseList;
 
-	for (auto &it : _activeFrames) {
-		releaseList.emplace_back(it);
-		it->invalidate();
-	}
+	auto activeFrames = std::move(_activeFrames);
 	_activeFrames.clear();
 
-	for (auto &it : _totalFrames) {
+	for (auto &it : activeFrames) {
 		releaseList.emplace_back(it);
 		it->invalidate();
 	}
+
+	auto totalFrames = std::move(_totalFrames);
 	_totalFrames.clear();
+
+	for (auto &it : totalFrames) {
+		releaseList.emplace_back(it);
+		it->invalidate();
+	}
 
 	releaseList.clear();
 
-	for (auto &it :_framesAwaitingImages) {
-		it->invalidate(true);
-	}
+	for (auto &it : _framesAwaitingImages) { it->invalidate(true); }
 	_framesAwaitingImages.clear();
 
-	for (auto &it :_scheduledForPresent) {
-		it->invalidate(true);
-	}
+	for (auto &it : _scheduledForPresent) { it->invalidate(true); }
 	_scheduledForPresent.clear();
 
-	for (auto &it :_scheduledPresentHandles) {
-		it->cancel();
-	}
+	for (auto &it : _scheduledPresentHandles) { it->cancel(); }
 	_scheduledPresentHandles.clear();
 }
 
@@ -218,16 +219,16 @@ bool PresentationEngine::present(PresentationFrame *frame) {
 			return true;
 		}
 		auto clock = sp::platform::clock(ClockType::Monotonic);
-		if (!_options.usePresentWindow || !_nextPresentWindow || _nextPresentWindow < clock + _engineUpdateInterval) {
+		if (!_options.usePresentWindow || !_nextPresentWindow
+				|| _nextPresentWindow < clock + _engineUpdateInterval) {
 			runScheduledPresent(frame);
 		} else {
 			auto frameTimeout = _nextPresentWindow - clock;
 			XL_COREPRESENT_LOG("schedulePresent: ", frameTimeout);
 
 			// schedule image until next present window
-			auto handle = _loop->getLooper()->schedule(
-					TimeInterval::microseconds(frameTimeout),
-					[this, frame = Rc<PresentationFrame>(frame)] (event::Handle *h, bool success) {
+			auto handle = _loop->getLooper()->schedule(TimeInterval::microseconds(frameTimeout),
+					[this, frame = Rc<PresentationFrame>(frame)](event::Handle *h, bool success) {
 				if (success) {
 					runScheduledPresent(frame);
 				} else {
@@ -257,16 +258,12 @@ bool PresentationEngine::present(PresentationFrame *frame) {
 void PresentationEngine::update(bool displayLink) {
 	if (displayLink && _options.followDisplayLink) {
 		// ignore present windows
-		for (auto &it : _scheduledForPresent) {
-			runScheduledPresent(move(it));
-		}
+		for (auto &it : _scheduledForPresent) { runScheduledPresent(move(it)); }
 		_scheduledForPresent.clear();
 	}
 }
 
-void PresentationEngine::setTargetFrameInterval(uint64_t value) {
-	_targetFrameInterval = value;
-}
+void PresentationEngine::setTargetFrameInterval(uint64_t value) { _targetFrameInterval = value; }
 
 void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame *frame) {
 	XL_COREPRESENT_LOG("presentWithQueue: ", _activeFrames.size());
@@ -294,7 +291,7 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame 
 	if (!_options.followDisplayLink && _targetFrameInterval) {
 		// use clock before `present` call
 		_nextPresentWindow = clock + _targetFrameInterval
-							 - _engineUpdateInterval; // allow one tick of `update`, that may be required for scheduling
+				- _engineUpdateInterval; // allow one tick of `update`, that may be required for scheduling
 	}
 
 	if (!_running || (_swapchain->getAcquiredImagesCount() != 0 && !_activeFrames.empty())) {
@@ -338,21 +335,15 @@ PresentationEngine::FrameTimeInfo PresentationEngine::updatePresentationInterval
 	return ret;
 }
 
-uint64_t PresentationEngine::getLastFrameInterval() const {
-	return _lastPresentationInterval;
-}
+uint64_t PresentationEngine::getLastFrameInterval() const { return _lastPresentationInterval; }
 
-uint64_t PresentationEngine::getAvgFrameInterval() const {
-	return _avgPresentationIntervalValue;
-}
+uint64_t PresentationEngine::getAvgFrameInterval() const { return _avgPresentationIntervalValue; }
 
-uint64_t PresentationEngine::getLastFrameTime() const {
-	return _lastFrameTime;
-}
+uint64_t PresentationEngine::getLastFrameTime() const { return _lastFrameTime; }
 
-uint64_t PresentationEngine::getLastDeviceFrameTime() const {
-	return _lastDeviceFrameTime;
-}
+uint64_t PresentationEngine::getLastFenceFrameTime() const { return _lastFenceFrameTime; }
+
+uint64_t PresentationEngine::getLastTimestampFrameTime() const { return _lastTimestampFrameTime; }
 
 void PresentationEngine::setReadyForNextFrame() {
 	// if we not in on-demand mode - ignore
@@ -373,13 +364,9 @@ void PresentationEngine::setReadyForNextFrame() {
 	}
 }
 
-void PresentationEngine::setRenderOnDemand(bool value) {
-	_options.renderOnDemand = value;
-}
+void PresentationEngine::setRenderOnDemand(bool value) { _options.renderOnDemand = value; }
 
-bool PresentationEngine::isRenderOnDemand() const {
-	return _options.renderOnDemand;
-}
+bool PresentationEngine::isRenderOnDemand() const { return _options.renderOnDemand; }
 
 bool PresentationEngine::isRunning() const {
 	return _running && _swapchain && !_swapchain->isDeprecated();
@@ -439,15 +426,19 @@ void PresentationEngine::handleFrameComplete(PresentationFrame *frame) {
 		_avgFrameTimeValue = _avgFrameTime.getAverage();
 
 		if (auto t = h->getSubmissionTime()) {
-			_lastDeviceFrameTime = t;
+			_lastFenceFrameTime = t;
 			_avgFenceInterval.addValue(t);
 			_avgFenceIntervalValue = _avgFenceInterval.getAverage();
 		}
+		if (auto t = h->getDeviceTime()) {
+			_lastTimestampFrameTime = t;
+			_avgTimestampInterval.addValue(t);
+			_avgTimestampIntervalValue = _avgTimestampInterval.getAverage();
+		}
 	}
 	if (!_options.earlyPresent && frame->hasFlag(PresentationFrame::ImageRendered)) {
-		_loop->performOnThread([this, frame = Rc<PresentationFrame>(frame)] {
-			present(frame);
-		}, this, false);
+		_loop->performOnThread([this, frame = Rc<PresentationFrame>(frame)] { present(frame); },
+				this, false);
 	} else {
 		_totalFrames.erase(frame);
 		if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
@@ -470,18 +461,12 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 
 void PresentationEngine::resetFrames() {
 	auto frames = _activeFrames;
-	for (auto &it : frames) {
-		it->invalidate(true);
-	}
+	for (auto &it : frames) { it->invalidate(true); }
 
 	frames = _totalFrames;
-	for (auto &it : frames) {
-		it->invalidate(true);
-	}
+	for (auto &it : frames) { it->invalidate(true); }
 
-	for (auto &it :_scheduledPresentHandles) {
-		it->cancel();
-	}
+	for (auto &it : _scheduledPresentHandles) { it->cancel(); }
 	_scheduledPresentHandles.clear();
 
 	_framesAwaitingImages.clear();
@@ -504,7 +489,8 @@ void PresentationEngine::scheduleImage(PresentationFrame *frame) {
 }
 
 bool PresentationEngine::acquireScheduledImage() {
-	if (!_requestedSwapchainImage.empty() || _framesAwaitingImages.empty() || _totalFrames.size() != _activeFrames.size()) {
+	if (!_requestedSwapchainImage.empty() || _framesAwaitingImages.empty()
+			|| _totalFrames.size() != _activeFrames.size()) {
 		return false;
 	}
 
@@ -513,15 +499,16 @@ bool PresentationEngine::acquireScheduledImage() {
 	auto fence = loop->acquireFence(FenceType::Swapchain);
 	if (auto acquiredImage = _swapchain->acquire(true, fence)) {
 		_requestedSwapchainImage.emplace(acquiredImage);
-		XL_COREPRESENT_LOG("acquireScheduledImage - spawn request: ", _requestedSwapchainImage.size());
-		fence->addRelease([this, f = fence.get(), acquiredImage] (bool success) mutable {
+		XL_COREPRESENT_LOG("acquireScheduledImage - spawn request: ",
+				_requestedSwapchainImage.size());
+		fence->addRelease([this, f = fence.get(), acquiredImage](bool success) mutable {
 			if (success) {
 				handleSwapchainImageReady(move(acquiredImage));
 			} else {
 				_requestedSwapchainImage.erase(acquiredImage);
 			}
-			XL_COREPRESENT_LOG("[", f->getFrame(),  "] acquireScheduledImage [complete]",
-					" [", sp::platform::clock(ClockType::Monotonic) - f->getArmedTime(), "]");
+			XL_COREPRESENT_LOG("[", f->getFrame(), "] acquireScheduledImage [complete]", " [",
+					sp::platform::clock(ClockType::Monotonic) - f->getArmedTime(), "]");
 		}, this, "PresentationEngine::acquireScheduledImage");
 		fence->schedule(*loop);
 		return true;
@@ -565,11 +552,11 @@ void PresentationEngine::runScheduledPresent(PresentationFrame *frame) {
 		presentSwapchainImage(move(queue), frame);
 	} else {
 		_device->acquireQueue(QueueFlags::Present, *_loop,
-				[this, frame = Rc<PresentationFrame>(frame)](Loop&, const Rc<DeviceQueue> &queue) mutable {
+				[this, frame = Rc<PresentationFrame>(frame)](Loop &,
+						const Rc<DeviceQueue> &queue) mutable {
 			presentSwapchainImage(Rc<DeviceQueue>(queue), frame);
-		}, [frame = Rc<PresentationFrame>(frame)] (Loop &) {
-			frame->invalidate();
-		}, this);
+		},
+				[frame = Rc<PresentationFrame>(frame)](Loop &) { frame->invalidate(); }, this);
 	}
 }
 
@@ -581,4 +568,4 @@ void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue, Presenta
 	_device->releaseQueue(move(queue));
 }
 
-}
+} // namespace stappler::xenolith::core

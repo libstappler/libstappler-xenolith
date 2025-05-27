@@ -353,6 +353,7 @@ void FrameHandle::onQueueSubmitted(FrameQueue &queue) {
 
 void FrameHandle::onQueueComplete(FrameQueue &queue) {
 	_submissionTime += queue.getSubmissionTime();
+	_deviceTime += queue.getDeviceTime();
 	++_queuesCompleted;
 	tryComplete();
 }

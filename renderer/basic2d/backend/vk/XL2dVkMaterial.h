@@ -35,27 +35,28 @@ using namespace xenolith::vk;
 
 class SP_PUBLIC MaterialAttachment : public core::MaterialAttachment {
 public:
-	virtual ~MaterialAttachment();
-
-	virtual bool init(AttachmentBuilder &builder, const BufferInfo &,
-			const core::TextureSetLayoutData *);
+	virtual ~MaterialAttachment() = default;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 
+	virtual void setCompiled(core::Device &) override;
+
+	virtual Bytes getMaterialData(NotNull<core::Material *>) const override;
+
+	virtual Rc<core::BufferObject> allocateMaterialPersistentBuffer(
+			NotNull<core::Material *>) const override;
+
 protected:
-	using core::MaterialAttachment::init;
+	size_t getMaterialSize(NotNull<core::Material *>) const;
+
+	Rc<DeviceMemoryPool> _pool;
 };
 
-class MaterialAttachmentHandle : public BufferAttachmentHandle {
+class MaterialAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~MaterialAttachmentHandle();
+	virtual ~MaterialAttachmentHandle() = default;
 
 	virtual bool init(const Rc<Attachment> &, const FrameQueue &) override;
-
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
-			const DescriptorData &) const override;
-
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
 	const MaterialAttachment *getMaterialAttachment() const;
 

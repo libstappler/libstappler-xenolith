@@ -29,6 +29,10 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKTABLE_H_
 #define XENOLITH_BACKEND_VK_XLVKTABLE_H_
 
+#include <vulkan/vulkan.h>
+
+#include "XLCommon.h"
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 struct SP_PUBLIC LoaderTable {

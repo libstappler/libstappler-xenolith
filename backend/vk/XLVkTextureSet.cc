@@ -20,7 +20,7 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-**/
+ **/
 
 #include "XLVkTextureSet.h"
 #include "XLVkLoop.h"
@@ -31,10 +31,8 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 	auto &devInfo = dev.getInfo();
 
 	uint32_t maxImageCount = data.imageCount;
-	uint32_t maxBufferCount = data.bufferCount;
 	if (dev.getInfo().features.deviceDescriptorIndexing.descriptorBindingPartiallyBound) {
 		maxImageCount = data.imageCountIndexed;
-		maxBufferCount = data.bufferCountIndexed;
 	}
 
 	auto &limits = devInfo.properties.device10.properties.limits;
@@ -43,16 +41,11 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 
 	auto imageLimit = std::min(limits.maxPerStageDescriptorSampledImages,
 			limits.maxDescriptorSetSampledImages);
-	auto bufferLimit = std::min(limits.maxPerStageDescriptorStorageBuffers,
-			limits.maxDescriptorSetStorageBuffers);
 
 	_imageCount = imageLimit = std::min(imageLimit - 2, maxImageCount);
-	_bufferCount = bufferLimit = std::min(bufferLimit - 4, maxBufferCount);
 
-	if (_imageCount + _bufferCount > maxResources) {
-		auto v = maxResources / 4;
-		_imageCount = imageLimit = v * 3;
-		_bufferCount = bufferLimit = v;
+	if (_imageCount > maxResources) {
+		_imageCount = imageLimit = maxResources - 4;
 	}
 
 	if (!devInfo.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
@@ -71,21 +64,18 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 			uint32_t(vkSamplers.size()), VK_SHADER_STAGE_FRAGMENT_BIT, vkSamplers.data()},
 		VkDescriptorSetLayoutBinding{uint32_t(1), VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 			uint32_t(_imageCount), VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-		VkDescriptorSetLayoutBinding{uint32_t(2), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			uint32_t(_bufferCount), VK_SHADER_STAGE_VERTEX_BIT, nullptr},
 	};
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.pNext = nullptr;
-	layoutInfo.bindingCount = 3;
+	layoutInfo.bindingCount = 2;
 	layoutInfo.pBindings = b;
 	layoutInfo.flags = 0;
 
 	if (dev.getInfo().features.deviceDescriptorIndexing.descriptorBindingPartiallyBound) {
 		Vector<VkDescriptorBindingFlags> flags;
 		flags.emplace_back(0);
-		flags.emplace_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 		flags.emplace_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 
 		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlags;
@@ -113,7 +103,6 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 
 	_emptyImage = data.emptyImage;
 	_solidImage = data.solidImage;
-	_emptyBuffer = data.emptyBuffer;
 
 	return core::Object::init(dev,
 			[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *data) {
@@ -134,12 +123,10 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 
 bool TextureSet::init(Device &dev, const core::TextureSetLayout &layout) {
 	_imageCount = layout.getImageCount();
-	_bufferCount = layout.getBuffersCount();
 
 	VkDescriptorPoolSize poolSizes[] = {
 		VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, _imageCount},
 		VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_SAMPLER, layout.getSamplersCount()},
-		VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _bufferCount},
 	};
 
 	VkDescriptorPoolCreateInfo poolInfo{};
@@ -192,11 +179,9 @@ void TextureSet::write(const core::MaterialLayout &set) {
 	auto dev = ((Device *)_object.device)->getDevice();
 
 	std::forward_list<Vector<VkDescriptorImageInfo>> imagesList;
-	std::forward_list<Vector<VkDescriptorBufferInfo>> buffersList;
 	Vector<VkWriteDescriptorSet> writes;
 
 	writeImages(writes, set, imagesList);
-	writeBuffers(writes, set, buffersList);
 
 	table->vkUpdateDescriptorSets(dev, uint32_t(writes.size()), writes.data(), 0, nullptr);
 }
@@ -204,16 +189,6 @@ void TextureSet::write(const core::MaterialLayout &set) {
 Vector<const ImageMemoryBarrier *> TextureSet::getPendingImageBarriers() const {
 	Vector<const ImageMemoryBarrier *> ret;
 	for (auto &it : _pendingImageBarriers) {
-		if (auto b = it->getPendingBarrier()) {
-			ret.emplace_back(b);
-		}
-	}
-	return ret;
-}
-
-Vector<const BufferMemoryBarrier *> TextureSet::getPendingBufferBarriers() const {
-	Vector<const BufferMemoryBarrier *> ret;
-	for (auto &it : _pendingBufferBarriers) {
 		if (auto b = it->getPendingBarrier()) {
 			ret.emplace_back(b);
 		}
@@ -233,23 +208,9 @@ void TextureSet::foreachPendingImageBarriers(const Callback<void(const ImageMemo
 	}
 }
 
-void TextureSet::foreachPendingBufferBarriers(const Callback<void(const BufferMemoryBarrier &)> &cb,
-		bool drain) const {
-	for (auto &it : _pendingBufferBarriers) {
-		if (auto b = it->getPendingBarrier()) {
-			cb(*b);
-			if (drain) {
-				it->dropPendingBarrier();
-			}
-		}
-	}
-}
-
 void TextureSet::dropPendingBarriers() {
 	for (auto &it : _pendingImageBarriers) { it->dropPendingBarrier(); }
-	for (auto &it : _pendingBufferBarriers) { it->dropPendingBarrier(); }
 	_pendingImageBarriers.clear();
-	_pendingBufferBarriers.clear();
 }
 
 Device *TextureSet::getDevice() const { return (Device *)_object.device; }
@@ -343,99 +304,6 @@ void TextureSet::writeImages(Vector<VkWriteDescriptorSet> &writes, const core::M
 		imageWriteData.descriptorCount = uint32_t(localImages->size());
 		imageWriteData.pImageInfo = localImages->data();
 		writes.emplace_back(move(imageWriteData));
-	}
-}
-
-void TextureSet::writeBuffers(Vector<VkWriteDescriptorSet> &writes, const core::MaterialLayout &set,
-		std::forward_list<Vector<VkDescriptorBufferInfo>> &bufferList) {
-	Vector<VkDescriptorBufferInfo> *localBuffers = nullptr;
-
-	VkWriteDescriptorSet bufferWriteData({VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
-		_set, // set
-		2, // descriptor
-		0, // index
-		0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, VK_NULL_HANDLE, VK_NULL_HANDLE});
-
-	if (_partiallyBound) {
-		_layoutBuffers.resize(set.usedBufferSlots, nullptr);
-	} else {
-		_layoutBuffers.resize(set.bufferSlots.size(), nullptr);
-	}
-
-	auto pushWritten = [&, this] {
-		bufferWriteData.descriptorCount = uint32_t(localBuffers->size());
-		bufferWriteData.pBufferInfo = localBuffers->data();
-		writes.emplace_back(move(bufferWriteData));
-		bufferWriteData = VkWriteDescriptorSet({VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr,
-			_set, // set
-			2, // descriptor
-			0, // start from next index
-			0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, VK_NULL_HANDLE, VK_NULL_HANDLE});
-		localBuffers = nullptr;
-	};
-
-	auto emptyBuffer = _layout->getEmptyBuffer()->buffer.get_cast<Buffer>();
-
-	for (uint32_t i = 0; i < set.usedBufferSlots; ++i) {
-		if (set.bufferSlots[i].buffer && _layoutBuffers[i] != set.bufferSlots[i].buffer) {
-			// replace old buffer in descriptor
-			if (!localBuffers) {
-				localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());
-			}
-			localBuffers->emplace_back(VkDescriptorBufferInfo(
-					{((Buffer *)set.bufferSlots[i].buffer.get())->getBuffer(), 0, VK_WHOLE_SIZE}));
-			auto buffer = (Buffer *)set.bufferSlots[i].buffer.get();
-
-			// propagate barrier, if any
-			if (buffer->getPendingBarrier()) {
-				_pendingBufferBarriers.emplace_back(buffer);
-			}
-			_layoutBuffers[i] = set.bufferSlots[i].buffer;
-			++bufferWriteData.descriptorCount;
-		} else if (!_partiallyBound && !set.bufferSlots[i].buffer
-				&& _layoutBuffers[i] != emptyBuffer) {
-			// if partiallyBound feature is not available, drop old buffers to preallocated empty buffer
-			if (!localBuffers) {
-				localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());
-			}
-			localBuffers->emplace_back(
-					VkDescriptorBufferInfo({emptyBuffer->getBuffer(), 0, VK_WHOLE_SIZE}));
-			_layoutBuffers[i] = emptyBuffer;
-			++bufferWriteData.descriptorCount;
-		} else {
-			// descriptor was not changed, no need to write, push written
-			if (bufferWriteData.descriptorCount > 0) {
-				pushWritten();
-			}
-			bufferWriteData.dstArrayElement = i + 1; // start from next index
-		}
-	}
-
-	if (!_partiallyBound) {
-		// write empty buffers into empty descriptors
-		for (uint32_t i = set.usedBufferSlots; i < _bufferCount; ++i) {
-			if (_layoutBuffers[i] != emptyBuffer) {
-				if (!localBuffers) {
-					localBuffers = &bufferList.emplace_front(Vector<VkDescriptorBufferInfo>());
-				}
-				localBuffers->emplace_back(
-						VkDescriptorBufferInfo({emptyBuffer->getBuffer(), 0, VK_WHOLE_SIZE}));
-				_layoutBuffers[i] = emptyBuffer;
-				++bufferWriteData.descriptorCount;
-			} else {
-				// no need to write, push written
-				if (bufferWriteData.descriptorCount > 0) {
-					pushWritten();
-				}
-				bufferWriteData.dstArrayElement = i + 1; // start from next index
-			}
-		}
-	}
-
-	if (bufferWriteData.descriptorCount > 0) {
-		bufferWriteData.descriptorCount = uint32_t(localBuffers->size());
-		bufferWriteData.pBufferInfo = localBuffers->data();
-		writes.emplace_back(move(bufferWriteData));
 	}
 }
 

@@ -86,6 +86,8 @@ public:
 	virtual Rc<core::ImageView> makeImageView(const Rc<core::ImageObject> &,
 			const ImageViewInfo &) override;
 	virtual Rc<core::CommandPool> makeCommandPool(uint32_t family, core::QueueFlags flags) override;
+	virtual Rc<core::QueryPool> makeQueryPool(uint32_t family, core::QueueFlags flags,
+			const core::QueryPoolInfo &) override;
 	virtual Rc<core::TextureSet> makeTextureSet(const core::TextureSetLayout &) override;
 
 	template <typename Callback>

@@ -25,6 +25,7 @@
 #include "XL2dVkParticlePass.h"
 
 #include "XLCoreDevice.h"
+#include "XLCoreEnum.h"
 #include "XLCoreQueueData.h"
 #include "XLPlatform.h"
 #include "XLApplication.h"
@@ -50,25 +51,29 @@ enum class PseudoSdfSpecialization {
 bool ShadowPass::makeRenderQueue(Queue::Builder &builder, RenderQueueInfo &info) {
 	using namespace core;
 
-	auto particleVertexes = builder.addAttachemnt(FrameContext2d::ParticleVertexesAttachment,
+	const AttachmentData *particleEmitters = nullptr;
+
+	particleEmitters = builder.addAttachemnt(FrameContext2d::ParticleEmittersAttachment,
 			[](AttachmentBuilder &builder) -> Rc<Attachment> {
 		builder.defineAsInput();
-		return Rc<ParticleVertexAttachment>::create(builder);
+		return Rc<ParticleEmitterAttachment>::create(builder);
 	});
 
-	builder.addPass("ParticlePass", PassType::Compute, RenderOrderingHighest,
+	builder.addPass("ParticlePass", PassType::Compute, RenderOrdering(1),
 			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<ParticlePass>::create(builder, passBuilder, particleVertexes);
+		return Rc<ParticlePass>::create(builder, passBuilder, particleEmitters);
 	});
 
 	builder.addPass("MaterialSwapchainPass", PassType::Graphics, RenderOrderingHighest,
 			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<ShadowPass>::create(builder, passBuilder,
-				PassCreateInfo{.target = info.target,
+				PassCreateInfo{
+					.target = info.target,
 					.extent = info.extent,
 					.flags = info.flags | Flags::UsePseudoSdf,
 					.backgroundColor = info.backgroundColor,
-					.particleAttachment = particleVertexes});
+					.particleAttachment = particleEmitters,
+				});
 	});
 
 	return true;
@@ -79,21 +84,27 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 	using namespace core;
 
 	core::SamplerInfo samplers[] = {
-		SamplerInfo{.magFilter = Filter::Nearest,
+		SamplerInfo{
+			.magFilter = Filter::Nearest,
 			.minFilter = Filter::Nearest,
 			.addressModeU = SamplerAddressMode::Repeat,
 			.addressModeV = SamplerAddressMode::Repeat,
-			.addressModeW = SamplerAddressMode::Repeat},
-		SamplerInfo{.magFilter = Filter::Linear,
+			.addressModeW = SamplerAddressMode::Repeat,
+		},
+		SamplerInfo{
+			.magFilter = Filter::Linear,
 			.minFilter = Filter::Linear,
 			.addressModeU = SamplerAddressMode::Repeat,
 			.addressModeV = SamplerAddressMode::Repeat,
-			.addressModeW = SamplerAddressMode::Repeat},
-		SamplerInfo{.magFilter = Filter::Linear,
+			.addressModeW = SamplerAddressMode::Repeat,
+		},
+		SamplerInfo{
+			.magFilter = Filter::Linear,
 			.minFilter = Filter::Linear,
 			.addressModeU = SamplerAddressMode::ClampToEdge,
 			.addressModeV = SamplerAddressMode::ClampToEdge,
-			.addressModeW = SamplerAddressMode::ClampToEdge},
+			.addressModeW = SamplerAddressMode::ClampToEdge,
+		},
 	};
 
 	auto texLayout = queueBuilder.addTextureSetLayout("General", samplers);
@@ -169,15 +180,13 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 
 	_materials = queueBuilder.addAttachemnt(FrameContext2d::MaterialAttachmentName,
 			[&](AttachmentBuilder &builder) -> Rc<Attachment> {
-		return Rc<vk::MaterialAttachment>::create(builder,
-				BufferInfo(core::BufferUsage::StorageBuffer), texLayout);
+		return Rc<vk::MaterialAttachment>::create(builder, texLayout);
 	});
 
 	_vertexes = queueBuilder.addAttachemnt(FrameContext2d::VertexAttachmentName,
 			[&, this](AttachmentBuilder &builder) -> Rc<Attachment> {
 		builder.defineAsInput();
-		return Rc<VertexAttachment>::create(builder, BufferInfo(core::BufferUsage::StorageBuffer),
-				_materials);
+		return Rc<VertexAttachment>::create(builder, _materials);
 	});
 
 	_lightsData = queueBuilder.addAttachemnt(FrameContext2d::LightDataAttachmentName,
@@ -192,30 +201,38 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 	auto sdfDepthAttachment = passBuilder.addAttachment(_depthSdf);
 	auto depth2dAttachment = passBuilder.addAttachment(_depth2d);
 
+	_particles = info.particleAttachment;
+
+	passBuilder.addAttachment(_vertexes);
+	passBuilder.addAttachment(_lightsData);
+	passBuilder.addAttachment(_materials);
+	passBuilder.addAttachment(info.particleAttachment,
+			AttachmentDependencyInfo::make(PipelineStage::VertexShader
+							| PipelineStage::DrawIndirect,
+					AccessType::IndirectCommandRead | AccessType::ShaderRead));
+
 	auto layout2d = passBuilder.addDescriptorLayout("Layout2d",
 			[&, this](PipelineLayoutBuilder &layoutBuilder) {
-		// Vertex input attachment - per-frame vertex list
-		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
-			setBuilder.addDescriptor(passBuilder.addAttachment(_vertexes));
-			setBuilder.addDescriptor(passBuilder.addAttachment(_materials));
-			setBuilder.addDescriptor(passBuilder.addAttachment(_lightsData));
-			setBuilder.addDescriptor(shadowAttachment, DescriptorType::InputAttachment,
-					AttachmentLayout::ShaderReadOnlyOptimal);
-			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment,
-					AttachmentLayout::ShaderReadOnlyOptimal);
-		});
 		layoutBuilder.setTextureSetLayout(texLayout);
 	});
 
 	auto layoutSdf = passBuilder.addDescriptorLayout("LayoutSdf",
 			[&, this](PipelineLayoutBuilder &layoutBuilder) {
 		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
-			setBuilder.addDescriptor(passBuilder.addAttachment(_vertexes));
-			setBuilder.addDescriptor(passBuilder.addAttachment(_lightsData));
 			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment,
 					AttachmentLayout::General);
 		});
-		layoutBuilder.setTextureSetLayout(texLayout);
+	});
+
+	auto layoutShadow = passBuilder.addDescriptorLayout("Layout2d",
+			[&, this](PipelineLayoutBuilder &layoutBuilder) {
+		// Vertex input attachment - per-frame vertex list
+		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
+			setBuilder.addDescriptor(shadowAttachment, DescriptorType::InputAttachment,
+					AttachmentLayout::ShaderReadOnlyOptimal);
+			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment,
+					AttachmentLayout::ShaderReadOnlyOptimal);
+		});
 	});
 
 	auto subpass2d = passBuilder.addSubpass([&, this](SubpassBuilder &subpassBuilder) {
@@ -338,18 +355,12 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 		auto shadowFrag =
 				queueBuilder.addProgramByRef("PseudoMergeFrag", shaders::PseudoSdfShadowFrag);
 
-		auto nsamplers = texLayout->samplers.size();
 		// clang-format off
-		subpassBuilder.addGraphicPipeline(ShadowPass::ShadowPipeline, layout2d->defaultFamily,
+		subpassBuilder.addGraphicPipeline(ShadowPass::ShadowPipeline, layoutShadow->defaultFamily,
 			Vector<SpecializationInfo>({// no specialization required for vertex shader
 				shadowVert,
 				// specialization for fragment shader - use platform-dependent array sizes
-				SpecializationInfo(shadowFrag, Vector<SpecializationConstant>{
-					SpecializationConstant(
-						[nsamplers](const core::Device &dev, const PipelineLayoutData &) -> SpecializationConstant {
-								return uint32_t(nsamplers);
-					}),
-				})
+				shadowFrag
 			}),
 			PipelineMaterialInfo({
 				BlendInfo(BlendFactor::Zero, BlendFactor::SrcColor, BlendOp::Add,
@@ -381,6 +392,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 			PipelineStage::ColorAttachmentOutput | PipelineStage::FragmentShader,
 			AccessType::ColorAttachmentWrite | AccessType::InputAttachmantRead, true);
 
+	passBuilder.setAcquireTimestamps(2);
+
 	if (!VertexPass::init(passBuilder)) {
 		return false;
 	}
@@ -403,12 +416,7 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	// load shaders by ref - do not copy data into engine
 	auto materialVert = queueBuilder.addProgram("Loader_MaterialVert",
 			[](core::Device &dev, const core::ProgramData::DataCallback &cb) {
-		auto &vkDev = (vk::Device &)dev;
-		if (vkDev.hasBufferDeviceAddresses()) {
-			cb(shaders::MaterialVert);
-		} else {
-			cb(shaders::MaterialNoBdaVert);
-		}
+		cb(shaders::MaterialVert);
 	});
 
 	auto materialFrag = queueBuilder.addProgramByRef("Loader_MaterialFrag", shaders::MaterialFrag);
@@ -418,12 +426,7 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	// clang-format off
 	auto shaderSpecInfo = Vector<SpecializationInfo>({
 		core::SpecializationInfo(
-			materialVert,
-			Vector<SpecializationConstant>{
-				SpecializationConstant([](const core::Device &dev, const PipelineLayoutData &data) -> SpecializationConstant {
-					return data.textureSetLayout->layout.get_cast<vk::TextureSetLayout>()->getBuffersCount();
-				})
-			}
+			materialVert
 		),
 		core::SpecializationInfo(
 			materialFrag,
@@ -465,12 +468,7 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	// clang-format off
 	auto shaderTex2dArraySpecInfo = Vector<SpecializationInfo>({
 		core::SpecializationInfo(
-			materialVert,
-			Vector<SpecializationConstant>{
-				SpecializationConstant([](const core::Device &dev, const PipelineLayoutData &data) -> SpecializationConstant {
-					return data.textureSetLayout->layout.get_cast<vk::TextureSetLayout>()->getBuffersCount();
-				})
-			}
+			materialVert
 		),
 		core::SpecializationInfo(
 			materialFrag,
@@ -504,12 +502,7 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	// clang-format off
 	auto shaderTex3dSpecInfo = Vector<SpecializationInfo>({
 		core::SpecializationInfo(
-			materialVert,
-			Vector<SpecializationConstant>{
-				SpecializationConstant([](const core::Device &dev, const PipelineLayoutData &data) -> SpecializationConstant {
-					return data.textureSetLayout->layout.get_cast<vk::TextureSetLayout>()->getBuffersCount();
-				})
-			}
+			materialVert
 		),
 		core::SpecializationInfo(
 			materialFrag,
@@ -563,9 +556,13 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 			AttachmentLayout::ColorAttachmentOptimal);
 
 	subpassBuilder.addColor(shadowAttachment,
-			AttachmentDependencyInfo{PipelineStage::ColorAttachmentOutput,
-				AccessType::ColorAttachmentWrite, PipelineStage::ColorAttachmentOutput,
-				AccessType::ColorAttachmentWrite, FrameRenderPassState::Submitted},
+			AttachmentDependencyInfo{
+				PipelineStage::ColorAttachmentOutput,
+				AccessType::ColorAttachmentWrite,
+				PipelineStage::ColorAttachmentOutput,
+				AccessType::ColorAttachmentWrite,
+				FrameRenderPassState::Submitted,
+			},
 			BlendInfo(BlendFactor::One, core::BlendFactor::One, core::BlendOp::Max));
 
 	subpassBuilder.setDepthStencil(depth2dAttachment,
@@ -603,33 +600,17 @@ bool ShadowPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	return VertexPassHandle::prepare(q, sp::move(cb));
 }
 
-void ShadowPassHandle::prepareRenderPass(CommandBuffer &buf) {
-	Vector<BufferMemoryBarrier> bufferBarriers;
-	Vector<ImageMemoryBarrier> imageBarriers;
-	if (_shadowData->getLightsCount() && _shadowData->getBuffer()) {
-		if (auto b = _shadowData->getBuffer()->getPendingBarrier()) {
-			bufferBarriers.emplace_back(*b);
-		}
-	}
-}
-
 void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &buf) {
 	auto &fb = getFramebuffer();
 	auto currentExtent = fb->getExtent();
 
 	auto drawFullscreen = [&](const core::GraphicPipelineData *pipeline) {
-		buf.cmdBindPipelineWithDescriptors(pipeline);
-
 		auto viewport = VkViewport{0.0f, 0.0f, float(currentExtent.width),
 			float(currentExtent.height), 0.0f, 1.0f};
 		buf.cmdSetViewport(0, makeSpanView(&viewport, 1));
 
 		auto scissorRect = VkRect2D{{0, 0}, {currentExtent.width, currentExtent.height}};
 		buf.cmdSetScissor(0, makeSpanView(&scissorRect, 1));
-
-		uint32_t samplerIndex = 1; // linear filtering
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&samplerIndex), sizeof(uint32_t)));
 
 		buf.cmdDrawIndexed(6, // indexCount
 				1, // instanceCount
@@ -652,16 +633,21 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		auto backreadPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(
 				StringView(ShadowPass::PseudoSdfBackreadPipeline));
 
-		struct PseudoSdfPcb {
-			float inset = config::VGPseudoSdfInset;
-			float offset = config::VGPseudoSdfOffset;
-			float max = config::VGPseudoSdfMax;
-		} pcb;
+		PSDFConstantData pcb;
+		pcb.vertexPointer =
+				UVec2::convertFromPacked(buf.bindBufferAddress(_vertexBuffer->getVertexes().get()));
+		pcb.transformPointer = UVec2::convertFromPacked(
+				buf.bindBufferAddress(_vertexBuffer->getTransforms().get()));
+		pcb.shadowDataPointer =
+				UVec2::convertFromPacked(buf.bindBufferAddress(_shadowData->getBuffer().get()));
+		pcb.pseudoSdfInset = config::VGPseudoSdfInset;
+		pcb.pseudoSdfOffset = config::VGPseudoSdfOffset;
+		pcb.pseudoSdfMax = config::VGPseudoSdfMax;
 
 		buf.cmdBindPipelineWithDescriptors(solidPipeline);
 
 		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
+				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PSDFConstantData)));
 
 		clearDynamicState(buf);
 
@@ -677,9 +663,6 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		}
 
 		buf.cmdBindPipelineWithDescriptors(sdfPipeline);
-
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
 
 		clearDynamicState(buf);
 
@@ -707,9 +690,6 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 		buf.cmdBindPipelineWithDescriptors(backreadPipeline);
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_VERTEX_BIT, 0,
-				BytesView(reinterpret_cast<const uint8_t *>(&pcb), sizeof(PseudoSdfPcb)));
-
 		clearDynamicState(buf);
 
 		for (auto &materialVertexSpan : _vertexBuffer->getShadowSdfData()) {
@@ -728,6 +708,10 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		// shadow drawing pipeline
 		auto pipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(
 				StringView(ShadowPass::ShadowPipeline));
+		buf.cmdBindPipelineWithDescriptors(pipeline);
+		buf.cmdPushConstants(VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+				BytesView(reinterpret_cast<const uint8_t *>(&pcb.shadowDataPointer),
+						sizeof(uint64_t)));
 		drawFullscreen(pipeline);
 	} else {
 		buf.cmdNextSubpass();

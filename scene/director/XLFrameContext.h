@@ -41,7 +41,7 @@ class FrameStateOwnerInterface;
 
 class SP_PUBLIC FrameContext : public ResourceOwner {
 public:
-	virtual ~FrameContext();
+	virtual ~FrameContext() = default;
 
 	virtual bool init();
 
@@ -110,6 +110,7 @@ protected:
 struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 	virtual ~FrameContextHandle() = default;
 
+	uint64_t clock;
 	Rc<Director> director; // allow to access director from rendering pipeline (to send stats)
 	FrameContext *context = nullptr;
 

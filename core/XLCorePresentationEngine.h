@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -82,7 +83,8 @@ public:
 	virtual void end();
 
 	virtual bool recreateSwapchain(core::PresentMode) = 0;
-	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg, core::PresentMode presentMode) = 0;
+	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
+			core::PresentMode presentMode) = 0;
 	virtual void deprecateSwapchain(bool fast);
 
 	virtual bool present(PresentationFrame *frame);
@@ -113,7 +115,8 @@ public:
 	uint64_t getLastFrameInterval() const;
 	uint64_t getAvgFrameInterval() const;
 	uint64_t getLastFrameTime() const;
-	uint64_t getLastDeviceFrameTime() const;
+	uint64_t getLastFenceFrameTime() const;
+	uint64_t getLastTimestampFrameTime() const;
 
 	void setReadyForNextFrame();
 
@@ -132,12 +135,11 @@ public:
 
 protected:
 #if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override {
-		return true;
-	}
+	virtual bool isRetainTrackerEnabled() const override { return true; }
 #endif
 
-	virtual void acquireFrameData(PresentationFrame *, Function<void(core::PresentationFrame *)> &&) = 0;
+	virtual void acquireFrameData(PresentationFrame *,
+			Function<void(core::PresentationFrame *)> &&) = 0;
 
 	void scheduleSwapchainRecreation();
 
@@ -182,9 +184,13 @@ protected:
 	math::MovingAverage<FrameAverageCount, uint64_t> _avgFrameTime;
 	std::atomic<uint64_t> _avgFrameTimeValue = 0;
 
-	uint64_t _lastDeviceFrameTime = 0;
+	uint64_t _lastFenceFrameTime = 0;
 	math::MovingAverage<FrameAverageCount, uint64_t> _avgFenceInterval;
 	std::atomic<uint64_t> _avgFenceIntervalValue = 0;
+
+	uint64_t _lastTimestampFrameTime = 0;
+	math::MovingAverage<FrameAverageCount, uint64_t> _avgTimestampInterval;
+	std::atomic<uint64_t> _avgTimestampIntervalValue = 0;
 
 	uint64_t _frameOrder = 0; // current scheduled frame order
 
@@ -211,5 +217,5 @@ protected:
 	Set<PresentationFrame *> _totalFrames;
 };
 
-}
+} // namespace stappler::xenolith::core
 #endif /* XENOLITH_CORE_XLCOREPRESENTATIONENGINE_H_ */

@@ -25,34 +25,30 @@
 #define XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKSHADOW_H_
 
 #include "XL2dVkMaterial.h"
+#include "XLCoreAttachment.h"
 #include "XLVkQueuePass.h"
 #include "XL2dCommandList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
-class SP_PUBLIC ShadowLightDataAttachment : public BufferAttachment {
+class SP_PUBLIC ShadowLightDataAttachment : public core::GenericAttachment {
 public:
-	virtual ~ShadowLightDataAttachment();
+	virtual ~ShadowLightDataAttachment() = default;
 
 	virtual bool init(AttachmentBuilder &) override;
 
 protected:
-	using BufferAttachment::init;
+	using GenericAttachment::init;
 
 	virtual Rc<AttachmentHandle> makeFrameHandle(const FrameQueue &) override;
 };
 
-class SP_PUBLIC ShadowLightDataAttachmentHandle : public BufferAttachmentHandle {
+class SP_PUBLIC ShadowLightDataAttachmentHandle : public core::AttachmentHandle {
 public:
-	virtual ~ShadowLightDataAttachmentHandle();
+	virtual ~ShadowLightDataAttachmentHandle() = default;
 
 	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
 			Function<void(bool)> &&) override;
-
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
-			const DescriptorData &) const override;
-
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &) override;
 
 	void allocateBuffer(DeviceFrameHandle *, uint32_t gridCells, float maxValue = nan());
 

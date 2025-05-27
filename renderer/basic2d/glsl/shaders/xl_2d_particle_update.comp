@@ -1,71 +1,49 @@
 #version 450
 #extension GL_GOOGLE_include_directive : enable
-#extension GL_ARB_gpu_shader_int64 : enable
-
-layout (constant_id = 0) const int EMITTER_ARRAY_SIZE = 16;
-layout (constant_id = 1) const int FIRST_PARTICLE = 16;
-const int OUTPUT_BUFFERS_COUNT = 3;
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
 
 #include "SPGlslInit.h"
 #include "XL2dGlslParticle.h"
 #include "XL2dGlslVertexData.h"
 
-layout (set = 0, binding = 0) readonly buffer Emitters {
-	ParticleEmitterData emitter;
-	ParticleEmissionPoints emissionData;
-} emitterBuffers[EMITTER_ARRAY_SIZE];
-
-layout (set = 0, binding = 0) buffer Particles {
-	ParticleData particles[];
-} particleBuffers[EMITTER_ARRAY_SIZE];
-
-layout (set = 0, binding = 0) readonly buffer ExtraFloatData {
-	float values[];
-} extraFloatData[EMITTER_ARRAY_SIZE];
-
-layout (set = 0, binding = 0) readonly buffer ExtraIntData {
-	uint values[];
-} extraIntData[EMITTER_ARRAY_SIZE];
-
-layout (set = 0, binding = 1) buffer Vertexes {
-	ParticleVertex vertices[];
-} vertexBuffer[OUTPUT_BUFFERS_COUNT];
-
-layout (set = 0, binding = 1) buffer Indexes {
-	uint indexes[];
-} indexBuffer[OUTPUT_BUFFERS_COUNT];
-
-layout (set = 0, binding = 1) buffer Commands {
-	ParticleIndirectCommand commands[EMITTER_ARRAY_SIZE];
-} commandBuffer[OUTPUT_BUFFERS_COUNT];
+layout(buffer_reference) readonly buffer EmitterBuffer;
+layout(buffer_reference) readonly buffer EmissionPointsBuffer;
+layout(buffer_reference) buffer ParticlesBuffer;
+layout(buffer_reference) buffer VerticesBuffer;
+layout(buffer_reference) buffer CommandBuffer;
 
 layout (push_constant) uniform PCB {
-	uint emitterIndex; // 0
-	uint vertexOffset; // 1
-	uint indexOffset; // 2
-	uint nframes;
-} pcb;
+	ParticleConstantData pcb;
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer EmitterBuffer {
+	ParticleEmitterData data;
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer EmissionPointsBuffer {
+	ParticleEmissionPoints data;
+	vec2 points[];
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) buffer ParticlesBuffer {
+	ParticleData particles[];
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) buffer VerticesBuffer {
+	Vertex vertices[];
+};
+
+layout(std430, buffer_reference, buffer_reference_align = 8) buffer CommandBuffer {
+	ParticleIndirectCommand command;
+};
 
 layout(local_size_x = 64) in;
 
-uint brand(uint bound) {
-	return pcg16_boundedrand_r(particleBuffers[pcb.emitterIndex]
-		.particles[FIRST_PARTICLE + gl_GlobalInvocationID.x].rng, bound);
-}
-
-uint rand() {
-	return pcg16_random_r(particleBuffers[pcb.emitterIndex]
-		.particles[FIRST_PARTICLE + gl_GlobalInvocationID.x].rng);
-}
-
-float frand() {
-	return pcg16_random_float_r(particleBuffers[pcb.emitterIndex]
-		.particles[FIRST_PARTICLE + gl_GlobalInvocationID.x].rng);
-}
-
-vec2 vrand() {
-	return vec2(frand(), frand());
-}
+#define brand(particle, bound) (pcg16_boundedrand_r(particle.rng, bound))
+#define rand(particle) (pcg16_random_r(particle.rng))
+#define frand(particle) (pcg16_random_float_r(particle.rng))
+#define vrand(particle) (vec2(frand(particle), frand(particle)))
 
 vec2 getNormalFromAngle(float angle) {
 	return vec2(cos(angle), sin(angle));
@@ -75,33 +53,21 @@ vec2 rotateNormalVec(vec2 n, vec2 dA) {
 	return n * dA.x + vec2(-n.y, n.x) * dA.y;
 }
 
-void getEmissionLocationFromPoints(out vec2 emissionPoint) {
-	if (emitterBuffers[pcb.emitterIndex].emissionData.count == 1) {
-		emissionPoint = emitterBuffers[pcb.emitterIndex].emissionData.singlePoint;
-	}
-
-	uint index = brand(emitterBuffers[pcb.emitterIndex].emissionData.count);
-	uint offset = emitterBuffers[pcb.emitterIndex].emissionData.offset;
-	
-	uint target = offset + (index * 2);
-
-	emissionPoint.x = extraFloatData[pcb.emitterIndex].values[target];
-	emissionPoint.y = extraFloatData[pcb.emitterIndex].values[target + 1];
-}
-
-void emitParticle(out ParticleData particle) {
-	const ParticleEmitterData emitter = emitterBuffers[pcb.emitterIndex].emitter;
+void emitParticle(inout ParticleData particle) {
+	const ParticleEmitterData emitter = EmitterBuffer(pcb.emitterPointer).data;
 
 	vec2 emissionPoint;
 	if (emitter.emissionType == 0) {
-		getEmissionLocationFromPoints(emissionPoint);
+		EmissionPointsBuffer points = EmissionPointsBuffer(emitter.emissionData);
+		uint index = brand(particle, points.data.count);
+		emissionPoint = points.points[index];
 	}
 
 	particle.position = emissionPoint;
 	particle.sizeNormal = emitter.sizeNormal;
 	particle.color = emitter.color;
 
-	particle.fullLifetime = uint(ceil((emitter.lifetime.init + emitter.lifetime.rnd * frand()) / emitter.frameInterval));
+	particle.fullLifetime = uint(ceil((emitter.lifetime.init + emitter.lifetime.rnd * frand(particle)) / emitter.frameInterval));
 	particle.currentLifetime = particle.fullLifetime;
 
 	if ((emitter.flags & (1 << 3)) != 0) {
@@ -110,39 +76,37 @@ void emitParticle(out ParticleData particle) {
 		particle.framesUntilEmission = particle.currentLifetime;
 	}
 
-	particle.scale = emitter.sizeValue * (emitter.scale.init + emitter.scale.rnd * frand());
-	particle.angle = getNormalFromAngle(emitter.angle.init + emitter.angle.rnd * frand());
-	particle.normal = getNormalFromAngle(emitter.normal.init + emitter.normal.rnd * frand());
+	particle.scale = emitter.sizeValue * (emitter.scale.init + emitter.scale.rnd * frand(particle));
+	particle.angle = getNormalFromAngle(emitter.angle.init + emitter.angle.rnd * frand(particle));
+	particle.normal = getNormalFromAngle(emitter.normal.init + emitter.normal.rnd * frand(particle));
 
-	particle.velocity = emitter.velocity.init + emitter.velocity.rnd * frand();
-	particle.linearVelocity = emitter.linearVelocity.init + emitter.linearVelocity.rnd * vrand();
+	particle.velocity = emitter.velocity.init + emitter.velocity.rnd * frand(particle);
+	particle.linearVelocity = emitter.linearVelocity.init + emitter.linearVelocity.rnd * vrand(particle);
 
-	particle.qAngularVelocity = (getNormalFromAngle(emitter.angularVelocity.init + emitter.angularVelocity.rnd * frand()))
+	particle.qAngularVelocity = (getNormalFromAngle(emitter.angularVelocity.init + emitter.angularVelocity.rnd * frand(particle)))
 			* emitter.frameInterval;
 
-	particle.orbitalVelocity = emitter.orbitalVelocity.init + emitter.orbitalVelocity.rnd * frand();
+	particle.orbitalVelocity = emitter.orbitalVelocity.init + emitter.orbitalVelocity.rnd * frand(particle);
 
-	particle.radialVelocity = emitter.radialVelocity.init + emitter.radialVelocity.rnd * frand();
+	particle.radialVelocity = emitter.radialVelocity.init + emitter.radialVelocity.rnd * frand(particle);
 
-	particle.qAcceleration = (emitter.acceleration.init + emitter.acceleration.rnd * frand())
+	particle.qAcceleration = (emitter.acceleration.init + emitter.acceleration.rnd * frand(particle))
 			* emitter.frameInterval;
 
-	particle.qLinearAcceleration = (emitter.linearAcceleration.init + emitter.linearAcceleration.rnd * vrand())
+	particle.qLinearAcceleration = (emitter.linearAcceleration.init + emitter.linearAcceleration.rnd * vrand(particle))
 			* emitter.frameInterval;
 
-	particle.radialAcceleration = emitter.radialAcceleration.init + emitter.radialAcceleration.rnd * frand();
-	particle.tangentialAcceleration = emitter.tangentialAcceleration.init + emitter.tangentialAcceleration.rnd * frand();
-	particle.hue = emitter.hue.init + emitter.hue.rnd * frand();
+	particle.radialAcceleration = emitter.radialAcceleration.init + emitter.radialAcceleration.rnd * frand(particle);
+	particle.tangentialAcceleration = emitter.tangentialAcceleration.init + emitter.tangentialAcceleration.rnd * frand(particle);
+	particle.hue = emitter.hue.init + emitter.hue.rnd * frand(particle);
 }
 
-void simpulateParticleFrame(inout ParticleData particle) {
-	float dt = emitterBuffers[pcb.emitterIndex].emitter.frameInterval;
-
+void simulateParticleFrame(inout ParticleData particle) {
 	particle.velocity = particle.velocity + particle.qAcceleration;
 	particle.linearVelocity = particle.linearVelocity + particle.qLinearAcceleration;
 
-	vec2 alongNormal = particle.normal * particle.velocity * dt;
-	vec2 linear = particle.linearVelocity * dt;
+	vec2 alongNormal = particle.normal * particle.velocity * pcb.dt;
+	vec2 linear = particle.linearVelocity * pcb.dt;
 
 	particle.position = particle.position + alongNormal + linear;
 
@@ -150,10 +114,13 @@ void simpulateParticleFrame(inout ParticleData particle) {
 }
 
 void main() {
-	const uint particleIndex = FIRST_PARTICLE + gl_GlobalInvocationID.x;
+	VerticesBuffer vertexBuffer = VerticesBuffer(pcb.outVerticesPointer);
+	CommandBuffer commandBuffer = CommandBuffer(pcb.outCommandPointer);
+	ParticlesBuffer particleBuffer = ParticlesBuffer(pcb.particlesPointer);
+
 	uint nframes = pcb.nframes;
 
-	ParticleData particle = particleBuffers[pcb.emitterIndex].particles[particleIndex];
+	ParticleData particle = ParticlesBuffer(pcb.particlesPointer).particles[gl_GlobalInvocationID.x];
 
 	// first - simulate particle
 	if (nframes > 0) {
@@ -171,17 +138,17 @@ void main() {
 
 		if (particle.currentLifetime != 0) {
 			for (uint i = 0; i < nframes; ++ i) {
-				simpulateParticleFrame(particle);
+				simulateParticleFrame(particle);
 			}
 
-			particleBuffers[pcb.emitterIndex].particles[particleIndex] = particle;
+			particleBuffer.particles[gl_GlobalInvocationID.x] = particle;
 		}
 	}
 
 	// second - write vertexes for the paticle
 
-	uint writeIndex = atomicAdd(commandBuffer[2].commands[pcb.emitterIndex].indexCount, 6) / 6;
-	
+	const uint vertexOffset = atomicAdd(commandBuffer.command.vertexCount, 6);
+
 	vec2 bl = rotateNormalVec(-particle.sizeNormal, particle.angle) * particle.scale;
 	vec2 tl = rotateNormalVec(vec2(-particle.sizeNormal.x, particle.sizeNormal.y), particle.angle) * particle.scale;
 	vec2 tr = rotateNormalVec(particle.sizeNormal, particle.angle) * particle.scale;
@@ -192,30 +159,22 @@ void main() {
 	const float texTop = 0.0f;
 	const float texBottom = 1.0f;
 
-	const uint vertexOffset = writeIndex * 4;
-	const uint vertexBufferOffset = pcb.vertexOffset + vertexOffset;
-	const uint indexOffset = pcb.indexOffset + writeIndex * 6;
+	vertexBuffer.vertices[vertexOffset + 0].pos = vec4(particle.position + bl, 0.0, 1.0);
+	vertexBuffer.vertices[vertexOffset + 0].tex = vec2(texLeft, texTop);
+	vertexBuffer.vertices[vertexOffset + 0].color = particle.color;
 
-	vertexBuffer[0].vertices[vertexBufferOffset + 0].pos = particle.position + bl;
-	vertexBuffer[0].vertices[vertexBufferOffset + 0].tex = vec2(texLeft, texTop);
-	vertexBuffer[0].vertices[vertexBufferOffset + 0].color = particle.color;
+	vertexBuffer.vertices[vertexOffset + 1].pos = vec4(particle.position + tl, 0.0, 1.0);
+	vertexBuffer.vertices[vertexOffset + 1].tex = vec2(texLeft, texBottom);
+	vertexBuffer.vertices[vertexOffset + 1].color = particle.color;
 
-	vertexBuffer[0].vertices[vertexBufferOffset + 1].pos = particle.position + tl;
-	vertexBuffer[0].vertices[vertexBufferOffset + 1].tex = vec2(texLeft, texBottom);
-	vertexBuffer[0].vertices[vertexBufferOffset + 1].color = particle.color;
+	vertexBuffer.vertices[vertexOffset + 2].pos = vec4(particle.position + br, 0.0, 1.0);
+	vertexBuffer.vertices[vertexOffset + 2].tex = vec2(texRight, texTop);
+	vertexBuffer.vertices[vertexOffset + 2].color = particle.color;
 
-	vertexBuffer[0].vertices[vertexBufferOffset + 2].pos = particle.position + br;
-	vertexBuffer[0].vertices[vertexBufferOffset + 2].tex = vec2(texRight, texTop);
-	vertexBuffer[0].vertices[vertexBufferOffset + 2].color = particle.color;
+	vertexBuffer.vertices[vertexOffset + 3].pos = vec4(particle.position + tr, 0.0, 1.0);
+	vertexBuffer.vertices[vertexOffset + 3].tex = vec2(texRight, texBottom);
+	vertexBuffer.vertices[vertexOffset + 3].color = particle.color;
 
-	vertexBuffer[0].vertices[vertexBufferOffset + 3].pos = particle.position + tr;
-	vertexBuffer[0].vertices[vertexBufferOffset + 3].tex = vec2(texRight, texBottom);
-	vertexBuffer[0].vertices[vertexBufferOffset + 3].color = particle.color;
-
-	indexBuffer[1].indexes[indexOffset + 0] = vertexOffset + 0;
-	indexBuffer[1].indexes[indexOffset + 1] = vertexOffset + 1;
-	indexBuffer[1].indexes[indexOffset + 2] = vertexOffset + 2;
-	indexBuffer[1].indexes[indexOffset + 3] = vertexOffset + 3;
-	indexBuffer[1].indexes[indexOffset + 4] = vertexOffset + 2;
-	indexBuffer[1].indexes[indexOffset + 5] = vertexOffset + 1;
+	vertexBuffer.vertices[vertexOffset + 4] = vertexBuffer.vertices[vertexOffset + 2];
+	vertexBuffer.vertices[vertexOffset + 5] = vertexBuffer.vertices[vertexOffset + 1];
 }

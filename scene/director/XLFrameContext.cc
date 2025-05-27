@@ -28,8 +28,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-FrameContext::~FrameContext() { }
-
 bool FrameContext::init() { return true; }
 
 void FrameContext::onEnter(Scene *scene) {
@@ -106,45 +104,26 @@ core::MaterialId FrameContext::acquireMaterial(const core::PipelineFamilyInfo *f
 void FrameContext::readMaterials(core::MaterialAttachment *a) {
 	_materialAttachment = a;
 
-	auto renderPass = a->getLastRenderPass();
-	while (renderPass) {
-		auto &layouts = renderPass->pipelineLayouts;
-		for (auto &layout : layouts) {
-			bool isUsable = false;
-			for (auto &set : layout->sets) {
-				for (auto &desc : set->descriptors) {
-					if (desc->attachment->attachment->attachment == a) {
-						isUsable = true;
-						break;
-					}
+	auto texLayout = a->getTargetLayout();
+	for (auto &layout : texLayout->bindingLayouts) {
+		_layouts.emplace(layout);
+
+		for (auto &family : layout->families) {
+			auto sp = _families.emplace(family, PipelineLayoutData({family, family->layout})).first;
+
+			for (auto &pipeline : family->graphicPipelines) {
+				auto hash = pipeline->material.hash();
+				auto it = sp->second.pipelines.find(hash);
+				if (it == sp->second.pipelines.end()) {
+					it = sp->second.pipelines
+								 .emplace(hash, Vector<const core::GraphicPipelineData *>())
+								 .first;
 				}
-			}
-
-			if (!isUsable) {
-				break;
-			}
-
-			_layouts.emplace(layout);
-
-			for (auto &family : layout->families) {
-				auto sp = _families.emplace(family, PipelineLayoutData({family, family->layout}))
-								  .first;
-
-				for (auto &pipeline : family->graphicPipelines) {
-					auto hash = pipeline->material.hash();
-					auto it = sp->second.pipelines.find(hash);
-					if (it == sp->second.pipelines.end()) {
-						it = sp->second.pipelines
-									 .emplace(hash, Vector<const core::GraphicPipelineData *>())
-									 .first;
-					}
-					it->second.emplace_back(pipeline);
-				}
+				it->second.emplace_back(pipeline);
 			}
 		}
-
-		renderPass = a->getPrevRenderPass(renderPass);
 	}
+
 	for (auto &m : a->getPredefinedMaterials()) {
 		addMaterial(getMaterialInfo(m), m->getId(), false);
 	}

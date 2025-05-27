@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,14 +22,13 @@
  **/
 
 #include "XLCoreDevice.h"
+#include "XLCoreDeviceQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 Device::Device() { }
 
-Device::~Device() {
-	invalidateObjects();
-}
+Device::~Device() { invalidateObjects(); }
 
 bool Device::init(const Instance *instance) {
 	_glInstance = instance;
@@ -41,12 +41,10 @@ void Device::end() {
 #if SP_REF_DEBUG
 	if (isRetainTrackerEnabled()) {
 		log::debug("Gl-Device", "Backtrace for ", (void *)this);
-		foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+		foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-			for (auto &it : vec) {
-				stream << "\t" << it << "\n";
-			}
+			for (auto &it : vec) { stream << "\t" << it << "\n"; }
 			log::debug("Gl-Device-Backtrace", stream.str());
 		});
 	}
@@ -77,25 +75,21 @@ Rc<Framebuffer> Device::makeFramebuffer(const QueuePassData *, SpanView<Rc<Image
 	return nullptr;
 }
 
-auto Device::makeImage(const ImageInfoData &) -> Rc<ImageStorage> {
-	return nullptr;
-}
+auto Device::makeImage(const ImageInfoData &) -> Rc<ImageStorage> { return nullptr; }
 
-Rc<Semaphore> Device::makeSemaphore() {
-	return nullptr;
-}
+Rc<Semaphore> Device::makeSemaphore() { return nullptr; }
 
 Rc<ImageView> Device::makeImageView(const Rc<ImageObject> &, const ImageViewInfo &) {
 	return nullptr;
 }
 
-Rc<CommandPool> Device::makeCommandPool(uint32_t family, QueueFlags flags) {
+Rc<CommandPool> Device::makeCommandPool(uint32_t family, QueueFlags flags) { return nullptr; }
+
+Rc<QueryPool> Device::makeQueryPool(uint32_t family, QueueFlags flags, const QueryPoolInfo &) {
 	return nullptr;
 }
 
-Rc<TextureSet> Device::makeTextureSet(const TextureSetLayout &) {
-	return nullptr;
-}
+Rc<TextureSet> Device::makeTextureSet(const TextureSetLayout &) { return nullptr; }
 
 const DeviceQueueFamily *Device::getQueueFamily(uint32_t familyIdx) const {
 	for (auto &it : _families) {
@@ -122,15 +116,9 @@ const DeviceQueueFamily *Device::getQueueFamily(QueueFlags ops) const {
 
 const DeviceQueueFamily *Device::getQueueFamily(core::PassType type) const {
 	switch (type) {
-	case core::PassType::Graphics:
-		return getQueueFamily(QueueFlags::Graphics);
-		break;
-	case core::PassType::Compute:
-		return getQueueFamily(QueueFlags::Compute);
-		break;
-	case core::PassType::Transfer:
-		return getQueueFamily(QueueFlags::Transfer);
-		break;
+	case core::PassType::Graphics: return getQueueFamily(QueueFlags::Graphics); break;
+	case core::PassType::Compute: return getQueueFamily(QueueFlags::Compute); break;
+	case core::PassType::Transfer: return getQueueFamily(QueueFlags::Transfer); break;
 	case core::PassType::Generic:
 		log::warn("core::Device", "core::PassType::Generic can not be assigned to queue family by it's type;"
 				" please acquire queue family through flags");
@@ -156,8 +144,9 @@ Rc<DeviceQueue> Device::tryAcquireQueue(QueueFlags ops) {
 	return nullptr;
 }
 
-bool Device::acquireQueue(QueueFlags ops, FrameHandle &handle, Function<void(FrameHandle &, const Rc<DeviceQueue> &)> && acquire,
-		Function<void(FrameHandle &)> && invalidate, Rc<Ref> &&ref) {
+bool Device::acquireQueue(QueueFlags ops, FrameHandle &handle,
+		Function<void(FrameHandle &, const Rc<DeviceQueue> &)> &&acquire,
+		Function<void(FrameHandle &)> &&invalidate, Rc<Ref> &&ref) {
 
 	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
 	if (!family) {
@@ -171,7 +160,8 @@ bool Device::acquireQueue(QueueFlags ops, FrameHandle &handle, Function<void(Fra
 		family->queues.pop_back();
 	} else {
 		// XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &handle, sp::move(ref)));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire),
+				sp::move(invalidate), &handle, sp::move(ref)));
 	}
 
 	if (queue) {
@@ -182,8 +172,9 @@ bool Device::acquireQueue(QueueFlags ops, FrameHandle &handle, Function<void(Fra
 	return true;
 }
 
-bool Device::acquireQueue(QueueFlags ops, Loop &loop, Function<void(Loop &, const Rc<DeviceQueue> &)> && acquire,
-		Function<void(Loop &)> && invalidate, Rc<Ref> &&ref) {
+bool Device::acquireQueue(QueueFlags ops, Loop &loop,
+		Function<void(Loop &, const Rc<DeviceQueue> &)> &&acquire,
+		Function<void(Loop &)> &&invalidate, Rc<Ref> &&ref) {
 
 	auto family = (DeviceQueueFamily *)getQueueFamily(ops);
 	if (!family) {
@@ -197,7 +188,8 @@ bool Device::acquireQueue(QueueFlags ops, Loop &loop, Function<void(Loop &, cons
 		family->queues.pop_back();
 	} else {
 		// XL_VKDEVICE_LOG("acquireQueue-wait ", family->index, " (", family->count, ") ", getQueueFlagsDesc(family->flags));
-		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire), sp::move(invalidate), &loop, sp::move(ref)));
+		family->waiters.emplace_back(DeviceQueueFamily::Waiter(sp::move(acquire),
+				sp::move(invalidate), &loop, sp::move(ref)));
 	}
 
 	lock.unlock();
@@ -321,22 +313,12 @@ Rc<CommandPool> Device::acquireCommandPool(uint32_t familyIndex) {
 }
 
 void Device::releaseCommandPool(core::Loop &loop, Rc<CommandPool> &&pool) {
-	pool->reset(*this, true);
-
-	/*auto idx = pool->getFamilyIdx();
-	std::unique_lock<Mutex> lock(_resourceMutex);
-	for (auto &it : _families) {
-		if (it.index == idx) {
-			it.pools.emplace_back(move(pool));
-			break;
-		}
-	}*/
-
 	auto refId = retain();
-	loop.performInQueue(Rc<thread::Task>::create([this, pool = Rc<CommandPool>(pool)] (const thread::Task &) -> bool {
+	loop.performInQueue(Rc<thread::Task>::create(
+			[this, pool = Rc<CommandPool>(pool)](const thread::Task &) -> bool {
 		pool->reset(*this);
 		return true;
-	}, [this, pool = Rc<CommandPool>(pool), refId] (const thread::Task &, bool success) mutable {
+	}, [this, pool = Rc<CommandPool>(pool), refId](const thread::Task &, bool success) mutable {
 		if (success) {
 			auto idx = pool->getFamilyIdx();
 			std::unique_lock<Mutex> lock(_resourceMutex);
@@ -357,7 +339,87 @@ void Device::releaseCommandPoolUnsafe(Rc<CommandPool> &&pool) {
 	std::unique_lock<Mutex> lock(_resourceMutex);
 	for (auto &it : _families) {
 		if (it.index == pool->getFamilyIdx()) {
-			it.pools.emplace_back(Rc<CommandPool>(pool));
+			it.pools.emplace_back(move(pool));
+			break;
+		}
+	}
+}
+
+Rc<QueryPool> Device::acquireQueryPool(QueueFlags c, const QueryPoolInfo &info) {
+	auto family = (DeviceQueueFamily *)getQueueFamily(c);
+	if (!family) {
+		return nullptr;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	if (!family->pools.empty()) {
+		auto qIt = family->queries.find(info);
+		if (qIt != family->queries.end()) {
+			auto ret = qIt->second.back();
+			qIt->second.pop_back();
+			return ret;
+		}
+	}
+	lock.unlock();
+	return makeQueryPool(family->index, family->flags, info);
+}
+
+Rc<QueryPool> Device::acquireQueryPool(uint32_t familyIndex, const QueryPoolInfo &info) {
+	auto family = (DeviceQueueFamily *)getQueueFamily(familyIndex);
+	if (!family) {
+		return nullptr;
+	}
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	if (!family->pools.empty()) {
+		auto qIt = family->queries.find(info);
+		if (qIt != family->queries.end()) {
+			auto ret = qIt->second.back();
+			qIt->second.pop_back();
+			return ret;
+		}
+	}
+	lock.unlock();
+	return makeQueryPool(family->index, family->flags, info);
+}
+
+void Device::releaseQueryPool(core::Loop &loop, Rc<QueryPool> &&pool) {
+	auto refId = retain();
+	loop.performInQueue(Rc<thread::Task>::create(
+			[this, pool = Rc<QueryPool>(pool)](const thread::Task &) -> bool {
+		pool->reset(*this);
+		return true;
+	}, [this, pool = Rc<QueryPool>(pool), refId](const thread::Task &, bool success) mutable {
+		if (success) {
+			auto idx = pool->getFamilyIdx();
+			std::unique_lock<Mutex> lock(_resourceMutex);
+			for (auto &it : _families) {
+				if (it.index == idx) {
+					auto qIt = it.queries.find(pool->getInfo());
+					if (qIt == it.queries.end()) {
+						qIt = it.queries.emplace(pool->getInfo(), Vector<Rc<QueryPool>>()).first;
+					}
+					qIt->second.emplace_back(move(pool));
+					break;
+				}
+			}
+		}
+		release(refId);
+	}, this));
+}
+
+void Device::releaseQueryPoolUnsafe(Rc<QueryPool> &&pool) {
+	pool->reset(*this);
+
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	for (auto &it : _families) {
+		if (it.index == pool->getFamilyIdx()) {
+			auto qIt = it.queries.find(pool->getInfo());
+			if (qIt == it.queries.end()) {
+				qIt = it.queries.emplace(pool->getInfo(), Vector<Rc<QueryPool>>()).first;
+			}
+			qIt->second.emplace_back(move(pool));
+			break;
 		}
 	}
 }
@@ -381,9 +443,11 @@ void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
 
 	taskData->loop->performOnThread([this, taskData] {
 		taskData->device->acquireQueue(taskData->task->getQueueFlags(), *taskData->loop,
-				[this, taskData] (core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
-			taskData->fence = ref_cast<Fence>(taskData->loop->acquireFence(core::FenceType::Default));
-			taskData->pool = ref_cast<CommandPool>(taskData->device->acquireCommandPool(taskData->task->getQueueFlags()));
+				[this, taskData](core::Loop &loop, const Rc<core::DeviceQueue> &queue) {
+			taskData->fence =
+					ref_cast<Fence>(taskData->loop->acquireFence(core::FenceType::Default));
+			taskData->pool = ref_cast<CommandPool>(
+					taskData->device->acquireCommandPool(taskData->task->getQueueFlags()));
 			taskData->queue = ref_cast<DeviceQueue>(queue);
 
 			if (!taskData->task->handleQueueAcquired(*taskData->device, *queue)) {
@@ -392,13 +456,13 @@ void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
 				return;
 			}
 
-			taskData->fence->addRelease([taskData] (bool success) {
+			taskData->fence->addRelease([taskData](bool success) {
 				taskData->device->releaseCommandPool(*taskData->loop, move(taskData->pool));
 				taskData->task->handleComplete(success);
 			}, this, "TextureSetLayout::readImage transferBuffer->dropPendingBarrier");
 
-			loop.performInQueue(Rc<thread::Task>::create([taskData] (const thread::Task &) -> bool {
-				auto buf = taskData->pool->recordBuffer(*taskData->device, [&] (CommandBuffer &buf) {
+			loop.performInQueue(Rc<thread::Task>::create([taskData](const thread::Task &) -> bool {
+				auto buf = taskData->pool->recordBuffer(*taskData->device, [&](CommandBuffer &buf) {
 					taskData->task->fillCommandBuffer(*taskData->device, buf);
 					return true;
 				});
@@ -407,7 +471,7 @@ void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
 					return true;
 				}
 				return false;
-			}, [taskData] (const thread::Task &, bool success) {
+			}, [taskData](const thread::Task &, bool success) {
 				if (taskData->queue) {
 					taskData->device->releaseQueue(move(taskData->queue));
 				}
@@ -417,9 +481,7 @@ void Device::runTask(Loop &loop, Rc<DeviceQueueTask> &&t) {
 				taskData->fence->schedule(*taskData->loop);
 				taskData->fence = nullptr;
 			}));
-		}, [taskData] (core::Loop &) {
-			taskData->task->handleComplete(false);
-		});
+		}, [taskData](core::Loop &) { taskData->task->handleComplete(false); });
 	}, taskData, true);
 }
 
@@ -428,13 +490,9 @@ void Device::invalidateSemaphore(Rc<Semaphore> &&sem) const {
 	_invalidatedSemaphores.emplace_back(move(sem));
 }
 
-void Device::waitIdle() const {
-	_invalidatedSemaphores.clear();
-}
+void Device::waitIdle() const { _invalidatedSemaphores.clear(); }
 
-const Vector<DeviceQueueFamily> &Device::getQueueFamilies() const {
-	return _families;
-}
+const Vector<DeviceQueueFamily> &Device::getQueueFamilies() const { return _families; }
 
 void Device::addObject(Object *obj) {
 	std::unique_lock<Mutex> lock(_objectMutex);
@@ -446,21 +504,13 @@ void Device::removeObject(Object *obj) {
 	_objects.erase(obj);
 }
 
-void Device::onLoopStarted(Loop &loop) {
+void Device::onLoopStarted(Loop &loop) { }
 
-}
+void Device::onLoopEnded(Loop &) { }
 
-void Device::onLoopEnded(Loop &) {
+bool Device::supportsUpdateAfterBind(DescriptorType) const { return false; }
 
-}
-
-bool Device::supportsUpdateAfterBind(DescriptorType) const {
-	return false;
-}
-
-void Device::clearShaders() {
-	_shaders.clear();
-}
+void Device::clearShaders() { _shaders.clear(); }
 
 void Device::invalidateObjects() {
 	Vector<ObjectData> data;
@@ -468,32 +518,35 @@ void Device::invalidateObjects() {
 	std::unique_lock<Mutex> lock(_objectMutex);
 	for (auto &it : _objects) {
 		if (auto img = dynamic_cast<ImageObject *>(it)) {
-			log::warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((", typeid(*it).name(),
-					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+			log::warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((",
+					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
+					"] was not destroyed before device destruction");
 		} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
-			log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (", typeid(*it).name(),
-					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+			log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (",
+					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
+					"] was not destroyed before device destruction");
 		} else if (auto obj = dynamic_cast<BufferObject *>(it)) {
-			log::warn("Gl-Device", "Buffer ", (void *)it, " \"", obj->getName(), "\" ((", typeid(*it).name(),
-					") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+			log::warn("Gl-Device", "Buffer ", (void *)it, " \"", obj->getName(), "\" ((",
+					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
+					"] was not destroyed before device destruction");
 		} else {
 			auto name = it->getName();
 			if (!name.empty()) {
-				log::warn("Gl-Device", "Object ", (void *)it, " \"", name, "\" ((", typeid(*it).name(),
-						") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+				log::warn("Gl-Device", "Object ", (void *)it, " \"", name, "\" ((",
+						typeid(*it).name(), ") [rc:", it->getReferenceCount(),
+						"] was not destroyed before device destruction");
 			} else {
 				log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
-						") [rc:", it->getReferenceCount(), "] was not destroyed before device destruction");
+						") [rc:", it->getReferenceCount(),
+						"] was not destroyed before device destruction");
 			}
 		}
 #if SP_REF_DEBUG
 		log::warn("Gl-Device", "Backtrace for ", (void *)it);
-		it->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+		it->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-			for (auto &it : vec) {
-				stream << "\t" << it << "\n";
-			}
+			for (auto &it : vec) { stream << "\t" << it << "\n"; }
 			log::warn("Gl-Device-Backtrace", stream.str());
 		});
 #endif
@@ -516,4 +569,4 @@ void Device::invalidateObjects() {
 	data.clear();
 }
 
-}
+} // namespace stappler::xenolith::core

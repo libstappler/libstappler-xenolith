@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,14 +40,14 @@ class SP_PUBLIC TransferResource final : public core::AttachmentInputData {
 public:
 	struct BufferAllocInfo {
 		core::BufferData *data = nullptr;
-		VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr };
+		VkBufferCreateInfo info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr};
 		MemoryRequirements req;
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VkDeviceSize offset = 0;
 		VkDeviceSize stagingOffset = 0;
 		VkDeviceMemory dedicated = VK_NULL_HANDLE;
 		uint32_t dedicatedMemType = 0;
-		std::optional<VkBufferMemoryBarrier> barrier;
+		std::optional<BufferMemoryBarrier> barrier;
 		bool useStaging = false;
 
 		BufferAllocInfo() = default;
@@ -55,14 +56,14 @@ public:
 
 	struct ImageAllocInfo {
 		core::ImageData *data = nullptr;
-		VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr };
+		VkImageCreateInfo info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr};
 		MemoryRequirements req;
 		VkImage image = VK_NULL_HANDLE;
 		VkDeviceSize offset = 0;
 		VkDeviceSize stagingOffset = 0;
 		VkDeviceMemory dedicated = VK_NULL_HANDLE;
 		uint32_t dedicatedMemType = 0;
-		std::optional<VkImageMemoryBarrier> barrier;
+		std::optional<ImageMemoryBarrier> barrier;
 		bool useStaging = false;
 
 		ImageAllocInfo() = default;
@@ -87,14 +88,17 @@ public:
 	virtual ~TransferResource();
 	void invalidate(Device &dev);
 
-	bool init(const Rc<Allocator> &alloc, const Rc<core::Resource> &, Function<void(bool)> &&cb = nullptr);
-	bool init(const Rc<Allocator> &alloc, Rc<core::Resource> &&, Function<void(bool)> &&cb = nullptr);
+	bool init(const Rc<Allocator> &alloc, const Rc<core::Resource> &,
+			Function<void(bool)> &&cb = nullptr);
+	bool init(const Rc<Allocator> &alloc, Rc<core::Resource> &&,
+			Function<void(bool)> &&cb = nullptr);
 
 	bool initialize(AllocationUsage = AllocationUsage::DeviceLocal);
 	bool compile();
 
-	bool prepareCommands(uint32_t idx, VkCommandBuffer buf,
-			Vector<VkImageMemoryBarrier> &outputImageBarriers, Vector<VkBufferMemoryBarrier> &outputBufferBarriers);
+	bool prepareCommands(uint32_t idx, CommandBuffer &buf,
+			Vector<ImageMemoryBarrier> &outputImageBarriers,
+			Vector<BufferMemoryBarrier> &outputBufferBarriers);
 	bool transfer(const Rc<DeviceQueue> &, const Rc<CommandPool> &, const Rc<Fence> &);
 
 	bool isValid() const { return _alloc != nullptr; }
@@ -117,7 +121,7 @@ protected:
 	bool writeStaging(StagingBuffer &);
 	void dropStaging(StagingBuffer &) const;
 
-	Allocator::MemType * _memType = nullptr;
+	Allocator::MemType *_memType = nullptr;
 	VkDeviceSize _requiredMemory = 0;
 	Rc<Allocator> _alloc;
 	Rc<core::Resource> _resource;
@@ -146,6 +150,6 @@ protected:
 	const AttachmentData *_attachment = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKTRANSFERQUEUE_H_ */

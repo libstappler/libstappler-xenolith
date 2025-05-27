@@ -23,6 +23,7 @@
  **/
 
 #include "XLCoreMaterial.h"
+#include "XLCoreAttachment.h"
 #include "XLCoreDynamicImage.h"
 #include "XLCoreLoop.h"
 #include "XLCoreDevice.h"
@@ -30,45 +31,24 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-MaterialSet::~MaterialSet() { clear(); }
-
-bool MaterialSet::init(const BufferInfo &info, const EncodeCallback &callback, uint32_t objectSize,
-		uint32_t imagesInSet, uint32_t buffersInSet, const MaterialAttachment *owner) {
-	_info = info;
-	_encodeCallback = callback;
-	_objectSize = objectSize;
+bool MaterialSet::init(uint32_t imagesInSet, const MaterialAttachment *owner) {
 	_imagesInSet = imagesInSet;
-	_buffersInSet = buffersInSet;
-	_info.size = 0;
 	_owner = owner;
 	return true;
 }
 
 bool MaterialSet::init(const Rc<MaterialSet> &other) {
-	_info = other->_info;
-	_encodeCallback = other->_encodeCallback;
 	_generation = other->_generation + 1;
 	_materials = other->_materials;
-	_objectSize = other->_objectSize;
 	_imagesInSet = other->_imagesInSet;
-	_buffersInSet = other->_buffersInSet;
 	_layouts = other->_layouts;
 	_owner = other->_owner;
-	_buffer = other->_buffer;
+	_updatedMaterials = other->_updatedMaterials;
 
 	for (auto &it : _layouts) { it.set = nullptr; }
 
 	return true;
 }
-
-bool MaterialSet::encode(uint8_t *buf, const Material *material) {
-	if (_encodeCallback) {
-		return _encodeCallback(buf, material);
-	}
-	return false;
-}
-
-void MaterialSet::clear() { }
 
 Vector<Rc<Material>> MaterialSet::updateMaterials(const Rc<MaterialInputData> &data,
 		const Callback<Rc<ImageView>(const MaterialImage &)> &cb) {
@@ -76,7 +56,7 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Rc<MaterialInputData> &d
 			data->materialsToRemove, cb);
 }
 
-Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &materials,
+Vector<Rc<Material>> MaterialSet::updateMaterials(SpanView<Rc<Material>> materials,
 		SpanView<MaterialId> dynamicMaterials, SpanView<MaterialId> materialsToRemove,
 		const Callback<Rc<ImageView>(const MaterialImage &)> &cb) {
 	Vector<MaterialId> updatedIds;
@@ -214,18 +194,9 @@ Vector<Rc<Material>> MaterialSet::updateMaterials(const Vector<Rc<Material>> &ma
 		}
 	}
 
-	_info.size = _objectSize * _materials.size();
+	for (auto &it : ret) { emplace_ordered(_updatedMaterials, it->getId()); }
 
-	if (_info.size == 0 || ret.size() == 0) {
-		return Vector<Rc<Material>>();
-	}
 	return ret;
-}
-
-void MaterialSet::setBuffer(Rc<BufferObject> &&buffer,
-		std::unordered_map<MaterialId, uint32_t> &&ordering) {
-	_buffer = sp::move(buffer);
-	_ordering = sp::move(ordering);
 }
 
 const MaterialLayout *MaterialSet::getLayout(uint32_t idx) const {
@@ -243,16 +214,21 @@ const Material *MaterialSet::getMaterialById(MaterialId idx) const {
 	return nullptr;
 }
 
-uint32_t MaterialSet::getMaterialOrder(MaterialId idx) const {
-	auto it = _ordering.find(idx);
-	if (it != _ordering.end()) {
-		return it->second;
-	}
-	return maxOf<uint32_t>();
-}
-
 const TextureSetLayoutData *MaterialSet::getTargetLayout() const {
 	return _owner->getTargetLayout();
+}
+
+void MaterialSet::foreachUpdated(const Callback<void(MaterialId, NotNull<Material *>)> &cb,
+		bool clear) {
+	for (auto &it : _updatedMaterials) {
+		auto mIt = _materials.find(it);
+		if (mIt != _materials.end()) {
+			cb(mIt->first, mIt->second.get());
+		}
+	}
+	if (clear) {
+		_updatedMaterials.clear();
+	}
 }
 
 void MaterialSet::removeMaterial(Material *oldMaterial) {
@@ -294,23 +270,10 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 				}
 				oIt.view = nullptr;
 			}
-			if (oIt.image->atlas) {
-				auto &atlasBuffer = oIt.image->atlas->getBuffer();
-				if (atlasBuffer && atlasBuffer->getDeviceAddress() == 0) {
-					auto descIdx = atlasBuffer->getDescriptor();
-					if (descIdx < oldSet.bufferSlots.size()) {
-						--oldSet.bufferSlots[descIdx].refCount;
-						if (oldSet.bufferSlots[descIdx].refCount == 0) {
-							oldSet.bufferSlots[descIdx].buffer = nullptr;
-						}
-					}
-				}
-			}
 		}
 	}
 
 	Vector<Pair<const MaterialImage *, Vector<uint32_t>>> uniqueImages;
-	Vector<BufferObject *> uniqueBuffers;
 
 	// find unique images
 	uint32_t imageIdx = 0;
@@ -328,27 +291,13 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			uniqueImages.emplace_back(pair(&it, Vector<uint32_t>({imageIdx})));
 		}
 		++imageIdx;
-
-		if (it.image->atlas) {
-			auto &atlasBuffer = it.image->atlas->getBuffer();
-			if (atlasBuffer && atlasBuffer->getDeviceAddress() == 0) {
-				uniqueBuffers.emplace_back(atlasBuffer);
-			}
-		}
 	}
 
 	auto emplaceMaterial = [&, this](uint32_t setIdx, MaterialLayout &set,
-								   Vector<uint32_t> &imageLocations,
-								   Vector<uint32_t> &bufferLocations) {
+								   Vector<uint32_t> &imageLocations) {
 		if (imageLocations.empty()) {
 			for (uint32_t imageIdx = 0; imageIdx < uniqueImages.size(); ++imageIdx) {
 				imageLocations.emplace_back(imageIdx);
-			}
-		}
-
-		if (!uniqueBuffers.empty() && bufferLocations.empty()) {
-			for (uint32_t bufferIdx = 0; bufferIdx < uniqueBuffers.size(); ++bufferIdx) {
-				bufferLocations.emplace_back(bufferIdx);
 			}
 		}
 
@@ -376,22 +325,6 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			++imageIdx;
 		}
 
-		uint32_t bufferIdx = 0;
-		for (auto &it : uniqueBuffers) {
-			auto loc = bufferLocations[bufferIdx];
-			if (set.bufferSlots[loc].buffer) {
-				++set.bufferSlots[loc].refCount;
-			} else {
-				// fill slot with new ImageView
-				set.bufferSlots[loc].buffer = it;
-				set.bufferSlots[loc].buffer->setLocation(setIdx, loc);
-				++set.bufferSlots[loc].refCount;
-				set.usedBufferSlots = std::max(set.usedBufferSlots, loc + 1);
-			}
-
-			++bufferIdx;
-		}
-
 		newMaterial->setLayoutIndex(setIdx);
 
 		if (oldImages) {
@@ -411,11 +344,8 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 
 	auto tryToEmplaceSet = [&](uint32_t setIndex, MaterialLayout &set) -> bool {
 		uint32_t emplacedImages = 0;
-		uint32_t emplacedBuffers = 0;
 		Vector<uint32_t> imagePositions;
 		imagePositions.resize(uniqueImages.size(), maxOf<uint32_t>());
-		Vector<uint32_t> bufferPositions;
-		bufferPositions.resize(uniqueBuffers.size(), maxOf<uint32_t>());
 
 		imageIdx = 0;
 		// for each unique image, find it's potential place in set
@@ -450,38 +380,9 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 			++imageIdx;
 		}
 
-		imageIdx = 0;
-		for (auto &uit : uniqueBuffers) {
-			uint32_t location = 0;
-			for (auto &it : set.bufferSlots) {
-				if (it.buffer && it.buffer == uit) {
-					if (bufferPositions[imageIdx] == maxOf<uint32_t>()) {
-						++emplacedBuffers; // mark as emplaced only if not emplaced already
-					}
-					bufferPositions[imageIdx] = location;
-					break; // stop searching - best variant
-				} else if (!it.buffer || it.refCount == 0) {
-					// only if not emplaced
-					if (bufferPositions[imageIdx] == maxOf<uint32_t>()) {
-						if (std::find(bufferPositions.begin(), bufferPositions.end(), location)
-								== bufferPositions.end()) {
-							++emplacedBuffers;
-							bufferPositions[imageIdx] = location;
-						}
-					}
-					// continue searching for possible alias
-				}
-				++location;
-				if (location > set.usedBufferSlots + uniqueBuffers.size()) {
-					break;
-				}
-			}
-			++imageIdx;
-		}
-
 		// if all images emplaced, perform actual emplace and return
-		if (emplacedImages == uniqueImages.size() && emplacedBuffers == uniqueBuffers.size()) {
-			emplaceMaterial(setIndex, set, imagePositions, bufferPositions);
+		if (emplacedImages == uniqueImages.size()) {
+			emplaceMaterial(setIndex, set, imagePositions);
 			return true;
 		}
 		return false;
@@ -511,11 +412,9 @@ void MaterialSet::emplaceMaterialImages(Material *oldMaterial, Material *newMate
 	// no available set, create new one;
 	auto &nIt = _layouts.emplace_back(MaterialLayout());
 	nIt.imageSlots.resize(_imagesInSet);
-	nIt.bufferSlots.resize(_buffersInSet);
 
 	Vector<uint32_t> imageLocations;
-	Vector<uint32_t> bufferLocations;
-	emplaceMaterial(uint32_t(_layouts.size() - 1), nIt, imageLocations, bufferLocations);
+	emplaceMaterial(uint32_t(_layouts.size() - 1), nIt, imageLocations);
 }
 
 bool MaterialImage::canAlias(const MaterialImage &other) const {
@@ -621,20 +520,19 @@ bool Material::init(const Material *master, Vector<MaterialImage> &&images) {
 
 void Material::setLayoutIndex(uint32_t idx) { _layoutIndex = idx; }
 
+void Material::setBuffer(Rc<BufferObject> &&buf) { _buffer = move(buf); }
+
 MaterialAttachment::~MaterialAttachment() {
 	std::unique_lock<Mutex> lock(_dynamicMutex);
 	for (auto &it : _dynamicTrackers) { it.first->removeTracker(this); }
 }
 
-bool MaterialAttachment::init(AttachmentBuilder &builder, const BufferInfo &info,
-		const TextureSetLayoutData *layout, MaterialSet::EncodeCallback &&cb, uint32_t size) {
-	if (!BufferAttachment::init(builder, info)) {
+bool MaterialAttachment::init(AttachmentBuilder &builder, const TextureSetLayoutData *layout) {
+	if (!GenericAttachment::init(builder)) {
 		return false;
 	}
 
 	_targetLayout = layout;
-	_materialObjectSize = size;
-	_encodeCallback = sp::move(cb);
 	return true;
 }
 
@@ -648,19 +546,21 @@ void MaterialAttachment::addPredefinedMaterials(Vector<Rc<Material>> &&materials
 	}
 }
 
-const Rc<MaterialSet> &MaterialAttachment::getMaterials() const { return _data; }
+const Rc<MaterialSet> &MaterialAttachment::getMaterials() const { return _materialSet; }
 
 void MaterialAttachment::setMaterials(const Rc<MaterialSet> &data) const {
-	auto tmp = _data;
-	_data = data;
-	if (tmp) {
-		tmp->clear();
-	}
+	auto tmp = _materialSet;
+	_materialSet = data;
+}
+
+Bytes MaterialAttachment::getMaterialData(NotNull<Material *>) const { return Bytes(); }
+
+Rc<BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(NotNull<Material *>) const {
+	return nullptr;
 }
 
 Rc<MaterialSet> MaterialAttachment::allocateSet(const Device &dev) const {
-	return Rc<MaterialSet>::create(_info, _encodeCallback, _materialObjectSize,
-			_targetLayout->layout->getImageCount(), _targetLayout->layout->getBuffersCount(), this);
+	return Rc<MaterialSet>::create(_targetLayout->layout->getImageCount(), this);
 }
 
 Rc<MaterialSet> MaterialAttachment::cloneSet(const Rc<MaterialSet> &other) const {
@@ -726,5 +626,9 @@ MaterialId MaterialAttachment::getNextMaterialId() const {
 void MaterialAttachment::setCompiler(Queue *c) { _compiler = c; }
 
 Queue *MaterialAttachment::getCompiler() const { return _compiler; }
+
+void MaterialAttachment::setMaterialBuffer(NotNull<Material *> m, Rc<BufferObject> &&buf) const {
+	m->setBuffer(move(buf));
+}
 
 } // namespace stappler::xenolith::core

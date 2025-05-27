@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -71,16 +72,18 @@ public:
 	const Rc<ResourceCache> &getResourceCache() const;
 	const Mat4 &getGeneralProjection() const { return _generalProjection; }
 
-	const core::FrameConstraints & getFrameConstraints() const { return _constraints; }
+	const core::FrameConstraints &getFrameConstraints() const { return _constraints; }
 
 	void pushDrawStat(const DrawStat &);
 
+	const UpdateTime &getUpdateTime() const { return _time; }
 	const DrawStat &getDrawStat() const { return _drawStat; }
 
 	float getFps() const;
 	float getAvgFps() const;
 	float getSpf() const; // in milliseconds
-	float getDeviceFrameTime() const;
+	float getFenceFrameTime() const;
+	float getTimestampFrameTime() const;
 
 	float getDirectorFrameTime() const { return _avgFrameTimeValue / 1000.0f; }
 
@@ -120,6 +123,6 @@ protected:
 	uint64_t _avgFrameTimeValue = 0;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_DIRECTOR_XLDIRECTOR_H_ */

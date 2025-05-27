@@ -24,6 +24,7 @@
 #ifndef XENOLITH_CORE_XLCOREINFO_H_
 #define XENOLITH_CORE_XLCOREINFO_H_
 
+#include "XLCoreEnum.h"
 #include "XLCorePipelineInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -35,6 +36,8 @@ class Sampler;
 class DataAtlas;
 class Resource;
 class TextureSetLayout;
+
+struct PipelineLayoutData;
 
 #if (XL_USE_64_BIT_PTR_DEFINES == 1)
 using ObjectHandle = ValueWrapper<void *, class ObjectHandleFlag>;
@@ -515,7 +518,7 @@ struct SP_PUBLIC SurfaceInfo {
 	String description() const;
 };
 
-struct TextureSetLayoutInfo {
+struct SP_PUBLIC TextureSetLayoutInfo {
 	uint32_t imageCount = config::MaxTextureSetImages;
 	uint32_t imageCountIndexed = config::MaxTextureSetImagesIndexed;
 	uint32_t bufferCount = config::MaxBufferArrayObjects;
@@ -523,9 +526,10 @@ struct TextureSetLayoutInfo {
 	memory::vector<SamplerInfo> samplers;
 };
 
-struct TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
+struct SP_PUBLIC TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
 	Rc<TextureSetLayout> layout;
 	memory::vector<Rc<Sampler>> compiledSamplers;
+	memory::vector<PipelineLayoutData *> bindingLayouts;
 	const ImageData *emptyImage = nullptr;
 	const ImageData *solidImage = nullptr;
 	const BufferData *emptyBuffer = nullptr;
@@ -534,6 +538,31 @@ struct TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
 struct SP_PUBLIC DescriptorData {
 	ObjectHandle object;
 	Rc<Ref> data;
+};
+
+struct SP_PUBLIC SubresourceRangeInfo {
+	ObjectType type;
+	union {
+		struct {
+			ImageAspects aspectMask;
+			uint32_t baseMipLevel;
+			uint32_t levelCount;
+			uint32_t baseArrayLayer;
+			uint32_t layerCount;
+		} image;
+		struct {
+			uint64_t offset;
+			uint64_t size;
+		} buffer;
+	};
+
+	// assume buffer data
+	SubresourceRangeInfo(ObjectType);
+	SubresourceRangeInfo(ObjectType, uint64_t, uint64_t);
+
+	// assume image data
+	SubresourceRangeInfo(ObjectType, ImageAspects);
+	SubresourceRangeInfo(ObjectType, ImageAspects, uint32_t, uint32_t, uint32_t, uint32_t);
 };
 
 SP_PUBLIC String getBufferFlagsDescription(BufferFlags fmt);
