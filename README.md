@@ -99,3 +99,7 @@ https://github.com/user-attachments/assets/2bc1876e-5926-452c-80b2-830518a71109
 * Динамические шрифты в реальном времени
 
 https://github.com/user-attachments/assets/908469f6-7719-493b-82c2-a6c7f1878e9c
+
+* Динамические обводки и реализация гексагонального поля на основе векторных объектов
+
+https://github.com/user-attachments/assets/73a05aa0-28be-485e-acba-325488b978c7
