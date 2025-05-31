@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,16 +20,17 @@
  THE SOFTWARE.
  **/
 
-#ifndef SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
-#define SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
+#ifndef XENOLITH_UTILS_TESTAPP_SRC_TESTS_2D_RENDERER2DPARTICLETEST_H_
+#define XENOLITH_UTILS_TESTAPP_SRC_TESTS_2D_RENDERER2DPARTICLETEST_H_
 
 #include "AppLayoutTest.h"
+#include "XL2dParticleEmitter.h"
 
 namespace stappler::xenolith::app {
 
-class Renderer2dAnimationTest : public LayoutTest {
+class Renderer2dParticleTest : public LayoutTest {
 public:
-	virtual ~Renderer2dAnimationTest() = default;
+	virtual ~Renderer2dParticleTest() = default;
 
 	virtual bool init() override;
 
@@ -42,11 +42,9 @@ public:
 protected:
 	using LayoutTest::init;
 
-	Rc<TemporaryResource> _resource;
-	Sprite *_sprite1 = nullptr;
-	Sprite *_sprite2 = nullptr;
+	ParticleEmitter *_emitter = nullptr;
 };
 
 } // namespace stappler::xenolith::app
 
-#endif /* SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_ */
+#endif /* XENOLITH_UTILS_TESTAPP_SRC_TESTS_2D_RENDERER2DPARTICLETEST_H_ */

@@ -24,6 +24,7 @@
 
 #include "XLVkQueuePass.h"
 
+#include "XLCoreEnum.h"
 #include "XLCoreMaterial.h"
 #include "XLVkAllocator.h"
 #include "XLVkAttachment.h"
@@ -284,7 +285,7 @@ Vector<const core::CommandBuffer *> QueuePassHandle::doPrepareCommands(FrameHand
 				}
 				++i;
 			}
-		});
+		}, true);
 		return true;
 	}, move(info));
 	return Vector<const core::CommandBuffer *>{buf};
@@ -564,6 +565,12 @@ QueuePassHandle::ImageInputOutputBarrier QueuePassHandle::getImageInputOutputBar
 QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputBarrier(Device *dev,
 		Buffer *buffer, core::AttachmentHandle &handle, VkDeviceSize offset,
 		VkDeviceSize size) const {
+	auto getApplicableStage = [&](core::AttachmentPassData *data,
+									  core::PipelineStage stage) -> core::PipelineStage {
+		auto q = dev->getQueueFamily(data->pass->pass.get_cast<vk::QueuePass>()->getQueueOps());
+		return stage & core::getStagesForQueue(q->flags);
+	};
+
 	BufferInputOutputBarrier ret;
 
 	auto attachmentData = handle.getAttachment()->getData();
@@ -600,9 +607,12 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 
 		QueueFamilyTransfer transfer;
 
-		if (current->pass->type != prev->pass->type) {
-			auto prevQueue = dev->getQueueFamily(prev->pass->type);
-			auto currentQueue = dev->getQueueFamily(current->pass->type);
+		if (current->pass->pass.get_cast<vk::QueuePass>()->getQueueOps()
+				!= prev->pass->pass.get_cast<vk::QueuePass>()->getQueueOps()) {
+			auto prevQueue =
+					dev->getQueueFamily(prev->pass->pass.get_cast<vk::QueuePass>()->getQueueOps());
+			auto currentQueue = dev->getQueueFamily(
+					current->pass->pass.get_cast<vk::QueuePass>()->getQueueOps());
 			if (prevQueue != currentQueue) {
 				hasOwnershipTransfer = true;
 				transfer = QueueFamilyTransfer{prevQueue->index, currentQueue->index};
@@ -612,23 +622,35 @@ QueuePassHandle::BufferInputOutputBarrier QueuePassHandle::getBufferInputOutputB
 		if (hasOwnershipTransfer || hasReadWriteTransition) {
 			ret.input = BufferMemoryBarrier(buffer, VkAccessFlags(prev->dependency.finalAccessMask),
 					VkAccessFlags(current->dependency.initialAccessMask), transfer, offset, size);
-			ret.inputFrom = prev->dependency.finalUsageStage;
-			ret.inputTo = current->dependency.initialUsageStage;
+
+			// Vulkan VUID-vkCmdPipelineBarrier-dstStageMask-06462 states to check against CURRENT queue
+			ret.inputFrom = getApplicableStage(current, prev->dependency.finalUsageStage);
+			if (ret.inputFrom == core::PipelineStage::None) {
+				ret.inputFrom = core::PipelineStage::AllCommands;
+			}
+			ret.inputTo = getApplicableStage(current, current->dependency.initialUsageStage);
 		}
 	}
 
 	if (next) {
-		if (current->pass->type != next->pass->type) {
-			auto nextQueue = dev->getQueueFamily(next->pass->type);
-			auto currentQueue = dev->getQueueFamily(current->pass->type);
+		if (current->pass->pass.get_cast<vk::QueuePass>()->getQueueOps()
+				!= next->pass->pass.get_cast<vk::QueuePass>()->getQueueOps()) {
+			auto nextQueue =
+					dev->getQueueFamily(next->pass->pass.get_cast<vk::QueuePass>()->getQueueOps());
+			auto currentQueue = dev->getQueueFamily(
+					current->pass->pass.get_cast<vk::QueuePass>()->getQueueOps());
 			if (nextQueue != currentQueue) {
 				ret.output = BufferMemoryBarrier(buffer,
 						VkAccessFlags(current->dependency.finalAccessMask),
 						VkAccessFlags(next->dependency.initialAccessMask),
 						QueueFamilyTransfer{currentQueue->index, nextQueue->index}, offset, size);
 
-				ret.outputFrom = current->dependency.finalUsageStage;
-				ret.outputTo = next->dependency.initialUsageStage;
+				// Vulkan VUID-vkCmdPipelineBarrier-dstStageMask-06462 states to check against CURRENT queue
+				ret.outputFrom = getApplicableStage(current, current->dependency.finalUsageStage);
+				ret.outputTo = getApplicableStage(current, next->dependency.initialUsageStage);
+				if (ret.outputTo == core::PipelineStage::None) {
+					ret.outputTo = core::PipelineStage::AllCommands;
+				}
 			}
 		}
 	}

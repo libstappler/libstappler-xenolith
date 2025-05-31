@@ -133,11 +133,7 @@ void Command::release() {
 			d->deferred = nullptr;
 		}
 		break;
-	case CommandType::ParticleEmitter:
-		if (CmdParticleEmitter *d = static_cast<CmdParticleEmitter *>(data)) {
-			d->data = nullptr;
-		}
-		break;
+	case CommandType::ParticleEmitter: break;
 	}
 }
 
@@ -184,7 +180,6 @@ void CommandList::pushVertexArray(Rc<VertexData> &&vert, const Mat4 &t, CmdInfo 
 		cmdData->state = info.state;
 		cmdData->renderingLevel = info.renderingLevel;
 		cmdData->depthValue = info.depthValue;
-		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});
@@ -211,7 +206,6 @@ void CommandList::pushVertexArray(
 		cmdData->state = info.state;
 		cmdData->renderingLevel = info.renderingLevel;
 		cmdData->depthValue = info.depthValue;
-		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});
@@ -235,19 +229,18 @@ void CommandList::pushDeferredVertexResult(const Rc<DeferredVertexResult> &res, 
 		cmdData->state = info.state;
 		cmdData->renderingLevel = info.renderingLevel;
 		cmdData->depthValue = info.depthValue;
-		cmdData->textureLayer = info.textureLayer;
 
 		addCommand(cmd);
 	});
 }
 
-void CommandList::pushParticleEmitter(uint64_t id, Rc<ParticleSystemData> &&data, const Mat4 &t,
-		CmdInfo &&info, CommandFlags flags) {
+uint32_t CommandList::pushParticleEmitter(uint64_t id, const Mat4 &t, CmdInfo &&info,
+		CommandFlags flags) {
+	uint32_t ret = 0;
 	_pool->perform([&, this] {
 		auto cmd = Command::create(_pool->getPool(), CommandType::ParticleEmitter, flags);
 		auto cmdData = reinterpret_cast<CmdParticleEmitter *>(cmd->data);
 
-		cmdData->data = move(data);
 		cmdData->transform = t;
 		cmdData->id = id;
 
@@ -258,10 +251,13 @@ void CommandList::pushParticleEmitter(uint64_t id, Rc<ParticleSystemData> &&data
 		cmdData->state = info.state;
 		cmdData->renderingLevel = info.renderingLevel;
 		cmdData->depthValue = info.depthValue;
-		cmdData->textureLayer = info.textureLayer;
+
+		// note: prefix increment, NOT suffix
+		ret = cmdData->transformIndex = ++_preallocatedTransforms;
 
 		addCommand(cmd);
 	});
+	return ret;
 }
 
 void CommandList::addCommand(Command *cmd) {

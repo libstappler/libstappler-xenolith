@@ -41,7 +41,7 @@ namespace STAPPLER_VERSIONIZED stappler::glsl {
 #define XL_GLSL_FLAG_POSITION_MASK_Z (1 << 2)
 #define XL_GLSL_FLAG_POSITION_MASK_W (1 << 3)
 
-#define XL_GLSL_FLAG_DEFAULT (XL_GLSL_FLAG_POSITION_MASK_X | XL_GLSL_FLAG_POSITION_MASK_Y)
+#define XL_GLSL_FLAG_DEFAULT (XL_GLSL_FLAG_POSITION_MASK_X | XL_GLSL_FLAG_POSITION_MASK_Y | XL_GLSL_FLAG_POSITION_MASK_W)
 
 struct VertexConstantData {
 	uvec2 vertexPointer; // 0-8
@@ -50,9 +50,8 @@ struct VertexConstantData {
 	uvec2 atlasPointer; // 24-32
 	uint imageIdx; // 32-36
 	uint samplerIdx; // 36-40
-	float outlineOffset; // 40-44
-	uint gradientOffset; // 44-48
-	uint gradientCount; // 48-52
+	uint gradientOffset; // 40-44
+	uint gradientCount; // 44-48
 };
 
 struct PSDFConstantData {
@@ -86,29 +85,29 @@ struct TransformData {
 	vec4 instanceColor;
 	vec4 outlineColor;
 	float shadowValue;
-	float textureLayer;
-	float padding1;
+	float padding0;
+	float outlineOffset;
 	uint flags;
 
 #ifndef SP_GLSL
 	TransformData()
 	: transform(mat4::IDENTITY)
-	, offset(vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	, offset(vec4(0.0f, 0.0f, 0.0f, 0.0f))
 	, instanceColor(vec4::ONE)
 	, outlineColor(vec4::ONE)
 	, shadowValue(0.0f)
-	, textureLayer(0.0f)
-	, padding1(0.0f)
+	, padding0(0.0f)
+	, outlineOffset(0.0f)
 	, flags(XL_GLSL_FLAG_DEFAULT) { }
 
 	TransformData(const mat4 &m)
 	: transform(m)
-	, offset(vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	, offset(vec4(0.0f, 0.0f, 0.0f, 0.0f))
 	, instanceColor(vec4::ONE)
 	, outlineColor(vec4::ONE)
 	, shadowValue(0.0f)
-	, textureLayer(0.0f)
-	, padding1(0.0f)
+	, padding0(0.0f)
+	, outlineOffset(0.0f)
 	, flags(XL_GLSL_FLAG_DEFAULT) { }
 #endif
 };

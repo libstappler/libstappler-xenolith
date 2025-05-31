@@ -352,9 +352,9 @@ Rc<QueryPool> Device::acquireQueryPool(QueueFlags c, const QueryPoolInfo &info) 
 	}
 
 	std::unique_lock<Mutex> lock(_resourceMutex);
-	if (!family->pools.empty()) {
+	if (!family->queries.empty()) {
 		auto qIt = family->queries.find(info);
-		if (qIt != family->queries.end()) {
+		if (qIt != family->queries.end() && !qIt->second.empty()) {
 			auto ret = qIt->second.back();
 			qIt->second.pop_back();
 			return ret;
@@ -371,9 +371,9 @@ Rc<QueryPool> Device::acquireQueryPool(uint32_t familyIndex, const QueryPoolInfo
 	}
 
 	std::unique_lock<Mutex> lock(_resourceMutex);
-	if (!family->pools.empty()) {
+	if (!family->queries.empty()) {
 		auto qIt = family->queries.find(info);
-		if (qIt != family->queries.end()) {
+		if (qIt != family->queries.end() && !qIt->second.empty()) {
 			auto ret = qIt->second.back();
 			qIt->second.pop_back();
 			return ret;

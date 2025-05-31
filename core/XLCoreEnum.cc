@@ -22,8 +22,33 @@
  **/
 
 #include "XLCoreEnum.h"
+#include "SPCore.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
+
+PipelineStage getStagesForQueue(QueueFlags flags) {
+	PipelineStage ret = PipelineStage::TopOfPipe | PipelineStage::BottomOfPipe | PipelineStage::Host
+			| PipelineStage::AllCommands | PipelineStage::CommandPreprocess;
+	if (hasFlag(flags, QueueFlags::Graphics)) {
+		ret |= PipelineStage::DrawIndirect | PipelineStage::VertexInput
+				| PipelineStage::VertexShader | PipelineStage::TesselationControl
+				| PipelineStage::TesselationEvaluation | PipelineStage::GeometryShader
+				| PipelineStage::FragmentShader | PipelineStage::EarlyFragmentTest
+				| PipelineStage::LateFragmentTest | PipelineStage::ColorAttachmentOutput
+				| PipelineStage::AllGraphics | PipelineStage::TransformFeedback
+				| PipelineStage::ConditionalRendering | PipelineStage::AccelerationStructureBuild
+				| PipelineStage::RayTracingShader | PipelineStage::ShadingRateImage
+				| PipelineStage::TaskShader | PipelineStage::MeshShader
+				| PipelineStage::FragmentDensityProcess;
+	}
+	if (hasFlag(flags, QueueFlags::Compute)) {
+		ret |= PipelineStage::ComputeShader;
+	}
+	if (hasFlag(flags, QueueFlags::Transfer)) {
+		ret |= PipelineStage::Transfer;
+	}
+	return ret;
+}
 
 StringView getDescriptorTypeName(DescriptorType type) {
 	switch (type) {

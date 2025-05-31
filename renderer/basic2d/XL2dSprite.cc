@@ -139,6 +139,8 @@ void Sprite::setTexture(Rc<Texture> &&tex) {
 	}
 }
 
+void Sprite::setTexture(Texture *tex) { setTexture(Rc<Texture>(tex)); }
+
 void Sprite::scheduleTextureUpdate(StringView textureName) {
 	if (!_running || textureName.empty() || textureName.empty()) {
 		setTexture(move(textureName));
@@ -327,7 +329,12 @@ void Sprite::setBlendInfo(const core::BlendInfo &info) {
 	}
 }
 
-void Sprite::setTextureLayer(float value) { _textureLayer = value; }
+void Sprite::setTextureLayer(float value) {
+	if (_textureLayer != value) {
+		_textureLayer = value;
+		_vertexesDirty = true;
+	}
+}
 
 void Sprite::setLineWidth(float value) {
 	if (_materialInfo.getLineWidth() != value) {
@@ -444,7 +451,7 @@ void Sprite::updateVertexes(FrameInfo &frame) {
 
 	_vertexes.addQuad()
 			.setGeometry(Vec4(placementResult.viewRect.origin.x, placementResult.viewRect.origin.y,
-								 0.0f, 1.0f),
+								 _textureLayer, 1.0f),
 					placementResult.viewRect.size)
 			.setTextureRect(placementResult.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated)
 			.setColor(_displayedColor);
@@ -569,7 +576,7 @@ bool Sprite::checkVertexDirty() const { return _vertexesDirty; }
 CmdInfo Sprite::buildCmdInfo(const FrameInfo &frame) const {
 	auto handle = static_cast<const FrameContextHandle2d *>(frame.currentContext);
 	return CmdInfo{frame.zPath, _materialId, handle->getCurrentState(), _realRenderingLevel,
-		_displayedColor.a > 0.0f ? frame.depthStack.back() : 0.0f, _textureLayer};
+		_displayedColor.a > 0.0f ? frame.depthStack.back() : 0.0f};
 }
 
 void Sprite::doScheduleTextureUpdate(Rc<Texture> &&tex) {

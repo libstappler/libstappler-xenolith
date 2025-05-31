@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -60,11 +61,11 @@ SimpleGradient::SimpleGradient(ColorRef start, ColorRef end, const Vec2 &alongVe
 	Vec2 u(alongVector.x / h, alongVector.y / h);
 
 	// Compressed Interpolation mode
-	float h2 = 1 / ( fabsf(u.x) + fabsf(u.y) );
+	float h2 = 1 / (fabsf(u.x) + fabsf(u.y));
 	u = u * (h2 * c);
 
-	Color4B S( start.r, start.g, start.b, start.a  );
-	Color4B E( end.r, end.g, end.b, end.a );
+	Color4B S(start.r, start.g, start.b, start.a);
+	Color4B E(end.r, end.g, end.b, end.a);
 
 	// (-1, -1)
 	colors[0].r = E.r + (S.r - E.r) * ((c + u.x + u.y) / (2.0f * c));
@@ -111,9 +112,7 @@ bool SimpleGradient::operator!=(const SimpleGradient &other) const {
 	return memcmp(colors, other.colors, sizeof(Color4B) * 4) != 0;
 }
 
-bool Layer::init() {
-	return init(Color4F::WHITE);
-}
+bool Layer::init() { return init(Color4F::WHITE); }
 
 bool Layer::init(const Color4F &c) {
 	if (!Sprite::init(core::SolidTextureName)) {
@@ -138,32 +137,28 @@ bool Layer::init(const SimpleGradient &grad) {
 	return true;
 }
 
-void Layer::handleContentSizeDirty() {
-	Sprite::handleContentSizeDirty();
-}
+void Layer::handleContentSizeDirty() { Sprite::handleContentSizeDirty(); }
 
 void Layer::setGradient(const SimpleGradient &g) {
 	_gradient = g;
 	_contentSizeDirty = true;
 }
 
-const SimpleGradient &Layer::getGradient() const {
-	return _gradient;
-}
+const SimpleGradient &Layer::getGradient() const { return _gradient; }
 
 void Layer::updateVertexes(FrameInfo &frame) {
 	_vertexes.clear();
 	auto quad = _vertexes.addQuad()
-		.setGeometry(Vec4::ZERO, _contentSize)
-		.setTextureRect(_texturePlacement.textureRect, 1.0f, 1.0f, _flippedX, _flippedY, _rotated);
+						.setGeometry(Vec4(Vec2::ZERO, _textureLayer, 1.0f), _contentSize)
+						.setTextureRect(_texturePlacement.textureRect, 1.0f, 1.0f, _flippedX,
+								_flippedY, _rotated);
 
 	Color4F color[4];
 	for (int i = 0; i < 4; i++) {
-		color[i] = Color4F(
-				_displayedColor.r * (_gradient.colors[i].r / 255.0f),
+		color[i] = Color4F(_displayedColor.r * (_gradient.colors[i].r / 255.0f),
 				_displayedColor.g * (_gradient.colors[i].g / 255.0f),
 				_displayedColor.b * (_gradient.colors[i].b / 255.0f),
-				_displayedColor.a * _gradient.colors[i].a / 255.0f );
+				_displayedColor.a * _gradient.colors[i].a / 255.0f);
 	}
 
 	quad.setColor(makeSpanView(color, 4));
@@ -173,11 +168,10 @@ void Layer::updateVertexesColor() {
 	if (!_vertexes.empty()) {
 		Color4F color[4];
 		for (int i = 0; i < 4; i++) {
-			color[i] = Color4F(
-					_displayedColor.r * (_gradient.colors[i].r / 255.0f),
+			color[i] = Color4F(_displayedColor.r * (_gradient.colors[i].r / 255.0f),
 					_displayedColor.g * (_gradient.colors[i].g / 255.0f),
 					_displayedColor.b * (_gradient.colors[i].b / 255.0f),
-					_displayedColor.a * _gradient.colors[i].a / 255.0f );
+					_displayedColor.a * _gradient.colors[i].a / 255.0f);
 		}
 
 		_vertexes.getQuad(0, 0).setColor(makeSpanView(color, 4));
@@ -187,7 +181,8 @@ void Layer::updateVertexesColor() {
 RenderingLevel Layer::getRealRenderingLevel() const {
 	auto level = _renderingLevel;
 	if (level == RenderingLevel::Default) {
-		if (_displayedColor.a < 1.0f || _gradient.hasAlpha() || !_texture || _materialInfo.getLineWidth() != 0.0f) {
+		if (_displayedColor.a < 1.0f || _gradient.hasAlpha() || !_texture
+				|| _materialInfo.getLineWidth() != 0.0f) {
 			level = RenderingLevel::Transparent;
 		} else if (_colorMode.getMode() == core::ColorMode::Solid) {
 			if (_texture->hasAlpha()) {
@@ -205,19 +200,13 @@ RenderingLevel Layer::getRealRenderingLevel() const {
 					level = RenderingLevel::Solid;
 				}
 				break;
-			case core::ComponentMapping::Zero:
-				level = RenderingLevel::Transparent;
-				break;
-			case core::ComponentMapping::One:
-				level = RenderingLevel::Solid;
-				break;
-			default:
-				level = RenderingLevel::Transparent;
-				break;
+			case core::ComponentMapping::Zero: level = RenderingLevel::Transparent; break;
+			case core::ComponentMapping::One: level = RenderingLevel::Solid; break;
+			default: level = RenderingLevel::Transparent; break;
 			}
 		}
 	}
 	return level;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

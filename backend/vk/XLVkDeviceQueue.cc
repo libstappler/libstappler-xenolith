@@ -1165,6 +1165,15 @@ void CommandPool::recreatePool(Device &dev) {
 	_invalidated = false;
 }
 
+static void QueryPool_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *) {
+	auto d = static_cast<Device *>(dev);
+	auto target = (VkQueryPool)ptr.get();
+	if (target) {
+		d->getTable()->vkDestroyQueryPool(d->getDevice(), target, nullptr);
+		target = VK_NULL_HANDLE;
+	}
+}
+
 bool QueryPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c,
 		const core::QueryPoolInfo &qinfo) {
 	_info = qinfo;
@@ -1179,6 +1188,9 @@ bool QueryPool::init(Device &dev, uint32_t familyIdx, core::QueueFlags c,
 
 	if (dev.getTable()->vkCreateQueryPool(dev.getDevice(), &info, nullptr, &_queryPool)
 			== VK_SUCCESS) {
+
+		return core::QueryPool::init(dev, QueryPool_destroy, core::ObjectType::QueryPool,
+				core::ObjectHandle(_queryPool));
 		return true;
 	}
 	return false;

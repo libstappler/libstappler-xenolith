@@ -26,10 +26,26 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 static std::atomic<uint64_t> s_particleSystemId = 1;
 
-bool ParticleSystem::init() {
+bool ParticleSystem::init(uint32_t count, uint32_t frameInterval, float lifetime) {
 	_id = s_particleSystemId.fetch_add(1);
 	_data = Rc<ParticleSystemData>::alloc();
+
+	_data->data.count = count;
+	_data->data.frameInterval = frameInterval;
+	_data->data.dt = frameInterval / 1'000'000.0f;
+	_data->data.lifetime.init = lifetime;
+	_data->data.explosiveness = 0.0f;
+
 	return true;
+}
+
+void ParticleSystem::setParticleSize(Size2 size) {
+	if (_copyOnWrite) {
+		copy();
+	}
+
+	_data->data.sizeValue = Vec2(size / 2.0f).length();
+	_data->data.sizeNormal = Vec2(size).getNormalized();
 }
 
 void ParticleSystem::setCount(uint32_t c) {
@@ -58,6 +74,7 @@ void ParticleSystem::setFrameInterval(uint32_t f) {
 	}
 
 	_data->data.frameInterval = f;
+	_data->data.dt = f / 1'000'000.0f;
 }
 
 uint32_t ParticleSystem::getFrameInterval() const { return _data->data.frameInterval; }

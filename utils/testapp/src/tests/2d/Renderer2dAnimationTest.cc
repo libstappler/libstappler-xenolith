@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,18 +33,15 @@ bool Renderer2dAnimationTest::init() {
 		return false;
 	}
 
-	_sprite = addChild(Rc<Sprite>::create(), ZOrder(1));
-	_sprite->setTextureAutofit(Autofit::Contain);
-	_sprite->setAnchorPoint(Anchor::Middle);
-	_sprite->setSamplerIndex(SamplerIndex::DefaultFilterNearest);
+	_sprite1 = addChild(Rc<Sprite>::create(), ZOrder(1));
+	_sprite1->setTextureAutofit(Autofit::Contain);
+	_sprite1->setAnchorPoint(Anchor::Middle);
+	_sprite1->setSamplerIndex(SamplerIndex::DefaultFilterNearest);
 
-	_checkbox = addChild(Rc<CheckboxWithLabel>::create("Use linear filtration", false,
-								 [this](bool val) {
-		_sprite->setSamplerIndex(
-				val ? SamplerIndex::DefaultFilterLinear : SamplerIndex::DefaultFilterNearest);
-	}),
-			ZOrder(2));
-	_checkbox->setAnchorPoint(Anchor::Middle);
+	_sprite2 = addChild(Rc<Sprite>::create(), ZOrder(1));
+	_sprite2->setTextureAutofit(Autofit::Contain);
+	_sprite2->setAnchorPoint(Anchor::Middle);
+	_sprite2->setSamplerIndex(SamplerIndex::DefaultFilterLinear);
 
 	return true;
 }
@@ -62,8 +60,7 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 
 		Vector<FileInfo> paths;
 
-		filesystem::ftw(FileInfo{"resources/anim", FileCategory::Bundled},
-				[&](const FileInfo &path, FileType type) {
+		filesystem::ftw(FileInfo{"resources/anim"}, [&](const FileInfo &path, FileType type) {
 			if (type == FileType::File) {
 				paths.emplace_back(FileInfo(path.path.pdup(builder.getPool()), path.category));
 			}
@@ -77,18 +74,20 @@ void Renderer2dAnimationTest::handleEnter(Scene *scene) {
 							core::ImageUsage::Sampled),
 					makeSpanView(paths))) {
 			if (auto tmp = cache->addTemporaryResource(Rc<core::Resource>::create(move(builder)))) {
-				_sprite->setTexture(Rc<Texture>::create(d, tmp));
+				auto tex = Rc<Texture>::create(d, tmp);
+				_sprite1->setTexture(tex);
+				_sprite2->setTexture(tex);
 				_resource = tmp;
 			}
 		}
 	}
 
-	_sprite->runAction(
-			Rc<RepeatForever>::create(Rc<ActionProgress>::create(5.0f, [this](float value) {
-		Texture *tex = _sprite->getTexture();
-		auto maxLayer = float(tex->getImageData()->arrayLayers.get());
+	runAction(Rc<RepeatForever>::create(Rc<ActionProgress>::create(5.0f, [this](float value) {
+		Texture *tex = _sprite1->getTexture();
+		auto maxLayer1 = float(tex->getImageData()->arrayLayers.get());
 
-		_sprite->setTextureLayer(progress(0.0f, maxLayer, value));
+		_sprite1->setTextureLayer(progress(0.0f, maxLayer1, value));
+		_sprite2->setTextureLayer(progress(0.0f, maxLayer1, value));
 	})));
 }
 
@@ -97,13 +96,15 @@ void Renderer2dAnimationTest::handleExit() { LayoutTest::handleExit(); }
 void Renderer2dAnimationTest::handleContentSizeDirty() {
 	LayoutTest::handleContentSizeDirty();
 
-	if (_sprite) {
-		_sprite->setContentSize(_contentSize * 0.75f);
-		_sprite->setPosition(_contentSize / 2.0f);
+	if (_sprite1) {
+		_sprite1->setContentSize(_contentSize * 0.5f);
+		_sprite1->setPosition(_contentSize / 2.0f - Vec2(-160.0f, 0.0f));
 	}
 
-	_checkbox->setContentSize(Size2(36.0f, 36.0f));
-	_checkbox->setPosition(Vec2(_contentSize.width / 2.0f - 80.0f, 64.0f));
+	if (_sprite2) {
+		_sprite2->setContentSize(_contentSize * 0.5f);
+		_sprite2->setPosition(_contentSize / 2.0f + Vec2(-160.0f, 0.0f));
+	}
 }
 
 } // namespace stappler::xenolith::app

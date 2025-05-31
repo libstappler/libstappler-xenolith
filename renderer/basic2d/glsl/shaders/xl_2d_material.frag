@@ -22,8 +22,9 @@ layout (location = 0) in vec4 fragColor;
 layout (location = 1) in vec4 fragTexCoord;
 layout (location = 2) in vec4 shadowColor;
 layout (location = 3) in vec4 outlineColor;
-layout (location = 4) in vec2 fragPosition;
-layout (location = 5) in flat uvec4 tex;
+layout (location = 4) in float outlineOffset;
+layout (location = 5) in vec2 fragPosition;
+layout (location = 6) in flat uvec4 tex;
 
 layout (location = 0) out vec4 outColor;
 layout (location = 1) out vec4 outShadow;
@@ -36,7 +37,6 @@ vec4 getSample(in sampler2D s, vec2 coord) {
 	return texture(s, coord);
 }
 
-#define M_SQRT1_2 0.70710678118654752440
 #define SAMPLER2D(image, sampler) sampler2D( images2d[image], immutableSamplers[sampler] )
 #define SAMPLER2DARR(image, sampler) sampler2DArray( images2dArray[image], immutableSamplers[sampler] )
 #define SAMPLER3D(image, sampler) sampler3D( images3d[image], immutableSamplers[sampler] )
@@ -80,9 +80,9 @@ vec2 getTextureSize_pc() {
 }
 
 float getOutlineSample(in vec2 coord, float initColor, float z) {
-	const uint nsamples = min(4, max(uint(ceil(pushConstants.outlineOffset)), 2));
+	const uint nsamples = min(4, max(uint(ceil(outlineOffset)), 2));
 
-	const vec2 offset = pushConstants.outlineOffset / getTextureSize_pc();
+	const vec2 offset = outlineOffset / getTextureSize_pc();
 	const vec2 step = offset / float(nsamples - 1);
 	const vec2 origin = coord - offset / 2.0;
 
@@ -115,7 +115,7 @@ void main() {
 		textureColor = texture(SAMPLER2D_PC, fragTexCoord.xy);
 	}
 
-	if (pushConstants.outlineOffset > 0.0) {
+	if (outlineOffset > 0.0) {
 		float outlineSample = getOutlineSample(fragTexCoord.xy, textureColor.a, fragTexCoord.z);
 
 		outColor = outlineColor * outlineSample + textureColor * (1.0 - outlineSample);

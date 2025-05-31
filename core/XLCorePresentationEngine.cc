@@ -199,13 +199,16 @@ void PresentationEngine::end() {
 
 	releaseList.clear();
 
-	for (auto &it : _framesAwaitingImages) { it->invalidate(true); }
+	auto framesAwaitingImages = sp::move(_framesAwaitingImages);
+	auto scheduledForPresent = sp::move(_scheduledForPresent);
+	auto scheduledPresentHandles = sp::move(_scheduledPresentHandles);
+
+	for (auto &it : framesAwaitingImages) { it->invalidate(true); }
+	for (auto &it : scheduledForPresent) { it->invalidate(true); }
+	for (auto &it : scheduledPresentHandles) { it->cancel(); }
+
 	_framesAwaitingImages.clear();
-
-	for (auto &it : _scheduledForPresent) { it->invalidate(true); }
 	_scheduledForPresent.clear();
-
-	for (auto &it : _scheduledPresentHandles) { it->cancel(); }
 	_scheduledPresentHandles.clear();
 }
 

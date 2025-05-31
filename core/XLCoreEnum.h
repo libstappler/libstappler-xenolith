@@ -890,6 +890,8 @@ enum class SemaphoreType {
 	Timeline,
 };
 
+SP_PUBLIC PipelineStage getStagesForQueue(QueueFlags);
+
 SP_PUBLIC StringView getDescriptorTypeName(DescriptorType);
 SP_PUBLIC void getProgramStageDescription(const CallbackStream &, ProgramStage fmt);
 

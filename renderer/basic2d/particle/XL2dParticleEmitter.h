@@ -37,10 +37,16 @@ public:
 	virtual bool init(NotNull<ParticleSystem *>, StringView);
 	virtual bool init(NotNull<ParticleSystem *>, Rc<Texture> &&);
 
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
+
 	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
 
 protected:
 	Rc<ParticleSystem> _system;
+	uint32_t _maxFramesPerCall = 2;
+
+	Action *_actionRenderLock = nullptr;
 };
 
 } // namespace stappler::xenolith::basic2d

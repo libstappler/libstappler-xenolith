@@ -21,8 +21,10 @@
  **/
 
 #include "XL2dParticleEmitter.h"
+#include "XL2dParticleSystem.h"
 #include "XL2dSprite.h"
 #include "XL2dFrameContext.h"
+#include "XLAction.h"
 #include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -54,6 +56,17 @@ bool ParticleEmitter::init(NotNull<ParticleSystem *> s, Rc<Texture> &&tex) {
 	return true;
 }
 
+void ParticleEmitter::handleEnter(Scene *scene) {
+	Sprite::handleEnter(scene);
+	_actionRenderLock = runAction(Rc<RenderContinuously>::create());
+}
+
+void ParticleEmitter::handleExit() {
+	stopAction(_actionRenderLock);
+	_actionRenderLock = nullptr;
+	Sprite::handleExit();
+}
+
 void ParticleEmitter::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	auto data = _vertexes.pop();
 	Mat4 newMV;
@@ -72,10 +85,19 @@ void ParticleEmitter::pushCommands(FrameInfo &frame, NodeFlags flags) {
 
 	auto particleSystem = _system->pop();
 
-	handle->particleEmitters.emplace(_system->getId(), particleSystem);
+	auto cmdInfo = buildCmdInfo(frame);
+	auto materialIndex = cmdInfo.material;
 
-	handle->commands->pushParticleEmitter(_system->getId(), move(particleSystem), targetTransform,
-			buildCmdInfo(frame), _commandFlags);
+	auto transform = handle->commands->pushParticleEmitter(_system->getId(), targetTransform,
+			move(cmdInfo), _commandFlags);
+
+	handle->particleEmitters.emplace(_system->getId(),
+			ParticleSystemRenderInfo{
+				move(particleSystem),
+				materialIndex,
+				_maxFramesPerCall,
+				transform,
+			});
 }
 
 } // namespace stappler::xenolith::basic2d

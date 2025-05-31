@@ -26,6 +26,7 @@
 #include "SPEnum.h"
 #include "SPNotNull.h"
 #include "XL2d.h"
+#include "XLCoreMaterial.h"
 #include "XLCurveBuffer.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -45,6 +46,16 @@ struct ParticleSystemData : public Ref {
 	ParticleEmitterData data;
 	Rc<CurveBuffer> colorCurve;
 	Vector<Vec2> emissionPoints;
+
+	ParticleSystemData() { ::memset(&data, 0, sizeof(ParticleEmitterData)); }
+};
+
+struct ParticleSystemRenderInfo {
+	Rc<ParticleSystemData> system;
+	core::MaterialId material = 0;
+	uint32_t maxFramesPerCall = 0;
+	uint32_t transform = 0;
+	uint32_t index = 0;
 };
 
 SP_DEFINE_ENUM_AS_MASK(ParticleSystemFlags)
@@ -53,9 +64,11 @@ class ParticleSystem : public Ref {
 public:
 	virtual ~ParticleSystem() = default;
 
-	bool init();
+	bool init(uint32_t count, uint32_t frameInterval, float lifetime);
 
 	uint64_t getId() const { return _id; }
+
+	void setParticleSize(Size2);
 
 	void setCount(uint32_t);
 	uint32_t getCount() const;

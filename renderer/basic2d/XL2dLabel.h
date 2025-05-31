@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +47,8 @@ public:
 
 	bool init(std::future<Rc<LabelResult>> &&);
 
-	virtual bool acquireResult(const Callback<void(SpanView<InstanceVertexData>, Flags)> &) override;
+	virtual bool acquireResult(
+			const Callback<void(SpanView<InstanceVertexData>, Flags)> &) override;
 
 	virtual void handleReady(Rc<LabelResult> &&);
 
@@ -85,9 +87,13 @@ public:
 		core::TextCursor _cursor = core::TextCursor::InvalidCursor;
 	};
 
-	static void writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::StandartInterface> *format, Vector<ColorMask> &colorMap);
-	static void writeQuads(VertexArray &vertexes, const font::TextLayoutData<memory::PoolInterface> *format, Vector<ColorMask> &colorMap);
-	static Rc<LabelResult> writeResult(TextLayout *format, const Color4F &);
+	static void writeQuads(VertexArray &vertexes,
+			const font::TextLayoutData<memory::StandartInterface> *format,
+			Vector<ColorMask> &colorMap, float layer);
+	static void writeQuads(VertexArray &vertexes,
+			const font::TextLayoutData<memory::PoolInterface> *format, Vector<ColorMask> &colorMap,
+			float layer);
+	static Rc<LabelResult> writeResult(TextLayout *format, const Color4F &, float layer);
 
 	virtual ~Label();
 
@@ -96,8 +102,8 @@ public:
 	virtual bool init(StringView, float w, TextAlign = TextAlign::Left);
 	virtual bool init(font::FontController *, const DescriptionStyle & = DescriptionStyle(),
 			StringView = StringView(), float w = 0.0f, TextAlign = TextAlign::Left);
-	virtual bool init(const DescriptionStyle &, StringView = StringView(),
-			float w = 0.0f, TextAlign = TextAlign::Left);
+	virtual bool init(const DescriptionStyle &, StringView = StringView(), float w = 0.0f,
+			TextAlign = TextAlign::Left);
 
 	virtual void tryUpdateLabel();
 
@@ -125,7 +131,8 @@ public:
 	// returns character index in FormatSpec for position in label or maxOf<uint32_t>()
 	// pair.second - true if index match suffix or false if index match prefix
 	// use convertToNodeSpace to get position
-	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &, font::CharSelectMode = font::CharSelectMode::Best) const;
+	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &,
+			font::CharSelectMode = font::CharSelectMode::Best) const;
 
 	virtual core::TextCursor selectWord(uint32_t) const;
 
@@ -149,7 +156,8 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual Rc<LabelDeferredResult> runDeferred(thread::ThreadPool *, TextLayout *format, const Color4F &color);
+	virtual Rc<LabelDeferredResult> runDeferred(thread::ThreadPool *, TextLayout *format,
+			const Color4F &color);
 
 	virtual void applyLayout(TextLayout *);
 
@@ -188,6 +196,6 @@ protected:
 	Rc<LabelDeferredResult> _deferredResult;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DLABEL_H_ */

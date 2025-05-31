@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,19 +40,22 @@ public:
 		size_t firstVertex;
 		size_t firstIndex;
 
-		Quad & setTextureRect(const Rect &, float texWidth, float texHeight, bool flippedX, bool flippedY, bool rotated = false);
-		Quad & setTexturePoints(const Vec2 &tl, const Vec2 &bl, const Vec2 &tr, const Vec2 &br, float texWidth, float texHeight);
+		Quad &setTextureRect(const Rect &, float texWidth, float texHeight, bool flippedX,
+				bool flippedY, bool rotated = false);
+		Quad &setTexturePoints(const Vec2 &tl, const Vec2 &bl, const Vec2 &tr, const Vec2 &br,
+				float texWidth, float texHeight);
 
 		// Vec4 - you can pass whatever you want as w component to shader
-		Quad & setGeometry(const Vec4 &origin, const Size2 &size, const Mat4 &t);
-		Quad & setGeometry(const Vec4 &origin, const Size2 &size);
-		Quad & setColor(const Color4F &color);
-		Quad & setColor(SpanView<Color4F>); // tl bl tr br
-		Quad & setColor(std::initializer_list<Color4F> &&); // tl bl tr br
+		Quad &setGeometry(const Vec4 &origin, const Size2 &size, const Mat4 &t);
+		Quad &setGeometry(const Vec4 &origin, const Size2 &size);
+		Quad &setColor(const Color4F &color);
+		Quad &setColor(SpanView<Color4F>); // tl bl tr br
+		Quad &setColor(std::initializer_list<Color4F> &&); // tl bl tr br
 
-		Quad & drawChar(const font::Metrics &m, char16_t l, int16_t charX, int16_t charY,
-				const Color4B &color, font::TextDecoration, uint16_t face);
-		Quad & drawUnderlineRect(int16_t charX, int16_t charY, uint16_t width, uint16_t height, const Color4B &color);
+		Quad &drawChar(const font::Metrics &m, char16_t l, int16_t charX, int16_t charY,
+				const Color4B &color, font::TextDecoration, uint16_t face, float layer = 0.0f);
+		Quad &drawUnderlineRect(int16_t charX, int16_t charY, uint16_t width, uint16_t height,
+				const Color4B &color, float layer = 0.0f);
 	};
 
 	virtual ~VertexArray();
@@ -90,6 +94,6 @@ protected:
 	Rc<VertexData> _data;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DVERTEXARRAY_H_ */

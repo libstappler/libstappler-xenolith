@@ -34,6 +34,13 @@ struct ParticleConstantData {
 	uvec2 outCommandPointer;
 	uvec2 emitterPointer;
 	uvec2 particlesPointer;
+	uint materialIndex;
+
+	float timeline; // (1.0 - explosiveness) * lifetime / count
+
+	uint framesInGen;
+	uint genframe;
+	float gentime;
 	uint nframes;
 	float dt;
 };
@@ -70,23 +77,22 @@ struct ParticleEmitterData {
 	// [16-31]	// 0 - localCoords;
 	// 1 - alignWithVelocity;
 	// 2 - orderByLifetime
-	// 3 - useLifetimeMax
 	uint flags;
 	float explosiveness;
 	vec2 origin;
 
 	// [32-47]
-	float frameInterval;
-	vec2 sizeNormal;
+	uint frameInterval;
 	float sizeValue;
+	vec2 sizeNormal;
 
 	// [48-63]
 	vec4 color;
 
 	// [64-79]
-	// Нормализованное начальное направление движения в радианах
-	ParticleFloatParam normal;
-	vec2 padding72;
+	uint padding64;
+	uint padding68;
+	ParticleFloatParam normal; // Нормализованное начальное направление движения в радианах
 
 	// [80-95]
 	ParticleFloatParam lifetime; // in float seconds
@@ -121,7 +127,7 @@ struct ParticleEmitterData {
 	uint colorCurveOffset;
 	uint animFrameCurveOffset;
 	uint padding216;
-	float padding220;
+	float dt;
 
 	// [224]
 };
@@ -142,7 +148,7 @@ struct ParticleData {
 	float scale;
 	uint fullLifetime;
 	uint currentLifetime; // in frames
-	uint framesUntilEmission;
+	uint padding60;
 
 	// [64-79]
 	vec2 normal;

@@ -558,10 +558,8 @@ void Fence::doRelease(Loop *loop, bool success) {
 
 	if (loop) {
 		for (auto &it : _queries) { _object.device->releaseQueryPool(*loop, move(it)); }
-	} else {
-		_queries.clear();
 	}
-
+	_queries.clear();
 
 	_tag = StringView();
 	autorelease.clear();

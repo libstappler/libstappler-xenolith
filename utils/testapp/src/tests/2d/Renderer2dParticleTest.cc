@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,32 +20,39 @@
  THE SOFTWARE.
  **/
 
-#ifndef SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
-#define SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_
-
-#include "AppLayoutTest.h"
+#include "Renderer2dParticleTest.h"
+#include "SPTime.h"
+#include "SPVec2.h"
+#include "XL2dParticleEmitter.h"
+#include "XL2dParticleSystem.h"
 
 namespace stappler::xenolith::app {
 
-class Renderer2dAnimationTest : public LayoutTest {
-public:
-	virtual ~Renderer2dAnimationTest() = default;
+bool Renderer2dParticleTest::init() {
+	if (!LayoutTest::init(LayoutName::Renderer2dParticleTest, "2d particle system test")) {
+		return false;
+	}
 
-	virtual bool init() override;
+	auto system = Rc<ParticleSystem>::create(10, TimeInterval::milliseconds(16).toMicros(), 3.0f);
 
-	virtual void handleEnter(Scene *) override;
-	virtual void handleExit() override;
+	system->setParticleSize(Size2(10.0f, 10.0f));
 
-	virtual void handleContentSizeDirty() override;
+	_emitter = addChild(Rc<ParticleEmitter>::create(system));
+	_emitter->setAnchorPoint(Anchor::Middle);
 
-protected:
-	using LayoutTest::init;
+	return true;
+}
 
-	Rc<TemporaryResource> _resource;
-	Sprite *_sprite1 = nullptr;
-	Sprite *_sprite2 = nullptr;
-};
+void Renderer2dParticleTest::handleEnter(Scene *scene) { LayoutTest::handleEnter(scene); }
+
+void Renderer2dParticleTest::handleExit() { LayoutTest::handleExit(); }
+
+void Renderer2dParticleTest::handleContentSizeDirty() {
+	LayoutTest::handleContentSizeDirty();
+
+	if (_emitter) {
+		_emitter->setPosition(_contentSize / 2.0f);
+	}
+}
 
 } // namespace stappler::xenolith::app
-
-#endif /* SRC_TESTS_2D_RENDERER2DANIMATIONTEST_H_ */

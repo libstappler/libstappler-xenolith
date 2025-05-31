@@ -314,6 +314,7 @@ VkPhysicalDevice Device::getPhysicalDevice() const { return _info.device; }
 void Device::end() {
 	for (auto &it : _families) {
 		for (auto &b : it.pools) { b->invalidate(); }
+		it.queries.clear();
 		it.pools.clear();
 	}
 

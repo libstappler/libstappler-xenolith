@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +25,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-VertexArray::Quad & VertexArray::Quad::setTextureRect(const Rect &texRect,
-		float texWidth, float texHeight, bool flippedX, bool flippedY, bool rotated) {
+VertexArray::Quad &VertexArray::Quad::setTextureRect(const Rect &texRect, float texWidth,
+		float texHeight, bool flippedX, bool flippedY, bool rotated) {
 
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
 
@@ -43,13 +44,13 @@ VertexArray::Quad & VertexArray::Quad::setTextureRect(const Rect &texRect,
 	}
 
 	if (!rotated) {
-		 // tl bl tr br
+		// tl bl tr br
 		data[0].tex = Vec2(texLeft, texTop);
 		data[1].tex = Vec2(texLeft, texBottom);
 		data[2].tex = Vec2(texRight, texTop);
 		data[3].tex = Vec2(texRight, texBottom);
 	} else {
-		 // tl bl tr br
+		// tl bl tr br
 		data[0].tex = Vec2(texLeft, texTop);
 		data[1].tex = Vec2(texRight, texTop);
 		data[2].tex = Vec2(texLeft, texBottom);
@@ -59,12 +60,12 @@ VertexArray::Quad & VertexArray::Quad::setTextureRect(const Rect &texRect,
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setTexturePoints(
-		const Vec2 &tl, const Vec2 &bl, const Vec2 &tr, const Vec2 &br, float texWidth, float texHeight) {
+VertexArray::Quad &VertexArray::Quad::setTexturePoints(const Vec2 &tl, const Vec2 &bl,
+		const Vec2 &tr, const Vec2 &br, float texWidth, float texHeight) {
 
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
 
-	 // tl bl tr br
+	// tl bl tr br
 	data[0].tex = Vec2(tl.x / texWidth, tl.y / texHeight);
 	data[1].tex = Vec2(bl.x / texWidth, bl.y / texHeight);
 	data[2].tex = Vec2(tr.x / texWidth, tr.y / texHeight);
@@ -72,7 +73,8 @@ VertexArray::Quad & VertexArray::Quad::setTexturePoints(
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 &size, const Mat4 &transform) {
+VertexArray::Quad &VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 &size,
+		const Mat4 &transform) {
 	const float x1 = pos.x;
 	const float y1 = pos.y;
 
@@ -104,16 +106,16 @@ VertexArray::Quad & VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 
 
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
 
-	 // tl bl tr br
-	data[0].pos = Vec4( dx, dy, pos.z, pos.w);
-	data[1].pos = Vec4( ax, ay, pos.z, pos.w);
-	data[2].pos = Vec4( cx, cy, pos.z, pos.w);
-	data[3].pos = Vec4( bx, by, pos.z, pos.w);
+	// tl bl tr br
+	data[0].pos = Vec4(dx, dy, pos.z, pos.w);
+	data[1].pos = Vec4(ax, ay, pos.z, pos.w);
+	data[2].pos = Vec4(cx, cy, pos.z, pos.w);
+	data[3].pos = Vec4(bx, by, pos.z, pos.w);
 
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 &size) {
+VertexArray::Quad &VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 &size) {
 	const float x1 = pos.x;
 	const float y1 = pos.y;
 
@@ -126,16 +128,16 @@ VertexArray::Quad & VertexArray::Quad::setGeometry(const Vec4 &pos, const Size2 
 	// |          |
 	// (x1, y1) - (x2, y1)
 
-	 // tl bl tr br
-	data[0].pos = Vec4( x1, y2, pos.z, 1.0);
-	data[1].pos = Vec4( x1, y1, pos.z, 1.0);
-	data[2].pos = Vec4( x2, y2, pos.z, 1.0);
-	data[3].pos = Vec4( x2, y1, pos.z, 1.0);
+	// tl bl tr br
+	data[0].pos = Vec4(x1, y2, pos.z, pos.w);
+	data[1].pos = Vec4(x1, y1, pos.z, pos.w);
+	data[2].pos = Vec4(x2, y2, pos.z, pos.w);
+	data[3].pos = Vec4(x2, y1, pos.z, pos.w);
 
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setColor(const Color4F &color) {
+VertexArray::Quad &VertexArray::Quad::setColor(const Color4F &color) {
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
 	data[0].color = color;
 	data[1].color = color;
@@ -144,7 +146,7 @@ VertexArray::Quad & VertexArray::Quad::setColor(const Color4F &color) {
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setColor(SpanView<Color4F> colors) { // tl bl tr br
+VertexArray::Quad &VertexArray::Quad::setColor(SpanView<Color4F> colors) { // tl bl tr br
 	if (colors.size() != 4) {
 		return *this;
 	}
@@ -157,14 +159,17 @@ VertexArray::Quad & VertexArray::Quad::setColor(SpanView<Color4F> colors) { // t
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::setColor(std::initializer_list<Color4F> &&colors) { // tl bl tr br
+VertexArray::Quad &VertexArray::Quad::setColor(
+		std::initializer_list<Color4F> &&colors) { // tl bl tr br
 	return setColor(SpanView<Color4F>(colors.begin(), colors.size()));
 }
 
-VertexArray::Quad & VertexArray::Quad::drawChar(const font::Metrics &m, char16_t charID, int16_t charX, int16_t charY,
-		const Color4B &color, font::TextDecoration, uint16_t face) {
+VertexArray::Quad &VertexArray::Quad::drawChar(const font::Metrics &m, char16_t charID,
+		int16_t charX, int16_t charY, const Color4B &color, font::TextDecoration, uint16_t face,
+		float layer) {
 
-	setGeometry(Vec4(charX, charY - m.descender, 0.0f, 1.0f), Size2(0, 0)); // char placing based on atlas data
+	setGeometry(Vec4(charX, charY - m.descender, layer, 1.0f),
+			Size2(0, 0)); // char placing based on atlas data
 	setColor(Color4F(color));
 
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
@@ -187,8 +192,9 @@ VertexArray::Quad & VertexArray::Quad::drawChar(const font::Metrics &m, char16_t
 	return *this;
 }
 
-VertexArray::Quad & VertexArray::Quad::drawUnderlineRect(int16_t charX, int16_t charY, uint16_t width, uint16_t height, const Color4B &color) {
-	setGeometry(Vec4(charX, charY, 0.0f, 1.0f), Size2(width, height));
+VertexArray::Quad &VertexArray::Quad::drawUnderlineRect(int16_t charX, int16_t charY,
+		uint16_t width, uint16_t height, const Color4B &color, float layer) {
+	setGeometry(Vec4(charX, charY, layer, 1.0f), Size2(width, height));
 	setColor(Color4F(color));
 
 	Vertex *data = const_cast<Vertex *>(vertexes.data());
@@ -203,17 +209,18 @@ VertexArray::Quad & VertexArray::Quad::drawUnderlineRect(int16_t charX, int16_t 
 	data[2].tex = Vec2(texRight, texTop);
 	data[3].tex = Vec2(texRight, texBottom);
 
-	data[0].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomLeft);
+	data[0].object =
+			font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomLeft);
 	data[1].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::TopLeft);
-	data[2].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomRight);
-	data[3].object = font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::TopRight);
+	data[2].object =
+			font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::BottomRight);
+	data[3].object =
+			font::CharId::getCharId(font::CharId::SourceMax, 0, font::CharAnchor::TopRight);
 
 	return *this;
 }
 
-VertexArray::~VertexArray() {
-	_data = nullptr;
-}
+VertexArray::~VertexArray() { _data = nullptr; }
 
 bool VertexArray::init(uint32_t bufferCapacity, uint32_t indexCapacity) {
 	_data = Rc<VertexData>::alloc();
@@ -253,9 +260,7 @@ Rc<VertexData> VertexArray::dup() {
 	return data;
 }
 
-bool VertexArray::empty() const {
-	return _data->indexes.empty() || _data->data.empty();
-}
+bool VertexArray::empty() const { return _data->indexes.empty() || _data->data.empty(); }
 
 void VertexArray::clear() {
 	if (_copyOnWrite) {
@@ -290,10 +295,8 @@ VertexArray::Quad VertexArray::addQuad() {
 	_data->indexes[firstIndex + 4] = firstVertex + 2;
 	_data->indexes[firstIndex + 5] = firstVertex + 1;
 
-	return Quad({
-		SpanView<Vertex>(_data->data.data() + firstVertex, 4),
-		SpanView<uint32_t>(_data->indexes.data() + firstIndex, 6),
-				firstVertex, firstIndex});
+	return Quad({SpanView<Vertex>(_data->data.data() + firstVertex, 4),
+		SpanView<uint32_t>(_data->indexes.data() + firstIndex, 6), firstVertex, firstIndex});
 }
 
 VertexArray::Quad VertexArray::getQuad(size_t firstVertex, size_t firstIndex) {
@@ -301,10 +304,8 @@ VertexArray::Quad VertexArray::getQuad(size_t firstVertex, size_t firstIndex) {
 		copy();
 	}
 
-	return Quad({
-			SpanView<Vertex>(_data->data.data() + firstVertex, 4),
-			SpanView<uint32_t>(_data->indexes.data() + firstIndex, 6),
-					firstVertex, firstIndex});
+	return Quad({SpanView<Vertex>(_data->data.data() + firstVertex, 4),
+		SpanView<uint32_t>(_data->indexes.data() + firstIndex, 6), firstVertex, firstIndex});
 }
 
 void VertexArray::updateColor(const Color4F &color) {
@@ -312,9 +313,7 @@ void VertexArray::updateColor(const Color4F &color) {
 		copy();
 	}
 
-	for (auto &it : _data->data) {
-		it.color = color;
-	}
+	for (auto &it : _data->data) { it.color = color; }
 }
 
 void VertexArray::updateColor(const Color4F &color, const Vector<ColorMask> &mask) {
@@ -324,25 +323,29 @@ void VertexArray::updateColor(const Color4F &color, const Vector<ColorMask> &mas
 
 	auto count = std::min(_data->data.size(), mask.size());
 
-	for (size_t i = 0; i < count; ++ i) {
+	for (size_t i = 0; i < count; ++i) {
 		switch (mask[i]) {
 		case ColorMask::None: break;
-		case ColorMask::All:
-			_data->data[i].color = color;
-			break;
+		case ColorMask::All: _data->data[i].color = color; break;
 		case ColorMask::Color:
 			_data->data[i].color.x = color.r;
 			_data->data[i].color.y = color.g;
 			_data->data[i].color.z = color.b;
 			break;
-		case ColorMask::A:
-			_data->data[i].color.w = color.a;
-			break;
+		case ColorMask::A: _data->data[i].color.w = color.a; break;
 		default:
-			if ((mask[i] & ColorMask::R) != ColorMask::None) { _data->data[i].color.x = color.r; }
-			if ((mask[i] & ColorMask::G) != ColorMask::None) { _data->data[i].color.y = color.g; }
-			if ((mask[i] & ColorMask::B) != ColorMask::None) { _data->data[i].color.z = color.b; }
-			if ((mask[i] & ColorMask::A) != ColorMask::None) { _data->data[i].color.w = color.a; }
+			if ((mask[i] & ColorMask::R) != ColorMask::None) {
+				_data->data[i].color.x = color.r;
+			}
+			if ((mask[i] & ColorMask::G) != ColorMask::None) {
+				_data->data[i].color.y = color.g;
+			}
+			if ((mask[i] & ColorMask::B) != ColorMask::None) {
+				_data->data[i].color.z = color.b;
+			}
+			if ((mask[i] & ColorMask::A) != ColorMask::None) {
+				_data->data[i].color.w = color.a;
+			}
 			break;
 		}
 	}
@@ -356,45 +359,45 @@ void VertexArray::updateColorQuads(const Color4F &color, const Vector<ColorMask>
 	auto quadsCount = _data->data.size() / 4;
 	auto count = std::min(quadsCount, mask.size());
 
-	for (size_t i = 0; i < count; ++ i) {
+	for (size_t i = 0; i < count; ++i) {
 		switch (mask[i]) {
 		case ColorMask::None: break;
 		case ColorMask::All:
-			for (size_t j = 0; j < 4; ++ j) {
-				_data->data[i * 4 + j].color = color;
-			}
+			for (size_t j = 0; j < 4; ++j) { _data->data[i * 4 + j].color = color; }
 			break;
 		case ColorMask::Color:
-			for (size_t j = 0; j < 4; ++ j) {
+			for (size_t j = 0; j < 4; ++j) {
 				_data->data[i * 4 + j].color.x = color.r;
 				_data->data[i * 4 + j].color.y = color.g;
 				_data->data[i * 4 + j].color.z = color.b;
 			}
 			break;
 		case ColorMask::A:
-			for (size_t j = 0; j < 4; ++ j) {
-				_data->data[i * 4 + j].color.w = color.a;
-			}
+			for (size_t j = 0; j < 4; ++j) { _data->data[i * 4 + j].color.w = color.a; }
 			break;
 		default:
-			for (size_t j = 0; j < 4; ++ j) {
-				if ((mask[i] & ColorMask::R) != ColorMask::None) { _data->data[i * 4 + j].color.x = color.r; }
-				if ((mask[i] & ColorMask::G) != ColorMask::None) { _data->data[i * 4 + j].color.y = color.g; }
-				if ((mask[i] & ColorMask::B) != ColorMask::None) { _data->data[i * 4 + j].color.z = color.b; }
-				if ((mask[i] & ColorMask::A) != ColorMask::None) { _data->data[i * 4 + j].color.w = color.a; }
+			for (size_t j = 0; j < 4; ++j) {
+				if ((mask[i] & ColorMask::R) != ColorMask::None) {
+					_data->data[i * 4 + j].color.x = color.r;
+				}
+				if ((mask[i] & ColorMask::G) != ColorMask::None) {
+					_data->data[i * 4 + j].color.y = color.g;
+				}
+				if ((mask[i] & ColorMask::B) != ColorMask::None) {
+					_data->data[i * 4 + j].color.z = color.b;
+				}
+				if ((mask[i] & ColorMask::A) != ColorMask::None) {
+					_data->data[i * 4 + j].color.w = color.a;
+				}
 			}
 			break;
 		}
 	}
 }
 
-size_t VertexArray::getVertexCount() const {
-	return _data->data.size();
-}
+size_t VertexArray::getVertexCount() const { return _data->data.size(); }
 
-size_t VertexArray::getIndexCount() const {
-	return _data->indexes.size();
-}
+size_t VertexArray::getIndexCount() const { return _data->indexes.size(); }
 
 void VertexArray::copy() {
 	if (_copyOnWrite) {
@@ -406,4 +409,4 @@ void VertexArray::copy() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::basic2d

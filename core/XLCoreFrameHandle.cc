@@ -278,6 +278,7 @@ Rc<AttachmentInputData> FrameHandle::getInputData(const AttachmentData *attachme
 void FrameHandle::invalidate() {
 	if (_loop->isOnThisThread()) {
 		if (_valid) {
+			auto id = retain();
 			if (!_timeEnd) {
 				_timeEnd = sp::platform::clock(FrameClockType);
 			}
@@ -307,11 +308,19 @@ void FrameHandle::invalidate() {
 			}
 
 			if (_request) {
-				_request->finalize(*_loop, attachments, _valid);
-				for (auto &it : _queues) {
-					_request->signalDependencies(*_loop, it->getQueue(), _valid);
+				auto req = sp::move(_request);
+				auto queues = sp::move(_queues);
+				auto success = _valid;
+
+				_request = nullptr;
+				_queues.clear();
+
+				req->finalize(*_loop, attachments, success);
+				for (auto &it : queues) {
+					req->signalDependencies(*_loop, it->getQueue(), success);
 				}
 			}
+			release(id);
 		}
 	} else {
 		_loop->performOnThread([this] { invalidate(); }, this);

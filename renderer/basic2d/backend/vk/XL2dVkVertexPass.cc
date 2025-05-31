@@ -35,6 +35,7 @@
 #include "XL2dFrameContext.h"
 #include "XLLinearGradient.h"
 #include "backend/vk/XL2dVkParticlePass.h"
+#include "glsl/include/XL2dGlslVertexData.h"
 #include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
@@ -61,7 +62,6 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 		SpanView<InstanceVertexData> vertexes;
 		SpanView<ZOrder> zOrder;
 		float depthValue = 0.0f;
-		float textureLayer = 0.0f;
 
 		uint32_t vertexOffset = 0;
 		uint32_t vertexCount = 0;
@@ -74,6 +74,8 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 
 		VertexDataPlanInfo *instanced = nullptr;
 		VertexDataPlanInfo *packed = nullptr;
+
+		Vector<const CmdParticleEmitter *> particles;
 
 		uint32_t gradientStart = 0;
 		uint32_t gradientCount = 0;
@@ -115,6 +117,9 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 
 	memory::pool_t *pool = nullptr;
 
+	StatePlanInfo *acquireStatePlan(FrameContextHandle2d *input, const core::Material *material,
+			Map<core::MaterialId, MaterialWritePlan> &writePlan, const CmdInfo *c);
+
 	void emplaceWritePlan(FrameContextHandle2d *input, const core::Material *material,
 			Map<core::MaterialId, MaterialWritePlan> &writePlan, const Command *c,
 			const CmdInfo *cmd, SpanView<InstanceVertexData> vertexes);
@@ -122,6 +127,7 @@ struct VertexMaterialDynamicData : public InterfaceObject<memory::PoolInterface>
 	void applyNormalized(SpanView<InstanceVertexData> &vertexes, const CmdDeferred *cmd);
 	void pushVertexData(VertexProcessor *, const Command *c, const CmdVertexArray *cmd);
 	void pushDeferred(VertexProcessor *, const Command *c, const CmdDeferred *cmd);
+	void pushParticleEmitter(VertexProcessor *, const Command *c, const CmdParticleEmitter *cmd);
 
 	void updatePathsDepth();
 
@@ -224,7 +230,9 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 						reinterpret_cast<const CmdDeferred *>(cmd->data));
 				break;
 			case CommandType::ParticleEmitter:
-				// TODO
+				dynamicData->pushParticleEmitter(this, cmd,
+						reinterpret_cast<const CmdParticleEmitter *>(cmd->data));
+
 				break;
 			}
 			cmd = cmd->next;
@@ -246,7 +254,9 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 		_transforms = devPool->spawn(AllocationUsage::DeviceLocalHostVisible,
 				BufferInfo(StringView("TransformBuffer"), core::BufferUsage::StorageBuffer,
 						core::BufferUsage::ShaderDeviceAddress,
-						(dynamicData->globalWritePlan.transforms + 1) * sizeof(TransformData)));
+						(_input->commands->getPredefinedTransforms()
+								+ dynamicData->globalWritePlan.transforms + 1)
+								* sizeof(TransformData)));
 
 		if (!_vertexes || !_indexes || !_transforms) {
 			delete dynamicData;
@@ -256,6 +266,7 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 		Bytes vertexData, indexData, transformData, instanceData;
 
 		WriteTarget writeTarget;
+		writeTarget.transtormOffset = _input->commands->getPredefinedTransforms();
 
 		if (fhandle.isPersistentMapping()) {
 			// do not invalidate regions
@@ -301,9 +312,9 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 	return ret;
 }
 
-void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input,
-		const core::Material *material, Map<core::MaterialId, MaterialWritePlan> &writePlan,
-		const Command *c, const CmdInfo *cmd, SpanView<InstanceVertexData> vertexes) {
+VertexMaterialDynamicData::StatePlanInfo *VertexMaterialDynamicData::acquireStatePlan(
+		FrameContextHandle2d *input, const core::Material *material,
+		Map<core::MaterialId, MaterialWritePlan> &writePlan, const CmdInfo *cmd) {
 	auto materialIt = writePlan.find(cmd->material);
 	if (materialIt == writePlan.end()) {
 		if (material) {
@@ -336,6 +347,21 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input,
 			}
 		}
 
+		auto pathsIt = paths.find(cmd->zPath);
+		if (pathsIt == paths.end()) {
+			paths.emplace(cmd->zPath, 0.0f);
+		}
+
+		return &stateIt->second;
+	}
+	return nullptr;
+}
+void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input,
+		const core::Material *material, Map<core::MaterialId, MaterialWritePlan> &writePlan,
+		const Command *c, const CmdInfo *cmd, SpanView<InstanceVertexData> vertexes) {
+	auto statePlan = acquireStatePlan(input, material, writePlan, cmd);
+
+	if (statePlan) {
 		InstanceVertexData *packedStart = const_cast<InstanceVertexData *>(vertexes.data());
 		size_t packedCommands = 0;
 
@@ -367,21 +393,19 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input,
 				if (packedCommands > 0) {
 					// write packed blocks
 					auto vertexData = new (pool) VertexDataPlanInfo;
-					vertexData->next = stateIt->second.packed;
+					vertexData->next = statePlan->packed;
 					vertexData->vertexes = makeSpanView(packedStart, packedCommands);
 					vertexData->zOrder = cmd->zPath;
 					vertexData->depthValue = cmd->depthValue;
-					vertexData->textureLayer = cmd->textureLayer;
-					stateIt->second.packed = vertexData;
+					statePlan->packed = vertexData;
 				}
 
 				auto vertexData = new (pool) VertexDataPlanInfo;
-				vertexData->next = stateIt->second.instanced;
+				vertexData->next = statePlan->instanced;
 				vertexData->vertexes = makeSpanView(&vIt, 1);
 				vertexData->zOrder = cmd->zPath;
 				vertexData->depthValue = cmd->depthValue;
-				vertexData->textureLayer = cmd->textureLayer;
-				stateIt->second.instanced = vertexData;
+				statePlan->instanced = vertexData;
 
 				packedCommands = 0;
 				packedStart = const_cast<InstanceVertexData *>(&vIt + 1);
@@ -394,18 +418,12 @@ void VertexMaterialDynamicData::emplaceWritePlan(FrameContextHandle2d *input,
 		if (packedCommands > 0) {
 			// write packed blocks
 			auto vertexData = new (pool) VertexDataPlanInfo;
-			vertexData->next = stateIt->second.packed;
+			vertexData->next = statePlan->packed;
 			vertexData->vertexes = makeSpanView(packedStart, packedCommands);
 			vertexData->zOrder = cmd->zPath;
 			vertexData->depthValue = cmd->depthValue;
-			vertexData->textureLayer = cmd->textureLayer;
-			stateIt->second.packed = vertexData;
+			statePlan->packed = vertexData;
 		}
-	}
-
-	auto pathsIt = paths.find(cmd->zPath);
-	if (pathsIt == paths.end()) {
-		paths.emplace(cmd->zPath, 0.0f);
 	}
 }
 
@@ -504,6 +522,34 @@ void VertexMaterialDynamicData::pushDeferred(VertexProcessor *processor, const C
 						.first;
 		}
 		emplaceWritePlan(processor->_input, material, v->second, c, cmd, storedVertexes);
+	}
+}
+
+void VertexMaterialDynamicData::pushParticleEmitter(VertexProcessor *processor, const Command *c,
+		const CmdParticleEmitter *cmd) {
+	auto material = processor->_attachment->getMaterialSet()->getMaterialById(cmd->material);
+	if (!material) {
+		return;
+	}
+
+	auto emplacePlan = [&](Map<core::MaterialId, MaterialWritePlan> &writePlan) {
+		auto statePlan = acquireStatePlan(processor->_input, material, writePlan, cmd);
+		if (statePlan) {
+			statePlan->particles.emplace_back(cmd);
+		}
+	};
+
+	if (material->getPipeline()->isSolid()) {
+		emplacePlan(solidWritePlan);
+	} else if (cmd->renderingLevel == RenderingLevel::Surface) {
+		emplacePlan(surfaceWritePlan);
+	} else {
+		auto v = transparentWritePlan.find(cmd->zPath);
+		if (v == transparentWritePlan.end()) {
+			v = transparentWritePlan.emplace(cmd->zPath, Map<core::MaterialId, MaterialWritePlan>())
+						.first;
+		}
+		emplacePlan(v->second);
 	}
 }
 
@@ -647,6 +693,70 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget,
 		writeTarget.vertexOffset += vertexes.data->data.size();
 	};
 
+	auto writeTransform = [&](const TransformData &inst, float zOffset, float depthValue,
+								  const StateData *stateData, uint32_t preTransform) -> uint32_t {
+		auto ret = preTransform ? preTransform : writeTarget.transtormOffset;
+		auto instanceTarget = writeTarget.transform + ret;
+		memcpy(instanceTarget, &inst, sizeof(TransformData));
+		instanceTarget->offset.z = zOffset;
+		instanceTarget->shadowValue = depthValue;
+		if (stateData) {
+			instanceTarget->outlineColor = stateData->outlineColor;
+			instanceTarget->outlineOffset = stateData->outlineOffset;
+		} else {
+			instanceTarget->outlineOffset = 0.0f;
+		}
+
+		if (!preTransform) {
+			++writeTarget.transtormOffset;
+		}
+		return ret;
+	};
+
+	auto pushVertexList = [&](core::MaterialId mId, MaterialWritePlan &plan,
+								  const StatePlanInfo &state, VertexDataPlanInfo *packedInstance,
+								  bool instances) {
+		while (packedInstance) {
+			packedInstance->vertexOffset = writeTarget.vertexOffset;
+
+			// used as firstInstance for instanced drawing to access transform array
+			packedInstance->transformOffset = writeTarget.transtormOffset;
+
+			float zOffset = 0.0f;
+			float depthValue = 0.0f;
+			auto pathIt = paths.find(packedInstance->zOrder);
+			if (pathIt != paths.end()) {
+				zOffset = pathIt->second;
+			}
+
+			if (packedInstance->depthValue > 0.0f) {
+				auto f16 = halffloat::encode(packedInstance->depthValue);
+				auto value = halffloat::decode(f16);
+				depthValue = value;
+			}
+
+			for (auto &iit : packedInstance->vertexes) {
+				if (instances) {
+					for (auto &inst : iit.instances) {
+						writeTransform(inst, zOffset, depthValue, state.stateData, 0);
+					}
+
+					pushVertexes(mId, plan, 0, iit);
+				} else {
+					auto transform = writeTransform(iit.instances.front(), zOffset, depthValue,
+							state.stateData, 0);
+					pushVertexes(mId, plan, transform, iit);
+				}
+			}
+
+			packedInstance->vertexCount = writeTarget.vertexOffset - packedInstance->vertexOffset;
+			packedInstance->transformCount =
+					writeTarget.transtormOffset - packedInstance->transformOffset;
+
+			packedInstance = packedInstance->next;
+		}
+	};
+
 	for (auto &plan : writePlan) {
 		for (auto &state : plan.second.states) {
 			// write gradient vertexes (2 + n: start, end, anchors)
@@ -697,87 +807,27 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget,
 				writeTarget.vertexOffset += state.second.stateData->gradient->steps.size() + 2;
 			}
 
-			auto packedInstance = state.second.instanced;
-			while (packedInstance) {
-				packedInstance->vertexOffset = writeTarget.vertexOffset;
-				packedInstance->transformOffset = writeTarget.transtormOffset;
+			pushVertexList(plan.first, plan.second, state.second, state.second.instanced, true);
+			pushVertexList(plan.first, plan.second, state.second, state.second.packed, false);
+
+			for (auto &it : state.second.particles) {
+				TransformData inst(it->transform);
 
 				float zOffset = 0.0f;
 				float depthValue = 0.0f;
-				auto pathIt = paths.find(packedInstance->zOrder);
+				auto pathIt = paths.find(it->zPath);
 				if (pathIt != paths.end()) {
 					zOffset = pathIt->second;
 				}
 
-				if (packedInstance->depthValue > 0.0f) {
-					auto f16 = halffloat::encode(packedInstance->depthValue);
+				if (it->depthValue > 0.0f) {
+					auto f16 = halffloat::encode(it->depthValue);
 					auto value = halffloat::decode(f16);
 					depthValue = value;
 				}
 
-				for (auto &iit : packedInstance->vertexes) {
-					for (auto &inst : iit.instances) {
-						auto instanceTarget = writeTarget.transform + writeTarget.transtormOffset;
-						memcpy(instanceTarget, &inst, sizeof(TransformData));
-						instanceTarget->offset.z = zOffset;
-						instanceTarget->shadowValue = depthValue;
-						instanceTarget->textureLayer = packedInstance->textureLayer;
-						if (state.second.stateData) {
-							instanceTarget->outlineColor = state.second.stateData->outlineColor;
-						}
-
-						++writeTarget.transtormOffset;
-					}
-
-					pushVertexes(plan.first, plan.second, 0, iit);
-				}
-
-				packedInstance->vertexCount =
-						writeTarget.vertexOffset - packedInstance->vertexOffset;
-				packedInstance->transformCount =
-						writeTarget.transtormOffset - packedInstance->transformOffset;
-
-				packedInstance = packedInstance->next;
-			}
-
-			packedInstance = state.second.packed;
-			while (packedInstance) {
-				packedInstance->vertexOffset = writeTarget.vertexOffset;
-				packedInstance->transformOffset = writeTarget.transtormOffset;
-
-				float zOffset = 0.0f;
-				float depthValue = 0.0f;
-				auto pathIt = paths.find(packedInstance->zOrder);
-				if (pathIt != paths.end()) {
-					zOffset = pathIt->second;
-				}
-
-				if (packedInstance->depthValue > 0.0f) {
-					auto f16 = halffloat::encode(packedInstance->depthValue);
-					auto value = halffloat::decode(f16);
-					depthValue = value;
-				}
-
-				for (auto &iit : packedInstance->vertexes) {
-					auto instanceTarget = writeTarget.transform + writeTarget.transtormOffset;
-					memcpy(instanceTarget, &iit.instances.front(), sizeof(TransformData));
-					instanceTarget->offset.z = zOffset;
-					instanceTarget->shadowValue = depthValue;
-					instanceTarget->textureLayer = packedInstance->textureLayer;
-					if (state.second.stateData) {
-						instanceTarget->outlineColor = state.second.stateData->outlineColor;
-					}
-
-					pushVertexes(plan.first, plan.second, writeTarget.transtormOffset, iit);
-					++writeTarget.transtormOffset;
-				}
-
-				packedInstance->vertexCount =
-						writeTarget.vertexOffset - packedInstance->vertexOffset;
-				packedInstance->transformCount =
-						writeTarget.transtormOffset - packedInstance->transformOffset;
-
-				packedInstance = packedInstance->next;
+				writeTransform(inst, zOffset, depthValue, state.second.stateData,
+						it->transformIndex);
 			}
 		}
 	}
@@ -788,6 +838,7 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 	// optimize draw order, minimize switching pipeline, textureSet and descriptors
 	Vector<const Pair<const core::MaterialId, MaterialWritePlan> *> drawOrder;
 
+	// optimize pipeline switching strategy
 	for (auto &it : writePlan) {
 		if (drawOrder.empty()) {
 			drawOrder.emplace_back(&it);
@@ -872,7 +923,7 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 			for (auto &vertexes : packedInstance->vertexes) {
 				processStatePlanIndexes(vertexes, phase, 0);
 				if (writeTarget.indexOffset > materialIndexes) {
-					processor->materialSpans.emplace_back(VertexSpan{.material = materialId,
+					target.emplace_back(VertexSpan{.material = materialId,
 						.indexCount = writeTarget.indexOffset - materialIndexes,
 						.instanceCount = packedInstance->transformCount,
 						.firstIndex = materialIndexes,
@@ -911,6 +962,24 @@ void VertexMaterialDynamicData::drawWritePlan(VertexProcessor *processor, WriteT
 				.gradientCount = statePlan.gradientCount,
 				.outlineOffset =
 						(statePlan.stateData ? statePlan.stateData->outlineOffset : 0.0f)});
+		}
+
+		// do not draw shadows for a particles for now
+		if (phase == StatePlanPhase::StatePlanGeneral) {
+			for (auto &it : statePlan.particles) {
+				target.emplace_back(VertexSpan{.material = materialId,
+					.indexCount = 0,
+					.instanceCount = 1,
+					.firstIndex = 0,
+					.vertexOffset = 0,
+					.firstInstance = 0,
+					.state = stateId,
+					.gradientOffset = statePlan.gradientStart,
+					.gradientCount = statePlan.gradientCount,
+					.outlineOffset =
+							(statePlan.stateData ? statePlan.stateData->outlineOffset : 0.0f),
+					.particleSystemId = it->id});
+			}
 		}
 	};
 
@@ -1122,7 +1191,7 @@ Vector<const core::CommandBuffer *> VertexPassHandle::doPrepareCommands(FrameHan
 		prepareRenderPass(buf);
 
 		_data->impl.cast<RenderPass>()->perform(*this, buf,
-				[&, this] { prepareMaterialCommands(materials, buf); });
+				[&, this] { prepareMaterialCommands(materials, buf); }, true);
 
 		finalizeRenderPass(buf);
 		return true;
@@ -1181,7 +1250,6 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 			UVec2::convertFromPacked(buf.bindBufferAddress(_vertexBuffer->getVertexes().get()));
 	pcb.transformPointer =
 			UVec2::convertFromPacked(buf.bindBufferAddress(_vertexBuffer->getTransforms().get()));
-	pcb.outlineOffset = 0.0f;
 
 	auto spans = _vertexBuffer->getVertexData();
 
@@ -1218,7 +1286,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		pcb.samplerIdx = material->getImages().front().sampler;
 		pcb.gradientOffset = materialVertexSpan.gradientOffset;
 		pcb.gradientCount = materialVertexSpan.gradientCount;
-		pcb.outlineOffset = materialVertexSpan.outlineOffset;
+		//pcb.outlineOffset = materialVertexSpan.outlineOffset;
 
 		if (auto a = material->getAtlas()) {
 			pcb.atlasPointer =
@@ -1250,21 +1318,27 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		applyDynamicState(commands, buf, materialVertexSpan.state);
 
 		if (materialVertexSpan.particleSystemId > 0) {
-			VertexConstantData pcbParticle = pcb;
 
-			pcbParticle.vertexPointer =
-					UVec2::convertFromPacked(_particles->getVertices()->getDeviceAddress());
+			auto particleVertexes = _particles->getVertices();
 
-			buf.cmdPushConstants(pass->getPipelineLayout(0),
-					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-					BytesView(reinterpret_cast<const uint8_t *>(&pcbParticle),
-							sizeof(VertexConstantData)));
+			auto emitterRenderInfo =
+					_particles->getEmitterRenderInfo(materialVertexSpan.particleSystemId);
 
-			auto emitterIdx = _particles->getEmitterIndex(materialVertexSpan.particleSystemId);
+			if (particleVertexes && emitterRenderInfo) {
+				VertexConstantData pcbParticle = pcb;
 
-			buf.cmdDrawIndirect(_particles->getCommands(),
-					emitterIdx * sizeof(ParticleIndirectCommand), 1,
-					sizeof(ParticleIndirectCommand));
+				pcbParticle.vertexPointer =
+						UVec2::convertFromPacked(particleVertexes->getDeviceAddress());
+
+				buf.cmdPushConstants(pass->getPipelineLayout(0),
+						VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+						BytesView(reinterpret_cast<const uint8_t *>(&pcbParticle),
+								sizeof(VertexConstantData)));
+
+				buf.cmdDrawIndirect(_particles->getCommands(),
+						emitterRenderInfo->index * sizeof(ParticleIndirectCommand), 1,
+						sizeof(ParticleIndirectCommand));
+			}
 		} else {
 			buf.cmdPushConstants(pass->getPipelineLayout(0),
 					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,

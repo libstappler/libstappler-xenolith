@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -83,6 +84,7 @@ enum class LayoutName {
 	MaterialTabBarTest,
 
 	Renderer2dAnimationTest = 256 * 7,
+	Renderer2dParticleTest,
 };
 
 struct MenuData {
@@ -100,6 +102,6 @@ LayoutName getLayoutNameById(StringView);
 
 Rc<basic2d::SceneLayout2d> makeLayoutNode(LayoutName);
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_ROOT_APPTESTS_H_ */

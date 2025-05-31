@@ -37,6 +37,7 @@ public:
 	struct EmitterData {
 		uint64_t id = 0;
 		mutable uint64_t clock = 0;
+		mutable uint64_t frame = 0;
 		Rc<Buffer> emitter;
 		Rc<Buffer> particles;
 		Rc<Buffer> emissionData;
@@ -57,7 +58,7 @@ public:
 	virtual ~ParticlePersistentData() = default;
 
 	Vector<uint64_t> updateEmitters(DeviceMemoryPool *,
-			const memory::map<uint64_t, Rc<ParticleSystemData>> &data, uint64_t clock);
+			const memory::map<uint64_t, ParticleSystemRenderInfo> &data, uint64_t clock);
 
 	void updateEmitter(DeviceMemoryPool *, EmitterData &, ParticleSystemData *);
 	void addEmitter(DeviceMemoryPool *, uint64_t id, ParticleSystemData *, uint64_t clock);
@@ -96,12 +97,12 @@ public:
 	Buffer *getVertices() const { return _vertices; }
 	Buffer *getCommands() const { return _commands; }
 
-	uint32_t getEmitterIndex(uint64_t) const;
+	const ParticleSystemRenderInfo *getEmitterRenderInfo(uint64_t) const;
 
 	virtual void enumerateAttachmentObjects(
 			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
 
-	bool hasInput() const { return !_emittersIndex.empty(); }
+	bool hasInput() const { return !_emittersIndexes.empty(); }
 
 protected:
 	friend class ParticleEmitterAttachment;
@@ -110,7 +111,7 @@ protected:
 	Rc<Buffer> _commands;
 
 	Rc<ParticlePersistentData> _data;
-	Map<uint64_t, uint32_t> _emittersIndex;
+	Map<uint64_t, const ParticleSystemRenderInfo *> _emittersIndexes;
 };
 
 class SP_PUBLIC ParticlePass : public QueuePass {

@@ -45,6 +45,7 @@ public:
 	// set texture immediately
 	virtual void setTexture(StringView);
 	virtual void setTexture(Rc<Texture> &&);
+	virtual void setTexture(Texture *);
 
 	// schedule texture swapping
 	virtual void scheduleTextureUpdate(StringView);

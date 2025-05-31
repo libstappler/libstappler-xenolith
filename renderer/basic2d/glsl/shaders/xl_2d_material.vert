@@ -42,8 +42,9 @@ layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 fragTexCoord;
 layout (location = 2) out vec4 shadowColor;
 layout (location = 3) out vec4 outlineColor;
-layout (location = 4) out vec2 fragPosition;
-layout (location = 5) out flat uvec4 texOut;
+layout (location = 4) out float outlineOffset;
+layout (location = 5) out vec2 fragPosition;
+layout (location = 6) out flat uvec4 texOut;
 
 uint hash(uint k, uint capacity) {
 	k ^= k >> 16;
@@ -94,14 +95,17 @@ void main() {
 		}
 	}
 
-	gl_Position = transform.transform * instance.transform * pos
-		* makeMask(transform.flags) * makeMask(transform.flags)
+	float layer = pos.z;
+
+	gl_Position = (transform.transform * instance.transform
+			* pos * makeMask(transform.flags) * makeMask(transform.flags))
 		+ transform.offset + instance.offset;
 	fragPosition = gl_Position.xy;
 	fragColor = color * transform.instanceColor * instance.instanceColor;
-	fragTexCoord = vec4(tex, max(transform.textureLayer, instance.textureLayer), 0.0);
+	fragTexCoord = vec4(tex, layer, 0.0);
 	shadowColor = vec4(transform.shadowValue.xxx, transform.shadowValue > 0.0 ? 1.0 : 0.0);
 	outlineColor = transform.outlineColor * instance.outlineColor;
+	outlineOffset = max(transform.outlineOffset, instance.outlineOffset);
 
 	texOut = uvec4(materialBuffer.m.samplerImageIdx & 0xFFFF, (materialBuffer.m.samplerImageIdx >> 16) & 0xFFFF, 0, 0);
 }

@@ -44,7 +44,6 @@ struct SP_PUBLIC CmdInfo {
 	StateId state = StateIdNone;
 	RenderingLevel renderingLevel = RenderingLevel::Solid;
 	float depthValue = 0.0f;
-	float textureLayer = 0.0f;
 };
 
 struct SP_PUBLIC CmdVertexArray : CmdInfo {
@@ -52,9 +51,9 @@ struct SP_PUBLIC CmdVertexArray : CmdInfo {
 };
 
 struct SP_PUBLIC CmdParticleEmitter : CmdInfo {
-	Rc<ParticleSystemData> data;
 	Mat4 transform;
 	uint64_t id = 0;
+	uint32_t transformIndex = 0;
 };
 
 struct SP_PUBLIC CmdDeferred : CmdInfo {
@@ -106,7 +105,7 @@ public:
 	void pushDeferredVertexResult(const Rc<DeferredVertexResult> &, const Mat4 &view,
 			const Mat4 &model, bool normalized, CmdInfo &&info, CommandFlags = CommandFlags::None);
 
-	void pushParticleEmitter(uint64_t id, Rc<ParticleSystemData> &&, const Mat4 &, CmdInfo &&info,
+	uint32_t pushParticleEmitter(uint64_t id, const Mat4 &, CmdInfo &&info,
 			CommandFlags = CommandFlags::None);
 
 	const Command *getFirst() const { return _first; }
@@ -116,6 +115,8 @@ public:
 
 	size_t size() const { return _size; }
 
+	uint32_t getPredefinedTransforms() const { return _preallocatedTransforms; }
+
 protected:
 	void addCommand(Command *);
 
@@ -123,6 +124,7 @@ protected:
 	Command *_first = nullptr;
 	Command *_last = nullptr;
 	size_t _size = 0;
+	uint32_t _preallocatedTransforms = 0;
 };
 
 struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
@@ -131,7 +133,7 @@ struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
 	ShadowLightInput lights;
 	Rc<CommandList> commands;
 
-	memory::map<uint64_t, Rc<ParticleSystemData>> particleEmitters;
+	memory::map<uint64_t, ParticleSystemRenderInfo> particleEmitters;
 };
 
 } // namespace stappler::xenolith::basic2d

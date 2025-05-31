@@ -703,8 +703,8 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf,
 		fromStage = core::PipelineStage::None;
 		toStage = core::PipelineStage::None;
 
-		imageBarriersData.clear();
-		bufferBarriersData.clear();
+		imageBarriers.clear();
+		bufferBarriers.clear();
 
 		for (auto &it : imageBarriersData) {
 			if (it.output) {
@@ -721,7 +721,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf,
 			}
 		}
 
-		if (!imageBarriersData.empty() || !bufferBarriersData.empty()) {
+		if (!imageBarriers.empty() || !bufferBarriers.empty()) {
 			buf.cmdPipelineBarrier(VkPipelineStageFlags(fromStage), VkPipelineStageFlags(toStage),
 					0, bufferBarriers, imageBarriers);
 		}
