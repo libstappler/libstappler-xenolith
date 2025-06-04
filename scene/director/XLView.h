@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +24,12 @@
 #ifndef XENOLITH_SCENE_DIRECTOR_XLVIEW_H_
 #define XENOLITH_SCENE_DIRECTOR_XLVIEW_H_
 
-#include "XLEventHeader.h"
 #include "XLCoreLoop.h"
 #include "XLCorePresentationEngine.h"
 #include "XLPlatformViewInterface.h"
 #include "XLInput.h"
 #include "XLDirector.h"
+#include "XLEvent.h"
 #include "SPThread.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -53,7 +54,7 @@ struct SP_PUBLIC ViewInfo {
 };
 
 class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInterface {
-	public:
+public:
 	static constexpr size_t FrameAverageCount = 20;
 
 	using AttachmentLayout = core::AttachmentLayout;
@@ -78,19 +79,12 @@ class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInter
 
 	void setPresentationEngine(Rc<core::PresentationEngine> &&);
 
-	bool isOnThisThread() const;
-
-	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false,
-			StringView tag = STAPPLER_LOCATION);
-
 	virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
 			AttachmentLayout l) const = 0;
 	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,
 			const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
 
 	Director *getDirector() const;
-	Application *getApplication() const { return _mainLoop; }
-	core::Loop *getGlLoop() const { return _glLoop; }
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
 	// update screen extent, non thread-safe
@@ -122,14 +116,13 @@ class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInter
 
 	virtual void deprecateSwapchain();
 
-	protected:
+protected:
 	bool _inBackground = false;
 	bool _hasFocus = true;
 	bool _pointerInWindow = false;
 	bool _navigationEmpty = true;
 
 	Rc<Director> _director;
-	Rc<Application> _mainLoop;
 
 	ViewInfo _info;
 	uint64_t _backButtonCounter = 0;

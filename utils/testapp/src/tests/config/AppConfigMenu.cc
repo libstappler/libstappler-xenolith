@@ -26,6 +26,7 @@
 #include "AppConfigPresentModeSwitcher.h"
 #include "AppSlider.h"
 #include "XLEventListener.h"
+#include "XLInputListener.h"
 #include "XLView.h"
 
 namespace stappler::xenolith::app {
@@ -80,14 +81,16 @@ bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
 	_label->setString("Apply");
 
 	auto l = addInputListener(Rc<InputListener>::create());
-	l->addMouseOverRecognizer([this] (const GestureData &data) {
+	l->addMouseOverRecognizer([this](const GestureData &data) {
 		if (_enabled) {
 			stopAllActionsByTag(1);
-			runAction(Rc<TintTo>::create(0.15f, data.event == GestureEvent::Began ? Color::Grey_200 : Color::Grey_50), 1);
+			runAction(Rc<TintTo>::create(0.15f,
+							  data.event == GestureEvent::Began ? Color::Grey_200 : Color::Grey_50),
+					1);
 		}
 		return true;
 	});
-	l->addPressRecognizer([this] (const GesturePress &press) {
+	l->addPressRecognizer([this](const GesturePress &press) {
 		if (!_enabled) {
 			return false;
 		}
@@ -135,7 +138,7 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 
 	auto val = 1.0f - float(value - min) / float(max - min);
 
-	_slider = addChild(Rc<SliderWithLabel>::create("60", val, [this] (float value) {
+	_slider = addChild(Rc<SliderWithLabel>::create("60", val, [this](float value) {
 		float max = 1'000'000 / 10;
 		float min = 1'000'000 / 360;
 
@@ -148,7 +151,7 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 	_slider->setFontSize(20);
 
 	auto el = Rc<EventListener>::create();
-	el->onEvent(View::onFrameRate, [this] (const Event &event) {
+	el->listenForEvent(View::onFrameRate, [this](const Event &event) {
 		if (event.getObject() == _director->getView()) {
 			/*_currentRate = uint64_t(event.getIntValue());
 
@@ -188,14 +191,14 @@ bool ConfigMenu::init() {
 	}
 
 	auto el = Rc<EventListener>::create();
-	el->onEvent(AppDelegate::onSwapchainConfig, [this] (const Event &event) {
+	el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
 		updateAppData((AppDelegate *)event.getObject());
 		updateApplyButton();
 		_contentSizeDirty = true;
 	});
-	el->onEvent(View::onFrameRate, [this] (const Event &event) {
+	el->listenForEvent(View::onFrameRate, [this](const Event &event) {
 		if (event.getObject() == _director->getView()) {
-			_currentRate = uint64_t(event.getIntValue());
+			_currentRate = uint64_t(event.getDataValue().asInteger());
 		}
 	});
 	addComponent(move(el));
@@ -226,25 +229,22 @@ void ConfigMenu::handleContentSizeDirty() {
 void ConfigMenu::makeScrollList(ScrollController *controller) {
 	controller->addPlaceholder(24.0f);
 
-	controller->addItem([this] (const ScrollController::Item &item) -> Rc<Node> {
-		return Rc<ConfigApplyButton>::create(!_applyData.empty(), [this] () {
-			applyConfig();
-		});
+	controller->addItem([this](const ScrollController::Item &item) -> Rc<Node> {
+		return Rc<ConfigApplyButton>::create(!_applyData.empty(), [this]() { applyConfig(); });
 	}, 42.0f, ZOrder(0), "apply");
 
-	controller->addItem([this] (const ScrollController::Item &item) -> Rc<Node> {
+	controller->addItem([this](const ScrollController::Item &item) -> Rc<Node> {
 		auto app = (AppDelegate *)_director->getApplication();
 		auto m = _currentMode;
 		auto modeIt = _applyData.find(ApplyPresentMode);
 		if (modeIt != _applyData.end()) {
 			m = core::PresentMode(modeIt->second);
 		}
-		return Rc<ConfigPresentModeSwitcher>::create(app, toInt(m), [this] (uint32_t mode) {
-			updatePresentMode(core::PresentMode(mode));
-		});
+		return Rc<ConfigPresentModeSwitcher>::create(app, toInt(m),
+				[this](uint32_t mode) { updatePresentMode(core::PresentMode(mode)); });
 	}, 42.0f);
-	controller->addItem([this] (const ScrollController::Item &item) -> Rc<Node> {
-		return Rc<ConfigFrameRateSlider>::create(_currentRate, [] (uint64_t) { });
+	controller->addItem([this](const ScrollController::Item &item) -> Rc<Node> {
+		return Rc<ConfigFrameRateSlider>::create(_currentRate, [](uint64_t) { });
 	}, 42.0f);
 }
 
@@ -287,4 +287,4 @@ void ConfigMenu::applyConfig() {
 	_director->getView()->updateConfig();
 }
 
-}
+} // namespace stappler::xenolith::app

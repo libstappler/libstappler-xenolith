@@ -24,6 +24,8 @@
 #include "XLCoreQueuePass.h"
 #include "XLCoreQueue.h"
 #include "XLCoreFrameQueue.h"
+#include "XLCoreFrameHandle.h"
+#include "XLCoreLoop.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -71,7 +73,7 @@ const FramePassData *QueuePassHandle::getQueueData() const { return _queueData; 
 
 StringView QueuePassHandle::getName() const { return _data->key; }
 
-const Rc<Framebuffer> &QueuePassHandle::getFramebuffer() const { return _queueData->framebuffer; }
+Framebuffer *QueuePassHandle::getFramebuffer() const { return _queueData->framebuffer; }
 
 bool QueuePassHandle::isAvailable(const FrameQueue &handle) const {
 	if (_data->checkAvailable) {
@@ -129,6 +131,12 @@ const AttachmentPassData *QueuePassHandle::getAttachemntData(const AttachmentDat
 }
 
 void QueuePassHandle::prepareSubpasses(FrameQueue &q) {
+	_loop = q.getLoop();
+
+	_fence = ref_cast<Fence>(_loop->acquireFence(core::FenceType::Default));
+	_fence->setFrame(q.getFrame()->getOrder());
+	_fence->setTag(getName());
+
 	for (auto &subpass : _queuePass->getData()->subpasses) {
 		if (subpass->prepareCallback) {
 			subpass->prepareCallback(q, *subpass);

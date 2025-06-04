@@ -689,7 +689,7 @@ void RenderPass::perform(const QueuePassHandle &handle, CommandBuffer &buf,
 	}
 
 	if (_data->renderPass) {
-		buf.cmdBeginRenderPass(this, (Framebuffer *)handle.getFramebuffer().get(),
+		buf.cmdBeginRenderPass(this, (Framebuffer *)handle.getFramebuffer(),
 				VK_SUBPASS_CONTENTS_INLINE, useAlternative);
 
 		cb();

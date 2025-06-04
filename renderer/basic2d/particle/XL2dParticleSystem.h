@@ -76,8 +76,12 @@ public:
 	void setExplosiveness(float);
 	float getExplosiveness() const;
 
+	void setRandomness(float);
+	float getRandomness() const;
+
 	void setFrameInterval(uint32_t);
 	uint32_t getFrameInterval() const;
+	float getDt() const;
 
 	void setEmissionPoints(SpanView<Vec2>);
 

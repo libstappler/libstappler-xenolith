@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,120 +25,88 @@ THE SOFTWARE.
 #ifndef XENOLITH_APPLICATION_XLEVENT_H_
 #define XENOLITH_APPLICATION_XLEVENT_H_
 
-#include "XLEventHeader.h"
+#include "SPEventBus.h"
+#include "XLPlatformApplication.h"
+
+#define XL_DECLARE_EVENT_CLASS(class, event) \
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(#class "." #event);
+
+#define XL_DECLARE_EVENT(class, catName, event) \
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(catName "." #event);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-/* common usage:
- Event::send(eventHeader, sourceObject)
- */
+class Event;
 
-class SP_PUBLIC Event {
-protected:
-	enum class Type {
-		Int,
-		Float,
-		Bool,
-		Object,
-		String,
-		Bytes,
-		Data,
-		None
-	};
+using EventId = event::BusEventCategory;
 
+class SP_PUBLIC EventHeader {
 public:
-	Ref *getObject() const;
+	EventHeader() = delete;
+	EventHeader(StringView eventName);
+	~EventHeader();
 
-	const EventHeader &getHeader() const;
-	EventHeader::Category getCategory() const;
-	EventHeader::EventID getEventID() const;
+	EventHeader(const EventHeader &other) = default;
+	EventHeader(EventHeader &&other) = default;
+
+	EventHeader &operator=(const EventHeader &other) = default;
+	EventHeader &operator=(EventHeader &&other) = default;
+
+	EventId getEventId() const;
+	StringView getName() const;
+
+	operator EventId() const;
+
+	bool operator==(const Event &event) const;
+
+	template <typename T>
+	inline void operator()(Ref *object, T &&value) const {
+		send(object, std::forward<T>(value));
+	}
+
+	inline void operator()(Ref *object) const { send(object); }
+
+protected:
+	void send(Ref *object, int64_t value) const;
+	void send(Ref *object, double value) const;
+	void send(Ref *object, bool value) const;
+	void send(Ref *object, Ref *value) const;
+	void send(Ref *object, const char *value) const;
+	void send(Ref *object, const String &value) const;
+	void send(Ref *object, const StringView &value) const;
+	void send(Ref *object, const BytesView &value) const;
+	void send(Ref *object, Value &&value) const;
+	void send(Ref *object = nullptr) const;
+
+	EventId _category = EventId::zero();
+};
+
+class SP_PUBLIC Event : public event::BusEvent {
+public:
+	Event(const EventHeader &header, Ref *object, Value &&dataVal, Ref *objVal);
+	Event(const EventHeader &header, Ref *object);
+
+	EventId getEventId() const;
 
 	bool is(const EventHeader &eventHeader) const;
-	bool operator == (const EventHeader &eventHeader) const;
+	bool operator==(const EventHeader &eventHeader) const;
 
-	template <class T = Ref> inline T * getTarget() const {
-        static_assert(std::is_convertible<T *, Ref *>::value,
-					  "Invalid Type for stappler::Event target!");
+	template <class T = Ref>
+	inline T *getObject() const {
+		static_assert(std::is_convertible<T *, Ref *>::value,
+				"Invalid Type for stappler::Event target!");
 		return static_cast<T *>(_object);
 	}
 
-	inline bool valueIsVoid() const { return _type == Type::None; }
-	inline bool valueIsBool() const { return _type == Type::Bool; }
-	inline bool valueIsInt() const { return _type == Type::Int; }
-	inline bool valueIsFloat() const { return _type == Type::Float; }
-	inline bool valueIsObject() const { return _type == Type::Object; }
-	inline bool valueIsString() const { return _type == Type::String; }
-	inline bool valueIsBytes() const { return _type == Type::Bytes; }
-	inline bool valueIsData() const { return _type == Type::Data; }
-
-	inline int64_t getIntValue() const { return (_type == Type::Int)?_value.intValue:0; }
-	inline double getFloatValue() const { return (_type == Type::Float)?_value.floatValue:0; }
-	inline bool getBoolValue() const { return (_type == Type::Bool)?_value.boolValue:false; }
-
-	template <class T> inline T getObjValueImpl(const std::true_type &type) const {
-		return (_type == Type::Object)?static_cast<T>(_value.objValue):nullptr;
-	}
-	template <class T> inline T getObjValueImpl(const std::false_type &type) const {
-        return static_cast<T>(0);
-	}
-	template <class T = Ref *> inline T getObjectValue() const {
-        static_assert(std::is_convertible<T, Ref *>::value,
-					  "Invalid Type for stappler::Event target!");
-		return getObjValueImpl<T>(std::is_convertible<T, Ref *>());
-	}
-	inline StringView getStringValue() const {
-		return (_type == Type::String)?(*_value.strValue):ZERO_STRING;
-	}
-	inline BytesView getBytesValue() const {
-		return (_type == Type::Bytes)?(*_value.bytesValue):ZERO_BYTES;
-	}
-	inline const Value &getDataValue() const {
-		return (_type == Type::Data)?(*_value.dataValue):Value::Null;
-	}
-
-	Value getValue() const;
+	const Value &getDataValue() const { return _dataValue; }
+	Ref *getObjectValue() const { return _objectValue; }
 
 protected:
-	union EventValue {
-		int64_t intValue;
-		double floatValue;
-		bool boolValue;
-		Ref *objValue;
-		const String *strValue;
-		const Bytes *bytesValue;
-		const Value * dataValue;
-	};
-
-	Event(const EventHeader &header, Ref *object, EventValue val, Type type);
-	Event(const EventHeader &header, Ref *object);
-
-	static void send(const EventHeader &header, Ref *object, EventValue val, Type type);
-	static void send(const EventHeader &header, Ref *object, int64_t value);
-	static void send(const EventHeader &header, Ref *object, double value);
-	static void send(const EventHeader &header, Ref *object, bool value);
-	static void send(const EventHeader &header, Ref *object, Ref *value);
-	static void send(const EventHeader &header, Ref *object, const char *value);
-	static void send(const EventHeader &header, Ref *object, const String &value);
-	static void send(const EventHeader &header, Ref *object, const StringView &value);
-	static void send(const EventHeader &header, Ref *object, const BytesView &value);
-	static void send(const EventHeader &header, Ref *object, const Value &value);
-	static void send(const EventHeader &header, Ref *object);
-
-protected:
-	void dispatch() const;
-
-	const EventHeader &_header;
-	Type _type = Type::None;
 	Ref *_object = nullptr;
-	EventValue _value;
-
-	friend class EventHeader;
-
-private:
-	static String ZERO_STRING;
-	static Bytes ZERO_BYTES;
+	Value _dataValue;
+	Rc<Ref> _objectValue;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLEVENT_H_ */

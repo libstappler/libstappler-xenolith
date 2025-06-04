@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,21 +22,37 @@
  **/
 
 #include "XLPlatformViewInterface.h"
+#include "XLPlatformApplication.h"
+#include "XLCoreLoop.h"
+#include "SPEventLooper.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-void ViewInterface::update(bool displayLink) {
-	_presentationEngine->update(displayLink);
+bool ViewInterface::init(PlatformApplication &app, core::Loop &loop) {
+	_application = &app;
+	_loop = &loop;
+	return true;
+}
+
+void ViewInterface::update(bool displayLink) { _presentationEngine->update(displayLink); }
+
+bool ViewInterface::isOnThisThread() const { return _loop->isOnThisThread(); }
+
+void ViewInterface::performOnThread(Function<void()> &&func, Ref *target, bool immediate,
+		StringView tag) {
+	if (immediate && isOnThisThread()) {
+		func();
+	} else {
+		_loop->getLooper()->performOnThread(sp::move(func), target, immediate, tag);
+	}
 }
 
 void ViewInterface::updateConfig() {
-	_glLoop->performOnThread([this] {
-		_presentationEngine->deprecateSwapchain(false);
-	}, this, true);
+	_loop->performOnThread([this] { _presentationEngine->deprecateSwapchain(false); }, this, true);
 }
 
 void ViewInterface::setReadyForNextFrame() {
-	_glLoop->performOnThread([this] {
+	_loop->performOnThread([this] {
 		if (_presentationEngine) {
 			_presentationEngine->setReadyForNextFrame();
 		}
@@ -43,7 +60,7 @@ void ViewInterface::setReadyForNextFrame() {
 }
 
 void ViewInterface::setRenderOnDemand(bool value) {
-	_glLoop->performOnThread([this, value] {
+	_loop->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setRenderOnDemand(value);
 		}
@@ -55,7 +72,7 @@ bool ViewInterface::isRenderOnDemand() const {
 }
 
 void ViewInterface::setFrameInterval(uint64_t value) {
-	_glLoop->performOnThread([this, value] {
+	_loop->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setTargetFrameInterval(value);
 		}
@@ -67,9 +84,8 @@ uint64_t ViewInterface::getFrameInterval() const {
 }
 
 void ViewInterface::setContentPadding(const Padding &padding) {
-	_glLoop->performOnThread([this, padding] {
-		_presentationEngine->setContentPadding(padding);
-	}, this, true);
+	_loop->performOnThread([this, padding] { _presentationEngine->setContentPadding(padding); },
+			this, true);
 }
 
 void ViewInterface::waitUntilFrame() {
@@ -78,4 +94,4 @@ void ViewInterface::waitUntilFrame() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::platform

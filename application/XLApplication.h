@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@
 #define XENOLITH_APPLICATION_XLAPPLICATION_H_
 
 #include "XLPlatformApplication.h"
-#include "XLEventHeader.h"
+#include "XLEvent.h"
 #include "XLResourceCache.h"
 #include "XLApplicationExtension.h"
 
@@ -46,13 +47,6 @@ public:
 	virtual void threadInit() override;
 	virtual void threadDispose() override;
 
-	void addEventListener(const EventHandlerNode *listener) const;
-	void removeEventListner(const EventHandlerNode *listener) const;
-
-	void removeAllEventListeners() const;
-
-	void dispatchEvent(const Event &ev) const;
-
 	const Rc<ResourceCache> &getResourceCache() const { return _resourceCache; }
 
 	template <typename T>
@@ -73,7 +67,6 @@ protected:
 
 	bool _hasViews = false;
 
-	mutable HashMap<EventHeader::EventID, HashSet<const EventHandlerNode *>> _eventListeners;
 	Rc<ResourceCache> _resourceCache;
 
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
@@ -104,6 +97,6 @@ auto Application::getExtension() const -> T * {
 }
 
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLAPPLICATION_H_ */

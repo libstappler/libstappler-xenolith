@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,23 +25,41 @@
 #define XENOLITH_PLATFORM_XLPLATFORMVIEWINTERFACE_H_
 
 #include "XLCoreInput.h"
-#include "XLCoreInfo.h"
 #include "XLCoreLoop.h"
 #include "XLCorePresentationEngine.h"
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+class PlatformApplication;
+
+}
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct SP_PUBLIC WindowInfo {
 	String title;
 	String bundleId;
-	URect rect = URect(0, 0, 1024, 768);
+	URect rect = URect(0, 0, 1'024, 768);
 	Padding decoration;
 	float density = 0.0f;
 };
 
+class ViewLayer : public Ref {
+public:
+	void handleEnter();
+	void handleExit();
+	void handleUpdate();
+
+
+protected:
+	URect rect;
+};
+
 class SP_PUBLIC ViewInterface : public Ref {
 public:
-	virtual ~ViewInterface() { }
+	virtual ~ViewInterface() = default;
+
+	virtual bool init(PlatformApplication &, core::Loop &);
 
 	virtual void update(bool displayLink);
 	virtual void end() = 0;
@@ -59,7 +78,15 @@ public:
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) = 0;
 	virtual void writeToClipboard(BytesView, StringView contentType = StringView()) = 0;
 
-	core::Loop *getGlLoop() const { return _glLoop; }
+	PlatformApplication *getApplication() const { return _application; }
+
+	core::Loop *getLoop() const { return _loop; }
+
+	bool isOnThisThread() const;
+
+	void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false,
+			StringView tag = STAPPLER_LOCATION);
+
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
 	void updateConfig();
@@ -77,10 +104,11 @@ public:
 	void waitUntilFrame();
 
 protected:
-	Rc<core::Loop> _glLoop;
+	Rc<core::Loop> _loop;
 	Rc<core::PresentationEngine> _presentationEngine;
+	Rc<PlatformApplication> _application;
 };
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif /* XENOLITH_PLATFORM_XLPLATFORMVIEWINTERFACE_H_ */

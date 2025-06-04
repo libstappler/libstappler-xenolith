@@ -283,13 +283,13 @@ bool Label::init(font::FontController *source, const DescriptionStyle &style, St
 	setRenderingLevel(RenderingLevel::Surface);
 
 	auto el = Rc<EventListener>::create();
-	el->onEventWithObject(font::FontController::onFontSourceUpdated, source,
+	el->listenForEventWithObject(font::FontController::onFontSourceUpdated, source,
 			std::bind(&Label::onFontSourceUpdated, this));
 
 	if (_source->isLoaded()) {
 		setTexture(Rc<Texture>(_source->getTexture()));
 	} else {
-		el->onEventWithObject(font::FontController::onLoaded, source,
+		el->listenForEventWithObject(font::FontController::onLoaded, source,
 				std::bind(&Label::onFontSourceLoaded, this), true);
 	}
 

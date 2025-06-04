@@ -49,7 +49,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	_left = addChild(Rc<VectorSprite>::create(Size2(24, 24)), ZOrder(2));
 	_left->setAnchorPoint(Anchor::MiddleLeft);
 	_left->setColor(Color::Grey_400);
-	getIconData(IconName::Hardware_keyboard_arrow_left_solid, [&] (BytesView bytes) {
+	getIconData(IconName::Hardware_keyboard_arrow_left_solid, [&](BytesView bytes) {
 		_left->addPath(VectorPath().addPath(bytes).setFillColor(Color::White));
 	});
 	_left->setContentSize(Size2(40, 40));
@@ -57,7 +57,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	_right = addChild(Rc<VectorSprite>::create(Size2(24, 24)), ZOrder(2));
 	_right->setAnchorPoint(Anchor::MiddleRight);
 	_right->setColor(Color::Grey_400);
-	getIconData(IconName::Hardware_keyboard_arrow_right_solid, [&] (BytesView bytes) {
+	getIconData(IconName::Hardware_keyboard_arrow_right_solid, [&](BytesView bytes) {
 		_right->addPath(VectorPath().addPath(bytes).setFillColor(Color::White));
 	});
 	_right->setContentSize(Size2(40, 40));
@@ -66,12 +66,12 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	_layerLeft = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerLeft->setAnchorPoint(Anchor::MiddleLeft);
 	l = _layerLeft->addInputListener(Rc<InputListener>::create());
-	l->addMouseOverRecognizer([this] (const GestureData &data) {
+	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedLeft = data.event == GestureEvent::Began;
 		updateState();
 		return true;
 	});
-	l->addPressRecognizer([this] (const GesturePress &press) {
+	l->addPressRecognizer([this](const GesturePress &press) {
 		if (press.event != GestureEvent::Ended) {
 			handlePrevMode();
 		}
@@ -81,12 +81,12 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	_layerRight = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerRight->setAnchorPoint(Anchor::MiddleRight);
 	l = _layerRight->addInputListener(Rc<InputListener>::create());
-	l->addMouseOverRecognizer([this] (const GestureData &data) {
+	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedRight = data.event == GestureEvent::Began;
 		updateState();
 		return true;
 	});
-	l->addPressRecognizer([this] (const GesturePress &press) {
+	l->addPressRecognizer([this](const GesturePress &press) {
 		if (press.event != GestureEvent::Ended) {
 			handleNextMode();
 		}
@@ -100,12 +100,13 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 		if (it == _selectedMode) {
 			_presentIndex = idx;
 		}
-		auto l = addChild(Rc<Layer>::create(it == _selectedMode ? Color::Red_500 : Color::Red_100), ZOrder(2));
+		auto l = addChild(Rc<Layer>::create(it == _selectedMode ? Color::Red_500 : Color::Red_100),
+				ZOrder(2));
 		l->setAnchorPoint(Anchor::MiddleBottom);
 		l->setContentSize(Size2(8.0f, 8.0f));
 		l->setTag(it);
 		_layers.emplace_back(l);
-		++ idx;
+		++idx;
 	}
 
 	updateState();
@@ -138,23 +139,27 @@ void ConfigSwitcher::updateState() {
 		if (!_selectedLeft || _presentIndex == 0) {
 			applyGradient(_layerLeft, SimpleGradient(Color::Red_50));
 		} else {
-			applyGradient(_layerLeft, SimpleGradient(Color::Grey_300, Color::Red_50, SimpleGradient::Horizontal));
+			applyGradient(_layerLeft,
+					SimpleGradient(Color::Grey_300, Color::Red_50, SimpleGradient::Horizontal));
 		}
 		if (!_selectedRight || _presentIndex + 1 == _layers.size()) {
 			applyGradient(_layerRight, SimpleGradient(Color::Red_50));
 		} else {
-			applyGradient(_layerRight, SimpleGradient(Color::Red_50, Color::Grey_300, SimpleGradient::Horizontal));
+			applyGradient(_layerRight,
+					SimpleGradient(Color::Red_50, Color::Grey_300, SimpleGradient::Horizontal));
 		}
 	} else {
 		if (!_selectedLeft || _presentIndex == 0) {
 			applyGradient(_layerLeft, SimpleGradient(Color::Grey_100));
 		} else {
-			applyGradient(_layerLeft, SimpleGradient(Color::Grey_300, Color::Grey_100, SimpleGradient::Horizontal));
+			applyGradient(_layerLeft,
+					SimpleGradient(Color::Grey_300, Color::Grey_100, SimpleGradient::Horizontal));
 		}
 		if (!_selectedRight || _presentIndex + 1 == _layers.size()) {
 			applyGradient(_layerRight, SimpleGradient(Color::Grey_100));
 		} else {
-			applyGradient(_layerRight, SimpleGradient(Color::Grey_100, Color::Grey_300, SimpleGradient::Horizontal));
+			applyGradient(_layerRight,
+					SimpleGradient(Color::Grey_100, Color::Grey_300, SimpleGradient::Horizontal));
 		}
 	}
 
@@ -180,9 +185,11 @@ void ConfigSwitcher::applyGradient(Layer *layer, const SimpleGradient &gradient)
 	if (_actionManager) {
 		layer->stopAllActionsByTag(1);
 		if (layer->getGradient() != gradient) {
-			layer->runAction(Rc<ActionProgress>::create(0.15f, [layer, start = layer->getGradient(), target = gradient] (float p) {
-				layer->setGradient(progress(start, target, p));
-			}), 1);
+			layer->runAction(
+					Rc<ActionProgress>::create(0.15f,
+							[layer, start = layer->getGradient(), target = gradient](
+									float p) { layer->setGradient(progress(start, target, p)); }),
+					1);
 		}
 	} else {
 		layer->setGradient(gradient);
@@ -191,7 +198,7 @@ void ConfigSwitcher::applyGradient(Layer *layer, const SimpleGradient &gradient)
 
 void ConfigSwitcher::handlePrevMode() {
 	if (_presentIndex > 0) {
-		-- _presentIndex;
+		--_presentIndex;
 		if (_layers[_presentIndex]->getTag() != _selectedMode) {
 			_selectedMode = uint32_t(_layers[_presentIndex]->getTag());
 			_callback(_selectedMode);
@@ -202,7 +209,7 @@ void ConfigSwitcher::handlePrevMode() {
 
 void ConfigSwitcher::handleNextMode() {
 	if (_presentIndex + 1 < _layers.size()) {
-		++ _presentIndex;
+		++_presentIndex;
 		if (_layers[_presentIndex]->getTag() != _selectedMode) {
 			_selectedMode = uint32_t(_layers[_presentIndex]->getTag());
 			_callback(_selectedMode);
@@ -211,13 +218,14 @@ void ConfigSwitcher::handleNextMode() {
 	}
 }
 
-bool ConfigPresentModeSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uint32_t)> &&cb) {
+bool ConfigPresentModeSwitcher::init(AppDelegate *app, uint32_t selected,
+		Function<void(uint32_t)> &&cb) {
 	if (!ConfigSwitcher::init(app, selected, sp::move(cb))) {
 		return false;
 	}
 
 	auto el = Rc<EventListener>::create();
-	el->onEvent(AppDelegate::onSwapchainConfig, [this] (const Event &event) {
+	el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
 		updateAppData((AppDelegate *)event.getObject());
 		_contentSizeDirty = true;
 	});
@@ -232,9 +240,7 @@ uint32_t ConfigPresentModeSwitcher::getCurrentValue(AppDelegate *app) const {
 
 Vector<uint32_t> ConfigPresentModeSwitcher::getValueList(AppDelegate *app) const {
 	Vector<uint32_t> ret;
-	for (auto &it : app->getSurfaceInfo().presentModes) {
-		ret.emplace_back(toInt(it));
-	}
+	for (auto &it : app->getSurfaceInfo().presentModes) { ret.emplace_back(toInt(it)); }
 	return ret;
 }
 
@@ -243,9 +249,7 @@ String ConfigPresentModeSwitcher::getValueLabel(uint32_t val) const {
 }
 
 void ConfigPresentModeSwitcher::updateAppData(AppDelegate *app) {
-	for (auto &it : _layers) {
-		it->removeFromParent(true);
-	}
+	for (auto &it : _layers) { it->removeFromParent(true); }
 	_layers.clear();
 
 	_selectedMode = _currentMode = getCurrentValue(app);
@@ -257,15 +261,16 @@ void ConfigPresentModeSwitcher::updateAppData(AppDelegate *app) {
 		if (it == _selectedMode) {
 			_presentIndex = idx;
 		}
-		auto l = addChild(Rc<Layer>::create(it == _selectedMode ? Color::Red_500 : Color::Red_100), ZOrder(2));
+		auto l = addChild(Rc<Layer>::create(it == _selectedMode ? Color::Red_500 : Color::Red_100),
+				ZOrder(2));
 		l->setAnchorPoint(Anchor::MiddleBottom);
 		l->setContentSize(Size2(8.0f, 8.0f));
 		l->setTag(it);
 		_layers.emplace_back(l);
-		++ idx;
+		++idx;
 	}
 
 	updateState();
 }
 
-}
+} // namespace stappler::xenolith::app

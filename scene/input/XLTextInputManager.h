@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,6 @@
 #ifndef XENOLITH_SCENE_INPUT_XLTEXTINPUTMANAGER_H_
 #define XENOLITH_SCENE_INPUT_XLTEXTINPUTMANAGER_H_
 
-#include "XLEventHandler.h"
 #include "XLInput.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -43,17 +43,19 @@ struct SP_PUBLIC TextInputHandler {
 	Function<void(WideStringView, TextCursor, TextCursor)> onText;
 	Function<void(bool, const Rect &, float)> onKeyboard;
 	Function<void(bool)> onInput;
-	//Function<bool(const Vec2 &)> onTouchFilter;
+
 	Rc<TextInputManager> manager;
 
 	~TextInputHandler();
 
-	bool run(TextInputManager *, WideStringView str = WideStringView(), TextCursor cursor = TextCursor(), TextCursor marked = TextCursor::InvalidCursor,
+	bool run(TextInputManager *, WideStringView str = WideStringView(),
+			TextCursor cursor = TextCursor(), TextCursor marked = TextCursor::InvalidCursor,
 			TextInputType = TextInputType::Empty);
 	void cancel();
 
 	// only if this handler is active
-	bool setString(WideStringView str, TextCursor cursor = TextCursor(), TextCursor marked = TextCursor::InvalidCursor);
+	bool setString(WideStringView str, TextCursor cursor = TextCursor(),
+			TextCursor marked = TextCursor::InvalidCursor);
 	bool setCursor(TextCursor);
 	bool setMarked(TextCursor);
 
@@ -65,7 +67,7 @@ struct SP_PUBLIC TextInputHandler {
 	bool isActive() const;
 };
 
-class SP_PUBLIC TextInputManager : public Ref {
+class SP_PUBLIC TextInputManager final : public Ref {
 public:
 	TextInputManager();
 
@@ -74,8 +76,8 @@ public:
 	void insertText(WideStringView sInsert, bool compose = false);
 	void insertText(WideStringView sInsert, TextCursor replacement);
 	void setMarkedText(WideStringView sInsert, TextCursor replacement, TextCursor marked);
-    void deleteBackward();
-    void deleteForward();
+	void deleteBackward();
+	void deleteForward();
 	void unmarkText();
 
 	bool hasText();
@@ -85,15 +87,17 @@ public:
 
 	void setInputEnabled(bool enabled);
 
-	void onTextChanged();
+	void handleTextChanged();
 
 	// run input capture (or update it with new params)
 	// propagates all data to device input manager, enables screen keyboard if needed
-	bool run(TextInputHandler *, WideStringView str, TextCursor cursor, TextCursor marked, TextInputType type);
+	bool run(TextInputHandler *, WideStringView str, TextCursor cursor, TextCursor marked,
+			TextInputType type);
 
 	// update current buffer string (and/or internal cursor)
 	// propagates string and cursor to device input manager to enable autocorrections, suggestions, etc...
-	void setString(WideStringView str, TextCursor cursor = TextCursor(), TextCursor marked = TextCursor::InvalidCursor);
+	void setString(WideStringView str, TextCursor cursor = TextCursor(),
+			TextCursor marked = TextCursor::InvalidCursor);
 	void setCursor(TextCursor);
 	void setMarked(TextCursor);
 
@@ -129,6 +133,6 @@ protected:
 	InputKeyComposeState _compose = InputKeyComposeState::Nothing;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_INPUT_XLTEXTINPUTMANAGER_H_ */

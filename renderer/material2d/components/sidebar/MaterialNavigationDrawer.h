@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +26,7 @@
 
 #include "MaterialSidebar.h"
 #include "MaterialMenu.h"
-#include "XLEventHeader.h"
+#include "XLEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -55,6 +56,6 @@ protected:
 	Menu *_navigation = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_SIDEBAR_MATERIALNAVIGATIONDRAWER_H_ */

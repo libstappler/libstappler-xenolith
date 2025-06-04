@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +26,7 @@
 
 #include "XLCommon.h"
 #include "XLApplication.h"
-#include "XLEventHeader.h"
+#include "XLEvent.h"
 #include "SPDbScheme.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
@@ -70,48 +71,56 @@ public:
 	// remove value for key, optionally returns previous
 	bool clear(CoderSource, DataCallback && = nullptr) const;
 
-	bool get(const Scheme &, DataCallback &&, uint64_t oid, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, StringView alias, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, const Value &id, db::UpdateFlags = db::UpdateFlags::None) const;
-
 	bool get(const Scheme &, DataCallback &&, uint64_t oid,
-			StringView field, db::UpdateFlags = db::UpdateFlags::None) const;
+			db::UpdateFlags = db::UpdateFlags::None) const;
 	bool get(const Scheme &, DataCallback &&, StringView alias,
-			StringView field, db::UpdateFlags = db::UpdateFlags::None) const;
+			db::UpdateFlags = db::UpdateFlags::None) const;
 	bool get(const Scheme &, DataCallback &&, const Value &id,
-			StringView field, db::UpdateFlags = db::UpdateFlags::None) const;
+			db::UpdateFlags = db::UpdateFlags::None) const;
 
-	bool get(const Scheme &, DataCallback &&, uint64_t oid,
-			InitList<StringView> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, uint64_t oid, StringView field,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, StringView alias, StringView field,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, const Value &id, StringView field,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+
+	bool get(const Scheme &, DataCallback &&, uint64_t oid, InitList<StringView> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, StringView alias, InitList<StringView> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, const Value &id, InitList<StringView> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+
+	bool get(const Scheme &, DataCallback &&, uint64_t oid, InitList<const char *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, StringView alias, InitList<const char *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, const Value &id, InitList<const char *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+
+	bool get(const Scheme &, DataCallback &&, uint64_t oid, InitList<const db::Field *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 	bool get(const Scheme &, DataCallback &&, StringView alias,
-			InitList<StringView> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, const Value &id,
-			InitList<StringView> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-
-	bool get(const Scheme &, DataCallback &&, uint64_t oid,
-			InitList<const char *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, StringView alias,
-			InitList<const char *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, const Value &id,
-			InitList<const char *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-
-	bool get(const Scheme &, DataCallback &&, uint64_t oid,
 			InitList<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, StringView alias,
-			InitList<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, const Value &id,
-			InitList<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, const Value &id, InitList<const db::Field *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 
 	// returns Array with zero or more Dictionaries with object data or Null value
-	bool select(const Scheme &, DataCallback &&, QueryCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool select(const Scheme &, DataCallback &&, QueryCallback && = nullptr,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 
 	// returns Dictionary with single object data or Null value
-	bool create(const Scheme &, Value &&, DataCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool create(const Scheme &, Value &&, DataCallback && = nullptr,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 	bool create(const Scheme &, Value &&, DataCallback &&, db::Conflict::Flags) const;
-	bool create(const Scheme &, Value &&, DataCallback &&, db::UpdateFlags, db::Conflict::Flags) const;
+	bool create(const Scheme &, Value &&, DataCallback &&, db::UpdateFlags,
+			db::Conflict::Flags) const;
 
-	bool update(const Scheme &, uint64_t oid, Value &&data, DataCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool update(const Scheme &, const Value & obj, Value &&data, DataCallback && = nullptr, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool update(const Scheme &, uint64_t oid, Value &&data, DataCallback && = nullptr,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool update(const Scheme &, const Value &obj, Value &&data, DataCallback && = nullptr,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 
 	bool remove(const Scheme &, uint64_t oid, Function<void(bool)> && = nullptr) const;
 	bool remove(const Scheme &, const Value &, Function<void(bool)> && = nullptr) const;
@@ -120,7 +129,7 @@ public:
 	bool count(const Scheme &, Function<void(size_t)> &&, QueryCallback &&) const;
 
 	bool touch(const Scheme &, uint64_t id) const;
-	bool touch(const Scheme &, const Value & obj) const;
+	bool touch(const Scheme &, const Value &obj) const;
 
 	// perform on Server's thread
 	bool perform(Function<bool(const Server &, const db::Transaction &)> &&, Ref * = nullptr) const;
@@ -128,14 +137,14 @@ public:
 	Application *getApplication() const;
 
 protected:
-	bool get(const Scheme &, DataCallback &&, uint64_t oid,
-			Vector<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
-	bool get(const Scheme &, DataCallback &&, StringView alias,
-			Vector<const db::Field *> &&fields, db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, uint64_t oid, Vector<const db::Field *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
+	bool get(const Scheme &, DataCallback &&, StringView alias, Vector<const db::Field *> &&fields,
+			db::UpdateFlags = db::UpdateFlags::None) const;
 
 	ServerData *_data = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::storage
 
 #endif /* XENOLITH_RESOURCES_STORAGE_XLSTORAGESERVER_H_ */

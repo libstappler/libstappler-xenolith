@@ -57,9 +57,9 @@ bool GeneralTemporaryResourceTest::init() {
 	_checkbox->setAnchorPoint(Anchor::Middle);
 
 	auto l = addComponent(Rc<EventListener>::create());
-	l->onEvent(TemporaryResource::onLoaded, [this](const Event &ev) {
+	l->listenForEvent(TemporaryResource::onLoaded, [this](const Event &ev) {
 		if (ev.getObject() == _resource) {
-			if (ev.getBoolValue()) {
+			if (ev.getDataValue().asBool()) {
 				_label->setString("Loaded");
 				_label->setColor(Color::Red_600);
 			} else {

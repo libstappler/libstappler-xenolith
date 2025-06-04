@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,62 +40,60 @@ public:
 	static LocaleManager *getInstance() {
 		if (!s_sharedInstance) {
 			auto p = memory::pool::create_tagged(nullptr, "LocaleManager");
-			memory::pool::perform([&] {
-				s_sharedInstance = new LocaleManager(p);
-			}, p);
+			memory::pool::perform([&] { s_sharedInstance = new LocaleManager(p); }, p);
 		}
 		return s_sharedInstance;
 	}
 
-	LocaleManager(memory::pool_t *p) : _defaultTime{
-		"today",
-		"yesterday",
-		"jan", "feb", "mar", "apr", "may", "jun",
-		"jul", "aug", "sep", "oct", "nov", "dec"
-	}, _pool(p) {
-		define("ru-ru", {
-			pair("SystemSearch", "Найти"),
-			pair("SystemFontSize", "Размер шрифта"),
-			pair("SystemTheme", "Оформление"),
-			pair("SystemThemeLight", "Светлая тема"),
-			pair("SystemThemeNeutral", "Нейтральная тема"),
-			pair("SystemThemeDark", "Темная тема"),
-			pair("SystemMore", "Ещё"),
-			pair("SystemRestore", "Восстановить"),
-			pair("SystemRemoved", "Удалено"),
-			pair("SystemCopy", "Копировать"),
-			pair("SystemCut", "Вырезать"),
-			pair("SystemPaste", "Вставить"),
-			pair("SystemTapExit", "Нажмите ещё раз для выхода"),
+	LocaleManager(memory::pool_t *p)
+	: _defaultTime{"today", "yesterday", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
+		  "sep", "oct", "nov", "dec"}
+	, _pool(p) {
+		define("ru-ru",
+				{
+					pair("SystemSearch", "Найти"),
+					pair("SystemFontSize", "Размер шрифта"),
+					pair("SystemTheme", "Оформление"),
+					pair("SystemThemeLight", "Светлая тема"),
+					pair("SystemThemeNeutral", "Нейтральная тема"),
+					pair("SystemThemeDark", "Темная тема"),
+					pair("SystemMore", "Ещё"),
+					pair("SystemRestore", "Восстановить"),
+					pair("SystemRemoved", "Удалено"),
+					pair("SystemCopy", "Копировать"),
+					pair("SystemCut", "Вырезать"),
+					pair("SystemPaste", "Вставить"),
+					pair("SystemTapExit", "Нажмите ещё раз для выхода"),
 
-			pair("SystemErrorOverflowChars", "Слишком много символов"),
-			pair("SystemErrorInvalidChar", "Недопустимый символ"),
+					pair("SystemErrorOverflowChars", "Слишком много символов"),
+					pair("SystemErrorInvalidChar", "Недопустимый символ"),
 
-			pair("Shortcut:Megabytes", "Мб"),
-			pair("Shortcut:Pages", "с"),
-		});
+					pair("Shortcut:Megabytes", "Мб"),
+					pair("Shortcut:Pages", "с"),
+				});
 
-		define("en-us", {
-			pair("SystemSearch", "Search"),
-			pair("SystemFontSize", "Font size"),
-			pair("SystemTheme", "Theme"),
-			pair("SystemThemeLight", "Light theme"),
-			pair("SystemThemeNeutral", "Neutral theme"),
-			pair("SystemThemeDark", "Dark theme"),
-			pair("SystemMore", "More"),
-			pair("SystemRestore", "Restore"),
-			pair("SystemRemoved", "Removed"),
-			pair("SystemCopy", "Copy"),
-			pair("SystemCut", "Cut"),
-			pair("SystemPaste", "Paste"),
-			pair("SystemTapExit", "Tap one more time to exit"),
+		define("en-us",
+				{
+					pair("SystemSearch", "Search"),
+					pair("SystemFontSize", "Font size"),
+					pair("SystemTheme", "Theme"),
+					pair("SystemThemeLight", "Light theme"),
+					pair("SystemThemeNeutral", "Neutral theme"),
+					pair("SystemThemeDark", "Dark theme"),
+					pair("SystemMore", "More"),
+					pair("SystemRestore", "Restore"),
+					pair("SystemRemoved", "Removed"),
+					pair("SystemCopy", "Copy"),
+					pair("SystemCut", "Cut"),
+					pair("SystemPaste", "Paste"),
+					pair("SystemTapExit", "Tap one more time to exit"),
 
-			pair("SystemErrorOverflowChars", "Too many characters"),
-			pair("SystemErrorInvalidChar", "Invalid character"),
+					pair("SystemErrorOverflowChars", "Too many characters"),
+					pair("SystemErrorInvalidChar", "Invalid character"),
 
-			pair("Shortcut:Megabytes", "Mb"),
-			pair("Shortcut:Pages", "p"),
-		});
+					pair("Shortcut:Megabytes", "Mb"),
+					pair("Shortcut:Pages", "p"),
+				});
 	}
 
 	void define(const StringView &locale, LocaleInitList &&init) {
@@ -104,7 +103,8 @@ public:
 			it = _strings.emplace(locale.str<Interface>(), StringMap()).first;
 		}
 		for (auto &iit : init) {
-			it->second.emplace(string::toUtf16<Interface>(iit.first), string::toUtf16<Interface>(iit.second));
+			it->second.emplace(string::toUtf16<Interface>(iit.first),
+					string::toUtf16<Interface>(iit.second));
 		}
 	}
 
@@ -119,17 +119,21 @@ public:
 		}
 	}
 
-	void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &arr) {
+	void define(const StringView &locale,
+			const std::array<StringView, toInt(TimeTokens::Max)> &arr) {
 		memory::pool::context ctx(_pool);
 		auto it = _timeTokens.find(locale);
 		if (it == _timeTokens.end()) {
-			it = _timeTokens.emplace(locale.str<Interface>(), std::array<memory::string, toInt(TimeTokens::Max)>()).first;
+			it = _timeTokens
+						 .emplace(locale.str<Interface>(),
+								 std::array<memory::string, toInt(TimeTokens::Max)>())
+						 .first;
 		}
 
 		size_t i = 0;
 		for (auto &arr_it : arr) {
 			it->second[i] = arr_it.str<Interface>();
-			++ i;
+			++i;
 		}
 	}
 
@@ -186,14 +190,14 @@ public:
 
 			while (!r.empty()) {
 				if (r.is(':')) {
-					++ r;
+					++r;
 				}
 
 				WideStringView res = r.readUntil<WideStringView::Chars<':'>>();
 				if (numEq == 1) {
 					return res;
 				} else {
-					-- numEq;
+					--numEq;
 				}
 			}
 
@@ -201,12 +205,8 @@ public:
 		}
 	}
 
-	void setDefault(StringView def) {
-		_default = def.str<mem_std::Interface>();
-	}
-	StringView getDefault() {
-		return _default;
-	}
+	void setDefault(StringView def) { _default = def.str<mem_std::Interface>(); }
+	StringView getDefault() { return _default; }
 
 	void setLocale(StringView loc) {
 		if (_locale != loc) {
@@ -214,9 +214,7 @@ public:
 			onLocale(nullptr, loc);
 		}
 	}
-	StringView getLocale() {
-		return _locale;
-	}
+	StringView getLocale() { return _locale; }
 
 	void setNumRule(const StringView &locale, const NumRule &rule) {
 		_numRules.emplace(locale.str<Interface>(), rule);
@@ -240,19 +238,20 @@ public:
 			WideStringView shortView(r.data(), std::min(r.size(), maxChars));
 			shortView.skipUntil<WideStringView::Chars<'%'>>();
 			if (shortView.is('%')) {
-				++ shortView;
+				++shortView;
 				if (shortView.is('=')) {
-					++ shortView;
-					shortView = WideStringView(shortView.data(), std::min(maxChars, r.size() - (shortView.data() - r.data())));
+					++shortView;
+					shortView = WideStringView(shortView.data(),
+							std::min(maxChars, r.size() - (shortView.data() - r.data())));
 					shortView.skipChars<WideStringView::CharGroup<CharGroupId::Numbers>>();
 					if (shortView.is('%')) {
 						return true;
 					}
 				} else {
-					shortView = WideStringView(shortView.data(), std::min(maxChars, r.size() - (shortView.data() - r.data())));
-					shortView.skipChars<
-						WideStringView::CharGroup<CharGroupId::Alphanumeric>,
-						WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
+					shortView = WideStringView(shortView.data(),
+							std::min(maxChars, r.size() - (shortView.data() - r.data())));
+					shortView.skipChars< WideStringView::CharGroup<CharGroupId::Alphanumeric>,
+							WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
 					if (shortView.is('%')) {
 						return true;
 					}
@@ -279,17 +278,16 @@ public:
 			while (!r.empty()) {
 				r.skipUntil<WideStringView::Chars<'%'>>();
 				if (r.is('%')) {
-					++ r;
+					++r;
 					if (r.is('=')) {
-						++ r;
+						++r;
 						r.skipChars<WideStringView::CharGroup<CharGroupId::Numbers>>();
 						if (r.is('%')) {
 							return true;
 						}
 					} else {
-						r.skipChars<
-							WideStringView::CharGroup<CharGroupId::Alphanumeric>,
-							WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
+						r.skipChars< WideStringView::CharGroup<CharGroupId::Alphanumeric>,
+								WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
 						if (r.is('%')) {
 							return true;
 						}
@@ -306,23 +304,23 @@ public:
 			r += "@Locale:"_len;
 			return string(r).str<memory::StandartInterface>();
 		} else {
-			WideString ret; ret.reserve(r.size());
+			WideString ret;
+			ret.reserve(r.size());
 			while (!r.empty()) {
 				auto tmp = r.readUntil<WideStringView::Chars<'%'>>();
 				ret.append(tmp.data(), tmp.size());
 				if (r.is('%')) {
-					++ r;
-					auto token = r.readChars<
-						WideStringView::CharGroup<CharGroupId::Alphanumeric>,
-						WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
+					++r;
+					auto token = r.readChars< WideStringView::CharGroup<CharGroupId::Alphanumeric>,
+							WideStringView::Chars<':', '.', '-', '_', '[', ']', '+', '='>>();
 					if (r.is('%')) {
-						++ r;
+						++r;
 						WideStringView replacement;
 						if (token.is('=')) {
 							auto numToken = token;
-							++ numToken;
+							++numToken;
 							if (numToken.is<WideStringView::CharGroup<CharGroupId::Numbers>>()) {
-								numToken.readInteger().unwrap([&, this] (int64_t id) {
+								numToken.readInteger().unwrap([&, this](int64_t id) {
 									if (numToken.empty()) {
 										replacement = string(size_t(id));
 									}
@@ -334,19 +332,21 @@ public:
 							while (!splitMaster.empty()) {
 								num = splitMaster.readUntil<WideStringView::Chars<':'>>();
 								if (splitMaster.is(':')) {
-									++ splitMaster;
+									++splitMaster;
 								}
 							}
 
 							if (!num.empty()) {
 								WideStringView validate(num);
 								if (validate.is('-')) {
-									++ validate;
+									++validate;
 								}
-								validate.skipChars<WideStringView::CharGroup<CharGroupId::Numbers>>();
+								validate.skipChars<
+										WideStringView::CharGroup<CharGroupId::Numbers>>();
 								if (validate.empty()) {
-									WideStringView vtoken(token.data(), token.size() - num.size() - 1);
-									num.readInteger().unwrap([&, this] (int64_t id) {
+									WideStringView vtoken(token.data(),
+											token.size() - num.size() - 1);
+									num.readInteger().unwrap([&, this](int64_t id) {
 										replacement = numeric(vtoken, uint32_t(id));
 									});
 								}
@@ -392,7 +392,8 @@ public:
 				ret.append("-gb");
 			} else {
 				ret.reserve(5);
-				ret.append("-").append(string::StringTraits<memory::StandartInterface>::tolower(locale));
+				ret.append("-").append(
+						string::StringTraits<memory::StandartInterface>::tolower(locale));
 			}
 		}
 
@@ -405,7 +406,7 @@ public:
 			it = _timeTokens.find(StringView(_default));
 		}
 
-		auto &table = it == _timeTokens.end()?_defaultTime:it->second;
+		auto &table = it == _timeTokens.end() ? _defaultTime : it->second;
 		return table[toInt(tok)];
 	}
 
@@ -415,7 +416,7 @@ public:
 			it = _timeTokens.find(StringView(_default));
 		}
 
-		return it == _timeTokens.end()?_defaultTime:it->second;
+		return it == _timeTokens.end() ? _defaultTime : it->second;
 	}
 
 protected:
@@ -433,7 +434,7 @@ protected:
 
 LocaleManager *LocaleManager::s_sharedInstance = nullptr;
 
-EventHeader onLocale("Locale", "onLocale");
+EventHeader onLocale("Locale::onLocale");
 
 void define(const StringView &locale, LocaleInitList &&init) {
 	LocaleManager::getInstance()->define(locale, sp::move(init));
@@ -451,27 +452,17 @@ WideStringView string(const WideStringView &str) {
 	return LocaleManager::getInstance()->string(str);
 }
 
-WideStringView string(size_t idx) {
-	return LocaleManager::getInstance()->string(idx);
-}
+WideStringView string(size_t idx) { return LocaleManager::getInstance()->string(idx); }
 
 WideStringView numeric(const WideStringView &str, uint32_t num) {
 	return LocaleManager::getInstance()->numeric(str, num);
 }
 
-void setDefault(StringView def) {
-	LocaleManager::getInstance()->setDefault(def);
-}
-StringView getDefault() {
-	return LocaleManager::getInstance()->getDefault();
-}
+void setDefault(StringView def) { LocaleManager::getInstance()->setDefault(def); }
+StringView getDefault() { return LocaleManager::getInstance()->getDefault(); }
 
-void setLocale(StringView loc) {
-	LocaleManager::getInstance()->setLocale(loc);
-}
-StringView getLocale() {
-	return LocaleManager::getInstance()->getLocale();
-}
+void setLocale(StringView loc) { LocaleManager::getInstance()->setLocale(loc); }
+StringView getLocale() { return LocaleManager::getInstance()->getLocale(); }
 
 void setNumRule(const String &locale, NumRule &&rule) {
 	LocaleManager::getInstance()->setNumRule(locale, rule);
@@ -489,17 +480,11 @@ WideString resolveLocaleTags(const WideStringView &r) {
 	return LocaleManager::getInstance()->resolveLocaleTags(r);
 }
 
-String language(const StringView &locale) {
-	return LocaleManager::getInstance()->language(locale);
-}
+String language(const StringView &locale) { return LocaleManager::getInstance()->language(locale); }
 
-String common(const StringView &locale) {
-	return LocaleManager::getInstance()->common(locale);
-}
+String common(const StringView &locale) { return LocaleManager::getInstance()->common(locale); }
 
-StringView timeToken(TimeTokens tok) {
-	return LocaleManager::getInstance()->timeToken(tok);
-}
+StringView timeToken(TimeTokens tok) { return LocaleManager::getInstance()->timeToken(tok); }
 
 const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTable() {
 	return LocaleManager::getInstance()->timeTokenTable();
@@ -544,14 +529,17 @@ static String localDate_impl(const std::array<T, toInt(TimeTokens::Max)> &table,
 	sp_localtime_r(&sec_time, &tm_time);
 
 	if (isToday(tm_time, tm_now)) {
-		return String(table[toInt(TimeTokens::Today)].data(), table[toInt(TimeTokens::Today)].size());
+		return String(table[toInt(TimeTokens::Today)].data(),
+				table[toInt(TimeTokens::Today)].size());
 	} else if (isYesterday(tm_time, tm_now)) {
-		return String(table[toInt(TimeTokens::Yesterday)].data(), table[toInt(TimeTokens::Yesterday)].size());
+		return String(table[toInt(TimeTokens::Yesterday)].data(),
+				table[toInt(TimeTokens::Yesterday)].size());
 	}
 	if (tm_time.tm_year == tm_now.tm_year) {
 		return toString(tm_time.tm_mday, " ", table[tm_time.tm_mon + 2]);
 	} else {
-		return toString(tm_time.tm_mday, " ", table[tm_time.tm_mon + 2], " ", 1900 + tm_time.tm_year);
+		return toString(tm_time.tm_mday, " ", table[tm_time.tm_mon + 2], " ",
+				1'900 + tm_time.tm_year);
 	}
 }
 
@@ -563,4 +551,4 @@ String localDate(const std::array<StringView, toInt(TimeTokens::Max)> &table, Ti
 	return localDate_impl(table, t);
 }
 
-}
+} // namespace stappler::xenolith::locale

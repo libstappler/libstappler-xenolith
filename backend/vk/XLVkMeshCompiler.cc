@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +44,8 @@ public:
 	virtual ~MeshCompilerAttachmentHandle();
 
 	virtual bool setup(FrameQueue &handle, Function<void(bool)> &&) override;
-	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&, Function<void(bool)> &&) override;
+	virtual void submitInput(FrameQueue &, Rc<core::AttachmentInputData> &&,
+			Function<void(bool)> &&) override;
 
 	virtual const Rc<core::MeshInputData> &getInputData() const { return _inputData; }
 	virtual const Rc<core::MeshSet> &getMeshSet() const { return _originSet; }
@@ -80,7 +82,8 @@ public:
 
 protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
-	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
+	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool,
+			Rc<core::Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 
 	bool loadPersistent(core::MeshIndex *);
@@ -96,13 +99,15 @@ bool MeshCompiler::init() {
 
 	Queue::Builder builder("MeshCompiler");
 
-	auto attachment = builder.addAttachemnt("", [] (AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
+	auto attachment =
+			builder.addAttachemnt("", [](AttachmentBuilder &attachmentBuilder) -> Rc<Attachment> {
 		attachmentBuilder.defineAsInput();
 		attachmentBuilder.defineAsOutput();
 		return Rc<MeshCompilerAttachment>::create(attachmentBuilder);
 	});
 
-	builder.addPass("MeshPass", PassType::Transfer, RenderOrdering(0), [&] (QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+	builder.addPass("MeshPass", PassType::Transfer, RenderOrdering(0),
+			[&](QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
 		return Rc<MeshCompilerPass>::create(passBuilder, attachment);
 	});
 
@@ -121,13 +126,9 @@ bool MeshCompiler::inProgress(const MeshAttachment *a) const {
 	return false;
 }
 
-void MeshCompiler::setInProgress(const MeshAttachment *a) {
-	_inProgress.emplace(a);
-}
+void MeshCompiler::setInProgress(const MeshAttachment *a) { _inProgress.emplace(a); }
 
-void MeshCompiler::dropInProgress(const MeshAttachment *a) {
-	_inProgress.erase(a);
-}
+void MeshCompiler::dropInProgress(const MeshAttachment *a) { _inProgress.erase(a); }
 
 bool MeshCompiler::hasRequest(const MeshAttachment *a) const {
 	auto it = _requests.find(a);
@@ -167,15 +168,11 @@ void MeshCompiler::appendRequest(const MeshAttachment *a, Rc<MeshInputData> &&re
 	if (it->second.deps.empty()) {
 		it->second.deps = sp::move(deps);
 	} else {
-		for (auto &iit : deps) {
-			it->second.deps.emplace_back(move(iit));
-		}
+		for (auto &iit : deps) { it->second.deps.emplace_back(move(iit)); }
 	}
 }
 
-void MeshCompiler::clearRequests() {
-	_requests.clear();
-}
+void MeshCompiler::clearRequests() { _requests.clear(); }
 
 auto MeshCompiler::makeRequest(Rc<core::MeshInputData> &&input,
 		Vector<Rc<core::DependencyEvent>> &&deps) -> Rc<FrameRequest> {
@@ -190,7 +187,7 @@ void MeshCompiler::runMeshCompilationFrame(core::Loop &loop, Rc<MeshInputData> &
 	auto targetAttachment = req->attachment;
 
 	auto h = loop.makeFrame(makeRequest(sp::move(req), sp::move(deps)), 0);
-	h->setCompleteCallback([this, targetAttachment] (FrameHandle &handle) {
+	h->setCompleteCallback([this, targetAttachment](FrameHandle &handle) {
 		auto reqIt = _requests.find(targetAttachment);
 		if (reqIt != _requests.end()) {
 			if (handle.getLoop()->isRunning()) {
@@ -198,13 +195,9 @@ void MeshCompiler::runMeshCompilationFrame(core::Loop &loop, Rc<MeshInputData> &
 				Rc<MeshInputData> req = Rc<MeshInputData>::alloc();
 				req->attachment = targetAttachment;
 				req->meshesToAdd.reserve(reqIt->second.toAdd.size());
-				for (auto &m : reqIt->second.toAdd) {
-					req->meshesToAdd.emplace_back(m);
-				}
+				for (auto &m : reqIt->second.toAdd) { req->meshesToAdd.emplace_back(m); }
 				req->meshesToRemove.reserve(reqIt->second.toRemove.size());
-				for (auto &m : reqIt->second.toRemove) {
-					req->meshesToRemove.emplace_back(m);
-				}
+				for (auto &m : reqIt->second.toRemove) { req->meshesToRemove.emplace_back(m); }
 				_requests.erase(reqIt);
 
 				runMeshCompilationFrame(*handle.getLoop(), sp::move(req), sp::move(deps));
@@ -231,14 +224,16 @@ bool MeshCompilerAttachmentHandle::setup(FrameQueue &handle, Function<void(bool)
 	return true;
 }
 
-void MeshCompilerAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data, Function<void(bool)> &&cb) {
+void MeshCompilerAttachmentHandle::submitInput(FrameQueue &q, Rc<core::AttachmentInputData> &&data,
+		Function<void(bool)> &&cb) {
 	auto d = data.cast<core::MeshInputData>();
 	if (!d || q.isFinalized()) {
 		cb(false);
 	}
 
-	q.getFrame()->waitForDependencies(data->waitDependencies, [this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle, bool success) {
-		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)] (FrameHandle &handle) {
+	q.getFrame()->waitForDependencies(data->waitDependencies,
+			[this, d = sp::move(d), cb = sp::move(cb)](FrameHandle &handle, bool success) {
+		handle.performOnGlThread([this, d = sp::move(d), cb = sp::move(cb)](FrameHandle &handle) {
 			_inputData = d;
 			_originSet = _inputData->attachment->getMeshes();
 			cb(true);
@@ -267,7 +262,8 @@ auto MeshCompilerPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePass
 MeshCompilerPassHandle::~MeshCompilerPassHandle() { }
 
 bool MeshCompilerPassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb) {
-	if (auto a = frame.getAttachment(static_cast<MeshCompilerPass *>(_queuePass.get())->getMeshAttachment())) {
+	if (auto a = frame.getAttachment(
+				static_cast<MeshCompilerPass *>(_queuePass.get())->getMeshAttachment())) {
 		_meshAttachment = static_cast<MeshCompilerAttachmentHandle *>(a->handle.get());
 	}
 
@@ -313,13 +309,14 @@ Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(Fr
 			if (iit != input->meshesToRemove.end()) {
 				it = indexes.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	} while (0);
 
 	for (auto &it : input->meshesToAdd) {
-		indexes.emplace_back(core::MeshSet::Index{maxOf<VkDeviceSize>(), maxOf<VkDeviceSize>(), it});
+		indexes.emplace_back(
+				core::MeshSet::Index{maxOf<VkDeviceSize>(), maxOf<VkDeviceSize>(), it});
 	}
 
 	uint64_t indexBufferSize = 0;
@@ -347,19 +344,19 @@ Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(Fr
 	auto vertexBuffer = allocator->spawnPersistent(AllocationUsage::DeviceLocal, vertexBufferInfo);
 	auto indexBuffer = allocator->spawnPersistent(AllocationUsage::DeviceLocal, indexBufferInfo);
 
-	auto loadBuffer = [] (const core::BufferData *bufferData, Buffer *buf) {
+	auto loadBuffer = [](const core::BufferData *bufferData, Buffer *buf) {
 		if (!bufferData->data.empty()) {
 			buf->setData(bufferData->data);
 		} else {
-			buf->map([&] (uint8_t *ptr, VkDeviceSize size) {
-				bufferData->writeData(ptr, size);
-			});
+			buf->map([&](uint8_t *ptr, VkDeviceSize size) { bufferData->writeData(ptr, size); });
 		}
 		return buf;
 	};
 
-	auto writeBufferCopy = [&memPool, &loadBuffer] (CommandBuffer &buf, const core::BufferData *bufferData, Buffer *targetBuffer,
-			VkDeviceSize targetOffset, VkDeviceSize originOffset, Buffer *originBuffer) -> VkDeviceSize {
+	auto writeBufferCopy = [&memPool, &loadBuffer](CommandBuffer &buf,
+								   const core::BufferData *bufferData, Buffer *targetBuffer,
+								   VkDeviceSize targetOffset, VkDeviceSize originOffset,
+								   Buffer *originBuffer) -> VkDeviceSize {
 		Buffer *sourceBuffer = nullptr;
 		VkDeviceSize sourceOffset = 0;
 		VkDeviceSize targetSize = bufferData->size;
@@ -387,7 +384,8 @@ Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(Fr
 		return 0;
 	};
 
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&, this] (CommandBuffer &buf) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&, this](CommandBuffer &buf) {
 		uint64_t targetIndexOffset = 0;
 		uint64_t targetVertexOffset = 0;
 
@@ -415,8 +413,8 @@ Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(Fr
 				it.indexOffset = maxOf<VkDeviceSize>();
 			}
 
-			auto vertexBufferSize = writeBufferCopy(buf, it.index->getVertexBufferData(), vertexBuffer,
-					targetVertexOffset, it.vertexOffset, prevVertexBuffer);
+			auto vertexBufferSize = writeBufferCopy(buf, it.index->getVertexBufferData(),
+					vertexBuffer, targetVertexOffset, it.vertexOffset, prevVertexBuffer);
 			if (vertexBufferSize > 0) {
 				it.vertexOffset = targetIndexOffset;
 				targetIndexOffset += vertexBufferSize;
@@ -435,7 +433,8 @@ Vector<const core::CommandBuffer *> MeshCompilerPassHandle::doPrepareCommands(Fr
 	return Vector<const core::CommandBuffer *>();
 }
 
-void MeshCompilerPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func, bool success, Rc<Fence> &&fence) {
+void MeshCompilerPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func,
+		bool success, Rc<core::Fence> &&fence) {
 	if (success) {
 		_meshAttachment->getInputData()->attachment->setMeshes(sp::move(_outputData));
 	}
@@ -444,7 +443,8 @@ void MeshCompilerPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)
 	frame.signalDependencies(success);
 }
 
-void MeshCompilerPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func, bool success) {
+void MeshCompilerPassHandle::doComplete(FrameQueue &queue, Function<void(bool)> &&func,
+		bool success) {
 	QueuePassHandle::doComplete(queue, sp::move(func), success);
 }
 
@@ -459,4 +459,4 @@ bool MeshCompilerPassHandle::loadPersistent(core::MeshIndex *index) {
 	return false;
 }
 
-}
+} // namespace stappler::xenolith::vk

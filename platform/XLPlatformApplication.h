@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +30,7 @@
 #include "SPThreadTaskQueue.h"
 #include "SPCommandLineParser.h"
 #include "SPEventLooper.h"
+#include "SPEventBus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -51,7 +53,8 @@ struct SP_PUBLIC UpdateTime {
 struct SP_PUBLIC ApplicationInfo {
 	static CommandLineParser<ApplicationInfo> CommandLine;
 
-	static ApplicationInfo readFromCommandLine(int argc, const char * argv[], const Callback<void(StringView)> &cb = nullptr);
+	static ApplicationInfo readFromCommandLine(int argc, const char *argv[],
+			const Callback<void(StringView)> &cb = nullptr);
 
 	// application reverce-domain name
 	String bundleName = "org.stappler.xenolith.test";
@@ -75,7 +78,7 @@ struct SP_PUBLIC ApplicationInfo {
 	uint32_t applicationVersionCode = 0;
 
 	// application screen size (windows size of fullscreen size)
-	Extent2 screenSize = Extent2(1024, 768);
+	Extent2 screenSize = Extent2(1'024, 768);
 
 	// Window decoration padding
 	Padding viewDecoration;
@@ -117,7 +120,7 @@ struct SP_PUBLIC ApplicationInfo {
 	uint16_t mainThreadsCount = 1;
 
 	// Application event update interval (NOT screen update interval)
-	TimeInterval updateInterval = TimeInterval::microseconds(100000);
+	TimeInterval updateInterval = TimeInterval::microseconds(100'000);
 
 	Function<void(const PlatformApplication &)> initCallback;
 	Function<void(const PlatformApplication &, const UpdateTime &)> updateCallback;
@@ -134,6 +137,8 @@ public:
 
 	using ExecuteCallback = Function<bool(const Task &)>;
 	using CompleteCallback = Function<void(const Task &, bool)>;
+
+	static event::Bus *getSharedBus();
 
 	virtual ~PlatformApplication();
 	PlatformApplication();
@@ -152,8 +157,8 @@ public:
 
 	virtual void wakeup();
 
-	void performOnGlThread(Function<void()> &&func, Ref *target = nullptr,
-			bool immediate = false, StringView tag = STAPPLER_LOCATION) const;
+	void performOnGlThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false,
+			StringView tag = STAPPLER_LOCATION) const;
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
@@ -162,16 +167,16 @@ public:
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
-    void performOnAppThread(Rc<Task> &&task, bool onNextFrame = false);
+	void performOnAppThread(Rc<Task> &&task, bool onNextFrame = false);
 
 	/* Performs action in this thread, task will be constructed in place */
 	void perform(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr) const;
 
 	/* Performs task in thread, identified by id */
-    void perform(Rc<Task> &&task) const;
+	void perform(Rc<Task> &&task) const;
 
 	/* Performs task in thread, identified by id */
-    void perform(Rc<Task> &&task, bool performFirst) const;
+	void perform(Rc<Task> &&task, bool performFirst) const;
 
 	const ApplicationInfo &getInfo() const { return _info; }
 
@@ -230,6 +235,6 @@ protected:
 	Bytes _messageToken;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_PLATFORM_XLPLATFORMAPPLICATION_H_ */

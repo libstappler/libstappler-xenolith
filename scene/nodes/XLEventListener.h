@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,27 +24,47 @@
 #ifndef XENOLITH_SCENE_NODES_XLEVENTLISTENER_H_
 #define XENOLITH_SCENE_NODES_XLEVENTLISTENER_H_
 
+#include "SPEventBus.h"
 #include "XLEvent.h"
-#include "XLEventHandler.h"
 #include "XLComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SP_PUBLIC EventListener : public Component, public EventHandler {
+using EventCallback = Function<void(const Event &)>;
+
+class SP_PUBLIC EventDelegate : public event::BusDelegate {
 public:
-	using EventCallback = Function<void(const Event &)>;
+	virtual ~EventDelegate() = default;
 
-	virtual ~EventListener();
-	virtual bool init() override;
+	bool init(Ref *, const EventHeader &h, BusEventCallback &&);
 
-	void onEventRecieved(const Event &ev, const EventCallback &);
-
-	EventHandlerNode * onEvent(const EventHeader &h, EventCallback &&, bool destroyAfterEvent = false);
-	EventHandlerNode * onEventWithObject(const EventHeader &h, Ref *obj, EventCallback &&, bool destroyAfterEvent = false);
-
-	void clear();
+	void enable(event::Looper *);
+	void disable();
 };
 
-}
+class SP_PUBLIC EventListener : public Component {
+public:
+	virtual ~EventListener();
+
+	virtual bool init() override;
+
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
+
+	virtual void handleRemoved() override;
+
+	event::BusDelegate *listenForEvent(const EventHeader &h, EventCallback &&,
+			bool removeAfterEvent = false);
+
+	event::BusDelegate *listenForEventWithObject(const EventHeader &h, Ref *obj, EventCallback &&,
+			bool removeAfterEvent = false);
+
+	void clear();
+
+protected:
+	Set<Rc<EventDelegate>> _listeners;
+};
+
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_NODES_XLEVENTLISTENER_H_ */

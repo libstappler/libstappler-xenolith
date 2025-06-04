@@ -79,7 +79,8 @@ public:
 
 protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
-	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
+	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool,
+			Rc<core::Fence> &&) override;
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool) override;
 
 	Rc<core::MaterialSet> _outputData;
@@ -347,7 +348,7 @@ Vector<const core::CommandBuffer *> MaterialCompilationPassHandle::doPrepareComm
 }
 
 void MaterialCompilationPassHandle::doSubmitted(FrameHandle &frame, Function<void(bool)> &&func,
-		bool success, Rc<Fence> &&fence) {
+		bool success, Rc<core::Fence> &&fence) {
 	if (success) {
 		_materialAttachment->getInputData()->attachment->setMaterials(_outputData);
 	}

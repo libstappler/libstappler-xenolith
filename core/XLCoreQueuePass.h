@@ -85,8 +85,10 @@ public:
 	virtual StringView getName() const override;
 
 	virtual const QueuePassData *getData() const { return _data; }
-	virtual const Rc<QueuePass> &getQueuePass() const { return _queuePass; }
-	virtual const Rc<Framebuffer> &getFramebuffer() const;
+	virtual QueuePass *getQueuePass() const { return _queuePass; }
+	virtual Framebuffer *getFramebuffer() const;
+
+	virtual Fence *getFence() const { return _fence; }
 
 	// Check if render pass can be performed for frame
 	// `isAvailable` should be called before `prepare`, but after all pass resources
@@ -129,6 +131,9 @@ protected:
 	Rc<QueuePass> _queuePass;
 	const QueuePassData *_data = nullptr;
 	FramePassData *_queueData = nullptr;
+
+	Loop *_loop = nullptr;
+	Rc<Fence> _fence;
 
 	mutable Mutex _autoreleaseMutex;
 	mutable Vector<Rc<Ref>> _autorelease;

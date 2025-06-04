@@ -21,6 +21,7 @@
  **/
 
 #include "Renderer2dParticleTest.h"
+#include "SPMath.h"
 #include "SPTime.h"
 #include "SPVec2.h"
 #include "XL2dParticleEmitter.h"
@@ -33,9 +34,13 @@ bool Renderer2dParticleTest::init() {
 		return false;
 	}
 
-	auto system = Rc<ParticleSystem>::create(10, TimeInterval::milliseconds(16).toMicros(), 3.0f);
+	auto system = Rc<ParticleSystem>::create(64, TimeInterval::milliseconds(16).toMicros(), 3.0f);
 
-	system->setParticleSize(Size2(10.0f, 10.0f));
+	system->setParticleSize(Size2(4.0f, 4.0f));
+	system->setRandomness(0.0f);
+	system->setNormal(0.0f, numbers::pi * 4);
+	system->setVelocity(10.0f);
+	system->setAcceleration(20.0f);
 
 	_emitter = addChild(Rc<ParticleEmitter>::create(system));
 	_emitter->setAnchorPoint(Anchor::Middle);

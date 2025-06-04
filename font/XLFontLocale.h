@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +24,7 @@
 #ifndef XENOLITH_FONT_XLFONTLOCALE_H_
 #define XENOLITH_FONT_XLFONTLOCALE_H_
 
-#include "XLEventHeader.h"
+#include "XLEvent.h"
 #include "XLFontConfig.h"
 #include "SPMetastring.h"
 
@@ -35,8 +36,9 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 #endif
 
 // full localized string
-template <typename CharType, CharType ... Chars> auto operator ""_locale() {
-	return metastring::merge("@Locale:"_meta, metastring::metastring<Chars ...>());
+template <typename CharType, CharType... Chars>
+auto operator""_locale() {
+	return metastring::merge("@Locale:"_meta, metastring::metastring<Chars...>());
 }
 
 #ifdef __clang__
@@ -44,7 +46,7 @@ template <typename CharType, CharType ... Chars> auto operator ""_locale() {
 #endif
 
 // localized token
-inline String operator""_token ( const char* str, std::size_t len) {
+inline String operator""_token(const char *str, std::size_t len) {
 	String ret;
 	ret.reserve(len + 2);
 	ret.append("%");
@@ -54,7 +56,8 @@ inline String operator""_token ( const char* str, std::size_t len) {
 }
 
 inline String localeIndex(size_t idx) {
-	String ret; ret.reserve(20);
+	String ret;
+	ret.reserve(20);
 	ret.append("%=");
 	ret.append(toString(idx));
 	ret.push_back('%');
@@ -66,7 +69,7 @@ inline constexpr auto localeIndex() {
 	return metastring::merge("%="_meta, metastring::numeric<Index>(), "%"_meta);
 }
 
-}
+} // namespace stappler::xenolith
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
@@ -96,7 +99,8 @@ extern EventHeader onLocale;
 
 SP_PUBLIC void define(const StringView &locale, LocaleInitList &&);
 SP_PUBLIC void define(const StringView &locale, LocaleIndexList &&);
-SP_PUBLIC void define(const StringView &locale, const std::array<StringView, toInt(TimeTokens::Max)> &);
+SP_PUBLIC void define(const StringView &locale,
+		const std::array<StringView, toInt(TimeTokens::Max)> &);
 
 SP_PUBLIC void setDefault(StringView);
 SP_PUBLIC StringView getDefault();
@@ -109,14 +113,14 @@ SP_PUBLIC void setNumRule(const String &, NumRule &&);
 SP_PUBLIC WideStringView string(const WideStringView &);
 SP_PUBLIC WideStringView string(size_t);
 
-template <char ... Chars>
+template <char... Chars>
 SP_PUBLIC WideStringView string(const metastring::metastring<Chars...> &str) {
 	return string(WideStringView(str.to_std_ustring()));
 }
 
 SP_PUBLIC WideStringView numeric(const WideStringView &, uint32_t);
 
-template <char ... Chars>
+template <char... Chars>
 SP_PUBLIC WideStringView numeric(const metastring::metastring<Chars...> &str, uint32_t n) {
 	return numeric(WideStringView(str.to_std_ustring()), n);
 }
@@ -137,6 +141,6 @@ SP_PUBLIC const std::array<memory::string, toInt(TimeTokens::Max)> &timeTokenTab
 SP_PUBLIC String localDate(Time);
 SP_PUBLIC String localDate(const std::array<StringView, toInt(TimeTokens::Max)> &, Time);
 
-}
+} // namespace stappler::xenolith::locale
 
 #endif /* XENOLITH_FONT_XLFONTLOCALE_H_ */

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +32,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-TextInputHandler::~TextInputHandler() {
-	cancel();
-}
+TextInputHandler::~TextInputHandler() { cancel(); }
 
-bool TextInputHandler::run(TextInputManager *manager, WideStringView str, TextCursor cursor, TextCursor marked, TextInputType type) {
+bool TextInputHandler::run(TextInputManager *manager, WideStringView str, TextCursor cursor,
+		TextCursor marked, TextInputType type) {
 	if (!isActive()) {
 		this->manager = manager;
 		return manager->run(this, str, cursor, marked, type);
@@ -75,19 +75,11 @@ bool TextInputHandler::setMarked(TextCursor c) {
 	return false;
 }
 
-WideStringView TextInputHandler::getString() const {
-	return this->manager->getString();
-}
-TextCursor TextInputHandler::getCursor() const {
-	return this->manager->getCursor();
-}
-TextCursor TextInputHandler::getMarked() const {
-	return this->manager->getMarked();
-}
+WideStringView TextInputHandler::getString() const { return this->manager->getString(); }
+TextCursor TextInputHandler::getCursor() const { return this->manager->getCursor(); }
+TextCursor TextInputHandler::getMarked() const { return this->manager->getMarked(); }
 
-bool TextInputHandler::isInputEnabled() const {
-	return this->manager->isInputEnabled();
-}
+bool TextInputHandler::isInputEnabled() const { return this->manager->isInputEnabled(); }
 
 bool TextInputHandler::isActive() const {
 	return this->manager && this->manager->getHandler() == this;
@@ -100,13 +92,11 @@ bool TextInputManager::init(TextInputViewInterface *view) {
 	return true;
 }
 
-bool TextInputManager::hasText() {
-	return _string.length() != 0;
-}
+bool TextInputManager::hasText() { return _string.length() != 0; }
 
 void TextInputManager::insertText(WideStringView sInsert, bool compose) {
 	if (doInsertText(sInsert, compose)) {
-		onTextChanged();
+		handleTextChanged();
 	}
 }
 
@@ -116,11 +106,12 @@ void TextInputManager::insertText(WideStringView sInsert, TextCursor replacement
 	}
 
 	if (doInsertText(sInsert, false)) {
-		onTextChanged();
+		handleTextChanged();
 	}
 }
 
-void TextInputManager::setMarkedText(WideStringView sInsert, TextCursor replacement, TextCursor marked) {
+void TextInputManager::setMarkedText(WideStringView sInsert, TextCursor replacement,
+		TextCursor marked) {
 	if (replacement.start != maxOf<uint32_t>()) {
 		_cursor = replacement;
 	}
@@ -129,7 +120,7 @@ void TextInputManager::setMarkedText(WideStringView sInsert, TextCursor replacem
 
 	if (doInsertText(sInsert, false)) {
 		_marked = TextCursor(start + marked.start, marked.length);
-		onTextChanged();
+		handleTextChanged();
 	}
 }
 
@@ -139,24 +130,24 @@ void TextInputManager::textChanged(WideStringView text, TextCursor cursor, TextC
 		_cursor.start = 0;
 		_cursor.length = 0;
 		_marked = TextCursor::InvalidCursor;
-		onTextChanged();
+		handleTextChanged();
 		return;
 	}
 
 	_string = text.str<Interface>();
 	_cursor = cursor;
 	_marked = marked;
-	onTextChanged();
+	handleTextChanged();
 }
 
 void TextInputManager::cursorChanged(TextCursor cursor) {
 	_cursor = cursor;
-	onTextChanged();
+	handleTextChanged();
 }
 
 void TextInputManager::markedChanged(TextCursor marked) {
 	_marked = marked;
-	onTextChanged();
+	handleTextChanged();
 }
 
 void TextInputManager::deleteBackward() {
@@ -165,9 +156,10 @@ void TextInputManager::deleteBackward() {
 	}
 
 	if (_cursor.length > 0) {
-		_string.erase(_string.begin() + _cursor.start, _string.begin() + _cursor.start + _cursor.length);
+		_string.erase(_string.begin() + _cursor.start,
+				_string.begin() + _cursor.start + _cursor.length);
 		_cursor.length = 0;
-		onTextChanged();
+		handleTextChanged();
 		return;
 	}
 
@@ -182,13 +174,14 @@ void TextInputManager::deleteBackward() {
 		_string = WideString();
 		_cursor.start = 0;
 		_cursor.length = 0;
-		onTextChanged();
+		handleTextChanged();
 		return;
 	}
 
-	_string.erase(_string.begin() + _cursor.start - 1, _string.begin() + _cursor.start - 1 + nDeleteLen);
+	_string.erase(_string.begin() + _cursor.start - 1,
+			_string.begin() + _cursor.start - 1 + nDeleteLen);
 	_cursor.start -= nDeleteLen;
-	onTextChanged();
+	handleTextChanged();
 }
 
 void TextInputManager::deleteForward() {
@@ -197,9 +190,10 @@ void TextInputManager::deleteForward() {
 	}
 
 	if (_cursor.length > 0) {
-		_string.erase(_string.begin() + _cursor.start, _string.begin() + _cursor.start + _cursor.length);
+		_string.erase(_string.begin() + _cursor.start,
+				_string.begin() + _cursor.start + _cursor.length);
 		_cursor.length = 0;
-		onTextChanged();
+		handleTextChanged();
 		return;
 	}
 
@@ -214,17 +208,15 @@ void TextInputManager::deleteForward() {
 		_string = WideString();
 		_cursor.start = 0;
 		_cursor.length = 0;
-		onTextChanged();
+		handleTextChanged();
 		return;
 	}
 
 	_string.erase(_string.begin() + _cursor.start, _string.begin() + _cursor.start + nDeleteLen);
-	onTextChanged();
+	handleTextChanged();
 }
 
-void TextInputManager::unmarkText() {
-	markedChanged(TextCursor::InvalidCursor);
-}
+void TextInputManager::unmarkText() { markedChanged(TextCursor::InvalidCursor); }
 
 void TextInputManager::setInputEnabled(bool enabled) {
 	if (_isInputEnabled != enabled) {
@@ -239,13 +231,14 @@ void TextInputManager::setInputEnabled(bool enabled) {
 	}
 }
 
-void TextInputManager::onTextChanged() {
+void TextInputManager::handleTextChanged() {
 	if (_handler && _handler->onText) {
 		_handler->onText(_string, _cursor, _marked);
 	}
 }
 
-bool TextInputManager::run(TextInputHandler *h, WideStringView str, TextCursor cursor, TextCursor marked, TextInputType type) {
+bool TextInputManager::run(TextInputHandler *h, WideStringView str, TextCursor cursor,
+		TextCursor marked, TextInputType type) {
 	auto oldH = _handler;
 	_handler = h;
 	if (oldH && _running) {
@@ -302,9 +295,7 @@ void TextInputManager::setMarked(TextCursor marked) {
 	}
 }
 
-WideStringView TextInputManager::getString() const {
-	return _string;
-}
+WideStringView TextInputManager::getString() const { return _string; }
 
 WideStringView TextInputManager::getStringByRange(TextCursor cursor) {
 	WideStringView str = _string;
@@ -319,12 +310,8 @@ WideStringView TextInputManager::getStringByRange(TextCursor cursor) {
 
 	return str.sub(0, cursor.length);
 }
-TextCursor TextInputManager::getCursor() const {
-	return _cursor;
-}
-TextCursor TextInputManager::getMarked() const {
-	return _marked;
-}
+TextCursor TextInputManager::getCursor() const { return _cursor; }
+TextCursor TextInputManager::getMarked() const { return _marked; }
 
 void TextInputManager::cancel() {
 	if (_running) {
@@ -346,13 +333,13 @@ bool TextInputManager::canHandleInputEvent(const InputEventData &data) {
 		case InputEventName::KeyRepeated:
 		case InputEventName::KeyReleased:
 		case InputEventName::KeyCanceled:
-			if (data.key.keychar || data.key.keycode == InputKeyCode::BACKSPACE || data.key.keycode == InputKeyCode::DELETE
+			if (data.key.keychar || data.key.keycode == InputKeyCode::BACKSPACE
+					|| data.key.keycode == InputKeyCode::DELETE
 					|| data.key.keycode == InputKeyCode::ESCAPE) {
 				return true;
 			}
 			break;
-		default:
-			break;
+		default: break;
 		}
 	}
 	return false;
@@ -372,7 +359,8 @@ bool TextInputManager::handleInputEvent(const InputEventData &data) {
 		if (data.key.keycode == InputKeyCode::BACKSPACE || data.key.keychar == char32_t(0x0008)) {
 			deleteBackward();
 			return true;
-		} else if (data.key.keycode == InputKeyCode::DELETE || data.key.keychar == char32_t(0x007f)) {
+		} else if (data.key.keycode == InputKeyCode::DELETE
+				|| data.key.keychar == char32_t(0x007f)) {
 			deleteForward();
 			return true;
 		} else if (data.key.keycode == InputKeyCode::ESCAPE) {
@@ -398,17 +386,14 @@ bool TextInputManager::handleInputEvent(const InputEventData &data) {
 			case InputKeyComposeState::Composing:
 				insertText(string::toUtf16<Interface>(c), true);
 				break;
-			case InputKeyComposeState::Disabled:
-				break;
+			case InputKeyComposeState::Disabled: break;
 			}
 			_compose = data.key.compose;
 			return true;
 		}
 		break;
-	case InputEventName::KeyCanceled:
-		break;
-	default:
-		break;
+	case InputEventName::KeyCanceled: break;
+	default: break;
 	}
 	return false;
 }
@@ -416,7 +401,8 @@ bool TextInputManager::handleInputEvent(const InputEventData &data) {
 bool TextInputManager::doInsertText(WideStringView sInsert, bool compose) {
 	if (sInsert.size() > 0) {
 		if (_cursor.length > 0 && (!compose || _compose != InputKeyComposeState::Composing)) {
-			_string.erase(_string.begin() + _cursor.start, _string.begin() + _cursor.start + _cursor.length);
+			_string.erase(_string.begin() + _cursor.start,
+					_string.begin() + _cursor.start + _cursor.length);
 			_cursor.length = 0;
 		}
 
@@ -439,4 +425,4 @@ bool TextInputManager::doInsertText(WideStringView sInsert, bool compose) {
 	return false;
 }
 
-}
+} // namespace stappler::xenolith

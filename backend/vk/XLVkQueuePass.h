@@ -105,7 +105,7 @@ protected:
 	virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &);
 	virtual bool doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubmited);
 
-	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&);
+	virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<core::Fence> &&);
 
 	// called before OnComplete event sended to FrameHandle (so, before any finalization)
 	virtual void doComplete(FrameQueue &, Function<void(bool)> &&, bool);
@@ -134,8 +134,6 @@ protected:
 	bool _descriptorsReady = false;
 
 	Device *_device = nullptr;
-	Loop *_loop = nullptr;
-	Rc<Fence> _fence;
 	Rc<CommandPool> _pool;
 	Rc<DeviceQueue> _queue;
 	Vector<Rc<DescriptorPool>> _descriptors;

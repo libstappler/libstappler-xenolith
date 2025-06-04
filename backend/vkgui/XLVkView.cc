@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -55,7 +56,7 @@ bool View::init(Application &app, const Device &dev, ViewInfo &&info) {
 		return false;
 	}
 
-	_instance = _glLoop->getInstance().get_cast<Instance>();
+	_instance = _loop->getInstance().get_cast<Instance>();
 	_device = const_cast<Device *>(static_cast<const Device *>(&dev));
 	return true;
 }
@@ -66,7 +67,7 @@ void View::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image
 		AttachmentLayout l) const {
 	auto path = file.path.str<Interface>();
 	auto cat = file.category;
-	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l,
+	_device->readImage(*_loop.get_cast<Loop>(), image.get_cast<Image>(), l,
 			[path, cat](const ImageInfoData &info, BytesView view) mutable {
 		if (!StringView(path).ends_with(".png")) {
 			path = path + String(".png");
@@ -91,7 +92,7 @@ void View::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image
 
 void View::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 		const Rc<core::ImageObject> &image, AttachmentLayout l) const {
-	_device->readImage(*(Loop *)_glLoop.get(), (Image *)image.get(), l, sp::move(cb));
+	_device->readImage(*_loop.get_cast<Loop>(), image.get_cast<Image>(), l, sp::move(cb));
 }
 
 void View::handleFramePresented(core::PresentationFrame *frame) { }

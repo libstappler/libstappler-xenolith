@@ -7,11 +7,14 @@
 #include "XL2dGlslParticle.h"
 #include "XL2dGlslVertexData.h"
 
+layout (constant_id = 0) const int ENABLE_FEEDBACK = 0;
+
 layout(buffer_reference) readonly buffer EmitterBuffer;
 layout(buffer_reference) readonly buffer EmissionPointsBuffer;
 layout(buffer_reference) buffer ParticlesBuffer;
 layout(buffer_reference) buffer VerticesBuffer;
 layout(buffer_reference) buffer CommandBuffer;
+layout(buffer_reference) buffer FeedbackBuffer;
 
 layout (push_constant) uniform PCB {
 	ParticleConstantData pcb;
@@ -38,6 +41,10 @@ layout(std430, buffer_reference, buffer_reference_align = 8) buffer CommandBuffe
 	ParticleIndirectCommand command;
 };
 
+layout(std430, buffer_reference, buffer_reference_align = 8) buffer FeedbackBuffer {
+	ParticleFeedback data;
+};
+
 layout(local_size_x = 64) in;
 
 VerticesBuffer vertexBuffer = VerticesBuffer(pcb.outVerticesPointer);
@@ -58,54 +65,61 @@ vec2 rotateNormalVec(vec2 n, vec2 dA) {
 	return n * dA.x + vec2(-n.y, n.x) * dA.y;
 }
 
+float getParam(in ParticleFloatParam param, inout pcg16_state_t rng, in uint count, in float randomness) {
+	return param.init
+		+ param.rnd * pcg16_random_float_r(rng) * randomness
+		+ param.rnd * (float(gl_GlobalInvocationID.x) / float(count)) * (1.0 - randomness);
+}
+
+vec2 getParam(in ParticleVec2Param param, inout pcg16_state_t rng, in uint count, in float randomness) {
+	return param.init
+		+ param.rnd * vec2(pcg16_random_float_r(rng), pcg16_random_float_r(rng)) * randomness
+		+ param.rnd * (float(gl_GlobalInvocationID.x) / float(count)) * (1.0 - randomness);
+}
+
 void emitParticle(inout ParticleData particle) {
-	vec2 emissionPoint;
-	/*if (emitter.emissionType == 0) {
-		EmissionPointsBuffer points = EmissionPointsBuffer(emitter.emissionData);
-		uint index = brand(particle, points.data.count);
-		emissionPoint = points.points[index];
-	}*/
+	const ParticleEmitterData emitter = EmitterBuffer(pcb.emitterPointer).data;
+
+	vec2 emissionPoint = vec2(0, 0);
+	//if (emitter.emissionType == 0) {
+	//	EmissionPointsBuffer points = EmissionPointsBuffer(emitter.emissionData);
+	//	uint index = brand(particle, points.data.count);
+	//	emissionPoint = points.points[index];
+	//}
 
 	particle.position = emissionPoint;
-	particle.color = emitterBuffer.data.color;
+	particle.color = emitter.color;
 
-	particle.fullLifetime = uint(ceil((emitterBuffer.data.lifetime.init
-			+ emitterBuffer.data.lifetime.rnd * frand(particle)) / emitterBuffer.data.dt));
+	particle.fullLifetime = uint(floor( (getParam(emitter.lifetime, particle.rng, emitter.count, emitter.randomness)) / emitter.dt ));
 	particle.currentLifetime = particle.fullLifetime;
 
-	particle.scale = emitterBuffer.data.sizeValue * (emitterBuffer.data.scale.init
-			+ emitterBuffer.data.scale.rnd * frand(particle));
-	particle.angle = getNormalFromAngle(emitterBuffer.data.angle.init
-			+ emitterBuffer.data.angle.rnd * frand(particle));
-	particle.normal = getNormalFromAngle(emitterBuffer.data.normal.init
-			+ emitterBuffer.data.normal.rnd * frand(particle));
+	particle.sizeValue = emitter.sizeValue * getParam(emitter.scale, particle.rng, emitter.count, emitter.randomness);
 
-	particle.velocity = emitterBuffer.data.velocity.init
-			+ emitterBuffer.data.velocity.rnd * frand(particle);
-	particle.linearVelocity = emitterBuffer.data.linearVelocity.init
-			+ emitterBuffer.data.linearVelocity.rnd * vrand(particle);
+	particle.angle = getNormalFromAngle( getParam(emitter.angle, particle.rng, emitter.count, emitter.randomness) );
+	particle.normal = getNormalFromAngle( getParam(emitter.normal, particle.rng, emitter.count, emitter.randomness) );
 
-	particle.qAngularVelocity = (getNormalFromAngle(emitterBuffer.data.angularVelocity.init
-			+ emitterBuffer.data.angularVelocity.rnd * frand(particle)))
-			* emitterBuffer.data.dt;
+	particle.velocity = getParam(emitter.velocity, particle.rng, emitter.count, emitter.randomness);
+	particle.linearVelocity = getParam(emitter.linearVelocity, particle.rng, emitter.count, emitter.randomness);
 
-	particle.orbitalVelocity = emitterBuffer.data.orbitalVelocity.init
-			+ emitterBuffer.data.orbitalVelocity.rnd * frand(particle);
+	particle.qAcceleration = getParam(emitter.acceleration, particle.rng, emitter.count, emitter.randomness)
+				* emitter.dt;
+	
+	/*particle.qAngularVelocity = getNormalFromAngle(
+			getParam(emitter.angularVelocity, particle.rng))
+			* emitter.dt;
 
-	particle.radialVelocity = emitterBuffer.data.radialVelocity.init
-			+ emitterBuffer.data.radialVelocity.rnd * frand(particle);
+	particle.orbitalVelocity = getParam(emitter.orbitalVelocity, particle.rng);
 
-	particle.qAcceleration = (emitterBuffer.data.acceleration.init
-			+ emitterBuffer.data.acceleration.rnd * frand(particle))
-			* emitterBuffer.data.dt;
+	particle.radialVelocity = getParam(emitter.radialVelocity, particle.rng);
 
-	particle.qLinearAcceleration = (emitterBuffer.data.linearAcceleration.init
-			+ emitterBuffer.data.linearAcceleration.rnd * vrand(particle))
-			* emitterBuffer.data.dt;
+	
 
-	particle.radialAcceleration = emitterBuffer.data.radialAcceleration.init + emitterBuffer.data.radialAcceleration.rnd * frand(particle);
-	particle.tangentialAcceleration = emitterBuffer.data.tangentialAcceleration.init + emitterBuffer.data.tangentialAcceleration.rnd * frand(particle);
-	particle.hue = emitterBuffer.data.hue.init + emitterBuffer.data.hue.rnd * frand(particle);
+	particle.qLinearAcceleration = getParam(emitter.linearAcceleration, particle.rng)
+			* emitter.dt;
+
+	particle.radialAcceleration = getParam(emitter.radialAcceleration, particle.rng);
+	particle.tangentialAcceleration = getParam(emitter.tangentialAcceleration, particle.rng);
+	particle.hue = getParam(emitter.hue, particle.rng);*/
 }
 
 void simulateParticleFrame(inout ParticleData particle) {
@@ -115,7 +129,7 @@ void simulateParticleFrame(inout ParticleData particle) {
 	vec2 alongNormal = particle.normal * particle.velocity * pcb.dt;
 	vec2 linear = particle.linearVelocity * pcb.dt;
 
-	particle.position = particle.position + alongNormal + linear;
+	particle.position = particle.position + alongNormal /*+ linear*/;
 
 	particle.angle = rotateNormalVec(particle.angle, particle.qAngularVelocity);
 }
@@ -125,7 +139,8 @@ void main() {
 		return;
 	}
 
-	const float particleProgress = float(gl_GlobalInvocationID.x) / float(emitterBuffer.data.count);
+	const float particleProgress = float(gl_GlobalInvocationID.x) / float(emitterBuffer.data.count)
+			* (1.0 - emitterBuffer.data.explosiveness);
 
 	uint nframes = pcb.nframes;
 
@@ -133,33 +148,42 @@ void main() {
 
 	// first - simulate particle
 
-	/*if (nframes > 0) {
-		uint keyFrame = uint( floor(pcb.timeline * gl_GlobalInvocationID.x) );
-
-		if (pcb.genframe <= keyFrame && keyFrame < pcb.genframe + nframes ) {
-			nframes -= keyFrame - pcb.genframe;
-
+	if (nframes > 0) {
+		if (pcb.gentime <= particleProgress && particleProgress < pcb.gentime + pcb.gendt * float(nframes)) {
 			emitParticle(particle);
+			nframes -= min(uint(floor((particleProgress - pcb.gentime) * pcb.gendt)), nframes - 1);
+
+			/*if (ENABLE_FEEDBACK != 0) {
+				FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
+				atomicAdd(feedbackBuffer.data.emissionCount, 1);
+			}*/
 		}
 
 		if (particle.currentLifetime <= nframes) {
 			particle.currentLifetime = 0;
+			/*if (ENABLE_FEEDBACK != 0) {
+				FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
+				atomicAdd(feedbackBuffer.data.skippedCount, 1);
+			}*/
 		} else {
 			for (uint i = 0; i < nframes; ++ i) {
 				simulateParticleFrame(particle);
+				/*if (ENABLE_FEEDBACK != 0) {
+					FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
+					atomicAdd(feedbackBuffer.data.simulationCount, 1);
+				}*/
 			}
 			particle.currentLifetime -= nframes;
 		}
 
-		particleBuffer.particles[gl_GlobalInvocationID.x] = particle;
+		ParticlesBuffer(pcb.particlesPointer).particles[gl_GlobalInvocationID.x] = particle;
 	}
 
 	// second - write vertexes for the paticle
 
 	if (particle.currentLifetime == 0) {
 		return;
-	}*/
-
+	}
 
 	/*vec2 bl = rotateNormalVec(-particle.sizeNormal, particle.angle) * particle.scale;
 	vec2 tl = rotateNormalVec(vec2(-particle.sizeNormal.x, particle.sizeNormal.y), particle.angle) * particle.scale;
@@ -168,9 +192,7 @@ void main() {
 
 	const uint vertexOffset = atomicAdd(commandBuffer.command.vertexCount, 6);
 
-	float progressAngle = (particleProgress) * (float(M_PI) * 2.0);
-	vec2 normalVec = vec2(cos(progressAngle), sin(progressAngle));
-	vec2 pos = normalVec * 50.0 * fract(pcb.gentime + particleProgress);
+	vec2 pos = particle.position; //particle.normal * 50.0 * fract(pcb.gentime + particleProgress);
 
 	vec2 bl = -emitterBuffer.data.sizeNormal * emitterBuffer.data.sizeValue;
 	vec2 tl = vec2(-emitterBuffer.data.sizeNormal.x, emitterBuffer.data.sizeNormal.y) * emitterBuffer.data.sizeValue;

@@ -66,6 +66,7 @@ using glsl::ParticleEmissionPoints;
 using glsl::ParticleEmitterData;
 using glsl::ParticleData;
 using glsl::ParticleConstantData;
+using glsl::ParticleFeedback;
 
 struct Triangle {
 	Vertex a;

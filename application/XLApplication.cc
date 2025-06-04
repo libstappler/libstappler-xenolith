@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +23,6 @@
 
 #include "XLApplication.h"
 #include "XLEvent.h"
-#include "XLEventHandler.h"
 #include "XLResourceCache.h"
 #include "XLCoreDevice.h"
 #include "XLCoreQueue.h"
@@ -67,42 +67,6 @@ void Application::threadDispose() {
 	PlatformApplication::threadDispose();
 
 	tl_mainLoop = nullptr;
-}
-
-void Application::addEventListener(const EventHandlerNode *listener) const {
-	auto it = _eventListeners.find(listener->getEventID());
-	if (it != _eventListeners.end()) {
-		it->second.insert(listener);
-	} else {
-		_eventListeners.emplace(listener->getEventID(),
-				HashSet<const EventHandlerNode *>{listener});
-	}
-}
-
-void Application::removeEventListner(const EventHandlerNode *listener) const {
-	auto it = _eventListeners.find(listener->getEventID());
-	if (it != _eventListeners.end()) {
-		it->second.erase(listener);
-	}
-}
-
-void Application::removeAllEventListeners() const { _eventListeners.clear(); }
-
-void Application::dispatchEvent(const Event &ev) const {
-	if (_eventListeners.size() > 0) {
-		auto it = _eventListeners.find(ev.getHeader().getEventID());
-		if (it != _eventListeners.end() && it->second.size() != 0) {
-			Vector<const EventHandlerNode *> listenersToExecute;
-			auto &listeners = it->second;
-			for (auto l : listeners) {
-				if (l->shouldRecieveEventWithObject(ev.getEventID(), ev.getObject())) {
-					listenersToExecute.push_back(l);
-				}
-			}
-
-			for (auto l : listenersToExecute) { l->onEventRecieved(ev); }
-		}
-	}
 }
 
 void Application::updateMessageToken(BytesView tok) {

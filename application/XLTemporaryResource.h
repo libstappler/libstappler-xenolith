@@ -24,12 +24,12 @@
 #ifndef XENOLITH_APPLICATION_XLTEMPORARYRESOURCE_H_
 #define XENOLITH_APPLICATION_XLTEMPORARYRESOURCE_H_
 
-#include "XLEventHeader.h"
 #include "XLResourceOwner.h"
 #include "XLCoreResource.h"
 #include "XLResourceCache.h"
 #include "XLTexture.h"
 #include "XLMeshIndex.h"
+#include "XLEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

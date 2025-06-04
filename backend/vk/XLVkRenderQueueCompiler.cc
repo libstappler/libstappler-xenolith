@@ -398,9 +398,10 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 		_attachment = static_cast<RenderQueueAttachmentHandle *>(a->handle.get());
 	}
 
-	_loop = static_cast<Loop *>(frame.getLoop());
 	_device = static_cast<Device *>(frame.getFrame()->getDevice());
 	_queue = _attachment->getRenderQueue();
+
+	prepareSubpasses(frame);
 
 	auto hasMaterials = false;
 	auto &res = _attachment->getTransferResource();

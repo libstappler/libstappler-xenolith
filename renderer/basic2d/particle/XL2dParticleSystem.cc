@@ -77,7 +77,19 @@ void ParticleSystem::setFrameInterval(uint32_t f) {
 	_data->data.dt = f / 1'000'000.0f;
 }
 
+void ParticleSystem::setRandomness(float v) {
+	if (_copyOnWrite) {
+		copy();
+	}
+
+	_data->data.randomness = v;
+}
+
+float ParticleSystem::getRandomness() const { return _data->data.randomness; }
+
 uint32_t ParticleSystem::getFrameInterval() const { return _data->data.frameInterval; }
+
+float ParticleSystem::getDt() const { return _data->data.dt; }
 
 void ParticleSystem::setEmissionPoints(SpanView<Vec2>) {
 	if (_copyOnWrite) {

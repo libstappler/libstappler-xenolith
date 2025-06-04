@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +26,7 @@
 
 #include "MaterialSurfaceStyle.h"
 #include "XLComponent.h"
-#include "XLEventHeader.h"
+#include "XLEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -61,6 +62,6 @@ protected:
 	Map<uint32_t, ColorScheme> _schemes;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLECONTAINER_H_ */

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +22,32 @@
  **/
 
 #include "XLEventListener.h"
-#include "XLEventHandler.h"
+#include "SPEventBus.h"
+#include "XLComponent.h"
+#include "XLApplication.h"
+#include "XLScene.h"
+#include "XLDirector.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+bool EventDelegate::init(Ref *owner, const EventHeader &ev, BusEventCallback &&cb) {
+	_owner = owner;
+	_categories.emplace_back(ev.getEventId());
+	_looper = nullptr;
+	_callback = sp::move(cb);
+
+	return true;
+}
+
+void EventDelegate::enable(event::Looper *looper) {
+	_looper = looper;
+	PlatformApplication::getSharedBus()->addListener(this);
+}
+
+void EventDelegate::disable() {
+	PlatformApplication::getSharedBus()->removeListener(this);
+	_looper = nullptr;
+}
 
 EventListener::~EventListener() { }
 
@@ -32,29 +56,92 @@ bool EventListener::init() {
 		return false;
 	}
 
+	_componentFlags = ComponentFlags::HandleOwnerEvents | ComponentFlags::HandleSceneEvents;
+
 	return true;
 }
 
-void EventListener::onEventRecieved(const Event &ev, const EventCallback &cb) {
-	if (_enabled && _owner && cb) {
-		cb(ev);
+void EventListener::handleEnter(Scene *scene) {
+	Component::handleEnter(scene);
+
+	for (auto &it : _listeners) {
+		it->enable(scene->getDirector()->getApplication()->getAppLooper());
 	}
 }
 
-EventHandlerNode * EventListener::onEvent(const EventHeader &h, EventCallback &&callback, bool destroyAfterEvent) {
-	return EventHandlerNode::onEvent(h, nullptr,
-			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, sp::move(callback)),
-			this, destroyAfterEvent);
+void EventListener::handleExit() {
+	for (auto &it : _listeners) { it->disable(); }
+	Component::handleExit();
 }
 
-EventHandlerNode * EventListener::onEventWithObject(const EventHeader &h, Ref *obj, EventCallback &&callback, bool destroyAfterEvent) {
-	return EventHandlerNode::onEvent(h, obj,
-			std::bind(&EventListener::onEventRecieved, this, std::placeholders::_1, sp::move(callback)),
-			this, destroyAfterEvent);
+void EventListener::handleRemoved() {
+	clear();
+	Component::handleRemoved();
+}
+
+event::BusDelegate *EventListener::listenForEvent(const EventHeader &h, EventCallback &&callback,
+		bool removeAfterEvent) {
+	auto d = Rc<EventDelegate>::create(this, h,
+			[this, callback = sp::move(callback), removeAfterEvent](event::Bus &bus,
+					const event::BusEvent &event, event::BusDelegate &d) {
+		if (_enabled && _owner && callback) {
+			callback(static_cast<const Event &>(event));
+			if (removeAfterEvent) {
+				bus.removeListener(&d);
+				_listeners.erase(static_cast<EventDelegate *>(&d));
+				d.invalidate();
+			}
+		}
+	});
+	_listeners.emplace(d);
+
+	if (_running && _owner) {
+		d->enable(_owner->getDirector()->getApplication()->getAppLooper());
+	}
+
+	return d;
+}
+
+event::BusDelegate *EventListener::listenForEventWithObject(const EventHeader &h, Ref *obj,
+		EventCallback &&callback, bool removeAfterEvent) {
+	auto d = Rc<EventDelegate>::create(this, h,
+			[this, callback = sp::move(callback), removeAfterEvent, obj](event::Bus &bus,
+					const event::BusEvent &event, event::BusDelegate &d) {
+		if (_enabled && _owner && callback) {
+			auto &ev = static_cast<const Event &>(event);
+			if (ev.getObject() == obj) {
+				callback(ev);
+				if (removeAfterEvent) {
+					bus.removeListener(&d);
+					_listeners.erase(static_cast<EventDelegate *>(&d));
+					d.invalidate();
+				}
+			}
+		}
+	});
+	_listeners.emplace(d);
+
+	if (_running && _owner) {
+		d->enable(_owner->getDirector()->getApplication()->getAppLooper());
+	}
+
+	return d;
 }
 
 void EventListener::clear() {
-	EventHandler::clearEvents();
+	auto l = sp::move(_listeners);
+	_listeners.clear();
+
+	for (auto &it : l) {
+		if (it->getLooper()) {
+			it->invalidate();
+		}
+		if (it->getBus()) {
+			it->disable();
+		}
+	}
+
+	l.clear();
 }
 
-}
+} // namespace stappler::xenolith

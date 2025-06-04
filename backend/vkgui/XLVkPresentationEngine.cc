@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,13 +41,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-bool PresentationEngine::init(Device *dev, View *view, Rc<Surface> &&surface, core::FrameConstraints &&c, uint64_t frameInterval) {
+bool PresentationEngine::init(Device *dev, View *view, Rc<Surface> &&surface,
+		core::FrameConstraints &&c, uint64_t frameInterval) {
 	_view = view;
 	_surface = move(surface);
 	_targetFrameInterval = frameInterval;
 
 	_device = dev;
-	_loop = view->getGlLoop();
+	_loop = view->getLoop();
 
 	_constraints = move(c);
 
@@ -54,7 +56,8 @@ bool PresentationEngine::init(Device *dev, View *view, Rc<Surface> &&surface, co
 }
 
 bool PresentationEngine::run() {
-	auto info = _view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
+	auto info =
+			_view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _view->selectConfig(info);
 
 	createSwapchain(info, move(cfg), cfg.presentMode);
@@ -72,11 +75,13 @@ bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
 	}
 
 
-	auto info = _view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
+	auto info =
+			_view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _view->selectConfig(info);
 
 	if (!info.isSupported(cfg)) {
-		log::error("Vk-Error", "Presentation with config ", cfg.description(), " is not supported for ", info.description());
+		log::error("Vk-Error", "Presentation with config ", cfg.description(),
+				" is not supported for ", info.description());
 		return false;
 	}
 
@@ -100,19 +105,21 @@ bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
 	return ret;
 }
 
-bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::SwapchainConfig &&cfg, core::PresentMode presentMode) {
+bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::SwapchainConfig &&cfg,
+		core::PresentMode presentMode) {
 	auto dev = static_cast<Device *>(_device);
 	auto devInfo = dev->getInfo();
 
 	auto swapchainImageInfo = _view->getSwapchainImageInfo(cfg);
-	uint32_t queueFamilyIndices[] = { devInfo.graphicsFamily.index, devInfo.presentFamily.index };
+	uint32_t queueFamilyIndices[] = {devInfo.graphicsFamily.index, devInfo.presentFamily.index};
 
 	do {
 		auto oldSwapchain = move(_swapchain);
 
 		log::verbose("vk::View", "Surface: ", info.description());
-		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo), presentMode,
-				_surface, queueFamilyIndices, oldSwapchain ? oldSwapchain.get_cast<SwapchainHandle>() : nullptr);
+		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
+				presentMode, _surface, queueFamilyIndices,
+				oldSwapchain ? oldSwapchain.get_cast<SwapchainHandle>() : nullptr);
 
 		if (_swapchain) {
 			_constraints.extent = cfg.extent;
@@ -124,15 +131,12 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 				for (auto &iit : it.views) {
 					auto id = iit.second->getIndex();
 					ids.emplace_back(iit.second->getIndex());
-					iit.second->setReleaseCallback([loop = _loop, cache, id] {
-						cache->removeImageView(id);
-					});
+					iit.second->setReleaseCallback(
+							[loop = _loop, cache, id] { cache->removeImageView(id); });
 				}
 			}
 
-			for (auto &id : ids) {
-				cache->addImageView(id);
-			}
+			for (auto &id : ids) { cache->addImageView(id); }
 
 			log::verbose("vk::View", "Swapchain: ", cfg.description());
 		}
@@ -146,19 +150,21 @@ void PresentationEngine::handleFramePresented(core::PresentationFrame *frame) {
 	core::PresentationEngine::handleFramePresented(frame);
 }
 
-void PresentationEngine::acquireFrameData(core::PresentationFrame *frame, Function<void(core::PresentationFrame *)> &&cb) {
-	_view->getApplication()->performOnAppThread([this, frame = Rc<core::PresentationFrame>(frame), cb = sp::move(cb)] () mutable {
+void PresentationEngine::acquireFrameData(core::PresentationFrame *frame,
+		Function<void(core::PresentationFrame *)> &&cb) {
+	_view->getApplication()->performOnAppThread(
+			[this, frame = Rc<core::PresentationFrame>(frame), cb = sp::move(cb)]() mutable {
 		XL_VKPRESENT_LOG("scheduleSwapchainImage: _director->acquireFrame");
 		if (_view->getDirector()->acquireFrame(frame->getRequest())) {
 			XL_VKPRESENT_LOG("scheduleSwapchainImage: frame acquired");
-			_view->performOnThread([frame = move(frame), cb = sp::move(cb)] () mutable {
-				cb(frame);
-			}, this);
+			_view->performOnThread(
+					[frame = move(frame), cb = sp::move(cb)]() mutable { cb(frame); }, this);
 		}
 	}, this);
 }
 
-bool PresentationEngine::isImagePresentable(const core::ImageObject &image, VkFilter &filter) const {
+bool PresentationEngine::isImagePresentable(const core::ImageObject &image,
+		VkFilter &filter) const {
 	auto dev = static_cast<Device *>(_device);
 
 	auto &config = _swapchain->getConfig();
@@ -178,7 +184,8 @@ bool PresentationEngine::isImagePresentable(const core::ImageObject &image, VkFi
 	dev->getInstance()->vkGetPhysicalDeviceFormatProperties(dev->getInfo().device,
 			VkFormat(config.imageFormat), &targetProps);
 
-	if (config.extent.width == sourceImageInfo.extent.width && config.extent.height == sourceImageInfo.extent.height) {
+	if (config.extent.width == sourceImageInfo.extent.width
+			&& config.extent.height == sourceImageInfo.extent.height) {
 		if ((targetProps.optimalTilingFeatures & VK_FORMAT_FEATURE_TRANSFER_DST_BIT) == 0) {
 			return false;
 		}
@@ -202,7 +209,9 @@ bool PresentationEngine::isImagePresentable(const core::ImageObject &image, VkFi
 				return false;
 			}
 
-			if ((sourceProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0) {
+			if ((sourceProps.optimalTilingFeatures
+						& VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+					!= 0) {
 				filter = VK_FILTER_LINEAR;
 			}
 		} else {
@@ -210,7 +219,9 @@ bool PresentationEngine::isImagePresentable(const core::ImageObject &image, VkFi
 				return false;
 			}
 
-			if ((sourceProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0) {
+			if ((sourceProps.linearTilingFeatures
+						& VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+					!= 0) {
 				filter = VK_FILTER_LINEAR;
 			}
 		}
@@ -219,4 +230,4 @@ bool PresentationEngine::isImagePresentable(const core::ImageObject &image, VkFi
 	return true;
 }
 
-}
+} // namespace stappler::xenolith::vk

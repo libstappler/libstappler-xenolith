@@ -115,7 +115,6 @@ void QueuePassHandle::invalidate() {
 
 bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 	_onPrepared = sp::move(cb);
-	_loop = static_cast<Loop *>(q.getLoop());
 	_device = static_cast<Device *>(q.getFrame()->getDevice());
 	_pool = static_cast<CommandPool *>(_device->acquireCommandPool(getQueueOps()).get());
 
@@ -208,10 +207,6 @@ void QueuePassHandle::submit(FrameQueue &q, Rc<FrameSync> &&sync, Function<void(
 	}
 
 	Rc<FrameHandle> f = q.getFrame(); // capture frame ref
-
-	_fence = ref_cast<Fence>(_loop->acquireFence(core::FenceType::Default));
-	_fence->setFrame(f->getOrder());
-	_fence->setTag(getName());
 
 	_fence->addRelease([dev = _device, pool = _pool, loop = q.getLoop()](bool success) {
 		dev->releaseCommandPool(*loop, Rc<CommandPool>(pool));
@@ -318,7 +313,7 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 }
 
 void QueuePassHandle::doSubmitted(FrameHandle &handle, Function<void(bool)> &&func, bool success,
-		Rc<Fence> &&fence) {
+		Rc<core::Fence> &&fence) {
 	auto queue = handle.getFrameQueue(_data->queue->queue);
 	for (auto &it : _data->submittedCallbacks) { it(*queue, *_data, success); }
 

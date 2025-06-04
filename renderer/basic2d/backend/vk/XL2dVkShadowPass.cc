@@ -601,7 +601,7 @@ bool ShadowPassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 }
 
 void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, CommandBuffer &buf) {
-	auto &fb = getFramebuffer();
+	auto fb = getFramebuffer();
 	auto currentExtent = fb->getExtent();
 
 	auto drawFullscreen = [&](const core::GraphicPipelineData *pipeline) {

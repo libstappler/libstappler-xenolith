@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,140 +32,103 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 // Опции для аргументов командной строки
 CommandLineParser<ApplicationInfo> ApplicationInfo::CommandLine({
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-v", "--verbose"
-		},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-v", "--verbose"},
 		.description = "Produce more verbose output",
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.verbose = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-h", "--help"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-h", "--help"},
 		.description = StringView("Show help message and exit"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.help = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-q", "--quiet"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-q", "--quiet"},
 		.description = StringView("Disable verbose output"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.quiet = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-W<#>", "--width <#>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-W<#>", "--width <#>"},
 		.description = StringView("Window width"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.screenSize.width = uint32_t(StringView(args[0]).readInteger(10).get(0));
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-H<#>", "--height <#>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-H<#>", "--height <#>"},
 		.description = StringView("Window height"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.screenSize.height = uint32_t(StringView(args[0]).readInteger(10).get(0));
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"-D<#.#>", "--density <#.#>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"-D<#.#>", "--density <#.#>"},
 		.description = StringView("Pixel density for a window"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.density = float(StringView(args[0]).readFloat().get(0));
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--l <locale>", "--locale <locale>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--l <locale>", "--locale <locale>"},
 		.description = StringView("User language locale"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.userLanguage = StringView(args[0]).str<Interface>();
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--phone"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--phone"},
 		.description = StringView("Use phone-screen layout, if possible"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.isPhone = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--bundle <bundle-name>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--bundle <bundle-name>"},
 		.description = StringView("Application bundle name"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
-			target.bundleName = StringView(args[0]).str<Interface>();;
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
+			target.bundleName = StringView(args[0]).str<Interface>();
+			;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--fixed"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--fixed"},
 		.description = StringView("Use fixed (so, not resizable) window layout"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.isFixed = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--renderdoc"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--renderdoc"},
 		.description = StringView("Open connection for renderdoc"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.renderdoc = true;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--novalidation"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--novalidation"},
 		.description = StringView("Force-disable Vulkan validation layers"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			target.validation = false;
 			return true;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--decor <decoration-description>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--decor <decoration-description>"},
 		.description = StringView("Define window decoration paddings"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
 			auto values = StringView(args[0]);
-			float f[4] = { nan(), nan(), nan(), nan() };
+			float f[4] = {nan(), nan(), nan(), nan()};
 			uint32_t i = 0;
-			values.split<StringView::Chars<','>>([&] (StringView val) {
+			values.split<StringView::Chars<','>>([&](StringView val) {
 				if (i < 4) {
 					f[i] = val.readFloat().get(nan());
 				}
-				++ i;
+				++i;
 			});
 			if (!isnan(f[0])) {
 				if (isnan(f[1])) {
@@ -180,26 +144,25 @@ CommandLineParser<ApplicationInfo> ApplicationInfo::CommandLine({
 				return true;
 			}
 			return false;
-		}
-	},
-	CommandLineOption<ApplicationInfo> {
-		.patterns = {
-			"--device <#>"
-		},
+		}},
+	CommandLineOption<ApplicationInfo>{.patterns = {"--device <#>"},
 		.description = StringView("Force-disable Vulkan validation layers"),
-		.callback = [] (ApplicationInfo &target, StringView pattern, SpanView<StringView> args) -> bool {
-			target.loopInfo.deviceIdx = StringView(args.at(0)).readInteger(10).get(core::Instance::DefaultDevice);
+		.callback = [](ApplicationInfo &target, StringView pattern,
+							SpanView<StringView> args) -> bool {
+			target.loopInfo.deviceIdx =
+					StringView(args.at(0)).readInteger(10).get(core::Instance::DefaultDevice);
 			return true;
-		}
-	},
+		}},
 });
 
-ApplicationInfo ApplicationInfo::readFromCommandLine(int argc, const char * argv[], const Callback<void(StringView)> &cb) {
+ApplicationInfo ApplicationInfo::readFromCommandLine(int argc, const char *argv[],
+		const Callback<void(StringView)> &cb) {
 	ApplicationInfo ret;
 
-	CommandLine.parse(ret, argc, argv, cb ? Callback<void(ApplicationInfo &, StringView)>([&] (ApplicationInfo &, StringView arg) {
-		cb(arg);
-	}) : nullptr);
+	CommandLine.parse(ret, argc, argv,
+			cb ? Callback<void(ApplicationInfo &, StringView)>(
+						 [&](ApplicationInfo &, StringView arg) { cb(arg); })
+			   : nullptr);
 
 	return ret;
 }
@@ -215,7 +178,8 @@ Value ApplicationInfo::encode() const {
 	}
 	ret.setValue(Value({Value(screenSize.width), Value(screenSize.height)}), "screenSize");
 	ret.setValue(Value({Value(viewDecoration.top), Value(viewDecoration.right),
-		Value(viewDecoration.bottom), Value(viewDecoration.left)}), "viewDecoration");
+					 Value(viewDecoration.bottom), Value(viewDecoration.left)}),
+			"viewDecoration");
 	ret.setDouble(density, "density");
 	if (isPhone) {
 		ret.setBool(isPhone, "isPhone");
@@ -238,10 +202,12 @@ Value ApplicationInfo::encode() const {
 	return ret;
 }
 
-PlatformApplication::~PlatformApplication() {
-	_instance = nullptr;
+event::Bus *PlatformApplication::getSharedBus() {
+	static event::Bus s_bus;
+	return &s_bus;
 }
 
+PlatformApplication::~PlatformApplication() { _instance = nullptr; }
 
 PlatformApplication::PlatformApplication() { }
 
@@ -250,9 +216,7 @@ bool PlatformApplication::init(ApplicationInfo &&info, Rc<core::Instance> &&inst
 		return false;
 	}
 
-	_mainLooper = event::Looper::acquire(event::LooperInfo{
-		.workersCount = info.mainThreadsCount
-	});
+	_mainLooper = event::Looper::acquire(event::LooperInfo{.workersCount = info.mainThreadsCount});
 
 	_info = move(info);
 	_info.applicationVersionCode = XL_MAKE_API_VERSION(_info.applicationVersion);
@@ -268,7 +232,8 @@ void PlatformApplication::run() {
 
 	if (_info.loopInfo.onDeviceStarted) {
 		auto tmpStarted = sp::move(_info.loopInfo.onDeviceStarted);
-		_info.loopInfo.onDeviceStarted = [this, tmpStarted = sp::move(tmpStarted)] (const core::Loop &loop, const core::Device &dev) {
+		_info.loopInfo.onDeviceStarted = [this, tmpStarted = sp::move(tmpStarted)](
+												 const core::Loop &loop, const core::Device &dev) {
 			if (tmpStarted) {
 				tmpStarted(loop, dev);
 			}
@@ -276,14 +241,16 @@ void PlatformApplication::run() {
 			handleDeviceStarted(loop, dev);
 		};
 	} else {
-		_info.loopInfo.onDeviceStarted = [this] (const core::Loop &loop, const core::Device &dev) {
+		_info.loopInfo.onDeviceStarted = [this](const core::Loop &loop, const core::Device &dev) {
 			handleDeviceStarted(loop, dev);
 		};
 	}
 
 	if (_info.loopInfo.onDeviceFinalized) {
 		auto tmpFinalized = sp::move(_info.loopInfo.onDeviceFinalized);
-		_info.loopInfo.onDeviceFinalized = [this, tmpFinalized = sp::move(tmpFinalized)] (const core::Loop &loop, const core::Device &dev) {
+		_info.loopInfo.onDeviceFinalized =
+				[this, tmpFinalized = sp::move(tmpFinalized)](const core::Loop &loop,
+						const core::Device &dev) {
 			handleDeviceFinalized(loop, dev);
 
 			if (tmpFinalized) {
@@ -291,7 +258,7 @@ void PlatformApplication::run() {
 			}
 		};
 	} else {
-		_info.loopInfo.onDeviceFinalized = [this] (const core::Loop &loop, const core::Device &dev) {
+		_info.loopInfo.onDeviceFinalized = [this](const core::Loop &loop, const core::Device &dev) {
 			handleDeviceFinalized(loop, dev);
 		};
 	}
@@ -300,26 +267,21 @@ void PlatformApplication::run() {
 	_glLoop->run();
 }
 
-void PlatformApplication::waitStopped() {
-	platformWaitExit();
-}
+void PlatformApplication::waitStopped() { platformWaitExit(); }
 
 void PlatformApplication::threadInit() {
 	_thisThreadId = std::this_thread::get_id();
 
-	_appLooper = event::Looper::acquire(event::LooperInfo{
-		.name = StringView("Application"),
+	_appLooper = event::Looper::acquire(event::LooperInfo{.name = StringView("Application"),
 		.workersCount = _info.appThreadsCount,
 
 		// Disable ALooper for internal queue, it can not be stopped gracefully
-		.engineMask = event::QueueEngine::Any & ~event::QueueEngine::ALooper
-	});
+		.engineMask = event::QueueEngine::Any & ~event::QueueEngine::ALooper});
 
 	_timer = _appLooper->scheduleTimer(event::TimerInfo{
 		.completion = event::TimerInfo::Completion::create<PlatformApplication>(this,
-				[] (PlatformApplication *data, event::TimerHandle *self, uint32_t value, Status status) {
-			data->performUpdate();
-		}),
+				[](PlatformApplication *data, event::TimerHandle *self, uint32_t value,
+						Status status) { data->performUpdate(); }),
 		.interval = _info.updateInterval,
 		.count = event::TimerInfo::Infinite,
 	});
@@ -352,12 +314,10 @@ void PlatformApplication::threadDispose() {
 		auto loop = _glLoop.get();
 		_glLoop = nullptr;
 
-		loop->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+		loop->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-			for (auto &it : vec) {
-				stream << "\t" << it << "\n";
-			}
+			for (auto &it : vec) { stream << "\t" << it << "\n"; }
 			log::debug("core::Loop", stream.str());
 		});
 	} else {
@@ -380,26 +340,25 @@ bool PlatformApplication::worker() {
 	return _continueExecution.test_and_set();
 }
 
-void PlatformApplication::end()  {
+void PlatformApplication::end() {
 	stop();
 
-	_appLooper->wakeup(event::QueueWakeupInfo{
-		.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
-		.timeout = TimeInterval::seconds(1)
-	});
+	_appLooper->wakeup(event::QueueWakeupInfo{.flags = event::WakeupFlags::Graceful
+				| event::WakeupFlags::SuspendThreads,
+		.timeout = TimeInterval::seconds(1)});
 }
 
 void PlatformApplication::wakeup() {
-	performOnAppThread([this] {
-		performUpdate();
-	}, this, true);
+	performOnAppThread([this] { performUpdate(); }, this, true);
 }
 
-void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate, StringView tag) const {
+void PlatformApplication::performOnGlThread(Function<void()> &&func, Ref *target, bool immediate,
+		StringView tag) const {
 	_mainLooper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
-void PlatformApplication::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame, StringView tag) {
+void PlatformApplication::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame,
+		StringView tag) {
 	if (isOnThisThread() && !onNextFrame) {
 		func();
 	} else {
@@ -417,7 +376,8 @@ void PlatformApplication::performOnAppThread(Rc<Task> &&task, bool onNextFrame) 
 	}
 }
 
-void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&complete, Ref *obj) const {
+void PlatformApplication::perform(ExecuteCallback &&exec, CompleteCallback &&complete,
+		Ref *obj) const {
 	perform(Rc<Task>::create(sp::move(exec), sp::move(complete), obj));
 }
 
@@ -435,9 +395,7 @@ void PlatformApplication::updateMessageToken(BytesView tok) {
 	}
 }
 
-void PlatformApplication::receiveRemoteNotification(Value &&val) {
-
-}
+void PlatformApplication::receiveRemoteNotification(Value &&val) { }
 
 void PlatformApplication::handleDeviceStarted(const core::Loop &loop, const core::Device &dev) {
 	_device = &dev;
@@ -455,17 +413,11 @@ void PlatformApplication::handleDeviceFinalized(const core::Loop &loop, const co
 	_device = nullptr;
 }
 
-void PlatformApplication::loadExtensions() {
+void PlatformApplication::loadExtensions() { }
 
-}
+void PlatformApplication::initializeExtensions() { }
 
-void PlatformApplication::initializeExtensions() {
-
-}
-
-void PlatformApplication::finalizeExtensions() {
-
-}
+void PlatformApplication::finalizeExtensions() { }
 
 void PlatformApplication::performAppUpdate(const UpdateTime &time) {
 	if (_info.updateCallback) {
@@ -486,7 +438,7 @@ void PlatformApplication::performUpdate() {
 	_lastUpdate = _clock;
 }
 
-}
+} // namespace stappler::xenolith
 
 //
 // PlatformApplication
@@ -513,14 +465,13 @@ void PlatformApplication::platformWaitExit() {
 
 void PlatformApplication::platformSignalExit() {
 	_mainLooper->performOnThread([this] {
-		_mainLooper->wakeup(event::QueueWakeupInfo{
-			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
-			.timeout = TimeInterval::seconds(1)
-		});
+		_mainLooper->wakeup(event::QueueWakeupInfo{.flags = event::WakeupFlags::Graceful
+					| event::WakeupFlags::SuspendThreads,
+			.timeout = TimeInterval::seconds(1)});
 	}, this, false);
 }
 
-}
+} // namespace stappler::xenolith
 
 #endif
 
@@ -539,15 +490,11 @@ void PlatformApplication::openUrl(StringView url) const {
 
 void PlatformApplication::platformInitialize() { }
 
-void PlatformApplication::platformWaitExit() {
-	Thread::waitStopped();
-}
+void PlatformApplication::platformWaitExit() { Thread::waitStopped(); }
 
-void PlatformApplication::platformSignalExit() {
+void PlatformApplication::platformSignalExit() { }
 
-}
-
-}
+} // namespace stappler::xenolith
 
 #endif
 
@@ -560,26 +507,25 @@ void PlatformApplication::platformSignalExit() {
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 void PlatformApplication::openUrl(StringView url) const {
-	ShellExecute(0, 0, (wchar_t *)string::toUtf16<Interface>(url).data(), 0, 0 , SW_SHOW );
+	ShellExecute(0, 0, (wchar_t *)string::toUtf16<Interface>(url).data(), 0, 0, SW_SHOW);
 }
 
 void PlatformApplication::platformInitialize() { }
 
 void PlatformApplication::platformWaitExit() {
-	_mainLooper->run(TimeInterval::seconds(1000000000));
+	_mainLooper->run(TimeInterval::seconds(1'000'000'000));
 	Thread::waitStopped();
 }
 
 void PlatformApplication::platformSignalExit() {
 	_mainLooper->performOnThread([this] {
-		_mainLooper->wakeup(event::QueueWakeupInfo{
-			.flags = event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads,
-			.timeout = TimeInterval::seconds(1)
-		});
+		_mainLooper->wakeup(event::QueueWakeupInfo{.flags = event::WakeupFlags::Graceful
+					| event::WakeupFlags::SuspendThreads,
+			.timeout = TimeInterval::seconds(1)});
 	}, this, false);
 }
 
-}
+} // namespace stappler::xenolith
 
 #endif
 
@@ -589,20 +535,19 @@ void PlatformApplication::platformSignalExit() {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-void PlatformApplication::openUrl(StringView url) const {
-	platform::openUrl(url);
-}
+void PlatformApplication::openUrl(StringView url) const { platform::openUrl(url); }
 
-void PlatformApplication::platformInitialize() {
-	_shouldSignalOnExit = platform::isOnMainThread();
-}
+void PlatformApplication::platformInitialize() { _shouldSignalOnExit = platform::isOnMainThread(); }
 
 void PlatformApplication::platformWaitExit() {
 	if (_shouldSignalOnExit) {
 		if (platform::isOnMainThread()) {
 			platform::runApplication();
 		} else {
-			log::error("xenolith::PlatformApplication", "If application was runned from main thread, waitFinalized should be also called in main thread");
+			log::
+					error("xenolith::PlatformApplication",
+							"If application was runned from main thread, waitFinalized should be "
+							"also " "called in main thread");
 		}
 	} else {
 		Thread::waitStopped();
@@ -611,13 +556,13 @@ void PlatformApplication::platformWaitExit() {
 
 void PlatformApplication::platformSignalExit() {
 	if (_shouldSignalOnExit) {
-		platform::performOnMainThread([this] () {
+		platform::performOnMainThread([this]() {
 			_thread.join();
 			platform::stopApplication();
 		}, this);
 	}
 }
 
-}
+} // namespace stappler::xenolith
 
 #endif

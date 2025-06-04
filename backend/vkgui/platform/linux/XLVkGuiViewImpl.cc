@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,26 +40,25 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
 #if XL_ENABLE_WAYLAND
-static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::Instance *instance, VkPhysicalDevice dev) {
+static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::Instance *instance,
+		VkPhysicalDevice dev) {
 	auto display = v->getDisplay();
 	auto surface = v->getSurface();
 
-	std::cout << "Create wayland surface for " << (void *)dev << " on " << (void *)display->display << "\n";
-	auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(dev, 0, display->display);
+	std::cout << "Create wayland surface for " << (void *)dev << " on " << (void *)display->display
+			  << "\n";
+	auto supports =
+			instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(dev, 0, display->display);
 	if (!supports) {
 		return nullptr;
 	}
 
 	VkSurfaceKHR ret;
-	VkWaylandSurfaceCreateInfoKHR info{
-		VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-		nullptr,
-		0,
-		display->display,
-		surface
-	};
+	VkWaylandSurfaceCreateInfoKHR info{VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR, nullptr,
+		0, display->display, surface};
 
-	if (instance->vkCreateWaylandSurfaceKHR(instance->getInstance(), &info, nullptr, &ret) == VK_SUCCESS) {
+	if (instance->vkCreateWaylandSurfaceKHR(instance->getInstance(), &info, nullptr, &ret)
+			== VK_SUCCESS) {
 		VkBool32 pSupported = 0;
 		instance->vkGetPhysicalDeviceSurfaceSupportKHR(dev, 0, ret, &pSupported);
 		if (!pSupported) {
@@ -71,21 +71,22 @@ static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::
 }
 #endif
 
-static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Instance *instance, VkPhysicalDevice dev) {
+static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Instance *instance,
+		VkPhysicalDevice dev) {
 	auto connection = v->getConnection();
 	auto window = v->getWindow();
 
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
-	VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, nullptr, 0, connection, window};
-	if (instance->vkCreateXcbSurfaceKHR(instance->getInstance(), &createInfo, nullptr, &surface) != VK_SUCCESS) {
+	VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, nullptr, 0,
+		connection, window};
+	if (instance->vkCreateXcbSurfaceKHR(instance->getInstance(), &createInfo, nullptr, &surface)
+			!= VK_SUCCESS) {
 		return nullptr;
 	}
 	return surface;
 }
 
-ViewImpl::~ViewImpl() {
-	_view = nullptr;
-}
+ViewImpl::~ViewImpl() { _view = nullptr; }
 
 bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info) {
 	if (!vk::View::init(loop, static_cast<const vk::Device &>(dev), move(info))) {
@@ -97,16 +98,19 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 
 #if XL_ENABLE_WAYLAND
 	if (auto wayland = xenolith::platform::WaylandLibrary::getInstance()) {
-		if ((platform::SurfaceType(presentMask) & platform::SurfaceType::Wayland) != platform::SurfaceType::None) {
+		if ((platform::SurfaceType(presentMask) & platform::SurfaceType::Wayland)
+				!= platform::SurfaceType::None) {
 			auto waylandDisplay = getenv("WAYLAND_DISPLAY");
 			auto sessionType = getenv("XDG_SESSION_TYPE");
 
 			if (waylandDisplay || strcasecmp("wayland", sessionType) == 0) {
-				auto view = Rc<xenolith::platform::WaylandView>::alloc(wayland, this, _info.name, _info.bundleId, _info.rect);
+				auto view = Rc<xenolith::platform::WaylandView>::alloc(wayland, this, _info.name,
+						_info.bundleId, _info.rect);
 				if (view) {
 					_view = view;
 					_surface = Rc<vk::Surface>::create(_instance,
-							createWindowSurface(view, _instance, _device->getPhysicalDevice()), _view);
+							createWindowSurface(view, _instance, _device->getPhysicalDevice()),
+							_view);
 					if (_surface) {
 						setFrameInterval(_view->getScreenFrameInterval());
 					} else {
@@ -115,7 +119,6 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 				} else {
 					log::error("ViewImpl", "Fail to initialize wayland window, try X11");
 				}
-
 			}
 		}
 	}
@@ -124,8 +127,10 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 	if (!_view) {
 		// try X11
 		if (auto xcb = xenolith::platform::XcbLibrary::getInstance()) {
-			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB) != platform::SurfaceType::None) {
-				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb->acquireConnection(), this, _info.window);
+			if ((platform::SurfaceType(presentMask) & platform::SurfaceType::XCB)
+					!= platform::SurfaceType::None) {
+				auto view = Rc<xenolith::platform::XcbView>::alloc(xcb->acquireConnection(), this,
+						_info.window);
 				if (!view) {
 					log::error("ViewImpl", "Fail to initialize xcb window");
 					return false;
@@ -157,8 +162,8 @@ bool ViewImpl::init(Application &loop, const core::Device &dev, ViewInfo &&info)
 void ViewImpl::run() {
 	View::run();
 
-	_pollHandle = event::PollFdHandle::create(_glLoop->getLooper()->getQueue(), _view->getSocketFd(), event::PollFlags::In,
-			[this] (int fd, event::PollFlags flags) {
+	_pollHandle = event::PollFdHandle::create(_loop->getLooper()->getQueue(), _view->getSocketFd(),
+			event::PollFlags::In, [this](int fd, event::PollFlags flags) {
 		if (hasFlag(flags, event::PollFlags::In)) {
 			if (!_view->poll(false)) {
 				end();
@@ -166,7 +171,7 @@ void ViewImpl::run() {
 		}
 		return Status::Ok;
 	}, this);
-	_glLoop->getLooper()->performHandle(_pollHandle);
+	_loop->getLooper()->performHandle(_pollHandle);
 }
 
 void ViewImpl::end() {
@@ -178,29 +183,23 @@ void ViewImpl::end() {
 	View::end();
 }
 
-void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
+void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) { }
 
-}
-
-void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
-
-}
+void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) { }
 
 void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
 	performOnThread([this] {
 		_inputEnabled = true;
-		_mainLoop->performOnAppThread([this] () {
-			_director->getTextInputManager()->setInputEnabled(true);
-		}, this);
+		_application->performOnAppThread(
+				[this]() { _director->getTextInputManager()->setInputEnabled(true); }, this);
 	}, this);
 }
 
 void ViewImpl::cancelTextInput() {
 	performOnThread([this] {
 		_inputEnabled = false;
-		_mainLoop->performOnAppThread([this] () {
-			_director->getTextInputManager()->setInputEnabled(false);
-		}, this);
+		_application->performOnAppThread(
+				[this]() { _director->getTextInputManager()->setInputEnabled(false); }, this);
 	}, this);
 }
 
@@ -217,17 +216,18 @@ void ViewImpl::mapWindow() {
 }
 
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
-		_view->readFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnAppThread([cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
-				cb(view, ct);
-			}, this);
+	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
+		_view->readFromClipboard([this, cb = sp::move(cb)](BytesView view, StringView ct) mutable {
+			_application->performOnAppThread([cb = sp::move(cb), view = view.bytes<Interface>(),
+													 ct = ct.str<Interface>()]() { cb(view, ct); },
+					this);
 		}, ref);
 	}, this);
 }
 
 void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
-	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
+	performOnThread(
+			[this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
 		_view->writeToClipboard(data, contentType);
 	}, this);
 }
@@ -252,15 +252,19 @@ struct InstanceSurfaceData : Ref {
 	Rc<xenolith::platform::XcbLibrary> xcb;
 };
 
-uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
+uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device,
+		uint32_t queueIdx) {
 	InstanceSurfaceData *instanceData = (InstanceSurfaceData *)instance->getUserdata();
 
 	uint32_t ret = 0;
 	if ((instanceData->surfaceType & SurfaceType::Wayland) != SurfaceType::None) {
 #if XL_ENABLE_WAYLAND
-		auto display = xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
-		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on " << (void *)display << ": ";
-		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx, display);
+		auto display =
+				xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
+		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on "
+				  << (void *)display << ": ";
+		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx,
+				display);
 		if (supports) {
 			ret |= toInt(SurfaceType::Wayland);
 			std::cout << "yes\n";
@@ -280,7 +284,8 @@ uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice
 	return ret;
 }
 
-bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
+bool initInstance(vk::platform::VulkanInstanceData &data,
+		const vk::platform::VulkanInstanceInfo &info) {
 	auto instanceData = Rc<InstanceSurfaceData>::alloc();
 
 	SurfaceType osSurfaceType = SurfaceType::None;
@@ -321,6 +326,6 @@ bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::Vu
 	return false;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif

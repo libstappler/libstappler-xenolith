@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,151 +23,74 @@ THE SOFTWARE.
 **/
 
 #include "XLEvent.h"
-#include "XLApplication.h"
+#include "XLPlatformApplication.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-String Event::ZERO_STRING;
-Bytes Event::ZERO_BYTES;
-
-void Event::dispatch() const {
-	Application::getInstance()->dispatchEvent(*this);
+static void EventHeader_send(const EventHeader &header, Ref *object, Value &&dataVal = Value(),
+		Ref *objVal = nullptr) {
+	auto ev = Rc<Event>::alloc(header, object, move(dataVal), objVal);
+	PlatformApplication::getSharedBus()->dispatchEvent(ev.get());
 }
 
-Ref *Event::getObject() const {
-	return _object;
+EventHeader::EventHeader(StringView name)
+: _category(PlatformApplication::getSharedBus()->allocateCategory(name)) {
+	SPASSERT(!name.empty(), "Event should have name");
 }
 
-const EventHeader &Event::getHeader() const {
-	return _header;
+EventHeader::~EventHeader() { }
+
+EventId EventHeader::getEventId() const { return _category; }
+
+StringView EventHeader::getName() const {
+	return PlatformApplication::getSharedBus()->getCategoryName(_category);
 }
 
-EventHeader::Category Event::getCategory() const {
-	return _header.getCategory();
+EventHeader::operator EventId() const { return _category; }
+
+bool EventHeader::operator==(const Event &event) const { return event.getCategory() == _category; }
+
+void EventHeader::send(Ref *object, int64_t value) const {
+	EventHeader_send(*this, object, Value(value));
 }
-EventHeader::EventID Event::getEventID() const {
-	return _header.getEventID();
+void EventHeader::send(Ref *object, double value) const {
+	EventHeader_send(*this, object, Value(value));
 }
+void EventHeader::send(Ref *object, bool value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, Ref *value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, const char *value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, const String &value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, const StringView &value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, const BytesView &value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, Value &&value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object) const { EventHeader_send(*this, object); }
+
+EventId Event::getEventId() const { return getCategory(); }
 
 bool Event::is(const EventHeader &eventHeader) const {
-	return _header.getEventID() == eventHeader.getEventID();
+	return getEventId() == eventHeader.getEventId();
 }
 
-bool Event::operator == (const EventHeader &eventHeader) const {
-	return is(eventHeader);
-}
-
-Value Event::getValue() const {
-	switch (_type) {
-	case Type::Int:
-		return Value(_value.intValue);
-		break;
-	case Type::Float:
-		return Value(_value.floatValue);
-		break;
-	case Type::Bool:
-		return Value(_value.boolValue);
-		break;
-	case Type::String:
-		return Value(*_value.strValue);
-		break;
-	case Type::Bytes:
-		return Value(*_value.bytesValue);
-		break;
-	case Type::Data:
-		return Value(*_value.dataValue);
-		break;
-	case Type::Object:
-	case Type::None: break;
-	}
-	return Value();
-}
+bool Event::operator==(const EventHeader &eventHeader) const { return is(eventHeader); }
 
 Event::Event(const EventHeader &header, Ref *object)
-: _header(header), _object(object) { _value.intValue = 0; }
+: BusEvent(header.getEventId()), _object(object) { }
 
-Event::Event(const EventHeader &header, Ref *object, EventValue val, Type type)
-: _header(header), _type(type), _object(object), _value(val) { }
+Event::Event(const EventHeader &header, Ref *object, Value &&dataVal, Ref *objVal)
+: BusEvent(header.getEventId()), _dataValue(move(dataVal)), _objectValue(objVal) { }
 
-void Event::send(const EventHeader &header, Ref *object, int64_t value) {
-	EventValue val; val.intValue = value;
-	send(header, object, val, Type::Int);
-}
-void Event::send(const EventHeader &header, Ref *object, double value) {
-	EventValue val; val.floatValue = value;
-	send(header, object, val, Type::Float);
-}
-void Event::send(const EventHeader &header, Ref *object, bool value) {
-	EventValue val; val.boolValue = value;
-	send(header, object, val, Type::Bool);
-}
-void Event::send(const EventHeader &header, Ref *object, Ref *value) {
-	EventValue val; val.objValue = value;
-	send(header, object, val, Type::Object);
-}
-void Event::send(const EventHeader &header, Ref *object, const char *value) {
-	String str = value;
-	send(header, object, str);
-}
-void Event::send(const EventHeader &header, Ref *object, const String &value) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object, value] () {
-			EventValue val; val.strValue = &value;
-			Event event(header, object, val, Type::String);
-			event.dispatch();
-		});
-	}
-}
-void Event::send(const EventHeader &header, Ref *object, const StringView &value) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object, value = value.str<Interface>()] () {
-			EventValue val; val.strValue = &value;
-			Event event(header, object, val, Type::String);
-			event.dispatch();
-		});
-	}
-}
-
-void Event::send(const EventHeader &header, Ref *object, const BytesView &value) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object, value = value.bytes<Interface>()] () {
-			EventValue val; val.bytesValue = &value;
-			Event event(header, object, val, Type::Bytes);
-			event.dispatch();
-		});
-	}
-}
-
-void Event::send(const EventHeader &header, Ref *object, const Value &value) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object, value] () {
-			EventValue val; val.dataValue = &value;
-			Event event(header, object, val, Type::Data);
-			event.dispatch();
-		});
-	}
-}
-void Event::send(const EventHeader &header, Ref *object, EventValue val, Type type) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object, val, type] () {
-			Event event(header, object, val, type);
-			event.dispatch();
-		});
-	}
-}
-void Event::send(const EventHeader &header, Ref *object) {
-	auto app = Application::getInstance();
-	if (app) {
-		app->performOnAppThread([header, object] () {
-			Event event(header, object);
-			event.dispatch();
-		});
-	}
-}
-
-}
+} // namespace stappler::xenolith

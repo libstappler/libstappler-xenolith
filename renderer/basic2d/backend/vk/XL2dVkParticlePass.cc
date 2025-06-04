@@ -23,6 +23,7 @@
 #include "XL2dVkParticlePass.h"
 #include "SPMemory.h"
 #include "SPPlatform.h"
+#include "SPPlatformInit.h"
 #include "SPTime.h"
 #include "XL2d.h"
 #include "XL2dCommandList.h"
@@ -41,6 +42,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
+static constexpr int ENABLE_FEEDBACK = 0;
+
 const ParticleSystemRenderInfo *ParticleEmitterAttachmentHandle::getEmitterRenderInfo(
 		uint64_t id) const {
 	auto it = _emittersIndexes.find(id);
@@ -53,8 +56,12 @@ const ParticleSystemRenderInfo *ParticleEmitterAttachmentHandle::getEmitterRende
 void ParticleEmitterAttachmentHandle::enumerateAttachmentObjects(
 		const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &cb) {
 	using namespace core;
-	cb(_vertices.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _vertices->getSize()));
-	cb(_commands.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _commands->getSize()));
+	if (_vertices) {
+		cb(_vertices.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _vertices->getSize()));
+	}
+	if (_commands) {
+		cb(_commands.get(), SubresourceRangeInfo(ObjectType::Buffer, 0, _commands->getSize()));
+	}
 }
 
 Vector<uint64_t> ParticlePersistentData::updateEmitters(DeviceMemoryPool *pool,
@@ -137,6 +144,8 @@ void ParticlePersistentData::addEmitter(DeviceMemoryPool *pool, uint64_t id, Par
 		uint64_t clock) {
 	_emitters.emplace(id, spawnEmitter(pool, id, s, s->data.count, clock));
 }
+
+void ParticlePersistentData::clearStaging() { _staging.clear(); }
 
 ParticlePersistentData::EmitterData ParticlePersistentData::spawnEmitter(DeviceMemoryPool *pool,
 		uint64_t id, ParticleSystemData *s, uint32_t initParticles, uint64_t clock) {
@@ -241,9 +250,7 @@ void ParticleEmitterAttachment::handleInput(FrameQueue &q, ParticleEmitterAttach
 
 	Vector<uint64_t> ids;
 
-	if (!ctx->particleEmitters.empty()) {
-		ids = _data->updateEmitters(dFrame->getMemPool(nullptr), ctx->particleEmitters, ctx->clock);
-	}
+	ids = _data->updateEmitters(dFrame->getMemPool(nullptr), ctx->particleEmitters, ctx->clock);
 
 	if (!_data->getEmitters().empty()) {
 		auto alloc = dFrame->getMemPool(nullptr);
@@ -303,7 +310,8 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 
 		subpassBuilder.addComputePipeline(UpdatePipelineName, layout->defaultFamily,
 			SpecializationInfo(
-				particleUpdateComp
+				particleUpdateComp,
+				memory::vector<SpecializationConstant>{SpecializationConstant(ENABLE_FEEDBACK)}
 			)
 		);
 
@@ -339,68 +347,12 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 	}
 
 	auto fHandle = queue.getAttachment(_emitters);
+	auto pHandle = queue.getRenderPass(_data);
 
 	auto attachment = _emitters->attachment.get_cast<ParticleEmitterAttachment>();
 	auto aHandle = fHandle->handle.get_cast<ParticleEmitterAttachmentHandle>();
 	auto ctx = static_cast<FrameContextHandle2d *>(aHandle->getInput());
 	auto data = attachment->getData();
-
-	/*auto transferVertexBuffer = memPool->spawn(AllocationUsage::DeviceLocalHostVisible,
-			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
-					aHandle->getVertices()->getSize()));
-
-	transferVertexBuffer->map([&](uint8_t *buf, VkDeviceSize bufSize) {
-		auto target = reinterpret_cast<Vertex *>(buf);
-
-		uint32_t vertexOffset = 0;
-
-		for (auto &e : data->getEmitters()) {
-			auto &data = e.second.systemData->data;
-			auto renderInfo = aHandle->getEmitterRenderInfo(e.first);
-			for (size_t i = 0; i < data.count; ++i) {
-				auto vTarget = target;
-				target += 6;
-
-				auto progress = float(i) / float(data.count);
-				auto normalVec = Vec2::forAngle(progress * (float(numbers::pi) * 2.0f));
-
-				auto pos = normalVec * 50.0f;
-
-				Vec2 bl = -data.sizeNormal * data.sizeValue;
-				Vec2 tl = Vec2(-data.sizeNormal.x, data.sizeNormal.y) * data.sizeValue;
-				Vec2 tr = data.sizeNormal * data.sizeValue;
-				Vec2 br = Vec2(data.sizeNormal.x, -data.sizeNormal.y) * data.sizeValue;
-
-				const float texLeft = 0.0f;
-				const float texRight = 1.0f;
-				const float texTop = 0.0f;
-				const float texBottom = 1.0f;
-
-				vTarget[0].pos = Vec4(pos + bl, 0.0, 1.0);
-				vTarget[0].material = renderInfo->material | renderInfo->transform << 16;
-				vTarget[0].tex = Vec2(texLeft, texTop);
-				vTarget[0].color = Vec4::IDENTITY;
-
-				vTarget[1].pos = Vec4(pos + tl, 0.0, 1.0);
-				vTarget[1].material = renderInfo->material | renderInfo->transform << 16;
-				vTarget[1].tex = Vec2(texLeft, texBottom);
-				vTarget[1].color = Vec4::IDENTITY;
-
-				vTarget[2].pos = Vec4(pos + br, 0.0, 1.0);
-				vTarget[2].material = renderInfo->material | renderInfo->transform << 16;
-				vTarget[2].tex = Vec2(texRight, texTop);
-				vTarget[2].color = Vec4::IDENTITY;
-
-				vTarget[3].pos = Vec4(pos + tr, 0.0, 1.0);
-				vTarget[3].material = renderInfo->material | renderInfo->transform << 16;
-				vTarget[3].tex = Vec2(texRight, texBottom);
-				vTarget[3].color = Vec4::IDENTITY;
-
-				vTarget[4] = vTarget[1];
-				vTarget[5] = vTarget[2];
-			}
-		}
-	}, DeviceMemoryAccess::Flush);*/
 
 	auto transferIndirectBuffer = memPool->spawn(AllocationUsage::DeviceLocalHostVisible,
 			BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
@@ -439,9 +391,10 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 				VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT, it.targetOffset, it.size));
 	}
 
+	data->clearStaging();
+
 	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
 			barriers);
-
 
 	buf.cmdBindPipelineWithDescriptors((*it), 0);
 
@@ -463,21 +416,43 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 		auto nframes = std::min(renderInfo->maxFramesPerCall, static_cast<uint32_t>(std::floor(v)));
 
 		// corrent frame index if lifetime was decreased
-		while (e.second.frame > framesInGen) { e.second.frame -= framesInGen; }
+		while (e.second.frame >= framesInGen) { e.second.frame -= framesInGen; }
 
 		pcb.framesInGen = framesInGen;
 		pcb.genframe = e.second.frame;
 		pcb.gentime = float(pcb.genframe) / float(framesInGen);
+		pcb.gendt = (1.0f / float(framesInGen));
+		pcb.dt = d.dt;
 
 		pcb.nframes = nframes;
 		pcb.timeline = (1.0 - d.explosiveness) * lifetime / d.count;
-		pcb.dt = pcb.nframes * d.frameInterval;
 		pcb.materialIndex = renderInfo->material | renderInfo->transform << 16;
 
 		pcb.outVerticesPointer = UVec2::convertFromPacked(vertexAddress);
 		pcb.outCommandPointer = UVec2::convertFromPacked(commandsAddress);
 		pcb.emitterPointer = UVec2::convertFromPacked(e.second.emitter->getDeviceAddress());
 		pcb.particlesPointer = UVec2::convertFromPacked(e.second.particles->getDeviceAddress());
+
+		if constexpr (ENABLE_FEEDBACK) {
+			auto feedback = memPool->spawn(AllocationUsage::DeviceLocalHostVisible,
+					BufferInfo(core::ForceBufferUsage(core::BufferUsage::ShaderDeviceAddress),
+							sizeof(ParticleFeedback)));
+
+			feedback->map([&](uint8_t *buf, VkDeviceSize bufSize) { memset(buf, 0, bufSize); },
+					DeviceMemoryAccess::Flush);
+
+			pcb.feedbackPointer = UVec2::convertFromPacked(feedback->getDeviceAddress());
+
+			pHandle->handle->getFence()->addRelease([feedback, framesInGen, nframes, pcb](bool) {
+				feedback->map([&](uint8_t *buf, VkDeviceSize bufSize) {
+					auto fb = (ParticleFeedback *)buf;
+
+					std::cout << framesInGen << " " << nframes << " " << pcb.genframe << " "
+							  << pcb.gentime << " " << pcb.gendt << " " << fb->emissionCount << " "
+							  << fb->simulationCount << " " << fb->skippedCount << "\n";
+				}, DeviceMemoryAccess::Invalidate);
+			}, feedback, STAPPLER_LOCATION);
+		}
 
 		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
 				BytesView((const uint8_t *)&pcb, sizeof(ParticleConstantData)));
@@ -486,7 +461,7 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 		e.second.frame += nframes;
 		e.second.clock += static_cast<uint64_t>(nframes) * d.frameInterval;
 
-		while (e.second.frame > framesInGen) { e.second.frame -= framesInGen; }
+		while (e.second.frame >= framesInGen) { e.second.frame -= framesInGen; }
 	}
 }
 

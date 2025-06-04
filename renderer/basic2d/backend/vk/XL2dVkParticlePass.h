@@ -67,6 +67,8 @@ public:
 
 	SpanView<StagingData> getStaging() const { return _staging; }
 
+	void clearStaging();
+
 protected:
 	EmitterData spawnEmitter(DeviceMemoryPool *, uint64_t id, ParticleSystemData *,
 			uint32_t initParticles, uint64_t clock);
