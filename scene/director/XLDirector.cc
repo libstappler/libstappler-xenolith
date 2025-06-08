@@ -49,7 +49,8 @@ bool Director::init(Application *main, const core::FrameConstraints &constraints
 	_pool->perform([&, this] {
 		_scheduler = Rc<Scheduler>::create();
 		_actionManager = Rc<ActionManager>::create();
-		_inputDispatcher = Rc<InputDispatcher>::create(_pool, view);
+		_inputDispatcher = Rc<InputDispatcher>::create(_pool);
+		_textInput = Rc<TextInputManager>::create(_view);
 	});
 	_startTime = sp::platform::clock(ClockType::Monotonic);
 	_time.global = 0;
@@ -63,9 +64,7 @@ bool Director::init(Application *main, const core::FrameConstraints &constraints
 	return true;
 }
 
-TextInputManager *Director::getTextInputManager() const {
-	return _inputDispatcher->getTextInputManager();
-}
+TextInputManager *Director::getTextInputManager() const { return _textInput; }
 
 const Rc<ResourceCache> &Director::getResourceCache() const {
 	return _mainLoop->getResourceCache();

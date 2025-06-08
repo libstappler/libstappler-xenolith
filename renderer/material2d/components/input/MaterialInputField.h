@@ -26,6 +26,8 @@
 #include "MaterialSurface.h"
 #include "MaterialInputTextContainer.h"
 #include "MaterialIconSprite.h"
+#include "SPEnum.h"
+#include "XLPlatformTextInputInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -43,9 +45,11 @@ enum class InputFieldPasswordMode {
 
 enum class InputFieldError {
 	None,
-	Overflow,
-	InvalidChar,
+	Overflow = 1 << 0,
+	InvalidChar = 1 << 1,
 };
+
+SP_DEFINE_ENUM_AS_MASK(InputFieldError)
 
 class SP_PUBLIC InputField : public Surface {
 public:
@@ -76,10 +80,12 @@ public:
 	virtual void setEnabled(bool);
 	virtual bool isEnabled() const;
 
-	virtual WideStringView getInputString() const { return _inputString; }
+	virtual const TextInputState &getInput() const { return _inputState; }
+
+	virtual WideStringView getInputString() const { return _inputState.getStringView(); }
 
 	virtual void setInputType(TextInputType);
-	virtual TextInputType getInputType() const { return _inputType; }
+	virtual TextInputType getInputType() const { return _inputState.type; }
 
 	virtual void setPasswordMode(InputFieldPasswordMode);
 	virtual InputFieldPasswordMode getPasswordMode() const { return _passwordMode; }
@@ -103,13 +109,13 @@ protected:
 	virtual void acquireInput(const Vec2 &targetLocation);
 	virtual void updateCursorForLocation(const Vec2 &);
 
-	virtual void handleTextInput(WideStringView, TextCursor, TextCursor);
-	virtual void handleKeyboardEnabled(bool, const Rect &, float);
-	virtual void handleInputEnabled(bool);
+	virtual void handleTextInput(const TextInputState &);
 
 	virtual bool handleInputChar(char16_t);
 
 	virtual void handleError(InputFieldError);
+
+	virtual InputFieldError validateInputData(TextInputState &);
 
 	InputFieldStyle _style = InputFieldStyle::Filled;
 	InputListener *_inputListener = nullptr;
@@ -121,11 +127,8 @@ protected:
 	IconSprite *_trailingIcon = nullptr;
 	Surface *_indicator = nullptr;
 
-	WideString _inputString;
 	TextInputHandler _handler;
-	TextCursor _cursor;
-	TextCursor _markedRegion = TextCursor::InvalidCursor;
-	TextInputType _inputType = TextInputType::Default;
+	TextInputState _inputState;
 	InputFieldPasswordMode _passwordMode = InputFieldPasswordMode::NotPassword;
 
 	float _activityAnimationDuration = 0.25f;
@@ -138,6 +141,6 @@ protected:
 	bool _isLongPress = false;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_INPUT_MATERIALINPUTFIELD_H_ */

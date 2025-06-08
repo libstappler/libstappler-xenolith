@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +26,24 @@
 
 #include "XLCoreLoop.h"
 #include "XLPlatformApplication.h"
+#include "XLPlatformTextInputInterface.h"
+#include "XLPlatformViewInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Application;
 class ResourceCache;
 
+using platform::TextInputString;
+using platform::TextInputRequest;
+using platform::TextInputState;
+
+using platform::ViewLayer;
+using platform::ViewLayerFlags;
+
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLAPPLICATIONINFO_H_ */

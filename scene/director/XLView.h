@@ -53,7 +53,7 @@ struct SP_PUBLIC ViewInfo {
 	}
 };
 
-class SP_PUBLIC View : public platform::ViewInterface, public TextInputViewInterface {
+class SP_PUBLIC View : public platform::ViewInterface {
 public:
 	static constexpr size_t FrameAverageCount = 20;
 
@@ -64,8 +64,6 @@ public:
 	using RenderQueue = core::Queue;
 
 	static EventHeader onFrameRate;
-	static EventHeader onBackground;
-	static EventHeader onFocus;
 
 	virtual ~View();
 
@@ -87,17 +85,12 @@ public:
 	Director *getDirector() const;
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
-	// update screen extent, non thread-safe
-	// only updates field, view is not resized
-
-	// handle and propagate input event
-	virtual void handleInputEvent(const InputEventData &) override;
-	virtual void handleInputEvents(Vector<InputEventData> &&) override;
-
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const;
 	virtual core::ImageViewInfo getSwapchainImageViewInfo(const core::ImageInfo &image) const;
 
 	virtual Extent2 getExtent() const override;
+
+	virtual const WindowInfo &getWindowInfo() const override;
 
 	core::SwapchainConfig selectConfig(const core::SurfaceInfo &) const;
 
@@ -117,9 +110,9 @@ public:
 	virtual void deprecateSwapchain();
 
 protected:
-	bool _inBackground = false;
-	bool _hasFocus = true;
-	bool _pointerInWindow = false;
+	virtual void propagateInputEvent(core::InputEventData &) override;
+	virtual void propagateTextInput(TextInputState &) override;
+
 	bool _navigationEmpty = true;
 
 	Rc<Director> _director;

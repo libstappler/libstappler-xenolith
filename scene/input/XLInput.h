@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +30,17 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-using InputFlags = core::InputFlags;
-using InputMouseButton = core::InputMouseButton;
-using InputModifier = core::InputModifier;
-using InputKeyCode = core::InputKeyCode;
-using InputKeyComposeState = core::InputKeyComposeState;
-using InputEventName = core::InputEventName;
-using InputEventData = core::InputEventData;
-using TextInputType = core::TextInputType;
-using TextCursor = core::TextCursor;
-using TextCursorPosition = core::TextCursorPosition;
-using TextCursorLength = core::TextCursorLength;
+using core::InputFlags;
+using core::InputMouseButton;
+using core::InputModifier;
+using core::InputKeyCode;
+using core::InputKeyComposeState;
+using core::InputEventName;
+using core::InputEventData;
+using core::TextInputType;
+using core::TextCursor;
+using core::TextCursorPosition;
+using core::TextCursorLength;
 
 enum class InputEventState {
 	Declined, // Получатель не заинтересован в этой цепочке событий
@@ -76,17 +77,17 @@ constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
 
 #endif
 
-}
+} // namespace stappler::xenolith
 
 namespace std {
 
 template <>
 struct SP_PUBLIC hash<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData> {
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData &ev) const {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::InputEventData &ev) const {
 		return std::hash<uint32_t>{}(ev.id);
 	}
 };
 
-}
+} // namespace std
 
 #endif /* XENOLITH_SCENE_INPUT_XLINPUT_H_ */

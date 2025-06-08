@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,7 @@
 #include "XLInputListener.h"
 #include "XLAction.h"
 #include "XL2dLabel.h"
+#include "XLPlatformViewInterface.h"
 
 namespace stappler::xenolith::app {
 
@@ -35,11 +37,10 @@ bool Button::init(Function<void()> &&cb) {
 
 	_callback = sp::move(cb);
 
-	_listener = addInputListener(Rc<InputListener>::create());
-	_listener->setTouchFilter([] (const InputEvent &event, const InputListener::DefaultEventFilter &) {
-		return true;
-	});
-	_listener->addMoveRecognizer([this] (const GestureData &ev) {
+	_listener = addComponent(Rc<InputListener>::create());
+	_listener->setTouchFilter([](const InputEvent &event,
+									  const InputListener::DefaultEventFilter &) { return true; });
+	_listener->addMoveRecognizer([this](const GestureData &ev) {
 		bool touched = isTouched(ev.input->currentLocation);
 		if (touched != _focus) {
 			_focus = touched;
@@ -51,7 +52,7 @@ bool Button::init(Function<void()> &&cb) {
 		}
 		return true;
 	}, false);
-	_listener->addTouchRecognizer([this] (const GestureData &ev) -> bool {
+	_listener->addTouchRecognizer([this](const GestureData &ev) -> bool {
 		if (ev.event == GestureEvent::Began) {
 			if (isTouched(ev.input->currentLocation)) {
 				_listener->setExclusive();
@@ -66,13 +67,15 @@ bool Button::init(Function<void()> &&cb) {
 		}
 		return true;
 	});
-	_listener->setPointerEnterCallback([this] (bool pointerWithinWindow) {
+	_listener->setPointerEnterCallback([this](bool pointerWithinWindow) {
 		if (!pointerWithinWindow && _focus) {
 			_focus = false;
 			handleFocusLeave();
 		}
 		return true;
 	});
+
+	_listener->setViewLayerFlags(ViewLayerFlags::CursorPointer);
 
 	updateEnabled();
 
@@ -86,9 +89,7 @@ void Button::setEnabled(bool value) {
 	}
 }
 
-void Button::setCallback(Function<void()> &&cb) {
-	_callback = cb;
-}
+void Button::setCallback(Function<void()> &&cb) { _callback = cb; }
 
 void Button::handleFocusEnter() {
 	stopAllActions();
@@ -100,9 +101,7 @@ void Button::handleFocusLeave() {
 	runAction(Rc<TintTo>::create(0.2f, _enabled ? Color::Grey_400 : Color::Grey_200));
 }
 
-void Button::handleTouch() {
-	_callback();
-}
+void Button::handleTouch() { _callback(); }
 
 void Button::updateEnabled() {
 	if (!_focus) {
@@ -134,8 +133,6 @@ void ButtonWithLabel::handleContentSizeDirty() {
 	_label->setPosition(_contentSize / 2.0f);
 }
 
-void ButtonWithLabel::setString(StringView str) {
-	_label->setString(str);
-}
+void ButtonWithLabel::setString(StringView str) { _label->setString(str); }
 
-}
+} // namespace stappler::xenolith::app

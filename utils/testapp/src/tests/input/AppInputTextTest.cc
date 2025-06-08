@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +22,9 @@
  **/
 
 #include "AppInputTextTest.h"
+#include "XLInputListener.h"
+#include "XLDirector.h"
+#include "XLTextInputManager.h"
 
 namespace stappler::xenolith::app {
 
@@ -38,29 +42,32 @@ bool InputTextTest::init() {
 	_label->setColor(Color::Grey_500);
 	_label->setString("Placeholder");
 
-	_inputHandler.onText = [this] (WideStringView str, TextCursor cursor, TextCursor marked) {
-		std::cout << "InputTextTest: onText: " << string::toUtf8<Interface>(str) << " " << cursor.start << ":" << cursor.length << "\n";
-		_label->setString(str);
-	};
-	_inputHandler.onKeyboard = [] (bool enabled, const Rect &targetRect, float duration) {
-		std::cout << "InputTextTest: onKeyboard: " << enabled << " " << targetRect << " " << duration << "\n";
-	};
-	_inputHandler.onInput = [this] (bool enabled) {
-		if (enabled) {
-			_background->setColor(Color::Red_100);
-			_label->setColor(Color::Black);
-			_label->setString("");
-		} else {
-			_background->setColor(Color::Grey_200);
-			_label->setString("Placeholder");
-			_label->setColor(Color::Grey_500);
-			_inputAcquired = false;
+	_inputHandler.onData = [this](const TextInputState &state) {
+		if (_state.enabled != state.enabled) {
+			if (state.enabled) {
+				_background->setColor(Color::Red_100);
+				_label->setColor(Color::Black);
+			} else {
+				_background->setColor(Color::Grey_200);
+				if (state.empty()) {
+					_label->setString("Placeholder");
+				}
+				_label->setColor(Color::Grey_500);
+				_inputAcquired = false;
+			}
 		}
-		std::cout << "InputTextTest: onKeyboard: " << enabled << "\n";
+
+		_state = state;
+
+		std::cout << "InputTextTest: onData: " << string::toUtf8<Interface>(state.getStringView())
+				  << " " << state.cursor.start << ":" << state.cursor.length << "\n";
+		if (!_state.empty()) {
+			_label->setString(state.getStringView());
+		}
 	};
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addTapRecognizer([this] (const GestureTap &tap) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addTapRecognizer([this](const GestureTap &tap) {
 		handleTap(tap.pos);
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
@@ -81,7 +88,7 @@ void InputTextTest::handleTap(const Vec2 &pos) {
 	if (!_inputAcquired) {
 		if (_background->isTouched(pos)) {
 			auto manager = _director->getTextInputManager();
-			if (_inputHandler.run(manager)) {
+			if (_inputHandler.run(manager, _state.getRequest())) {
 				_inputAcquired = true;
 			}
 		}
@@ -90,4 +97,4 @@ void InputTextTest::handleTap(const Vec2 &pos) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

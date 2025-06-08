@@ -25,12 +25,11 @@
 #include "XLInputDispatcher.h"
 #include "XLApplication.h"
 #include "SPEventTimerHandle.h"
+#include "XLPlatformViewInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(View, onFrameRate);
-XL_DECLARE_EVENT_CLASS(View, onBackground);
-XL_DECLARE_EVENT_CLASS(View, onFocus);
 
 View::~View() { log::debug("xenolith::View", "~View"); }
 
@@ -127,66 +126,6 @@ void View::setPresentationEngine(Rc<core::PresentationEngine> &&e) {
 
 Director *View::getDirector() const { return _director; }
 
-void View::handleInputEvent(const InputEventData &event) {
-	if (!_presentationEngine) {
-		return;
-	}
-
-	_application->performOnAppThread([this, event = event]() mutable {
-		if (event.isPointEvent()) {
-			event.point.density = _presentationEngine
-					? _presentationEngine->getFrameConstraints().density
-					: _info.window.density;
-		}
-
-		switch (event.event) {
-		case InputEventName::Background:
-			_inBackground = event.getValue();
-			onBackground(this, _inBackground);
-			break;
-		case InputEventName::PointerEnter: _pointerInWindow = event.getValue(); break;
-		case InputEventName::FocusGain:
-			_hasFocus = event.getValue();
-			onFocus(this, _hasFocus);
-			break;
-		default: break;
-		}
-		_director->getInputDispatcher()->handleInputEvent(event);
-	}, this);
-	setReadyForNextFrame();
-}
-
-void View::handleInputEvents(Vector<InputEventData> &&events) {
-	if (!_presentationEngine) {
-		return;
-	}
-
-	_application->performOnAppThread([this, events = sp::move(events)]() mutable {
-		for (auto &event : events) {
-			if (event.isPointEvent()) {
-				event.point.density = _presentationEngine
-						? _presentationEngine->getFrameConstraints().density
-						: _info.window.density;
-			}
-
-			switch (event.event) {
-			case InputEventName::Background:
-				_inBackground = event.getValue();
-				onBackground(this, _inBackground);
-				break;
-			case InputEventName::PointerEnter: _pointerInWindow = event.getValue(); break;
-			case InputEventName::FocusGain:
-				_hasFocus = event.getValue();
-				onFocus(this, _hasFocus);
-				break;
-			default: break;
-			}
-			_director->getInputDispatcher()->handleInputEvent(event);
-		}
-	}, this, true);
-	setReadyForNextFrame();
-}
-
 core::ImageInfo View::getSwapchainImageInfo(const core::SwapchainConfig &cfg) const {
 	core::ImageInfo swapchainImageInfo;
 	swapchainImageInfo.format = cfg.imageFormat;
@@ -226,6 +165,8 @@ Extent2 View::getExtent() const {
 	}
 }
 
+const WindowInfo &View::getWindowInfo() const { return _info.window; }
+
 void View::retainBackButton() {
 	performOnThread([this] { ++_backButtonCounter; }, this, true);
 }
@@ -246,6 +187,16 @@ void View::deprecateSwapchain() {
 			_presentationEngine->deprecateSwapchain(false);
 		}
 	}, this, false);
+}
+
+void View::propagateInputEvent(core::InputEventData &event) {
+	platform::ViewInterface::propagateInputEvent(event);
+	_director->getInputDispatcher()->handleInputEvent(event);
+}
+
+void View::propagateTextInput(TextInputState &state) {
+	platform::ViewInterface::propagateTextInput(state);
+	_director->getTextInputManager()->handleInputUpdate(state);
 }
 
 } // namespace stappler::xenolith

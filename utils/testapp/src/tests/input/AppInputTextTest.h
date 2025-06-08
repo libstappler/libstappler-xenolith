@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -46,8 +47,9 @@ protected:
 
 	bool _inputAcquired = false;
 	TextInputHandler _inputHandler;
+	TextInputState _state;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_INPUT_APPINPUTTEXTTEST_H_ */

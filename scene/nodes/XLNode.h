@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -76,7 +77,7 @@ public:
 	virtual void setScaleY(float scaleY);
 	virtual void setScaleZ(float scaleZ);
 
-	virtual const Vec3 & getScale() const { return _scale; }
+	virtual const Vec3 &getScale() const { return _scale; }
 
 	virtual void setPosition(const Vec2 &position);
 	virtual void setPosition(const Vec3 &position);
@@ -84,12 +85,12 @@ public:
 	virtual void setPositionY(float);
 	virtual void setPositionZ(float);
 
-	virtual const Vec3 & getPosition() const { return _position; }
+	virtual const Vec3 &getPosition() const { return _position; }
 
 	virtual void setSkewX(float skewX);
 	virtual void setSkewY(float skewY);
 
-	virtual const Vec2 & getSkew() const { return _skew; }
+	virtual const Vec2 &getSkew() const { return _skew; }
 
 	/**
 	 * Sets the anchor point in percent.
@@ -103,8 +104,8 @@ public:
 	 *
 	 * @param anchorPoint   The anchor point of node.
 	 */
-	virtual void setAnchorPoint(const Vec2& anchorPoint);
-	virtual const Vec2 & getAnchorPoint() const { return _anchorPoint; }
+	virtual void setAnchorPoint(const Vec2 &anchorPoint);
+	virtual const Vec2 &getAnchorPoint() const { return _anchorPoint; }
 
 	/**
 	 * Sets the untransformed size of the node.
@@ -114,28 +115,28 @@ public:
 	 *
 	 * @param contentSize   The untransformed size of the node.
 	 */
-	virtual void setContentSize(const Size2& contentSize);
-	virtual const Size2& getContentSize() const { return _contentSize; }
+	virtual void setContentSize(const Size2 &contentSize);
+	virtual const Size2 &getContentSize() const { return _contentSize; }
 
 	virtual void setVisible(bool visible);
 	virtual bool isVisible() const { return _visible; }
 
 	virtual void setRotation(float rotationInRadians);
-	virtual void setRotation(const Vec3 & rotationInRadians);
-	virtual void setRotation(const Quaternion & quat);
+	virtual void setRotation(const Vec3 &rotationInRadians);
+	virtual void setRotation(const Quaternion &quat);
 
 	virtual float getRotation() const { return _rotation.z; }
 	virtual const Vec3 &getRotation3D() const { return _rotation; }
 	virtual const Quaternion &getRotationQuat() const { return _rotationQuat; }
 
-	template<typename N, typename ... Args>
-	auto addChild(N *child, Args &&... args) -> N * {
+	template <typename N, typename... Args>
+	auto addChild(N *child, Args &&...args) -> N * {
 		addChildNode(child, std::forward<Args>(args)...);
 		return child;
 	}
 
-	template<typename N, typename ... Args>
-	auto addChild(const Rc<N> &child, Args &&... args) -> N * {
+	template <typename N, typename... Args>
+	auto addChild(const Rc<N> &child, Args &&...args) -> N * {
 		addChildNode(child.get(), std::forward<Args>(args)...);
 		return child.get();
 	}
@@ -144,9 +145,9 @@ public:
 	virtual void addChildNode(Node *child, ZOrder localZOrder);
 	virtual void addChildNode(Node *child, ZOrder localZOrder, uint64_t tag);
 
-	virtual Node* getChildByTag(uint64_t tag) const;
+	virtual Node *getChildByTag(uint64_t tag) const;
 
-	virtual const Vector<Rc<Node>>& getChildren() const { return _children; }
+	virtual const Vector<Rc<Node>> &getChildren() const { return _children; }
 	virtual size_t getChildrenCount() const { return _children.size(); }
 
 	virtual void setParent(Node *parent);
@@ -199,7 +200,7 @@ public:
 	void stopActionByTag(uint32_t tag);
 	void stopAllActionsByTag(uint32_t tag);
 
-	Action* getActionByTag(uint32_t tag);
+	Action *getActionByTag(uint32_t tag);
 	size_t getNumberOfRunningActions() const;
 
 
@@ -225,30 +226,11 @@ public:
 	virtual bool removeAllComponentByTag(uint64_t);
 	virtual void removeAllComponents();
 
-    template <typename T>
-    T *getComponentByType() const;
+	template <typename T>
+	T *getComponentByType() const;
 
-    template <typename T>
-    T *getComponentByType(uint32_t tag) const;
-
-	template <typename C>
-	auto addInputListener(C *component) -> C * {
-		if (addInputListenerItem(component)) {
-			return component;
-		}
-		return nullptr;
-	}
-
-	template <typename C>
-	auto addInputListener(const Rc<C> &component) -> C * {
-		if (addInputListenerItem(component.get())) {
-			return component.get();
-		}
-		return nullptr;
-	}
-
-	virtual bool addInputListenerItem(InputListener *);
-	virtual bool removeInputListener(InputListener *);
+	template <typename T>
+	T *getComponentByType(uint32_t tag) const;
 
 	virtual StringView getName() const { return _name; }
 	virtual void setName(StringView str) { _name = str.str<Interface>(); }
@@ -278,18 +260,18 @@ public:
 
 	virtual void update(const UpdateTime &time);
 
-	virtual const Mat4& getNodeToParentTransform() const;
+	virtual const Mat4 &getNodeToParentTransform() const;
 
-	virtual void setNodeToParentTransform(const Mat4& transform);
-	virtual const Mat4& getParentToNodeTransform() const;
+	virtual void setNodeToParentTransform(const Mat4 &transform);
+	virtual const Mat4 &getParentToNodeTransform() const;
 
 	virtual Mat4 getNodeToWorldTransform() const;
 	virtual Mat4 getWorldToNodeTransform() const;
 
-	Vec2 convertToNodeSpace(const Vec2& worldPoint) const;
-	Vec2 convertToWorldSpace(const Vec2& nodePoint) const;
-	Vec2 convertToNodeSpaceAR(const Vec2& worldPoint) const;
-	Vec2 convertToWorldSpaceAR(const Vec2& nodePoint) const;
+	Vec2 convertToNodeSpace(const Vec2 &worldPoint) const;
+	Vec2 convertToWorldSpace(const Vec2 &nodePoint) const;
+	Vec2 convertToNodeSpaceAR(const Vec2 &worldPoint) const;
+	Vec2 convertToWorldSpaceAR(const Vec2 &nodePoint) const;
 
 	virtual bool isCascadeOpacityEnabled() const { return _cascadeOpacityEnabled; }
 	virtual bool isCascadeColorEnabled() const { return _cascadeColorEnabled; }
@@ -305,8 +287,8 @@ public:
 
 	virtual Color4F getColor() const { return _realColor; }
 	virtual Color4F getDisplayedColor() const { return _displayedColor; }
-	virtual void setColor(const Color4F& color, bool withOpacity = false);
-	virtual void updateDisplayedColor(const Color4F& parentColor);
+	virtual void setColor(const Color4F &color, bool withOpacity = false);
+	virtual void updateDisplayedColor(const Color4F &parentColor);
 
 	virtual void setDepthIndex(float value) { _depthIndex = value; }
 	virtual float getDepthIndex() const { return _depthIndex; }
@@ -353,11 +335,11 @@ public:
 
 protected:
 	struct VisitInfo {
-		void (*visitBegin) (const VisitInfo &) = nullptr;
-		void (*visitNodesBelow) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
-		void (*visitSelf) (const VisitInfo &, Node *) = nullptr;
-		void (*visitNodesAbove) (const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
-		void (*visitEnd) (const VisitInfo &) = nullptr;
+		void (*visitBegin)(const VisitInfo &) = nullptr;
+		void (*visitNodesBelow)(const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
+		void (*visitSelf)(const VisitInfo &, Node *) = nullptr;
+		void (*visitNodesAbove)(const VisitInfo &, SpanView<Rc<Node>>) = nullptr;
+		void (*visitEnd)(const VisitInfo &) = nullptr;
 		Node *node = nullptr;
 
 		mutable NodeFlags flags = NodeFlags::None;
@@ -429,7 +411,6 @@ protected:
 	Function<void()> _reorderChildDirtyCallback;
 
 	Vector<Rc<Component>> _components;
-	Vector<Rc<InputListener>> _inputEvents;
 
 	Scene *_scene = nullptr;
 	Director *_director = nullptr;
@@ -464,6 +445,6 @@ auto Node::getComponentByType(uint32_t tag) const -> T * {
 }
 
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_NODES_XLNODE_H_ */

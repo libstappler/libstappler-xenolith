@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,14 +39,11 @@ bool Checkbox::init(bool value, Function<void(bool)> &&cb) {
 	setColor(_backgroundColor);
 	setContentSize(Size2(32.0f, 32.0f));
 
-	_input = addInputListener(Rc<InputListener>::create());
-	_input->addTapRecognizer([this] (const GestureTap &data) {
+	_input = addComponent(Rc<InputListener>::create());
+	_input->addTapRecognizer([this](const GestureTap &data) {
 		switch (data.event) {
-		case GestureEvent::Activated:
-			setValue(!_value);
-			break;
-		default:
-			break;
+		case GestureEvent::Activated: setValue(!_value); break;
+		default: break;
 		}
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
@@ -65,9 +63,7 @@ void Checkbox::setValue(bool value) {
 	}
 }
 
-bool Checkbox::getValue() const {
-	return _value;
-}
+bool Checkbox::getValue() const { return _value; }
 
 void Checkbox::setForegroundColor(const Color4F &color) {
 	if (_foregroundColor != color) {
@@ -76,9 +72,7 @@ void Checkbox::setForegroundColor(const Color4F &color) {
 	}
 }
 
-Color4F Checkbox::getForegroundColor() const {
-	return _foregroundColor;
-}
+Color4F Checkbox::getForegroundColor() const { return _foregroundColor; }
 
 void Checkbox::setBackgroundColor(const Color4F &color) {
 	if (_backgroundColor != color) {
@@ -87,9 +81,7 @@ void Checkbox::setBackgroundColor(const Color4F &color) {
 	}
 }
 
-Color4F Checkbox::getBackgroundColor() const {
-	return _backgroundColor;
-}
+Color4F Checkbox::getBackgroundColor() const { return _backgroundColor; }
 
 void Checkbox::updateValue() {
 	if (_value) {
@@ -104,7 +96,8 @@ bool CheckboxWithLabel::init(StringView title, bool value, Function<void(bool)> 
 		return false;
 	}
 
-	_label = addChild(Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::HeadlineSmall));
+	_label = addChild(
+			Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::HeadlineSmall));
 	_label->setAnchorPoint(Anchor::MiddleLeft);
 	_label->setString(title);
 
@@ -117,8 +110,6 @@ void CheckboxWithLabel::handleContentSizeDirty() {
 	_label->setPosition(Vec2(_contentSize.width + 16.0f, _contentSize.height / 2.0f));
 }
 
-void CheckboxWithLabel::setLabelColor(const Color4F &color) {
-	_label->setColor(color);
-}
+void CheckboxWithLabel::setLabelColor(const Color4F &color) { _label->setColor(color); }
 
-}
+} // namespace stappler::xenolith::app

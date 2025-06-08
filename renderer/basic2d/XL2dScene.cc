@@ -226,7 +226,7 @@ void Scene2d::setContent(SceneContent *content) {
 }
 
 void Scene2d::initialize() {
-	_listener = addInputListener(Rc<InputListener>::create());
+	_listener = addComponent(Rc<InputListener>::create());
 	_listener->addKeyRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
 			_fps->incrementMode();

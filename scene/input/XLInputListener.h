@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@
 #ifndef XENOLITH_SCENE_INPUT_XLINPUTLISTENER_H_
 #define XENOLITH_SCENE_INPUT_XLINPUTLISTENER_H_
 
-#include "XLCommon.h"
+#include "XLComponent.h"
 #include "XLNodeInfo.h"
 #include "XLGestureRecognizer.h"
 
@@ -34,13 +35,13 @@ class Node;
 class Scene;
 class GestureRecognizer;
 
-class SP_PUBLIC InputListener : public Ref {
+class SP_PUBLIC InputListener : public Component {
 public:
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
 	using KeyMask = std::bitset<toInt(InputKeyCode::Max)>;
 
-	template<typename T>
+	template <typename T>
 	using InputCallback = Function<bool(const T &)>;
 
 	using DefaultEventFilter = std::function<bool(const InputEvent &)>;
@@ -53,23 +54,21 @@ public:
 	static EventMask makeEventMask(std::initializer_list<InputEventName> &&);
 	static KeyMask makeKeyMask(std::initializer_list<InputKeyCode> &&);
 
-	InputListener();
-	virtual ~InputListener();
+	virtual ~InputListener() = default;
 
 	bool init(int32_t priority = 0);
 
-	void onEnter(Scene *);
-	void onExit();
+	virtual void handleEnter(Scene *) override;
+	virtual void handleExit() override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
 
-	void update(UpdateTime);
+	virtual void update(const UpdateTime &) override;
 
-	bool isRunning() const { return _running; }
-
-	void setEnabled(bool b);
-	bool isEnabled() const { return _enabled; }
+	void setViewLayerFlags(ViewLayerFlags);
+	ViewLayerFlags getViewLayerFlags() const { return _layerFlags; }
 
 	void setOwner(Node *pOwner);
-	Node* getOwner() const { return _owner; }
+	Node *getOwner() const { return _owner; }
 
 	void setPriority(int32_t);
 	int32_t getPriority() const { return _priority; }
@@ -82,9 +81,6 @@ public:
 
 	void setTouchPadding(float value) { _touchPadding = value; }
 	float getTouchPadding() const { return _touchPadding; }
-
-	void setDensity(float value) { _density = value; }
-	float getDensity() const { return _density; }
 
 	void setExclusive();
 	void setExclusiveForTouch(uint32_t eventId);
@@ -108,14 +104,18 @@ public:
 	bool canHandleEvent(const InputEvent &event) const;
 	InputEventState handleEvent(const InputEvent &event);
 
-	GestureRecognizer *addTouchRecognizer(InputCallback<GestureData> &&, ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
-	GestureRecognizer *addTapRecognizer(InputCallback<GestureTap> &&, ButtonMask && = makeButtonMask({InputMouseButton::Touch}),
-			uint32_t maxTapCount = 2);
-	GestureRecognizer *addPressRecognizer(InputCallback<GesturePress> &&, TimeInterval interval = TapIntervalAllowed,
-			bool continuous = false, ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
-	GestureRecognizer *addSwipeRecognizer(InputCallback<GestureSwipe> &&, float threshold = TapDistanceAllowed, bool sendThreshold = false,
+	GestureRecognizer *addTouchRecognizer(InputCallback<GestureData> &&,
 			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
-	GestureRecognizer *addPinchRecognizer(InputCallback<GesturePinch> &&, ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+	GestureRecognizer *addTapRecognizer(InputCallback<GestureTap> &&,
+			ButtonMask && = makeButtonMask({InputMouseButton::Touch}), uint32_t maxTapCount = 2);
+	GestureRecognizer *addPressRecognizer(InputCallback<GesturePress> &&,
+			TimeInterval interval = TapIntervalAllowed, bool continuous = false,
+			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+	GestureRecognizer *addSwipeRecognizer(InputCallback<GestureSwipe> &&,
+			float threshold = TapDistanceAllowed, bool sendThreshold = false,
+			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+	GestureRecognizer *addPinchRecognizer(InputCallback<GesturePinch> &&,
+			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
 	GestureRecognizer *addScrollRecognizer(InputCallback<GestureScroll> &&);
 	GestureRecognizer *addMoveRecognizer(InputCallback<GestureData> &&, bool withinNode = true);
 	GestureRecognizer *addMouseOverRecognizer(InputCallback<GestureData> &&, float padding = 0.0f);
@@ -138,15 +138,12 @@ protected:
 
 	int32_t _priority = 0; // 0 - scene graph
 	uint32_t _dedicatedFocus = 0; // 0 - unused
-	bool _enabled = true;
-	bool _running = false;
-	Node *_owner = nullptr;
 	EventMask _eventMask;
 	EventMask _swallowEvents;
+	ViewLayerFlags _layerFlags = ViewLayerFlags::None;
 
 	float _touchPadding = 0.0f;
 	float _opacityFilter = 0.0f;
-	float _density = 1.0f;
 
 	Scene *_scene = nullptr;
 
@@ -155,6 +152,6 @@ protected:
 	Map<InputEventName, Function<bool(bool)>> _callbacks;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_SCENE_INPUT_XLINPUTLISTENER_H_ */

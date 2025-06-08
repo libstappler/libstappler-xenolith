@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,11 +36,11 @@ bool GeneralScissorTest::init() {
 
 	_node = addChild(Rc<Node>::create());
 	_node->setAnchorPoint(Anchor::Middle);
-	_node->setContentSizeDirtyCallback([this] {
-		_layer->setPosition(_node->getContentSize() / 2.0f);
-	});
+	_node->setContentSizeDirtyCallback(
+			[this] { _layer->setPosition(_node->getContentSize() / 2.0f); });
 
-	auto comp = _node->addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	auto comp = _node->addComponent(
+			Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
 	comp->enableScissor(Padding(-2.0f));
 
 	_layer = _node->addChild(Rc<Layer>::create(Color::Red_500));
@@ -51,19 +52,15 @@ bool GeneralScissorTest::init() {
 	_nodeResize->setContentSize(Size2(48, 48));
 	_nodeResize->setRotation(-45.0_to_rad);
 
-	auto l = _nodeResize->addInputListener(Rc<InputListener>::create());
-	l->addMouseOverRecognizer([this] (const GestureData &data) {
+	auto l = _nodeResize->addComponent(Rc<InputListener>::create());
+	l->addMouseOverRecognizer([this](const GestureData &data) {
 		switch (data.event) {
-		case GestureEvent::Began:
-			_nodeResize->setColor(Color::Grey_600);
-			break;
-		default:
-			_nodeResize->setColor(Color::Grey_400);
-			break;
+		case GestureEvent::Began: _nodeResize->setColor(Color::Grey_600); break;
+		default: _nodeResize->setColor(Color::Grey_400); break;
 		}
 		return true;
 	});
-	l->addSwipeRecognizer([this] (const GestureSwipe &swipe) {
+	l->addSwipeRecognizer([this](const GestureSwipe &swipe) {
 		if (swipe.event == GestureEvent::Activated) {
 			auto tmp = _contentSize * 0.90f * 0.5f;
 			auto max = Vec2(_contentSize / 2.0f) + Vec2(tmp.width, -tmp.height);
@@ -85,7 +82,8 @@ bool GeneralScissorTest::init() {
 			}
 			_nodeResize->setPosition(newPos);
 
-			auto newContentSize = Size2(newPos.x - _contentSize.width / 2.0f, _contentSize.height / 2.0f - newPos.y);
+			auto newContentSize = Size2(newPos.x - _contentSize.width / 2.0f,
+					_contentSize.height / 2.0f - newPos.y);
 			_node->setContentSize(newContentSize * 2.0f);
 		}
 
@@ -108,4 +106,4 @@ void GeneralScissorTest::handleContentSizeDirty() {
 	_nodeResize->setPosition(Vec2(_contentSize / 2.0f) + Vec2(tmp.width, -tmp.height));
 }
 
-}
+} // namespace stappler::xenolith::app

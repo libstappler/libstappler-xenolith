@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +23,14 @@
  **/
 
 #include "XLInputListener.h"
+#include "XLComponent.h"
 #include "XLDirector.h"
 #include "XLInputDispatcher.h"
 #include "XLGestureRecognizer.h"
+#include "XLPlatformViewInterface.h"
 #include "XLScheduler.h"
 #include "XLScene.h"
+#include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -45,82 +49,75 @@ InputListener::EventMask InputListener::EventMaskKeyboard = InputListener::makeE
 	InputEventName::KeyCanceled,
 });
 
-InputListener::ButtonMask InputListener::makeButtonMask(std::initializer_list<InputMouseButton> &&il) {
+InputListener::ButtonMask InputListener::makeButtonMask(
+		std::initializer_list<InputMouseButton> &&il) {
 	ButtonMask ret;
-	for (auto &it : il) {
-		ret.set(toInt(it));
-	}
+	for (auto &it : il) { ret.set(toInt(it)); }
 	return ret;
 }
 
 InputListener::EventMask InputListener::makeEventMask(std::initializer_list<InputEventName> &&il) {
 	EventMask ret;
-	for (auto &it : il) {
-		ret.set(toInt(it));
-	}
+	for (auto &it : il) { ret.set(toInt(it)); }
 	return ret;
 }
 
 InputListener::KeyMask InputListener::makeKeyMask(std::initializer_list<InputKeyCode> &&il) {
 	KeyMask ret;
-	for (auto &it : il) {
-		ret.set(toInt(it));
-	}
+	for (auto &it : il) { ret.set(toInt(it)); }
 	return ret;
 }
 
-InputListener::InputListener()
-: _enabled(true), _owner(nullptr) { }
-
-InputListener::~InputListener() { }
-
 bool InputListener::init(int32_t priority) {
+	if (!Component::init()) {
+		return false;
+	}
+
 	_priority = priority;
 	return true;
 }
 
-void InputListener::onEnter(Scene *scene) {
-	_running = true;
+void InputListener::handleEnter(Scene *scene) {
+	Component::handleEnter(scene);
+
 	_scene = scene;
 
-	_scene->getDirector()->getScheduler()->scheduleUpdate(this);
-
-	for (auto &it : _recognizers) {
-		it->onEnter(this);
-	}
+	for (auto &it : _recognizers) { it->onEnter(this); }
 }
 
-void InputListener::onExit() {
-	for (auto &it : _recognizers) {
-		it->onExit();
-	}
+void InputListener::handleExit() {
+	for (auto &it : _recognizers) { it->onExit(); }
 
-	_scene->getDirector()->getScheduler()->unschedule(this);
-	_running = false;
 	_scene = nullptr;
+
+	Component::handleExit();
 }
 
-void InputListener::update(UpdateTime dt) {
-	for (auto &it : _recognizers) {
-		it->update(dt.delta);
+void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flags) {
+	Component::handleVisitSelf(info, node, flags);
+
+	if (_enabled) {
+		info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
+				_layerFlags,
+				_layerFlags != ViewLayerFlags::None
+						? TransformRect(Rect(Vec2(0, 0), node->getContentSize()),
+								  info.modelTransformStack.back())
+						: Rect());
+		info.input->updateFocus(info.focusValue);
 	}
 }
 
-void InputListener::setOwner(Node *owner) {
-	_owner = owner;
+void InputListener::update(const UpdateTime &dt) {
+	for (auto &it : _recognizers) { it->update(dt.delta); }
 }
 
-void InputListener::setEnabled(bool b) {
-	_enabled = b;
-}
+void InputListener::setViewLayerFlags(ViewLayerFlags flags) { _layerFlags = flags; }
 
-void InputListener::setPriority(int32_t p) {
-	_priority = p;
-}
+void InputListener::setOwner(Node *owner) { _owner = owner; }
 
-void InputListener::setDedicatedFocus(uint32_t v) {
-	_dedicatedFocus = v;
-}
+void InputListener::setPriority(int32_t p) { _priority = p; }
+
+void InputListener::setDedicatedFocus(uint32_t v) { _dedicatedFocus = v; }
 
 void InputListener::setExclusive() {
 	if (_scene) {
@@ -150,29 +147,17 @@ void InputListener::setSwallowEvents(const EventMask &mask) {
 	}
 }
 
-void InputListener::setSwallowAllEvents() {
-	_swallowEvents.set();
-}
+void InputListener::setSwallowAllEvents() { _swallowEvents.set(); }
 
-void InputListener::setSwallowEvent(InputEventName event) {
-	_swallowEvents.set(toInt(event));
-}
+void InputListener::setSwallowEvent(InputEventName event) { _swallowEvents.set(toInt(event)); }
 
-void InputListener::clearSwallowAllEvents() {
-	_swallowEvents.reset();
-}
+void InputListener::clearSwallowAllEvents() { _swallowEvents.reset(); }
 
-void InputListener::clearSwallowEvent(InputEventName event) {
-	_swallowEvents.reset(toInt(event));
-}
+void InputListener::clearSwallowEvent(InputEventName event) { _swallowEvents.reset(toInt(event)); }
 
-void InputListener::clearSwallowEvents(const EventMask &event) {
-	_swallowEvents &= ~event;
-}
+void InputListener::clearSwallowEvents(const EventMask &event) { _swallowEvents &= ~event; }
 
-bool InputListener::isSwallowAllEvents() const {
-	return _swallowEvents.all();
-}
+bool InputListener::isSwallowAllEvents() const { return _swallowEvents.all(); }
 
 bool InputListener::isSwallowAllEvents(const EventMask &event) const {
 	return (_swallowEvents & event) == event;
@@ -186,9 +171,7 @@ bool InputListener::isSwallowEvent(InputEventName name) const {
 	return _swallowEvents.test(toInt(name));
 }
 
-void InputListener::setTouchFilter(const EventFilter &filter) {
-	_eventFilter = filter;
-}
+void InputListener::setTouchFilter(const EventFilter &filter) { _eventFilter = filter; }
 
 bool InputListener::shouldSwallowEvent(const InputEvent &event) const {
 	return _swallowEvents.test(toInt(event.data.event));
@@ -221,53 +204,66 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 	InputEventState ret = InputEventState::Declined;
 	auto it = _callbacks.find(event.data.event);
 	if (it != _callbacks.end()) {
-		ret = std::max(it->second(event.data.getValue()) ? InputEventState::Processed : InputEventState::Declined, ret);
+		ret = std::max(it->second(event.data.getValue()) ? InputEventState::Processed
+														 : InputEventState::Declined,
+				ret);
 	}
 	for (auto &it : _recognizers) {
 		if (!_running || !_owner) {
 			break;
 		}
 
-		ret = std::max(it->handleInputEvent(event, _density), ret);
+		ret = std::max(it->handleInputEvent(event, _owner->getInputDensity()), ret);
 	}
 	return ret;
 }
 
-GestureRecognizer *InputListener::addTouchRecognizer(InputCallback<GestureData> &&cb, ButtonMask &&buttonMask) {
+GestureRecognizer *InputListener::addTouchRecognizer(InputCallback<GestureData> &&cb,
+		ButtonMask &&buttonMask) {
 	return addRecognizer(Rc<GestureTouchRecognizer>::create(sp::move(cb), sp::move(buttonMask)));
 }
 
-GestureRecognizer *InputListener::addTapRecognizer(InputCallback<GestureTap> &&cb, ButtonMask &&buttonMask, uint32_t maxTapCount) {
-	return addRecognizer(Rc<GestureTapRecognizer>::create(sp::move(cb), sp::move(buttonMask), maxTapCount));
+GestureRecognizer *InputListener::addTapRecognizer(InputCallback<GestureTap> &&cb,
+		ButtonMask &&buttonMask, uint32_t maxTapCount) {
+	return addRecognizer(
+			Rc<GestureTapRecognizer>::create(sp::move(cb), sp::move(buttonMask), maxTapCount));
 }
 
 GestureRecognizer *InputListener::addScrollRecognizer(InputCallback<GestureScroll> &&cb) {
 	return addRecognizer(Rc<GestureScrollRecognizer>::create(sp::move(cb)));
 }
 
-GestureRecognizer *InputListener::addPressRecognizer(InputCallback<GesturePress> &&cb, TimeInterval interval, bool continuous,
+GestureRecognizer *InputListener::addPressRecognizer(InputCallback<GesturePress> &&cb,
+		TimeInterval interval, bool continuous, ButtonMask &&mask) {
+	return addRecognizer(
+			Rc<GesturePressRecognizer>::create(sp::move(cb), interval, continuous, sp::move(mask)));
+}
+
+GestureRecognizer *InputListener::addSwipeRecognizer(InputCallback<GestureSwipe> &&cb,
+		float threshold, bool sendThreshold, ButtonMask &&mask) {
+	return addRecognizer(Rc<GestureSwipeRecognizer>::create(sp::move(cb), threshold, sendThreshold,
+			sp::move(mask)));
+}
+
+GestureRecognizer *InputListener::addPinchRecognizer(InputCallback<GesturePinch> &&cb,
 		ButtonMask &&mask) {
-	return addRecognizer(Rc<GesturePressRecognizer>::create(sp::move(cb), interval, continuous, sp::move(mask)));
-}
-
-GestureRecognizer *InputListener::addSwipeRecognizer(InputCallback<GestureSwipe> &&cb, float threshold, bool sendThreshold, ButtonMask &&mask) {
-	return addRecognizer(Rc<GestureSwipeRecognizer>::create(sp::move(cb), threshold, sendThreshold, sp::move(mask)));
-}
-
-GestureRecognizer *InputListener::addPinchRecognizer(InputCallback<GesturePinch> &&cb, ButtonMask &&mask) {
 	return addRecognizer(Rc<GesturePinchRecognizer>::create(sp::move(cb), sp::move(mask)));
 }
 
-GestureRecognizer *InputListener::addMoveRecognizer(InputCallback<GestureData> &&cb, bool withinNode) {
+GestureRecognizer *InputListener::addMoveRecognizer(InputCallback<GestureData> &&cb,
+		bool withinNode) {
 	return addRecognizer(Rc<GestureMoveRecognizer>::create(sp::move(cb), withinNode));
 }
 
-GestureRecognizer *InputListener::addMouseOverRecognizer(InputCallback<GestureData> &&cb, float padding) {
+GestureRecognizer *InputListener::addMouseOverRecognizer(InputCallback<GestureData> &&cb,
+		float padding) {
 	return addRecognizer(Rc<GestureMouseOverRecognizer>::create(sp::move(cb)));
 }
 
-GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData> &&cb, KeyMask &&keys) {
-	return (GestureKeyRecognizer *)addRecognizer(Rc<GestureKeyRecognizer>::create(sp::move(cb), sp::move(keys)));
+GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData> &&cb,
+		KeyMask &&keys) {
+	return (GestureKeyRecognizer *)addRecognizer(
+			Rc<GestureKeyRecognizer>::create(sp::move(cb), sp::move(keys)));
 }
 
 void InputListener::setPointerEnterCallback(Function<bool(bool)> &&cb) {
@@ -322,8 +318,9 @@ bool InputListener::_shouldProcessEvent(const InputEvent &event) const {
 			visible = p->isVisible();
 			p = p->getParent();
 		}
-		if (visible && (!event.data.hasLocation() || event.data.event == InputEventName::MouseMove
-				|| node->isTouched(event.currentLocation, _touchPadding))
+		if (visible
+				&& (!event.data.hasLocation() || event.data.event == InputEventName::MouseMove
+						|| node->isTouched(event.currentLocation, _touchPadding))
 				&& node->getOpacity() >= _opacityFilter) {
 			return true;
 		}
@@ -332,7 +329,7 @@ bool InputListener::_shouldProcessEvent(const InputEvent &event) const {
 }
 
 void InputListener::addEventMask(const EventMask &mask) {
-	for (size_t i = 0; i < mask.size(); ++ i) {
+	for (size_t i = 0; i < mask.size(); ++i) {
 		if (mask.test(i)) {
 			_eventMask.set(i);
 		}
@@ -348,4 +345,4 @@ GestureRecognizer *InputListener::addRecognizer(GestureRecognizer *rec) {
 	return ret;
 }
 
-}
+} // namespace stappler::xenolith

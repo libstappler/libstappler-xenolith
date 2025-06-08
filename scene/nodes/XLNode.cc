@@ -644,37 +644,6 @@ void Node::removeAllComponents() {
 	}
 }
 
-bool Node::addInputListenerItem(InputListener *input) {
-	XLASSERT(input != nullptr, "Argument must be non-nil");
-	XLASSERT(input->getOwner() == nullptr, "Component already added. It can't be added again");
-
-	input->setOwner(this);
-	_inputEvents.push_back(input);
-	if (this->isRunning()) {
-		input->onEnter(_scene);
-	}
-
-	return true;
-}
-
-bool Node::removeInputListener(InputListener *input) {
-	if (_inputEvents.empty()) {
-		return false;
-	}
-
-	for (auto iter = _inputEvents.begin(); iter != _inputEvents.end(); ++iter) {
-		if ((*iter) == input) {
-			if (this->isRunning()) {
-				input->onExit();
-			}
-			input->setOwner(nullptr);
-			_inputEvents.erase(iter);
-			return true;
-		}
-	}
-	return false;
-}
-
 void Node::handleEnter(Scene *scene) {
 	_scene = scene;
 	_director = scene->getDirector();
@@ -715,9 +684,8 @@ void Node::handleEnter(Scene *scene) {
 		}
 	}
 
-	for (auto &it : _inputEvents) { it->onEnter(scene); }
-
-	for (auto &child : _children) { child->handleEnter(scene); }
+	auto childs = _children;
+	for (auto &child : childs) { child->handleEnter(scene); }
 
 	if (_scheduled) {
 		_scheduler->scheduleUpdate(this, 0, _paused);
@@ -738,9 +706,8 @@ void Node::handleExit() {
 		_scheduled = true; // -re-enable after restart;
 	}
 
-	for (auto &child : _children) { child->handleExit(); }
-
-	for (auto &it : _inputEvents) { it->onExit(); }
+	auto childs = _children;
+	for (auto &child : childs) { child->handleExit(); }
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
@@ -808,7 +775,6 @@ void Node::handleGlobalTransformDirty(const Mat4 &parentTransform) {
 
 	auto density = std::min(std::min(scale.x, scale.y), scale.z);
 	if (density != _inputDensity) {
-		for (auto &it : _inputEvents) { it->setDensity(density); }
 		_inputDensity = density;
 	}
 }
@@ -837,14 +803,6 @@ void Node::cleanup() {
 	for (auto &child : _children) { child->cleanup(); }
 
 	this->removeAllComponents();
-
-	for (auto &it : _inputEvents) {
-		if (this->isRunning()) {
-			it->onExit();
-		}
-		it->setOwner(nullptr);
-	}
-	_inputEvents.clear();
 }
 
 Rect Node::getBoundingBox() const {
@@ -1232,17 +1190,6 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleVisitSelf)) {
 			it->handleVisitSelf(info, this, flags);
 		}
-	}
-
-	for (auto &it : _inputEvents) {
-		if (it->isEnabled()) {
-			auto dedicated = it->getDedicatedFocus();
-			info.input->addListener(it, dedicated == 0 ? info.focusValue : dedicated);
-		}
-	}
-
-	if (!_inputEvents.empty()) {
-		info.input->updateFocus(info.focusValue);
 	}
 
 	// self draw

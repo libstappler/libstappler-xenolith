@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +31,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
+using xenolith::platform::TextInputFlags;
+
 enum class SurfaceType : uint32_t {
 	None,
 	XCB = 1 << 0,
@@ -47,12 +50,6 @@ public:
 	virtual void run() override;
 	virtual void end() override;
 
-	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
-	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
-	virtual void runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
-	virtual void cancelTextInput() override;
-
-	virtual bool isInputEnabled() const override { return _inputEnabled; }
 	xenolith::platform::LinuxViewInterface *getView() const { return _view; }
 
 	vk::Device *getDevice() const { return _device; }
@@ -71,12 +68,19 @@ public:
 protected:
 	//virtual bool recreateSwapchain(core::PresentMode) override;
 
+	virtual bool updateTextInput(const TextInputRequest &, TextInputFlags flags) override;
+	virtual void cancelTextInput() override;
+
+	virtual bool isTextInputEnabled() const override { return _inputEnabled; }
+
+	virtual void handleLayerUpdate(const ViewLayer &) override;
+
 	Rc<event::Handle> _pollHandle;
 	Rc<xenolith::platform::LinuxViewInterface> _view;
 	bool _inputEnabled = false;
 };
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif
 

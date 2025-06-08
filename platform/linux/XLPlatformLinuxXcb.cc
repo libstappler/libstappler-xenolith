@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,17 +29,16 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 static XcbLibrary *s_XcbLibrary = nullptr;
 
 // redirect xcb_wait_for_reply to libxcb
-SP_EXTERN_C void * xcb_wait_for_reply(xcb_connection_t *c, unsigned int request, xcb_generic_error_t **e) {
+SP_EXTERN_C void *xcb_wait_for_reply(xcb_connection_t *c, unsigned int request,
+		xcb_generic_error_t **e) {
 	return s_XcbLibrary->xcb_wait_for_reply(c, request, e);
 }
 
-XcbLibrary *XcbLibrary::getInstance() {
-	return s_XcbLibrary;
-}
+void _xl_xcb_null_fn() { }
 
-XcbLibrary::~XcbLibrary() {
-	close();
-}
+XcbLibrary *XcbLibrary::getInstance() { return s_XcbLibrary; }
+
+XcbLibrary::~XcbLibrary() { close(); }
 
 bool XcbLibrary::init() {
 	_handle = Dso("libxcb.so");
@@ -56,97 +56,75 @@ bool XcbLibrary::init() {
 	return false;
 }
 
-bool XcbLibrary::open(Dso &handle) {
-	this->xcb_connect = handle.sym<decltype(this->xcb_connect)>("xcb_connect");
-	this->xcb_get_setup = handle.sym<decltype(this->xcb_get_setup)>("xcb_get_setup");
-	this->xcb_setup_roots_iterator =
-			handle.sym<decltype(this->xcb_setup_roots_iterator)>("xcb_setup_roots_iterator");
-	this->xcb_screen_next =
-			handle.sym<decltype(this->xcb_screen_next)>("xcb_screen_next");
-	this->xcb_connection_has_error =
-			handle.sym<decltype(this->xcb_connection_has_error)>("xcb_connection_has_error");
-	this->xcb_get_file_descriptor =
-			handle.sym<decltype(this->xcb_get_file_descriptor)>("xcb_get_file_descriptor");
-	this->xcb_generate_id = handle.sym<decltype(this->xcb_generate_id)>("xcb_generate_id");
-	this->xcb_flush = handle.sym<decltype(this->xcb_flush)>("xcb_flush");
-	this->xcb_disconnect = handle.sym<decltype(this->xcb_disconnect)>("xcb_disconnect");
-	this->xcb_poll_for_event = handle.sym<decltype(this->xcb_poll_for_event)>("xcb_poll_for_event");
-	this->xcb_send_event = handle.sym<decltype(this->xcb_send_event)>("xcb_send_event");
-	this->xcb_get_extension_data = handle.sym<decltype(this->xcb_get_extension_data)>("xcb_get_extension_data");
-	this->xcb_map_window = handle.sym<decltype(this->xcb_map_window)>("xcb_map_window");
-	this->xcb_create_window = handle.sym<decltype(this->xcb_create_window)>("xcb_create_window");
-	this->xcb_configure_window = handle.sym<decltype(this->xcb_configure_window)>("xcb_configure_window");
-	this->xcb_change_window_attributes = handle.sym<decltype(this->xcb_change_window_attributes)>("xcb_change_window_attributes");
-	this->xcb_change_property = handle.sym<decltype(this->xcb_change_property)>("xcb_change_property");
-	this->xcb_intern_atom = handle.sym<decltype(this->xcb_intern_atom)>("xcb_intern_atom");
-	this->xcb_intern_atom_reply = handle.sym<decltype(this->xcb_intern_atom_reply)>("xcb_intern_atom_reply");
-	this->xcb_wait_for_reply = handle.sym<decltype(this->xcb_wait_for_reply)>("xcb_wait_for_reply");
-	this->xcb_get_modifier_mapping_unchecked =
-			handle.sym<decltype(this->xcb_get_modifier_mapping_unchecked)>("xcb_get_modifier_mapping_unchecked");
-	this->xcb_get_modifier_mapping_reply =
-			handle.sym<decltype(this->xcb_get_modifier_mapping_reply)>("xcb_get_modifier_mapping_reply");
-	this->xcb_get_modifier_mapping_keycodes =
-			handle.sym<decltype(this->xcb_get_modifier_mapping_keycodes)>("xcb_get_modifier_mapping_keycodes");
-	this->xcb_convert_selection =
-			handle.sym<decltype(this->xcb_convert_selection)>("xcb_convert_selection");
-	this->xcb_set_selection_owner =
-			handle.sym<decltype(this->xcb_set_selection_owner)>("xcb_set_selection_owner");
-	this->xcb_get_selection_owner =
-			handle.sym<decltype(this->xcb_get_selection_owner)>("xcb_get_selection_owner");
-	this->xcb_get_selection_owner_reply =
-			handle.sym<decltype(this->xcb_get_selection_owner_reply)>("xcb_get_selection_owner_reply");
-	this->xcb_get_property_value =
-			handle.sym<decltype(this->xcb_get_property_value)>("xcb_get_property_value");
-	this->xcb_get_property_value_length =
-			handle.sym<decltype(this->xcb_get_property_value_length)>("xcb_get_property_value_length");
-	this->xcb_get_keyboard_mapping =
-			handle.sym<decltype(this->xcb_get_keyboard_mapping)>("xcb_get_keyboard_mapping");
-	this->xcb_get_keyboard_mapping_reply =
-			handle.sym<decltype(this->xcb_get_keyboard_mapping_reply)>("xcb_get_keyboard_mapping_reply");
-	this->xcb_get_property_reply =
-			handle.sym<decltype(this->xcb_get_property_reply)>("xcb_get_property_reply");
-	this->xcb_get_property =
-			handle.sym<decltype(this->xcb_get_property)>("xcb_get_property");
-	this->xcb_get_property_value =
-			handle.sym<decltype(this->xcb_get_property_value)>("xcb_get_property_value");
-	this->xcb_get_property_value_length =
-			handle.sym<decltype(this->xcb_get_property_value_length)>("xcb_get_property_value_length");
-
-	if (this->xcb_connect
-			&& this->xcb_get_setup
-			&& this->xcb_setup_roots_iterator
-			&& this->xcb_screen_next
-			&& this->xcb_connection_has_error
-			&& this->xcb_get_file_descriptor
-			&& this->xcb_generate_id
-			&& this->xcb_flush
-			&& this->xcb_disconnect
-			&& this->xcb_poll_for_event
-			&& this->xcb_send_event
-			&& this->xcb_get_extension_data
-			&& this->xcb_map_window
-			&& this->xcb_create_window
-			&& this->xcb_change_property
-			&& this->xcb_intern_atom
-			&& this->xcb_intern_atom_reply
-			&& this->xcb_wait_for_reply
-			&& this->xcb_get_modifier_mapping_unchecked
-			&& this->xcb_get_modifier_mapping_reply
-			&& this->xcb_get_modifier_mapping_keycodes
-			&& this->xcb_convert_selection
-			&& this->xcb_set_selection_owner
-			&& this->xcb_get_selection_owner
-			&& this->xcb_get_selection_owner_reply
-			&& this->xcb_get_keyboard_mapping
-			&& this->xcb_get_keyboard_mapping_reply
-			&& this->xcb_get_property_reply
-			&& this->xcb_get_property
-			&& this->xcb_get_property_value
-			&& this->xcb_get_property_value_length) {
-		openAux();
-		return true;
+template <typename T>
+static bool XcbLibrary_clearFunctionList(T first, T last) {
+	while (first != last) {
+		*first = nullptr;
+		++first;
 	}
-	return false;
+	return true;
+}
+
+template <typename T>
+static bool XcbLibrary_validateFunctionList(T first, T last) {
+	while (first != last) {
+		if (*first == nullptr) {
+			XcbLibrary_clearFunctionList(first, last);
+			return false;
+		}
+		++first;
+	}
+	return true;
+}
+
+bool XcbLibrary::open(Dso &handle) {
+	XL_XCB_LOAD_PROTO(handle, xcb_connect)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_setup)
+	XL_XCB_LOAD_PROTO(handle, xcb_setup_roots_iterator)
+	XL_XCB_LOAD_PROTO(handle, xcb_screen_next)
+	XL_XCB_LOAD_PROTO(handle, xcb_connection_has_error)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_file_descriptor)
+	XL_XCB_LOAD_PROTO(handle, xcb_generate_id)
+	XL_XCB_LOAD_PROTO(handle, xcb_flush)
+	XL_XCB_LOAD_PROTO(handle, xcb_disconnect)
+	XL_XCB_LOAD_PROTO(handle, xcb_poll_for_event)
+	XL_XCB_LOAD_PROTO(handle, xcb_send_event)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_extension_data)
+	XL_XCB_LOAD_PROTO(handle, xcb_map_window)
+	XL_XCB_LOAD_PROTO(handle, xcb_create_window)
+	XL_XCB_LOAD_PROTO(handle, xcb_configure_window)
+	XL_XCB_LOAD_PROTO(handle, xcb_change_window_attributes)
+	XL_XCB_LOAD_PROTO(handle, xcb_change_property)
+	XL_XCB_LOAD_PROTO(handle, xcb_intern_atom)
+	XL_XCB_LOAD_PROTO(handle, xcb_intern_atom_reply)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_property_reply)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_property)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_property_value)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_property_value_length)
+	XL_XCB_LOAD_PROTO(handle, xcb_request_check)
+	XL_XCB_LOAD_PROTO(handle, xcb_open_font_checked)
+	XL_XCB_LOAD_PROTO(handle, xcb_create_glyph_cursor)
+	XL_XCB_LOAD_PROTO(handle, xcb_wait_for_reply)
+	XL_XCB_LOAD_PROTO(handle, xcb_create_gc_checked)
+	XL_XCB_LOAD_PROTO(handle, xcb_free_cursor)
+	XL_XCB_LOAD_PROTO(handle, xcb_close_font_checked)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_modifier_mapping_unchecked)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_modifier_mapping_reply)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_modifier_mapping_keycodes)
+	XL_XCB_LOAD_PROTO(handle, xcb_convert_selection)
+	XL_XCB_LOAD_PROTO(handle, xcb_set_selection_owner)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_selection_owner);
+	XL_XCB_LOAD_PROTO(handle, xcb_get_selection_owner_reply)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_keyboard_mapping)
+	XL_XCB_LOAD_PROTO(handle, xcb_get_keyboard_mapping_reply)
+
+	if (!XcbLibrary_validateFunctionList(&_xcb_first_fn, &_xcb_last_fn)) {
+		log::error("XcbLibrary", "Fail to load xcb function");
+		return false;
+	}
+
+	openAux();
+	return true;
 }
 
 void XcbLibrary::close() {
@@ -155,23 +133,15 @@ void XcbLibrary::close() {
 	}
 }
 
-bool XcbLibrary::hasRandr() const {
-	return _randr ? true : false;
-}
+bool XcbLibrary::hasRandr() const { return _randr ? true : false; }
 
-bool XcbLibrary::hasKeysyms() const {
-	return _keysyms ? true : false;
-}
+bool XcbLibrary::hasKeysyms() const { return _keysyms ? true : false; }
 
-bool XcbLibrary::hasXkb() const {
-	return _xkb ? true : false;
-}
+bool XcbLibrary::hasXkb() const { return _xkb ? true : false; }
 
-bool XcbLibrary::hasSync() const {
-	return _sync ? true : false;
-}
+bool XcbLibrary::hasSync() const { return _sync ? true : false; }
 
-XcbConnection * XcbLibrary::getCommonConnection() {
+XcbConnection *XcbLibrary::getCommonConnection() {
 	std::unique_lock lock(_connectionMutex);
 	if (!_connection) {
 		_connection = Rc<XcbConnection>::alloc(this);
@@ -193,272 +163,123 @@ Rc<XcbConnection> XcbLibrary::acquireConnection() {
 
 void XcbLibrary::openAux() {
 	if (auto randr = Dso("libxcb-randr.so")) {
-		this->xcb_randr_id =
-				randr.sym<decltype(this->xcb_randr_id)>("xcb_randr_id");
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_id)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_query_version)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_query_version_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_sizes)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_sizes_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_sizes_iterator)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_rates_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_info_rates_iterator)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_refresh_rates_next)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_refresh_rates_end)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_refresh_rates_rates)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_refresh_rates_rates_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_modes)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_modes_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_outputs)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_outputs_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_modes)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_modes_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_names)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_names_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_crtcs)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_screen_resources_current_crtcs_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_primary)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_primary_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_primary_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_crtcs)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_crtcs_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_crtcs_end)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_modes)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_modes_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_name)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_output_info_name_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_unchecked)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_reply)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_outputs)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_outputs_length)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible)
+		XL_XCB_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible_length)
 
-		this->xcb_randr_query_version =
-				randr.sym<decltype(this->xcb_randr_query_version)>("xcb_randr_query_version");
-		this->xcb_randr_query_version_reply =
-				randr.sym<decltype(this->xcb_randr_query_version_reply)>("xcb_randr_query_version_reply");
-		this->xcb_randr_get_screen_info_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_unchecked)>("xcb_randr_get_screen_info_unchecked");
-		this->xcb_randr_get_screen_info_reply =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_reply)>("xcb_randr_get_screen_info_reply");
-
-		this->xcb_randr_get_screen_info_sizes =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_sizes)>("xcb_randr_get_screen_info_sizes");;
-		this->xcb_randr_get_screen_info_sizes_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_sizes_length)>("xcb_randr_get_screen_info_sizes_length");
-		this->xcb_randr_get_screen_info_sizes_iterator =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_sizes_iterator)>("xcb_randr_get_screen_info_sizes_iterator");
-		this->xcb_randr_get_screen_info_rates_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_rates_length)>("xcb_randr_get_screen_info_rates_length");
-		this->xcb_randr_get_screen_info_rates_iterator =
-				randr.sym<decltype(this->xcb_randr_get_screen_info_rates_iterator)>("xcb_randr_get_screen_info_rates_iterator");
-		this->xcb_randr_refresh_rates_next =
-				randr.sym<decltype(this->xcb_randr_refresh_rates_next)>("xcb_randr_refresh_rates_next");
-		this->xcb_randr_refresh_rates_end =
-				randr.sym<decltype(this->xcb_randr_refresh_rates_end)>("xcb_randr_refresh_rates_end");
-		this->xcb_randr_refresh_rates_rates =
-				randr.sym<decltype(this->xcb_randr_refresh_rates_rates)>("xcb_randr_refresh_rates_rates");
-		this->xcb_randr_refresh_rates_rates_length =
-				randr.sym<decltype(this->xcb_randr_refresh_rates_rates_length)>("xcb_randr_refresh_rates_rates_length");
-
-		this->xcb_randr_get_screen_resources =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources)>("xcb_randr_get_screen_resources");
-		this->xcb_randr_get_screen_resources_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_unchecked)>("xcb_randr_get_screen_resources_unchecked");
-		this->xcb_randr_get_screen_resources_reply =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_reply)>("xcb_randr_get_screen_resources_reply");
-		this->xcb_randr_get_screen_resources_modes =
-					randr.sym<decltype(this->xcb_randr_get_screen_resources_modes)>("xcb_randr_get_screen_resources_modes");
-		this->xcb_randr_get_screen_resources_modes_length =
-					randr.sym<decltype(this->xcb_randr_get_screen_resources_modes_length)>("xcb_randr_get_screen_resources_modes_length");
-
-		this->xcb_randr_get_screen_resources_current =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current)>("xcb_randr_get_screen_resources_current");
-		this->xcb_randr_get_screen_resources_current_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_unchecked)>("xcb_randr_get_screen_resources_current_unchecked");
-		this->xcb_randr_get_screen_resources_current_reply =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_reply)>("xcb_randr_get_screen_resources_current_reply");
-		this->xcb_randr_get_screen_resources_current_outputs =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_outputs)>("xcb_randr_get_screen_resources_current_outputs");
-		this->xcb_randr_get_screen_resources_current_outputs_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_outputs_length)>("xcb_randr_get_screen_resources_current_outputs_length");
-		this->xcb_randr_get_screen_resources_current_modes =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_modes)>("xcb_randr_get_screen_resources_current_modes");
-		this->xcb_randr_get_screen_resources_current_modes_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_modes_length)>("xcb_randr_get_screen_resources_current_modes_length");
-		this->xcb_randr_get_screen_resources_current_names =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_names)>("xcb_randr_get_screen_resources_current_names");
-		this->xcb_randr_get_screen_resources_current_names_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_names_length)>("xcb_randr_get_screen_resources_current_names_length");
-		this->xcb_randr_get_screen_resources_current_crtcs =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_crtcs)>("xcb_randr_get_screen_resources_current_crtcs");
-		this->xcb_randr_get_screen_resources_current_crtcs_length =
-				randr.sym<decltype(this->xcb_randr_get_screen_resources_current_crtcs_length)>("xcb_randr_get_screen_resources_current_crtcs_length");
-
-		this->xcb_randr_get_output_primary =
-				randr.sym<decltype(this->xcb_randr_get_output_primary)>("xcb_randr_get_output_primary");
-		this->xcb_randr_get_output_primary_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_output_primary_unchecked)>("xcb_randr_get_output_primary_unchecked");
-		this->xcb_randr_get_output_primary_reply =
-				randr.sym<decltype(this->xcb_randr_get_output_primary_reply)>("xcb_randr_get_output_primary_reply");
-
-		this->xcb_randr_get_output_info =
-				randr.sym<decltype(this->xcb_randr_get_output_info)>("xcb_randr_get_output_info");
-		this->xcb_randr_get_output_info_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_output_info_unchecked)>("xcb_randr_get_output_info_unchecked");
-		this->xcb_randr_get_output_info_reply =
-				randr.sym<decltype(this->xcb_randr_get_output_info_reply)>("xcb_randr_get_output_info_reply");
-		this->xcb_randr_get_output_info_crtcs =
-				randr.sym<decltype(this->xcb_randr_get_output_info_crtcs)>("xcb_randr_get_output_info_crtcs");
-		this->xcb_randr_get_output_info_crtcs_length =
-				randr.sym<decltype(this->xcb_randr_get_output_info_crtcs_length)>("xcb_randr_get_output_info_crtcs_length");
-		this->xcb_randr_get_output_info_crtcs_end =
-				randr.sym<decltype(this->xcb_randr_get_output_info_crtcs_end)>("xcb_randr_get_output_info_crtcs_end");
-		this->xcb_randr_get_output_info_modes =
-				randr.sym<decltype(this->xcb_randr_get_output_info_modes)>("xcb_randr_get_output_info_modes");
-		this->xcb_randr_get_output_info_modes_length =
-				randr.sym<decltype(this->xcb_randr_get_output_info_modes_length)>("xcb_randr_get_output_info_modes_length");
-		this->xcb_randr_get_output_info_name =
-				randr.sym<decltype(this->xcb_randr_get_output_info_name)>("xcb_randr_get_output_info_name");
-		this->xcb_randr_get_output_info_name_length =
-				randr.sym<decltype(this->xcb_randr_get_output_info_name_length)>("xcb_randr_get_output_info_name_length");
-
-		this->xcb_randr_get_crtc_info =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info)>("xcb_randr_get_crtc_info");
-		this->xcb_randr_get_crtc_info_unchecked =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_unchecked)>("xcb_randr_get_crtc_info_unchecked");
-		this->xcb_randr_get_crtc_info_reply =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_reply)>("xcb_randr_get_crtc_info_reply");
-		this->xcb_randr_get_crtc_info_outputs =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_outputs)>("xcb_randr_get_crtc_info_outputs");
-		this->xcb_randr_get_crtc_info_outputs_length =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_outputs_length)>("xcb_randr_get_crtc_info_outputs_length");
-		this->xcb_randr_get_crtc_info_possible =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_possible)>("xcb_randr_get_crtc_info_possible");
-		this->xcb_randr_get_crtc_info_possible_length =
-				randr.sym<decltype(this->xcb_randr_get_crtc_info_possible_length)>("xcb_randr_get_crtc_info_possible_length");
-
-		if (this->xcb_randr_id
-				&&this->xcb_randr_query_version
-				&& this->xcb_randr_query_version_reply
-				&& this->xcb_randr_get_screen_info_unchecked
-				&& this->xcb_randr_get_screen_info_reply
-				&& this->xcb_randr_get_screen_info_sizes
-				&& this->xcb_randr_get_screen_info_sizes_length
-				&& this->xcb_randr_get_screen_info_sizes_iterator
-				&& this->xcb_randr_get_screen_info_rates_length
-				&& this->xcb_randr_get_screen_info_rates_iterator
-				&& this->xcb_randr_refresh_rates_next
-				&& this->xcb_randr_refresh_rates_end
-				&& this->xcb_randr_refresh_rates_rates
-				&& this->xcb_randr_refresh_rates_rates_length
-				&& this->xcb_randr_get_screen_resources
-				&& this->xcb_randr_get_screen_resources_unchecked
-				&& this->xcb_randr_get_screen_resources_reply
-				&& this->xcb_randr_get_screen_resources_modes
-				&& this->xcb_randr_get_screen_resources_modes_length
-				&& this->xcb_randr_get_screen_resources_current
-				&& this->xcb_randr_get_screen_resources_current_unchecked
-				&& this->xcb_randr_get_screen_resources_current_reply
-				&& this->xcb_randr_get_screen_resources_current_outputs
-				&& this->xcb_randr_get_screen_resources_current_outputs_length
-				&& this->xcb_randr_get_screen_resources_current_modes
-				&& this->xcb_randr_get_screen_resources_current_modes_length
-				&& this->xcb_randr_get_screen_resources_current_names
-				&& this->xcb_randr_get_screen_resources_current_names_length
-				&& this->xcb_randr_get_screen_resources_current_crtcs
-				&& this->xcb_randr_get_screen_resources_current_crtcs_length
-				&& this->xcb_randr_get_output_primary
-				&& this->xcb_randr_get_output_primary_unchecked
-				&& this->xcb_randr_get_output_primary_reply
-				&& this->xcb_randr_get_output_info
-				&& this->xcb_randr_get_output_info_unchecked
-				&& this->xcb_randr_get_output_info_reply
-				&& this->xcb_randr_get_output_info_crtcs
-				&& this->xcb_randr_get_output_info_crtcs_length
-				&& this->xcb_randr_get_output_info_crtcs_end
-				&& this->xcb_randr_get_output_info_modes
-				&& this->xcb_randr_get_output_info_modes_length
-				&& this->xcb_randr_get_output_info_name
-				&& this->xcb_randr_get_output_info_name_length
-				&& this->xcb_randr_get_crtc_info
-				&& this->xcb_randr_get_crtc_info_unchecked
-				&& this->xcb_randr_get_crtc_info_reply
-				&& this->xcb_randr_get_crtc_info_outputs
-				&& this->xcb_randr_get_crtc_info_outputs_length
-				&& this->xcb_randr_get_crtc_info_possible
-				&& this->xcb_randr_get_crtc_info_possible_length) {
-			_randr = move(randr);
+		if (!XcbLibrary_validateFunctionList(&_xcb_randr_first_fn, &_xcb_randr_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-randr function");
 		} else {
-			this->xcb_randr_query_version = nullptr;
-			this->xcb_randr_query_version_reply = nullptr;
-			this->xcb_randr_get_screen_info_unchecked = nullptr;
-			this->xcb_randr_get_screen_info_reply = nullptr;
-			this->xcb_randr_get_screen_info_sizes = nullptr;
-			this->xcb_randr_get_screen_info_sizes_length = nullptr;
-			this->xcb_randr_get_screen_info_sizes_iterator = nullptr;
-			this->xcb_randr_get_screen_info_rates_length = nullptr;
-			this->xcb_randr_get_screen_info_rates_iterator = nullptr;
-			this->xcb_randr_refresh_rates_next = nullptr;
-			this->xcb_randr_refresh_rates_rates = nullptr;
-			this->xcb_randr_refresh_rates_rates_length = nullptr;
-			this->xcb_randr_get_screen_resources = nullptr;
-			this->xcb_randr_get_screen_resources_unchecked = nullptr;
-			this->xcb_randr_get_screen_resources_reply = nullptr;
-			this->xcb_randr_get_screen_resources_modes = nullptr;
-			this->xcb_randr_get_screen_resources_modes_length = nullptr;
-			this->xcb_randr_get_screen_resources_current = nullptr;
-			this->xcb_randr_get_screen_resources_current_unchecked = nullptr;
-			this->xcb_randr_get_screen_resources_current_reply = nullptr;
+			_randr = move(randr);
 		}
 	}
 
 	if (auto keysyms = Dso("libxcb-keysyms.so")) {
-		this->xcb_key_symbols_alloc = keysyms.sym<decltype(xcb_key_symbols_alloc)>("xcb_key_symbols_alloc");
-		this->xcb_key_symbols_free = keysyms.sym<decltype(xcb_key_symbols_free)>("xcb_key_symbols_free");
-		this->xcb_key_symbols_get_keysym = keysyms.sym<decltype(xcb_key_symbols_get_keysym)>("xcb_key_symbols_get_keysym");
-		this->xcb_key_symbols_get_keycode = keysyms.sym<decltype(xcb_key_symbols_get_keycode)>("xcb_key_symbols_get_keycode");
-		this->xcb_key_press_lookup_keysym = keysyms.sym<decltype(xcb_key_press_lookup_keysym)>("xcb_key_press_lookup_keysym");
-		this->xcb_key_release_lookup_keysym = keysyms.sym<decltype(xcb_key_release_lookup_keysym)>("xcb_key_release_lookup_keysym");
-		this->xcb_refresh_keyboard_mapping = keysyms.sym<decltype(xcb_refresh_keyboard_mapping)>("xcb_refresh_keyboard_mapping");
-		this->xcb_is_keypad_key = keysyms.sym<decltype(xcb_is_keypad_key)>("xcb_is_keypad_key");
-		this->xcb_is_private_keypad_key = keysyms.sym<decltype(xcb_is_private_keypad_key)>("xcb_is_private_keypad_key");
-		this->xcb_is_cursor_key = keysyms.sym<decltype(xcb_is_cursor_key)>("xcb_is_cursor_key");
-		this->xcb_is_pf_key = keysyms.sym<decltype(xcb_is_pf_key)>("xcb_is_pf_key");
-		this->xcb_is_function_key = keysyms.sym<decltype(xcb_is_function_key)>("xcb_is_function_key");
-		this->xcb_is_misc_function_key = keysyms.sym<decltype(xcb_is_misc_function_key)>("xcb_is_misc_function_key");
-		this->xcb_is_modifier_key = keysyms.sym<decltype(xcb_is_modifier_key)>("xcb_is_modifier_key");
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_symbols_alloc)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_symbols_free)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_symbols_get_keysym)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_symbols_get_keycode)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_press_lookup_keysym)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_key_release_lookup_keysym)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_refresh_keyboard_mapping)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_keypad_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_private_keypad_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_cursor_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_pf_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_function_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_misc_function_key)
+		XL_XCB_LOAD_PROTO(keysyms, xcb_is_modifier_key)
 
-		if (this->xcb_key_symbols_alloc
-				&& this->xcb_key_symbols_free
-				&& this->xcb_key_symbols_get_keysym
-				&& this->xcb_key_symbols_get_keycode
-				&& this->xcb_key_press_lookup_keysym
-				&& this->xcb_key_release_lookup_keysym
-				&& this->xcb_refresh_keyboard_mapping
-				&& this->xcb_is_keypad_key
-				&& this->xcb_is_private_keypad_key
-				&& this->xcb_is_cursor_key
-				&& this->xcb_is_pf_key
-				&& this->xcb_is_function_key
-				&& this->xcb_is_misc_function_key
-				&& this->xcb_is_modifier_key) {
-			_keysyms = move(keysyms);
+		if (!XcbLibrary_validateFunctionList(&_xcb_key_first_fn, &_xcb_key_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-randr function");
 		} else {
-			this->xcb_key_symbols_alloc = nullptr;
-			this->xcb_key_symbols_free = nullptr;
-			this->xcb_key_symbols_get_keysym = nullptr;
-			this->xcb_key_symbols_get_keycode = nullptr;
-			this->xcb_key_press_lookup_keysym = nullptr;
-			this->xcb_key_release_lookup_keysym = nullptr;
-			this->xcb_refresh_keyboard_mapping = nullptr;
-			this->xcb_is_keypad_key = nullptr;
-			this->xcb_is_private_keypad_key = nullptr;
-			this->xcb_is_cursor_key = nullptr;
-			this->xcb_is_pf_key = nullptr;
-			this->xcb_is_function_key = nullptr;
-			this->xcb_is_misc_function_key = nullptr;
-			this->xcb_is_modifier_key = nullptr;
+			_keysyms = move(keysyms);
 		}
 	}
 
 	if (auto xkb = Dso("libxcb-xkb.so")) {
-		this->xcb_xkb_select_events = xkb.sym<decltype(xcb_xkb_select_events)>("xcb_xkb_select_events");
+		XL_XCB_LOAD_PROTO(xkb, xcb_xkb_select_events)
 
-		if (this->xcb_xkb_select_events) {
-			_xkb = move(xkb);
+		if (!XcbLibrary_validateFunctionList(&_xcb_xkb_first_fn, &_xcb_xkb_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-xkb function");
 		} else {
-			this->xcb_xkb_select_events = nullptr;
+			_xkb = move(xkb);
 		}
 	}
 
 	if (auto sync = Dso("libxcb-sync.so")) {
-		this->xcb_sync_id = sync.sym<decltype(xcb_sync_id)>("xcb_sync_id");
-		this->xcb_sync_create_counter = sync.sym<decltype(xcb_sync_create_counter)>("xcb_sync_create_counter");
-		this->xcb_sync_create_counter_checked = sync.sym<decltype(xcb_sync_create_counter_checked)>("xcb_sync_create_counter_checked");
-		this->xcb_sync_destroy_counter = sync.sym<decltype(xcb_sync_destroy_counter)>("xcb_sync_destroy_counter");
-		this->xcb_sync_destroy_counter_checked = sync.sym<decltype(xcb_sync_destroy_counter_checked)>("xcb_sync_destroy_counter_checked");
-		this->xcb_sync_set_counter = sync.sym<decltype(xcb_sync_set_counter)>("xcb_sync_set_counter");
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_id)
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_create_counter)
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_create_counter_checked)
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_destroy_counter)
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_destroy_counter_checked)
+		XL_XCB_LOAD_PROTO(sync, xcb_sync_set_counter)
 
-		if (this->xcb_sync_id
-				&& this->xcb_sync_create_counter
-				&& this->xcb_sync_create_counter_checked
-				&& this->xcb_sync_destroy_counter
-				&& this->xcb_sync_destroy_counter_checked
-				&& this->xcb_sync_set_counter) {
-			_sync = move(sync);
+		if (!XcbLibrary_validateFunctionList(&_xcb_sync_first_fn, &_xcb_sync_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-sync function");
 		} else {
-			this->xcb_sync_id = nullptr;
-			this->xcb_sync_create_counter = nullptr;
-			this->xcb_sync_create_counter_checked = nullptr;
-			this->xcb_sync_destroy_counter = nullptr;
-			this->xcb_sync_destroy_counter_checked = nullptr;
-			this->xcb_sync_set_counter = nullptr;
+			_sync = move(sync);
+		}
+	}
+
+	if (auto cursor = Dso("libxcb-cursor.so")) {
+		XL_XCB_LOAD_PROTO(cursor, xcb_cursor_context_new)
+		XL_XCB_LOAD_PROTO(cursor, xcb_cursor_load_cursor)
+		XL_XCB_LOAD_PROTO(cursor, xcb_cursor_context_free)
+
+		if (!XcbLibrary_validateFunctionList(&_xcb_cursor_first_fn, &_xcb_cursor_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-cursor function");
+		} else {
+			_cursor = move(cursor);
 		}
 	}
 }
 
-}
+} // namespace stappler::xenolith::platform

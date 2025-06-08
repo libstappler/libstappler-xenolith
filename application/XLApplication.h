@@ -31,9 +31,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class Event;
-class EventHandlerNode;
-
 class SP_PUBLIC Application : public PlatformApplication {
 public:
 	static EventHeader onMessageToken;

@@ -22,20 +22,19 @@
  **/
 
 #include "XLVkGuiViewImpl.h"
+#include "XLCoreInput.h"
+#include "XLVk.h"
 
 #if LINUX
 
 #include "linux/XLPlatformLinuxWaylandView.h"
 #include "linux/XLPlatformLinuxXcbView.h"
 #include "linux/XLPlatformLinuxXcbConnection.h"
-#include "XLTextInputManager.h"
+#include "XLVkPresentationEngine.h"
 #include "XLVkPlatform.h"
-#include "SPPlatformUnistd.h"
 
 #include "platform/fd/SPEventPollFd.h"
 
-#include <sys/eventfd.h>
-#include <poll.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
@@ -183,31 +182,6 @@ void ViewImpl::end() {
 	View::end();
 }
 
-void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) { }
-
-void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) { }
-
-void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) {
-	performOnThread([this] {
-		_inputEnabled = true;
-		_application->performOnAppThread(
-				[this]() { _director->getTextInputManager()->setInputEnabled(true); }, this);
-	}, this);
-}
-
-void ViewImpl::cancelTextInput() {
-	performOnThread([this] {
-		_inputEnabled = false;
-		_application->performOnAppThread(
-				[this]() { _director->getTextInputManager()->setInputEnabled(false); }, this);
-	}, this);
-}
-
-core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
-	_view->onSurfaceInfo(info);
-	return move(info);
-}
-
 void ViewImpl::mapWindow() {
 	if (_view) {
 		_view->mapWindow();
@@ -235,6 +209,31 @@ void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
 void ViewImpl::handleFramePresented(core::PresentationFrame *frame) {
 	if (_view) {
 		_view->handleFramePresented();
+	}
+}
+
+core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
+	_view->onSurfaceInfo(info);
+	return move(info);
+}
+
+bool ViewImpl::updateTextInput(const TextInputRequest &, TextInputFlags flags) {
+	if (!_inputEnabled && hasFlag(flags, TextInputFlags::RunIfDisabled)) {
+		_inputEnabled = true;
+		_textInput->handleInputEnabled(true);
+	}
+	return true;
+}
+
+void ViewImpl::cancelTextInput() {
+	_inputEnabled = false;
+	_textInput->handleInputEnabled(false);
+}
+
+void ViewImpl::handleLayerUpdate(const ViewLayer &layer) {
+	View::handleLayerUpdate(layer);
+	if (_view) {
+		_view->handleLayerUpdate(layer);
 	}
 }
 

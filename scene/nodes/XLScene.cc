@@ -98,7 +98,7 @@ void Scene::render(FrameInfo &info) {
 	visitGeometry(info, NodeFlags::None);
 	visitDraw(info, NodeFlags::None);
 
-	eventDispatcher->commitStorage(move(info.input));
+	eventDispatcher->commitStorage(_director->getView(), move(info.input));
 }
 
 void Scene::handleEnter(Scene *scene) { Node::handleEnter(scene); }

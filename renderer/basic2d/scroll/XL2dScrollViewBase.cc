@@ -34,7 +34,7 @@ bool ScrollViewBase::init(Layout layout) {
 
 	_layout = layout;
 
-	_inputListener = addInputListener(Rc<InputListener>::create());
+	_inputListener = addComponent(Rc<InputListener>::create());
 	_inputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			onTap(tap.count, tap.pos);

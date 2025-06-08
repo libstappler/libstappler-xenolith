@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,7 @@
 
 #include "AppInputSwipeTest.h"
 #include "XL2dActionAcceleratedMove.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -37,8 +39,8 @@ bool InputSwipeTest::init() {
 	_node->setAnchorPoint(Anchor::Middle);
 	_node->setContentSize(Size2(48.0f, 48.0f));
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addSwipeRecognizer([this] (const GestureSwipe &swipe) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addSwipeRecognizer([this](const GestureSwipe &swipe) {
 		switch (swipe.event) {
 		case GestureEvent::Began:
 			if (_node->isTouched(swipe.input->originalLocation)) {
@@ -49,21 +51,19 @@ bool InputSwipeTest::init() {
 			return false;
 			break;
 		case GestureEvent::Activated:
-			_node->setPosition(getBoundedPosition(_node->getPosition().xy() + swipe.delta / swipe.density));
+			_node->setPosition(
+					getBoundedPosition(_node->getPosition().xy() + swipe.delta / swipe.density));
 			return true;
 			break;
 		case GestureEvent::Ended:
 			_node->setColor(Color::Red_500);
-			if (auto a = ActionAcceleratedMove::createWithBounds(
-					5000, _node->getPosition().xy(), swipe.velocity / swipe.density, getBoundsRect())) {
+			if (auto a = ActionAcceleratedMove::createWithBounds(5'000, _node->getPosition().xy(),
+						swipe.velocity / swipe.density, getBoundsRect())) {
 				_node->runAction(move(a), 1);
 			}
 			break;
-		case GestureEvent::Cancelled:
-			_node->setColor(Color::Red_500);
-			break;
-		default:
-			break;
+		case GestureEvent::Cancelled: _node->setColor(Color::Red_500); break;
+		default: break;
 		}
 		return false;
 	});
@@ -108,4 +108,4 @@ Rect InputSwipeTest::getBoundsRect() const {
 	return bbox;
 }
 
-}
+} // namespace stappler::xenolith::app

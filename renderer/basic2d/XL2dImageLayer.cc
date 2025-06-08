@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 Rect ImageLayer::getCorrectRect(Size2 containerSize) {
 	Size2 parentSize = getContentSize();
 	Rect ret = Rect(parentSize.width - containerSize.width,
-			parentSize.height - containerSize.height,
-			containerSize.width - parentSize.width,
+			parentSize.height - containerSize.height, containerSize.width - parentSize.width,
 			containerSize.height - parentSize.height);
 
 	if (containerSize.width <= parentSize.width) {
@@ -71,22 +71,19 @@ Vec2 ImageLayer::getCorrectPosition(Size2 containerSize, Vec2 point) {
 
 	if (isnan(ret.x) || isnan(ret.y)) {
 		log::format(log::LogType::Error, "ImageLayer", "pos %f %f %f %f : %f %f : %f %f",
-				bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height,
-				point.x, point.y, ret.x, ret.y);
+				bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height, point.x,
+				point.y, ret.x, ret.y);
 	}
 	return ret;
 }
 
 Size2 ImageLayer::getContainerSize() const {
-	return Size2(
-			_root->getContentSize().width * _root->getScale().x,
+	return Size2(_root->getContentSize().width * _root->getScale().x,
 			_root->getContentSize().height * _root->getScale().y);
 }
 
 Size2 ImageLayer::getContainerSizeForScale(float value) const {
-	return Size2(
-			_root->getContentSize().width * value,
-			_root->getContentSize().height * value);
+	return Size2(_root->getContentSize().width * value, _root->getContentSize().height * value);
 }
 
 ImageLayer::~ImageLayer() { }
@@ -97,17 +94,16 @@ bool ImageLayer::init() {
 	}
 
 	setOpacity(1.0f);
-	_gestureListener = addInputListener(Rc<InputListener>::create());
-	_gestureListener->setTouchFilter([] (const InputEvent &ev, const InputListener::DefaultEventFilter &f) {
-		return f(ev);
-	});
-	_gestureListener->addTapRecognizer([this] (const GestureTap &tap) {
+	_gestureListener = addComponent(Rc<InputListener>::create());
+	_gestureListener->setTouchFilter(
+			[](const InputEvent &ev, const InputListener::DefaultEventFilter &f) { return f(ev); });
+	_gestureListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (_actionCallback) {
 			_actionCallback();
 		}
 		return handleTap(tap.input->currentLocation, tap.count);
 	});
-	_gestureListener->addSwipeRecognizer([this] (const GestureSwipe &s) {
+	_gestureListener->addSwipeRecognizer([this](const GestureSwipe &s) {
 		if (s.event == GestureEvent::Began) {
 			if (_actionCallback) {
 				_actionCallback();
@@ -116,12 +112,12 @@ bool ImageLayer::init() {
 		} else if (s.event == GestureEvent::Activated) {
 			return handleSwipe(Vec2(s.delta.x / _globalScale.x, s.delta.y / _globalScale.y));
 		} else if (s.event == GestureEvent::Ended) {
-			return handleSwipeEnd(Vec2(s.velocity.x / _globalScale.x, s.velocity.y / _globalScale.y));
-
+			return handleSwipeEnd(
+					Vec2(s.velocity.x / _globalScale.x, s.velocity.y / _globalScale.y));
 		}
 		return true;
 	});
-	_gestureListener->addPinchRecognizer([this] (const GesturePinch &p) {
+	_gestureListener->addPinchRecognizer([this](const GesturePinch &p) {
 		if (p.event == GestureEvent::Began) {
 			if (_actionCallback) {
 				_actionCallback();
@@ -157,12 +153,11 @@ void ImageLayer::handleContentSizeDirty() {
 	_root->setContentSize(Size2(imageSize.width, imageSize.height));
 
 	if (!_scaleDisabled) {
-		_minScale = std::min(
-				_contentSize.width / _image->getContentSize().width,
+		_minScale = std::min(_contentSize.width / _image->getContentSize().width,
 				_contentSize.height / _image->getContentSize().height);
 
-		_maxScale = std::max(
-				_image->getContentSize().width * GetMaxScaleFactor() / _contentSize.width,
+		_maxScale = std::max(_image->getContentSize().width * GetMaxScaleFactor()
+						/ _contentSize.width,
 				_image->getContentSize().height * GetMaxScaleFactor() / _contentSize.height);
 	} else {
 		_minScale = _maxScale = 1.0f;
@@ -180,7 +175,8 @@ void ImageLayer::handleContentSizeDirty() {
 	_root->setPosition(getCorrectPosition(getContainerSize(), _root->getPosition().xy() + offset));
 
 	auto currentScale = _root->getScale().x;
-	if (_maxScale != 0 && _minScale != 0 && (currentScale > _maxScale || currentScale < _minScale)) {
+	if (_maxScale != 0 && _minScale != 0
+			&& (currentScale > _maxScale || currentScale < _minScale)) {
 		float newScale = currentScale;
 		if (_minScale > _maxScale) {
 			newScale = _minScale;
@@ -227,12 +223,11 @@ void ImageLayer::setTexture(Rc<Texture> &&tex) {
 
 	if (_running) {
 		if (!_scaleDisabled) {
-			_minScale = std::min(
-					_contentSize.width / _image->getContentSize().width,
+			_minScale = std::min(_contentSize.width / _image->getContentSize().width,
 					_contentSize.height / _image->getContentSize().height);
 
-			_maxScale = std::max(
-					_image->getContentSize().width * GetMaxScaleFactor() / _contentSize.width,
+			_maxScale = std::max(_image->getContentSize().width * GetMaxScaleFactor()
+							/ _contentSize.width,
 					_image->getContentSize().height * GetMaxScaleFactor() / _contentSize.height);
 
 			_root->setScale(_minScale);
@@ -242,7 +237,8 @@ void ImageLayer::setTexture(Rc<Texture> &&tex) {
 			_root->setContentSize(imageSize);
 			_root->setScale(1.0f);
 			_root->setPosition(getCorrectPosition(getContainerSize(),
-					Vec2((_contentSize.width - imageSize.width) / 2.0f, _contentSize.height - imageSize.height)));
+					Vec2((_contentSize.width - imageSize.width) / 2.0f,
+							_contentSize.height - imageSize.height)));
 		}
 
 		_contentSizeDirty = true;
@@ -251,13 +247,9 @@ void ImageLayer::setTexture(Rc<Texture> &&tex) {
 	}
 }
 
-const Rc<Texture> &ImageLayer::getTexture() const {
-	return _image->getTexture();
-}
+const Rc<Texture> &ImageLayer::getTexture() const { return _image->getTexture(); }
 
-void ImageLayer::setActionCallback(Function<void()> &&cb) {
-	_actionCallback = sp::move(cb);
-}
+void ImageLayer::setActionCallback(Function<void()> &&cb) { _actionCallback = sp::move(cb); }
 
 Vec2 ImageLayer::getTexturePosition() const {
 	auto csize = getContainerSize();
@@ -306,11 +298,11 @@ bool ImageLayer::handleTap(Vec2 point, int count) {
 			Vec2 locInParent = convertToNodeSpace(location);
 
 			Vec2 normal = (pos - locInParent) / origScale * newScale;
-			Vec2 newPos = getCorrectPosition(getContainerSizeForScale(newScale), locInParent + normal);
+			Vec2 newPos =
+					getCorrectPosition(getContainerSizeForScale(newScale), locInParent + normal);
 
-			_root->runAction(Rc<Spawn>::create(
-				Rc<ScaleTo>::create(0.35, newScale),
-				Rc<MoveTo>::create(0.35, newPos)));
+			_root->runAction(Rc<Spawn>::create(Rc<ScaleTo>::create(0.35, newScale),
+					Rc<MoveTo>::create(0.35, newPos)));
 		} else {
 			Vec2 location = convertToNodeSpace(point);
 
@@ -329,19 +321,17 @@ bool ImageLayer::handleTap(Vec2 point, int count) {
 			Vec2 locInParent = convertToNodeSpace(location);
 
 			Vec2 normal = (pos - locInParent) * (newScale / origScale) * _inputDensity;
-			Vec2 newPos = getCorrectPosition(getContainerSizeForScale(newScale), locInParent + normal);
+			Vec2 newPos =
+					getCorrectPosition(getContainerSizeForScale(newScale), locInParent + normal);
 
-			_root->runAction(Rc<Spawn>::create(
-				Rc<ScaleTo>::create(0.35, newScale),
-				Rc<MoveTo>::create(0.35, newPos)));
+			_root->runAction(Rc<Spawn>::create(Rc<ScaleTo>::create(0.35, newScale),
+					Rc<MoveTo>::create(0.35, newPos)));
 		}
 	}
 	return true;
 }
 
-bool ImageLayer::handleSwipeBegin(Vec2 point) {
-	return true;
-}
+bool ImageLayer::handleSwipeBegin(Vec2 point) { return true; }
 
 bool ImageLayer::handleSwipe(Vec2 delta) {
 	Vec2 containerPosition = _root->getPosition().xy();
@@ -352,11 +342,10 @@ bool ImageLayer::handleSwipe(Vec2 delta) {
 
 bool ImageLayer::handleSwipeEnd(Vec2 velocity) {
 	_root->stopAllActions();
-	auto a = ActionAcceleratedMove::createWithBounds(5000, _root->getPosition().xy(), velocity, getCorrectRect(_root->getBoundingBox().size));
+	auto a = ActionAcceleratedMove::createWithBounds(5'000, _root->getPosition().xy(), velocity,
+			getCorrectRect(_root->getBoundingBox().size));
 	if (a) {
-		_root->runAction(Rc<Sequence>::create(move(a), [this] {
-			_contentSizeDirty = true;
-		}));
+		_root->runAction(Rc<Sequence>::create(move(a), [this] { _contentSizeDirty = true; }));
 	}
 	return true;
 }
@@ -394,4 +383,4 @@ bool ImageLayer::handlePinch(Vec2 location, float scale, float velocity, bool is
 	return true;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +24,11 @@
 
 #include "XLInputDispatcher.h"
 #include "XLInputListener.h"
+#include "XLPlatformViewInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-InputListenerStorage::~InputListenerStorage() {
-	clear();
-}
+InputListenerStorage::~InputListenerStorage() { clear(); }
 
 InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
 	perform([&, this] {
@@ -41,15 +41,9 @@ InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
 }
 
 void InputListenerStorage::clear() {
-	for (auto &it : *_preSceneEvents) {
-		it.listener->release(0);
-	}
-	for (auto &it : *_sceneEvents) {
-		it.listener->release(0);
-	}
-	for (auto &it : *_postSceneEvents) {
-		it.listener->release(0);
-	}
+	for (auto &it : *_preSceneEvents) { it.listener->release(0); }
+	for (auto &it : *_sceneEvents) { it.listener->release(0); }
+	for (auto &it : *_postSceneEvents) { it.listener->release(0); }
 
 	_preSceneEvents->clear();
 	_sceneEvents->clear();
@@ -63,32 +57,33 @@ void InputListenerStorage::reserve(const InputListenerStorage *st) {
 	_postSceneEvents->reserve(st->_postSceneEvents->size());
 }
 
-void InputListenerStorage::addListener(InputListener *input, uint32_t focus) {
+void InputListenerStorage::addListener(InputListener *input, uint32_t focus, ViewLayerFlags flags,
+		Rect rect) {
 	input->retain();
 	auto p = input->getPriority();
 	if (p == 0) {
-		_sceneEvents->emplace_back(Rec{input, focus});
+		_sceneEvents->emplace_back(Rec{input, focus, flags, rect});
 	} else if (p < 0) {
-		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(), Rec{input, focus},
-				[] (const Rec &l, const Rec &r) {
+		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(),
+				Rec{input, focus}, [](const Rec &l, const Rec &r) {
 			return l.listener->getPriority() < r.listener->getPriority();
 		});
 
 		if (lb == _postSceneEvents->end()) {
-			_postSceneEvents->emplace_back(Rec{input, focus});
+			_postSceneEvents->emplace_back(Rec{input, focus, flags, rect});
 		} else {
-			_postSceneEvents->emplace(lb, Rec{input, focus});
+			_postSceneEvents->emplace(lb, Rec{input, focus, flags, rect});
 		}
 	} else {
-		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(), Rec{input, focus},
-				[] (const Rec &l, const Rec &r) {
+		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(),
+				Rec{input, focus}, [](const Rec &l, const Rec &r) {
 			return l.listener->getPriority() < r.listener->getPriority();
 		});
 
 		if (lb == _preSceneEvents->end()) {
-			_preSceneEvents->emplace_back(Rec{input, focus});
+			_preSceneEvents->emplace_back(Rec{input, focus, flags, rect});
 		} else {
-			_preSceneEvents->emplace(lb, Rec{input, focus});
+			_preSceneEvents->emplace(lb, Rec{input, focus, flags, rect});
 		}
 	}
 }
@@ -97,17 +92,12 @@ void InputListenerStorage::updateFocus(uint32_t focusValue) {
 	_maxFocusValue = max(focusValue, _maxFocusValue);
 }
 
-bool InputDispatcher::init(PoolRef *pool, TextInputViewInterface *view) {
-	if (view) {
-		_textInput = Rc<TextInputManager>::create(view);
-	}
+bool InputDispatcher::init(PoolRef *pool) {
 	_pool = pool;
 	return true;
 }
 
-void InputDispatcher::update(const UpdateTime &time) {
-	_currentTime = time.global;
-}
+void InputDispatcher::update(const UpdateTime &time) { _currentTime = time.global; }
 
 Rc<InputListenerStorage> InputDispatcher::acquireNewStorage() {
 	Rc<InputListenerStorage> req;
@@ -123,12 +113,22 @@ Rc<InputListenerStorage> InputDispatcher::acquireNewStorage() {
 	return req;
 }
 
-void InputDispatcher::commitStorage(Rc<InputListenerStorage> &&storage) {
+void InputDispatcher::commitStorage(View *view, Rc<InputListenerStorage> &&storage) {
 	_tmpEvents = move(_events);
 	_events = move(storage);
 	if (_tmpEvents) {
 		_tmpEvents->clear();
 	}
+
+	Vector<ViewLayer> layers;
+	_events->foreach ([&](const InputListenerStorage::Rec &rec) {
+		if (rec.flags != ViewLayerFlags::None) {
+			layers.emplace_back(ViewLayer{rec.rect, rec.flags});
+		}
+		return true;
+	}, false);
+
+	view->updateLayers(sp::move(layers));
 }
 
 void InputDispatcher::handleInputEvent(const InputEventData &event) {
@@ -138,19 +138,20 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 
 	switch (event.event) {
 	case InputEventName::None:
-	case InputEventName::Max:
-		return;
-		break;
+	case InputEventName::Max: return; break;
 	case InputEventName::Begin: {
 		auto v = _activeEvents.find(event.id);
 		if (v == _activeEvents.end()) {
-			v = _activeEvents.emplace(event.id, EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()}).first;
+			v = _activeEvents
+						.emplace(event.id,
+								EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()})
+						.first;
 		} else {
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
 		}
 
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(v->second.event)) {
 				v->second.listeners.emplace_back(l.listener);
 			}
@@ -183,7 +184,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_pointerLocation = Vec2(event.x, event.y);
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {
 				handlers.listeners.emplace_back(l.listener);
 			}
@@ -193,7 +194,8 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 
 		for (auto &it : _activeEvents) {
-			if ((it.second.event.data.modifiers & InputModifier::Unmanaged) == InputModifier::None) {
+			if ((it.second.event.data.modifiers & InputModifier::Unmanaged)
+					== InputModifier::None) {
 				it.second.event.data.x = event.x;
 				it.second.event.data.y = event.y;
 				it.second.event.data.event = InputEventName::Move;
@@ -205,7 +207,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 	}
 	case InputEventName::Scroll: {
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {
 				handlers.listeners.emplace_back(l.listener);
 			}
@@ -218,7 +220,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_inBackground = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {
 				handlers.listeners.emplace_back(l.listener);
 			}
@@ -236,7 +238,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_hasFocus = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {
 				handlers.listeners.emplace_back(l.listener);
 			}
@@ -254,7 +256,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_pointerInWindow = event.getValue();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {
 				handlers.listeners.emplace_back(l.listener);
 			}
@@ -270,17 +272,9 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		break;
 	}
 	case InputEventName::KeyPressed: {
-		if (_textInput && _textInput->canHandleInputEvent(event)) {
-			// forward to text input
-			if (_textInput->handleInputEvent(event)) {
-				clearKey(event);
-				return;
-			}
-		}
-
 		auto v = resetKey(event);
 
-		_events->foreach([&] (const InputListenerStorage::Rec &l) {
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(v->event)) {
 				v->listeners.emplace_back(l.listener);
 			}
@@ -289,48 +283,22 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		v->handle(true);
 		break;
 	}
-	case InputEventName::KeyRepeated:
-		if (_textInput && _textInput->canHandleInputEvent(event)) {
-			// forward to text input
-			if (_textInput->handleInputEvent(event)) {
-				clearKey(event);
-				return;
-			}
-		}
-
-		handleKey(event, false);
-		break;
-
+	case InputEventName::KeyRepeated: handleKey(event, false); break;
 	case InputEventName::KeyReleased:
-	case InputEventName::KeyCanceled:
-		if (_textInput && _textInput->canHandleInputEvent(event)) {
-			// forward to text input
-			if (_textInput->handleInputEvent(event)) {
-				clearKey(event);
-				return;
-			}
-		}
-
-		handleKey(event, true);
-		break;
+	case InputEventName::KeyCanceled: handleKey(event, true); break;
 	}
 }
 
 Vector<InputEventData> InputDispatcher::getActiveEvents() const {
-	Vector<InputEventData> eventsTmp; eventsTmp.reserve(_activeEvents.size());
-	for (auto &it : _activeEvents) {
-		eventsTmp.emplace_back(it.second.event.data);
-	}
+	Vector<InputEventData> eventsTmp;
+	eventsTmp.reserve(_activeEvents.size());
+	for (auto &it : _activeEvents) { eventsTmp.emplace_back(it.second.event.data); }
 	return eventsTmp;
 }
 
 void InputDispatcher::setListenerExclusive(const InputListener *l) {
-	for (auto &it : _activeEvents) {
-		setListenerExclusive(it.second, l);
-	}
-	for (auto &it : _activeKeys) {
-		setListenerExclusive(it.second, l);
-	}
+	for (auto &it : _activeEvents) { setListenerExclusive(it.second, l); }
+	for (auto &it : _activeKeys) { setListenerExclusive(it.second, l); }
 }
 
 void InputDispatcher::setListenerExclusiveForTouch(const InputListener *l, uint32_t id) {
@@ -353,7 +321,8 @@ bool InputDispatcher::hasActiveInput() const {
 
 InputEvent InputDispatcher::getEventInfo(const InputEventData &event) const {
 	auto loc = Vec2(event.x, event.y);
-	return InputEvent{event, loc, loc, loc, _currentTime, _currentTime, _currentTime, event.modifiers, event.modifiers};
+	return InputEvent{event, loc, loc, loc, _currentTime, _currentTime, _currentTime,
+		event.modifiers, event.modifiers};
 }
 
 void InputDispatcher::updateEventInfo(InputEvent &event, const InputEventData &data) const {
@@ -401,7 +370,8 @@ void InputDispatcher::EventHandlersInfo::handle(bool removeOnFail) {
 			}
 
 			if (exclusive) {
-				if (std::find(processed.begin(), processed.end(), exclusive.get()) == processed.end()) {
+				if (std::find(processed.begin(), processed.end(), exclusive.get())
+						== processed.end()) {
 					auto res = exclusive->handleEvent(event);
 					if (res == InputEventState::Declined) {
 						exclusive = nullptr;
@@ -479,7 +449,10 @@ InputDispatcher::EventHandlersInfo *InputDispatcher::resetKey(const InputEventDa
 	if (event.key.keycode == InputKeyCode::Unknown) {
 		auto v = _activeKeySyms.find(event.key.keysym);
 		if (v == _activeKeySyms.end()) {
-			v = _activeKeySyms.emplace(event.key.keysym, EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()}).first;
+			v = _activeKeySyms
+						.emplace(event.key.keysym,
+								EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()})
+						.first;
 		} else {
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
@@ -489,7 +462,10 @@ InputDispatcher::EventHandlersInfo *InputDispatcher::resetKey(const InputEventDa
 	} else {
 		auto v = _activeKeys.find(event.key.keycode);
 		if (v == _activeKeys.end()) {
-			v = _activeKeys.emplace(event.key.keycode, EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()}).first;
+			v = _activeKeys
+						.emplace(event.key.keycode,
+								EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()})
+						.first;
 		} else {
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
@@ -547,4 +523,4 @@ void InputDispatcher::cancelKeyEvents(float x, float y, InputModifier mods) {
 	_activeKeys.clear();
 }
 
-}
+} // namespace stappler::xenolith

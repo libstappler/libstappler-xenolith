@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,7 @@
 
 #include "AppScene.h"
 #include "XLIcons.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -52,9 +54,7 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 	auto image = Rc<VectorImage>::create(Size2(24, 24));
 
 	auto path = image->addPath();
-	getIconData(iconName, [&] (BytesView bytes) {
-		path->getPath()->init(bytes);
-	});
+	getIconData(iconName, [&](BytesView bytes) { path->getPath()->init(bytes); });
 	path->setWindingRule(vg::Winding::EvenOdd);
 	path->setAntialiased(true);
 	auto t = Mat4::IDENTITY;
@@ -71,8 +71,8 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 	//_image->setDeferred(true);
 	_iconName = iconName;
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addTapRecognizer([this] (const GestureTap &tap) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 2 && _callback) {
 			_callback(_iconName);
 		}
@@ -100,9 +100,8 @@ bool VgIconListPopup::init() {
 	_label = addChild(Rc<Label>::create(), ZOrder(1));
 	_label->setAnchorPoint(Anchor::Middle);
 	_label->setFontSize(20);
-	_label->setContentSizeDirtyCallback([this] {
-		setContentSize(_label->getContentSize() + Size2(16.0f, 16.0f));
-	});
+	_label->setContentSizeDirtyCallback(
+			[this] { setContentSize(_label->getContentSize() + Size2(16.0f, 16.0f)); });
 
 	setVisible(false);
 
@@ -134,15 +133,13 @@ bool VgIconList::init() {
 	_scrollView->setIndicatorColor(Color::Grey_500);
 	auto controller = _scrollView->setController(Rc<ScrollController>::create());
 
-	for (uint32_t i = toInt(IconName::Action_3d_rotation_outline); i < toInt(IconName::Max); ++ i) {
-		controller->addItem([this, i] (const ScrollController::Item &) -> Rc<Node> {
-			return Rc<VgIconListNode>::create(IconName(i), [this] (IconName name) {
+	for (uint32_t i = toInt(IconName::Action_3d_rotation_outline); i < toInt(IconName::Max); ++i) {
+		controller->addItem([this, i](const ScrollController::Item &) -> Rc<Node> {
+			return Rc<VgIconListNode>::create(IconName(i), [this](IconName name) {
 				if (_running) {
 					if (auto scene = dynamic_cast<AppScene *>(_scene)) {
 						auto l = Rc<VgIconTest>::create();
-						l->setDataValue(Value({
-							pair("icon", Value(toInt(name)))
-						}));
+						l->setDataValue(Value({pair("icon", Value(toInt(name)))}));
 						scene->runLayout(LayoutName::VgIconTest, move(l));
 					}
 				}
@@ -150,15 +147,13 @@ bool VgIconList::init() {
 		}, 72.0f, 0);
 	}
 
-	controller->setRebuildCallback([this] (ScrollController *c) {
-		return rebuildScroll(c);
-	});
+	controller->setRebuildCallback([this](ScrollController *c) { return rebuildScroll(c); });
 
 	_popup = addChild(Rc<VgIconListPopup>::create(), ZOrder(1));
 	_popup->setContentSize(Size2(192.0f, 32.0f));
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addMoveRecognizer([this] (const GestureData &input) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addMoveRecognizer([this](const GestureData &input) {
 		updatePopupLocation(input.input->currentLocation);
 		return true;
 	});
@@ -191,7 +186,7 @@ bool VgIconList::rebuildScroll(ScrollController *c) {
 		it.size = Size2(72.0f, 72.0f);
 		it.pos = Vec2(xPos, yPos);
 		xPos += 72.0f;
-		++ idx;
+		++idx;
 	}
 
 	if (_nCols != nCols) {
@@ -224,4 +219,4 @@ void VgIconList::updatePopupLocation(const Vec2 &pos) {
 	_popup->setString(getIconName(IconName(targetTag)));
 }
 
-}
+} // namespace stappler::xenolith::app

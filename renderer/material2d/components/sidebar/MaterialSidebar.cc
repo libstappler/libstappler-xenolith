@@ -40,8 +40,9 @@ bool Sidebar::init(Position pos) {
 
 	_position = pos;
 
-	_listener = addInputListener(Rc<InputListener>::create());
-	_listener->setTouchFilter([this] (const InputEvent &ev, const InputListener::DefaultEventFilter &) -> bool {
+	_listener = addComponent(Rc<InputListener>::create());
+	_listener->setTouchFilter(
+			[this](const InputEvent &ev, const InputListener::DefaultEventFilter &) -> bool {
 		if (!_node) {
 			return false;
 		}
@@ -53,14 +54,15 @@ bool Sidebar::init(Position pos) {
 				return true;
 			}
 			if (_edgeSwipeEnabled) {
-				if ((_position == Left && pos.x < 16.0f) || (_position == Right && pos.x > _contentSize.width - 16.0f)) {
+				if ((_position == Left && pos.x < 16.0f)
+						|| (_position == Right && pos.x > _contentSize.width - 16.0f)) {
 					return true;
 				}
 			}
 			return false;
 		}
 	});
-	_listener->addPressRecognizer([this] (const GesturePress &p) -> bool {
+	_listener->addPressRecognizer([this](const GesturePress &p) -> bool {
 		if (isNodeEnabled() && !_node->isTouched(p.location())) {
 			if (p.event == GestureEvent::Ended) {
 				hide();
@@ -69,31 +71,32 @@ bool Sidebar::init(Position pos) {
 		}
 		return false;
 	});
-	_listener->addSwipeRecognizer([this] (const GestureSwipe &s) -> bool {
+	_listener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		if (!isNodeVisible() && !_edgeSwipeEnabled) {
 			return false;
 		}
 
-    	if (s.event == GestureEvent::Began) {
-    		if (std::abs(s.delta.y) < std::abs(s.delta.x) && !_node->isTouched(s.location())) {
-    			stopNodeActions();
+		if (s.event == GestureEvent::Began) {
+			if (std::abs(s.delta.y) < std::abs(s.delta.x) && !_node->isTouched(s.location())) {
+				stopNodeActions();
 				onSwipeDelta(s.delta.x / s.density);
 				return true;
-    		}
-    		return false;
-    	} else if (s.event == GestureEvent::Activated) {
+			}
+			return false;
+		} else if (s.event == GestureEvent::Activated) {
 			onSwipeDelta(s.delta.x / s.density);
-    		return true;
-    	} else {
-    		onSwipeFinished(s.velocity.x / s.density);
-    		return true;
-    	}
+			return true;
+		} else {
+			onSwipeFinished(s.velocity.x / s.density);
+			return true;
+		}
 
 		return true;
 	});
 	_listener->setSwallowEvents(InputListener::EventMaskTouch);
 
-	addComponent(Rc<StyleMonitor>::create([this] (const ColorScheme *scheme, const SurfaceStyleData &) {
+	addComponent(
+			Rc<StyleMonitor>::create([this](const ColorScheme *scheme, const SurfaceStyleData &) {
 		_background->setColor(scheme->get(ColorRole::Scrim));
 	}));
 
@@ -141,30 +144,16 @@ void Sidebar::setBaseNode(Node *n, ZOrder zOrder) {
 	_contentSizeDirty = true;
 }
 
-Node *Sidebar::getNode() const {
-	return _node;
-}
+Node *Sidebar::getNode() const { return _node; }
 
-void Sidebar::setNodeWidth(float value) {
-	_nodeWidth = value;
-}
-float Sidebar::getNodeWidth() const {
-	return _nodeWidth;
-}
+void Sidebar::setNodeWidth(float value) { _nodeWidth = value; }
+float Sidebar::getNodeWidth() const { return _nodeWidth; }
 
-void Sidebar::setNodeWidthCallback(const WidthCallback &cb) {
-	_widthCallback = cb;
-}
-const Sidebar::WidthCallback &Sidebar::getNodeWidthCallback() const {
-	return _widthCallback;
-}
+void Sidebar::setNodeWidthCallback(const WidthCallback &cb) { _widthCallback = cb; }
+const Sidebar::WidthCallback &Sidebar::getNodeWidthCallback() const { return _widthCallback; }
 
-void Sidebar::setSwallowTouches(bool value) {
-	_swallowTouches = value;
-}
-bool Sidebar::isSwallowTouches() const {
-	return _swallowTouches;
-}
+void Sidebar::setSwallowTouches(bool value) { _swallowTouches = value; }
+bool Sidebar::isSwallowTouches() const { return _swallowTouches; }
 
 void Sidebar::setEdgeSwipeEnabled(bool value) {
 	_edgeSwipeEnabled = value;
@@ -177,27 +166,26 @@ void Sidebar::setEdgeSwipeEnabled(bool value) {
 	}
 }
 
-bool Sidebar::isEdgeSwipeEnabled() const {
-	return _edgeSwipeEnabled;
-}
+bool Sidebar::isEdgeSwipeEnabled() const { return _edgeSwipeEnabled; }
 
 void Sidebar::setBackgroundActiveOpacity(float value) {
 	_backgroundActiveOpacity = value;
-	_background->setOpacity(progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, getProgress()));
+	_background->setOpacity(
+			progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, getProgress()));
 }
 void Sidebar::setBackgroundPassiveOpacity(float value) {
 	_backgroundPassiveOpacity = value;
-	_background->setOpacity(progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, getProgress()));
+	_background->setOpacity(
+			progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, getProgress()));
 }
 
 void Sidebar::show() {
 	stopActionByTag(HIDE_ACTION_TAG);
 	if (getActionByTag(SHOW_ACTION_TAG) == nullptr) {
-		auto a = makeEasing(Rc<ActionProgress>::create(
-				progress(0.35f, 0.0f, getProgress()), getProgress(), 1.0f,
-				[this] (float progress) {
-			setProgress(progress);
-		}), EasingType::Standard);
+		auto a = makeEasing(Rc<ActionProgress>::create(progress(0.35f, 0.0f, getProgress()),
+									getProgress(), 1.0f,
+									[this](float progress) { setProgress(progress); }),
+				EasingType::Standard);
 		a->setTag(SHOW_ACTION_TAG);
 		runAction(a);
 	}
@@ -207,19 +195,17 @@ void Sidebar::hide(float factor) {
 	stopActionByTag(SHOW_ACTION_TAG);
 	if (getActionByTag(HIDE_ACTION_TAG) == nullptr) {
 		if (factor <= 1.0f) {
-			auto a =  makeEasing(Rc<ActionProgress>::create(
-					progress(0.0f, 0.35f / factor, getProgress()), getProgress(), 0.0f,
-					[this] (float progress) {
-				setProgress(progress);
-			}), EasingType::Standard);
+			auto a = makeEasing(
+					Rc<ActionProgress>::create(progress(0.0f, 0.35f / factor, getProgress()),
+							getProgress(), 0.0f, [this](float progress) { setProgress(progress); }),
+					EasingType::Standard);
 			a->setTag(HIDE_ACTION_TAG);
 			runAction(a);
 		} else {
-			auto a = makeEasing(Rc<ActionProgress>::create(
-					progress(0.0f, 0.35f / factor, getProgress()), getProgress(), 0.0f,
-					[this] (float progress) {
-				setProgress(progress);
-			}), EasingType::Standard);
+			auto a = makeEasing(
+					Rc<ActionProgress>::create(progress(0.0f, 0.35f / factor, getProgress()),
+							getProgress(), 0.0f, [this](float progress) { setProgress(progress); }),
+					EasingType::Standard);
 			a->setTag(HIDE_ACTION_TAG);
 			runAction(a);
 		}
@@ -228,7 +214,8 @@ void Sidebar::hide(float factor) {
 
 float Sidebar::getProgress() const {
 	if (_node) {
-		return (_position == Left)?(1.0f - _node->getAnchorPoint().x):(_node->getAnchorPoint().x);
+		return (_position == Left) ? (1.0f - _node->getAnchorPoint().x)
+								   : (_node->getAnchorPoint().x);
 	}
 	return 0.0f;
 }
@@ -236,7 +223,7 @@ float Sidebar::getProgress() const {
 void Sidebar::setProgress(float value) {
 	auto prev = getProgress();
 	if (_node && value != getProgress()) {
-		_node->setAnchorPoint(Vec2((_position == Left)?(1.0f - value):(value), 0.0f));
+		_node->setAnchorPoint(Vec2((_position == Left) ? (1.0f - value) : (value), 0.0f));
 		if (value == 0.0f) {
 			if (_node->isVisible()) {
 				_node->setVisible(false);
@@ -255,7 +242,8 @@ void Sidebar::setProgress(float value) {
 			}
 		}
 
-		_background->setOpacity(progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, value));
+		_background->setOpacity(
+				progress(_backgroundPassiveOpacity, _backgroundActiveOpacity, value));
 		if (!_background->isVisible() && _background->getOpacity() > 0) {
 			_background->setVisible(true);
 		}
@@ -265,7 +253,7 @@ void Sidebar::setProgress(float value) {
 void Sidebar::onSwipeDelta(float value) {
 	float d = value / _nodeWidth;
 
-	float progress = getProgress() - d * (_position==Left ? -1 : 1);
+	float progress = getProgress() - d * (_position == Left ? -1 : 1);
 	if (progress >= 1.0f) {
 		progress = 1.0f;
 	} else if (progress <= 0.0f) {
@@ -277,10 +265,10 @@ void Sidebar::onSwipeDelta(float value) {
 
 void Sidebar::onSwipeFinished(float value) {
 	float v = value / _nodeWidth;
-	auto t = fabsf(v) / (5000 / _nodeWidth);
+	auto t = fabsf(v) / (5'000 / _nodeWidth);
 	auto d = v * t - (5000.0f * t * t / _nodeWidth) / 2.0f;
 
-	float progress = getProgress() - d * (_position==Left ? -1 : 1);
+	float progress = getProgress() - d * (_position == Left ? -1 : 1);
 
 	if (progress > 0.5) {
 		show();
@@ -289,26 +277,14 @@ void Sidebar::onSwipeFinished(float value) {
 	}
 }
 
-bool Sidebar::isNodeVisible() const {
-	return getProgress() > 0.0f;
-}
-bool Sidebar::isNodeEnabled() const {
-	return getProgress() == 1.0f;
-}
+bool Sidebar::isNodeVisible() const { return getProgress() > 0.0f; }
+bool Sidebar::isNodeEnabled() const { return getProgress() == 1.0f; }
 
-void Sidebar::setEnabled(bool value) {
-	_listener->setEnabled(value);
-}
-bool Sidebar::isEnabled() const {
-	return _listener->isEnabled();
-}
+void Sidebar::setEnabled(bool value) { _listener->setEnabled(value); }
+bool Sidebar::isEnabled() const { return _listener->isEnabled(); }
 
-void Sidebar::setNodeVisibleCallback(BoolCallback &&cb) {
-	_visibleCallback = sp::move(cb);
-}
-void Sidebar::setNodeEnabledCallback(BoolCallback &&cb) {
-	_enabledCallback = sp::move(cb);
-}
+void Sidebar::setNodeVisibleCallback(BoolCallback &&cb) { _visibleCallback = sp::move(cb); }
+void Sidebar::setNodeEnabledCallback(BoolCallback &&cb) { _enabledCallback = sp::move(cb); }
 
 void Sidebar::onNodeEnabled(bool value) {
 	if (_enabledCallback) {
@@ -338,4 +314,4 @@ void Sidebar::stopNodeActions() {
 	stopActionByTag(HIDE_ACTION_TAG);
 }
 
-}
+} // namespace stappler::xenolith::material2d

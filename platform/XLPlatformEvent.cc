@@ -22,10 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "XLEvent.h"
-#include "XLPlatformApplication.h"
+#include "XLPlatformEvent.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static void EventHeader_send(const EventHeader &header, Ref *object, Value &&dataVal = Value(),
 		Ref *objVal = nullptr) {
@@ -93,4 +92,4 @@ Event::Event(const EventHeader &header, Ref *object)
 Event::Event(const EventHeader &header, Ref *object, Value &&dataVal, Ref *objVal)
 : BusEvent(header.getEventId()), _dataValue(move(dataVal)), _objectValue(objVal) { }
 
-} // namespace stappler::xenolith
+} // namespace stappler::xenolith::platform

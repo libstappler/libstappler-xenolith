@@ -45,16 +45,12 @@ bool Button::init(const SurfaceStyle &style) {
 	_labelText = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelText->setAnchorPoint(Anchor::MiddleLeft);
 	_labelText->setLocaleEnabled(true);
-	_labelText->setContentSizeDirtyCallback([this] {
-		updateSizeFromContent();
-	});
+	_labelText->setContentSizeDirtyCallback([this] { updateSizeFromContent(); });
 
 	_labelValue = addChild(Rc<TypescaleLabel>::create(TypescaleRole::LabelLarge), ZOrder(1));
 	_labelValue->setAnchorPoint(Anchor::MiddleLeft);
 	_labelValue->setLocaleEnabled(true);
-	_labelValue->setContentSizeDirtyCallback([this] {
-		updateSizeFromContent();
-	});
+	_labelValue->setContentSizeDirtyCallback([this] { updateSizeFromContent(); });
 
 	_leadingIcon = addChild(Rc<IconSprite>::create(IconName::None), ZOrder(1));
 	_leadingIcon->setAnchorPoint(Anchor::MiddleLeft);
@@ -64,13 +60,13 @@ bool Button::init(const SurfaceStyle &style) {
 	_trailingIcon->setAnchorPoint(Anchor::MiddleLeft);
 	_trailingIcon->setContentSize(Size2(18.0f, 18.0f));
 
-	_inputListener = addInputListener(Rc<InputListener>::create());
-	_inputListener->addMouseOverRecognizer([this] (const GestureData &data) {
+	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener->addMouseOverRecognizer([this](const GestureData &data) {
 		_mouseOver = (data.event == GestureEvent::Began);
 		updateActivityState();
 		return true;
 	});
-	_inputListener->addPressRecognizer([this] (const GesturePress &press) {
+	_inputListener->addPressRecognizer([this](const GesturePress &press) {
 		if (!_enabled || (_menuButtonListener->getSubscription() && !isMenuSourceButtonEnabled())) {
 			return false;
 		}
@@ -98,7 +94,7 @@ bool Button::init(const SurfaceStyle &style) {
 		return true;
 	}, LongPressInterval);
 
-	_inputListener->addTapRecognizer([this] (const GestureTap &tap) {
+	_inputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (!_enabled) {
 			return false;
 		}
@@ -109,9 +105,8 @@ bool Button::init(const SurfaceStyle &style) {
 		return true;
 	});
 
-	_menuButtonListener = addComponent(Rc<DataListener<MenuSourceButton>>::create([this] (SubscriptionFlags flags) {
-		updateMenuButtonSource();
-	}));
+	_menuButtonListener = addComponent(Rc<DataListener<MenuSourceButton>>::create(
+			[this](SubscriptionFlags flags) { updateMenuButtonSource(); }));
 
 	return true;
 }
@@ -136,9 +131,7 @@ void Button::setFollowContentSize(bool value) {
 	}
 }
 
-bool Button::isFollowContentSize() const {
-	return _followContentSize;
-}
+bool Button::isFollowContentSize() const { return _followContentSize; }
 
 void Button::setSwallowEvents(bool value) {
 	if (value) {
@@ -167,16 +160,15 @@ void Button::setSelected(bool val) {
 	}
 }
 
-bool Button::isSelected() const {
-	return _selected;
-}
+bool Button::isSelected() const { return _selected; }
 
 bool Button::isMenuSourceButtonEnabled() const {
 	if (!_menuButtonListener) {
 		return false;
 	}
 
-	return _menuButtonListener->getSubscription()->getCallback() != nullptr || _menuButtonListener->getSubscription()->getNextMenu();
+	return _menuButtonListener->getSubscription()->getCallback() != nullptr
+			|| _menuButtonListener->getSubscription()->getNextMenu();
 }
 
 void Button::setNodeMask(NodeMask mask) {
@@ -193,9 +185,7 @@ void Button::setText(StringView text) {
 	_contentSizeDirty = true;
 }
 
-StringView Button::getText() const {
-	return _labelText->getString8();
-}
+StringView Button::getText() const { return _labelText->getString8(); }
 
 void Button::setTextValue(StringView text) {
 	_labelValue->setString(text);
@@ -203,9 +193,7 @@ void Button::setTextValue(StringView text) {
 	_contentSizeDirty = true;
 }
 
-StringView Button::getTextValue() const {
-	return _labelValue->getString8();
-}
+StringView Button::getTextValue() const { return _labelValue->getString8(); }
 
 void Button::setIconSize(float value) {
 	if (value != getIconSize()) {
@@ -215,9 +203,7 @@ void Button::setIconSize(float value) {
 	}
 }
 
-float Button::getIconSize() const {
-	return _leadingIcon->getContentSize().width;
-}
+float Button::getIconSize() const { return _leadingIcon->getContentSize().width; }
 
 void Button::setLeadingIconName(IconName name, float progress) {
 	if (name != getLeadingIconName()) {
@@ -227,9 +213,7 @@ void Button::setLeadingIconName(IconName name, float progress) {
 	}
 }
 
-IconName Button::getLeadingIconName() const {
-	return _leadingIcon->getIconName();
-}
+IconName Button::getLeadingIconName() const { return _leadingIcon->getIconName(); }
 
 void Button::setLeadingIconProgress(float progress, float animation) {
 	if (animation > 0.0f) {
@@ -239,9 +223,7 @@ void Button::setLeadingIconProgress(float progress, float animation) {
 	}
 }
 
-float Button::getLeadingIconProgress() const {
-	return _leadingIcon->getProgress();
-}
+float Button::getLeadingIconProgress() const { return _leadingIcon->getProgress(); }
 
 void Button::setTrailingIconName(IconName name) {
 	if (name != getTrailingIconName()) {
@@ -250,9 +232,7 @@ void Button::setTrailingIconName(IconName name) {
 	}
 }
 
-IconName Button::getTrailingIconName() const {
-	return _trailingIcon->getIconName();
-}
+IconName Button::getTrailingIconName() const { return _trailingIcon->getIconName(); }
 
 void Button::setTrailingIconProgress(float progress, float animation) {
 	if (animation > 0.0f) {
@@ -262,21 +242,13 @@ void Button::setTrailingIconProgress(float progress, float animation) {
 	}
 }
 
-float Button::getTrailingIconProgress() const {
-	return _trailingIcon->getProgress();
-}
+float Button::getTrailingIconProgress() const { return _trailingIcon->getProgress(); }
 
-void Button::setTapCallback(Function<void()> &&cb) {
-	_callbackTap = sp::move(cb);
-}
+void Button::setTapCallback(Function<void()> &&cb) { _callbackTap = sp::move(cb); }
 
-void Button::setLongPressCallback(Function<void()> &&cb) {
-	_callbackLongPress = sp::move(cb);
-}
+void Button::setLongPressCallback(Function<void()> &&cb) { _callbackLongPress = sp::move(cb); }
 
-void Button::setDoubleTapCallback(Function<void()> &&cb) {
-	_callbackDoubleTap = sp::move(cb);
-}
+void Button::setDoubleTapCallback(Function<void()> &&cb) { _callbackDoubleTap = sp::move(cb); }
 
 void Button::setMenuSourceButton(Rc<MenuSourceButton> &&button) {
 	if (button != _menuButtonListener->getSubscription()) {
@@ -309,17 +281,11 @@ void Button::setBlendColor(const Color4F &color, float value) {
 	_trailingIcon->setBlendColor(color, value);
 }
 
-ColorRole Button::getBlendColorRule() const {
-	return _labelText->getBlendColorRule();
-}
+ColorRole Button::getBlendColorRule() const { return _labelText->getBlendColorRule(); }
 
-const Color4F &Button::getBlendColor() const {
-	return _labelText->getBlendColor();
-}
+const Color4F &Button::getBlendColor() const { return _labelText->getBlendColor(); }
 
-float Button::getBlendColorValue() const {
-	return _labelText->getBlendColorValue();
-}
+float Button::getBlendColorValue() const { return _labelText->getBlendColorValue(); }
 
 bool Button::hasContent() const {
 	return !_labelText->empty() || !_labelValue->empty()
@@ -372,10 +338,11 @@ void Button::handleTap() {
 			cb(this, btn);
 		} else if (_floatingMenuSource) {
 			if (auto content = dynamic_cast<SceneContent2d *>(_scene->getContent())) {
-				auto posRight = content->convertToNodeSpace(convertToWorldSpace(Vec2(_contentSize.width, _contentSize.height)));
+				auto posRight = content->convertToNodeSpace(
+						convertToWorldSpace(Vec2(_contentSize.width, _contentSize.height)));
 
 				FloatingMenu::push(content, _floatingMenuSource, posRight,
-					FloatingMenu::Binding::OriginRight, nullptr);
+						FloatingMenu::Binding::OriginRight, nullptr);
 			}
 		}
 	}
@@ -400,8 +367,11 @@ void Button::handleDoubleTap() {
 float Button::getWidthForContent() const {
 	float contentWidth = 0.0f;
 	if (!_labelText->empty() && (_nodeMask & NodeMask::LabelText) != NodeMask::None) {
-		contentWidth = ((_styleTarget.nodeStyle == NodeStyle::Text) ? 24.0f : 48.0f) + _labelText->getContentSize().width;
-		if (_styleTarget.nodeStyle == NodeStyle::Text && (getLeadingIconName() != IconName::None || getTrailingIconName() != IconName::None)) {
+		contentWidth = ((_styleTarget.nodeStyle == NodeStyle::Text) ? 24.0f : 48.0f)
+				+ _labelText->getContentSize().width;
+		if (_styleTarget.nodeStyle == NodeStyle::Text
+				&& (getLeadingIconName() != IconName::None
+						|| getTrailingIconName() != IconName::None)) {
 			contentWidth += 16.0f;
 		}
 	} else {
@@ -412,10 +382,12 @@ float Button::getWidthForContent() const {
 		contentWidth += _labelValue->getContentSize().width + 8.0f;
 	}
 
-	if (getLeadingIconName() != IconName::None && (_nodeMask & NodeMask::LeadingIcon) != NodeMask::None) {
+	if (getLeadingIconName() != IconName::None
+			&& (_nodeMask & NodeMask::LeadingIcon) != NodeMask::None) {
 		contentWidth += _leadingIcon->getContentSize().width;
 	}
-	if (getTrailingIconName() != IconName::None && (_nodeMask & NodeMask::TrailingIcon) != NodeMask::None) {
+	if (getTrailingIconName() != IconName::None
+			&& (_nodeMask & NodeMask::TrailingIcon) != NodeMask::None) {
 		contentWidth += _trailingIcon->getContentSize().width;
 	}
 	return contentWidth;
@@ -470,7 +442,8 @@ void Button::layoutContent() {
 		trailingIconName = IconName::None;
 	}
 
-	if (leadingIconName != IconName::None && trailingIconName == IconName::None && !hasLabelText && !hasLabelValue) {
+	if (leadingIconName != IconName::None && trailingIconName == IconName::None && !hasLabelText
+			&& !hasLabelValue) {
 		_leadingIcon->setAnchorPoint(Anchor::Middle);
 		_leadingIcon->setPosition(_contentSize / 2.0f);
 	} else {
@@ -479,7 +452,8 @@ void Button::layoutContent() {
 		float contentWidth = getWidthForContent();
 		float offset = (_contentSize.width - contentWidth) / 2.0f;
 
-		Vec2 target(offset + (_styleTarget.nodeStyle == NodeStyle::Text ? 12.0f : 16.0f), _contentSize.height / 2.0f);
+		Vec2 target(offset + (_styleTarget.nodeStyle == NodeStyle::Text ? 12.0f : 16.0f),
+				_contentSize.height / 2.0f);
 
 		if (leadingIconName != IconName::None) {
 			_leadingIcon->setPosition(target);
@@ -500,4 +474,4 @@ void Button::layoutContent() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022-2025 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,7 @@
 #include "XLDirector.h"
 #include "XLApplication.h"
 #include "XLInputDispatcher.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -90,15 +92,22 @@ bool InputKeyboardOnScreenKey::init(Function<void(bool)> &&cb) {
 	// so, if icon defined after background, it will be filtered by depth test
 
 	// icon:
-	image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+	image->addPath()
+			->openForWriting([](vg::PathWriter &writer) {
 		writer.moveTo(10, 30).lineTo(20, 40).lineTo(30, 30);
-	}).setStrokeWidth(4.0f)
-			.setStyle(vg::DrawFlags::Stroke).setStrokeColor(Color::Black).setAntialiased(false);
+	})
+			.setStrokeWidth(4.0f)
+			.setStyle(vg::DrawFlags::Stroke)
+			.setStrokeColor(Color::Black)
+			.setAntialiased(false);
 
 	// background
-	image->addPath()->openForWriting([] (vg::PathWriter &writer) {
+	image->addPath()
+			->openForWriting([](vg::PathWriter &writer) {
 		writer.moveTo(20, 0).lineTo(0, 20).lineTo(0, 50).lineTo(40, 50).lineTo(40, 20);
-	}).setFillColor(Color::Grey_200).setAntialiased(false);
+	})
+			.setFillColor(Color::Grey_200)
+			.setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
 		return false;
@@ -126,45 +135,36 @@ bool InputKeyboardOnScreenKeyboard::init() {
 		return false;
 	}
 
-	_up = addChild(Rc<InputKeyboardOnScreenKey>::create([this] (bool value) {
-		sendInputEvent(ActiveButton::Up, InputKeyCode::UP, value);
-	}));
+	_up = addChild(Rc<InputKeyboardOnScreenKey>::create(
+			[this](bool value) { sendInputEvent(ActiveButton::Up, InputKeyCode::UP, value); }));
 	_up->setAnchorPoint(Anchor::MiddleBottom - Vec2(0.0f, 0.1f));
 
-	_right = addChild(Rc<InputKeyboardOnScreenKey>::create([this] (bool value) {
+	_right = addChild(Rc<InputKeyboardOnScreenKey>::create([this](bool value) {
 		sendInputEvent(ActiveButton::Right, InputKeyCode::RIGHT, value);
 	}));
 	_right->setRotation(90.0_to_rad);
 	_right->setAnchorPoint(Anchor::MiddleBottom - Vec2(0.0f, 0.1f));
 
-	_left = addChild(Rc<InputKeyboardOnScreenKey>::create([this] (bool value) {
-		sendInputEvent(ActiveButton::Left, InputKeyCode::LEFT, value);
-	}));
+	_left = addChild(Rc<InputKeyboardOnScreenKey>::create(
+			[this](bool value) { sendInputEvent(ActiveButton::Left, InputKeyCode::LEFT, value); }));
 	_left->setRotation(-90.0_to_rad);
 	_left->setAnchorPoint(Anchor::MiddleBottom - Vec2(0.0f, 0.1f));
 
-	_down = addChild(Rc<InputKeyboardOnScreenKey>::create([this] (bool value) {
-		sendInputEvent(ActiveButton::Down, InputKeyCode::DOWN, value);
-	}));
+	_down = addChild(Rc<InputKeyboardOnScreenKey>::create(
+			[this](bool value) { sendInputEvent(ActiveButton::Down, InputKeyCode::DOWN, value); }));
 	_down->setRotation(180.0_to_rad);
 	_down->setAnchorPoint(Anchor::MiddleBottom - Vec2(0.0f, 0.1f));
 
 	setContentSize(Size2(120.0f, 120.0f));
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addTouchRecognizer([this] (const GestureData &input) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addTouchRecognizer([this](const GestureData &input) {
 		_currentLocation = input.input->currentLocation;
 		switch (input.event) {
-		case GestureEvent::Began:
-			return handleTouchBegin(*input.input);
-			break;
-		case GestureEvent::Activated:
-			return handleTouchMove(*input.input);
-			break;
+		case GestureEvent::Began: return handleTouchBegin(*input.input); break;
+		case GestureEvent::Activated: return handleTouchMove(*input.input); break;
 		case GestureEvent::Ended:
-		case GestureEvent::Cancelled:
-			return handleTouchEnd(*input.input);
-			break;
+		case GestureEvent::Cancelled: return handleTouchEnd(*input.input); break;
 		}
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}));
@@ -207,7 +207,8 @@ bool InputKeyboardOnScreenKeyboard::handleTouchEnd(const InputEvent &ev) {
 	return false;
 }
 
-InputKeyboardOnScreenKeyboard::ActiveButtons InputKeyboardOnScreenKeyboard::computeActiveButtons() const {
+InputKeyboardOnScreenKeyboard::ActiveButtons
+InputKeyboardOnScreenKeyboard::computeActiveButtons() const {
 	ActiveButtons ret;
 	for (auto &it : _touches) {
 		auto btn = getButtonForLocation(it.second);
@@ -229,8 +230,9 @@ void InputKeyboardOnScreenKeyboard::updateActiveButtons() {
 	}
 }
 
-InputKeyboardOnScreenKeyboard::ActiveButton InputKeyboardOnScreenKeyboard::getButtonForLocation(const Vec2 &loc) const {
-	auto testButton = [&] (const Node *node, float distance) {
+InputKeyboardOnScreenKeyboard::ActiveButton InputKeyboardOnScreenKeyboard::getButtonForLocation(
+		const Vec2 &loc) const {
+	auto testButton = [&](const Node *node, float distance) {
 		auto bb = node->getBoundingBox();
 		if (bb.containsPoint(loc)) {
 			auto d = Vec2(bb.getMidX(), bb.getMidY()).distanceSquared(loc);
@@ -268,19 +270,15 @@ InputKeyboardOnScreenKeyboard::ActiveButton InputKeyboardOnScreenKeyboard::getBu
 	return ret;
 }
 
-void InputKeyboardOnScreenKeyboard::sendInputEvent(ActiveButton btn, InputKeyCode code, bool enabled) {
+void InputKeyboardOnScreenKeyboard::sendInputEvent(ActiveButton btn, InputKeyCode code,
+		bool enabled) {
 	if (!_director) {
 		return;
 	}
 
-	InputEventData data({
-		uint32_t(btn),
-		enabled ? InputEventName::KeyPressed : InputEventName::KeyReleased,
-		InputMouseButton::None,
-		InputModifier::None,
-		float(_currentLocation.x),
-		float(_currentLocation.y)
-	});
+	InputEventData data({uint32_t(btn),
+		enabled ? InputEventName::KeyPressed : InputEventName::KeyReleased, InputMouseButton::None,
+		InputModifier::None, float(_currentLocation.x), float(_currentLocation.y)});
 
 	data.key.keycode = code;
 
@@ -294,43 +292,61 @@ bool InputKeyboardTest::init() {
 		return false;
 	}
 
-	_input = addInputListener(Rc<InputListener>::create());
-	_key = _input->addKeyRecognizer([this] (const GestureData &input) {
+	_input = addComponent(Rc<InputListener>::create());
+	_key = _input->addKeyRecognizer(
+			[this](const GestureData &input) {
 		if (!_useUpdate) {
 			switch (input.event) {
 			case GestureEvent::Began:
 				switch (input.input->data.key.keycode) {
-				case InputKeyCode::LEFT: _layer->setPosition(_layer->getPosition() + Vec3(-8.0f, 0.0f, 0.0f)); break;
-				case InputKeyCode::RIGHT: _layer->setPosition(_layer->getPosition() + Vec3(8.0f, 0.0f, 0.0f)); break;
-				case InputKeyCode::DOWN: _layer->setPosition(_layer->getPosition() + Vec3(0.0f, -8.0f, 0.0f)); break;
-				case InputKeyCode::UP: _layer->setPosition(_layer->getPosition() + Vec3(0.0f, 8.0f, 0.0f)); break;
+				case InputKeyCode::LEFT:
+					_layer->setPosition(_layer->getPosition() + Vec3(-8.0f, 0.0f, 0.0f));
+					break;
+				case InputKeyCode::RIGHT:
+					_layer->setPosition(_layer->getPosition() + Vec3(8.0f, 0.0f, 0.0f));
+					break;
+				case InputKeyCode::DOWN:
+					_layer->setPosition(_layer->getPosition() + Vec3(0.0f, -8.0f, 0.0f));
+					break;
+				case InputKeyCode::UP:
+					_layer->setPosition(_layer->getPosition() + Vec3(0.0f, 8.0f, 0.0f));
+					break;
 				default: break;
 				}
 				break;
 			case GestureEvent::Repeat:
 				switch (input.input->data.key.keycode) {
-				case InputKeyCode::LEFT: _layer->setPosition(_layer->getPosition() + Vec3(-8.0f, 0.0f, 0.0f)); break;
-				case InputKeyCode::RIGHT: _layer->setPosition(_layer->getPosition() + Vec3(8.0f, 0.0f, 0.0f)); break;
-				case InputKeyCode::DOWN: _layer->setPosition(_layer->getPosition() + Vec3(0.0f, -8.0f, 0.0f)); break;
-				case InputKeyCode::UP: _layer->setPosition(_layer->getPosition() + Vec3(0.0f, 8.0f, 0.0f)); break;
+				case InputKeyCode::LEFT:
+					_layer->setPosition(_layer->getPosition() + Vec3(-8.0f, 0.0f, 0.0f));
+					break;
+				case InputKeyCode::RIGHT:
+					_layer->setPosition(_layer->getPosition() + Vec3(8.0f, 0.0f, 0.0f));
+					break;
+				case InputKeyCode::DOWN:
+					_layer->setPosition(_layer->getPosition() + Vec3(0.0f, -8.0f, 0.0f));
+					break;
+				case InputKeyCode::UP:
+					_layer->setPosition(_layer->getPosition() + Vec3(0.0f, 8.0f, 0.0f));
+					break;
 				default: break;
 				}
 				break;
-			case GestureEvent::Ended:
-				break;
-			case GestureEvent::Cancelled:
-				break;
+			case GestureEvent::Ended: break;
+			case GestureEvent::Cancelled: break;
 			}
 		}
 		return true;
-	}, InputListener::makeKeyMask({InputKeyCode::LEFT, InputKeyCode::RIGHT, InputKeyCode::DOWN, InputKeyCode::UP}));
+	},
+			InputListener::makeKeyMask({InputKeyCode::LEFT, InputKeyCode::RIGHT, InputKeyCode::DOWN,
+				InputKeyCode::UP}));
 
 	_layer = addChild(Rc<Layer>::create(Color::Red_500));
 	_layer->setAnchorPoint(Anchor::Middle);
 
-	_handleUpdateCheckbox = addChild(Rc<CheckboxWithLabel>::create("Use update instead of repeat", _useUpdate, [this] (bool value) {
-		_useUpdate = value;
-	}), Node::ZOrderMax);
+	_handleUpdateCheckbox =
+			addChild(Rc<CheckboxWithLabel>::create("Use update instead of repeat", _useUpdate,
+							 [this](bool value) { _useUpdate = value; }),
+					Node::ZOrderMax);
 	_handleUpdateCheckbox->setAnchorPoint(Anchor::MiddleBottom);
 
 	_onScreenKeyboard = addChild(Rc<InputKeyboardOnScreenKeyboard>::create(), ZOrder(10));
@@ -376,4 +392,4 @@ void InputKeyboardTest::update(const UpdateTime &time) {
 	_layer->setPosition(_layer->getPosition() + offset);
 }
 
-}
+} // namespace stappler::xenolith::app

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +27,10 @@
 namespace stappler::xenolith::app {
 
 bool InputPinchTest::init() {
-	if (!LayoutTest::init(LayoutName::InputPinchTest, "On PC:\n"
-			"Ctrl + Right click to run gesture\n"
-			"Ctrl + Shift + Right click to set origin point")) {
+	if (
+			!LayoutTest::init(LayoutName::InputPinchTest,
+					"On PC:\n" "Ctrl + Right click to run gesture\n" "Ctrl + Shift + Right click "
+																	 "to " "set origin point")) {
 		return false;
 	}
 
@@ -36,8 +38,8 @@ bool InputPinchTest::init() {
 	_node->setAnchorPoint(Anchor::Middle);
 	_node->setContentSize(Size2(48.0f, 48.0f));
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addPinchRecognizer([this] (const GesturePinch &pinch) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addPinchRecognizer([this](const GesturePinch &pinch) {
 		if (pinch.event == GestureEvent::Began) {
 			_node->setPosition(convertToNodeSpace(pinch.center));
 			_initialScale = _node->getScale().x;
@@ -56,4 +58,4 @@ void InputPinchTest::handleContentSizeDirty() {
 	_node->setPosition(_contentSize / 2.0f);
 }
 
-}
+} // namespace stappler::xenolith::app

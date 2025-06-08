@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,11 +40,11 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	_label->setFontSize(26);
 	_label->setPersistentLayout(true);
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->setTouchFilter([] (const InputEvent &event, const InputListener::DefaultEventFilter &) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});
-
+	l->setViewLayerFlags(ViewLayerFlags::CursorPointer);
 
 	/*l->addMouseOverRecognizer([this] (const GestureData &ev) {
 		switch (ev.event) {
@@ -59,7 +60,7 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 		return true;
 	}, false);*/
 
-	l->addMoveRecognizer([this] (const GestureData &ev) {
+	l->addMoveRecognizer([this](const GestureData &ev) {
 		bool touched = isTouched(ev.input->currentLocation);
 		if (touched != _focus) {
 			_focus = touched;
@@ -71,21 +72,13 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 		}
 		return true;
 	}, false);
-	l->addPressRecognizer([this] (const GesturePress &press) {
+	l->addPressRecognizer([this](const GesturePress &press) {
 		if (isTouched(press.pos)) {
 			switch (press.event) {
-			case GestureEvent::Began:
-				return true;
-				break;
-			case GestureEvent::Activated:
-				return true;
-				break;
-			case GestureEvent::Ended:
-				return handlePress();
-				break;
-			case GestureEvent::Cancelled:
-				return true;
-				break;
+			case GestureEvent::Began: return true; break;
+			case GestureEvent::Activated: return true; break;
+			case GestureEvent::Ended: return handlePress(); break;
+			case GestureEvent::Cancelled: return true; break;
 			}
 		}
 		return false;
@@ -96,13 +89,9 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	return true;
 }
 
-void LayoutMenuItem::handleMouseEnter() {
-	_label->setFontWeight(font::FontWeight::Bold);
-}
+void LayoutMenuItem::handleMouseEnter() { _label->setFontWeight(font::FontWeight::Bold); }
 
-void LayoutMenuItem::handleMouseLeave() {
-	_label->setFontWeight(font::FontWeight::Normal);
-}
+void LayoutMenuItem::handleMouseLeave() { _label->setFontWeight(font::FontWeight::Normal); }
 
 bool LayoutMenuItem::handlePress() {
 	if (_callback) {
@@ -117,4 +106,4 @@ void LayoutMenuItem::handleContentSizeDirty() {
 	_label->setPosition(_contentSize / 2.0f);
 }
 
-}
+} // namespace stappler::xenolith::app

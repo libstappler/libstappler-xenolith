@@ -152,7 +152,7 @@ bool MultiViewLayout::init(Generator *gen) {
 		_generator = addComponent(Rc<Generator>(gen));
 	}
 
-	_swipeListener = addInputListener(Rc<InputListener>::create());
+	_swipeListener = addComponent(Rc<InputListener>::create());
 	_swipeListener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		if (s.event == GestureEvent::Began) {
 			if (beginSwipe(s.delta)) {

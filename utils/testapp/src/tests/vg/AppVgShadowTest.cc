@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,7 @@
 #include "AppVgShadowTest.h"
 #include "XL2dSceneLight.h"
 #include "XL2dSceneContent.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -63,9 +65,10 @@ protected:
 bool LightNormalSelectorPoint::init() {
 	auto image = Rc<VectorImage>::create(Size2(10, 10));
 	image->addPath("", "org.stappler.xenolith.tess.TessPoint")
-		->setFillColor(Color::White)
-		.openForWriting([&] (vg::PathWriter &writer) { writer.addOval(Rect(0, 0, 10, 10)); })
-		.setAntialiased(false);
+			->setFillColor(Color::White)
+			.openForWriting([&](vg::PathWriter &writer) {
+		writer.addOval(Rect(0, 0, 10, 10));
+	}).setAntialiased(false);
 
 	if (!VectorSprite::init(move(image))) {
 		return false;
@@ -77,12 +80,11 @@ bool LightNormalSelectorPoint::init() {
 bool VgShadowTest::LightNormalSelector::init() {
 	auto image = Rc<VectorImage>::create(Size2(16.0f, 16.0f));
 	image->addPath(VectorPath()
-			.openForWriting([] (vg::PathWriter &writer) {
-				writer.addCircle(8.0f, 8.0f, 7.0f);
-			})
-			.setStyle(VectorPath::DrawStyle::Stroke)
-			.setStrokeWidth(1.0f)
-			.setStrokeColor(Color::Grey_500));
+					.openForWriting(
+							[](vg::PathWriter &writer) { writer.addCircle(8.0f, 8.0f, 7.0f); })
+					.setStyle(VectorPath::DrawStyle::Stroke)
+					.setStrokeWidth(1.0f)
+					.setStrokeColor(Color::Grey_500));
 
 	if (!VectorSprite::init(move(image))) {
 		return false;
@@ -93,8 +95,8 @@ bool VgShadowTest::LightNormalSelector::init() {
 	_point->setColor(Color::Red_500);
 	_point->setAnchorPoint(Anchor::Middle);
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->addTouchRecognizer([this] (const GestureData &data) -> bool {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->addTouchRecognizer([this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Moved || data.event == GestureEvent::Ended) {
 			auto maxDist = (_contentSize.width + _contentSize.height) / 5.0f;
 			auto pos = convertToNodeSpace(data.input->currentLocation);
@@ -102,7 +104,8 @@ bool VgShadowTest::LightNormalSelector::init() {
 			if (dist < maxDist) {
 				_point->setPosition(pos);
 			} else {
-				_point->setPosition(Vec2(_contentSize / 2.0f) + (pos - Vec2(_contentSize / 2.0f)).getNormalized() * maxDist);
+				_point->setPosition(Vec2(_contentSize / 2.0f)
+						+ (pos - Vec2(_contentSize / 2.0f)).getNormalized() * maxDist);
 			}
 
 			_normal = (_point->getPosition().xy() - Vec2(_contentSize / 2.0f)) / (maxDist * 3.0f);
@@ -155,7 +158,8 @@ void VgShadowTest::LightNormalSelector::updateLightNormal(const Vec2 &vec) {
 	content->addLight(move(light));
 
 	if (_ambient) {
-		auto ambient = Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), _k, Color::White);
+		auto ambient =
+				Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), _k, Color::White);
 
 		content->addLight(move(ambient));
 	}
@@ -194,22 +198,20 @@ bool VgShadowTest::init() {
 	_info->setAnchorPoint(Anchor::MiddleTop);
 
 	_sliderScale = addChild(Rc<SliderWithLabel>::create(toString("Scale: ", initialScale),
-			(initialScale - 0.1f) / 2.9f, [this] (float val) {
-		updateScaleValue(val);
-	}));
+			(initialScale - 0.1f) / 2.9f, [this](float val) { updateScaleValue(val); }));
 	_sliderScale->setAnchorPoint(Anchor::TopLeft);
 	_sliderScale->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderShadow = addChild(Rc<SliderWithLabel>::create(toString("Shadow: ", initialShadow),
-			initialShadow / maxShadow, [this, maxShadow] (float val) {
+			initialShadow / maxShadow, [this, maxShadow](float val) {
 		_sprite->setDepthIndex(val * maxShadow);
 		_sliderShadow->setString(toString("Shadow: ", _sprite->getDepthIndex()));
 	}));
 	_sliderShadow->setAnchorPoint(Anchor::TopLeft);
 	_sliderShadow->setContentSize(Size2(128.0f, 32.0f));
 
-	_sliderK = addChild(Rc<SliderWithLabel>::create(toString("K: ", initialK),
-			initialK / 2.0f, [this] (float val) {
+	_sliderK = addChild(Rc<SliderWithLabel>::create(toString("K: ", initialK), initialK / 2.0f,
+			[this](float val) {
 		_normalSelector->setK(val * 2.0f);
 		_sliderK->setString(toString("K: ", val * 2.0f));
 	}));
@@ -221,23 +223,25 @@ bool VgShadowTest::init() {
 	_normalSelector->setContentSize(Size2(92.0f, 92.0f));
 	_normalSelector->setK(initialK);
 
-	_checkboxAmbient = addChild(Rc<CheckboxWithLabel>::create("Ambient", false, [this] (bool value) {
-		_normalSelector->setAmbient(value);
-	}));
+	_checkboxAmbient = addChild(Rc<CheckboxWithLabel>::create("Ambient", false,
+			[this](bool value) { _normalSelector->setAmbient(value); }));
 	_checkboxAmbient->setAnchorPoint(Anchor::TopLeft);
 	_checkboxAmbient->setContentSize(Size2(32.0f, 32.0f));
 
-	auto l = _sprite->addInputListener(Rc<InputListener>::create());
-	l->addTouchRecognizer([this] (const GestureData &data) -> bool {
+	auto l = _sprite->addComponent(Rc<InputListener>::create());
+	l->addTouchRecognizer(
+			[this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Ended) {
-			if (data.input->data.button == InputMouseButton::Mouse8 || data.input->data.button == InputMouseButton::MouseScrollRight
+			if (data.input->data.button == InputMouseButton::Mouse8
+					|| data.input->data.button == InputMouseButton::MouseScrollRight
 					|| data.input->data.button == InputMouseButton::MouseLeft) {
 				if (_currentName == IconName::Action_3d_rotation_outline) {
 					updateIcon(IconName::Toggle_toggle_on_solid);
 				} else {
 					updateIcon(IconName(toInt(_currentName) - 1));
 				}
-			} else if (data.input->data.button == InputMouseButton::Mouse9 || data.input->data.button == InputMouseButton::MouseScrollLeft
+			} else if (data.input->data.button == InputMouseButton::Mouse9
+					|| data.input->data.button == InputMouseButton::MouseScrollLeft
 					|| data.input->data.button == InputMouseButton::MouseRight) {
 				if (_currentName == IconName::Toggle_toggle_on_solid) {
 					updateIcon(IconName::Action_3d_rotation_outline);
@@ -247,10 +251,13 @@ bool VgShadowTest::init() {
 			}
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::MouseLeft, InputMouseButton::MouseRight,
-		InputMouseButton::MouseScrollLeft, InputMouseButton::MouseScrollRight, InputMouseButton::Mouse8, InputMouseButton::Mouse9}));
+	},
+			InputListener::makeButtonMask(
+					{InputMouseButton::MouseLeft, InputMouseButton::MouseRight,
+						InputMouseButton::MouseScrollLeft, InputMouseButton::MouseScrollRight,
+						InputMouseButton::Mouse8, InputMouseButton::Mouse9}));
 
-	l->addKeyRecognizer([this] (const GestureData &ev) {
+	l->addKeyRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
 			if (ev.input->data.key.keycode == InputKeyCode::LEFT) {
 				if (_currentName == IconName::Action_3d_rotation_outline) {
@@ -313,13 +320,12 @@ void VgShadowTest::setDataValue(Value &&data) {
 
 void VgShadowTest::updateIcon(IconName name) {
 	_currentName = name;
-	_label->setString(toString(getIconName(_currentName), " ", toInt(_currentName), "/", toInt(IconName::Toggle_toggle_on_solid)));
+	_label->setString(toString(getIconName(_currentName), " ", toInt(_currentName), "/",
+			toInt(IconName::Toggle_toggle_on_solid)));
 
 	_sprite->clear();
 	auto path = _sprite->addPath();
-	getIconData(_currentName, [&] (BytesView bytes) {
-		path->getPath()->init(bytes);
-	});
+	getIconData(_currentName, [&](BytesView bytes) { path->getPath()->init(bytes); });
 	path->setWindingRule(vg::Winding::EvenOdd);
 	path->setAntialiased(false);
 	auto t = Mat4::IDENTITY;
@@ -327,9 +333,7 @@ void VgShadowTest::updateIcon(IconName name) {
 	t.translate(0, -24, 0);
 	path->setTransform(t);
 
-	LayoutTest::setDataValue(Value({
-		pair("icon", Value(toInt(_currentName)))
-	}));
+	LayoutTest::setDataValue(Value({pair("icon", Value(toInt(_currentName)))}));
 }
 
 void VgShadowTest::updateScaleValue(float value) {
@@ -339,4 +343,4 @@ void VgShadowTest::updateScaleValue(float value) {
 	_sprite->setScale(q);
 }
 
-}
+} // namespace stappler::xenolith::app

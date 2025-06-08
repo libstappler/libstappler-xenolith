@@ -24,6 +24,8 @@
 #include "XLPlatform.h"
 
 #include "XLPlatformApplication.cc"
+#include "XLPlatformEvent.cc"
+#include "XLPlatformTextInputInterface.cc"
 #include "XLPlatformViewInterface.cc"
 
 #if LINUX
@@ -45,11 +47,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-core::ImageFormat getCommonFormat() {
-	return core::ImageFormat::B8G8R8A8_UNORM;
-}
+core::ImageFormat getCommonFormat() { return core::ImageFormat::B8G8R8A8_UNORM; }
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif
 
@@ -57,11 +57,9 @@ core::ImageFormat getCommonFormat() {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-core::ImageFormat getCommonFormat() {
-	return core::ImageFormat::B8G8R8A8_UNORM;
-}
+core::ImageFormat getCommonFormat() { return core::ImageFormat::B8G8R8A8_UNORM; }
 
-}
+} // namespace stappler::xenolith::platform
 
 #include "win32/XLPlatformWin32Library.cc"
 #include "win32/XLPlatformWin32View.cc"
@@ -79,11 +77,9 @@ core::ImageFormat getCommonFormat() {
 #if MACOS
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-core::ImageFormat getCommonFormat() {
-	return core::ImageFormat::B8G8R8A8_UNORM;
-}
+core::ImageFormat getCommonFormat() { return core::ImageFormat::B8G8R8A8_UNORM; }
 
-}
+} // namespace stappler::xenolith::platform
 
 #include "macos/XLPlatformMacosUtils.cc"
 

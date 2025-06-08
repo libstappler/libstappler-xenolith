@@ -36,7 +36,7 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle &style) {
 
 	_layout = layout;
 
-	_inputListener = addInputListener(Rc<InputListener>::create());
+	_inputListener = addComponent(Rc<InputListener>::create());
 	_inputListener->addTouchRecognizer(
 			[this](const GestureData &) -> bool { return isSwallowTouches(); });
 	_inputListener->addPressRecognizer([this](const GesturePress &press) -> bool {

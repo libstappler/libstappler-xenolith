@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,7 @@
 
 #include "AppVgDynamicIcons.h"
 #include "XLIcons.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -40,13 +42,14 @@ bool VgDynamicIcons::init() {
 	_iconNav->setColor(Color::Black);
 	_iconNav->setContentSize(Size2(96.0f, 96.0f));
 
-	_iconProgress = addChild(Rc<material2d::IconSprite>::create(IconName::Dynamic_DownloadProgress));
+	_iconProgress =
+			addChild(Rc<material2d::IconSprite>::create(IconName::Dynamic_DownloadProgress));
 	_iconProgress->setAnchorPoint(Anchor::Middle);
 	_iconProgress->setColor(Color::Black);
 	_iconProgress->setContentSize(Size2(96.0f, 96.0f));
 
-	_listener = addInputListener(Rc<InputListener>::create());
-	_listener->addTapRecognizer([this] (const GestureTap &tap) {
+	_listener = addComponent(Rc<InputListener>::create());
+	_listener->addTapRecognizer([this](const GestureTap &tap) {
 		if (_iconLoader->isTouched(tap.input->currentLocation)) {
 			_iconLoader->animate((_iconLoader->getProgress() > 0.0f) ? 0.0f : 1.0f, 2.0f);
 		}
@@ -70,4 +73,4 @@ void VgDynamicIcons::handleContentSizeDirty() {
 	_iconProgress->setPosition(Vec2(_contentSize / 2.0f) + Vec2(96.0f, 0.0f));
 }
 
-}
+} // namespace stappler::xenolith::app

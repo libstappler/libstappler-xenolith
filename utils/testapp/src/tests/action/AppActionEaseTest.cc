@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -52,7 +53,7 @@ bool ActionEaseNode::init(StringView str, Function<Rc<ActionInterval>(Rc<ActionI
 	_callback = sp::move(cb);
 	_activated = onActivated;
 
-	auto l = _layer->addInputListener(Rc<InputListener>::create());
+	auto l = _layer->addComponent(Rc<InputListener>::create());
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		run();
 		return true;

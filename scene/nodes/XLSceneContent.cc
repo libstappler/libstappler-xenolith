@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,17 +36,17 @@ bool SceneContent::init() {
 		return false;
 	}
 
-	_inputListener = addInputListener(Rc<InputListener>::create());
+	_inputListener = addComponent(Rc<InputListener>::create());
 	_inputListener->setPriority(-1);
 	_inputListener->setDedicatedFocus(maxOf<uint32_t>());
-	_inputListener->addKeyRecognizer([this] (GestureData data) {
+	_inputListener->addKeyRecognizer([this](GestureData data) {
 		if (data.event == GestureEvent::Ended) {
 			return onBackButton();
 		}
 		return data.event == GestureEvent::Began;
 	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
 
-	_inputListener->setBackgroudCallback([this] (bool val) -> bool {
+	_inputListener->setBackgroudCallback([this](bool val) -> bool {
 		handleBackgroundTransition(val);
 		return true;
 	});
@@ -81,9 +82,7 @@ void SceneContent::handleExit() {
 	Node::handleExit();
 }
 
-void SceneContent::handleContentSizeDirty() {
-	Node::handleContentSizeDirty();
-}
+void SceneContent::handleContentSizeDirty() { Node::handleContentSizeDirty(); }
 
 SP_COVERAGE_TRIVIAL
 void SceneContent::updateBackButtonStatus() { }
@@ -91,9 +90,7 @@ void SceneContent::updateBackButtonStatus() { }
 void SceneContent::handleBackgroundTransition(bool val) { }
 
 SP_COVERAGE_TRIVIAL
-bool SceneContent::onBackButton() {
-	return false;
-}
+bool SceneContent::onBackButton() { return false; }
 
 void SceneContent::setHandlesViewDecoration(bool value) {
 	if (_handlesViewDecoration != value) {
@@ -134,9 +131,7 @@ void SceneContent::disableScissor() {
 	_scissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
 }
 
-bool SceneContent::isScissorEnabled() const {
-	return _scissorComponent->isScissorEnabled();
-}
+bool SceneContent::isScissorEnabled() const { return _scissorComponent->isScissorEnabled(); }
 
 void SceneContent::setDecorationPadding(Padding padding) {
 	if (padding != _decorationPadding) {
@@ -145,4 +140,4 @@ void SceneContent::setDecorationPadding(Padding padding) {
 	}
 }
 
-}
+} // namespace stappler::xenolith

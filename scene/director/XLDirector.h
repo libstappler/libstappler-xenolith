@@ -116,6 +116,7 @@ protected:
 	Rc<Scheduler> _scheduler;
 	Rc<ActionManager> _actionManager;
 	Rc<InputDispatcher> _inputDispatcher;
+	Rc<TextInputManager> _textInput;
 
 	Vector<Rc<Ref>> _autorelease;
 

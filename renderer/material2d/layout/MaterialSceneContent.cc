@@ -65,26 +65,26 @@ bool Snackbar::init() {
 
 	setAnchorPoint(Anchor::MiddleBottom);
 
-	_listener = addInputListener(Rc<InputListener>::create());
-	_listener->addTouchRecognizer([this] (const GestureData &data) -> bool {
+	_listener = addComponent(Rc<InputListener>::create());
+	_listener->addTouchRecognizer([this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Began) {
 			stopAllActions();
-			runAction(Rc<Sequence>::create(_data.delayTime, std::bind(&Snackbar::hide, this, nullptr)));
+			runAction(Rc<Sequence>::create(_data.delayTime,
+					std::bind(&Snackbar::hide, this, nullptr)));
 		}
 		return true;
 	});
 	_listener->setSwallowEvents(InputListener::EventMaskTouch);
 
-	_surface = addChild(Rc<Surface>::create(SurfaceStyle(NodeStyle::Filled, Elevation::Level5, ColorRole::OnSurfaceVariant)));
+	_surface = addChild(Rc<Surface>::create(
+			SurfaceStyle(NodeStyle::Filled, Elevation::Level5, ColorRole::OnSurfaceVariant)));
 
 	_label = _surface->addChild(Rc<TypescaleLabel>::create(TypescaleRole::BodyLarge), ZOrder(1));
 	_label->setLocaleEnabled(true);
 	_label->setAnchorPoint(Anchor::MiddleLeft);
 
 	_button = _surface->addChild(Rc<Button>::create(NodeStyle::Text), ZOrder(1));
-	_button->setTapCallback([this] {
-		onButton();
-	});
+	_button->setTapCallback([this] { onButton(); });
 	_button->setAnchorPoint(Anchor::MiddleRight);
 	_button->setVisible(false);
 	_button->setSwallowEvents(true);
@@ -126,27 +126,26 @@ void Snackbar::setSnackbarData(SnackbarData &&data) {
 	if (!_data.text.empty() || !_data.buttonText.empty()) {
 		setVisible(true);
 		setOpacity(1.0f);
-		runAction(Rc<Sequence>::create(makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, 0)), EasingType::Standard), _data.delayTime,
-				std::bind(&Snackbar::hide, this, nullptr)));
+		runAction(Rc<Sequence>::create(
+				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, 0)), EasingType::Standard),
+				_data.delayTime, std::bind(&Snackbar::hide, this, nullptr)));
 	}
 }
 
-const SnackbarData &Snackbar::getData() const {
-	return _data;
-}
+const SnackbarData &Snackbar::getData() const { return _data; }
 
-void Snackbar::clear() {
-	setSnackbarData(SnackbarData(""));
-}
+void Snackbar::clear() { setSnackbarData(SnackbarData("")); }
 
 void Snackbar::hide(Function<void()> &&cb) {
 	if (!cb) {
 		runAction(Rc<Sequence>::create(
-				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, -_contentSize.height)), EasingType::Standard),
+				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, -_contentSize.height)),
+						EasingType::Standard),
 				std::bind(&Snackbar::onHidden, this)));
 	} else {
 		runAction(Rc<Sequence>::create(
-				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, -_contentSize.height)), EasingType::Standard),
+				makeEasing(Rc<MoveTo>::create(0.25f, Vec2(_position.x, -_contentSize.height)),
+						EasingType::Standard),
 				sp::move(cb)));
 	}
 }
@@ -228,39 +227,23 @@ bool SceneContent::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	return SceneContent2d::visitDraw(frame, parentFlags);
 }
 
-void SceneContent::showSnackbar(SnackbarData &&data) {
-	_snackbar->show(move(data));
-}
-const String &SceneContent::getSnackbarString() const {
-	return _snackbar->getData().text;
-}
-void SceneContent::clearSnackbar() {
-	_snackbar->clear();
-}
+void SceneContent::showSnackbar(SnackbarData &&data) { _snackbar->show(move(data)); }
+const String &SceneContent::getSnackbarString() const { return _snackbar->getData().text; }
+void SceneContent::clearSnackbar() { _snackbar->clear(); }
 
-bool SceneContent::isNavigationAvailable() const {
-	return _navigation->isEnabled();
-}
+bool SceneContent::isNavigationAvailable() const { return _navigation->isEnabled(); }
 
-void SceneContent::setNavigationEnabled(bool value) {
-	_navigation->setEnabled(value);
-}
+void SceneContent::setNavigationEnabled(bool value) { _navigation->setEnabled(value); }
 
 void SceneContent::setNavigationMenuSource(MenuSource *source) {
 	_navigation->setMenuSource(source);
 }
 
-void SceneContent::setNavigationStyle(const SurfaceStyle &style) {
-	_navigation->setStyle(style);
-}
+void SceneContent::setNavigationStyle(const SurfaceStyle &style) { _navigation->setStyle(style); }
 
-void SceneContent::openNavigation() {
-	_navigation->show();
-}
+void SceneContent::openNavigation() { _navigation->show(); }
 
-void SceneContent::closeNavigation() {
-	_navigation->hide();
-}
+void SceneContent::closeNavigation() { _navigation->hide(); }
 
 float SceneContent::getMaxDepthIndex() const {
 	float maxIndex = _depthIndex;
@@ -294,4 +277,4 @@ void SceneContent::handleBackgroundTransition(bool value) {
 	_contentSizeDirty = true;
 }
 
-}
+} // namespace stappler::xenolith::material2d

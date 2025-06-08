@@ -23,6 +23,8 @@
  **/
 
 #include "XLTextInputManager.h"
+#include "XLPlatformTextInputInterface.h"
+#include "XLView.h"
 
 #if WIN32
 #ifdef DELETE
@@ -34,11 +36,10 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 TextInputHandler::~TextInputHandler() { cancel(); }
 
-bool TextInputHandler::run(TextInputManager *manager, WideStringView str, TextCursor cursor,
-		TextCursor marked, TextInputType type) {
+bool TextInputHandler::run(TextInputManager *manager, TextInputRequest &&req) {
 	if (!isActive()) {
 		this->manager = manager;
-		return manager->run(this, str, cursor, marked, type);
+		return manager->run(this, move(req));
 	}
 	return false;
 }
@@ -51,25 +52,9 @@ void TextInputHandler::cancel() {
 }
 
 // only if this handler is active
-bool TextInputHandler::setString(WideStringView str, TextCursor c, TextCursor m) {
+bool TextInputHandler::update(TextInputRequest &&req) {
 	if (isActive()) {
-		this->manager->setString(str, c, m);
-		return true;
-	}
-	return false;
-}
-
-bool TextInputHandler::setCursor(TextCursor c) {
-	if (isActive()) {
-		this->manager->setCursor(c);
-		return true;
-	}
-	return false;
-}
-
-bool TextInputHandler::setMarked(TextCursor c) {
-	if (isActive()) {
-		this->manager->setMarked(c);
+		this->manager->update(this, move(req));
 		return true;
 	}
 	return false;
@@ -79,226 +64,62 @@ WideStringView TextInputHandler::getString() const { return this->manager->getSt
 TextCursor TextInputHandler::getCursor() const { return this->manager->getCursor(); }
 TextCursor TextInputHandler::getMarked() const { return this->manager->getMarked(); }
 
-bool TextInputHandler::isInputEnabled() const { return this->manager->isInputEnabled(); }
-
 bool TextInputHandler::isActive() const {
 	return this->manager && this->manager->getHandler() == this;
 }
 
-TextInputManager::TextInputManager() { }
-
-bool TextInputManager::init(TextInputViewInterface *view) {
+bool TextInputManager::init(View *view) {
 	_view = view;
 	return true;
 }
 
-bool TextInputManager::hasText() { return _string.length() != 0; }
-
-void TextInputManager::insertText(WideStringView sInsert, bool compose) {
-	if (doInsertText(sInsert, compose)) {
-		handleTextChanged();
-	}
-}
-
-void TextInputManager::insertText(WideStringView sInsert, TextCursor replacement) {
-	if (replacement.start != maxOf<uint32_t>()) {
-		_cursor = replacement;
-	}
-
-	if (doInsertText(sInsert, false)) {
-		handleTextChanged();
-	}
-}
-
-void TextInputManager::setMarkedText(WideStringView sInsert, TextCursor replacement,
-		TextCursor marked) {
-	if (replacement.start != maxOf<uint32_t>()) {
-		_cursor = replacement;
-	}
-
-	auto start = _cursor.start;
-
-	if (doInsertText(sInsert, false)) {
-		_marked = TextCursor(start + marked.start, marked.length);
-		handleTextChanged();
-	}
-}
-
-void TextInputManager::textChanged(WideStringView text, TextCursor cursor, TextCursor marked) {
-	if (text.size() == 0) {
-		_string = WideString();
-		_cursor.start = 0;
-		_cursor.length = 0;
-		_marked = TextCursor::InvalidCursor;
-		handleTextChanged();
-		return;
-	}
-
-	_string = text.str<Interface>();
-	_cursor = cursor;
-	_marked = marked;
-	handleTextChanged();
-}
-
-void TextInputManager::cursorChanged(TextCursor cursor) {
-	_cursor = cursor;
-	handleTextChanged();
-}
-
-void TextInputManager::markedChanged(TextCursor marked) {
-	_marked = marked;
-	handleTextChanged();
-}
-
-void TextInputManager::deleteBackward() {
-	if (_string.empty()) {
-		return;
-	}
-
-	if (_cursor.length > 0) {
-		_string.erase(_string.begin() + _cursor.start,
-				_string.begin() + _cursor.start + _cursor.length);
-		_cursor.length = 0;
-		handleTextChanged();
-		return;
-	}
-
-	if (_cursor.start == 0) {
-		return;
-	}
-
-	// TODO: check for surrogate pairs
-	size_t nDeleteLen = 1;
-
-	if (_string.length() <= nDeleteLen) {
-		_string = WideString();
-		_cursor.start = 0;
-		_cursor.length = 0;
-		handleTextChanged();
-		return;
-	}
-
-	_string.erase(_string.begin() + _cursor.start - 1,
-			_string.begin() + _cursor.start - 1 + nDeleteLen);
-	_cursor.start -= nDeleteLen;
-	handleTextChanged();
-}
-
-void TextInputManager::deleteForward() {
-	if (_string.empty()) {
-		return;
-	}
-
-	if (_cursor.length > 0) {
-		_string.erase(_string.begin() + _cursor.start,
-				_string.begin() + _cursor.start + _cursor.length);
-		_cursor.length = 0;
-		handleTextChanged();
-		return;
-	}
-
-	if (_cursor.start == _string.size()) {
-		return;
-	}
-
-	// TODO: check for surrogate pairs
-	size_t nDeleteLen = 1;
-
-	if (_string.length() <= nDeleteLen) {
-		_string = WideString();
-		_cursor.start = 0;
-		_cursor.length = 0;
-		handleTextChanged();
-		return;
-	}
-
-	_string.erase(_string.begin() + _cursor.start, _string.begin() + _cursor.start + nDeleteLen);
-	handleTextChanged();
-}
-
-void TextInputManager::unmarkText() { markedChanged(TextCursor::InvalidCursor); }
-
-void TextInputManager::setInputEnabled(bool enabled) {
-	if (_isInputEnabled != enabled) {
-		_isInputEnabled = enabled;
-		_compose = InputKeyComposeState::Nothing;
-		if (_handler && _handler->onInput) {
-			_handler->onInput(enabled);
-		}
-		if (!_isInputEnabled) {
-			cancel();
-		}
-	}
-}
-
-void TextInputManager::handleTextChanged() {
-	if (_handler && _handler->onText) {
-		_handler->onText(_string, _cursor, _marked);
-	}
-}
-
-bool TextInputManager::run(TextInputHandler *h, WideStringView str, TextCursor cursor,
-		TextCursor marked, TextInputType type) {
+bool TextInputManager::run(TextInputHandler *h, TextInputRequest &&req) {
 	auto oldH = _handler;
 	_handler = h;
-	if (oldH && _running) {
-		oldH->onInput(false);
+
+	if (oldH) {
+		auto copy = _state;
+		copy.enabled = false;
+		oldH->onData(copy);
 	}
-	_cursor = cursor;
-	_marked = marked;
-	_string = str.str<Interface>();
-	_type = type;
+
 	_handler = h;
-	if (cursor.start > str.size()) {
-		_cursor.start = (uint32_t)str.size();
+
+	if (req.cursor.start > req.size()) {
+		req.cursor.start = static_cast<uint32_t>(req.size());
 	}
-	if (!_running) {
-		_view->runTextInput(_string, cursor.start, cursor.length, type);
-		_running = true;
-	} else {
-		_view->updateTextInput(_string, cursor.start, cursor.length, type);
-		if (_running) {
-			_handler->onInput(true);
-		}
-		return false;
-	}
-	_compose = InputKeyComposeState::Nothing;
+
+	_state = req.getState();
+
+	_view->acquireTextInput(move(req));
 	return true;
 }
 
-void TextInputManager::setString(WideStringView str, TextCursor cursor, TextCursor marked) {
-	_cursor = cursor;
-	_marked = marked;
-	_string = str.str<Interface>();
-	if (cursor.start > str.size()) {
-		_cursor.start = (uint32_t)str.size();
+bool TextInputManager::update(TextInputHandler *h, TextInputRequest &&req) {
+	if (_handler != h) {
+		return false;
 	}
 
-	_view->updateTextInput(_string, cursor.start, cursor.length, _type);
+	if (req.cursor.start > req.size()) {
+		req.cursor.start = static_cast<uint32_t>(req.size());
+	}
+
+	auto newState = req.getState();
+
+	if (_state.enabled) {
+		newState.compose = _state.compose;
+		newState.enabled = _state.enabled;
+	}
+
+	_state = move(newState);
+	_view->acquireTextInput(move(req));
+	return true;
 }
 
-void TextInputManager::setCursor(TextCursor cursor) {
-	_cursor = cursor;
-	if (cursor.start > _string.length()) {
-		_cursor.start = (uint32_t)_string.length();
-	}
-
-	if (_running) {
-		_view->updateTextCursor(_cursor.start, _cursor.length);
-	}
-}
-
-void TextInputManager::setMarked(TextCursor marked) {
-	_marked = marked;
-	if (marked.start > _string.length()) {
-		_marked.start = (uint32_t)_string.length();
-	}
-}
-
-WideStringView TextInputManager::getString() const { return _string; }
+WideStringView TextInputManager::getString() const { return _state.getStringView(); }
 
 WideStringView TextInputManager::getStringByRange(TextCursor cursor) {
-	WideStringView str = _string;
+	WideStringView str = _state.getStringView();
 	if (cursor.start >= str.size()) {
 		return WideStringView();
 	}
@@ -310,119 +131,34 @@ WideStringView TextInputManager::getStringByRange(TextCursor cursor) {
 
 	return str.sub(0, cursor.length);
 }
-TextCursor TextInputManager::getCursor() const { return _cursor; }
-TextCursor TextInputManager::getMarked() const { return _marked; }
+
+TextCursor TextInputManager::getCursor() const { return _state.cursor; }
+
+TextCursor TextInputManager::getMarked() const { return _state.marked; }
 
 void TextInputManager::cancel() {
-	if (_running) {
-		_view->cancelTextInput();
-		setInputEnabled(false);
-		_handler = nullptr;
-
-		_string = WideString();
-		_cursor.start = 0;
-		_cursor.length = 0;
-		_running = false;
+	if (_handler) {
+		auto copy = _state;
+		copy.enabled = false;
+		_handler->onData(copy);
+		_handler->manager = nullptr;
 	}
+	_view->releaseTextInput();
+	_handler = nullptr;
+	_state.enabled = false;
+	_state.string = nullptr;
 }
 
-bool TextInputManager::canHandleInputEvent(const InputEventData &data) {
-	if (_running && _isInputEnabled && data.key.compose != InputKeyComposeState::Disabled) {
-		switch (data.event) {
-		case InputEventName::KeyPressed:
-		case InputEventName::KeyRepeated:
-		case InputEventName::KeyReleased:
-		case InputEventName::KeyCanceled:
-			if (data.key.keychar || data.key.keycode == InputKeyCode::BACKSPACE
-					|| data.key.keycode == InputKeyCode::DELETE
-					|| data.key.keycode == InputKeyCode::ESCAPE) {
-				return true;
-			}
-			break;
-		default: break;
-		}
+bool TextInputManager::isEnabled() const { return _state.enabled; }
+
+void TextInputManager::handleInputUpdate(const TextInputState &state) {
+	_state = state;
+
+	if (!_state.enabled) {
+		cancel();
+	} else if (_handler) {
+		_handler->onData(_state);
 	}
-	return false;
-}
-
-bool TextInputManager::handleInputEvent(const InputEventData &data) {
-	if (data.event == InputEventName::KeyReleased) {
-		if (data.key.compose != InputKeyComposeState::Forced) {
-			return false;
-		}
-	}
-
-	switch (data.event) {
-	case InputEventName::KeyPressed:
-	case InputEventName::KeyRepeated:
-	case InputEventName::KeyReleased:
-		if (data.key.keycode == InputKeyCode::BACKSPACE || data.key.keychar == char32_t(0x0008)) {
-			deleteBackward();
-			return true;
-		} else if (data.key.keycode == InputKeyCode::DELETE
-				|| data.key.keychar == char32_t(0x007f)) {
-			deleteForward();
-			return true;
-		} else if (data.key.keycode == InputKeyCode::ESCAPE) {
-			cancel();
-		} else if (data.key.keychar) {
-			auto c = data.key.keychar;
-			// replace \r with \n for formatter
-			if (c == '\r') {
-				c = '\n';
-			}
-			switch (data.key.compose) {
-			case InputKeyComposeState::Nothing:
-			case InputKeyComposeState::Forced:
-				if (_compose == InputKeyComposeState::Composing) {
-					_cursor.start += _cursor.length;
-					_cursor.length = 0;
-				}
-				insertText(string::toUtf16<Interface>(c));
-				break;
-			case InputKeyComposeState::Composed:
-				insertText(string::toUtf16<Interface>(c), false);
-				break;
-			case InputKeyComposeState::Composing:
-				insertText(string::toUtf16<Interface>(c), true);
-				break;
-			case InputKeyComposeState::Disabled: break;
-			}
-			_compose = data.key.compose;
-			return true;
-		}
-		break;
-	case InputEventName::KeyCanceled: break;
-	default: break;
-	}
-	return false;
-}
-
-bool TextInputManager::doInsertText(WideStringView sInsert, bool compose) {
-	if (sInsert.size() > 0) {
-		if (_cursor.length > 0 && (!compose || _compose != InputKeyComposeState::Composing)) {
-			_string.erase(_string.begin() + _cursor.start,
-					_string.begin() + _cursor.start + _cursor.length);
-			_cursor.length = 0;
-		}
-
-		WideString sText(_string.substr(0, _cursor.start).append(sInsert.data(), sInsert.size()));
-
-		if (_cursor.start < _string.length()) {
-			sText.append(_string.substr(_cursor.start));
-		}
-
-		_string = sp::move(sText);
-
-		if (compose) {
-			_cursor.length += sInsert.size();
-		} else {
-			_cursor.start += sInsert.size();
-		}
-
-		return true;
-	}
-	return false;
 }
 
 } // namespace stappler::xenolith

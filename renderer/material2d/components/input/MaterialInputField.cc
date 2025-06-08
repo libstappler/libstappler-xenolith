@@ -23,9 +23,11 @@
 #include "MaterialInputField.h"
 #include "MaterialInputTextContainer.h"
 #include "MaterialEasing.h"
+#include "XLApplicationInfo.h"
 #include "XLDirector.h"
 #include "XL2dLayer.h"
 #include "XLInputListener.h"
+#include "XLPlatformTextInputInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -69,12 +71,15 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 	_trailingIcon->setAnchorPoint(Anchor::MiddleRight);
 	_trailingIcon->setContentSize(Size2(24.0f, 24.0f));
 
-	_indicator = addChild(Rc<Surface>::create(SurfaceStyle(ColorRole::OnSurfaceVariant, NodeStyle::Filled)), ZOrder(1));
+	_indicator = addChild(
+			Rc<Surface>::create(SurfaceStyle(ColorRole::OnSurfaceVariant, NodeStyle::Filled)),
+			ZOrder(1));
 	_indicator->setAnchorPoint(Anchor::BottomLeft);
 
-	_inputListener = addInputListener(Rc<InputListener>::create());
+	_inputListener = addComponent(Rc<InputListener>::create());
 
-	_inputListener->setTouchFilter([this] (const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
+	_inputListener->setTouchFilter(
+			[this](const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
 		if (cb(event)) {
 			return true;
 		}
@@ -86,62 +91,57 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 		return false;
 	});
 
-	_inputListener->addMouseOverRecognizer([this] (const GestureData &data) {
+	_inputListener->addMouseOverRecognizer([this](const GestureData &data) {
 		_mouseOver = (data.event == GestureEvent::Began);
 		updateActivityState();
 		return true;
 	});
-	_inputListener->addTapRecognizer([this] (const GestureTap &tap) {
+	_inputListener->addTapRecognizer([this](const GestureTap &tap) {
 		return handleTap(tap.input->currentLocation);
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
 
-	_inputListener->addPressRecognizer([this] (const GesturePress &press) {
+	_inputListener->addPressRecognizer([this](const GesturePress &press) {
 		switch (press.event) {
-		case GestureEvent::Began:
-			return handlePressBegin(press.location());
-			break;
+		case GestureEvent::Began: return handlePressBegin(press.location()); break;
 		case GestureEvent::Activated:
 			return handleLongPress(press.location(), press.tickCount);
 			break;
-		case GestureEvent::Ended:
-			return handlePressEnd(press.location());
-			break;
-		case GestureEvent::Cancelled:
-			return handlePressCancel(press.location());
-			break;
+		case GestureEvent::Ended: return handlePressEnd(press.location()); break;
+		case GestureEvent::Cancelled: return handlePressCancel(press.location()); break;
 		}
 		return false;
 	}, TimeInterval::milliseconds(425), true);
 
-	_inputListener->addSwipeRecognizer([this] (const GestureSwipe &swipe) {
+	_inputListener->addSwipeRecognizer([this](const GestureSwipe &swipe) {
 		switch (swipe.event) {
 		case GestureEvent::Began:
 			if (handleSwipeBegin(swipe.input->originalLocation, swipe.delta / swipe.density)) {
-				return handleSwipe(swipe.input->originalLocation, swipe.delta / swipe.density, swipe.velocity / swipe.density);
+				return handleSwipe(swipe.input->originalLocation, swipe.delta / swipe.density,
+						swipe.velocity / swipe.density);
 			}
 			return false;
 			break;
 		case GestureEvent::Activated:
-			return handleSwipe(swipe.location(), swipe.delta / swipe.density, swipe.velocity / swipe.density);
+			return handleSwipe(swipe.location(), swipe.delta / swipe.density,
+					swipe.velocity / swipe.density);
 			break;
 		case GestureEvent::Ended:
-		case GestureEvent::Cancelled:
-			return handleSwipeEnd(swipe.velocity / swipe.density);
-			break;
+		case GestureEvent::Cancelled: return handleSwipeEnd(swipe.velocity / swipe.density); break;
 		}
 		return false;
 	});
 
-	_focusInputListener = addInputListener(Rc<InputListener>::create());
+	_focusInputListener = addComponent(Rc<InputListener>::create());
 	_focusInputListener->setPriority(1);
-	_focusInputListener->addTapRecognizer([this] (const GestureTap &tap) {
+	_focusInputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (_handler.isActive()) {
 			_handler.cancel();
 		}
 		_focusInputListener->setEnabled(false);
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
-	_focusInputListener->setTouchFilter([this] (const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
+	_focusInputListener->setTouchFilter(
+			[this](const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
 		if (!_container->isTouched(event.currentLocation, 8.0f)) {
 			return true;
 		}
@@ -149,16 +149,12 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 	});
 	_focusInputListener->setEnabled(false);
 
-	_handler.onText = std::bind(&InputField::handleTextInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-	_handler.onKeyboard = std::bind(&InputField::handleKeyboardEnabled, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-	_handler.onInput = std::bind(&InputField::handleInputEnabled, this, std::placeholders::_1);
+	_handler.onData = std::bind(&InputField::handleTextInput, this, std::placeholders::_1);
 
 	return true;
 }
 
-void InputField::handleEnter(Scene *scene) {
-	Surface::handleEnter(scene);
-}
+void InputField::handleEnter(Scene *scene) { Surface::handleEnter(scene); }
 
 void InputField::handleExit() {
 	Surface::handleExit();
@@ -194,7 +190,7 @@ void InputField::handleContentSizeDirty() {
 		_labelText->setPosition(Vec2(xOffset, _contentSize.height - 9.0f));
 		_indicator->setContentSize(Size2(_contentSize.width, 2.0f));
 	} else {
-		if (!_inputString.empty()) {
+		if (!_inputState.empty()) {
 			_labelText->setAnchorPoint(Anchor::TopLeft);
 			_labelText->setPosition(Vec2(xOffset, _contentSize.height - 9.0f));
 		} else {
@@ -207,21 +203,13 @@ void InputField::handleContentSizeDirty() {
 	stopAllActionsByTag(InputEnabledActionTag);
 }
 
-void InputField::setLabelText(StringView text) {
-	_labelText->setString(text);
-}
+void InputField::setLabelText(StringView text) { _labelText->setString(text); }
 
-StringView InputField::getLabelText() const {
-	return _labelText->getString8();
-}
+StringView InputField::getLabelText() const { return _labelText->getString8(); }
 
-void InputField::setSupportingText(StringView text) {
-	_supportingText->setString(text);
-}
+void InputField::setSupportingText(StringView text) { _supportingText->setString(text); }
 
-StringView InputField::getSupportingText() const {
-	return _supportingText->getString8();
-}
+StringView InputField::getSupportingText() const { return _supportingText->getString8(); }
 
 void InputField::setLeadingIconName(IconName name) {
 	if (name != getLeadingIconName()) {
@@ -230,9 +218,7 @@ void InputField::setLeadingIconName(IconName name) {
 	}
 }
 
-IconName InputField::getLeadingIconName() const {
-	return _leadingIcon->getIconName();
-}
+IconName InputField::getLeadingIconName() const { return _leadingIcon->getIconName(); }
 
 void InputField::setTrailingIconName(IconName name) {
 	if (name != getTrailingIconName()) {
@@ -241,9 +227,7 @@ void InputField::setTrailingIconName(IconName name) {
 	}
 }
 
-IconName InputField::getTrailingIconName() const {
-	return _trailingIcon->getIconName();
-}
+IconName InputField::getTrailingIconName() const { return _trailingIcon->getIconName(); }
 
 void InputField::setEnabled(bool value) {
 	if (_enabled != value) {
@@ -252,17 +236,23 @@ void InputField::setEnabled(bool value) {
 	}
 }
 
-bool InputField::isEnabled() const {
-	return _enabled;
-}
+bool InputField::isEnabled() const { return _enabled; }
 
 void InputField::setInputType(TextInputType type) {
-	_inputType = type;
+	if (_inputState.type != type) {
+		_inputState.type = type;
+		if (_handler.isActive()) {
+			_handler.update(TextInputRequest{
+				.string = _inputState.string,
+				.cursor = _inputState.cursor,
+				.marked = _inputState.marked,
+				.type = _inputState.type,
+			});
+		}
+	}
 }
 
-void InputField::setPasswordMode(InputFieldPasswordMode mode) {
-	_passwordMode = mode;
-}
+void InputField::setPasswordMode(InputFieldPasswordMode mode) { _passwordMode = mode; }
 
 void InputField::updateActivityState() {
 	auto style = getStyleTarget();
@@ -295,7 +285,8 @@ bool InputField::handlePressBegin(const Vec2 &pt) {
 		return false;
 	}
 
-	if (_trailingIcon && getTrailingIconName() != IconName::None && _trailingIcon->isTouched(pt, 12)) {
+	if (_trailingIcon && getTrailingIconName() != IconName::None
+			&& _trailingIcon->isTouched(pt, 12)) {
 		return false;
 	}
 
@@ -394,7 +385,7 @@ void InputField::updateInputEnabled() {
 
 	stopAllActionsByTag(InputEnabledActionTag);
 
-	bool populated = !_inputString.empty();
+	bool populated = (!_inputState.empty());
 
 	auto labelAnchor = _labelText->getAnchorPoint();
 	auto labelPos = _labelText->getPosition();
@@ -416,16 +407,23 @@ void InputField::updateInputEnabled() {
 		targetLabelSize = font::FontSize(12);
 	}
 
-	runAction(makeEasing(Rc<ActionProgress>::create(_activityAnimationDuration, [=, this] (float p) {
+	runAction(makeEasing(Rc<ActionProgress>::create(_activityAnimationDuration,
+								 [=, this](float p) {
 		_labelText->setAnchorPoint(progress(labelAnchor, targetLabelAnchor, p));
 		_labelText->setPosition(progress(labelPos, targetLabelPos, p));
 		_labelText->setFontSize(progress(sourceLabelSize, targetLabelSize, p));
 		_indicator->setContentSize(progress(indicatorSize, targetIndicatorSize, p));
-	}), EasingType::Standard), InputEnabledActionTag);
+	}),
+					  EasingType::Standard),
+			InputEnabledActionTag);
 
-	runAction(makeEasing(Rc<ActionProgress>::create(_activityAnimationDuration, [=, this] (float p) {
-		_labelText->setBlendColor(ColorRole::Primary, progress(sourceBlendValue, targetBlendValue, p));
-	}), EasingType::Standard), InputEnabledLabelActionTag);
+	runAction(makeEasing(Rc<ActionProgress>::create(_activityAnimationDuration,
+								 [=, this](float p) {
+		_labelText->setBlendColor(ColorRole::Primary,
+				progress(sourceBlendValue, targetBlendValue, p));
+	}),
+					  EasingType::Standard),
+			InputEnabledLabelActionTag);
 
 	auto indicatorStyle = _indicator->getStyleTarget();
 	indicatorStyle.colorRole = _focused ? ColorRole::Primary : ColorRole::OnSurfaceVariant;
@@ -434,115 +432,169 @@ void InputField::updateInputEnabled() {
 }
 
 void InputField::acquireInputFromContainer() {
-	_cursor = _container->getCursor();
-	_markedRegion = TextCursor::InvalidCursor;
-	_handler.run(_director->getTextInputManager(), _inputString, _cursor, _markedRegion, _inputType);
+	_handler.run(_director->getTextInputManager(),
+			TextInputRequest{
+				.string = _inputState.string,
+				.cursor = _container->getCursor(),
+				.marked = TextCursor::InvalidCursor,
+				.type = _inputState.type,
+			});
 	_focusInputListener->setEnabled(true);
 }
 
 void InputField::acquireInput(const Vec2 &targetLocation) {
 	auto cursor = _container->getCursorForPosition(targetLocation);
-	if (cursor != TextCursor::InvalidCursor) {
-		_cursor = cursor;
-	} else {
-		_cursor = TextCursor(uint32_t(_inputString.size()), 0);
+	if (cursor == TextCursor::InvalidCursor) {
+		cursor = TextCursor(static_cast<uint32_t>(_inputState.getStringView().size()), 0);
 	}
 
-	_container->setCursor(_cursor);
+	_container->setCursor(cursor);
 	_container->touchPointers();
-	_markedRegion = TextCursor::InvalidCursor;
-	_handler.run(_director->getTextInputManager(), _inputString, _cursor, _markedRegion, _inputType);
+	_handler.run(_director->getTextInputManager(),
+			TextInputRequest{
+				.string = _inputState.string,
+				.cursor = cursor,
+				.marked = TextCursor::InvalidCursor,
+				.type = _inputState.type,
+			});
 	_focusInputListener->setEnabled(true);
 }
 
 void InputField::updateCursorForLocation(const Vec2 &targetLocation) {
 	auto cursor = _container->getCursorForPosition(targetLocation);
-	if (cursor != TextCursor::InvalidCursor && cursor != _cursor) {
-		_cursor = cursor;
+	if (cursor != TextCursor::InvalidCursor && cursor != _inputState.cursor) {
+		_inputState.cursor = cursor;
 		if (_handler.isActive()) {
-			_handler.setCursor(cursor);
+			_handler.update(TextInputRequest{
+				.string = _inputState.string,
+				.cursor = _inputState.cursor,
+				.marked = TextCursor::InvalidCursor,
+				.type = _inputState.type,
+			});
 			_container->setCursor(cursor);
 			_container->touchPointers();
-			_markedRegion = TextCursor::InvalidCursor;
 		}
 	}
 }
 
-void InputField::handleTextInput(WideStringView str, TextCursor cursor, TextCursor marked) {
-	auto label = _container->getLabel();
-
-	auto maxChars = label->getMaxChars();
-	if (maxChars > 0) {
-		if (maxChars < str.size()) {
-			auto tmpString = WideStringView(str, 0, maxChars);
-			_handler.setString(tmpString, cursor);
-			handleTextInput(tmpString, _cursor, _markedRegion);
-			handleError(InputFieldError::Overflow);
-			return;
-		}
-	}
-
-	for (auto &it : str) {
-		if (!handleInputChar(it)) {
-			_handler.setString(getInputString(), _cursor);
-			handleError(InputFieldError::Overflow);
-			return;
-		}
-	}
-
-	_container->setCursor(cursor);
-
-	_inputString = str.str<Interface>();
-	_cursor = cursor;
-
-	switch (_passwordMode) {
-	case InputFieldPasswordMode::NotPassword:
-	case InputFieldPasswordMode::ShowAll:
-		label->setString(_inputString);
-		break;
-	case InputFieldPasswordMode::ShowNone:
-	case InputFieldPasswordMode::ShowChar: {
-		WideString str; str.resize(_inputString.length(), u'*');
-		label->setString(str);
-		/*if (isInsert) {
-			showLastChar();
-		}*/
-		break;
-	}
-	}
-
-	label->tryUpdateLabel();
-
-	_container->handleLabelChanged();
-}
-
-void InputField::handleKeyboardEnabled(bool, const Rect &, float) {
-
-}
-
-void InputField::handleInputEnabled(bool enabled) {
-	if (_focused != enabled) {
-		_focused = enabled;
+void InputField::handleTextInput(const TextInputState &data) {
+	// Update focus state if input was enabled or disabled
+	if (_focused != data.enabled) {
+		_focused = data.enabled;
 		updateActivityState();
 		updateInputEnabled();
 		if (_enabled) {
-			_container->setCursorCallback([this] (TextCursor cursor) {
-				_cursor = cursor;
-				_handler.setCursor(cursor);
+			_container->setCursorCallback([this](TextCursor cursor) {
+				_inputState.cursor = cursor;
+				if (_handler.isActive()) {
+					_handler.update(TextInputRequest{
+						.string = _inputState.string,
+						.cursor = _inputState.cursor,
+						.marked = TextCursor::InvalidCursor,
+						.type = _inputState.type,
+					});
+					_container->setCursor(cursor);
+					_container->touchPointers();
+				}
 			});
 		} else {
 			_container->setCursorCallback(nullptr);
 		}
 	}
-	_container->setEnabled(enabled);
+	_container->setEnabled(data.enabled);
+
+	if (data.string == _inputState.string) {
+		// only cursors was updated
+
+		_inputState = data;
+		_container->setCursor(_inputState.cursor);
+		_container->handleLabelChanged();
+	} else {
+		// check for input errors
+		// Note that errors can occur in any place in string due OS-assisted input
+		auto tmp = data;
+		auto err = validateInputData(tmp);
+
+		// set current state to possibly modified input state
+		if (err == InputFieldError::None) {
+			// ignore tmp state if there is no error
+			_inputState = data;
+		} else {
+			_inputState = move(tmp);
+		}
+
+		_container->setCursor(_inputState.cursor);
+
+		auto label = _container->getLabel();
+
+		switch (_passwordMode) {
+		case InputFieldPasswordMode::NotPassword:
+		case InputFieldPasswordMode::ShowAll: label->setString(_inputState.getStringView()); break;
+		case InputFieldPasswordMode::ShowNone:
+		case InputFieldPasswordMode::ShowChar: {
+			// Update password-protected output
+			WideString str;
+			str.resize(_inputState.size(), u'*');
+			label->setString(str);
+			/*if (isInsert) {
+			showLastChar();
+		}*/
+			break;
+		}
+		}
+
+		label->tryUpdateLabel();
+
+		_container->handleLabelChanged();
+
+		if (err != InputFieldError::None) {
+			handleError(InputFieldError::Overflow);
+
+			// in case of an input error, we need to notify OS about new input state in our end
+			_handler.update(TextInputRequest{
+				.string = tmp.string,
+				.cursor = tmp.cursor,
+				.marked = tmp.marked,
+				.type = tmp.type,
+			});
+		}
+	}
 }
 
-bool InputField::handleInputChar(char16_t ch) {
-	return true;
+bool InputField::handleInputChar(char16_t ch) { return true; }
+
+void InputField::handleError(InputFieldError err) { }
+
+InputFieldError InputField::validateInputData(TextInputState &state) {
+	InputFieldError err = InputFieldError::None;
+
+	auto label = _container->getLabel();
+
+	auto maxChars = label->getMaxChars();
+	if (maxChars > 0 && maxChars < state.size()) {
+		auto tmpString = WideStringView(state.getStringView(), 0, maxChars);
+		state.string = TextInputString::create(tmpString);
+		if (state.cursor.start > state.size()) {
+			state.cursor.start = static_cast<uint32_t>(state.size());
+			state.cursor.length = 0;
+		}
+		err |= InputFieldError::Overflow;
+	}
+
+	size_t count = 0;
+	for (auto &it : state.string->string) {
+		if (!handleInputChar(it)) {
+			auto tmpString = WideStringView(state.getStringView(), 0, count);
+			state.string = TextInputString::create(tmpString);
+			if (state.cursor.start > state.size()) {
+				state.cursor.start = static_cast<uint32_t>(state.size());
+				state.cursor.length = 0;
+			}
+			err |= InputFieldError::InvalidChar;
+		}
+		++count;
+	}
+	return err;
 }
 
-void InputField::handleError(InputFieldError err) {
-
-}
-
-}
+} // namespace stappler::xenolith::material2d

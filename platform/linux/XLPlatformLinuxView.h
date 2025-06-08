@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -49,8 +50,10 @@ public:
 	virtual void writeToClipboard(BytesView, StringView contentType) = 0;
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const = 0;
+
+	virtual void handleLayerUpdate(const ViewLayer &) = 0;
 };
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif /* XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXVIEW_H_ */

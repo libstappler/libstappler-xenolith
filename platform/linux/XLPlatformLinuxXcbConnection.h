@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +27,7 @@
 #include "XLPlatformLinuxXcb.h"
 #include "XLPlatformLinuxXkb.h"
 #include "XLCoreInput.h"
+#include <initializer_list>
 
 #if LINUX
 
@@ -39,20 +41,20 @@ struct XcbAtomInfo {
 };
 
 static XcbAtomInfo s_atomRequests[] = {
-	{ XcbAtomIndex::WM_PROTOCOLS, "WM_PROTOCOLS", true, 0 },
-	{ XcbAtomIndex::WM_DELETE_WINDOW, "WM_DELETE_WINDOW", true, 0 },
-	{ XcbAtomIndex::WM_NAME, "WM_NAME", false, 0 },
-	{ XcbAtomIndex::WM_ICON_NAME, "WM_ICON_NAME", false, 0 },
-	{ XcbAtomIndex::_NET_WM_SYNC_REQUEST, "_NET_WM_SYNC_REQUEST", true, 0 },
-	{ XcbAtomIndex::_NET_WM_SYNC_REQUEST_COUNTER, "_NET_WM_SYNC_REQUEST_COUNTER", true, 0 },
-	{ XcbAtomIndex::SAVE_TARGETS, "SAVE_TARGETS", false, 0 },
-	{ XcbAtomIndex::CLIPBOARD, "CLIPBOARD", false, 0 },
-	{ XcbAtomIndex::PRIMARY, "PRIMARY", false, 0 },
-	{ XcbAtomIndex::TARGETS, "TARGETS", false, 0 },
-	{ XcbAtomIndex::MULTIPLE, "MULTIPLE", false, 0 },
-	{ XcbAtomIndex::UTF8_STRING, "UTF8_STRING", false, 0 },
-	{ XcbAtomIndex::XNULL, "NULL", false, 0 },
-	{ XcbAtomIndex::XENOLITH_CLIPBOARD, "XENOLITH_CLIPBOARD", false, 0 },
+	{XcbAtomIndex::WM_PROTOCOLS, "WM_PROTOCOLS", true, 0},
+	{XcbAtomIndex::WM_DELETE_WINDOW, "WM_DELETE_WINDOW", true, 0},
+	{XcbAtomIndex::WM_NAME, "WM_NAME", false, 0},
+	{XcbAtomIndex::WM_ICON_NAME, "WM_ICON_NAME", false, 0},
+	{XcbAtomIndex::_NET_WM_SYNC_REQUEST, "_NET_WM_SYNC_REQUEST", true, 0},
+	{XcbAtomIndex::_NET_WM_SYNC_REQUEST_COUNTER, "_NET_WM_SYNC_REQUEST_COUNTER", true, 0},
+	{XcbAtomIndex::SAVE_TARGETS, "SAVE_TARGETS", false, 0},
+	{XcbAtomIndex::CLIPBOARD, "CLIPBOARD", false, 0},
+	{XcbAtomIndex::PRIMARY, "PRIMARY", false, 0},
+	{XcbAtomIndex::TARGETS, "TARGETS", false, 0},
+	{XcbAtomIndex::MULTIPLE, "MULTIPLE", false, 0},
+	{XcbAtomIndex::UTF8_STRING, "UTF8_STRING", false, 0},
+	{XcbAtomIndex::XNULL, "NULL", false, 0},
+	{XcbAtomIndex::XENOLITH_CLIPBOARD, "XENOLITH_CLIPBOARD", false, 0},
 };
 
 struct XcbWindowInfo {
@@ -71,11 +73,13 @@ struct XcbWindowInfo {
 	bool overrideClose = true;
 	bool enableSync = false;
 
-	xcb_sync_int64_t syncValue = { 0, 0 };
+	xcb_sync_int64_t syncValue = {0, 0};
 
 	// output
 	xcb_window_t window;
 	xcb_sync_counter_t syncCounter;
+
+	xcb_cursor_t cursorId = 0;
 };
 
 struct ScreenInfo {
@@ -88,10 +92,10 @@ struct ScreenInfo {
 
 struct ModeInfo {
 	uint32_t id;
-    uint16_t width;
-    uint16_t height;
-    uint16_t rate;
-    String name;
+	uint16_t width;
+	uint16_t height;
+	uint16_t rate;
+	String name;
 };
 
 struct CrtcInfo {
@@ -109,7 +113,7 @@ struct CrtcInfo {
 
 struct OutputInfo {
 	xcb_randr_output_t output;
-    xcb_randr_crtc_t crtc;
+	xcb_randr_crtc_t crtc;
 	Vector<xcb_randr_mode_t> modes;
 	String name;
 };
@@ -190,6 +194,14 @@ public:
 	ScreenInfoData getScreenInfo(xcb_screen_t *screen) const;
 	ScreenInfoData getScreenInfo(xcb_window_t root) const;
 
+	void fillTextInputData(core::InputEventData &, xcb_keycode_t, uint16_t state,
+			bool textInputEnabled, bool compose);
+
+	xcb_cursor_t loadCursor(StringView);
+	xcb_cursor_t loadCursor(std::initializer_list<StringView>);
+
+	bool setCursorId(xcb_window_t window, xcb_cursor_t);
+
 protected:
 	void initXkb();
 
@@ -198,12 +210,15 @@ protected:
 
 	void updateKeysymMapping();
 
-	XcbLibrary *_xcb;
+	bool checkCookie(xcb_void_cookie_t cookie, StringView errMessage);
+
+	XcbLibrary *_xcb = nullptr;
 	Rc<XkbLibrary> _xkb;
 	xcb_connection_t *_connection = nullptr;
 	int _screenNbr = -1;
 	const xcb_setup_t *_setup = nullptr;
 	xcb_screen_t *_screen = nullptr;
+	xcb_cursor_context_t *_cursorContext = nullptr;
 	int _socket = -1;
 
 	XcbAtomInfo _atoms[sizeof(s_atomRequests) / sizeof(XcbAtomInfo)];
@@ -218,7 +233,7 @@ protected:
 	xkb_keymap *_xkbKeymap = nullptr;
 	xkb_state *_xkbState = nullptr;
 	xkb_compose_state *_xkbCompose = nullptr;
-	core::InputKeyCode _keycodes[256] = { core::InputKeyCode::Unknown };
+	core::InputKeyCode _keycodes[256] = {core::InputKeyCode::Unknown};
 
 	xcb_key_symbols_t *_keysyms = nullptr;
 	uint16_t _numlock = 0;
@@ -231,7 +246,7 @@ protected:
 	Map<xcb_window_t, XcbWindowInterface *> _windows;
 };
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif // LINUX
 

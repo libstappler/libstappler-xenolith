@@ -25,87 +25,13 @@ THE SOFTWARE.
 #ifndef XENOLITH_APPLICATION_XLEVENT_H_
 #define XENOLITH_APPLICATION_XLEVENT_H_
 
-#include "SPEventBus.h"
-#include "XLPlatformApplication.h"
+#include "XLPlatformEvent.h"
 
-#define XL_DECLARE_EVENT_CLASS(class, event) \
-	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(#class "." #event);
+namespace stappler::xenolith {
 
-#define XL_DECLARE_EVENT(class, catName, event) \
-	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(catName "." #event);
-
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-class Event;
-
-using EventId = event::BusEventCategory;
-
-class SP_PUBLIC EventHeader {
-public:
-	EventHeader() = delete;
-	EventHeader(StringView eventName);
-	~EventHeader();
-
-	EventHeader(const EventHeader &other) = default;
-	EventHeader(EventHeader &&other) = default;
-
-	EventHeader &operator=(const EventHeader &other) = default;
-	EventHeader &operator=(EventHeader &&other) = default;
-
-	EventId getEventId() const;
-	StringView getName() const;
-
-	operator EventId() const;
-
-	bool operator==(const Event &event) const;
-
-	template <typename T>
-	inline void operator()(Ref *object, T &&value) const {
-		send(object, std::forward<T>(value));
-	}
-
-	inline void operator()(Ref *object) const { send(object); }
-
-protected:
-	void send(Ref *object, int64_t value) const;
-	void send(Ref *object, double value) const;
-	void send(Ref *object, bool value) const;
-	void send(Ref *object, Ref *value) const;
-	void send(Ref *object, const char *value) const;
-	void send(Ref *object, const String &value) const;
-	void send(Ref *object, const StringView &value) const;
-	void send(Ref *object, const BytesView &value) const;
-	void send(Ref *object, Value &&value) const;
-	void send(Ref *object = nullptr) const;
-
-	EventId _category = EventId::zero();
-};
-
-class SP_PUBLIC Event : public event::BusEvent {
-public:
-	Event(const EventHeader &header, Ref *object, Value &&dataVal, Ref *objVal);
-	Event(const EventHeader &header, Ref *object);
-
-	EventId getEventId() const;
-
-	bool is(const EventHeader &eventHeader) const;
-	bool operator==(const EventHeader &eventHeader) const;
-
-	template <class T = Ref>
-	inline T *getObject() const {
-		static_assert(std::is_convertible<T *, Ref *>::value,
-				"Invalid Type for stappler::Event target!");
-		return static_cast<T *>(_object);
-	}
-
-	const Value &getDataValue() const { return _dataValue; }
-	Ref *getObjectValue() const { return _objectValue; }
-
-protected:
-	Ref *_object = nullptr;
-	Value _dataValue;
-	Rc<Ref> _objectValue;
-};
+using platform::EventId;
+using platform::Event;
+using platform::EventHeader;
 
 } // namespace stappler::xenolith
 

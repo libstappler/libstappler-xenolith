@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022-2025 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +81,7 @@ bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
 	_label->setAnchorPoint(Anchor::Middle);
 	_label->setString("Apply");
 
-	auto l = addInputListener(Rc<InputListener>::create());
+	auto l = addComponent(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		if (_enabled) {
 			stopAllActionsByTag(1);

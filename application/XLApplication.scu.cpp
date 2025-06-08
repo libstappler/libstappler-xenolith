@@ -24,7 +24,6 @@
 #include "XLCommon.h"
 
 #include "XLApplication.cc"
-#include "XLEvent.cc"
 #include "XLMeshIndex.cc"
 #include "XLResourceCache.cc"
 #include "XLResourceObject.cc"

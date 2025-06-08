@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -77,6 +78,8 @@ public:
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
+	virtual void handleLayerUpdate(const ViewLayer &) override;
+
 protected:
 	void notifyClipboard(BytesView);
 
@@ -87,7 +90,6 @@ protected:
 
 	Rc<XcbConnection> _connection;
 	XcbLibrary *_xcb = nullptr;
-	XkbLibrary *_xkb = nullptr;
 
 	ViewInterface *_view = nullptr;
 
@@ -104,10 +106,6 @@ protected:
 	uint16_t _borderWidth = 0;
 	uint16_t _rate = 60;
 
-	xkb_keymap *_xkbKeymap = nullptr;
-	xkb_state *_xkbState = nullptr;
-	xkb_compose_state *_xkbCompose = nullptr;
-
 	String _wmClass;
 	ScreenInfoData _screenInfo;
 
@@ -116,7 +114,7 @@ protected:
 	Bytes _clipboardSelection;
 };
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif
 

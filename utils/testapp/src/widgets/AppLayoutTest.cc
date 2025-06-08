@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +24,17 @@
 #include "AppLayoutTest.h"
 #include "XL2dVectorSprite.h"
 #include "XLIcons.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
 bool LayoutTestBackButton::init(Function<void()> &&cb) {
 	auto image = Rc<VectorImage>::create(Size2(24.0f, 24.0f));
 
-	getIconData(IconName::Navigation_close_solid, [&] (BytesView view) {
-		image->addPath("", "org.stappler.xenolith.test.LayoutTestBackButton.Close")->setPath(view).setFillColor(Color::White);
+	getIconData(IconName::Navigation_close_solid, [&](BytesView view) {
+		image->addPath("", "org.stappler.xenolith.test.LayoutTestBackButton.Close")
+				->setPath(view)
+				.setFillColor(Color::White);
 	});
 
 	if (!VectorSprite::init(move(image))) {
@@ -42,11 +46,11 @@ bool LayoutTestBackButton::init(Function<void()> &&cb) {
 
 	setColor(Color::Grey_600);
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->setTouchFilter([] (const InputEvent &event, const InputListener::DefaultEventFilter &) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});
-	l->addMouseOverRecognizer([this] (const GestureData &ev) {
+	l->addMouseOverRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Began) {
 			handleMouseEnter();
 		} else {
@@ -54,20 +58,12 @@ bool LayoutTestBackButton::init(Function<void()> &&cb) {
 		}
 		return true;
 	});
-	l->addPressRecognizer([this] (const GesturePress &press) {
+	l->addPressRecognizer([this](const GesturePress &press) {
 		switch (press.event) {
-		case GestureEvent::Began:
-			return isTouched(press.pos);
-			break;
-		case GestureEvent::Activated:
-			return true;
-			break;
-		case GestureEvent::Ended:
-			return handlePress();
-			break;
-		case GestureEvent::Cancelled:
-			return true;
-			break;
+		case GestureEvent::Began: return isTouched(press.pos); break;
+		case GestureEvent::Activated: return true; break;
+		case GestureEvent::Ended: return handlePress(); break;
+		case GestureEvent::Cancelled: return true; break;
 		}
 		return false;
 	});
@@ -125,7 +121,8 @@ bool LayoutTest::init(LayoutName layout, StringView text) {
 		if (scene) {
 			scene->runLayout(_layoutRoot, makeLayoutNode(_layoutRoot));
 		}
-	}), ZOrderMax);
+	}),
+			ZOrderMax);
 	_backButton->setContentSize(Size2(36.0f, 36.0f));
 	_backButton->setAnchorPoint(Anchor::TopRight);
 
@@ -168,4 +165,4 @@ void LayoutTest::setDataValue(Value &&val) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

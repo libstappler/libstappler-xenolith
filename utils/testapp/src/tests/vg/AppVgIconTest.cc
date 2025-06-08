@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,7 @@
 
 #include "AppVgIconTest.h"
 #include "XL2dVectorSprite.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -76,41 +78,38 @@ bool VgIconTest::init() {
 	_info->setAnchorPoint(Anchor::MiddleTop);
 
 	_sliderQuality = addChild(Rc<SliderWithLabel>::create(toString("Quality: ", initialQuality),
-			(initialQuality - 0.1f) / 4.9f, [this] (float val) {
-		updateQualityValue(val);
-	}));
+			(initialQuality - 0.1f) / 4.9f, [this](float val) { updateQualityValue(val); }));
 	_sliderQuality->setAnchorPoint(Anchor::TopLeft);
 	_sliderQuality->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderScale = addChild(Rc<SliderWithLabel>::create(toString("Scale: ", initialScale),
-			(initialScale - 0.1f) / 2.9f, [this] (float val) {
-		updateScaleValue(val);
-	}));
+			(initialScale - 0.1f) / 2.9f, [this](float val) { updateScaleValue(val); }));
 	_sliderScale->setAnchorPoint(Anchor::TopLeft);
 	_sliderScale->setContentSize(Size2(128.0f, 32.0f));
 
-	_checkboxVisible = addChild(Rc<CheckboxWithLabel>::create("Triangles", false, [this] (bool value) {
-		_triangles->setVisible(value);
-	}));
+	_checkboxVisible = addChild(Rc<CheckboxWithLabel>::create("Triangles", false,
+			[this](bool value) { _triangles->setVisible(value); }));
 	_checkboxVisible->setAnchorPoint(Anchor::TopLeft);
 	_checkboxVisible->setContentSize(Size2(32.0f, 32.0f));
 
-	_checkboxAntialias = addChild(Rc<CheckboxWithLabel>::create("Antialias", _antialias, [this] (bool value) {
-		updateAntialiasValue(value);
-	}));
+	_checkboxAntialias = addChild(Rc<CheckboxWithLabel>::create("Antialias", _antialias,
+			[this](bool value) { updateAntialiasValue(value); }));
 	_checkboxAntialias->setAnchorPoint(Anchor::TopLeft);
 	_checkboxAntialias->setContentSize(Size2(32.0f, 32.0f));
 
-	auto l = _sprite->addInputListener(Rc<InputListener>::create());
-	l->addTouchRecognizer([this] (const GestureData &data) -> bool {
+	auto l = _sprite->addComponent(Rc<InputListener>::create());
+	l->addTouchRecognizer(
+			[this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Ended) {
-			if (data.input->data.button == InputMouseButton::Mouse8 || data.input->data.button == InputMouseButton::MouseScrollRight) {
+			if (data.input->data.button == InputMouseButton::Mouse8
+					|| data.input->data.button == InputMouseButton::MouseScrollRight) {
 				if (_currentName == IconName::Action_3d_rotation_outline) {
 					updateIcon(IconName::Toggle_toggle_on_solid);
 				} else {
 					updateIcon(IconName(toInt(_currentName) - 1));
 				}
-			} else if (data.input->data.button == InputMouseButton::Mouse9 || data.input->data.button == InputMouseButton::MouseScrollLeft) {
+			} else if (data.input->data.button == InputMouseButton::Mouse9
+					|| data.input->data.button == InputMouseButton::MouseScrollLeft) {
 				if (_currentName == IconName::Toggle_toggle_on_solid) {
 					updateIcon(IconName::Action_3d_rotation_outline);
 				} else {
@@ -119,9 +118,12 @@ bool VgIconTest::init() {
 			}
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::MouseScrollLeft, InputMouseButton::MouseScrollRight, InputMouseButton::Mouse8, InputMouseButton::Mouse9}));
+	},
+			InputListener::makeButtonMask(
+					{InputMouseButton::MouseScrollLeft, InputMouseButton::MouseScrollRight,
+						InputMouseButton::Mouse8, InputMouseButton::Mouse9}));
 
-	l->addKeyRecognizer([this] (const GestureData &ev) {
+	l->addKeyRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
 			if (ev.input->data.key.keycode == InputKeyCode::LEFT) {
 				if (_currentName == IconName::Action_3d_rotation_outline) {
@@ -186,15 +188,14 @@ void VgIconTest::setDataValue(Value &&data) {
 
 void VgIconTest::updateIcon(IconName name) {
 	_currentName = name;
-	_label->setString(toString(getIconName(_currentName), " ", toInt(_currentName), "/", toInt(IconName::Toggle_toggle_on_solid)));
+	_label->setString(toString(getIconName(_currentName), " ", toInt(_currentName), "/",
+			toInt(IconName::Toggle_toggle_on_solid)));
 
 	do {
 		_sprite->clear();
 		_sprite->setTextureAutofit(Autofit::Contain);
 		auto path = _sprite->addPath();
-		getIconData(_currentName, [&] (BytesView bytes) {
-			path->getPath()->init(bytes);
-		});
+		getIconData(_currentName, [&](BytesView bytes) { path->getPath()->init(bytes); });
 		path->setWindingRule(vg::Winding::EvenOdd);
 		path->setAntialiased(_antialias);
 		auto t = Mat4::IDENTITY;
@@ -207,9 +208,7 @@ void VgIconTest::updateIcon(IconName name) {
 		_triangles->clear();
 		auto path = _triangles->addPath();
 		//path->getPath()->init(pathData);
-		getIconData(_currentName, [&] (BytesView bytes) {
-			path->getPath()->init(bytes);
-		});
+		getIconData(_currentName, [&](BytesView bytes) { path->getPath()->init(bytes); });
 		path->setWindingRule(vg::Winding::EvenOdd);
 		path->setAntialiased(false);
 		auto t = Mat4::IDENTITY;
@@ -218,9 +217,7 @@ void VgIconTest::updateIcon(IconName name) {
 		path->setTransform(t);
 	} while (0);
 
-	LayoutTest::setDataValue(Value({
-		pair("icon", Value(toInt(_currentName)))
-	}));
+	LayoutTest::setDataValue(Value({pair("icon", Value(toInt(_currentName)))}));
 }
 
 void VgIconTest::updateQualityValue(float value) {
@@ -246,4 +243,4 @@ void VgIconTest::updateAntialiasValue(bool value) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

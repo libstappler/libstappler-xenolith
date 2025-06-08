@@ -22,19 +22,110 @@
  **/
 
 #include "XLPlatformViewInterface.h"
+#include "XLCoreInput.h"
 #include "XLPlatformApplication.h"
 #include "XLCoreLoop.h"
 #include "SPEventLooper.h"
+#include "XLPlatformTextInputInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+XL_DECLARE_EVENT_CLASS(ViewInterface, onBackground);
+XL_DECLARE_EVENT_CLASS(ViewInterface, onFocus);
 
 bool ViewInterface::init(PlatformApplication &app, core::Loop &loop) {
 	_application = &app;
 	_loop = &loop;
+	_textInput = Rc<TextInputInterface>::create(this);
 	return true;
 }
 
 void ViewInterface::update(bool displayLink) { _presentationEngine->update(displayLink); }
+
+void ViewInterface::handleInputEvent(const InputEventData &event) {
+	if (!_presentationEngine) {
+		return;
+	}
+
+	switch (event.event) {
+	case InputEventName::MouseMove: handleMotionEvent(event); break;
+	case InputEventName::KeyPressed:
+	case InputEventName::KeyRepeated:
+	case InputEventName::KeyReleased:
+	case InputEventName::KeyCanceled:
+		if (_handleTextInputFromKeyboard && isTextInputEnabled() && _textInput
+				&& _textInput->canHandleInputEvent(event)) {
+			// forward to text input
+			if (_textInput->handleInputEvent(event)) {
+				InputEventData ev = event;
+				ev.event = InputEventName::KeyCanceled; // force-cancel processed key
+
+				_application->performOnAppThread([this, ev]() mutable { propagateInputEvent(ev); },
+						this);
+				return;
+			}
+		}
+		_application->performOnAppThread(
+				[this, event = event]() mutable { propagateInputEvent(event); }, this);
+		break;
+	default:
+		_application->performOnAppThread(
+				[this, event = event]() mutable { propagateInputEvent(event); }, this);
+		break;
+	}
+
+	setReadyForNextFrame();
+}
+
+void ViewInterface::handleInputEvents(Vector<InputEventData> &&events) {
+	if (!_presentationEngine) {
+		return;
+	}
+
+	for (auto &event : events) {
+		switch (event.event) {
+		case InputEventName::MouseMove: handleMotionEvent(event); break;
+		case InputEventName::KeyPressed:
+		case InputEventName::KeyRepeated:
+		case InputEventName::KeyReleased:
+		case InputEventName::KeyCanceled:
+			if (_handleTextInputFromKeyboard && isTextInputEnabled() && _textInput
+					&& _textInput->canHandleInputEvent(event)) {
+				// forward to text input
+				if (_textInput->handleInputEvent(event)) {
+					event.event = InputEventName::KeyCanceled; // force-cancel processed key
+				}
+			}
+			break;
+		default: break;
+		}
+	}
+
+	_application->performOnAppThread([this, events = sp::move(events)]() mutable {
+		for (auto &event : events) { propagateInputEvent(event); }
+	}, this, true);
+	setReadyForNextFrame();
+}
+
+const ViewLayer *ViewInterface::getTopLayer(Vec2 vec) const {
+	auto it = _layers.crbegin();
+	while (it != _layers.crend()) {
+		if (it->rect.containsPoint(vec)) {
+			return &(*it);
+		}
+		++it;
+	}
+	return nullptr;
+}
+
+const ViewLayer *ViewInterface::getBottomLayer(Vec2 vec) const {
+	for (auto &it : _layers) {
+		if (it.rect.containsPoint(vec)) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
 
 bool ViewInterface::isOnThisThread() const { return _loop->isOnThisThread(); }
 
@@ -93,5 +184,58 @@ void ViewInterface::waitUntilFrame() {
 		_presentationEngine->waitUntilFramePresentation();
 	}
 }
+
+void ViewInterface::acquireTextInput(TextInputRequest &&req) {
+	performOnThread([this, data = move(req)]() { _textInput->run(data); }, this);
+}
+
+void ViewInterface::releaseTextInput() {
+	performOnThread([this]() { _textInput->cancel(); }, this);
+}
+
+void ViewInterface::updateLayers(Vector<ViewLayer> &&layers) {
+	performOnThread([this, layers = sp::move(layers)]() mutable { handleLayers(sp::move(layers)); },
+			this);
+}
+
+void ViewInterface::propagateInputEvent(core::InputEventData &event) {
+	if (event.isPointEvent()) {
+		event.point.density = _presentationEngine
+				? _presentationEngine->getFrameConstraints().density
+				: getWindowInfo().density;
+	}
+
+	switch (event.event) {
+	case InputEventName::Background:
+		_inBackground = event.getValue();
+		onBackground(this, _inBackground);
+		break;
+	case InputEventName::PointerEnter: _pointerInWindow = event.getValue(); break;
+	case InputEventName::FocusGain:
+		_hasFocus = event.getValue();
+		onFocus(this, _hasFocus);
+		break;
+	default: break;
+	}
+}
+
+void ViewInterface::propagateTextInput(TextInputState &state) { }
+
+void ViewInterface::handleLayers(Vector<ViewLayer> &&layers) { _layers = sp::move(layers); }
+
+void ViewInterface::handleMotionEvent(const core::InputEventData &event) {
+	if (_handleLayerForMotion) {
+		auto l = getTopLayer(Vec2(event.x, event.y));
+		if (l) {
+			if (*l != _currentLayer) {
+				handleLayerUpdate(*l);
+			}
+		} else if (ViewLayer() != _currentLayer) {
+			handleLayerUpdate(ViewLayer());
+		}
+	}
+}
+
+void ViewInterface::handleLayerUpdate(const ViewLayer &layer) { _currentLayer = layer; }
 
 } // namespace stappler::xenolith::platform

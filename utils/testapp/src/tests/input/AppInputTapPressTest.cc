@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +22,7 @@
  **/
 
 #include "AppInputTapPressTest.h"
+#include "XLInputListener.h"
 
 namespace stappler::xenolith::app {
 
@@ -49,7 +51,7 @@ void InputTapPressTestNode::handleContentSizeDirty() {
 }
 
 void InputTapPressTestNode::handleTap() {
-	++ _index;
+	++_index;
 
 	Color color(Color::Tone(_index % 16), Color::Level::b500);
 
@@ -67,8 +69,8 @@ bool InputTapPressTest::init() {
 
 	_nodeTap = addChild(Rc<InputTapPressTestNode>::create("Tap"));
 	_nodeTap->setAnchorPoint(Anchor::Middle);
-	l = _nodeTap->addInputListener(Rc<InputListener>::create());
-	l->addTapRecognizer([node = _nodeTap] (const GestureTap &tap) {
+	l = _nodeTap->addComponent(Rc<InputListener>::create());
+	l->addTapRecognizer([node = _nodeTap](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 1) {
 			node->handleTap();
 		}
@@ -77,8 +79,8 @@ bool InputTapPressTest::init() {
 
 	_nodeDoubleTap = addChild(Rc<InputTapPressTestNode>::create("Double tap"));
 	_nodeDoubleTap->setAnchorPoint(Anchor::Middle);
-	l = _nodeDoubleTap->addInputListener(Rc<InputListener>::create());
-	l->addTapRecognizer([node = _nodeDoubleTap] (const GestureTap &tap) {
+	l = _nodeDoubleTap->addComponent(Rc<InputListener>::create());
+	l->addTapRecognizer([node = _nodeDoubleTap](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 2) {
 			node->handleTap();
 		}
@@ -87,8 +89,8 @@ bool InputTapPressTest::init() {
 
 	_nodePress = addChild(Rc<InputTapPressTestNode>::create("Press"));
 	_nodePress->setAnchorPoint(Anchor::Middle);
-	l = _nodePress->addInputListener(Rc<InputListener>::create());
-	l->addPressRecognizer([node = _nodePress] (const GesturePress &tap) {
+	l = _nodePress->addComponent(Rc<InputListener>::create());
+	l->addPressRecognizer([node = _nodePress](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Ended) {
 			node->handleTap();
 		}
@@ -97,8 +99,8 @@ bool InputTapPressTest::init() {
 
 	_nodeLongPress = addChild(Rc<InputTapPressTestNode>::create("Long press"));
 	_nodeLongPress->setAnchorPoint(Anchor::Middle);
-	l = _nodeLongPress->addInputListener(Rc<InputListener>::create());
-	l->addPressRecognizer([node = _nodeLongPress] (const GesturePress &tap) {
+	l = _nodeLongPress->addComponent(Rc<InputListener>::create());
+	l->addPressRecognizer([node = _nodeLongPress](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			node->handleTap();
 		}
@@ -107,8 +109,8 @@ bool InputTapPressTest::init() {
 
 	_nodeTick = addChild(Rc<InputTapPressTestNode>::create("Press tick"));
 	_nodeTick->setAnchorPoint(Anchor::Middle);
-	l = _nodeTick->addInputListener(Rc<InputListener>::create());
-	l->addPressRecognizer([node = _nodeTick] (const GesturePress &tap) {
+	l = _nodeTick->addComponent(Rc<InputListener>::create());
+	l->addPressRecognizer([node = _nodeTick](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			node->handleTap();
 		}
@@ -133,13 +135,13 @@ void InputTapPressTest::handleContentSizeDirty() {
 	_nodeDoubleTap->setPosition(center + Vec2(0.0f, ((nodeHeight + 4.0f) / 2.0f) * 1.0f));
 
 	_nodePress->setContentSize(nodeSize);
-	_nodePress->setPosition(center + Vec2(0.0f, - ((nodeHeight + 4.0f) / 2.0f) * 1.0f));
+	_nodePress->setPosition(center + Vec2(0.0f, -((nodeHeight + 4.0f) / 2.0f) * 1.0f));
 
 	_nodeLongPress->setContentSize(nodeSize);
-	_nodeLongPress->setPosition(center + Vec2(0.0f, - ((nodeHeight + 4.0f) / 2.0f) * 3.0f));
+	_nodeLongPress->setPosition(center + Vec2(0.0f, -((nodeHeight + 4.0f) / 2.0f) * 3.0f));
 
 	_nodeTick->setContentSize(nodeSize);
-	_nodeTick->setPosition(center + Vec2(0.0f, - ((nodeHeight + 4.0f) / 2.0f) * 5.0f));
+	_nodeTick->setPosition(center + Vec2(0.0f, -((nodeHeight + 4.0f) / 2.0f) * 5.0f));
 }
 
-}
+} // namespace stappler::xenolith::app

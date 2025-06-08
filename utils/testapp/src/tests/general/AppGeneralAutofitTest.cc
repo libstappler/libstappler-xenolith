@@ -39,9 +39,9 @@ public:
 protected:
 	Size2 _targetSize;
 	Layer *_background = nullptr;
-	Layer *_layers[5] = { nullptr };
-	Sprite *_sprites[5] = { nullptr };
-	Label *_labels[5] = { nullptr };
+	Layer *_layers[5] = {nullptr};
+	Sprite *_sprites[5] = {nullptr};
+	Label *_labels[5] = {nullptr};
 };
 
 bool GeneralAutofitTestNode::init() {
@@ -52,7 +52,7 @@ bool GeneralAutofitTestNode::init() {
 	_background = addChild(Rc<Layer>::create(Color::Red_50));
 	_background->setAnchorPoint(Anchor::Middle);
 
-	for (size_t i = 0; i < 5; ++ i) {
+	for (size_t i = 0; i < 5; ++i) {
 		_layers[i] = addChild(Rc<Layer>::create(Color::Teal_500), ZOrder(1));
 		_layers[i]->setAnchorPoint(Anchor::Middle);
 
@@ -96,7 +96,7 @@ void GeneralAutofitTestNode::handleContentSizeDirty() {
 		Vec2(_contentSize.width * 0.8f, _contentSize.height * 0.8f),
 	};
 
-	for (size_t i = 0; i < 5; ++ i) {
+	for (size_t i = 0; i < 5; ++i) {
 		if (_sprites[i]) {
 			_sprites[i]->setContentSize(size);
 			_sprites[i]->setPosition(positions[i]);
@@ -116,10 +116,12 @@ void GeneralAutofitTestNode::handleContentSizeDirty() {
 bool GeneralAutofitTestResize::init() {
 	auto image = Rc<VectorImage>::create(Size2(24, 24));
 
-	getIconData(IconName::Navigation_unfold_more_solid, [&] (BytesView view) {
-		image->addPath("", "org.stappler.xenolith.test.GeneralAutofitTestResize.Resize")->setPath(view)
-				.openForWriting([] (vg::PathWriter &writer) { writer.addOval(Rect(0, 0, 24, 24)); })
-				.setWindingRule(vg::Winding::EvenOdd).setFillColor(Color::White);
+	getIconData(IconName::Navigation_unfold_more_solid, [&](BytesView view) {
+		image->addPath("", "org.stappler.xenolith.test.GeneralAutofitTestResize.Resize")
+				->setPath(view)
+				.openForWriting([](vg::PathWriter &writer) { writer.addOval(Rect(0, 0, 24, 24)); })
+				.setWindingRule(vg::Winding::EvenOdd)
+				.setFillColor(Color::White);
 	});
 
 	return VectorSprite::init(move(image));
@@ -139,19 +141,15 @@ bool GeneralAutofitTest::init() {
 	_nodeResize->setContentSize(Size2(48, 48));
 	_nodeResize->setRotation(-45.0_to_rad);
 
-	auto l = _nodeResize->addInputListener(Rc<InputListener>::create());
-	l->addMouseOverRecognizer([this] (const GestureData &data) {
+	auto l = _nodeResize->addComponent(Rc<InputListener>::create());
+	l->addMouseOverRecognizer([this](const GestureData &data) {
 		switch (data.event) {
-		case GestureEvent::Began:
-			_nodeResize->setColor(Color::Grey_600);
-			break;
-		default:
-			_nodeResize->setColor(Color::Grey_400);
-			break;
+		case GestureEvent::Began: _nodeResize->setColor(Color::Grey_600); break;
+		default: _nodeResize->setColor(Color::Grey_400); break;
 		}
 		return true;
 	});
-	l->addSwipeRecognizer([this] (const GestureSwipe &swipe) {
+	l->addSwipeRecognizer([this](const GestureSwipe &swipe) {
 		if (swipe.event == GestureEvent::Activated) {
 			auto tmp = _contentSize * 0.90f * 0.5f;
 			auto max = Vec2(_contentSize / 2.0f) + Vec2(tmp.width, -tmp.height);
@@ -173,7 +171,8 @@ bool GeneralAutofitTest::init() {
 			}
 			_nodeResize->setPosition(newPos);
 
-			auto newContentSize = Size2(newPos.x - _contentSize.width / 2.0f, _contentSize.height / 2.0f - newPos.y);
+			auto newContentSize = Size2(newPos.x - _contentSize.width / 2.0f,
+					_contentSize.height / 2.0f - newPos.y);
 			_nodeAutofit->setContentSize(newContentSize * 2.0f);
 		}
 
@@ -194,4 +193,4 @@ void GeneralAutofitTest::handleContentSizeDirty() {
 	_nodeResize->setPosition(Vec2(_contentSize / 2.0f) + Vec2(tmp.width, -tmp.height));
 }
 
-}
+} // namespace stappler::xenolith::app

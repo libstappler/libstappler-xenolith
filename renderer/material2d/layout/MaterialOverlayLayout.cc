@@ -44,15 +44,16 @@ bool OverlayLayout::init(const Vec2 &globalOrigin, Binding b, Surface *node, Siz
 	_binding = b;
 	_fullSize = targetSize;
 
-	auto l = addInputListener(Rc<InputListener>::create());
-	l->setSwallowEvents(InputListener::makeEventMask({InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
-	l->setTouchFilter([this] (const InputEvent &ev, const InputListener::DefaultEventFilter &def) {
+	auto l = addComponent(Rc<InputListener>::create());
+	l->setSwallowEvents(InputListener::makeEventMask(
+			{InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
+	l->setTouchFilter([this](const InputEvent &ev, const InputListener::DefaultEventFilter &def) {
 		if (!_surface->isTouched(ev.currentLocation)) {
 			return def(ev);
 		}
 		return false;
 	});
-	l->addTapRecognizer([this] (const GestureTap &tap) {
+	l->addTapRecognizer([this](const GestureTap &tap) {
 		if (!_surface->isTouched(tap.location())) {
 			if (_sceneContent) {
 				_sceneContent->popOverlay(this);
@@ -92,22 +93,20 @@ void OverlayLayout::onPopTransitionBegan(SceneContent2d *l, bool replace) {
 }
 
 Rc<OverlayLayout::Transition> OverlayLayout::makeExitTransition(SceneContent2d *) const {
-	return Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(0.2f, [this] (float p) {
+	return Rc<Sequence>::create(makeEasing(Rc<ActionProgress>::create(0.2f,
+										[this](float p) {
 		_surface->setContentSize(progress(_fullSize, Size2(_fullSize.width, 1), p));
-	})), [this] {
+	})),
+			[this] {
 		if (_closeCallback) {
 			_closeCallback();
 		}
 	});
 }
 
-void OverlayLayout::setReadyCallback(Function<void(bool)> &&cb) {
-	_readyCallback = sp::move(cb);
-}
+void OverlayLayout::setReadyCallback(Function<void(bool)> &&cb) { _readyCallback = sp::move(cb); }
 
-void OverlayLayout::setCloseCallback(Function<void()> &&cb) {
-	_closeCallback = sp::move(cb);
-}
+void OverlayLayout::setCloseCallback(Function<void()> &&cb) { _closeCallback = sp::move(cb); }
 
 void OverlayLayout::emplaceNode(const Vec2 &origin, Binding b) {
 	const float incr = OverlayHorizontalIncrement;
@@ -148,10 +147,7 @@ void OverlayLayout::emplaceNode(const Vec2 &origin, Binding b) {
 			_surface->setPositionX(origin.x);
 		}
 		break;
-	case Binding::Anchor:
-		_surface->setPosition(origin);
-
-		break;
+	case Binding::Anchor: _surface->setPosition(origin); break;
 	}
 
 	if (b != Binding::Anchor && b != Binding::Relative) {
@@ -168,7 +164,8 @@ void OverlayLayout::emplaceNode(const Vec2 &origin, Binding b) {
 		}
 	} else if (b == Binding::Relative) {
 		if (_fullSize.height > origin.y - incr / 4) {
-			_surface->setAnchorPoint(Vec2(getAnchorPoint().x, (origin.y - incr / 4) / _fullSize.height));
+			_surface->setAnchorPoint(
+					Vec2(getAnchorPoint().x, (origin.y - incr / 4) / _fullSize.height));
 		}
 	}
 
@@ -177,11 +174,12 @@ void OverlayLayout::emplaceNode(const Vec2 &origin, Binding b) {
 	}
 
 	_surface->setContentSize(Size2(_fullSize.width, 1));
-	_surface->runAction(Rc<Sequence>::create(material2d::makeEasing(Rc<ResizeTo>::create(0.2f, _fullSize)), [this] {
+	_surface->runAction(Rc<Sequence>::create(
+			material2d::makeEasing(Rc<ResizeTo>::create(0.2f, _fullSize)), [this] {
 		if (_readyCallback) {
 			_readyCallback(true);
 		}
 	}));
 }
 
-}
+} // namespace stappler::xenolith::material2d

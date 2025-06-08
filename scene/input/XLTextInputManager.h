@@ -25,10 +25,13 @@
 #ifndef XENOLITH_SCENE_INPUT_XLTEXTINPUTMANAGER_H_
 #define XENOLITH_SCENE_INPUT_XLTEXTINPUTMANAGER_H_
 
+#include "XLCoreInput.h"
 #include "XLInput.h"
+#include "XLPlatformTextInputInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+class View;
 class TextInputManager;
 
 // TextInputHandler used to capture text input
@@ -40,97 +43,52 @@ class TextInputManager;
 // keep it small (e.g. when working with paragraphs, send only current paragraph). Large
 // strings can significantly reduce performance
 struct SP_PUBLIC TextInputHandler {
-	Function<void(WideStringView, TextCursor, TextCursor)> onText;
-	Function<void(bool, const Rect &, float)> onKeyboard;
-	Function<void(bool)> onInput;
+	Function<void(const TextInputState &)> onData;
 
 	Rc<TextInputManager> manager;
 
 	~TextInputHandler();
 
-	bool run(TextInputManager *, WideStringView str = WideStringView(),
-			TextCursor cursor = TextCursor(), TextCursor marked = TextCursor::InvalidCursor,
-			TextInputType = TextInputType::Empty);
+	bool run(TextInputManager *, TextInputRequest &&);
 	void cancel();
 
 	// only if this handler is active
-	bool setString(WideStringView str, TextCursor cursor = TextCursor(),
-			TextCursor marked = TextCursor::InvalidCursor);
-	bool setCursor(TextCursor);
-	bool setMarked(TextCursor);
+	bool update(TextInputRequest &&);
 
 	WideStringView getString() const;
 	TextCursor getCursor() const;
 	TextCursor getMarked() const;
 
-	bool isInputEnabled() const;
 	bool isActive() const;
 };
 
 class SP_PUBLIC TextInputManager final : public Ref {
 public:
-	TextInputManager();
+	bool init(View *);
 
-	bool init(TextInputViewInterface *);
-
-	void insertText(WideStringView sInsert, bool compose = false);
-	void insertText(WideStringView sInsert, TextCursor replacement);
-	void setMarkedText(WideStringView sInsert, TextCursor replacement, TextCursor marked);
-	void deleteBackward();
-	void deleteForward();
-	void unmarkText();
-
-	bool hasText();
-	void textChanged(WideStringView text, TextCursor, TextCursor);
-	void cursorChanged(TextCursor);
-	void markedChanged(TextCursor);
-
-	void setInputEnabled(bool enabled);
-
-	void handleTextChanged();
-
-	// run input capture (or update it with new params)
-	// propagates all data to device input manager, enables screen keyboard if needed
-	bool run(TextInputHandler *, WideStringView str, TextCursor cursor, TextCursor marked,
-			TextInputType type);
-
-	// update current buffer string (and/or internal cursor)
-	// propagates string and cursor to device input manager to enable autocorrections, suggestions, etc...
-	void setString(WideStringView str, TextCursor cursor = TextCursor(),
-			TextCursor marked = TextCursor::InvalidCursor);
-	void setCursor(TextCursor);
-	void setMarked(TextCursor);
+	bool run(TextInputHandler *, TextInputRequest &&);
+	bool update(TextInputHandler *, TextInputRequest &&);
 
 	WideStringView getStringByRange(TextCursor);
 	WideStringView getString() const;
 	TextCursor getCursor() const;
 	TextCursor getMarked() const;
 
-	// disable text input, disables keyboard connection and keyboard input event interception
-	// default manager automatically disabled when app goes background
 	void cancel();
 
-	bool isRunning() const { return _running; }
-	bool isInputEnabled() const { return _isInputEnabled; }
+	bool isEnabled() const;
 
 	TextInputHandler *getHandler() const { return _handler; }
 
-	bool canHandleInputEvent(const InputEventData &);
-	bool handleInputEvent(const InputEventData &);
-
 protected:
-	bool doInsertText(WideStringView, bool compose);
+	friend class View;
 
-	TextInputViewInterface *_view = nullptr;
+	void handleInputUpdate(const TextInputState &);
+
+	View *_view = nullptr;
 	TextInputHandler *_handler = nullptr;
-	bool _isInputEnabled = false;
-	bool _running = false;
 
-	TextInputType _type = TextInputType::Empty;
-	WideString _string;
-	TextCursor _cursor;
-	TextCursor _marked;
-	InputKeyComposeState _compose = InputKeyComposeState::Nothing;
+	TextInputState _state;
 };
 
 } // namespace stappler::xenolith

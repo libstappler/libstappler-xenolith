@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,8 @@
 
 #include "AppDelegate.h"
 #include "XL2dLabel.h"
+#include "XL2dLayer.h"
+#include "XL2dVectorSprite.h"
 #include "XLEventListener.h"
 #include "XLInputListener.h"
 #include "XLDirector.h"
@@ -65,7 +68,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	InputListener *l = nullptr;
 	_layerLeft = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerLeft->setAnchorPoint(Anchor::MiddleLeft);
-	l = _layerLeft->addInputListener(Rc<InputListener>::create());
+	l = _layerLeft->addComponent(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedLeft = data.event == GestureEvent::Began;
 		updateState();
@@ -80,7 +83,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 
 	_layerRight = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerRight->setAnchorPoint(Anchor::MiddleRight);
-	l = _layerRight->addInputListener(Rc<InputListener>::create());
+	l = _layerRight->addComponent(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedRight = data.event == GestureEvent::Began;
 		updateState();
