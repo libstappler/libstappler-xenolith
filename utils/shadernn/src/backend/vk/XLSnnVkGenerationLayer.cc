@@ -31,52 +31,57 @@ namespace stappler::xenolith::vk::shadernn {
 
 GenerationLayer::~GenerationLayer() { }
 
-bool GenerationLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builder, const AttachmentData *output) {
+bool GenerationLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builder,
+		const AttachmentData *output) {
 	using namespace core;
 
-	auto dataBuffer = queueBuilder.addAttachemnt("GenerationLayerData", [] (AttachmentBuilder &builder) -> Rc<core::Attachment> {
+	auto dataBuffer = queueBuilder.addAttachemnt("GenerationLayerData",
+			[](AttachmentBuilder &builder) -> Rc<core::Attachment> {
 		builder.defineAsInput();
+
+		builder.setInputValidationCallback([](const AttachmentInputData *data) {
+			return dynamic_cast<const GenerationDataInput *>(data) != nullptr;
+		});
+
+		builder.setInputSubmissionCallback(
+				[](FrameQueue &, AttachmentHandle &, AttachmentInputData *,
+						Function<void(bool)> &&cb) { cb(true); });
+
 		auto a = Rc<GenericAttachment>::create(builder);
-		a->setValidateInputCallback([] (const Attachment &, const Rc<AttachmentInputData> &data) {
-			return dynamic_cast<GenerationDataInput *>(data.get()) != nullptr;
-		});
-		a->setFrameHandleCallback([] (Attachment &a, const FrameQueue &q) {
-			auto h = Rc<core::AttachmentHandle>::create(a, q);
-			h->setInputCallback([] (AttachmentHandle &handle, FrameQueue &queue, AttachmentInputData *input, Function<void(bool)> &&cb) {
-				cb(true);
-			});
-			return h;
-		});
 		return a;
 	});
 
-	auto passOutput = builder.addAttachment(output, [] (AttachmentPassBuilder &builder) {
+	auto passOutput = builder.addAttachment(output, [](AttachmentPassBuilder &builder) {
 		builder.setDependency(AttachmentDependencyInfo{
-			PipelineStage::ComputeShader, AccessType::ShaderWrite | AccessType::ShaderRead,
-			PipelineStage::ComputeShader, AccessType::ShaderWrite | AccessType::ShaderRead,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderWrite | AccessType::ShaderRead,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderWrite | AccessType::ShaderRead,
 			FrameRenderPassState::Submitted,
 		});
 	});
 
 	builder.addAttachment(dataBuffer);
 
-	auto layout = builder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
-		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
-			setBuilder.addDescriptor(passOutput, DescriptorType::StorageImage, AttachmentLayout::General);
+	auto layout = builder.addDescriptorLayout([&](PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&](DescriptorSetBuilder &setBuilder) {
+			setBuilder.addDescriptor(passOutput, DescriptorType::StorageImage,
+					AttachmentLayout::General);
 		});
 	});
 
 	auto precision = getAttachmentPrecision(output);
 
-	builder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
-		subpassBuilder.addComputePipeline("GenerationLayerPipeline", layout,
-				queueBuilder.addProgramByRef("GenerationLayerPipeline", getShader(LayerShader::Gen, precision)));
+	builder.addSubpass([&](SubpassBuilder &subpassBuilder) {
+		subpassBuilder.addComputePipeline("GenerationLayerPipeline", layout->defaultFamily,
+				queueBuilder.addProgramByRef("GenerationLayerPipeline",
+						getShader(LayerShader::Gen, precision)));
 	});
 
 	_outputAttachment = output;
 	_dataAttachment = dataBuffer;
 
-	_frameHandleCallback = [] (core::QueuePass &pass, const FrameQueue &q) {
+	_frameHandleCallback = [](core::QueuePass &pass, const FrameQueue &q) {
 		return Rc<LayerHandle>::create(pass, q);
 	};
 
@@ -99,17 +104,21 @@ bool GenerationLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const core::CommandBuffer *> GenerationLayer::LayerHandle::doPrepareCommands(FrameHandle &handle) {
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
+Vector<const core::CommandBuffer *> GenerationLayer::LayerHandle::doPrepareCommands(
+		FrameHandle &handle) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&](vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			auto extent = handle.getFrameConstraints().extent;
 			auto input = static_cast<GenerationDataInput *>(_dataBuffer->getInput());
 
 			buf.cmdBindDescriptorSets(pass, 0);
-			buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&input->data), sizeof(GenerationData)));
+			buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+					BytesView(reinterpret_cast<uint8_t *>(&input->data), sizeof(GenerationData)));
 
-			auto pipeline = static_cast<vk::ComputePipeline *>((*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
+			auto pipeline = static_cast<vk::ComputePipeline *>(
+					(*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
 
 			buf.cmdBindPipeline(pipeline);
 			buf.cmdDispatch((extent.width - 1) / pipeline->getLocalX() + 1,
@@ -121,4 +130,4 @@ Vector<const core::CommandBuffer *> GenerationLayer::LayerHandle::doPrepareComma
 	return Vector<const core::CommandBuffer *>{buf};
 }
 
-}
+} // namespace stappler::xenolith::vk::shadernn

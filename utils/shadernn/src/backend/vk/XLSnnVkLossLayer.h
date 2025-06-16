@@ -36,7 +36,8 @@ public:
 
 	using BufferView = BufferAttachmentHandle::BufferView;
 
-	using PipelineOpFn = Function<void(Front *, CommandBuffer &, ComputePipeline *, SpanView<BufferView>)>;
+	using PipelineOpFn = Function<void(Front *, CommandBuffer &, const core::ComputePipelineData *,
+			SpanView<BufferView>)>;
 
 	enum class PipelineOpIndex {
 		MatrixSoftmaxByRows, // softmax to activation
@@ -72,7 +73,8 @@ public:
 	virtual ~CrossEntropyLossLayer();
 
 	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &, Front *,
-			const AttachmentData *inputLabels, const AttachmentData *inputNetwork, const AttachmentData *output);
+			const AttachmentData *inputLabels, const AttachmentData *inputNetwork,
+			const AttachmentData *output);
 
 	void initPropagation(Queue::Builder &queueBuilder, QueuePassBuilder &);
 
@@ -97,6 +99,6 @@ protected:
 	Map<PipelineOpIndex, PipelineOp> _pipelineOps;
 };
 
-}
+} // namespace stappler::xenolith::vk::shadernn
 
 #endif /* SRC_BACKEND_VK_XLSNNVKLOSSLAYER_H_ */

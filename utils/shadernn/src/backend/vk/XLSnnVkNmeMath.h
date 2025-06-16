@@ -28,65 +28,66 @@
 
 namespace stappler::xenolith::vk::shadernn {
 
-void AddVectorToMatrixRows(CommandBuffer &buf, ComputePipeline *p, int batchSize,
-	int matrixHeight, int matrixWidth);
+void AddVectorToMatrixRows(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth);
 
-void MultiplyMatrixByMatrix(
-	CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-	int batchSize, int firstHeight, int firstWidth,
-	int secondWidth, int resultBufferSize);
+void MultiplyMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int batchSize, int firstHeight, int firstWidth,
+		int secondWidth, int resultBufferSize);
 
-void MultiplyMatrixByTransposedMatrix(
-	CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-	int firstHeight, int firstWidth, int firstRowSize,
-	int secondHeight, int secondRowSize,
-	int resultRowSize, int resultBufferSize );
+void MultiplyMatrixByTransposedMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int firstHeight, int firstWidth, int firstRowSize,
+		int secondHeight, int secondRowSize, int resultRowSize, int resultBufferSize);
 
-void MultiplyMatrixByTransposedMatrix(
-	CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-	int batchSize, int firstHeight, int firstWidth,
-	int secondHeight, int resultBufferSize );
+void MultiplyMatrixByTransposedMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int batchSize, int firstHeight, int firstWidth,
+		int secondHeight, int resultBufferSize);
 
-void MultiplyTransposedMatrixByMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int firstHeight, int firstWidth, int firstRowSize,
-		int secondWidth, int secondRowSize,
+void MultiplyTransposedMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int firstHeight, int firstWidth, int firstRowSize,
+		int secondWidth, int secondRowSize, int resultRowSize, int resultBufferSize);
+
+void MultiplyTransposedMatrixByMatrixAndAdd(CommandBuffer &buf,
+		const core::ComputePipelineData *mul, const core::ComputePipelineData *borders,
+		int firstHeight, int firstWidth, int firstRowSize, int secondWidth, int secondRowSize,
 		int resultRowSize, int resultBufferSize);
 
-void MultiplyTransposedMatrixByMatrixAndAdd(
-	CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-	int firstHeight, int firstWidth, int firstRowSize,
-	int secondWidth, int secondRowSize,
-	int resultRowSize, int resultBufferSize);
+void VectorAdd(CommandBuffer &buf, const core::ComputePipelineData *add4,
+		const core::ComputePipelineData *add1, int vectorSize);
 
-void VectorAdd(CommandBuffer &buf, ComputePipeline *add4, ComputePipeline *add1, int vectorSize);
+void VectorReLU(CommandBuffer &buf, const core::ComputePipelineData *relu4,
+		const core::ComputePipelineData *relu, int vectorSize, float threshold);
 
-void VectorReLU(CommandBuffer &buf, ComputePipeline *relu4, ComputePipeline *relu, int vectorSize, float threshold);
+void VectorReLUDiff(CommandBuffer &buf, const core::ComputePipelineData *relu, int vectorSize,
+		float threshold);
 
-void VectorReLUDiff(CommandBuffer &buf, ComputePipeline *relu, int vectorSize, float threshold);
+void MatrixSoftmaxByRows(CommandBuffer &buf, const core::ComputePipelineData *p, int height,
+		int width);
 
-void MatrixSoftmaxByRows(CommandBuffer &buf, ComputePipeline *p, int height, int width);
+void VectorNegLog(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorNegLog(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
+void VectorEltwiseMultiply(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorEltwiseMultiply(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
+void VectorMultiply(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorMultiply(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
+void VectorMultiplyAndAdd(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorMultiplyAndAdd(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
+void VectorSub(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorSub(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
+void SumMatrixColumns(CommandBuffer &buf, const core::ComputePipelineData *p, int matrixHeight,
+		int matrixWidth);
 
-void SumMatrixColumns(CommandBuffer &buf, ComputePipeline *p, int matrixHeight, int matrixWidth);
+void SumMatrixRowsAdd(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth);
 
-void SumMatrixRowsAdd(CommandBuffer &buf, ComputePipeline *p, int batchSize, int matrixHeight, int matrixWidth);
+void SumMatrixRows(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth);
 
-void SumMatrixRows(CommandBuffer &buf, ComputePipeline *p, int batchSize, int matrixHeight, int matrixWidth);
+void MultiplyDiagMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *p,
+		int firstSize, int secondWidth, int resultBufferSize);
 
-void MultiplyDiagMatrixByMatrix(CommandBuffer &buf, ComputePipeline *p, int firstSize, int secondWidth, int resultBufferSize);
+void VectorDotProduct(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize);
 
-void VectorDotProduct(CommandBuffer &buf, ComputePipeline *p, int vectorSize);
-
-}
+} // namespace stappler::xenolith::vk::shadernn
 
 #endif /* SRC_BACKEND_VK_XLSNNVKNMEMATH_H_ */

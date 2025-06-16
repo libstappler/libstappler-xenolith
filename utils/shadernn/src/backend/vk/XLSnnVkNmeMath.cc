@@ -150,13 +150,14 @@ inline int Ceil(int val, int discret) {
 
 // The maximum number of groups over the X dimension when working with a 1D (vector) shader
 // With larger sizes, the shader data will be represented in two dimensions
-constexpr int VulkanMaxVectorXGroupCount = 8192;
+constexpr int VulkanMaxVectorXGroupCount = 8'192;
 
 // The number of combined operations
 constexpr int VectorCombine = 4;
 
-static void runVectorShader(CommandBuffer &buf, ComputePipeline *pipeline, BytesView pcb, int count) {
-	int groupCountX = Ceil(count, pipeline->getLocalX());
+static void runVectorShader(CommandBuffer &buf, const core::ComputePipelineData *pipeline,
+		BytesView pcb, int count) {
+	int groupCountX = Ceil(count, pipeline->pipeline->getLocalX());
 	int groupCountY = Ceil(groupCountX, VulkanMaxVectorXGroupCount);
 	groupCountX = std::min<int>(groupCountX, VulkanMaxVectorXGroupCount);
 
@@ -164,254 +165,268 @@ static void runVectorShader(CommandBuffer &buf, ComputePipeline *pipeline, Bytes
 		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, pcb);
 	}
 
-	buf.cmdBindPipeline(pipeline);
+	buf.cmdBindPipeline(static_cast<ComputePipeline *>(pipeline->pipeline.get()));
 	buf.cmdDispatch(groupCountX, groupCountY, 1);
 }
 
-static void BatchMultiplyMatrixByTransposedMatrix(
-	CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-	bool toAdd, int batchSize,
-	int firstHeight, int firstWidth, int firstRowSize,
-	int secondHeight, int secondRowSize,
-	int resultRowSize, int resultBufferSize ) {
+static void BatchMultiplyMatrixByTransposedMatrix(CommandBuffer &buf,
+		const core::ComputePipelineData *mul, const core::ComputePipelineData *borders, bool toAdd,
+		int batchSize, int firstHeight, int firstWidth, int firstRowSize, int secondHeight,
+		int secondRowSize, int resultRowSize, int resultBufferSize) {
 
-	if( firstHeight >= 4 && secondHeight >= 4 ) {
-		MultiplyMatrixByTransposedMatrixData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondHeight, secondRowSize, resultRowSize,  ( toAdd ) ? 1 : 0 };
+	if (firstHeight >= 4 && secondHeight >= 4) {
+		MultiplyMatrixByTransposedMatrixData param = {batchSize, firstHeight, firstWidth,
+			firstRowSize, secondHeight, secondRowSize, resultRowSize, (toAdd) ? 1 : 0};
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(mul, firstHeight / 4, secondHeight / 4, batchSize);
 	}
 
 	int leftOffset = secondHeight - secondHeight % 4;
 	int topOffset = firstHeight - firstHeight % 4;
 	int count = secondHeight * firstHeight - leftOffset * topOffset;
-	if ( count > 0 ) {
-		MultiplyMatrixByTransposedMatrixBordersData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondHeight, secondRowSize, resultRowSize, leftOffset, topOffset, toAdd };
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+	if (count > 0) {
+		MultiplyMatrixByTransposedMatrixBordersData param = {batchSize, firstHeight, firstWidth,
+			firstRowSize, secondHeight, secondRowSize, resultRowSize, leftOffset, topOffset, toAdd};
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(borders, count, batchSize, 1);
 	}
 }
 
-static void batchMultiplyTransposedMatrixByMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		bool toAdd, int batchSize, int firstHeight, int firstWidth, int firstRowSize,
-		int secondWidth, int secondRowSize, int resultRowSize, int resultBufferSize ) {
-	if( firstWidth >= 4 && secondWidth >= 4 ) {
-		BatchMultiplyTransposedMatrixByMatrixData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondWidth, secondRowSize, resultRowSize, toAdd ? 1 : 0 };
+static void batchMultiplyTransposedMatrixByMatrix(CommandBuffer &buf,
+		const core::ComputePipelineData *mul, const core::ComputePipelineData *borders, bool toAdd,
+		int batchSize, int firstHeight, int firstWidth, int firstRowSize, int secondWidth,
+		int secondRowSize, int resultRowSize, int resultBufferSize) {
+	if (firstWidth >= 4 && secondWidth >= 4) {
+		BatchMultiplyTransposedMatrixByMatrixData param = {batchSize, firstHeight, firstWidth,
+			firstRowSize, secondWidth, secondRowSize, resultRowSize, toAdd ? 1 : 0};
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(mul, secondWidth / 4, firstWidth / 4, batchSize);
 	}
 
 	int leftOffset = secondWidth - secondWidth % 4;
 	int topOffset = firstWidth - firstWidth % 4;
 	int count = secondWidth * firstWidth - leftOffset * topOffset;
-	if( count > 0 ) {
-		BatchMultiplyTransposedMatrixByMatrixBordersData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondWidth, secondRowSize, resultRowSize, leftOffset, topOffset, toAdd ? 1 : 0 };
+	if (count > 0) {
+		BatchMultiplyTransposedMatrixByMatrixBordersData param = {batchSize, firstHeight,
+			firstWidth, firstRowSize, secondWidth, secondRowSize, resultRowSize, leftOffset,
+			topOffset, toAdd ? 1 : 0};
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(borders, count, batchSize, 1);
 	}
 }
 
-static void multiplyMatrixByMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		bool toAdd, int batchSize, int firstHeight, int firstWidth, int firstRowSize, int secondWidth,
-	int secondRowSize, int resultRowSize, int resultBufferSize ) {
+static void multiplyMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, bool toAdd, int batchSize, int firstHeight,
+		int firstWidth, int firstRowSize, int secondWidth, int secondRowSize, int resultRowSize,
+		int resultBufferSize) {
 
-	if( firstHeight >= 4 && secondWidth >= 4 ) {
-		MultiplyMatrixByMatrixData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondWidth, secondRowSize, resultRowSize, toAdd ? 1 : 0 };
+	if (firstHeight >= 4 && secondWidth >= 4) {
+		MultiplyMatrixByMatrixData param = {batchSize, firstHeight, firstWidth, firstRowSize,
+			secondWidth, secondRowSize, resultRowSize, toAdd ? 1 : 0};
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(mul, secondWidth / 4, firstHeight / 4, batchSize);
 	}
 
 	int leftOffset = secondWidth - secondWidth % 4;
-    int topOffset = firstHeight - firstHeight % 4;
-    int count = secondWidth * firstHeight - leftOffset * topOffset;
-    if( count > 0 ) {
-		BatchMultiplyMatrixByMatrixBordersData param = { batchSize, firstHeight, firstWidth, firstRowSize,
-			secondWidth, secondRowSize, resultRowSize, leftOffset, topOffset, toAdd ? 1 : 0 };
+	int topOffset = firstHeight - firstHeight % 4;
+	int count = secondWidth * firstHeight - leftOffset * topOffset;
+	if (count > 0) {
+		BatchMultiplyMatrixByMatrixBordersData param = {batchSize, firstHeight, firstWidth,
+			firstRowSize, secondWidth, secondRowSize, resultRowSize, leftOffset, topOffset,
+			toAdd ? 1 : 0};
 
-		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+				BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 		buf.cmdDispatchPipeline(borders, count, batchSize, 1);
 	}
 }
 
-void MultiplyMatrixByMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int batchSize, int firstHeight, int firstWidth, int secondWidth, int resultBufferSize) {
+void MultiplyMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int batchSize, int firstHeight, int firstWidth,
+		int secondWidth, int resultBufferSize) {
 	multiplyMatrixByMatrix(buf, mul, borders, false, batchSize, firstHeight, firstWidth, firstWidth,
-			secondWidth, secondWidth, secondWidth, resultBufferSize );
+			secondWidth, secondWidth, secondWidth, resultBufferSize);
 }
 
-void MultiplyMatrixByTransposedMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int firstHeight, int firstWidth, int firstRowSize,
-		int secondHeight, int secondRowSize,
-		int resultRowSize, int resultBufferSize ) {
+void MultiplyMatrixByTransposedMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int firstHeight, int firstWidth, int firstRowSize,
+		int secondHeight, int secondRowSize, int resultRowSize, int resultBufferSize) {
 
-	BatchMultiplyMatrixByTransposedMatrix( buf, mul, borders, false, 1,
-		firstHeight, firstWidth, firstRowSize,
-		secondHeight, secondRowSize,
-		resultRowSize, resultBufferSize );
+	BatchMultiplyMatrixByTransposedMatrix(buf, mul, borders, false, 1, firstHeight, firstWidth,
+			firstRowSize, secondHeight, secondRowSize, resultRowSize, resultBufferSize);
 }
 
-void MultiplyMatrixByTransposedMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int batchSize, int firstHeight, int firstWidth,
-		int secondHeight, int resultBufferSize )
-{
-	BatchMultiplyMatrixByTransposedMatrix( buf, mul, borders, false, batchSize,
-		firstHeight, firstWidth, firstWidth,
-		secondHeight, firstWidth,
-		secondHeight, resultBufferSize );
+void MultiplyMatrixByTransposedMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int batchSize, int firstHeight, int firstWidth,
+		int secondHeight, int resultBufferSize) {
+	BatchMultiplyMatrixByTransposedMatrix(buf, mul, borders, false, batchSize, firstHeight,
+			firstWidth, firstWidth, secondHeight, firstWidth, secondHeight, resultBufferSize);
 }
 
-void MultiplyTransposedMatrixByMatrixAndAdd(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int firstHeight, int firstWidth, int firstRowSize,
-		int secondWidth, int secondRowSize,
+void MultiplyTransposedMatrixByMatrixAndAdd(CommandBuffer &buf,
+		const core::ComputePipelineData *mul, const core::ComputePipelineData *borders,
+		int firstHeight, int firstWidth, int firstRowSize, int secondWidth, int secondRowSize,
 		int resultRowSize, int resultBufferSize) {
-	batchMultiplyTransposedMatrixByMatrix( buf, mul, borders, true, 1, firstHeight, firstWidth, firstRowSize,
-		secondWidth, secondRowSize, resultRowSize, resultBufferSize );
+	batchMultiplyTransposedMatrixByMatrix(buf, mul, borders, true, 1, firstHeight, firstWidth,
+			firstRowSize, secondWidth, secondRowSize, resultRowSize, resultBufferSize);
 }
 
-void MultiplyTransposedMatrixByMatrix(
-		CommandBuffer &buf, ComputePipeline *mul, ComputePipeline *borders,
-		int firstHeight, int firstWidth, int firstRowSize,
-		int secondWidth, int secondRowSize,
-		int resultRowSize, int resultBufferSize) {
-	batchMultiplyTransposedMatrixByMatrix( buf, mul, borders, false, 1, firstHeight, firstWidth, firstRowSize,
-		secondWidth, secondRowSize, resultRowSize, resultBufferSize );
+void MultiplyTransposedMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *mul,
+		const core::ComputePipelineData *borders, int firstHeight, int firstWidth, int firstRowSize,
+		int secondWidth, int secondRowSize, int resultRowSize, int resultBufferSize) {
+	batchMultiplyTransposedMatrixByMatrix(buf, mul, borders, false, 1, firstHeight, firstWidth,
+			firstRowSize, secondWidth, secondRowSize, resultRowSize, resultBufferSize);
 }
 
-void AddVectorToMatrixRows(CommandBuffer &buf, ComputePipeline *p, int batchSize,
-	int matrixHeight, int matrixWidth)
-{
-	AddVectorToMatrixRowsData param = { batchSize, matrixHeight, matrixWidth };
+void AddVectorToMatrixRows(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth) {
+	AddVectorToMatrixRowsData param = {batchSize, matrixHeight, matrixWidth};
 
-	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
-	buf.cmdDispatchPipeline(p, matrixWidth, Ceil( matrixHeight, 4 ), batchSize);
+	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+	buf.cmdDispatchPipeline(p, matrixWidth, Ceil(matrixHeight, 4), batchSize);
 }
 
-void VectorAdd(CommandBuffer &buf, ComputePipeline *add4, ComputePipeline *add1, int vectorSize) {
-	int countQuad = ( vectorSize / 16 ) * 4;
-	if( countQuad > 0 ) {
+void VectorAdd(CommandBuffer &buf, const core::ComputePipelineData *add4,
+		const core::ComputePipelineData *add1, int vectorSize) {
+	int countQuad = (vectorSize / 16) * 4;
+	if (countQuad > 0) {
 		runVectorShader(buf, add4, BytesView(), countQuad);
 	}
 
 	int countSingle = vectorSize % 16;
-	if( countSingle > 0 ) {
+	if (countSingle > 0) {
 		int offset = vectorSize - countSingle;
 
 		struct {
 			int offset;
-		} param = { offset };
+		} param = {offset};
 
-		runVectorShader(buf, add1, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), countSingle);
+		runVectorShader(buf, add1, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+				countSingle);
 	}
 }
 
-void VectorReLU(CommandBuffer &buf, ComputePipeline *relu4, ComputePipeline *relu, int vectorSize, float threshold) {
-	int countQuad = ( vectorSize / 16 ) * 4;
-	if( countQuad > 0 ) {
+void VectorReLU(CommandBuffer &buf, const core::ComputePipelineData *relu4,
+		const core::ComputePipelineData *relu, int vectorSize, float threshold) {
+	int countQuad = (vectorSize / 16) * 4;
+	if (countQuad > 0) {
 		struct {
 			float value;
-		} param = { threshold };
+		} param = {threshold};
 
-		runVectorShader(buf, relu4, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), countQuad);
+		runVectorShader(buf, relu4, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+				countQuad);
 	}
 
 	int countSingle = vectorSize % 16;
-	if( countSingle > 0 ) {
+	if (countSingle > 0) {
 		int offset = vectorSize - countSingle;
 
 		struct {
 			float value;
 			int offset;
-		} param = { threshold, offset };
+		} param = {threshold, offset};
 
-		runVectorShader(buf, relu, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), countSingle);
+		runVectorShader(buf, relu, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+				countSingle);
 	}
 }
 
-void VectorReLUDiff(CommandBuffer &buf, ComputePipeline *relu, int vectorSize, float threshold) {
+void VectorReLUDiff(CommandBuffer &buf, const core::ComputePipelineData *relu, int vectorSize,
+		float threshold) {
 	struct {
 		float value;
-	} param = { threshold };
+	} param = {threshold};
 
-	runVectorShader(buf, relu, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), Ceil(vectorSize, VectorCombine));
+	runVectorShader(buf, relu, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+			Ceil(vectorSize, VectorCombine));
 }
 
-void MatrixSoftmaxByRows(CommandBuffer &buf, ComputePipeline *p, int height, int width) {
-	MatrixSoftmaxByRowsData param = { height, width };
+void MatrixSoftmaxByRows(CommandBuffer &buf, const core::ComputePipelineData *p, int height,
+		int width) {
+	MatrixSoftmaxByRowsData param = {height, width};
 
 	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
 			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 	buf.cmdDispatchPipeline(p, width, height, 1);
 }
 
-void VectorNegLog(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
-	VectorLogData param = { 1 };
+void VectorNegLog(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
+	VectorLogData param = {1};
 
-	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), Ceil(vectorSize, VectorCombine));
+	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+			Ceil(vectorSize, VectorCombine));
 }
 
-void VectorEltwiseMultiply(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
-	VectorMultiplyFloatData param = { 0, 0, 0 };
+void VectorEltwiseMultiply(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
+	VectorMultiplyFloatData param = {0, 0, 0};
 
-	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), Ceil(vectorSize, VectorCombine));
+	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+			Ceil(vectorSize, VectorCombine));
 }
 
-void VectorMultiply(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
-	VectorMultiplyFloatData param = { 1, 0, 0 };
+void VectorMultiply(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
+	VectorMultiplyFloatData param = {1, 0, 0};
 
-	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)), Ceil(vectorSize, VectorCombine));
+	runVectorShader(buf, p, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)),
+			Ceil(vectorSize, VectorCombine));
 }
 
-void VectorMultiplyAndAdd(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
+void VectorMultiplyAndAdd(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
 	runVectorShader(buf, p, BytesView(), Ceil(vectorSize, VectorCombine));
 }
 
-void VectorSub(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
+void VectorSub(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
 	runVectorShader(buf, p, BytesView(), Ceil(vectorSize, VectorCombine));
 }
 
-void SumMatrixColumns(CommandBuffer &buf, ComputePipeline *p, int matrixHeight, int matrixWidth) {
-	SumMatrixColumnsData param = { matrixWidth, matrixHeight };
+void SumMatrixColumns(CommandBuffer &buf, const core::ComputePipelineData *p, int matrixHeight,
+		int matrixWidth) {
+	SumMatrixColumnsData param = {matrixWidth, matrixHeight};
 
-	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 	buf.cmdDispatchPipeline(p, matrixHeight, 1, 1);
 }
 
-void SumMatrixRowsAdd(CommandBuffer &buf, ComputePipeline *p, int batchSize, int matrixHeight, int matrixWidth ) {
-	struct SumMatrixRowsData param = { matrixWidth, matrixHeight, batchSize, 1 };
-	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+void SumMatrixRowsAdd(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth) {
+	struct SumMatrixRowsData param = {matrixWidth, matrixHeight, batchSize, 1};
+	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 	buf.cmdDispatchPipeline(p, matrixWidth, 1, batchSize);
 }
 
-void SumMatrixRows(CommandBuffer &buf, ComputePipeline *p, int batchSize, int matrixHeight, int matrixWidth ) {
-	struct SumMatrixRowsData param = { matrixWidth, matrixHeight, batchSize, 0 };
-	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+void SumMatrixRows(CommandBuffer &buf, const core::ComputePipelineData *p, int batchSize,
+		int matrixHeight, int matrixWidth) {
+	struct SumMatrixRowsData param = {matrixWidth, matrixHeight, batchSize, 0};
+	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
 	buf.cmdDispatchPipeline(p, matrixWidth, 1, batchSize);
 }
 
-void MultiplyDiagMatrixByMatrix(CommandBuffer &buf, ComputePipeline *p, int firstSize, int secondWidth, int resultBufferSize ) {
-	MultiplyDiagMatrixByMatrixData param = { firstSize, secondWidth };
+void MultiplyDiagMatrixByMatrix(CommandBuffer &buf, const core::ComputePipelineData *p,
+		int firstSize, int secondWidth, int resultBufferSize) {
+	MultiplyDiagMatrixByMatrixData param = {firstSize, secondWidth};
 
-	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0, BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
-	buf.cmdDispatchPipeline(p, Ceil( firstSize, 4 ), secondWidth, 1);
+	buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
+			BytesView(reinterpret_cast<uint8_t *>(&param), sizeof(param)));
+	buf.cmdDispatchPipeline(p, Ceil(firstSize, 4), secondWidth, 1);
 }
 
-void VectorDotProduct(CommandBuffer &buf, ComputePipeline *p, int vectorSize) {
+void VectorDotProduct(CommandBuffer &buf, const core::ComputePipelineData *p, int vectorSize) {
 	runVectorShader(buf, p, BytesView(),
-			p->getLocalX() * p->getLocalY() * p->getLocalZ());
+			p->pipeline->getLocalX() * p->pipeline->getLocalY() * p->pipeline->getLocalZ());
 }
 
-}
+} // namespace stappler::xenolith::vk::shadernn

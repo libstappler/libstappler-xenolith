@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::interpolation {
 
-float interpolateTo(float time, Type type, const SpanView<float> &params) {
+float interpolateTo(float time, Type type, SpanView<float> params) {
 	float delta = 0;
 
 	switch (type) {

@@ -57,7 +57,8 @@ public:
 	protected:
 		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
-		virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
+		virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool,
+				Rc<core::Fence> &&) override;
 
 		vk::BufferAttachmentHandle *_inputBuffer = nullptr;
 		vk::BufferAttachmentHandle *_outputBuffer = nullptr;
@@ -86,7 +87,8 @@ public:
 	virtual ~StatAnalysisLayer();
 
 	virtual bool init(Queue::Builder &queueBuilder, QueuePassBuilder &, Front *,
-			const AttachmentData *inputData, const AttachmentData *inputClasses, const AttachmentData *output);
+			const AttachmentData *inputData, const AttachmentData *inputClasses,
+			const AttachmentData *output);
 
 	const AttachmentData *getInputDataAttachment() const { return _inputDataAttachment; }
 	const AttachmentData *getInputClassesAttachment() const { return _inputClassesAttachment; }
@@ -103,7 +105,8 @@ public:
 	protected:
 		virtual Vector<const core::CommandBuffer *> doPrepareCommands(FrameHandle &) override;
 
-		virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool, Rc<Fence> &&) override;
+		virtual void doSubmitted(FrameHandle &, Function<void(bool)> &&, bool,
+				Rc<core::Fence> &&) override;
 
 		vk::BufferAttachmentHandle *_inputDataBuffer = nullptr;
 		vk::BufferAttachmentHandle *_inputClassesBuffer = nullptr;
@@ -123,6 +126,6 @@ protected:
 	Rc<Front> _front;
 };
 
-}
+} // namespace stappler::xenolith::vk::shadernn
 
 #endif /* SRC_BACKEND_VK_XLSNNVKSTATPERCENTLAYER_H_ */

@@ -81,7 +81,7 @@ enum Type {
 	Max
 };
 
-SP_PUBLIC float interpolateTo(float time, Type type, const SpanView<float> &);
+SP_PUBLIC float interpolateTo(float time, Type type, SpanView<float> = SpanView<float>());
 
 SP_PUBLIC float linear(float time);
 

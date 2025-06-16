@@ -39,47 +39,55 @@ bool SubpixelLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builder
 
 	_front = front;
 
-	auto passInput = builder.addAttachment(input, [] (AttachmentPassBuilder &builder) {
+	auto passInput = builder.addAttachment(input, [](AttachmentPassBuilder &builder) {
 		builder.setDependency(AttachmentDependencyInfo{
-			PipelineStage::ComputeShader, AccessType::ShaderRead,
-			PipelineStage::ComputeShader, AccessType::ShaderRead,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderRead,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderRead,
 			FrameRenderPassState::Submitted,
 		});
 		builder.setInitialLayout(AttachmentLayout::General);
 		builder.setFinalLayout(AttachmentLayout::General);
 	});
 
-	auto passOutput = builder.addAttachment(output, [] (AttachmentPassBuilder &builder) {
+	auto passOutput = builder.addAttachment(output, [](AttachmentPassBuilder &builder) {
 		builder.setDependency(AttachmentDependencyInfo{
-			PipelineStage::ComputeShader, AccessType::ShaderWrite,
-			PipelineStage::ComputeShader, AccessType::ShaderWrite,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderWrite,
+			PipelineStage::ComputeShader,
+			AccessType::ShaderWrite,
 			FrameRenderPassState::Submitted,
 		});
 		builder.setInitialLayout(AttachmentLayout::General);
 		builder.setFinalLayout(AttachmentLayout::General);
 	});
 
-	auto layout = builder.addDescriptorLayout([&] (PipelineLayoutBuilder &layoutBuilder) {
-		layoutBuilder.addSet([&] (DescriptorSetBuilder &setBuilder) {
-			setBuilder.addDescriptor(passOutput, DescriptorType::StorageImage, AttachmentLayout::General);
-			setBuilder.addDescriptor(passInput, DescriptorType::StorageImage, AttachmentLayout::General);
+	auto layout = builder.addDescriptorLayout([&](PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&](DescriptorSetBuilder &setBuilder) {
+			setBuilder.addDescriptor(passOutput, DescriptorType::StorageImage,
+					AttachmentLayout::General);
+			setBuilder.addDescriptor(passInput, DescriptorType::StorageImage,
+					AttachmentLayout::General);
 		});
 	});
 
-	builder.addSubpass([&] (SubpassBuilder &subpassBuilder) {
-	    uint32_t subPixelFactor = 2;
+	builder.addSubpass([&](SubpassBuilder &subpassBuilder) {
+		uint32_t subPixelFactor = 2;
 
 		SpecializationInfo spec;
-		spec.data = queueBuilder.addProgramByRef(toString(front->getName(), "_shader"), getShader(LayerShader::Subpixel, precision));
+		spec.data = queueBuilder.addProgramByRef(toString(front->getName(), "_shader"),
+				getShader(LayerShader::Subpixel, precision));
 		spec.constants.emplace_back(SpecializationConstant(subPixelFactor)); // 0
 
-		subpassBuilder.addComputePipeline(toString(front->getName(), "_pipeline"), layout, move(spec));
+		subpassBuilder.addComputePipeline(toString(front->getName(), "_pipeline"),
+				layout->defaultFamily, move(spec));
 	});
 
 	_inputAttachment = input;
 	_outputAttachment = output;
 
-	_frameHandleCallback = [] (core::QueuePass &pass, const FrameQueue &q) {
+	_frameHandleCallback = [](core::QueuePass &pass, const FrameQueue &q) {
 		return Rc<LayerHandle>::create(pass, q);
 	};
 
@@ -102,8 +110,10 @@ bool SubpixelLayer::LayerHandle::prepare(FrameQueue &q, Function<void(bool)> &&c
 	return vk::QueuePassHandle::prepare(q, sp::move(cb));
 }
 
-Vector<const core::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(FrameHandle &frame) {
-	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors), [&] (vk::CommandBuffer &buf) {
+Vector<const core::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommands(
+		FrameHandle &frame) {
+	auto buf = _pool->recordBuffer(*_device, Vector<Rc<DescriptorPool>>(_descriptors),
+			[&](vk::CommandBuffer &buf) {
 		auto pass = _data->impl.cast<vk::RenderPass>().get();
 		pass->perform(*this, buf, [&] {
 			buf.cmdBindDescriptorSets(pass, 0);
@@ -112,7 +122,8 @@ Vector<const core::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommand
 
 			auto oc_4 = UP_DIV(_front->getNumOutputPlanes(), uint32_t(4));
 
-			auto pipeline = static_cast<vk::ComputePipeline *>((*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
+			auto pipeline = static_cast<vk::ComputePipeline *>(
+					(*_data->subpasses[0]->computePipelines.begin())->pipeline.get());
 
 			buf.cmdBindPipeline(pipeline);
 			buf.cmdDispatch((extent.width - 1) / pipeline->getLocalX() + 1,
@@ -124,4 +135,4 @@ Vector<const core::CommandBuffer *> SubpixelLayer::LayerHandle::doPrepareCommand
 	return Vector<const core::CommandBuffer *>{buf};
 }
 
-}
+} // namespace stappler::xenolith::vk::shadernn

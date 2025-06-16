@@ -80,11 +80,9 @@ public:
 
 	TextInputHandler *getHandler() const { return _handler; }
 
-protected:
-	friend class View;
-
 	void handleInputUpdate(const TextInputState &);
 
+protected:
 	View *_view = nullptr;
 	TextInputHandler *_handler = nullptr;
 
