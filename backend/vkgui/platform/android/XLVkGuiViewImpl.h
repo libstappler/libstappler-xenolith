@@ -41,10 +41,12 @@ public:
 	virtual void update(bool displayLink) override;
 	virtual void end() override;
 
-	virtual void updateTextCursor(uint32_t pos, uint32_t len) override;
-	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
-	virtual void runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType) override;
-	virtual void cancelTextInput() override;
+	virtual bool isTextInputEnabled() const override; // from view thread
+
+	virtual bool updateTextInput(const TextInputRequest &,
+			xenolith::platform::TextInputFlags flags) override; // from view thread
+
+	virtual void cancelTextInput() override; // from view thread
 
 	void runWithWindow(ANativeWindow *);
 
@@ -52,8 +54,6 @@ public:
 
 	virtual void setDecorationTone(float) override;
 	virtual void setDecorationVisible(bool) override;
-
-	virtual bool isInputEnabled() const override;
 
 	virtual void linkWithNativeWindow(void *) override;
 
@@ -66,7 +66,7 @@ protected:
 	using vk::View::init;
 
 	void doSetDecorationTone(float);
-    void doSetDecorationVisible(bool);
+	void doSetDecorationVisible(bool);
 	void updateDecorations();
 
 	void doReadFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
@@ -85,7 +85,7 @@ protected:
 	std::condition_variable _windowCond;
 };
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif
 

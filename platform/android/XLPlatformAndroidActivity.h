@@ -25,6 +25,7 @@
 
 #include "XLPlatformAndroidClassLoader.h"
 #include "XLPlatformAndroidNetworkConnectivity.h"
+#include "XLPlatformTextInputInterface.h"
 #include "XLPlatformViewInterface.h"
 #include "XLCoreInput.h"
 #include "XLPlatformApplication.h"
@@ -53,9 +54,7 @@ class ActivityComponent : public Ref {
 public:
 	virtual ~ActivityComponent() { }
 
-	virtual bool init() {
-		return true;
-	}
+	virtual bool init() { return true; }
 
 	virtual void handleAdded(Activity *a) { }
 	virtual void handlePause(Activity *a) { }
@@ -69,7 +68,10 @@ public:
 	virtual void handleLowMemory(Activity *a) { }
 
 	// return true if result was processed
-	virtual bool handleActivityResult(Activity *a, int request_code, int result_code, jobject data) { return false; }
+	virtual bool handleActivityResult(Activity *a, int request_code, int result_code,
+			jobject data) {
+		return false;
+	}
 };
 
 struct AppEnv {
@@ -86,10 +88,12 @@ struct AppEnv {
 
 class Activity : public Ref {
 public:
-	static constexpr StringView NetworkConnectivityClassName = "org.stappler.xenolith.appsupport.NetworkConnectivity";
-	static constexpr StringView NetworkConnectivityClassPath = "org/stappler/xenolith/appsupport/NetworkConnectivity";
+	static constexpr StringView NetworkConnectivityClassName =
+			"org.stappler.xenolith.appsupport.NetworkConnectivity";
+	static constexpr StringView NetworkConnectivityClassPath =
+			"org/stappler/xenolith/appsupport/NetworkConnectivity";
 
-	static constexpr int FLAG_ACTIVITY_NEW_TASK =  268435456;
+	static constexpr int FLAG_ACTIVITY_NEW_TASK = 268'435'456;
 
 	Activity();
 	virtual ~Activity();
@@ -135,9 +139,8 @@ public:
 
 	virtual void openUrl(StringView url);
 
-	virtual void updateTextCursor(uint32_t pos, uint32_t len);
-	virtual void updateTextInput(WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
-	virtual void runTextInput(Rc<ActivityTextInputWrapper> &&, WideStringView str, uint32_t pos, uint32_t len, core::TextInputType);
+	virtual bool updateTextInput(const TextInputRequest &,
+			TextInputFlags flags = TextInputFlags::RunIfDisabled);
 	virtual void cancelTextInput();
 
 	jni::Local getDisplay() const;
@@ -162,7 +165,7 @@ protected:
 	void handleInputQueueCreated(AInputQueue *);
 	void handleInputQueueDestroyed(AInputQueue *);
 	void handleLowMemory();
-	void* handleSaveInstanceState(size_t* outLen);
+	void *handleSaveInstanceState(size_t *outLen);
 
 	void handleNativeWindowCreated(ANativeWindow *);
 	void handleNativeWindowDestroyed(ANativeWindow *);
@@ -236,12 +239,12 @@ protected:
 	Value _drawables;
 	Rc<PlatformApplication> _application;
 	Vector<Rc<ActivityComponent>> _components;
-	Rc<ActivityTextInputWrapper> _textInputWrapper;
+	TextInputState _textInputState;
 };
 
 SP_DEFINE_ENUM_AS_MASK(ActivityFlags)
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif
 

@@ -61,6 +61,8 @@ struct TextInputString : public Ref {
 		return ret;
 	}
 
+	size_t size() const { return string.size(); }
+
 	WideString string;
 };
 
@@ -107,7 +109,7 @@ public:
 	void unmarkText();
 
 	bool hasText();
-	void textChanged(WideStringView text, TextCursor, TextCursor);
+	void textChanged(TextInputString *, TextCursor, TextCursor);
 	void cursorChanged(TextCursor);
 	void markedChanged(TextCursor);
 

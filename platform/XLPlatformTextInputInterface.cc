@@ -88,10 +88,10 @@ void TextInputInterface::setMarkedText(WideStringView sInsert, TextCursor replac
 	}
 }
 
-void TextInputInterface::textChanged(WideStringView text, TextCursor cursor, TextCursor marked) {
+void TextInputInterface::textChanged(TextInputString *text, TextCursor cursor, TextCursor marked) {
 	TextInputState newState = _state;
-	if (text.size() == 0) {
-		newState.string = Rc<TextInputString>::alloc();
+	if (text->size() == 0) {
+		newState.string = text;
 		newState.cursor.start = 0;
 		newState.cursor.length = 0;
 		newState.marked = TextCursor::InvalidCursor;
@@ -99,7 +99,7 @@ void TextInputInterface::textChanged(WideStringView text, TextCursor cursor, Tex
 		return;
 	}
 
-	newState.string = TextInputString::create(text);
+	newState.string = text;
 	newState.cursor = cursor;
 	newState.marked = marked;
 	handleTextChanged(move(newState));

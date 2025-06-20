@@ -411,7 +411,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, NotNull<core::Material
 					stagingBuffer->getSize(), " vs ", targetBuffer->getSize(), ")");
 		} else {
 			stagingBuffer->map([&](uint8_t *ptr, VkDeviceSize size) {
-				memcpy(ptr, bufferData.data(), std::min(VkDeviceSize(size), bufferData.size()));
+				memcpy(ptr, bufferData.data(), std::min(size_t(size), bufferData.size()));
 			}, DeviceMemoryAccess::Flush);
 
 			ret.emplace_back(

@@ -114,7 +114,7 @@ struct SP_PUBLIC ImageMemoryBarrier {
 
 	explicit operator bool() const {
 		return srcAccessMask != 0 || dstAccessMask != 0 || oldLayout != VK_IMAGE_LAYOUT_UNDEFINED
-				|| newLayout != VK_IMAGE_LAYOUT_UNDEFINED || vkimage != nullptr;
+				|| newLayout != VK_IMAGE_LAYOUT_UNDEFINED || vkimage != VK_NULL_HANDLE;
 	}
 
 	XAccessFlags srcAccessMask = 0;
@@ -147,7 +147,7 @@ struct SP_PUBLIC BufferMemoryBarrier {
 	BufferMemoryBarrier(const VkBufferMemoryBarrier &);
 
 	explicit operator bool() const {
-		return srcAccessMask != 0 || dstAccessMask != 0 || vkbuffer != nullptr;
+		return srcAccessMask != 0 || dstAccessMask != 0 || vkbuffer != VK_NULL_HANDLE;
 	}
 
 	XAccessFlags srcAccessMask = 0;

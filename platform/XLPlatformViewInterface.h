@@ -113,6 +113,8 @@ public:
 
 	PlatformApplication *getApplication() const { return _application; } // from any thread
 
+	TextInputInterface *getTextInputInterface() const { return _textInput; }
+
 	core::Loop *getLoop() const { return _loop; } // from any thread
 
 	bool isOnThisThread() const; // from any thread
@@ -154,10 +156,14 @@ protected:
 
 	// Run text input mode with buffer with new string, cursor and input type,
 	// or update text input buffer
+	//
+	// should be forwarded to OS input method
 	virtual bool updateTextInput(const TextInputRequest &,
 			TextInputFlags flags = TextInputFlags::RunIfDisabled) = 0; // from view thread
 
 	// Disable text input, if it was enabled
+	//
+	// should be forwarded to OS input method
 	virtual void cancelTextInput() = 0; // from view thread
 
 	virtual void propagateInputEvent(core::InputEventData &); // from app thread

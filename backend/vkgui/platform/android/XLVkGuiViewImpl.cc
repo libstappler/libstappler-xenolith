@@ -52,7 +52,8 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 		return false;
 	}
 
-	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
+	auto activity =
+			static_cast<xenolith::platform::Activity *>(_application->getInfo().platformHandle);
 	activity->setView(this);
 
 	_activity = activity;
@@ -60,13 +61,9 @@ bool ViewImpl::init(Application &loop, core::Device &dev, ViewInfo &&info) {
 	return true;
 }
 
-void ViewImpl::run() {
-	View::run();
-}
+void ViewImpl::run() { View::run(); }
 
-void ViewImpl::update(bool displayLink) {
-	_presentationEngine->update(displayLink);
-}
+void ViewImpl::update(bool displayLink) { _presentationEngine->update(displayLink); }
 
 void ViewImpl::end() {
 	vk::View::end();
@@ -77,49 +74,14 @@ void ViewImpl::end() {
 	}
 }
 
-void ViewImpl::updateTextCursor(uint32_t pos, uint32_t len) {
-	performOnThread([this, pos, len] {
-		if (_activity) {
-			_activity->updateTextCursor(pos, len);
-		}
-	}, this, true);
-}
+bool ViewImpl::isTextInputEnabled() const { return false; }
 
-void ViewImpl::updateTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType type) {
-	performOnThread([this, str = str.str<Interface>(), pos, len, type] {
-		if (_activity) {
-			_activity->updateTextInput(str, pos, len, type);
-		}
-	}, this, true);
-}
-
-void ViewImpl::runTextInput(WideStringView str, uint32_t pos, uint32_t len, TextInputType type) {
-	performOnThread([this, str = str.str<Interface>(), pos, len, type] {
-		if (_activity) {
-			auto wrapper = Rc<xenolith::platform::ActivityTextInputWrapper>::alloc();
-			wrapper->target = this;
-			wrapper->textChanged = [this] (Ref *ref, WideStringView text, core::TextCursor cursor) {
-				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this), text = text.str<Interface>(), cursor] {
-					dir->getTextInputManager()->textChanged(text, cursor, core::TextCursor());
-					view->setReadyForNextFrame();
-				}, ref);
-			};
-			wrapper->inputEnabled = [this] (Ref *ref, bool value) {
-				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this), value] {
-					dir->getTextInputManager()->setInputEnabled(value);
-					view->setReadyForNextFrame();
-				}, ref);
-			};
-			wrapper->cancelInput = [this] (Ref *ref) {
-				_mainLoop->performOnAppThread([dir = _director, view = Rc<ViewImpl>(this)] {
-					dir->getTextInputManager()->cancel();
-					view->setReadyForNextFrame();
-				}, ref);
-			};
-
-			_activity->runTextInput(move(wrapper), str, pos, len, type);
-		}
-	}, this, true);
+bool ViewImpl::updateTextInput(const TextInputRequest &req,
+		xenolith::platform::TextInputFlags flags) {
+	if (_activity) {
+		return _activity->updateTextInput(req, flags);
+	}
+	return false;
 }
 
 void ViewImpl::cancelTextInput() {
@@ -144,7 +106,9 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 	_nativeWindow = window;
 	constraints.extent = Extent2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
-	if (instance->vkCreateAndroidSurfaceKHR(instance->getInstance(), &surfaceCreateInfo, nullptr, &targetSurface) != VK_SUCCESS) {
+	if (instance->vkCreateAndroidSurfaceKHR(instance->getInstance(), &surfaceCreateInfo, nullptr,
+				&targetSurface)
+			!= VK_SUCCESS) {
 		log::error("ViewImpl", "fail to create surface");
 		return;
 	}
@@ -153,8 +117,10 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 	ANativeWindow_acquire(_nativeWindow);
 
 	auto info = View::getSurfaceOptions(surface->getSurfaceOptions(*_device.get()));
-	if ((info.currentTransform & core::SurfaceTransformFlags::Rotate90) != core::SurfaceTransformFlags::None ||
-		(info.currentTransform & core::SurfaceTransformFlags::Rotate270) != core::SurfaceTransformFlags::None) {
+	if ((info.currentTransform & core::SurfaceTransformFlags::Rotate90)
+					!= core::SurfaceTransformFlags::None
+			|| (info.currentTransform & core::SurfaceTransformFlags::Rotate270)
+					!= core::SurfaceTransformFlags::None) {
 		_identityExtent = Extent2(info.currentExtent.height, info.currentExtent.width);
 	} else {
 		_identityExtent = info.currentExtent;
@@ -166,14 +132,16 @@ void ViewImpl::runWithWindow(ANativeWindow *window) {
 
 	auto rate = display.callMethod<jfloat>(jgetRefreshRate);
 
-	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface), move(constraints), uint64_t(1'000'000.0f / rate));
+	auto engine = Rc<PresentationEngine>::create(_device, this, move(surface), move(constraints),
+			uint64_t(1'000'000.0f / rate));
 	if (!engine) {
 		log::error("vk::ViewImpl", "Fail to create PresentationEngine");
 	}
 
 	setPresentationEngine(move(engine));
 
-	auto activity = static_cast<xenolith::platform::Activity *>(_mainLoop->getInfo().platformHandle);
+	auto activity =
+			static_cast<xenolith::platform::Activity *>(_application->getInfo().platformHandle);
 	setActivity(activity);
 }
 
@@ -193,41 +161,66 @@ void ViewImpl::setActivity(xenolith::platform::Activity *activity) {
 
 	jobject windowObj = env->CallObjectMethod(jactivity, getWindow);
 
-	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_STABLE = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_STABLE", "I");
-	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION", "I");
-	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN", "I");
-	jfieldID id_SYSTEM_UI_FLAG_HIDE_NAVIGATION = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_HIDE_NAVIGATION", "I");
-	jfieldID id_SYSTEM_UI_FLAG_FULLSCREEN = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_FULLSCREEN", "I");
-	jfieldID id_SYSTEM_UI_FLAG_IMMERSIVE_STICKY = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_IMMERSIVE_STICKY", "I");
-	jfieldID id_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR", "I");
-	jfieldID id_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR = env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LIGHT_STATUS_BAR", "I");
+	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_STABLE =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_STABLE", "I");
+	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION", "I");
+	jfieldID id_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN", "I");
+	jfieldID id_SYSTEM_UI_FLAG_HIDE_NAVIGATION =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_HIDE_NAVIGATION", "I");
+	jfieldID id_SYSTEM_UI_FLAG_FULLSCREEN =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_FULLSCREEN", "I");
+	jfieldID id_SYSTEM_UI_FLAG_IMMERSIVE_STICKY =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_IMMERSIVE_STICKY", "I");
+	jfieldID id_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR", "I");
+	jfieldID id_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR =
+			env->GetStaticFieldID(viewClass, "SYSTEM_UI_FLAG_LIGHT_STATUS_BAR", "I");
 
-	flag_SYSTEM_UI_FLAG_LAYOUT_STABLE = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_STABLE);
-	flag_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-	flag_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-	flag_SYSTEM_UI_FLAG_HIDE_NAVIGATION = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-	flag_SYSTEM_UI_FLAG_FULLSCREEN = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_FULLSCREEN);
-	flag_SYSTEM_UI_FLAG_IMMERSIVE_STICKY = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-	flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-	flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR = env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+	flag_SYSTEM_UI_FLAG_LAYOUT_STABLE =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_STABLE);
+	flag_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+	flag_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+	flag_SYSTEM_UI_FLAG_HIDE_NAVIGATION =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+	flag_SYSTEM_UI_FLAG_FULLSCREEN =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_FULLSCREEN);
+	flag_SYSTEM_UI_FLAG_IMMERSIVE_STICKY =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+	flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+	flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR =
+			env->GetStaticIntField(viewClass, id_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
-	jfieldID id_FLAG_TRANSLUCENT_STATUS = env->GetStaticFieldID(layoutClass, "FLAG_TRANSLUCENT_STATUS", "I");
-	jfieldID id_FLAG_TRANSLUCENT_NAVIGATION = env->GetStaticFieldID(layoutClass, "FLAG_TRANSLUCENT_NAVIGATION", "I");
-	jfieldID id_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS = env->GetStaticFieldID(layoutClass, "FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS", "I");
+	jfieldID id_FLAG_TRANSLUCENT_STATUS =
+			env->GetStaticFieldID(layoutClass, "FLAG_TRANSLUCENT_STATUS", "I");
+	jfieldID id_FLAG_TRANSLUCENT_NAVIGATION =
+			env->GetStaticFieldID(layoutClass, "FLAG_TRANSLUCENT_NAVIGATION", "I");
+	jfieldID id_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS =
+			env->GetStaticFieldID(layoutClass, "FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS", "I");
 	jfieldID id_FLAG_FULLSCREEN = env->GetStaticFieldID(layoutClass, "FLAG_FULLSCREEN", "I");
-	jfieldID id_FLAG_LAYOUT_INSET_DECOR = env->GetStaticFieldID(layoutClass, "FLAG_LAYOUT_INSET_DECOR", "I");
-	jfieldID id_FLAG_LAYOUT_IN_SCREEN = env->GetStaticFieldID(layoutClass, "FLAG_LAYOUT_IN_SCREEN", "I");
+	jfieldID id_FLAG_LAYOUT_INSET_DECOR =
+			env->GetStaticFieldID(layoutClass, "FLAG_LAYOUT_INSET_DECOR", "I");
+	jfieldID id_FLAG_LAYOUT_IN_SCREEN =
+			env->GetStaticFieldID(layoutClass, "FLAG_LAYOUT_IN_SCREEN", "I");
 
 	flag_FLAG_TRANSLUCENT_STATUS = env->GetStaticIntField(layoutClass, id_FLAG_TRANSLUCENT_STATUS);
-	flag_FLAG_TRANSLUCENT_NAVIGATION = env->GetStaticIntField(layoutClass, id_FLAG_TRANSLUCENT_NAVIGATION);
-	flag_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS = env->GetStaticIntField(layoutClass, id_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+	flag_FLAG_TRANSLUCENT_NAVIGATION =
+			env->GetStaticIntField(layoutClass, id_FLAG_TRANSLUCENT_NAVIGATION);
+	flag_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS =
+			env->GetStaticIntField(layoutClass, id_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 	flag_FLAG_FULLSCREEN = env->GetStaticIntField(layoutClass, id_FLAG_FULLSCREEN);
 	flag_FLAG_LAYOUT_INSET_DECOR = env->GetStaticIntField(layoutClass, id_FLAG_LAYOUT_INSET_DECOR);
 	flag_FLAG_LAYOUT_IN_SCREEN = env->GetStaticIntField(layoutClass, id_FLAG_LAYOUT_IN_SCREEN);
 
-	env->CallVoidMethod(windowObj, clearFlags, flag_FLAG_TRANSLUCENT_NAVIGATION | flag_FLAG_TRANSLUCENT_STATUS);
-	env->CallVoidMethod(windowObj, addFlags, flag_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
-		| flag_FLAG_LAYOUT_INSET_DECOR | flag_FLAG_LAYOUT_IN_SCREEN);
+	env->CallVoidMethod(windowObj, clearFlags,
+			flag_FLAG_TRANSLUCENT_NAVIGATION | flag_FLAG_TRANSLUCENT_STATUS);
+	env->CallVoidMethod(windowObj, addFlags,
+			flag_FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS | flag_FLAG_LAYOUT_INSET_DECOR
+					| flag_FLAG_LAYOUT_IN_SCREEN);
 
 	updateDecorations();
 }
@@ -238,18 +231,20 @@ core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
 		info.currentExtent = _identityExtent;
 		info.currentTransform |= core::SurfaceTransformFlags::PreRotated;
 	} else {
-		if (info.currentExtent != _identityExtent && (info.currentTransform == core::SurfaceTransformFlags::Identity
-													  || info.currentTransform == core::SurfaceTransformFlags::Rotate180)) {
+		if (info.currentExtent != _identityExtent
+				&& (info.currentTransform == core::SurfaceTransformFlags::Identity
+						|| info.currentTransform == core::SurfaceTransformFlags::Rotate180)) {
 			info.currentExtent = _identityExtent;
-			log::warn("ViewImpl", "Fixed:", info.currentExtent,
-					   " Rotation: ", core::getSurfaceTransformFlagsDescription(info.currentTransform));
+			log::warn("ViewImpl", "Fixed:", info.currentExtent, " Rotation: ",
+					core::getSurfaceTransformFlagsDescription(info.currentTransform));
 		}
 
-		if (info.currentExtent == _identityExtent && (info.currentTransform == core::SurfaceTransformFlags::Rotate270
-													  || info.currentTransform == core::SurfaceTransformFlags::Rotate90)) {
+		if (info.currentExtent == _identityExtent
+				&& (info.currentTransform == core::SurfaceTransformFlags::Rotate270
+						|| info.currentTransform == core::SurfaceTransformFlags::Rotate90)) {
 			info.currentExtent = Extent2(_identityExtent.height, _identityExtent.width);
-			log::warn("ViewImpl", "Fixed:", info.currentExtent,
-					   " Rotation: ", core::getSurfaceTransformFlagsDescription(info.currentTransform));
+			log::warn("ViewImpl", "Fixed:", info.currentExtent, " Rotation: ",
+					core::getSurfaceTransformFlagsDescription(info.currentTransform));
 		}
 	}
 
@@ -261,32 +256,31 @@ core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
 			if (!_activity->getFormatSupport().R8G8B8A8_UNORM) {
 				it = info.formats.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 			break;
 		case core::ImageFormat::R8G8B8_UNORM:
 			if (!_activity->getFormatSupport().R8G8B8_UNORM) {
 				it = info.formats.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 			break;
 		case core::ImageFormat::R5G6B5_UNORM_PACK16:
 			if (!_activity->getFormatSupport().R5G6B5_UNORM) {
 				it = info.formats.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 			break;
 		case core::ImageFormat::R16G16B16A16_SFLOAT:
 			if (!_activity->getFormatSupport().R16G16B16A16_FLOAT) {
 				it = info.formats.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 			break;
-		default:
-			++ it;
+		default: ++it;
 		}
 	}
 
@@ -294,19 +288,11 @@ core::SurfaceInfo ViewImpl::getSurfaceOptions(core::SurfaceInfo &&info) const {
 }
 
 void ViewImpl::setDecorationTone(float value) {
-	performOnThread([this, value] {
-		doSetDecorationTone(value);
-	});
+	performOnThread([this, value] { doSetDecorationTone(value); });
 }
 
 void ViewImpl::setDecorationVisible(bool value) {
-	performOnThread([this, value] {
-		doSetDecorationVisible(value);
-	});
-}
-
-bool ViewImpl::isInputEnabled() const {
-	return false;
+	performOnThread([this, value] { doSetDecorationVisible(value); });
 }
 
 void ViewImpl::linkWithNativeWindow(void *window) {
@@ -335,7 +321,8 @@ void ViewImpl::updateDecorations() {
 	jclass windowClass = env->FindClass("android/view/Window");
 	jclass viewClass = env->FindClass("android/view/View");
 	jmethodID getWindow = env->GetMethodID(activityClass, "getWindow", "()Landroid/view/Window;");
-	jmethodID setNavigationBarColor = env->GetMethodID(windowClass, "setNavigationBarColor", "(I)V");
+	jmethodID setNavigationBarColor =
+			env->GetMethodID(windowClass, "setNavigationBarColor", "(I)V");
 	jmethodID setStatusBarColor = env->GetMethodID(windowClass, "setStatusBarColor", "(I)V");
 	jmethodID clearFlags = env->GetMethodID(windowClass, "clearFlags", "(I)V");
 	jmethodID addFlags = env->GetMethodID(windowClass, "addFlags", "(I)V");
@@ -351,13 +338,13 @@ void ViewImpl::updateDecorations() {
 	updatedVisibility |= flag_SYSTEM_UI_FLAG_LAYOUT_STABLE;
 
 	if (_decorationTone < 0.5f) {
-		env->CallVoidMethod(windowObj, setNavigationBarColor, jint(0xFFFFFFFF));
-		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFFFFFFFF));
+		env->CallVoidMethod(windowObj, setNavigationBarColor, jint(0xFFFF'FFFF));
+		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFFFF'FFFF));
 		updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
 		updatedVisibility = updatedVisibility | flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
 	} else {
-		env->CallVoidMethod(windowObj, setNavigationBarColor, jint(0xFF000000));
-		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFF000000));
+		env->CallVoidMethod(windowObj, setNavigationBarColor, jint(0xFF00'0000));
+		env->CallVoidMethod(windowObj, setStatusBarColor, jint(0xFF00'0000));
 		updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
 		updatedVisibility = updatedVisibility & ~flag_SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
 	}
@@ -386,10 +373,12 @@ void ViewImpl::updateDecorations() {
 		jclass controllerClass = env->FindClass("android/view/WindowInsetsController");
 		jclass typeClass = env->FindClass("android/view/WindowInsets$Type");
 
-		jmethodID getInsetsController = env->GetMethodID(windowClass, "getInsetsController", "()Landroid/view/WindowInsetsController;");
+		jmethodID getInsetsController = env->GetMethodID(windowClass, "getInsetsController",
+				"()Landroid/view/WindowInsetsController;");
 		jmethodID show = env->GetMethodID(controllerClass, "show", "(I)V");
 		jmethodID hide = env->GetMethodID(controllerClass, "hide", "(I)V");
-		jmethodID setSystemBarsAppearance = env->GetMethodID(controllerClass, "setSystemBarsAppearance", "(II)V");
+		jmethodID setSystemBarsAppearance =
+				env->GetMethodID(controllerClass, "setSystemBarsAppearance", "(II)V");
 		jmethodID statusBars = env->GetStaticMethodID(typeClass, "statusBars", "()I");
 		jmethodID navBars = env->GetStaticMethodID(typeClass, "navigationBars", "()I");
 
@@ -403,12 +392,11 @@ void ViewImpl::updateDecorations() {
 
 		if (_decorationTone < 0.5f) {
 			env->CallVoidMethod(insetsControllerObj, setSystemBarsAppearance,
-				APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS,
-				APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
+					APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS,
+					APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
 		} else {
-			env->CallVoidMethod(insetsControllerObj, setSystemBarsAppearance,
-								0,
-								APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
+			env->CallVoidMethod(insetsControllerObj, setSystemBarsAppearance, 0,
+					APPEARANCE_LIGHT_NAVIGATION_BARS | APPEARANCE_LIGHT_STATUS_BARS);
 		}
 
 		if (_decorationVisible) {
@@ -439,17 +427,19 @@ void ViewImpl::updateDecorations() {
 }
 
 void ViewImpl::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)] () mutable {
-		doReadFromClipboard([this, cb = sp::move(cb)] (BytesView view, StringView ct) mutable {
-			_mainLoop->performOnAppThread([this, cb = sp::move(cb), view = view.bytes<Interface>(), ct = ct.str<Interface>()] () {
-				cb(view, ct);
-			}, this);
+	performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
+		doReadFromClipboard([this, cb = sp::move(cb)](BytesView view, StringView ct) mutable {
+			_application->performOnAppThread([this, cb = sp::move(cb),
+													 view = view.bytes<Interface>(),
+													 ct = ct.str<Interface>()]() { cb(view, ct); },
+					this);
 		}, ref);
 	}, this);
 }
 
 void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
-	performOnThread([this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
+	performOnThread(
+			[this, data = data.bytes<Interface>(), contentType = contentType.str<Interface>()] {
 		doWriteToClipboard(data, contentType);
 	}, this);
 }
@@ -463,13 +453,19 @@ void ViewImpl::doReadFromClipboard(Function<void(BytesView, StringView)> &&cb, R
 	jclass clipItemClass = a->env->FindClass("android/content/ClipData$Item");
 	jclass charSequenceClass = a->env->FindClass("java/lang/CharSequence");
 
-	auto getPrimaryClipFn = a->env->GetMethodID(clipboardClass, "getPrimaryClip", "()Landroid/content/ClipData;");
-	auto getClipDescriptionFn = a->env->GetMethodID(clipDataClass, "getDescription", "()Landroid/content/ClipDescription;");
+	auto getPrimaryClipFn =
+			a->env->GetMethodID(clipboardClass, "getPrimaryClip", "()Landroid/content/ClipData;");
+	auto getClipDescriptionFn = a->env->GetMethodID(clipDataClass, "getDescription",
+			"()Landroid/content/ClipDescription;");
 	auto getItemCountFn = a->env->GetMethodID(clipDataClass, "getItemCount", "()I");
-	auto getItemAtFn = a->env->GetMethodID(clipDataClass, "getItemAt", "(I)Landroid/content/ClipData$Item;");
-	auto getMimeTypeFn = a->env->GetMethodID(clipDescriptionClass, "getMimeType", "(I)Ljava/lang/String;");
-	auto coerceToTextFn = a->env->GetMethodID(clipItemClass, "coerceToText", "(Landroid/content/Context;)Ljava/lang/CharSequence;");
-	auto coerceToHtmlTextFn = a->env->GetMethodID(clipItemClass, "coerceToHtmlText", "(Landroid/content/Context;)Ljava/lang/String;");
+	auto getItemAtFn =
+			a->env->GetMethodID(clipDataClass, "getItemAt", "(I)Landroid/content/ClipData$Item;");
+	auto getMimeTypeFn =
+			a->env->GetMethodID(clipDescriptionClass, "getMimeType", "(I)Ljava/lang/String;");
+	auto coerceToTextFn = a->env->GetMethodID(clipItemClass, "coerceToText",
+			"(Landroid/content/Context;)Ljava/lang/CharSequence;");
+	auto coerceToHtmlTextFn = a->env->GetMethodID(clipItemClass, "coerceToHtmlText",
+			"(Landroid/content/Context;)Ljava/lang/String;");
 	auto toStringFn = a->env->GetMethodID(charSequenceClass, "toString", "()Ljava/lang/String;");
 
 	auto primClip = a->env->CallObjectMethod(clipboard, getPrimaryClipFn);
@@ -545,8 +541,10 @@ void ViewImpl::doWriteToClipboard(BytesView data, StringView contentType) {
 	jclass clipboardClass = a->env->FindClass("android/content/ClipboardManager");
 	jclass clipDataClass = a->env->FindClass("android/content/ClipData");
 
-	auto newPlainTextFn = a->env->GetStaticMethodID(clipDataClass, "newPlainText", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;");
-	auto setPrimaryClipFn = a->env->GetMethodID(clipboardClass, "setPrimaryClip", "(Landroid/content/ClipData;)V");
+	auto newPlainTextFn = a->env->GetStaticMethodID(clipDataClass, "newPlainText",
+			"(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;");
+	auto setPrimaryClipFn =
+			a->env->GetMethodID(clipboardClass, "setPrimaryClip", "(Landroid/content/ClipData;)V");
 
 	auto label = a->env->NewStringUTF(contentType.str<Interface>().data());
 	auto content = a->env->NewStringUTF(data.readString().str<Interface>().data());
@@ -568,7 +566,8 @@ Rc<vk::View> createView(Application &loop, const core::Device &dev, ViewInfo &&i
 	return Rc<ViewImpl>::create(loop, const_cast<core::Device &>(dev), move(info));
 }
 
-bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
+bool initInstance(vk::platform::VulkanInstanceData &data,
+		const vk::platform::VulkanInstanceInfo &info) {
 	const char *surfaceExt = nullptr;
 	const char *androidExt = nullptr;
 	for (auto &extension : info.availableExtensions) {
@@ -588,10 +587,11 @@ bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::Vu
 	return false;
 }
 
-uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
+uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device,
+		uint32_t queueIdx) {
 	return 1;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif

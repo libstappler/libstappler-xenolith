@@ -22,10 +22,12 @@
  **/
 
 #include "XLPlatformAndroidActivity.h"
+#include "SPCore.h"
 #include "SPPlatformUnistd.h"
 #include "SPDso.h"
 
 #include "XLPlatformAndroidKeyCodes.cc"
+#include "XLPlatformTextInputInterface.h"
 
 #include <sys/timerfd.h>
 #include <sys/eventfd.h>
@@ -936,29 +938,32 @@ void Activity::handleActivityResult(jint request_code, jint result_code, jobject
 }
 
 void Activity::handleCancelInput() {
-	if (_textInputWrapper) {
-		_textInputWrapper->cancelInput(_textInputWrapper->target);
-		_textInputWrapper = nullptr;
+	if (_rootView) {
+		_rootView->getTextInputInterface()->cancel();
 	}
 }
 
 void Activity::handleTextChanged(jstring text, jint cursor_start, jint cursor_len) {
-	if (_textInputWrapper) {
+	if (_rootView) {
 		jboolean isCopy = 0;
 		auto jchars = _activity->env->GetStringChars(text, &isCopy);
 		auto len = _activity->env->GetStringLength(text);
 
-		_textInputWrapper->textChanged(_textInputWrapper->target,
-				WideStringView(reinterpret_cast<const char16_t *>(jchars), len),
-				core::TextCursor(cursor_start, cursor_len));
+		auto newString = WideStringView(reinterpret_cast<const char16_t *>(jchars), len);
+		_textInputState.string = TextInputString::create(newString);
+		_textInputState.cursor = core::TextCursor(cursor_start, cursor_len);
+
+		_rootView->getTextInputInterface()->textChanged(_textInputState.string,
+				_textInputState.cursor, core::TextCursor::InvalidCursor);
 
 		_activity->env->ReleaseStringChars(text, jchars);
 	}
 }
 
 void Activity::handleInputEnabled(jboolean value) {
-	if (_textInputWrapper) {
-		_textInputWrapper->inputEnabled(_textInputWrapper->target, (value == 0) ? false : true);
+	if (_rootView) {
+		_textInputState.enabled = (value == 0) ? false : true;
+		_rootView->getTextInputInterface()->handleInputEnabled((value == 0) ? false : true);
 	}
 }
 
@@ -982,30 +987,51 @@ void Activity::openUrl(StringView url) {
 	env->env->DeleteLocalRef(intentClass);
 }
 
-void Activity::updateTextCursor(uint32_t pos, uint32_t len) {
-	_activity->env->CallVoidMethod(_activity->clazz, _updateCursorMethod, jint(pos), jint(len));
-}
+bool Activity::updateTextInput(const TextInputRequest &req, TextInputFlags flags) {
+	if (!_textInputState.enabled) {
+		if (hasFlag(flags, TextInputFlags::RunIfDisabled)) {
+			_textInputState = req.getState();
 
-void Activity::updateTextInput(WideStringView str, uint32_t pos, uint32_t len,
-		core::TextInputType type) {
-	auto jstr = _activity->env->NewString(reinterpret_cast<const jchar *>(str.data()), str.size());
-	_activity->env->CallVoidMethod(_activity->clazz, _updateInputMethod, jstr, jint(pos), jint(len),
-			jint(type));
-	_activity->env->DeleteLocalRef(jstr);
-}
+			auto jstr = _activity->env->NewString(
+					reinterpret_cast<const jchar *>(_textInputState.string->string.data()),
+					_textInputState.string->string.size());
 
-void Activity::runTextInput(Rc<ActivityTextInputWrapper> &&wrapper, WideStringView str,
-		uint32_t pos, uint32_t len, core::TextInputType type) {
-	_textInputWrapper = move(wrapper);
+			_activity->env->CallVoidMethod(_activity->clazz, _runInputMethod, jstr,
+					jint(_textInputState.cursor.start), jint(_textInputState.cursor.length),
+					jint(_textInputState.type));
+			_activity->env->DeleteLocalRef(jstr);
+			return true;
+		}
+	} else {
+		if (_textInputState.string->string == req.string->string) {
+			_textInputState = req.getState();
+			_textInputState.enabled = true;
 
-	auto jstr = _activity->env->NewString(reinterpret_cast<const jchar *>(str.data()), str.size());
-	_activity->env->CallVoidMethod(_activity->clazz, _runInputMethod, jstr, jint(pos), jint(len),
-			jint(type));
-	_activity->env->DeleteLocalRef(jstr);
+			_activity->env->CallVoidMethod(_activity->clazz, _updateCursorMethod,
+					jint(_textInputState.cursor.start), jint(_textInputState.cursor.length));
+			return true;
+		} else {
+			_textInputState = req.getState();
+			_textInputState.enabled = true;
+
+			auto jstr = _activity->env->NewString(
+					reinterpret_cast<const jchar *>(_textInputState.string->string.data()),
+					_textInputState.string->string.size());
+
+			_activity->env->CallVoidMethod(_activity->clazz, _updateInputMethod, jstr,
+					jint(_textInputState.cursor.start), jint(_textInputState.cursor.length),
+					jint(_textInputState.type));
+			_activity->env->DeleteLocalRef(jstr);
+			return true;
+		}
+	}
+	return false;
 }
 
 void Activity::cancelTextInput() {
-	_activity->env->CallVoidMethod(_activity->clazz, _cancelInputMethod);
+	if (_textInputState.enabled) {
+		_activity->env->CallVoidMethod(_activity->clazz, _cancelInputMethod);
+	}
 }
 
 jni::Local Activity::getDisplay() const { return Activity_getDisplay(_activity, _sdkVersion); }
