@@ -343,9 +343,7 @@ bool PlatformApplication::worker() {
 void PlatformApplication::end() {
 	stop();
 
-	_appLooper->wakeup(event::QueueWakeupInfo{.flags = event::WakeupFlags::Graceful
-				| event::WakeupFlags::SuspendThreads,
-		.timeout = TimeInterval::seconds(1)});
+	_appLooper->wakeup(event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads);
 }
 
 void PlatformApplication::wakeup() {
@@ -465,9 +463,7 @@ void PlatformApplication::platformWaitExit() {
 
 void PlatformApplication::platformSignalExit() {
 	_mainLooper->performOnThread([this] {
-		_mainLooper->wakeup(event::QueueWakeupInfo{.flags = event::WakeupFlags::Graceful
-					| event::WakeupFlags::SuspendThreads,
-			.timeout = TimeInterval::seconds(1)});
+		_mainLooper->wakeup(event::WakeupFlags::Graceful | event::WakeupFlags::SuspendThreads);
 	}, this, false);
 }
 

@@ -24,11 +24,14 @@
 #include "XLStorageServer.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
+#include "SPMemAlloc.h"
+#include "SPMemPoolInterface.h"
 #include "XLStorageComponent.h"
 #include "XLApplication.h"
 #include "SPValid.h"
 #include "SPThread.h"
 #include "SPSqlDriver.h"
+#include <new>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
@@ -65,33 +68,37 @@ protected:
 	ServerComponentData *_components = nullptr;
 };
 
+struct ServerDataTaskCallback {
+	Function<bool(const Server &, const db::Transaction &)> callback;
+	Rc<Ref> ref;
+
+	ServerDataTaskCallback() = default;
+	ServerDataTaskCallback(Function<bool(const Server &, const db::Transaction &)> &&cb)
+	: callback(sp::move(cb)) { }
+	ServerDataTaskCallback(Function<bool(const Server &, const db::Transaction &)> &&cb, Ref *ref)
+	: callback(sp::move(cb)), ref(ref) { }
+};
+
+struct ServerDataStorage : memory::AllocPool {
+	db::Map<StringView, StringView> params;
+	db::Map<StringView, const db::Scheme *> predefinedSchemes;
+	db::Map<ComponentContainer *, ServerComponentData *> components;
+	db::String documentRoot;
+	memory::PriorityQueue<ServerDataTaskCallback> queue;
+	StringView serverName;
+};
 
 struct Server::ServerData : public thread::Thread, public db::ApplicationInterface {
-	struct TaskCallback {
-		Function<bool(const Server &, const db::Transaction &)> callback;
-		Rc<Ref> ref;
-
-		TaskCallback() = default;
-		TaskCallback(Function<bool(const Server &, const db::Transaction &)> &&cb)
-		: callback(sp::move(cb)) { }
-		TaskCallback(Function<bool(const Server &, const db::Transaction &)> &&cb, Ref *ref)
-		: callback(sp::move(cb)), ref(ref) { }
-	};
-
+	memory::allocator_t *_serverAlloc = nullptr;
 	memory::pool_t *serverPool = nullptr;
 	memory::pool_t *threadPool = nullptr;
 	memory::pool_t *asyncPool = nullptr;
 	Application *application = nullptr;
-	db::Map<StringView, StringView> params;
-	db::Map<StringView, const db::Scheme *> predefinedSchemes;
-	db::Map<ComponentContainer *, ServerComponentData *> components;
+	ServerDataStorage *storage = nullptr;
 
-	db::String documentRoot;
-	StringView serverName;
 	std::condition_variable condition;
 	Mutex mutexQueue;
 	Mutex mutexFree;
-	memory::PriorityQueue<TaskCallback> queue;
 	db::sql::Driver *driver = nullptr;
 	db::sql::Driver::Handle handle;
 	Server *server = nullptr;
@@ -109,7 +116,7 @@ struct Server::ServerData : public thread::Thread, public db::ApplicationInterfa
 	ServerData();
 	virtual ~ServerData();
 
-	bool execute(const TaskCallback &);
+	bool execute(const ServerDataTaskCallback &);
 	void runAsync();
 
 	virtual void threadInit() override;
@@ -150,11 +157,13 @@ Rc<ApplicationExtension> Server::createServer(Application *app, const Value &par
 Server::~Server() { }
 
 bool Server::init(Application *app, const Value &params) {
-	auto pool = memory::pool::create();
+	auto alloc = memory::allocator::create();
+	auto pool = memory::pool::create(alloc);
 
 	memory::pool::context ctx(pool);
 
-	_data = new (pool) ServerData;
+	_data = new (std::nothrow) ServerData;
+	_data->_serverAlloc = alloc;
 	_data->serverPool = pool;
 	_data->application = app;
 
@@ -164,9 +173,9 @@ bool Server::init(Application *app, const Value &params) {
 		if (it.first == "driver") {
 			driver = StringView(it.second.getString());
 		} else if (it.first == "serverName") {
-			_data->serverName = StringView(it.second.getString()).pdup(pool);
+			_data->storage->serverName = StringView(it.second.getString()).pdup(pool);
 		} else {
-			_data->params.emplace(StringView(it.first).pdup(pool),
+			_data->storage->params.emplace(StringView(it.first).pdup(pool),
 					StringView(it.second.getString()).pdup(pool));
 		}
 	}
@@ -177,6 +186,7 @@ bool Server::init(Application *app, const Value &params) {
 
 	_data->driver = db::sql::Driver::open(pool, _data, driver);
 	if (!_data->driver) {
+		log::error("storage::Server", "Fail to open DB driver: ", driver);
 		return false;
 	}
 
@@ -190,9 +200,15 @@ void Server::invalidate(Application *) {
 	if (_data) {
 		for (auto &it : _data->appComponents) { it.second->handleComponentsUnloaded(*this); }
 
+		auto alloc = _data->_serverAlloc;
 		auto serverPool = _data->serverPool;
-		_data->~ServerData();
+		_data->stop();
+		_data->condition.notify_all();
+		_data->waitStopped();
 		memory::pool::destroy(serverPool);
+		memory::allocator::destroy(alloc);
+		_data->storage = nullptr;
+		_data->release(0);
 		_data = nullptr;
 	}
 }
@@ -751,9 +767,9 @@ bool Server::perform(Function<bool(const Server &, const db::Transaction &)> &&c
 	}
 
 	if (std::this_thread::get_id() == _data->getThreadId()) {
-		_data->execute(ServerData::TaskCallback(sp::move(cb), ref));
+		_data->execute(ServerDataTaskCallback(sp::move(cb), ref));
 	} else {
-		_data->queue.push(0, false, ServerData::TaskCallback(sp::move(cb), ref));
+		_data->storage->queue.push(0, false, ServerDataTaskCallback(sp::move(cb), ref));
 		_data->condition.notify_one();
 	}
 	return true;
@@ -799,18 +815,19 @@ bool Server::get(const Scheme &scheme, DataCallback &&cb, StringView alias,
 }
 
 Server::ServerData::ServerData() {
-	queue.setQueueLocking(mutexQueue);
-	queue.setFreeLocking(mutexFree);
+	storage = new (memory::pool::acquire()) ServerDataStorage;
+	storage->queue.setQueueLocking(mutexQueue);
+	storage->queue.setFreeLocking(mutexFree);
 
 	filesystem::enumeratePaths(FileCategory::AppData, [&](StringView str, FileFlags) {
-		documentRoot = str.str<db::Interface>();
+		storage->documentRoot = str.str<db::Interface>();
 		return false;
 	});
 }
 
-Server::ServerData::~ServerData() { condition.notify_all(); }
+Server::ServerData::~ServerData() { }
 
-bool Server::ServerData::execute(const TaskCallback &task) {
+bool Server::ServerData::execute(const ServerDataTaskCallback &task) {
 	if (currentTransaction) {
 		if (!task.callback) {
 			return false;
@@ -857,13 +874,17 @@ void Server::ServerData::runAsync() {
 
 void Server::ServerData::threadInit() {
 	memory::pool::perform([&] {
-		handle = driver->connect(params);
+		handle = driver->connect(storage->params);
 		if (!handle.get()) {
 			StringStream out;
-			for (auto &it : params) { out << "\n\t" << it.first << ": " << it.second; }
+			for (auto &it : storage->params) { out << "\n\t" << it.first << ": " << it.second; }
 			log::error("StorageServer", "Fail to initialize DB with params: ", out.str());
 		}
 	}, serverPool);
+
+	if (!handle.get()) {
+		return;
+	}
 
 	asyncPool = memory::pool::create();
 	threadPool = memory::pool::create();
@@ -872,16 +893,16 @@ void Server::ServerData::threadInit() {
 		driver->init(handle, db::Vector<db::StringView>());
 
 		driver->performWithStorage(handle, [&, this](const db::Adapter &adapter) {
-			db::Scheme::initSchemes(predefinedSchemes);
+			db::Scheme::initSchemes(storage->predefinedSchemes);
 			interfaceConfig.name = adapter.getDatabaseName();
-			adapter.init(interfaceConfig, predefinedSchemes);
+			adapter.init(interfaceConfig, storage->predefinedSchemes);
 		});
 	}, threadPool);
 
 	runAsync();
 
-	if (!serverName.empty()) {
-		thread::ThreadInfo::setThreadInfo(serverName);
+	if (!storage->serverName.empty()) {
+		thread::ThreadInfo::setThreadInfo(storage->serverName);
 	}
 
 	now = sp::platform::clock(ClockType::Monotonic);
@@ -900,16 +921,15 @@ bool Server::ServerData::worker() {
 		handleHeartbeat();
 	}
 
-	TaskCallback task;
+	ServerDataTaskCallback task;
 	do {
-		queue.pop_direct([&](memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb) {
-			task = move(cb);
-		});
+		storage->queue.pop_direct([&](memory::PriorityQueue<ServerDataTaskCallback>::PriorityType,
+										  ServerDataTaskCallback &&cb) { task = move(cb); });
 	} while (0);
 
 	if (!task.callback) {
 		std::unique_lock<std::mutex> lock(mutexQueue);
-		if (!queue.empty(lock)) {
+		if (!storage->queue.empty(lock)) {
 			return true;
 		}
 		condition.wait_for(lock, std::chrono::seconds(1));
@@ -925,24 +945,24 @@ bool Server::ServerData::worker() {
 }
 
 void Server::ServerData::threadDispose() {
-	memory::pool::perform([&] {
-		while (!queue.empty()) {
-			TaskCallback task;
-			do {
-				queue.pop_direct(
-						[&](memory::PriorityQueue<TaskCallback>::PriorityType, TaskCallback &&cb)
-								SP_COVERAGE_TRIVIAL { task = move(cb); });
-			} while (0);
+	while (!storage->queue.empty()) {
+		ServerDataTaskCallback task;
+		do {
+			storage->queue.pop_direct(
+					[&](memory::PriorityQueue<ServerDataTaskCallback>::PriorityType,
+							ServerDataTaskCallback &&cb) SP_COVERAGE_TRIVIAL { task = move(cb); });
+		} while (0);
 
-			if (task.callback) {
-				execute(task);
-			}
+		if (task.callback) {
+			execute(task);
 		}
+	}
 
+	memory::pool::perform([&] {
 		if (driver->isValid(handle)) {
 			driver->performWithStorage(handle, [&, this](const db::Adapter &adapter) {
-				auto it = components.begin();
-				while (it != components.end()) {
+				auto it = storage->components.begin();
+				while (it != storage->components.end()) {
 					adapter.performWithTransaction([&, this](const db::Transaction &t) {
 						do {
 							memory::pool::context ctx(it->second->pool);
@@ -956,9 +976,9 @@ void Server::ServerData::threadDispose() {
 						return true;
 					});
 					memory::pool::destroy(it->second->pool);
-					it = components.erase(it);
+					it = storage->components.erase(it);
 				}
-				components.clear();
+				storage->components.clear();
 			});
 		}
 	}, threadPool);
@@ -970,7 +990,7 @@ void Server::ServerData::threadDispose() {
 }
 
 void Server::ServerData::handleHeartbeat() {
-	for (auto &it : components) {
+	for (auto &it : storage->components) {
 		for (auto &iit : it.second->components) { iit.second->handleHeartbeat(*server); }
 	}
 }
@@ -995,8 +1015,8 @@ bool Server::ServerData::addComponent(ComponentContainer *comp, const db::Transa
 }
 
 void Server::ServerData::removeComponent(ComponentContainer *comp, const db::Transaction &t) {
-	auto cmpIt = components.find(comp);
-	if (cmpIt == components.end()) {
+	auto cmpIt = storage->components.find(comp);
+	if (cmpIt == storage->components.end()) {
 		return;
 	}
 
@@ -1011,7 +1031,7 @@ void Server::ServerData::removeComponent(ComponentContainer *comp, const db::Tra
 	} while (0);
 
 	memory::pool::destroy(cmpIt->second->pool);
-	components.erase(cmpIt);
+	storage->components.erase(cmpIt);
 }
 
 void Server::ServerData::scheduleAyncDbTask(
@@ -1020,7 +1040,7 @@ void Server::ServerData::scheduleAyncDbTask(
 	addAsyncTask(setupCb);
 }
 
-db::StringView Server::ServerData::getDocumentRoot() const { return documentRoot; }
+db::StringView Server::ServerData::getDocumentRoot() const { return storage->documentRoot; }
 
 const db::Scheme *Server::ServerData::getFileScheme() const { return nullptr; }
 
@@ -1035,7 +1055,7 @@ void Server::ServerData::pushDebugMessage(db::Value &&val) const {
 }
 
 void Server::ServerData::initTransaction(db::Transaction &t) const {
-	for (auto &it : components) {
+	for (auto &it : storage->components) {
 		for (auto &iit : it.second->components) { iit.second->handleStorageTransaction(t); }
 	}
 }
@@ -1072,7 +1092,7 @@ bool ServerComponentLoader::run(ComponentContainer *comp) {
 	memory::pool::context ctx(_pool);
 
 	_components->container = comp;
-	_data->components.emplace(comp, _components);
+	_data->storage->components.emplace(comp, _components);
 
 	db::Scheme::initSchemes(_components->schemes);
 	_transaction->getAdapter().init(_data->interfaceConfig, _components->schemes);

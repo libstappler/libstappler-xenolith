@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +39,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 #if LINUX
 
-SPUNUSED static void registerNetworkCallback(Application *, void *key,
+SPUNUSED static void registerNetworkCallback(Application *app, void *key,
 		Function<void(NetworkCapabilities)> &&cb) {
-	auto lib = stappler::xenolith::platform::DBusLibrary::get();
-	lib.addNetworkConnectionCallback(key,
+	auto lib = Rc<stappler::xenolith::platform::DBusLibrary>::alloc();
+	app->addExtension(Rc<stappler::xenolith::platform::DBusLibrary>(lib));
+	lib->addNetworkConnectionCallback(key,
 			[cb = sp::move(cb)](const stappler::xenolith::platform::NetworkState &state) {
 		NetworkCapabilities defaultFlags = NetworkCapabilities::NotRoaming
 				| NetworkCapabilities::NotCongested | NetworkCapabilities::NotVpn;
@@ -88,9 +90,9 @@ SPUNUSED static void registerNetworkCallback(Application *, void *key,
 	});
 }
 
-SPUNUSED static void unregisterNetworkCallback(Application *, void *key) {
-	auto lib = stappler::xenolith::platform::DBusLibrary::get();
-	lib.removeNetworkConnectionCallback(key);
+SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
+	auto lib = app->getExtension<stappler::xenolith::platform::DBusLibrary>();
+	lib->removeNetworkConnectionCallback(key);
 }
 
 #endif

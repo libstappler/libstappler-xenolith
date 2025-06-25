@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,7 @@
 #include "SPThread.h"
 #include "SPDso.h"
 
+#include <new>
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
@@ -32,71 +34,65 @@
 #define NM_DBUS_INTERFACE_NAME "org.freedesktop.NetworkManager"
 #define NM_DBUS_SIGNAL_STATE_CHANGED "StateChanged"
 
-typedef enum
-{
-  DBUS_BUS_SESSION,    /**< The login session bus */
-  DBUS_BUS_SYSTEM,     /**< The systemwide bus */
-  DBUS_BUS_STARTER     /**< The bus that started us, if any */
+typedef enum {
+	DBUS_BUS_SESSION, /**< The login session bus */
+	DBUS_BUS_SYSTEM, /**< The systemwide bus */
+	DBUS_BUS_STARTER /**< The bus that started us, if any */
 } DBusBusType;
 
-typedef enum
-{
-  DBUS_HANDLER_RESULT_HANDLED,
-  DBUS_HANDLER_RESULT_NOT_YET_HANDLED,
-  DBUS_HANDLER_RESULT_NEED_MEMORY
+typedef enum {
+	DBUS_HANDLER_RESULT_HANDLED,
+	DBUS_HANDLER_RESULT_NOT_YET_HANDLED,
+	DBUS_HANDLER_RESULT_NEED_MEMORY
 } DBusHandlerResult;
 
-typedef enum
-{
-  DBUS_WATCH_READABLE = 1 << 0,
-  DBUS_WATCH_WRITABLE = 1 << 1,
-  DBUS_WATCH_ERROR    = 1 << 2,
-  DBUS_WATCH_HANGUP   = 1 << 3
-  /* Internal to libdbus, there is also _DBUS_WATCH_NVAL in dbus-watch.h */
+typedef enum {
+	DBUS_WATCH_READABLE = 1 << 0,
+	DBUS_WATCH_WRITABLE = 1 << 1,
+	DBUS_WATCH_ERROR = 1 << 2,
+	DBUS_WATCH_HANGUP = 1 << 3
+	/* Internal to libdbus, there is also _DBUS_WATCH_NVAL in dbus-watch.h */
 } DBusWatchFlags;
 
-typedef enum
-{
-  DBUS_DISPATCH_DATA_REMAINS,  /**< There is more data to potentially convert to messages. */
-  DBUS_DISPATCH_COMPLETE,      /**< All currently available data has been processed. */
-  DBUS_DISPATCH_NEED_MEMORY    /**< More memory is needed to continue. */
+typedef enum {
+	DBUS_DISPATCH_DATA_REMAINS, /**< There is more data to potentially convert to messages. */
+	DBUS_DISPATCH_COMPLETE, /**< All currently available data has been processed. */
+	DBUS_DISPATCH_NEED_MEMORY /**< More memory is needed to continue. */
 } DBusDispatchStatus;
 
-struct DBusError
-{
-  const char *name;    /**< public error name field */
-  const char *message; /**< public error message field */
+struct DBusError {
+	const char *name; /**< public error name field */
+	const char *message; /**< public error message field */
 
-  unsigned int dummy1 : 1; /**< placeholder */
-  unsigned int dummy2 : 1; /**< placeholder */
-  unsigned int dummy3 : 1; /**< placeholder */
-  unsigned int dummy4 : 1; /**< placeholder */
-  unsigned int dummy5 : 1; /**< placeholder */
+	unsigned int dummy1 : 1; /**< placeholder */
+	unsigned int dummy2 : 1; /**< placeholder */
+	unsigned int dummy3 : 1; /**< placeholder */
+	unsigned int dummy4 : 1; /**< placeholder */
+	unsigned int dummy5 : 1; /**< placeholder */
 
-  void *padding1; /**< placeholder */
+	void *padding1; /**< placeholder */
 };
 
 typedef struct DBusMessageIter DBusMessageIter;
 
-struct DBusMessageIter
-{
-  void *dummy1;         /**< Don't use this */
-  void *dummy2;         /**< Don't use this */
-  uint32_t dummy3; /**< Don't use this */
-  int dummy4;           /**< Don't use this */
-  int dummy5;           /**< Don't use this */
-  int dummy6;           /**< Don't use this */
-  int dummy7;           /**< Don't use this */
-  int dummy8;           /**< Don't use this */
-  int dummy9;           /**< Don't use this */
-  int dummy10;          /**< Don't use this */
-  int dummy11;          /**< Don't use this */
-  int pad1;             /**< Don't use this */
-  void *pad2;           /**< Don't use this */
-  void *pad3;           /**< Don't use this */
+struct DBusMessageIter {
+	void *dummy1; /**< Don't use this */
+	void *dummy2; /**< Don't use this */
+	uint32_t dummy3; /**< Don't use this */
+	int dummy4; /**< Don't use this */
+	int dummy5; /**< Don't use this */
+	int dummy6; /**< Don't use this */
+	int dummy7; /**< Don't use this */
+	int dummy8; /**< Don't use this */
+	int dummy9; /**< Don't use this */
+	int dummy10; /**< Don't use this */
+	int dummy11; /**< Don't use this */
+	int pad1; /**< Don't use this */
+	void *pad2; /**< Don't use this */
+	void *pad3; /**< Don't use this */
 };
 
-typedef uint32_t  dbus_bool_t;
+typedef uint32_t dbus_bool_t;
 typedef struct DBusMessage DBusMessage;
 typedef struct DBusConnection DBusConnection;
 typedef struct DBusPendingCall DBusPendingCall;
@@ -109,43 +105,47 @@ typedef void (*DBusRemoveWatchFunction)(DBusWatch *watch, void *data);
 typedef dbus_bool_t (*DBusAddTimeoutFunction)(DBusTimeout *timeout, void *data);
 typedef void (*DBusTimeoutToggledFunction)(DBusTimeout *timeout, void *data);
 typedef void (*DBusRemoveTimeoutFunction)(DBusTimeout *timeout, void *data);
-typedef void (*DBusDispatchStatusFunction)(DBusConnection *connection, DBusDispatchStatus new_status, void *data);
+typedef void (*DBusDispatchStatusFunction)(DBusConnection *connection,
+		DBusDispatchStatus new_status, void *data);
 typedef void (*DBusWakeupMainFunction)(void *data);
-typedef dbus_bool_t (*DBusAllowUnixUserFunction)(DBusConnection *connection, unsigned long uid, void *data);
-typedef dbus_bool_t (*DBusAllowWindowsUserFunction)(DBusConnection *connection, const char *user_sid, void *data);
-typedef void (*DBusPendingCallNotifyFunction) (DBusPendingCall *pending, void *user_data);
-typedef void (*DBusFreeFunction) (void *memory);
-typedef DBusHandlerResult (*DBusHandleMessageFunction) (DBusConnection *connection, DBusMessage *message, void *user_data);
+typedef dbus_bool_t (
+		*DBusAllowUnixUserFunction)(DBusConnection *connection, unsigned long uid, void *data);
+typedef dbus_bool_t (*DBusAllowWindowsUserFunction)(DBusConnection *connection,
+		const char *user_sid, void *data);
+typedef void (*DBusPendingCallNotifyFunction)(DBusPendingCall *pending, void *user_data);
+typedef void (*DBusFreeFunction)(void *memory);
+typedef DBusHandlerResult (*DBusHandleMessageFunction)(DBusConnection *connection,
+		DBusMessage *message, void *user_data);
 
 enum DBusTypeWrapper {
-	DBUS_TYPE_INVALID     = int('\0'),
-	DBUS_TYPE_BYTE        = int( 'y'),
-	DBUS_TYPE_BOOLEAN     = int( 'b'),
-	DBUS_TYPE_INT16       = int( 'n'),
-	DBUS_TYPE_UINT16      = int( 'q'),
-	DBUS_TYPE_INT32       = int( 'i'),
-	DBUS_TYPE_UINT32      = int( 'u'),
-	DBUS_TYPE_INT64       = int( 'x'),
-	DBUS_TYPE_UINT64      = int( 't'),
-	DBUS_TYPE_DOUBLE      = int( 'd'),
-	DBUS_TYPE_STRING      = int( 's'),
-	DBUS_TYPE_OBJECT_PATH = int( 'o'),
-	DBUS_TYPE_SIGNATURE   = int( 'g'),
-	DBUS_TYPE_UNIX_FD     = int( 'h'),
+	DBUS_TYPE_INVALID = int('\0'),
+	DBUS_TYPE_BYTE = int('y'),
+	DBUS_TYPE_BOOLEAN = int('b'),
+	DBUS_TYPE_INT16 = int('n'),
+	DBUS_TYPE_UINT16 = int('q'),
+	DBUS_TYPE_INT32 = int('i'),
+	DBUS_TYPE_UINT32 = int('u'),
+	DBUS_TYPE_INT64 = int('x'),
+	DBUS_TYPE_UINT64 = int('t'),
+	DBUS_TYPE_DOUBLE = int('d'),
+	DBUS_TYPE_STRING = int('s'),
+	DBUS_TYPE_OBJECT_PATH = int('o'),
+	DBUS_TYPE_SIGNATURE = int('g'),
+	DBUS_TYPE_UNIX_FD = int('h'),
 
 	/* Compound types */
-	DBUS_TYPE_ARRAY       = int( 'a'),
-	DBUS_TYPE_VARIANT     = int( 'v'),
-	DBUS_TYPE_STRUCT      = int( 'r'),
-	DBUS_TYPE_DICT_ENTRY  = int( 'e'),
+	DBUS_TYPE_ARRAY = int('a'),
+	DBUS_TYPE_VARIANT = int('v'),
+	DBUS_TYPE_STRUCT = int('r'),
+	DBUS_TYPE_DICT_ENTRY = int('e'),
 };
 
 enum DBusMessageTypeWrapper {
-	DBUS_MESSAGE_TYPE_INVALID		= int(0),
-	DBUS_MESSAGE_TYPE_METHOD_CALL	= int(1),
-	DBUS_MESSAGE_TYPE_METHOD_RETURN	= int(2),
-	DBUS_MESSAGE_TYPE_ERROR			= int(3),
-	DBUS_MESSAGE_TYPE_SIGNAL		= int(4),
+	DBUS_MESSAGE_TYPE_INVALID = int(0),
+	DBUS_MESSAGE_TYPE_METHOD_CALL = int(1),
+	DBUS_MESSAGE_TYPE_METHOD_RETURN = int(2),
+	DBUS_MESSAGE_TYPE_ERROR = int(3),
+	DBUS_MESSAGE_TYPE_SIGNAL = int(4),
 };
 
 enum NMDeviceType {
@@ -158,7 +158,8 @@ enum NMDeviceType {
 	NM_DEVICE_TYPE_BT = 5, // a Bluetooth device supporting PAN or DUN access protocols
 	NM_DEVICE_TYPE_OLPC_MESH = 6, // an OLPC XO mesh networking device
 	NM_DEVICE_TYPE_WIMAX = 7, // an 802.16e Mobile WiMAX broadband device
-	NM_DEVICE_TYPE_MODEM = 8, // a modem supporting analog telephone, CDMA/EVDO, GSM/UMTS, or LTE network access protocols
+	NM_DEVICE_TYPE_MODEM =
+			8, // a modem supporting analog telephone, CDMA/EVDO, GSM/UMTS, or LTE network access protocols
 	NM_DEVICE_TYPE_INFINIBAND = 9, // an IP-over-InfiniBand device
 	NM_DEVICE_TYPE_BOND = 10, // a bond master interface
 	NM_DEVICE_TYPE_VLAN = 11, // an 802.1Q VLAN interface
@@ -176,11 +177,13 @@ static constexpr auto DBUS_TIMEOUT_USE_DEFAULT = int(-1);
 
 #if XL_LINK
 extern "C" {
-void dbus_error_init (DBusError *error);
-void dbus_error_free (DBusError *error);
-DBusMessage* dbus_message_new_method_call(const char *bus_name, const char *path, const char *iface, const char *method);
+void dbus_error_init(DBusError *error);
+void dbus_error_free(DBusError *error);
+DBusMessage *dbus_message_new_method_call(const char *bus_name, const char *path, const char *iface,
+		const char *method);
 dbus_bool_t dbus_message_append_args(DBusMessage *message, int first_arg_type, ...);
-dbus_bool_t dbus_message_is_signal(DBusMessage *message, const char *iface, const char *signal_name);
+dbus_bool_t dbus_message_is_signal(DBusMessage *message, const char *iface,
+		const char *signal_name);
 dbus_bool_t dbus_message_is_error(DBusMessage *message, const char *error_name);
 void dbus_message_unref(DBusMessage *message);
 dbus_bool_t dbus_message_iter_init(DBusMessage *message, DBusMessageIter *iter);
@@ -189,52 +192,54 @@ void dbus_message_iter_next(DBusMessageIter *iter);
 int dbus_message_iter_get_arg_type(DBusMessageIter *iter);
 void dbus_message_iter_get_basic(DBusMessageIter *iter, void *value);
 int dbus_message_get_type(DBusMessage *message);
-const char* dbus_message_get_path(DBusMessage *message);
-const char* dbus_message_get_interface(DBusMessage *message);
-const char* dbus_message_get_member(DBusMessage *message);
-const char* dbus_message_get_error_name(DBusMessage *message);
-const char* dbus_message_get_destination(DBusMessage *message);
-const char* dbus_message_get_sender(DBusMessage *message);
-const char* dbus_message_get_signature(DBusMessage *message);
-DBusMessage* dbus_connection_send_with_reply_and_block(DBusConnection *connection,
+const char *dbus_message_get_path(DBusMessage *message);
+const char *dbus_message_get_interface(DBusMessage *message);
+const char *dbus_message_get_member(DBusMessage *message);
+const char *dbus_message_get_error_name(DBusMessage *message);
+const char *dbus_message_get_destination(DBusMessage *message);
+const char *dbus_message_get_sender(DBusMessage *message);
+const char *dbus_message_get_signature(DBusMessage *message);
+DBusMessage *dbus_connection_send_with_reply_and_block(DBusConnection *connection,
 		DBusMessage *message, int timeout_milliseconds, DBusError *error);
-dbus_bool_t dbus_connection_send_with_reply(DBusConnection *connection,
-		DBusMessage *message, DBusPendingCall **pending_return, int timeout_milliseconds);
-dbus_bool_t dbus_connection_set_watch_functions(DBusConnection *connection, DBusAddWatchFunction add_function,
-		DBusRemoveWatchFunction remove_function, DBusWatchToggledFunction toggled_function,
-		void *data, DBusFreeFunction free_data_function);
-dbus_bool_t dbus_connection_set_timeout_functions(DBusConnection *connection, DBusAddTimeoutFunction add_function,
-		DBusRemoveTimeoutFunction remove_function, DBusTimeoutToggledFunction toggled_function,
-		void *data, DBusFreeFunction free_data_function);
-void dbus_connection_set_wakeup_main_function(DBusConnection *connection, DBusWakeupMainFunction wakeup_main_function,
-		void *data, DBusFreeFunction free_data_function);
-void dbus_connection_set_dispatch_status_function(DBusConnection *connection, DBusDispatchStatusFunction function,
-		void *data, DBusFreeFunction free_data_function);
-dbus_bool_t dbus_connection_add_filter(DBusConnection *connection, DBusHandleMessageFunction function,
-		void *user_data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_connection_send_with_reply(DBusConnection *connection, DBusMessage *message,
+		DBusPendingCall **pending_return, int timeout_milliseconds);
+dbus_bool_t dbus_connection_set_watch_functions(DBusConnection *connection,
+		DBusAddWatchFunction add_function, DBusRemoveWatchFunction remove_function,
+		DBusWatchToggledFunction toggled_function, void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_connection_set_timeout_functions(DBusConnection *connection,
+		DBusAddTimeoutFunction add_function, DBusRemoveTimeoutFunction remove_function,
+		DBusTimeoutToggledFunction toggled_function, void *data,
+		DBusFreeFunction free_data_function);
+void dbus_connection_set_wakeup_main_function(DBusConnection *connection,
+		DBusWakeupMainFunction wakeup_main_function, void *data,
+		DBusFreeFunction free_data_function);
+void dbus_connection_set_dispatch_status_function(DBusConnection *connection,
+		DBusDispatchStatusFunction function, void *data, DBusFreeFunction free_data_function);
+dbus_bool_t dbus_connection_add_filter(DBusConnection *connection,
+		DBusHandleMessageFunction function, void *user_data, DBusFreeFunction free_data_function);
 void dbus_connection_close(DBusConnection *connection);
 void dbus_connection_unref(DBusConnection *connection);
 void dbus_connection_flush(DBusConnection *connection);
 DBusDispatchStatus dbus_connection_dispatch(DBusConnection *connection);
 dbus_bool_t dbus_error_is_set(const DBusError *error);
-DBusConnection* dbus_bus_get(DBusBusType type, DBusError *error);
-DBusConnection* dbus_bus_get_private(DBusBusType type, DBusError *error);
+DBusConnection *dbus_bus_get(DBusBusType type, DBusError *error);
+DBusConnection *dbus_bus_get_private(DBusBusType type, DBusError *error);
 void dbus_bus_add_match(DBusConnection *connection, const char *rule, DBusError *error);
-DBusPendingCall* dbus_pending_call_ref(DBusPendingCall *pending);
+DBusPendingCall *dbus_pending_call_ref(DBusPendingCall *pending);
 void dbus_pending_call_unref(DBusPendingCall *pending);
-dbus_bool_t dbus_pending_call_set_notify(DBusPendingCall *pending, DBusPendingCallNotifyFunction function,
-		void *user_data, DBusFreeFunction free_user_data);
+dbus_bool_t dbus_pending_call_set_notify(DBusPendingCall *pending,
+		DBusPendingCallNotifyFunction function, void *user_data, DBusFreeFunction free_user_data);
 dbus_bool_t dbus_pending_call_get_completed(DBusPendingCall *pending);
-DBusMessage* dbus_pending_call_steal_reply(DBusPendingCall *pending);
+DBusMessage *dbus_pending_call_steal_reply(DBusPendingCall *pending);
 void dbus_pending_call_block(DBusPendingCall *pending);
 int dbus_watch_get_unix_fd(DBusWatch *watch);
 unsigned int dbus_watch_get_flags(DBusWatch *watch);
-void* dbus_watch_get_data(DBusWatch *watch);
+void *dbus_watch_get_data(DBusWatch *watch);
 void dbus_watch_set_data(DBusWatch *watch, void *data, DBusFreeFunction free_data_function);
 dbus_bool_t dbus_watch_handle(DBusWatch *watch, unsigned int flags);
 dbus_bool_t dbus_watch_get_enabled(DBusWatch *watch);
 int dbus_timeout_get_interval(DBusTimeout *timeout);
-void* dbus_timeout_get_data(DBusTimeout *timeout);
+void *dbus_timeout_get_data(DBusTimeout *timeout);
 void dbus_timeout_set_data(DBusTimeout *timeout, void *data, DBusFreeFunction free_data_function);
 dbus_bool_t dbus_timeout_handle(DBusTimeout *timeout);
 dbus_bool_t dbus_timeout_get_enabled(DBusTimeout *timeout);
@@ -301,7 +306,7 @@ struct DBusInterface : public thread::Thread {
 	struct EventStruct {
 		EventType type;
 		int fd;
-	    struct epoll_event event;
+		struct epoll_event event;
 		Connection *connection;
 		bool enabled = false;
 		union {
@@ -320,7 +325,7 @@ struct DBusInterface : public thread::Thread {
 	DBusMessage *getSettingSync(Connection &c, const char *key, const char *value, Error &err);
 	bool parseType(DBusMessage *const reply, const int type, void *value);
 
-	explicit operator bool () const { return handle ? true : false; }
+	explicit operator bool() const { return handle ? true : false; }
 
 	bool openHandle(Dso &d);
 
@@ -343,8 +348,9 @@ struct DBusInterface : public thread::Thread {
 
 	DBusPendingCall *loadServiceNames(Connection &c, Set<String> &, Function<void()> &&);
 
-	DBusPendingCall *callMethod(Connection &c, StringView bus, StringView path, StringView iface, StringView method,
-			const Callback<void(DBusMessage *)> &, Function<void(DBusMessage *)> &&);
+	DBusPendingCall *callMethod(Connection &c, StringView bus, StringView path, StringView iface,
+			StringView method, const Callback<void(DBusMessage *)> &,
+			Function<void(DBusMessage *)> &&);
 
 	void parseServiceList(Set<String> &, DBusMessage *);
 	NetworkState parseNetworkState(DBusMessage *);
@@ -366,67 +372,80 @@ struct DBusInterface : public thread::Thread {
 		return interfaceTheme;
 	}
 
-	void (*dbus_error_init) (DBusError *error) = nullptr;
-	void (*dbus_error_free) (DBusError *error) = nullptr;
-	DBusMessage* (*dbus_message_new_method_call) (const char *bus_name, const char *path, const char *iface, const char *method) = nullptr;
-	dbus_bool_t (*dbus_message_append_args) (DBusMessage *message, int first_arg_type, ...) = nullptr;
-	dbus_bool_t (*dbus_message_is_signal) (DBusMessage *message, const char *iface, const char *signal_name) = nullptr;
-	dbus_bool_t (*dbus_message_is_error) (DBusMessage *message, const char *error_name) = nullptr;	void (*dbus_message_unref) (DBusMessage *message) = nullptr;
-	dbus_bool_t (*dbus_message_iter_init) (DBusMessage *message, DBusMessageIter *iter) = nullptr;
-	void (*dbus_message_iter_recurse) (DBusMessageIter *iter, DBusMessageIter *sub) = nullptr;
-	void (*dbus_message_iter_next) (DBusMessageIter *iter) = nullptr;
-	int (*dbus_message_iter_get_arg_type) (DBusMessageIter *iter) = nullptr;
-	void (*dbus_message_iter_get_basic) (DBusMessageIter *iter, void *value) = nullptr;
+	void (*dbus_error_init)(DBusError *error) = nullptr;
+	void (*dbus_error_free)(DBusError *error) = nullptr;
+	DBusMessage *(*dbus_message_new_method_call)(const char *bus_name, const char *path,
+			const char *iface, const char *method) = nullptr;
+	dbus_bool_t (
+			*dbus_message_append_args)(DBusMessage *message, int first_arg_type, ...) = nullptr;
+	dbus_bool_t (*dbus_message_is_signal)(DBusMessage *message, const char *iface,
+			const char *signal_name) = nullptr;
+	dbus_bool_t (*dbus_message_is_error)(DBusMessage *message, const char *error_name) = nullptr;
+	void (*dbus_message_unref)(DBusMessage *message) = nullptr;
+	dbus_bool_t (*dbus_message_iter_init)(DBusMessage *message, DBusMessageIter *iter) = nullptr;
+	void (*dbus_message_iter_recurse)(DBusMessageIter *iter, DBusMessageIter *sub) = nullptr;
+	void (*dbus_message_iter_next)(DBusMessageIter *iter) = nullptr;
+	int (*dbus_message_iter_get_arg_type)(DBusMessageIter *iter) = nullptr;
+	void (*dbus_message_iter_get_basic)(DBusMessageIter *iter, void *value) = nullptr;
 	int (*dbus_message_get_type)(DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_path) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_interface) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_member) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_error_name) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_destination) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_sender) (DBusMessage *message) = nullptr;
-	const char* (*dbus_message_get_signature) (DBusMessage *message) = nullptr;
-	DBusMessage* (*dbus_connection_send_with_reply_and_block) (DBusConnection *connection,
+	const char *(*dbus_message_get_path)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_interface)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_member)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_error_name)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_destination)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_sender)(DBusMessage *message) = nullptr;
+	const char *(*dbus_message_get_signature)(DBusMessage *message) = nullptr;
+	DBusMessage *(*dbus_connection_send_with_reply_and_block)(DBusConnection *connection,
 			DBusMessage *message, int timeout_milliseconds, DBusError *error) = nullptr;
-	dbus_bool_t (*dbus_connection_send_with_reply) (DBusConnection *connection,
-			DBusMessage *message, DBusPendingCall **pending_return, int timeout_milliseconds);
-	dbus_bool_t (*dbus_connection_set_watch_functions) (DBusConnection *connection, DBusAddWatchFunction add_function,
-			DBusRemoveWatchFunction remove_function, DBusWatchToggledFunction toggled_function,
-			void *data, DBusFreeFunction free_data_function) = nullptr;
-	dbus_bool_t (*dbus_connection_set_timeout_functions) (DBusConnection *connection, DBusAddTimeoutFunction add_function,
-			DBusRemoveTimeoutFunction remove_function, DBusTimeoutToggledFunction toggled_function,
-			void *data, DBusFreeFunction free_data_function) = nullptr;
-	void (*dbus_connection_set_wakeup_main_function) (DBusConnection *connection, DBusWakeupMainFunction wakeup_main_function,
-			void *data, DBusFreeFunction free_data_function) = nullptr;
-	void (*dbus_connection_set_dispatch_status_function) (DBusConnection *connection, DBusDispatchStatusFunction function,
-			void *data, DBusFreeFunction free_data_function) = nullptr;
-	dbus_bool_t (*dbus_connection_add_filter) (DBusConnection *connection, DBusHandleMessageFunction function,
-			void *user_data, DBusFreeFunction free_data_function) = nullptr;
-	void (*dbus_connection_close) (DBusConnection *connection) = nullptr;
-	void (*dbus_connection_unref) (DBusConnection *connection) = nullptr;
+	dbus_bool_t (*dbus_connection_send_with_reply)(DBusConnection *connection, DBusMessage *message,
+			DBusPendingCall **pending_return, int timeout_milliseconds);
+	dbus_bool_t (*dbus_connection_set_watch_functions)(DBusConnection *connection,
+			DBusAddWatchFunction add_function, DBusRemoveWatchFunction remove_function,
+			DBusWatchToggledFunction toggled_function, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	dbus_bool_t (*dbus_connection_set_timeout_functions)(DBusConnection *connection,
+			DBusAddTimeoutFunction add_function, DBusRemoveTimeoutFunction remove_function,
+			DBusTimeoutToggledFunction toggled_function, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	void (*dbus_connection_set_wakeup_main_function)(DBusConnection *connection,
+			DBusWakeupMainFunction wakeup_main_function, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	void (*dbus_connection_set_dispatch_status_function)(DBusConnection *connection,
+			DBusDispatchStatusFunction function, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	dbus_bool_t (*dbus_connection_add_filter)(DBusConnection *connection,
+			DBusHandleMessageFunction function, void *user_data,
+			DBusFreeFunction free_data_function) = nullptr;
+	void (*dbus_connection_close)(DBusConnection *connection) = nullptr;
+	void (*dbus_connection_unref)(DBusConnection *connection) = nullptr;
 	void (*dbus_connection_flush)(DBusConnection *connection) = nullptr;
 	DBusDispatchStatus (*dbus_connection_dispatch)(DBusConnection *connection) = nullptr;
-	dbus_bool_t (*dbus_error_is_set) (const DBusError *error) = nullptr;
-	DBusConnection* (*dbus_bus_get) (DBusBusType type, DBusError *error) = nullptr;
-	DBusConnection* (*dbus_bus_get_private) (DBusBusType type, DBusError *error) = nullptr;
-	void (*dbus_bus_add_match) (DBusConnection *connection, const char *rule, DBusError *error) = nullptr;
-	DBusPendingCall* (*dbus_pending_call_ref) (DBusPendingCall *pending) = nullptr;
-	void (*dbus_pending_call_unref) (DBusPendingCall *pending) = nullptr;
-	dbus_bool_t (*dbus_pending_call_set_notify) (DBusPendingCall *pending, DBusPendingCallNotifyFunction function,
-			void *user_data, DBusFreeFunction free_user_data) = nullptr;
-	dbus_bool_t (*dbus_pending_call_get_completed) (DBusPendingCall *pending) = nullptr;
-	DBusMessage* (*dbus_pending_call_steal_reply) (DBusPendingCall *pending) = nullptr;
-	void (*dbus_pending_call_block) (DBusPendingCall *pending) = nullptr;
-	int (*dbus_watch_get_unix_fd) (DBusWatch *watch) = nullptr;
-	unsigned int (*dbus_watch_get_flags) (DBusWatch *watch) = nullptr;
-	void* (*dbus_watch_get_data) (DBusWatch *watch) = nullptr;
-	void (*dbus_watch_set_data) (DBusWatch *watch, void *data, DBusFreeFunction free_data_function) = nullptr;
-	dbus_bool_t (*dbus_watch_handle) (DBusWatch *watch, unsigned int flags) = nullptr;
-	dbus_bool_t (*dbus_watch_get_enabled) (DBusWatch *watch) = nullptr;
-	int (*dbus_timeout_get_interval) (DBusTimeout *timeout) = nullptr;
-	void* (*dbus_timeout_get_data) (DBusTimeout *timeout) = nullptr;
-	void (*dbus_timeout_set_data) (DBusTimeout *timeout, void *data, DBusFreeFunction free_data_function) = nullptr;
-	dbus_bool_t (*dbus_timeout_handle) (DBusTimeout *timeout) = nullptr;
-	dbus_bool_t (*dbus_timeout_get_enabled) (DBusTimeout *timeout) = nullptr;
+	dbus_bool_t (*dbus_error_is_set)(const DBusError *error) = nullptr;
+	DBusConnection *(*dbus_bus_get)(DBusBusType type, DBusError *error) = nullptr;
+	DBusConnection *(*dbus_bus_get_private)(DBusBusType type, DBusError *error) = nullptr;
+	void (*dbus_bus_add_match)(DBusConnection *connection, const char *rule,
+			DBusError *error) = nullptr;
+	DBusPendingCall *(*dbus_pending_call_ref)(DBusPendingCall *pending) = nullptr;
+	void (*dbus_pending_call_unref)(DBusPendingCall *pending) = nullptr;
+	dbus_bool_t (*dbus_pending_call_set_notify)(DBusPendingCall *pending,
+			DBusPendingCallNotifyFunction function, void *user_data,
+			DBusFreeFunction free_user_data) = nullptr;
+	dbus_bool_t (*dbus_pending_call_get_completed)(DBusPendingCall *pending) = nullptr;
+	DBusMessage *(*dbus_pending_call_steal_reply)(DBusPendingCall *pending) = nullptr;
+	void (*dbus_pending_call_block)(DBusPendingCall *pending) = nullptr;
+	int (*dbus_watch_get_unix_fd)(DBusWatch *watch) = nullptr;
+	unsigned int (*dbus_watch_get_flags)(DBusWatch *watch) = nullptr;
+	void *(*dbus_watch_get_data)(DBusWatch *watch) = nullptr;
+	void (*dbus_watch_set_data)(DBusWatch *watch, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	dbus_bool_t (*dbus_watch_handle)(DBusWatch *watch, unsigned int flags) = nullptr;
+	dbus_bool_t (*dbus_watch_get_enabled)(DBusWatch *watch) = nullptr;
+	int (*dbus_timeout_get_interval)(DBusTimeout *timeout) = nullptr;
+	void *(*dbus_timeout_get_data)(DBusTimeout *timeout) = nullptr;
+	void (*dbus_timeout_set_data)(DBusTimeout *timeout, void *data,
+			DBusFreeFunction free_data_function) = nullptr;
+	dbus_bool_t (*dbus_timeout_handle)(DBusTimeout *timeout) = nullptr;
+	dbus_bool_t (*dbus_timeout_get_enabled)(DBusTimeout *timeout) = nullptr;
 
 	Dso handle;
 	Connection *sessionConnection = nullptr;
@@ -446,46 +465,48 @@ struct DBusInterface : public thread::Thread {
 
 	int epollFd = -1;
 	int eventFd = -1;
-    struct epoll_event epollEventFd;
+	struct epoll_event epollEventFd;
 
 	std::mutex eventMutex;
-    Vector<Function<void()>> events;
+	Vector<Function<void()>> events;
 
-    struct StateCallback {
-    	Function<void(const NetworkState &)> callback;
-    	Rc<Ref> ref;
-    };
+	struct StateCallback {
+		Function<void(const NetworkState &)> callback;
+		Rc<Ref> ref;
+	};
 
-    Map<void *, StateCallback> networkCallbacks;
+	Map<void *, StateCallback> networkCallbacks;
 };
-
-static Rc<DBusInterface> s_connection = Rc<DBusInterface>::alloc();
 
 static uint32_t DBusInterface_watchFlagsToEpoll(unsigned int flags) {
 	uint32_t events = 0;
-	if (flags & DBUS_WATCH_READABLE)
+	if (flags & DBUS_WATCH_READABLE) {
 		events |= EPOLLIN;
-	if (flags & DBUS_WATCH_WRITABLE)
+	}
+	if (flags & DBUS_WATCH_WRITABLE) {
 		events |= EPOLLOUT;
+	}
 	return events;
 }
 
 static unsigned int DBusInterface_epollToWatchFlags(uint32_t events) {
 	short flags = 0;
-	if (events & EPOLLIN)
+	if (events & EPOLLIN) {
 		flags |= DBUS_WATCH_READABLE;
-	if (events & EPOLLOUT)
+	}
+	if (events & EPOLLOUT) {
 		flags |= DBUS_WATCH_WRITABLE;
-	if (events & EPOLLHUP)
+	}
+	if (events & EPOLLHUP) {
 		flags |= DBUS_WATCH_HANGUP;
-	if (events & EPOLLERR)
+	}
+	if (events & EPOLLERR) {
 		flags |= DBUS_WATCH_ERROR;
+	}
 	return flags;
 }
 
-DBusInterface::Error::Error(DBusInterface *i) : iface(i) {
-	iface->dbus_error_init(&error);
-}
+DBusInterface::Error::Error(DBusInterface *i) : iface(i) { iface->dbus_error_init(&error); }
 
 DBusInterface::Error::~Error() {
 	if (iface->dbus_error_is_set(&error)) {
@@ -493,9 +514,7 @@ DBusInterface::Error::~Error() {
 	}
 }
 
-bool DBusInterface::Error::isSet() const {
-	return iface->dbus_error_is_set(&error);
-}
+bool DBusInterface::Error::isSet() const { return iface->dbus_error_is_set(&error); }
 
 void DBusInterface::Error::reset() {
 	if (iface->dbus_error_is_set(&error)) {
@@ -505,15 +524,12 @@ void DBusInterface::Error::reset() {
 
 DBusInterface::Connection::Connection() : iface(nullptr), connection(nullptr) { }
 
-DBusInterface::Connection::Connection(DBusInterface *i, DBusBusType type)
-: iface(i) {
+DBusInterface::Connection::Connection(DBusInterface *i, DBusBusType type) : iface(i) {
 	Error error(iface);
 	connection = iface->dbus_bus_get_private(type, &error.error);
 }
 
-DBusInterface::Connection::~Connection() {
-	close();
-}
+DBusInterface::Connection::~Connection() { close(); }
 
 static dbus_bool_t DBusInterface_Connection_addWatch(DBusWatch *watch, void *data) {
 	auto conn = reinterpret_cast<DBusInterface::Connection *>(data);
@@ -550,14 +566,16 @@ static void DBusInterface_Connection_wakeupMain(void *data) {
 	conn->wakeup();
 }
 
-static void DBusInterface_Connection_dispatchStatus(DBusConnection *connection, DBusDispatchStatus new_status, void *data) {
+static void DBusInterface_Connection_dispatchStatus(DBusConnection *connection,
+		DBusDispatchStatus new_status, void *data) {
 	if (new_status == DBUS_DISPATCH_DATA_REMAINS) {
 		auto conn = reinterpret_cast<DBusInterface::Connection *>(data);
 		conn->schedule_dispatch();
 	}
 }
 
-static DBusHandlerResult DBusInterface_Connection_handleMessage(DBusConnection *connection, DBusMessage *message, void *data) {
+static DBusHandlerResult DBusInterface_Connection_handleMessage(DBusConnection *connection,
+		DBusMessage *message, void *data) {
 	auto conn = reinterpret_cast<DBusInterface::Connection *>(data);
 	return conn->handleMessage(message);
 }
@@ -565,12 +583,17 @@ static DBusHandlerResult DBusInterface_Connection_handleMessage(DBusConnection *
 void DBusInterface::Connection::setup() {
 	if (connection) {
 		iface->dbus_connection_set_watch_functions(connection, DBusInterface_Connection_addWatch,
-				DBusInterface_Connection_watchToggled, DBusInterface_Connection_removeWatch, this, nullptr);
-		iface->dbus_connection_set_timeout_functions(connection, DBusInterface_Connection_addTimeout,
-				DBusInterface_Connection_timeoutToggled, DBusInterface_Connection_removeTimeout, this, nullptr);
-		iface->dbus_connection_set_wakeup_main_function(connection, DBusInterface_Connection_wakeupMain, this, nullptr);
-		iface->dbus_connection_set_dispatch_status_function(connection, DBusInterface_Connection_dispatchStatus, this, nullptr);
-		iface->dbus_connection_add_filter(connection, DBusInterface_Connection_handleMessage, this, nullptr);
+				DBusInterface_Connection_watchToggled, DBusInterface_Connection_removeWatch, this,
+				nullptr);
+		iface->dbus_connection_set_timeout_functions(connection,
+				DBusInterface_Connection_addTimeout, DBusInterface_Connection_timeoutToggled,
+				DBusInterface_Connection_removeTimeout, this, nullptr);
+		iface->dbus_connection_set_wakeup_main_function(connection,
+				DBusInterface_Connection_wakeupMain, this, nullptr);
+		iface->dbus_connection_set_dispatch_status_function(connection,
+				DBusInterface_Connection_dispatchStatus, this, nullptr);
+		iface->dbus_connection_add_filter(connection, DBusInterface_Connection_handleMessage, this,
+				nullptr);
 		schedule_dispatch();
 	}
 }
@@ -628,8 +651,8 @@ dbus_bool_t DBusInterface::Connection::addTimeout(DBusTimeout *timeout) {
 	struct itimerspec initTimer;
 	initTimer.it_interval.tv_nsec = 0;
 	initTimer.it_interval.tv_sec = 0;
-	initTimer.it_value.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-	initTimer.it_value.tv_sec = milliseconds / 1000;
+	initTimer.it_value.tv_nsec = (milliseconds % 1'000) * 1'000 * 1'000;
+	initTimer.it_value.tv_sec = milliseconds / 1'000;
 
 	::timerfd_settime(ev->fd, 0, &initTimer, nullptr);
 
@@ -659,8 +682,8 @@ void DBusInterface::Connection::timeoutToggled(DBusTimeout *timeout) {
 			struct itimerspec initTimer;
 			initTimer.it_interval.tv_nsec = 0;
 			initTimer.it_interval.tv_sec = 0;
-			initTimer.it_value.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-			initTimer.it_value.tv_sec = milliseconds / 1000;
+			initTimer.it_value.tv_nsec = (milliseconds % 1'000) * 1'000 * 1'000;
+			initTimer.it_value.tv_sec = milliseconds / 1'000;
 
 			::timerfd_settime(ev->fd, 0, &initTimer, nullptr);
 
@@ -683,23 +706,17 @@ void DBusInterface::Connection::removeTimeout(DBusTimeout *timeout) {
 	iface->dbus_timeout_set_data(timeout, nullptr, nullptr);
 }
 
-void DBusInterface::Connection::wakeup() {
-	iface->wakeup();
-}
+void DBusInterface::Connection::wakeup() { iface->wakeup(); }
 
 void DBusInterface::Connection::schedule_dispatch() {
-	iface->addEvent([this] {
-		dispatchAll();
-	});
+	iface->addEvent([this] { dispatchAll(); });
 }
 
 DBusHandlerResult DBusInterface::Connection::handleMessage(DBusMessage *message) {
 	return iface->handleMessage(this, message);
 }
 
-void DBusInterface::Connection::flush() {
-	iface->dbus_connection_flush(connection);
-}
+void DBusInterface::Connection::flush() { iface->dbus_connection_flush(connection); }
 
 DBusDispatchStatus DBusInterface::Connection::dispatch() {
 	return iface->dbus_connection_dispatch(connection);
@@ -722,11 +739,8 @@ void DBusInterface::Connection::close() {
 void DBusInterface::EventStruct::free(void *obj) {
 	EventStruct *ev = reinterpret_cast<EventStruct *>(obj);
 	switch (ev->type) {
-	case EventType::Watch:
-		break;
-	case EventType::Timeout:
-		::close(ev->fd);
-		break;
+	case EventType::Watch: break;
+	case EventType::Timeout: ::close(ev->fd); break;
 	}
 	delete ev;
 }
@@ -741,8 +755,8 @@ void DBusInterface::EventStruct::handle(uint32_t ev) {
 		struct itimerspec initTimer;
 		initTimer.it_interval.tv_nsec = 0;
 		initTimer.it_interval.tv_sec = 0;
-		initTimer.it_value.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-		initTimer.it_value.tv_sec = milliseconds / 1000;
+		initTimer.it_value.tv_nsec = (milliseconds % 1'000) * 1'000 * 1'000;
+		initTimer.it_value.tv_sec = milliseconds / 1'000;
 
 		::timerfd_settime(fd, 0, &initTimer, nullptr);
 
@@ -761,6 +775,12 @@ DBusInterface::DBusInterface() {
 		return;
 	}
 #endif
+
+	eventFd = ::eventfd(0, EFD_NONBLOCK);
+	epollEventFd.events = EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
+	epollEventFd.data.ptr = this;
+
+	epollFd = ::epoll_create1(0);
 
 	if (openHandle(handle)) {
 		sessionConnection = new Connection(this, DBUS_BUS_SESSION);
@@ -791,7 +811,6 @@ DBusInterface::DBusInterface() {
 }
 
 DBusInterface::~DBusInterface() {
-	wakeup();
 	if (sessionConnection) {
 		delete sessionConnection;
 		sessionConnection = nullptr;
@@ -799,6 +818,15 @@ DBusInterface::~DBusInterface() {
 	if (systemConnection) {
 		delete systemConnection;
 		systemConnection = nullptr;
+	}
+
+	if (eventFd >= 0) {
+		::close(eventFd);
+		eventFd = -1;
+	}
+	if (epollFd >= 0) {
+		::close(epollFd);
+		epollFd = -1;
 	}
 }
 
@@ -829,7 +857,8 @@ bool DBusInterface::openHandle(Dso &d) {
 	this->dbus_connection_set_watch_functions = &::dbus_connection_set_watch_functions;
 	this->dbus_connection_set_timeout_functions = &::dbus_connection_set_timeout_functions;
 	this->dbus_connection_set_wakeup_main_function = &::dbus_connection_set_wakeup_main_function;
-	this->dbus_connection_set_dispatch_status_function = &::dbus_connection_set_dispatch_status_function;
+	this->dbus_connection_set_dispatch_status_function =
+			&::dbus_connection_set_dispatch_status_function;
 	this->dbus_connection_add_filter = &::dbus_connection_add_filter;
 	this->dbus_connection_close = &::dbus_connection_close;
 	this->dbus_connection_unref = &::dbus_connection_unref;
@@ -857,10 +886,8 @@ bool DBusInterface::openHandle(Dso &d) {
 	this->dbus_timeout_handle = &::dbus_timeout_handle;
 	this->dbus_timeout_get_enabled = &::dbus_timeout_get_enabled;
 #else
-	this->dbus_error_init =
-			d.sym<decltype(this->dbus_error_init)>("dbus_error_init");
-	this->dbus_error_free =
-			d.sym<decltype(this->dbus_error_free)>("dbus_error_free");
+	this->dbus_error_init = d.sym<decltype(this->dbus_error_init)>("dbus_error_init");
+	this->dbus_error_free = d.sym<decltype(this->dbus_error_free)>("dbus_error_free");
 	this->dbus_message_new_method_call =
 			d.sym<decltype(this->dbus_message_new_method_call)>("dbus_message_new_method_call");
 	this->dbus_message_append_args =
@@ -869,8 +896,7 @@ bool DBusInterface::openHandle(Dso &d) {
 			d.sym<decltype(this->dbus_message_is_signal)>("dbus_message_is_signal");
 	this->dbus_message_is_error =
 			d.sym<decltype(this->dbus_message_is_error)>("dbus_message_is_error");
-	this->dbus_message_unref =
-			d.sym<decltype(this->dbus_message_unref)>("dbus_message_unref");
+	this->dbus_message_unref = d.sym<decltype(this->dbus_message_unref)>("dbus_message_unref");
 	this->dbus_message_iter_init =
 			d.sym<decltype(this->dbus_message_iter_init)>("dbus_message_iter_init");
 	this->dbus_message_iter_next =
@@ -898,17 +924,22 @@ bool DBusInterface::openHandle(Dso &d) {
 	this->dbus_message_get_signature =
 			d.sym<decltype(this->dbus_message_get_signature)>("dbus_message_get_signature");
 	this->dbus_connection_send_with_reply_and_block =
-			d.sym<decltype(this->dbus_connection_send_with_reply_and_block)>("dbus_connection_send_with_reply_and_block");
-	this->dbus_connection_send_with_reply =
-			d.sym<decltype(this->dbus_connection_send_with_reply)>("dbus_connection_send_with_reply");
+			d.sym<decltype(this->dbus_connection_send_with_reply_and_block)>(
+					"dbus_connection_send_with_reply_and_block");
+	this->dbus_connection_send_with_reply = d.sym<decltype(this->dbus_connection_send_with_reply)>(
+			"dbus_connection_send_with_reply");
 	this->dbus_connection_set_watch_functions =
-			d.sym<decltype(this->dbus_connection_set_watch_functions)>("dbus_connection_set_watch_functions");
+			d.sym<decltype(this->dbus_connection_set_watch_functions)>(
+					"dbus_connection_set_watch_functions");
 	this->dbus_connection_set_timeout_functions =
-			d.sym<decltype(this->dbus_connection_set_timeout_functions)>("dbus_connection_set_timeout_functions");
+			d.sym<decltype(this->dbus_connection_set_timeout_functions)>(
+					"dbus_connection_set_timeout_functions");
 	this->dbus_connection_set_wakeup_main_function =
-			d.sym<decltype(this->dbus_connection_set_wakeup_main_function)>("dbus_connection_set_wakeup_main_function");
+			d.sym<decltype(this->dbus_connection_set_wakeup_main_function)>(
+					"dbus_connection_set_wakeup_main_function");
 	this->dbus_connection_set_dispatch_status_function =
-			d.sym<decltype(this->dbus_connection_set_dispatch_status_function)>("dbus_connection_set_dispatch_status_function");
+			d.sym<decltype(this->dbus_connection_set_dispatch_status_function)>(
+					"dbus_connection_set_dispatch_status_function");
 	this->dbus_connection_add_filter =
 			d.sym<decltype(this->dbus_connection_add_filter)>("dbus_connection_add_filter");
 	this->dbus_connection_close =
@@ -919,22 +950,19 @@ bool DBusInterface::openHandle(Dso &d) {
 			d.sym<decltype(this->dbus_connection_flush)>("dbus_connection_flush");
 	this->dbus_connection_dispatch =
 			d.sym<decltype(this->dbus_connection_dispatch)>("dbus_connection_dispatch");
-	this->dbus_error_is_set =
-			d.sym<decltype(this->dbus_error_is_set)>("dbus_error_is_set");
-	this->dbus_bus_get =
-			d.sym<decltype(this->dbus_bus_get)>("dbus_bus_get");
+	this->dbus_error_is_set = d.sym<decltype(this->dbus_error_is_set)>("dbus_error_is_set");
+	this->dbus_bus_get = d.sym<decltype(this->dbus_bus_get)>("dbus_bus_get");
 	this->dbus_bus_get_private =
 			d.sym<decltype(this->dbus_bus_get_private)>("dbus_bus_get_private");
-	this->dbus_bus_add_match =
-			d.sym<decltype(this->dbus_bus_add_match)>("dbus_bus_add_match");
+	this->dbus_bus_add_match = d.sym<decltype(this->dbus_bus_add_match)>("dbus_bus_add_match");
 	this->dbus_pending_call_ref =
 			d.sym<decltype(this->dbus_pending_call_ref)>("dbus_pending_call_ref");
 	this->dbus_pending_call_unref =
 			d.sym<decltype(this->dbus_pending_call_unref)>("dbus_pending_call_unref");
 	this->dbus_pending_call_set_notify =
 			d.sym<decltype(this->dbus_pending_call_set_notify)>("dbus_pending_call_set_notify");
-	this->dbus_pending_call_get_completed =
-			d.sym<decltype(this->dbus_pending_call_get_completed)>("dbus_pending_call_get_completed");
+	this->dbus_pending_call_get_completed = d.sym<decltype(this->dbus_pending_call_get_completed)>(
+			"dbus_pending_call_get_completed");
 	this->dbus_pending_call_steal_reply =
 			d.sym<decltype(this->dbus_pending_call_steal_reply)>("dbus_pending_call_steal_reply");
 	this->dbus_pending_call_block =
@@ -943,12 +971,9 @@ bool DBusInterface::openHandle(Dso &d) {
 			d.sym<decltype(this->dbus_watch_get_unix_fd)>("dbus_watch_get_unix_fd");
 	this->dbus_watch_get_flags =
 			d.sym<decltype(this->dbus_watch_get_flags)>("dbus_watch_get_flags");
-	this->dbus_watch_get_data =
-			d.sym<decltype(this->dbus_watch_get_data)>("dbus_watch_get_data");
-	this->dbus_watch_set_data =
-			d.sym<decltype(this->dbus_watch_set_data)>("dbus_watch_set_data");
-	this->dbus_watch_handle =
-			d.sym<decltype(this->dbus_watch_handle)>("dbus_watch_handle");
+	this->dbus_watch_get_data = d.sym<decltype(this->dbus_watch_get_data)>("dbus_watch_get_data");
+	this->dbus_watch_set_data = d.sym<decltype(this->dbus_watch_set_data)>("dbus_watch_set_data");
+	this->dbus_watch_handle = d.sym<decltype(this->dbus_watch_handle)>("dbus_watch_handle");
 	this->dbus_watch_get_enabled =
 			d.sym<decltype(this->dbus_watch_get_enabled)>("dbus_watch_get_enabled");
 	this->dbus_timeout_get_interval =
@@ -957,76 +982,45 @@ bool DBusInterface::openHandle(Dso &d) {
 			d.sym<decltype(this->dbus_timeout_get_data)>("dbus_timeout_get_data");
 	this->dbus_timeout_set_data =
 			d.sym<decltype(this->dbus_timeout_set_data)>("dbus_timeout_set_data");
-	this->dbus_timeout_handle =
-			d.sym<decltype(this->dbus_timeout_handle)>("dbus_timeout_handle");
+	this->dbus_timeout_handle = d.sym<decltype(this->dbus_timeout_handle)>("dbus_timeout_handle");
 	this->dbus_timeout_get_enabled =
 			d.sym<decltype(this->dbus_timeout_get_enabled)>("dbus_timeout_get_enabled");
 #endif
 
-	return this->dbus_error_init
-		&& this->dbus_error_free
-		&& this->dbus_message_new_method_call
-		&& this->dbus_message_append_args
-		&& this->dbus_message_unref
-		&& this->dbus_message_iter_init
-		&& this->dbus_message_iter_next
-		&& this->dbus_message_iter_recurse
-		&& this->dbus_message_iter_get_arg_type
-		&& this->dbus_message_iter_get_basic
-		&& this->dbus_message_get_type
-		&& this->dbus_message_get_path
-		&& this->dbus_message_get_interface
-		&& this->dbus_message_get_member
-		&& this->dbus_message_get_error_name
-		&& this->dbus_message_get_destination
-		&& this->dbus_message_get_sender
-		&& this->dbus_message_get_signature
-		&& this->dbus_connection_send_with_reply_and_block
-		&& this->dbus_connection_send_with_reply
-		&& this->dbus_connection_set_watch_functions
-		&& this->dbus_connection_set_timeout_functions
-		&& this->dbus_connection_set_wakeup_main_function
-		&& this->dbus_connection_set_dispatch_status_function
-		&& this->dbus_connection_add_filter
-		&& this->dbus_connection_close
-		&& this->dbus_connection_unref
-		&& this->dbus_connection_flush
-		&& this->dbus_connection_dispatch
-		&& this->dbus_error_is_set
-		&& this->dbus_bus_get
-		&& this->dbus_bus_get_private
-		&& this->dbus_bus_add_match
-		&& this->dbus_pending_call_ref
-		&& this->dbus_pending_call_unref
-		&& this->dbus_pending_call_set_notify
-		&& this->dbus_pending_call_get_completed
-		&& this->dbus_pending_call_steal_reply
-		&& this->dbus_watch_get_unix_fd
-		&& this->dbus_watch_get_flags
-		&& this->dbus_watch_get_data
-		&& this->dbus_watch_set_data
-		&& this->dbus_watch_handle
-		&& this->dbus_watch_get_enabled
-		&& this->dbus_timeout_get_interval
-		&& this->dbus_timeout_get_data
-		&& this->dbus_timeout_set_data
-		&& this->dbus_timeout_handle
-		&& this->dbus_timeout_get_enabled;
+	return this->dbus_error_init && this->dbus_error_free && this->dbus_message_new_method_call
+			&& this->dbus_message_append_args && this->dbus_message_unref
+			&& this->dbus_message_iter_init && this->dbus_message_iter_next
+			&& this->dbus_message_iter_recurse && this->dbus_message_iter_get_arg_type
+			&& this->dbus_message_iter_get_basic && this->dbus_message_get_type
+			&& this->dbus_message_get_path && this->dbus_message_get_interface
+			&& this->dbus_message_get_member && this->dbus_message_get_error_name
+			&& this->dbus_message_get_destination && this->dbus_message_get_sender
+			&& this->dbus_message_get_signature && this->dbus_connection_send_with_reply_and_block
+			&& this->dbus_connection_send_with_reply && this->dbus_connection_set_watch_functions
+			&& this->dbus_connection_set_timeout_functions
+			&& this->dbus_connection_set_wakeup_main_function
+			&& this->dbus_connection_set_dispatch_status_function
+			&& this->dbus_connection_add_filter && this->dbus_connection_close
+			&& this->dbus_connection_unref && this->dbus_connection_flush
+			&& this->dbus_connection_dispatch && this->dbus_error_is_set && this->dbus_bus_get
+			&& this->dbus_bus_get_private && this->dbus_bus_add_match && this->dbus_pending_call_ref
+			&& this->dbus_pending_call_unref && this->dbus_pending_call_set_notify
+			&& this->dbus_pending_call_get_completed && this->dbus_pending_call_steal_reply
+			&& this->dbus_watch_get_unix_fd && this->dbus_watch_get_flags
+			&& this->dbus_watch_get_data && this->dbus_watch_set_data && this->dbus_watch_handle
+			&& this->dbus_watch_get_enabled && this->dbus_timeout_get_interval
+			&& this->dbus_timeout_get_data && this->dbus_timeout_set_data
+			&& this->dbus_timeout_handle && this->dbus_timeout_get_enabled;
 }
 
 void DBusInterface::threadInit() {
 	thread::ThreadInfo::setThreadInfo("DBusThread");
 
-	eventFd = ::eventfd(0, EFD_NONBLOCK);
-	epollEventFd.events = EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
-	epollEventFd.data.ptr = this;
-
-	epollFd = ::epoll_create1(0);
-
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_ADD, eventFd, &epollEventFd);
 	if (err == -1) {
-		char buf[256] = { 0 };
-		log::error("DBusInterface", "Fail to add eventFd with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		char buf[256] = {0};
+		log::error("DBusInterface",
+				"Fail to add eventFd with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 
 	sessionConnection->setup();
@@ -1037,7 +1031,7 @@ void DBusInterface::threadInit() {
 			log::verbose("DBusInterface", "Session bus loaded");
 			if (sessionServices.find("org.freedesktop.portal.Desktop") != sessionServices.end()) {
 				hasDesktopPortal = true;
-				readInterfaceTheme([this] (InterfaceThemeInfo &&theme) {
+				readInterfaceTheme([this](InterfaceThemeInfo &&theme) {
 					std::unique_lock lock(interfaceMutex);
 					interfaceTheme = move(theme);
 					interfaceLoaded = true;
@@ -1057,17 +1051,16 @@ void DBusInterface::threadInit() {
 			if (systemServices.find("org.freedesktop.NetworkManager") != systemServices.end()) {
 				Error error(this);
 				hasNetworkManager = true;
-				dbus_bus_add_match(systemConnection->connection, "type='signal',interface='"
-						NM_DBUS_INTERFACE_NAME "'", &error.error);
+				dbus_bus_add_match(systemConnection->connection,
+						"type='signal',interface='" NM_DBUS_INTERFACE_NAME "'", &error.error);
 				// see signals from the given interface
 				systemConnection->flush();
 				if (error.isSet()) {
 					log::error("DBusConnection", "fail to add signal match: ", error.error.message);
 				}
 
-				updateNetworkState(*systemConnection, [this] (NetworkState &&state) {
-					setNetworkState(move(state));
-				});
+				updateNetworkState(*systemConnection,
+						[this](NetworkState &&state) { setNetworkState(move(state)); });
 			}
 		});
 	});
@@ -1075,18 +1068,7 @@ void DBusInterface::threadInit() {
 	Thread::threadInit();
 }
 
-void DBusInterface::threadDispose() {
-	if (eventFd >= 0) {
-		::close(eventFd);
-		eventFd = -1;
-	}
-	if (epollFd >= 0) {
-		::close(epollFd);
-		epollFd = -1;
-	}
-
-	Thread::threadDispose();
-}
+void DBusInterface::threadDispose() { Thread::threadDispose(); }
 
 bool DBusInterface::worker() {
 	std::array<struct epoll_event, 16> _events;
@@ -1094,8 +1076,9 @@ bool DBusInterface::worker() {
 	if (_continueExecution.test_and_set()) {
 		int nevents = epoll_wait(epollFd, _events.data(), 16, 100);
 		if (nevents == -1 && errno != EINTR) {
-			char buf[256] = { 0 };
-			log::error("DBusConnection", "epoll_wait() failed with errno ", errno, " (", strerror_r(errno, buf, 255), ")");
+			char buf[256] = {0};
+			log::error("DBusConnection", "epoll_wait() failed with errno ", errno, " (",
+					strerror_r(errno, buf, 255), ")");
 			return false;
 		} else if (errno == EINTR) {
 			return true;
@@ -1116,7 +1099,7 @@ bool DBusInterface::worker() {
 }
 
 void DBusInterface::wakeup() {
-	addEvent([] () {}); // add empty function for event
+	addEvent([]() { }); // add empty function for event
 }
 
 void DBusInterface::addEvent(Function<void()> &&ev) {
@@ -1126,32 +1109,36 @@ void DBusInterface::addEvent(Function<void()> &&ev) {
 
 	uint64_t value = 1;
 	if (::write(eventFd, &value, sizeof(uint64_t)) != sizeof(uint64_t)) {
-		char buf[256] = { 0 };
-		log::error("DBusInterface", "Fail to send dbus event with write: ", strerror_r(errno, buf, 255));
+		char buf[256] = {0};
+		log::error("DBusInterface",
+				"Fail to send dbus event with write: ", strerror_r(errno, buf, 255));
 	}
 }
 
 void DBusInterface::addEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_ADD, ev->fd, &ev->event);
 	if (err == -1) {
-		char buf[256] = { 0 };
-		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		char buf[256] = {0};
+		log::error("DBusInterface",
+				"Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
 void DBusInterface::updateEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_MOD, ev->fd, &ev->event);
 	if (err == -1) {
-		char buf[256] = { 0 };
-		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		char buf[256] = {0};
+		log::error("DBusInterface",
+				"Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
 void DBusInterface::removeEvent(EventStruct *ev) {
 	int err = ::epoll_ctl(epollFd, EPOLL_CTL_DEL, ev->fd, &ev->event);
 	if (err == -1) {
-		char buf[256] = { 0 };
-		log::error("DBusInterface", "Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
+		char buf[256] = {0};
+		log::error("DBusInterface",
+				"Fail to add event with EPOLL_CTL_ADD: ", strerror_r(errno, buf, 255));
 	}
 }
 
@@ -1164,9 +1151,7 @@ void DBusInterface::handleEvents() {
 		events.clear();
 		lock.unlock();
 
-		for (auto &it : data) {
-			it();
-		}
+		for (auto &it : data) { it(); }
 	}
 }
 
@@ -1181,38 +1166,34 @@ DBusHandlerResult DBusInterface::handleMessage(Connection *, DBusMessage *messag
 }
 
 DBusHandlerResult DBusInterface::handleNetworkStateChanged(DBusMessage *message) {
-	updateNetworkState(*systemConnection, [this] (NetworkState &&state) {
-		setNetworkState(move(state));
-	});
+	updateNetworkState(*systemConnection,
+			[this](NetworkState &&state) { setNetworkState(move(state)); });
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 DBusPendingCall *DBusInterface::readInterfaceTheme(Function<void(InterfaceThemeInfo &&)> &&cb) {
 	return callMethod(*sessionConnection, "org.freedesktop.portal.Desktop",
 			"/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "ReadAll",
-			[&, this] (DBusMessage *message) {
-		const char * array[] = { "org.gnome.desktop.interface" };
+			[&, this](DBusMessage *message) {
+		const char *array[] = {"org.gnome.desktop.interface"};
 		const char **v_ARRAY = array;
 
-		dbus_message_append_args(message,
-				DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &v_ARRAY, 1, DBUS_TYPE_INVALID);
-	}, [this, cb = sp::move(cb)] (DBusMessage *reply) {
-		cb(parseInterfaceThemeSettings(reply));
-	});
+		dbus_message_append_args(message, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &v_ARRAY, 1,
+				DBUS_TYPE_INVALID);
+	}, [this, cb = sp::move(cb)](DBusMessage *reply) { cb(parseInterfaceThemeSettings(reply)); });
 }
 
-DBusPendingCall *DBusInterface::updateNetworkState(Connection &c, Function<void(NetworkState &&)> &&cb) {
-	return callMethod(c, "org.freedesktop.NetworkManager",
-			"/org/freedesktop/NetworkManager", "org.freedesktop.DBus.Properties", "GetAll",
-			[this] (DBusMessage *msg) {
+DBusPendingCall *DBusInterface::updateNetworkState(Connection &c,
+		Function<void(NetworkState &&)> &&cb) {
+	return callMethod(c, "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+			"org.freedesktop.DBus.Properties", "GetAll", [this](DBusMessage *msg) {
 		const char *interface_name = "org.freedesktop.NetworkManager";
 		dbus_message_append_args(msg, DBUS_TYPE_STRING, &interface_name, DBUS_TYPE_INVALID);
-	}, [this, cb = sp::move(cb)] (DBusMessage *reply) {
-		cb(parseNetworkState(reply));
-	});
+	}, [this, cb = sp::move(cb)](DBusMessage *reply) { cb(parseNetworkState(reply)); });
 }
 
-DBusMessage *DBusInterface::getSettingSync(Connection &c, const char *key, const char *value, Error &err) {
+DBusMessage *DBusInterface::getSettingSync(Connection &c, const char *key, const char *value,
+		Error &err) {
 	dbus_bool_t success;
 	DBusMessage *message;
 	DBusMessage *reply;
@@ -1220,13 +1201,15 @@ DBusMessage *DBusInterface::getSettingSync(Connection &c, const char *key, const
 	message = this->dbus_message_new_method_call("org.freedesktop.portal.Desktop",
 			"/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "Read");
 
-	success = this->dbus_message_append_args(message, DBUS_TYPE_STRING, &key, DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID);
+	success = this->dbus_message_append_args(message, DBUS_TYPE_STRING, &key, DBUS_TYPE_STRING,
+			&value, DBUS_TYPE_INVALID);
 
 	if (!success) {
 		return NULL;
 	}
 
-	reply = this->dbus_connection_send_with_reply_and_block(c.connection, message, DBUS_TIMEOUT_USE_DEFAULT, &err.error);
+	reply = this->dbus_connection_send_with_reply_and_block(c.connection, message,
+			DBUS_TIMEOUT_USE_DEFAULT, &err.error);
 
 	this->dbus_message_unref(message);
 
@@ -1243,18 +1226,21 @@ bool DBusInterface::parseType(DBusMessage *const reply, const int type, void *va
 
 	this->dbus_message_iter_init(reply, &iter[0]);
 	currentType = DBusTypeWrapper(this->dbus_message_iter_get_arg_type(&iter[0]));
-	if (currentType != DBUS_TYPE_VARIANT)
+	if (currentType != DBUS_TYPE_VARIANT) {
 		return false;
+	}
 
 	this->dbus_message_iter_recurse(&iter[0], &iter[1]);
 	currentType = DBusTypeWrapper(this->dbus_message_iter_get_arg_type(&iter[1]));
-	if (currentType != DBUS_TYPE_VARIANT)
+	if (currentType != DBUS_TYPE_VARIANT) {
 		return false;
+	}
 
 	this->dbus_message_iter_recurse(&iter[1], &iter[2]);
 	currentType = DBusTypeWrapper(this->dbus_message_iter_get_arg_type(&iter[2]));
-	if (currentType != type)
+	if (currentType != type) {
 		return false;
+	}
 
 	this->dbus_message_iter_get_basic(&iter[2], value);
 
@@ -1289,26 +1275,30 @@ struct MessageData {
 	}
 };
 
-DBusPendingCall *DBusInterface::loadServiceNames(Connection &c, Set<String> &services, Function<void()> &&cb) {
-	return callMethod(c, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames",
-			nullptr, [this, services = &services, cb = sp::move(cb)] (DBusMessage *reply) {
+DBusPendingCall *DBusInterface::loadServiceNames(Connection &c, Set<String> &services,
+		Function<void()> &&cb) {
+	return callMethod(c, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+			"ListNames", nullptr,
+			[this, services = &services, cb = sp::move(cb)](DBusMessage *reply) {
 		parseServiceList(*services, reply);
 		cb();
 	});
 }
 
-DBusPendingCall *DBusInterface::callMethod(Connection &c, StringView bus, StringView path, StringView iface, StringView method,
-		const Callback<void(DBusMessage *)> &argsCallback, Function<void(DBusMessage *)> &&resultCallback) {
+DBusPendingCall *DBusInterface::callMethod(Connection &c, StringView bus, StringView path,
+		StringView iface, StringView method, const Callback<void(DBusMessage *)> &argsCallback,
+		Function<void(DBusMessage *)> &&resultCallback) {
 	DBusPendingCall *ret = nullptr;
 
-	auto message = this->dbus_message_new_method_call(bus.data(),
-			path.data(), iface.data(), method.data());
+	auto message = this->dbus_message_new_method_call(bus.data(), path.data(), iface.data(),
+			method.data());
 
 	if (argsCallback) {
 		argsCallback(message);
 	}
 
-	auto success = this->dbus_connection_send_with_reply(c.connection, message, &ret, DBUS_TIMEOUT_USE_DEFAULT);
+	auto success = this->dbus_connection_send_with_reply(c.connection, message, &ret,
+			DBUS_TIMEOUT_USE_DEFAULT);
 	this->dbus_message_unref(message);
 
 	if (success && ret) {
@@ -1317,7 +1307,8 @@ DBusPendingCall *DBusInterface::callMethod(Connection &c, StringView bus, String
 		data->connection = &c;
 		data->callback = sp::move(resultCallback);
 
-		this->dbus_pending_call_set_notify(ret, MessageData::parseReply, data, MessageData::freeMessage);
+		this->dbus_pending_call_set_notify(ret, MessageData::parseReply, data,
+				MessageData::freeMessage);
 		c.flush();
 	}
 	return ret;
@@ -1328,12 +1319,14 @@ void DBusInterface::parseServiceList(Set<String> &services, DBusMessage *reply) 
 	DBusMessageIter iter;
 
 	dbus_message_iter_init(reply, &iter);
-	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter))) != DBUS_TYPE_INVALID) {
+	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter)))
+			!= DBUS_TYPE_INVALID) {
 		if (current_type == DBUS_TYPE_ARRAY) {
 			DBusTypeWrapper sub_type = DBUS_TYPE_INVALID;
 			DBusMessageIter sub;
 			dbus_message_iter_recurse(&iter, &sub);
-			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub))) != DBUS_TYPE_INVALID) {
+			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub)))
+					!= DBUS_TYPE_INVALID) {
 				if (sub_type == DBUS_TYPE_STRING) {
 					char *str = nullptr;
 					dbus_message_iter_get_basic(&sub, &str);
@@ -1351,7 +1344,7 @@ void DBusInterface::parseServiceList(Set<String> &services, DBusMessage *reply) 
 NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 	NetworkState ret;
 
-	auto readEntry = [&, this] (DBusMessageIter *entry) {
+	auto readEntry = [&, this](DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {
@@ -1411,12 +1404,14 @@ NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 	DBusMessageIter iter;
 
 	dbus_message_iter_init(reply, &iter);
-	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter))) != DBUS_TYPE_INVALID) {
+	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter)))
+			!= DBUS_TYPE_INVALID) {
 		if (current_type == DBUS_TYPE_ARRAY) {
 			DBusTypeWrapper sub_type = DBUS_TYPE_INVALID;
 			DBusMessageIter sub;
 			dbus_message_iter_recurse(&iter, &sub);
-			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub))) != DBUS_TYPE_INVALID) {
+			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub)))
+					!= DBUS_TYPE_INVALID) {
 				if (sub_type == DBUS_TYPE_DICT_ENTRY) {
 					DBusMessageIter entry;
 					dbus_message_iter_recurse(&sub, &entry);
@@ -1434,7 +1429,7 @@ NetworkState DBusInterface::parseNetworkState(DBusMessage *reply) {
 InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply) {
 	InterfaceThemeInfo ret;
 
-	auto readEntry = [&, this] (DBusMessageIter *entry) {
+	auto readEntry = [&, this](DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {
@@ -1455,7 +1450,7 @@ InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply
 		}
 	};
 
-	auto readNamespaceEntry = [&, this] (DBusMessageIter *entry) {
+	auto readNamespaceEntry = [&, this](DBusMessageIter *entry) {
 		DBusTypeWrapper entry_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 
 		if (entry_type == DBUS_TYPE_STRING) {
@@ -1468,7 +1463,8 @@ InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply
 					DBusTypeWrapper sub_type = DBUS_TYPE_INVALID;
 					DBusMessageIter sub;
 					dbus_message_iter_recurse(entry, &sub);
-					while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub))) != DBUS_TYPE_INVALID) {
+					while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub)))
+							!= DBUS_TYPE_INVALID) {
 						if (sub_type == DBUS_TYPE_DICT_ENTRY) {
 							DBusMessageIter dict;
 							dbus_message_iter_recurse(&sub, &dict);
@@ -1485,12 +1481,14 @@ InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply
 	DBusMessageIter iter;
 
 	dbus_message_iter_init(reply, &iter);
-	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter))) != DBUS_TYPE_INVALID) {
+	while ((current_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&iter)))
+			!= DBUS_TYPE_INVALID) {
 		if (current_type == DBUS_TYPE_ARRAY) {
 			DBusTypeWrapper sub_type = DBUS_TYPE_INVALID;
 			DBusMessageIter sub;
 			dbus_message_iter_recurse(&iter, &sub);
-			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub))) != DBUS_TYPE_INVALID) {
+			while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub)))
+					!= DBUS_TYPE_INVALID) {
 				if (sub_type == DBUS_TYPE_DICT_ENTRY) {
 					DBusMessageIter entry;
 					dbus_message_iter_recurse(&sub, &entry);
@@ -1505,7 +1503,8 @@ InterfaceThemeInfo DBusInterface::parseInterfaceThemeSettings(DBusMessage *reply
 	return ret;
 }
 
-bool DBusInterface::parseProperty(DBusMessageIter *entry, void *value, DBusTypeWrapper expectedType) {
+bool DBusInterface::parseProperty(DBusMessageIter *entry, void *value,
+		DBusTypeWrapper expectedType) {
 	dbus_message_iter_next(entry);
 	DBusTypeWrapper type = DBusTypeWrapper(dbus_message_iter_get_arg_type(entry));
 	if (type == DBUS_TYPE_VARIANT) {
@@ -1524,7 +1523,8 @@ bool DBusInterface::parseProperty(DBusMessageIter *entry, void *value, DBusTypeW
 				DBusTypeWrapper sub_type = DBUS_TYPE_INVALID;
 				DBusMessageIter sub;
 				dbus_message_iter_recurse(&prop, &sub);
-				while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub))) != DBUS_TYPE_INVALID) {
+				while ((sub_type = DBusTypeWrapper(dbus_message_iter_get_arg_type(&sub)))
+						!= DBUS_TYPE_INVALID) {
 					auto target = reinterpret_cast<Vector<uint32_t> *>(value);
 					switch (sub_type) {
 					case DBUS_TYPE_UINT32: {
@@ -1533,16 +1533,14 @@ bool DBusInterface::parseProperty(DBusMessageIter *entry, void *value, DBusTypeW
 						target->emplace_back(type);
 						break;
 					}
-					default:
-						break;
+					default: break;
 					}
 					dbus_message_iter_next(&sub);
 				}
 				return true;
 				break;
 			}
-			default:
-				break;
+			default: break;
 			}
 		}
 	}
@@ -1558,15 +1556,16 @@ void DBusInterface::setNetworkState(NetworkState &&state) {
 	}
 }
 
-void DBusInterface::addNetworkConnectionCallback(void *key, Function<void(const NetworkState &)> &&cb) {
-	addEvent([this, cb = sp::move(cb), key] () mutable {
+void DBusInterface::addNetworkConnectionCallback(void *key,
+		Function<void(const NetworkState &)> &&cb) {
+	addEvent([this, cb = sp::move(cb), key]() mutable {
 		cb(networkState);
 		networkCallbacks.emplace(key, StateCallback{sp::move(cb), this});
 	});
 }
 
 void DBusInterface::removeNetworkConnectionCallback(void *key) {
-	addEvent([this, key] () mutable {
+	addEvent([this, key]() mutable {
 		auto refId = retain();
 		networkCallbacks.erase(key);
 		release(refId);
@@ -1619,17 +1618,25 @@ String NetworkState::description() const {
 
 	if (!capabilities.empty()) {
 		out << " ( ";
-		for (auto &it : capabilities) {
-			out << it << " ";
-		}
+		for (auto &it : capabilities) { out << it << " "; }
 		out << ")";
 	}
 	return out.str();
 }
 
-DBusLibrary DBusLibrary::get() {
-	return DBusLibrary(s_connection.get());
+DBusLibrary::DBusLibrary() { _connection = new (std::nothrow) DBusInterface; }
+
+void DBusLibrary::initialize(Application *) { }
+
+void DBusLibrary::invalidate(Application *) {
+	_connection->stop();
+	_connection->wakeup();
+	_connection->waitStopped();
+	_connection->release(0);
+	_connection = nullptr;
 }
+
+void DBusLibrary::update(Application *, const UpdateTime &t) { }
 
 bool DBusLibrary::isAvailable() const {
 	return _connection->sessionConnection && _connection->systemConnection;
@@ -1639,7 +1646,8 @@ InterfaceThemeInfo DBusLibrary::getCurrentInterfaceTheme() const {
 	return _connection->getCurrentTheme();
 }
 
-void DBusLibrary::addNetworkConnectionCallback(void *key, Function<void(const NetworkState &)> &&cb) {
+void DBusLibrary::addNetworkConnectionCallback(void *key,
+		Function<void(const NetworkState &)> &&cb) {
 	_connection->addNetworkConnectionCallback(key, sp::move(cb));
 }
 
@@ -1647,6 +1655,4 @@ void DBusLibrary::removeNetworkConnectionCallback(void *key) {
 	_connection->removeNetworkConnectionCallback(key);
 }
 
-DBusLibrary::DBusLibrary(DBusInterface *c) : _connection(c) { }
-
-}
+} // namespace stappler::xenolith::platform

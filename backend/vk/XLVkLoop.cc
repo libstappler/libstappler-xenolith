@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +38,7 @@
 #include "SPEventTimerHandle.h"
 
 #define XL_VK_DEPS_DEBUG 0
+#define XL_VK_PAUSE_TIMER 1
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -57,9 +59,10 @@ struct Loop::Internal final : memory::AllocPool {
 		transferQueue = Rc<TransferQueue>::create();
 		materialQueue = Rc<MaterialCompiler>::create();
 
-		renderQueueCompiler = Rc<RenderQueueCompiler>::create(*device, transferQueue, materialQueue);
+		renderQueueCompiler =
+				Rc<RenderQueueCompiler>::create(*device, transferQueue, materialQueue);
 
-		compileQueue(transferQueue, [this] (bool success) {
+		compileQueue(transferQueue, [this](bool success) {
 			if (!success) {
 				return;
 			}
@@ -76,7 +79,7 @@ struct Loop::Internal final : memory::AllocPool {
 				_tmpResources.clear();
 			}, loop, true);
 		});
-		compileQueue(materialQueue, [this] (bool success) {
+		compileQueue(materialQueue, [this](bool success) {
 			if (!success) {
 				return;
 			}
@@ -88,11 +91,13 @@ struct Loop::Internal final : memory::AllocPool {
 
 				for (auto &req : _tmpMaterials) {
 					if (materialQueue->inProgress(req.first->attachment)) {
-						materialQueue->appendRequest(req.first->attachment, sp::move(req.first), sp::move(req.second));
+						materialQueue->appendRequest(req.first->attachment, sp::move(req.first),
+								sp::move(req.second));
 					} else {
 						auto attachment = req.first->attachment;
 						materialQueue->setInProgress(attachment);
-						materialQueue->runMaterialCompilationFrame(*loop, sp::move(req.first), sp::move(req.second));
+						materialQueue->runMaterialCompilationFrame(*loop, sp::move(req.first),
+								sp::move(req.second));
 					}
 				}
 				_tmpMaterials.clear();
@@ -128,16 +133,16 @@ struct Loop::Internal final : memory::AllocPool {
 			}
 		}
 
+#if XL_VK_PAUSE_TIMER
 		if (scheduledFences.empty()) {
 			updateTimerHandle->pause();
 		}
+#endif
 	}
 
 	void waitIdle() {
 		// wait for all pending tasks on fences
-		for (auto &it : scheduledFences) {
-			it->check(*loop, false);
-		}
+		for (auto &it : scheduledFences) { it->check(*loop, false); }
 		scheduledFences.clear();
 
 		if (device) {
@@ -147,7 +152,7 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void compileResource(Rc<TransferResource> &&req) {
-		loop->performOnThread([this, req = move(req)] () mutable {
+		loop->performOnThread([this, req = move(req)]() mutable {
 			if (!_running.load()) {
 				return;
 			}
@@ -174,18 +179,18 @@ struct Loop::Internal final : memory::AllocPool {
 		auto input = Rc<RenderQueueInput>::alloc();
 		input->queue = req;
 
-		auto h = Rc<DeviceFrameHandle>::create(*loop, *device, renderQueueCompiler->makeRequest(move(input)), 0);
+		auto h = Rc<DeviceFrameHandle>::create(*loop, *device,
+				renderQueueCompiler->makeRequest(move(input)), 0);
 		if (cb) {
-			h->setCompleteCallback([cb = sp::move(cb), req] (FrameHandle &handle) {
-				cb(handle.isValid());
-			});
+			h->setCompleteCallback(
+					[cb = sp::move(cb), req](FrameHandle &handle) { cb(handle.isValid()); });
 		}
 
 		h->update(true);
 	}
 
 	void compileMaterials(Rc<core::MaterialInputData> &&req, Vector<Rc<DependencyEvent>> &&deps) {
-		loop->performOnThread([this, req = move(req), deps = sp::move(deps)] () mutable {
+		loop->performOnThread([this, req = move(req), deps = sp::move(deps)]() mutable {
 			if (!_running.load()) {
 				return;
 			}
@@ -197,7 +202,8 @@ struct Loop::Internal final : memory::AllocPool {
 				} else {
 					auto attachment = req->attachment;
 					materialQueue->setInProgress(attachment);
-					materialQueue->runMaterialCompilationFrame(*loop, sp::move(req), sp::move(deps));
+					materialQueue->runMaterialCompilationFrame(*loop, sp::move(req),
+							sp::move(deps));
 				}
 			}
 		}, loop, true);
@@ -213,19 +219,18 @@ struct Loop::Internal final : memory::AllocPool {
 					if (!success) {
 						v->success = false;
 					}
-					++ v->signaled;
+					++v->signaled;
 					if (v->signaled == v->events.size()) {
 #if XL_VK_DEPS_DEBUG
-						StringStream str; str << "signalDependencies:";
-						for (auto &it : v->events) {
-							str << " " << it->getId();
-						}
+						StringStream str;
+						str << "signalDependencies:";
+						for (auto &it : v->events) { str << " " << it->getId(); }
 						str << "\n";
 						log::debug("vk::Loop", "Signal: ", str.str());
 #endif
 						v->callback(iit.first->second->success);
 					}
-					++ iit.first;
+					++iit.first;
 				}
 
 				dependencyRequests.erase(tmp.first, tmp.second);
@@ -235,10 +240,9 @@ struct Loop::Internal final : memory::AllocPool {
 
 	void waitForDependencies(Vector<Rc<DependencyEvent>> &&events, Function<void(bool)> &&cb) {
 #if XL_VK_DEPS_DEBUG
-		StringStream str; str << "waitForDependencies:";
-		for (auto &it : events) {
-			str << " " << it->getId();
-		}
+		StringStream str;
+		str << "waitForDependencies:";
+		for (auto &it : events) { str << " " << it->getId(); }
 		log::debug("vk::Loop", "Wait: ", str.str());
 #endif
 
@@ -252,7 +256,7 @@ struct Loop::Internal final : memory::AllocPool {
 				if (!it->isSuccessful()) {
 					req->success = false;
 				}
-				++ req->signaled;
+				++req->signaled;
 			} else {
 				dependencyRequests.emplace(it.get(), req);
 			}
@@ -271,10 +275,12 @@ struct Loop::Internal final : memory::AllocPool {
 			loop->getLooper()->performHandle(handle);
 		} else {
 			if (scheduledFences.empty()) {
+#if XL_VK_PAUSE_TIMER
 				auto status = updateTimerHandle->resume();
 				if (status != Status::Ok) {
 					log::error("vk::Loop", "Fail to resume fence scheduler: ", status);
 				}
+#endif
 			}
 			scheduledFences.emplace(move(fence));
 		}
@@ -323,7 +329,8 @@ bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info)
 			_internal->setDevice(move(dev));
 			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 		} else if (_info.deviceIdx != core::Instance::DefaultDevice) {
-			log::warn("vk::Loop", "Unable to create device with index: ", _info.deviceIdx, ", fallback to default");
+			log::warn("vk::Loop", "Unable to create device with index: ", _info.deviceIdx,
+					", fallback to default");
 			_info.deviceIdx = core::Instance::DefaultDevice;
 			if (auto dev = _instance.get_cast<Instance>()->makeDevice(_info)) {
 				_internal->setDevice(move(dev));
@@ -345,13 +352,12 @@ void Loop::run() {
 	_looper->performOnThread([&] {
 		_internal->updateTimerHandle = _looper->scheduleTimer(event::TimerInfo{
 			.completion = event::TimerInfo::Completion::create<Loop>(this,
-					[] (Loop *loop, event::TimerHandle *, uint32_t valuu, Status status) {
-				loop->_internal->update();
-				loop->_frameCache->clear();
-			}),
+					[](Loop *loop, event::TimerHandle *, uint32_t valuu, Status status) {
+			loop->_internal->update();
+			loop->_frameCache->clear();
+		}),
 			.interval = TimeInterval::microseconds(config::PresentationSchedulerInterval),
-			.count = event::TimerInfo::Infinite
-		});
+			.count = event::TimerInfo::Infinite});
 
 		if (_internal->info->onDeviceStarted) {
 			_internal->info->onDeviceStarted(*this, *_internal->device);
@@ -382,16 +388,16 @@ void Loop::stop() {
 	}, this);
 }
 
-bool Loop::isRunning() const {
-	return _internal->_running;
-}
+bool Loop::isRunning() const { return _internal->_running; }
 
-void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb, bool preload) const {
-	auto res = Rc<TransferResource>::create(_internal->device->getAllocator(), sp::move(req), sp::move(cb));
+void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb,
+		bool preload) const {
+	auto res = Rc<TransferResource>::create(_internal->device->getAllocator(), sp::move(req),
+			sp::move(cb));
 	if (preload) {
 		res->initialize();
 	}
-	performOnThread([this, res = sp::move(res)] () mutable {
+	performOnThread([this, res = sp::move(res)]() mutable {
 		_internal->compileResource(sp::move(res));
 	}, const_cast<Loop *>(this), true);
 }
@@ -402,8 +408,9 @@ void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) c
 	}, const_cast<Loop *>(this), true);
 }
 
-void Loop::compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> &deps) const {
-	performOnThread([this, req = move(req), deps = deps] () mutable {
+void Loop::compileMaterials(Rc<core::MaterialInputData> &&req,
+		const Vector<Rc<DependencyEvent>> &deps) const {
+	performOnThread([this, req = move(req), deps = deps]() mutable {
 		_internal->compileMaterials(sp::move(req), sp::move(deps));
 	}, const_cast<Loop *>(this), true);
 }
@@ -422,7 +429,7 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 
 		auto frame = makeFrame(move(req), gen);
 		if (frame && callback) {
-			frame->setCompleteCallback([callback = sp::move(callback)] (FrameHandle &handle) {
+			frame->setCompleteCallback([callback = sp::move(callback)](FrameHandle &handle) {
 				callback(handle.isValid());
 			});
 		}
@@ -449,7 +456,8 @@ void Loop::performInQueue(Function<void()> &&func, Ref *target) const {
 	_looper->performAsync(sp::move(func), target);
 }
 
-void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate, StringView tag) const {
+void Loop::performOnThread(Function<void()> &&func, Ref *target, bool immediate,
+		StringView tag) const {
 	if (!_internal || !_internal->_running.load()) {
 		return;
 	}
@@ -468,7 +476,8 @@ auto Loop::makeFrame(Rc<FrameRequest> &&req, uint64_t gen) -> Rc<FrameHandle> {
 	return Rc<DeviceFrameHandle>::create(*this, *_internal->device, move(req), gen);
 }
 
-Rc<core::Framebuffer> Loop::acquireFramebuffer(const PassData *data, SpanView<Rc<core::ImageView>> views) {
+Rc<core::Framebuffer> Loop::acquireFramebuffer(const PassData *data,
+		SpanView<Rc<core::ImageView>> views) {
 	return _frameCache->acquireFramebuffer(data, views);
 }
 
@@ -476,10 +485,13 @@ void Loop::releaseFramebuffer(Rc<core::Framebuffer> &&fb) {
 	_frameCache->releaseFramebuffer(move(fb));
 }
 
-auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h, const core::ImageInfoData &i) -> Rc<ImageStorage> {
+auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h,
+		const core::ImageInfoData &i) -> Rc<ImageStorage> {
 	core::ImageInfoData info(i);
 	if (a->isTransient()) {
-		if ((info.usage & (core::ImageUsage::ColorAttachment | core::ImageUsage::DepthStencilAttachment | core::ImageUsage::InputAttachment))
+		if ((info.usage
+					& (core::ImageUsage::ColorAttachment | core::ImageUsage::DepthStencilAttachment
+							| core::ImageUsage::InputAttachment))
 				!= core::ImageUsage::None) {
 			info.usage |= core::ImageUsage::TransientAttachment;
 		}
@@ -490,28 +502,26 @@ auto Loop::acquireImage(const ImageAttachment *a, const AttachmentHandle *h, con
 }
 
 void Loop::releaseImage(Rc<ImageStorage> &&image) {
-	performOnThread([this, image = move(image)] () mutable {
+	performOnThread([this, image = move(image)]() mutable {
 		_frameCache->releaseImage(move(image));
 	}, this, true);
 }
 
-Rc<core::Semaphore> Loop::makeSemaphore() {
-	return _internal->device->makeSemaphore();
-}
+Rc<core::Semaphore> Loop::makeSemaphore() { return _internal->device->makeSemaphore(); }
 
 const Vector<core::ImageFormat> &Loop::getSupportedDepthStencilFormat() const {
 	return _internal->device->getSupportedDepthStencilFormat();
 }
 
 Rc<core::Fence> Loop::acquireFence(core::FenceType type) {
-	auto initFence = [&] (const Rc<Fence> &fence) {
-		fence->setFrame([this, fence] () mutable {
+	auto initFence = [&](const Rc<Fence> &fence) {
+		fence->setFrame([this, fence]() mutable {
 			if (_looper->isOnThisThread()) {
 				// schedule fence
 				_internal->scheduleFence(Rc<Fence>(fence));
 				return true;
 			} else {
-				performOnThread([this, fence = move(fence)] () mutable {
+				performOnThread([this, fence = move(fence)]() mutable {
 					if (!fence->check(*this, true)) {
 						return;
 					}
@@ -520,7 +530,7 @@ Rc<core::Fence> Loop::acquireFence(core::FenceType type) {
 				}, this, true);
 				return true;
 			}
-		}, [this, fence] () mutable {
+		}, [this, fence]() mutable {
 			fence->clear();
 			std::unique_lock<Mutex> lock(_internal->resourceMutex);
 			switch (fence->getType()) {
@@ -566,17 +576,18 @@ void Loop::signalDependencies(const Vector<Rc<DependencyEvent>> &events, Queue *
 			return;
 		}
 
-		performOnThread([this, events, success, q = Rc<Queue>(q)] () {
+		performOnThread([this, events, success, q = Rc<Queue>(q)]() {
 			_internal->signalDependencies(events, q, success);
 		}, this, false);
 	}
 }
 
-void Loop::waitForDependencies(const Vector<Rc<DependencyEvent>> &events, Function<void(bool)> &&cb) {
+void Loop::waitForDependencies(const Vector<Rc<DependencyEvent>> &events,
+		Function<void(bool)> &&cb) {
 	if (events.empty()) {
 		cb(true);
 	} else {
-		performOnThread([this, events = events, cb = sp::move(cb)] () mutable {
+		performOnThread([this, events = events, cb = sp::move(cb)]() mutable {
 			_internal->waitForDependencies(sp::move(events), sp::move(cb));
 		}, this, true);
 	}
@@ -588,27 +599,27 @@ void Loop::waitIdle() {
 	}
 }
 
-void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
-	performOnThread([this, cb = sp::move(cb), image, l] () mutable {
+void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
+		const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
+	performOnThread([this, cb = sp::move(cb), image, l]() mutable {
 		_internal->device->readImage(*this, image.cast<Image>(), l, sp::move(cb));
 	}, this, true);
 }
 
-void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<core::BufferObject> &buf) {
+void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
+		const Rc<core::BufferObject> &buf) {
 	if ((buf->getInfo().usage & core::BufferUsage::TransferSrc) != core::BufferUsage::TransferSrc) {
-		log::error("vk::Loop::captureBuffer", "Buffer '", buf->getName(), "' has no BufferUsage::TransferSrc flag to being captured");
+		log::error("vk::Loop::captureBuffer", "Buffer '", buf->getName(),
+				"' has no BufferUsage::TransferSrc flag to being captured");
 	}
 
-	performOnThread([this, cb = sp::move(cb), buf] () mutable {
+	performOnThread([this, cb = sp::move(cb), buf]() mutable {
 		_internal->device->readBuffer(*this, buf.cast<Buffer>(), sp::move(cb));
 	}, this, true);
 }
 
-void Loop::performInit() {
-}
+void Loop::performInit() { }
 
-void Loop::finalizeInit() {
+void Loop::finalizeInit() { }
 
-}
-
-}
+} // namespace stappler::xenolith::vk

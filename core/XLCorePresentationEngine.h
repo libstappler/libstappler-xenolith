@@ -87,7 +87,7 @@ public:
 			core::PresentMode presentMode) = 0;
 	virtual void deprecateSwapchain(bool fast);
 
-	virtual bool present(PresentationFrame *frame);
+	virtual bool present(PresentationFrame *frame, ImageStorage *image);
 	virtual bool presentImmediate(PresentationFrame *frame) { return false; }
 
 	virtual void update(bool displayLink);
@@ -151,10 +151,11 @@ protected:
 
 	void handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image);
 
-	void runScheduledPresent(PresentationFrame *frame);
-	void presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame);
+	void runScheduledPresent(PresentationFrame *frame, ImageStorage *image);
+	void presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame,
+			ImageStorage *image);
 
-	void presentWithQueue(DeviceQueue &queue, PresentationFrame *frame);
+	void presentWithQueue(DeviceQueue &queue, PresentationFrame *frame, ImageStorage *image);
 
 	Options _options;
 	FrameConstraints _constraints;
@@ -202,7 +203,7 @@ protected:
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;
 
 	// Frames, waiting to be presented
-	Vector<Rc<PresentationFrame>> _scheduledForPresent;
+	Vector< Pair<Rc<PresentationFrame>, Rc<ImageStorage>>> _scheduledForPresent;
 
 	// Handles, waiting for their present windows
 	Set<Rc<event::Handle>> _scheduledPresentHandles;

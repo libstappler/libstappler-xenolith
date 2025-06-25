@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,9 @@
 #define XENOLITH_PLATFORM_LINUX_XLPLATFORMLINUXDBUS_H_
 
 #include "SPCore.h"
+#include "XLApplicationExtension.h"
 #include "XLCommon.h"
+#include "XLPlatformApplication.h"
 
 #if LINUX
 
@@ -44,9 +47,12 @@ enum NMState {
 enum NMConnectivityState {
 	NM_CONNECTIVITY_UNKNOWN = 1, // Network connectivity is unknown.
 	NM_CONNECTIVITY_NONE = 2, // The host is not connected to any network.
-	NM_CONNECTIVITY_PORTAL = 3, // The host is behind a captive portal and cannot reach the full Internet.
-	NM_CONNECTIVITY_LIMITED = 4, // The host is connected to a network, but does not appear to be able to reach the full Internet.
-	NM_CONNECTIVITY_FULL = 5, // The host is connected to a network, and appears to be able to reach the full Internet.
+	NM_CONNECTIVITY_PORTAL =
+			3, // The host is behind a captive portal and cannot reach the full Internet.
+	NM_CONNECTIVITY_LIMITED =
+			4, // The host is connected to a network, but does not appear to be able to reach the full Internet.
+	NM_CONNECTIVITY_FULL =
+			5, // The host is connected to a network, and appears to be able to reach the full Internet.
 };
 
 enum NMMetered {
@@ -87,9 +93,16 @@ struct SP_PUBLIC NetworkState {
 	String description() const;
 };
 
-class SP_PUBLIC DBusLibrary {
+class SP_PUBLIC DBusLibrary : public ApplicationExtension {
 public:
-	static DBusLibrary get();
+	virtual ~DBusLibrary() = default;
+
+	DBusLibrary();
+
+	virtual void initialize(Application *) override;
+	virtual void invalidate(Application *) override;
+
+	virtual void update(Application *, const UpdateTime &t) override;
 
 	bool isAvailable() const;
 
@@ -99,12 +112,10 @@ public:
 	void removeNetworkConnectionCallback(void *key);
 
 protected:
-	DBusLibrary(DBusInterface *);
-
 	DBusInterface *_connection = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::platform
 
 #endif
 

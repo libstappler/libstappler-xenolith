@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,7 @@
 #include "XLNetworkController.h"
 #include "SPNetworkContext.h"
 #include "XLNetworkRequest.h"
+#include <cstddef>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
@@ -79,20 +81,19 @@ struct Controller::Data final : thread::Thread {
 	bool finalize(Handle &handle, Context *ctx, const Callback<bool(CURL *)> &onAfterPerform);
 };
 
-SPUNUSED static void registerNetworkCallback(Application *, void *, Function<void(NetworkCapabilities)> &&);
+SPUNUSED static void registerNetworkCallback(Application *, void *,
+		Function<void(NetworkCapabilities)> &&);
 SPUNUSED static void unregisterNetworkCallback(Application *, void *);
 
 XL_DECLARE_EVENT(Controller, "network::Controller", onNetworkCapabilities);
 
 Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &&signKey)
-: _application(app), _controller(c), _name(name.str<Interface>()), _signKey(sp::move(signKey)) {
-
-}
+: _application(app), _controller(c), _name(name.str<Interface>()), _signKey(sp::move(signKey)) { }
 
 Controller::Data::~Data() { }
 
 bool Controller::Data::init() {
-	registerNetworkCallback(_application, this, [this] (NetworkCapabilities cap) {
+	registerNetworkCallback(_application, this, [this](NetworkCapabilities cap) {
 		_application->performOnAppThread([this, cap] {
 			_capabilities = cap;
 			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
@@ -101,9 +102,7 @@ bool Controller::Data::init() {
 	return true;
 }
 
-void Controller::Data::invalidate() {
-	unregisterNetworkCallback(_application, this);
-}
+void Controller::Data::invalidate() { unregisterNetworkCallback(_application, this); }
 
 void Controller::Data::threadInit() {
 	_pending.setQueueLocking(_mutexQueue);
@@ -122,7 +121,8 @@ bool Controller::Data::worker() {
 	}
 
 	do {
-		if (!_pending.pop_direct([&, this] (memory::PriorityQueue<Rc<Handle>>::PriorityType type, Rc<Request> &&it) {
+		if (!_pending.pop_direct([&, this](memory::PriorityQueue<Rc<Handle>>::PriorityType type,
+										 Rc<Request> &&it) {
 			auto h = curl_easy_init();
 			auto networkHandle = const_cast<Handle *>(&it->getHandle());
 			auto i = _handles.emplace(h, ControllerHandle{move(it), networkHandle}).first;
@@ -136,12 +136,14 @@ bool Controller::Data::worker() {
 			i->second.context.curl = h;
 			i->second.context.origHandle = networkHandle;
 
-			i->second.context.origHandle->setDownloadProgress([this, h = networkHandle] (int64_t total, int64_t now) -> int {
+			i->second.context.origHandle->setDownloadProgress(
+					[this, h = networkHandle](int64_t total, int64_t now) -> int {
 				onDownloadProgress(h, total, now);
 				return 0;
 			});
 
-			i->second.context.origHandle->setUploadProgress([this,  h = networkHandle] (int64_t total, int64_t now) -> int {
+			i->second.context.origHandle->setUploadProgress(
+					[this, h = networkHandle](int64_t total, int64_t now) -> int {
 				onUploadProgress(h, total, now);
 				return 0;
 			});
@@ -167,7 +169,7 @@ bool Controller::Data::worker() {
 
 	int timeout = 16;
 	if (running == 0) {
-		timeout = 1000;
+		timeout = 1'000;
 	}
 
 	err = curl_multi_poll(reinterpret_cast<CURLM *>(_handle), NULL, 0, timeout, nullptr);
@@ -213,9 +215,7 @@ void Controller::Data::threadDispose() {
 
 		curl_multi_cleanup(reinterpret_cast<CURLM *>(_handle));
 
-		for (auto &it : _sharegroups) {
-			curl_share_cleanup((CURLSH *)it.second);
-		}
+		for (auto &it : _sharegroups) { curl_share_cleanup((CURLSH *)it.second); }
 
 		_handles.clear();
 		_sharegroups.clear();
@@ -233,8 +233,10 @@ void *Controller::Data::getSharegroup(StringView name) {
 	}
 
 	auto sharegroup = curl_share_init();
-	curl_share_setopt(reinterpret_cast<CURLSH *>(sharegroup), CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
-	curl_share_setopt(reinterpret_cast<CURLSH *>(sharegroup), CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+	curl_share_setopt(reinterpret_cast<CURLSH *>(sharegroup), CURLSHOPT_SHARE,
+			CURL_LOCK_DATA_COOKIE);
+	curl_share_setopt(reinterpret_cast<CURLSH *>(sharegroup), CURLSHOPT_SHARE,
+			CURL_LOCK_DATA_SSL_SESSION);
 	curl_share_setopt(reinterpret_cast<CURLSH *>(sharegroup), CURLSHOPT_SHARE, CURL_LOCK_DATA_PSL);
 
 	_sharegroups.emplace(name.str<Interface>(), sharegroup);
@@ -272,18 +274,15 @@ void Controller::Data::sign(NetworkHandle &handle, Context &ctx) const {
 
 	auto &appInfo = _application->getInfo();
 
-	auto msg = toString(
-		handle.getUrl(), "\r\n",
-		"X-ApplicationName: ", appInfo.bundleName, "\r\n",
-		"X-ApplicationVersion: ", appInfo.applicationVersion, "\r\n",
-		"X-ClientDate: ", date, "\r\n",
-		"User-Agent: ", _application->getInfo().userAgent, "\r\n"
-		);
+	auto msg = toString(handle.getUrl(), "\r\n", "X-ApplicationName: ", appInfo.bundleName, "\r\n",
+			"X-ApplicationVersion: ", appInfo.applicationVersion, "\r\n", "X-ClientDate: ", date,
+			"\r\n", "User-Agent: ", _application->getInfo().userAgent, "\r\n");
 
 	auto sig = string::Sha512::hmac(msg, _signKey);
 
 	ctx.headers = curl_slist_append(ctx.headers, toString("X-ClientDate: ", date).data());
-	ctx.headers = curl_slist_append(ctx.headers, toString("X-Stappler-Sign: ", base64url::encode<Interface>(sig)).data());
+	ctx.headers = curl_slist_append(ctx.headers,
+			toString("X-Stappler-Sign: ", base64url::encode<Interface>(sig)).data());
 
 	if (!_application->getInfo().userAgent.empty()) {
 		handle.setUserAgent(_application->getInfo().userAgent);
@@ -295,11 +294,10 @@ void Controller::Data::pushTask(Rc<Request> &&handle) {
 	curl_multi_wakeup(_handle);
 }
 
-void Controller::Data::wakeup() {
-	curl_multi_wakeup(_handle);
-}
+void Controller::Data::wakeup() { curl_multi_wakeup(_handle); }
 
-bool Controller::Data::prepare(Handle &handle, Context *ctx, const Callback<bool(CURL *)> &onBeforePerform) {
+bool Controller::Data::prepare(Handle &handle, Context *ctx,
+		const Callback<bool(CURL *)> &onBeforePerform) {
 	if (!handle.prepare(ctx)) {
 		return false;
 	}
@@ -307,12 +305,14 @@ bool Controller::Data::prepare(Handle &handle, Context *ctx, const Callback<bool
 	return stappler::network::prepare(*handle.getData(), ctx, onBeforePerform);
 }
 
-bool Controller::Data::finalize(Handle &handle, Context *ctx, const Callback<bool(CURL *)> &onAfterPerform) {
+bool Controller::Data::finalize(Handle &handle, Context *ctx,
+		const Callback<bool(CURL *)> &onAfterPerform) {
 	auto ret = stappler::network::finalize(*handle.getData(), ctx, onAfterPerform);
 	return handle.finalize(ctx, ret);
 }
 
-Rc<ApplicationExtension> Controller::createController(Application *app, StringView name, Bytes &&signKey) {
+Rc<ApplicationExtension> Controller::createController(Application *app, StringView name,
+		Bytes &&signKey) {
 	return Rc<network::Controller>::alloc(app, name, sp::move(signKey));
 }
 
@@ -322,48 +322,33 @@ Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
 	_data->run();
 }
 
-Controller::~Controller() {
+Controller::~Controller() { }
+
+void Controller::initialize(Application *) { }
+
+void Controller::invalidate(Application *) {
 	_data->stop();
 	curl_multi_wakeup(_data->_handle);
 	_data->waitStopped();
 	delete _data;
+	_data = nullptr;
 }
 
-void Controller::initialize(Application *) {
+void Controller::update(Application *, const UpdateTime &t) { }
 
-}
+Application *Controller::getApplication() const { return _data->_application; }
 
-void Controller::invalidate(Application *) {
+StringView Controller::getName() const { return _data->_name; }
 
-}
+void Controller::run(Rc<Request> &&handle) { _data->pushTask(move(handle)); }
 
-void Controller::update(Application *, const UpdateTime &t) {
-
-}
-
-Application *Controller::getApplication() const {
-	return _data->_application;
-}
-
-StringView Controller::getName() const {
-	return _data->_name;
-}
-
-void Controller::run(Rc<Request> &&handle) {
-	_data->pushTask(move(handle));
-}
-
-void Controller::setSignKey(Bytes &&value) {
-	_data->_signKey = sp::move(value);
-}
+void Controller::setSignKey(Bytes &&value) { _data->_signKey = sp::move(value); }
 
 bool Controller::isNetworkOnline() const {
 	return (_data->_capabilities & NetworkCapabilities::Internet) != NetworkCapabilities::None;
 }
 
-NetworkCapabilities Controller::getNetworkCapabilities() const {
-	return _data->_capabilities;
-}
+NetworkCapabilities Controller::getNetworkCapabilities() const { return _data->_capabilities; }
 
 
-}
+} // namespace stappler::xenolith::network

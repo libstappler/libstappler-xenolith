@@ -35,7 +35,6 @@ bool EventDelegate::init(Ref *owner, const EventHeader &ev, BusEventCallback &&c
 	_categories.emplace_back(ev.getEventId());
 	_looper = nullptr;
 	_callback = sp::move(cb);
-
 	return true;
 }
 
@@ -84,13 +83,16 @@ event::BusDelegate *EventListener::listenForEvent(const EventHeader &h, EventCal
 	auto d = Rc<EventDelegate>::create(this, h,
 			[this, callback = sp::move(callback), removeAfterEvent](event::Bus &bus,
 					const event::BusEvent &event, event::BusDelegate &d) {
-		if (_enabled && _owner && callback) {
+		if (_enabled && _owner && _running) {
+			auto refId = retain();
+			std::cout << "call: " << this << "\n";
 			callback(static_cast<const Event &>(event));
 			if (removeAfterEvent) {
-				bus.removeListener(&d);
 				_listeners.erase(static_cast<EventDelegate *>(&d));
+				bus.removeListener(&d);
 				d.invalidate();
 			}
+			release(refId);
 		}
 	});
 	_listeners.emplace(d);

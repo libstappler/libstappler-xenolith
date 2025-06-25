@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +32,7 @@ class Application;
 
 class SP_PUBLIC ApplicationExtension : public Ref {
 public:
-	virtual ~ApplicationExtension() { }
+	virtual ~ApplicationExtension() = default;
 
 	virtual void initialize(Application *) = 0;
 	virtual void invalidate(Application *) = 0;
@@ -39,6 +40,6 @@ public:
 	virtual void update(Application *, const UpdateTime &t) = 0;
 };
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLAPPLICATIONEXTENSION_H_ */

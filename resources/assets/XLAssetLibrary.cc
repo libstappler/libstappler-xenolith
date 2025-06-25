@@ -24,6 +24,7 @@
 #include "XLAssetLibrary.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
+#include "SPLog.h"
 #include "XLApplication.h"
 #include "XLAsset.h"
 #include "XLStorageComponent.h"
@@ -211,10 +212,16 @@ bool AssetLibrary::init(Application *app, network::Controller *c, StringView nam
 
 	targetDbParams.setString(name, "serverName");
 
+	_server = Rc<Server>::create(app, targetDbParams);
+	if (!_server) {
+		log::error("AssetLibrary", "Fail to create DB server connection for asset library");
+		return false;
+	}
+
 	_application = app; // always before server initialization
 	_controller = c;
 	_container = Rc<AssetComponentContainer>::create("AssetLibrary", this);
-	_server = Rc<Server>::create(app, dbParams);
+
 	_server->addComponentContainer(_container);
 	return true;
 }
@@ -230,6 +237,7 @@ void AssetLibrary::invalidate(Application *app) {
 	_callbacks.clear();
 
 	_server->removeComponentContainer(_container);
+	_server->invalidate(app);
 	_server = nullptr;
 }
 
