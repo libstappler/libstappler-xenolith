@@ -45,7 +45,8 @@ bool Director::init(Application *main, const core::FrameConstraints &constraints
 	_mainLoop = main;
 	_view = view;
 	_engine = _view->getPresentationEngine();
-	_pool = Rc<PoolRef>::alloc();
+	_allocator = Rc<AllocRef>::alloc();
+	_pool = Rc<PoolRef>::alloc(_allocator);
 	_pool->perform([&, this] {
 		_scheduler = Rc<Scheduler>::create();
 		_actionManager = Rc<ActionManager>::create();
@@ -113,7 +114,7 @@ bool Director::acquireFrame(FrameRequest *req) {
 			return;
 		}
 
-		auto pool = Rc<PoolRef>::alloc();
+		auto pool = Rc<PoolRef>::alloc(_allocator);
 
 		pool->perform([&, this] {
 			_scene->renderRequest(req, pool);

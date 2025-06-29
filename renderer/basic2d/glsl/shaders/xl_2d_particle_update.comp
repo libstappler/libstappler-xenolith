@@ -8,10 +8,10 @@
 #include "XL2dGlslVertexData.h"
 
 layout (constant_id = 0) const int ENABLE_FEEDBACK = 0;
+layout (constant_id = 1) const int BUFFERS_ARRAY_SIZE = 1024;
 
 layout(buffer_reference) readonly buffer EmitterBuffer;
 layout(buffer_reference) readonly buffer EmissionPointsBuffer;
-layout(buffer_reference) buffer ParticlesBuffer;
 layout(buffer_reference) buffer VerticesBuffer;
 layout(buffer_reference) buffer CommandBuffer;
 layout(buffer_reference) buffer FeedbackBuffer;
@@ -29,10 +29,6 @@ layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer Emi
 	vec2 points[];
 };
 
-layout(std430, buffer_reference, buffer_reference_align = 8) buffer ParticlesBuffer {
-	ParticleData particles[];
-};
-
 layout(std430, buffer_reference, buffer_reference_align = 8) buffer VerticesBuffer {
 	Vertex vertices[];
 };
@@ -45,12 +41,17 @@ layout(std430, buffer_reference, buffer_reference_align = 8) buffer FeedbackBuff
 	ParticleFeedback data;
 };
 
+layout (set = 0, binding = 0) buffer ParticlesBuffer {
+	ParticleData particles[];
+} particleBuffers[BUFFERS_ARRAY_SIZE];
+
 layout(local_size_x = 64) in;
 
 VerticesBuffer vertexBuffer = VerticesBuffer(pcb.outVerticesPointer);
 CommandBuffer commandBuffer = CommandBuffer(pcb.outCommandPointer);
-ParticlesBuffer particleBuffer = ParticlesBuffer(pcb.particlesPointer);
 EmitterBuffer emitterBuffer = EmitterBuffer(pcb.emitterPointer);
+
+ParticleData particle;
 
 #define brand(particle, bound) (pcg16_boundedrand_r(particle.rng, bound))
 #define rand(particle) (pcg16_random_r(particle.rng))
@@ -77,7 +78,7 @@ vec2 getParam(in ParticleVec2Param param, inout pcg16_state_t rng, in uint count
 		+ param.rnd * (float(gl_GlobalInvocationID.x) / float(count)) * (1.0 - randomness);
 }
 
-void emitParticle(inout ParticleData particle) {
+void emitParticle() {
 	const ParticleEmitterData emitter = EmitterBuffer(pcb.emitterPointer).data;
 
 	vec2 emissionPoint = vec2(0, 0);
@@ -122,7 +123,7 @@ void emitParticle(inout ParticleData particle) {
 	particle.hue = getParam(emitter.hue, particle.rng);*/
 }
 
-void simulateParticleFrame(inout ParticleData particle) {
+void simulateParticleFrame() {
 	particle.velocity = particle.velocity + particle.qAcceleration;
 	particle.linearVelocity = particle.linearVelocity + particle.qLinearAcceleration;
 
@@ -139,50 +140,65 @@ void main() {
 		return;
 	}
 
+	bool emitted = false;
+	particle = particleBuffers[pcb.particleBufferIndex].particles[gl_GlobalInvocationID.x];
+
 	const float particleProgress = float(gl_GlobalInvocationID.x) / float(emitterBuffer.data.count)
 			* (1.0 - emitterBuffer.data.explosiveness);
 
 	uint nframes = pcb.nframes;
 
-	ParticleData particle = ParticlesBuffer(pcb.particlesPointer).particles[gl_GlobalInvocationID.x];
-
 	// first - simulate particle
 
 	if (nframes > 0) {
 		if (pcb.gentime <= particleProgress && particleProgress < pcb.gentime + pcb.gendt * float(nframes)) {
-			emitParticle(particle);
+			emitParticle();
 			nframes -= min(uint(floor((particleProgress - pcb.gentime) * pcb.gendt)), nframes - 1);
 
-			/*if (ENABLE_FEEDBACK != 0) {
+			if (ENABLE_FEEDBACK != 0) {
 				FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
 				atomicAdd(feedbackBuffer.data.emissionCount, 1);
-			}*/
+				feedbackBuffer.data.nframes = nframes;
+			}
+			emitted = true;
 		}
 
 		if (particle.currentLifetime <= nframes) {
 			particle.currentLifetime = 0;
-			/*if (ENABLE_FEEDBACK != 0) {
+			if (ENABLE_FEEDBACK != 0) {
 				FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
 				atomicAdd(feedbackBuffer.data.skippedCount, 1);
-			}*/
+			}
 		} else {
 			for (uint i = 0; i < nframes; ++ i) {
-				simulateParticleFrame(particle);
-				/*if (ENABLE_FEEDBACK != 0) {
+				simulateParticleFrame();
+				if (ENABLE_FEEDBACK != 0) {
 					FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
 					atomicAdd(feedbackBuffer.data.simulationCount, 1);
-				}*/
+				}
 			}
 			particle.currentLifetime -= nframes;
 		}
 
-		ParticlesBuffer(pcb.particlesPointer).particles[gl_GlobalInvocationID.x] = particle;
+		particleBuffers[pcb.particleBufferIndex].particles[gl_GlobalInvocationID.x] = particle;
 	}
 
+	//if (ENABLE_FEEDBACK != 0) {
+	//	if (emitted) {
+	//		FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
+	//		feedbackBuffer.data.emitted = particleBuffers[pcb.particleBufferIndex].particles[gl_GlobalInvocationID.x];
+	//	}
+	//}
+	
 	// second - write vertexes for the paticle
-
+	
 	if (particle.currentLifetime == 0) {
 		return;
+	}
+
+	if (ENABLE_FEEDBACK != 0) {
+		FeedbackBuffer feedbackBuffer = FeedbackBuffer(pcb.feedbackPointer);
+		atomicAdd(feedbackBuffer.data.written, 1);
 	}
 
 	/*vec2 bl = rotateNormalVec(-particle.sizeNormal, particle.angle) * particle.scale;

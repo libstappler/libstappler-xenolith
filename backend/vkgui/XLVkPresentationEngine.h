@@ -33,17 +33,20 @@ class SP_PUBLIC PresentationEngine final : public core::PresentationEngine {
 public:
 	virtual ~PresentationEngine() = default;
 
-	bool init(Device *, View *, Rc<Surface> &&, core::FrameConstraints &&, uint64_t frameInterval = 0);
+	bool init(Device *, View *, Rc<Surface> &&, core::FrameConstraints &&,
+			uint64_t frameInterval = 0);
 
 	virtual bool run() override;
 
-	virtual bool recreateSwapchain(core::PresentMode) override;
-	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg, core::PresentMode presentMode) override;
+	virtual bool recreateSwapchain() override;
+	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
+			core::PresentMode presentMode) override;
 
 	virtual void handleFramePresented(core::PresentationFrame *) override;
 
 protected:
-	virtual void acquireFrameData(core::PresentationFrame *, Function<void(core::PresentationFrame *)> &&) override;
+	virtual void acquireFrameData(core::PresentationFrame *,
+			Function<void(core::PresentationFrame *)> &&) override;
 
 	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;
 
@@ -51,6 +54,6 @@ protected:
 	Rc<Surface> _surface;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VKGUI_XLVKPRESENTATIONENGINE_H_ */

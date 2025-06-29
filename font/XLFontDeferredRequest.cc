@@ -24,16 +24,16 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-void DeferredRequest::runFontRenderer(thread::ThreadPool *queue, const Rc<FontExtension> &ext,
-		const Vector<FontUpdateRequest> &req, Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex, Function<void()> &&onComp) {
+void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontExtension> &ext,
+		const Vector<FontUpdateRequest> &req,
+		Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex,
+		Function<void()> &&onComp) {
 	auto data = Rc<DeferredRequest>::alloc(ext, req);
 	data->onTexture = sp::move(onTex);
 	data->onComplete = sp::move(onComp);
 
-	for (uint32_t i = 0; i < queue->getInfo().threadCount; ++ i) {
-		queue->perform([data] () {
-			data->runThread();
-		});
+	for (uint32_t i = 0; i < queue->getThreadPool()->getInfo().threadCount; ++i) {
+		queue->performAsync([data]() { data->runThread(); });
 	}
 }
 
@@ -41,22 +41,19 @@ DeferredRequest::~DeferredRequest() { }
 
 DeferredRequest::DeferredRequest(const Rc<FontExtension> &ext, const Vector<FontUpdateRequest> &req)
 : ext(ext) {
-	for (auto &it : req) {
-		nrequests += it.chars.size();
-	}
+	for (auto &it : req) { nrequests += it.chars.size(); }
 
 	fontRequests.reserve(nrequests);
 
-	for (uint32_t i = 0; i < req.size(); ++ i) {
+	for (uint32_t i = 0; i < req.size(); ++i) {
 		faces.emplace_back(req[i].object);
-		for (auto &it : req[i].chars) {
-			fontRequests.emplace_back(i, it);
-		}
+		for (auto &it : req[i].chars) { fontRequests.emplace_back(i, it); }
 	}
 }
 
 void DeferredRequest::runThread() {
-	Vector<Rc<FontFaceObjectHandle>> threadFaces; threadFaces.resize(faces.size(), nullptr);
+	Vector<Rc<FontFaceObjectHandle>> threadFaces;
+	threadFaces.resize(faces.size(), nullptr);
 	uint32_t target = current.fetch_add(1);
 	uint32_t c = 0;
 	while (target < nrequests) {
@@ -71,9 +68,8 @@ void DeferredRequest::runThread() {
 			threadFaces[v.first] = ext->getLibrary()->makeThreadHandle(faces[v.first]);
 		}
 
-		threadFaces[v.first]->acquireTexture(v.second, [&, this] (const font::CharTexture &tex) {
-			onTexture(v.first, tex);
-		});
+		threadFaces[v.first]->acquireTexture(v.second,
+				[&, this](const font::CharTexture &tex) { onTexture(v.first, tex); });
 		c = complete.fetch_add(1);
 		target = current.fetch_add(1);
 	}
@@ -83,4 +79,4 @@ void DeferredRequest::runThread() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::font

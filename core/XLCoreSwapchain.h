@@ -62,14 +62,14 @@ public:
 		Rc<Semaphore> sem;
 		Rc<Swapchain> swapchain;
 
-		SwapchainAcquiredImage(uint32_t idx, const SwapchainImageData *data, Rc<Semaphore> &&sem, Rc<Swapchain> &&s)
+		SwapchainAcquiredImage(uint32_t idx, const SwapchainImageData *data, Rc<Semaphore> &&sem,
+				Rc<Swapchain> &&s)
 		: imageIndex(idx), data(data), sem(move(sem)), swapchain(move(s)) { }
 	};
 
 	virtual ~Swapchain();
 
 	PresentMode getPresentMode() const { return _presentMode; }
-	PresentMode getRebuildMode() const { return _rebuildMode; }
 	const ImageInfo &getImageInfo() const { return _imageInfo; }
 	const SwapchainConfig &getConfig() const { return _config; }
 	const SurfaceInfo &getSurfaceInfo() const { return _surfaceInfo; }
@@ -79,9 +79,10 @@ public:
 
 	bool isDeprecated();
 	bool isOptimal() const;
+	bool isValid() const;
 
 	// returns true if it was first deprecation
-	bool deprecate(bool fast);
+	bool deprecate();
 
 	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree, const Rc<Fence> &fence) = 0;
 
@@ -98,7 +99,8 @@ protected:
 
 	ImageViewInfo getSwapchainImageViewInfo(const ImageInfo &image) const;
 
-	bool _deprecated = false;
+	bool _deprecated = false; // should we recreate swapchain
+	bool _invalid = false; // can we present images with this swapchain
 	core::PresentMode _presentMode = core::PresentMode::Unsupported;
 	ImageInfo _imageInfo;
 	core::SurfaceInfo _surfaceInfo;
@@ -106,7 +108,6 @@ protected:
 	uint32_t _acquiredImages = 0;
 	uint64_t _presentedFrames = 0;
 	uint64_t _presentTime = 0;
-	core::PresentMode _rebuildMode = core::PresentMode::Unsupported;
 
 	Mutex _resourceMutex;
 	Rc<Surface> _surface;
@@ -158,6 +159,6 @@ protected:
 	Rc<Swapchain> _swapchain;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCORESWAPCHAIN_H_ */

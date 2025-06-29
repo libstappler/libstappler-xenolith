@@ -28,12 +28,9 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct SP_PUBLIC DeferredRequest : Ref {
-	static void runFontRenderer(
-		thread::ThreadPool *,
-		const Rc<FontExtension> &,
-		const Vector<FontUpdateRequest> &req,
-		Function<void(uint32_t reqIdx, const CharTexture &texData)> &&,
-		Function<void()> &&);
+	static void runFontRenderer(event::Looper *, const Rc<FontExtension> &,
+			const Vector<FontUpdateRequest> &req,
+			Function<void(uint32_t reqIdx, const CharTexture &texData)> &&, Function<void()> &&);
 
 	virtual ~DeferredRequest();
 
@@ -52,6 +49,6 @@ struct SP_PUBLIC DeferredRequest : Ref {
 	Function<void()> onComplete;
 };
 
-}
+} // namespace stappler::xenolith::font
 
 #endif /* XENOLITH_FONT_XLFONTDEFERREDREQUEST_H_ */

@@ -68,13 +68,13 @@ public:
 	xcb_window_t getWindow() const { return _info.window; }
 	xcb_connection_t *getConnection() const;
 
-	virtual void handleFramePresented() override;
+	virtual void handleFramePresented(uint64_t) override;
 
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) override;
 	virtual void writeToClipboard(BytesView, StringView contentType) override;
 
 	virtual int getSocketFd() const override;
-	virtual bool poll(bool frameReady) override;
+	virtual bool poll(LinuxPollState &state) override;
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
@@ -100,8 +100,6 @@ protected:
 	xcb_timestamp_t _lastInputTime = 0;
 	xcb_timestamp_t _lastSyncTime = 0;
 	Vector<core::InputEventData> _pendingEvents;
-	bool _deprecateSwapchain = false;
-	bool _shouldClose = false;
 
 	uint16_t _borderWidth = 0;
 	uint16_t _rate = 60;
@@ -112,6 +110,8 @@ protected:
 	Function<void(BytesView, StringView)> _clipboardCallback;
 	Rc<Ref> _clipboardTarget;
 	Bytes _clipboardSelection;
+
+	LinuxPollState *_pollState = nullptr;
 };
 
 } // namespace stappler::xenolith::platform

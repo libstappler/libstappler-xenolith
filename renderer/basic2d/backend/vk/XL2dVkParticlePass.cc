@@ -27,6 +27,7 @@
 #include "SPTime.h"
 #include "XL2d.h"
 #include "XL2dCommandList.h"
+#include "XL2dConfig.h"
 #include "XL2dParticleSystem.h"
 #include "XL2dFrameContext.h"
 #include "XLCoreAttachment.h"
@@ -51,6 +52,22 @@ const ParticleSystemRenderInfo *ParticleEmitterAttachmentHandle::getEmitterRende
 		return it->second;
 	}
 	return nullptr;
+}
+
+uint32_t ParticleEmitterAttachmentHandle::enumerateDirtyDescriptors(const PassHandle &,
+		const PipelineDescriptor &, const core::DescriptorBinding &binding,
+		const Callback<void(uint32_t)> &cb) const {
+	uint32_t ret = 0;
+	uint32_t idx = 0;
+	for (auto &it : _buffers) {
+		if (it.dirty || it.buffer != binding.get(idx).data
+				|| it.buffer->getObjectData().handle != binding.get(idx).object) {
+			cb(idx);
+			++ret;
+		}
+		++idx;
+	}
+	return ret;
 }
 
 void ParticleEmitterAttachmentHandle::enumerateAttachmentObjects(
@@ -170,8 +187,9 @@ ParticlePersistentData::EmitterData ParticlePersistentData::spawnEmitter(DeviceM
 
 	auto emitterBuffer = alloc->preallocate(
 			BufferInfo(core::BufferUsage::ShaderDeviceAddress, sizeof(ParticleEmitterData)));
-	auto particlesBuffer = alloc->preallocate(BufferInfo(core::BufferUsage::ShaderDeviceAddress,
-			sizeof(ParticleData) * s->data.count));
+	auto particlesBuffer = alloc->preallocate(
+			BufferInfo(core::BufferUsage::ShaderDeviceAddress | core::BufferUsage::StorageBuffer,
+					sizeof(ParticleData) * s->data.count));
 
 	Rc<Buffer> emissionData;
 	if (s->data.emissionType == 0) {
@@ -218,7 +236,8 @@ ParticlePersistentData::EmitterData ParticlePersistentData::spawnEmitter(DeviceM
 }
 
 bool ParticleEmitterAttachment::init(AttachmentBuilder &builder) {
-	if (!core::GenericAttachment::init(builder)) {
+	if (!BufferAttachment::init(builder,
+				BufferInfo(core::BufferUsage::StorageBuffer, core::PassType::Compute))) {
 		return false;
 	}
 
@@ -281,6 +300,8 @@ void ParticleEmitterAttachment::handleInput(FrameQueue &q, ParticleEmitterAttach
 				handle._emittersIndexes.emplace(it.first, &fIt->second);
 			}
 
+			handle.addBufferView(it.second.particles);
+
 			++index;
 		}
 	}
@@ -294,13 +315,16 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 
 	_emitters = outVertexes;
 
-	passBuilder.addAttachment(_emitters,
+	auto particlesData = passBuilder.addAttachment(_emitters,
 			AttachmentDependencyInfo::make(PipelineStage::ComputeShader | PipelineStage::Transfer,
 					AccessType::ShaderWrite | AccessType::TransferWrite));
 
 	auto layout = passBuilder.addDescriptorLayout("ParticleLayout",
-			[](PipelineLayoutBuilder &layoutBuilder) {
-		// Vertex input attachment - per-frame vertex list
+			[&](PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&](DescriptorSetBuilder &set) {
+			set.addDescriptorArray(particlesData, config::ParticleBufferArraySize,
+					DescriptorFlags::UpdateAfterBind | DescriptorFlags::PartiallyBound);
+		});
 	});
 
 	// clang-format off
@@ -311,7 +335,10 @@ bool ParticlePass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuil
 		subpassBuilder.addComputePipeline(UpdatePipelineName, layout->defaultFamily,
 			SpecializationInfo(
 				particleUpdateComp,
-				memory::vector<SpecializationConstant>{SpecializationConstant(ENABLE_FEEDBACK)}
+				memory::vector<SpecializationConstant>{
+					SpecializationConstant(ENABLE_FEEDBACK),
+					SpecializationConstant(config::ParticleBufferArraySize)
+				}
 			)
 		);
 
@@ -341,8 +368,8 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 	auto memPool = dFrame->getMemPool(nullptr);
 
 	auto &buf = static_cast<vk::CommandBuffer &>(cbuf);
-	auto it = subpass.computePipelines.find(UpdatePipelineName);
-	if (it == subpass.computePipelines.end()) {
+	auto pipelineIt = subpass.computePipelines.find(UpdatePipelineName);
+	if (pipelineIt == subpass.computePipelines.end()) {
 		return;
 	}
 
@@ -396,13 +423,18 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 	buf.cmdPipelineBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
 			barriers);
 
-	buf.cmdBindPipelineWithDescriptors((*it), 0);
+	buf.cmdGlobalBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT);
+
+	buf.cmdBindPipelineWithDescriptors((*pipelineIt), 0);
 
 	uint64_t vertexAddress = buf.bindBufferAddress(aHandle->getVertices());
 	uint64_t commandsAddress = buf.bindBufferAddress(aHandle->getCommands());
 
 	ParticleConstantData pcb;
 
+	uint32_t bufferIndex = 0;
 	for (auto &e : data->getEmitters()) {
 		auto &d = e.second.systemData->data;
 		auto renderInfo = aHandle->getEmitterRenderInfo(e.first);
@@ -431,7 +463,7 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 		pcb.outVerticesPointer = UVec2::convertFromPacked(vertexAddress);
 		pcb.outCommandPointer = UVec2::convertFromPacked(commandsAddress);
 		pcb.emitterPointer = UVec2::convertFromPacked(e.second.emitter->getDeviceAddress());
-		pcb.particlesPointer = UVec2::convertFromPacked(e.second.particles->getDeviceAddress());
+		pcb.particleBufferIndex = bufferIndex;
 
 		if constexpr (ENABLE_FEEDBACK) {
 			auto feedback = memPool->spawn(AllocationUsage::DeviceLocalHostVisible,
@@ -447,21 +479,28 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 				feedback->map([&](uint8_t *buf, VkDeviceSize bufSize) {
 					auto fb = (ParticleFeedback *)buf;
 
-					std::cout << framesInGen << " " << nframes << " " << pcb.genframe << " "
-							  << pcb.gentime << " " << pcb.gendt << " " << fb->emissionCount << " "
-							  << fb->simulationCount << " " << fb->skippedCount << "\n";
+					log::debug("Particles", framesInGen, " ", nframes, " ", pcb.genframe, " ",
+							pcb.gentime, " ", pcb.gendt, " emitted:", fb->emissionCount,
+							" simulated:", fb->simulationCount, " skipped:", fb->skippedCount,
+							" written: ", fb->written);
+					if (fb->emissionCount > 0) {
+						log::debug("Particles", "P: ", fb->emitted.currentLifetime, " ",
+								fb->nframes);
+					}
 				}, DeviceMemoryAccess::Invalidate);
 			}, feedback, STAPPLER_LOCATION);
 		}
 
 		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,
 				BytesView((const uint8_t *)&pcb, sizeof(ParticleConstantData)));
-		buf.cmdDispatchPipeline(*it, e.second.systemData->data.count);
+		buf.cmdDispatchPipeline(*pipelineIt, e.second.systemData->data.count);
 
 		e.second.frame += nframes;
 		e.second.clock += static_cast<uint64_t>(nframes) * d.frameInterval;
 
 		while (e.second.frame >= framesInGen) { e.second.frame -= framesInGen; }
+
+		++bufferIndex;
 	}
 }
 

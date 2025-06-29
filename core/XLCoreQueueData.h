@@ -70,6 +70,9 @@ struct FrameAttachmentData;
 struct FrameSync;
 struct FrameOutputBinding;
 
+struct ImageData;
+struct BufferData;
+
 struct SP_PUBLIC ProgramDescriptorBinding {
 	uint32_t set = 0;
 	uint32_t descriptor = 0;
@@ -188,8 +191,11 @@ struct SP_PUBLIC PipelineDescriptor : NamedMem {
 	AttachmentLayout layout = AttachmentLayout::Ignored;
 	uint32_t count = 1;
 	uint32_t index = maxOf<uint32_t>();
-	bool updateAfterBind = false;
-	bool countIsPredefined = false;
+
+	// note that UpdateAfterBind requested by default, engine uses it to optimize command buffer setup,
+	// executing buffer write and descriptors write in separate threads
+	DescriptorFlags requestFlags = DescriptorFlags::UpdateAfterBind; // what was requested
+	DescriptorFlags deviceFlags = DescriptorFlags::None; // what device supports
 	mutable uint64_t boundGeneration = 0;
 };
 
@@ -435,6 +441,10 @@ struct SP_PUBLIC QueueData : NamedMem {
 	memory::map<std::type_index, Attachment *> typedOutput;
 
 	memory::vector<QueuePassDependency> passDependencies;
+
+	const ImageData *emptyImage = nullptr;
+	const ImageData *solidImage = nullptr;
+	const BufferData *emptyBuffer = nullptr;
 
 	void clear();
 };

@@ -37,24 +37,9 @@ class Device;
 class RenderPass;
 class QueuePassHandle;
 
-struct SP_PUBLIC DescriptorBinding {
-	VkDescriptorType type;
-	Vector<DescriptorData> data;
-
-	~DescriptorBinding();
-
-	DescriptorBinding(VkDescriptorType, uint32_t count);
-
-	Rc<Ref> write(uint32_t, DescriptorBufferInfo &&);
-	Rc<Ref> write(uint32_t, DescriptorImageInfo &&);
-	Rc<Ref> write(uint32_t, DescriptorBufferViewInfo &&);
-
-	const DescriptorData &get(uint32_t) const;
-};
-
 struct SP_PUBLIC DescriptorSetBindings : public Ref {
 	VkDescriptorSet set;
-	Vector<DescriptorBinding> bindings;
+	Vector<core::DescriptorBinding> bindings;
 };
 
 class SP_PUBLIC Framebuffer : public core::Framebuffer {
@@ -74,7 +59,7 @@ protected:
 class SP_PUBLIC PipelineLayout : public core::Object {
 public:
 	struct DescriptorBindingInfo {
-		VkDescriptorType type;
+		core::DescriptorType type;
 		uint32_t count;
 	};
 

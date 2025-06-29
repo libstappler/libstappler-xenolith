@@ -310,9 +310,11 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 			_classLoader ? _classLoader->apkPath : StringView());
 
 	int result = 0;
+	ctx.pop(); // allow application to add it's root pool
 	if (!sp::initialize(result)) {
 		return false;
 	}
+	ctx.push();
 
 	_info = ActivityInfo::get(_config, env, activityClass, thiz);
 	_activity->instance = this;

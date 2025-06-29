@@ -65,15 +65,28 @@ bool PresentationEngine::run() {
 	return core::PresentationEngine::run();
 }
 
-bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
+bool PresentationEngine::recreateSwapchain() {
 	XL_VKPRESENT_LOG("recreateSwapchain");
-
-	resetFrames();
-
-	if (mode == core::PresentMode::Unsupported) {
+	if (hasFlag(_deprecationFlags, SwapchainFlags::Finalized)) {
 		return false;
 	}
 
+	_device->waitIdle();
+
+	resetFrames();
+
+	if (hasFlag(_deprecationFlags, SwapchainFlags::EndOfLife)) {
+		_deprecationFlags |= SwapchainFlags::Finalized;
+
+		auto callbacks = sp::move(_deprecationCallbacks);
+		_deprecationCallbacks.clear();
+
+		for (auto &it : callbacks) { it(false); }
+
+		end();
+
+		return false;
+	}
 
 	auto info =
 			_view->getSurfaceOptions(_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
@@ -90,11 +103,21 @@ bool PresentationEngine::recreateSwapchain(core::PresentMode mode) {
 	}
 
 	bool ret = false;
-	if (mode == core::PresentMode::Unsupported) {
-		ret = createSwapchain(info, move(cfg), cfg.presentMode);
-	} else {
-		ret = createSwapchain(info, move(cfg), mode);
+
+	auto mode = cfg.presentMode;
+	if (hasFlag(_deprecationFlags, SwapchainFlags::SwitchToFastMode)) {
+		mode = cfg.presentModeFast;
 	}
+
+	ret = createSwapchain(info, move(cfg), mode);
+
+	_deprecationFlags = SwapchainFlags::None;
+
+	auto callbacks = sp::move(_deprecationCallbacks);
+	_deprecationCallbacks.clear();
+
+	for (auto &it : callbacks) { it(true); }
+
 	if (ret) {
 		_nextPresentWindow = 0;
 		_readyForNextFrame = true;
@@ -116,7 +139,11 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 	do {
 		auto oldSwapchain = move(_swapchain);
 
-		log::verbose("vk::View", "Surface: ", info.description());
+		if (oldSwapchain && oldSwapchain->getPresentedFramesCount() == 0) {
+			log::warn("vk::View", "Swapchain replaced without frame presentation");
+		}
+
+		log::verbose("vk::PresentationEngine", "Surface: ", info.description());
 		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
 				presentMode, _surface, queueFamilyIndices,
 				oldSwapchain ? oldSwapchain.get_cast<SwapchainHandle>() : nullptr);
@@ -138,7 +165,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 
 			for (auto &id : ids) { cache->addImageView(id); }
 
-			log::verbose("vk::View", "Swapchain: ", cfg.description());
+			log::verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
 		}
 	} while (0);
 
@@ -153,15 +180,16 @@ void PresentationEngine::handleFramePresented(core::PresentationFrame *frame) {
 void PresentationEngine::acquireFrameData(core::PresentationFrame *frame,
 		Function<void(core::PresentationFrame *)> &&cb) {
 	_view->getApplication()->performOnAppThread(
-			[this, frame = Rc<core::PresentationFrame>(frame), cb = sp::move(cb)]() mutable {
+			[this, frame = Rc<core::PresentationFrame>(frame), cb = sp::move(cb),
+					req = Rc<core::FrameRequest>(frame->getRequest())]() mutable {
 		XL_VKPRESENT_LOG("scheduleSwapchainImage: _director->acquireFrame");
-		auto req = Rc<core::FrameRequest>(frame->getRequest());
 		if (_view->getDirector()->acquireFrame(req)) {
 			XL_VKPRESENT_LOG("scheduleSwapchainImage: frame acquired");
 			_view->performOnThread(
 					[frame = move(frame), cb = sp::move(cb)]() mutable { cb(frame); }, this);
 		}
-	}, this);
+	},
+			this);
 }
 
 bool PresentationEngine::isImagePresentable(const core::ImageObject &image,

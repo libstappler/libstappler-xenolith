@@ -57,12 +57,19 @@ static core::InputModifier getModifiers(uint32_t mask) {
 static core::InputMouseButton getButton(xcb_button_t btn) { return core::InputMouseButton(btn); }
 
 XcbView::~XcbView() {
-	_defaultScreen = nullptr;
-	if (_info.syncCounter) {
-		_xcb->xcb_sync_destroy_counter(_connection->getConnection(), _info.syncCounter);
-		_info.syncCounter = 0;
+	if (_connection) {
+		if (_info.window) {
+			_connection->detachWindow(_info.window);
+			_info.window = 0;
+		}
+
+		_defaultScreen = nullptr;
+		if (_info.syncCounter) {
+			_xcb->xcb_sync_destroy_counter(_connection->getConnection(), _info.syncCounter);
+			_info.syncCounter = 0;
+		}
+		_connection = nullptr;
 	}
-	_connection = nullptr;
 }
 
 XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, const WindowInfo &info) {
@@ -128,7 +135,9 @@ void XcbView::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
 	if (ev->width != _info.rect.width || ev->height != _info.rect.height) {
 		_info.rect.width = ev->width;
 		_info.rect.height = ev->height;
-		_deprecateSwapchain = true;
+		if (_pollState) {
+			_pollState->deprecateSwapchain = true;
+		}
 	}
 }
 
@@ -362,11 +371,13 @@ void XcbView::handleSelectionRequest(xcb_selection_request_event_t *event) {
 void XcbView::handleSyncRequest(xcb_timestamp_t syncTime, xcb_sync_int64_t value) {
 	_lastSyncTime = syncTime;
 	_info.syncValue = value;
+	_info.syncFrameOrder = _pollState->frameOrder;
 }
 
 void XcbView::handleCloseRequest() {
-	_shouldClose = true;
-	_connection->detachWindow(_info.window);
+	if (_pollState) {
+		_pollState->shouldClose = true;
+	}
 }
 
 void XcbView::handleScreenChangeNotify(xcb_randr_screen_change_notify_event_t *ev) {
@@ -381,11 +392,6 @@ void XcbView::dispatchPendingEvents() {
 		_view->handleInputEvents(sp::move(_pendingEvents));
 	}
 	_pendingEvents.clear();
-
-	if (_deprecateSwapchain) {
-		_view->getPresentationEngine()->deprecateSwapchain(false);
-		_deprecateSwapchain = false;
-	}
 }
 
 uint64_t XcbView::getScreenFrameInterval() const { return 1'000'000 / _rate; }
@@ -396,8 +402,9 @@ void XcbView::mapWindow() {
 	_xcb->xcb_flush(_connection->getConnection());
 }
 
-void XcbView::handleFramePresented() {
-	if (_info.syncCounter && (_info.syncValue.lo != 0 || _info.syncValue.hi != 0)) {
+void XcbView::handleFramePresented(uint64_t frameOrder) {
+	if (_info.syncCounter && (_info.syncValue.lo != 0 || _info.syncValue.hi != 0)
+			&& frameOrder > _info.syncFrameOrder) {
 		_xcb->xcb_sync_set_counter(_connection->getConnection(), _info.syncCounter,
 				_info.syncValue);
 		_xcb->xcb_flush(_connection->getConnection());
@@ -449,9 +456,11 @@ void XcbView::writeToClipboard(BytesView data, StringView contentType) {
 
 int XcbView::getSocketFd() const { return _connection->getSocket(); }
 
-bool XcbView::poll(bool frameReady) {
+bool XcbView::poll(LinuxPollState &state) {
+	_pollState = &state;
 	_connection->poll();
-	return !_shouldClose;
+	_pollState = nullptr;
+	return true;
 }
 
 core::FrameConstraints XcbView::exportConstraints(core::FrameConstraints &&c) const {

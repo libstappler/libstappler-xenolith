@@ -415,9 +415,16 @@ static void Queue_buildDescriptors(QueueData *data, Device &dev) {
 			for (auto &set : layout->sets) {
 				for (auto &desc : set->descriptors) {
 					if (desc->type != DescriptorType::Unknown) {
-						if (dev.supportsUpdateAfterBind(desc->type)) {
-							desc->updateAfterBind = true;
+						auto flags = dev.getSupportedDescriptorFlags(desc->type);
+
+						if (hasFlag(desc->requestFlags, DescriptorFlags::UpdateAfterBind)
+								&& hasFlag(flags, DescriptorFlags::UpdateAfterBind)) {
+							desc->deviceFlags |= core::DescriptorFlags::UpdateAfterBind;
 							pass->hasUpdateAfterBind = true;
+						}
+						if (hasFlag(desc->requestFlags, DescriptorFlags::PartiallyBound)
+								&& hasFlag(flags, DescriptorFlags::PartiallyBound)) {
+							desc->deviceFlags |= core::DescriptorFlags::PartiallyBound;
 						}
 					}
 				}
@@ -702,7 +709,7 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName,
 							getDescriptorTypeName(binding.type));
 				}
 				d->stages |= info->stage;
-				if (!d->countIsPredefined) {
+				if (!hasFlag(d->requestFlags, DescriptorFlags::PredefinedCount)) {
 					if (binding.count < maxOf<uint32_t>()) {
 						d->count = std::max(binding.count, d->count);
 					}
@@ -1136,6 +1143,48 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, D
 	return true;
 }
 
+bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment,
+		DescriptorFlags flags, DescriptorType type, AttachmentLayout layout) {
+	auto pool = _data->layout->pass->queue->pool;
+	memory::pool::context ctx(pool);
+
+	auto p = new (pool) PipelineDescriptor;
+	p->key = attachment->key;
+	p->set = _data;
+	p->attachment = attachment;
+	p->type = type;
+	p->layout = layout;
+	p->count = 1;
+	p->requestFlags = flags;
+	p->index = uint32_t(_data->descriptors.size());
+
+	_data->descriptors.emplace_back(p);
+	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
+
+	return true;
+}
+
+bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count,
+		DescriptorFlags flags, DescriptorType type, AttachmentLayout layout) {
+	auto pool = _data->layout->pass->queue->pool;
+	memory::pool::context ctx(pool);
+
+	auto p = new (pool) PipelineDescriptor;
+	p->key = attachment->key;
+	p->set = _data;
+	p->attachment = attachment;
+	p->type = type;
+	p->layout = layout;
+	p->count = count;
+	p->index = uint32_t(_data->descriptors.size());
+	p->requestFlags = flags | DescriptorFlags::PredefinedCount;
+
+	_data->descriptors.emplace_back(p);
+	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
+
+	return true;
+}
+
 bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count,
 		DescriptorType type, AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
@@ -1149,7 +1198,7 @@ bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachme
 	p->layout = layout;
 	p->count = count;
 	p->index = uint32_t(_data->descriptors.size());
-	p->countIsPredefined = true;
+	p->requestFlags |= DescriptorFlags::PredefinedCount;
 
 	_data->descriptors.emplace_back(p);
 	((AttachmentPassData *)attachment)->descriptors.emplace_back(p);
@@ -1537,6 +1586,35 @@ Queue::Builder::Builder(StringView name)
 		_data = new (p) QueueData;
 		_data->pool = p;
 		_data->key = name.pdup(p);
+
+		uint8_t empty = 0, solid = 255;
+		uint64_t emptyBuffer = maxOf<uint64_t>();
+
+		_data->emptyImage = _internalResource.getImage(EmptyTextureName);
+		if (!_data->emptyImage) {
+			_data->emptyImage = _internalResource.addImage(EmptyTextureName,
+					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled,
+							core::ImageFormat::R8_UNORM),
+					BytesView(&empty, 1).pdup(_internalResource.getPool()));
+			_internalResource.addImageView(_data->emptyImage, ImageViewInfo());
+		}
+
+		_data->solidImage = _internalResource.getImage(SolidTextureName);
+		if (!_data->solidImage) {
+			_data->solidImage = _internalResource.addImage(SolidTextureName,
+					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM,
+							core::ImageHints::Opaque),
+					BytesView(&solid, 1).pdup(_internalResource.getPool()));
+			_internalResource.addImageView(_data->solidImage, ImageViewInfo());
+		}
+
+		_data->emptyBuffer = _internalResource.getBuffer(EmptyBufferName);
+		if (!_data->emptyBuffer) {
+			_data->emptyBuffer = _internalResource.addBuffer(EmptyBufferName,
+					BufferInfo(uint64_t(8), core::BufferUsage::StorageBuffer),
+					BytesView(reinterpret_cast<const uint8_t *>(&emptyBuffer), sizeof(uint64_t))
+							.pdup(_internalResource.getPool()));
+		}
 	}, p);
 }
 
@@ -1693,6 +1771,7 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key,
 	if (auto r = Resource_conditionalInsert<TextureSetLayoutData>(_data->textureSets, key,
 				[&, this]() -> TextureSetLayoutData * {
 		auto layout = new (_data->pool) TextureSetLayoutData;
+		layout->queue = _data;
 		layout->key = key.pdup(_data->pool);
 		layout->imageCount = images;
 		layout->imageCountIndexed = imagesIndexed;
@@ -1700,36 +1779,6 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key,
 		layout->bufferCountIndexed = buffersIndexed;
 		layout->samplers = samplers.vec<memory::PoolInterface>();
 		layout->compiledSamplers.resize(layout->samplers.size());
-
-		uint8_t empty = 0, solid = 255;
-		uint64_t emptyBuffer = maxOf<uint64_t>();
-
-		layout->emptyImage = _internalResource.getImage(EmptyTextureName);
-		if (!layout->emptyImage) {
-			layout->emptyImage = _internalResource.addImage(EmptyTextureName,
-					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled,
-							core::ImageFormat::R8_UNORM),
-					BytesView(&empty, 1).pdup(_internalResource.getPool()));
-			_internalResource.addImageView(layout->emptyImage, ImageViewInfo());
-		}
-
-		layout->solidImage = _internalResource.getImage(SolidTextureName);
-		if (!layout->solidImage) {
-			layout->solidImage = _internalResource.addImage(SolidTextureName,
-					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM,
-							core::ImageHints::Opaque),
-					BytesView(&solid, 1).pdup(_internalResource.getPool()));
-			_internalResource.addImageView(layout->solidImage, ImageViewInfo());
-		}
-
-		layout->emptyBuffer = _internalResource.getBuffer(EmptyBufferName);
-		if (!layout->emptyBuffer) {
-			layout->emptyBuffer = _internalResource.addBuffer(EmptyBufferName,
-					BufferInfo(uint64_t(8), core::BufferUsage::StorageBuffer),
-					BytesView(reinterpret_cast<const uint8_t *>(&emptyBuffer), sizeof(uint64_t))
-							.pdup(_internalResource.getPool()));
-		}
-
 		return layout;
 	}, _data->pool)) {
 		return r;

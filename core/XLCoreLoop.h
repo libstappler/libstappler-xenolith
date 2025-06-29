@@ -72,26 +72,32 @@ public:
 	// in preload mode, resource will be prepared for transfer immediately in caller's thread
 	// (device will allocate transfer buffer then fill it with resource data)
 	// do not use reload with main thread
-	virtual void compileResource(Rc<Resource> &&req, Function<void(bool)> &&, bool preload = false) const = 0;
+	virtual void compileResource(Rc<Resource> &&req, Function<void(bool)> &&,
+			bool preload = false) const = 0;
 	virtual void compileQueue(const Rc<Queue> &req, Function<void(bool)> && = nullptr) const = 0;
 
-	virtual void compileMaterials(Rc<MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const = 0;
-	virtual void compileImage(const Rc<DynamicImage> &, Function<void(bool)> && = nullptr) const = 0;
+	virtual void compileMaterials(Rc<MaterialInputData> &&req,
+			const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const = 0;
+	virtual void compileImage(const Rc<DynamicImage> &,
+			Function<void(bool)> && = nullptr) const = 0;
 
 	// run frame with RenderQueue
-	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) = 0;
+	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0,
+			Function<void(bool)> && = nullptr) = 0;
 
 	virtual void performInQueue(Rc<thread::Task> &&) const = 0;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
-	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION) const = 0;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr,
+			bool immediate = false, StringView tag = STAPPLER_LOCATION) const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 
 	virtual Rc<Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<ImageView>>) = 0;
 	virtual void releaseFramebuffer(Rc<Framebuffer> &&) = 0;
 
-	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, const ImageInfoData &) = 0;
+	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *,
+			const ImageInfoData &) = 0;
 	virtual void releaseImage(Rc<ImageStorage> &&) = 0;
 
 	virtual Rc<Semaphore> makeSemaphore() = 0;
@@ -101,20 +107,23 @@ public:
 	virtual const Vector<ImageFormat> &getSupportedDepthStencilFormat() const = 0;
 
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
-	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) = 0;
+	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &,
+			Function<void(bool)> &&) = 0;
 
 	virtual void run() = 0;
 	virtual void waitIdle() = 0;
 	virtual void stop() = 0;
 
-	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb, const Rc<ImageObject> &image, AttachmentLayout l) = 0;
-	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<BufferObject> &) = 0;
+	virtual void captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
+			core::AttachmentLayout l) = 0;
+	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
+			const Rc<ImageObject> &image, AttachmentLayout l) = 0;
+	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
+			const Rc<BufferObject> &) = 0;
 
 protected:
 #if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override {
-		return true;
-	}
+	virtual bool isRetainTrackerEnabled() const override { return true; }
 #endif
 
 	Rc<Instance> _instance;
@@ -123,6 +132,6 @@ protected:
 	event::Looper *_looper = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCORELOOP_H_ */

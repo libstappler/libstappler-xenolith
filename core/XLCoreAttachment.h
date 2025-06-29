@@ -26,7 +26,7 @@
 
 #include "XLCoreEnum.h"
 #include "XLCoreQueueData.h"
-#include "XLCoreInfo.h"
+#include "XLCoreDescriptorInfo.h"
 #include "XLCoreImageStorage.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -233,10 +233,8 @@ public:
 
 	virtual void submitInput(FrameQueue &, Rc<AttachmentInputData> &&, Function<void(bool)> &&cb);
 
-	virtual uint32_t getDescriptorArraySize(const PassHandle &, const PipelineDescriptor &) const;
-
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
-			const DescriptorData &) const;
+	virtual uint32_t enumerateDirtyDescriptors(const PassHandle &, const PipelineDescriptor &,
+			const DescriptorBinding &, const Callback<void(uint32_t)> &) const;
 
 	virtual void enumerateAttachmentObjects(
 			const Callback<void(Object *, const SubresourceRangeInfo &)> &);

@@ -139,7 +139,7 @@ void ViewInterface::performOnThread(Function<void()> &&func, Ref *target, bool i
 }
 
 void ViewInterface::updateConfig() {
-	_loop->performOnThread([this] { _presentationEngine->deprecateSwapchain(false); }, this, true);
+	_loop->performOnThread([this] { _presentationEngine->deprecateSwapchain(); }, this, true);
 }
 
 void ViewInterface::setReadyForNextFrame() {

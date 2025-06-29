@@ -27,9 +27,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-bool PresentationFrame::init(PresentationEngine *e, FrameConstraints c,
-		uint64_t frameOrder, Flags flags,
-		Function<void(PresentationFrame *, bool)> &&completeCallback) {
+bool PresentationFrame::init(PresentationEngine *e, FrameConstraints c, uint64_t frameOrder,
+		Flags flags, Function<void(PresentationFrame *, bool)> &&completeCallback) {
 	_frameOrder = frameOrder;
 	_flags = flags;
 
@@ -91,6 +90,8 @@ core::FrameHandle *PresentationFrame::submitFrame() {
 	if (_target) {
 		_target->setFrameIndex(_frameHandle->getOrder());
 	}
+
+	_frameOrder = _frameHandle->getOrder();
 
 	_flags |= FrameSubmitted;
 	return _frameHandle;
@@ -172,12 +173,11 @@ void PresentationFrame::cancelFrameHandle() {
 	_frameHandle = nullptr;
 }
 
-void PresentationFrame::setSubmitted() {
-	_flags |= QueueSubmitted;
-}
+void PresentationFrame::setSubmitted() { _flags |= QueueSubmitted; }
 
-void PresentationFrame::setPresented() {
+void PresentationFrame::setPresented(Status st) {
 	_flags |= ImagePresented;
+	_presentationStatus = st;
 	if (_active && _engine) {
 		_engine->handleFramePresented(this);
 		if (_completeCallback) {
@@ -187,4 +187,4 @@ void PresentationFrame::setPresented() {
 	}
 }
 
-}
+} // namespace stappler::xenolith::core

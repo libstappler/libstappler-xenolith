@@ -29,6 +29,7 @@
 
 #include "XLCommon.h"
 #include "XLCoreEnum.h"
+#include "XLCoreDescriptorInfo.h"
 #include <vulkan/vulkan_core.h>
 
 #if LINUX

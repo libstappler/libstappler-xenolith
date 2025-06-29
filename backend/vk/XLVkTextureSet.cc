@@ -101,11 +101,11 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 		}
 	}
 
-	_emptyImage = data.emptyImage;
-	_solidImage = data.solidImage;
+	_emptyImage = data.queue->emptyImage;
+	_solidImage = data.queue->solidImage;
 
 	return core::Object::init(dev,
-			[](core::Device *dev, core::ObjectType, ObjectHandle ptr, void *data) {
+			[](core::Device *dev, core::ObjectType, core::ObjectHandle ptr, void *data) {
 		auto d = ((Device *)dev);
 		if (d->isPortabilityMode()) {
 			auto pool = memory::pool::acquire();

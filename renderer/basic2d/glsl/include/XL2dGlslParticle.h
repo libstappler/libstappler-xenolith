@@ -33,9 +33,9 @@ struct ParticleConstantData {
 	uvec2 outVerticesPointer;
 	uvec2 outCommandPointer;
 	uvec2 emitterPointer;
-	uvec2 particlesPointer;
 	uvec2 feedbackPointer;
 	uint materialIndex;
+	uint particleBufferIndex;
 
 	float timeline; // (1.0 - explosiveness) * lifetime / count
 
@@ -180,7 +180,9 @@ struct ParticleFeedback {
 	uint emissionCount;
 	uint simulationCount;
 	uint skippedCount;
-	uint padding12;
+	uint nframes;
+	ParticleData emitted;
+	uint written;
 };
 
 #ifndef SP_GLSL

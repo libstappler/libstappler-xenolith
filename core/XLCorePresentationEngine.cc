@@ -78,7 +78,7 @@ bool PresentationEngine::waitUntilFramePresentation() {
 
 void PresentationEngine::scheduleNextImage(Function<void(PresentationFrame *, bool)> &&cb,
 		PresentationFrame::Flags frameFlags) {
-	if (!_activeFrames.empty()) {
+	if (!_activeFrames.empty() || _swapchain->isDeprecated()) {
 		return;
 	}
 
@@ -140,7 +140,8 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 
 			auto nextFrame = frame->submitFrame();
 			if (nextFrame) {
-				_frameOrder = nextFrame->getOrder();
+				// set to next suggested number
+				_frameOrder = nextFrame->getOrder() + 1;
 			}
 		} else {
 			log::error("core::PresentationEngine", "acquireFrameData - Swapchain was invalidated");
@@ -155,13 +156,18 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 	return true;
 }
 
-void PresentationEngine::deprecateSwapchain(bool fast) {
+void PresentationEngine::deprecateSwapchain(SwapchainFlags flags, Function<void(bool)> &&cb) {
 	XL_COREPRESENT_LOG("deprecateSwapchain");
 	if (!_running || !_swapchain) {
 		return;
 	}
 
-	_swapchain->deprecate(fast);
+	_swapchain->deprecate();
+
+	_deprecationFlags |= flags;
+	if (cb) {
+		_deprecationCallbacks.emplace_back(sp::move(cb));
+	}
 
 	auto it = _scheduledForPresent.begin();
 	while (it != _scheduledForPresent.end()) {
@@ -221,6 +227,8 @@ void PresentationEngine::end() {
 	_framesAwaitingImages.clear();
 	_scheduledForPresent.clear();
 	_scheduledPresentHandles.clear();
+
+	_swapchain = nullptr;
 }
 
 bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) {
@@ -260,7 +268,7 @@ bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) 
 			return true;
 		}
 		if (presentImmediate(frame)) {
-			frame->setPresented();
+			frame->setPresented(Status::ErrorCancelled);
 		} else {
 			frame->invalidate();
 		}
@@ -292,7 +300,7 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame 
 
 	if (res == Status::Suboptimal || res == Status::ErrorCancelled) {
 		XL_COREPRESENT_LOG("presentWithQueue - deprecate swapchain");
-		_swapchain->deprecate(false);
+		_swapchain->deprecate();
 	} else if (res != Status::Ok) {
 		log::error("vk::View", "presentWithQueue: error:", res);
 	}
@@ -301,7 +309,7 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame 
 	// read before frame marked as presented
 	bool isCorrectable = frame->hasFlag(PresentationFrame::CorrectableFrame);
 
-	frame->setPresented();
+	frame->setPresented(res);
 
 	if (_waitUntilFrame) {
 		_loop->getLooper()->wakeup();
@@ -353,6 +361,8 @@ PresentationEngine::FrameTimeInfo PresentationEngine::updatePresentationInterval
 	ret.avg = _avgPresentationIntervalValue.load();
 	return ret;
 }
+
+uint64_t PresentationEngine::getFrameOrder() const { return _frameOrder; }
 
 uint64_t PresentationEngine::getLastFrameInterval() const { return _lastPresentationInterval; }
 
@@ -474,9 +484,12 @@ void PresentationEngine::handleFrameComplete(PresentationFrame *frame) {
 }
 
 void PresentationEngine::scheduleSwapchainRecreation() {
+	if (_swapchain && _swapchain->getPresentedFramesCount() == 0) {
+		log::warn("core::PresentationEngine",
+				"Scheduling swapchain recreation without frame presentation");
+	}
 	_loop->performOnThread([this] {
-		_device->waitIdle();
-		recreateSwapchain(_swapchain->getRebuildMode());
+		recreateSwapchain();
 	}, this, false);
 }
 

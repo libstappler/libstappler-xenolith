@@ -508,7 +508,9 @@ void Device::onLoopStarted(Loop &loop) { }
 
 void Device::onLoopEnded(Loop &) { }
 
-bool Device::supportsUpdateAfterBind(DescriptorType) const { return false; }
+DescriptorFlags Device::getSupportedDescriptorFlags(DescriptorType) const {
+	return DescriptorFlags::None;
+}
 
 void Device::clearShaders() { _shaders.clear(); }
 

@@ -30,17 +30,17 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class SP_PUBLIC View : public xenolith::View {
-	public:
+public:
 	virtual ~View() = default;
 
 	virtual bool init(Application &, const Device &, ViewInfo &&);
 
 	virtual void end() override;
 
-	virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
+	/*virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
 			AttachmentLayout l) const override;
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&,
-			const Rc<core::ImageObject> &image, AttachmentLayout l) const override;
+			const Rc<core::ImageObject> &image, AttachmentLayout l) const override;*/
 
 	vk::Device *getDevice() const { return _device; }
 
@@ -48,7 +48,7 @@ class SP_PUBLIC View : public xenolith::View {
 
 	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const;
 
-	protected:
+protected:
 	using xenolith::View::init;
 
 	bool _readyForNextFrame = false;

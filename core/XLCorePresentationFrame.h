@@ -52,7 +52,8 @@ struct SP_PUBLIC SwapchainAcquiredImage : public Ref {
 	Rc<Semaphore> sem;
 	Rc<Swapchain> swapchain;
 
-	SwapchainAcquiredImage(uint32_t idx, const SwapchainImageData *d, Rc<Semaphore> &&s, Rc<Swapchain> &&sw)
+	SwapchainAcquiredImage(uint32_t idx, const SwapchainImageData *d, Rc<Semaphore> &&s,
+			Rc<Swapchain> &&sw)
 	: imageIndex(idx), data(d), sem(move(s)), swapchain(move(sw)) { }
 };
 
@@ -79,8 +80,7 @@ public:
 
 	virtual ~PresentationFrame() = default;
 
-	bool init(PresentationEngine *, FrameConstraints,
-			uint64_t frameOrder, Flags flags,
+	bool init(PresentationEngine *, FrameConstraints, uint64_t frameOrder, Flags flags,
 			Function<void(PresentationFrame *, bool)> &&completeCallback = nullptr);
 
 	bool hasFlag(Flags f) const { return sp::hasFlag(_flags, f); }
@@ -94,6 +94,8 @@ public:
 
 	uint64_t getFrameOrder() const { return _frameOrder; }
 
+	Status getPresentationStatus() const { return _presentationStatus; }
+
 	SwapchainImage *getSwapchainImage() const;
 
 	AttachmentData *setupOutputAttachment();
@@ -104,7 +106,7 @@ public:
 	bool assignResult(ImageStorage *);
 
 	void setSubmitted();
-	void setPresented();
+	void setPresented(Status);
 
 	void invalidate(bool invalidateSwapchain = false);
 
@@ -114,6 +116,7 @@ protected:
 	uint64_t _frameOrder = 0;
 	bool _active = true;
 	Flags _flags = None;
+	Status _presentationStatus = Status::Ok;
 	Rc<ImageStorage> _target;
 	Rc<FrameRequest> _frameRequest;
 	Rc<FrameHandle> _frameHandle;
@@ -124,6 +127,6 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(PresentationFrame::Flags)
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREPRESENTATIONFRAME_H_ */

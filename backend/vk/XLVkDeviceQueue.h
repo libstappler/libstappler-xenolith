@@ -159,40 +159,6 @@ struct SP_PUBLIC BufferMemoryBarrier {
 	Buffer *buffer = nullptr;
 };
 
-struct SP_PUBLIC DescriptorInfo {
-	DescriptorInfo(const PipelineDescriptor *desc, uint32_t index)
-	: descriptor(desc), index(index) { }
-
-	const PipelineDescriptor *descriptor;
-	uint32_t index;
-};
-
-struct SP_PUBLIC DescriptorImageInfo : public DescriptorInfo {
-	~DescriptorImageInfo();
-	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index);
-
-	Rc<ImageView> imageView;
-	VkSampler sampler = VK_NULL_HANDLE;
-	XImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-};
-
-struct SP_PUBLIC DescriptorBufferInfo : public DescriptorInfo {
-	~DescriptorBufferInfo();
-	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index);
-
-	Rc<Buffer> buffer;
-	VkDeviceSize offset = 0;
-	VkDeviceSize range = VK_WHOLE_SIZE;
-};
-
-struct SP_PUBLIC DescriptorBufferViewInfo : public DescriptorInfo {
-	~DescriptorBufferViewInfo();
-	DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index);
-
-	Rc<Buffer> buffer;
-	VkBufferView target = VK_NULL_HANDLE;
-};
-
 struct CommandBufferInfo {
 	static constexpr VkCommandBufferUsageFlagBits DefaultFlags =
 			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;

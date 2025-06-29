@@ -51,7 +51,7 @@ protected:
 
 class SP_PUBLIC TextureSet : public core::TextureSet {
 public:
-	virtual ~TextureSet() { }
+	virtual ~TextureSet() = default;
 
 	bool init(Device &dev, const core::TextureSetLayout &);
 

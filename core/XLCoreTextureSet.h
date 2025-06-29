@@ -34,14 +34,13 @@ class Loop;
 
 class SP_PUBLIC TextureSet : public Object {
 public:
-	virtual ~TextureSet() { }
+	virtual ~TextureSet() = default;
 
 	virtual void write(const MaterialLayout &);
 
 protected:
 	uint32_t _count = 0;
 	Vector<uint64_t> _layoutIndexes;
-	Vector<BufferObject *> _layoutBuffers;
 };
 
 // persistent object, part of Device
@@ -49,7 +48,7 @@ class SP_PUBLIC TextureSetLayout : public Object {
 public:
 	using AttachmentLayout = core::AttachmentLayout;
 
-	virtual ~TextureSetLayout() { }
+	virtual ~TextureSetLayout() = default;
 
 	const uint32_t &getImageCount() const { return _imageCount; }
 	const uint32_t &getSamplersCount() const { return _samplersCount; }

@@ -173,12 +173,26 @@ public:
 	// add single descriptor
 	// compiler CAN inspect shaders to modify descriptors count, if descriptor is actually an array
 	// if descriptor array size defined by spec constant - use addDescriptorArray instead
+	// note: UpdateAfterBind flag is set up by default
 	bool addDescriptor(const AttachmentPassData *, DescriptorType = DescriptorType::Unknown,
 			AttachmentLayout = AttachmentLayout::Ignored);
+
+	// add single descriptor with dedicated flags
+	// Note: this will override default UpdateAfterBind flag
+	// Please, specify it manually, if you have no specific intent to disable it
+	bool addDescriptor(const AttachmentPassData *, DescriptorFlags,
+			DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
 
 	// add descriptor array with predefined descriptors count
 	// compiler can not modify size of this array
 	bool addDescriptorArray(const AttachmentPassData *, uint32_t count,
+			DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
+
+	// add descriptor array with predefined descriptors count with dedicated flags
+	// compiler can not modify size of this array
+	// Note: this will override default UpdateAfterBind flag
+	// Please, specify it manually, if you have no specific intent to disable it
+	bool addDescriptorArray(const AttachmentPassData *, uint32_t count, DescriptorFlags,
 			DescriptorType = DescriptorType::Unknown, AttachmentLayout = AttachmentLayout::Ignored);
 
 protected:

@@ -349,21 +349,6 @@ BufferMemoryBarrier::BufferMemoryBarrier(const VkBufferMemoryBarrier &barrier)
 , size(barrier.size)
 , buffer(nullptr) { }
 
-DescriptorImageInfo::~DescriptorImageInfo() { }
-
-DescriptorImageInfo::DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index)
-: DescriptorInfo(desc, index) { }
-
-DescriptorBufferInfo::~DescriptorBufferInfo() { }
-
-DescriptorBufferInfo::DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index)
-: DescriptorInfo(desc, index) { }
-
-DescriptorBufferViewInfo::~DescriptorBufferViewInfo() { }
-
-DescriptorBufferViewInfo::DescriptorBufferViewInfo(const PipelineDescriptor *desc, uint32_t index)
-: DescriptorInfo(desc, index) { }
-
 CommandBuffer::~CommandBuffer() { invalidate(); }
 
 bool CommandBuffer::init(const CommandPool *pool, const DeviceTable *table, VkCommandBuffer buffer,
@@ -693,7 +678,8 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorP
 		return;
 	}
 
-	auto pt = getBindPoint(pass->getType());
+	auto passType = pass->getType();
+	auto pt = getBindPoint(passType);
 
 	if (!pt) {
 		log::error("vk::CommandBuffer", "Invalid bind point");
@@ -975,7 +961,7 @@ CommandBuffer::BindPoint *CommandBuffer::getBindPoint(VkPipelineBindPoint pt) {
 		return &_bindPoints[0];
 		break;
 	case VK_PIPELINE_BIND_POINT_COMPUTE:
-		_bindPoints[0].point = VK_PIPELINE_BIND_POINT_COMPUTE;
+		_bindPoints[1].point = VK_PIPELINE_BIND_POINT_COMPUTE;
 		return &_bindPoints[1];
 		break;
 	case VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR:

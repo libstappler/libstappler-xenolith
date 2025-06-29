@@ -502,6 +502,12 @@ void Fence::setSignaled(Loop &loop) {
 }
 
 void Fence::scheduleReset(Loop &loop) {
+	if (!loop.isRunning()) {
+		_releaseFn = nullptr;
+		_scheduleFn = nullptr;
+		_autorelease.clear();
+		_queries.clear();
+	}
 	if (_releaseFn) {
 		loop.performInQueue(Rc<thread::Task>::create([this](const thread::Task &) {
 			doResetFence();

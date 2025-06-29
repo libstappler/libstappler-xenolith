@@ -50,6 +50,8 @@ public:
 	virtual void run() override;
 	virtual void end() override;
 
+	virtual void close(bool graceful) override;
+
 	xenolith::platform::LinuxViewInterface *getView() const { return _view; }
 
 	vk::Device *getDevice() const { return _device; }

@@ -348,14 +348,9 @@ bool AttachmentHandle::isOutput() const {
 	return (_attachment->getUsage() & AttachmentUsage::Output) != AttachmentUsage::None;
 }
 
-uint32_t AttachmentHandle::getDescriptorArraySize(const PassHandle &,
-		const PipelineDescriptor &d) const {
-	return d.count;
-}
-
-bool AttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d, uint32_t,
-		const DescriptorData &) const {
-	return false;
+uint32_t AttachmentHandle::enumerateDirtyDescriptors(const PassHandle &, const PipelineDescriptor &,
+		const DescriptorBinding &, const Callback<void(uint32_t)> &) const {
+	return 0;
 }
 
 void AttachmentHandle::enumerateAttachmentObjects(

@@ -70,6 +70,7 @@
 #include "XLCoreAttachment.cc"
 #include "XLCoreImageStorage.cc"
 #include "XLCoreObject.cc"
+#include "XLCoreDescriptorInfo.cc"
 #include "XLCoreDevice.cc"
 #include "XLCoreDeviceQueue.cc"
 #include "XLCoreQueuePass.cc"

@@ -31,7 +31,6 @@ const ColorMode ColorMode::SolidColor = ColorMode();
 const ColorMode ColorMode::IntensityChannel(core::ComponentMapping::R, core::ComponentMapping::One);
 const ColorMode ColorMode::AlphaChannel(core::ComponentMapping::One, core::ComponentMapping::R);
 
-
 SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t) : type(t), buffer{0, maxOf<uint64_t>()} { }
 
 SubresourceRangeInfo::SubresourceRangeInfo(ObjectType t, uint64_t offset, uint64_t size)

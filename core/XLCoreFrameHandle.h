@@ -150,7 +150,7 @@ protected:
 #endif
 
 	Loop *_loop = nullptr; // loop can not die until frames are performed
-	Device *_device = nullptr;
+	Rc<Device> _device;
 	Rc<PoolRef> _pool;
 	Rc<FrameRequest> _request;
 

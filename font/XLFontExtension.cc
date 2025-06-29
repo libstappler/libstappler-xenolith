@@ -266,7 +266,7 @@ void FontExtension::updateImage(const Rc<core::DynamicImage> &image,
 	}
 
 	auto input = Rc<RenderFontInput>::alloc();
-	input->queue = _mainLoop->getAppLooper()->getThreadPool();
+	input->queue = _mainLoop->getAppLooper();
 	input->image = image;
 	input->ext = this;
 	input->requests = sp::move(data);

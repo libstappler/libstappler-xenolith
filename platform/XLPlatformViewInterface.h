@@ -91,6 +91,8 @@ public:
 	virtual void update(bool displayLink); // from view thread
 	virtual void end() = 0; // from view thread
 
+	virtual void close(bool graceful = true) = 0;
+
 	virtual void handleInputEvent(const core::InputEventData &); // from view thread
 	virtual void handleInputEvents(Vector<core::InputEventData> &&); // from view thread
 

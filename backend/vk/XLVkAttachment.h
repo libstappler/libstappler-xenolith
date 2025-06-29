@@ -58,9 +58,10 @@ public:
 
 	virtual ~BufferAttachmentHandle() = default;
 
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferInfo &);
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
-			const DescriptorData &) const override;
+	virtual bool writeDescriptor(const core::QueuePassHandle &, core::DescriptorBufferInfo &);
+
+	virtual uint32_t enumerateDirtyDescriptors(const PassHandle &, const PipelineDescriptor &,
+			const core::DescriptorBinding &, const Callback<void(uint32_t)> &) const override;
 
 	virtual void enumerateAttachmentObjects(
 			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
@@ -83,9 +84,10 @@ public:
 
 	core::ImageStorage *getImage() const;
 
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorImageInfo &);
-	virtual bool isDescriptorDirty(const PassHandle &, const PipelineDescriptor &, uint32_t,
-			const DescriptorData &) const override;
+	virtual bool writeDescriptor(const core::QueuePassHandle &, core::DescriptorImageInfo &);
+
+	virtual uint32_t enumerateDirtyDescriptors(const PassHandle &, const PipelineDescriptor &,
+			const core::DescriptorBinding &, const Callback<void(uint32_t)> &) const override;
 
 	virtual void enumerateAttachmentObjects(
 			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;
@@ -95,7 +97,7 @@ class SP_PUBLIC TexelAttachmentHandle : public core::AttachmentHandle {
 public:
 	virtual ~TexelAttachmentHandle() = default;
 
-	virtual bool writeDescriptor(const core::QueuePassHandle &, DescriptorBufferViewInfo &) {
+	virtual bool writeDescriptor(const core::QueuePassHandle &, core::DescriptorBufferViewInfo &) {
 		return false;
 	}
 };

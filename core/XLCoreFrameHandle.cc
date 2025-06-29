@@ -99,6 +99,9 @@ void FrameHandle::DescribeActiveFrames() {
 
 FrameHandle::~FrameHandle() {
 	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "Destroy");
+
+	_device = nullptr;
+
 #if DEBUG
 	s_frameMutex.lock();
 	--s_frameCount;

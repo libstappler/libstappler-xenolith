@@ -74,6 +74,7 @@ struct XcbWindowInfo {
 	bool enableSync = false;
 
 	xcb_sync_int64_t syncValue = {0, 0};
+	uint64_t syncFrameOrder = 0;
 
 	// output
 	xcb_window_t window;

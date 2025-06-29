@@ -340,46 +340,145 @@ const DeviceTable *Device::getTable() const {
 	return _table;
 }
 
-bool Device::supportsUpdateAfterBind(DescriptorType type) const {
-	if (!_updateAfterBindEnabled) {
-		return false;
+core::DescriptorFlags Device::getSupportedDescriptorFlags(DescriptorType type) const {
+	if (!_useDescriptorIndexing) {
+		return core::DescriptorFlags::None;
 	}
+	core::DescriptorFlags flags = core::DescriptorFlags::None;
+	if (_info.features.deviceDescriptorIndexing.descriptorBindingPartiallyBound) {
+		flags |= core::DescriptorFlags::PartiallyBound;
+	}
+	if (_info.features.deviceDescriptorIndexing.descriptorBindingUpdateUnusedWhilePending) {
+		flags |= core::DescriptorFlags::UpdateWhilePending;
+	}
+	if (_info.features.deviceDescriptorIndexing.descriptorBindingVariableDescriptorCount) {
+		flags |= core::DescriptorFlags::VariableDescriptorCount;
+	}
+	if (_info.features.deviceDescriptorIndexing.runtimeDescriptorArray) {
+		flags |= core::DescriptorFlags::RuntimeDescriptorArray;
+	}
+
 	switch (type) {
-	case DescriptorType::Sampler:
-		return true; // Samplers are immutable engine-wide
-		break;
+	case DescriptorType::Sampler: break;
 	case DescriptorType::CombinedImageSampler:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind;
+		if (_info.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderSampledImageArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		if (_info.features.deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::SampledImage:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind;
+		if (_info.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderSampledImageArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderSampledImageArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		if (_info.features.deviceDescriptorIndexing.descriptorBindingSampledImageUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::StorageImage:
-		return _info.features.deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind;
+		if (_info.features.device10.features.shaderStorageImageArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderStorageImageArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderStorageImageArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		if (_info.features.deviceDescriptorIndexing.descriptorBindingStorageImageUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::UniformTexelBuffer:
-		return _info.features.deviceDescriptorIndexing
-				.descriptorBindingUniformTexelBufferUpdateAfterBind;
+		if (_info.features.deviceDescriptorIndexing.shaderUniformTexelBufferArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing
+						.shaderUniformTexelBufferArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing
+						.descriptorBindingUniformTexelBufferUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::StorageTexelBuffer:
-		return _info.features.deviceDescriptorIndexing
-				.descriptorBindingStorageTexelBufferUpdateAfterBind;
+		if (_info.features.deviceDescriptorIndexing.shaderStorageTexelBufferArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing
+						.shaderStorageTexelBufferArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing
+						.descriptorBindingStorageTexelBufferUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::UniformBuffer:
 	case DescriptorType::UniformBufferDynamic:
-		return _info.features.deviceDescriptorIndexing
-				.descriptorBindingUniformBufferUpdateAfterBind;
+		if (_info.features.device10.features.shaderUniformBufferArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderUniformBufferArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		if (_info.features.deviceDescriptorIndexing.descriptorBindingUniformBufferUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::StorageBuffer:
 	case DescriptorType::StorageBufferDynamic:
-		return _info.features.deviceDescriptorIndexing
-				.descriptorBindingStorageBufferUpdateAfterBind;
+		if (_info.features.device10.features.shaderStorageBufferArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderStorageBufferArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		if (_info.features.deviceDescriptorIndexing.descriptorBindingStorageBufferUpdateAfterBind) {
+			flags |= core::DescriptorFlags::UpdateAfterBind;
+		}
 		break;
 	case DescriptorType::InputAttachment:
+		if (_info.features.deviceDescriptorIndexing.shaderInputAttachmentArrayDynamicIndexing) {
+			flags |= core::DescriptorFlags::DynamicIndexing;
+		}
+		if (_info.features.deviceDescriptorIndexing.shaderInputAttachmentArrayNonUniformIndexing) {
+			flags |= core::DescriptorFlags::NonUniformIndexing;
+		}
+		if (_info.properties.deviceDescriptorIndexing
+						.shaderInputAttachmentArrayNonUniformIndexingNative) {
+			flags |= core::DescriptorFlags::NonUniformIndexingNative;
+		}
+		break;
 	case DescriptorType::Attachment:
-	case DescriptorType::Unknown: return false; break;
+	case DescriptorType::Unknown: break;
 	}
-	return false;
+	return flags;
 }
 
 Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass,

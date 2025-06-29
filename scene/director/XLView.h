@@ -77,11 +77,6 @@ public:
 
 	void setPresentationEngine(Rc<core::PresentationEngine> &&);
 
-	virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
-			AttachmentLayout l) const = 0;
-	virtual void captureImage(Function<void(const core::ImageInfoData &info, BytesView view)> &&,
-			const Rc<core::ImageObject> &image, AttachmentLayout l) const = 0;
-
 	Director *getDirector() const;
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 

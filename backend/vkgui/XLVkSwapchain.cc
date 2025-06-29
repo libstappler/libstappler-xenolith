@@ -53,15 +53,17 @@ core::SurfaceInfo Surface::getSurfaceOptions(const Device &dev) const {
 	return _instance.get_cast<Instance>()->getSurfaceOptions(_surface, dev.getPhysicalDevice());
 }
 
-static void SwapchainHandle_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle handle, void *ptr) {
+static void SwapchainHandle_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle handle,
+		void *ptr) {
 	auto data = reinterpret_cast<SwapchainHandle::SwapchainHandleData *>(ptr);
 
 	auto d = static_cast<Device *>(dev);
-	d->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	d->makeApiCall([&](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
 		table.vkDestroySwapchainKHR(device, (VkSwapchainKHR)handle.get(), nullptr);
-		XL_VKAPI_LOG("vkDestroySwapchainKHR: [", sp::platform::clock(ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("vkDestroySwapchainKHR: [", sp::platform::clock(ClockType::Monotonic) - t,
+				"]");
 #else
 		table.vkDestroySwapchainKHR(device, (VkSwapchainKHR)handle.get(), nullptr);
 #endif
@@ -71,16 +73,20 @@ static void SwapchainHandle_destroy(core::Device *dev, core::ObjectType, core::O
 	delete data;
 }
 
-bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const core::SwapchainConfig &cfg, ImageInfo &&swapchainImageInfo,
-		core::PresentMode presentMode, Surface *surface, uint32_t families[2], SwapchainHandle *old) {
+bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
+		const core::SwapchainConfig &cfg, ImageInfo &&swapchainImageInfo,
+		core::PresentMode presentMode, Surface *surface, uint32_t families[2],
+		SwapchainHandle *old) {
 
-	VkSwapchainCreateInfoKHR swapChainCreateInfo{}; sanitizeVkStruct(swapChainCreateInfo);
+	VkSwapchainCreateInfoKHR swapChainCreateInfo{};
+	sanitizeVkStruct(swapChainCreateInfo);
 	swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	swapChainCreateInfo.surface = surface->getSurface();
 	swapChainCreateInfo.minImageCount = cfg.imageCount;
 	swapChainCreateInfo.imageFormat = VkFormat(swapchainImageInfo.format);
 	swapChainCreateInfo.imageColorSpace = VkColorSpaceKHR(cfg.colorSpace);
-	swapChainCreateInfo.imageExtent = VkExtent2D({swapchainImageInfo.extent.width, swapchainImageInfo.extent.height});
+	swapChainCreateInfo.imageExtent =
+			VkExtent2D({swapchainImageInfo.extent.width, swapchainImageInfo.extent.height});
 	swapChainCreateInfo.imageArrayLayers = swapchainImageInfo.arrayLayers.get();
 	swapChainCreateInfo.imageUsage = VkImageUsageFlags(swapchainImageInfo.usage);
 
@@ -92,8 +98,10 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 
-	if ((cfg.transform & core::SurfaceTransformFlags::PreRotated) != core::SurfaceTransformFlags::None) {
-		swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(core::getPureTransform(cfg.transform));
+	if ((cfg.transform & core::SurfaceTransformFlags::PreRotated)
+			!= core::SurfaceTransformFlags::None) {
+		swapChainCreateInfo.preTransform =
+				VkSurfaceTransformFlagBitsKHR(core::getPureTransform(cfg.transform));
 	} else {
 		swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(cfg.transform);
 	}
@@ -109,12 +117,12 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkResult result = VK_ERROR_UNKNOWN;
-	dev.makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	dev.makeApiCall([&](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &swapchain);
-		XL_VKAPI_LOG("vkCreateSwapchainKHR: ", result,
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("vkCreateSwapchainKHR: ", result, " [",
+				sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		result = table.vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &swapchain);
 #endif
@@ -127,9 +135,11 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		Vector<VkImage> swapchainImages;
 
 		uint32_t imageCount = 0;
-		dev.getTable()->vkGetSwapchainImagesKHR(dev.getDevice(), data->swapchain, &imageCount, nullptr);
+		dev.getTable()->vkGetSwapchainImagesKHR(dev.getDevice(), data->swapchain, &imageCount,
+				nullptr);
 		swapchainImages.resize(imageCount);
-		dev.getTable()->vkGetSwapchainImagesKHR(dev.getDevice(), data->swapchain, &imageCount, swapchainImages.data());
+		dev.getTable()->vkGetSwapchainImagesKHR(dev.getDevice(), data->swapchain, &imageCount,
+				swapchainImages.data());
 
 		data->images.reserve(imageCount);
 		data->presentSemaphores.resize(imageCount);
@@ -152,15 +162,17 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		auto swapchainImageViewInfo = getSwapchainImageViewInfo(swapchainImageInfo);
 
 		for (auto &it : swapchainImages) {
-			auto image = Rc<Image>::create(dev, it, swapchainImageInfo, uint32_t(data->images.size()));
+			auto image =
+					Rc<Image>::create(dev, it, swapchainImageInfo, uint32_t(data->images.size()));
 
 			Map<ImageViewInfo, Rc<core::ImageView>> views;
-			views.emplace(swapchainImageViewInfo, Rc<ImageView>::create(dev, image.get(), swapchainImageViewInfo));
+			views.emplace(swapchainImageViewInfo,
+					Rc<ImageView>::create(dev, image.get(), swapchainImageViewInfo));
 
 			data->images.emplace_back(SwapchainImageData{sp::move(image), sp::move(views)});
 		}
 
-		_rebuildMode = _presentMode = presentMode;
+		_presentMode = presentMode;
 		_imageInfo = move(swapchainImageInfo);
 		_config = move(cfg);
 		_config.imageCount = imageCount;
@@ -168,7 +180,8 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info, const cor
 		_surfaceInfo = info;
 		_data = data;
 
-		return core::Swapchain::init(dev, SwapchainHandle_destroy, core::ObjectType::Swapchain, ObjectHandle(_data->swapchain), _data);
+		return core::Swapchain::init(dev, SwapchainHandle_destroy, core::ObjectType::Swapchain,
+				ObjectHandle(_data->swapchain), _data);
 	}
 	return false;
 }
@@ -177,7 +190,8 @@ SpanView<SwapchainHandle::SwapchainImageData> SwapchainHandle::getImages() const
 	return _data->images;
 }
 
-auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence) -> Rc<SwapchainAcquiredImage> {
+auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence)
+		-> Rc<SwapchainAcquiredImage> {
 	if (_deprecated) {
 		return nullptr;
 	}
@@ -193,14 +207,14 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence) -> Rc
 
 	uint32_t imageIndex = maxOf<uint32_t>();
 	VkResult ret = VK_ERROR_UNKNOWN;
-	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+	dev->makeApiCall([&, this](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
 		ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
 				sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
 				fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
-		XL_VKAPI_LOG("vkAcquireNextImageKHR: ", imageIndex, " ", ret,
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "]");
+		XL_VKAPI_LOG("vkAcquireNextImageKHR: ", imageIndex, " ", ret, " [",
+				sp::platform::clock(ClockType::Monotonic) - t, "]");
 #else
 		ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
 				sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
@@ -218,8 +232,9 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence) -> Rc
 			fence->setTag("SwapchainHandle::acquire");
 			fence->setArmed();
 		}
-		++ _acquiredImages;
-		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex), move(sem), this);
+		++_acquiredImages;
+		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex),
+				move(sem), this);
 		break;
 	case VK_SUBOPTIMAL_KHR:
 		if (sem) {
@@ -230,29 +245,33 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence) -> Rc
 			fence->setArmed();
 		}
 		_deprecated = true;
-		++ _acquiredImages;
-		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex), move(sem), this);
+		++_acquiredImages;
+		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex),
+				move(sem), this);
 		break;
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		_deprecated = true;
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
 		break;
-	default:
-		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
-		break;
+	default: releaseSemaphore(ref_cast<Semaphore>(move(sem))); break;
 	}
 
 	return nullptr;
 }
 
 Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *image) {
+	if (_invalid) {
+		return Status::ErrorCancelled;
+	}
+
 	auto waitSem = (Semaphore *)image->getSignalSem().get();
 	auto waitSemObj = waitSem->getSemaphore();
 	auto imageIndex = uint32_t(image->getImageIndex());
 
 	auto dev = static_cast<Device *>(_object.device);
 
-	VkPresentInfoKHR presentInfo{}; sanitizeVkStruct(presentInfo);
+	VkPresentInfoKHR presentInfo{};
+	sanitizeVkStruct(presentInfo);
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 	presentInfo.waitSemaphoreCount = 1;
@@ -264,23 +283,26 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 	presentInfo.pResults = nullptr; // Optional
 
 	VkResult result = VK_ERROR_UNKNOWN;
-	dev->makeApiCall([&] (const DeviceTable &table, VkDevice device) {
+	dev->makeApiCall([&](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		result = table.vkQueuePresentKHR(static_cast<DeviceQueue &>(queue).getQueue(), &presentInfo);
+		result =
+				table.vkQueuePresentKHR(static_cast<DeviceQueue &>(queue).getQueue(), &presentInfo);
 		XL_VKAPI_LOG("[", image->getFrameIndex(), "] vkQueuePresentKHR: ", imageIndex, " ", result,
-				" [", sp::platform::clock(ClockType::Monotonic) - t, "] [timeout: ", t - _presentTime,
+				" [", sp::platform::clock(ClockType::Monotonic) - t,
+				"] [timeout: ", t - _presentTime,
 				"] [acquisition: ", t - image->getAcquisitionTime(), "]");
 		_presentTime = t;
 #else
-		result = table.vkQueuePresentKHR(static_cast<DeviceQueue &>(queue).getQueue(), &presentInfo);
+		result =
+				table.vkQueuePresentKHR(static_cast<DeviceQueue &>(queue).getQueue(), &presentInfo);
 #endif
 	});
 
 	do {
 		std::unique_lock<Mutex> lock(_resourceMutex);
 		static_cast<core::SwapchainImage *>(image)->setPresented();
-		-- _acquiredImages;
+		--_acquiredImages;
 	} while (0);
 
 	if (_data->presentSemaphores[imageIndex]) {
@@ -292,12 +314,14 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 	_data->presentSemaphores[imageIndex] = waitSem;
 
 	if (result == VK_SUCCESS) {
-		++ _presentedFrames;
-		if (_presentedFrames == config::MaxSuboptimalFrames && _presentMode == _config.presentModeFast
+		++_presentedFrames;
+		if (_presentedFrames == config::MaxSuboptimalFrames
+				&& _presentMode == _config.presentModeFast
 				&& _config.presentModeFast != _config.presentMode) {
 			result = VK_SUBOPTIMAL_KHR;
-			_rebuildMode = _config.presentMode;
 		}
+	} else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		_invalid = true;
 	}
 
 	return getStatus(result);
@@ -306,7 +330,7 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 void SwapchainHandle::invalidateImage(const core::ImageStorage *image) {
 	if (!static_cast<const core::SwapchainImage *>(image)->isPresented()) {
 		std::unique_lock<Mutex> lock(_resourceMutex);
-		-- _acquiredImages;
+		--_acquiredImages;
 	}
 }
 
@@ -319,7 +343,8 @@ Rc<core::Semaphore> SwapchainHandle::acquireSemaphore() {
 	}
 	lock.unlock();
 
-	return Rc<Semaphore>::create(*static_cast<Device *>(_object.device), core::SemaphoreType::Default);
+	return Rc<Semaphore>::create(*static_cast<Device *>(_object.device),
+			core::SemaphoreType::Default);
 }
 
 bool SwapchainHandle::releaseSemaphore(Rc<core::Semaphore> &&sem) {
@@ -331,7 +356,8 @@ bool SwapchainHandle::releaseSemaphore(Rc<core::Semaphore> &&sem) {
 	return false;
 }
 
-Rc<core::ImageView> SwapchainHandle::makeView(const Rc<core::ImageObject> &image, const ImageViewInfo &viewInfo) {
+Rc<core::ImageView> SwapchainHandle::makeView(const Rc<core::ImageObject> &image,
+		const ImageViewInfo &viewInfo) {
 	auto img = (Image *)image.get();
 	auto idx = img->getIndex();
 
@@ -342,8 +368,10 @@ Rc<core::ImageView> SwapchainHandle::makeView(const Rc<core::ImageObject> &image
 		return it->second;
 	}
 
-	it = _data->images[idx].views.emplace(viewInfo, Rc<ImageView>::create(*dev, img, viewInfo)).first;
+	it = _data->images[idx]
+				 .views.emplace(viewInfo, Rc<ImageView>::create(*dev, img, viewInfo))
+				 .first;
 	return it->second;
 }
 
-}
+} // namespace stappler::xenolith::vk

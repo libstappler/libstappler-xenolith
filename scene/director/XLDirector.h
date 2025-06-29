@@ -112,6 +112,7 @@ protected:
 
 	Mat4 _generalProjection;
 
+	Rc<AllocRef> _allocator;
 	Rc<PoolRef> _pool;
 	Rc<Scheduler> _scheduler;
 	Rc<ActionManager> _actionManager;

@@ -35,6 +35,8 @@ static constexpr float VGPseudoSdfOffset = 80.0f;
 static constexpr float VGPseudoSdfMax = 255.0f;
 static constexpr uint32_t VGPseudoSdfMaterial = maxOf<uint32_t>() - 1;
 
-}
+static constexpr uint32_t ParticleBufferArraySize = 1'024;
+
+} // namespace stappler::xenolith::config
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DCONFIG_H_ */

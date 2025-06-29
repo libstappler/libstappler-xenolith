@@ -59,35 +59,24 @@ Swapchain::~Swapchain() {
 	_surface = nullptr;
 }
 
-bool Swapchain::isDeprecated() {
-	return _deprecated;
-}
+bool Swapchain::isDeprecated() { return _deprecated; }
 
-bool Swapchain::isOptimal() const {
-	return _presentMode == _config.presentMode;
-}
+bool Swapchain::isOptimal() const { return _presentMode == _config.presentMode; }
 
-bool Swapchain::deprecate(bool fast) {
+bool Swapchain::isValid() const { return !_invalid; }
+
+bool Swapchain::deprecate() {
 	auto tmp = _deprecated;
 	_deprecated = true;
-	if (fast && _config.presentModeFast != core::PresentMode::Unsupported) {
-		_rebuildMode = _config.presentModeFast;
-	}
 	return !tmp;
 }
 
 ImageViewInfo Swapchain::getSwapchainImageViewInfo(const ImageInfo &image) const {
 	ImageViewInfo info;
 	switch (image.imageType) {
-	case core::ImageType::Image1D:
-		info.type = core::ImageViewType::ImageView1D;
-		break;
-	case core::ImageType::Image2D:
-		info.type = core::ImageViewType::ImageView2D;
-		break;
-	case core::ImageType::Image3D:
-		info.type = core::ImageViewType::ImageView3D;
-		break;
+	case core::ImageType::Image1D: info.type = core::ImageViewType::ImageView1D; break;
+	case core::ImageType::Image2D: info.type = core::ImageViewType::ImageView2D; break;
+	case core::ImageType::Image3D: info.type = core::ImageViewType::ImageView3D; break;
 	}
 
 	return image.getViewInfo(info);
@@ -121,12 +110,11 @@ bool SwapchainImage::init(Swapchain *swapchain, uint64_t order) {
 	return true;
 }
 
-bool SwapchainImage::init(Swapchain *swapchain, const Swapchain::SwapchainImageData &image, Rc<Semaphore> &&sem) {
+bool SwapchainImage::init(Swapchain *swapchain, const Swapchain::SwapchainImageData &image,
+		Rc<Semaphore> &&sem) {
 	_swapchain = swapchain;
 	_image = image.image.get();
-	for (auto &it : image.views) {
-		_views.emplace(it.first, it.second);
-	}
+	for (auto &it : image.views) { _views.emplace(it.first, it.second); }
 	if (sem) {
 		_waitSem = sem.get();
 	}
@@ -140,9 +128,7 @@ void SwapchainImage::cleanup() {
 	// stappler::log::info("SwapchainImage", "cleanup");
 }
 
-void SwapchainImage::rearmSemaphores(core::Loop &loop) {
-	ImageStorage::rearmSemaphores(loop);
-}
+void SwapchainImage::rearmSemaphores(core::Loop &loop) { ImageStorage::rearmSemaphores(loop); }
 
 void SwapchainImage::releaseSemaphore(core::Semaphore *sem) {
 	if (_state == State::Presented && sem == _waitSem && _swapchain) {
@@ -159,7 +145,7 @@ ImageInfoData SwapchainImage::getInfo() const {
 	} else if (_swapchain) {
 		return _swapchain->getImageInfo();
 	}
-    return ImageInfoData();
+	return ImageInfoData();
 }
 
 Rc<core::ImageView> SwapchainImage::makeView(const ImageViewInfo &info) {
@@ -172,20 +158,17 @@ Rc<core::ImageView> SwapchainImage::makeView(const ImageViewInfo &info) {
 	return it->second;
 }
 
-void SwapchainImage::setImage(Rc<Swapchain> &&handle, const Swapchain::SwapchainImageData &image, const Rc<Semaphore> &sem) {
+void SwapchainImage::setImage(Rc<Swapchain> &&handle, const Swapchain::SwapchainImageData &image,
+		const Rc<Semaphore> &sem) {
 	_image = image.image.get();
-	for (auto &it : image.views) {
-		_views.emplace(it.first, it.second);
-	}
+	for (auto &it : image.views) { _views.emplace(it.first, it.second); }
 	if (sem) {
 		_waitSem = sem.get();
 	}
 	_signalSem = _swapchain->acquireSemaphore().get();
 }
 
-void SwapchainImage::setPresented() {
-	_state = State::Presented;
-}
+void SwapchainImage::setPresented() { _state = State::Presented; }
 
 void SwapchainImage::invalidateImage() {
 	if (_image && _swapchain) {
@@ -201,4 +184,4 @@ void SwapchainImage::invalidateSwapchain() {
 	_state = State::Presented;
 }
 
-}
+} // namespace stappler::xenolith::core

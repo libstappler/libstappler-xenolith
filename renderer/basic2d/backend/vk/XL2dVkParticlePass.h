@@ -77,7 +77,7 @@ protected:
 	Map<uint64_t, EmitterData> _emitters;
 };
 
-class SP_PUBLIC ParticleEmitterAttachment : public core::GenericAttachment {
+class SP_PUBLIC ParticleEmitterAttachment : public BufferAttachment {
 public:
 	virtual ~ParticleEmitterAttachment() = default;
 
@@ -92,7 +92,7 @@ protected:
 	Rc<ParticlePersistentData> _data;
 };
 
-class SP_PUBLIC ParticleEmitterAttachmentHandle : public core::AttachmentHandle {
+class SP_PUBLIC ParticleEmitterAttachmentHandle : public BufferAttachmentHandle {
 public:
 	virtual ~ParticleEmitterAttachmentHandle() = default;
 
@@ -100,6 +100,9 @@ public:
 	Buffer *getCommands() const { return _commands; }
 
 	const ParticleSystemRenderInfo *getEmitterRenderInfo(uint64_t) const;
+
+	virtual uint32_t enumerateDirtyDescriptors(const PassHandle &, const PipelineDescriptor &,
+			const core::DescriptorBinding &, const Callback<void(uint32_t)> &) const override;
 
 	virtual void enumerateAttachmentObjects(
 			const Callback<void(core::Object *, const core::SubresourceRangeInfo &)> &) override;

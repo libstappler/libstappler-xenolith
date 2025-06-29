@@ -48,26 +48,34 @@ public:
 
 	virtual bool isRunning() const override;
 
-	virtual void compileResource(Rc<core::Resource> &&req, Function<void(bool)> && = nullptr, bool preload = false) const override;
-	virtual void compileQueue(const Rc<Queue> &req, Function<void(bool)> && = nullptr) const override;
+	virtual void compileResource(Rc<core::Resource> &&req, Function<void(bool)> && = nullptr,
+			bool preload = false) const override;
+	virtual void compileQueue(const Rc<Queue> &req,
+			Function<void(bool)> && = nullptr) const override;
 
-	virtual void compileMaterials(Rc<core::MaterialInputData> &&req, const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const override;
-	virtual void compileImage(const Rc<core::DynamicImage> &, Function<void(bool)> && = nullptr) const override;
+	virtual void compileMaterials(Rc<core::MaterialInputData> &&req,
+			const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>()) const override;
+	virtual void compileImage(const Rc<core::DynamicImage> &,
+			Function<void(bool)> && = nullptr) const override;
 
 	// run frame with RenderQueue
-	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0, Function<void(bool)> && = nullptr) override;
+	virtual void runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen = 0,
+			Function<void(bool)> && = nullptr) override;
 
 	virtual void performInQueue(Rc<thread::Task> &&) const override;
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const override;
 
-	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr, bool immediate = false, StringView tag = STAPPLER_LOCATION) const override;
+	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr,
+			bool immediate = false, StringView tag = STAPPLER_LOCATION) const override;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) override;
 
-	virtual Rc<core::Framebuffer> acquireFramebuffer(const PassData *, SpanView<Rc<core::ImageView>>) override;
+	virtual Rc<core::Framebuffer> acquireFramebuffer(const PassData *,
+			SpanView<Rc<core::ImageView>>) override;
 	virtual void releaseFramebuffer(Rc<core::Framebuffer> &&) override;
 
-	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *, const core::ImageInfoData &) override;
+	virtual Rc<ImageStorage> acquireImage(const ImageAttachment *, const AttachmentHandle *,
+			const core::ImageInfoData &) override;
 	virtual void releaseImage(Rc<ImageStorage> &&) override;
 
 	virtual Rc<core::Semaphore> makeSemaphore() override;
@@ -76,15 +84,20 @@ public:
 
 	virtual Rc<core::Fence> acquireFence(core::FenceType) override;
 
-	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) override;
-	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &, Function<void(bool)> &&) override;
+	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *,
+			bool success) override;
+	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &,
+			Function<void(bool)> &&) override;
 
 	virtual void waitIdle() override;
 
+	virtual void captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
+			core::AttachmentLayout l) override;
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 			const Rc<core::ImageObject> &image, core::AttachmentLayout l) override;
 
-	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb, const Rc<core::BufferObject> &) override;
+	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
+			const Rc<core::BufferObject> &) override;
 
 protected:
 	using core::Loop::init;
@@ -95,6 +108,6 @@ protected:
 	Internal *_internal = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::vk
 
 #endif /* XENOLITH_BACKEND_VK_XLVKLOOP_H_ */

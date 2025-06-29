@@ -45,6 +45,13 @@ public:
 		uint64_t clock;
 	};
 
+	enum class SwapchainFlags {
+		None,
+		SwitchToFastMode = 1 << 0,
+		EndOfLife = 1 << 1,
+		Finalized = 1 << 2,
+	};
+
 	struct Options {
 		// Запускать следующий кадр только по запросу либо наличию действий в процессе
 		// В таком случае, PresentationInterval будет считаться на основе реальной презентации
@@ -82,10 +89,13 @@ public:
 	virtual bool run();
 	virtual void end();
 
-	virtual bool recreateSwapchain(core::PresentMode) = 0;
+	virtual bool recreateSwapchain() = 0;
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
 			core::PresentMode presentMode) = 0;
-	virtual void deprecateSwapchain(bool fast);
+
+	// Callback receives true for successful recreation and false for end-of-life
+	virtual void deprecateSwapchain(SwapchainFlags = SwapchainFlags::None,
+			Function<void(bool)> && = nullptr);
 
 	virtual bool present(PresentationFrame *frame, ImageStorage *image);
 	virtual bool presentImmediate(PresentationFrame *frame) { return false; }
@@ -112,6 +122,7 @@ public:
 
 	FrameTimeInfo updatePresentationInterval();
 
+	uint64_t getFrameOrder() const;
 	uint64_t getLastFrameInterval() const;
 	uint64_t getAvgFrameInterval() const;
 	uint64_t getLastFrameTime() const;
@@ -216,7 +227,12 @@ protected:
 
 	Set<PresentationFrame *> _activeFrames;
 	Set<PresentationFrame *> _totalFrames;
+
+	SwapchainFlags _deprecationFlags = SwapchainFlags::None;
+	Vector<Function<void(bool)>> _deprecationCallbacks;
 };
+
+SP_DEFINE_ENUM_AS_MASK(PresentationEngine::SwapchainFlags)
 
 } // namespace stappler::xenolith::core
 #endif /* XENOLITH_CORE_XLCOREPRESENTATIONENGINE_H_ */

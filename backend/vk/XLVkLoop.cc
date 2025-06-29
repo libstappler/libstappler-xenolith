@@ -37,6 +37,8 @@
 #include "SPEventLooper.h"
 #include "SPEventTimerHandle.h"
 
+#include "SPBitmap.h"
+
 #define XL_VK_DEPS_DEBUG 0
 #define XL_VK_PAUSE_TIMER 1
 
@@ -372,10 +374,6 @@ void Loop::stop() {
 		_internal->updateTimerHandle->cancel();
 		_internal->updateTimerHandle = nullptr;
 
-		if (_frameCache) {
-			_frameCache->invalidate();
-		}
-
 		_internal->waitIdle();
 		_internal->endDevice();
 
@@ -383,6 +381,11 @@ void Loop::stop() {
 
 		delete _internal;
 		_internal = nullptr;
+
+		if (_frameCache) {
+			_frameCache->invalidate();
+			_frameCache = nullptr;
+		}
 
 		memory::pool::destroy(mempool);
 	}, this);
@@ -429,7 +432,10 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 
 		auto frame = makeFrame(move(req), gen);
 		if (frame && callback) {
-			frame->setCompleteCallback([callback = sp::move(callback)](FrameHandle &handle) {
+			frame->setCompleteCallback([this, callback = sp::move(callback)](FrameHandle &handle) {
+				if (_internal || !_internal->_running.load()) {
+					return;
+				}
 				callback(handle.isValid());
 			});
 		}
@@ -515,30 +521,33 @@ const Vector<core::ImageFormat> &Loop::getSupportedDepthStencilFormat() const {
 
 Rc<core::Fence> Loop::acquireFence(core::FenceType type) {
 	auto initFence = [&](const Rc<Fence> &fence) {
-		fence->setFrame([this, fence]() mutable {
-			if (_looper->isOnThisThread()) {
+		fence->setFrame([guard = Rc<Loop>(this), fence]() mutable {
+			if (guard->_looper->isOnThisThread()) {
 				// schedule fence
-				_internal->scheduleFence(Rc<Fence>(fence));
+				guard->_internal->scheduleFence(Rc<Fence>(fence));
 				return true;
 			} else {
-				performOnThread([this, fence = move(fence)]() mutable {
-					if (!fence->check(*this, true)) {
+				guard->performOnThread([guard, fence = move(fence)]() mutable {
+					if (!fence->check(*guard, true)) {
 						return;
 					}
 
-					_internal->scheduleFence(move(fence));
-				}, this, true);
+					guard->_internal->scheduleFence(move(fence));
+				}, guard, true);
 				return true;
 			}
-		}, [this, fence]() mutable {
+		}, [guard = Rc<Loop>(this), fence]() mutable {
+			if (!guard->_internal) {
+				return;
+			}
 			fence->clear();
-			std::unique_lock<Mutex> lock(_internal->resourceMutex);
+			std::unique_lock<Mutex> lock(guard->_internal->resourceMutex);
 			switch (fence->getType()) {
 			case core::FenceType::Default:
-				_internal->defaultFences.emplace_back(move(fence));
+				guard->_internal->defaultFences.emplace_back(move(fence));
 				break;
 			case core::FenceType::Swapchain:
-				_internal->swapchainFences.emplace_back(move(fence));
+				guard->_internal->swapchainFences.emplace_back(move(fence));
 				break;
 			}
 		}, 0);
@@ -597,6 +606,32 @@ void Loop::waitIdle() {
 	if (_internal) {
 		_internal->waitIdle();
 	}
+}
+
+void Loop::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
+		core::AttachmentLayout l) {
+	auto path = file.path.str<Interface>();
+	auto cat = file.category;
+	captureImage([path, cat](const ImageInfoData &info, BytesView view) mutable {
+		if (!StringView(path).ends_with(".png")) {
+			path = path + String(".png");
+		}
+		if (!view.empty()) {
+			auto fmt = core::getImagePixelFormat(info.format);
+			bitmap::PixelFormat pixelFormat = bitmap::PixelFormat::Auto;
+			switch (fmt) {
+			case core::PixelFormat::A: pixelFormat = bitmap::PixelFormat::A8; break;
+			case core::PixelFormat::IA: pixelFormat = bitmap::PixelFormat::IA88; break;
+			case core::PixelFormat::RGB: pixelFormat = bitmap::PixelFormat::RGB888; break;
+			case core::PixelFormat::RGBA: pixelFormat = bitmap::PixelFormat::RGBA8888; break;
+			default: break;
+			}
+			if (pixelFormat != bitmap::PixelFormat::Auto) {
+				Bitmap bmp(view.data(), info.extent.width, info.extent.height, pixelFormat);
+				bmp.save(FileInfo{path, cat});
+			}
+		}
+	}, image, l);
 }
 
 void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,

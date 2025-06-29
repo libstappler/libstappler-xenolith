@@ -34,32 +34,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-DescriptorBinding::~DescriptorBinding() { data.clear(); }
-
-DescriptorBinding::DescriptorBinding(VkDescriptorType type, uint32_t count) : type(type) {
-	data.resize(count, DescriptorData{core::ObjectHandle::zero(), nullptr});
-}
-
-Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
-	return ret;
-}
-
-Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorImageInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.imageView->getObjectData().handle, move(info.imageView)};
-	return ret;
-}
-
-Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferViewInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
-	return ret;
-}
-
-const DescriptorData &DescriptorBinding::get(uint32_t idx) const { return data[idx]; }
-
 bool Framebuffer::init(Device &dev, RenderPass *renderPass,
 		SpanView<Rc<core::ImageView>> imageViews) {
 	Vector<VkImageView> views;
@@ -140,13 +114,19 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 		bindings.reserve(setData->descriptors.size());
 		uint32_t bindingIdx = 0;
 		for (auto &binding : setData->descriptors) {
-			if (binding->updateAfterBind) {
-				flags.emplace_back(VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
+			VkDescriptorBindingFlags bindingFlags = 0;
+			if (hasFlag(binding->deviceFlags, core::DescriptorFlags::UpdateAfterBind)) {
+				bindingFlags |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
 				hasFlags = true;
 				_updateAfterBind = true;
-			} else {
-				flags.emplace_back(0);
 			}
+			if (hasFlag(binding->deviceFlags, core::DescriptorFlags::PartiallyBound)) {
+				bindingFlags |= VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT;
+				hasFlags = true;
+				_updateAfterBind = true;
+			}
+
+			flags.emplace_back(bindingFlags);
 
 			binding->index = bindingIdx;
 
@@ -164,8 +144,7 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 				b.pImmutableSamplers = nullptr;
 			}
 			bindings.emplace_back(b);
-			descriptors.emplace_back(
-					DescriptorBindingInfo{VkDescriptorType(binding->type), binding->count});
+			descriptors.emplace_back(DescriptorBindingInfo{binding->type, binding->count});
 			++bindingIdx;
 		}
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -276,7 +255,10 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 	return cleanup();
 }
 
-DescriptorPool::~DescriptorPool() { invalidate(); }
+DescriptorPool::~DescriptorPool() {
+	for (auto &it : _sets) { it->bindings.clear(); }
+	invalidate();
+}
 
 bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	auto sizes = layout->getSizes();
@@ -422,6 +404,8 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 			return false;
 		}
 
+		bool success = true;
+
 		Vector<VkDescriptorImageInfo> *localImages = nullptr;
 		Vector<VkDescriptorBufferInfo> *localBuffers = nullptr;
 		Vector<VkBufferView> *localViews = nullptr;
@@ -438,80 +422,12 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 		writeData.pBufferInfo = VK_NULL_HANDLE;
 		writeData.pTexelBufferView = VK_NULL_HANDLE;
 
-		auto c = a->getDescriptorArraySize(handle, desc);
-		for (uint32_t i = 0; i < c; ++i) {
-			if (a->isDescriptorDirty(handle, desc, i, set->bindings[currentDescriptor].get(i))) {
-				switch (desc.type) {
-				case DescriptorType::Sampler:
-				case DescriptorType::CombinedImageSampler:
-				case DescriptorType::SampledImage:
-				case DescriptorType::StorageImage:
-				case DescriptorType::InputAttachment:
-					if (!localImages) {
-						localImages = &images.emplace_front(Vector<VkDescriptorImageInfo>());
-					}
-					if (localImages) {
-						auto h = (ImageAttachmentHandle *)a;
-
-						DescriptorImageInfo info(&desc, i);
-						if (!h->writeDescriptor(handle, info)) {
-							return false;
-						} else {
-							localImages->emplace_back(VkDescriptorImageInfo{info.sampler,
-								info.imageView->getImageView(), info.layout});
-							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
-								handle.autorelease(ref);
-							}
-						}
-					}
-					break;
-				case DescriptorType::StorageTexelBuffer:
-				case DescriptorType::UniformTexelBuffer:
-					if (!localViews) {
-						localViews = &views.emplace_front(Vector<VkBufferView>());
-					}
-					if (localViews) {
-						auto h = (TexelAttachmentHandle *)a;
-
-						DescriptorBufferViewInfo info(&desc, i);
-						if (h->writeDescriptor(handle, info)) {
-							localViews->emplace_back(info.target);
-							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
-								handle.autorelease(ref);
-							}
-						} else {
-							return false;
-						}
-					}
-					break;
-				case DescriptorType::UniformBuffer:
-				case DescriptorType::StorageBuffer:
-				case DescriptorType::UniformBufferDynamic:
-				case DescriptorType::StorageBufferDynamic:
-					if (!localBuffers) {
-						localBuffers = &buffers.emplace_front(Vector<VkDescriptorBufferInfo>());
-					}
-					if (localBuffers) {
-						auto h = (BufferAttachmentHandle *)a;
-
-						DescriptorBufferInfo info(&desc, i);
-						if (!h->writeDescriptor(handle, info)) {
-							return false;
-						} else {
-							localBuffers->emplace_back(VkDescriptorBufferInfo{
-								info.buffer->getBuffer(), info.offset, info.range});
-							if (auto ref = set->bindings[currentDescriptor].write(i, move(info))) {
-								handle.autorelease(ref);
-							}
-						}
-					}
-					break;
-				case DescriptorType::Unknown:
-				case DescriptorType::Attachment: break;
-				}
-				++writeData.descriptorCount;
-			} else {
+		uint32_t nextIdx = 0;
+		a->enumerateDirtyDescriptors(handle, desc, set->bindings[currentDescriptor],
+				[&](uint32_t idx) {
+			if (idx != nextIdx) {
 				if (writeData.descriptorCount > 0) {
+					// flush write-data
 					if (localImages) {
 						writeData.pImageInfo = localImages->data();
 					}
@@ -523,25 +439,102 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					}
 
 					writes.emplace_back(move(writeData));
-
-					writeData.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeData.pNext = nullptr;
-					writeData.dstSet = set->set;
-					writeData.dstBinding = currentDescriptor;
-					writeData.descriptorCount = 0;
-					writeData.descriptorType = VkDescriptorType(desc.type);
-					writeData.pImageInfo = VK_NULL_HANDLE;
-					writeData.pBufferInfo = VK_NULL_HANDLE;
-					writeData.pTexelBufferView = VK_NULL_HANDLE;
-
-					localImages = nullptr;
-					localBuffers = nullptr;
-					localViews = nullptr;
 				}
 
-				writeData.dstArrayElement = i + 1;
+				writeData.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeData.pNext = nullptr;
+				writeData.dstSet = set->set;
+				writeData.dstBinding = currentDescriptor;
+				writeData.descriptorCount = 0;
+				writeData.descriptorType = VkDescriptorType(desc.type);
+				writeData.pImageInfo = VK_NULL_HANDLE;
+				writeData.pBufferInfo = VK_NULL_HANDLE;
+				writeData.pTexelBufferView = VK_NULL_HANDLE;
+				writeData.dstArrayElement = idx;
+
+				localImages = nullptr;
+				localBuffers = nullptr;
+				localViews = nullptr;
 			}
-		}
+
+			switch (desc.type) {
+			case DescriptorType::Sampler:
+			case DescriptorType::CombinedImageSampler:
+			case DescriptorType::SampledImage:
+			case DescriptorType::StorageImage:
+			case DescriptorType::InputAttachment:
+				if (!localImages) {
+					localImages = &images.emplace_front(Vector<VkDescriptorImageInfo>());
+				}
+				if (localImages) {
+					auto h = (ImageAttachmentHandle *)a;
+
+					core::DescriptorImageInfo info(&desc, idx);
+					if (!h->writeDescriptor(handle, info)) {
+						success = false;
+						return;
+					} else {
+						localImages->emplace_back(VkDescriptorImageInfo{info.sampler
+									? info.sampler.get_cast<Sampler>()->getSampler()
+									: VK_NULL_HANDLE,
+							info.imageView.get_cast<ImageView>()->getImageView(),
+							VkImageLayout(info.layout)});
+						if (auto ref = set->bindings[currentDescriptor].write(idx, move(info))) {
+							handle.autorelease(ref);
+						}
+					}
+				}
+				break;
+			case DescriptorType::StorageTexelBuffer:
+			case DescriptorType::UniformTexelBuffer:
+				if (!localViews) {
+					localViews = &views.emplace_front(Vector<VkBufferView>());
+				}
+				if (localViews) {
+					auto h = (TexelAttachmentHandle *)a;
+
+					core::DescriptorBufferViewInfo info(&desc, idx);
+					if (h->writeDescriptor(handle, info)) {
+						localViews->emplace_back(VkBufferView(info.target.get()));
+						if (auto ref = set->bindings[currentDescriptor].write(idx, move(info))) {
+							handle.autorelease(ref);
+						}
+					} else {
+						success = false;
+						return;
+					}
+				}
+				break;
+			case DescriptorType::UniformBuffer:
+			case DescriptorType::StorageBuffer:
+			case DescriptorType::UniformBufferDynamic:
+			case DescriptorType::StorageBufferDynamic:
+				if (!localBuffers) {
+					localBuffers = &buffers.emplace_front(Vector<VkDescriptorBufferInfo>());
+				}
+				if (localBuffers) {
+					auto h = (BufferAttachmentHandle *)a;
+
+					core::DescriptorBufferInfo info(&desc, idx);
+					if (!h->writeDescriptor(handle, info)) {
+						success = false;
+						return;
+					} else {
+						localBuffers->emplace_back(VkDescriptorBufferInfo{
+							info.buffer.get_cast<Buffer>()->getBuffer(), info.offset, info.range});
+						if (auto ref = set->bindings[currentDescriptor].write(idx, move(info))) {
+							handle.autorelease(ref);
+						}
+					}
+				}
+				break;
+			case DescriptorType::Unknown:
+			case DescriptorType::Attachment: break;
+			}
+			++writeData.descriptorCount;
+
+			nextIdx = idx + 1;
+		});
 
 		if (writeData.descriptorCount > 0) {
 			if (localImages) {
@@ -556,7 +549,7 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 
 			writes.emplace_back(move(writeData));
 		}
-		return true;
+		return success;
 	};
 
 	uint32_t layoutIndex = pool->getLayout()->getIndex();
@@ -566,7 +559,7 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 		auto set = pool->getSet(currentSet);
 		uint32_t currentDescriptor = 0;
 		for (auto &it : descriptorSetData->descriptors) {
-			if (it->updateAfterBind != async) {
+			if (hasFlag(it->deviceFlags, core::DescriptorFlags::UpdateAfterBind) != async) {
 				++currentDescriptor;
 				continue;
 			}

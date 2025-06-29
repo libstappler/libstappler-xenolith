@@ -268,8 +268,10 @@ Resource::Resource() { }
 Resource::~Resource() {
 	if (_data) {
 		_data->clear();
-		auto p = _data->pool;
-		memory::pool::destroy(p);
+		if (!_data->externalPool) {
+			auto p = _data->pool;
+			memory::pool::destroy(p);
+		}
 		_data = nullptr;
 	}
 }

@@ -24,7 +24,6 @@
 #ifndef XENOLITH_CORE_XLCOREINFO_H_
 #define XENOLITH_CORE_XLCOREINFO_H_
 
-#include "XLCoreEnum.h"
 #include "XLCorePipelineInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -37,7 +36,9 @@ class DataAtlas;
 class Resource;
 class TextureSetLayout;
 
+struct PipelineDescriptor;
 struct PipelineLayoutData;
+struct QueueData;
 
 #if (XL_USE_64_BIT_PTR_DEFINES == 1)
 using ObjectHandle = ValueWrapper<void *, class ObjectHandleFlag>;
@@ -527,17 +528,10 @@ struct SP_PUBLIC TextureSetLayoutInfo {
 };
 
 struct SP_PUBLIC TextureSetLayoutData : NamedMem, TextureSetLayoutInfo {
+	QueueData *queue = nullptr;
 	Rc<TextureSetLayout> layout;
 	memory::vector<Rc<Sampler>> compiledSamplers;
 	memory::vector<PipelineLayoutData *> bindingLayouts;
-	const ImageData *emptyImage = nullptr;
-	const ImageData *solidImage = nullptr;
-	const BufferData *emptyBuffer = nullptr;
-};
-
-struct SP_PUBLIC DescriptorData {
-	ObjectHandle object;
-	Rc<Ref> data;
 };
 
 struct SP_PUBLIC SubresourceRangeInfo {

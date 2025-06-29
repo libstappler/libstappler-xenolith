@@ -28,13 +28,20 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
+struct LinuxPollState {
+	uint64_t frameOrder = 0;
+	bool shouldClose = false;
+	bool deprecateSwapchain = false;
+	bool deprecateToFastMode = false;
+};
+
 class SP_PUBLIC LinuxViewInterface : public Ref {
 public:
 	virtual ~LinuxViewInterface() { }
 
 	virtual int getSocketFd() const = 0;
 
-	virtual bool poll(bool frameReady) = 0;
+	virtual bool poll(LinuxPollState &) = 0;
 	virtual uint64_t getScreenFrameInterval() const = 0;
 
 	virtual void mapWindow() = 0;
@@ -44,7 +51,7 @@ public:
 
 	virtual void commit(uint32_t width, uint32_t height) { }
 
-	virtual void handleFramePresented() { }
+	virtual void handleFramePresented(uint64_t) { }
 
 	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) = 0;
 	virtual void writeToClipboard(BytesView, StringView contentType) = 0;

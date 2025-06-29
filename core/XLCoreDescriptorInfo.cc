@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,34 @@
  THE SOFTWARE.
  **/
 
-#include "XLCoreInstance.h"
-#include "XLCoreLoop.h"
+#include "XLCoreDescriptorInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-Instance::Instance(Dso &&dso, TerminateCallback &&terminate, Rc<Ref> &&userdata)
-: _dsoModule(sp::move(dso)), _terminate(sp::move(terminate)), _userdata(userdata) { }
+DescriptorBinding::~DescriptorBinding() { data.clear(); }
 
-Instance::~Instance() {
-	if (_terminate) {
-		_terminate();
-		_terminate = nullptr;
-	}
-
-	_dsoModule.close();
-
-	log::debug("core::Instance", "~Instance");
+DescriptorBinding::DescriptorBinding(DescriptorType type, uint32_t count) : type(type) {
+	data.resize(count, DescriptorData{core::ObjectHandle::zero(), nullptr});
 }
 
-Rc<Loop> Instance::makeLoop(event::Looper *, LoopInfo &&) const { return nullptr; }
+Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferInfo &&info) {
+	auto ret = move(data[idx].data);
+	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	return ret;
+}
+
+Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorImageInfo &&info) {
+	auto ret = move(data[idx].data);
+	data[idx] = DescriptorData{info.imageView->getObjectData().handle, move(info.imageView)};
+	return ret;
+}
+
+Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferViewInfo &&info) {
+	auto ret = move(data[idx].data);
+	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	return ret;
+}
+
+const DescriptorData &DescriptorBinding::get(uint32_t idx) const { return data[idx]; }
 
 } // namespace stappler::xenolith::core

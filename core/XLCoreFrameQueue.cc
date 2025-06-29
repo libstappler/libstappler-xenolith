@@ -681,8 +681,6 @@ void FrameQueue::onRenderPassResourcesAcquired(FramePassData &data) {
 		data.handle->autorelease(data.framebuffer);
 	}
 
-	data.handle->autorelease(_frame->getDevice());
-
 	for (auto &it : data.handle->getData()->subpasses) {
 		for (auto &p : it->graphicPipelines) {
 			if (p->pipeline) {

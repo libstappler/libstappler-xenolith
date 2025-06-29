@@ -130,6 +130,7 @@ protected:
 
 template <typename Callback>
 bool InputListenerStorage::foreach (const Callback &cb, bool focusOnly) {
+	static_assert(std::is_invocable_v<Callback, const Rec &>, "Invalid callback type");
 	memory::vector<Rec>::reverse_iterator it, end;
 	it = _preSceneEvents->rbegin();
 	end = _preSceneEvents->rend();

@@ -75,9 +75,7 @@ public:
 	const DeviceTable *getTable() const;
 	const Rc<Allocator> &getAllocator() const { return _allocator; }
 
-	//BytesView emplaceConstant(core::PredefinedConstant, Bytes &) const;
-
-	virtual bool supportsUpdateAfterBind(DescriptorType) const override;
+	virtual core::DescriptorFlags getSupportedDescriptorFlags(DescriptorType) const override;
 
 	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *,
 			SpanView<Rc<core::ImageView>>) override;
@@ -92,6 +90,8 @@ public:
 
 	template <typename Callback>
 	void makeApiCall(const Callback &cb) {
+		static_assert(std::is_invocable_v<Callback, const DeviceTable &, VkDevice>,
+				"Invalid callback type");
 		//_apiMutex.lock();
 		cb(*getTable(), getDevice());
 		//_apiMutex.unlock();
@@ -133,7 +133,8 @@ private:
 
 	Rc<Allocator> _allocator;
 
-	bool _updateAfterBindEnabled = true;
+	// set this to false to forcefully disable any of DescriptorIndexing features
+	bool _useDescriptorIndexing = true;
 
 	std::unordered_map<VkFormat, VkFormatProperties> _formats;
 

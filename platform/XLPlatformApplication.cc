@@ -305,6 +305,9 @@ void PlatformApplication::threadDispose() {
 		_info.finalizeCallback(*this);
 	}
 
+	_timer->cancel();
+	_timer = nullptr;
+
 	finalizeExtensions();
 
 	_glLoop->stop();

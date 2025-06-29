@@ -164,8 +164,18 @@ void ViewImpl::run() {
 	_pollHandle = event::PollFdHandle::create(_loop->getLooper()->getQueue(), _view->getSocketFd(),
 			event::PollFlags::In, [this](int fd, event::PollFlags flags) {
 		if (hasFlag(flags, event::PollFlags::In)) {
-			if (!_view->poll(false)) {
-				end();
+			xenolith::platform::LinuxPollState state;
+			state.frameOrder = _presentationEngine->getFrameOrder();
+			if (!_view->poll(state)) {
+				close(false);
+			} else {
+				if (state.shouldClose) {
+					close(true);
+				} else if (state.deprecateSwapchain) {
+					_presentationEngine->deprecateSwapchain(state.deprecateToFastMode
+									? PresentationEngine::SwapchainFlags::SwitchToFastMode
+									: PresentationEngine::SwapchainFlags::None);
+				}
 			}
 		}
 		return Status::Ok;
@@ -180,6 +190,15 @@ void ViewImpl::end() {
 	_view = nullptr;
 
 	View::end();
+}
+
+void ViewImpl::close(bool graceful) {
+	if (!graceful) {
+		end();
+	} else {
+		_presentationEngine->deprecateSwapchain(PresentationEngine::SwapchainFlags::EndOfLife,
+				[this](bool) { _loop->performOnThread([this] { end(); }, this, false); });
+	}
 }
 
 void ViewImpl::mapWindow() {
@@ -207,8 +226,8 @@ void ViewImpl::writeToClipboard(BytesView data, StringView contentType) {
 }
 
 void ViewImpl::handleFramePresented(core::PresentationFrame *frame) {
-	if (_view) {
-		_view->handleFramePresented();
+	if (_view && frame->getPresentationStatus() == Status::Ok) {
+		_view->handleFramePresented(frame->getFrameOrder());
 	}
 }
 

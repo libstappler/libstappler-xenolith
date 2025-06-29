@@ -42,8 +42,7 @@ LOCAL_MODULES_PATHS = \
 LOCAL_MODULES ?= \
 	xenolith_backend_vkgui \
 	xenolith_renderer_material2d \
-	xenolith_resources_assets \
-	stappler_backtrace
+	xenolith_resources_assets
 
 # Android config
 LOCAL_ANDROID_MK := proj.android/app/Android.mk # path to root Android.mk

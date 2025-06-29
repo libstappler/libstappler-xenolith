@@ -880,6 +880,23 @@ enum class DeviceIdleFlags {
 
 SP_DEFINE_ENUM_AS_MASK(DeviceIdleFlags)
 
+enum class DescriptorFlags : uint32_t {
+	None = 0,
+	UpdateAfterBind = 0x0000'0001,
+	UpdateWhilePending = 0x0000'0002,
+	PartiallyBound = 0x0000'0004,
+	VariableDescriptorCount = 0x0000'0008, // not implemented for now
+
+	// Extra engine flags
+	RuntimeDescriptorArray = 0x0800'0000,
+	PredefinedCount = 0x1000'0000,
+	DynamicIndexing = 0x2000'0000,
+	NonUniformIndexing = 0x4000'0000,
+	NonUniformIndexingNative = 0x8000'0000U,
+};
+
+SP_DEFINE_ENUM_AS_MASK(DescriptorFlags)
+
 enum class FenceType {
 	Default,
 	Swapchain,

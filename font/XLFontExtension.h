@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 class FontExtension;
 
 struct SP_PUBLIC RenderFontInput : public core::AttachmentInputData {
-	Rc<thread::ThreadPool> queue;
+	event::Looper *queue = nullptr;
 	Rc<core::DynamicImage> image;
 	Rc<FontExtension> ext;
 	Vector<FontUpdateRequest> requests;
@@ -43,7 +43,7 @@ class SP_PUBLIC FontExtension : public ApplicationExtension {
 public:
 	using DefaultFontName = FontLibrary::DefaultFontName;
 
-	static Rc<core::Queue> createFontQueue(core::Instance *,StringView);
+	static Rc<core::Queue> createFontQueue(core::Instance *, StringView);
 	static Rc<ApplicationExtension> createFontExtension(Rc<Application> &&, Rc<core::Queue> &&);
 	static Rc<ApplicationExtension> createDefaultController(FontExtension *, StringView);
 
@@ -86,6 +86,6 @@ protected:
 	Vector<ImageQuery> _pendingImageQueries;
 };
 
-}
+} // namespace stappler::xenolith::font
 
 #endif /* XENOLITH_FONT_XLFONTLIBRARY_H_ */

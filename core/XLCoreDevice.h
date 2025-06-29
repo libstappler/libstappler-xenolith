@@ -79,7 +79,7 @@ public:
 	virtual void onLoopStarted(Loop &);
 	virtual void onLoopEnded(Loop &);
 
-	virtual bool supportsUpdateAfterBind(DescriptorType) const;
+	virtual DescriptorFlags getSupportedDescriptorFlags(DescriptorType) const;
 
 	virtual Rc<Framebuffer> makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>);
 	virtual Rc<ImageStorage> makeImage(const ImageInfoData &);

@@ -536,13 +536,13 @@ void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuil
 	static_cast<MaterialAttachment *>(_materials->attachment.get())
 			->addPredefinedMaterials(Vector<Rc<Material>>({
 				Rc<Material>::create(Material::MaterialIdInitial, materialPipeline,
-						layout2d->textureSetLayout->emptyImage, ColorMode::IntensityChannel),
+						layout2d->textureSetLayout->queue->emptyImage, ColorMode::IntensityChannel),
 				Rc<Material>::create(Material::MaterialIdInitial, materialPipeline,
-						layout2d->textureSetLayout->solidImage, ColorMode::IntensityChannel),
+						layout2d->textureSetLayout->queue->solidImage, ColorMode::IntensityChannel),
 				Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline,
-						layout2d->textureSetLayout->emptyImage, ColorMode()),
+						layout2d->textureSetLayout->queue->emptyImage, ColorMode()),
 				Rc<Material>::create(Material::MaterialIdInitial, transparentPipeline,
-						layout2d->textureSetLayout->solidImage, ColorMode()),
+						layout2d->textureSetLayout->queue->solidImage, ColorMode()),
 			}));
 
 	subpassBuilder.addColor(colorAttachment,

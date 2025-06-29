@@ -31,7 +31,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &,
-		DescriptorBufferInfo &info) {
+		core::DescriptorBufferInfo &info) {
 	if (info.index < _buffers.size()) {
 		auto &v = _buffers[info.index];
 		info.buffer = v.buffer;
@@ -42,13 +42,20 @@ bool BufferAttachmentHandle::writeDescriptor(const core::QueuePassHandle &,
 	return false;
 }
 
-bool BufferAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &,
-		uint32_t idx, const DescriptorData &data) const {
-	if (idx < _buffers.size()) {
-		return _buffers[idx].dirty || _buffers[idx].buffer != data.data
-				|| _buffers[idx].buffer->getObjectData().handle != data.object;
+uint32_t BufferAttachmentHandle::enumerateDirtyDescriptors(const PassHandle &,
+		const PipelineDescriptor &, const core::DescriptorBinding &binding,
+		const Callback<void(uint32_t)> &cb) const {
+	uint32_t ret = 0;
+	uint32_t idx = 0;
+	for (auto &it : _buffers) {
+		if (it.dirty || it.buffer != binding.get(idx).data
+				|| it.buffer->getObjectData().handle != binding.get(idx).object) {
+			cb(idx);
+			++ret;
+		}
+		++idx;
 	}
-	return false;
+	return ret;
 }
 
 void BufferAttachmentHandle::enumerateAttachmentObjects(
@@ -103,7 +110,7 @@ auto ImageAttachment::makeFrameHandle(const FrameQueue &queue) -> Rc<AttachmentH
 core::ImageStorage *ImageAttachmentHandle::getImage() const { return _queueData->image; }
 
 bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
-		DescriptorImageInfo &info) {
+		core::DescriptorImageInfo &info) {
 	auto image = _queueData->image;
 	if (!image) {
 		return false;
@@ -113,7 +120,7 @@ bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
 	ImageViewInfo viewInfo(image->getInfo());
 	viewInfo.setup(info.descriptor->attachment->colorMode, allowSwizzle);
 	if (auto view = image->getView(viewInfo)) {
-		info.layout = VkImageLayout(info.descriptor->layout);
+		info.layout = info.descriptor->layout;
 		info.imageView = static_cast<ImageView *>(view.get());
 		return true;
 	}
@@ -121,9 +128,14 @@ bool ImageAttachmentHandle::writeDescriptor(const core::QueuePassHandle &queue,
 	return false;
 }
 
-bool ImageAttachmentHandle::isDescriptorDirty(const PassHandle &, const PipelineDescriptor &d,
-		uint32_t, const DescriptorData &) const {
-	return getImage();
+uint32_t ImageAttachmentHandle::enumerateDirtyDescriptors(const PassHandle &pass,
+		const PipelineDescriptor &d, const core::DescriptorBinding &binding,
+		const Callback<void(uint32_t)> &cb) const {
+	if (getImage()) {
+		cb(0);
+		return 1;
+	}
+	return 0;
 }
 
 void ImageAttachmentHandle::enumerateAttachmentObjects(
