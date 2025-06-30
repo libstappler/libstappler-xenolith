@@ -38,6 +38,7 @@ class RenderPass;
 class QueuePassHandle;
 
 struct SP_PUBLIC DescriptorSetBindings : public Ref {
+	uint32_t idx = 0;
 	VkDescriptorSet set;
 	Vector<core::DescriptorBinding> bindings;
 };
@@ -60,6 +61,7 @@ class SP_PUBLIC PipelineLayout : public core::Object {
 public:
 	struct DescriptorBindingInfo {
 		core::DescriptorType type;
+		core::DescriptorFlags flags;
 		uint32_t count;
 	};
 

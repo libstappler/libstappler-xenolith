@@ -30,6 +30,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 struct SP_PUBLIC DescriptorData {
 	ObjectHandle object;
 	Rc<Ref> data;
+
+	bool empty() const { return object == ObjectHandle::zero(); }
 };
 
 struct SP_PUBLIC DescriptorInfo {
@@ -43,8 +45,9 @@ struct SP_PUBLIC DescriptorInfo {
 struct SP_PUBLIC DescriptorImageInfo : public DescriptorInfo {
 	~DescriptorImageInfo() = default;
 
-	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index)
-	: DescriptorInfo(desc, index) { }
+	DescriptorImageInfo(const PipelineDescriptor *desc, uint32_t index, ImageView *v = nullptr,
+			Sampler *s = nullptr)
+	: DescriptorInfo(desc, index), imageView(v), sampler(s) { }
 
 	Rc<ImageView> imageView;
 	Rc<Sampler> sampler;
@@ -54,8 +57,9 @@ struct SP_PUBLIC DescriptorImageInfo : public DescriptorInfo {
 struct SP_PUBLIC DescriptorBufferInfo : public DescriptorInfo {
 	~DescriptorBufferInfo() = default;
 
-	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index)
-	: DescriptorInfo(desc, index) { }
+	DescriptorBufferInfo(const PipelineDescriptor *desc, uint32_t index, BufferObject *b = nullptr,
+			uint64_t off = 0, uint64_t r = maxOf<uint64_t>())
+	: DescriptorInfo(desc, index), buffer(b), offset(off), range(r) { }
 
 	Rc<BufferObject> buffer;
 	uint64_t offset = 0;
@@ -74,11 +78,13 @@ struct SP_PUBLIC DescriptorBufferViewInfo : public DescriptorInfo {
 
 struct SP_PUBLIC DescriptorBinding {
 	DescriptorType type;
+	DescriptorFlags flags;
+	uint32_t bound = 0;
 	Vector<DescriptorData> data;
 
 	~DescriptorBinding();
 
-	DescriptorBinding(DescriptorType, uint32_t count);
+	DescriptorBinding(DescriptorType, DescriptorFlags, uint32_t count);
 
 	// returns previously associated data
 	Rc<Ref> write(uint32_t, DescriptorBufferInfo &&);
@@ -86,6 +92,8 @@ struct SP_PUBLIC DescriptorBinding {
 	Rc<Ref> write(uint32_t, DescriptorBufferViewInfo &&);
 
 	const DescriptorData &get(uint32_t) const;
+
+	uint32_t size() const;
 };
 
 } // namespace stappler::xenolith::core

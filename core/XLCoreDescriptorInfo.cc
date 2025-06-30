@@ -26,28 +26,64 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 DescriptorBinding::~DescriptorBinding() { data.clear(); }
 
-DescriptorBinding::DescriptorBinding(DescriptorType type, uint32_t count) : type(type) {
+DescriptorBinding::DescriptorBinding(DescriptorType type, DescriptorFlags flags, uint32_t count)
+: type(type), flags(flags) {
 	data.resize(count, DescriptorData{core::ObjectHandle::zero(), nullptr});
 }
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	if (idx >= data.size()) {
+		return nullptr;
+	}
+
+	auto &desc = data[idx];
+	auto empty = desc.empty();
+	auto ret = move(desc.data);
+	desc = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	if (empty && !desc.empty()) {
+		++bound;
+	} else if (!empty && desc.empty()) {
+		--bound;
+	}
 	return ret;
 }
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorImageInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.imageView->getObjectData().handle, move(info.imageView)};
+	if (idx >= data.size()) {
+		return nullptr;
+	}
+
+	auto &desc = data[idx];
+	auto empty = desc.empty();
+	auto ret = move(desc.data);
+	desc = DescriptorData{info.imageView->getObjectData().handle, move(info.imageView)};
+	if (empty && !desc.empty()) {
+		++bound;
+	} else if (!empty && desc.empty()) {
+		--bound;
+	}
 	return ret;
 }
 
 Rc<Ref> DescriptorBinding::write(uint32_t idx, DescriptorBufferViewInfo &&info) {
-	auto ret = move(data[idx].data);
-	data[idx] = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	if (idx >= data.size()) {
+		return nullptr;
+	}
+
+	auto &desc = data[idx];
+	auto empty = desc.empty();
+	auto ret = move(desc.data);
+	desc = DescriptorData{info.buffer->getObjectData().handle, move(info.buffer)};
+	if (empty && !desc.empty()) {
+		++bound;
+	} else if (!empty && desc.empty()) {
+		--bound;
+	}
 	return ret;
 }
 
 const DescriptorData &DescriptorBinding::get(uint32_t idx) const { return data[idx]; }
+
+uint32_t DescriptorBinding::size() const { return static_cast<uint32_t>(data.size()); }
 
 } // namespace stappler::xenolith::core

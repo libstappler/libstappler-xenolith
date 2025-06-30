@@ -917,8 +917,18 @@ inline const CallbackStream &operator<<(const CallbackStream &stream, Descriptor
 	return stream;
 }
 
+inline std::ostream &operator<<(std::ostream &stream, DescriptorType t) {
+	stream << xenolith::core::getDescriptorTypeName(t);
+	return stream;
+}
+
 inline const CallbackStream &operator<<(const CallbackStream &stream, ProgramStage t) {
 	getProgramStageDescription(stream, t);
+	return stream;
+}
+
+inline std::ostream &operator<<(std::ostream &stream, ProgramStage t) {
+	getProgramStageDescription(makeCallback(stream), t);
 	return stream;
 }
 
