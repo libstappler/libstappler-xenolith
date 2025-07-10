@@ -218,11 +218,12 @@ protected:
 	core::InputModifier _activeModifiers = core::InputModifier::None;
 	int32_t _sdkVersion = 0;
 
+	bool _running = false;
+
 	Size2 _windowSize;
 	Vec2 _hoverLocation;
 	NativeBufferFormatSupport _formatSupport;
-	bool _recreateSwapchain = false;
-	bool isEmulator = false;
+	bool _isEmulator = false;
 
 	Rc<ViewInterface> _rootView;
 

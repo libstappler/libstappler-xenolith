@@ -25,9 +25,10 @@
 #define XENOLITH_BACKEND_VKGUI_PLATFORM_LINUX_XLVKGUIVIEWIMPL_H_
 
 #include "XLVkView.h"
-#include "linux/XLPlatformLinuxView.h"
 
-#if LINUX
+#if 0 && LINUX
+
+#include "linux/XLPlatformLinuxView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
@@ -49,8 +50,6 @@ public:
 
 	virtual void run() override;
 	virtual void end() override;
-
-	virtual void close(bool graceful) override;
 
 	xenolith::platform::LinuxViewInterface *getView() const { return _view; }
 

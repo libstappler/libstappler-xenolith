@@ -25,22 +25,18 @@ THE SOFTWARE.
 #define XENOLITH_BACKEND_VKGUI_XLVKVIEW_H_
 
 #include "XLVkSwapchain.h"
-#include "XLView.h"
+#include "XLAppWindow.h"
+#include "XLCorePresentationFrame.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-class SP_PUBLIC View : public xenolith::View {
+class SP_PUBLIC VkWindow : public AppWindow {
 public:
-	virtual ~View() = default;
+	virtual ~VkWindow() = default;
 
-	virtual bool init(Application &, const Device &, ViewInfo &&);
+	virtual bool init(NotNull<Context>, NotNull<AppThread>, NotNull<NativeWindow>, const Device &);
 
 	virtual void end() override;
-
-	/*virtual void captureImage(const FileInfo &, const Rc<core::ImageObject> &image,
-			AttachmentLayout l) const override;
-	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&,
-			const Rc<core::ImageObject> &image, AttachmentLayout l) const override;*/
 
 	vk::Device *getDevice() const { return _device; }
 
@@ -49,8 +45,6 @@ public:
 	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const;
 
 protected:
-	using xenolith::View::init;
-
 	bool _readyForNextFrame = false;
 
 	Rc<Instance> _instance;

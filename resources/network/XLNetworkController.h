@@ -37,7 +37,8 @@ class SP_PUBLIC Controller final : public ApplicationExtension {
 public:
 	static EventHeader onNetworkCapabilities;
 
-	static Rc<ApplicationExtension> createController(Application *, StringView, Bytes &&signKey = Bytes());
+	static Rc<ApplicationExtension> createController(Application *, StringView,
+			Bytes &&signKey = Bytes());
 
 	Controller(Application *, StringView, Bytes &&signKey = Bytes());
 	virtual ~Controller();
@@ -55,7 +56,6 @@ public:
 	void setSignKey(Bytes &&value);
 
 	bool isNetworkOnline() const;
-	NetworkCapabilities getNetworkCapabilities() const;
 
 protected:
 	struct Data;
@@ -63,6 +63,6 @@ protected:
 	Data *_data;
 };
 
-}
+} // namespace stappler::xenolith::network
 
 #endif /* XENOLITH_RESOURCES_NETWORK_XLNETWORKCONTROLLER_H_ */

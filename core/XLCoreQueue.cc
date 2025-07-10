@@ -28,6 +28,7 @@
 #include "XLCoreResource.h"
 #include "XLCoreDevice.h"
 #include "XLCoreQueuePass.h"
+#include "XLCoreTextureSet.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 

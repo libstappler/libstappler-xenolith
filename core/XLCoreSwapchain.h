@@ -36,6 +36,8 @@ public:
 
 	Instance *getInstance() const { return _instance; }
 
+	virtual SurfaceInfo getSurfaceOptions(const Device &) const = 0;
+
 protected:
 	Rc<Ref> _window;
 	Rc<Instance> _instance;

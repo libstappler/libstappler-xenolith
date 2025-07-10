@@ -295,7 +295,7 @@ float ParticleSystem::getTangentialAccelerationMax() const {
 	return _data->data.tangentialAcceleration.init + _data->data.tangentialAcceleration.rnd;
 }
 
-void ParticleSystem::setColorCurve(NotNull<CurveBuffer *> curve) {
+void ParticleSystem::setColorCurve(NotNull<CurveBuffer> curve) {
 	if (_copyOnWrite) {
 		copy();
 	}

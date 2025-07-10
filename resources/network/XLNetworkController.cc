@@ -348,7 +348,4 @@ bool Controller::isNetworkOnline() const {
 	return (_data->_capabilities & NetworkCapabilities::Internet) != NetworkCapabilities::None;
 }
 
-NetworkCapabilities Controller::getNetworkCapabilities() const { return _data->_capabilities; }
-
-
 } // namespace stappler::xenolith::network

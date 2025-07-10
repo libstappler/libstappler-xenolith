@@ -267,7 +267,7 @@ public:
 	void writeImageTransfer(uint32_t sourceFamily, uint32_t targetFamily, const Rc<Buffer> &,
 			const Rc<Image> &);
 
-	uint64_t bindBufferAddress(NotNull<core::BufferObject *>);
+	uint64_t bindBufferAddress(NotNull<core::BufferObject>);
 
 	virtual void bindBuffer(core::BufferObject *) override;
 

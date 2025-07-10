@@ -914,7 +914,7 @@ void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFam
 	}
 }
 
-uint64_t CommandBuffer::bindBufferAddress(NotNull<core::BufferObject *> buffer) {
+uint64_t CommandBuffer::bindBufferAddress(NotNull<core::BufferObject> buffer) {
 	auto dev = buffer->getDeviceAddress();
 	if (!dev) {
 		log::error("CommandBuffer", "BufferDeviceAddress is not available for the buffer");

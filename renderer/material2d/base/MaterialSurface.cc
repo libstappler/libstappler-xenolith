@@ -25,7 +25,7 @@
 #include "MaterialEasing.h"
 #include "MaterialSurfaceInterior.h"
 #include "MaterialStyleContainer.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 #include "XL2dFrameContext.h"
 #include "XL2dCommandList.h"
 
@@ -75,17 +75,18 @@ void Surface::setStyle(const SurfaceStyle &style, float duration) {
 
 	if (_styleOrigin != style) {
 		_styleTarget = move(style);
-		runAction(makeEasing(Rc<ActionProgress>::create(duration, [this] (float progress) {
+		runAction(makeEasing(Rc<ActionProgress>::create(duration,
+						  [this](float progress) {
 			_styleProgress = progress;
 			_styleDirty = true;
-		}, [this] {
-			_inTransition = true;
-		}, [this] {
+		}, [this] { _inTransition = true; },
+						  [this] {
 			_styleOrigin = _styleTarget;
 			_styleDirty = true;
 			_inTransition = false;
 			_styleProgress = 0.0f;
-		})), TransitionActionTag);
+		})),
+				TransitionActionTag);
 		_styleDirty = true;
 	}
 }
@@ -178,11 +179,13 @@ bool Surface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	}
 
 	if (style) {
-		if (_styleTarget.apply(_styleDataTarget, _contentSize, style, getSurfaceInteriorForFrame(frame))) {
+		if (_styleTarget.apply(_styleDataTarget, _contentSize, style,
+					getSurfaceInteriorForFrame(frame))) {
 			_styleDirty = true;
 		}
 
-		if (_styleOrigin.apply(_styleDataOrigin, _contentSize, style, getSurfaceInteriorForFrame(frame))) {
+		if (_styleOrigin.apply(_styleDataOrigin, _contentSize, style,
+					getSurfaceInteriorForFrame(frame))) {
 			_styleDirty = true;
 		}
 	}
@@ -218,10 +221,12 @@ void Surface::applyStyle(StyleContainer *, const SurfaceStyleData &style) {
 		return;
 	}
 
-	auto radius = std::min(std::min(_contentSize.width / 2.0f, _contentSize.height / 2.0f), style.cornerRadius);
+	auto radius = std::min(std::min(_contentSize.width / 2.0f, _contentSize.height / 2.0f),
+			style.cornerRadius);
 
-	if (radius != _realCornerRadius || (_image && _contentSize != _image->getImageSize()) || _outlineValue != style.outlineValue
-			|| _fillValue != style.colorElevation.a || style.shapeFamily != _realShapeFamily) {
+	if (radius != _realCornerRadius || (_image && _contentSize != _image->getImageSize())
+			|| _outlineValue != style.outlineValue || _fillValue != style.colorElevation.a
+			|| style.shapeFamily != _realShapeFamily) {
 		auto img = Rc<VectorImage>::create(_contentSize);
 
 		updateBackgroundImage(img.get(), style, radius);
@@ -248,46 +253,48 @@ void Surface::updateBackgroundImage(VectorImage *img, const SurfaceStyleData &st
 	if (radius > 0.0f) {
 		switch (style.shapeFamily) {
 		case ShapeFamily::RoundedCorners:
-			path->openForWriting([&] (vg::PathWriter &writer) {
+			path->openForWriting([&](vg::PathWriter &writer) {
 				writer.moveTo(0.0f, radius)
-					.arcTo(radius, radius, 0.0f, false, true, radius, 0.0f)
-					.lineTo(_contentSize.width - radius, 0.0f)
-					.arcTo(radius, radius, 0.0f, false, true, _contentSize.width, radius)
-					.lineTo(_contentSize.width, _contentSize.height - radius)
-					.arcTo(radius, radius, 0.0f, false, true, _contentSize.width - radius, _contentSize.height)
-					.lineTo(radius, _contentSize.height)
-					.arcTo(radius, radius, 0.0f, false, true, 0.0f, _contentSize.height - radius)
-					.closePath();
+						.arcTo(radius, radius, 0.0f, false, true, radius, 0.0f)
+						.lineTo(_contentSize.width - radius, 0.0f)
+						.arcTo(radius, radius, 0.0f, false, true, _contentSize.width, radius)
+						.lineTo(_contentSize.width, _contentSize.height - radius)
+						.arcTo(radius, radius, 0.0f, false, true, _contentSize.width - radius,
+								_contentSize.height)
+						.lineTo(radius, _contentSize.height)
+						.arcTo(radius, radius, 0.0f, false, true, 0.0f,
+								_contentSize.height - radius)
+						.closePath();
 			});
 			break;
 		case ShapeFamily::CutCorners:
-			path->openForWriting([&] (vg::PathWriter &writer) {
+			path->openForWriting([&](vg::PathWriter &writer) {
 				writer.moveTo(0.0f, radius)
-					.lineTo(radius, 0.0f)
-					.lineTo(_contentSize.width - radius, 0.0f)
-					.lineTo(_contentSize.width, radius)
-					.lineTo(_contentSize.width, _contentSize.height - radius)
-					.lineTo(_contentSize.width - radius, _contentSize.height)
-					.lineTo(radius, _contentSize.height)
-					.lineTo(0.0f, _contentSize.height - radius)
-					.closePath();
+						.lineTo(radius, 0.0f)
+						.lineTo(_contentSize.width - radius, 0.0f)
+						.lineTo(_contentSize.width, radius)
+						.lineTo(_contentSize.width, _contentSize.height - radius)
+						.lineTo(_contentSize.width - radius, _contentSize.height)
+						.lineTo(radius, _contentSize.height)
+						.lineTo(0.0f, _contentSize.height - radius)
+						.closePath();
 			});
 			break;
 		}
 	} else {
-		path->openForWriting([&] (vg::PathWriter &writer) {
+		path->openForWriting([&](vg::PathWriter &writer) {
 			writer.moveTo(0.0f, 0.0f)
-				.lineTo(_contentSize.width, 0.0f)
-				.lineTo(_contentSize.width, _contentSize.height)
-				.lineTo(0.0f, _contentSize.height)
-				.closePath();
+					.lineTo(_contentSize.width, 0.0f)
+					.lineTo(_contentSize.width, _contentSize.height)
+					.lineTo(0.0f, _contentSize.height)
+					.closePath();
 		});
 	}
 
 	path->setAntialiased(false)
-		.setFillColor(Color::White)
-		.setFillOpacity(uint8_t(style.colorElevation.a * 255.0f))
-		.setStyle(vg::DrawFlags::None);
+			.setFillColor(Color::White)
+			.setFillOpacity(uint8_t(style.colorElevation.a * 255.0f))
+			.setStyle(vg::DrawFlags::None);
 
 	if (style.colorElevation.a > 0.0f) {
 		path->setStyle(path->getStyle() | vg::DrawFlags::Fill);
@@ -295,10 +302,10 @@ void Surface::updateBackgroundImage(VectorImage *img, const SurfaceStyleData &st
 
 	if (style.outlineValue > 0.0f) {
 		path->setStrokeWidth(1.0f)
-			.setStyle(path->getStyle() | vg::DrawFlags::Stroke)
-			.setStrokeColor(Color::White)
-			.setStrokeOpacity(uint8_t(style.outlineValue * 255.0f))
-			.setAntialiased(true);
+				.setStyle(path->getStyle() | vg::DrawFlags::Stroke)
+				.setStrokeColor(Color::White)
+				.setStrokeOpacity(uint8_t(style.outlineValue * 255.0f))
+				.setAntialiased(true);
 	}
 }
 
@@ -318,9 +325,7 @@ RenderingLevel Surface::getRealRenderingLevel() const {
 	return l;
 }
 
-bool BackgroundSurface::init() {
-	return init(material2d::SurfaceStyle::Background);
-}
+bool BackgroundSurface::init() { return init(material2d::SurfaceStyle::Background); }
 
 bool BackgroundSurface::init(const SurfaceStyle &style) {
 	if (!Surface::init(style)) {
@@ -336,4 +341,4 @@ StyleContainer *BackgroundSurface::getStyleContainerForFrame(FrameInfo &frame) c
 	return _styleContainer;
 }
 
-}
+} // namespace stappler::xenolith::material2d

@@ -27,6 +27,8 @@
 #include "XL2dVkVertexPass.h"
 #include "XL2dVkShadow.h"
 
+#if MODULE_XENOLITH_BACKEND_VK
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class SP_PUBLIC ShadowPass : public VertexPass {
@@ -42,14 +44,14 @@ public:
 	};
 
 	struct RenderQueueInfo {
-		Application *target = nullptr;
+		core::Loop *target = nullptr;
 		Extent2 extent;
 		Flags flags = Flags::None;
 		Color4F backgroundColor = Color4F::WHITE;
 	};
 
 	struct PassCreateInfo {
-		Application *target = nullptr;
+		core::Loop *target = nullptr;
 		Extent2 extent;
 		Flags flags;
 		Color4F backgroundColor = Color4F::WHITE;
@@ -78,7 +80,7 @@ protected:
 
 	void makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder,
 			core::SubpassBuilder &subpassBuilder, const core::PipelineLayoutData *layout2d,
-			ResourceCache *cache, const core::AttachmentPassData *colorAttachment,
+			const core::AttachmentPassData *colorAttachment,
 			const core::AttachmentPassData *shadowAttachment,
 			const core::AttachmentPassData *depth2dAttachment);
 
@@ -104,5 +106,7 @@ protected:
 };
 
 } // namespace stappler::xenolith::basic2d::vk
+
+#endif
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKSHADOWPASS_H_ */

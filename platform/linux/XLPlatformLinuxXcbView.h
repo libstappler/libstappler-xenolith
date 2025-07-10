@@ -37,7 +37,7 @@ class SP_PUBLIC XcbView : public LinuxViewInterface, public XcbWindowInterface {
 public:
 	virtual ~XcbView();
 
-	XcbView(Rc<XcbConnection> &&, ViewInterface *, const WindowInfo &);
+	XcbView(Rc<XcbConnection> &&, BasicWindow *, const WindowInfo &);
 
 	virtual void handleConfigureNotify(xcb_configure_notify_event_t *) override;
 
@@ -91,7 +91,7 @@ protected:
 	Rc<XcbConnection> _connection;
 	XcbLibrary *_xcb = nullptr;
 
-	ViewInterface *_view = nullptr;
+	BasicWindow *_view = nullptr;
 
 	xcb_screen_t *_defaultScreen = nullptr;
 

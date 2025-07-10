@@ -73,8 +73,9 @@ public:
 	void addObject(Object *);
 	void removeObject(Object *);
 
-	const Vector<ImageFormat> &getSupportedDepthStencilFormat() const { return _depthFormats; }
-	const Vector<ImageFormat> &getSupportedColorFormat() const { return _colorFormats; }
+	ImageFormat getCommonFormat() const { return _commonFormat; }
+	SpanView<ImageFormat> getSupportedDepthStencilFormat() const { return _depthFormats; }
+	SpanView<ImageFormat> getSupportedColorFormat() const { return _colorFormats; }
 
 	virtual void onLoopStarted(Loop &);
 	virtual void onLoopEnded(Loop &);
@@ -88,8 +89,6 @@ public:
 	virtual Rc<CommandPool> makeCommandPool(uint32_t family, QueueFlags flags);
 	virtual Rc<QueryPool> makeQueryPool(uint32_t family, QueueFlags flags, const QueryPoolInfo &);
 	virtual Rc<TextureSet> makeTextureSet(const TextureSetLayout &);
-
-	uint32_t getPresentatonMask() const { return _presentMask; }
 
 	const DeviceQueueFamily *getQueueFamily(uint32_t) const;
 	const DeviceQueueFamily *getQueueFamily(QueueFlags) const;
@@ -150,10 +149,9 @@ protected:
 
 	HashSet<Object *> _objects;
 
+	ImageFormat _commonFormat = ImageFormat::R8G8B8A8_UNORM;
 	Vector<ImageFormat> _depthFormats;
 	Vector<ImageFormat> _colorFormats;
-
-	uint32_t _presentMask = 0;
 
 	mutable Mutex _resourceMutex;
 	uint32_t _resourceQueueWaiters = 0;

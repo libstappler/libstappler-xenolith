@@ -337,7 +337,7 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet *materials,
 		return;
 	}
 
-	materials->foreachUpdated([&](core::MaterialId, NotNull<core::Material *> m) {
+	materials->foreachUpdated([&](core::MaterialId, NotNull<core::Material> m) {
 		auto buf = static_cast<Buffer *>(m->getBuffer());
 		if (auto b = buf->getPendingBarrier()) {
 			outputBufferBarriers.emplace_back(*b);
@@ -357,7 +357,7 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet *materials,
 	}
 }
 
-auto QueuePassHandle::updateMaterials(FrameHandle &frame, NotNull<core::MaterialSet *> data,
+auto QueuePassHandle::updateMaterials(FrameHandle &frame, NotNull<core::MaterialSet> data,
 		SpanView<Rc<core::Material>> materials, SpanView<core::MaterialId> dynamicMaterials,
 		SpanView<core::MaterialId> materialsToRemove) -> Vector<MaterialTransferData> {
 	Vector<MaterialTransferData> ret;

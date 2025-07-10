@@ -72,7 +72,7 @@ XcbView::~XcbView() {
 	}
 }
 
-XcbView::XcbView(Rc<XcbConnection> &&conn, ViewInterface *view, const WindowInfo &info) {
+XcbView::XcbView(Rc<XcbConnection> &&conn, BasicWindow *view, const WindowInfo &info) {
 	_connection = move(conn);
 	_view = view;
 	_xcb = _connection->getXcb();

@@ -24,8 +24,6 @@
 #include "MaterialLayerSurface.h"
 #include "MaterialSurfaceInterior.h"
 #include "MaterialStyleContainer.h"
-#include "XLFrameInfo.h"
-#include "XL2dCommandList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -71,17 +69,18 @@ void LayerSurface::setStyle(const SurfaceStyle &style, float duration) {
 
 	if (_styleOrigin != style) {
 		_styleTarget = move(style);
-		runAction(makeEasing(Rc<ActionProgress>::create(duration, [this] (float progress) {
+		runAction(makeEasing(Rc<ActionProgress>::create(duration,
+						  [this](float progress) {
 			_styleProgress = progress;
 			_styleDirty = true;
-		}, [this] {
-			_inTransition = true;
-		}, [this] {
+		}, [this] { _inTransition = true; },
+						  [this] {
 			_styleOrigin = _styleTarget;
 			_styleDirty = true;
 			_inTransition = false;
 			_styleProgress = 0.0f;
-		})), TransitionActionTag);
+		})),
+				TransitionActionTag);
 		_styleDirty = true;
 	}
 }
@@ -174,10 +173,12 @@ bool LayerSurface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	}
 
 	if (style) {
-		if (_styleTarget.apply(_styleDataTarget, _contentSize, style, getSurfaceInteriorForFrame(frame))) {
+		if (_styleTarget.apply(_styleDataTarget, _contentSize, style,
+					getSurfaceInteriorForFrame(frame))) {
 			_styleDirty = true;
 		}
-		if (_styleOrigin.apply(_styleDataOrigin, _contentSize, style, getSurfaceInteriorForFrame(frame))) {
+		if (_styleOrigin.apply(_styleDataOrigin, _contentSize, style,
+					getSurfaceInteriorForFrame(frame))) {
 			_styleDirty = true;
 		}
 	}
@@ -221,4 +222,4 @@ RenderingLevel LayerSurface::getRealRenderingLevel() const {
 	return l;
 }
 
-}
+} // namespace stappler::xenolith::material2d

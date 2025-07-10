@@ -30,28 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
 /* forced view update interval for on-demand frame mode */
 static constexpr uint64_t OnDemandFrameInterval = 1'000'000;
 
-/* Number of frames, that can be performed in suboptimal swapchain modes */
-static constexpr uint32_t MaxSuboptimalFrames = 24;
 
-/* Default update interval for main loop */
-static constexpr uint64_t GuiMainLoopDefaultInterval = 100000;
-
-inline uint16_t getGlThreadCount() {
-#if DEBUG
-	return math::clamp(uint16_t(std::thread::hardware_concurrency()), uint16_t(2), uint16_t(4));
-#else
-	return math::clamp(uint16_t(std::thread::hardware_concurrency()), uint16_t(4), uint16_t(16));
-#endif
-}
-
-inline uint16_t getMainThreadCount() {
-#if DEBUG
-	return math::clamp(uint16_t(std::thread::hardware_concurrency() / 2), uint16_t(2), uint16_t(4));
-#else
-	return math::clamp(uint16_t(std::thread::hardware_concurrency() / 2), uint16_t(2), uint16_t(16));
-#endif
-}
-
-}
+} // namespace stappler::xenolith::config
 
 #endif /* XENOLITH_BACKEND_VKGUI_XLVKGUICONFIG_H_ */

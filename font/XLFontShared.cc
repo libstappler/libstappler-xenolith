@@ -20,7 +20,7 @@
  THE SOFTWARE.
  **/
 
-#include "XLFontExtension.h"
+#include "XLFontComponent.h"
 #include "XLFontController.h"
 #include "XLFontLocale.h"
 #include "SPSharedModule.h"
@@ -28,9 +28,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 static SharedSymbol s_xenolithFontSymbols[] = {
-	SharedSymbol{"FontExtension::createFontExtension", FontExtension::createFontExtension},
-	SharedSymbol{"FontExtension::createFontQueue", FontExtension::createFontQueue},
-	SharedSymbol{"FontExtension::createDefaultController", FontExtension::createDefaultController},
+	SharedSymbol{"FontComponent::createFontComponent", FontComponent::createFontComponent},
+	SharedSymbol{"FontComponent::createDefaultController", FontComponent::createDefaultController},
 	SharedSymbol{"locale::setLocale", locale::setLocale},
 };
 

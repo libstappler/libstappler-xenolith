@@ -33,9 +33,9 @@ class ParticleEmitter : public Sprite {
 public:
 	virtual ~ParticleEmitter() = default;
 
-	virtual bool init(NotNull<ParticleSystem *>);
-	virtual bool init(NotNull<ParticleSystem *>, StringView);
-	virtual bool init(NotNull<ParticleSystem *>, Rc<Texture> &&);
+	virtual bool init(NotNull<ParticleSystem>);
+	virtual bool init(NotNull<ParticleSystem>, StringView);
+	virtual bool init(NotNull<ParticleSystem>, Rc<Texture> &&);
 
 	virtual void handleEnter(Scene *) override;
 	virtual void handleExit() override;

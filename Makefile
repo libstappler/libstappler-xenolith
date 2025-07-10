@@ -36,7 +36,6 @@ LOCAL_MODULES ?= \
 	xenolith_application \
 	xenolith_scene \
 	xenolith_font \
-	xenolith_platform \
 	xenolith_backend_vk \
 	xenolith_backend_vkgui \
 	xenolith_renderer_basic2d \
@@ -57,7 +56,6 @@ LOCAL_EXPORT_MODULES ?= \
 	xenolith_resources_assets \
 	xenolith_resources_icons \
 	xenolith_resources_network \
-	xenolith_resources_storage \
-	xenolith_scene
+	xenolith_resources_storage
 
 include $(STAPPLER_ROOT)/build/make/shared.mk

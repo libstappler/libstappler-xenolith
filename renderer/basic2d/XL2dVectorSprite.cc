@@ -21,29 +21,28 @@
  **/
 
 #include "XL2dVectorSprite.h"
-#include "SPThreadPool.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 #include "XLTexture.h"
-#include "XL2dFrameContext.h"
-#include "XLFrameInfo.h"
 #include "XLDirector.h"
 #include "XLDynamicStateComponent.h"
+#include "XLCoreFrameRequest.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(thread::ThreadPool *queue, Rc<VectorImageData> &&image,
-		const VectorCanvasConfig &config, bool waitOnReady) {
+static Rc<VectorCanvasDeferredResult> VectorSprite_runDeferredVectorCavas(event::Looper *queue,
+		Rc<VectorImageData> &&image, const VectorCanvasConfig &config, bool waitOnReady) {
 	auto result = new std::promise<Rc<VectorCanvasResult>>;
-	Rc<VectorCanvasDeferredResult> ret = Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
-	queue->perform([queue, image = move(image), config, ret, result] () mutable {
+	Rc<VectorCanvasDeferredResult> ret =
+			Rc<VectorCanvasDeferredResult>::create(result->get_future(), waitOnReady);
+	queue->performAsync([queue, image = move(image), config, ret, result]() mutable {
 		auto canvas = VectorCanvas::getInstance();
 		auto res = canvas->draw(config, move(image));
 		result->set_value(res);
 
-		queue->performCompleted([ret = move(ret), res = move(res), result] () mutable {
+		queue->performOnThread([ret = move(ret), res = move(res), result]() mutable {
 			ret->handleReady(move(res));
 			delete result;
-		}, queue);
+		}, nullptr);
 	}, ret);
 	return ret;
 }
@@ -57,7 +56,9 @@ static float VectorSprite_getPseudoSdfOffset(float value) {
 	} else if (value < prefixDepth) {
 		return prefixSdf;
 	} else {
-		return prefixSdf + (std::floor(value) - prefixDepth) / (40.0f - prefixDepth) * (config::VGPseudoSdfOffset - prefixSdf);
+		return prefixSdf
+				+ (std::floor(value) - prefixDepth) / (40.0f - prefixDepth)
+				* (config::VGPseudoSdfOffset - prefixSdf);
 	}
 }
 
@@ -126,11 +127,13 @@ Rc<VectorPathRef> VectorSprite::addPath(StringView id, StringView cache, Mat4 po
 	return _image ? _image->addPath(id, cache, pos) : nullptr;
 }
 
-Rc<VectorPathRef> VectorSprite::addPath(const VectorPath & path, StringView id, StringView cache, Mat4 pos) {
+Rc<VectorPathRef> VectorSprite::addPath(const VectorPath &path, StringView id, StringView cache,
+		Mat4 pos) {
 	return _image ? _image->addPath(path, id, cache, pos) : nullptr;
 }
 
-Rc<VectorPathRef> VectorSprite::addPath(VectorPath && path, StringView id, StringView cache, Mat4 pos) {
+Rc<VectorPathRef> VectorSprite::addPath(VectorPath &&path, StringView id, StringView cache,
+		Mat4 pos) {
 	return _image ? _image->addPath(move(path), id, cache, pos) : nullptr;
 }
 
@@ -165,9 +168,7 @@ void VectorSprite::setImage(Rc<VectorImage> &&img) {
 	}
 }
 
-const Rc<VectorImage> &VectorSprite::getImage() const {
-	return _image;
-}
+const Rc<VectorImage> &VectorSprite::getImage() const { return _image; }
 
 void VectorSprite::setQuality(float val) {
 	if (_quality != val) {
@@ -199,9 +200,7 @@ uint32_t VectorSprite::getTrianglesCount() const {
 			}
 		}
 	} else if (_result) {
-		for (auto &it : _result->data) {
-			ret += it.data->indexes.size() / 3;
-		}
+		for (auto &it : _result->data) { ret += it.data->indexes.size() / 3; }
 	}
 	return ret;
 }
@@ -210,14 +209,10 @@ uint32_t VectorSprite::getVertexesCount() const {
 	uint32_t ret = 0;
 	if (_deferredResult) {
 		if (_deferredResult->isReady()) {
-			for (auto &it : _deferredResult->getResult()->data) {
-				ret += it.data->data.size();
-			}
+			for (auto &it : _deferredResult->getResult()->data) { ret += it.data->data.size(); }
 		}
 	} else if (_result) {
-		for (auto &it : _result->data) {
-			ret += it.data->data.size();
-		}
+		for (auto &it : _result->data) { ret += it.data->data.size(); }
 	}
 	return ret;
 }
@@ -256,9 +251,11 @@ Vec2 VectorSprite::convertToImageFromWorld(const Vec2 &worldLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height,
+			1.0f);
 
-	Mat4 tmp = (_modelViewTransform * _imageTargetTransform * t * _image->getViewBoxTransform()).getInversed();
+	Mat4 tmp = (_modelViewTransform * _imageTargetTransform * t * _image->getViewBoxTransform())
+					   .getInversed();
 	return tmp.transformPoint(worldLocation);
 }
 
@@ -266,7 +263,8 @@ Vec2 VectorSprite::convertToImageFromNode(const Vec2 &worldLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height,
+			1.0f);
 
 	Mat4 tmp = (_imageTargetTransform * t * _image->getViewBoxTransform()).getInversed();
 	return tmp.transformPoint(worldLocation);
@@ -276,7 +274,8 @@ Vec2 VectorSprite::convertFromImageToNode(const Vec2 &imageLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height,
+			1.0f);
 
 	Mat4 tmp = _imageTargetTransform * t * _image->getViewBoxTransform();
 	return tmp.transformPoint(imageLocation);
@@ -286,7 +285,8 @@ Vec2 VectorSprite::convertFromImageToWorld(const Vec2 &imageLocation) const {
 	auto imageSize = _image->getImageSize();
 
 	Mat4 t = Mat4::IDENTITY;
-	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height, 1.0f);
+	t.scale(_imageTargetSize.width / imageSize.width, _imageTargetSize.height / imageSize.height,
+			1.0f);
 
 	Mat4 tmp = _modelViewTransform * _imageTargetTransform * t * _image->getViewBoxTransform();
 	return tmp.transformPoint(imageLocation);
@@ -304,12 +304,13 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 	FrameContextHandle2d *handle = static_cast<FrameContextHandle2d *>(frame.currentContext);
 
 	if (_result) {
-		handle->commands->pushVertexArray([&] (memory::pool_t *pool) {
+		handle->commands->pushVertexArray([&](memory::pool_t *pool) {
 			auto &targetData = _result->mut;
 			auto reqMemSize = sizeof(InstanceVertexData) * targetData.size();
 
 			// pool memory is 16-bytes aligned, no problems with Mat4
-			auto tmpData = new (memory::pool::palloc(frame.pool->getPool(), reqMemSize)) InstanceVertexData[targetData.size()];
+			auto tmpData = new (memory::pool::palloc(frame.pool->getPool(), reqMemSize))
+					InstanceVertexData[targetData.size()];
 			auto target = tmpData;
 			if (_normalized) {
 				auto transform = frame.modelTransformStack.back() * _imageTargetTransform;
@@ -323,20 +324,22 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 						newMV.m[13] = floorf(modelTransform.m[13]);
 						newMV.m[14] = floorf(modelTransform.m[14]);
 
-						const_cast<TransformData &>(inst).transform = frame.viewProjectionStack.back() * newMV;
+						const_cast<TransformData &>(inst).transform =
+								frame.viewProjectionStack.back() * newMV;
 					}
 					target->data = it.data;
-					++ target;
+					++target;
 				}
 			} else {
-				auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back() * _imageTargetTransform;
+				auto transform = frame.viewProjectionStack.back() * frame.modelTransformStack.back()
+						* _imageTargetTransform;
 				for (auto &it : targetData) {
 					target->instances = it.instances.pdup(pool);
 					for (auto &inst : target->instances) {
 						const_cast<TransformData &>(inst).transform = transform * inst.transform;
 					}
 					target->data = it.data;
-					++ target;
+					++target;
 				}
 			}
 
@@ -347,7 +350,8 @@ void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
 			return;
 		}
 
-		handle->commands->pushDeferredVertexResult(_deferredResult, frame.viewProjectionStack.back(),
+		handle->commands->pushDeferredVertexResult(_deferredResult,
+				frame.viewProjectionStack.back(),
 				frame.modelTransformStack.back() * _imageTargetTransform, _normalized,
 				buildCmdInfo(frame), _commandFlags);
 	}
@@ -366,8 +370,8 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 	_modelViewTransform.decompose(&viewScale, nullptr, nullptr);
 
 	Size2 imageSize = _image->getImageSize();
-	Size2 targetViewSpaceSize = Size2(_contentSize.width * viewScale.x,
-			_contentSize.height * viewScale.y);
+	Size2 targetViewSpaceSize =
+			Size2(_contentSize.width * viewScale.x, _contentSize.height * viewScale.y);
 	Size2 contentSpaceSize = _contentSize;
 
 	float targetOffsetX = -_imagePlacement.textureRect.origin.x * imageSize.width;
@@ -378,13 +382,16 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 	if (_imagePlacement.autofit != Autofit::None) {
 		auto imageSizeInView = Size2(imageSize.width / placementResult.scale,
 				imageSize.height / placementResult.scale);
-		targetOffsetX = targetOffsetX + (_contentSize.width - imageSizeInView.width) * _imagePlacement.autofitPos.x;
-		targetOffsetY = targetOffsetY + (_contentSize.height - imageSizeInView.height) * _imagePlacement.autofitPos.y;
+		targetOffsetX = targetOffsetX
+				+ (_contentSize.width - imageSizeInView.width) * _imagePlacement.autofitPos.x;
+		targetOffsetY = targetOffsetY
+				+ (_contentSize.height - imageSizeInView.height) * _imagePlacement.autofitPos.y;
 
-		targetViewSpaceSize = Size2(imageSizeInView.width * viewScale.x,
-				imageSizeInView.height * viewScale.y);
+		targetViewSpaceSize =
+				Size2(imageSizeInView.width * viewScale.x, imageSizeInView.height * viewScale.y);
 
-		if (imageSizeInView.width > _contentSize.width || imageSizeInView.height > _contentSize.height) {
+		if (imageSizeInView.width > _contentSize.width
+				|| imageSizeInView.height > _contentSize.height) {
 			_imageScissorComponent->setStateApplyMode(DynamicStateApplyMode::ApplyForSelf);
 			_imageScissorComponent->enableScissor(0.0f);
 		} else {
@@ -398,12 +405,8 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		_imageScissorComponent->disableScissor();
 	}
 
-	Mat4 targetTransform(
-		1.0f, 0.0f, 0.0f, targetOffsetX,
-		0.0f, 1.0f, 0.0f, targetOffsetY,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
-	);
+	Mat4 targetTransform(1.0f, 0.0f, 0.0f, targetOffsetX, 0.0f, 1.0f, 0.0f, targetOffsetY, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	bool isDirty = false;
 
@@ -439,7 +442,8 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		config.textureFlippedX = _flippedX;
 		config.textureFlippedY = _flippedY;
 
-		auto texPlacementResult = _texturePlacement.resolve(contentSpaceSize, Size2(_texture->getExtent().width, _texture->getExtent().height));
+		auto texPlacementResult = _texturePlacement.resolve(contentSpaceSize,
+				Size2(_texture->getExtent().width, _texture->getExtent().height));
 		_textureScale = texPlacementResult.scale;
 
 		// Canvas uses pixel-wide extents, but for sdf we need dp-wide
@@ -451,8 +455,9 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 		}
 
 		if (_deferred) {
-			_deferredResult = VectorSprite_runDeferredVectorCavas(_director->getApplication()->getAppLooper()->getThreadPool(),
-					move(imageData), config, _waitDeferred);
+			_deferredResult =
+					VectorSprite_runDeferredVectorCavas(_director->getApplication()->getLooper(),
+							move(imageData), config, _waitDeferred);
 			_result = nullptr;
 		} else {
 			auto canvas = VectorCanvas::getInstance();
@@ -492,8 +497,7 @@ void VectorSprite::updateVertexes(FrameInfo &frame) {
 					return false;
 				}
 				break;
-			default:
-				break;
+			default: break;
 			}
 		}
 		return true;
@@ -539,15 +543,11 @@ RenderingLevel VectorSprite::getRealRenderingLevel() const {
 					level = _imageIsSolid ? RenderingLevel::Solid : RenderingLevel::Transparent;
 				}
 				break;
-			case core::ComponentMapping::Zero:
-				level = RenderingLevel::Transparent;
-				break;
+			case core::ComponentMapping::Zero: level = RenderingLevel::Transparent; break;
 			case core::ComponentMapping::One:
 				level = _imageIsSolid ? RenderingLevel::Solid : RenderingLevel::Transparent;
 				break;
-			default:
-				level = RenderingLevel::Transparent;
-				break;
+			default: level = RenderingLevel::Transparent; break;
 			}
 		}
 	}
@@ -559,4 +559,4 @@ bool VectorSprite::checkVertexDirty() const {
 	return Sprite::checkVertexDirty() || _savedSdfValue != targetDepth;
 }
 
-}
+} // namespace stappler::xenolith::basic2d

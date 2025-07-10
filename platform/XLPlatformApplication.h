@@ -131,7 +131,7 @@ struct SP_PUBLIC ApplicationInfo {
 	Value encode() const;
 };
 
-class SP_PUBLIC PlatformApplication : public thread::Thread {
+class SP_PUBLIC PlatformApplication : protected thread::Thread {
 public:
 	using Task = thread::Task;
 
@@ -153,7 +153,7 @@ public:
 	virtual void threadDispose() override;
 	virtual bool worker() override;
 
-	virtual void end();
+	virtual void stop() override;
 
 	virtual void wakeup();
 
@@ -192,6 +192,12 @@ public:
 	virtual void updateMessageToken(BytesView);
 	virtual void receiveRemoteNotification(Value &&);
 
+	using Thread::retain;
+	using Thread::release;
+	using Thread::operator new;
+	using Thread::operator delete;
+	using Thread::waitRunning;
+
 protected:
 	virtual void handleDeviceStarted(const core::Loop &loop, const core::Device &dev);
 	virtual void handleDeviceFinalized(const core::Loop &loop, const core::Device &dev);
@@ -214,9 +220,6 @@ protected:
 	};
 
 	event::Looper *_mainLooper = nullptr;
-	event::Looper *_appLooper = nullptr;
-
-	Rc<event::TimerHandle> _timer;
 
 	ApplicationInfo _info;
 
@@ -226,11 +229,6 @@ protected:
 
 	bool _extensionsInitialized = false;
 	bool _shouldSignalOnExit = false;
-
-	UpdateTime _time;
-	uint64_t _clock = 0;
-	uint64_t _startTime = 0;
-	uint64_t _lastUpdate = 0;
 
 	Bytes _messageToken;
 };

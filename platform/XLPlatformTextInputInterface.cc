@@ -46,7 +46,7 @@ TextInputState TextInputRequest::getState() const {
 	return newData;
 }
 
-bool TextInputInterface::init(ViewInterface *view) {
+bool TextInputInterface::init(BasicWindow *view) {
 	_view = view;
 	return true;
 }

@@ -33,6 +33,7 @@
 #include "XLVkRenderQueueCompiler.h"
 #include "XLVkMeshCompiler.h"
 #include "XLVkMaterialCompiler.h"
+#include "XLVkPresentationEngine.h"
 
 #include "SPEventLooper.h"
 #include "SPEventTimerHandle.h"
@@ -291,7 +292,7 @@ struct Loop::Internal final : memory::AllocPool {
 	memory::pool_t *pool = nullptr;
 
 	Loop *loop = nullptr;
-	const core::LoopInfo *info = nullptr;
+	Rc<core::LoopInfo> info;
 
 	Rc<event::TimerHandle> updateTimerHandle;
 
@@ -315,7 +316,8 @@ struct Loop::Internal final : memory::AllocPool {
 	Vector<Pair<Rc<core::MaterialInputData>, Vector<Rc<DependencyEvent>>>> _tmpMaterials;
 };
 
-bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info) {
+bool Loop::init(NotNull<event::Looper> looper, NotNull<core::Instance> instance,
+		Rc<LoopInfo> &&info) {
 	if (!core::Loop::init(looper, instance, move(info))) {
 		return false;
 	}
@@ -325,16 +327,16 @@ bool Loop::init(event::Looper *looper, Rc<Instance> &&instance, LoopInfo &&info)
 
 		_internal = new (pool) vk::Loop::Internal(pool, this);
 		_internal->pool = pool;
-		_internal->info = &_info;
+		_internal->info = _info;
 
-		if (auto dev = _instance.get_cast<Instance>()->makeDevice(_info)) {
+		if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
 			_internal->setDevice(move(dev));
 			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
-		} else if (_info.deviceIdx != core::Instance::DefaultDevice) {
-			log::warn("vk::Loop", "Unable to create device with index: ", _info.deviceIdx,
+		} else if (_info->deviceIdx != core::InstanceDefaultDevice) {
+			log::warn("vk::Loop", "Unable to create device with index: ", _info->deviceIdx,
 					", fallback to default");
-			_info.deviceIdx = core::Instance::DefaultDevice;
-			if (auto dev = _instance.get_cast<Instance>()->makeDevice(_info)) {
+			_info->deviceIdx = core::InstanceDefaultDevice;
+			if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
 				_internal->setDevice(move(dev));
 				_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 			} else {
@@ -515,7 +517,9 @@ void Loop::releaseImage(Rc<ImageStorage> &&image) {
 
 Rc<core::Semaphore> Loop::makeSemaphore() { return _internal->device->makeSemaphore(); }
 
-const Vector<core::ImageFormat> &Loop::getSupportedDepthStencilFormat() const {
+core::ImageFormat Loop::getCommonFormat() const { return _internal->device->getCommonFormat(); }
+
+SpanView<core::ImageFormat> Loop::getSupportedDepthStencilFormat() const {
 	return _internal->device->getSupportedDepthStencilFormat();
 }
 
@@ -651,6 +655,10 @@ void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> 
 	performOnThread([this, cb = sp::move(cb), buf]() mutable {
 		_internal->device->readBuffer(*this, buf.cast<Buffer>(), sp::move(cb));
 	}, this, true);
+}
+
+Rc<core::PresentationEngine> Loop::makePresentationEngine(Rc<core::PresentationWindow> w) {
+	return Rc<PresentationEngine>::create(this, _internal->device, w);
 }
 
 void Loop::performInit() { }

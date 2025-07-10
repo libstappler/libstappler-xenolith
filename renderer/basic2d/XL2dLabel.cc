@@ -22,12 +22,8 @@
  **/
 
 #include "XL2dLabel.h"
-#include "SPThreadPool.h"
-#include "XL2dFrameContext.h"
-#include "XLFrameInfo.h"
 #include "XLEventListener.h"
 #include "XLDirector.h"
-#include "XLFontExtension.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -105,11 +101,11 @@ static void Label_writeTextureQuad(float height, const font::Metrics &m,
 		const font::LineLayoutData &line, VertexArray::Quad &quad, float layer) {
 	switch (range.align) {
 	case font::VerticalAlign::Sub:
-		quad.drawChar(m, l, c.pos, height - float(line.pos + m.descender / 2), range.color,
+		quad.drawChar(m, l, c.pos, height - float(line.pos + int16_t(m.descender / 2)), range.color,
 				range.decoration, c.face, layer);
 		break;
 	case font::VerticalAlign::Super:
-		quad.drawChar(m, l, c.pos, height - float(line.pos + m.ascender / 2), range.color,
+		quad.drawChar(m, l, c.pos, height - float(line.pos + int16_t(m.ascender / 2)), range.color,
 				range.decoration, c.face, layer);
 		break;
 	default:
@@ -271,29 +267,13 @@ bool Label::init(font::FontController *source, const DescriptionStyle &style, St
 		return false;
 	}
 
-	if (!source) {
-		source = Application::getInstance()->getExtension<font::FontController>();
-	}
-
-	_source = source;
 	_style = style;
 	setNormalized(true);
 
 	setColorMode(core::ColorMode::AlphaChannel);
 	setRenderingLevel(RenderingLevel::Surface);
 
-	auto el = Rc<EventListener>::create();
-	el->listenForEventWithObject(font::FontController::onFontSourceUpdated, source,
-			std::bind(&Label::onFontSourceUpdated, this));
-
-	if (_source->isLoaded()) {
-		setTexture(Rc<Texture>(_source->getTexture()));
-	} else {
-		el->listenForEventWithObject(font::FontController::onLoaded, source,
-				std::bind(&Label::onFontSourceLoaded, this), true);
-	}
-
-	_listener = addComponent(el);
+	_listener = addComponent(Rc<EventListener>::create());
 
 	_selection = addChild(Rc<Selection>::create());
 	_selection->setAnchorPoint(Vec2(0.0f, 0.0f));
@@ -322,6 +302,33 @@ bool Label::init(const DescriptionStyle &style, StringView str, float w, TextAli
 	return init(nullptr, style, str, w, a);
 }
 
+void Label::handleEnter(xenolith::Scene *scene) {
+	Sprite::handleEnter(scene);
+
+	if (_source) {
+		return;
+	}
+
+	auto source = _director->getApplication()->getExtension<font::FontController>();
+	if (source) {
+		_listener->clear();
+
+		_listener->listenForEventWithObject(font::FontController::onFontSourceUpdated, source,
+				std::bind(&Label::onFontSourceUpdated, this));
+
+		if (_source->isLoaded()) {
+			setTexture(Rc<Texture>(_source->getTexture()));
+		} else {
+			_listener->listenForEventWithObject(font::FontController::onLoaded, source,
+					std::bind(&Label::onFontSourceLoaded, this), true);
+		}
+
+		_source = source;
+	}
+}
+
+void Label::handleExit() { Sprite::handleExit(); }
+
 void Label::tryUpdateLabel() {
 	if (_parent) {
 		updateLabelScale(_parent->getNodeToWorldTransform());
@@ -341,20 +348,20 @@ void Label::setStyle(const DescriptionStyle &style) {
 
 const Label::DescriptionStyle &Label::getStyle() const { return _style; }
 
-Rc<LabelDeferredResult> Label::runDeferred(thread::ThreadPool *queue, TextLayout *format,
+Rc<LabelDeferredResult> Label::runDeferred(event::Looper *queue, TextLayout *format,
 		const Color4F &color) {
 	auto result = new std::promise<Rc<LabelResult>>;
 	Rc<LabelDeferredResult> ret = Rc<LabelDeferredResult>::create(result->get_future());
-	queue->perform(
+	queue->performAsync(
 			[queue, format = Rc<Label::TextLayout>(format), color, ret, result,
 					layer = _textureLayer]() mutable {
 		auto res = Label::writeResult(format, color, layer);
 		result->set_value(res);
 
-		queue->performCompleted([ret = move(ret), res = move(res), result]() mutable {
+		queue->performOnThread([ret = move(ret), res = move(res), result]() mutable {
 			ret->handleReady(move(res));
 			delete result;
-		}, queue);
+		}, nullptr);
 	},
 			ret);
 	return ret;
@@ -569,8 +576,8 @@ void Label::updateVertexes(FrameInfo &frame) {
 	}
 
 	if (_deferred) {
-		_deferredResult = runDeferred(_director->getApplication()->getAppLooper()->getThreadPool(),
-				_format, _displayedColor);
+		_deferredResult =
+				runDeferred(_director->getApplication()->getLooper(), _format, _displayedColor);
 		_vertexes.clear();
 		_vertexColorDirty = false;
 	} else {

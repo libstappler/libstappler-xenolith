@@ -22,7 +22,6 @@
 
 #include "MaterialIconSprite.h"
 #include "MaterialStyleContainer.h"
-#include "XLFrameInfo.h"
 #include "XLAction.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
@@ -57,9 +56,7 @@ void IconSprite::setProgress(float pr) {
 	}
 }
 
-float IconSprite::getProgress() const {
-	return _progress;
-}
+float IconSprite::getProgress() const { return _progress; }
 
 void IconSprite::setBlendColor(ColorRole rule, float value) {
 	if (_blendColorRule != rule || _blendValue != value) {
@@ -74,13 +71,9 @@ void IconSprite::setBlendColor(const Color4F &c, float value) {
 	_blendValue = value;
 }
 
-void IconSprite::setPreserveOpacity(bool value) {
-	_preserveOpacity = value;
-}
+void IconSprite::setPreserveOpacity(bool value) { _preserveOpacity = value; }
 
-bool IconSprite::isPreserveOpacity() const {
-	return _preserveOpacity;
-}
+bool IconSprite::isPreserveOpacity() const { return _preserveOpacity; }
 
 bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	if (!_visible) {
@@ -122,9 +115,9 @@ void IconSprite::animate() {
 
 void IconSprite::animate(float targetProgress, float duration) {
 	stopAllActionsByTag("IconSprite::animate"_tag);
-	runAction(Rc<ActionProgress>::create(duration, _progress, targetProgress, [this] (float value) {
-		setProgress(value);
-	}), "IconSprite::animate"_tag);
+	runAction(Rc<ActionProgress>::create(duration, _progress, targetProgress,
+					  [this](float value) { setProgress(value); }),
+			"IconSprite::animate"_tag);
 }
 
 void IconSprite::updateIcon() {
@@ -132,4 +125,4 @@ void IconSprite::updateIcon() {
 	drawIcon(*_image, _iconName, _progress);
 }
 
-}
+} // namespace stappler::xenolith::material2d

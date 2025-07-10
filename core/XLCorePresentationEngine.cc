@@ -27,6 +27,8 @@
 #include "XLCoreSwapchain.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"
+#include "XLCoreDevice.h"
+#include "SPEventLooper.h"
 
 #define XL_COREPRESENT_DEBUG 0
 
@@ -183,6 +185,17 @@ void PresentationEngine::deprecateSwapchain(SwapchainFlags flags, Function<void(
 
 PresentationEngine::~PresentationEngine() {
 	log::debug("PresentationEngine", "~PresentationEngine");
+}
+
+bool PresentationEngine::init(NotNull<Loop> loop, NotNull<Device> device,
+		NotNull<PresentationWindow> window) {
+	_loop = loop;
+	_device = device;
+	_window = window;
+	_surface = _window->makeSurface(loop->getInstance());
+	_constraints = _window->getInitialFrameConstraints();
+	_targetFrameInterval = _window->getInitialFrameInterval();
+	return true;
 }
 
 bool PresentationEngine::run() {
@@ -488,9 +501,7 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 		log::warn("core::PresentationEngine",
 				"Scheduling swapchain recreation without frame presentation");
 	}
-	_loop->performOnThread([this] {
-		recreateSwapchain();
-	}, this, false);
+	_loop->performOnThread([this] { recreateSwapchain(); }, this, false);
 }
 
 void PresentationEngine::resetFrames() {

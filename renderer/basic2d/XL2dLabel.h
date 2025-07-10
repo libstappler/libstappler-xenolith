@@ -105,6 +105,9 @@ public:
 	virtual bool init(const DescriptionStyle &, StringView = StringView(), float w = 0.0f,
 			TextAlign = TextAlign::Left);
 
+	virtual void handleEnter(xenolith::Scene *) override;
+	virtual void handleExit() override;
+
 	virtual void tryUpdateLabel();
 
 	virtual void setStyle(const DescriptionStyle &);
@@ -156,7 +159,7 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual Rc<LabelDeferredResult> runDeferred(thread::ThreadPool *, TextLayout *format,
+	virtual Rc<LabelDeferredResult> runDeferred(event::Looper *, TextLayout *format,
 			const Color4F &color);
 
 	virtual void applyLayout(TextLayout *);

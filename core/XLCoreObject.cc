@@ -381,7 +381,7 @@ void Fence::setScheduleCallback(Function<bool()> &&schedule) { _scheduleFn = sp:
 
 void Fence::setReleaseCallback(Function<bool()> &&release) { _releaseFn = sp::move(release); }
 
-void Fence::bindQueries(NotNull<QueryPool *> q) { _queries.emplace_back(q); }
+void Fence::bindQueries(NotNull<QueryPool> q) { _queries.emplace_back(q); }
 
 void Fence::setArmed(DeviceQueue &q) {
 	std::unique_lock<Mutex> lock(_mutex);

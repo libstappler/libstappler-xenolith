@@ -28,12 +28,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-SP_PUBLIC Rc<vk::View> createView(Application &, const core::Device &, ViewInfo &&);
+//SP_PUBLIC Rc<vk::View> createView(Application &, const core::Device &, ViewInfo &&);
 
-SP_PUBLIC bool initInstance(vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info);
+SP_PUBLIC bool initInstance(vk::InstanceData &data, const vk::InstanceInfo &info);
 
-SP_PUBLIC uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx);
+SP_PUBLIC uint32_t checkPresentationSupport(const vk::Instance *instance, VkPhysicalDevice device,
+		uint32_t queueIdx);
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif /* XENOLITH_BACKEND_VKGUI_XLVKGUIPLATFORM_H_ */

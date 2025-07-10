@@ -27,7 +27,6 @@
 #include "XLCommon.h"
 #include "XLCoreMaterial.h"
 #include "XLNodeInfo.h"
-#include "XLSceneConfig.h"
 #include "XL2dConfig.h"
 
 #include "glsl/include/XL2dGlslVertexData.h"

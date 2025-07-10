@@ -22,23 +22,74 @@
 
 #include "XLCoreInstance.h"
 #include "XLCoreLoop.h"
+#include "SPSharedModule.h"
+
+#ifdef MODULE_XENOLITH_BACKEND_VK
+#include "XLVkPlatform.h"
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-Instance::Instance(Dso &&dso, TerminateCallback &&terminate, Rc<Ref> &&userdata)
-: _dsoModule(sp::move(dso)), _terminate(sp::move(terminate)), _userdata(userdata) { }
+Value InstanceInfo::encode() const {
+	Value ret;
+	ret.setString(getInstanceApiName(api), "backend");
+	if (auto i = backend->encode()) {
+		ret.setValue(move(i), "info");
+	}
+	Value f;
+	if (hasFlag(flags, InstanceFlags::Validation)) {
+		f.addString("Validation");
+	}
+	if (hasFlag(flags, InstanceFlags::RenderDoc)) {
+		f.addString("RenderDoc");
+	}
+	if (!f.empty()) {
+		ret.setValue(move(f), "flags");
+	}
+	return ret;
+}
+
+Value LoopInfo::encode() const {
+	Value ret;
+	ret.setInteger(deviceIdx, "deviceIdx");
+	ret.setString(getImageFormatName(defaultFormat), "defaultFormat");
+	if (auto b = backend->encode()) {
+		ret.setValue(move(b), "backend");
+	}
+	return ret;
+}
+
+Rc<Instance> Instance::create(Rc<InstanceInfo> &&info) {
+#ifdef MODULE_XENOLITH_BACKEND_VK
+	if (info->api == InstanceApi::Vulkan) {
+		auto createInstance =
+				SharedModule::acquireTypedSymbol<decltype(&vk::platform::createInstance)>(
+						buildconfig::MODULE_XENOLITH_BACKEND_VK_NAME, "platform::createInstance");
+		if (createInstance) {
+			return createInstance(move(info));
+		}
+	}
+#endif
+	return nullptr;
+}
 
 Instance::~Instance() {
-	if (_terminate) {
-		_terminate();
-		_terminate = nullptr;
-	}
-
 	_dsoModule.close();
 
 	log::debug("core::Instance", "~Instance");
 }
 
-Rc<Loop> Instance::makeLoop(event::Looper *, LoopInfo &&) const { return nullptr; }
+Instance::Instance(InstanceApi api, InstanceFlags flags, Dso &&dso)
+: _api(api), _flags(flags), _dsoModule(sp::move(dso)) { }
+
+Rc<Loop> Instance::makeLoop(NotNull<event::Looper>, Rc<LoopInfo> &&) const { return nullptr; }
+
+StringView getInstanceApiName(InstanceApi backend) {
+	switch (backend) {
+	case InstanceApi::None: return "None"; break;
+	case InstanceApi::Vulkan: return "Vulkan"; break;
+	}
+	return StringView();
+}
 
 } // namespace stappler::xenolith::core

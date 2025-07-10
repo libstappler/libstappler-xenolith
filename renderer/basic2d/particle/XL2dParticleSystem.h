@@ -137,7 +137,7 @@ public:
 	float getTangentialAccelerationMin() const;
 	float getTangentialAccelerationMax() const;
 
-	void setColorCurve(NotNull<CurveBuffer *>);
+	void setColorCurve(NotNull<CurveBuffer>);
 	CurveBuffer *getColorCurve() const;
 
 	void addFlags(ParticleSystemFlags);

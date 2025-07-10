@@ -25,7 +25,7 @@
 #include "XLCoreInput.h"
 #include "XLVk.h"
 
-#if LINUX
+#if LINUX && 0
 
 #include "linux/XLPlatformLinuxWaylandView.h"
 #include "linux/XLPlatformLinuxXcbView.h"
@@ -71,19 +71,7 @@ static VkSurfaceKHR createWindowSurface(xenolith::platform::WaylandView *v, vk::
 #endif
 
 static VkSurfaceKHR createWindowSurface(xenolith::platform::XcbView *v, vk::Instance *instance,
-		VkPhysicalDevice dev) {
-	auto connection = v->getConnection();
-	auto window = v->getWindow();
-
-	VkSurfaceKHR surface = VK_NULL_HANDLE;
-	VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, nullptr, 0,
-		connection, window};
-	if (instance->vkCreateXcbSurfaceKHR(instance->getInstance(), &createInfo, nullptr, &surface)
-			!= VK_SUCCESS) {
-		return nullptr;
-	}
-	return surface;
-}
+		VkPhysicalDevice dev) { }
 
 ViewImpl::~ViewImpl() { _view = nullptr; }
 
@@ -190,15 +178,6 @@ void ViewImpl::end() {
 	_view = nullptr;
 
 	View::end();
-}
-
-void ViewImpl::close(bool graceful) {
-	if (!graceful) {
-		end();
-	} else {
-		_presentationEngine->deprecateSwapchain(PresentationEngine::SwapchainFlags::EndOfLife,
-				[this](bool) { _loop->performOnThread([this] { end(); }, this, false); });
-	}
 }
 
 void ViewImpl::mapWindow() {

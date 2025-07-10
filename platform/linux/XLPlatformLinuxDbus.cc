@@ -350,7 +350,7 @@ struct DBusInterface : public thread::Thread {
 
 	DBusPendingCall *callMethod(Connection &c, StringView bus, StringView path, StringView iface,
 			StringView method, const Callback<void(DBusMessage *)> &,
-			Function<void(DBusMessage *)> &&);
+			Function<void(DBusMessage *)> &&, Ref * = nullptr);
 
 	void parseServiceList(Set<String> &, DBusMessage *);
 	NetworkState parseNetworkState(DBusMessage *);
@@ -1287,7 +1287,7 @@ DBusPendingCall *DBusInterface::loadServiceNames(Connection &c, Set<String> &ser
 
 DBusPendingCall *DBusInterface::callMethod(Connection &c, StringView bus, StringView path,
 		StringView iface, StringView method, const Callback<void(DBusMessage *)> &argsCallback,
-		Function<void(DBusMessage *)> &&resultCallback) {
+		Function<void(DBusMessage *)> &&resultCallback, Ref *) {
 	DBusPendingCall *ret = nullptr;
 
 	auto message = this->dbus_message_new_method_call(bus.data(), path.data(), iface.data(),

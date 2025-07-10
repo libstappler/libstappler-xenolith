@@ -24,20 +24,20 @@
 #ifndef XENOLITH_APPLICATION_XLAPPLICATIONEXTENSION_H_
 #define XENOLITH_APPLICATION_XLAPPLICATIONEXTENSION_H_
 
-#include "XLApplicationInfo.h"
+#include "XLContextInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class Application;
+class AppThread;
 
 class SP_PUBLIC ApplicationExtension : public Ref {
 public:
 	virtual ~ApplicationExtension() = default;
 
-	virtual void initialize(Application *) = 0;
-	virtual void invalidate(Application *) = 0;
+	virtual void initialize(AppThread *) = 0;
+	virtual void invalidate(AppThread *) = 0;
 
-	virtual void update(Application *, const UpdateTime &t) = 0;
+	virtual void update(AppThread *, const UpdateTime &t) = 0;
 };
 
 } // namespace stappler::xenolith

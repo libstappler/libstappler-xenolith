@@ -26,6 +26,9 @@
 
 #include "XL2d.h"
 #include "XLCoreInfo.h"
+
+#if MODULE_XENOLITH_BACKEND_VK
+
 #include "XLVkAttachment.h"
 #include "XLVkQueuePass.h"
 
@@ -41,13 +44,13 @@ public:
 
 	virtual void setCompiled(core::Device &) override;
 
-	virtual Bytes getMaterialData(NotNull<core::Material *>) const override;
+	virtual Bytes getMaterialData(NotNull<core::Material>) const override;
 
 	virtual Rc<core::BufferObject> allocateMaterialPersistentBuffer(
-			NotNull<core::Material *>) const override;
+			NotNull<core::Material>) const override;
 
 protected:
-	size_t getMaterialSize(NotNull<core::Material *>) const;
+	size_t getMaterialSize(NotNull<core::Material>) const;
 
 	Rc<DeviceMemoryPool> _pool;
 };
@@ -68,5 +71,7 @@ protected:
 };
 
 } // namespace stappler::xenolith::basic2d::vk
+
+#endif
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKMATERIAL_H_ */

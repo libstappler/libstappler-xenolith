@@ -85,7 +85,7 @@ public:
 
 	const TextureSetLayoutData *getTargetLayout() const;
 
-	void foreachUpdated(const Callback<void(MaterialId, NotNull<Material *>)> &, bool clear);
+	void foreachUpdated(const Callback<void(MaterialId, NotNull<Material>)> &, bool clear);
 
 protected:
 	void removeMaterial(Material *oldMaterial);
@@ -169,9 +169,9 @@ public:
 
 	const TextureSetLayoutData *getTargetLayout() const { return _targetLayout; }
 
-	virtual Bytes getMaterialData(NotNull<Material *>) const;
+	virtual Bytes getMaterialData(NotNull<Material>) const;
 
-	virtual Rc<BufferObject> allocateMaterialPersistentBuffer(NotNull<Material *>) const;
+	virtual Rc<BufferObject> allocateMaterialPersistentBuffer(NotNull<Material>) const;
 
 	virtual Rc<MaterialSet> allocateSet(const Device &) const;
 	virtual Rc<MaterialSet> cloneSet(const Rc<MaterialSet> &) const;
@@ -190,7 +190,7 @@ public:
 protected:
 	using GenericAttachment::init;
 
-	void setMaterialBuffer(NotNull<Material *>, Rc<BufferObject> &&) const;
+	void setMaterialBuffer(NotNull<Material>, Rc<BufferObject> &&) const;
 
 	struct DynamicImageTracker {
 		uint32_t refCount;

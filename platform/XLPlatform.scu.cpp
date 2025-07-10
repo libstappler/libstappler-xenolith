@@ -23,6 +23,7 @@
 #include "XLCommon.h"
 #include "XLPlatform.h"
 
+#include "XLApplicationPlatform.cc"
 #include "XLPlatformApplication.cc"
 #include "XLPlatformEvent.cc"
 #include "XLPlatformTextInputInterface.cc"

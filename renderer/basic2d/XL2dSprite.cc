@@ -28,7 +28,7 @@
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
 #include "XLDirector.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 #include "XL2dFrameContext.h"
 #include "XL2dCommandList.h"
 
@@ -87,7 +87,7 @@ void Sprite::setTexture(StringView textureName) {
 				_materialDirty = true;
 			}
 		} else if (!_texture || _texture->getName() != textureName) {
-			if (auto &cache = _director->getResourceCache()) {
+			if (auto cache = _director->getResourceCache()) {
 				if (auto tex = cache->acquireTexture(textureName)) {
 					setTexture(move(tex));
 				}
@@ -145,7 +145,7 @@ void Sprite::scheduleTextureUpdate(StringView textureName) {
 	if (!_running || textureName.empty() || textureName.empty()) {
 		setTexture(move(textureName));
 	} else if (!_texture || _texture->getName() != textureName) {
-		if (auto &cache = _director->getResourceCache()) {
+		if (auto cache = _director->getResourceCache()) {
 			if (auto tex = cache->acquireTexture(textureName)) {
 				if (tex->isLoaded()) {
 					setTexture(move(tex));
@@ -281,7 +281,7 @@ void Sprite::handleEnter(Scene *scene) {
 
 	if (!_textureName.empty()) {
 		if (!_texture || _texture->getName() != _textureName) {
-			if (auto &cache = _director->getResourceCache()) {
+			if (auto cache = _director->getResourceCache()) {
 				_texture = cache->acquireTexture(_textureName);
 				if (_texture) {
 					updateBlendAndDepth();

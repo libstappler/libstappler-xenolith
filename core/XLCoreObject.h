@@ -415,7 +415,7 @@ public:
 
 	bool isArmed() const { return _state == Armed; }
 
-	void bindQueries(NotNull<QueryPool *>);
+	void bindQueries(NotNull<QueryPool>);
 
 	void setArmed(DeviceQueue &);
 	void setArmed();

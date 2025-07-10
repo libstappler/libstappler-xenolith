@@ -71,6 +71,8 @@ public:
 
 	virtual void end() override;
 
+	SurfaceBackendMask getPresentatonMask() const { return _presentMask; }
+
 	const DeviceInfo &getInfo() const { return _info; }
 	const DeviceTable *getTable() const;
 	const Rc<Allocator> &getAllocator() const { return _allocator; }
@@ -128,6 +130,7 @@ private:
 #endif
 	VkDevice _device = VK_NULL_HANDLE;
 
+	SurfaceBackendMask _presentMask;
 	DeviceInfo _info;
 	Features _enabledFeatures;
 

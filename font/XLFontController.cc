@@ -22,10 +22,11 @@
 
 #include "XLFontController.h"
 
-#include "SPFilesystem.h"
+#include "XLAppThread.h"
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
-#include "XLFontExtension.h"
+#include "XLFontComponent.h"
+#include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
@@ -311,26 +312,27 @@ void FontController::Builder::addSources(FamilyQuery *query, Vector<const FontSo
 
 FontController::~FontController() { invalidate(nullptr); }
 
-bool FontController::init(const Rc<FontExtension> &ext, StringView name) {
-	_ext = ext;
+bool FontController::init(FontComponent *comp, StringView name) {
+	_component = comp;
 	_name = name.str<Interface>();
 	return true;
 }
 
-void FontController::extend(const Callback<bool(FontController::Builder &)> &cb) {
+void FontController::extend(AppThread *app, const Callback<bool(FontController::Builder &)> &cb) {
 	Builder builder(this);
 	if (cb(builder)) {
-		_ext->acquireController(move(builder));
+		_component->acquireController(app->getLooper(), move(builder));
 	}
 }
 
-void FontController::initialize(Application *app) {
-	_image = _ext->makeInitialImage(_name);
-	app->getGlLoop()->compileImage(_image, [app = Rc<Application>(app)](bool success) { });
+void FontController::initialize(AppThread *app) {
+	_image = FontComponent::makeInitialImage(_name);
+	app->getContext()->getGlLoop()->compileImage(_image,
+			[app = Rc<AppThread>(app)](bool success) { });
 	_texture = Rc<Texture>::create(_image);
 }
 
-void FontController::invalidate(Application *) {
+void FontController::invalidate(AppThread *) {
 	if (_image) {
 		// image need to be finalized to remove cycled refs
 		_image->finalize();
@@ -469,7 +471,7 @@ Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
 
 	// create layout
 	ret = Rc<FontFaceSet>::create(sp::move(cfgName), style.fontFamily, sp::move(spec),
-			sp::move(data), _ext->getLibrary());
+			sp::move(data), _component->getLibrary());
 	_layouts.emplace(ret->getName(), ret);
 	ret->touch(_clock, style.persistent);
 	return ret;
@@ -493,7 +495,7 @@ Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> 
 	if (l->addTextureChars(chars)) {
 		if (!_dependency) {
 			_dependency = Rc<core::DependencyEvent>::alloc(
-					core::DependencyEvent::QueueSet{_ext->getQueue()}, "FontController");
+					core::DependencyEvent::QueueSet{_component->getQueue()}, "FontController");
 		}
 		_dirty = true;
 		return _dependency;
@@ -518,7 +520,7 @@ StringView FontController::getFamilyName(uint32_t idx) const {
 	return StringView();
 }
 
-void FontController::update(Application *, const UpdateTime &clock) {
+void FontController::update(AppThread *app, const UpdateTime &clock) {
 	_clock = clock.global;
 	removeUnusedLayouts();
 	if (_dirty && _loaded) {
@@ -550,7 +552,8 @@ void FontController::update(Application *, const UpdateTime &clock) {
 			}
 		}
 		if (!objects.empty()) {
-			_ext->updateImage(_image, sp::move(objects), move(_dependency));
+			_component->updateImage(app->getLooper(), _image, sp::move(objects), move(_dependency),
+					[app = Rc<AppThread>(app)](bool) { app->wakeup(); });
 			_dependency = nullptr;
 		}
 		_dirty = false;

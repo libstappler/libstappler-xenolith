@@ -27,7 +27,7 @@ MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_INCLUDES_DIRS :=
 MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_INCLUDES_OBJS :=
 MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_SHADERS_DIR := $(XENOLITH_MODULE_DIR)/renderer/basic2d/glsl/shaders
 MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_SHADERS_INCLUDE := $(XENOLITH_MODULE_DIR)/renderer/basic2d/glsl/include
-MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_DEPENDS_ON := xenolith_scene xenolith_font stappler_tess stappler_vg
+MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS_DEPENDS_ON := xenolith_application xenolith_font stappler_tess stappler_vg
 
 # module name resolution
 MODULE_xenolith_renderer_basic2d_shaders := MODULE_XENOLITH_RENDERER_BASIC2D_SHADERS
@@ -46,7 +46,7 @@ MODULE_XENOLITH_RENDERER_BASIC2D_DEPENDS_ON := xenolith_renderer_basic2d_shaders
 MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_COPY_INCLUDES := \
 	$(XENOLITH_MODULE_DIR)/renderer/basic2d/glsl/include \
 	$(XENOLITH_MODULE_DIR)/renderer/basic2d/backend/vk
-MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_DEPENDS_ON := xenolith_backend_vkgui xenolith_scene xenolith_font stappler_tess stappler_vg
+MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_DEPENDS_ON := xenolith_backend_vk xenolith_application xenolith_font stappler_tess stappler_vg
 MODULE_XENOLITH_RENDERER_BASIC2D_SHARED_CONSUME := \
 	xenolith_renderer_basic2d_shaders
 

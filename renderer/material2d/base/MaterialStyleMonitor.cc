@@ -23,7 +23,7 @@
 #include "MaterialStyleMonitor.h"
 #include "MaterialSurfaceInterior.h"
 #include "MaterialStyleContainer.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -39,17 +39,11 @@ bool StyleMonitor::init(StyleCallback &&cb) {
 	return true;
 }
 
-void StyleMonitor::setStyleCallback(StyleCallback &&cb) {
-	_styleCallback = sp::move(cb);
-}
+void StyleMonitor::setStyleCallback(StyleCallback &&cb) { _styleCallback = sp::move(cb); }
 
-const StyleMonitor::StyleCallback &StyleMonitor::getStyleCallback() const {
-	return _styleCallback;
-}
+const StyleMonitor::StyleCallback &StyleMonitor::getStyleCallback() const { return _styleCallback; }
 
-void StyleMonitor::setDirty(bool value) {
-	_dirty = value;
-}
+void StyleMonitor::setDirty(bool value) { _dirty = value; }
 
 void StyleMonitor::handleVisitSelf(FrameInfo &frame, Node *node, NodeFlags parentFlags) {
 	auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
@@ -65,4 +59,4 @@ void StyleMonitor::handleVisitSelf(FrameInfo &frame, Node *node, NodeFlags paren
 	Component::handleVisitSelf(frame, node, parentFlags);
 }
 
-}
+} // namespace stappler::xenolith::material2d

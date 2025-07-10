@@ -25,17 +25,7 @@ THE SOFTWARE.
 #include "XLVkView.h"
 #include "XLVkLoop.h"
 #include "XLVkDevice.h"
-#include "XLVkTextureSet.h"
-#include "XLVkSwapchain.h"
 #include "XLVkRenderPass.h"
-#include "XLVkGuiConfig.h"
-#include "XLDirector.h"
-#include "XLCoreImageStorage.h"
-#include "XLCoreFrameQueue.h"
-#include "XLCoreFrameRequest.h"
-#include "XLCoreFrameCache.h"
-#include "XLVkPresentationEngine.h"
-#include "SPBitmap.h"
 
 #define XL_VKVIEW_DEBUG 0
 
@@ -51,21 +41,22 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-bool View::init(Application &app, const Device &dev, ViewInfo &&info) {
-	if (!xenolith::View::init(app, move(info))) {
+bool VkWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<NativeWindow> window,
+		const Device &dev) {
+	if (!AppWindow::init(ctx, app, window)) {
 		return false;
 	}
 
-	_instance = _loop->getInstance().get_cast<Instance>();
+	_instance = _context->getGlLoop()->getInstance().get_cast<Instance>();
 	_device = const_cast<Device *>(static_cast<const Device *>(&dev));
 	return true;
 }
 
-void View::end() { xenolith::View::end(); }
+void VkWindow::end() { AppWindow::end(); }
 
-void View::handleFramePresented(core::PresentationFrame *frame) { }
+void VkWindow::handleFramePresented(core::PresentationFrame *frame) { }
 
-core::SurfaceInfo View::getSurfaceOptions(core::SurfaceInfo &&opts) const {
+core::SurfaceInfo VkWindow::getSurfaceOptions(core::SurfaceInfo &&opts) const {
 	return std::move(opts);
 }
 

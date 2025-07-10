@@ -21,13 +21,11 @@
  **/
 
 #include "XL2dSceneContent.h"
-#include "XL2dScene.h"
 #include "XL2dFrameContext.h"
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneLight.h"
 #include "XLDirector.h"
-#include "XLView.h"
-#include "XLFrameInfo.h"
+#include "XLAppWindow.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -47,15 +45,11 @@ bool SceneContent2d::init() {
 void SceneContent2d::handleEnter(Scene *scene) {
 	SceneContent::handleEnter(scene);
 
-	for (auto &it : _lights) {
-		it->onEnter(scene);
-	}
+	for (auto &it : _lights) { it->onEnter(scene); }
 }
 
 void SceneContent2d::handleExit() {
-	for (auto &it : _lights) {
-		it->onExit();
-	}
+	for (auto &it : _lights) { it->onExit(); }
 
 	SceneContent::handleExit();
 }
@@ -63,13 +57,9 @@ void SceneContent2d::handleExit() {
 void SceneContent2d::handleContentSizeDirty() {
 	SceneContent::handleContentSizeDirty();
 
-	for (auto &node : _layouts) {
-		updateLayoutNode(node);
-	}
+	for (auto &node : _layouts) { updateLayoutNode(node); }
 
-	for (auto &overlay : _overlays) {
-		updateLayoutNode(overlay);
-	}
+	for (auto &overlay : _overlays) { updateLayoutNode(overlay); }
 }
 
 void SceneContent2d::replaceLayout(SceneLayout2d *node) {
@@ -87,7 +77,7 @@ void SceneContent2d::replaceLayout(SceneLayout2d *node) {
 	ZOrder zIndex = -ZOrder(_layouts.size()) - ZOrder(2);
 	for (auto n : _layouts) {
 		n->setLocalZOrder(zIndex);
-		zIndex ++;
+		zIndex++;
 	}
 
 	_layouts.push_back(node);
@@ -183,7 +173,7 @@ void SceneContent2d::pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb
 		ZOrder zIndex = -ZOrder(_layouts.size()) - ZOrder(2);
 		for (auto &n : _layouts) {
 			n->setLocalZOrder(zIndex);
-			zIndex ++;
+			zIndex++;
 		}
 	}
 
@@ -223,7 +213,7 @@ void SceneContent2d::eraseLayout(SceneLayout2d *node) {
 		for (auto n : _layouts) {
 			n->setLocalZOrder(zIndex);
 			n->setVisible(false);
-			zIndex ++;
+			zIndex++;
 		}
 		updateNodesVisibility();
 	}
@@ -236,7 +226,7 @@ void SceneContent2d::eraseOverlay(SceneLayout2d *l) {
 		ZOrder zIndex = ZOrder(1);
 		for (auto n : _overlays) {
 			n->setLocalZOrder(zIndex);
-			zIndex ++;
+			zIndex++;
 		}
 		updateNodesVisibility();
 	}
@@ -268,14 +258,9 @@ void SceneContent2d::updateNodesVisibility() {
 	if (!_layouts.empty()) {
 		auto status = _layouts.back()->getDecorationStatus();
 		switch (status) {
-		case DecorationStatus::DontCare:
-			break;
-		case DecorationStatus::Visible:
-			showViewDecoration();
-			break;
-		case DecorationStatus::Hidden:
-			hideViewDecoration();
-			break;
+		case DecorationStatus::DontCare: break;
+		case DecorationStatus::Visible: showViewDecoration(); break;
+		case DecorationStatus::Hidden: hideViewDecoration(); break;
 		}
 	}
 }
@@ -285,14 +270,14 @@ void SceneContent2d::updateBackButtonStatus() {
 		if (!_retainBackButton) {
 			_retainBackButton = true;
 			if (_director && !_backButtonRetained) {
-				_director->getView()->retainBackButton();
+				_director->getWindow()->retainExitGuard();
 				_backButtonRetained = true;
 			}
 		}
 	} else {
 		_retainBackButton = false;
 		if (_director && _backButtonRetained) {
-			_director->getView()->releaseBackButton();
+			_director->getWindow()->releaseExitGuard();
 			_backButtonRetained = false;
 		}
 	}
@@ -325,9 +310,7 @@ bool SceneContent2d::popTopLayout() {
 	return false;
 }
 
-bool SceneContent2d::isActive() const {
-	return !_layouts.empty();
-}
+bool SceneContent2d::isActive() const { return !_layouts.empty(); }
 
 bool SceneContent2d::onBackButton() {
 	if (_layouts.empty()) {
@@ -353,17 +336,11 @@ bool SceneContent2d::onBackButton() {
 	}
 }
 
-size_t SceneContent2d::getLayoutsCount() const {
-	return _layouts.size();
-}
+size_t SceneContent2d::getLayoutsCount() const { return _layouts.size(); }
 
-const Vector<Rc<SceneLayout2d>> &SceneContent2d::getLayouts() const {
-	return _layouts;
-}
+const Vector<Rc<SceneLayout2d>> &SceneContent2d::getLayouts() const { return _layouts; }
 
-const Vector<Rc<SceneLayout2d>> &SceneContent2d::getOverlays() const {
-	return _overlays;
-}
+const Vector<Rc<SceneLayout2d>> &SceneContent2d::getOverlays() const { return _overlays; }
 
 bool SceneContent2d::pushOverlay(SceneLayout2d *l) {
 	if (!l || l->isRunning()) {
@@ -494,8 +471,8 @@ bool SceneContent2d::addLight(SceneLight *light, uint64_t tag, StringView name) 
 	_lights.emplace_back(light);
 
 	switch (light->getType()) {
-	case SceneLightType::Ambient: ++ _lightsAmbientCount; break;
-	case SceneLightType::Direct: ++ _lightsDirectCount; break;
+	case SceneLightType::Ambient: ++_lightsAmbientCount; break;
+	case SceneLightType::Direct: ++_lightsDirectCount; break;
 	}
 
 	if (tag != InvalidTag) {
@@ -544,7 +521,7 @@ void SceneContent2d::removeLight(SceneLight *light) {
 			removeLight(it);
 			return;
 		}
-		++ it;
+		++it;
 	}
 }
 
@@ -562,9 +539,7 @@ void SceneContent2d::removeLightByName(StringView name) {
 
 void SceneContent2d::removeAllLights() {
 	auto it = _lights.begin();
-	while (it != _lights.end()) {
-		it = removeLight(it);
-	}
+	while (it != _lights.end()) { it = removeLight(it); }
 }
 
 void SceneContent2d::removeAllLightsByType(SceneLightType type) {
@@ -573,18 +548,14 @@ void SceneContent2d::removeAllLightsByType(SceneLightType type) {
 		if ((*it)->getType() == type) {
 			it = removeLight(it);
 		} else {
-			++ it;
+			++it;
 		}
 	}
 }
 
-void SceneContent2d::setGlobalLight(const Color4F &color) {
-	_globalLight = color;
-}
+void SceneContent2d::setGlobalLight(const Color4F &color) { _globalLight = color; }
 
-const Color4F & SceneContent2d::getGlobalLight() const {
-	return _globalLight;
-}
+const Color4F &SceneContent2d::getGlobalLight() const { return _globalLight; }
 
 void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 	SceneContent::draw(info, flags);
@@ -593,7 +564,8 @@ void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 
 	auto &constraints = _scene->getFrameConstraints();
 
-	Size2 scaledExtent(constraints.extent.width / constraints.density, constraints.extent.height / constraints.density);
+	Size2 scaledExtent(constraints.extent.width / constraints.density,
+			constraints.extent.height / constraints.density);
 
 	ctx->lights.sceneDensity = constraints.density;
 	ctx->lights.shadowDensity = _shadowDensity;
@@ -611,7 +583,8 @@ void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 	}
 }
 
-Vector<Rc<SceneLight>>::iterator SceneContent2d::removeLight(Vector<Rc<SceneLight>>::iterator itVec) {
+Vector<Rc<SceneLight>>::iterator SceneContent2d::removeLight(
+		Vector<Rc<SceneLight>>::iterator itVec) {
 	if ((*itVec)->isRunning()) {
 		(*itVec)->onExit();
 	}
@@ -631,11 +604,11 @@ Vector<Rc<SceneLight>>::iterator SceneContent2d::removeLight(Vector<Rc<SceneLigh
 	}
 
 	switch ((*itVec)->getType()) {
-	case SceneLightType::Ambient: -- _lightsAmbientCount; break;
-	case SceneLightType::Direct: -- _lightsDirectCount; break;
+	case SceneLightType::Ambient: --_lightsAmbientCount; break;
+	case SceneLightType::Direct: --_lightsDirectCount; break;
 	}
 
 	return _lights.erase(itVec);
 }
 
-}
+} // namespace stappler::xenolith::basic2d

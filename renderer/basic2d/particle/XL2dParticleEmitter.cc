@@ -23,13 +23,11 @@
 #include "XL2dParticleEmitter.h"
 #include "XL2dParticleSystem.h"
 #include "XL2dSprite.h"
-#include "XL2dFrameContext.h"
 #include "XLAction.h"
-#include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-bool ParticleEmitter::init(NotNull<ParticleSystem *> s) {
+bool ParticleEmitter::init(NotNull<ParticleSystem> s) {
 	if (!Sprite::init()) {
 		return false;
 	}
@@ -38,7 +36,7 @@ bool ParticleEmitter::init(NotNull<ParticleSystem *> s) {
 	return true;
 }
 
-bool ParticleEmitter::init(NotNull<ParticleSystem *> s, StringView texName) {
+bool ParticleEmitter::init(NotNull<ParticleSystem> s, StringView texName) {
 	if (!Sprite::init(texName)) {
 		return false;
 	}
@@ -47,7 +45,7 @@ bool ParticleEmitter::init(NotNull<ParticleSystem *> s, StringView texName) {
 	return true;
 }
 
-bool ParticleEmitter::init(NotNull<ParticleSystem *> s, Rc<Texture> &&tex) {
+bool ParticleEmitter::init(NotNull<ParticleSystem> s, Rc<Texture> &&tex) {
 	if (!Sprite::init(move(tex))) {
 		return false;
 	}

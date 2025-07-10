@@ -26,8 +26,6 @@
 #include "MaterialAppBar.h"
 #include "MaterialButton.h"
 #include "XL2dSceneContent.h"
-#include "XLDirector.h"
-#include "XLView.h"
 #include "XLAction.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {

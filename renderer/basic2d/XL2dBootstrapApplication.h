@@ -42,7 +42,7 @@
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
-
+/*
 class SP_PUBLIC BootstrapApplication : public vk::GuiApplication {
 public:
 	static EventHeader onSwapchainConfig;
@@ -81,7 +81,7 @@ protected:
 	Rc<xenolith::ApplicationExtension> _storageServer;
 	Rc<xenolith::ApplicationExtension> _assetLibrary;
 };
-
+*/
 }
 
 #endif

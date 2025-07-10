@@ -265,8 +265,8 @@ bool Activity::init(ANativeActivity *activity, ActivityFlags flags) {
 	do {
 		auto isEmulatorMethod = activityClass.getMethodID("isEmulator", "()Z");
 		if (isEmulatorMethod) {
-			isEmulator = thiz.callMethod<jboolean>(isEmulatorMethod);
-			if (isEmulator) {
+			_isEmulator = thiz.callMethod<jboolean>(isEmulatorMethod);
+			if (_isEmulator) {
 				// emulators often do not support this format for swapchains
 				_formatSupport.R8G8B8A8_UNORM = false;
 				if (_formatSupport.R5G6B5_UNORM) {
@@ -372,20 +372,6 @@ bool Activity::runApplication(PlatformApplication *app) {
 	if (!tok.empty()) {
 		_application->updateMessageToken(BytesView(StringView(tok)));
 	}
-
-	addTokenCallback(this, [this](StringView str) {
-		_application->performOnAppThread([this, str = str.str<Interface>()]() mutable {
-			_application->updateMessageToken(BytesView(StringView(str)));
-		}, this);
-	});
-
-	addRemoteNotificationCallback(this, [this](const Value &val) {
-		_application->performOnAppThread([this, val = val]() mutable {
-			_application->receiveRemoteNotification(move(val));
-		}, this);
-	});
-
-	_application->run();
 
 	return true;
 }
@@ -554,7 +540,6 @@ void Activity::handleNativeWindowCreated(ANativeWindow *window) {
 	}
 
 	_windowSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
-	_recreateSwapchain = true;
 }
 
 void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
@@ -562,8 +547,7 @@ void Activity::handleNativeWindowDestroyed(ANativeWindow *window) {
 
 	log::format(log::Info, "NativeActivity", "NativeWindowDestroyed: %p -- %p", _activity, window);
 	if (_rootView) {
-		_rootView->end();
-		_recreateSwapchain = true;
+		_rootView->close();
 	}
 }
 
@@ -584,10 +568,9 @@ void Activity::handleNativeWindowResized(ANativeWindow *window) {
 			window, ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
 
 	auto newSize = Size2(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
-	if (_rootView && (_windowSize != newSize || _recreateSwapchain)) {
-		_recreateSwapchain = false;
+	if (_rootView && (_windowSize != newSize)) {
 		_windowSize = newSize;
-		_rootView->getPresentationEngine()->deprecateSwapchain(false);
+		_rootView->getPresentationEngine()->deprecateSwapchain();
 	}
 }
 
@@ -607,7 +590,24 @@ void Activity::handleStart() {
 
 	log::info("NativeActivity", "onStart");
 
-	for (auto &it : _components) { it->handleStart(this); }
+	if (!_running) {
+		addTokenCallback(this, [this](StringView str) {
+			_application->performOnAppThread([this, str = str.str<Interface>()]() mutable {
+				_application->updateMessageToken(BytesView(StringView(str)));
+			}, this);
+		});
+
+		addRemoteNotificationCallback(this, [this](const Value &val) {
+			_application->performOnAppThread([this, val = val]() mutable {
+				_application->receiveRemoteNotification(move(val));
+			}, this);
+		});
+
+		_application->run();
+
+		for (auto &it : _components) { it->handleStart(this); }
+		_running = true;
+	}
 }
 
 void Activity::handleResume() {
@@ -625,6 +625,17 @@ void Activity::handleStop() {
 	memory::pool::context ctx(_tmpPool, memory::pool::context<decltype(_tmpPool)>::clear);
 
 	stappler::log::info("NativeActivity", "onStop");
+
+	if (_running) {
+		for (auto &it : _components) { it->handleStop(this); }
+
+		removeRemoteNotificationCallback(this);
+		removeTokenCallback(this);
+
+		_application->stop();
+
+		_running = false;
+	}
 }
 
 void Activity::handleDestroy() {
@@ -634,11 +645,7 @@ void Activity::handleDestroy() {
 
 	for (auto &it : _components) { it->handleDestroy(this); }
 
-	if (_rootView) {
-		_rootView->end();
-	}
 	if (_application) {
-		_application->end();
 		_application->waitStopped();
 	}
 	ctx.pop();

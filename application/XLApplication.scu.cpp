@@ -23,9 +23,22 @@
 
 #include "XLCommon.h"
 
-#include "XLApplication.cc"
-#include "XLMeshIndex.cc"
-#include "XLResourceCache.cc"
-#include "XLResourceObject.cc"
-#include "XLTemporaryResource.cc"
-#include "XLTexture.cc"
+#include "XLEvent.cc"
+#include "XLContextInfo.cc"
+#include "XLContext.cc"
+#include "XLAppThread.cc"
+#include "XLAppWindow.cc"
+
+#include "platform/XLContextController.cc"
+#include "platform/XLContextNativeWindow.cc"
+
+#if LINUX
+#include "linux/thirdparty/glfw/xkb_unicode.cc"
+#include "linux/XLLinux.cc"
+#include "linux/XLLinuxXcbLibrary.cc"
+#include "linux/XLLinuxXkbLibrary.cc"
+#include "linux/XLLinuxDBusLibrary.cc"
+#include "linux/XLLinuxXcbConnection.cc"
+#include "linux/XLLinuxXcbWindow.cc"
+#include "linux/XLLinuxContextController.cc"
+#endif

@@ -29,30 +29,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-struct SP_PUBLIC VulkanInstanceInfo {
-	uint32_t targetVersion;
-	SpanView<VkLayerProperties> availableLayers;
-	SpanView<VkExtensionProperties> availableExtensions;
-};
-
-struct SP_PUBLIC VulkanInstanceData {
-	uint32_t targetVulkanVersion;
-	StringView applicationVersion;
-	StringView applicationName;
-	Vector<const char *> layersToEnable;
-	Vector<const char *> extensionsToEnable;
-	Function<uint32_t(const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx)>
-			checkPresentationSupport;
-	Rc<Ref> userdata;
-};
-
 class SP_PUBLIC FunctionTable final : public vk::LoaderTable {
 public:
 	using LoaderTable::LoaderTable;
 
-	Rc<Instance> createInstance(
-			const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &,
-			Dso &&vulkanModule, Instance::TerminateCallback &&) const;
+	Rc<Instance> createInstance(NotNull<core::InstanceInfo>, NotNull<InstanceBackendInfo>,
+			Dso &&vulkanModule) const;
 
 	explicit operator bool() const {
 		return vkGetInstanceProcAddr != nullptr && vkCreateInstance != nullptr
@@ -61,16 +43,19 @@ public:
 	}
 
 private:
-	VulkanInstanceInfo loadInfo() const;
-	bool prepareData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
-	bool validateData(VulkanInstanceData &, const VulkanInstanceInfo &) const;
+	InstanceInfo loadInfo() const;
+	bool prepareData(InstanceData &, const InstanceInfo &) const;
+	bool validateData(InstanceData &, const InstanceInfo &, bool &validationEnabled) const;
 
-	Rc<Instance> doCreateInstance(VulkanInstanceData &, const VulkanInstanceInfo &,
-			Dso &&vulkanModule, Instance::TerminateCallback &&) const;
+	Rc<Instance> doCreateInstance(InstanceData &, const InstanceInfo &, Dso &&vulkanModule,
+			bool validationEnabled) const;
+
+	mutable uint32_t _instanceVersion = 0;
+	mutable Vector<VkLayerProperties> _instanceAvailableLayers;
+	mutable Vector<VkExtensionProperties> _instanceAvailableExtensions;
 };
 
-SP_PUBLIC Rc<core::Instance> createInstance(
-		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &);
+SP_PUBLIC Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&);
 
 } // namespace stappler::xenolith::vk::platform
 

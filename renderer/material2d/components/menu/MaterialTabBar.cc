@@ -29,7 +29,7 @@
 #include "XLAction.h"
 #include "XLActionEase.h"
 #include "XLDirector.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

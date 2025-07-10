@@ -218,7 +218,7 @@ const TextureSetLayoutData *MaterialSet::getTargetLayout() const {
 	return _owner->getTargetLayout();
 }
 
-void MaterialSet::foreachUpdated(const Callback<void(MaterialId, NotNull<Material *>)> &cb,
+void MaterialSet::foreachUpdated(const Callback<void(MaterialId, NotNull<Material>)> &cb,
 		bool clear) {
 	for (auto &it : _updatedMaterials) {
 		auto mIt = _materials.find(it);
@@ -553,9 +553,9 @@ void MaterialAttachment::setMaterials(const Rc<MaterialSet> &data) const {
 	_materialSet = data;
 }
 
-Bytes MaterialAttachment::getMaterialData(NotNull<Material *>) const { return Bytes(); }
+Bytes MaterialAttachment::getMaterialData(NotNull<Material>) const { return Bytes(); }
 
-Rc<BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(NotNull<Material *>) const {
+Rc<BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(NotNull<Material>) const {
 	return nullptr;
 }
 
@@ -627,7 +627,7 @@ void MaterialAttachment::setCompiler(Queue *c) { _compiler = c; }
 
 Queue *MaterialAttachment::getCompiler() const { return _compiler; }
 
-void MaterialAttachment::setMaterialBuffer(NotNull<Material *> m, Rc<BufferObject> &&buf) const {
+void MaterialAttachment::setMaterialBuffer(NotNull<Material> m, Rc<BufferObject> &&buf) const {
 	m->setBuffer(move(buf));
 }
 

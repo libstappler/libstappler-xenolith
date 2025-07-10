@@ -24,7 +24,7 @@
 #include "MaterialSurfaceInterior.h"
 #include "MaterialStyleContainer.h"
 #include "MaterialEasing.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 #include "XL2dLayer.h"
 #include "XLAction.h"
 #include "XL2dVectorSprite.h"
@@ -41,9 +41,7 @@ bool InputTextContainer::init() {
 	_label = addChild(Rc<TypescaleLabel>::create(TypescaleRole::BodyLarge), ZOrder(-1));
 	_label->setAnchorPoint(Anchor::BottomLeft);
 
-	_label->setTransformDirtyCallback([this] (const Mat4 &) {
-		updateCursorPointers();
-	});
+	_label->setTransformDirtyCallback([this](const Mat4 &) { updateCursorPointers(); });
 
 	_caret = _label->addChild(Rc<Layer>::create());
 	_caret->setAnchorPoint(Anchor::BottomLeft);
@@ -55,19 +53,22 @@ bool InputTextContainer::init() {
 	_cursorPointer->setBlendColor(ColorRole::Primary, 1.0f);
 	_cursorPointer->setVisible(false);
 
-	_selectionPointerStart = addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinStartIcon), ZOrder(1));
+	_selectionPointerStart =
+			addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinStartIcon), ZOrder(1));
 	_selectionPointerStart->setContentSize(Size2(24.0f, 24.0f));
 	_selectionPointerStart->setAnchorPoint(Vec2(1.0f, _cursorAnchor));
 	_selectionPointerStart->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerStart->setVisible(false);
 
-	_selectionPointerEnd = addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinEndIcon), ZOrder(1));
+	_selectionPointerEnd =
+			addChild(Rc<IconSprite>::create(IconName::Stappler_SelectioinEndIcon), ZOrder(1));
 	_selectionPointerEnd->setContentSize(Size2(24.0f, 24.0f));
 	_selectionPointerEnd->setAnchorPoint(Vec2(0.0f, _cursorAnchor));
 	_selectionPointerEnd->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerEnd->setVisible(false);
 
-	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForNodesBelow));
+	_scissorComponent = addComponent(
+			Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForNodesBelow));
 	_scissorComponent->enableScissor(Padding(0.0f, 2.0f));
 
 	return true;
@@ -102,7 +103,8 @@ void InputTextContainer::update(const UpdateTime &time) {
 void InputTextContainer::handleContentSizeDirty() {
 	Node::handleContentSizeDirty();
 
-	_label->setPosition(Vec2(0.0f, 0.0f) + Vec2(_label->getContentSize() - _contentSize) * _adjustment);
+	_label->setPosition(
+			Vec2(0.0f, 0.0f) + Vec2(_label->getContentSize() - _contentSize) * _adjustment);
 	_caret->setContentSize(Size2(1.5f, _label->getFontHeight()));
 }
 
@@ -217,9 +219,13 @@ IconSprite *InputTextContainer::getTouchedCursor(const Vec2 &vec, float padding)
 bool InputTextContainer::handleLongPress(const Vec2 &pt, uint32_t tickCount) {
 	if (tickCount == 1) {
 		if (_selectedPointer
-				|| (_cursorPointer->isVisible() && _cursorPointer->getOpacity() > 0.0f && _cursorPointer->isTouched(pt))
-				|| (_selectionPointerStart->isVisible() && _selectionPointerStart->getOpacity() > 0.0f && _selectionPointerStart->isTouched(pt))
-				|| (_selectionPointerEnd->isVisible() && _selectionPointerEnd->getOpacity() > 0.0f && _selectionPointerEnd->isTouched(pt))) {
+				|| (_cursorPointer->isVisible() && _cursorPointer->getOpacity() > 0.0f
+						&& _cursorPointer->isTouched(pt))
+				|| (_selectionPointerStart->isVisible()
+						&& _selectionPointerStart->getOpacity() > 0.0f
+						&& _selectionPointerStart->isTouched(pt))
+				|| (_selectionPointerEnd->isVisible() && _selectionPointerEnd->getOpacity() > 0.0f
+						&& _selectionPointerEnd->isTouched(pt))) {
 			return false;
 		}
 
@@ -263,7 +269,8 @@ bool InputTextContainer::handleSwipe(const Vec2 &pt, const Vec2 &delta) {
 		unscheduleCursorPointer();
 		auto size = _selectedPointer->getContentSize();
 		auto anchor = _selectedPointer->getAnchorPoint();
-		auto offset = Vec2(anchor.x * size.width - size.width / 2.0f, (anchor.y + 1.0f) * size.height);
+		auto offset =
+				Vec2(anchor.x * size.width - size.width / 2.0f, (anchor.y + 1.0f) * size.height);
 
 		auto locInLabel = _label->convertToNodeSpace(pt) + offset;
 
@@ -272,7 +279,7 @@ bool InputTextContainer::handleSwipe(const Vec2 &pt, const Vec2 &delta) {
 			if (chIdx.first != maxOf<uint32_t>()) {
 				auto cursorIdx = chIdx.first;
 				if (chIdx.second) {
-					++ cursorIdx;
+					++cursorIdx;
 				}
 
 				if (_cursor.start != cursorIdx) {
@@ -286,13 +293,15 @@ bool InputTextContainer::handleSwipe(const Vec2 &pt, const Vec2 &delta) {
 			auto charNumber = _label->getCharIndex(locInLabel, font::CharSelectMode::Prefix).first;
 			if (charNumber != maxOf<uint32_t>()) {
 				if (charNumber != _cursor.start && charNumber < _cursor.start + _cursor.length) {
-					setCursor(TextCursor(charNumber, (_cursor.start + _cursor.length) - charNumber));
+					setCursor(
+							TextCursor(charNumber, (_cursor.start + _cursor.length) - charNumber));
 				}
 			}
 		} else if (_selectedPointer == _selectionPointerEnd) {
 			auto charNumber = _label->getCharIndex(locInLabel, font::CharSelectMode::Suffix).first;
 			if (charNumber != maxOf<uint32_t>()) {
-				if (charNumber != _cursor.start + _cursor.length - 1 && charNumber >= _cursor.start) {
+				if (charNumber != _cursor.start + _cursor.length - 1
+						&& charNumber >= _cursor.start) {
 					setCursor(TextCursor(_cursor.start, charNumber - _cursor.start + 1));
 				}
 			}
@@ -369,8 +378,10 @@ void InputTextContainer::updateCursorPointers() {
 	auto &t = _label->getNodeToParentTransform();
 
 	if (_cursor.length > 0) {
-		auto endPos = t.transformPoint(_label->getCursorPosition(_cursor.start + _cursor.length - 1, false));
-		_selectionPointerEnd->setPosition(endPos + Vec2(_caret->getContentSize().width / 2.0f, 0.0f));
+		auto endPos = t.transformPoint(
+				_label->getCursorPosition(_cursor.start + _cursor.length - 1, false));
+		_selectionPointerEnd->setPosition(
+				endPos + Vec2(_caret->getContentSize().width / 2.0f, 0.0f));
 
 		if (endPos.x >= 0.0f && endPos.x <= width) {
 			_selectionPointerEnd->setOpacity(1.0f);
@@ -386,7 +397,8 @@ void InputTextContainer::updateCursorPointers() {
 	auto cursorPos = t.transformPoint(_label->getCursorPosition(_cursor.start, true));
 
 	_cursorPointer->setPosition(cursorPos + Vec2(_caret->getContentSize().width / 2.0f, 0.0f));
-	_selectionPointerStart->setPosition(cursorPos + Vec2(_caret->getContentSize().width / 2.0f, 0.0f));
+	_selectionPointerStart->setPosition(
+			cursorPos + Vec2(_caret->getContentSize().width / 2.0f, 0.0f));
 
 	if (cursorPos.x >= 0.0f && cursorPos.x <= width) {
 		_cursorPointer->setOpacity(1.0f);
@@ -438,7 +450,8 @@ void InputTextContainer::runAdjustLabel(float pos) {
 
 	if (_enabled) {
 		if (dist > _contentSize.width * 0.5f) {
-			auto targetPos = labelPos - std::copysign(dist - _contentSize.width * 0.25f, labelPos - pos);
+			auto targetPos =
+					labelPos - std::copysign(dist - _contentSize.width * 0.25f, labelPos - pos);
 			_label->setPositionX(targetPos);
 			dist = _contentSize.width * 0.5f;
 		}
@@ -461,9 +474,8 @@ void InputTextContainer::scheduleCursorPointer() {
 	stopAllActionsByTag("TextFieldCursorPointer"_tag);
 	setPointerEnabled(true);
 	if (_cursor.length == 0) {
-		runAction(Rc<Sequence>::create(3.5f, [this] {
-			setPointerEnabled(false);
-		}), "TextFieldCursorPointer"_tag);
+		runAction(Rc<Sequence>::create(3.5f, [this] { setPointerEnabled(false); }),
+				"TextFieldCursorPointer"_tag);
 	}
 }
 
@@ -478,4 +490,4 @@ void InputTextContainer::setPointerEnabled(bool value) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

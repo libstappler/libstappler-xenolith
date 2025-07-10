@@ -28,6 +28,8 @@
 #include "XL2dCommandList.h"
 #include "XL2dVkParticlePass.h"
 
+#if MODULE_XENOLITH_BACKEND_VK
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
 class SP_PUBLIC VertexAttachment : public core::GenericAttachment {
@@ -147,5 +149,7 @@ protected:
 };
 
 } // namespace stappler::xenolith::basic2d::vk
+
+#endif
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKVERTEXPASS_H_ */

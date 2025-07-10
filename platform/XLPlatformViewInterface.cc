@@ -30,19 +30,19 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-XL_DECLARE_EVENT_CLASS(ViewInterface, onBackground);
-XL_DECLARE_EVENT_CLASS(ViewInterface, onFocus);
+XL_DECLARE_EVENT_CLASS(BasicWindow, onBackground);
+XL_DECLARE_EVENT_CLASS(BasicWindow, onFocus);
 
-bool ViewInterface::init(PlatformApplication &app, core::Loop &loop) {
+bool BasicWindow::init(PlatformApplication &app, core::Loop &loop) {
 	_application = &app;
 	_loop = &loop;
 	_textInput = Rc<TextInputInterface>::create(this);
 	return true;
 }
 
-void ViewInterface::update(bool displayLink) { _presentationEngine->update(displayLink); }
+void BasicWindow::update(bool displayLink) { _presentationEngine->update(displayLink); }
 
-void ViewInterface::handleInputEvent(const InputEventData &event) {
+void BasicWindow::handleInputEvent(const InputEventData &event) {
 	if (!_presentationEngine) {
 		return;
 	}
@@ -77,7 +77,7 @@ void ViewInterface::handleInputEvent(const InputEventData &event) {
 	setReadyForNextFrame();
 }
 
-void ViewInterface::handleInputEvents(Vector<InputEventData> &&events) {
+void BasicWindow::handleInputEvents(Vector<InputEventData> &&events) {
 	if (!_presentationEngine) {
 		return;
 	}
@@ -107,7 +107,7 @@ void ViewInterface::handleInputEvents(Vector<InputEventData> &&events) {
 	setReadyForNextFrame();
 }
 
-const ViewLayer *ViewInterface::getTopLayer(Vec2 vec) const {
+const ViewLayer *BasicWindow::getTopLayer(Vec2 vec) const {
 	auto it = _layers.crbegin();
 	while (it != _layers.crend()) {
 		if (it->rect.containsPoint(vec)) {
@@ -118,7 +118,7 @@ const ViewLayer *ViewInterface::getTopLayer(Vec2 vec) const {
 	return nullptr;
 }
 
-const ViewLayer *ViewInterface::getBottomLayer(Vec2 vec) const {
+const ViewLayer *BasicWindow::getBottomLayer(Vec2 vec) const {
 	for (auto &it : _layers) {
 		if (it.rect.containsPoint(vec)) {
 			return &it;
@@ -127,9 +127,9 @@ const ViewLayer *ViewInterface::getBottomLayer(Vec2 vec) const {
 	return nullptr;
 }
 
-bool ViewInterface::isOnThisThread() const { return _loop->isOnThisThread(); }
+bool BasicWindow::isOnThisThread() const { return _loop->isOnThisThread(); }
 
-void ViewInterface::performOnThread(Function<void()> &&func, Ref *target, bool immediate,
+void BasicWindow::performOnThread(Function<void()> &&func, Ref *target, bool immediate,
 		StringView tag) {
 	if (immediate && isOnThisThread()) {
 		func();
@@ -138,11 +138,11 @@ void ViewInterface::performOnThread(Function<void()> &&func, Ref *target, bool i
 	}
 }
 
-void ViewInterface::updateConfig() {
+void BasicWindow::updateConfig() {
 	_loop->performOnThread([this] { _presentationEngine->deprecateSwapchain(); }, this, true);
 }
 
-void ViewInterface::setReadyForNextFrame() {
+void BasicWindow::setReadyForNextFrame() {
 	_loop->performOnThread([this] {
 		if (_presentationEngine) {
 			_presentationEngine->setReadyForNextFrame();
@@ -150,7 +150,7 @@ void ViewInterface::setReadyForNextFrame() {
 	}, this, true);
 }
 
-void ViewInterface::setRenderOnDemand(bool value) {
+void BasicWindow::setRenderOnDemand(bool value) {
 	_loop->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setRenderOnDemand(value);
@@ -158,11 +158,11 @@ void ViewInterface::setRenderOnDemand(bool value) {
 	}, this, true);
 }
 
-bool ViewInterface::isRenderOnDemand() const {
+bool BasicWindow::isRenderOnDemand() const {
 	return _presentationEngine ? _presentationEngine->isRenderOnDemand() : false;
 }
 
-void ViewInterface::setFrameInterval(uint64_t value) {
+void BasicWindow::setFrameInterval(uint64_t value) {
 	_loop->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setTargetFrameInterval(value);
@@ -170,35 +170,35 @@ void ViewInterface::setFrameInterval(uint64_t value) {
 	}, this, true);
 }
 
-uint64_t ViewInterface::getFrameInterval() const {
+uint64_t BasicWindow::getFrameInterval() const {
 	return _presentationEngine ? _presentationEngine->getTargetFrameInterval() : 0;
 }
 
-void ViewInterface::setContentPadding(const Padding &padding) {
+void BasicWindow::setContentPadding(const Padding &padding) {
 	_loop->performOnThread([this, padding] { _presentationEngine->setContentPadding(padding); },
 			this, true);
 }
 
-void ViewInterface::waitUntilFrame() {
+void BasicWindow::waitUntilFrame() {
 	if (_presentationEngine) {
 		_presentationEngine->waitUntilFramePresentation();
 	}
 }
 
-void ViewInterface::acquireTextInput(TextInputRequest &&req) {
+void BasicWindow::acquireTextInput(TextInputRequest &&req) {
 	performOnThread([this, data = move(req)]() { _textInput->run(data); }, this);
 }
 
-void ViewInterface::releaseTextInput() {
+void BasicWindow::releaseTextInput() {
 	performOnThread([this]() { _textInput->cancel(); }, this);
 }
 
-void ViewInterface::updateLayers(Vector<ViewLayer> &&layers) {
+void BasicWindow::updateLayers(Vector<ViewLayer> &&layers) {
 	performOnThread([this, layers = sp::move(layers)]() mutable { handleLayers(sp::move(layers)); },
 			this);
 }
 
-void ViewInterface::propagateInputEvent(core::InputEventData &event) {
+void BasicWindow::propagateInputEvent(core::InputEventData &event) {
 	if (event.isPointEvent()) {
 		event.point.density = _presentationEngine
 				? _presentationEngine->getFrameConstraints().density
@@ -219,11 +219,11 @@ void ViewInterface::propagateInputEvent(core::InputEventData &event) {
 	}
 }
 
-void ViewInterface::propagateTextInput(TextInputState &state) { }
+void BasicWindow::propagateTextInput(TextInputState &state) { }
 
-void ViewInterface::handleLayers(Vector<ViewLayer> &&layers) { _layers = sp::move(layers); }
+void BasicWindow::handleLayers(Vector<ViewLayer> &&layers) { _layers = sp::move(layers); }
 
-void ViewInterface::handleMotionEvent(const core::InputEventData &event) {
+void BasicWindow::handleMotionEvent(const core::InputEventData &event) {
 	if (_handleLayerForMotion) {
 		auto l = getTopLayer(Vec2(event.x, event.y));
 		if (l) {
@@ -236,6 +236,6 @@ void ViewInterface::handleMotionEvent(const core::InputEventData &event) {
 	}
 }
 
-void ViewInterface::handleLayerUpdate(const ViewLayer &layer) { _currentLayer = layer; }
+void BasicWindow::handleLayerUpdate(const ViewLayer &layer) { _currentLayer = layer; }
 
 } // namespace stappler::xenolith::platform

@@ -40,7 +40,7 @@ using core::InputEventName;
 using core::InputEventData;
 using core::InputKeyComposeState;
 
-class ViewInterface;
+class BasicWindow;
 struct TextInputState;
 struct TextInputRequest;
 
@@ -99,7 +99,7 @@ class TextInputInterface : public Ref {
 public:
 	virtual ~TextInputInterface() = default;
 
-	bool init(ViewInterface *);
+	bool init(BasicWindow *);
 
 	void insertText(WideStringView sInsert, InputKeyComposeState);
 	void insertText(WideStringView sInsert, TextCursor replacement);
@@ -132,7 +132,7 @@ public:
 protected:
 	bool doInsertText(TextInputState &, WideStringView, InputKeyComposeState);
 
-	ViewInterface *_view = nullptr;
+	BasicWindow *_view = nullptr;
 	TextInputState _state;
 };
 

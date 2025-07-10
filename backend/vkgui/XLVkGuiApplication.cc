@@ -21,13 +21,12 @@
  **/
 
 #include "XLVkLoop.h"
-#include "XLVkGuiPlatform.h"
 #include "platform/linux/XLVkGuiViewImpl.h"
 #include "XLVkGuiApplication.h"
-#include "XLPlatform.h"
 
 #include "XLScene.h"
-
+#include "XLVkGuiPlatform.h"
+/*
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 GuiApplication::~GuiApplication() { }
@@ -38,7 +37,9 @@ bool GuiApplication::init(ApplicationInfo &&appInfo, Rc<core::Instance> &&instan
 			return true;
 		}
 	} else {
-		auto inst = vk::platform::createInstance([&] (vk::platform::VulkanInstanceData &data, const vk::platform::VulkanInstanceInfo &info) {
+		auto inst =
+				vk::platform::createInstance([&](vk::platform::VulkanInstanceData &data,
+													 const vk::platform::VulkanInstanceInfo &info) {
 			data.applicationName = appInfo.applicationName;
 			data.applicationVersion = appInfo.applicationVersion;
 			data.checkPresentationSupport = vk::platform::checkPresentationSupport;
@@ -51,8 +52,10 @@ bool GuiApplication::init(ApplicationInfo &&appInfo, Rc<core::Instance> &&instan
 	return false;
 }
 
-bool GuiApplication::init(ApplicationInfo &&appInfo, const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
-	auto instance = vk::platform::createInstance([&] (VulkanInstanceData &data, const VulkanInstanceInfo &info) {
+bool GuiApplication::init(ApplicationInfo &&appInfo,
+		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+	auto instance = vk::platform::createInstance(
+			[&](VulkanInstanceData &data, const VulkanInstanceInfo &info) {
 		if (cb(data, info)) {
 			data.applicationName = appInfo.applicationName;
 			data.applicationVersion = appInfo.applicationVersion;
@@ -81,12 +84,13 @@ void GuiApplication::run(core::LoopInfo &&info, uint32_t threadCount, TimeInterv
 
 	if (!_info.loopInfo.platformData) {
 		auto data = Rc<LoopData>::alloc();
-		data->deviceSupportCallback = [] (const vk::DeviceInfo &dev) {
-			return dev.supportsPresentation() &&
-					std::find(dev.availableExtensions.begin(), dev.availableExtensions.end(),
-							String(VK_KHR_SWAPCHAIN_EXTENSION_NAME)) != dev.availableExtensions.end();
+		data->deviceSupportCallback = [](const vk::DeviceInfo &dev) {
+			return dev.supportsPresentation()
+					&& std::find(dev.availableExtensions.begin(), dev.availableExtensions.end(),
+							   String(VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+					!= dev.availableExtensions.end();
 		};
-		data->deviceExtensionsCallback = [] (const vk::DeviceInfo &dev) -> Vector<StringView> {
+		data->deviceExtensionsCallback = [](const vk::DeviceInfo &dev) -> Vector<StringView> {
 			Vector<StringView> ret;
 			ret.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 			return ret;
@@ -97,4 +101,5 @@ void GuiApplication::run(core::LoopInfo &&info, uint32_t threadCount, TimeInterv
 	ViewApplication::run();
 }
 
-}
+} // namespace stappler::xenolith::vk
+*/

@@ -26,8 +26,10 @@
 
 #include "XL2dVkMaterial.h"
 #include "XLCoreAttachment.h"
-#include "XLVkQueuePass.h"
 #include "XL2dCommandList.h"
+
+#if MODULE_XENOLITH_BACKEND_VK
+#include "XLVkQueuePass.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
@@ -66,5 +68,6 @@ protected:
 };
 
 } // namespace stappler::xenolith::basic2d::vk
+#endif
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKSHADOW_H_ */

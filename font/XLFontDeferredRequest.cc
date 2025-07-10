@@ -24,7 +24,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontExtension> &ext,
+void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontComponent> &ext,
 		const Vector<FontUpdateRequest> &req,
 		Function<void(uint32_t reqIdx, const CharTexture &texData)> &&onTex,
 		Function<void()> &&onComp) {
@@ -39,7 +39,7 @@ void DeferredRequest::runFontRenderer(event::Looper *queue, const Rc<FontExtensi
 
 DeferredRequest::~DeferredRequest() { }
 
-DeferredRequest::DeferredRequest(const Rc<FontExtension> &ext, const Vector<FontUpdateRequest> &req)
+DeferredRequest::DeferredRequest(const Rc<FontComponent> &ext, const Vector<FontUpdateRequest> &req)
 : ext(ext) {
 	for (auto &it : req) { nrequests += it.chars.size(); }
 

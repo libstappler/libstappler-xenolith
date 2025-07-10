@@ -32,7 +32,6 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
-class View;
 
 class SP_PUBLIC Loop : public core::Loop {
 public:
@@ -41,7 +40,7 @@ public:
 
 	virtual ~Loop() = default;
 
-	bool init(event::Looper *, Rc<Instance> &&, LoopInfo &&);
+	virtual bool init(NotNull<event::Looper>, NotNull<core::Instance>, Rc<LoopInfo> &&) override;
 
 	virtual void run() override;
 	virtual void stop() override;
@@ -80,7 +79,9 @@ public:
 
 	virtual Rc<core::Semaphore> makeSemaphore() override;
 
-	virtual const Vector<core::ImageFormat> &getSupportedDepthStencilFormat() const override;
+	virtual core::ImageFormat getCommonFormat() const override;
+
+	virtual SpanView<core::ImageFormat> getSupportedDepthStencilFormat() const override;
 
 	virtual Rc<core::Fence> acquireFence(core::FenceType) override;
 
@@ -98,6 +99,9 @@ public:
 
 	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
 			const Rc<core::BufferObject> &) override;
+
+	virtual Rc<core::PresentationEngine> makePresentationEngine(
+			Rc<core::PresentationWindow>) override;
 
 protected:
 	using core::Loop::init;

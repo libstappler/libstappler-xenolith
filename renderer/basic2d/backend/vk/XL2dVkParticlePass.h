@@ -26,7 +26,8 @@
 #include "XL2dVkMaterial.h"
 #include "XL2dCommandList.h"
 #include "XLCoreDevice.h"
-#include <vulkan/vulkan_core.h>
+
+#if MODULE_XENOLITH_BACKEND_VK
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 
@@ -139,5 +140,7 @@ protected:
 };
 
 } // namespace stappler::xenolith::basic2d::vk
+
+#endif
 
 #endif /* XENOLITH_RENDERER_BASIC2D_BACKEND_VK_XL2DVKPARTICLEPASS_H_ */

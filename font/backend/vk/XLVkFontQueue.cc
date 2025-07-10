@@ -21,15 +21,15 @@
  THE SOFTWARE.
  **/
 
-#include "XLVkFontQueue.h"
-#include "XLVkRenderPass.h"
-#include "XLFontExtension.h"
+#include "XLFontComponent.h"
 #include "XLCoreFrameQueue.h"
 #include "XLFontDeferredRequest.h"
 #include "SPFontEmplace.h"
 
 #if MODULE_XENOLITH_BACKEND_VK
 
+#include "XLVkFontQueue.h"
+#include "XLVkRenderPass.h"
 #include "XLVkAllocator.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {

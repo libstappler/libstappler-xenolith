@@ -23,8 +23,8 @@
 #ifndef XENOLITH_FONT_XLFONTLABELBASE_H_
 #define XENOLITH_FONT_XLFONTLABELBASE_H_
 
-#include "XLApplicationInfo.h"
-#include "XLFontExtension.h"
+#include "XLContextInfo.h"
+#include "XLFontController.h"
 #include "SPMetastring.h"
 #include "SPFontFormatter.h"
 
@@ -56,17 +56,20 @@ public:
 	RangeLineIterator end() const;
 
 	WideString str(bool filterAlign = true) const;
-	WideString str(uint32_t, uint32_t, size_t maxWords = maxOf<size_t>(), bool ellipsis = true, bool filterAlign = true) const;
+	WideString str(uint32_t, uint32_t, size_t maxWords = maxOf<size_t>(), bool ellipsis = true,
+			bool filterAlign = true) const;
 
 	// on error maxOf<uint32_t> returned
-	Pair<uint32_t, CharSelectMode> getChar(int32_t x, int32_t y, CharSelectMode = CharSelectMode::Center) const;
+	Pair<uint32_t, CharSelectMode> getChar(int32_t x, int32_t y,
+			CharSelectMode = CharSelectMode::Center) const;
 	const LineLayoutData *getLine(uint32_t charIndex) const;
 	uint32_t getLineForChar(uint32_t charIndex) const;
 
 	Pair<uint32_t, uint32_t> selectWord(uint32_t originChar) const;
 
 	geom::Rect getLineRect(uint32_t lineId, float density, const geom::Vec2 & = geom::Vec2()) const;
-	geom::Rect getLineRect(const LineLayoutData &, float density, const geom::Vec2 & = geom::Vec2()) const;
+	geom::Rect getLineRect(const LineLayoutData &, float density,
+			const geom::Vec2 & = geom::Vec2()) const;
 
 	uint16_t getLineForCharId(uint32_t id) const;
 
@@ -124,10 +127,16 @@ public:
 			Name name;
 			Value value;
 
-			Param(const TextTransform &val) : name(Name::TextTransform) { value.textTransform = val; }
-			Param(const TextDecoration &val) : name(Name::TextDecoration) { value.textDecoration = val; }
+			Param(const TextTransform &val) : name(Name::TextTransform) {
+				value.textTransform = val;
+			}
+			Param(const TextDecoration &val) : name(Name::TextDecoration) {
+				value.textDecoration = val;
+			}
 			Param(const Hyphens &val) : name(Name::Hyphens) { value.hyphens = val; }
-			Param(const VerticalAlign &val) : name(Name::VerticalAlign) { value.verticalAlign = val; }
+			Param(const VerticalAlign &val) : name(Name::VerticalAlign) {
+				value.verticalAlign = val;
+			}
 			Param(const Color3B &val) : name(Name::Color) { value.color = val; }
 			Param(const Color &val) : name(Name::Color) { value.color = val; }
 			Param(const Opacity &val) : name(Name::Opacity) { value.opacity = val.get(); }
@@ -142,13 +151,20 @@ public:
 		Style() { }
 		Style(const Style &) = default;
 		Style(Style &&) = default;
-		Style & operator=(const Style &) = default;
-		Style & operator=(Style &&) = default;
+		Style &operator=(const Style &) = default;
+		Style &operator=(Style &&) = default;
 
 		Style(std::initializer_list<Param> il) : params(il) { }
 
-		template <class T> Style(const T & value) { params.push_back(value); }
-		template <class T> Style & set(const T &value) { set(Param(value), true); return *this; }
+		template <class T>
+		Style(const T &value) {
+			params.push_back(value);
+		}
+		template <class T>
+		Style &set(const T &value) {
+			set(Param(value), true);
+			return *this;
+		}
 
 		void set(const Param &, bool force = false);
 		void merge(const Style &);
@@ -165,8 +181,7 @@ public:
 		StyleSpec(size_t s, size_t l, Style &&style)
 		: start(s), length(l), style(sp::move(style)) { }
 
-		StyleSpec(size_t s, size_t l, const Style &style)
-		: start(s), length(l), style(style) { }
+		StyleSpec(size_t s, size_t l, const Style &style) : start(s), length(l), style(style) { }
 	};
 
 	struct DescriptionStyle {
@@ -183,11 +198,11 @@ public:
 
 		DescriptionStyle merge(const Rc<font::FontController> &, const Style &style) const;
 
-		bool operator == (const DescriptionStyle &) const;
-		bool operator != (const DescriptionStyle &) const;
+		bool operator==(const DescriptionStyle &) const;
+		bool operator!=(const DescriptionStyle &) const;
 
-		template <typename ... Args>
-		static DescriptionStyle construct(const StringView &family, FontSize size, Args && ... args) {
+		template <typename... Args>
+		static DescriptionStyle construct(const StringView &family, FontSize size, Args &&...args) {
 			DescriptionStyle p;
 			p.font.fontFamily = family;
 			p.font.fontSize = size;
@@ -195,26 +210,44 @@ public:
 			return p;
 		}
 
-		static void readParameter(DescriptionStyle &p, TextTransform value) { p.text.textTransform = value; }
-		static void readParameter(DescriptionStyle &p, TextDecoration value) { p.text.textDecoration = value; }
+		static void readParameter(DescriptionStyle &p, TextTransform value) {
+			p.text.textTransform = value;
+		}
+		static void readParameter(DescriptionStyle &p, TextDecoration value) {
+			p.text.textDecoration = value;
+		}
 		static void readParameter(DescriptionStyle &p, Hyphens value) { p.text.hyphens = value; }
-		static void readParameter(DescriptionStyle &p, VerticalAlign value) { p.text.verticalAlign = value; }
-		static void readParameter(DescriptionStyle &p, Opacity value) { p.text.opacity = value.get(); }
-		static void readParameter(DescriptionStyle &p, const Color3B &value) { p.text.color = value; }
+		static void readParameter(DescriptionStyle &p, VerticalAlign value) {
+			p.text.verticalAlign = value;
+		}
+		static void readParameter(DescriptionStyle &p, Opacity value) {
+			p.text.opacity = value.get();
+		}
+		static void readParameter(DescriptionStyle &p, const Color3B &value) {
+			p.text.color = value;
+		}
 		static void readParameter(DescriptionStyle &p, FontSize value) { p.font.fontSize = value; }
-		static void readParameter(DescriptionStyle &p, FontStyle value) { p.font.fontStyle = value; }
-		static void readParameter(DescriptionStyle &p, FontWeight value) { p.font.fontWeight = value; }
-		static void readParameter(DescriptionStyle &p, FontStretch value) { p.font.fontStretch = value; }
-		static void readParameter(DescriptionStyle &p, FontGrade value) { p.font.fontGrade = value; }
+		static void readParameter(DescriptionStyle &p, FontStyle value) {
+			p.font.fontStyle = value;
+		}
+		static void readParameter(DescriptionStyle &p, FontWeight value) {
+			p.font.fontWeight = value;
+		}
+		static void readParameter(DescriptionStyle &p, FontStretch value) {
+			p.font.fontStretch = value;
+		}
+		static void readParameter(DescriptionStyle &p, FontGrade value) {
+			p.font.fontGrade = value;
+		}
 
-		template <typename T, typename ... Args>
-		static void readParameters(DescriptionStyle &p, T && t, Args && ... args) {
+		template <typename T, typename... Args>
+		static void readParameters(DescriptionStyle &p, T &&t, Args &&...args) {
 			readParameter(p, t);
 			readParameters(p, std::forward<Args>(args)...);
 		}
 
 		template <typename T>
-		static void readParameters(DescriptionStyle &p, T && t) {
+		static void readParameters(DescriptionStyle &p, T &&t) {
 			readParameter(p, t);
 		}
 
@@ -250,8 +283,8 @@ public:
 	static WideString getLocalizedString(const StringView &);
 	static WideString getLocalizedString(const WideStringView &);
 
-	static Size2 getLabelSize(font::FontController *, const DescriptionStyle &,
-			const StringView &, float w = 0.0f, bool localized = false);
+	static Size2 getLabelSize(font::FontController *, const DescriptionStyle &, const StringView &,
+			float w = 0.0f, bool localized = false);
 	static Size2 getLabelSize(font::FontController *, const DescriptionStyle &,
 			const WideStringView &, float w = 0.0f, bool localized = false);
 
@@ -265,8 +298,8 @@ public:
 	virtual bool isLabelDirty() const;
 	virtual StyleVec compileStyle() const;
 
-	template <char ... Chars>
-	void setString(metastring::metastring<Chars ...> &&str) {
+	template <char... Chars>
+	void setString(metastring::metastring<Chars...> &&str) {
 		setString(str.to_std_string());
 	}
 
@@ -301,7 +334,8 @@ public:
 	virtual void setStyles(StyleVec &&);
 	virtual void setStyles(const StyleVec &);
 
-	virtual bool updateFormatSpec(TextLayout *, const StyleVec &, float density, uint8_t adjustValue);
+	virtual bool updateFormatSpec(TextLayout *, const StyleVec &, float density,
+			uint8_t adjustValue);
 
 	virtual bool empty() const { return _string16.empty(); }
 
@@ -415,6 +449,6 @@ protected:
 	bool _persistentLayout = false;
 };
 
-}
+} // namespace stappler::xenolith::font
 
 #endif /* XENOLITH_FONT_XLFONTLABELBASE_H_ */

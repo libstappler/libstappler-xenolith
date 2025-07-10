@@ -103,17 +103,33 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
 	}
 }
 
+void InstanceData::enableLayer(const char *str) {
+	auto it = std::find_if(layersToEnable.begin(), layersToEnable.end(),
+			[&](const char *ptr) { return strcmp(str, ptr) == 0; });
+	if (it == layersToEnable.end()) {
+		layersToEnable.emplace_back(str);
+	}
+}
+
+void InstanceData::enableExtension(const char *str) {
+	auto it = std::find_if(extensionsToEnable.begin(), extensionsToEnable.end(),
+			[&](const char *ptr) { return strcmp(str, ptr) == 0; });
+	if (it == extensionsToEnable.end()) {
+		extensionsToEnable.emplace_back(str);
+	}
+}
+
 Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceProcAddr,
 		uint32_t targetVersion, OptVec &&optionals, Dso &&vulkanModule,
-		TerminateCallback &&terminate, PresentSupportCallback &&present, bool validationEnabled,
-		Rc<Ref> &&userdata)
-: core::Instance(sp::move(vulkanModule), sp::move(terminate), sp::move(userdata))
+		PresentSupportCallback &&present, SurfaceBackendMask &&mask, core::InstanceFlags flags)
+: core::Instance(core::InstanceApi::Vulkan, flags, sp::move(vulkanModule))
 , InstanceTable(getInstanceProcAddr, inst)
 , _instance(inst)
 , _version(targetVersion)
 , _optionals(sp::move(optionals))
-, _checkPresentSupport(sp::move(present)) {
-	if (validationEnabled) {
+, _checkPresentSupport(sp::move(present))
+, _surfaceBackendMask(sp::move(mask)) {
+	if (hasFlag(flags, core::InstanceFlags::Validation)) {
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debugCreateInfo.pNext = nullptr;
@@ -155,20 +171,18 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 }
 
 Instance::~Instance() {
-	if constexpr (s_enableValidationLayers) {
-		if (debugMessenger != VK_NULL_HANDLE) {
-			vkDestroyDebugUtilsMessengerEXT(_instance, debugMessenger, nullptr);
-		}
+	if (debugMessenger != VK_NULL_HANDLE) {
+		vkDestroyDebugUtilsMessengerEXT(_instance, debugMessenger, nullptr);
 	}
 	vkDestroyInstance(_instance, nullptr);
 }
 
-Rc<core::Loop> Instance::makeLoop(event::Looper *looper, core::LoopInfo &&info) const {
-	return Rc<vk::Loop>::create(looper, Rc<Instance>(const_cast<Instance *>(this)), move(info));
+Rc<core::Loop> Instance::makeLoop(NotNull<event::Looper> looper, Rc<core::LoopInfo> &&info) const {
+	return Rc<vk::Loop>::create(looper, const_cast<Instance *>(this), move(info));
 }
 
 Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
-	auto data = info.platformData.cast<LoopData>().get();
+	auto data = info.backend.get_cast<LoopBackendInfo>();
 	if (!data) {
 		log::error("vk::Instance", "Fail to create device: loop platform data is not defined");
 		return nullptr;
@@ -248,7 +262,7 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		return true;
 	};
 
-	if (info.deviceIdx == DefaultDevice) {
+	if (info.deviceIdx == core::InstanceDefaultDevice) {
 		for (auto &it : _devices) {
 			if (!isDeviceSupported(it)) {
 				log::warn("vk::Instance", "Device rejected: device is not supported");
@@ -464,8 +478,7 @@ void Instance::printDevicesInfo(std::ostream &out) const {
 				out << "Protected";
 			}
 
-			VkBool32 presentSupport =
-					_checkPresentSupport ? _checkPresentSupport(this, device.device, i) : false;
+			VkBool32 presentSupport = checkPresentationSupport(device.device, i).any();
 			if (presentSupport) {
 				if (!empty) {
 					out << ", ";
@@ -612,10 +625,10 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 	int i = 0;
 	for (const VkQueueFamilyProperties &queueFamily : queueFamilies) {
-		auto presentSupport = _checkPresentSupport ? _checkPresentSupport(this, device, i) : false;
+		auto presentSupport = checkPresentationSupport(device, i);
 
 		queueInfo[i].index = i;
-		queueInfo[i].flags = getQueueFlags(queueFamily.queueFlags, presentSupport);
+		queueInfo[i].flags = getQueueFlags(queueFamily.queueFlags, presentSupport.any());
 		queueInfo[i].count = queueFamily.queueCount;
 		queueInfo[i].used = 0;
 		queueInfo[i].timestampValidBits = queueFamily.timestampValidBits;
@@ -769,6 +782,74 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 			ret.features.canEnable(requiredFeatures, deviceProperties.apiVersion);
 
 	return ret;
+}
+
+SurfaceBackendMask Instance::checkPresentationSupport(VkPhysicalDevice device,
+		uint32_t qIdx) const {
+	SurfaceBackendMask ret =
+			_checkPresentSupport ? _checkPresentSupport(this, device, qIdx) : SurfaceBackendMask();
+	ret.reset(0);
+	return ret & _surfaceBackendMask;
+}
+
+StringView getSurfaceBackendExtension(SurfaceBackend backend) {
+	switch (backend) {
+	case SurfaceBackend::Surface: return StringView("VK_KHR_surface"); break;
+	case SurfaceBackend::Android: return StringView("VK_KHR_android_surface"); break;
+	case SurfaceBackend::Wayland: return StringView("VK_KHR_wayland_surface"); break;
+	case SurfaceBackend::Win32: return StringView("VK_KHR_win32_surface"); break;
+	case SurfaceBackend::Xcb: return StringView("VK_KHR_xcb_surface"); break;
+	case SurfaceBackend::XLib: return StringView("VK_KHR_xlib_surface"); break;
+	case SurfaceBackend::DirectFb: return StringView("VK_EXT_directfb_surface"); break;
+	case SurfaceBackend::Fuchsia: return StringView("VK_FUCHSIA_imagepipe_surface"); break;
+	case SurfaceBackend::GoogleGames: return StringView("VK_GGP_stream_descriptor_surface"); break;
+	case SurfaceBackend::IOS: return StringView("VK_MVK_ios_surface"); break;
+	case SurfaceBackend::MacOS: return StringView("VK_MVK_macos_surface"); break;
+	case SurfaceBackend::VI: return StringView("VK_NN_vi_surface"); break;
+	case SurfaceBackend::Metal: return StringView("VK_EXT_metal_surface"); break;
+	case SurfaceBackend::QNX: return StringView("VK_QNX_screen_surface"); break;
+	case SurfaceBackend::OpenHarmony: return StringView("VK_OHOS_surface"); break;
+	case SurfaceBackend::Display: return StringView("VK_KHR_display"); break;
+	case SurfaceBackend::Max: break;
+	}
+	return StringView();
+}
+
+SurfaceBackend getSurfaceBackendForExtension(StringView ext) {
+	if (ext == "VK_KHR_surface") {
+		return SurfaceBackend::Surface;
+	} else if (ext == "VK_KHR_android_surface") {
+		return SurfaceBackend::Android;
+	} else if (ext == "VK_KHR_wayland_surface") {
+		return SurfaceBackend::Wayland;
+	} else if (ext == "VK_KHR_win32_surface") {
+		return SurfaceBackend::Win32;
+	} else if (ext == "VK_KHR_xcb_surface") {
+		return SurfaceBackend::Xcb;
+	} else if (ext == "VK_KHR_xlib_surface") {
+		return SurfaceBackend::XLib;
+	} else if (ext == "VK_EXT_directfb_surface") {
+		return SurfaceBackend::DirectFb;
+	} else if (ext == "VK_FUCHSIA_imagepipe_surface") {
+		return SurfaceBackend::Fuchsia;
+	} else if (ext == "VK_GGP_stream_descriptor_surface") {
+		return SurfaceBackend::GoogleGames;
+	} else if (ext == "VK_MVK_ios_surface") {
+		return SurfaceBackend::IOS;
+	} else if (ext == "VK_MVK_macos_surface") {
+		return SurfaceBackend::MacOS;
+	} else if (ext == "VK_NN_vi_surface") {
+		return SurfaceBackend::VI;
+	} else if (ext == "VK_EXT_metal_surface") {
+		return SurfaceBackend::Metal;
+	} else if (ext == "VK_QNX_screen_surface") {
+		return SurfaceBackend::QNX;
+	} else if (ext == "VK_OHOS_surface") {
+		return SurfaceBackend::OpenHarmony;
+	} else if (ext == "VK_KHR_display") {
+		return SurfaceBackend::Display;
+	}
+	return SurfaceBackend::Max;
 }
 
 } // namespace stappler::xenolith::vk

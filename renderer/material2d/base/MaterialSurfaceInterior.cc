@@ -25,7 +25,6 @@
 #include "MaterialStyleContainer.h"
 #include "MaterialSurface.h"
 #include "MaterialLayerSurface.h"
-#include "XLFrameInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -53,7 +52,8 @@ bool SurfaceInterior::init(SurfaceStyle &&style) {
 void SurfaceInterior::handleAdded(Node *owner) {
 	Component::handleAdded(owner);
 
-	_ownerIsMaterialNode = ((dynamic_cast<Surface *>(_owner) != nullptr) || (dynamic_cast<LayerSurface *>(_owner) != nullptr));
+	_ownerIsMaterialNode = ((dynamic_cast<Surface *>(_owner) != nullptr)
+			|| (dynamic_cast<LayerSurface *>(_owner) != nullptr));
 }
 
 void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags parentFlags) {
@@ -70,4 +70,4 @@ void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags par
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

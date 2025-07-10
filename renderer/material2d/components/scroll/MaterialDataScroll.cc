@@ -22,7 +22,7 @@
 
 #include "MaterialDataScroll.h"
 #include "XLDirector.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 #include "XL2dLayerRounded.h"
 #include "XL2dScrollController.h"
 #include "XLIcons.h"
@@ -72,39 +72,21 @@ bool DataScroll::Item::init(Value &&val, Vec2 pos, Size2 size) {
 	return true;
 }
 
-const Value &DataScroll::Item::getData() const {
-	return _data;
-}
+const Value &DataScroll::Item::getData() const { return _data; }
 
-Size2 DataScroll::Item::getContentSize() const {
-	return _size;
-}
+Size2 DataScroll::Item::getContentSize() const { return _size; }
 
-Vec2 DataScroll::Item::getPosition() const {
-	return _position;
-}
+Vec2 DataScroll::Item::getPosition() const { return _position; }
 
-void DataScroll::Item::setPosition(Vec2 pos) {
-	_position = pos;
-}
+void DataScroll::Item::setPosition(Vec2 pos) { _position = pos; }
 
-void DataScroll::Item::setContentSize(Size2 size) {
-	_size = size;
-}
+void DataScroll::Item::setContentSize(Size2 size) { _size = size; }
 
-void DataScroll::Item::setId(uint64_t id) {
-	_id = id;
-}
-uint64_t DataScroll::Item::getId() const {
-	return _id;
-}
+void DataScroll::Item::setId(uint64_t id) { _id = id; }
+uint64_t DataScroll::Item::getId() const { return _id; }
 
-void DataScroll::Item::setControllerId(size_t value) {
-	_controllerId = value;
-}
-size_t DataScroll::Item::getControllerId() const {
-	return _controllerId;
-}
+void DataScroll::Item::setControllerId(size_t value) { _controllerId = value; }
+size_t DataScroll::Item::getControllerId() const { return _controllerId; }
 
 bool DataScroll::Handler::init(DataScroll *s) {
 	_size = s->getRoot()->getContentSize();
@@ -114,21 +96,15 @@ bool DataScroll::Handler::init(DataScroll *s) {
 	return true;
 }
 
-void DataScroll::Handler::setCompleteCallback(CompleteCallback &&cb) {
-	_callback = sp::move(cb);
-}
+void DataScroll::Handler::setCompleteCallback(CompleteCallback &&cb) { _callback = sp::move(cb); }
 
 const DataScroll::Handler::CompleteCallback &DataScroll::Handler::getCompleteCallback() const {
 	return _callback;
 }
 
-Size2 DataScroll::Handler::getContentSize() const {
-	return _size;
-}
+Size2 DataScroll::Handler::getContentSize() const { return _size; }
 
-DataScroll * DataScroll::Handler::getScroll() const {
-	return _scroll;
-}
+DataScroll *DataScroll::Handler::getScroll() const { return _scroll; }
 
 bool DataScroll::init(DataSource *source, Layout l) {
 	if (!ScrollView::init(l)) {
@@ -137,7 +113,8 @@ bool DataScroll::init(DataSource *source, Layout l) {
 
 	setScrollMaxVelocity(5000.0f);
 
-	_sourceListener = addComponent(Rc<DataListener<DataSource>>::create(std::bind(&DataScroll::onSourceDirty, this), source));
+	_sourceListener = addComponent(Rc<DataListener<DataSource>>::create(
+			std::bind(&DataScroll::onSourceDirty, this), source));
 	_sourceListener->setSubscription(source);
 
 	setController(Rc<ScrollController>::create());
@@ -147,8 +124,9 @@ bool DataScroll::init(DataSource *source, Layout l) {
 
 void DataScroll::handleContentSizeDirty() {
 	ScrollView::handleContentSizeDirty();
-	if ((isVertical() && _savedSize != _contentSize.width) || (!isVertical() && _savedSize != _contentSize.height)) {
-		_savedSize = isVertical()?_contentSize.width:_contentSize.height;
+	if ((isVertical() && _savedSize != _contentSize.width)
+			|| (!isVertical() && _savedSize != _contentSize.height)) {
+		_savedSize = isVertical() ? _contentSize.width : _contentSize.height;
 		onSourceDirty();
 	}
 }
@@ -160,7 +138,7 @@ void DataScroll::reset() {
 	if (!isnan(min)) {
 		setScrollPosition(min);
 	} else {
-		setScrollPosition(0.0f - (isVertical()?_paddingGlobal.top:_paddingGlobal.left));
+		setScrollPosition(0.0f - (isVertical() ? _paddingGlobal.top : _paddingGlobal.left));
 	}
 }
 
@@ -181,9 +159,7 @@ void DataScroll::load(const Value &d) {
 	}
 }
 
-const DataScroll::ItemMap &DataScroll::getItems() const {
-	return _items;
-}
+const DataScroll::ItemMap &DataScroll::getItems() const { return _items; }
 
 void DataScroll::setSource(DataSource *c) {
 	if (c != _sourceListener->getSubscription()) {
@@ -196,10 +172,12 @@ void DataScroll::setSource(DataSource *c) {
 			_controller->clear();
 
 			if (isVertical()) {
-				_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset), _loaderSize, 0.0f);
+				_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset),
+						_loaderSize, 0.0f);
 			} else {
 				auto size = _contentSize.width - _paddingGlobal.left - _loaderSize;
-				_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset), max(_loaderSize, size), 0.0f);
+				_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset),
+						max(_loaderSize, size), 0.0f);
 			}
 
 			setScrollPosition(0.0f);
@@ -207,9 +185,7 @@ void DataScroll::setSource(DataSource *c) {
 	}
 }
 
-DataSource *DataScroll::getSource() const {
-	return _sourceListener->getSubscription();
-}
+DataSource *DataScroll::getSource() const { return _sourceListener->getSubscription(); }
 
 void DataScroll::setLookupLevel(uint32_t level) {
 	_categoryLookupLevel = level;
@@ -217,9 +193,7 @@ void DataScroll::setLookupLevel(uint32_t level) {
 	_sourceListener->setDirty();
 }
 
-uint32_t DataScroll::getLookupLevel() const {
-	return _categoryLookupLevel;
-}
+uint32_t DataScroll::getLookupLevel() const { return _categoryLookupLevel; }
 
 void DataScroll::setItemsForSubcats(bool value) {
 	_itemsForSubcats = value;
@@ -227,9 +201,7 @@ void DataScroll::setItemsForSubcats(bool value) {
 	_sourceListener->setDirty();
 }
 
-bool DataScroll::isItemsForSubcat() const {
-	return _itemsForSubcats;
-}
+bool DataScroll::isItemsForSubcat() const { return _itemsForSubcats; }
 
 void DataScroll::setCategoryBounds(bool value) {
 	if (_useCategoryBounds != value) {
@@ -238,9 +210,7 @@ void DataScroll::setCategoryBounds(bool value) {
 	}
 }
 
-bool DataScroll::hasCategoryBounds() const {
-	return _useCategoryBounds;
-}
+bool DataScroll::hasCategoryBounds() const { return _useCategoryBounds; }
 
 void DataScroll::setMaxSize(size_t max) {
 	_sliceMax = max;
@@ -248,57 +218,40 @@ void DataScroll::setMaxSize(size_t max) {
 	_sourceListener->setDirty();
 }
 
-size_t DataScroll::getMaxSize() const {
-	return _sliceMax;
-}
+size_t DataScroll::getMaxSize() const { return _sliceMax; }
 
-void DataScroll::setOriginId(DataSource::Id id) {
-	_sliceOrigin = id;
-}
+void DataScroll::setOriginId(DataSource::Id id) { _sliceOrigin = id; }
 
-DataSource::Id DataScroll::getOriginId() const {
-	return _sliceOrigin;
-}
+DataSource::Id DataScroll::getOriginId() const { return _sliceOrigin; }
 
-void DataScroll::setLoaderSize(float value) {
-	_loaderSize = value;
-}
+void DataScroll::setLoaderSize(float value) { _loaderSize = value; }
 
-float DataScroll::getLoaderSize() const {
-	return _loaderSize;
-}
+float DataScroll::getLoaderSize() const { return _loaderSize; }
 
-void DataScroll::setMinLoadTime(TimeInterval time) {
-	_minLoadTime = time;
-}
-TimeInterval DataScroll::getMinLoadTime() const {
-	return _minLoadTime;
-}
+void DataScroll::setMinLoadTime(TimeInterval time) { _minLoadTime = time; }
+TimeInterval DataScroll::getMinLoadTime() const { return _minLoadTime; }
 
-void DataScroll::setHandlerCallback(HandlerCallback &&cb) {
-	_handlerCallback = sp::move(cb);
-}
+void DataScroll::setHandlerCallback(HandlerCallback &&cb) { _handlerCallback = sp::move(cb); }
 
-void DataScroll::setItemCallback(ItemCallback &&cb) {
-	_itemCallback = sp::move(cb);
-}
+void DataScroll::setItemCallback(ItemCallback &&cb) { _itemCallback = sp::move(cb); }
 
-void DataScroll::setLoaderCallback(LoaderCallback &&cb) {
-	_loaderCallback = sp::move(cb);
-}
+void DataScroll::setLoaderCallback(LoaderCallback &&cb) { _loaderCallback = sp::move(cb); }
 
 void DataScroll::onSourceDirty() {
-	if ((isVertical() && _contentSize.height == 0.0f) || (!isVertical() && _contentSize.width == 0.0f)) {
+	if ((isVertical() && _contentSize.height == 0.0f)
+			|| (!isVertical() && _contentSize.width == 0.0f)) {
 		return;
 	}
 
 	if (!_sourceListener->getSubscription() || _items.size() == 0) {
 		_controller->clear();
 		if (isVertical()) {
-			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset), _loaderSize, 0.0f);
+			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset),
+					_loaderSize, 0.0f);
 		} else {
 			auto size = _contentSize.width - _paddingGlobal.left - _loaderSize;
-			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset), std::max(_loaderSize, size), 0.0f);
+			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset),
+					std::max(_loaderSize, size), 0.0f);
 		}
 	}
 
@@ -351,7 +304,8 @@ std::pair<DataSource *, bool> DataScroll::getSourceCategory(int64_t id) {
 		return std::make_pair(nullptr, false);
 	}
 
-	return _sourceListener->getSubscription()->getItemCategory(DataSource::Id(id), _categoryLookupLevel, _itemsForSubcats);
+	return _sourceListener->getSubscription()->getItemCategory(DataSource::Id(id),
+			_categoryLookupLevel, _itemsForSubcats);
 }
 
 bool DataScroll::requestSlice(DataSource::Id first, size_t count, Request type) {
@@ -368,13 +322,15 @@ bool DataScroll::requestSlice(DataSource::Id first, size_t count, Request type) 
 	}
 
 	if (_useCategoryBounds) {
-		_sourceListener->getSubscription()->setCategoryBounds(first, count, _categoryLookupLevel, _itemsForSubcats);
+		_sourceListener->getSubscription()->setCategoryBounds(first, count, _categoryLookupLevel,
+				_itemsForSubcats);
 	}
 
 	_invalidateAfter = stappler::Time::now();
 	_sourceListener->getSubscription()->getSliceData(
-		std::bind(&DataScroll::onSliceData, Rc<DataScroll>(this), std::placeholders::_1, Time::now(), type),
-		first, count, _categoryLookupLevel, _itemsForSubcats);
+			std::bind(&DataScroll::onSliceData, Rc<DataScroll>(this), std::placeholders::_1,
+					Time::now(), type),
+			first, count, _categoryLookupLevel, _itemsForSubcats);
 
 	return true;
 }
@@ -428,7 +384,8 @@ bool DataScroll::downloadBackSlice(size_t size) {
 		size = _sliceSize;
 	}
 
-	if (_sourceListener->getSubscription() && _currentSliceStart.get() + _currentSliceLen != _itemsCount) {
+	if (_sourceListener->getSubscription()
+			&& _currentSliceStart.get() + _currentSliceLen != _itemsCount) {
 		DataSource::Id first(_currentSliceStart.get() + _currentSliceLen);
 		if (first.get() + size > _itemsCount) {
 			size = _itemsCount - size_t(first.get());
@@ -458,20 +415,20 @@ void DataScroll::onSliceData(DataMap &val, Time time, Request type) {
 
 	auto deferred = _director->getApplication();
 
-	deferred->perform(Rc<thread::Task>::create([handler, itemPtr, dataPtr, time, type] (const thread::Task &) -> bool {
+	deferred->perform(Rc<thread::Task>::create(
+			[handler, itemPtr, dataPtr, time, type](const thread::Task &) -> bool {
 		(*itemPtr) = handler->run(type, sp::move(*dataPtr));
-		for (auto &it : (*itemPtr)) {
-			it.second->setId(it.first.get());
-		}
+		for (auto &it : (*itemPtr)) { it.second->setId(it.first.get()); }
 		return true;
-	}, [this, handler, itemPtr, dataPtr, time, type] (const thread::Task &, bool) {
+	}, [this, handler, itemPtr, dataPtr, time, type](const thread::Task &, bool) {
 		onSliceItems(sp::move(*itemPtr), time, type);
 
 		auto interval = Time::now() - time;
 		if (interval < _minLoadTime && type != Request::Update) {
-			auto a = Rc<Sequence>::create(_minLoadTime - interval, [guard = Rc<DataScroll>(this), handler, itemPtr, dataPtr] {
+			auto a = Rc<Sequence>::create(_minLoadTime - interval,
+					[guard = Rc<DataScroll>(this), handler, itemPtr, dataPtr] {
 				if (guard->isRunning()) {
-					const auto & cb = handler->getCompleteCallback();
+					const auto &cb = handler->getCompleteCallback();
 					if (cb) {
 						cb();
 					}
@@ -482,7 +439,7 @@ void DataScroll::onSliceData(DataMap &val, Time time, Request type) {
 			});
 			runAction(a);
 		} else {
-			const auto & cb = handler->getCompleteCallback();
+			const auto &cb = handler->getCompleteCallback();
 			if (cb) {
 				cb();
 			}
@@ -535,9 +492,11 @@ void DataScroll::onSliceItems(ItemMap &&val, Time time, Request type) {
 				auto end = _items.rbegin()->second->getPosition();
 
 				if (isVertical()) {
-					setScrollRelativePosition(fabs((it->second->getPosition().y - start.y) / (end.y - start.y)));
+					setScrollRelativePosition(
+							fabs((it->second->getPosition().y - start.y) / (end.y - start.y)));
 				} else {
-					setScrollRelativePosition(fabs((it->second->getPosition().x - start.x) / (end.x - start.x)));
+					setScrollRelativePosition(
+							fabs((it->second->getPosition().x - start.x) / (end.x - start.x)));
 				}
 			}
 		}
@@ -549,25 +508,29 @@ void DataScroll::updateItems() {
 
 	if (!_items.empty()) {
 		if (_items.begin()->first.get() > 0) {
-			Item * first = _items.begin()->second;
+			Item *first = _items.begin()->second;
 			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Front),
 					_loaderSize,
-					(_layout == Vertical)?(first->getPosition().y - _loaderSize):(first->getPosition().x - _loaderSize));
+					(_layout == Vertical) ? (first->getPosition().y - _loaderSize)
+										  : (first->getPosition().x - _loaderSize));
 		}
 
 		for (auto &it : _items) {
-			it.second->setControllerId(_controller->addItem(std::bind(&DataScroll::onItemRequest, this, std::placeholders::_1, it.first),
+			it.second->setControllerId(_controller->addItem(
+					std::bind(&DataScroll::onItemRequest, this, std::placeholders::_1, it.first),
 					it.second->getContentSize(), it.second->getPosition()));
 		}
 
 		if (_items.rbegin()->first.get() < _itemsCount - 1) {
-			Item * last = _items.rbegin()->second;
+			Item *last = _items.rbegin()->second;
 			_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Back),
 					_loaderSize,
-					(_layout == Vertical)?(last->getPosition().y + last->getContentSize().height):(last->getPosition().x + last->getContentSize().width));
+					(_layout == Vertical) ? (last->getPosition().y + last->getContentSize().height)
+										  : (last->getPosition().x + last->getContentSize().width));
 		}
 	} else {
-		_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset), _loaderSize, 0.0f);
+		_controller->addItem(std::bind(&DataScroll::onLoaderRequest, this, Request::Reset),
+				_loaderSize, 0.0f);
 	}
 
 	auto b = _movement;
@@ -579,9 +542,7 @@ void DataScroll::updateItems() {
 	_movement = b;
 }
 
-Rc<DataScroll::Handler> DataScroll::onHandler() {
-	return _handlerCallback(this);
-}
+Rc<DataScroll::Handler> DataScroll::onHandler() { return _handlerCallback(this); }
 
 Rc<Surface> DataScroll::onItemRequest(const ScrollController::Item &item, DataSource::Id id) {
 	if ((isVertical() && item.size.height > 0.0f) || (isHorizontal() && item.size.width > 0)) {
@@ -598,23 +559,15 @@ Rc<Surface> DataScroll::onItemRequest(const ScrollController::Item &item, DataSo
 Rc<DataScroll::Loader> DataScroll::onLoaderRequest(Request type) {
 	if (type == Request::Back) {
 		if (_loaderCallback) {
-			return _loaderCallback(type, [this] {
-				downloadBackSlice(_sliceSize);
-			});
+			return _loaderCallback(type, [this] { downloadBackSlice(_sliceSize); });
 		} else {
-			return Rc<Loader>::create([this] {
-				downloadBackSlice(_sliceSize);
-			});
+			return Rc<Loader>::create([this] { downloadBackSlice(_sliceSize); });
 		}
 	} else if (type == Request::Front) {
 		if (_loaderCallback) {
-			return _loaderCallback(type, [this] {
-				downloadFrontSlice(_sliceSize);
-			});
+			return _loaderCallback(type, [this] { downloadFrontSlice(_sliceSize); });
 		} else {
-			return Rc<Loader>::create([this] {
-				downloadFrontSlice(_sliceSize);
-			});
+			return Rc<Loader>::create([this] { downloadFrontSlice(_sliceSize); });
 		}
 	} else {
 		if (_loaderCallback) {
@@ -638,11 +591,13 @@ void DataScroll::updateIndicatorPosition() {
 	const float scrollLength = itemSize * _itemsCount;
 
 	const float min = getScrollMinPosition() - _currentSliceStart.get() * itemSize;
-	const float max = getScrollMaxPosition() + (_itemsCount - _currentSliceStart.get() - _currentSliceLen) * itemSize;
+	const float max = getScrollMaxPosition()
+			+ (_itemsCount - _currentSliceStart.get() - _currentSliceLen) * itemSize;
 
 	const float value = (_scrollPosition - min) / (max - min);
 
-	ScrollView::updateIndicatorPosition(_indicator, (isVertical()?scrollHeight:scrollWidth) / scrollLength, value, true, 20.0f);
+	ScrollView::updateIndicatorPosition(_indicator,
+			(isVertical() ? scrollHeight : scrollWidth) / scrollLength, value, true, 20.0f);
 }
 
 void DataScroll::onOverscroll(float delta) {
@@ -653,4 +608,4 @@ void DataScroll::onOverscroll(float delta) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

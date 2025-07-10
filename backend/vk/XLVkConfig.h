@@ -33,6 +33,9 @@ static constexpr bool UseExternalFenceSync = false;
 static constexpr bool UseExternalFenceSync = true;
 #endif
 
-}
+/* Number of frames, that can be performed in suboptimal swapchain modes */
+static constexpr uint32_t MaxSuboptimalFrames = 24;
+
+} // namespace stappler::xenolith::config
 
 #endif /* XENOLITH_BACKEND_VK_XLVKCONFIG_H_ */

@@ -34,111 +34,134 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-static uint32_t s_InstanceVersion = 0;
-static Vector<VkLayerProperties> s_InstanceAvailableLayers;
-static Vector<VkExtensionProperties> s_InstanceAvailableExtensions;
+Rc<Instance> FunctionTable::createInstance(NotNull<core::InstanceInfo> instanceInfo,
+		NotNull<InstanceBackendInfo> backend, Dso &&vulkanModule) const {
+	InstanceInfo info = loadInfo();
+	info.flags = instanceInfo->flags;
 
-Rc<Instance> FunctionTable::createInstance(
-		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &setupCb,
-		Dso &&vulkanModule, Instance::TerminateCallback &&termCb) const {
-	VulkanInstanceInfo info = loadInfo();
-	VulkanInstanceData data;
+	bool validationEnabled = false;
 
+	InstanceData data;
 	if (!prepareData(data, info)) {
 		return nullptr;
 	}
 
-	if (!setupCb(data, info)) {
+	if (!backend->setup(data, info)) {
 		log::warn("Vk", "VkInstance creation was aborted by client");
 		return nullptr;
 	}
 
-	if (!validateData(data, info)) {
+	if (!validateData(data, info, validationEnabled)) {
 		return nullptr;
 	}
 
-	return doCreateInstance(data, info, sp::move(vulkanModule), sp::move(termCb));
+	return doCreateInstance(data, info, sp::move(vulkanModule), validationEnabled);
 }
 
-VulkanInstanceInfo FunctionTable::loadInfo() const {
-	VulkanInstanceInfo ret;
+InstanceInfo FunctionTable::loadInfo() const {
+	InstanceInfo ret;
 
-	if (s_InstanceVersion == 0) {
+	if (_instanceVersion == 0) {
 		if (vkEnumerateInstanceVersion) {
-			vkEnumerateInstanceVersion(&s_InstanceVersion);
+			vkEnumerateInstanceVersion(&_instanceVersion);
 		} else {
-			s_InstanceVersion = VK_API_VERSION_1_0;
+			_instanceVersion = VK_API_VERSION_1_0;
 		}
 	}
 
-	if (s_InstanceAvailableLayers.empty()) {
+	if (_instanceAvailableLayers.empty()) {
 		uint32_t layerCount = 0;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-		s_InstanceAvailableLayers.resize(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount, s_InstanceAvailableLayers.data());
+		_instanceAvailableLayers.resize(layerCount);
+		vkEnumerateInstanceLayerProperties(&layerCount, _instanceAvailableLayers.data());
 	}
 
-	if (s_InstanceAvailableExtensions.empty()) {
+	if (_instanceAvailableExtensions.empty()) {
 		uint32_t extensionCount = 0;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
-		s_InstanceAvailableExtensions.resize(extensionCount);
+		_instanceAvailableExtensions.resize(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount,
-				s_InstanceAvailableExtensions.data());
+				_instanceAvailableExtensions.data());
 	}
 
-	ret.targetVersion = s_InstanceVersion;
-	ret.availableLayers = s_InstanceAvailableLayers;
-	ret.availableExtensions = s_InstanceAvailableExtensions;
+	ret.targetVersion = _instanceVersion;
+	ret.availableLayers = _instanceAvailableLayers;
+	ret.availableExtensions = _instanceAvailableExtensions;
+
+	for (auto &extension : ret.availableExtensions) {
+		if (strcmp(VK_KHR_SURFACE_EXTENSION_NAME, extension.extensionName) == 0) {
+			ret.hasSurfaceExtension = true;
+		} else {
+			auto b = getSurfaceBackendForExtension(StringView(extension.extensionName));
+			if (b != SurfaceBackend::Max) {
+				ret.availableBackends.set(toInt(b));
+			}
+		}
+	}
 
 	return ret;
 }
 
-bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceInfo &info) const {
+bool FunctionTable::prepareData(InstanceData &data, const InstanceInfo &info) const {
 	data.targetVulkanVersion = info.targetVersion;
+	return true;
+}
 
-	bool layerFound = false;
-	if constexpr (vk::s_enableValidationLayers) {
+bool FunctionTable::validateData(InstanceData &data, const InstanceInfo &info,
+		bool &validationEnabled) const {
+	if ((info.availableBackends & data.enableBackends) != data.enableBackends) {
+		log::error("Vk", "Invalid flags for surface backends");
+		return false;
+	}
+
+	bool validationLayerFound = false;
+	if (hasFlag(info.flags, core::InstanceFlags::Validation)) {
 		for (const char *layerName : vk::s_validationLayers) {
-
-			for (const auto &layerProperties : s_InstanceAvailableLayers) {
+			for (const auto &layerProperties : _instanceAvailableLayers) {
 				if (strcmp(layerName, layerProperties.layerName) == 0) {
-					data.layersToEnable.emplace_back(layerName);
-					layerFound = true;
+					data.enableLayer(layerName);
+					validationLayerFound = true;
 					break;
 				}
 			}
 
-			if (!layerFound) {
+			if (!validationLayerFound) {
 				log::error("Vk", "Validation layer not found: ", layerName);
+				if (hasFlag(info.flags, core::InstanceFlags::ForcedValidation)) {
+					log::error("Vk", "Forced validation flag is set: aborting");
+					return false;
+				}
+			} else {
+				validationEnabled = true;
 			}
 		}
 	}
 
+	// search for a debug extension
 	const char *debugExt = nullptr;
-
-	for (auto &extension : s_InstanceAvailableExtensions) {
-		if constexpr (vk::s_enableValidationLayers) {
+	for (auto &extension : _instanceAvailableExtensions) {
+		if (hasFlag(info.flags, core::InstanceFlags::Validation)) {
 			if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, extension.extensionName) == 0) {
-				data.extensionsToEnable.emplace_back(extension.extensionName);
+				data.enableExtension(extension.extensionName);
 				debugExt = extension.extensionName;
 				continue;
 			}
 		}
 	}
 
-	if constexpr (vk::s_enableValidationLayers) {
-		if (!debugExt && layerFound) {
+	if (hasFlag(info.flags, core::InstanceFlags::Validation)) {
+		if (!debugExt && validationLayerFound) {
 			for (const auto &layerName : vk::s_validationLayers) {
-				uint32_t layer_ext_count;
-				vkEnumerateInstanceExtensionProperties(layerName, &layer_ext_count, nullptr);
-				if (layer_ext_count == 0) {
+				uint32_t layerExtCount = 0;
+				vkEnumerateInstanceExtensionProperties(layerName, &layerExtCount, nullptr);
+				if (layerExtCount == 0) {
 					continue;
 				}
 
-				VkExtensionProperties layer_exts[layer_ext_count];
-				vkEnumerateInstanceExtensionProperties(layerName, &layer_ext_count, layer_exts);
+				VkExtensionProperties layer_exts[layerExtCount];
+				vkEnumerateInstanceExtensionProperties(layerName, &layerExtCount, layer_exts);
 
 				for (auto &extension : layer_exts) {
 					if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, extension.extensionName) == 0) {
@@ -159,27 +182,32 @@ bool FunctionTable::prepareData(VulkanInstanceData &data, const VulkanInstanceIn
 		}
 	}
 
-	return true;
-}
+	// drop Surface bit
+	data.enableBackends.reset(0);
 
-bool FunctionTable::validateData(VulkanInstanceData &data, const VulkanInstanceInfo &info) const {
+	if (data.enableBackends.any()) {
+		data.enableExtension(getSurfaceBackendExtension(SurfaceBackend::Surface).data());
+		for (auto it : sp::each<SurfaceBackend>()) {
+			if (data.enableBackends.test(toInt(it))) {
+				auto ext = getSurfaceBackendExtension(it);
+				if (!ext.empty()) {
+					data.enableExtension(ext.data());
+				}
+			}
+		}
+	}
+
 	bool completeExt = true;
 	for (auto &it : vk::s_requiredExtension) {
 		if (!it) {
 			break;
 		}
 
-		for (auto &extension : data.extensionsToEnable) {
-			if (strcmp(it, extension) == 0) {
-				continue;
-			}
-		}
-
 		bool found = false;
 		for (auto &extension : info.availableExtensions) {
 			if (strcmp(it, extension.extensionName) == 0) {
 				found = true;
-				data.extensionsToEnable.emplace_back(it);
+				data.enableExtension(it);
 			}
 		}
 		if (!found) {
@@ -196,9 +224,8 @@ bool FunctionTable::validateData(VulkanInstanceData &data, const VulkanInstanceI
 	return true;
 }
 
-Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
-		const VulkanInstanceInfo &info, Dso &&vulkanModule,
-		Instance::TerminateCallback &&cb) const {
+Rc<Instance> FunctionTable::doCreateInstance(InstanceData &data, const InstanceInfo &info,
+		Dso &&vulkanModule, bool validationEnabled) const {
 	Instance::OptVec enabledOptionals;
 
 	uint32_t optIdx = 0;
@@ -206,42 +233,14 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
 		if (!opt) {
 			break;
 		}
-		bool found = false;
-		for (auto &it : data.extensionsToEnable) {
-			if (strcmp(it, opt) == 0) {
+		for (auto &extension : info.availableExtensions) {
+			if (strcmp(opt, extension.extensionName) == 0) {
 				enabledOptionals.set(optIdx);
-				found = true;
+				data.enableExtension(opt);
 				break;
-			}
-		}
-		if (!found) {
-			for (auto &extension : info.availableExtensions) {
-				if (strcmp(opt, extension.extensionName) == 0) {
-					enabledOptionals.set(optIdx);
-					data.extensionsToEnable.emplace_back(opt);
-					break;
-				}
 			}
 		}
 		++optIdx;
-	}
-
-	const char *debugExt = nullptr;
-	for (auto &it : data.extensionsToEnable) {
-		if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, it) == 0) {
-			debugExt = it;
-			break;
-		}
-	}
-
-	bool validationEnabled = false;
-	for (auto &v : s_validationLayers) {
-		for (auto &it : data.layersToEnable) {
-			if (strcmp(it, v) == 0) {
-				validationEnabled = true;
-				break;
-			}
-		}
 	}
 
 	VkInstance instance = VK_NULL_HANDLE;
@@ -289,7 +288,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
 	createInfo.enabledLayerCount = uint32_t(data.layersToEnable.size());
 	createInfo.ppEnabledLayerNames = data.layersToEnable.data();
 
-	if constexpr (s_enableValidateSynchronization) {
+	if (validationEnabled && hasFlag(info.flags, core::InstanceFlags::ValidateSynchromization)) {
 		VkValidationFeaturesEXT validationExt;
 		validationExt.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
 		validationExt.pNext = createInfo.pNext;
@@ -313,15 +312,19 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
 		return nullptr;
 	}
 
+	auto flags = info.flags;
+	if (!validationEnabled) {
+		flags &= ~core::InstanceFlags::Validation;
+	}
+
 	auto vkInstance = Rc<vk::Instance>::alloc(instance, vkGetInstanceProcAddr,
 			data.targetVulkanVersion, sp::move(enabledOptionals), sp::move(vulkanModule),
-			sp::move(cb), sp::move(data.checkPresentationSupport),
-			validationEnabled && (debugExt != nullptr), sp::move(data.userdata));
+			sp::move(data.checkPresentationSupport), sp::move(data.enableBackends), flags);
 
 	if constexpr (vk::s_printVkInfo) {
 		StringStream out;
-		out << "\n\tVulkan: " << getVersionDescription(s_InstanceVersion) << "\n\tLayers:\n";
-		for (const auto &layerProperties : s_InstanceAvailableLayers) {
+		out << "\n\tVulkan: " << getVersionDescription(_instanceVersion) << "\n\tLayers:\n";
+		for (const auto &layerProperties : _instanceAvailableLayers) {
 			out << "\t\t" << layerProperties.layerName << " ("
 				<< getVersionDescription(layerProperties.specVersion) << "/"
 				<< getVersionDescription(layerProperties.implementationVersion) << ")\t - "
@@ -329,7 +332,7 @@ Rc<Instance> FunctionTable::doCreateInstance(VulkanInstanceData &data,
 		}
 
 		out << "\tExtensions:\n";
-		for (const auto &extension : s_InstanceAvailableExtensions) {
+		for (const auto &extension : _instanceAvailableExtensions) {
 			out << "\t\t" << extension.extensionName << ": "
 				<< getVersionDescription(extension.specVersion) << "\n";
 		}

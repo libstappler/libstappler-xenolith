@@ -63,7 +63,7 @@ void AppDelegate::run() {
 			view.getDirector()->runScene(move(scene));
 		},
 		.onClosed = [this] (View &view) {
-			end();
+			stop();
 		}
 	});
 	// clang-format on

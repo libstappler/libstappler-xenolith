@@ -23,8 +23,9 @@
 #ifndef XENOLITH_BACKEND_VKGUI_XLVKGUIAPPLICATION_H_
 #define XENOLITH_BACKEND_VKGUI_XLVKGUIAPPLICATION_H_
 
-#include "XLViewApplication.h"
+/*#include "XLViewApplication.h"
 #include "XLVkGuiConfig.h"
+
 #include "XLVkPlatform.h"
 #include "XLVkView.h"
 
@@ -49,5 +50,5 @@ public:
 };
 
 }
-
+*/
 #endif /* XENOLITH_BACKEND_VKGUI_XLVKGUIAPPLICATION_H_ */

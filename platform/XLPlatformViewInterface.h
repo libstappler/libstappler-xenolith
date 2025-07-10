@@ -29,6 +29,7 @@
 #include "XLCoreLoop.h"
 #include "XLCorePresentationEngine.h"
 #include "XLPlatformTextInputInterface.h"
+#include "XLEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -36,7 +37,7 @@ class PlatformApplication;
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct SP_PUBLIC WindowInfo {
 	String title;
@@ -46,45 +47,12 @@ struct SP_PUBLIC WindowInfo {
 	float density = 0.0f;
 };
 
-enum class ViewLayerFlags : uint32_t {
-	None,
-	CursorText,
-	CursorPointer,
-	CursorHelp,
-	CursorProgress,
-	CursorWait,
-	CursorCopy,
-	CursorAlias,
-	CursorNoDrop,
-	CursorNotAllowed,
-	CursorAllScroll,
-	CursorRowResize,
-	CursorColResize,
-	CursorMask = 0xF,
-
-	ResizableTop = 1 << 27,
-	ResizableRight = 1 << 28,
-	ResizableBottom = 1 << 29,
-	ResizableLeft = 1 << 30,
-	ResizeMask = ResizableTop | ResizableRight | ResizableBottom | ResizableLeft,
-};
-
-SP_DEFINE_ENUM_AS_MASK(ViewLayerFlags)
-
-struct ViewLayer {
-	Rect rect;
-	ViewLayerFlags flags;
-
-	bool operator==(const ViewLayer &) const = default;
-	bool operator!=(const ViewLayer &) const = default;
-};
-
-class SP_PUBLIC ViewInterface : public Ref {
+class SP_PUBLIC BasicWindow : public Ref {
 public:
 	static EventHeader onBackground;
 	static EventHeader onFocus;
 
-	virtual ~ViewInterface() = default;
+	virtual ~BasicWindow() = default;
 
 	virtual bool init(PlatformApplication &, core::Loop &);
 
@@ -107,11 +75,6 @@ public:
 	virtual void linkWithNativeWindow(void *) = 0; // from view thread
 
 	virtual uint64_t getBackButtonCounter() const = 0; // from any thread
-
-	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&,
-			Ref *) = 0; // from any thread
-	virtual void writeToClipboard(BytesView,
-			StringView contentType = StringView()) = 0; // from any thread
 
 	PlatformApplication *getApplication() const { return _application; } // from any thread
 
@@ -193,6 +156,6 @@ protected:
 	ViewLayer _currentLayer;
 };
 
-} // namespace stappler::xenolith::platform
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_PLATFORM_XLPLATFORMVIEWINTERFACE_H_ */

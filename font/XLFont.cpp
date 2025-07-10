@@ -22,7 +22,7 @@
 
 #include "XLCommon.h"
 
-#include "XLFontExtension.cc"
+#include "XLFontComponent.cc"
 #include "XLFontController.cc"
 #include "XLFontLocale.cc"
 #include "XLFontLabelBase.cc"

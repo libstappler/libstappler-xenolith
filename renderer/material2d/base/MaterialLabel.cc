@@ -24,7 +24,7 @@
 #include "MaterialSurface.h"
 #include "MaterialStyleContainer.h"
 #include "MaterialSurfaceInterior.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -34,26 +34,73 @@ struct TypescalePersistentStyle {
 
 	constexpr TypescalePersistentStyle(TypescaleRole role) {
 		switch (role) {
-		case TypescaleRole::DisplayLarge: size = font::FontSize(57); weight = font::FontWeight(400); break; // 57 400
-		case TypescaleRole::DisplayMedium: size = font::FontSize(45); weight = font::FontWeight(400); break; // 45 400
-		case TypescaleRole::DisplaySmall: size = font::FontSize(36); weight = font::FontWeight(400); break; // 36 400
-		case TypescaleRole::HeadlineLarge: size = font::FontSize(32); weight = font::FontWeight(400); break; // 32 400
-		case TypescaleRole::HeadlineMedium: size = font::FontSize(28); weight = font::FontWeight(400); break; // 28 400
-		case TypescaleRole::HeadlineSmall: size = font::FontSize(24); weight = font::FontWeight(400); break; // 24 400
-		case TypescaleRole::TitleLarge: size = font::FontSize(22); weight = font::FontWeight(400); break; // 22 400
-		case TypescaleRole::TitleMedium: size = font::FontSize(16); weight = font::FontWeight(500); break; // 16 500
-		case TypescaleRole::TitleSmall: size = font::FontSize(14); weight = font::FontWeight(500); break; // 14 500
-		case TypescaleRole::LabelLarge: size = font::FontSize(14); weight = font::FontWeight(500); break; // 14 500
-		case TypescaleRole::LabelMedium: size = font::FontSize(12); weight = font::FontWeight(500); break; // 12 500
-		case TypescaleRole::LabelSmall: size = font::FontSize(11); weight = font::FontWeight(500); break; // 11 500
-		case TypescaleRole::BodyLarge: size = font::FontSize(16); weight = font::FontWeight(400); break; // 16 400 0.5
-		case TypescaleRole::BodyMedium: size = font::FontSize(14); weight = font::FontWeight(400); break; // 14 400 0.25
-		case TypescaleRole::BodySmall: size = font::FontSize(12); weight = font::FontWeight(400); break; // 12 400 0.4
+		case TypescaleRole::DisplayLarge:
+			size = font::FontSize(57);
+			weight = font::FontWeight(400);
+			break; // 57 400
+		case TypescaleRole::DisplayMedium:
+			size = font::FontSize(45);
+			weight = font::FontWeight(400);
+			break; // 45 400
+		case TypescaleRole::DisplaySmall:
+			size = font::FontSize(36);
+			weight = font::FontWeight(400);
+			break; // 36 400
+		case TypescaleRole::HeadlineLarge:
+			size = font::FontSize(32);
+			weight = font::FontWeight(400);
+			break; // 32 400
+		case TypescaleRole::HeadlineMedium:
+			size = font::FontSize(28);
+			weight = font::FontWeight(400);
+			break; // 28 400
+		case TypescaleRole::HeadlineSmall:
+			size = font::FontSize(24);
+			weight = font::FontWeight(400);
+			break; // 24 400
+		case TypescaleRole::TitleLarge:
+			size = font::FontSize(22);
+			weight = font::FontWeight(400);
+			break; // 22 400
+		case TypescaleRole::TitleMedium:
+			size = font::FontSize(16);
+			weight = font::FontWeight(500);
+			break; // 16 500
+		case TypescaleRole::TitleSmall:
+			size = font::FontSize(14);
+			weight = font::FontWeight(500);
+			break; // 14 500
+		case TypescaleRole::LabelLarge:
+			size = font::FontSize(14);
+			weight = font::FontWeight(500);
+			break; // 14 500
+		case TypescaleRole::LabelMedium:
+			size = font::FontSize(12);
+			weight = font::FontWeight(500);
+			break; // 12 500
+		case TypescaleRole::LabelSmall:
+			size = font::FontSize(11);
+			weight = font::FontWeight(500);
+			break; // 11 500
+		case TypescaleRole::BodyLarge:
+			size = font::FontSize(16);
+			weight = font::FontWeight(400);
+			break; // 16 400 0.5
+		case TypescaleRole::BodyMedium:
+			size = font::FontSize(14);
+			weight = font::FontWeight(400);
+			break; // 14 400 0.25
+		case TypescaleRole::BodySmall:
+			size = font::FontSize(12);
+			weight = font::FontWeight(400);
+			break; // 12 400 0.4
 		case TypescaleRole::Unknown: break;
 		}
 	}
 
-	bool operator==(const font::FontParameters &f) const { return f.fontSize == size && f.fontWeight == weight; }
+	bool operator==(const font::FontParameters &f) const {
+		return f.fontSize == size && f.fontWeight == weight;
+	}
 };
 
 static TypescalePersistentStyle s_persistentVariants[] = {
@@ -75,7 +122,8 @@ static TypescalePersistentStyle s_persistentVariants[] = {
 	TypescalePersistentStyle(TypescaleRole::Unknown),
 };
 
-TypescaleLabel::DescriptionStyle TypescaleLabel::getTypescaleRoleStyle(TypescaleRole role, float density) {
+TypescaleLabel::DescriptionStyle TypescaleLabel::getTypescaleRoleStyle(TypescaleRole role,
+		float density) {
 	DescriptionStyle style;
 	style.font.fontFamily = StringView("sans");
 	style.font.density = density;
@@ -144,13 +192,9 @@ void TypescaleLabel::setBlendColor(const Color4F &c, float value) {
 	_blendValue = value;
 }
 
-void TypescaleLabel::setPreserveOpacity(bool value) {
-	_preserveOpacity = value;
-}
+void TypescaleLabel::setPreserveOpacity(bool value) { _preserveOpacity = value; }
 
-bool TypescaleLabel::isPreserveOpacity() const {
-	return _preserveOpacity;
-}
+bool TypescaleLabel::isPreserveOpacity() const { return _preserveOpacity; }
 
 bool TypescaleLabel::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	if (!_visible || empty()) {
@@ -208,9 +252,11 @@ void TypescaleLabel::specializeStyle(DescriptionStyle &style, float density) con
 
 	Label::specializeStyle(style, density);
 	if (!_persistentLayout) {
-		if ((style.font.fontGrade == font::FontGrade::Normal || style.font.fontGrade == font::FontGrade::Normal)
+		if ((style.font.fontGrade == font::FontGrade::Normal
+					|| style.font.fontGrade == font::FontGrade::Normal)
 				&& style.font.fontStretch.get() % 100 == 0
-				&& (style.font.fontStyle == font::FontStyle::Italic || style.font.fontStyle == font::FontStyle::Oblique)) {
+				&& (style.font.fontStyle == font::FontStyle::Italic
+						|| style.font.fontStyle == font::FontStyle::Oblique)) {
 
 			for (auto &it : s_persistentVariants) {
 				if (it == style.font) {
@@ -221,4 +267,4 @@ void TypescaleLabel::specializeStyle(DescriptionStyle &style, float density) con
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

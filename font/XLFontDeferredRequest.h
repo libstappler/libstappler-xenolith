@@ -23,18 +23,18 @@
 #ifndef XENOLITH_FONT_XLFONTDEFERREDREQUEST_H_
 #define XENOLITH_FONT_XLFONTDEFERREDREQUEST_H_
 
-#include "XLFontExtension.h"
+#include "XLFontComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 struct SP_PUBLIC DeferredRequest : Ref {
-	static void runFontRenderer(event::Looper *, const Rc<FontExtension> &,
+	static void runFontRenderer(event::Looper *, const Rc<FontComponent> &,
 			const Vector<FontUpdateRequest> &req,
 			Function<void(uint32_t reqIdx, const CharTexture &texData)> &&, Function<void()> &&);
 
 	virtual ~DeferredRequest();
 
-	DeferredRequest(const Rc<FontExtension> &lib, const Vector<FontUpdateRequest> &req);
+	DeferredRequest(const Rc<FontComponent> &lib, const Vector<FontUpdateRequest> &req);
 
 	void runThread();
 
@@ -44,7 +44,7 @@ struct SP_PUBLIC DeferredRequest : Ref {
 	Vector<Rc<font::FontFaceObject>> faces;
 	Vector<Pair<uint32_t, char16_t>> fontRequests;
 
-	Rc<font::FontExtension> ext;
+	Rc<font::FontComponent> ext;
 	Function<void(uint32_t reqIdx, const font::CharTexture &texData)> onTexture;
 	Function<void()> onComplete;
 };

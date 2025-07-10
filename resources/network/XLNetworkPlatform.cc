@@ -24,7 +24,7 @@
 #include "XLNetworkController.h"
 
 #if LINUX
-#include "linux/XLPlatformLinuxDbus.h"
+//#include "linux/XLPlatformLinuxDbus.h"
 #endif
 
 #if ANDROID
@@ -39,7 +39,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
 #if LINUX
 
-SPUNUSED static void registerNetworkCallback(Application *app, void *key,
+/*SPUNUSED static void registerNetworkCallback(Application *app, void *key,
 		Function<void(NetworkCapabilities)> &&cb) {
 	auto lib = Rc<stappler::xenolith::platform::DBusLibrary>::alloc();
 	app->addExtension(Rc<stappler::xenolith::platform::DBusLibrary>(lib));
@@ -93,7 +93,7 @@ SPUNUSED static void registerNetworkCallback(Application *app, void *key,
 SPUNUSED static void unregisterNetworkCallback(Application *app, void *key) {
 	auto lib = app->getExtension<stappler::xenolith::platform::DBusLibrary>();
 	lib->removeNetworkConnectionCallback(key);
-}
+}*/
 
 #endif
 

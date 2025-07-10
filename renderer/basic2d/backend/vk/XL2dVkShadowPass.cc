@@ -27,8 +27,7 @@
 #include "XLCoreDevice.h"
 #include "XLCoreEnum.h"
 #include "XLCoreQueueData.h"
-#include "XLPlatform.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 #include "XLVkLoop.h"
 #include "XLVkDevice.h"
 #include "XLVkRenderPass.h"
@@ -116,7 +115,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 
 		return Rc<vk::ImageAttachment>::create(builder,
 				ImageInfo(info.extent, core::ForceImageUsage(core::ImageUsage::ColorAttachment),
-						xenolith::platform::getCommonFormat()),
+						info.target->getCommonFormat()),
 				core::ImageAttachment::AttachmentInfo{
 					.initialLayout = AttachmentLayout::Undefined,
 					.finalLayout = AttachmentLayout::PresentSrc,
@@ -146,7 +145,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				ImageInfo(info.extent,
 						core::ForceImageUsage(core::ImageUsage::DepthStencilAttachment),
 						VertexPass::selectDepthFormat(
-								info.target->getGlLoop()->getSupportedDepthStencilFormat())),
+								info.target->getSupportedDepthStencilFormat())),
 				core::ImageAttachment::AttachmentInfo{.initialLayout = AttachmentLayout::Undefined,
 					.finalLayout = AttachmentLayout::DepthStencilAttachmentOptimal,
 					.clearOnLoad = true,
@@ -171,7 +170,7 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				ImageInfo(info.extent,
 						core::ForceImageUsage(core::ImageUsage::DepthStencilAttachment),
 						VertexPass::selectDepthFormat(
-								info.target->getGlLoop()->getSupportedDepthStencilFormat())),
+								info.target->getSupportedDepthStencilFormat())),
 				core::ImageAttachment::AttachmentInfo{.initialLayout = AttachmentLayout::Undefined,
 					.finalLayout = AttachmentLayout::DepthStencilAttachmentOptimal,
 					.clearOnLoad = true,
@@ -236,9 +235,8 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 	});
 
 	auto subpass2d = passBuilder.addSubpass([&, this](SubpassBuilder &subpassBuilder) {
-		makeMaterialSubpass(queueBuilder, passBuilder, subpassBuilder, layout2d,
-				info.target->getResourceCache(), colorAttachment, shadowAttachment,
-				depth2dAttachment);
+		makeMaterialSubpass(queueBuilder, passBuilder, subpassBuilder, layout2d, colorAttachment,
+				shadowAttachment, depth2dAttachment);
 	});
 
 	auto subpassSdf = passBuilder.addSubpass([&](SubpassBuilder &subpassBuilder) {
@@ -408,7 +406,7 @@ auto ShadowPass::makeFrameHandle(const FrameQueue &handle) -> Rc<QueuePassHandle
 
 void ShadowPass::makeMaterialSubpass(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilder,
 		core::SubpassBuilder &subpassBuilder, const core::PipelineLayoutData *layout2d,
-		ResourceCache *cache, const core::AttachmentPassData *colorAttachment,
+		const core::AttachmentPassData *colorAttachment,
 		const core::AttachmentPassData *shadowAttachment,
 		const core::AttachmentPassData *depth2dAttachment) {
 	using namespace core;

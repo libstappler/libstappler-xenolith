@@ -24,10 +24,11 @@
 #include "MaterialOverlayLayout.h"
 #include "MaterialMenuButton.h"
 #include "XL2dSceneLayout.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 #include "XLFontController.h"
 #include "XL2dLayer.h"
 #include "XLInputListener.h"
+#include "XLDirector.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -35,7 +36,9 @@ class FloatingMenuLayout : public OverlayLayout {
 public:
 	virtual ~FloatingMenuLayout() { }
 
-	virtual bool init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b, Menu *root);;
+	virtual bool init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b,
+			Menu *root);
+	;
 
 	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
 
@@ -43,7 +46,8 @@ protected:
 	FloatingMenu *_menu = nullptr;
 };
 
-bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b, Menu *root) {
+bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, FloatingMenu::Binding b,
+		Menu *root) {
 	auto menu = Rc<FloatingMenu>::create(source, root);
 
 	if (!OverlayLayout::init(globalOrigin, b, menu, Size2())) {
@@ -52,11 +56,9 @@ bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, Floa
 
 	_menu = menu;
 
-	_readyCallback = [this] (bool ready) {
-		_menu->setReady(ready);
-	};
+	_readyCallback = [this](bool ready) { _menu->setReady(ready); };
 
-	_closeCallback = [this] () {
+	_closeCallback = [this]() {
 		if (auto &cb = _menu->getCloseCallback()) {
 			cb();
 		}
@@ -74,7 +76,8 @@ void FloatingMenuLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) 
 	OverlayLayout::onPushTransitionEnded(l, replace);
 }
 
-void FloatingMenu::push(SceneContent2d *content, MenuSource *source, const Vec2 &globalOrigin, Binding b, Menu *root) {
+void FloatingMenu::push(SceneContent2d *content, MenuSource *source, const Vec2 &globalOrigin,
+		Binding b, Menu *root) {
 	auto l = Rc<FloatingMenuLayout>::create(source, globalOrigin, b, root);
 
 	content->pushOverlay(l);
@@ -100,12 +103,8 @@ bool FloatingMenu::init(MenuSource *source, Menu *root) {
 	return true;
 }
 
-void FloatingMenu::setCloseCallback(const CloseCallback &cb) {
-	_closeCallback = cb;
-}
-const FloatingMenu::CloseCallback & FloatingMenu::getCloseCallback() const {
-	return _closeCallback;
-}
+void FloatingMenu::setCloseCallback(const CloseCallback &cb) { _closeCallback = cb; }
+const FloatingMenu::CloseCallback &FloatingMenu::getCloseCallback() const { return _closeCallback; }
 
 void FloatingMenu::close() {
 	if (!_running) {
@@ -129,9 +128,7 @@ void FloatingMenu::closeRecursive() {
 	close();
 }
 
-void FloatingMenu::onCapturedTap() {
-	close();
-}
+void FloatingMenu::onCapturedTap() { close(); }
 
 float FloatingMenu::getMenuWidth(Node *root) {
 	float minWidth = 0;
@@ -144,7 +141,7 @@ float FloatingMenu::getMenuWidth(Node *root) {
 			}
 		} else if (item->getType() == MenuSourceItem::Type::Button) {
 			auto btn = static_cast<MenuSourceButton *>(item.get());
-			auto c = Application::getInstance()->getExtension<font::FontController>();
+			auto c = root->getDirector()->getApplication()->getExtension<font::FontController>();
 
 			float w = MenuButton::getMaxWidthForButton(btn, c, root->getInputDensity());
 			if (w > minWidth) {
@@ -194,9 +191,7 @@ void FloatingMenu::setReady(bool value) {
 	}
 }
 
-bool FloatingMenu::isReady() const {
-	return _ready;
-}
+bool FloatingMenu::isReady() const { return _ready; }
 
 void FloatingMenu::onMenuButton(MenuButton *btn) {
 	if (!btn->getMenuSourceButton()->getNextMenu()) {
@@ -205,4 +200,4 @@ void FloatingMenu::onMenuButton(MenuButton *btn) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

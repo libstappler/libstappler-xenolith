@@ -46,19 +46,10 @@ THE SOFTWARE.
 #define XL_VKAPI_LOG(...)
 #endif
 
-#include "XLVkDeviceQueue.cc"
 #include "XLVkDevice.cc"
-#include "XLVkSync.cc"
-#include "XLVkAllocator.cc"
-#include "XLVkPipeline.cc"
-#include "XLVkRenderPass.cc"
-#include "XLVkObject.cc"
-#include "XLVkTextureSet.cc"
-
 #include "XLVkLoop.cc"
 #include "XLVkInstance.cc"
 #include "XLVkTable.cc"
-#include "XLVkInfo.cc"
 
 #include "XLVkAttachment.cc"
 #include "XLVkQueuePass.cc"
@@ -73,3 +64,17 @@ THE SOFTWARE.
 #include "platform/linux/XLVkPlatformLinux.cc"
 #include "platform/win32/XLVkPlatformWin32.cc"
 #include "platform/macos/XLVkPlatformMac.cc"
+
+#include "SPSharedModule.h"
+#include "XLVkPlatform.h"
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
+
+static SharedSymbol s_vkSharedSymbols[] = {
+	SharedSymbol("platform::createInstance", platform::createInstance),
+};
+
+static SharedModule s_vkGuiSharedModule(buildconfig::MODULE_XENOLITH_BACKEND_VK_NAME,
+		s_vkSharedSymbols, sizeof(s_vkSharedSymbols) / sizeof(SharedSymbol));
+
+} // namespace stappler::xenolith::vk

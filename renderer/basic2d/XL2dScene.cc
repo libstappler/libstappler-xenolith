@@ -24,13 +24,12 @@
 #include "XL2dLayer.h"
 #include "XL2dLabel.h"
 #include "XL2dScene.h"
-#include "XL2dVectorCanvas.h"
 #include "XL2dVectorSprite.h"
-#include "XLView.h"
+#include "XLContext.h"
 #include "XLDirector.h"
 #include "XLInputListener.h"
 #include "XLSceneContent.h"
-#include "XLFrameInfo.h"
+#include "XLAppWindow.h"
 #include "backend/vk/XL2dVkShadowPass.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -47,7 +46,7 @@ public:
 
 	virtual ~FpsDisplay() { }
 
-	virtual bool init(font::FontController *fontController);
+	virtual bool init();
 	virtual void update(const UpdateTime &) override;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
@@ -65,22 +64,20 @@ protected:
 	DisplayMode _mode = Fps;
 };
 
-bool Scene2d::FpsDisplay::init(font::FontController *fontController) {
+bool Scene2d::FpsDisplay::init() {
 	if (!Layer::init(Color::White)) {
 		return false;
 	}
 
-	if (fontController) {
-		_label = addChild(Rc<Label>::create(fontController), Node::ZOrderMax);
-		_label->setString("0.0\n0.0\n0.0\n0 0 0 0");
-		_label->setFontFamily("monospace");
-		_label->setAnchorPoint(Anchor::BottomLeft);
-		_label->setColor(Color::Black, true);
-		_label->setFontSize(16);
-		_label->setContentSizeDirtyCallback([this] { setContentSize(_label->getContentSize()); });
-		_label->setPersistentLayout(true);
-		_label->addCommandFlags(CommandFlags::DoNotCount);
-	}
+	_label = addChild(Rc<Label>::create(), Node::ZOrderMax);
+	_label->setString("0.0\n0.0\n0.0\n0 0 0 0");
+	_label->setFontFamily("monospace");
+	_label->setAnchorPoint(Anchor::BottomLeft);
+	_label->setColor(Color::Black, true);
+	_label->setFontSize(16);
+	_label->setContentSizeDirtyCallback([this] { setContentSize(_label->getContentSize()); });
+	_label->setPersistentLayout(true);
+	_label->addCommandFlags(CommandFlags::DoNotCount);
 
 	addCommandFlags(CommandFlags::DoNotCount);
 	scheduleUpdate();
@@ -164,15 +161,16 @@ void Scene2d::FpsDisplay::show() {
 	}
 }
 
-bool Scene2d::init(Application *app, const core::FrameConstraints &constraints) {
+bool Scene2d::init(AppThread *app, const core::FrameConstraints &constraints) {
 	return init(app, [](Queue::Builder &) { }, constraints);
 }
 
-bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb,
+bool Scene2d::init(AppThread *app, const Callback<void(Queue::Builder &)> &cb,
 		const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
-	basic2d::vk::ShadowPass::RenderQueueInfo info{app,
+#if MODULE_XENOLITH_BACKEND_VK
+	basic2d::vk::ShadowPass::RenderQueueInfo info{app->getContext()->getGlLoop(),
 		Extent2(constraints.extent.width, constraints.extent.height),
 		basic2d::vk::ShadowPass::Flags::None};
 
@@ -185,6 +183,10 @@ bool Scene2d::init(Application *app, const Callback<void(Queue::Builder &)> &cb,
 	}
 
 	return true;
+#else
+	log::error("Scene2d", "No available GAPI found");
+	return false;
+#endif
 }
 
 bool Scene2d::init(Queue::Builder &&builder, const core::FrameConstraints &constraints) {
@@ -267,7 +269,7 @@ void Scene2d::initialize() {
 
 				Vector<InputEventData> events{_data1, _data2};
 
-				_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
+				_scene->getDirector()->getWindow()->handleInputEvents(sp::move(events));
 			}
 			return false;
 		}
@@ -285,7 +287,7 @@ void Scene2d::initialize() {
 
 		Vector<InputEventData> events{_data1, _data2};
 
-		_scene->getDirector()->getView()->handleInputEvents(sp::move(events));
+		_scene->getDirector()->getWindow()->handleInputEvents(sp::move(events));
 
 		return true;
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}));
@@ -334,11 +336,7 @@ void Scene2d::addContentNodes(SceneContent *root) {
 	}
 
 	if (root) {
-		auto mainLoop = Application::getInstance();
-
-		_fps = root->addChild(
-				Rc<FpsDisplay>::create(mainLoop->getExtension<font::FontController>()),
-				Node::ZOrderMax);
+		_fps = root->addChild(Rc<FpsDisplay>::create(), Node::ZOrderMax);
 #if NDEBUG
 		_fps->setVisible(false);
 #endif

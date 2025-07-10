@@ -31,7 +31,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
-class FontExtension;
+class FontComponent;
 
 struct SP_PUBLIC FontUpdateRequest {
 	Rc<FontFaceObject> object;
@@ -119,12 +119,12 @@ public:
 
 	virtual ~FontController();
 
-	bool init(const Rc<FontExtension> &, StringView name);
+	bool init(FontComponent *, StringView name);
 
-	void extend(const Callback<bool(FontController::Builder &)> &);
+	void extend(AppThread *app, const Callback<bool(FontController::Builder &)> &);
 
-	virtual void initialize(Application *) override;
-	virtual void invalidate(Application *) override;
+	virtual void initialize(AppThread *) override;
+	virtual void invalidate(AppThread *) override;
 
 	bool isLoaded() const { return _loaded; }
 	const Rc<core::DynamicImage> &getImage() const { return _image; }
@@ -138,10 +138,10 @@ public:
 	uint32_t getFamilyIndex(StringView) const;
 	StringView getFamilyName(uint32_t idx) const;
 
-	virtual void update(Application *, const UpdateTime &clock) override;
+	virtual void update(AppThread *, const UpdateTime &clock) override;
 
 protected:
-	friend class FontExtension;
+	friend class FontComponent;
 
 	void addFont(StringView family, Rc<FontFaceData> &&, bool front = false);
 	void addFont(StringView family, Vector<Rc<FontFaceData>> &&, bool front = false);
@@ -169,7 +169,7 @@ protected:
 	String _defaultFontFamily = "default";
 	Rc<Texture> _texture;
 	Rc<core::DynamicImage> _image;
-	Rc<FontExtension> _ext;
+	Rc<FontComponent> _component;
 
 	Map<String, String> _aliases;
 	Vector<StringView> _familiesNames;

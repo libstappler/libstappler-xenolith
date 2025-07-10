@@ -23,11 +23,10 @@
 #include "MaterialInputField.h"
 #include "MaterialInputTextContainer.h"
 #include "MaterialEasing.h"
-#include "XLApplicationInfo.h"
 #include "XLDirector.h"
 #include "XL2dLayer.h"
 #include "XLInputListener.h"
-#include "XLPlatformTextInputInterface.h"
+#include "XLCoreTextInput.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

@@ -32,7 +32,62 @@ class Loop;
 class Queue;
 class Device;
 
-struct LoopInfo;
+static constexpr uint16_t InstanceDefaultDevice = maxOf<uint16_t>();
+
+enum class InstanceApi {
+	None = 0,
+	Vulkan = 1,
+};
+
+enum class InstanceFlags {
+	None = 0,
+	RenderDoc = 1 << 0,
+	Validation = 1 << 1, // try to enable validation layers
+	ForcedValidation = 1 << 2, // do not start if we failed to enable validation
+	ValidateSynchromization = 1 << 3, // validate data synchronization
+};
+
+SP_DEFINE_ENUM_AS_MASK(InstanceFlags)
+
+struct SP_PUBLIC InstanceBackendInfo : public Ref {
+	virtual ~InstanceBackendInfo() = default;
+
+	virtual Value encode() const = 0;
+};
+
+struct SP_PUBLIC InstancePlatformInfo : public Ref {
+	virtual ~InstancePlatformInfo() = default;
+
+	virtual Value encode() const = 0;
+};
+
+struct SP_PUBLIC InstanceInfo final : public Ref {
+	virtual ~InstanceInfo() = default;
+
+	InstanceApi api = InstanceApi::None;
+	InstanceFlags flags = InstanceFlags::None;
+	Rc<InstanceBackendInfo> backend;
+
+	Value encode() const;
+};
+
+struct SP_PUBLIC LoopBackendInfo : public Ref {
+	virtual ~LoopBackendInfo() = default;
+
+	virtual Value encode() const = 0;
+};
+
+struct SP_PUBLIC LoopInfo final : public Ref {
+	virtual ~LoopInfo() = default;
+
+	uint16_t deviceIdx = InstanceDefaultDevice;
+	ImageFormat defaultFormat = ImageFormat::R8G8B8A8_UNORM;
+	Function<void(const Loop &, const Device &)> onDeviceStarted;
+	Function<void(const Loop &, const Device &)> onDeviceFinalized;
+	Rc<LoopBackendInfo> backend; // backend-specific data
+
+	Value encode() const;
+};
 
 struct SP_PUBLIC DeviceProperties {
 	String deviceName;
@@ -43,26 +98,28 @@ struct SP_PUBLIC DeviceProperties {
 
 class SP_PUBLIC Instance : public Ref {
 public:
-	using TerminateCallback = Function<void()>;
+	static Rc<Instance> create(Rc<InstanceInfo> &&);
 
-	static constexpr uint16_t DefaultDevice = maxOf<uint16_t>();
-
-	Instance(Dso &&, TerminateCallback &&, Rc<Ref> &&);
 	virtual ~Instance();
+
+	Instance(InstanceApi b, InstanceFlags flags, Dso &&);
 
 	const Vector<DeviceProperties> &getAvailableDevices() const { return _availableDevices; }
 
-	virtual Rc<Loop> makeLoop(event::Looper *, LoopInfo &&) const;
+	virtual Rc<Loop> makeLoop(NotNull<event::Looper>, Rc<core::LoopInfo> &&) const;
 
-	Ref *getUserdata() const { return _userdata; }
+	InstanceApi getApi() const { return _api; }
+	InstanceFlags getFlags() const { return _flags; }
 
 protected:
+	InstanceApi _api = InstanceApi::None;
+	InstanceFlags _flags = InstanceFlags::None;
 	Dso _dsoModule;
-	TerminateCallback _terminate;
-	Rc<Ref> _userdata;
 	Vector<DeviceProperties> _availableDevices;
 };
 
-}
+SP_PUBLIC StringView getInstanceApiName(InstanceApi);
+
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREINSTANCE_H_ */

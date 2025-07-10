@@ -43,7 +43,7 @@ void MaterialAttachment::setCompiled(core::Device &cdev) {
 	core::MaterialAttachment::setCompiled(cdev);
 }
 
-Bytes MaterialAttachment::getMaterialData(NotNull<core::Material *> m) const {
+Bytes MaterialAttachment::getMaterialData(NotNull<core::Material> m) const {
 	Bytes ret;
 	ret.resize(getMaterialSize(m));
 
@@ -76,7 +76,7 @@ Bytes MaterialAttachment::getMaterialData(NotNull<core::Material *> m) const {
 }
 
 Rc<core::BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(
-		NotNull<core::Material *> m) const {
+		NotNull<core::Material> m) const {
 	Rc<Buffer> buf;
 	auto lastPass = getLastRenderPass();
 	if (!lastPass) {
@@ -93,7 +93,7 @@ Rc<core::BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(
 	return buf;
 }
 
-size_t MaterialAttachment::getMaterialSize(NotNull<core::Material *>) const {
+size_t MaterialAttachment::getMaterialSize(NotNull<core::Material>) const {
 	return sizeof(MaterialData);
 }
 

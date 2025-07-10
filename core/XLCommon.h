@@ -25,7 +25,4 @@
 
 #include "XLCoreInfo.h"
 
-// link with libraries on compile time instead of Dso
-// #define XL_LINK 1
-
 #endif /* XENOLITH_CORE_XLCOMMON_H_ */

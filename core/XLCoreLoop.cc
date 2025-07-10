@@ -26,19 +26,15 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-Loop::~Loop() {
-	log::debug("core::Loop", "~Loop");
-}
+Loop::~Loop() { log::debug("core::Loop", "~Loop"); }
 
-bool Loop::init(event::Looper *looper, Instance *gl, LoopInfo &&info) {
-	_instance = gl;
+bool Loop::init(NotNull<event::Looper> looper, NotNull<Instance> inst, Rc<LoopInfo> &&info) {
+	_instance = inst;
 	_info = move(info);
 	_looper = looper;
 	return true;
 }
 
-bool Loop::isOnThisThread() const {
-	return _looper->isOnThisThread();
-}
+bool Loop::isOnThisThread() const { return _looper->isOnThisThread(); }
 
-}
+} // namespace stappler::xenolith::core

@@ -117,7 +117,7 @@ protected:
 			Vector<BufferMemoryBarrier> &outputBufferBarriers);
 
 	virtual Vector<MaterialTransferData> updateMaterials(FrameHandle &iframe,
-			NotNull<core::MaterialSet *> data, SpanView<Rc<core::Material>> materials,
+			NotNull<core::MaterialSet> data, SpanView<Rc<core::Material>> materials,
 			SpanView<core::MaterialId> dynamicMaterials,
 			SpanView<core::MaterialId> materialsToRemove);
 

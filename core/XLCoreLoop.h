@@ -27,22 +27,14 @@
 #include "XLCoreAttachment.h"
 #include "XLCoreInstance.h"
 #include "XLCoreMaterial.h"
-
-#include "SPThread.h"
-#include "SPThreadTaskQueue.h"
+#include "XLCoreFrameCache.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class Loop;
 class Device;
 class PresentationEngine;
-
-struct SP_PUBLIC LoopInfo {
-	uint16_t deviceIdx = core::Instance::DefaultDevice;
-	Function<void(const Loop &, const Device &)> onDeviceStarted;
-	Function<void(const Loop &, const Device &)> onDeviceFinalized;
-	Rc<Ref> platformData;
-};
+class PresentationWindow;
 
 class SP_PUBLIC Loop : public Ref {
 public:
@@ -59,10 +51,10 @@ public:
 
 	virtual ~Loop();
 
-	virtual bool init(event::Looper *, Instance *gl, LoopInfo &&);
+	virtual bool init(NotNull<event::Looper>, NotNull<Instance>, Rc<LoopInfo> &&);
 
-	const Rc<Instance> &getInstance() const { return _instance; }
-	const Rc<FrameCache> &getFrameCache() const { return _frameCache; }
+	Instance *getInstance() const { return _instance; }
+	FrameCache *getFrameCache() const { return _frameCache; }
 	event::Looper *getLooper() const { return _looper; }
 
 	bool isOnThisThread() const;
@@ -104,7 +96,9 @@ public:
 
 	virtual Rc<Fence> acquireFence(FenceType) = 0;
 
-	virtual const Vector<ImageFormat> &getSupportedDepthStencilFormat() const = 0;
+	virtual ImageFormat getCommonFormat() const = 0;
+
+	virtual SpanView<ImageFormat> getSupportedDepthStencilFormat() const = 0;
 
 	virtual void signalDependencies(const Vector<Rc<DependencyEvent>> &, Queue *, bool success) = 0;
 	virtual void waitForDependencies(const Vector<Rc<DependencyEvent>> &,
@@ -121,6 +115,8 @@ public:
 	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
 			const Rc<BufferObject> &) = 0;
 
+	virtual Rc<PresentationEngine> makePresentationEngine(NotNull<PresentationWindow>) = 0;
+
 protected:
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override { return true; }
@@ -128,7 +124,7 @@ protected:
 
 	Rc<Instance> _instance;
 	Rc<FrameCache> _frameCache;
-	LoopInfo _info;
+	Rc<LoopInfo> _info;
 	event::Looper *_looper = nullptr;
 };
 

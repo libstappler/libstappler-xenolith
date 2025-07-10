@@ -87,6 +87,8 @@ public:
 
 	bool isValid() const;
 
+	const FrameConstraints &getFrameConstraints() const { return _constraints; }
+
 	ImageStorage *getTarget() const { return _target; }
 	FrameRequest *getRequest() const { return _frameRequest; }
 	FrameHandle *getHandle() const { return _frameHandle; }
@@ -117,6 +119,7 @@ protected:
 	bool _active = true;
 	Flags _flags = None;
 	Status _presentationStatus = Status::Ok;
+	FrameConstraints _constraints;
 	Rc<ImageStorage> _target;
 	Rc<FrameRequest> _frameRequest;
 	Rc<FrameHandle> _frameHandle;

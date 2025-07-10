@@ -306,6 +306,7 @@ bool DescriptorPool::init(Device &dev, PipelineLayout *layout) {
 	for (auto &it : sets) {
 		auto set = Rc<DescriptorSetBindings>::alloc();
 		auto info = layout->getDescriptorsInfo(setIndex);
+		set->idx = setIndex;
 		set->set = it;
 		for (auto &d : info) { set->bindings.emplace_back(d.type, d.flags, d.count); }
 		_sets.emplace_back(move(set));

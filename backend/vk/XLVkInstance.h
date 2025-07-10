@@ -32,7 +32,40 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 class Device;
 
-struct SP_PUBLIC LoopData : Ref {
+struct SP_PUBLIC InstanceInfo {
+	core::InstanceFlags flags = core::InstanceFlags::None;
+	uint32_t targetVersion = 0;
+	bool hasSurfaceExtension = false;
+	SurfaceBackendMask availableBackends;
+	SpanView<VkLayerProperties> availableLayers;
+	SpanView<VkExtensionProperties> availableExtensions;
+};
+
+struct SP_PUBLIC InstanceData {
+	uint32_t targetVulkanVersion;
+	StringView applicationVersion;
+	StringView applicationName;
+	Vector<const char *> layersToEnable;
+	Vector<const char *> extensionsToEnable;
+
+	SurfaceBackendMask enableBackends;
+
+	Function<SurfaceBackendMask(const Instance *, VkPhysicalDevice device, uint32_t queueIdx)>
+			checkPresentationSupport;
+
+	void enableLayer(const char *);
+	void enableExtension(const char *);
+};
+
+struct SP_PUBLIC InstanceBackendInfo : public core::InstanceBackendInfo {
+	virtual ~InstanceBackendInfo() = default;
+	Function<bool(InstanceData &, const InstanceInfo &)> setup;
+
+	// nothing to encode
+	virtual Value encode() const { return Value(); }
+};
+
+struct SP_PUBLIC LoopBackendInfo : core::LoopBackendInfo {
 	using DeviceSupportCallback = Function<bool(const DeviceInfo &)>;
 	using DeviceExtensionsCallback = Function<Vector<StringView>(const DeviceInfo &)>;
 	using DeviceFeaturesCallback = Function<DeviceInfo::Features(const DeviceInfo &)>;
@@ -40,22 +73,24 @@ struct SP_PUBLIC LoopData : Ref {
 	DeviceSupportCallback deviceSupportCallback;
 	DeviceExtensionsCallback deviceExtensionsCallback;
 	DeviceFeaturesCallback deviceFeaturesCallback;
+
+	// nothing to encode
+	virtual Value encode() const { return Value(); }
 };
 
 class SP_PUBLIC Instance : public core::Instance, public InstanceTable {
 public:
 	using OptVec = std::bitset<toInt(OptionalInstanceExtension::Max)>;
 
-	using PresentSupportCallback =
-			Function<uint32_t(const Instance *, VkPhysicalDevice device, uint32_t familyIdx)>;
+	using PresentSupportCallback = Function<SurfaceBackendMask(const Instance *,
+			VkPhysicalDevice device, uint32_t familyIdx)>;
 
 	Instance(VkInstance, const PFN_vkGetInstanceProcAddr getInstanceProcAddr,
 			uint32_t targetVersion, OptVec &&optionals, Dso &&vulkanModule,
-			TerminateCallback &&terminate, PresentSupportCallback &&, bool validationEnabled,
-			Rc<Ref> &&);
+			PresentSupportCallback &&, SurfaceBackendMask &&, core::InstanceFlags flags);
 	virtual ~Instance();
 
-	virtual Rc<core::Loop> makeLoop(event::Looper *, core::LoopInfo &&) const override;
+	virtual Rc<core::Loop> makeLoop(NotNull<event::Looper>, Rc<core::LoopInfo> &&) const override;
 
 	Rc<Device> makeDevice(const core::LoopInfo &) const;
 
@@ -68,6 +103,8 @@ public:
 
 	uint32_t getVersion() const { return _version; }
 
+	SurfaceBackendMask getSurfaceBackends() const { return _surfaceBackendMask; }
+
 private:
 	void getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Features &,
 			const DeviceInfo::OptVec &, uint32_t) const;
@@ -76,6 +113,8 @@ private:
 
 	DeviceInfo getDeviceInfo(VkPhysicalDevice device) const;
 
+	SurfaceBackendMask checkPresentationSupport(VkPhysicalDevice device, uint32_t) const;
+
 	friend class VirtualDevice;
 	friend class DrawDevice;
 	friend class PresentationDevice;
@@ -83,13 +122,17 @@ private:
 	friend class Allocator;
 	friend class ViewImpl;
 
-	VkInstance _instance;
+	VkInstance _instance = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 	uint32_t _version = 0;
 	OptVec _optionals;
 	Vector<DeviceInfo> _devices;
 	PresentSupportCallback _checkPresentSupport;
-	VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+	SurfaceBackendMask _surfaceBackendMask;
 };
+
+SP_PUBLIC StringView getSurfaceBackendExtension(SurfaceBackend);
+SP_PUBLIC SurfaceBackend getSurfaceBackendForExtension(StringView);
 
 } // namespace stappler::xenolith::vk
 

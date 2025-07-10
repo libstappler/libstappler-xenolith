@@ -22,7 +22,7 @@
 
 #include "XLCommon.h"
 #include "XLVk.h"
-#include "XLPlatformViewInterface.h"
+#include "XLAppWindow.h"
 
 // Enable to log key API calls and timings
 #ifndef XL_VKAPI_DEBUG

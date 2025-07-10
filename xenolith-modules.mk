@@ -28,11 +28,8 @@ XENOLITH_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(XENOLITH_M
 TOOLKIT_MODULE_LIST += \
 	$(XENOLITH_MODULE_DIR)/core/core.mk \
 	$(XENOLITH_MODULE_DIR)/application/application.mk \
-	$(XENOLITH_MODULE_DIR)/scene/scene.mk \
 	$(XENOLITH_MODULE_DIR)/font/font.mk \
-	$(XENOLITH_MODULE_DIR)/platform/platform.mk \
 	$(XENOLITH_MODULE_DIR)/backend/vk/vk.mk \
-	$(XENOLITH_MODULE_DIR)/backend/vkgui/vkgui.mk \
 	$(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk \
 	$(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk \
 	$(XENOLITH_MODULE_DIR)/resources/icons/icons.mk \

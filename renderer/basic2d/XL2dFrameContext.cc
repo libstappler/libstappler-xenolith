@@ -22,7 +22,7 @@
  **/
 
 #include "XL2dFrameContext.h"
-#include "XLFrameInfo.h"
+#include "XLFrameContext.h"
 #include "XLCoreLoop.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameQueue.h"

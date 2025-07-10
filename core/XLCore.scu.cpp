@@ -64,16 +64,9 @@
 
 #include "XLCoreEnum.cc"
 #include "XLCoreInfo.cc"
-#include "XLCoreQueueData.cc"
-#include "XLCoreResource.cc"
-#include "XLCoreQueue.cc"
-#include "XLCoreAttachment.cc"
-#include "XLCoreImageStorage.cc"
 #include "XLCoreObject.cc"
-#include "XLCoreDescriptorInfo.cc"
 #include "XLCoreDevice.cc"
 #include "XLCoreDeviceQueue.cc"
-#include "XLCoreQueuePass.cc"
 #include "XLCoreInstance.cc"
 #include "XLCoreLoop.cc"
 #include "XLCoreDynamicImage.cc"
@@ -82,13 +75,9 @@
 #include "XLCoreSwapchain.cc"
 #include "XLCoreTextureSet.cc"
 
-#include "XLCoreFrameCache.cc"
-#include "XLCoreFrameRequest.cc"
-#include "XLCoreFrameQueue.cc"
-#include "XLCoreFrameHandle.cc"
-
 #include "XLCorePresentationFrame.cc"
 #include "XLCorePresentationEngine.cc"
+#include "XLCoreTextInput.cc"
 
 #include "SPMetastring.h"
 

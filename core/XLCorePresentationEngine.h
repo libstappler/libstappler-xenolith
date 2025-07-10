@@ -35,6 +35,25 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 class PresentationFrame;
 
+class SP_PUBLIC PresentationWindow {
+public:
+	virtual ~PresentationWindow() = default;
+
+	virtual ImageInfo getSwapchainImageInfo(const SwapchainConfig &cfg) const = 0;
+	virtual ImageViewInfo getSwapchainImageViewInfo(const ImageInfo &image) const = 0;
+	virtual SurfaceInfo getSurfaceOptions(SurfaceInfo &&) const = 0;
+
+	virtual SwapchainConfig selectConfig(const SurfaceInfo &) = 0;
+
+	virtual void acquireFrameData(PresentationFrame *, Function<void(PresentationFrame *)> &&) = 0;
+
+	virtual void handleFramePresented(PresentationFrame *) = 0;
+
+	virtual Rc<Surface> makeSurface(NotNull<Instance>) = 0;
+	virtual FrameConstraints getInitialFrameConstraints() const = 0;
+	virtual uint64_t getInitialFrameInterval() const = 0;
+};
+
 class SP_PUBLIC PresentationEngine : public Ref {
 public:
 	static constexpr size_t FrameAverageCount = 20;
@@ -85,6 +104,8 @@ public:
 	};
 
 	virtual ~PresentationEngine();
+
+	virtual bool init(NotNull<Loop>, NotNull<Device>, NotNull<PresentationWindow>);
 
 	virtual bool run();
 	virtual void end();
@@ -173,8 +194,11 @@ protected:
 
 	Device *_device = nullptr;
 
+	Rc<Surface> _surface;
 	Rc<Swapchain> _swapchain;
 	Rc<Loop> _loop;
+
+	PresentationWindow *_window = nullptr;
 
 	// время, после которого нужно выпускать следующий кадрр
 	// расчитывается как премя последней презентации + целевой кадроый интервал

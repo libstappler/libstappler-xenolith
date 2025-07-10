@@ -22,7 +22,7 @@
 
 #include "MaterialDecoratedLayout.h"
 #include "XLDirector.h"
-#include "XLView.h"
+#include "XLAppWindow.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -35,27 +35,32 @@ bool DecoratedLayout::init(ColorRole role) {
 
 	_decorationRoot = addChild(Rc<Node>::create(), ZOrderMax);
 
-	_decorationTop = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
+	_decorationTop = _decorationRoot->addChild(
+			Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationTop->setAnchorPoint(Anchor::TopLeft);
 	_decorationTop->setVisible(false);
-	_decorationTop->setStyleDirtyCallback([this] (const SurfaceStyleData &style) {
-		updateStatusBar(style);
-	});
+	_decorationTop->setStyleDirtyCallback(
+			[this](const SurfaceStyleData &style) { updateStatusBar(style); });
 
-	_decorationBottom = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
+	_decorationBottom = _decorationRoot->addChild(
+			Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationBottom->setAnchorPoint(Anchor::BottomLeft);
 	_decorationBottom->setVisible(false);
 
-	_decorationLeft = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
+	_decorationLeft = _decorationRoot->addChild(
+			Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationLeft->setAnchorPoint(Anchor::BottomLeft);
 	_decorationLeft->setVisible(false);
 
-	_decorationRight = _decorationRoot->addChild(Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
+	_decorationRight = _decorationRoot->addChild(
+			Rc<LayerSurface>::create(SurfaceStyle(role, NodeStyle::Filled)));
 	_decorationRight->setAnchorPoint(Anchor::BottomRight);
 	_decorationRight->setVisible(false);
 
-	_background = addChild(Rc<LayerSurface>::create(SurfaceStyle(ColorRole::Background, NodeStyle::SurfaceTonal)), ZOrderMin);
-	_background->setStyleDirtyCallback([this] (const SurfaceStyleData &data) {
+	_background = addChild(
+			Rc<LayerSurface>::create(SurfaceStyle(ColorRole::Background, NodeStyle::SurfaceTonal)),
+			ZOrderMin);
+	_background->setStyleDirtyCallback([this](const SurfaceStyleData &data) {
 		if (data.shadowValue > 0.0f) {
 			setDepthIndex(data.shadowValue);
 		}
@@ -89,7 +94,8 @@ void DecoratedLayout::handleContentSizeDirty() {
 
 	if (_decorationPadding.top > 0.0f) {
 		_decorationTop->setPosition(Vec2(_decorationPadding.left, _contentSize.height));
-		_decorationTop->setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(), _decorationPadding.top));
+		_decorationTop->setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(),
+				_decorationPadding.top));
 		_decorationTop->setVisible(true);
 	} else {
 		_decorationTop->setVisible(false);
@@ -97,7 +103,8 @@ void DecoratedLayout::handleContentSizeDirty() {
 
 	if (_decorationPadding.bottom > 0.0f) {
 		_decorationBottom->setPosition(Vec2(_decorationPadding.left, 0.0f));
-		_decorationBottom->setContentSize(Size2(_contentSize.width - _decorationPadding.horizontal(), _decorationPadding.bottom));
+		_decorationBottom->setContentSize(Size2(
+				_contentSize.width - _decorationPadding.horizontal(), _decorationPadding.bottom));
 		_decorationBottom->setVisible(true);
 	} else {
 		_decorationBottom->setVisible(false);
@@ -156,17 +163,16 @@ void DecoratedLayout::setViewDecorationFlags(ViewDecorationFlags value) {
 	}
 }
 
-ViewDecorationFlags DecoratedLayout::getViewDecorationFlags() const {
-	return _viewDecoration;
-}
+ViewDecorationFlags DecoratedLayout::getViewDecorationFlags() const { return _viewDecoration; }
 
 void DecoratedLayout::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
 	updateStatusBar(_decorationTop->getStyleCurrent());
 }
 
 void DecoratedLayout::updateStatusBar(const SurfaceStyleData &style) {
-	if (_director && (_viewDecoration & ViewDecorationFlags::Visible) != ViewDecorationFlags::None) {
-		_director->getView()->setDecorationTone(style.colorOn.data.tone / 50.0f);
+	if (_director
+			&& (_viewDecoration & ViewDecorationFlags::Visible) != ViewDecorationFlags::None) {
+		_director->getWindow()->setInsetDecorationTone(style.colorOn.data.tone / 50.0f);
 	}
 }
 
@@ -180,4 +186,4 @@ float DecoratedLayout::getMaxDepthIndex() const {
 	return maxIndex;
 }
 
-}
+} // namespace stappler::xenolith::material2d

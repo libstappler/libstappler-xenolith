@@ -750,7 +750,7 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 	deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtension.size());
 	deviceCreateInfo.ppEnabledExtensionNames = requiredExtension.data();
 
-	if constexpr (s_enableValidationLayers) {
+	if (hasFlag(instance->getFlags(), core::InstanceFlags::Validation)) {
 		deviceCreateInfo.enabledLayerCount =
 				static_cast<uint32_t>(sizeof(s_validationLayers) / sizeof(const char *));
 		deviceCreateInfo.ppEnabledLayerNames = s_validationLayers;
