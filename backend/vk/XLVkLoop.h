@@ -101,7 +101,7 @@ public:
 			const Rc<core::BufferObject> &) override;
 
 	virtual Rc<core::PresentationEngine> makePresentationEngine(
-			Rc<core::PresentationWindow>) override;
+			NotNull<core::PresentationWindow>) override;
 
 protected:
 	using core::Loop::init;

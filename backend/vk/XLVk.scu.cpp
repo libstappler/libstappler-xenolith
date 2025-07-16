@@ -74,7 +74,7 @@ static SharedSymbol s_vkSharedSymbols[] = {
 	SharedSymbol("platform::createInstance", platform::createInstance),
 };
 
-static SharedModule s_vkGuiSharedModule(buildconfig::MODULE_XENOLITH_BACKEND_VK_NAME,
+SP_USED static SharedModule s_vkGuiSharedModule(buildconfig::MODULE_XENOLITH_BACKEND_VK_NAME,
 		s_vkSharedSymbols, sizeof(s_vkSharedSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::xenolith::vk

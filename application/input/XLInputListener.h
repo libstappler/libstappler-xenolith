@@ -123,6 +123,8 @@ public:
 	void setPointerEnterCallback(Function<bool(bool)> &&);
 	void setBackgroudCallback(Function<bool(bool)> &&);
 	void setFocusCallback(Function<bool(bool)> &&);
+	void setCloseRequestCallback(Function<bool(bool)> &&);
+	void setScreenUpdateCallback(Function<bool(bool)> &&);
 
 	void clear();
 

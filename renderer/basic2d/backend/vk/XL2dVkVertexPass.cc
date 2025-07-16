@@ -195,7 +195,7 @@ bool VertexMaterialVertexProcessor::loadVertexes(core::FrameHandle &fhandle) {
 
 	auto pool = memory::pool::create(memory::pool::acquire());
 	auto ret = mem_pool::perform([&] {
-		auto &cache = handle->getLoop()->getFrameCache();
+		auto cache = handle->getLoop()->getFrameCache();
 
 		_drawStat.cachedFramebuffers = uint32_t(cache->getFramebuffersCount());
 		_drawStat.cachedImages = uint32_t(cache->getImagesCount());

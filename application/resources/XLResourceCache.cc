@@ -130,7 +130,7 @@ const core::ImageData *ResourceCache::getSolidImage() const {
 	return nullptr;
 }
 
-Rc<Texture> ResourceCache::addExternalImageByRef(StringView key, core::ImageInfo &&info,
+Rc<Texture> ResourceCache::addExternalBitmapImageByRef(StringView key, core::ImageInfo &&info,
 		BytesView data, TimeInterval ival, TemporaryResourceFlags flags) {
 	auto it = _temporaries.find(key);
 	if (it != _temporaries.end()) {
@@ -143,12 +143,80 @@ Rc<Texture> ResourceCache::addExternalImageByRef(StringView key, core::ImageInfo
 	}
 
 	core::Resource::Builder builder(key);
-	if (auto d = builder.addImageByRef(key, move(info), data)) {
+	if (auto d = builder.addBitmapImageByRef(key, move(info), data)) {
 		if (auto tmp = addTemporaryResource(Rc<core::Resource>::create(move(builder)), ival,
 					flags)) {
 			return Rc<Texture>::create(d, tmp);
 		}
 	}
+	return nullptr;
+}
+
+Rc<Texture> ResourceCache::addExternalBitmapImage(StringView key, core::ImageInfo &&info,
+		BytesView data, TimeInterval ival, TemporaryResourceFlags flags) {
+	auto it = _temporaries.find(key);
+	if (it != _temporaries.end()) {
+		if (auto tex = it->second->acquireTexture(key)) {
+			return tex;
+		}
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
+				"' found");
+		return nullptr;
+	}
+
+	core::Resource::Builder builder(key);
+	if (auto d = builder.addBitmapImage(key, move(info), data)) {
+		if (auto tmp = addTemporaryResource(Rc<core::Resource>::create(move(builder)), ival,
+					flags)) {
+			return Rc<Texture>::create(d, tmp);
+		}
+	}
+
+	return nullptr;
+}
+
+Rc<Texture> ResourceCache::addExternalEncodedImageByRef(StringView key, core::ImageInfo &&info,
+		BytesView data, TimeInterval ival, TemporaryResourceFlags flags) {
+	auto it = _temporaries.find(key);
+	if (it != _temporaries.end()) {
+		if (auto tex = it->second->acquireTexture(key)) {
+			return tex;
+		}
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
+				"' found");
+		return nullptr;
+	}
+
+	core::Resource::Builder builder(key);
+	if (auto d = builder.addEncodedImageByRef(key, move(info), data)) {
+		if (auto tmp = addTemporaryResource(Rc<core::Resource>::create(move(builder)), ival,
+					flags)) {
+			return Rc<Texture>::create(d, tmp);
+		}
+	}
+	return nullptr;
+}
+
+Rc<Texture> ResourceCache::addExternalEncodedImage(StringView key, core::ImageInfo &&info,
+		BytesView data, TimeInterval ival, TemporaryResourceFlags flags) {
+	auto it = _temporaries.find(key);
+	if (it != _temporaries.end()) {
+		if (auto tex = it->second->acquireTexture(key)) {
+			return tex;
+		}
+		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
+				"' found");
+		return nullptr;
+	}
+
+	core::Resource::Builder builder(key);
+	if (auto d = builder.addEncodedImage(key, move(info), data)) {
+		if (auto tmp = addTemporaryResource(Rc<core::Resource>::create(move(builder)), ival,
+					flags)) {
+			return Rc<Texture>::create(d, tmp);
+		}
+	}
+
 	return nullptr;
 }
 
@@ -171,29 +239,6 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 			return Rc<Texture>::create(d, tmp);
 		}
 	}
-	return nullptr;
-}
-
-Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&info, BytesView data,
-		TimeInterval ival, TemporaryResourceFlags flags) {
-	auto it = _temporaries.find(key);
-	if (it != _temporaries.end()) {
-		if (auto tex = it->second->acquireTexture(key)) {
-			return tex;
-		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
-		return nullptr;
-	}
-
-	core::Resource::Builder builder(key);
-	if (auto d = builder.addImage(key, move(info), data)) {
-		if (auto tmp = addTemporaryResource(Rc<core::Resource>::create(move(builder)), ival,
-					flags)) {
-			return Rc<Texture>::create(d, tmp);
-		}
-	}
-
 	return nullptr;
 }
 

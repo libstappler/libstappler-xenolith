@@ -26,42 +26,6 @@
 
 #include "XLCommon.h"
 
-#ifndef XL_FRAME_EMITTER_DEBUG
-// Log events in frame emitter (frame submission/completition)
-#define XL_FRAME_EMITTER_DEBUG 0
-#endif
-
-#ifndef XL_FRAME_QUEUE_DEBUG
-// Log FrameQueue attachments and render passes state changes
-#define XL_FRAME_QUEUE_DEBUG 0
-#endif
-
-#ifndef XL_FRAME_DEBUG
-// Log FrameHandle events
-#define XL_FRAME_DEBUG 0
-#endif
-
-#if XL_FRAME_EMITTER_DEBUG
-#define XL_FRAME_EMITTER_LOG(...) log::debug("FrameEmitter", __VA_ARGS__)
-#else
-#define XL_FRAME_EMITTER_LOG(...)
-#endif
-
-#if XL_FRAME_QUEUE_DEBUG
-#define XL_FRAME_QUEUE_LOG(...) log::debug("FrameQueue", "[", _queue->getName(), ": ",  _order, "] ", __VA_ARGS__)
-#else
-#define XL_FRAME_QUEUE_LOG(...)
-#endif
-
-#if XL_FRAME_DEBUG
-#define XL_FRAME_LOG(...) log::debug("Frame", __VA_ARGS__)
-#else
-#define XL_FRAME_LOG(...)
-#endif
-
-#define XL_FRAME_PROFILE(fn, tag, max) \
-	do { XL_PROFILE_BEGIN(frame, "gl::FrameHandle", tag, max); fn; XL_PROFILE_END(frame); } while (0);
-
 #include "XLCoreEnum.cc"
 #include "XLCoreInfo.cc"
 #include "XLCoreObject.cc"

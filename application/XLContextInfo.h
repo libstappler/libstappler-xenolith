@@ -26,6 +26,7 @@
 #include "XLApplicationConfig.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreLoop.h"
+#include "platform/XLEdid.h"
 #include "SPCommandLineParser.h"
 
 #if ANDROID
@@ -106,12 +107,51 @@ enum class WindowFlags {
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
 
+struct ModeInfo {
+	static const ModeInfo Current;
+	static const ModeInfo Preferred;
+
+	uint16_t width = 0;
+	uint16_t height = 0;
+	uint16_t rate = 0;
+
+	auto operator<=>(const ModeInfo &) const = default;
+};
+
+struct MonitorId {
+	static const MonitorId Primary;
+	static const MonitorId None;
+
+	String name;
+	platform::EdidInfo edid;
+};
+
+struct MonitorInfo : MonitorId {
+	IRect rect;
+	Extent2 mm;
+
+	uint32_t preferredMode = 0;
+	uint32_t currentMode = 0;
+
+	Vector<ModeInfo> modes;
+};
+
+struct ScreenInfo : public Ref {
+	Vector<MonitorInfo> monitors;
+	uint32_t primaryMonitor = 0;
+};
+
 struct SP_PUBLIC WindowInfo final : public Ref {
+	String id;
 	String title;
 	URect rect = URect(0, 0, 1'024, 768);
 	Padding decoration;
 	float density = 0.0f;
 	WindowFlags flags = WindowFlags::None;
+
+	// initial fullscreen mode
+	ModeInfo mode = ModeInfo::Current;
+	MonitorId monitor = MonitorId::None;
 
 	// TODO: extra window attributes go here
 
@@ -156,7 +196,7 @@ struct SP_PUBLIC ContextInfo final : public Ref {
 	uint32_t appVersionCode = 0; // version code in Vulkan format (see SP_MAKE_API_VERSION)
 
 	// Application event update interval (NOT screen update interval)
-	TimeInterval appUpdateInterval = TimeInterval::microseconds(100'000);
+	TimeInterval appUpdateInterval = TimeInterval::seconds(1);
 
 	uint16_t mainThreadsCount = config::getDefaultMainThreads(); // threads for general and gl tasks
 	uint16_t appThreadsCount = config::getDefaultAppThreads(); // threads for app-level tasks
@@ -201,6 +241,11 @@ private:
 
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
+
+constexpr const ModeInfo ModeInfo::Preferred{maxOf<uint16_t>(), maxOf<uint16_t>(), 0};
+constexpr const ModeInfo ModeInfo::Current{maxOf<uint16_t>(), maxOf<uint16_t>(), maxOf<uint16_t>()};
+constexpr const MonitorId MonitorId::Primary{"__primary__"};
+constexpr const MonitorId MonitorId::None;
 
 } // namespace stappler::xenolith
 

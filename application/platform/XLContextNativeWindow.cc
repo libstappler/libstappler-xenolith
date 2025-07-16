@@ -22,8 +22,15 @@
 
 #include "XLContextNativeWindow.h"
 #include "XLContextController.h"
+#include "XLAppWindow.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+ContextNativeWindow::~ContextNativeWindow() {
+	if (_appWindow) {
+		_appWindow = nullptr;
+	}
+}
 
 bool ContextNativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info) {
 	_controller = c;
@@ -54,6 +61,13 @@ bool ContextNativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLa
 	}
 	return found;
 }
+
+void ContextNativeWindow::setAppWindow(Rc<AppWindow> &&w) {
+	_appWindow = move(w);
+	_appWindow->run();
+}
+
+AppWindow *ContextNativeWindow::getAppWindow() const { return _appWindow; }
 
 void ContextNativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	_layers = sp::move(layers);

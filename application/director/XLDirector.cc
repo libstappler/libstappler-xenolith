@@ -38,7 +38,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Director::Director() { memset(&_drawStat, 0, sizeof(DrawStat)); }
 
-Director::~Director() { }
+Director::~Director() { log::info("Director", "~Director"); }
 
 bool Director::init(NotNull<AppThread> app, const core::FrameConstraints &constraints,
 		NotNull<AppWindow> window) {
@@ -176,6 +176,7 @@ void Director::end() {
 
 #if SP_REF_DEBUG
 	if (_scene) {
+		_autorelease.clear();
 		if (_scene->getReferenceCount() > 1) {
 			auto scene = _scene.get();
 			_scene = nullptr;
@@ -238,8 +239,7 @@ void Director::runScene(Rc<Scene> &&scene) {
 
 	// compile render queue
 	getGlLoop()->compileQueue(queue,
-			[this, scene = move(scene), linkId, w = Rc<AppWindow>(_window)](
-					bool success) mutable {
+			[this, scene = move(scene), linkId, w = Rc<AppWindow>(_window)](bool success) mutable {
 		// now we on the main/view thread, call runWithQueue directly
 		if (success) {
 			auto &q = scene->getQueue();

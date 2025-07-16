@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,36 +20,21 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#ifndef XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_
+#define XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_
 
-#include "XLEvent.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
+#include "XL2d.h"
+#include "XL2dLabel.h"
+#include "XL2dLayer.h"
+#include "XL2dVectorSprite.h"
+#include "XLInputListener.h"
+#include "XLAction.h"
+#include "XLActionEase.h"
 
-#include "platform/XLContextController.cc"
-#include "platform/XLContextNativeWindow.cc"
-#include "platform/XLEdid.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
-#if LINUX
-#include "linux/thirdparty/glfw/xkb_unicode.cc"
-#include "linux/XLLinux.cc"
-#include "linux/XLLinuxXcbLibrary.cc"
-#include "linux/XLLinuxXkbLibrary.cc"
-#include "linux/XLLinuxDBusLibrary.cc"
-#include "linux/XLLinuxXcbConnection.cc"
-#include "linux/XLLinuxXcbWindow.cc"
-#include "linux/XLLinuxContextController.cc"
-#endif
+using namespace basic2d;
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
+}
 
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName, Context::run),
-};
-
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
-
-} // namespace stappler::xenolith
+#endif /* XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_ */

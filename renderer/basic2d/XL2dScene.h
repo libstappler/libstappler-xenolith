@@ -37,10 +37,12 @@ public:
 	virtual ~Scene2d() { }
 
 	// create with default render queue
-	virtual bool init(AppThread *, const core::FrameConstraints &);
+	virtual bool init(NotNull<AppThread> app, NotNull<AppWindow>,
+			const core::FrameConstraints &constraints);
 
 	// create with default render queue, resources can be added via callback
-	virtual bool init(AppThread *, const Callback<void(Queue::Builder &)> &, const core::FrameConstraints &);
+	virtual bool init(NotNull<AppThread> app, NotNull<AppWindow>,
+			const Callback<void(Queue::Builder &)> &, const core::FrameConstraints &);
 
 	virtual bool init(Queue::Builder &&, const core::FrameConstraints &) override;
 
@@ -57,7 +59,8 @@ protected:
 	virtual void initialize();
 	virtual void addContentNodes(SceneContent *);
 
-	void updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 pos, uint32_t id);
+	void updateInputEventData(InputEventData &data, const InputEventData &source, Vec2 pos,
+			uint32_t id);
 
 	InputEventData _data1 = InputEventData{maxOf<uint32_t>() - 1};
 	InputEventData _data2 = InputEventData{maxOf<uint32_t>() - 2};
@@ -68,6 +71,6 @@ protected:
 	VectorSprite *_pointerCenter = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCENE_H_ */

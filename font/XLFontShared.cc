@@ -33,7 +33,7 @@ static SharedSymbol s_xenolithFontSymbols[] = {
 	SharedSymbol{"locale::setLocale", locale::setLocale},
 };
 
-static SharedModule s_xenolithFontModule(buildconfig::MODULE_XENOLITH_FONT_NAME,
+SP_USED static SharedModule s_xenolithFontModule(buildconfig::MODULE_XENOLITH_FONT_NAME,
 		s_xenolithFontSymbols, sizeof(s_xenolithFontSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::xenolith::font

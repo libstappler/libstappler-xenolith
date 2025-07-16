@@ -41,14 +41,15 @@ void FrameCache::invalidate() {
 	_images.clear();
 }
 
-Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data, SpanView<Rc<ImageView>> views) {
+Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data,
+		SpanView<Rc<ImageView>> views) {
 	auto e = views.front()->getFramebufferExtent();
-	Vector<uint64_t> ids; ids.reserve(views.size() + 2);
+	Vector<uint64_t> ids;
+	ids.reserve(views.size() + 2);
 	ids.emplace_back(data->impl->getIndex());
-	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
-	for (auto &it : views) {
-		ids.emplace_back(it->getIndex());
-	}
+	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24)
+			| uint64_t(e.width));
+	for (auto &it : views) { ids.emplace_back(it->getIndex()); }
 
 	auto it = _framebuffers.find(ids);
 	if (it != _framebuffers.end()) {
@@ -64,33 +65,36 @@ Rc<Framebuffer> FrameCache::acquireFramebuffer(const QueuePassData *data, SpanVi
 
 void FrameCache::releaseFramebuffer(Rc<Framebuffer> &&fb) {
 	auto e = fb->getFramebufferExtent();
-	Vector<uint64_t> ids; ids.reserve(fb->getViewIds().size() + 2);
+	Vector<uint64_t> ids;
+	ids.reserve(fb->getViewIds().size() + 2);
 	ids.emplace_back(fb->getRenderPass()->getIndex());
-	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
-	for (auto &it : fb->getViewIds()) {
-		ids.emplace_back(it);
-	}
+	ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24)
+			| uint64_t(e.width));
+	for (auto &it : fb->getViewIds()) { ids.emplace_back(it); }
 
 	if (isReachable(SpanView<uint64_t>(ids))) {
 		auto it = _framebuffers.find(ids);
 		if (it == _framebuffers.end()) {
-			_framebuffers.emplace(sp::move(ids), FrameCacheFramebuffer{ Vector<Rc<Framebuffer>>{sp::move(fb)}, e });
+			_framebuffers.emplace(sp::move(ids),
+					FrameCacheFramebuffer{Vector<Rc<Framebuffer>>{sp::move(fb)}, e});
 		} else {
 			it->second.framebuffers.emplace_back(sp::move(fb));
 		}
 	}
 }
 
-Rc<ImageStorage> FrameCache::acquireImage(uint64_t attachment, const ImageInfoData &info, SpanView<ImageViewInfo> v) {
+Rc<ImageStorage> FrameCache::acquireImage(uint64_t attachment, const ImageInfoData &info,
+		SpanView<ImageViewInfo> v) {
 	auto makeImage = [&, this] {
-		auto ret = _device->makeImage(info);
+		auto ret = _device->makeImage("TransientCacheImage", info);
 		ret->rearmSemaphores(*_loop);
 		makeViews(ret, v);
 		return ret;
 	};
 
 	auto aIt = _attachments.find(attachment);
-	if (aIt == _attachments.end() || (info.hints & core::ImageHints::DoNotCache) != core::ImageHints::None) {
+	if (aIt == _attachments.end()
+			|| (info.hints & core::ImageHints::DoNotCache) != core::ImageHints::None) {
 		return makeImage();
 	}
 
@@ -131,9 +135,7 @@ void FrameCache::releaseImage(Rc<ImageStorage> &&img) {
 	imageIt->second.images.emplace_back(move(img));
 }
 
-void FrameCache::addImageView(uint64_t id) {
-	_imageViews.emplace(id);
-}
+void FrameCache::addImageView(uint64_t id) { _imageViews.emplace(id); }
 
 void FrameCache::removeImageView(uint64_t id) {
 	auto it = _imageViews.find(id);
@@ -143,20 +145,16 @@ void FrameCache::removeImageView(uint64_t id) {
 		auto iit = _framebuffers.begin();
 		while (iit != _framebuffers.end()) {
 			if (!isReachable(SpanView<uint64_t>(iit->first))) {
-				for (auto &it : iit->second.framebuffers) {
-					_autorelease.emplace_back(it);
-				}
+				for (auto &it : iit->second.framebuffers) { _autorelease.emplace_back(it); }
 				iit = _framebuffers.erase(iit);
 			} else {
-				++ iit;
+				++iit;
 			}
 		}
 	}
 }
 
-void FrameCache::addRenderPass(uint64_t id) {
-	_renderPasses.emplace(id);
-}
+void FrameCache::addRenderPass(uint64_t id) { _renderPasses.emplace(id); }
 
 void FrameCache::removeRenderPass(uint64_t id) {
 	auto it = _renderPasses.find(id);
@@ -166,20 +164,16 @@ void FrameCache::removeRenderPass(uint64_t id) {
 		auto iit = _framebuffers.begin();
 		while (iit != _framebuffers.end()) {
 			if (!isReachable(SpanView<uint64_t>(iit->first))) {
-				for (auto &it : iit->second.framebuffers) {
-					_autorelease.emplace_back(it);
-				}
+				for (auto &it : iit->second.framebuffers) { _autorelease.emplace_back(it); }
 				iit = _framebuffers.erase(iit);
 			} else {
-				++ iit;
+				++iit;
 			}
 		}
 	}
 }
 
-void FrameCache::addAttachment(uint64_t id) {
-	_attachments.emplace(id, nullptr);
-}
+void FrameCache::addAttachment(uint64_t id) { _attachments.emplace(id, nullptr); }
 
 void FrameCache::removeAttachment(uint64_t id) {
 	auto it = _attachments.find(id);
@@ -204,33 +198,31 @@ void FrameCache::removeUnreachableFramebuffers() {
 			}
 		}
 		if (!found) {
-			for (auto &it : fbsIt->second.framebuffers) {
-				_autorelease.emplace_back(it);
-			}
+			for (auto &it : fbsIt->second.framebuffers) { _autorelease.emplace_back(it); }
 			fbsIt = _framebuffers.erase(fbsIt);
 		} else {
 			auto fbIt = fbsIt->second.framebuffers.begin();
 			while (fbIt != fbsIt->second.framebuffers.end()) {
 				auto e = (*fbIt)->getFramebufferExtent();
-				Vector<uint64_t> ids; ids.reserve((*fbIt)->getViewIds().size() + 2);
+				Vector<uint64_t> ids;
+				ids.reserve((*fbIt)->getViewIds().size() + 2);
 				ids.emplace_back((*fbIt)->getRenderPass()->getIndex());
-				ids.emplace_back(uint64_t(e.depth) << uint64_t(48) | uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
-				for (auto &it : (*fbIt)->getViewIds()) {
-					ids.emplace_back(it);
-				}
+				ids.emplace_back(uint64_t(e.depth) << uint64_t(48)
+						| uint64_t(e.height) << uint64_t(24) | uint64_t(e.width));
+				for (auto &it : (*fbIt)->getViewIds()) { ids.emplace_back(it); }
 
 				if (isReachable(SpanView<uint64_t>(ids))) {
 					_autorelease.emplace_back(*fbIt);
 					fbIt = fbsIt->second.framebuffers.erase(fbIt);
 				} else {
-					++ fbIt;
+					++fbIt;
 				}
 			}
 
 			if (fbsIt->second.framebuffers.empty()) {
 				fbsIt = _framebuffers.erase(fbsIt);
 			} else {
-				++ fbsIt;
+				++fbsIt;
 			}
 		}
 	}
@@ -238,23 +230,17 @@ void FrameCache::removeUnreachableFramebuffers() {
 
 size_t FrameCache::getFramebuffersCount() const {
 	size_t ret = 0;
-	for (auto &it : _framebuffers) {
-		ret += it.second.framebuffers.size();
-	}
+	for (auto &it : _framebuffers) { ret += it.second.framebuffers.size(); }
 	return ret;
 }
 
 size_t FrameCache::getImagesCount() const {
 	size_t ret = 0;
-	for (auto &it : _images) {
-		ret += it.second.images.size();
-	}
+	for (auto &it : _images) { ret += it.second.images.size(); }
 	return ret;
 }
 
-size_t FrameCache::getImageViewsCount() const {
-	return _imageViews.size();
-}
+size_t FrameCache::getImageViewsCount() const { return _imageViews.size(); }
 
 void FrameCache::clear() {
 	if (!_freezed) {
@@ -262,9 +248,7 @@ void FrameCache::clear() {
 	}
 }
 
-void FrameCache::freeze() {
-	_freezed = true;
-}
+void FrameCache::freeze() { _freezed = true; }
 
 void FrameCache::unfreeze() {
 	if (_freezed) {
@@ -296,9 +280,11 @@ bool FrameCache::isReachable(const ImageInfoData &info) const {
 const ImageInfoData *FrameCache::addImage(const ImageInfoData &info) {
 	auto it = _images.find(info);
 	if (it == _images.end()) {
-		it = _images.emplace(info, FrameCacheImageAttachment{uint32_t(1), Vector<Rc<ImageStorage>>()}).first;
+		it = _images.emplace(info,
+							FrameCacheImageAttachment{uint32_t(1), Vector<Rc<ImageStorage>>()})
+					 .first;
 	} else {
-		++ it->second.refCount;
+		++it->second.refCount;
 	}
 	return &it->first;
 }
@@ -307,12 +293,10 @@ void FrameCache::removeImage(const ImageInfoData &info) {
 	auto it = _images.find(info);
 	if (it != _images.end()) {
 		if (it->second.refCount == 1) {
-			for (auto &iit : it->second.images) {
-				_autorelease.emplace_back(iit);
-			}
+			for (auto &iit : it->second.images) { _autorelease.emplace_back(iit); }
 			_images.erase(it);
 		} else {
-			-- it->second.refCount;
+			--it->second.refCount;
 		}
 	}
 }
@@ -324,13 +308,12 @@ void FrameCache::makeViews(const Rc<ImageStorage> &img, SpanView<ImageViewInfo> 
 			auto imageView = _device->makeImageView(img->getImage(), info);
 			addImageView(imageView->getIndex());
 			imageView->setReleaseCallback([loop = Rc<Loop>(_loop), id = imageView->getIndex()] {
-				loop->performOnThread([loop, id] {
-					loop->getFrameCache()->removeImageView(id);
-				}, nullptr, true);
+				loop->performOnThread([loop, id] { loop->getFrameCache()->removeImageView(id); },
+						nullptr, true);
 			});
 			img->addView(info, move(imageView));
 		}
 	}
 }
 
-}
+} // namespace stappler::xenolith::core

@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,36 +20,52 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#ifndef XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEBUTTON_H_
+#define XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEBUTTON_H_
 
-#include "XLEvent.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
+#include "XLSimpleUiConfig.h"
 
-#include "platform/XLContextController.cc"
-#include "platform/XLContextNativeWindow.cc"
-#include "platform/XLEdid.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
-#if LINUX
-#include "linux/thirdparty/glfw/xkb_unicode.cc"
-#include "linux/XLLinux.cc"
-#include "linux/XLLinuxXcbLibrary.cc"
-#include "linux/XLLinuxXkbLibrary.cc"
-#include "linux/XLLinuxDBusLibrary.cc"
-#include "linux/XLLinuxXcbConnection.cc"
-#include "linux/XLLinuxXcbWindow.cc"
-#include "linux/XLLinuxContextController.cc"
-#endif
+class Button : public Layer {
+public:
+	virtual ~Button() { }
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
+	bool init(Function<void()> &&);
 
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName, Context::run),
+	void setEnabled(bool);
+	bool isEnabled() const { return _enabled; }
+
+	void setCallback(Function<void()> &&);
+
+protected:
+	using Layer::init;
+
+	virtual void handleFocusEnter();
+	virtual void handleFocusLeave();
+	virtual void handleTouch();
+	virtual void updateEnabled();
+
+	Function<void()> _callback;
+	InputListener *_listener = nullptr;
+	bool _focus = false;
+	bool _enabled = false;
 };
 
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
+class ButtonWithLabel : public Button {
+public:
+	virtual ~ButtonWithLabel() { }
 
-} // namespace stappler::xenolith
+	bool init(StringView, Function<void()> &&);
+
+	virtual void handleContentSizeDirty() override;
+
+	void setString(StringView);
+
+protected:
+	Label *_label = nullptr;
+};
+
+} // namespace stappler::xenolith::simpleui
+
+#endif /* XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEBUTTON_H_ */

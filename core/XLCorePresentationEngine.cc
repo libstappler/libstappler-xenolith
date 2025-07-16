@@ -29,6 +29,7 @@
 #include "XLCoreFrameQueue.h"
 #include "XLCoreDevice.h"
 #include "SPEventLooper.h"
+#include "SPEventTimerHandle.h"
 
 #define XL_COREPRESENT_DEBUG 0
 
@@ -144,6 +145,8 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 			if (nextFrame) {
 				// set to next suggested number
 				_frameOrder = nextFrame->getOrder() + 1;
+
+				_window->setFrameOrder(nextFrame->getOrder());
 			}
 		} else {
 			log::error("core::PresentationEngine", "acquireFrameData - Swapchain was invalidated");
@@ -158,7 +161,8 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 	return true;
 }
 
-void PresentationEngine::deprecateSwapchain(SwapchainFlags flags, Function<void(bool)> &&cb) {
+void PresentationEngine::deprecateSwapchain(PresentationSwapchainFlags flags,
+		Function<void(bool)> &&cb) {
 	XL_COREPRESENT_LOG("deprecateSwapchain");
 	if (!_running || !_swapchain) {
 		return;
@@ -175,6 +179,11 @@ void PresentationEngine::deprecateSwapchain(SwapchainFlags flags, Function<void(
 	while (it != _scheduledForPresent.end()) {
 		runScheduledPresent(move(it->first), move(it->second));
 		it = _scheduledForPresent.erase(it);
+	}
+
+	if (_acquisitionTimer) {
+		_acquisitionTimer->cancel();
+		_acquisitionTimer = nullptr;
 	}
 
 	auto acquiredImages = _swapchain->getAcquiredImagesCount();
@@ -205,6 +214,11 @@ bool PresentationEngine::run() {
 
 void PresentationEngine::end() {
 	_running = false;
+
+	if (_acquisitionTimer) {
+		_acquisitionTimer->cancel();
+		_acquisitionTimer = nullptr;
+	}
 
 	Vector<Rc<Ref>> releaseList;
 
@@ -292,8 +306,9 @@ bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) 
 	return true;
 }
 
-void PresentationEngine::update(bool displayLink) {
-	if (displayLink && _options.followDisplayLink) {
+void PresentationEngine::update(PresentationUpdateFlags flags) {
+	if ((hasFlag(flags, PresentationUpdateFlags::DisplayLink) && _options.followDisplayLink)
+			|| hasFlag(flags, PresentationUpdateFlags::FlushPending)) {
 		// ignore present windows
 		for (auto &it : _scheduledForPresent) {
 			runScheduledPresent(move(it.first), move(it.second));
@@ -304,7 +319,7 @@ void PresentationEngine::update(bool displayLink) {
 
 void PresentationEngine::setTargetFrameInterval(uint64_t value) { _targetFrameInterval = value; }
 
-void PresentationEngine::presentWithQueue(DeviceQueue &queue, PresentationFrame *frame,
+void PresentationEngine::presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame,
 		ImageStorage *image) {
 	XL_COREPRESENT_LOG("presentWithQueue: ", _activeFrames.size());
 	auto clock = sp::platform::clock(ClockType::Monotonic);
@@ -419,13 +434,13 @@ void PresentationEngine::setContentPadding(const Padding &padding) {
 	setReadyForNextFrame();
 }
 
-bool PresentationEngine::handleFrameStarted(PresentationFrame *frame) {
+bool PresentationEngine::handleFrameStarted(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameStarted");
 	_totalFrames.emplace(frame);
 	return _activeFrames.emplace(frame).second;
 }
 
-void PresentationEngine::handleFrameInvalidated(PresentationFrame *frame) {
+void PresentationEngine::handleFrameInvalidated(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameInvalidated");
 	_activeFrames.erase(frame);
 	_totalFrames.erase(frame);
@@ -437,7 +452,7 @@ void PresentationEngine::handleFrameInvalidated(PresentationFrame *frame) {
 	}
 }
 
-void PresentationEngine::handleFrameReady(PresentationFrame *frame) {
+void PresentationEngine::handleFrameReady(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameReady");
 	if (_options.earlyPresent) {
 		present(frame, frame->getSwapchainImage());
@@ -449,8 +464,11 @@ void PresentationEngine::handleFrameReady(PresentationFrame *frame) {
 	}
 }
 
-void PresentationEngine::handleFramePresented(PresentationFrame *frame) {
+void PresentationEngine::handleFramePresented(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFramePresented");
+
+	_window->handleFramePresented(frame);
+
 	_activeFrames.erase(frame);
 	if (!_options.earlyPresent) {
 		_totalFrames.erase(frame);
@@ -460,7 +478,7 @@ void PresentationEngine::handleFramePresented(PresentationFrame *frame) {
 	}
 }
 
-void PresentationEngine::handleFrameComplete(PresentationFrame *frame) {
+void PresentationEngine::handleFrameComplete(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameCancel");
 	if (auto h = frame->getHandle()) {
 		_lastFrameTime = h->getTimeEnd() - h->getTimeStart();
@@ -496,6 +514,11 @@ void PresentationEngine::handleFrameComplete(PresentationFrame *frame) {
 	}
 }
 
+void PresentationEngine::acquireFrameData(NotNull<PresentationFrame> frame,
+		Function<void(NotNull<PresentationFrame>)> &&cb) {
+	_window->acquireFrameData(frame, sp::move(cb));
+}
+
 void PresentationEngine::scheduleSwapchainRecreation() {
 	if (_swapchain && _swapchain->getPresentedFramesCount() == 0) {
 		log::warn("core::PresentationEngine",
@@ -520,7 +543,7 @@ void PresentationEngine::resetFrames() {
 	_acquiredSwapchainImages.clear();
 }
 
-void PresentationEngine::scheduleImage(PresentationFrame *frame) {
+void PresentationEngine::scheduleImage(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG("scheduleImage");
 	if (!_acquiredSwapchainImages.empty()) {
 		// pop one of the previously acquired images
@@ -533,16 +556,19 @@ void PresentationEngine::scheduleImage(PresentationFrame *frame) {
 	}
 }
 
-bool PresentationEngine::acquireScheduledImage() {
+Status PresentationEngine::acquireScheduledImage() {
 	if (!_requestedSwapchainImage.empty() || _framesAwaitingImages.empty()
 			|| _totalFrames.size() != _activeFrames.size()) {
-		return false;
+		XL_COREPRESENT_LOG("acquireScheduledImage - dropped");
+		return Status::Declined;
 	}
+
+	Status status;
 
 	XL_COREPRESENT_LOG("acquireScheduledImage");
 	auto loop = (Loop *)_loop.get();
 	auto fence = loop->acquireFence(FenceType::Swapchain);
-	if (auto acquiredImage = _swapchain->acquire(true, fence)) {
+	if (auto acquiredImage = _swapchain->acquire(true, fence, status)) {
 		_requestedSwapchainImage.emplace(acquiredImage);
 		XL_COREPRESENT_LOG("acquireScheduledImage - spawn request: ",
 				_requestedSwapchainImage.size());
@@ -556,11 +582,32 @@ bool PresentationEngine::acquireScheduledImage() {
 					sp::platform::clock(ClockType::Monotonic) - f->getArmedTime(), "]");
 		}, this, "PresentationEngine::acquireScheduledImage");
 		fence->schedule(*loop);
-		return true;
+		return Status::Ok;
 	} else {
+		XL_COREPRESENT_LOG("acquireScheduledImage - failed");
 		fence->schedule(*loop);
-		return false;
+		if (status == Status::Timeout) {
+			// schedule timed waiter
+			scheduleImageAcquisition();
+		}
+		return status;
 	}
+}
+
+void PresentationEngine::scheduleImageAcquisition() {
+	_acquisitionTimer = _loop->getLooper()->scheduleTimer(event::TimerInfo{
+		.completion = event::CompletionHandle<event::TimerHandle>::create<PresentationEngine>(this,
+				[](PresentationEngine *e, event::TimerHandle *h, uint32_t, Status st) {
+		if (st == Status::Ok && e->acquireScheduledImage() != Status::Timeout) {
+			h->cancel();
+			if (e->_acquisitionTimer == h) {
+				e->_acquisitionTimer = nullptr;
+			}
+		}
+	}),
+		.interval = config::PresentationSchedulerInterval,
+		.count = event::TimerInfo::Infinite,
+	});
 }
 
 void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image) {
@@ -586,7 +633,8 @@ void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquir
 	}
 }
 
-void PresentationEngine::runScheduledPresent(PresentationFrame *frame, ImageStorage *image) {
+void PresentationEngine::runScheduledPresent(NotNull<PresentationFrame> frame,
+		ImageStorage *image) {
 	XL_COREPRESENT_LOG("runScheduledPresent");
 
 	if (!_loop->isRunning() || frame->hasFlag(PresentationFrame::Invalidated)) {
@@ -605,8 +653,8 @@ void PresentationEngine::runScheduledPresent(PresentationFrame *frame, ImageStor
 	}
 }
 
-void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame,
-		ImageStorage *image) {
+void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue,
+		NotNull<PresentationFrame> frame, ImageStorage *image) {
 	XL_COREPRESENT_LOG("presentSwapchainImage");
 	if (frame->getSwapchain() == _swapchain && frame->getSwapchainImage()->isSubmitted()) {
 		presentWithQueue(*queue, frame, image);

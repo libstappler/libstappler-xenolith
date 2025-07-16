@@ -32,6 +32,10 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Director;
 
+enum class AppWindowConfigFlags {
+	None = 0,
+};
+
 class SP_PUBLIC AppWindow : public Ref, core::PresentationWindow {
 public:
 	using InputEventData = core::InputEventData;
@@ -42,7 +46,7 @@ public:
 	static EventHeader onBackground;
 	static EventHeader onFocus;
 
-	virtual ~AppWindow() = default;
+	virtual ~AppWindow();
 
 	virtual bool init(NotNull<Context>, NotNull<AppThread>, NotNull<NativeWindow>);
 
@@ -50,14 +54,13 @@ public:
 
 	virtual void run();
 
-	virtual void update(bool displayLink); // from view thread
+	virtual void update(core::PresentationUpdateFlags); // from view thread
 	virtual void end(); // from view thread
 
 	virtual void close(bool graceful = true);
 
-	virtual void setPresentationEngine(Rc<core::PresentationEngine> &&e);
-
 	virtual void handleInputEvents(Vector<InputEventData> &&);
+	virtual void handleTextInput(const TextInputState &);
 
 	Context *getContext() const { return _context; }
 	AppThread *getApplication() const { return _application; }
@@ -68,23 +71,10 @@ public:
 
 	Director *getDirector() const { return _director; }
 
-	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;
-	virtual core::ImageViewInfo getSwapchainImageViewInfo(
-			const core::ImageInfo &image) const override;
-	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const override;
+	// It's not safe to ask PresentationEngine about current config, use this instead
+	const core::SwapchainConfig &getAppSwapchainConfig() const { return _appSwapchainConfig; }
 
-	virtual core::SwapchainConfig selectConfig(const core::SurfaceInfo &) override;
-
-	virtual void acquireFrameData(core::PresentationFrame *,
-			Function<void(core::PresentationFrame *)> &&) override;
-
-	virtual void handleFramePresented(core::PresentationFrame *) override;
-
-	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
-	virtual core::FrameConstraints getInitialFrameConstraints() const override;
-	virtual uint64_t getInitialFrameInterval() const override;
-
-	void updateConfig(); // from any thread
+	void updateConfig(core::PresentationSwapchainFlags); // from any thread
 
 	void setReadyForNextFrame(); // from any thread
 
@@ -97,11 +87,11 @@ public:
 	void setFrameInterval(uint64_t); // from any thread
 	uint64_t getFrameInterval() const; // from any thread
 
-	void setInsetDecoration(const Padding &padding);
-
 	// exit guard will prevent OS WM to close window on it's side
 	void retainExitGuard();
 	void releaseExitGuard();
+
+	void setInsetDecoration(const Padding &padding);
 
 	void setInsetDecorationVisible(bool);
 	bool isInsetDecorationVisible() const;
@@ -114,7 +104,30 @@ public:
 
 	void updateLayers(Vector<WindowLayer> &&); // from app thread
 
+	// native window interface for app thread
+	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
+	void setFullscreen(MonitorId &&, ModeInfo &&, Function<void(Status)> &&, Ref * = nullptr);
+	bool isFullscreen() const { return _isFullscreen; }
+
 protected:
+	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;
+	virtual core::ImageViewInfo getSwapchainImageViewInfo(
+			const core::ImageInfo &image) const override;
+	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const override;
+
+	virtual core::SwapchainConfig selectConfig(const core::SurfaceInfo &, bool fastMode) override;
+
+	virtual void acquireFrameData(NotNull<core::PresentationFrame>,
+			Function<void(NotNull<core::PresentationFrame>)> &&) override;
+
+	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
+
+	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
+	virtual core::FrameConstraints getInitialFrameConstraints() const override;
+	virtual uint64_t getInitialFrameInterval() const override;
+
+	virtual void setFrameOrder(uint64_t) override;
+
 	virtual void propagateInputEvent(InputEventData &); // from app thread
 	virtual void propagateTextInput(TextInputState &); // from app thread
 
@@ -127,10 +140,13 @@ protected:
 	bool _inBackground = false;
 	bool _hasFocus = true;
 	bool _pointerInWindow = false;
+	bool _isFullscreen = false;
 
 	uint32_t _exitGuard = 0;
 	bool _insetDecorationVisible = true;
 	float _insetDecorationTone = true;
+
+	core::SwapchainConfig _appSwapchainConfig;
 };
 
 } // namespace stappler::xenolith

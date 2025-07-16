@@ -95,11 +95,22 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 		auto tm = _director->getDirectorFrameTime();
 		auto vertex = stat.vertexInputTime / float(1'000);
 
+		auto &cfg = _director->getWindow()->getAppSwapchainConfig();
+
+		String configData;
+		switch (cfg.presentMode) {
+		case core::PresentMode::Unsupported: configData = toString("U", cfg.imageCount); break;
+		case core::PresentMode::Immediate: configData = toString("I", cfg.imageCount); break;
+		case core::PresentMode::FifoRelaxed: configData = toString("Fr", cfg.imageCount); break;
+		case core::PresentMode::Fifo: configData = toString("F", cfg.imageCount); break;
+		case core::PresentMode::Mailbox: configData = toString("M", cfg.imageCount); break;
+		}
+
 		if (_label) {
 			String str;
 			switch (_mode) {
 			case Fps:
-				str = toString(std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
+				str = toString(configData, " ", std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
 						"\nGPU: ", fenceTime, " (", timestampTime, ")", "\nDir: ", tm,
 						" Ver: ", vertex, "\nF12 to switch");
 				break;
@@ -114,7 +125,7 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 						stat.cachedImages, "/", stat.cachedImageViews, "\nF12 to switch");
 				break;
 			case Full:
-				str = toString(std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
+				str = toString(configData, " ", std::setprecision(3), "FPS: ", fps, " SPF: ", spf,
 						"\nGPU: ", fenceTime, " (", timestampTime, ")", "\nDir: ", tm,
 						" Ver: ", vertex, "\n", "V:", stat.vertexes, " T:", stat.triangles,
 						"\nZ:", stat.zPaths, " C:", stat.drawCalls, " M: ", stat.materials, "\n",
@@ -161,12 +172,13 @@ void Scene2d::FpsDisplay::show() {
 	}
 }
 
-bool Scene2d::init(AppThread *app, const core::FrameConstraints &constraints) {
-	return init(app, [](Queue::Builder &) { }, constraints);
+bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
+		const core::FrameConstraints &constraints) {
+	return init(app, window, [](Queue::Builder &) { }, constraints);
 }
 
-bool Scene2d::init(AppThread *app, const Callback<void(Queue::Builder &)> &cb,
-		const core::FrameConstraints &constraints) {
+bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow>,
+		const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
 #if MODULE_XENOLITH_BACKEND_VK

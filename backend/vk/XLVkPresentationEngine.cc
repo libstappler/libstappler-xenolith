@@ -43,7 +43,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 bool PresentationEngine::run() {
 	auto info = _window->getSurfaceOptions(
 			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
-	auto cfg = _window->selectConfig(info);
+	auto cfg = _window->selectConfig(info, false);
 
 	createSwapchain(info, move(cfg), cfg.presentMode);
 
@@ -52,7 +52,7 @@ bool PresentationEngine::run() {
 
 bool PresentationEngine::recreateSwapchain() {
 	XL_VKPRESENT_LOG("recreateSwapchain");
-	if (hasFlag(_deprecationFlags, SwapchainFlags::Finalized)) {
+	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::Finalized)) {
 		return false;
 	}
 
@@ -60,8 +60,8 @@ bool PresentationEngine::recreateSwapchain() {
 
 	resetFrames();
 
-	if (hasFlag(_deprecationFlags, SwapchainFlags::EndOfLife)) {
-		_deprecationFlags |= SwapchainFlags::Finalized;
+	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::EndOfLife)) {
+		_deprecationFlags |= core::PresentationSwapchainFlags::Finalized;
 
 		auto callbacks = sp::move(_deprecationCallbacks);
 		_deprecationCallbacks.clear();
@@ -73,9 +73,11 @@ bool PresentationEngine::recreateSwapchain() {
 		return false;
 	}
 
+	auto fastModeSelected =
+			hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToFastMode);
 	auto info = _window->getSurfaceOptions(
 			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
-	auto cfg = _window->selectConfig(info);
+	auto cfg = _window->selectConfig(info, fastModeSelected);
 
 	if (!info.isSupported(cfg)) {
 		log::error("Vk-Error", "Presentation with config ", cfg.description(),
@@ -90,13 +92,13 @@ bool PresentationEngine::recreateSwapchain() {
 	bool ret = false;
 
 	auto mode = cfg.presentMode;
-	if (hasFlag(_deprecationFlags, SwapchainFlags::SwitchToFastMode)) {
+	if (fastModeSelected) {
 		mode = cfg.presentModeFast;
 	}
 
 	ret = createSwapchain(info, move(cfg), mode);
 
-	_deprecationFlags = SwapchainFlags::None;
+	_deprecationFlags = core::PresentationSwapchainFlags::None;
 
 	auto callbacks = sp::move(_deprecationCallbacks);
 	_deprecationCallbacks.clear();
@@ -130,7 +132,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 
 		log::verbose("vk::PresentationEngine", "Surface: ", info.description());
 		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
-				presentMode, _surface, queueFamilyIndices,
+				presentMode, _surface.get_cast<Surface>(), queueFamilyIndices,
 				oldSwapchain ? oldSwapchain.get_cast<SwapchainHandle>() : nullptr);
 
 		if (_swapchain) {
@@ -138,7 +140,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			_constraints.transform = cfg.transform;
 
 			Vector<uint64_t> ids;
-			auto &cache = _loop->getFrameCache();
+			auto cache = _loop->getFrameCache();
 			for (auto &it : static_cast<SwapchainHandle *>(_swapchain.get())->getImages()) {
 				for (auto &iit : it.views) {
 					auto id = iit.second->getIndex();
@@ -155,11 +157,6 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 	} while (0);
 
 	return _swapchain != nullptr;
-}
-
-void PresentationEngine::handleFramePresented(core::PresentationFrame *frame) {
-	_window->handleFramePresented(frame);
-	core::PresentationEngine::handleFramePresented(frame);
 }
 
 bool PresentationEngine::isImagePresentable(const core::ImageObject &image,

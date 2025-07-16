@@ -219,6 +219,7 @@ Rc<FontController> FontComponent::acquireController(event::Looper *looper,
 
 	bool hasController = (b.getTarget() != nullptr);
 	auto builder = Rc<ControllerBuilder>::alloc(move(b));
+	builder->looper = looper;
 	builder->ext = this;
 	if (!hasController) {
 		builder->controller = Rc<FontController>::create(this, builder->builder.getName());

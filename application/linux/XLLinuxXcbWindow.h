@@ -36,7 +36,7 @@ public:
 
 	XcbWindow();
 
-	virtual bool init(Rc<XcbConnection> &&, Rc<WindowInfo> &&, NotNull<ContextInfo>,
+	virtual bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
 			NotNull<LinuxContextController>);
 
 	virtual void handleConfigureNotify(xcb_configure_notify_event_t *);
@@ -51,9 +51,6 @@ public:
 	virtual void handleKeyPress(xcb_key_press_event_t *);
 	virtual void handleKeyRelease(xcb_key_release_event_t *);
 
-	virtual void handleSelectionNotify(xcb_selection_notify_event_t *);
-	virtual void handleSelectionRequest(xcb_selection_request_event_t *);
-
 	virtual void handleSyncRequest(xcb_timestamp_t, xcb_sync_int64_t);
 	virtual void handleCloseRequest();
 
@@ -67,8 +64,9 @@ public:
 	virtual uint64_t getScreenFrameInterval() const override;
 
 	virtual void mapWindow() override;
+	virtual void unmapWindow() override;
 
-	virtual void handleFramePresented(core::PresentationFrame *) override;
+	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
@@ -78,14 +76,15 @@ public:
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
 
-	void readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref);
+	virtual bool close() override;
 
-	void writeToClipboard(BytesView data, StringView contentType);
+	virtual Status setFullscreen(const MonitorId &, const xenolith::ModeInfo &) override;
 
 protected:
-	void notifyClipboard(BytesView);
+	virtual bool updateTextInput(const TextInputRequest &,
+			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
 
-	xcb_atom_t writeTargetToProperty(xcb_selection_request_event_t *request);
+	virtual void cancelTextInput() override;
 
 	void updateWindowAttributes();
 	void configureWindow(xcb_rectangle_t r, uint16_t border_width);
@@ -107,10 +106,6 @@ protected:
 
 	String _wmClass;
 	ScreenInfoData _screenInfo;
-
-	Function<void(BytesView, StringView)> _clipboardCallback;
-	Rc<Ref> _clipboardTarget;
-	Bytes _clipboardSelection;
 };
 
 } // namespace stappler::xenolith::platform

@@ -58,8 +58,8 @@ public:
 
 	SpanView<SwapchainImageData> getImages() const;
 
-	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree,
-			const Rc<core::Fence> &fence) override;
+	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree, const Rc<core::Fence> &fence,
+			Status &) override;
 
 	virtual Status present(core::DeviceQueue &queue, core::ImageStorage *) override;
 	virtual void invalidateImage(const core::ImageStorage *image) override;

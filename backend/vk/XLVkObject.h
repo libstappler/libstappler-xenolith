@@ -100,16 +100,16 @@ protected:
 
 class SP_PUBLIC Image : public core::ImageObject {
 public:
-	virtual ~Image() { }
+	virtual ~Image() = default;
 
 	// non-owining image wrapping
-	bool init(Device &dev, VkImage, const ImageInfoData &, uint32_t);
+	bool init(Device &dev, StringView key, VkImage, const ImageInfoData &, uint32_t);
 
 	// owning image wrapping
-	bool init(Device &dev, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&,
+	bool init(Device &dev, StringView key, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&,
 			Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
-	bool init(Device &dev, uint64_t, VkImage, const ImageInfoData &, Rc<DeviceMemory> &&,
-			Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
+	bool init(Device &dev, StringView key, uint64_t, VkImage, const ImageInfoData &,
+			Rc<DeviceMemory> &&, Rc<core::DataAtlas> && = Rc<core::DataAtlas>());
 
 	VkImage getImage() const { return _image; }
 	DeviceMemory *getMemory() const { return _memory; }

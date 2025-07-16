@@ -192,7 +192,11 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 					return true;
 				}
 				return false;
-			}, [cb = sp::move(cb)](FrameHandle &frame, bool success) { cb(success); }, nullptr,
+			},
+					[cb = sp::move(cb)](FrameHandle &frame, bool success) {
+				// finalize input receiving
+				cb(success);
+			}, nullptr,
 					"RenderQueueAttachmentHandle::submitInput _input->queue->getInternalResource");
 		} else {
 			handle.performOnGlThread([this, cb = sp::move(cb)](FrameHandle &frame) {
@@ -502,7 +506,7 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 	}
 
 	Vector<uint64_t> passIds;
-	auto &cache = frame.getLoop()->getFrameCache();
+	auto cache = frame.getLoop()->getFrameCache();
 	for (auto &it : _attachment->getRenderQueue()->getPasses()) {
 		if (it->impl && it->pass->getType() != core::PassType::Generic) {
 			passIds.emplace_back(it->impl->getIndex());
@@ -523,7 +527,7 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 					attachmentIds = sp::move(attachmentIds)]() mutable {
 		loop->performOnThread([loop, passIds = sp::move(passIds),
 									  attachmentIds = sp::move(attachmentIds)]() mutable {
-			auto &cache = loop->getFrameCache();
+			auto cache = loop->getFrameCache();
 			for (auto &id : passIds) { cache->removeRenderPass(id); }
 			for (auto &id : attachmentIds) { cache->removeAttachment(id); }
 			cache->removeUnreachableFramebuffers();

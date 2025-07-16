@@ -77,7 +77,9 @@ public:
 	XL_DEFINE_PROTO(xcb_send_event)
 	XL_DEFINE_PROTO(xcb_get_extension_data)
 	XL_DEFINE_PROTO(xcb_map_window)
+	XL_DEFINE_PROTO(xcb_unmap_window)
 	XL_DEFINE_PROTO(xcb_create_window)
+	XL_DEFINE_PROTO(xcb_destroy_window)
 	XL_DEFINE_PROTO(xcb_configure_window)
 	XL_DEFINE_PROTO(xcb_change_window_attributes)
 	XL_DEFINE_PROTO(xcb_change_property)
@@ -85,6 +87,7 @@ public:
 	XL_DEFINE_PROTO(xcb_intern_atom_reply)
 	XL_DEFINE_PROTO(xcb_get_property_reply)
 	XL_DEFINE_PROTO(xcb_get_property)
+	XL_DEFINE_PROTO(xcb_get_property_unchecked)
 	XL_DEFINE_PROTO(xcb_get_property_value)
 	XL_DEFINE_PROTO(xcb_get_property_value_length)
 	XL_DEFINE_PROTO(xcb_get_modifier_mapping_unchecked)
@@ -96,6 +99,12 @@ public:
 	XL_DEFINE_PROTO(xcb_get_selection_owner_reply)
 	XL_DEFINE_PROTO(xcb_get_keyboard_mapping)
 	XL_DEFINE_PROTO(xcb_get_keyboard_mapping_reply)
+	XL_DEFINE_PROTO(xcb_get_atom_name)
+	XL_DEFINE_PROTO(xcb_get_atom_name_unchecked)
+	XL_DEFINE_PROTO(xcb_get_atom_name_name)
+	XL_DEFINE_PROTO(xcb_get_atom_name_name_length)
+	XL_DEFINE_PROTO(xcb_get_atom_name_name_end)
+	XL_DEFINE_PROTO(xcb_get_atom_name_reply)
 	XL_DEFINE_PROTO(xcb_request_check)
 	XL_DEFINE_PROTO(xcb_open_font_checked)
 	XL_DEFINE_PROTO(xcb_create_glyph_cursor)
@@ -127,9 +136,19 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_refresh_rates_rates_length)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_unchecked)
-	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_reply)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_crtcs)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_crtcs_length)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_crtcs_end)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_outputs)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_outputs_length)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_outputs_end)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_modes)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_modes_length)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_modes_iterator)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_names)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_names_length)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_names_end)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_reply)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current_reply)
@@ -141,6 +160,12 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current_names_length)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current_crtcs)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_resources_current_crtcs_length)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties_unchecked)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties_atoms)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties_atoms_length)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties_atoms_end)
+	XL_DEFINE_PROTO(xcb_randr_list_output_properties_reply)
 	XL_DEFINE_PROTO(xcb_randr_get_output_primary)
 	XL_DEFINE_PROTO(xcb_randr_get_output_primary_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_get_output_primary_reply)
@@ -154,6 +179,12 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_get_output_info_modes_length)
 	XL_DEFINE_PROTO(xcb_randr_get_output_info_name)
 	XL_DEFINE_PROTO(xcb_randr_get_output_info_name_length)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property_unchecked)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property_data)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property_data_length)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property_data_end)
+	XL_DEFINE_PROTO(xcb_randr_get_output_property_reply)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_reply)
@@ -161,6 +192,16 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_outputs_length)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_possible)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_possible_length)
+	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs)
+	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs_length)
+	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs_end)
+	XL_DEFINE_PROTO(xcb_randr_monitor_info_next)
+	XL_DEFINE_PROTO(xcb_randr_monitor_info_end)
+	XL_DEFINE_PROTO(xcb_randr_get_monitors)
+	XL_DEFINE_PROTO(xcb_randr_get_monitors_unchecked)
+	XL_DEFINE_PROTO(xcb_randr_get_monitors_monitors_length)
+	XL_DEFINE_PROTO(xcb_randr_get_monitors_monitors_iterator)
+	XL_DEFINE_PROTO(xcb_randr_get_monitors_reply)
 	decltype(&_xl_null_fn) _xcb_randr_last_fn = &_xl_null_fn;
 
 	decltype(&_xl_null_fn) _xcb_key_first_fn = &_xl_null_fn;
@@ -199,10 +240,6 @@ public:
 	XL_DEFINE_PROTO(xcb_cursor_context_free)
 	decltype(&_xl_null_fn) _xcb_cursor_last_fn = &_xl_null_fn;
 
-	/*XcbConnection *getCommonConnection();
-
-	Rc<XcbConnection> acquireConnection();*/
-
 protected:
 	void openAux();
 
@@ -227,8 +264,11 @@ enum class XcbAtomIndex {
 	TARGETS,
 	MULTIPLE,
 	UTF8_STRING,
+	OCTET_STREAM, // application/octet-stream
+	ATOM_PAIR,
+	INCR,
 	XNULL,
-	XENOLITH_CLIPBOARD
+	XENOLITH_CLIPBOARD,
 };
 
 } // namespace stappler::xenolith::platform

@@ -496,7 +496,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	return p;
 }
 
-const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, BytesView data,
+const ImageData *Resource::Builder::addBitmapImage(StringView key, ImageInfo &&img, BytesView data,
 		AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
@@ -508,6 +508,70 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, By
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);
 		buf->data = data.pdup(_data->pool);
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
+		return buf;
+	}, _data->pool);
+	if (!p) {
+		log::error("Resource", _data->key, ": Image already added: ", key);
+		return nullptr;
+	}
+	return p;
+}
+
+const ImageData *Resource::Builder::addEncodedImageByRef(StringView key, ImageInfo &&img,
+		BytesView data, AttachmentLayout layout, AccessType access) {
+	Extent3 extent;
+	extent.depth = 1;
+	CoderSource source(data);
+	if (!bitmap::getImageSize(source, extent.width, extent.height)) {
+		log::error("Resource", "Fail to add image: ", key,
+				", fail to find image dimensions from data provided");
+		return nullptr;
+	}
+
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this]() -> ImageData * {
+		auto buf = new (_data->pool) ImageData;
+		static_cast<ImageInfo &>(*buf) = move(img);
+		buf->key = key.pdup(_data->pool);
+		buf->memCallback = [data, format = img.format](uint8_t *ptr, uint64_t size,
+								   const ImageData::DataCallback &dcb) {
+			Resource::loadImageMemoryData(ptr, size, data, format, dcb);
+		};
+		buf->extent = extent;
+		buf->targetLayout = layout;
+		buf->targetAccess = access;
+		return buf;
+	}, _data->pool);
+	if (!p) {
+		log::error("Resource", _data->key, ": Image already added: ", key);
+		return nullptr;
+	}
+	return p;
+}
+
+const ImageData *Resource::Builder::addEncodedImage(StringView key, ImageInfo &&img, BytesView data,
+		AttachmentLayout layout, AccessType access) {
+	Extent3 extent;
+	extent.depth = 1;
+
+	CoderSource source(data);
+	if (!bitmap::getImageSize(source, extent.width, extent.height)) {
+		log::error("Resource", "Fail to add image: ", key,
+				", fail to find image dimensions from data provided");
+		return nullptr;
+	}
+
+	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this]() -> ImageData * {
+		auto d = data.pdup(_data->pool);
+		auto buf = new (_data->pool) ImageData;
+		static_cast<ImageInfo &>(*buf) = move(img);
+		buf->key = key.pdup(_data->pool);
+		buf->memCallback = [d, format = img.format](uint8_t *ptr, uint64_t size,
+								   const ImageData::DataCallback &dcb) {
+			Resource::loadImageMemoryData(ptr, size, d, format, dcb);
+		};
+		buf->extent = extent;
 		buf->targetLayout = layout;
 		buf->targetAccess = access;
 		return buf;
@@ -653,8 +717,8 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 	return p;
 }
 
-const ImageData *Resource::Builder::addImageByRef(StringView key, ImageInfo &&img, BytesView data,
-		AttachmentLayout layout, AccessType access) {
+const ImageData *Resource::Builder::addBitmapImageByRef(StringView key, ImageInfo &&img,
+		BytesView data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
 		log::error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;

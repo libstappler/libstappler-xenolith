@@ -486,13 +486,13 @@ Rc<core::Framebuffer> Device::makeFramebuffer(const core::QueuePassData *pass,
 	return Rc<Framebuffer>::create(*this, (RenderPass *)pass->impl.get(), views);
 }
 
-auto Device::makeImage(const ImageInfoData &imageInfo) -> Rc<ImageStorage> {
+auto Device::makeImage(StringView key, const ImageInfoData &imageInfo) -> Rc<ImageStorage> {
 	bool isTransient =
 			(imageInfo.usage & core::ImageUsage::TransientAttachment) != core::ImageUsage::None;
 
 	auto img = _allocator->spawnPersistent(isTransient ? AllocationUsage::DeviceLocalLazilyAllocated
 													   : AllocationUsage::DeviceLocal,
-			imageInfo, false);
+			key, imageInfo, false);
 
 	return Rc<ImageStorage>::create(move(img));
 }
@@ -588,8 +588,11 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 					view);
 		});
 
-		task->resultImage = task->device->getAllocator()->spawnPersistent(
-				AllocationUsage::DeviceLocal, task->image->getInfo(), false);
+		SPASSERT(!task->image->getInfo().key.empty(), "Unnamed dynamic image");
+
+		task->resultImage =
+				task->device->getAllocator()->spawnPersistent(AllocationUsage::DeviceLocal,
+						task->image->getInfo().key, task->image->getInfo(), false);
 
 		if (!task->transferBuffer) {
 			task->loop->performOnThread([task] {

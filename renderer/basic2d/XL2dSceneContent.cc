@@ -434,6 +434,27 @@ void SceneContent2d::updateLayoutNode(SceneLayout2d *node) {
 	node->setContentSize(size);
 }
 
+void SceneContent2d::setDefaultLights() {
+	auto color = Color4F::WHITE;
+	color.a = 0.5f;
+
+	// Свет сверху под углом, дающий удлиннение теней снизу
+	auto light = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.3f),
+			1.5f, color);
+
+	// Свет строго сверху, дающий базовые тени
+	auto ambient = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient,
+			Vec2(0.0f, 0.0f), 1.5f, color);
+
+	removeAllLights();
+
+	// Базовый белый заполняющий свет
+	setGlobalLight(Color4F::WHITE);
+
+	addLight(move(light));
+	addLight(move(ambient));
+}
+
 bool SceneContent2d::addLight(SceneLight *light, uint64_t tag, StringView name) {
 	if (tag != InvalidTag) {
 		if (_lightsByTag.find(tag) != _lightsByTag.end()) {

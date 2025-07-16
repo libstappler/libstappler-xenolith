@@ -32,6 +32,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 XL_DECLARE_EVENT_CLASS(AppWindow, onBackground);
 XL_DECLARE_EVENT_CLASS(AppWindow, onFocus);
 
+AppWindow::~AppWindow() { log::info("AppWindow", "~AppWindow"); }
+
 bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<NativeWindow> w) {
 	_context = ctx;
 	_application = app;
@@ -39,25 +41,31 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 
 	_presentationEngine = _context->getGlLoop()->makePresentationEngine(this);
 
+	auto c = _presentationEngine->getFrameConstraints();
+
+	_director = Rc<Director>::create(_application.get_cast<AppThread>(), c, this);
+
 	return _presentationEngine != nullptr;
 }
 
 void AppWindow::runWithQueue(const Rc<core::Queue> &queue) {
 	if (!_presentationEngine->isRunning()) {
-		run();
+		if (!_presentationEngine->isRunning()) {
+			_presentationEngine->run();
+		}
+
+		_presentationEngine->scheduleNextImage(
+				[this](core::PresentationFrame *, bool success) { _window->mapWindow(); });
 	}
 }
 
 void AppWindow::run() {
-	if (!_presentationEngine->isRunning()) {
-		_presentationEngine->run();
-	}
-
-	_presentationEngine->scheduleNextImage(
-			[this](core::PresentationFrame *, bool success) { _window->mapWindow(); });
+	_application->performOnAppThread([this, director = _director]() mutable {
+		_context->handleAppWindowCreated(this, director);
+	}, this);
 }
 
-void AppWindow::update(bool displayLink) { _presentationEngine->update(displayLink); }
+void AppWindow::update(core::PresentationUpdateFlags flags) { _presentationEngine->update(flags); }
 
 void AppWindow::end() {
 	if (!_presentationEngine) {
@@ -76,59 +84,23 @@ void AppWindow::end() {
 			_director->end();
 		}
 		_context->handleAppWindowDestroyed(this);
-		_context->performOnThread([engine = move(engine)]() mutable {
-#if SP_REF_DEBUG
-			if (engine->getReferenceCount() > 1) {
-				auto tmp = engine.get();
-				engine = nullptr;
-
-				tmp->foreachBacktrace(
-						[](uint64_t id, Time time, const std::vector<std::string> &vec) {
-					StringStream stream;
-					stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-					for (auto &it : vec) { stream << "\t" << it << "\n"; }
-					log::debug("core::PresentationEngine", stream.str());
-				});
-			}
-			engine = nullptr;
-
-			auto refcount = getReferenceCount();
-			if (refcount > 1) {
-				foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
-					StringStream stream;
-					stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
-					for (auto &it : vec) { stream << "\t" << it << "\n"; }
-					log::debug("View", stream.str());
-				});
-			}
-#else
-			engine = nullptr;
-#endif
-		}, this);
+		_context->performOnThread([engine = move(engine)]() mutable { engine = nullptr; }, this);
+		_director = nullptr;
 	}, this);
 }
 
 void AppWindow::close(bool graceful) {
+	if (_window) {
+		if (_window->close()) {
+			return;
+		}
+	}
 	if (!graceful) {
 		end();
 	} else {
-		_presentationEngine->deprecateSwapchain(core::PresentationEngine::SwapchainFlags::EndOfLife,
+		_presentationEngine->deprecateSwapchain(core::PresentationSwapchainFlags::EndOfLife,
 				[this](bool) { _context->performOnThread([this] { end(); }, this, false); });
 	}
-}
-
-void AppWindow::setPresentationEngine(Rc<core::PresentationEngine> &&e) {
-	if (_presentationEngine) {
-		log::error("View", "Presentation engine already defined");
-		return;
-	}
-
-	_presentationEngine = move(e);
-
-	auto c = _presentationEngine->getFrameConstraints();
-	_director = Rc<Director>::create(_application.get_cast<AppThread>(), c, this);
-
-	_context->handleAppWindowCreated(this, c);
 }
 
 void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
@@ -139,6 +111,16 @@ void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
 	_application->performOnAppThread([this, events = sp::move(events)]() mutable {
 		for (auto &event : events) { propagateInputEvent(event); }
 	}, this, true);
+	setReadyForNextFrame();
+}
+
+void AppWindow::handleTextInput(const TextInputState &state) {
+	if (!_presentationEngine) {
+		return;
+	}
+
+	_application->performOnAppThread([this, state = state]() mutable { propagateTextInput(state); },
+			this, true);
 	setReadyForNextFrame();
 }
 
@@ -181,12 +163,20 @@ core::ImageViewInfo AppWindow::getSwapchainImageViewInfo(const core::ImageInfo &
 	return image.getViewInfo(info);
 }
 
-core::SwapchainConfig AppWindow::selectConfig(const core::SurfaceInfo &cfg) {
-	return _context->handleAppWindowSurfaceUpdate(this, cfg);
+core::SwapchainConfig AppWindow::selectConfig(const core::SurfaceInfo &cfg, bool fastMode) {
+	auto c = _context->handleAppWindowSurfaceUpdate(this, cfg, fastMode);
+	// preserve selected config for app thread
+	_application->performOnAppThread([this, c, fastMode] {
+		_appSwapchainConfig = c;
+		if (fastMode) {
+			_appSwapchainConfig.presentMode = _appSwapchainConfig.presentModeFast;
+		}
+	}, this);
+	return c;
 }
 
-void AppWindow::acquireFrameData(core::PresentationFrame *frame,
-		Function<void(core::PresentationFrame *)> &&cb) {
+void AppWindow::acquireFrameData(NotNull<core::PresentationFrame> frame,
+		Function<void(NotNull<core::PresentationFrame>)> &&cb) {
 	_application->performOnAppThread(
 			[this, frame = Rc<core::PresentationFrame>(frame), cb = sp::move(cb),
 					req = Rc<core::FrameRequest>(frame->getRequest())]() mutable {
@@ -198,7 +188,7 @@ void AppWindow::acquireFrameData(core::PresentationFrame *frame,
 			this);
 }
 
-void AppWindow::handleFramePresented(core::PresentationFrame *frame) {
+void AppWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
 	_window->handleFramePresented(frame);
 }
 
@@ -212,8 +202,15 @@ core::FrameConstraints AppWindow::getInitialFrameConstraints() const {
 
 uint64_t AppWindow::getInitialFrameInterval() const { return _window->getScreenFrameInterval(); }
 
-void AppWindow::updateConfig() {
-	_context->performOnThread([this] { _presentationEngine->deprecateSwapchain(); }, this, true);
+void AppWindow::setFrameOrder(uint64_t frameOrder) {
+	if (_window) {
+		_window->setFrameOrder(frameOrder);
+	}
+}
+
+void AppWindow::updateConfig(core::PresentationSwapchainFlags flags) {
+	_context->performOnThread([this, flags] { _presentationEngine->deprecateSwapchain(flags); },
+			this, true);
 }
 
 void AppWindow::setReadyForNextFrame() {
@@ -222,6 +219,12 @@ void AppWindow::setReadyForNextFrame() {
 			_presentationEngine->setReadyForNextFrame();
 		}
 	}, this, true);
+}
+
+void AppWindow::waitUntilFrame() {
+	if (_presentationEngine) {
+		_presentationEngine->waitUntilFramePresentation();
+	}
 }
 
 void AppWindow::setRenderOnDemand(bool value) {
@@ -248,17 +251,6 @@ uint64_t AppWindow::getFrameInterval() const {
 	return _presentationEngine ? _presentationEngine->getTargetFrameInterval() : 0;
 }
 
-void AppWindow::setInsetDecoration(const Padding &padding) {
-	_context->performOnThread([this, padding] { _presentationEngine->setContentPadding(padding); },
-			this, true);
-}
-
-void AppWindow::waitUntilFrame() {
-	if (_presentationEngine) {
-		_presentationEngine->waitUntilFramePresentation();
-	}
-}
-
 void AppWindow::retainExitGuard() {
 	_context->performOnThread([this]() {
 		if (_exitGuard == 0) {
@@ -275,6 +267,11 @@ void AppWindow::releaseExitGuard() {
 			_window->setExitGuard(false);
 		}
 	}, this);
+}
+
+void AppWindow::setInsetDecoration(const Padding &padding) {
+	_context->performOnThread([this, padding] { _presentationEngine->setContentPadding(padding); },
+			this, true);
 }
 
 void AppWindow::setInsetDecorationVisible(bool val) {
@@ -314,6 +311,24 @@ void AppWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	_context->performOnThread([this, layers = sp::move(layers)]() mutable {
 		_window->updateLayers(sp::move(layers));
 	}, this);
+}
+
+void AppWindow::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {
+	_application->acquireScreenInfo(sp::move(cb), ref);
+}
+
+void AppWindow::setFullscreen(MonitorId &&mon, ModeInfo &&mode, Function<void(Status)> &&cb,
+		Ref *ref) {
+	_context->performOnThread(
+			[this, mon = move(mon), mode = move(mode), cb = sp::move(cb),
+					ref = Rc<Ref>(ref)]() mutable {
+		auto st = _window->setFullscreen(mon, mode);
+		_application->performOnAppThread([st, cb = sp::move(cb), ref = move(ref)]() mutable {
+			cb(st);
+			ref = nullptr;
+		}, this);
+	},
+			this);
 }
 
 void AppWindow::propagateInputEvent(core::InputEventData &event) {

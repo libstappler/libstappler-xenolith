@@ -65,6 +65,10 @@ Connection::Connection(Library *lib, EventCallback &&cb, DBusBusType type)
 : lib(lib), callback(sp::move(cb)), type(type) {
 	lib->dbus_error_init(&error);
 	connection = lib->dbus_bus_get_private(type, &error);
+
+	// DBus is large enough to call _exit for the whole app, damn it...
+	lib->dbus_connection_set_exit_on_disconnect(connection, false);
+
 	if (lib->dbus_error_is_set(&error)) {
 		log::error("DBus", "Fail to connect: ", error.name, ": ", error.message);
 	}
@@ -217,11 +221,25 @@ bool Connection::handle(event::Handle *handle, const Event &ev, event::PollFlags
 	return false;
 }
 
-void Connection::flush() { lib->dbus_connection_flush(connection); }
+void Connection::flush() {
+	if (!connection) {
+		return;
+	}
+	lib->dbus_connection_flush(connection);
+}
 
-DBusDispatchStatus Connection::dispatch() { return lib->dbus_connection_dispatch(connection); }
+DBusDispatchStatus Connection::dispatch() {
+	if (!connection) {
+		return DBUS_DISPATCH_COMPLETE;
+	}
+	return lib->dbus_connection_dispatch(connection);
+}
 
 void Connection::dispatchAll() {
+	if (!connection) {
+		return;
+	}
+
 	while (lib->dbus_connection_dispatch(connection) == DBUS_DISPATCH_DATA_REMAINS) {
 		// empty
 	}
@@ -229,6 +247,8 @@ void Connection::dispatchAll() {
 
 void Connection::close() {
 	if (lib && connection) {
+		dispatchAll();
+
 		lib->dbus_connection_close(connection);
 		lib->dbus_connection_unref(connection);
 		connection = nullptr;
@@ -276,6 +296,7 @@ bool Library::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, dbus_message_get_destination)
 	XL_LOAD_PROTO(handle, dbus_message_get_sender)
 	XL_LOAD_PROTO(handle, dbus_message_get_signature)
+	XL_LOAD_PROTO(handle, dbus_connection_set_exit_on_disconnect)
 	XL_LOAD_PROTO(handle, dbus_connection_send_with_reply_and_block)
 	XL_LOAD_PROTO(handle, dbus_connection_send_with_reply)
 	XL_LOAD_PROTO(handle, dbus_connection_set_watch_functions)

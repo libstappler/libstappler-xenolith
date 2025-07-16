@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,36 +20,21 @@
  THE SOFTWARE.
  **/
 
+#ifndef XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
+#define XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
+
 #include "XLCommon.h"
 
-#include "XLEvent.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-#include "platform/XLContextController.cc"
-#include "platform/XLContextNativeWindow.cc"
-#include "platform/XLEdid.cc"
-
-#if LINUX
-#include "linux/thirdparty/glfw/xkb_unicode.cc"
-#include "linux/XLLinux.cc"
-#include "linux/XLLinuxXcbLibrary.cc"
-#include "linux/XLLinuxXkbLibrary.cc"
-#include "linux/XLLinuxDBusLibrary.cc"
-#include "linux/XLLinuxXcbConnection.cc"
-#include "linux/XLLinuxXcbWindow.cc"
-#include "linux/XLLinuxContextController.cc"
-#endif
-
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName, Context::run),
+struct EdidInfo {
+	String vendor;
+	String model;
+	String serial;
 };
 
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
+EdidInfo parseEdid(BytesView);
 
-} // namespace stappler::xenolith
+} // namespace stappler::xenolith::platform
+
+#endif /* XENOLITH_APPLICATION_PLATFORM_XLEDID_H_ */

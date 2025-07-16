@@ -227,8 +227,9 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 
 		if (handlers.event.data.getValue()) {
-			// Mouse left window, cancel active mouse events
+			// Window now in background, cancel active events
 			cancelTouchEvents(event.x, event.y, event.modifiers);
+			cancelKeyEvents(event.x, event.y, event.modifiers);
 		}
 		break;
 	}
@@ -245,6 +246,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 
 		if (!handlers.event.data.getValue()) {
+			// Window lost focus, cancel active events
 			cancelTouchEvents(event.x, event.y, event.modifiers);
 			cancelKeyEvents(event.x, event.y, event.modifiers);
 		}
@@ -267,6 +269,19 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 			// Mouse left window, cancel active mouse events
 			cancelTouchEvents(event.x, event.y, event.modifiers);
 		}
+		break;
+	}
+	case InputEventName::CloseRequest:
+	case InputEventName::ScreenUpdate: {
+		EventHandlersInfo handlers{getEventInfo(event)};
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
+			if (l.listener->canHandleEvent(handlers.event)) {
+				handlers.listeners.emplace_back(l.listener);
+			}
+			return true;
+		}, false);
+
+		handlers.handle(false);
 		break;
 	}
 	case InputEventName::KeyPressed: {

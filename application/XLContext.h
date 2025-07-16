@@ -26,6 +26,7 @@
 #include "XLEvent.h"
 #include "XLContextInfo.h"
 #include "XLCoreTextInput.h"
+#include "SPSharedModule.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -39,6 +40,44 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Context;
 class AppThread;
 class AppWindow;
+class Director;
+class Scene;
+
+// Syntactic sugar for SharedModule definition
+
+#define DEFINE_SCENE_FACTORY(SceneFactoryFunction) \
+static_assert(::std::is_same_v<decltype(&SceneFactoryFunction),\
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeSceneSignature>, \
+	"Scene factory function should match :Context::SymbolMakeSceneSignature"); \
+SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appCommonSceneFactorySymbol(\
+		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME, \
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeSceneName, \
+		&SceneFactoryFunction);
+
+#define DEFINE_PRIMARY_SCENE_CLASS(SceneClass) \
+	static STAPPLER_VERSIONIZED_NAMESPACE::Rc<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Scene> __macro_makeScene(\
+		STAPPLER_VERSIONIZED_NAMESPACE::NotNull<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::AppThread> app, \
+		STAPPLER_VERSIONIZED_NAMESPACE::NotNull<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::AppWindow> window, \
+		const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::FrameConstraints &constraints) { \
+	return STAPPLER_VERSIONIZED_NAMESPACE::Rc<SceneClass>::create(app, window, constraints); \
+} \
+DEFINE_SCENE_FACTORY(__macro_makeScene)
+
+#define DEFINE_CONTEXT_CONSTRUCTOR(ContextConstructorFunction) \
+static_assert(::std::is_same_v<decltype(&ContextConstructorFunction),\
+	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeContextSignature>, \
+	"Context constructor function should match :Context::SymbolMakeContextSignature"); \
+SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appCommonSContextConstructorSymbol(\
+		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME, \
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeContextName, \
+		&ContextConstructorFunction);
+
+#define DEFINE_CONTEXT_CLASS(ContextClass) \
+	static STAPPLER_VERSIONIZED_NAMESPACE::Rc<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context> __macro_makeContext(\
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::ContextConfig &&config) { \
+	return STAPPLER_VERSIONIZED_NAMESPACE::Rc<ContextClass>::create(STAPPLER_VERSIONIZED_NAMESPACE::move(config)); \
+} \
+DEFINE_CONTEXT_CONSTRUCTOR(__macro_makeContext)
 
 using NativeWindow = platform::ContextNativeWindow;
 
@@ -56,6 +95,23 @@ public:
 	virtual void handleLowMemory(Context *a) { }
 };
 
+/** Context: main application class, that allow workflow customization
+	
+ By default, it uses appcommon (MODULE_APPCOMMON_NAME) SharedModule to access user overrides:
+ 
+ (see Context::Symbol* constants)
+ 
+ - Context::SymbolHelpStringName - string with application CLI help
+ -  --or --
+ - Context::SymbolPrintHelpName - function to print application help
+ 
+ - Context::SymbolParseConfigName - function to parse command line data to ContextConfig
+ - Context::SymbolMakeContextName - function to create (possibly subclassed) Context
+ - Context::SymbolMakeScemeName - function to create application Scene for a view
+ 
+ It's essential to define Context::SymbolMakeScemeName or override `makeScene` for application to work
+*/
+
 class Context : public Ref {
 public:
 	using SwapchainConfig = core::SwapchainConfig;
@@ -64,12 +120,31 @@ public:
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
 
+	using SymbolHelpStringSignature = const char *;
+	static constexpr auto SymbolHelpStringName = "HELP_STRING";
+
+	using SymbolPrintHelpSignature = void (*)(const ContextConfig &, int argc, const char **);
+	static constexpr auto SymbolPrintHelpName = "printHelp";
+
+	using SymbolParseConfigSignature = ContextConfig (*)(int argc, const char **);
+	static constexpr auto SymbolParseConfigName = "parseConfig";
+
+	using SymbolMakeContextSignature = Rc<Context> (*)(ContextConfig &&);
+	static constexpr auto SymbolMakeContextName = "makeContext";
+
+	using SymbolMakeSceneSignature = Rc<Scene> (*)(NotNull<AppThread>, NotNull<AppWindow>,
+			const core::FrameConstraints &);
+	static constexpr auto SymbolMakeSceneName = "makeScene";
+
+	// Symbol name for the MODULE_XENOLITH_APPLICATION
+	static constexpr auto SymbolContextRunName = "Context::run";
+
+	static int run(int argc, const char **argv);
+
 	Context();
 	virtual ~Context();
 
 	virtual bool init(ContextConfig &&);
-
-	virtual int run();
 
 	const ContextInfo *getInfo() const { return _info; }
 	event::Looper *getLooper() const { return _looper; }
@@ -87,8 +162,9 @@ public:
 	template <typename T>
 	T *getComponent() const;
 
-	virtual void readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *);
-	virtual void writeToClipboard(BytesView, StringView contentType = StringView());
+	virtual Status readFromClipboard(Function<void(BytesView, StringView)> &&,
+			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
+	virtual Status writeToClipboard(BytesView, StringView contentType = StringView());
 
 	virtual void handleConfigurationChanged(Rc<ContextInfo> &&);
 
@@ -100,14 +176,15 @@ public:
 	virtual void handleAppThreadDestroyed(NotNull<AppThread>);
 	virtual void handleAppThreadUpdate(NotNull<AppThread>, const UpdateTime &time);
 
-	virtual SwapchainConfig handleAppWindowSurfaceUpdate(NotNull<AppWindow>, const SurfaceInfo &);
-	virtual void handleAppWindowCreated(NotNull<AppWindow>, const core::FrameConstraints &);
+	virtual SwapchainConfig handleAppWindowSurfaceUpdate(NotNull<AppWindow>, const SurfaceInfo &,
+			bool fastMode);
+	virtual void handleAppWindowCreated(NotNull<AppWindow>, NotNull<Director>);
 	virtual void handleAppWindowDestroyed(NotNull<AppWindow>);
 
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
 	virtual void handleNativeWindowRedrawNeeded(NotNull<NativeWindow>);
-	virtual void handleNativeWindowResized(NotNull<NativeWindow>);
+	virtual void handleNativeWindowResized(NotNull<NativeWindow>, bool liveResize);
 	virtual void handleNativeWindowInputEvents(NotNull<NativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
@@ -129,19 +206,20 @@ public:
 	virtual void handleWillStart();
 	virtual void handleDidStart();
 
-	virtual void handleWindowFocusChanged(int focused);
-
-	virtual bool handleBackButton();
-
 	virtual void addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&);
 	virtual void removeNetworkCallback(Ref *key);
 
 	virtual void updateMessageToken(BytesView tok);
 	virtual void receiveRemoteNotification(Value &&val);
 
+	virtual Rc<ScreenInfo> getScreenInfo() const;
+
 protected:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<NativeWindow>);
+
 	virtual Rc<core::PresentationEngine> makePresentationEngine(NotNull<core::PresentationWindow>);
+
+	virtual Rc<Scene> makeScene(NotNull<AppWindow>, const core::FrameConstraints &);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
@@ -164,7 +242,7 @@ protected:
 	Rc<core::Loop> _loop;
 
 	Rc<AppThread> _application;
-	Rc<AppWindow> _rootWindow;
+	Rc<NativeWindow> _rootWindow;
 
 	HashMap<std::type_index, Rc<ContextComponent>> _components;
 };

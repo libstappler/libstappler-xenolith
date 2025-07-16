@@ -67,6 +67,9 @@ public:
 
 	virtual void updateLayoutNode(SceneLayout2d *);
 
+	// drops all lights and sets system defaults
+	virtual void setDefaultLights();
+
 	virtual bool addLight(SceneLight *, uint64_t tag = InvalidTag, StringView name = StringView());
 
 	virtual SceneLight *getLightByTag(uint64_t) const;
@@ -80,7 +83,7 @@ public:
 	virtual void removeAllLightsByType(SceneLightType);
 
 	virtual void setGlobalLight(const Color4F &);
-	virtual const Color4F & getGlobalLight() const;
+	virtual const Color4F &getGlobalLight() const;
 
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
 
@@ -111,6 +114,6 @@ protected:
 	Color4F _globalLight = Color4F(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCENECONTENT_H_ */

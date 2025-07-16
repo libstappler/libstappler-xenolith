@@ -22,19 +22,81 @@
 
 #include "XLContext.h"
 #include "XLAppThread.h"
-#include "platform/XLContextController.h"
-#include "SPSharedModule.h"
 #include "XLAppWindow.h"
+#include "XLDirector.h"
+#include "XLScene.h"
+#include "platform/XLContextController.h"
+#include "platform/XLContextNativeWindow.h"
 
 #if MODULE_XENOLITH_FONT
 #include "XLFontLocale.h"
 #include "XLFontComponent.h"
 #endif
 
+#include "SPSharedModule.h"
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(Context, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Context, onRemoteNotification)
+
+int Context::run(int argc, const char **argv) {
+	auto runWithConfig = [&](ContextConfig &&config) -> int {
+		if (hasFlag(config.flags, CommonFlags::Help)) {
+
+			auto printHelpSymbol = SharedModule::acquireTypedSymbol<SymbolPrintHelpSignature>(
+					buildconfig::MODULE_APPCOMMON_NAME, SymbolPrintHelpName);
+			if (printHelpSymbol) {
+				printHelpSymbol(config, argc, argv);
+			} else {
+				auto appName = filepath::lastComponent(StringView(argv[0]));
+
+				std::cout << appName << " <options>:\n";
+				ContextConfig::CommandLine.describe([&](StringView str) { std::cout << str; });
+
+				auto helpString = SharedModule::acquireTypedSymbol<SymbolHelpStringSignature>(
+						buildconfig::MODULE_APPCOMMON_NAME, SymbolHelpStringName);
+				if (helpString) {
+					std::cout << helpString << "\n";
+				}
+			}
+			return 0;
+		}
+
+		if (hasFlag(config.flags, CommonFlags::Verbose)) {
+			std::cerr << " Current work dir: " << stappler::filesystem::currentDir<Interface>()
+					  << "\n";
+			std::cerr << " Options: " << stappler::data::EncodeFormat::Pretty << config.encode()
+					  << "\n";
+		}
+
+		Rc<Context> ctx;
+
+		auto makeContextSymbol = SharedModule::acquireTypedSymbol<SymbolMakeContextSignature>(
+				buildconfig::MODULE_APPCOMMON_NAME, SymbolMakeContextName);
+		if (makeContextSymbol) {
+			ctx = makeContextSymbol(move(config));
+		} else {
+			ctx = Rc<Context>::create(move(config));
+		}
+
+		if (!ctx) {
+			log::error("Context", "Fail to create Context");
+			return -1;
+		}
+
+		return ctx->_controller->run();
+	};
+
+	// access context
+	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigName);
+	if (cfgSymbol) {
+		return runWithConfig(cfgSymbol(argc, argv));
+	} else {
+		return runWithConfig(ContextConfig(argc, argv));
+	}
+}
 
 Context::Context() {
 	_alloc = memory::allocator::create();
@@ -73,21 +135,30 @@ bool Context::init(ContextConfig &&info) {
 	return true;
 }
 
-int Context::run() { return _controller->run(); }
-
 void Context::performOnThread(Function<void()> &&func, Ref *target, bool immediate,
 		StringView tag) const {
 	_looper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
-void Context::readFromClipboard(Function<void(BytesView, StringView)> &&, Ref *) { }
+Status Context::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
+		Function<StringView(SpanView<StringView>)> &&tcb, Ref *target) {
+	auto request = Rc<platform::ClipboardRequest>::create();
+	request->dataCallback = sp::move(cb);
+	request->typeCallback = sp::move(tcb);
+	request->target = target;
 
-void Context::writeToClipboard(BytesView, StringView contentType) { }
+	return _controller->readFromClipboard(sp::move(request));
+}
+
+Status Context::writeToClipboard(BytesView data, StringView contentType) {
+	return _controller->writeToClipboard(data, contentType);
+}
 
 void Context::handleConfigurationChanged(Rc<ContextInfo> &&info) { _info = move(info); }
 
 void Context::handleGraphicsLoaded(NotNull<core::Loop> loop) {
 	_loop = loop;
+	_loop->run();
 #if MODULE_XENOLITH_FONT
 	auto createFontComponent =
 			SharedModule::acquireTypedSymbol< decltype(&font::FontComponent::createFontComponent)>(
@@ -102,12 +173,18 @@ void Context::handleGraphicsLoaded(NotNull<core::Loop> loop) {
 
 Value Context::saveState() { return Value(); }
 
-void Context::handleAppThreadCreated(NotNull<AppThread>) { }
-void Context::handleAppThreadDestroyed(NotNull<AppThread>) { }
-void Context::handleAppThreadUpdate(NotNull<AppThread>, const UpdateTime &time) { }
+void Context::handleAppThreadCreated(NotNull<AppThread>) {
+	log::info("Context", "handleAppThreadCreated");
+}
+void Context::handleAppThreadDestroyed(NotNull<AppThread>) {
+	log::info("Context", "handleAppThreadDestroyed");
+}
+void Context::handleAppThreadUpdate(NotNull<AppThread>, const UpdateTime &time) {
+	// log::info("Context", "handleAppThreadUpdate");
+}
 
 core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w,
-		const SurfaceInfo &info) {
+		const SurfaceInfo &info, bool fastMode) {
 	SwapchainConfig ret;
 	ret.extent = info.currentExtent;
 	ret.imageCount = std::max(uint32_t(3), info.minImageCount);
@@ -187,33 +264,80 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	return ret;
 }
 
-void Context::handleAppWindowCreated(NotNull<AppWindow>, const core::FrameConstraints &) { }
-void Context::handleAppWindowDestroyed(NotNull<AppWindow>) { }
+void Context::handleAppWindowCreated(NotNull<AppWindow> w, NotNull<Director> d) {
+	log::info("Context", "handleAppWindowCreated");
+	auto scene = makeScene(w, d->getFrameConstraints());
+	if (scene) {
+		d->runScene(move(scene));
+	}
+}
 
-void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) { }
-void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) { }
-void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) { }
-void Context::handleNativeWindowResized(NotNull<NativeWindow>) { }
-void Context::handleNativeWindowInputEvents(NotNull<NativeWindow>,
-		Vector<core::InputEventData> &&) { }
+void Context::handleAppWindowDestroyed(NotNull<AppWindow> w) {
+	log::info("Context", "handleAppWindowDestroyed");
+}
 
-void Context::handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &) { }
+void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {
+	log::info("Context", "handleNativeWindowCreated");
+
+	if (w->isRootWindow()) {
+		SPASSERT(_rootWindow == nullptr, "There should be only one Root Window");
+		_rootWindow = w;
+	}
+
+	if (auto appWindow = makeAppWindow(w)) {
+		_rootWindow->setAppWindow(move(appWindow));
+	} else {
+		log::error("Context", "Fail to create AppWindow for NativeWindow");
+	}
+}
+
+void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
+	log::info("Context", "handleNativeWindowDestroyed");
+	w->getAppWindow()->close(true);
+	if (w->isRootWindow()) {
+		_rootWindow = nullptr;
+	}
+}
+void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
+	log::info("Context", "handleNativeWindowRedrawNeeded");
+}
+void Context::handleNativeWindowResized(NotNull<NativeWindow> w, bool liveResize) {
+	log::info("Context", "handleNativeWindowResized");
+
+	w->getAppWindow()->updateConfig(liveResize ? core::PresentationSwapchainFlags::SwitchToFastMode
+											   : core::PresentationSwapchainFlags::None);
+}
+void Context::handleNativeWindowInputEvents(NotNull<NativeWindow> w,
+		Vector<core::InputEventData> &&events) {
+	w->getAppWindow()->handleInputEvents(sp::move(events));
+}
+
+void Context::handleNativeWindowTextInput(NotNull<NativeWindow> w,
+		const core::TextInputState &state) {
+	w->getAppWindow()->handleTextInput(state);
+}
 
 void Context::handleLowMemory() {
+	log::info("Context", "handleLowMemory");
 	for (auto &it : _components) { it.second->handleLowMemory(this); }
 }
 
 void Context::handleWillDestroy() {
+	log::info("Context", "handleWillDestroy");
 	for (auto &it : _components) { it.second->handleDestroy(this); }
 	_components.clear();
 
 	_controller = nullptr;
-	_loop->stop();
-	_loop = nullptr;
+
+	if (_loop) {
+		_loop->stop();
+		_loop = nullptr;
+	}
 }
-void Context::handleDidDestroy() { }
+void Context::handleDidDestroy() { log::info("Context", "handleDidDestroy"); }
 
 void Context::handleWillStop() {
+	log::info("Context", "handleWillStop");
 	if (_running) {
 		for (auto &it : _components) { it.second->handleStop(this); }
 
@@ -222,28 +346,36 @@ void Context::handleWillStop() {
 }
 
 void Context::handleDidStop() {
-	_application->stop();
-	_application = nullptr;
+	log::info("Context", "handleDidStop");
+	if (_application) {
+		_application->stop();
+		_application = nullptr;
+	}
 }
 
 void Context::handleWillPause() {
+	log::info("Context", "handleWillPause");
 	for (auto &it : _components) { it.second->handlePause(this); }
 }
-void Context::handleDidPause() { }
+void Context::handleDidPause() { log::info("Context", "handleDidPause"); }
 
-void Context::handleWillResume() { }
+void Context::handleWillResume() { log::info("Context", "handleWillResume"); }
 
 void Context::handleDidResume() {
+	log::info("Context", "handleDidResume");
 	for (auto &it : _components) { it.second->handleResume(this); }
 }
 
-void Context::handleWillStart() { _application = Rc<AppThread>::create(this); }
+void Context::handleWillStart() {
+	log::info("Context", "handleWillStart");
+	_application = Rc<AppThread>::create(this);
+}
 
 void Context::handleDidStart() {
+	log::info("Context", "handleDidStart");
 	if (!_running) {
 
 		/*
-
 		addTokenCallback(this, [this](StringView str) {
 			_application->performOnAppThread([this, str = str.str<Interface>()]() mutable {
 				_application->updateMessageToken(BytesView(StringView(str)));
@@ -257,13 +389,12 @@ void Context::handleDidStart() {
 		});*/
 
 		for (auto &it : _components) { it.second->handleStart(this); }
+
+		_application->run();
+
 		_running = true;
 	}
 }
-
-void Context::handleWindowFocusChanged(int focused) { }
-
-bool Context::handleBackButton() { return false; }
 
 void Context::addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&cb) {
 	_controller->addNetworkCallback(key, sp::move(cb));
@@ -278,6 +409,8 @@ void Context::updateMessageToken(BytesView tok) {
 
 void Context::receiveRemoteNotification(Value &&val) { onRemoteNotification(this, move(val)); }
 
+Rc<ScreenInfo> Context::getScreenInfo() const { return _controller->getScreenInfo(); }
+
 Rc<AppWindow> Context::makeAppWindow(NotNull<NativeWindow> w) {
 	return _controller->makeAppWindow(_application, w);
 }
@@ -286,7 +419,21 @@ Rc<core::PresentationEngine> Context::makePresentationEngine(NotNull<core::Prese
 	return _loop->makePresentationEngine(w.get());
 }
 
+Rc<Scene> Context::makeScene(NotNull<AppWindow> w, const core::FrameConstraints &c) {
+	Rc<Scene> scene;
+	auto makeSceneSymbol = SharedModule::acquireTypedSymbol<SymbolMakeSceneSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, SymbolMakeSceneName);
+	if (makeSceneSymbol) {
+		scene = makeSceneSymbol(_application, w, c);
+	}
+	if (!scene) {
+		log::error("Context", "Fail to create scene for the window '", w->getInfo()->id, "'");
+	}
+	return scene;
+}
+
 void Context::initializeComponent(NotNull<ContextComponent> comp) {
 	_controller->initializeComponent(comp);
 }
+
 } // namespace stappler::xenolith

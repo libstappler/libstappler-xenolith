@@ -24,7 +24,6 @@
 #define XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
 
 #include "XLCorePresentationEngine.h"
-#include "XLVkView.h"
 #include "XLVkSwapchain.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
@@ -55,12 +54,7 @@ public:
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
 			core::PresentMode presentMode) override;
 
-	virtual void handleFramePresented(core::PresentationFrame *) override;
-
 protected:
-	virtual void acquireFrameData(core::PresentationFrame *,
-			Function<void(core::PresentationFrame *)> &&) override;
-
 	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;
 };
 

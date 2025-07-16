@@ -21,6 +21,7 @@
  **/
 
 #include "XLContextController.h"
+#include "XLContextNativeWindow.h"
 #include "XLContext.h"
 
 #if LINUX
@@ -52,8 +53,8 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run() { return _resultCode; }
 
-void ContextController::notifyWindowResized(NotNull<ContextNativeWindow> w) {
-	_context->handleNativeWindowResized(w);
+void ContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
+	_context->handleNativeWindowResized(w, liveResize);
 }
 void ContextController::notifyWindowInputEvents(NotNull<ContextNativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
@@ -66,8 +67,15 @@ void ContextController::notifyWindowTextInput(NotNull<ContextNativeWindow> w,
 }
 
 bool ContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
-	_context->handleNativeWindowDestroyed(w);
-	return false;
+	if (w->hasExitGuard()) {
+		auto event = core::InputEventData::BoolEvent(core::InputEventName::CloseRequest, true);
+		notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
+		return false;
+	} else {
+		_context->handleNativeWindowDestroyed(w);
+		w->unmapWindow();
+		return true;
+	}
 }
 
 void ContextController::addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&cb) {
@@ -95,6 +103,16 @@ void ContextController::initializeComponent(NotNull<ContextComponent> comp) {
 	case ContextState::Active: comp->handleResume(_context); break;
 	}
 }
+
+Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&) {
+	return Status::ErrorNotImplemented;
+}
+
+Status ContextController::writeToClipboard(BytesView, StringView contentType) {
+	return Status::ErrorNotImplemented;
+}
+
+Rc<ScreenInfo> ContextController::getScreenInfo() const { return Rc<ScreenInfo>::create(); }
 
 void ContextController::handleStateChanged(ContextState prevState, ContextState newState) {
 	if (prevState == newState) {

@@ -24,12 +24,12 @@
 #include "XLLinuxXcbWindow.h"
 #include <X11/keysym.h>
 
-#ifndef XL_X11_DEBUG
+#define XL_X11_DEBUG 1
+
 #if XL_X11_DEBUG
 #define XL_X11_LOG(...) log::debug("XCB", __VA_ARGS__)
 #else
 #define XL_X11_LOG(...)
-#endif
 #endif
 
 // use GLFW mappings as a fallback for XKB
@@ -37,88 +37,15 @@ uint32_t _glfwKeySym2Unicode(unsigned int keysym);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-void ScreenInfo::describe(const CallbackStream &out) {
-	out << "ScreenInfo(" << width << "x" << height << "; " << mwidth << "x" << mheight
-		<< "; rates:";
-	for (auto &it : rates) { out << " " << it; }
-	out << ");";
-}
-
-void ModeInfo::describe(const CallbackStream &out) {
-	out << "ModeInfo(" << id << ":'" << name << "': " << width << "x" << height << "@" << rate
-		<< ");";
-}
-
-void CrtcInfo::describe(const CallbackStream &out, uint32_t indent) {
-	for (uint32_t i = 0; i < indent; ++i) { out << '\t'; }
-	out << "CrtcInfo(" << crtc << "; x:" << x << "; y:" << y << "; w:" << width << "; h:" << height
-		<< "; m:" << mode << "; r:" << rotation << "; rs:" << rotations << ");\n";
-
-	for (uint32_t i = 0; i < indent + 1; ++i) { out << '\t'; }
-	out << "outputs:";
-	for (auto &it : outputs) { out << " " << it << ";"; }
-	out << "\n";
-
-	for (uint32_t i = 0; i < indent + 1; ++i) { out << '\t'; }
-	out << "possible:";
-	for (auto &it : possible) { out << " " << it << ";"; }
-	out << "\n";
-}
-
-void OutputInfo::describe(const CallbackStream &out) {
-	out << "OutputInfo(" << output << ":'" << name << "': crtc:" << crtc << "; modes:";
-
-	for (auto &it : modes) { out << " " << it << ";"; }
-	out << ");";
-}
-
-void ScreenInfoData::describe(const CallbackStream &out) {
-	out << "ScreenInfoData: " << config << "\n";
-	out << "\tcrtcs:";
-	for (auto &it : currentCrtcs) { out << " " << it << ";"; }
-	out << "\n";
-
-	out << "\toutput:";
-	for (auto &it : currentOutputs) { out << " " << it << ";"; }
-	out << "\n";
-
-	out << "\tcurrentModeInfo:\n";
-	for (auto &it : currentModeInfo) {
-		out << "\t\t";
-		it.describe(out);
-		out << "\n";
+uint16_t ScreenInfoData::getCommonRate() const {
+	uint16_t rate = 0;
+	for (auto &mIt : monitors) {
+		for (auto &oIt : mIt.outputs) { rate = std::max(oIt->crtc->mode->rate, rate); }
 	}
-
-	out << "\tmodeInfo:\n";
-	for (auto &it : modeInfo) {
-		out << "\t\t";
-		it.describe(out);
-		out << "\n";
-	}
-
-	out << "\tscreenInfo:\n";
-	for (auto &it : screenInfo) {
-		out << "\t\t";
-		it.describe(out);
-		out << "\n";
-	}
-
-	out << "\tcrtcInfo:\n";
-	for (auto &it : crtcInfo) { it.describe(out, 2); }
-
-	out << "\tprimaryOutput:\n";
-	out << "\t\t";
-	primaryOutput.describe(out);
-	out << "\n";
-
-	out << "\tprimaryCrtc:\n";
-	primaryCrtc.describe(out, 2);
-
-	out << "\tprimaryMode:\n";
-	out << "\t\t";
-	primaryMode.describe(out);
-	out << "\n";
+	return rate;
 }
+
+void ScreenInfoData::describe(const CallbackStream &out) { }
 
 void XcbConnection::ReportError(int error) {
 	switch (error) {
@@ -307,25 +234,18 @@ core::InputKeyCode XcbConnection::getKeysymCode(xcb_keysym_t sym) {
 }
 
 XcbConnection::~XcbConnection() {
+	if (_clipboard.window) {
+		_xcb->xcb_destroy_window(_connection, _clipboard.window);
+	}
+
 	if (_cursorContext) {
 		_xcb->xcb_cursor_context_free(_cursorContext);
 		_cursorContext = nullptr;
 	}
-	if (_xkbKeymap) {
-		_xkb->xkb_keymap_unref(_xkbKeymap);
-		_xkbKeymap = nullptr;
-	}
-	if (_xkbState) {
-		_xkb->xkb_state_unref(_xkbState);
-		_xkbState = nullptr;
-	}
-	if (_xkbCompose) {
-		_xkb->xkb_compose_state_unref(_xkbCompose);
-		_xkbCompose = nullptr;
-	}
-	if (_keysyms) {
-		_xcb->xcb_key_symbols_free(_keysyms);
-		_keysyms = nullptr;
+
+	if (_keys.keysyms) {
+		_xcb->xcb_key_symbols_free(_keys.keysyms);
+		_keys.keysyms = nullptr;
 	}
 	if (_connection) {
 		_xcb->xcb_disconnect(_connection);
@@ -333,9 +253,10 @@ XcbConnection::~XcbConnection() {
 	}
 }
 
-XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, StringView display) {
+XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, StringView display)
+: _xkb(xkb) {
 	_xcb = xcb;
-	_xkb = xkb;
+	_xkb.lib = xkb;
 
 	_connection = _xcb->xcb_connect(display.empty()
 					? NULL
@@ -354,11 +275,15 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		}
 	}
 
+	xcb_randr_query_version_cookie_t randrVersionCookie;
+
 	if (_xcb->hasRandr()) {
 		auto ext = _xcb->xcb_get_extension_data(_connection, _xcb->xcb_randr_id);
 		if (ext) {
-			_randrEnabled = true;
-			_randrFirstEvent = ext->first_event;
+			_randr.enabled = true;
+			_randr.firstEvent = ext->first_event;
+			randrVersionCookie = _xcb->xcb_randr_query_version(_connection,
+					XcbLibrary::RANDR_MAJOR_VERSION, XcbLibrary::RANDR_MINOR_VERSION);
 		}
 	}
 
@@ -369,8 +294,8 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		}
 	}
 
-	if (_xkb && _xkb->hasX11() && _xcb->hasXkb()) {
-		initXkb();
+	if (_xkb.lib && _xkb.lib->hasX11() && _xcb->hasXkb()) {
+		_xkb.initXcb(_xcb, _connection);
 	}
 
 	// read atoms from connection
@@ -403,6 +328,35 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		}
 		++i;
 	}
+
+	if (_randr.enabled) {
+		if (auto versionReply = _xcb->xcb_randr_query_version_reply(_connection, randrVersionCookie,
+					nullptr)) {
+			_randr.majorVersion = versionReply->major_version;
+			_randr.minorVersion = versionReply->minor_version;
+			_randr.initialized = true;
+			::free(versionReply);
+		}
+	}
+
+	uint32_t mask = XCB_CW_EVENT_MASK;
+	uint32_t values[2];
+	values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE;
+
+	/* Ask for our window's Id */
+	_clipboard.window = _xcb->xcb_generate_id(_connection);
+
+	_xcb->xcb_create_window(_connection,
+			XCB_COPY_FROM_PARENT, // depth (same as root)
+			_clipboard.window, // window Id
+			_screen->root, // parent window
+			0, 0, 100, 100,
+			0, // border_width
+			XCB_WINDOW_CLASS_INPUT_OUTPUT, // class
+			_screen->root_visual, // visual
+			mask, values);
+
+	_xcb->xcb_flush(_connection);
 }
 
 template <typename Event>
@@ -434,7 +388,9 @@ static bool XcbConnection_forwardToWindow(StringView eventName,
 	return false;
 }
 
-void XcbConnection::poll() {
+uint32_t XcbConnection::poll() {
+	uint32_t ret = 0;
+
 	xcb_generic_event_t *e;
 
 	Set<XcbWindow *> eventWindows;
@@ -442,8 +398,17 @@ void XcbConnection::poll() {
 	while ((e = _xcb->xcb_poll_for_event(_connection))) {
 		auto et = e->response_type & 0x7f;
 		switch (et) {
+		case 0: {
+			auto err = reinterpret_cast<xcb_generic_error_t *>(e);
+			log::error("XcbConnection", "X11 error: ", int(err->error_code));
+			break;
+		}
 		case XCB_EXPOSE: XL_X11_LOG("XCB_EXPOSE"); break;
-		case XCB_PROPERTY_NOTIFY: XL_X11_LOG("XCB_PROPERTY_NOTIFY"); break;
+		case XCB_PROPERTY_NOTIFY:
+			if (reinterpret_cast<xcb_property_notify_event_t *>(e)->window == _clipboard.window) {
+				handlePropertyNotify(reinterpret_cast<xcb_property_notify_event_t *>(e));
+			}
+			break;
 		case XCB_VISIBILITY_NOTIFY: XL_X11_LOG("XCB_VISIBILITY_NOTIFY"); break;
 		case XCB_MAP_NOTIFY: XL_X11_LOG("XCB_MAP_NOTIFY"); break;
 		case XCB_REPARENT_NOTIFY: XL_X11_LOG("XCB_REPARENT_NOTIFY"); break;
@@ -452,14 +417,14 @@ void XcbConnection::poll() {
 		case XCB_RESIZE_REQUEST: XL_X11_LOG("XCB_RESIZE_REQUEST"); break;
 
 		case XCB_SELECTION_NOTIFY:
-			XcbConnection_forwardToWindow("XCB_SELECTION_NOTIFY", _windows,
-					((xcb_selection_notify_event_t *)e)->requestor,
-					(xcb_selection_notify_event_t *)e, &XcbWindow::handleSelectionNotify);
+			if (reinterpret_cast<xcb_selection_notify_event_t *>(e)->requestor
+					== _clipboard.window) {
+				handleSelectionNotify(reinterpret_cast<xcb_selection_notify_event_t *>(e));
+			}
 			break;
+		case XCB_SELECTION_CLEAR: XL_X11_LOG("XCB_SELECTION_CLEAR"); break;
 		case XCB_SELECTION_REQUEST:
-			XcbConnection_forwardToWindow("XCB_SELECTION_REQUEST", _windows,
-					((xcb_selection_request_event_t *)e)->owner, (xcb_selection_request_event_t *)e,
-					&XcbWindow::handleSelectionRequest);
+			handleSelectionRequest((xcb_selection_request_event_t *)e);
 			break;
 		case XCB_BUTTON_PRESS:
 			XcbConnection_forwardToWindow("XCB_BUTTON_PRESS", _windows,
@@ -541,26 +506,26 @@ void XcbConnection::poll() {
 			break;
 		case XCB_MAPPING_NOTIFY: {
 			xcb_mapping_notify_event_t *ev = (xcb_mapping_notify_event_t *)e;
-			if (_keysyms) {
-				_xcb->xcb_refresh_keyboard_mapping(_keysyms, ev);
+			if (_keys.keysyms) {
+				_xcb->xcb_refresh_keyboard_mapping(_keys.keysyms, ev);
 			}
 			XL_X11_LOG("XCB_MAPPING_NOTIFY: ", (int)ev->request, " ", (int)ev->first_keycode, " ",
 					(int)ev->count);
 			break;
 		}
 		default:
-			if (et == _xkbFirstEvent) {
+			if (et == _xkb.firstEvent) {
 				switch (e->pad0) {
-				case XCB_XKB_NEW_KEYBOARD_NOTIFY: initXkb(); break;
-				case XCB_XKB_MAP_NOTIFY: updateXkbMapping(); break;
+				case XCB_XKB_NEW_KEYBOARD_NOTIFY: _xkb.initXcb(_xcb, _connection); break;
+				case XCB_XKB_MAP_NOTIFY: _xkb.updateXkbMapping(_connection); break;
 				case XCB_XKB_STATE_NOTIFY: {
 					xcb_xkb_state_notify_event_t *ev = (xcb_xkb_state_notify_event_t *)e;
-					_xkb->xkb_state_update_mask(_xkbState, ev->baseMods, ev->latchedMods,
+					_xkb.lib->xkb_state_update_mask(_xkb.state, ev->baseMods, ev->latchedMods,
 							ev->lockedMods, ev->baseGroup, ev->latchedGroup, ev->lockedGroup);
 					break;
 				}
 				}
-			} else if (et == _randrFirstEvent) {
+			} else if (et == _randr.firstEvent) {
 				switch (e->pad0) {
 				case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
 					XcbConnection_forwardToWindow("XCB_RANDR_SCREEN_CHANGE_NOTIFY", _windows,
@@ -579,9 +544,13 @@ void XcbConnection::poll() {
 
 		/* Free the Generic Event */
 		free(e);
+
+		++ret;
 	}
 
 	for (auto &it : eventWindows) { it->dispatchPendingEvents(); }
+
+	return ret;
 }
 
 bool XcbConnection::hasErrors() const {
@@ -593,9 +562,90 @@ bool XcbConnection::hasErrors() const {
 	return false;
 }
 
-core::InputKeyCode XcbConnection::getKeyCode(xcb_keycode_t code) const { return _keycodes[code]; }
+core::InputKeyCode XcbConnection::getKeyCode(xcb_keycode_t code) const {
+	return _xkb.keycodes[code];
+}
 
 xcb_atom_t XcbConnection::getAtom(XcbAtomIndex index) const { return _atoms[toInt(index)].value; }
+
+xcb_atom_t XcbConnection::getAtom(StringView name) {
+	auto it = _namedAtoms.find(name);
+	if (it != _namedAtoms.end()) {
+		return it->second;
+	}
+
+	auto cookie = _xcb->xcb_intern_atom(_connection, 0, name.size(), name.data());
+
+	xcb_generic_error_t *error = nullptr;
+	auto reply = _xcb->xcb_intern_atom_reply(_connection, cookie, &error);
+	if (error || !reply) {
+		log::error("XcbConnection", "Fail to xcb_intern_atom_reply for '", name, "'");
+		if (error) {
+			::free(error);
+		}
+	}
+
+	if (reply) {
+		auto atom = _namedAtoms.emplace(name.str<Interface>(), reply->atom).first->second;
+		_atomNames.emplace(reply->atom, name.str<Interface>());
+		free(reply);
+		return atom;
+	}
+
+	return 0;
+}
+
+StringView XcbConnection::getAtomName(xcb_atom_t atom) {
+	auto it = _atomNames.find(atom);
+	if (it != _atomNames.end()) {
+		return it->second;
+	}
+
+	auto cookie = _xcb->xcb_get_atom_name_unchecked(_connection, atom);
+	auto reply = _xcb->xcb_get_atom_name_reply(_connection, cookie, nullptr);
+	if (reply) {
+		auto data = _xcb->xcb_get_atom_name_name(reply);
+		auto ret = String(data, _xcb->xcb_get_atom_name_name_length(reply));
+		auto it = _atomNames.emplace(atom, ret).first;
+		::free(reply);
+		return it->second;
+	}
+	return StringView();
+}
+
+void XcbConnection::getAtomNames(SpanView<xcb_atom_t> ids,
+		const Callback<void(SpanView<StringView>)> &cb) {
+	Vector<StringView> names;
+	names.resize(ids.size());
+
+	Vector<std::tuple<xcb_get_atom_name_cookie_t, xcb_atom_t, StringView *>> cookies;
+
+	uint32_t idx = 0;
+	for (auto &id : ids) {
+		auto iit = _atomNames.find(id);
+		if (iit != _atomNames.end()) {
+			names[idx] = iit->second;
+		} else {
+			cookies.emplace_back(_xcb->xcb_get_atom_name_unchecked(_connection, id), id,
+					&names[idx]);
+		}
+		++idx;
+	}
+
+	for (auto &it : cookies) {
+		auto reply = _xcb->xcb_get_atom_name_reply(_connection, std::get<0>(it), nullptr);
+		if (reply) {
+			auto data = _xcb->xcb_get_atom_name_name(reply);
+			auto ret = String(data, _xcb->xcb_get_atom_name_name_length(reply));
+			auto aIt = _atomNames.emplace(std::get<1>(it), ret).first;
+			_namedAtoms.emplace(ret, std::get<1>(it));
+			*std::get<2>(it) = aIt->second;
+			::free(reply);
+		}
+	}
+
+	cb(names);
+}
 
 bool XcbConnection::createWindow(const WindowInfo *winfo, XcbWindowInfo &xinfo) const {
 	uint32_t mask = /*XCB_CW_BACK_PIXEL | */ XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
@@ -678,223 +728,225 @@ ScreenInfoData XcbConnection::getScreenInfo(xcb_screen_t *screen) const {
 }
 
 ScreenInfoData XcbConnection::getScreenInfo(xcb_window_t root) const {
-	if (!_xcb->hasRandr()) {
+	if (!_randr.initialized || _randr.majorVersion < 1 || _randr.minorVersion < 5) {
 		return ScreenInfoData();
 	}
 
-	// submit our version to X11
-	auto versionCookie = _xcb->xcb_randr_query_version(_connection, XcbLibrary::RANDR_MAJOR_VERSION,
-			XcbLibrary::RANDR_MINOR_VERSION);
-	if (auto versionReply =
-					_xcb->xcb_randr_query_version_reply(_connection, versionCookie, nullptr)) {
-		if (versionReply->major_version != XcbLibrary::RANDR_MAJOR_VERSION) {
-			::free(versionReply);
-			return ScreenInfoData();
-		}
-
-		::free(versionReply);
-	} else {
-		return ScreenInfoData();
-	}
+	struct OutputCookie {
+		xcb_randr_get_output_info_cookie_t infoCookie;
+		xcb_randr_list_output_properties_cookie_t listCookie;
+		OutputInfo *info;
+	};
 
 	ScreenInfoData ret;
 
-	// spawn requests
-	auto screenResCurrentCookie =
-			_xcb->xcb_randr_get_screen_resources_current_unchecked(_connection, root);
-	auto outputPrimaryCookie = _xcb->xcb_randr_get_output_primary_unchecked(_connection, root);
-	auto screenResCookie = _xcb->xcb_randr_get_screen_resources_unchecked(_connection, root);
-	auto screenInfoCookie = _xcb->xcb_randr_get_screen_info_unchecked(_connection, root);
-	xcb_randr_get_output_info_cookie_t outputInfoCookie;
-
-	Vector<Pair<xcb_randr_crtc_t, xcb_randr_get_crtc_info_cookie_t>> crtcCookies;
-
-	do {
-		// process current modes
-		auto curReply = _xcb->xcb_randr_get_screen_resources_current_reply(_connection,
-				screenResCurrentCookie, nullptr);
-		auto curModes = _xcb->xcb_randr_get_screen_resources_current_modes(curReply);
-		auto curNmodes = _xcb->xcb_randr_get_screen_resources_current_modes_length(curReply);
-		uint8_t *names = _xcb->xcb_randr_get_screen_resources_current_names(curReply);
-
-		while (curNmodes > 0) {
-			double vTotal = curModes->vtotal;
-
-			if (curModes->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
-				/* doublescan doubles the number of lines */
-				vTotal *= 2;
+	auto parseScreenResourcesCurrentReply =
+			[&](xcb_randr_get_screen_resources_current_cookie_t cookie) {
+		xcb_generic_error_t *error = nullptr;
+		auto reply =
+				_xcb->xcb_randr_get_screen_resources_current_reply(_connection, cookie, &error);
+		if (error || !reply) {
+			if (error) {
+				log::error("XcbConnection",
+						"Fail to xcb_randr_get_screen_resources: ", error->error_code);
+				::free(error);
 			}
-
-			if (curModes->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
-				/* interlace splits the frame into two fields */
-				/* the field rate is what is typically reported by monitors */
-				vTotal /= 2;
+			if (reply) {
+				::free(reply);
 			}
-
-			if (curModes->htotal && vTotal) {
-				auto rate = uint16_t(floor(
-						double(curModes->dot_clock) / (double(curModes->htotal) * double(vTotal))));
-				ret.currentModeInfo.emplace_back(ModeInfo{curModes->id, curModes->width,
-					curModes->height, rate, String((const char *)names, curModes->name_len)});
-			}
-
-			names += curModes->name_len;
-			++curModes;
-			--curNmodes;
+			return;
 		}
 
-		auto outputs = _xcb->xcb_randr_get_screen_resources_current_outputs(curReply);
-		auto noutputs = _xcb->xcb_randr_get_screen_resources_current_outputs_length(curReply);
+		ret.config = reply->config_timestamp;
+
+		auto names = _xcb->xcb_randr_get_screen_resources_current_names(reply);
+		auto modes = _xcb->xcb_randr_get_screen_resources_current_modes(reply);
+		auto nmodes = _xcb->xcb_randr_get_screen_resources_current_modes_length(reply);
+
+		while (nmodes > 0) {
+			auto m = parseModeInfo(modes, names);
+			ret.modes.emplace(m.id, move(m));
+
+			names += modes->name_len;
+
+			++modes;
+			--nmodes;
+		}
+
+		auto outputs = _xcb->xcb_randr_get_screen_resources_current_outputs(reply);
+		auto noutputs = _xcb->xcb_randr_get_screen_resources_current_outputs_length(reply);
 
 		while (noutputs > 0) {
-			ret.currentOutputs.emplace_back(*outputs);
+			ret.outputs.emplace(*outputs, OutputInfo{*outputs});
 			++outputs;
 			--noutputs;
 		}
 
-		ret.config = curReply->config_timestamp;
-
-		auto crtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs(curReply);
-		auto ncrtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs_length(curReply);
-
-		crtcCookies.reserve(ncrtcs);
+		auto crtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs(reply);
+		auto ncrtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs_length(reply);
 
 		while (ncrtcs > 0) {
-			ret.currentCrtcs.emplace_back(*crtcs);
+			ret.crtcs.emplace(*crtcs, CrtcInfo{*crtcs});
+			++crtcs;
+			--ncrtcs;
+		}
 
-			crtcCookies.emplace_back(*crtcs,
-					_xcb->xcb_randr_get_crtc_info_unchecked(_connection, *crtcs, ret.config));
+		::free(reply);
+	};
+
+	auto parseMonitorsReply = [&](xcb_randr_get_monitors_cookie_t cookie) {
+		xcb_generic_error_t *error = nullptr;
+		auto reply = _xcb->xcb_randr_get_monitors_reply(_connection, cookie, &error);
+		if (error || !reply) {
+			if (error) {
+				log::error("XcbConnection", "Fail to xcb_randr_get_monitors: ", error->error_code);
+				::free(error);
+			}
+			if (reply) {
+				::free(reply);
+			}
+			return;
+		}
+
+		auto it = _xcb->xcb_randr_get_monitors_monitors_iterator(reply);
+		auto nmonitors = _xcb->xcb_randr_get_monitors_monitors_length(reply);
+
+		while (nmonitors > 0) {
+			auto m = it.data;
+
+			auto &mon = ret.monitors.emplace_back(MonitorInfo{
+				getAtomString(m->name),
+				IRect{m->x, m->y, m->width, m->height},
+				Extent2(m->width_in_millimeters, m->height_in_millimeters),
+				m->primary != 0,
+				m->automatic != 0,
+			});
+
+			auto out = _xcb->xcb_randr_monitor_info_outputs(m);
+			auto outLen = _xcb->xcb_randr_monitor_info_outputs_length(m);
+
+			while (outLen > 0) {
+				auto it = ret.outputs.find(*out);
+				if (it != ret.outputs.end()) {
+					mon.outputs.emplace_back(&it->second);
+				}
+				++out;
+				--outLen;
+			}
+
+			_xcb->xcb_randr_monitor_info_next(&it);
+			--nmonitors;
+		}
+
+		::free(reply);
+	};
+
+	auto parseOutputInfo = [&](const OutputCookie &cookie) {
+		xcb_generic_error_t *error = nullptr;
+		auto reply = _xcb->xcb_randr_get_output_info_reply(_connection, cookie.infoCookie, &error);
+		if (error || !reply) {
+			if (error) {
+				log::error("XcbConnection",
+						"Fail to xcb_randr_get_output_info: ", error->error_code);
+				::free(error);
+			}
+			if (reply) {
+				::free(reply);
+			}
+			return;
+		}
+
+		auto cIt = ret.crtcs.find(reply->crtc);
+		if (cIt != ret.crtcs.end()) {
+			cookie.info->crtc = &cIt->second;
+		}
+
+		auto modes = _xcb->xcb_randr_get_output_info_modes(reply);
+		auto nmodes = _xcb->xcb_randr_get_output_info_modes_length(reply);
+		auto preferred = reply->num_preferred;
+
+		int idx = 0;
+		while (idx < nmodes) {
+			auto mIt = ret.modes.find(*modes);
+
+			if (mIt != ret.modes.end()) {
+				cookie.info->modes.emplace_back(&mIt->second);
+				if (idx == preferred) {
+					cookie.info->preferred = &mIt->second;
+				}
+			}
+
+			++idx;
+			++modes;
+		}
+
+		auto crtcs = _xcb->xcb_randr_get_output_info_crtcs(reply);
+		auto ncrtcs = _xcb->xcb_randr_get_output_info_crtcs_length(reply);
+
+		while (ncrtcs > 0) {
+			auto cIt = ret.crtcs.find(*crtcs);
+			if (cIt != ret.crtcs.end()) {
+				cookie.info->crtcs.emplace_back(&cIt->second);
+			}
 
 			++crtcs;
 			--ncrtcs;
 		}
 
-		::free(curReply);
-	} while (0);
-
-	do {
-		auto reply =
-				_xcb->xcb_randr_get_output_primary_reply(_connection, outputPrimaryCookie, nullptr);
-		ret.primaryOutput.output = reply->output;
-		::free(reply);
-
-		outputInfoCookie = _xcb->xcb_randr_get_output_info_unchecked(_connection,
-				ret.primaryOutput.output, ret.config);
-	} while (0);
-
-	// process screen info
-	do {
-		auto reply = _xcb->xcb_randr_get_screen_info_reply(_connection, screenInfoCookie, nullptr);
-		auto sizes = size_t(_xcb->xcb_randr_get_screen_info_sizes_length(reply));
-
-		Vector<Vector<uint16_t>> ratesVec;
-		Vector<uint16_t> tmp;
-
-		auto ratesIt = _xcb->xcb_randr_get_screen_info_rates_iterator(reply);
-		while (ratesIt.rem > 0) {
-			auto nRates = _xcb->xcb_randr_refresh_rates_rates_length(ratesIt.data);
-			auto rates = _xcb->xcb_randr_refresh_rates_rates(ratesIt.data);
-			auto tmpNRates = nRates;
-
-			while (tmpNRates) {
-				tmp.emplace_back(*rates);
-				++rates;
-				--tmpNRates;
-			}
-
-			_xcb->xcb_randr_refresh_rates_next(&ratesIt);
-			ratesIt.rem += 1 - nRates; // bypass rem bug
-
-			ratesVec.emplace_back(sp::move(tmp));
-			tmp.clear();
-		}
-
-		auto sizesData = _xcb->xcb_randr_get_screen_info_sizes(reply);
-		for (size_t i = 0; i < sizes; ++i) {
-			auto &it = sizesData[i];
-			ScreenInfo info{it.width, it.height, it.mwidth, it.mheight};
-
-			if (ratesVec.size() > i) {
-				info.rates = ratesVec[i];
-			} else if (ratesVec.size() == 1) {
-				info.rates = ratesVec[0];
-			} else {
-				info.rates = Vector<uint16_t>{60};
-			}
-
-			ret.screenInfo.emplace_back(move(info));
-		}
-
-		::free(reply);
-	} while (0);
-
-	do {
-		auto modesReply =
-				_xcb->xcb_randr_get_screen_resources_reply(_connection, screenResCookie, nullptr);
-		auto modes = _xcb->xcb_randr_get_screen_resources_modes(modesReply);
-		auto nmodes = _xcb->xcb_randr_get_screen_resources_modes_length(modesReply);
-
-		while (nmodes > 0) {
-			double vTotal = modes->vtotal;
-
-			if (modes->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
-				/* doublescan doubles the number of lines */
-				vTotal *= 2;
-			}
-
-			if (modes->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
-				/* interlace splits the frame into two fields */
-				/* the field rate is what is typically reported by monitors */
-				vTotal /= 2;
-			}
-
-			if (modes->htotal && vTotal) {
-				auto rate = uint16_t(
-						floor(double(modes->dot_clock) / (double(modes->htotal) * double(vTotal))));
-				ret.modeInfo.emplace_back(ModeInfo{modes->id, modes->width, modes->height, rate});
-			}
-
-			++modes;
-			--nmodes;
-		}
-
-		::free(modesReply);
-	} while (0);
-
-	do {
-		auto reply = _xcb->xcb_randr_get_output_info_reply(_connection, outputInfoCookie, nullptr);
-		auto modes = _xcb->xcb_randr_get_output_info_modes(reply);
-		auto nmodes = _xcb->xcb_randr_get_output_info_modes_length(reply);
-
-		while (nmodes > 0) {
-			ret.primaryOutput.modes.emplace_back(*modes);
-
-			++modes;
-			--nmodes;
-		}
-
 		auto name = _xcb->xcb_randr_get_output_info_name(reply);
 		auto nameLen = _xcb->xcb_randr_get_output_info_name_length(reply);
 
-		ret.primaryOutput.crtc = reply->crtc;
-		ret.primaryOutput.name = String((const char *)name, nameLen);
+		cookie.info->name = String((const char *)name, nameLen);
 
 		::free(reply);
-	} while (0);
 
-	for (auto &crtcCookie : crtcCookies) {
-		auto reply = _xcb->xcb_randr_get_crtc_info_reply(_connection, crtcCookie.second, nullptr);
+		error = nullptr;
+		auto listReply = _xcb->xcb_randr_list_output_properties_reply(_connection,
+				cookie.listCookie, &error);
+		if (error || !listReply) {
+			if (error) {
+				log::error("XcbConnection",
+						"Fail to xcb_randr_list_output_properties: ", error->error_code);
+				::free(error);
+			}
+			if (listReply) {
+				::free(listReply);
+			}
+			return;
+		}
 
-		Vector<xcb_randr_output_t> outputs;
-		Vector<xcb_randr_output_t> possible;
+		auto atoms = _xcb->xcb_randr_list_output_properties_atoms(listReply);
+		auto natoms = _xcb->xcb_randr_list_output_properties_atoms_length(listReply);
+
+		while (natoms > 0) {
+			cookie.info->properties.emplace_back(PropertyInfo{*atoms});
+			++atoms;
+			--natoms;
+		}
+	};
+
+	auto parseCrtcInfo = [&](xcb_randr_get_crtc_info_cookie_t cookie, CrtcInfo *crtc) {
+		xcb_generic_error_t *error = nullptr;
+		auto reply = _xcb->xcb_randr_get_crtc_info_reply(_connection, cookie, &error);
+		if (error || !reply) {
+			if (error) {
+				log::error("XcbConnection", "Fail to xcb_randr_get_crtc_info: ", error->error_code);
+				::free(error);
+			}
+			if (reply) {
+				::free(reply);
+			}
+			return;
+		}
 
 		auto outputsPtr = _xcb->xcb_randr_get_crtc_info_outputs(reply);
 		auto noutputs = _xcb->xcb_randr_get_crtc_info_outputs_length(reply);
 
-		outputs.reserve(noutputs);
-
 		while (noutputs) {
-			outputs.emplace_back(*outputsPtr);
+			auto oIt = ret.outputs.find(*outputsPtr);
+			if (oIt != ret.outputs.end()) {
+				crtc->outputs.emplace_back(&oIt->second);
+			}
 			++outputsPtr;
 			--noutputs;
 		}
@@ -902,57 +954,150 @@ ScreenInfoData XcbConnection::getScreenInfo(xcb_window_t root) const {
 		auto possiblePtr = _xcb->xcb_randr_get_crtc_info_possible(reply);
 		auto npossible = _xcb->xcb_randr_get_crtc_info_possible_length(reply);
 
-		possible.reserve(npossible);
-
 		while (npossible) {
-			possible.emplace_back(*possiblePtr);
+			auto oIt = ret.outputs.find(*possiblePtr);
+			if (oIt != ret.outputs.end()) {
+				crtc->possible.emplace_back(&oIt->second);
+			}
 			++possiblePtr;
 			--npossible;
 		}
 
-		ret.crtcInfo.emplace_back(CrtcInfo{crtcCookie.first, reply->x, reply->y, reply->width,
-			reply->height, reply->mode, reply->rotation, reply->rotations, sp::move(outputs),
-			sp::move(possible)});
+		auto mIt = ret.modes.find(reply->mode);
+		if (mIt != ret.modes.end()) {
+			crtc->mode = &mIt->second;
+		}
+
+		crtc->x = reply->x;
+		crtc->y = reply->y;
+		crtc->width = reply->width;
+		crtc->height = reply->height;
+		crtc->rotation = reply->rotation;
+		crtc->rotations = reply->rotations;
 
 		::free(reply);
+	};
+
+	auto parseAtomNames = [&](xcb_get_atom_name_cookie_t cookie, String *target) {
+		xcb_generic_error_t *error = nullptr;
+		auto nameReply = _xcb->xcb_get_atom_name_reply(_connection, cookie, &error);
+		if (error) {
+			log::error("XcbConnection", "xcb_get_atom_name_reply: error: code=", error->error_code);
+			return;
+		}
+
+		if (nameReply) {
+			auto name = _xcb->xcb_get_atom_name_name(nameReply);
+			auto len = _xcb->xcb_get_atom_name_name_length(nameReply);
+
+			*target = String(name, len);
+
+			::free(nameReply);
+		}
+	};
+
+	auto parseEdidReply = [&](xcb_randr_get_output_property_cookie_t cookie, MonitorInfo *mon) {
+		xcb_generic_error_t *error = nullptr;
+		auto reply = _xcb->xcb_randr_get_output_property_reply(_connection, cookie, &error);
+		if (error || !reply) {
+			if (error) {
+				log::error("XcbConnection",
+						"Fail to xcb_randr_get_output_property: ", error->error_code);
+				::free(error);
+			}
+			if (reply) {
+				::free(reply);
+			}
+			return;
+		}
+
+		auto data = _xcb->xcb_randr_get_output_property_data(reply);
+		auto len = _xcb->xcb_randr_get_output_property_data_length(reply);
+
+		mon->edid = parseEdid(BytesView(data, len));
+	};
+
+	auto screenResCurrentCookie =
+			_xcb->xcb_randr_get_screen_resources_current_unchecked(_connection, _screen->root);
+	auto monitorsCookie = _xcb->xcb_randr_get_monitors(_connection, _screen->root, 1);
+
+	_xcb->xcb_flush(_connection);
+
+	parseScreenResourcesCurrentReply(screenResCurrentCookie);
+	parseMonitorsReply(monitorsCookie);
+
+	Vector<OutputCookie> outputCookies;
+	Vector<Pair<xcb_randr_get_crtc_info_cookie_t, CrtcInfo *>> crtcCookies;
+
+	for (auto &oit : ret.outputs) {
+		auto infoCookie =
+				_xcb->xcb_randr_get_output_info(_connection, oit.second.output, ret.config);
+		auto listCookie = _xcb->xcb_randr_list_output_properties(_connection, oit.second.output);
+		outputCookies.emplace_back(OutputCookie{infoCookie, listCookie, &oit.second});
 	}
 
-	for (auto &it : ret.crtcInfo) {
-		if (it.crtc == ret.primaryOutput.crtc) {
-			ret.primaryCrtc = it;
+	for (auto &cit : ret.crtcs) {
+		auto cookie = _xcb->xcb_randr_get_crtc_info(_connection, cit.second.crtc, ret.config);
+		crtcCookies.emplace_back(cookie, &cit.second);
+	}
 
-			for (auto &iit : ret.currentModeInfo) {
-				if (iit.id == ret.primaryCrtc.mode) {
-					ret.primaryMode = iit;
-					break;
-				}
-			}
+	_xcb->xcb_flush(_connection);
 
-			break;
+	for (auto &it : outputCookies) { parseOutputInfo(it); }
+	for (auto &it : crtcCookies) { parseCrtcInfo(it.first, it.second); }
+
+
+	Vector<Pair<xcb_get_atom_name_cookie_t, String *>> atomCookies;
+
+	for (auto &it : ret.outputs) {
+		for (auto &pIt : it.second.properties) {
+			atomCookies.emplace_back(_xcb->xcb_get_atom_name(_connection, pIt.atom), &pIt.name);
 		}
 	}
+
+	_xcb->xcb_flush(_connection);
+
+	for (auto &it : atomCookies) { parseAtomNames(it.first, it.second); }
+
+	Vector<Pair<xcb_randr_get_output_property_cookie_t, MonitorInfo *>> edidCookies;
+
+	for (auto &it : ret.monitors) {
+		for (auto &oIt : it.outputs) {
+			for (auto &pIt : oIt->properties) {
+				if (pIt.name == "EDID") {
+					edidCookies.emplace_back(_xcb->xcb_randr_get_output_property(_connection,
+													 oIt->output, pIt.atom, 0, 0, 256, 0, 0),
+							&it);
+				}
+			}
+		}
+	}
+
+	_xcb->xcb_flush(_connection);
+
+	for (auto &it : edidCookies) { parseEdidReply(it.first, it.second); }
 
 	return ret;
 }
 
 void XcbConnection::fillTextInputData(core::InputEventData &event, xcb_keycode_t detail,
 		uint16_t state, bool textInputEnabled, bool compose) {
-	if (_xkb) {
+	if (_xkb.initialized) {
 		event.key.keycode = getKeyCode(detail);
 		event.key.compose = core::InputKeyComposeState::Nothing;
 		event.key.keysym = getKeysym(detail, state, false);
 		if (textInputEnabled) {
 			if (compose) {
-				const auto keysym = composeSymbol(
-						_xkb->xkb_state_key_get_one_sym(_xkbState, detail), event.key.compose);
-				const uint32_t cp = _xkb->xkb_keysym_to_utf32(keysym);
+				const auto keysym = _xkb.composeSymbol(
+						_xkb.lib->xkb_state_key_get_one_sym(_xkb.state, detail), event.key.compose);
+				const uint32_t cp = _xkb.lib->xkb_keysym_to_utf32(keysym);
 				if (cp != 0 && keysym != XKB_KEY_NoSymbol) {
 					event.key.keychar = cp;
 				} else {
 					event.key.keychar = 0;
 				}
 			} else {
-				event.key.keychar = _xkb->xkb_state_key_get_utf32(_xkbState, detail);
+				event.key.keychar = _xkb.lib->xkb_state_key_get_utf32(_xkb.state, detail);
 			}
 		} else {
 			event.key.keychar = 0;
@@ -974,13 +1119,13 @@ xcb_keysym_t XcbConnection::getKeysym(xcb_keycode_t code, uint16_t state, bool r
 	xcb_keysym_t k0, k1;
 
 	if (!resolveMods) {
-		k0 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 0);
+		k0 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 0);
 		// resolve only numlock
-		if ((state & _numlock)) {
-			k1 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 1);
+		if ((state & _keys.numlock)) {
+			k1 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 1);
 			if (_xcb->xcb_is_keypad_key(k1)) {
 				if ((state & XCB_MOD_MASK_SHIFT)
-						|| ((state & XCB_MOD_MASK_LOCK) && (state & _shiftlock))) {
+						|| ((state & XCB_MOD_MASK_LOCK) && (state & _keys.shiftlock))) {
 					return k0;
 				} else {
 					return k1;
@@ -990,20 +1135,21 @@ xcb_keysym_t XcbConnection::getKeysym(xcb_keycode_t code, uint16_t state, bool r
 		return k0;
 	}
 
-	if (state & _modeswitch) {
-		k0 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 2);
-		k1 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 3);
+	if (state & _keys.modeswitch) {
+		k0 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 2);
+		k1 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 3);
 	} else {
-		k0 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 0);
-		k1 = _xcb->xcb_key_symbols_get_keysym(_keysyms, code, 1);
+		k0 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 0);
+		k1 = _xcb->xcb_key_symbols_get_keysym(_keys.keysyms, code, 1);
 	}
 
 	if (k1 == XCB_NO_SYMBOL) {
 		k1 = k0;
 	}
 
-	if ((state & _numlock) && _xcb->xcb_is_keypad_key(k1)) {
-		if ((state & XCB_MOD_MASK_SHIFT) || ((state & XCB_MOD_MASK_LOCK) && (state & _shiftlock))) {
+	if ((state & _keys.numlock) && _xcb->xcb_is_keypad_key(k1)) {
+		if ((state & XCB_MOD_MASK_SHIFT)
+				|| ((state & XCB_MOD_MASK_LOCK) && (state & _keys.shiftlock))) {
 			return k0;
 		} else {
 			return k1;
@@ -1011,56 +1157,20 @@ xcb_keysym_t XcbConnection::getKeysym(xcb_keycode_t code, uint16_t state, bool r
 	} else if (!(state & XCB_MOD_MASK_SHIFT) && !(state & XCB_MOD_MASK_LOCK)) {
 		return k0;
 	} else if (!(state & XCB_MOD_MASK_SHIFT)
-			&& ((state & XCB_MOD_MASK_LOCK) && (state & _capslock))) {
+			&& ((state & XCB_MOD_MASK_LOCK) && (state & _keys.capslock))) {
 		if (k0 >= XK_0 && k0 <= XK_9) {
 			return k0;
 		}
 		return k1;
 	} else if ((state & XCB_MOD_MASK_SHIFT)
-			&& ((state & XCB_MOD_MASK_LOCK) && (state & _capslock))) {
+			&& ((state & XCB_MOD_MASK_LOCK) && (state & _keys.capslock))) {
 		return k1;
 	} else if ((state & XCB_MOD_MASK_SHIFT)
-			|| ((state & XCB_MOD_MASK_LOCK) && (state & _shiftlock))) {
+			|| ((state & XCB_MOD_MASK_LOCK) && (state & _keys.shiftlock))) {
 		return k1;
 	}
 
 	return XCB_NO_SYMBOL;
-}
-
-xkb_keysym_t XcbConnection::composeSymbol(xkb_keysym_t sym,
-		core::InputKeyComposeState &compose) const {
-	if (sym == XKB_KEY_NoSymbol || !_xkbCompose) {
-		XL_X11_LOG("Compose: ", sym, " (disabled)");
-		return sym;
-	}
-	if (_xkb->xkb_compose_state_feed(_xkbCompose, sym) != XKB_COMPOSE_FEED_ACCEPTED) {
-		XL_X11_LOG("Compose: ", sym, " (not accepted)");
-		return sym;
-	}
-	auto composedSym = sym;
-	auto state = _xkb->xkb_compose_state_get_status(_xkbCompose);
-	switch (state) {
-	case XKB_COMPOSE_COMPOSED:
-		compose = core::InputKeyComposeState::Composed;
-		composedSym = _xkb->xkb_compose_state_get_one_sym(_xkbCompose);
-		_xkb->xkb_compose_state_reset(_xkbCompose);
-		XL_X11_LOG("Compose: ", sym, ": ", composedSym, " (composed)");
-		break;
-	case XKB_COMPOSE_COMPOSING:
-		compose = core::InputKeyComposeState::Composing;
-		XL_X11_LOG("Compose: ", sym, ": ", composedSym, " (composing)");
-		break;
-	case XKB_COMPOSE_CANCELLED:
-		_xkb->xkb_compose_state_reset(_xkbCompose);
-		XL_X11_LOG("Compose: ", sym, ": ", composedSym, " (cancelled)");
-		break;
-	case XKB_COMPOSE_NOTHING:
-		_xkb->xkb_compose_state_reset(_xkbCompose);
-		XL_X11_LOG("Compose: ", sym, ": ", composedSym, " (nothing)");
-		break;
-	default: XL_X11_LOG("Compose: ", sym, ": ", composedSym, " (error)"); break;
-	}
-	return composedSym;
 }
 
 xcb_cursor_t XcbConnection::loadCursor(StringView str) {
@@ -1121,180 +1231,44 @@ bool XcbConnection::setCursorId(xcb_window_t window, uint32_t cursorId) {
 	return true;
 }
 
-void XcbConnection::initXkb() {
-	uint16_t xkbMajorVersion = 0;
-	uint16_t xkbMinorVersion = 0;
+void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
+	auto cookie = _xcb->xcb_get_selection_owner(getConnection(), getAtom(XcbAtomIndex::CLIPBOARD));
+	auto reply = _xcb->xcb_get_selection_owner_reply(getConnection(), cookie, nullptr);
 
-	if (!_xkbSetup) {
-		if (_xkb->xkb_x11_setup_xkb_extension(_connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
-					XKB_X11_MIN_MINOR_XKB_VERSION, XKB_X11_SETUP_XKB_EXTENSION_NO_FLAGS,
-					&xkbMajorVersion, &xkbMinorVersion, &_xkbFirstEvent, &_xkbFirstError)
-				!= 1) {
-			return;
+	if (reply->owner == _clipboard.window) {
+
+
+		//cb(_clipboard.selection, _clipboard.type);
+	} else {
+		if (_clipboard.requests.empty() && _clipboard.waiters.empty()) {
+			// acquire list of formats
+			_xcb->xcb_convert_selection(getConnection(), _clipboard.window,
+					getAtom(XcbAtomIndex::CLIPBOARD), getAtom(XcbAtomIndex::TARGETS),
+					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_CURRENT_TIME);
+			_xcb->xcb_flush(getConnection());
 		}
-	}
 
-	_xkbSetup = true;
-	_xkbDeviceId = _xkb->xkb_x11_get_core_keyboard_device_id(_connection);
-
-	enum {
-		required_events = (XCB_XKB_EVENT_TYPE_NEW_KEYBOARD_NOTIFY | XCB_XKB_EVENT_TYPE_MAP_NOTIFY
-				| XCB_XKB_EVENT_TYPE_STATE_NOTIFY),
-
-		required_nkn_details = (XCB_XKB_NKN_DETAIL_KEYCODES),
-
-		required_map_parts = (XCB_XKB_MAP_PART_KEY_TYPES | XCB_XKB_MAP_PART_KEY_SYMS
-				| XCB_XKB_MAP_PART_MODIFIER_MAP | XCB_XKB_MAP_PART_EXPLICIT_COMPONENTS
-				| XCB_XKB_MAP_PART_KEY_ACTIONS | XCB_XKB_MAP_PART_VIRTUAL_MODS
-				| XCB_XKB_MAP_PART_VIRTUAL_MOD_MAP),
-
-		required_state_details =
-				(XCB_XKB_STATE_PART_MODIFIER_BASE | XCB_XKB_STATE_PART_MODIFIER_LATCH
-						| XCB_XKB_STATE_PART_MODIFIER_LOCK | XCB_XKB_STATE_PART_GROUP_BASE
-						| XCB_XKB_STATE_PART_GROUP_LATCH | XCB_XKB_STATE_PART_GROUP_LOCK),
-	};
-
-	static const xcb_xkb_select_events_details_t details = {.affectNewKeyboard =
-																	required_nkn_details,
-		.newKeyboardDetails = required_nkn_details,
-		.affectState = required_state_details,
-		.stateDetails = required_state_details};
-
-	_xcb->xcb_xkb_select_events(_connection, _xkbDeviceId, required_events, 0, required_events,
-			required_map_parts, required_map_parts, &details);
-
-	updateXkbMapping();
-}
-
-void XcbConnection::updateXkbMapping() {
-	if (_xkbState) {
-		_xkb->xkb_state_unref(_xkbState);
-		_xkbState = nullptr;
-	}
-	if (_xkbKeymap) {
-		_xkb->xkb_keymap_unref(_xkbKeymap);
-		_xkbKeymap = nullptr;
-	}
-	if (_xkbCompose) {
-		_xkb->xkb_compose_state_unref(_xkbCompose);
-		_xkbCompose = nullptr;
-	}
-
-	_xkbKeymap = _xkb->xkb_x11_keymap_new_from_device(_xkb->getContext(), _connection, _xkbDeviceId,
-			XKB_KEYMAP_COMPILE_NO_FLAGS);
-	if (_xkbKeymap == nullptr) {
-		fprintf(stderr, "Failed to get Keymap for current keyboard device.\n");
-		return;
-	}
-
-	_xkbState = _xkb->xkb_x11_state_new_from_device(_xkbKeymap, _connection, _xkbDeviceId);
-	if (_xkbState == nullptr) {
-		fprintf(stderr, "Failed to get state object for current keyboard device.\n");
-		return;
-	}
-
-	memset(_keycodes, 0, sizeof(core::InputKeyCode) * 256);
-
-	_xkb->xkb_keymap_key_for_each(_xkbKeymap,
-			[](struct xkb_keymap *keymap, xkb_keycode_t key, void *data) {
-		((XcbConnection *)data)->updateXkbKey(key);
-	}, this);
-
-	auto locale = getenv("LC_ALL");
-	if (!locale) {
-		locale = getenv("LC_CTYPE");
-	}
-	if (!locale) {
-		locale = getenv("LANG");
-	}
-
-	auto composeTable = _xkb->xkb_compose_table_new_from_locale(_xkb->getContext(),
-			locale ? locale : "C", XKB_COMPOSE_COMPILE_NO_FLAGS);
-	if (composeTable) {
-		_xkbCompose = _xkb->xkb_compose_state_new(composeTable, XKB_COMPOSE_STATE_NO_FLAGS);
-		_xkb->xkb_compose_table_unref(composeTable);
+		_clipboard.requests.emplace_back(sp::move(req));
 	}
 }
 
-void XcbConnection::updateXkbKey(xcb_keycode_t code) {
-	static const struct {
-		core::InputKeyCode key;
-		const char *name;
-	} keymap[] = {{core::InputKeyCode::GRAVE_ACCENT, "TLDE"}, {core::InputKeyCode::_1, "AE01"},
-		{core::InputKeyCode::_2, "AE02"}, {core::InputKeyCode::_3, "AE03"},
-		{core::InputKeyCode::_4, "AE04"}, {core::InputKeyCode::_5, "AE05"},
-		{core::InputKeyCode::_6, "AE06"}, {core::InputKeyCode::_7, "AE07"},
-		{core::InputKeyCode::_8, "AE08"}, {core::InputKeyCode::_9, "AE09"},
-		{core::InputKeyCode::_0, "AE10"}, {core::InputKeyCode::MINUS, "AE11"},
-		{core::InputKeyCode::EQUAL, "AE12"}, {core::InputKeyCode::Q, "AD01"},
-		{core::InputKeyCode::W, "AD02"}, {core::InputKeyCode::E, "AD03"},
-		{core::InputKeyCode::R, "AD04"}, {core::InputKeyCode::T, "AD05"},
-		{core::InputKeyCode::Y, "AD06"}, {core::InputKeyCode::U, "AD07"},
-		{core::InputKeyCode::I, "AD08"}, {core::InputKeyCode::O, "AD09"},
-		{core::InputKeyCode::P, "AD10"}, {core::InputKeyCode::LEFT_BRACKET, "AD11"},
-		{core::InputKeyCode::RIGHT_BRACKET, "AD12"}, {core::InputKeyCode::A, "AC01"},
-		{core::InputKeyCode::S, "AC02"}, {core::InputKeyCode::D, "AC03"},
-		{core::InputKeyCode::F, "AC04"}, {core::InputKeyCode::G, "AC05"},
-		{core::InputKeyCode::H, "AC06"}, {core::InputKeyCode::J, "AC07"},
-		{core::InputKeyCode::K, "AC08"}, {core::InputKeyCode::L, "AC09"},
-		{core::InputKeyCode::SEMICOLON, "AC10"}, {core::InputKeyCode::APOSTROPHE, "AC11"},
-		{core::InputKeyCode::Z, "AB01"}, {core::InputKeyCode::X, "AB02"},
-		{core::InputKeyCode::C, "AB03"}, {core::InputKeyCode::V, "AB04"},
-		{core::InputKeyCode::B, "AB05"}, {core::InputKeyCode::N, "AB06"},
-		{core::InputKeyCode::M, "AB07"}, {core::InputKeyCode::COMMA, "AB08"},
-		{core::InputKeyCode::PERIOD, "AB09"}, {core::InputKeyCode::SLASH, "AB10"},
-		{core::InputKeyCode::BACKSLASH, "BKSL"}, {core::InputKeyCode::WORLD_1, "LSGT"},
-		{core::InputKeyCode::SPACE, "SPCE"}, {core::InputKeyCode::ESCAPE, "ESC"},
-		{core::InputKeyCode::ENTER, "RTRN"}, {core::InputKeyCode::TAB, "TAB"},
-		{core::InputKeyCode::BACKSPACE, "BKSP"}, {core::InputKeyCode::INSERT, "INS"},
-		{core::InputKeyCode::DELETE, "DELE"}, {core::InputKeyCode::RIGHT, "RGHT"},
-		{core::InputKeyCode::LEFT, "LEFT"}, {core::InputKeyCode::DOWN, "DOWN"},
-		{core::InputKeyCode::UP, "UP"}, {core::InputKeyCode::PAGE_UP, "PGUP"},
-		{core::InputKeyCode::PAGE_DOWN, "PGDN"}, {core::InputKeyCode::HOME, "HOME"},
-		{core::InputKeyCode::END, "END"}, {core::InputKeyCode::CAPS_LOCK, "CAPS"},
-		{core::InputKeyCode::SCROLL_LOCK, "SCLK"}, {core::InputKeyCode::NUM_LOCK, "NMLK"},
-		{core::InputKeyCode::PRINT_SCREEN, "PRSC"}, {core::InputKeyCode::PAUSE, "PAUS"},
-		{core::InputKeyCode::F1, "FK01"}, {core::InputKeyCode::F2, "FK02"},
-		{core::InputKeyCode::F3, "FK03"}, {core::InputKeyCode::F4, "FK04"},
-		{core::InputKeyCode::F5, "FK05"}, {core::InputKeyCode::F6, "FK06"},
-		{core::InputKeyCode::F7, "FK07"}, {core::InputKeyCode::F8, "FK08"},
-		{core::InputKeyCode::F9, "FK09"}, {core::InputKeyCode::F10, "FK10"},
-		{core::InputKeyCode::F11, "FK11"}, {core::InputKeyCode::F12, "FK12"},
-		{core::InputKeyCode::F13, "FK13"}, {core::InputKeyCode::F14, "FK14"},
-		{core::InputKeyCode::F15, "FK15"}, {core::InputKeyCode::F16, "FK16"},
-		{core::InputKeyCode::F17, "FK17"}, {core::InputKeyCode::F18, "FK18"},
-		{core::InputKeyCode::F19, "FK19"}, {core::InputKeyCode::F20, "FK20"},
-		{core::InputKeyCode::F21, "FK21"}, {core::InputKeyCode::F22, "FK22"},
-		{core::InputKeyCode::F23, "FK23"}, {core::InputKeyCode::F24, "FK24"},
-		{core::InputKeyCode::F25, "FK25"}, {core::InputKeyCode::KP_0, "KP0"},
-		{core::InputKeyCode::KP_1, "KP1"}, {core::InputKeyCode::KP_2, "KP2"},
-		{core::InputKeyCode::KP_3, "KP3"}, {core::InputKeyCode::KP_4, "KP4"},
-		{core::InputKeyCode::KP_5, "KP5"}, {core::InputKeyCode::KP_6, "KP6"},
-		{core::InputKeyCode::KP_7, "KP7"}, {core::InputKeyCode::KP_8, "KP8"},
-		{core::InputKeyCode::KP_9, "KP9"}, {core::InputKeyCode::KP_DECIMAL, "KPDL"},
-		{core::InputKeyCode::KP_DIVIDE, "KPDV"}, {core::InputKeyCode::KP_MULTIPLY, "KPMU"},
-		{core::InputKeyCode::KP_SUBTRACT, "KPSU"}, {core::InputKeyCode::KP_ADD, "KPAD"},
-		{core::InputKeyCode::KP_ENTER, "KPEN"}, {core::InputKeyCode::KP_EQUAL, "KPEQ"},
-		{core::InputKeyCode::LEFT_SHIFT, "LFSH"}, {core::InputKeyCode::LEFT_CONTROL, "LCTL"},
-		{core::InputKeyCode::LEFT_ALT, "LALT"}, {core::InputKeyCode::LEFT_SUPER, "LWIN"},
-		{core::InputKeyCode::RIGHT_SHIFT, "RTSH"}, {core::InputKeyCode::RIGHT_CONTROL, "RCTL"},
-		{core::InputKeyCode::RIGHT_ALT, "RALT"}, {core::InputKeyCode::RIGHT_ALT, "LVL3"},
-		{core::InputKeyCode::RIGHT_ALT, "MDSW"}, {core::InputKeyCode::RIGHT_SUPER, "RWIN"},
-		{core::InputKeyCode::MENU, "MENU"}};
-
-	core::InputKeyCode key = core::InputKeyCode::Unknown;
-	if (auto name = _xkb->xkb_keymap_key_get_name(_xkbKeymap, code)) {
-		for (size_t i = 0; i < sizeof(keymap) / sizeof(keymap[0]); i++) {
-			if (strncmp(name, keymap[i].name, 4) == 0) {
-				key = keymap[i].key;
-				break;
-			}
-		}
+void XcbConnection::writeToClipboard(BytesView data, StringView contentType) {
+	_clipboard.selection = data.bytes<Interface>();
+	_clipboard.type = contentType.str<Interface>();
+	if (_clipboard.type.empty()) {
+		_clipboard.type = "text/plain";
 	}
+	_clipboard.typeAtom = getAtom(_clipboard.type);
 
-	if (key != core::InputKeyCode::Unknown) {
-		_keycodes[code] = key;
+	_xcb->xcb_set_selection_owner(getConnection(), _clipboard.window,
+			getAtom(XcbAtomIndex::CLIPBOARD), XCB_CURRENT_TIME);
+
+	auto cookie = _xcb->xcb_get_selection_owner(getConnection(), getAtom(XcbAtomIndex::CLIPBOARD));
+	auto reply = _xcb->xcb_get_selection_owner_reply(getConnection(), cookie, nullptr);
+	if (reply->owner != _clipboard.window) {
+		log::error("XcbWindow", "Fail to set selection owner");
 	}
+	::free(reply);
 }
 
 void XcbConnection::updateKeysymMapping() {
@@ -1309,15 +1283,15 @@ void XcbConnection::updateKeysymMapping() {
 		}
 	};
 
-	if (_keysyms) {
-		_xcb->xcb_key_symbols_free(_keysyms);
+	if (_keys.keysyms) {
+		_xcb->xcb_key_symbols_free(_keys.keysyms);
 	}
 
 	if (_xcb->hasKeysyms()) {
-		_keysyms = _xcb->xcb_key_symbols_alloc(_connection);
+		_keys.keysyms = _xcb->xcb_key_symbols_alloc(_connection);
 	}
 
-	if (!_keysyms) {
+	if (!_keys.keysyms) {
 		return;
 	}
 
@@ -1326,15 +1300,15 @@ void XcbConnection::updateKeysymMapping() {
 	xcb_get_keyboard_mapping_cookie_t mappingCookie;
 	const xcb_setup_t *setup = _xcb->xcb_get_setup(_connection);
 
-	if (!_xkb) {
+	if (!_xkb.lib) {
 		mappingCookie = _xcb->xcb_get_keyboard_mapping(_connection, setup->min_keycode,
 				setup->max_keycode - setup->min_keycode + 1);
 	}
 
-	auto numlockcodes = _xcb->xcb_key_symbols_get_keycode(_keysyms, XK_Num_Lock);
-	auto shiftlockcodes = _xcb->xcb_key_symbols_get_keycode(_keysyms, XK_Shift_Lock);
-	auto capslockcodes = _xcb->xcb_key_symbols_get_keycode(_keysyms, XK_Caps_Lock);
-	auto modeswitchcodes = _xcb->xcb_key_symbols_get_keycode(_keysyms, XK_Mode_switch);
+	auto numlockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Num_Lock);
+	auto shiftlockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Shift_Lock);
+	auto capslockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Caps_Lock);
+	auto modeswitchcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Mode_switch);
 
 	auto modmap_r = _xcb->xcb_get_modifier_mapping_reply(_connection, modifierCookie, nullptr);
 	if (!modmap_r) {
@@ -1343,18 +1317,18 @@ void XcbConnection::updateKeysymMapping() {
 
 	xcb_keycode_t *modmap = _xcb->xcb_get_modifier_mapping_keycodes(modmap_r);
 
-	_numlock = 0;
-	_shiftlock = 0;
-	_capslock = 0;
-	_modeswitch = 0;
+	_keys.numlock = 0;
+	_keys.shiftlock = 0;
+	_keys.capslock = 0;
+	_keys.modeswitch = 0;
 
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < modmap_r->keycodes_per_modifier; j++) {
 			xcb_keycode_t kc = modmap[i * modmap_r->keycodes_per_modifier + j];
-			look_for(_numlock, numlockcodes, kc, i);
-			look_for(_shiftlock, shiftlockcodes, kc, i);
-			look_for(_capslock, capslockcodes, kc, i);
-			look_for(_modeswitch, modeswitchcodes, kc, i);
+			look_for(_keys.numlock, numlockcodes, kc, i);
+			look_for(_keys.shiftlock, shiftlockcodes, kc, i);
+			look_for(_keys.capslock, capslockcodes, kc, i);
+			look_for(_keys.modeswitch, modeswitchcodes, kc, i);
 		}
 	}
 
@@ -1366,8 +1340,8 @@ void XcbConnection::updateKeysymMapping() {
 	::free(modeswitchcodes);
 
 	// only if no xkb available
-	if (!_xkb) {
-		memset(_keycodes, 0, sizeof(core::InputKeyCode) * 256);
+	if (!_xkb.lib) {
+		memset(_xkb.keycodes, 0, sizeof(core::InputKeyCode) * 256);
 		// from https://stackoverflow.com/questions/18689863/obtain-keyboard-layout-and-keysyms-with-xcb
 		xcb_get_keyboard_mapping_reply_t *keyboard_mapping =
 				_xcb->xcb_get_keyboard_mapping_reply(_connection, mappingCookie, NULL);
@@ -1377,7 +1351,7 @@ void XcbConnection::updateKeysymMapping() {
 		xcb_keysym_t *keysyms = (xcb_keysym_t *)(keyboard_mapping + 1);
 
 		for (int keycode_idx = 0; keycode_idx < nkeycodes; ++keycode_idx) {
-			_keycodes[setup->min_keycode + keycode_idx] =
+			_xkb.keycodes[setup->min_keycode + keycode_idx] =
 					getKeysymCode(keysyms[keycode_idx * keyboard_mapping->keysyms_per_keycode]);
 		}
 
@@ -1392,6 +1366,311 @@ bool XcbConnection::checkCookie(xcb_void_cookie_t cookie, StringView errMessage)
 		return false;
 	}
 	return true;
+}
+
+ModeInfo XcbConnection::parseModeInfo(xcb_randr_mode_info_t *mode, uint8_t *name) const {
+	double vTotal = mode->vtotal;
+
+	if (mode->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
+		/* doublescan doubles the number of lines */
+		vTotal *= 2;
+	}
+
+	if (mode->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
+		/* interlace splits the frame into two fields */
+		/* the field rate is what is typically reported by monitors */
+		vTotal /= 2;
+	}
+
+	uint16_t rate;
+	if (mode->htotal && vTotal) {
+		rate = uint16_t(floor(double(mode->dot_clock) / (double(mode->htotal) * double(vTotal))));
+	}
+	return ModeInfo{mode->id, mode->width, mode->height, rate,
+		String((const char *)name, mode->name_len)};
+}
+
+String XcbConnection::getAtomString(xcb_atom_t atom) const {
+	xcb_generic_error_t *error = nullptr;
+	auto nameReply = _xcb->xcb_get_atom_name_reply(_connection,
+			_xcb->xcb_get_atom_name(_connection, atom), &error);
+	if (error) {
+		log::error("XcbConnection", "xcb_get_atom_name_reply: error: code=", error->error_code);
+		return String();
+	}
+
+	if (nameReply) {
+		auto name = _xcb->xcb_get_atom_name_name(nameReply);
+		auto len = _xcb->xcb_get_atom_name_name_length(nameReply);
+
+		auto ret = String(name, len);
+
+		::free(nameReply);
+
+		return ret;
+	}
+
+	return String();
+}
+
+void XcbConnection::continueClipboardProcessing() {
+	if (!_clipboard.waiters.empty()) {
+		auto firstType = _clipboard.waiters.begin()->first;
+		_xcb->xcb_convert_selection(getConnection(), _clipboard.window,
+				getAtom(XcbAtomIndex::CLIPBOARD), firstType,
+				getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_CURRENT_TIME);
+		_xcb->xcb_flush(getConnection());
+	} else if (!_clipboard.requests.empty()) {
+		_xcb->xcb_convert_selection(getConnection(), _clipboard.window,
+				getAtom(XcbAtomIndex::CLIPBOARD), getAtom(XcbAtomIndex::TARGETS),
+				getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_CURRENT_TIME);
+		_xcb->xcb_flush(getConnection());
+	}
+}
+
+void XcbConnection::finalizeClipboardWaiters(BytesView data, xcb_atom_t type) {
+	auto wIt = _clipboard.waiters.equal_range(type);
+	auto typeName = getAtomName(type);
+	if (typeName == "STRING" || typeName == "UTF8_STRING") {
+		typeName = StringView("text/plain");
+	}
+	for (auto it = wIt.first; it != wIt.second; ++it) { it->second->dataCallback(data, typeName); }
+
+	_clipboard.waiters.erase(wIt.first, wIt.second);
+}
+
+void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
+	if (event->property == getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)) {
+		if (event->target == getAtom(XcbAtomIndex::TARGETS)) {
+			auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1, _clipboard.window,
+					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_ATOM_ATOM, 0, maxOf<uint32_t>());
+			auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+			if (reply) {
+				auto targets = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
+				auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
+
+				// resolve required types
+				getAtomNames(SpanView(targets, len), [&](SpanView<StringView> types) {
+					// Hide system types from user
+					Vector<StringView> safeTypes;
+					for (auto &it : types) {
+						if (it == "UTF8_STRING" || it == "STRING") {
+							safeTypes.emplace_back("text/plain");
+						} else if (it != "TARGETS" && it != "MULTIPLE" && it != "SAVE_TARGETS"
+								&& it != "TIMESTAMP" && it != "COMPOUND_TEXT") {
+							safeTypes.emplace_back(it);
+						}
+					}
+					for (auto &it : _clipboard.requests) {
+						auto type = it->typeCallback(safeTypes);
+						// check if type is in list of available types
+						if (!type.empty()
+								&& std::find(types.begin(), types.end(), type) != types.end()) {
+							if (type == "text/plain") {
+								auto tIt = std::find(types.begin(), types.end(), "UTF8_STRING");
+								if (tIt != types.end()) {
+									_clipboard.waiters.emplace(getAtom(XcbAtomIndex::UTF8_STRING),
+											sp::move(it));
+								} else {
+									tIt = std::find(types.begin(), types.end(), "STRING");
+									if (tIt != types.end()) {
+										_clipboard.waiters.emplace(XCB_ATOM_STRING, sp::move(it));
+									} else {
+										_clipboard.waiters.emplace(getAtom(type), sp::move(it));
+									}
+								}
+							} else {
+								_clipboard.waiters.emplace(getAtom(type), sp::move(it));
+							}
+						} else {
+							// notify that we have no matched type
+							it->dataCallback(BytesView(), StringView());
+						}
+					}
+				});
+
+				_clipboard.requests.clear();
+
+				::free(reply);
+			}
+		} else {
+			auto wIt = _clipboard.waiters.equal_range(event->target);
+
+			if (wIt.first != wIt.second) {
+				log::debug("XcbConnection",
+						"Received clipboard data: ", getAtomName(event->target));
+				auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1,
+						_clipboard.window, getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD),
+						XCB_GET_PROPERTY_TYPE_ANY, 0, maxOf<uint32_t>());
+				auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+				if (reply) {
+					if (reply->type == getAtom(XcbAtomIndex::INCR)) {
+						// wait for an incremental content
+						_clipboard.incr = true;
+						_clipboard.incrType = event->target;
+						_clipboard.incrBuffer.clear();
+						return;
+					} else {
+						finalizeClipboardWaiters(
+								BytesView((const uint8_t *)_xcb->xcb_get_property_value(reply),
+										_xcb->xcb_get_property_value_length(reply)),
+								_clipboard.incrType);
+					}
+
+					free(reply);
+				} else {
+					_clipboard.waiters.erase(wIt.first, wIt.second);
+				}
+			} else {
+				log::error("XcbConnection", "No requests waits for a ", getAtomName(event->target),
+						" clipboard target");
+
+				// remove property for a type
+				auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1,
+						_clipboard.window, getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD),
+						XCB_GET_PROPERTY_TYPE_ANY, 0, 0);
+				auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+				if (reply) {
+					::free(reply);
+				}
+			}
+		}
+	}
+	continueClipboardProcessing();
+}
+
+void XcbConnection::handlePropertyNotify(xcb_property_notify_event_t *ev) {
+	if (ev->atom == getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)
+			&& ev->state == XCB_PROPERTY_NEW_VALUE) {
+		if (_clipboard.incr) {
+			auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1, _clipboard.window,
+					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_GET_PROPERTY_TYPE_ANY, 0,
+					maxOf<uint32_t>());
+			auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+			if (reply) {
+				auto len = _xcb->xcb_get_property_value_length(reply);
+
+				if (len > 0) {
+					auto data = (const uint8_t *)_xcb->xcb_get_property_value(reply);
+					_clipboard.incrBuffer.emplace_back(BytesView(data, len).bytes<Interface>());
+				} else {
+					Bytes data;
+					size_t size = 0;
+					for (auto &it : _clipboard.incrBuffer) { size += it.size(); }
+
+					data.resize(size);
+
+					size = 0;
+					for (auto &it : _clipboard.incrBuffer) {
+						memcpy(data.data() + size, it.data(), it.size());
+						size += it.size();
+					}
+
+					finalizeClipboardWaiters(data, _clipboard.incrType);
+					_clipboard.incrBuffer.clear();
+					_clipboard.incr = false;
+					// finalize transfer
+				}
+			} else {
+				finalizeClipboardWaiters(BytesView(), _clipboard.incrType);
+				_clipboard.incrBuffer.clear();
+				_clipboard.incr = false;
+			}
+		}
+		log::debug("XcbConnection", getAtomName(ev->atom), " ", ev->state);
+	}
+}
+
+void XcbConnection::handleSelectionRequest(xcb_selection_request_event_t *event) {
+	const xcb_atom_t targets[] = {
+		getAtom(XcbAtomIndex::TARGETS),
+		getAtom(XcbAtomIndex::MULTIPLE),
+		_clipboard.typeAtom,
+		getAtom(XcbAtomIndex::OCTET_STREAM),
+		getAtom(XcbAtomIndex::UTF8_STRING),
+		XCB_ATOM_STRING,
+	};
+
+	xcb_selection_notify_event_t notify;
+	notify.response_type = XCB_SELECTION_NOTIFY;
+	notify.pad0 = 0;
+	notify.sequence = 0;
+	notify.time = event->time;
+	notify.requestor = event->requestor;
+	notify.selection = event->selection;
+	notify.target = event->target;
+	notify.property = 0;
+
+	auto ntargets = sizeof(targets) / sizeof(targets[0]);
+
+	if (!_clipboard.type.starts_with("text/")) {
+		ntargets -= 2; // remove text-based targets
+	}
+
+	if (event->target == getAtom(XcbAtomIndex::TARGETS)) {
+		// The list of supported targets was requested
+		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
+				event->property, XCB_ATOM_ATOM, 32, ntargets, (unsigned char *)targets);
+		notify.property = event->property;
+	} else if (event->target == getAtom(XcbAtomIndex::MULTIPLE)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 0, event->requestor,
+				event->property, getAtom(XcbAtomIndex::ATOM_PAIR), 0, maxOf<uint32_t>());
+		auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+		if (reply) {
+			xcb_atom_t *requests = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
+			auto count = uint32_t(_xcb->xcb_get_property_value_length(reply)) / sizeof(xcb_atom_t);
+
+			for (uint32_t i = 0; i < count; i += 2) {
+				uint32_t j;
+
+				for (j = 0; j < ntargets; j++) {
+					if (targets[i] == requests[j]) {
+						break;
+					}
+				}
+
+				if (j < ntargets) {
+					_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE,
+							event->requestor, event->property, event->target, 8,
+							_clipboard.selection.size(), _clipboard.selection.data());
+				} else {
+					requests[i + 1] = XCB_ATOM_NONE;
+				}
+			}
+
+			_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
+					event->property, getAtom(XcbAtomIndex::ATOM_PAIR), 32, count, requests);
+			::free(reply);
+
+			notify.property = event->property;
+		}
+	} else if (event->target == getAtom(XcbAtomIndex::SAVE_TARGETS)) {
+		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
+				event->property, getAtom(XcbAtomIndex::XNULL), 32, 0, nullptr);
+		notify.property = event->property;
+	} else {
+		for (uint32_t i = 0; i < ntargets; ++i) {
+			if (event->target == targets[i]) {
+				_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
+						event->property, event->target, 8, _clipboard.selection.size(),
+						_clipboard.selection.data());
+				notify.property = event->property;
+			}
+		}
+	}
+
+	_xcb->xcb_send_event(getConnection(), false, event->requestor,
+			XCB_EVENT_MASK_NO_EVENT, // SelectionNotify events go without mask
+			(const char *)&notify);
+	_xcb->xcb_flush(getConnection());
+}
+
+void XcbConnection::notifyClipboard(BytesView data, StringView type) {
+	/*if (type.empty()) {
+		type = StringView("text/plain");
+	}
+	for (auto &it : _clipboard.callbacks) { it.first(data, type); }
+	_clipboard.callbacks.clear();*/
 }
 
 } // namespace stappler::xenolith::platform

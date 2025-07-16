@@ -43,16 +43,36 @@ public:
 	virtual ImageViewInfo getSwapchainImageViewInfo(const ImageInfo &image) const = 0;
 	virtual SurfaceInfo getSurfaceOptions(SurfaceInfo &&) const = 0;
 
-	virtual SwapchainConfig selectConfig(const SurfaceInfo &) = 0;
+	virtual SwapchainConfig selectConfig(const SurfaceInfo &, bool fastMode) = 0;
 
-	virtual void acquireFrameData(PresentationFrame *, Function<void(PresentationFrame *)> &&) = 0;
+	virtual void acquireFrameData(NotNull<PresentationFrame>,
+			Function<void(NotNull<PresentationFrame>)> &&) = 0;
 
-	virtual void handleFramePresented(PresentationFrame *) = 0;
+	virtual void handleFramePresented(NotNull<PresentationFrame>) = 0;
 
 	virtual Rc<Surface> makeSurface(NotNull<Instance>) = 0;
 	virtual FrameConstraints getInitialFrameConstraints() const = 0;
 	virtual uint64_t getInitialFrameInterval() const = 0;
+
+	virtual void setFrameOrder(uint64_t) = 0;
 };
+
+enum class PresentationSwapchainFlags {
+	None,
+	SwitchToFastMode = 1 << 0,
+	EndOfLife = 1 << 1,
+	Finalized = 1 << 2,
+};
+
+SP_DEFINE_ENUM_AS_MASK(PresentationSwapchainFlags)
+
+enum class PresentationUpdateFlags {
+	None,
+	DisplayLink = 1 << 0,
+	FlushPending = 1 << 1,
+};
+
+SP_DEFINE_ENUM_AS_MASK(PresentationUpdateFlags)
 
 class SP_PUBLIC PresentationEngine : public Ref {
 public:
@@ -62,13 +82,6 @@ public:
 		uint64_t dt;
 		uint64_t avg;
 		uint64_t clock;
-	};
-
-	enum class SwapchainFlags {
-		None,
-		SwitchToFastMode = 1 << 0,
-		EndOfLife = 1 << 1,
-		Finalized = 1 << 2,
 	};
 
 	struct Options {
@@ -100,7 +113,7 @@ public:
 
 		// Экспериментально: отправлять кадр на презентацию сразу после его отправки в обработку. Может снизить видимую задержку ввода.
 		// На текущий момент, работает нестабильно для режима FIFO
-		bool earlyPresent = false;
+		bool earlyPresent = true;
 	};
 
 	virtual ~PresentationEngine();
@@ -115,13 +128,13 @@ public:
 			core::PresentMode presentMode) = 0;
 
 	// Callback receives true for successful recreation and false for end-of-life
-	virtual void deprecateSwapchain(SwapchainFlags = SwapchainFlags::None,
+	virtual void deprecateSwapchain(PresentationSwapchainFlags = PresentationSwapchainFlags::None,
 			Function<void(bool)> && = nullptr);
 
 	virtual bool present(PresentationFrame *frame, ImageStorage *image);
 	virtual bool presentImmediate(PresentationFrame *frame) { return false; }
 
-	virtual void update(bool displayLink);
+	virtual void update(PresentationUpdateFlags);
 
 	void setTargetFrameInterval(uint64_t);
 	uint64_t getTargetFrameInterval() const { return _targetFrameInterval; }
@@ -159,35 +172,37 @@ public:
 
 	bool isRunning() const;
 
-	virtual bool handleFrameStarted(PresentationFrame *);
-	virtual void handleFrameInvalidated(PresentationFrame *);
-	virtual void handleFrameReady(PresentationFrame *);
-	virtual void handleFramePresented(PresentationFrame *);
-	virtual void handleFrameComplete(PresentationFrame *);
+	virtual bool handleFrameStarted(NotNull<PresentationFrame>);
+	virtual void handleFrameInvalidated(NotNull<PresentationFrame>);
+	virtual void handleFrameReady(NotNull<PresentationFrame>);
+	virtual void handleFramePresented(NotNull<PresentationFrame>);
+	virtual void handleFrameComplete(NotNull<PresentationFrame>);
 
 protected:
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override { return true; }
 #endif
 
-	virtual void acquireFrameData(PresentationFrame *,
-			Function<void(core::PresentationFrame *)> &&) = 0;
+	virtual void acquireFrameData(NotNull<PresentationFrame>,
+			Function<void(NotNull<PresentationFrame>)> &&);
 
 	void scheduleSwapchainRecreation();
 
 	void resetFrames();
 
-	void scheduleImage(PresentationFrame *frame);
+	void scheduleImage(NotNull<PresentationFrame>);
 
-	bool acquireScheduledImage();
+	Status acquireScheduledImage();
+	void scheduleImageAcquisition();
 
 	void handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image);
 
-	void runScheduledPresent(PresentationFrame *frame, ImageStorage *image);
-	void presentSwapchainImage(Rc<DeviceQueue> &&queue, PresentationFrame *frame,
+	void runScheduledPresent(NotNull<PresentationFrame> frame, ImageStorage *image);
+	void presentSwapchainImage(Rc<DeviceQueue> &&queue, NotNull<PresentationFrame> frame,
 			ImageStorage *image);
 
-	void presentWithQueue(DeviceQueue &queue, PresentationFrame *frame, ImageStorage *image);
+	void presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame,
+			ImageStorage *image);
 
 	Options _options;
 	FrameConstraints _constraints;
@@ -252,11 +267,10 @@ protected:
 	Set<PresentationFrame *> _activeFrames;
 	Set<PresentationFrame *> _totalFrames;
 
-	SwapchainFlags _deprecationFlags = SwapchainFlags::None;
+	PresentationSwapchainFlags _deprecationFlags = PresentationSwapchainFlags::None;
 	Vector<Function<void(bool)>> _deprecationCallbacks;
+	Rc<event::TimerHandle> _acquisitionTimer;
 };
-
-SP_DEFINE_ENUM_AS_MASK(PresentationEngine::SwapchainFlags)
 
 } // namespace stappler::xenolith::core
 #endif /* XENOLITH_CORE_XLCOREPRESENTATIONENGINE_H_ */

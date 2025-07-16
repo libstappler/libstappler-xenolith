@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,36 +20,31 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "SPCommon.h"
+#include "SPSharedModule.h"
+#include "SPLog.h"
 
-#include "XLEvent.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
-
-#include "platform/XLContextController.cc"
-#include "platform/XLContextNativeWindow.cc"
-#include "platform/XLEdid.cc"
-
-#if LINUX
-#include "linux/thirdparty/glfw/xkb_unicode.cc"
-#include "linux/XLLinux.cc"
-#include "linux/XLLinuxXcbLibrary.cc"
-#include "linux/XLLinuxXkbLibrary.cc"
-#include "linux/XLLinuxDBusLibrary.cc"
-#include "linux/XLLinuxXcbConnection.cc"
-#include "linux/XLLinuxXcbWindow.cc"
-#include "linux/XLLinuxContextController.cc"
+#if MODULE_XENOLITH_APPLICATION
+#include "XLContext.h"
 #endif
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith {
-
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName, Context::run),
-};
-
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
-
-} // namespace stappler::xenolith
+int main(int argc, const char *argv[]) {
+	// Main symbol should depend only on stappler_core for successful linkage
+	// So, use SharedModule to load `Context::run`
+#if MODULE_XENOLITH_APPLICATION
+	auto runFn =
+			stappler::SharedModule::acquireTypedSymbol<decltype(&stappler::xenolith::Context::run)>(
+					stappler::buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
+					stappler::xenolith::Context::SymbolContextRunName);
+	if (runFn) {
+		return runFn(argc, argv);
+	}
+	stappler::log::error("main",
+			"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
+	return -1;
+#else
+	stappler::log::error("main",
+			"MODULE_XENOLITH_APPLICATION is not defined for the default entry point");
+	return -1;
+#endif
+}

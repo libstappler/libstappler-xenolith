@@ -81,7 +81,7 @@ public:
 
 	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *,
 			SpanView<Rc<core::ImageView>>) override;
-	virtual Rc<ImageStorage> makeImage(const ImageInfoData &) override;
+	virtual Rc<ImageStorage> makeImage(StringView, const ImageInfoData &) override;
 	virtual Rc<core::Semaphore> makeSemaphore() override;
 	virtual Rc<core::ImageView> makeImageView(const Rc<core::ImageObject> &,
 			const ImageViewInfo &) override;

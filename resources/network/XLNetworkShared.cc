@@ -29,7 +29,7 @@ static SharedSymbol s_xenolithResourceNetwork[] = {
 	SharedSymbol{"Controller::createController", Controller::createController},
 };
 
-static SharedModule s_xenolithResourceNetworkModule(
+SP_USED static SharedModule s_xenolithResourceNetworkModule(
 		buildconfig::MODULE_XENOLITH_RESOURCES_NETWORK_NAME, s_xenolithResourceNetwork,
 		sizeof(s_xenolithResourceNetwork) / sizeof(SharedSymbol));
 

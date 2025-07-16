@@ -411,12 +411,12 @@ bool TransferResource::compile() {
 					DeviceMemoryInfo{it.req.requirements.size, it.req.requirements.alignment,
 						it.dedicatedMemType, true},
 					it.dedicated, _targetUsage);
-			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, move(dedicated),
-					Rc<core::DataAtlas>(it.data->atlas));
+			img = Rc<Image>::create(*_alloc->getDevice(), it.data->key, it.image, *it.data,
+					move(dedicated), Rc<core::DataAtlas>(it.data->atlas));
 			it.dedicated = VK_NULL_HANDLE;
 		} else {
-			img = Rc<Image>::create(*_alloc->getDevice(), it.image, *it.data, Rc<DeviceMemory>(mem),
-					Rc<core::DataAtlas>(it.data->atlas));
+			img = Rc<Image>::create(*_alloc->getDevice(), it.data->key, it.image, *it.data,
+					Rc<DeviceMemory>(mem), Rc<core::DataAtlas>(it.data->atlas));
 		}
 		if (it.barrier) {
 			img->setPendingBarrier(it.barrier.value());

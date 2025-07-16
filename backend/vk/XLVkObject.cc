@@ -24,7 +24,6 @@
 
 #include "XLVkObject.h"
 #include "SPMath.h"
-#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -182,7 +181,11 @@ VkMappedMemoryRange DeviceMemory::calculateMappedMemoryRange(VkDeviceSize offset
 	return range;
 }
 
-bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, uint32_t idx) {
+bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData &info,
+		uint32_t idx) {
+	SPASSERT(!key.empty(), "Image should have a name");
+
+	_name = key.str<Interface>();
 	_info = info;
 	_image = image;
 
@@ -197,8 +200,11 @@ bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, uint32_t
 	return ret;
 }
 
-bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, Rc<DeviceMemory> &&mem,
-		Rc<core::DataAtlas> &&atlas) {
+bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData &info,
+		Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
+	SPASSERT(!key.empty(), "Image should have a name");
+
+	_name = key.str<Interface>();
 	_info = info;
 	_image = image;
 	_atlas = atlas;
@@ -212,8 +218,11 @@ bool Image::init(Device &dev, VkImage image, const ImageInfoData &info, Rc<Devic
 	}, core::ObjectType::Image, ObjectHandle(_image), this);
 }
 
-bool Image::init(Device &dev, uint64_t idx, VkImage image, const ImageInfoData &info,
-		Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
+bool Image::init(Device &dev, StringView key, uint64_t idx, VkImage image,
+		const ImageInfoData &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
+	SPASSERT(!key.empty(), "Image should have a name");
+
+	_name = key.str<Interface>();
 	_info = info;
 	_image = image;
 	_atlas = atlas;

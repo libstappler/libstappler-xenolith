@@ -40,17 +40,18 @@ public:
 	using TextInputState = core::TextInputState;
 	using TextInputFlags = core::TextInputFlags;
 
-	virtual ~ContextNativeWindow() = default;
+	virtual ~ContextNativeWindow();
 
 	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&info);
 
 	virtual uint64_t getScreenFrameInterval() const = 0;
 
 	virtual void mapWindow() = 0;
+	virtual void unmapWindow() = 0;
 
 	virtual void specializeSurfaceInfo(core::SurfaceInfo &) const { }
 
-	virtual void handleFramePresented(core::PresentationFrame *) { }
+	virtual void handleFramePresented(NotNull<core::PresentationFrame>) { }
 	virtual void handleLayerUpdate(const WindowLayer &) { }
 
 	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const {
@@ -63,9 +64,15 @@ public:
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) = 0;
 
-	virtual void setExitGuard(bool) { }
+	virtual bool close() = 0;
+
+	virtual void setExitGuard(bool value) { _hasExitGuard = value; }
+	virtual bool hasExitGuard() const { return _hasExitGuard; }
+
 	virtual void setInsetDecorationVisible(bool) { }
 	virtual void setInsetDecorationTone(float) { }
+
+	bool isRootWindow() const { return _isRootWindow; }
 
 	void setFrameOrder(uint64_t v) { _frameOrder = v; }
 	uint64_t getFrameOrder() const { return _frameOrder; }
@@ -82,7 +89,14 @@ public:
 	// callback: return false to stop iterating
 	bool findLayers(Vec2, const Callback<bool(const WindowLayer &)> &) const;
 
+	void setAppWindow(Rc<AppWindow> &&);
+	AppWindow *getAppWindow() const;
+
 	virtual void updateLayers(Vector<WindowLayer> &&);
+
+	virtual Status setFullscreen(const MonitorId &, const ModeInfo &) {
+		return Status::ErrorNotImplemented;
+	}
 
 protected:
 	// Run text input mode or update text input buffer
@@ -106,11 +120,16 @@ protected:
 	Rc<WindowInfo> _info;
 	Rc<core::TextInputProcessor> _textInput;
 
+	Rc<AppWindow> _appWindow;
+
 	// usually, text input can be captured from keyboard, but on some systems text input separated from keyboard input
 	bool _handleTextInputFromKeyboard = true;
 
 	// intercept pointer motion event to track current top layer
 	bool _handleLayerForMotion = true;
+
+	bool _isRootWindow = true;
+	bool _hasExitGuard = false;
 
 	Vec2 _layerLocation;
 	Vector<WindowLayer> _layers;

@@ -52,7 +52,8 @@ public:
 
 	Rc<DynamicImageInstance> getInstance();
 
-	void updateInstance(Loop &, const Rc<ImageObject> &, Rc<DataAtlas> && = Rc<DataAtlas>(), Rc<Ref> &&userdata = Rc<Ref>(),
+	void updateInstance(Loop &, const Rc<ImageObject> &, Rc<DataAtlas> && = Rc<DataAtlas>(),
+			Rc<Ref> &&userdata = Rc<Ref>(),
 			const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>());
 
 	void addTracker(const MaterialAttachment *);
@@ -78,11 +79,15 @@ protected:
 
 class SP_PUBLIC DynamicImage::Builder {
 public:
-	const ImageData * setImageByRef(StringView key, ImageInfo &&, BytesView data, Rc<DataAtlas> && = nullptr);
-	const ImageData * setImage(StringView key, ImageInfo &&, const FileInfo &data, Rc<DataAtlas> && = nullptr);
-	const ImageData * setImage(StringView key, ImageInfo &&, BytesView data, Rc<DataAtlas> && = nullptr);
-	const ImageData * setImage(StringView key, ImageInfo &&,
-			Function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &&cb, Rc<DataAtlas> && = nullptr);
+	const ImageData *setImageByRef(StringView key, ImageInfo &&, BytesView data,
+			Rc<DataAtlas> && = nullptr);
+	const ImageData *setImage(StringView key, ImageInfo &&, const FileInfo &data,
+			Rc<DataAtlas> && = nullptr);
+	const ImageData *setImage(StringView key, ImageInfo &&, BytesView data,
+			Rc<DataAtlas> && = nullptr);
+	const ImageData *setImage(StringView key, ImageInfo &&,
+			Function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &&cb,
+			Rc<DataAtlas> && = nullptr);
 
 protected:
 	friend class DynamicImage;
@@ -92,6 +97,6 @@ protected:
 	DynamicImage *_data = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCOREDYNAMICIMAGE_H_ */

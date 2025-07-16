@@ -31,7 +31,11 @@ MODULE_XENOLITH_APPLICATION_INCLUDES_OBJS := \
 	$(XENOLITH_MODULE_DIR)/application/resources \
 	$(XENOLITH_MODULE_DIR)/application/nodes
 
-MODULE_XENOLITH_APPLICATION_DEPENDS_ON := xenolith_core stappler_data
+MODULE_XENOLITH_APPLICATION_DEPENDS_ON := xenolith_core xenolith_font stappler_data
+
+ifndef LOCAL_MAIN
+MODULE_XENOLITH_APPLICATION_DEPENDS_ON += xenolith_application_main
+endif
 
 ifdef LINUX
 MODULE_XENOLITH_APPLICATION_DBUS_CFLAGS := $(shell pkg-config --cflags dbus-1)
@@ -55,3 +59,23 @@ endef
 
 # module name resolution
 MODULE_xenolith_application := MODULE_XENOLITH_APPLICATION
+
+MODULE_XENOLITH_APPLICATION_MAIN_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
+MODULE_XENOLITH_APPLICATION_MAIN_PRECOMPILED_HEADERS :=
+MODULE_XENOLITH_APPLICATION_MAIN_SRCS_DIRS := 
+MODULE_XENOLITH_APPLICATION_MAIN_SRCS_OBJS := $(XENOLITH_MODULE_DIR)/application/XLMain.cpp
+MODULE_XENOLITH_APPLICATION_MAIN_INCLUDES_DIRS :=
+MODULE_XENOLITH_APPLICATION_MAIN_INCLUDES_OBJS :=
+
+MODULE_XENOLITH_APPLICATION_MAIN_DEPENDS_ON := stappler_core
+
+#spec
+
+MODULE_XENOLITH_APPLICATION_MAIN_SHARED_SPEC_SUMMARY := Xenolith default entry point implementation
+
+define MODULE_XENOLITH_APPLICATION_MAIN_SHARED_SPEC_DESCRIPTION
+Module libxenolith-application-main contains default entry point for an applications without `main` definition
+endef
+
+# module name resolution
+MODULE_xenolith_application_main := MODULE_XENOLITH_APPLICATION_MAIN

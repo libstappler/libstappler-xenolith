@@ -293,6 +293,26 @@ void InputListener::setFocusCallback(Function<bool(bool)> &&cb) {
 	}
 }
 
+void InputListener::setCloseRequestCallback(Function<bool(bool)> &&cb) {
+	if (cb) {
+		_callbacks.insert_or_assign(InputEventName::CloseRequest, sp::move(cb));
+		_eventMask.set(toInt(InputEventName::CloseRequest));
+	} else {
+		_callbacks.erase(InputEventName::CloseRequest);
+		_eventMask.reset(toInt(InputEventName::CloseRequest));
+	}
+}
+
+void InputListener::setScreenUpdateCallback(Function<bool(bool)> &&cb) {
+	if (cb) {
+		_callbacks.insert_or_assign(InputEventName::ScreenUpdate, sp::move(cb));
+		_eventMask.set(toInt(InputEventName::ScreenUpdate));
+	} else {
+		_callbacks.erase(InputEventName::ScreenUpdate);
+		_eventMask.reset(toInt(InputEventName::ScreenUpdate));
+	}
+}
+
 void InputListener::clear() {
 	_eventMask.reset();
 	_recognizers.clear();

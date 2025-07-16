@@ -597,7 +597,6 @@ bool FontRenderPassHandle::init(QueuePass &pass, const FrameQueue &handle) {
 
 core::QueueFlags FontRenderPassHandle::getQueueOps() const { return _queueOps; }
 
-
 bool FontRenderPassHandle::prepare(FrameQueue &handle, Function<void(bool)> &&cb) {
 	if (auto a = handle.getAttachment(
 				static_cast<FontRenderPass *>(_queuePass.get())->getRenderFontAttachment())) {
@@ -634,7 +633,8 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 	auto allocator = _device->getAllocator();
 
 	if (_device->hasDynamicIndexedBuffers()) {
-		_targetImage = allocator->preallocate(info, false, instance->data.image->getIndex());
+		_targetImage =
+				allocator->preallocate(info.key, info, false, instance->data.image->getIndex());
 		_targetAtlas = allocator->preallocate(core::BufferInfo(atlas->getBufferData().size(),
 				core::BufferUsage::StorageBuffer | core::BufferUsage::ShaderDeviceAddress));
 
@@ -645,8 +645,8 @@ Vector<const core::CommandBuffer *> FontRenderPassHandle::doPrepareCommands(Fram
 		(void)allocator->emplaceObjects(AllocationUsage::DeviceLocal, makeSpanView(images),
 				makeSpanView(buffers));
 	} else {
-		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info, false,
-				instance->data.image->getIndex());
+		_targetImage = allocator->spawnPersistent(AllocationUsage::DeviceLocal, info.key, info,
+				false, instance->data.image->getIndex());
 	}
 
 	auto frame = static_cast<DeviceFrameHandle *>(&handle);

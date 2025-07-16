@@ -60,7 +60,11 @@ void AppThread::threadInit() {
 		.count = event::TimerInfo::Infinite,
 	});
 
+	loadExtensions();
+
 	_context->handleAppThreadCreated(this);
+
+	initializeExtensions();
 
 	_time.delta = 0;
 	_time.global = sp::platform::clock(ClockType::Monotonic);
@@ -132,6 +136,43 @@ void AppThread::perform(Rc<Task> &&task, bool performFirst) const {
 	_appLooper->performAsync(sp::move(task), performFirst);
 }
 
+void AppThread::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
+		Function<StringView(SpanView<StringView>)> &&tcb, Ref *ref) {
+	_context->performOnThread(
+			[this, cb = sp::move(cb), tcb = sp::move(tcb), ref = Rc<Ref>(ref)]() mutable {
+		_context->readFromClipboard(
+				[this, cb = sp::move(cb), ref = sp::move(ref)](BytesView data,
+						StringView type) mutable {
+			performOnAppThread(
+					[data = data.bytes<Interface>(), type = type.str<Interface>(),
+							cb = sp::move(cb), ref = move(ref)]() mutable {
+				cb(data, type);
+				ref = nullptr;
+			},
+					this);
+		},
+				sp::move(tcb), this);
+	}, this);
+}
+
+void AppThread::writeToClipboard(BytesView data, StringView contentType) {
+	_context->performOnThread(
+			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>()]() {
+		_context->writeToClipboard(data, type);
+	});
+}
+
+void AppThread::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {
+	_context->performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
+		auto info = _context->getScreenInfo();
+		performOnAppThread([cb = sp::move(cb), ref = move(ref), info = move(info)]() mutable {
+			cb(info);
+			ref = nullptr;
+			info = nullptr;
+		}, this);
+	}, this);
+}
+
 void AppThread::performAppUpdate(const UpdateTime &time) {
 	_context->handleAppThreadUpdate(this, time);
 	for (auto &it : _extensions) { it.second->update(this, time); }
@@ -156,7 +197,7 @@ void AppThread::loadExtensions() {
 #if MODULE_XENOLITH_FONT
 	auto createFontController = SharedModule::acquireTypedSymbol<
 			decltype(&font::FontComponent::createDefaultController)>(
-			buildconfig::MODULE_XENOLITH_FONT_NAME, "FontExtension::createDefaultController");
+			buildconfig::MODULE_XENOLITH_FONT_NAME, "FontComponent::createDefaultController");
 
 	if (createFontController) {
 		auto comp = _context->getComponent<font::FontComponent>();

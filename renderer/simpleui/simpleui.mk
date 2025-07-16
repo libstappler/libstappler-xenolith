@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,22 +18,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# current dir
-XENOLITH_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+MODULE_XENOLITH_RENDERER_SIMPLEUI_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
+MODULE_XENOLITH_RENDERER_SIMPLEUI_LIBS :=
+MODULE_XENOLITH_RENDERER_SIMPLEUI_SRCS_DIRS := $(XENOLITH_MODULE_DIR)/renderer/simpleui
+MODULE_XENOLITH_RENDERER_SIMPLEUI_SRCS_OBJS :=
+MODULE_XENOLITH_RENDERER_SIMPLEUI_INCLUDES_DIRS := $(XENOLITH_MODULE_DIR)/renderer/simpleui
+MODULE_XENOLITH_RENDERER_SIMPLEUI_INCLUDES_OBJS :=
+MODULE_XENOLITH_RENDERER_SIMPLEUI_DEPENDS_ON := xenolith_renderer_basic2d xenolith_resources_icons
 
-XENOLITH_VERSION_API := 3
-XENOLITH_VERSION_REV := 1
-XENOLITH_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(XENOLITH_MODULE_DIR)))
+#spec
 
-TOOLKIT_MODULE_LIST += \
-	$(XENOLITH_MODULE_DIR)/core/core.mk \
-	$(XENOLITH_MODULE_DIR)/application/application.mk \
-	$(XENOLITH_MODULE_DIR)/font/font.mk \
-	$(XENOLITH_MODULE_DIR)/backend/vk/vk.mk \
-	$(XENOLITH_MODULE_DIR)/renderer/basic2d/basic2d.mk \
-	$(XENOLITH_MODULE_DIR)/renderer/material2d/material2d.mk \
-	$(XENOLITH_MODULE_DIR)/renderer/simpleui/simpleui.mk \
-	$(XENOLITH_MODULE_DIR)/resources/icons/icons.mk \
-	$(XENOLITH_MODULE_DIR)/resources/storage/storage.mk \
-	$(XENOLITH_MODULE_DIR)/resources/network/network.mk \
-	$(XENOLITH_MODULE_DIR)/resources/assets/assets.mk
+MODULE_XENOLITH_RENDERER_SIMPLEUI_SHARED_SPEC_SUMMARY := Xenolith minimal and very simple UI kit
+
+define MODULE_XENOLITH_RENDERER_SIMPLEUI_SHARED_SPEC_DESCRIPTION
+Module libxenolith-renderer-simpleui implements simple UI primitives for fast prototyping and debug
+endef
+
+# module name resolution
+MODULE_xenolith_renderer_simpleui := MODULE_XENOLITH_RENDERER_SIMPLEUI

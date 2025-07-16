@@ -134,7 +134,12 @@ void Scene::handlePresented(Director *dir) {
 	}
 
 	if (auto res = _queue->getInternalResource()) {
-		dir->getResourceCache()->addResource(res);
+		auto cache = dir->getResourceCache();
+		if (cache) {
+			cache->addResource(res);
+		} else {
+			log::error("Director", "ResourceCache is not loaded");
+		}
 	}
 
 	handleEnter(this);

@@ -75,7 +75,7 @@ Rc<Framebuffer> Device::makeFramebuffer(const QueuePassData *, SpanView<Rc<Image
 	return nullptr;
 }
 
-auto Device::makeImage(const ImageInfoData &) -> Rc<ImageStorage> { return nullptr; }
+auto Device::makeImage(StringView, const ImageInfoData &) -> Rc<ImageStorage> { return nullptr; }
 
 Rc<Semaphore> Device::makeSemaphore() { return nullptr; }
 

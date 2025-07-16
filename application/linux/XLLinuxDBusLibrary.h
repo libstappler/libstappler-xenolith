@@ -196,6 +196,7 @@ public:
 	XL_DEFINE_PROTO(dbus_message_get_destination)
 	XL_DEFINE_PROTO(dbus_message_get_sender)
 	XL_DEFINE_PROTO(dbus_message_get_signature)
+	XL_DEFINE_PROTO(dbus_connection_set_exit_on_disconnect)
 	XL_DEFINE_PROTO(dbus_connection_send_with_reply_and_block)
 	XL_DEFINE_PROTO(dbus_connection_send_with_reply)
 	XL_DEFINE_PROTO(dbus_connection_set_watch_functions)

@@ -27,6 +27,8 @@
 #include "XLLinuxXkbLibrary.h"
 #include "XLContextInfo.h"
 #include "XLCoreInput.h"
+#include "platform/XLEdid.h"
+#include "platform/XLContextController.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -52,6 +54,9 @@ static XcbAtomInfo s_atomRequests[] = {
 	{XcbAtomIndex::TARGETS, "TARGETS", false, 0},
 	{XcbAtomIndex::MULTIPLE, "MULTIPLE", false, 0},
 	{XcbAtomIndex::UTF8_STRING, "UTF8_STRING", false, 0},
+	{XcbAtomIndex::OCTET_STREAM, "application/octet-stream", false, 0},
+	{XcbAtomIndex::ATOM_PAIR, "ATOM_PAIR", false, 0},
+	{XcbAtomIndex::INCR, "INCR", false, 0},
 	{XcbAtomIndex::XNULL, "NULL", false, 0},
 	{XcbAtomIndex::XENOLITH_CLIPBOARD, "XENOLITH_CLIPBOARD", false, 0},
 };
@@ -72,6 +77,7 @@ struct XcbWindowInfo {
 
 	bool overrideClose = true;
 	bool enableSync = false;
+	bool closed = false;
 
 	xcb_sync_int64_t syncValue = {0, 0};
 	uint64_t syncFrameOrder = 0;
@@ -83,24 +89,29 @@ struct XcbWindowInfo {
 	xcb_cursor_t cursorId = 0;
 };
 
-struct ScreenInfo {
-	uint16_t width;
-	uint16_t height;
-	uint16_t mwidth;
-	uint16_t mheight;
-	Vector<uint16_t> rates;
-
-	void describe(const CallbackStream &);
-};
-
 struct ModeInfo {
-	uint32_t id;
+	xcb_randr_mode_t id;
 	uint16_t width;
 	uint16_t height;
 	uint16_t rate;
 	String name;
+};
 
-	void describe(const CallbackStream &);
+struct CrtcInfo;
+
+struct PropertyInfo {
+	xcb_atom_t atom;
+	String name;
+};
+
+struct OutputInfo {
+	xcb_randr_output_t output;
+	Vector<const ModeInfo *> modes;
+	Vector<const CrtcInfo *> crtcs;
+	const CrtcInfo *crtc = nullptr;
+	const ModeInfo *preferred = nullptr;
+	String name;
+	Vector<PropertyInfo> properties;
 };
 
 struct CrtcInfo {
@@ -109,36 +120,38 @@ struct CrtcInfo {
 	int16_t y;
 	uint16_t width;
 	uint16_t height;
-	xcb_randr_mode_t mode;
+	const ModeInfo *mode = nullptr;
 	uint16_t rotation;
 	uint16_t rotations;
-	Vector<xcb_randr_output_t> outputs;
-	Vector<xcb_randr_output_t> possible;
-
-	void describe(const CallbackStream &, uint32_t indent = 0);
+	Vector<const OutputInfo *> outputs;
+	Vector<const OutputInfo *> possible;
 };
 
-struct OutputInfo {
-	xcb_randr_output_t output;
-	xcb_randr_crtc_t crtc;
-	Vector<xcb_randr_mode_t> modes;
+struct MonitorInfo {
 	String name;
 
-	void describe(const CallbackStream &);
+	IRect rect;
+	Extent2 mm;
+
+	bool primary = false;
+	bool automatic = false;
+
+	Vector<const OutputInfo *> outputs;
+
+	EdidInfo edid;
 };
 
 struct ScreenInfoData {
-	Vector<xcb_randr_crtc_t> currentCrtcs;
-	Vector<xcb_randr_output_t> currentOutputs;
-	Vector<ModeInfo> currentModeInfo;
-	Vector<ModeInfo> modeInfo;
-	Vector<ScreenInfo> screenInfo;
-	Vector<CrtcInfo> crtcInfo;
+	xcb_timestamp_t config = 0;
+	Map<xcb_randr_mode_t, ModeInfo> modes;
+	Map<xcb_randr_output_t, OutputInfo> outputs;
+	Map<xcb_randr_crtc_t, CrtcInfo> crtcs;
 
-	OutputInfo primaryOutput;
-	CrtcInfo primaryCrtc;
-	ModeInfo primaryMode;
-	xcb_timestamp_t config;
+	Vector<MonitorInfo> monitors;
+
+	const MonitorInfo *primary = nullptr;
+
+	uint16_t getCommonRate() const;
 
 	void describe(const CallbackStream &);
 };
@@ -154,10 +167,10 @@ public:
 	XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb,
 			StringView display = StringView());
 
-	void poll();
+	uint32_t poll();
 
 	XcbLibrary *getXcb() const { return _xcb; }
-	XkbLibrary *getXkb() const { return _xkb; }
+	XkbLibrary *getXkb() const { return _xkb.lib; }
 
 	int getSocket() const { return _socket; }
 
@@ -169,9 +182,12 @@ public:
 	// get code from keysym mapping table
 	core::InputKeyCode getKeyCode(xcb_keycode_t code) const;
 	xcb_keysym_t getKeysym(xcb_keycode_t code, uint16_t state, bool resolveMods) const;
-	xkb_keysym_t composeSymbol(xkb_keysym_t sym, core::InputKeyComposeState &compose) const;
 
 	xcb_atom_t getAtom(XcbAtomIndex) const;
+	xcb_atom_t getAtom(StringView);
+	StringView getAtomName(xcb_atom_t);
+
+	void getAtomNames(SpanView<xcb_atom_t>, const Callback<void(SpanView<StringView>)> &);
 
 	bool createWindow(const WindowInfo *, XcbWindowInfo &info) const;
 
@@ -189,18 +205,61 @@ public:
 
 	bool setCursorId(xcb_window_t window, xcb_cursor_t);
 
+	void readFromClipboard(Rc<ClipboardRequest> &&req);
+
+	void writeToClipboard(BytesView data, StringView contentType);
+
 protected:
-	void initXkb();
-
-	void updateXkbMapping();
-	void updateXkbKey(xcb_keycode_t code);
-
 	void updateKeysymMapping();
 
 	bool checkCookie(xcb_void_cookie_t cookie, StringView errMessage);
 
+	ModeInfo parseModeInfo(xcb_randr_mode_info_t *, uint8_t *name) const;
+
+	String getAtomString(xcb_atom_t) const;
+
+	void continueClipboardProcessing();
+	void finalizeClipboardWaiters(BytesView, xcb_atom_t);
+	void handleSelectionNotify(xcb_selection_notify_event_t *);
+	void handlePropertyNotify(xcb_property_notify_event_t *);
+	void handleSelectionRequest(xcb_selection_request_event_t *);
+
+	void notifyClipboard(BytesView, StringView type);
+
+	struct RandrInfo {
+		bool enabled = true;
+		bool initialized = false;
+		uint8_t firstEvent = 0;
+
+		uint32_t majorVersion = 0;
+		uint32_t minorVersion = 0;
+	};
+
+	struct KeyInfo {
+		uint16_t numlock = 0;
+		uint16_t shiftlock = 0;
+		uint16_t capslock = 0;
+		uint16_t modeswitch = 0;
+
+		xcb_key_symbols_t *keysyms = nullptr;
+	};
+
+	struct ClipboardInfo {
+		xcb_window_t window = 0;
+
+		Vector<Rc<ClipboardRequest>> requests;
+		std::multimap<xcb_atom_t, Rc<ClipboardRequest>> waiters;
+		Vector<Bytes> incrBuffer;
+		xcb_atom_t incrType = 0;
+		bool incr = false;
+
+		Rc<Ref> target;
+		Bytes selection;
+		String type;
+		xcb_atom_t typeAtom;
+	};
+
 	XcbLibrary *_xcb = nullptr;
-	Rc<XkbLibrary> _xkb;
 	xcb_connection_t *_connection = nullptr;
 	int _screenNbr = -1;
 	const xcb_setup_t *_setup = nullptr;
@@ -209,28 +268,17 @@ protected:
 	int _socket = -1;
 
 	XcbAtomInfo _atoms[sizeof(s_atomRequests) / sizeof(XcbAtomInfo)];
-
-	bool _randrEnabled = true;
-	uint8_t _randrFirstEvent = 0;
-
-	bool _xkbSetup = false;
-	int32_t _xkbDeviceId = 0;
-	uint8_t _xkbFirstEvent = 0;
-	uint8_t _xkbFirstError = 0;
-	xkb_keymap *_xkbKeymap = nullptr;
-	xkb_state *_xkbState = nullptr;
-	xkb_compose_state *_xkbCompose = nullptr;
-	core::InputKeyCode _keycodes[256] = {core::InputKeyCode::Unknown};
-
-	xcb_key_symbols_t *_keysyms = nullptr;
-	uint16_t _numlock = 0;
-	uint16_t _shiftlock = 0;
-	uint16_t _capslock = 0;
-	uint16_t _modeswitch = 0;
+	Map<String, xcb_atom_t> _namedAtoms;
+	Map<xcb_atom_t, String> _atomNames;
 
 	bool _syncEnabled = true;
 
 	Map<xcb_window_t, XcbWindow *> _windows;
+
+	KeyInfo _keys;
+	XkbInfo _xkb;
+	RandrInfo _randr;
+	ClipboardInfo _clipboard;
 };
 
 } // namespace stappler::xenolith::platform

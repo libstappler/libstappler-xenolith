@@ -44,6 +44,9 @@ SP_DEFINE_ENUM_AS_MASK(TemporaryResourceFlags)
 
 class SP_PUBLIC ResourceCache : public ApplicationExtension {
 public:
+	using ImageData = core::ImageData;
+	using ImageInfo = core::ImageInfo;
+
 	virtual ~ResourceCache();
 
 	bool init(AppThread *);
@@ -62,8 +65,8 @@ public:
 	Rc<Texture> acquireTexture(StringView) const;
 	Rc<MeshIndex> acquireMeshIndex(StringView) const;
 
-	const core::ImageData *getEmptyImage() const;
-	const core::ImageData *getSolidImage() const;
+	const ImageData *getEmptyImage() const;
+	const ImageData *getSolidImage() const;
 
 	/*const gl::BufferData * addExternalBufferByRef(StringView key, gl::BufferInfo &&, BytesView data);
 	const gl::BufferData * addExternalBuffer(StringView key, gl::BufferInfo &&, FilePath data);
@@ -71,18 +74,23 @@ public:
 	const gl::BufferData * addExternalBuffer(StringView key, gl::BufferInfo &&, size_t,
 			const memory::function<void(const gl::BufferData::DataCallback &)> &cb);*/
 
-	Rc<Texture> addExternalImageByRef(StringView key, core::ImageInfo &&, BytesView data,
+	Rc<Texture> addExternalBitmapImageByRef(StringView key, ImageInfo &&, BytesView data,
 			TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
-	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&, const FileInfo &data,
+	Rc<Texture> addExternalBitmapImage(StringView key, ImageInfo &&, BytesView data,
 			TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
-	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&, BytesView data,
+	Rc<Texture> addExternalEncodedImageByRef(StringView key, ImageInfo &&, BytesView data,
 			TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
-	Rc<Texture> addExternalImage(StringView key, core::ImageInfo &&,
-			const memory::function<void(uint8_t *, uint64_t, const core::ImageData::DataCallback &)>
-					&cb,
+	Rc<Texture> addExternalEncodedImage(StringView key, ImageInfo &&, BytesView data,
+			TimeInterval = TimeInterval(),
+			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
+	Rc<Texture> addExternalImage(StringView key, ImageInfo &&, const FileInfo &data,
+			TimeInterval = TimeInterval(),
+			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
+	Rc<Texture> addExternalImage(StringView key, ImageInfo &&,
+			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &,
 			TimeInterval = TimeInterval(),
 			TemporaryResourceFlags flags = TemporaryResourceFlags::None);
 

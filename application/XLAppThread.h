@@ -71,6 +71,13 @@ public:
 	/* Performs task in thread, identified by id */
 	void perform(Rc<Task> &&task, bool performFirst) const;
 
+	void readFromClipboard(Function<void(BytesView, StringView)> &&,
+			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
+
+	void writeToClipboard(BytesView, StringView contentType = StringView());
+
+	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
+
 	Context *getContext() const { return _context; }
 	event::Looper *getLooper() const { return _appLooper; }
 

@@ -21,7 +21,7 @@
 **/
 
 #include "XLVkSwapchain.h"
-#include "XLVkGuiConfig.h"
+#include "XLVkConfig.h"
 #include "XLVkInstance.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
@@ -162,8 +162,9 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 		auto swapchainImageViewInfo = getSwapchainImageViewInfo(swapchainImageInfo);
 
 		for (auto &it : swapchainImages) {
-			auto image =
-					Rc<Image>::create(dev, it, swapchainImageInfo, uint32_t(data->images.size()));
+			auto image = Rc<Image>::create(dev,
+					toString("SwapchainImage[", uint32_t(data->images.size()), "]"), it,
+					swapchainImageInfo, uint32_t(data->images.size()));
 
 			Map<ImageViewInfo, Rc<core::ImageView>> views;
 			views.emplace(swapchainImageViewInfo,
@@ -190,7 +191,7 @@ SpanView<SwapchainHandle::SwapchainImageData> SwapchainHandle::getImages() const
 	return _data->images;
 }
 
-auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence)
+auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Status &status)
 		-> Rc<SwapchainAcquiredImage> {
 	if (_deprecated) {
 		return nullptr;
@@ -201,26 +202,35 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence)
 
 	auto dev = static_cast<Device *>(_object.device);
 
-	if (_acquiredImages > 0) {
-		std::cout << "test\n";
-	}
-
 	uint32_t imageIndex = maxOf<uint32_t>();
 	VkResult ret = VK_ERROR_UNKNOWN;
 	dev->makeApiCall([&, this](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
-		ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
-				sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
-				fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
+#endif
+		if (table.vkAcquireNextImage2KHR) {
+			VkAcquireNextImageInfoKHR info;
+			info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+			info.pNext = nullptr;
+			info.swapchain = _data->swapchain;
+			info.timeout = timeout;
+			info.semaphore = sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE;
+			info.fence = fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE;
+			info.deviceMask = 1;
+
+			ret = table.vkAcquireNextImage2KHR(device, &info, &imageIndex);
+		} else {
+			ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
+					sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
+					fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
+		}
+#if XL_VKAPI_DEBUG
 		XL_VKAPI_LOG("vkAcquireNextImageKHR: ", imageIndex, " ", ret, " [",
 				sp::platform::clock(ClockType::Monotonic) - t, "]");
-#else
-		ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
-				sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
-				fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
 #endif
 	});
+
+	status = getStatus(ret);
 
 	Rc<SwapchainAcquiredImage> image;
 	switch (ret) {
@@ -253,7 +263,11 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence)
 		_deprecated = true;
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
 		break;
-	default: releaseSemaphore(ref_cast<Semaphore>(move(sem))); break;
+	case VK_TIMEOUT: releaseSemaphore(ref_cast<Semaphore>(move(sem))); break;
+	default:
+		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
+		log::error("vk::SwapchainHandle", "Fail to acquire image: ", getStatus(ret));
+		break;
 	}
 
 	return nullptr;

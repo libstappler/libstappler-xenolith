@@ -44,10 +44,17 @@ public:
 
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
 
-	void notifyWindowResized(NotNull<ContextNativeWindow>) override;
+	void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize) override;
 	bool notifyWindowClosed(NotNull<ContextNativeWindow>) override;
 
+	void handleRootWindowClosed();
+
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) override;
+
+	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
+	virtual Status writeToClipboard(BytesView, StringView contentType = StringView()) override;
+
+	virtual Rc<ScreenInfo> getScreenInfo() const override;
 
 protected:
 	dbus_bool_t handleDbusEvent(dbus::Connection *c, const dbus::Event &);
@@ -57,6 +64,9 @@ protected:
 	void updateNetworkState();
 	bool loadInstance();
 	bool loadWindow();
+
+	virtual void handleContextWillDestroy() override;
+	virtual void handleContextDidDestroy() override;
 
 	Rc<XcbLibrary> _xcb;
 	Rc<XkbLibrary> _xkb;
@@ -71,7 +81,8 @@ protected:
 
 	NetworkState _networkState;
 
-	Vector<ContextNativeWindow *> _resizedWindows;
+	bool _withinPoll = false;
+	Vector<Pair<ContextNativeWindow *, bool>> _resizedWindows;
 	Vector<ContextNativeWindow *> _closedWindows;
 };
 

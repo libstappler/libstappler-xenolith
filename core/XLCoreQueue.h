@@ -375,13 +375,19 @@ public:
 			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 
-	const ImageData *addImageByRef(StringView key, ImageInfo &&, BytesView data,
+	const ImageData *addBitmapImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addBitmapImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addEncodedImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+	const ImageData *addEncodedImage(StringView key, ImageInfo &&img, BytesView data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
 			AccessType = AccessType::ShaderRead);
 	const ImageData *addImage(StringView key, ImageInfo &&img, const FileInfo &data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
-			AccessType = AccessType::ShaderRead);
-	const ImageData *addImage(StringView key, ImageInfo &&img, BytesView data,
 			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
 			AccessType = AccessType::ShaderRead);
 	const ImageData *addImage(StringView key, ImageInfo &&img,

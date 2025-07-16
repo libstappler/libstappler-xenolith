@@ -41,7 +41,9 @@ static constexpr ClockType FrameClockType = ClockType::Monotonic;
 
 #ifndef XL_FRAME_PROFILE
 #define XL_FRAME_PROFILE(fn, tag, max) \
-	do { } while (0);
+	do { \
+		fn; \
+	} while (0);
 #endif
 
 static std::atomic<uint32_t> s_frameCount = 0;

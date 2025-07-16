@@ -36,8 +36,10 @@ class SP_PUBLIC Resource : public NamedRef {
 public:
 	class Builder;
 
-	static uint64_t loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data, ImageFormat fmt, const ImageData::DataCallback &dcb);
-	static uint64_t loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path, ImageFormat fmt, const ImageData::DataCallback &dcb);
+	static uint64_t loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data,
+			ImageFormat fmt, const ImageData::DataCallback &dcb);
+	static uint64_t loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path,
+			ImageFormat fmt, const ImageData::DataCallback &dcb);
 
 	Resource();
 	virtual ~Resource();
@@ -75,27 +77,53 @@ public:
 	Builder(memory::pool_t *, StringView);
 	~Builder();
 
-	const BufferData * addBufferByRef(StringView key, BufferInfo &&, BytesView data,
+	const BufferData *addBufferByRef(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&, const FileInfo &data,
+	const BufferData *addBuffer(StringView key, BufferInfo &&, const FileInfo &data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&, BytesView data,
+	const BufferData *addBuffer(StringView key, BufferInfo &&, BytesView data,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
-	const BufferData * addBuffer(StringView key, BufferInfo &&,
+	const BufferData *addBuffer(StringView key, BufferInfo &&,
 			const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
 			Rc<DataAtlas> &&atlas = Rc<DataAtlas>(), AccessType = AccessType::ShaderRead);
 
-	const ImageData * addImageByRef(StringView key, ImageInfo &&, BytesView data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, const FileInfo &data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, SpanView<FileInfo> data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img, BytesView data,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
-	const ImageData * addImage(StringView key, ImageInfo &&img,
+	// Adds bitmap in memory, data must remain actual until Resource exists
+	const ImageData *addBitmapImageByRef(StringView key, ImageInfo &&, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	// Adds bitmap in memory by copying it into resource
+	const ImageData *addBitmapImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	const ImageData *addEncodedImageByRef(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	const ImageData *addEncodedImage(StringView key, ImageInfo &&img, BytesView data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	// Adss image as a callback, that writes bitmap into GPU's memory
+	const ImageData *addImage(StringView key, ImageInfo &&img,
 			const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
-			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal, AccessType = AccessType::ShaderRead);
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	// Adds image from a file, extent will be set automatically,
+	// image will be decoded to Bitmap and converted into specified format automatically
+	const ImageData *addImage(StringView key, ImageInfo &&img, const FileInfo &data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
+	// Adds image from a file set, extent will be set automatically,
+	// image will be decoded to Bitmap and converted into specified format automatically.
+	// Images will be stacked as Image2DAray or Image3D
+	const ImageData *addImage(StringView key, ImageInfo &&img, SpanView<FileInfo> data,
+			AttachmentLayout = AttachmentLayout::ShaderReadOnlyOptimal,
+			AccessType = AccessType::ShaderRead);
+
 
 	// Add predefined image view
 	const ImageViewData *addImageView(const ImageData *, ImageViewInfo &&);
@@ -113,6 +141,6 @@ protected:
 	ResourceData *_data = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::core
 
 #endif /* XENOLITH_CORE_XLCORERESOURCE_H_ */

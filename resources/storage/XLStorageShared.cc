@@ -29,7 +29,7 @@ static SharedSymbol s_xenolithResoureStorage[] = {
 	SharedSymbol{"Server::createServer", Server::createServer},
 };
 
-static SharedModule s_xenolithResoureStorageModule(
+SP_USED static SharedModule s_xenolithResoureStorageModule(
 		buildconfig::MODULE_XENOLITH_RESOURCES_STORAGE_NAME, s_xenolithResoureStorage,
 		sizeof(s_xenolithResoureStorage) / sizeof(SharedSymbol));
 

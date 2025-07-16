@@ -43,6 +43,35 @@ enum class ContextState {
 	Active,
 };
 
+struct ClipboardRequest : public Ref {
+	// receives data from clipboard
+	Function<void(BytesView, StringView)> dataCallback;
+
+	// Select one of suggested types to receive
+	// You should not assume on what thread this function would be called,
+	// so, assume the worst case
+	Function<StringView(SpanView<StringView>)> typeCallback;
+
+	// Target to keep
+	Rc<Ref> target;
+};
+
+struct ClipboardData : public Ref {
+	// Supported types for the data
+	Vector<String> types;
+
+	// Function to convert clipboard's data into target format
+	// You should not assume on what thread this function would be called,
+	// so, assume the worst case
+	Function<Bytes(BytesView, StringView)> encodeCallback;
+
+	// Data itself
+	Bytes data;
+
+	// Data owner
+	Rc<Ref> owner;
+};
+
 class ContextController : public Ref {
 public:
 	static Rc<ContextController> create(NotNull<Context>, ContextConfig &&info);
@@ -57,10 +86,12 @@ public:
 
 	event::Looper *getLooper() const { return _looper; }
 
-	virtual void notifyWindowResized(NotNull<ContextNativeWindow>);
+	virtual void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize);
 	virtual void notifyWindowInputEvents(NotNull<ContextNativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void notifyWindowTextInput(NotNull<ContextNativeWindow>, const core::TextInputState &);
+
+	// true if window should be closed, false otherwise (e.g. ExitGuard)
 	virtual bool notifyWindowClosed(NotNull<ContextNativeWindow>);
 
 	virtual void addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&);
@@ -69,6 +100,11 @@ public:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
+
+	virtual Status readFromClipboard(Rc<ClipboardRequest> &&);
+	virtual Status writeToClipboard(BytesView, StringView contentType = StringView());
+
+	virtual Rc<ScreenInfo> getScreenInfo() const;
 
 protected:
 	virtual void handleStateChanged(ContextState prevState, ContextState newState);

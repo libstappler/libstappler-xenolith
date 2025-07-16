@@ -1541,7 +1541,7 @@ Status getStatus(VkResult res) {
 	switch (res) {
 	case VK_SUCCESS: return Status::Ok; break;
 	case VK_NOT_READY: return Status::Declined; break;
-	case VK_TIMEOUT: return Status::Suspended; break;
+	case VK_TIMEOUT: return Status::Timeout; break;
 	case VK_EVENT_SET: return Status::EventSet; break;
 	case VK_EVENT_RESET: return Status::EventReset; break;
 	case VK_INCOMPLETE: return Status::Incomplete; break;

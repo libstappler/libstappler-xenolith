@@ -1593,7 +1593,7 @@ Queue::Builder::Builder(StringView name)
 
 		_data->emptyImage = _internalResource.getImage(EmptyTextureName);
 		if (!_data->emptyImage) {
-			_data->emptyImage = _internalResource.addImage(EmptyTextureName,
+			_data->emptyImage = _internalResource.addBitmapImage(EmptyTextureName,
 					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled,
 							core::ImageFormat::R8_UNORM),
 					BytesView(&empty, 1).pdup(_internalResource.getPool()));
@@ -1602,7 +1602,7 @@ Queue::Builder::Builder(StringView name)
 
 		_data->solidImage = _internalResource.getImage(SolidTextureName);
 		if (!_data->solidImage) {
-			_data->solidImage = _internalResource.addImage(SolidTextureName,
+			_data->solidImage = _internalResource.addBitmapImage(SolidTextureName,
 					ImageInfo(Extent2(1, 1), core::ImageUsage::Sampled, core::ImageFormat::R8_UNORM,
 							core::ImageHints::Opaque),
 					BytesView(&solid, 1).pdup(_internalResource.getPool()));
@@ -1845,15 +1845,23 @@ const BufferData *Queue::Builder::addBuffer(StringView key, BufferInfo &&info,
 	return _internalResource.addBuffer(key, move(info), cb, move(atlas), access);
 }
 
-const ImageData *Queue::Builder::addImageByRef(StringView key, ImageInfo &&info, BytesView data,
+const ImageData *Queue::Builder::addBitmapImageByRef(StringView key, ImageInfo &&info,
+		BytesView data, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addBitmapImageByRef(key, move(info), data, layout, access);
+}
+const ImageData *Queue::Builder::addBitmapImage(StringView key, ImageInfo &&info, BytesView data,
 		AttachmentLayout layout, AccessType access) {
-	return _internalResource.addImageByRef(key, move(info), data, layout, access);
+	return _internalResource.addBitmapImage(key, move(info), data, layout, access);
+}
+const ImageData *Queue::Builder::addEncodedImageByRef(StringView key, ImageInfo &&info,
+		BytesView data, AttachmentLayout layout, AccessType access) {
+	return _internalResource.addEncodedImageByRef(key, move(info), data, layout, access);
+}
+const ImageData *Queue::Builder::addEncodedImage(StringView key, ImageInfo &&info, BytesView data,
+		AttachmentLayout layout, AccessType access) {
+	return _internalResource.addEncodedImage(key, move(info), data, layout, access);
 }
 const ImageData *Queue::Builder::addImage(StringView key, ImageInfo &&info, const FileInfo &data,
-		AttachmentLayout layout, AccessType access) {
-	return _internalResource.addImage(key, move(info), data, layout, access);
-}
-const ImageData *Queue::Builder::addImage(StringView key, ImageInfo &&info, BytesView data,
 		AttachmentLayout layout, AccessType access) {
 	return _internalResource.addImage(key, move(info), data, layout, access);
 }

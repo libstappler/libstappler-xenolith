@@ -83,7 +83,7 @@ public:
 	virtual DescriptorFlags getSupportedDescriptorFlags(DescriptorType) const;
 
 	virtual Rc<Framebuffer> makeFramebuffer(const QueuePassData *, SpanView<Rc<ImageView>>);
-	virtual Rc<ImageStorage> makeImage(const ImageInfoData &);
+	virtual Rc<ImageStorage> makeImage(StringView, const ImageInfoData &);
 	virtual Rc<Semaphore> makeSemaphore();
 	virtual Rc<ImageView> makeImageView(const Rc<ImageObject> &, const ImageViewInfo &);
 	virtual Rc<CommandPool> makeCommandPool(uint32_t family, QueueFlags flags);

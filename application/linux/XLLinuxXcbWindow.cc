@@ -57,16 +57,19 @@ static core::InputModifier getModifiers(uint32_t mask) {
 static core::InputMouseButton getButton(xcb_button_t btn) { return core::InputMouseButton(btn); }
 
 XcbWindow::~XcbWindow() {
+	if (_controller && _isRootWindow) {
+		_controller.get_cast<LinuxContextController>()->handleRootWindowClosed();
+	}
 	if (_connection) {
-		if (_xinfo.window) {
-			_connection->detachWindow(_xinfo.window);
-			_xinfo.window = 0;
-		}
-
 		_defaultScreen = nullptr;
 		if (_xinfo.syncCounter) {
 			_xcb->xcb_sync_destroy_counter(_connection->getConnection(), _xinfo.syncCounter);
 			_xinfo.syncCounter = 0;
+		}
+
+		if (_xinfo.window) {
+			_xcb->xcb_destroy_window(_connection->getConnection(), _xinfo.window);
+			_xinfo.window = 0;
 		}
 		_connection = nullptr;
 	}
@@ -74,13 +77,15 @@ XcbWindow::~XcbWindow() {
 
 XcbWindow::XcbWindow() { }
 
-bool XcbWindow::init(Rc<XcbConnection> &&conn, Rc<WindowInfo> &&info, NotNull<ContextInfo> ctx,
-		NotNull<LinuxContextController> c) {
+bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
+		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c) {
 	if (!ContextNativeWindow::init(c, move(info))) {
 		return false;
 	}
 
+	_connection = conn;
 	_controller = c;
+
 	_xcb = _connection->getXcb();
 
 	if (_connection->hasErrors()) {
@@ -122,7 +127,9 @@ bool XcbWindow::init(Rc<XcbConnection> &&conn, Rc<WindowInfo> &&info, NotNull<Co
 	}
 
 	_screenInfo = _connection->getScreenInfo(_defaultScreen);
-	_rate = _screenInfo.primaryMode.rate;
+	_rate = _screenInfo.getCommonRate();
+
+	_xcb->xcb_flush(_connection->getConnection());
 
 	return true;
 }
@@ -137,7 +144,7 @@ void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
 	if (ev->width != _xinfo.rect.width || ev->height != _xinfo.rect.height) {
 		_xinfo.rect.width = ev->width;
 		_xinfo.rect.height = ev->height;
-		_controller->notifyWindowResized(this);
+		_controller->notifyWindowResized(this, true);
 	}
 
 	_info->rect = URect{uint16_t(_xinfo.rect.x), uint16_t(_xinfo.rect.y), _xinfo.rect.width,
@@ -282,13 +289,6 @@ void XcbWindow::handleKeyPress(xcb_key_press_event_t *ev) {
 	_connection->fillTextInputData(event, ev->detail, ev->state, isTextInputEnabled(), true);
 
 	_pendingEvents.emplace_back(event);
-
-#if XL_X11_DEBUG
-	String str;
-	unicode::utf8Encode(str, event.key.keychar);
-	XL_X11_LOG("Key pressed in window ", ev->event, " (", (int)ev->time, ") ", event.key.keysym,
-			" '", str, "' ", uint32_t(event.key.keychar));
-#endif
 }
 
 void XcbWindow::handleKeyRelease(xcb_key_release_event_t *ev) {
@@ -306,68 +306,6 @@ void XcbWindow::handleKeyRelease(xcb_key_release_event_t *ev) {
 	_connection->fillTextInputData(event, ev->detail, ev->state, isTextInputEnabled(), false);
 
 	_pendingEvents.emplace_back(event);
-
-#if XL_X11_DEBUG
-	String str;
-	unicode::utf8Encode(str, event.key.keychar);
-	XL_X11_LOG("Key released in window ", ev->event, " (", (int)ev->time, ") ", event.key.keysym,
-			" '", str, "' ", uint32_t(event.key.keychar));
-#endif
-}
-
-void XcbWindow::handleSelectionNotify(xcb_selection_notify_event_t *event) {
-	xcb_get_property_reply_t *reply;
-
-	if (event->property == _connection->getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)) {
-		reply = _xcb->xcb_get_property_reply(_connection->getConnection(),
-				_xcb->xcb_get_property(_connection->getConnection(), 1, _xinfo.window,
-						_connection->getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD),
-						_connection->getAtom(XcbAtomIndex::UTF8_STRING), 0, 300),
-				NULL);
-		notifyClipboard(BytesView((const uint8_t *)_xcb->xcb_get_property_value(reply),
-				_xcb->xcb_get_property_value_length(reply)));
-		free(reply);
-	}
-}
-
-void XcbWindow::handleSelectionRequest(xcb_selection_request_event_t *event) {
-	if (event->target == _connection->getAtom(XcbAtomIndex::TARGETS)) {
-		// The list of supported targets was requested
-
-		const xcb_atom_t targets[] = {_connection->getAtom(XcbAtomIndex::TARGETS),
-			_connection->getAtom(XcbAtomIndex::UTF8_STRING)};
-
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				event->requestor, event->property, XCB_ATOM_ATOM, 8 * sizeof(xcb_atom_t),
-				sizeof(targets) / sizeof(targets[0]), (unsigned char *)targets);
-	}
-
-	if (event->target == _connection->getAtom(XcbAtomIndex::SAVE_TARGETS)) {
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				event->requestor, event->property, _connection->getAtom(XcbAtomIndex::XNULL), 32, 0,
-				nullptr);
-	}
-
-	if (event->target == _connection->getAtom(XcbAtomIndex::UTF8_STRING)) {
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				event->requestor, event->property, event->target, 8, _clipboardSelection.size(),
-				_clipboardSelection.data());
-	}
-
-	xcb_selection_notify_event_t notify;
-	notify.response_type = XCB_SELECTION_NOTIFY;
-	notify.pad0 = 0;
-	notify.sequence = 0;
-	notify.time = event->time;
-	notify.requestor = event->requestor;
-	notify.selection = event->selection;
-	notify.target = event->target;
-	notify.property = event->property;
-
-	_xcb->xcb_send_event(_connection->getConnection(), false, event->requestor,
-			XCB_EVENT_MASK_NO_EVENT, // SelectionNotify events go without mask
-			(const char *)&notify);
-	_xcb->xcb_flush(_connection->getConnection());
 }
 
 void XcbWindow::handleSyncRequest(xcb_timestamp_t syncTime, xcb_sync_int64_t value) {
@@ -380,8 +318,15 @@ void XcbWindow::handleCloseRequest() { _controller->notifyWindowClosed(this); }
 
 void XcbWindow::handleScreenChangeNotify(xcb_randr_screen_change_notify_event_t *ev) {
 	_screenInfo = _connection->getScreenInfo(ev->root);
-	if (_rate != _screenInfo.primaryMode.rate) {
-		_rate = _screenInfo.primaryMode.rate;
+
+	core::InputEventData event =
+			core::InputEventData::BoolEvent(core::InputEventName::ScreenUpdate, true);
+
+	_pendingEvents.emplace_back(event);
+
+	auto commonRate = _screenInfo.getCommonRate();
+	if (_rate != commonRate) {
+		_rate = commonRate;
 	}
 }
 
@@ -400,7 +345,13 @@ void XcbWindow::mapWindow() {
 	_xcb->xcb_flush(_connection->getConnection());
 }
 
-void XcbWindow::handleFramePresented(core::PresentationFrame *frame) {
+void XcbWindow::unmapWindow() {
+	_xcb->xcb_unmap_window(_connection->getConnection(), _xinfo.window);
+	_xcb->xcb_flush(_connection->getConnection());
+	_connection->detachWindow(_xinfo.window);
+}
+
+void XcbWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
 	if (_xinfo.syncCounter && (_xinfo.syncValue.lo != 0 || _xinfo.syncValue.hi != 0)
 			&& frame->getFrameOrder() > _xinfo.syncFrameOrder) {
 		_xcb->xcb_sync_set_counter(_connection->getConnection(), _xinfo.syncCounter,
@@ -416,6 +367,9 @@ xcb_connection_t *XcbWindow::getConnection() const { return _connection->getConn
 
 core::FrameConstraints XcbWindow::exportConstraints(core::FrameConstraints &&c) const {
 	c.extent = Extent3(_xinfo.rect.width, _xinfo.rect.height, 1);
+	if (c.density == 0.0f) {
+		c.density = 1.0f;
+	}
 	return move(c);
 }
 
@@ -491,94 +445,24 @@ Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 #endif
 }
 
-void XcbWindow::readFromClipboard(Function<void(BytesView, StringView)> &&cb, Ref *ref) {
-	auto cookie = _xcb->xcb_get_selection_owner(_connection->getConnection(),
-			_connection->getAtom(XcbAtomIndex::CLIPBOARD));
-	auto reply = _xcb->xcb_get_selection_owner_reply(_connection->getConnection(), cookie, nullptr);
-
-	if (reply->owner == _xinfo.window) {
-		cb(_clipboardSelection, StringView("text/plain"));
-	} else {
-		_xcb->xcb_convert_selection(_connection->getConnection(), _xinfo.window,
-				_connection->getAtom(XcbAtomIndex::CLIPBOARD),
-				_connection->getAtom(XcbAtomIndex::UTF8_STRING),
-				_connection->getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_CURRENT_TIME);
-		_xcb->xcb_flush(_connection->getConnection());
-
-		if (_clipboardCallback) {
-			_clipboardCallback(BytesView(), StringView());
+bool XcbWindow::close() {
+	if (!_xinfo.closed) {
+		_xinfo.closed = true;
+		if (!_controller->notifyWindowClosed(this)) {
+			_xinfo.closed = false;
 		}
-
-		_clipboardCallback = sp::move(cb);
-		_clipboardTarget = ref;
+		return true;
 	}
+	return false;
 }
 
-void XcbWindow::writeToClipboard(BytesView data, StringView contentType) {
-	_clipboardSelection = data.bytes<Interface>();
-
-	_xcb->xcb_set_selection_owner(_connection->getConnection(), _xinfo.window,
-			_connection->getAtom(XcbAtomIndex::CLIPBOARD), XCB_CURRENT_TIME);
-
-	auto cookie = _xcb->xcb_get_selection_owner(_connection->getConnection(),
-			_connection->getAtom(XcbAtomIndex::CLIPBOARD));
-	auto reply = _xcb->xcb_get_selection_owner_reply(_connection->getConnection(), cookie, nullptr);
-	if (reply->owner != _xinfo.window) {
-		log::error("XcbWindow", "Fail to set selection owner");
-	}
-	::free(reply);
+Status XcbWindow::setFullscreen(const MonitorId &id, const xenolith::ModeInfo &info) {
+	return Status::ErrorNotImplemented;
 }
 
-void XcbWindow::notifyClipboard(BytesView data) {
-	if (_clipboardCallback) {
-		_clipboardCallback(data, "text/plain");
-	}
-	_clipboardCallback = nullptr;
-	_clipboardTarget = nullptr;
-}
+bool XcbWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
 
-xcb_atom_t XcbWindow::writeTargetToProperty(xcb_selection_request_event_t *request) {
-	if (request->property == 0) {
-		// The requester is a legacy client (ICCCM section 2.2)
-		// We don't support legacy clients, so fail here
-		return 0;
-	}
-
-	if (request->target == _connection->getAtom(XcbAtomIndex::TARGETS)) {
-		// The list of supported targets was requested
-
-		const xcb_atom_t targets[] = {_connection->getAtom(XcbAtomIndex::TARGETS),
-			_connection->getAtom(XcbAtomIndex::UTF8_STRING)};
-
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				request->requestor, request->property, XCB_ATOM_ATOM, 8 * sizeof(xcb_atom_t),
-				sizeof(targets) / sizeof(targets[0]), (unsigned char *)targets);
-		return request->property;
-	}
-
-	if (request->target == _connection->getAtom(XcbAtomIndex::SAVE_TARGETS)) {
-		// The request is a check whether we support SAVE_TARGETS
-		// It should be handled as a no-op side effect target
-
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				request->requestor, request->property, _connection->getAtom(XcbAtomIndex::XNULL),
-				32, 0, nullptr);
-		return request->property;
-	}
-
-	// Conversion to a data target was requested
-
-	if (request->target == _connection->getAtom(XcbAtomIndex::UTF8_STRING)) {
-		_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
-				request->requestor, request->property, request->target, 8,
-				_clipboardSelection.size(), _clipboardSelection.data());
-		return request->property;
-	}
-
-	// The requested target is not supported
-
-	return 0;
-}
+void XcbWindow::cancelTextInput() { }
 
 void XcbWindow::updateWindowAttributes() {
 	uint32_t mask = XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;

@@ -28,6 +28,7 @@
 #if LINUX
 
 #include "XLLinux.h"
+#include "XLCoreInput.h"
 
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-x11.h>
@@ -35,6 +36,37 @@
 #include <xkbcommon/xkbcommon-names.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+class XkbLibrary;
+class XcbLibrary;
+
+struct XkbInfo {
+	Rc<XkbLibrary> lib;
+
+	bool enabled = true;
+	bool initialized = false;
+	uint8_t firstEvent = 0;
+	uint8_t firstError = 0;
+
+	uint16_t majorVersion = 0;
+	uint16_t minorVersion = 0;
+	int32_t deviceId = 0;
+
+	xkb_keymap *keymap = nullptr;
+	xkb_state *state = nullptr;
+	xkb_compose_state *compose = nullptr;
+
+	core::InputKeyCode keycodes[256] = {core::InputKeyCode::Unknown};
+
+	XkbInfo(NotNull<XkbLibrary>);
+	~XkbInfo();
+
+	bool initXcb(NotNull<XcbLibrary>, xcb_connection_t *);
+	void updateXkbMapping(xcb_connection_t *conn);
+	void updateXkbKey(xcb_keycode_t code);
+
+	xkb_keysym_t composeSymbol(xkb_keysym_t sym, core::InputKeyComposeState &compose) const;
+};
 
 class SP_PUBLIC XkbLibrary : public Ref {
 public:

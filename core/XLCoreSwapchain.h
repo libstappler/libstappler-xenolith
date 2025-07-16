@@ -86,7 +86,7 @@ public:
 	// returns true if it was first deprecation
 	bool deprecate();
 
-	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree, const Rc<Fence> &fence) = 0;
+	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree, const Rc<Fence> &fence, Status &) = 0;
 
 	virtual Status present(DeviceQueue &queue, ImageStorage *) = 0;
 	virtual void invalidateImage(const ImageStorage *) = 0;

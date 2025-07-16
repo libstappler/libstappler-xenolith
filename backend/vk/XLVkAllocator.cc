@@ -644,9 +644,9 @@ Rc<Buffer> Allocator::spawnPersistent(AllocationUsage usage, const BufferInfo &i
 	return target;
 }
 
-Rc<Image> Allocator::spawnPersistent(AllocationUsage usage, const core::ImageInfoData &info,
-		bool preinitialized, uint64_t forceId) {
-	auto target = preallocate(info, preinitialized, forceId);
+Rc<Image> Allocator::spawnPersistent(AllocationUsage usage, StringView key,
+		const core::ImageInfoData &info, bool preinitialized, uint64_t forceId) {
+	auto target = preallocate(key, info, preinitialized, forceId);
 	if (!target) {
 		return nullptr;
 	}
@@ -688,7 +688,8 @@ Rc<Buffer> Allocator::preallocate(const BufferInfo &info, BytesView view) {
 	}
 }
 
-Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized, uint64_t forceId) {
+Rc<Image> Allocator::preallocate(StringView key, const ImageInfoData &info, bool preinitialized,
+		uint64_t forceId) {
 	VkImageCreateInfo imageInfo{};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.pNext = nullptr;
@@ -716,9 +717,9 @@ Rc<Image> Allocator::preallocate(const ImageInfoData &info, bool preinitialized,
 	}
 
 	if (forceId) {
-		return Rc<Image>::create(*_device, forceId, target, info, nullptr);
+		return Rc<Image>::create(*_device, key, forceId, target, info, nullptr);
 	} else {
-		return Rc<Image>::create(*_device, target, info, nullptr);
+		return Rc<Image>::create(*_device, key, target, info, nullptr);
 	}
 }
 
@@ -1056,8 +1057,8 @@ Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info)
 	return nullptr;
 }
 
-Rc<Image> DeviceMemoryPool::spawn(AllocationUsage type, const ImageInfoData &data) {
-	auto image = _allocator->preallocate(data, false);
+Rc<Image> DeviceMemoryPool::spawn(AllocationUsage type, StringView key, const ImageInfoData &data) {
+	auto image = _allocator->preallocate(key, data, false);
 	auto requirements = _allocator->getImageMemoryRequirements(image->getImage());
 
 	if (requirements.requiresDedicated) {

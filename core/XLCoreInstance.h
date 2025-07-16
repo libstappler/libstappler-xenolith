@@ -82,8 +82,6 @@ struct SP_PUBLIC LoopInfo final : public Ref {
 
 	uint16_t deviceIdx = InstanceDefaultDevice;
 	ImageFormat defaultFormat = ImageFormat::R8G8B8A8_UNORM;
-	Function<void(const Loop &, const Device &)> onDeviceStarted;
-	Function<void(const Loop &, const Device &)> onDeviceFinalized;
 	Rc<LoopBackendInfo> backend; // backend-specific data
 
 	Value encode() const;

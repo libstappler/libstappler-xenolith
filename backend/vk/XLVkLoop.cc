@@ -120,11 +120,6 @@ struct Loop::Internal final : memory::AllocPool {
 		materialQueue = nullptr;
 		meshQueue = nullptr;
 		device->end();
-
-		if (info->onDeviceFinalized) {
-			info->onDeviceFinalized(*loop, *device);
-		}
-
 		device = nullptr;
 	}
 
@@ -362,10 +357,6 @@ void Loop::run() {
 		}),
 			.interval = TimeInterval::microseconds(config::PresentationSchedulerInterval),
 			.count = event::TimerInfo::Infinite});
-
-		if (_internal->info->onDeviceStarted) {
-			_internal->info->onDeviceStarted(*this, *_internal->device);
-		}
 	}, this, true);
 }
 
@@ -428,7 +419,7 @@ void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> 
 
 void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bool)> &&callback) {
 	performOnThread([this, req = sp::move(req), gen, callback = sp::move(callback)]() mutable {
-		if (!_internal->_running.load()) {
+		if (!_internal || !_internal->_running.load()) {
 			return;
 		}
 
@@ -657,8 +648,8 @@ void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> 
 	}, this, true);
 }
 
-Rc<core::PresentationEngine> Loop::makePresentationEngine(Rc<core::PresentationWindow> w) {
-	return Rc<PresentationEngine>::create(this, _internal->device, w);
+Rc<core::PresentationEngine> Loop::makePresentationEngine(NotNull<core::PresentationWindow> w) {
+	return Rc<PresentationEngine>::create(this, _internal->device.get(), w);
 }
 
 void Loop::performInit() { }

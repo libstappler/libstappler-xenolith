@@ -29,7 +29,7 @@ static SharedSymbol s_xenolithResoureAsset[] = {
 	SharedSymbol{"AssetLibrary::createLibrary", AssetLibrary::createLibrary},
 };
 
-static SharedModule s_xenolithResourceAssetModule(
+SP_USED static SharedModule s_xenolithResourceAssetModule(
 		buildconfig::MODULE_XENOLITH_RESOURCES_ASSETS_NAME, s_xenolithResoureAsset,
 		sizeof(s_xenolithResoureAsset) / sizeof(SharedSymbol));
 

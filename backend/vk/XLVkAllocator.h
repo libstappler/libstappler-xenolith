@@ -165,11 +165,12 @@ public:
 	MemoryRequirements getImageMemoryRequirements(VkImage target);
 
 	Rc<Buffer> spawnPersistent(AllocationUsage, const BufferInfo &, BytesView = BytesView());
-	Rc<Image> spawnPersistent(AllocationUsage, const ImageInfoData &, bool preinitialized,
-			uint64_t forceId = 0);
+	Rc<Image> spawnPersistent(AllocationUsage, StringView, const ImageInfoData &,
+			bool preinitialized, uint64_t forceId = 0);
 
 	Rc<Buffer> preallocate(const BufferInfo &, BytesView = BytesView());
-	Rc<Image> preallocate(const ImageInfoData &, bool preinitialized, uint64_t forceId = 0);
+	Rc<Image> preallocate(StringView key, const ImageInfoData &, bool preinitialized,
+			uint64_t forceId = 0);
 
 	Rc<DeviceMemory> emplaceObjects(AllocationUsage usage, SpanView<Image *>, SpanView<Buffer *>);
 
@@ -215,7 +216,7 @@ public:
 	bool init(const Rc<Allocator> &, bool persistentMapping = false);
 
 	Rc<Buffer> spawn(AllocationUsage type, const BufferInfo &);
-	Rc<Image> spawn(AllocationUsage type, const ImageInfoData &);
+	Rc<Image> spawn(AllocationUsage type, StringView, const ImageInfoData &);
 
 	Rc<Buffer> spawnPersistent(AllocationUsage, const BufferInfo &);
 

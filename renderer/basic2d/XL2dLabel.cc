@@ -316,8 +316,8 @@ void Label::handleEnter(xenolith::Scene *scene) {
 		_listener->listenForEventWithObject(font::FontController::onFontSourceUpdated, source,
 				std::bind(&Label::onFontSourceUpdated, this));
 
-		if (_source->isLoaded()) {
-			setTexture(Rc<Texture>(_source->getTexture()));
+		if (source->isLoaded()) {
+			setTexture(Rc<Texture>(source->getTexture()));
 		} else {
 			_listener->listenForEventWithObject(font::FontController::onLoaded, source,
 					std::bind(&Label::onFontSourceLoaded, this), true);

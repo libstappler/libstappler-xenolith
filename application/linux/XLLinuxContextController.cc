@@ -26,15 +26,15 @@
 #include "SPEventLooper.h"
 #include "SPEventPollHandle.h"
 #include "SPEventTimerHandle.h"
+#include "platform/XLContextNativeWindow.h"
 
-#if MODULE_XENOLITH_BACKEND_VK_GUI
+#if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkInstance.h"
-#include "XLVkView.h"
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-#if MODULE_XENOLITH_BACKEND_VK_GUI
+#if MODULE_XENOLITH_BACKEND_VK
 static vk::SurfaceBackendMask checkPresentationSupport(LinuxContextController *c,
 		const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
 
@@ -127,12 +127,37 @@ int LinuxContextController::run() {
 			_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
 		}
 
+		if (!loadInstance()) {
+			log::error("LinuxContextController", "Fail to load gAPI instance");
+			_resultCode = -1;
+			destroy();
+			return;
+		}
+
 		if (_xcbConnection) {
 			_xcbPollHandle = _looper->listenPollableHandle(_xcbConnection->getSocket(),
-					event::PollFlags::In, [this](int fd, event::PollFlags) {
+					event::PollFlags::In | event::PollFlags::AllowMulti,
+					[this](int fd, event::PollFlags flags) {
+				_withinPoll = true;
 				_xcbConnection->poll();
+				_withinPoll = false;
 
-				for (auto &it : _resizedWindows) { _context->handleNativeWindowRedrawNeeded(it); }
+				for (auto &it : _resizedWindows) {
+					ContextController::notifyWindowResized(it.first, it.second);
+				}
+
+				_resizedWindows.clear();
+
+				for (auto &it : _closedWindows) {
+					// Close windows
+					if (it->hasExitGuard()) {
+						ContextController::notifyWindowClosed(it);
+					} else {
+						it->close();
+					}
+				}
+
+				_closedWindows.clear();
 
 				return Status::Ok;
 			}, this);
@@ -144,13 +169,25 @@ int LinuxContextController::run() {
 	return ContextController::run();
 }
 
-void LinuxContextController::notifyWindowResized(NotNull<ContextNativeWindow> w) {
-	_resizedWindows.emplace_back(w);
+void LinuxContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
+	if (_withinPoll) {
+		_resizedWindows.emplace_back(w, liveResize);
+	} else {
+		ContextController::notifyWindowResized(w, liveResize);
+	}
 }
 
 bool LinuxContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
-	_resizedWindows.emplace_back(w);
-	return false;
+	if (_withinPoll) {
+		_closedWindows.emplace_back(w);
+		return !w->hasExitGuard();
+	} else {
+		return ContextController::notifyWindowClosed(w);
+	}
+}
+
+void LinuxContextController::handleRootWindowClosed() {
+	_looper->performOnThread([this] { destroy(); }, this);
 }
 
 Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
@@ -158,10 +195,63 @@ Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
 	return Rc<AppWindow>::create(_context, app, w);
 }
 
+Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
+	_xcbConnection->readFromClipboard(sp::move(req));
+	return Status::Ok;
+}
+
+Status LinuxContextController::writeToClipboard(BytesView, StringView contentType) {
+	return Status::ErrorNotImplemented;
+}
+
+Rc<ScreenInfo> LinuxContextController::getScreenInfo() const {
+	auto xinfo = _xcbConnection->getScreenInfo(_xcbConnection->getDefaultScreen());
+
+	Rc<ScreenInfo> info = ContextController::getScreenInfo();
+
+	for (auto &it : xinfo.monitors) {
+		xenolith::MonitorInfo m;
+		m.name = it.name;
+		m.edid = it.edid;
+		m.rect = it.rect;
+		m.mm = it.mm;
+
+		if (it.primary) {
+			info->primaryMonitor = info->monitors.size();
+		}
+
+		for (auto &oit : it.outputs) {
+			for (auto &mit : oit->modes) {
+				xenolith::ModeInfo mode;
+				mode.width = mit->width;
+				mode.height = mit->height;
+				mode.rate = mit->rate;
+				if (mit == oit->preferred) {
+					m.preferredMode = m.modes.size();
+				}
+				if (mit == oit->crtc->mode) {
+					m.currentMode = m.modes.size();
+				}
+				m.modes.emplace_back(mode);
+			}
+		}
+
+		info->monitors.emplace_back(move(m));
+	}
+
+	return info;
+}
+
 dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const dbus::Event &ev) {
 	switch (ev.type) {
 	case dbus::Event::None: break;
 	case dbus::Event::AddWatch: {
+		if (auto d = _dbus->dbus_watch_get_data(ev.watch)) {
+			auto handle = reinterpret_cast<event::PollHandle *>(d);
+			handle->reset(dbus::getPollFlags(_dbus->dbus_watch_get_flags(ev.watch)));
+			return 1;
+		}
+
 		auto handle = _looper->listenPollableHandle(_dbus->dbus_watch_get_unix_fd(ev.watch),
 				dbus::getPollFlags(_dbus->dbus_watch_get_flags(ev.watch)),
 				event::CompletionHandle<event::PollHandle>::create<DBusWatch>(ev.watch,
@@ -172,6 +262,10 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 			}
 
 			auto c = static_cast<dbus::Connection *>(handle->getUserdata());
+			if (!c) {
+				return;
+			}
+
 			if (!c->handle(handle, dbus::Event{dbus::Event::TriggerWatch, {watch}},
 						event::PollFlags(flags))) {
 				handle->cancel();
@@ -180,8 +274,12 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 				c);
 
 		handle->retain(0);
-		_dbus->dbus_watch_set_data(ev.watch, handle.get(),
-				[](void *ptr) { reinterpret_cast<event::PollHandle *>(ptr)->release(0); });
+		_dbus->dbus_watch_set_data(ev.watch, handle.get(), [](void *ptr) {
+			auto handle = reinterpret_cast<event::PollHandle *>(ptr);
+			handle->cancel(Status::ErrorCancelled);
+			handle->setUserdata(nullptr);
+			handle->release(0);
+		});
 
 		if (!_dbus->dbus_watch_get_enabled(ev.watch)) {
 			handle->pause();
@@ -208,6 +306,8 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 	case dbus::Event::RemoveWatch: {
 		auto handle = reinterpret_cast<event::PollHandle *>(_dbus->dbus_watch_get_data(ev.watch));
 		handle->cancel(Status::Done);
+		handle->setUserdata(nullptr);
+		_dbus->dbus_watch_set_data(ev.watch, nullptr, nullptr);
 		return 1;
 		break;
 	}
@@ -221,6 +321,7 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 			});
 			return 1;
 		}
+
 		auto handle = _looper->scheduleTimer(
 				event::TimerInfo{
 					.completion = event::CompletionHandle<event::TimerHandle>::create<DBusTimeout>(
@@ -232,6 +333,10 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 			}
 
 			auto c = static_cast<dbus::Connection *>(handle->getUserdata());
+			if (!c) {
+				return;
+			}
+
 			if (!c->handle(handle, dbus::Event{dbus::Event::TriggerTimeout, {.timeout = timeout}},
 						event::PollFlags(flags))) {
 				handle->cancel();
@@ -251,9 +356,14 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 					.count = 1,
 				},
 				c);
+
 		handle->retain(0);
-		_dbus->dbus_timeout_set_data(ev.timeout, handle.get(),
-				[](void *ptr) { reinterpret_cast<event::PollHandle *>(ptr)->release(0); });
+		_dbus->dbus_timeout_set_data(ev.timeout, handle.get(), [](void *ptr) {
+			auto handle = reinterpret_cast<event::TimerHandle *>(ptr);
+			handle->cancel(Status::ErrorCancelled);
+			handle->setUserdata(nullptr);
+			handle->release(0);
+		});
 
 		if (!_dbus->dbus_timeout_get_enabled(ev.timeout)) {
 			handle->pause();
@@ -285,12 +395,20 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 		auto handle =
 				reinterpret_cast<event::TimerHandle *>(_dbus->dbus_timeout_get_data(ev.timeout));
 		handle->cancel(Status::ErrorCancelled);
+		handle->setUserdata(nullptr);
+		_dbus->dbus_timeout_set_data(ev.timeout, nullptr, nullptr);
 		return 1;
 		break;
 	}
 	case dbus::Event::TriggerTimeout: break;
-	case dbus::Event::Dispatch: _looper->performOnThread([c]() { c->dispatchAll(); }, c); break;
-	case dbus::Event::Wakeup: _looper->performOnThread([c]() { c->flush(); }, c); break;
+	case dbus::Event::Dispatch:
+		_looper->performOnThread([c]() { c->dispatchAll(); }, c, true);
+		break;
+	case dbus::Event::Wakeup:
+		_looper->performOnThread([c]() {
+			//c->flush();
+		}, c, true);
+		break;
 	case dbus::Event::Connected:
 		if (c == _systemBus) {
 			if (c->services.find(NM_SERVICE_NAME) != c->services.end()) {
@@ -300,6 +418,9 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 
 				updateNetworkState();
 			}
+			log::debug("LinuxContextController", "System bus connected");
+		} else {
+			log::debug("LinuxContextController", "Session bus connected");
 		}
 		tryStart();
 		return 1;
@@ -321,16 +442,17 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 
 void LinuxContextController::tryStart() {
 	if (_sessionBus->connected && _systemBus->connected && _xcbConnection) {
-		if (!loadInstance()) {
-			log::error("LinuxContextController", "Fail to load gAPI instance");
-			return;
-		}
+		_looper->performOnThread([this] {
+			if (!resume()) {
+				log::error("LinuxContextController", "Fail to resume Context");
+				destroy();
+			}
 
-		if (!resume()) {
-			log::error("LinuxContextController", "Fail to resume Context");
-		}
-
-		loadWindow();
+			if (!loadWindow()) {
+				log::error("LinuxContextController", "Fail to load root native window");
+				destroy();
+			}
+		}, this);
 	}
 }
 
@@ -341,23 +463,9 @@ void LinuxContextController::updateNetworkState() {
 	}, [this](NotNull<dbus::Connection> c, DBusMessage *reply) {
 		_networkState = NetworkState(_dbus, reply);
 
-
-		//describe(c->lib, reply, [](StringView str) { std::cout << str; });
-
 		std::cout << "NetworkState: ";
 		_networkState.description([](StringView str) { std::cout << str; });
 		std::cout << "\n";
-
-		// Do we need to check active connection's props?
-		/*_systemBus->callMethod(NM_SERVICE_NAME,
-				"/org/freedesktop/NetworkManager/ActiveConnection/66",
-				"org.freedesktop.DBus.Properties", "GetAll", [this](DBusMessage *msg) {
-			_dbus->dbus_message_append_args(msg, DBUS_TYPE_STRING, &NM_SERVICE_CONNECTION_NAME,
-					DBUS_TYPE_INVALID);
-		}, [this](NotNull<dbus::Connection> c, DBusMessage *reply) {
-			std::cout << "Connection: \n";
-			describe(c->lib, reply, [](StringView str) { std::cout << str; });
-		}, this);*/
 	}, this);
 }
 
@@ -366,7 +474,7 @@ bool LinuxContextController::loadInstance() {
 		return false;
 	}
 
-#if MODULE_XENOLITH_BACKEND_VK_GUI
+#if MODULE_XENOLITH_BACKEND_VK
 	auto instanceInfo = move(_instanceInfo);
 	_instanceInfo = nullptr;
 
@@ -404,15 +512,52 @@ bool LinuxContextController::loadInstance() {
 		}
 	}
 #else
-	log::error("LinuxContextController", "No available GAPI backends found");
+	log::error("LinuxContextController", "No available gAPI backends found");
+	_resultCode = -1;
 #endif
 	return false;
 }
 
 bool LinuxContextController::loadWindow() {
-	if (_xcbConnection) { }
+	if (_xcbConnection) {
+		auto window =
+				Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), _context->getInfo(), this);
+		if (window) {
+			_context->handleNativeWindowCreated(window);
+			return true;
+		}
+	}
 
 	return false;
+}
+
+void LinuxContextController::handleContextWillDestroy() {
+	if (_xcbPollHandle) {
+		_xcbPollHandle->cancel();
+		_xcbPollHandle = nullptr;
+	}
+
+	_networkConnectionFilter = nullptr;
+
+	if (_sessionBus) {
+		_sessionBus->close();
+		_sessionBus = nullptr;
+	}
+
+	if (_systemBus) {
+		_systemBus->close();
+		_systemBus = nullptr;
+	}
+
+	ContextController::handleContextWillDestroy();
+}
+
+void LinuxContextController::handleContextDidDestroy() {
+	ContextController::handleContextDidDestroy();
+
+	_xcbConnection = nullptr;
+
+	_looper->wakeup(event::WakeupFlags::Graceful);
 }
 
 } // namespace stappler::xenolith::platform
