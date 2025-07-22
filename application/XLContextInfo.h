@@ -25,8 +25,8 @@
 
 #include "XLApplicationConfig.h"
 #include "XLCoreFrameRequest.h"
+#include "XlCoreMonitorInfo.h"
 #include "XLCoreLoop.h"
-#include "platform/XLEdid.h"
 #include "SPCommandLineParser.h"
 
 #if ANDROID
@@ -38,6 +38,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Context;
 class AppThread;
 class AppWindow;
+
+using core::ModeInfo;
+using core::MonitorId;
+using core::MonitorInfo;
+using core::ScreenInfo;
 
 #if ANDROID
 using NativeContextHandle = ANativeActivity;
@@ -61,15 +66,24 @@ enum class NetworkFlags {
 	Validated = (1 << 11),
 	WifiP2P = (1 << 12),
 	CaptivePortal = (1 << 13),
-	Local = (1 << 14)
+	Local = (1 << 14),
+	Wired = (1 << 15),
+	Wireless = (1 << 16),
 };
 
 SP_DEFINE_ENUM_AS_MASK(NetworkFlags)
 
 enum class WindowLayerFlags : uint32_t {
 	None,
+	CursorArrow,
+	CursorRightArrow,
 	CursorText,
+	CursorVerticalText,
 	CursorPointer,
+	CursorGrab,
+	CursorGrabbed,
+	CursorTarget,
+	CursorPencil,
 	CursorHelp,
 	CursorProgress,
 	CursorWait,
@@ -77,10 +91,24 @@ enum class WindowLayerFlags : uint32_t {
 	CursorAlias,
 	CursorNoDrop,
 	CursorNotAllowed,
-	CursorAllScroll,
-	CursorRowResize,
-	CursorColResize,
-	CursorMask = 0xF,
+	CursorMove,
+	CursorResizeTop,
+	CursorResizeTopRight,
+	CursorResizeRight,
+	CursorResizeBottomRight,
+	CursorResizeBottom,
+	CursorResizeBottomLeft,
+	CursorResizeLeft,
+	CursorResizeTopLeft,
+	CursorResizeTopBottom,
+	CursorResizeLeftRight,
+	CursorResizeTopLeftBottomRight,
+	CursorResizeTopRightBottomLeft,
+	CursorResizeAll,
+	CursorMask = 0xFF,
+
+	// If this flag is set - use resize flags as markers for the cursor name
+	FlagsMask = 0xFF00,
 
 	ResizableTop = 1 << 27,
 	ResizableRight = 1 << 28,
@@ -102,44 +130,40 @@ struct WindowLayer {
 enum class WindowFlags {
 	None = 0,
 	FixedBorder = 1 << 0,
-	SingleWindow = 1 << 1, // no subwindows can be created
+
+	// Try to bypass WM composition when in fullscreen mode
+	// To set fullscreen mode as initial use `monitor` property, not this flag
+	//
+	// Note that on Linux ExclusiveFullscreen is seamless when window is fullscreen
+	// and no composition objects (like notifications, cursor) above it, but on Windows
+	// WM context should be switched
+	ExclusiveFullscreen = 1 << 1,
+
+	// Use direct output to display, bypassing whole WM stack
+	// Check if it actually supported with WindowCapabilities::DirectOutput
+	DirectOutput = 1 << 2,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
 
-struct ModeInfo {
-	static const ModeInfo Current;
-	static const ModeInfo Preferred;
+// Cababilities, prowided by OS Window Manager
+enum class WindowCapabilities {
+	None,
+	// Switch between windowed and fullscreen modes
+	// If not provided - window is only windowed or only fullscreen
+	FullscreenSwitch = 1 << 0,
 
-	uint16_t width = 0;
-	uint16_t height = 0;
-	uint16_t rate = 0;
+	// Subwindows are allowed
+	Subwindows = 1 << 1,
 
-	auto operator<=>(const ModeInfo &) const = default;
+	// Direct output is available on platform
+	DirectOutput = 1 << 2,
+
+	// 'Back' action can close application (Android-like)
+	BackIsExit = 1 << 2,
 };
 
-struct MonitorId {
-	static const MonitorId Primary;
-	static const MonitorId None;
-
-	String name;
-	platform::EdidInfo edid;
-};
-
-struct MonitorInfo : MonitorId {
-	IRect rect;
-	Extent2 mm;
-
-	uint32_t preferredMode = 0;
-	uint32_t currentMode = 0;
-
-	Vector<ModeInfo> modes;
-};
-
-struct ScreenInfo : public Ref {
-	Vector<MonitorInfo> monitors;
-	uint32_t primaryMonitor = 0;
-};
+SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
 
 struct SP_PUBLIC WindowInfo final : public Ref {
 	String id;
@@ -156,8 +180,11 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 	// TODO: extra window attributes go here
 
 	core::PresentMode preferredPresentMode = core::PresentMode::Mailbox;
-	core::ImageFormat imageFormat = core::ImageFormat::Undefined;
+	core::ImageFormat imageFormat = core::ImageFormat::R8G8B8A8_UNORM;
 	core::ColorSpace colorSpace = core::ColorSpace::SRGB_NONLINEAR_KHR;
+
+	// provided by WM, no reason to set it by user
+	WindowCapabilities capabilities = WindowCapabilities::None;
 
 	core::FrameConstraints exportConstraints() const {
 		return core::FrameConstraints{
@@ -189,7 +216,7 @@ struct SP_PUBLIC ContextInfo final : public Ref {
 	String bundleName = "org.stappler.xenolith.test"; // application reverce-domain name
 	String appName = "Xenolith"; // application human-readable name
 	String appVersion = "0.0.1"; // application human-readable version
-	String userLanguage = "ru-ru"; // current locale name
+	String userLanguage = ""; //"ru-ru"; // current locale name
 	String userAgent = "XenolithTestApp"; // networking user agent
 	String launchUrl; // initial launch URL (deep link)
 
@@ -237,6 +264,25 @@ struct ContextConfig final {
 
 private:
 	ContextConfig();
+};
+
+struct ThemeInfo {
+	String colorScheme;
+	String iconTheme;
+	String cursorTheme;
+	String documentFontName;
+	String monospaceFontName;
+	String defaultFontName;
+	int32_t cursorSize = 0;
+	uint32_t scalingFactor = 0;
+	float textScaling = 1.0f;
+	bool leftHandedMouse = false;
+	uint32_t doubleClickInterval = 500'000; // in microseconds
+
+	Value encode() const;
+
+	bool operator==(const ThemeInfo &) const = default;
+	bool operator!=(const ThemeInfo &) const = default;
 };
 
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;

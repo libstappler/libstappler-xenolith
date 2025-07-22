@@ -63,10 +63,7 @@ struct ClipboardData : public Ref {
 	// Function to convert clipboard's data into target format
 	// You should not assume on what thread this function would be called,
 	// so, assume the worst case
-	Function<Bytes(BytesView, StringView)> encodeCallback;
-
-	// Data itself
-	Bytes data;
+	Function<Bytes(StringView)> encodeCallback;
 
 	// Data owner
 	Rc<Ref> owner;
@@ -86,7 +83,7 @@ public:
 
 	event::Looper *getLooper() const { return _looper; }
 
-	virtual void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize);
+	virtual void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>, bool liveResize);
 	virtual void notifyWindowInputEvents(NotNull<ContextNativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void notifyWindowTextInput(NotNull<ContextNativeWindow>, const core::TextInputState &);
@@ -94,17 +91,17 @@ public:
 	// true if window should be closed, false otherwise (e.g. ExitGuard)
 	virtual bool notifyWindowClosed(NotNull<ContextNativeWindow>);
 
-	virtual void addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&);
-	virtual void removeNetworkCallback(Ref *key);
-
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&);
-	virtual Status writeToClipboard(BytesView, StringView contentType = StringView());
+	virtual Status writeToClipboard(Rc<ClipboardData> &&);
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;
+
+	virtual void handleNetworkStateChanged(NetworkFlags);
+	virtual void handleThemeInfoChanged(const ThemeInfo &);
 
 protected:
 	virtual void handleStateChanged(ContextState prevState, ContextState newState);
@@ -134,8 +131,6 @@ protected:
 
 	virtual Rc<core::Loop> makeLoop(NotNull<core::Instance>);
 
-	virtual void updateNetworkFlags(NetworkFlags);
-
 	int _resultCode = 0;
 	ContextState _state = ContextState::Created;
 	Context *_context = nullptr;
@@ -147,7 +142,7 @@ protected:
 	Rc<core::LoopInfo> _loopInfo;
 
 	NetworkFlags _networkFlags = NetworkFlags::None;
-	Map<Rc<Ref>, Function<void(NetworkFlags)>> _networkCallbacks;
+	ThemeInfo _themeInfo;
 };
 
 } // namespace stappler::xenolith::platform

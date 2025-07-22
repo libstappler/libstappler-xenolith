@@ -24,6 +24,7 @@
 #ifndef XENOLITH_APPLICATION_XLAPPLICATION_H_
 #define XENOLITH_APPLICATION_XLAPPLICATION_H_
 
+#include "XLContextInfo.h"
 #include "XLEvent.h"
 #include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
@@ -34,6 +35,9 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class SP_PUBLIC AppThread : protected thread::Thread {
 public:
+	static EventHeader onNetworkState;
+	static EventHeader onThemeInfo;
+
 	using Task = thread::Task;
 
 	using ExecuteCallback = Function<bool(const Task &)>;
@@ -52,6 +56,9 @@ public:
 	virtual void stop() override;
 
 	virtual void wakeup();
+
+	virtual void handleNetworkStateChanged(NetworkFlags);
+	virtual void handleThemeInfoChanged(const ThemeInfo &);
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
@@ -74,12 +81,17 @@ public:
 	void readFromClipboard(Function<void(BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
 
-	void writeToClipboard(BytesView, StringView contentType = StringView());
+	void writeToClipboard(BytesView, StringView contentType = StringView("text/plain"),
+			Ref * = nullptr);
+	void writeToClipboard(Function<Bytes(StringView)> &&, SpanView<StringView>, Ref * = nullptr);
 
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 
 	Context *getContext() const { return _context; }
 	event::Looper *getLooper() const { return _appLooper; }
+
+	NetworkFlags getNetworkFlags() const { return _networkFlags; }
+	const ThemeInfo &getThemeInfo() const { return _themeInfo; }
 
 	template <typename T>
 	auto addExtension(Rc<T> &&) -> T *;
@@ -110,6 +122,9 @@ protected:
 	uint64_t _lastUpdate = 0;
 
 	bool _extensionsInitialized = false;
+
+	NetworkFlags _networkFlags = NetworkFlags::None;
+	ThemeInfo _themeInfo;
 
 	Rc<ResourceCache> _resourceCache;
 

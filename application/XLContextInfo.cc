@@ -247,9 +247,10 @@ Value WindowInfo::encode() const {
 	if (hasFlag(flags, WindowFlags::FixedBorder)) {
 		f.addString("FixedBorder");
 	}
-	if (hasFlag(flags, WindowFlags::SingleWindow)) {
-		f.addString("SingleWindow");
+	if (hasFlag(flags, WindowFlags::ExclusiveFullscreen)) {
+		f.addString("ExclusiveFullscreen");
 	}
+
 	if (!f.empty()) {
 		ret.setValue(move(f), "flags");
 	}
@@ -313,6 +314,19 @@ Value ContextConfig::encode() const {
 	if (!f.empty()) {
 		ret.setValue(move(f), "flags");
 	}
+	return ret;
+}
+
+Value ThemeInfo::encode() const {
+	Value ret;
+	ret.setValue(colorScheme, "colorScheme");
+	ret.setValue(iconTheme, "iconTheme");
+	ret.setValue(cursorTheme, "cursorTheme");
+	ret.setValue(monospaceFontName, "monospaceFontName");
+	ret.setValue(defaultFontName, "defaultFontName");
+	ret.setValue(cursorSize, "cursorSize");
+	ret.setValue(scalingFactor, "scalingFactor");
+	ret.setValue(textScaling, "textScaling");
 	return ret;
 }
 

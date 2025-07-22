@@ -21,10 +21,16 @@
 **/
 
 #include "XLVkPresentationEngine.h"
+#include "SPStatus.h"
+#include "XLCorePresentationEngine.h"
 #include "XLCorePresentationFrame.h"
 #include "XLCoreFrameRequest.h"
 #include "XLCoreFrameCache.h"
 #include "SPEventLooper.h"
+#include "XLVkInfo.h"
+#include "XLVkSwapchain.h"
+#include "XlCoreMonitorInfo.h"
+#include <vulkan/vulkan_core.h>
 
 #define XL_VKPRESENT_DEBUG 0
 
@@ -45,9 +51,86 @@ bool PresentationEngine::run() {
 			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _window->selectConfig(info, false);
 
-	createSwapchain(info, move(cfg), cfg.presentMode);
+	createSwapchain(info, move(cfg), cfg.presentMode, true);
 
 	return core::PresentationEngine::run();
+}
+
+Rc<core::ScreenInfo> PresentationEngine::getScreenInfo() const {
+	Rc<core::ScreenInfo> ret = Rc<core::ScreenInfo>::create();
+
+	ret->primaryMonitor = maxOf<uint32_t>();
+
+	auto &info = static_cast<Device *>(_device)->getInfo();
+
+	for (auto &it : info.displays) { ret->monitors.emplace_back(it); }
+
+	return ret;
+}
+
+Status PresentationEngine::setFullscreenSurface(const core::MonitorId &monId,
+		const core::ModeInfo &mode) {
+	if (monId == core::MonitorId::None) {
+		if (_surface != _originalSurface) {
+			_nextSurface = _originalSurface;
+			deprecateSwapchain(core::PresentationSwapchainFlags::SwitchToNext);
+			return Status::Ok;
+		}
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	if (monId == core::MonitorId::Primary) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	auto &devInfo = static_cast<Device *>(_device)->getInfo();
+
+	const DisplayInfo *display = nullptr;
+	for (auto &it : devInfo.displays) {
+		if (it == monId) {
+			display = &it;
+		}
+	}
+
+	if (!display) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	const ModeInfo *targetMode = nullptr;
+	for (auto &it : display->modes) {
+		if (it.info == mode) {
+			targetMode = &it;
+		}
+	}
+
+	if (!targetMode) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	VkDisplaySurfaceCreateInfoKHR info;
+	info.sType = VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR;
+	info.pNext = nullptr;
+	info.flags = 0;
+	info.displayMode = targetMode->mode;
+	info.planeIndex = targetMode->planes.front().index;
+	info.planeStackIndex = targetMode->planes.front().index;
+	info.transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+	info.globalAlpha = 0.0f;
+	info.alphaMode = VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR;
+	info.imageExtent = VkExtent2D{targetMode->info.width, targetMode->info.height};
+
+	VkSurfaceKHR surface;
+
+	auto instance = static_cast<Instance *>(_loop->getInstance());
+	auto result = instance->vkCreateDisplayPlaneSurfaceKHR(instance->getInstance(), &info, nullptr,
+			&surface);
+
+	if (result == VK_SUCCESS) {
+		_nextSurface = Rc<Surface>::create(instance, surface);
+
+		deprecateSwapchain(core::PresentationSwapchainFlags::SwitchToNext);
+	}
+	return Status::Ok;
 }
 
 bool PresentationEngine::recreateSwapchain() {
@@ -57,6 +140,14 @@ bool PresentationEngine::recreateSwapchain() {
 	}
 
 	_device->waitIdle();
+
+	bool oldSwapchainValid = true;
+	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToNext)) {
+		if (_nextSurface) {
+			_surface = move(_nextSurface);
+			oldSwapchainValid = false;
+		}
+	}
 
 	resetFrames();
 
@@ -96,7 +187,7 @@ bool PresentationEngine::recreateSwapchain() {
 		mode = cfg.presentModeFast;
 	}
 
-	ret = createSwapchain(info, move(cfg), mode);
+	ret = createSwapchain(info, move(cfg), mode, oldSwapchainValid);
 
 	_deprecationFlags = core::PresentationSwapchainFlags::None;
 
@@ -116,7 +207,7 @@ bool PresentationEngine::recreateSwapchain() {
 }
 
 bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::SwapchainConfig &&cfg,
-		core::PresentMode presentMode) {
+		core::PresentMode presentMode, bool oldSwapchainValid) {
 	auto dev = static_cast<Device *>(_device);
 	auto devInfo = dev->getInfo();
 
@@ -133,11 +224,15 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 		log::verbose("vk::PresentationEngine", "Surface: ", info.description());
 		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
 				presentMode, _surface.get_cast<Surface>(), queueFamilyIndices,
-				oldSwapchain ? oldSwapchain.get_cast<SwapchainHandle>() : nullptr);
+				(oldSwapchain && oldSwapchainValid) ? oldSwapchain.get_cast<SwapchainHandle>()
+													: nullptr);
 
 		if (_swapchain) {
-			_constraints.extent = cfg.extent;
-			_constraints.transform = cfg.transform;
+			auto newConstraints = _window->exportFrameConstraints();
+			newConstraints.extent = cfg.extent;
+			newConstraints.transform = cfg.transform;
+
+			_constraints = sp::move(newConstraints);
 
 			Vector<uint64_t> ids;
 			auto cache = _loop->getFrameCache();
@@ -153,10 +248,17 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			for (auto &id : ids) { cache->addImageView(id); }
 
 			log::verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
+		} else {
+			log::error("vk::PresentationEngine", "Fail to create swapchain");
 		}
 	} while (0);
 
-	return _swapchain != nullptr;
+	if (_swapchain) {
+		_waitForDisplayLink = false;
+		_readyForNextFrame = true;
+		return true;
+	}
+	return false;
 }
 
 bool PresentationEngine::isImagePresentable(const core::ImageObject &image,

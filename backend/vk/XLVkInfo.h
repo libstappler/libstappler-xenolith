@@ -25,9 +25,55 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKINFO_H_
 #define XENOLITH_BACKEND_VK_XLVKINFO_H_
 
+#include "SPGeometry.h"
 #include "XLVk.h"
+#include "XlCoreMonitorInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
+
+struct DisplayInfo;
+
+struct SP_PUBLIC ModePlaneInfo {
+	uint32_t index;
+	VkDisplayPlaneCapabilitiesKHR caps;
+};
+
+struct SP_PUBLIC ModeInfo {
+	VkDisplayModeKHR mode;
+	core::ModeInfo info;
+
+	Vector<ModePlaneInfo> planes;
+};
+
+struct SP_PUBLIC PlaneInfo {
+	uint32_t stackIndex = 0;
+	const DisplayInfo *current = nullptr;
+	Vector<const DisplayInfo *> displays;
+};
+
+struct SP_PUBLIC DisplayInfo {
+	VkDisplayKHR display;
+	String name;
+
+	Extent2 mm;
+	Extent2 extent;
+
+	Vector<const PlaneInfo *> planes;
+	Vector<ModeInfo> modes;
+
+	bool operator==(const core::MonitorId &id) const { return id.name == name; }
+
+	operator core::MonitorInfo() const {
+		core::MonitorInfo mon;
+		mon.name = name;
+		mon.rect = IRect{0, 0, extent.width, extent.height};
+		mon.mm = mm;
+
+		for (auto &it : modes) { mon.modes.emplace_back(it.info); }
+
+		return mon;
+	}
+};
 
 struct SP_PUBLIC DeviceInfo {
 	using OptVec = std::bitset<toInt(OptionalDeviceExtension::Max)>;
@@ -128,6 +174,10 @@ struct SP_PUBLIC DeviceInfo {
 
 	bool requiredExtensionsExists = false;
 	bool requiredFeaturesExists = false;
+
+	Vector<uint32_t> knownPlanes;
+	Vector<PlaneInfo> planes;
+	Vector<DisplayInfo> displays;
 
 	DeviceInfo();
 	DeviceInfo(VkPhysicalDevice, QueueFamilyInfo, QueueFamilyInfo, QueueFamilyInfo, QueueFamilyInfo,

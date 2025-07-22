@@ -42,14 +42,11 @@ public:
 
 	virtual ~ContextNativeWindow();
 
-	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&info);
-
-	virtual uint64_t getScreenFrameInterval() const = 0;
+	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, WindowCapabilities);
 
 	virtual void mapWindow() = 0;
 	virtual void unmapWindow() = 0;
-
-	virtual void specializeSurfaceInfo(core::SurfaceInfo &) const { }
+	virtual bool close() = 0;
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) { }
 	virtual void handleLayerUpdate(const WindowLayer &) { }
@@ -64,13 +61,15 @@ public:
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) = 0;
 
-	virtual bool close() = 0;
-
 	virtual void setExitGuard(bool value) { _hasExitGuard = value; }
 	virtual bool hasExitGuard() const { return _hasExitGuard; }
 
 	virtual void setInsetDecorationVisible(bool) { }
 	virtual void setInsetDecorationTone(float) { }
+
+	virtual core::PresentationOptions getPreferredOptions() const {
+		return core::PresentationOptions();
+	}
 
 	bool isRootWindow() const { return _isRootWindow; }
 
@@ -94,8 +93,9 @@ public:
 
 	virtual void updateLayers(Vector<WindowLayer> &&);
 
-	virtual Status setFullscreen(const MonitorId &, const ModeInfo &) {
-		return Status::ErrorNotImplemented;
+	virtual void setFullscreen(const MonitorId &, const ModeInfo &, Function<void(Status)> &&cb,
+			Ref *ref) {
+		cb(Status::ErrorNotImplemented);
 	}
 
 protected:

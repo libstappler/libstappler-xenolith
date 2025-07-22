@@ -65,22 +65,22 @@ public:
 	virtual void setTargetContentSize(const Size2 &);
 	virtual Size2 getTargetContentSize() const { return _targetContentSize; }
 
-	virtual bool onBackButton();
+	virtual bool handleBackButton();
 
 	virtual void setBackButtonCallback(const BackButtonCallback &);
 	virtual const BackButtonCallback &getBackButtonCallback() const;
 
-	virtual void onPush(SceneContent2d *l, bool replace);
-	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace);
+	virtual void handlePush(SceneContent2d *l, bool replace);
+	virtual void handlePushTransitionEnded(SceneContent2d *l, bool replace);
 
-	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace);
-	virtual void onPop(SceneContent2d *l, bool replace);
+	virtual void hanldePopTransitionBegan(SceneContent2d *l, bool replace);
+	virtual void handlePop(SceneContent2d *l, bool replace);
 
-	virtual void onBackground(SceneContent2d *l, SceneLayout2d *overlay);
-	virtual void onBackgroundTransitionEnded(SceneContent2d *l, SceneLayout2d *overlay);
+	virtual void handleBackground(SceneContent2d *l, SceneLayout2d *overlay);
+	virtual void handleBackgroundTransitionEnded(SceneContent2d *l, SceneLayout2d *overlay);
 
-	virtual void onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay);
-	virtual void onForeground(SceneContent2d *l, SceneLayout2d *overlay);
+	virtual void handleForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay);
+	virtual void handleForeground(SceneContent2d *l, SceneLayout2d *overlay);
 
 	virtual Rc<Transition> makeEnterTransition(SceneContent2d *) const;
 	virtual Rc<Transition> makeExitTransition(SceneContent2d *) const;
@@ -89,6 +89,8 @@ public:
 
 	virtual void setLayoutName(StringView);
 	virtual StringView getLayoutName() const;
+
+	virtual bool pop();
 
 	virtual DecorationStatus getDecorationStatus() const { return DecorationStatus::DontCare; }
 	virtual SceneContent2d *getSceneContent() const { return _sceneContent; }
@@ -103,6 +105,6 @@ protected:
 	Size2 _targetContentSize;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DSCENELAYOUT_H_ */

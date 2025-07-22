@@ -23,10 +23,14 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XLLINUXCONTEXTCONTROLLER_H_
 #define XENOLITH_APPLICATION_LINUX_XLLINUXCONTEXTCONTROLLER_H_
 
+#include "XLContextInfo.h"
+#include "dbus/XLLinuxDBusLibrary.h"
+#include "linux/XLLinuxDisplayConfigManager.h"
 #include "platform/XLContextController.h"
 
-#include "XLLinuxXcbConnection.h"
-#include "XLLinuxDBusLibrary.h"
+#include "wayland/XLLinuxWaylandDisplay.h"
+#include "xcb/XLLinuxXcbConnection.h"
+#include "dbus/XLLinuxDBusController.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -43,43 +47,52 @@ public:
 	virtual int run() override;
 
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
+	WaylandDisplay *getWaylandDisplay() const { return _waylandDisplay; }
 
-	void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize) override;
-	bool notifyWindowClosed(NotNull<ContextNativeWindow>) override;
+	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
+
+	bool isInPoll() const { return _withinPoll; }
+
+	virtual void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>,
+			bool liveResize) override;
+	virtual bool notifyWindowClosed(NotNull<ContextNativeWindow>) override;
+
+	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
 	void handleRootWindowClosed();
 
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) override;
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
-	virtual Status writeToClipboard(BytesView, StringView contentType = StringView()) override;
+	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
 
 	virtual Rc<ScreenInfo> getScreenInfo() const override;
 
-protected:
-	dbus_bool_t handleDbusEvent(dbus::Connection *c, const dbus::Event &);
+	virtual void handleThemeInfoChanged(const ThemeInfo &) override;
 
 	void tryStart();
 
-	void updateNetworkState();
-	bool loadInstance();
+protected:
+	Rc<core::Instance> loadInstance();
 	bool loadWindow();
 
 	virtual void handleContextWillDestroy() override;
 	virtual void handleContextDidDestroy() override;
 
+	void notifyPendingWindows();
+
 	Rc<XcbLibrary> _xcb;
+	Rc<WaylandLibrary> _wayland;
 	Rc<XkbLibrary> _xkb;
 	Rc<dbus::Library> _dbus;
 
+	Rc<dbus::Controller> _dbusController;
 	Rc<XcbConnection> _xcbConnection;
+	Rc<WaylandDisplay> _waylandDisplay;
+	Rc<DisplayConfigManager> _displayConfigManager;
+
 	Rc<event::PollHandle> _xcbPollHandle;
-
-	Rc<dbus::Connection> _sessionBus;
-	Rc<dbus::Connection> _systemBus;
-	Rc<dbus::BusFilter> _networkConnectionFilter;
-
-	NetworkState _networkState;
+	Rc<event::PollHandle> _waylandPollHandle;
 
 	bool _withinPoll = false;
 	Vector<Pair<ContextNativeWindow *, bool>> _resizedWindows;

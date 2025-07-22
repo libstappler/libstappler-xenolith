@@ -109,13 +109,14 @@ public:
 	virtual void stop() = 0;
 
 	virtual void captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
-			core::AttachmentLayout l) = 0;
+			core::AttachmentLayout l);
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 			const Rc<ImageObject> &image, AttachmentLayout l) = 0;
 	virtual void captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
 			const Rc<BufferObject> &) = 0;
 
-	virtual Rc<PresentationEngine> makePresentationEngine(NotNull<PresentationWindow>) = 0;
+	virtual Rc<PresentationEngine> makePresentationEngine(NotNull<PresentationWindow>,
+			PresentationOptions) = 0;
 
 protected:
 #if SP_REF_DEBUG

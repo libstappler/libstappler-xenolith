@@ -21,11 +21,18 @@
  **/
 
 #include "XLLinuxContextController.h"
+#include "SPCore.h"
+#include "SPEvent.h"
 #include "XLContext.h"
+#include "XLContextInfo.h"
 #include "XLCoreInstance.h"
 #include "SPEventLooper.h"
 #include "SPEventPollHandle.h"
-#include "SPEventTimerHandle.h"
+#include "linux/XLLinuxDisplayConfigManager.h"
+#include "linux/dbus/XLLinuxDBusController.h"
+#include "linux/wayland/XLLinuxWaylandWindow.h"
+#include "linux/xcb/XLLinuxXcbWindow.h"
+#include "platform/XLContextController.h"
 #include "platform/XLContextNativeWindow.h"
 
 #if MODULE_XENOLITH_BACKEND_VK
@@ -39,22 +46,16 @@ static vk::SurfaceBackendMask checkPresentationSupport(LinuxContextController *c
 		const vk::Instance *instance, VkPhysicalDevice device, uint32_t queueIdx) {
 
 	vk::SurfaceBackendMask ret;
-#if XL_ENABLE_WAYLAND
-	if ((instanceData->surfaceType & SurfaceType::Wayland) != SurfaceType::None) {
-		auto display =
-				xenolith::platform::WaylandLibrary::getInstance()->getActiveConnection().display;
-		std::cout << "Check if " << (void *)device << " [" << queueIdx << "] supports wayland on "
-				  << (void *)display << ": ";
-		auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device, queueIdx,
-				display);
-		if (supports) {
-			ret |= toInt(SurfaceType::Wayland);
-			std::cout << "yes\n";
-		} else {
-			std::cout << "no\n";
+	if (instance->getSurfaceBackends().test(toInt(vk::SurfaceBackend::Wayland))) {
+		if (auto display = c->getWaylandDisplay()) {
+			auto supports = instance->vkGetPhysicalDeviceWaylandPresentationSupportKHR(device,
+					queueIdx, display->display);
+			if (supports) {
+				ret.set(toInt(vk::SurfaceBackend::Wayland));
+			}
 		}
 	}
-#endif
+
 	if (instance->getSurfaceBackends().test(toInt(vk::SurfaceBackend::Xcb))) {
 		if (auto conn = c->getXcbConnection()) {
 			auto xcbConn = conn->getConnection();
@@ -79,6 +80,13 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 	if (config.loop) {
 		config.loop->defaultFormat = core::ImageFormat::B8G8R8A8_UNORM;
 	}
+
+	if (config.window) {
+		if (config.window->imageFormat == core::ImageFormat::Undefined) {
+			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
+		}
+		config.window->flags |= WindowFlags::ExclusiveFullscreen;
+	}
 }
 
 bool LinuxContextController::init(NotNull<Context> ctx, ContextConfig &&config) {
@@ -94,6 +102,7 @@ bool LinuxContextController::init(NotNull<Context> ctx, ContextConfig &&config) 
 	_xcb = Rc<XcbLibrary>::create();
 	_xkb = Rc<XkbLibrary>::create();
 	_dbus = Rc<dbus::Library>::create();
+	_wayland = Rc<WaylandLibrary>::create();
 
 	_looper = event::Looper::acquire(
 			event::LooperInfo{.workersCount = _contextInfo->mainThreadsCount});
@@ -105,33 +114,81 @@ int LinuxContextController::run() {
 	_context->handleConfigurationChanged(move(_contextInfo));
 
 	_contextInfo = nullptr;
-
-	_sessionBus = Rc<dbus::Connection>::alloc(_dbus,
-			[this](dbus::Connection *c, const dbus::Event &ev) -> dbus_bool_t {
-		return handleDbusEvent(c, ev);
-	}, DBUS_BUS_SESSION);
-
-	_systemBus = Rc<dbus::Connection>::alloc(_dbus,
-			[this](dbus::Connection *c, const dbus::Event &ev) -> dbus_bool_t {
-		return handleDbusEvent(c, ev);
-	}, DBUS_BUS_SYSTEM);
+	_dbusController = Rc<dbus::Controller>::create(_dbus, _looper, this);
 
 	_looper->performOnThread([this] {
-		_sessionBus->dispatchAll();
-		_systemBus->dispatchAll();
+		_dbusController->setup();
 
-		_sessionBus->setup();
-		_systemBus->setup();
+		Rc<core::Instance> instance;
 
-		if (_xcb && _xkb) {
-			_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
+		auto sessionType = ::getenv("XDG_SESSION_TYPE");
+		sessionType = (char *)"x11";
+		if (StringView(sessionType) == "wayland") {
+			if (_wayland && _xkb) {
+				_waylandDisplay = Rc<WaylandDisplay>::create(_wayland, _xkb);
+			}
+
+			if (!_waylandDisplay) {
+				if (_xcb && _xkb) {
+					_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
+				}
+
+				if (!_xcbConnection) {
+					log::error("LinuxContextController",
+							"Fail to connect to X server or Wayland server");
+					_resultCode = -1;
+					destroy();
+					return;
+				}
+			}
+
+			instance = loadInstance();
+			if (instance && !hasFlag(_context->getInfo()->flags, ContextFlags::Headless)
+					&& _waylandDisplay) {
+				// Try to load with Wayland only, then check if we have device to present images
+				bool supportsPresentation = false;
+				if (instance) {
+					for (auto &it : instance->getAvailableDevices()) {
+						if (it.supportsPresentation) {
+							supportsPresentation = true;
+							break;
+						}
+					}
+				}
+				if (!supportsPresentation) {
+					// Load x11 server, then recreate instance
+					if (_xcb && _xkb) {
+						_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
+					}
+					instance = loadInstance();
+				}
+			}
+		} else if (StringView(sessionType) == "x11") {
+			// X11 session
+
+			if (_xcb && _xkb) {
+				_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
+			}
+			instance = loadInstance();
+		} else {
+			log::error("LinuxContextController",
+				"No X11 or Wayland session detected; If there were, please consider to "
+				"set XDG_SESSION_TYPE appropiriately");
+
+			// maybe, on a rainy day, we implement DirectFramebuffer or something but for now in't time to...
+			destroy();
+			return;
 		}
 
-		if (!loadInstance()) {
+		if (!instance) {
 			log::error("LinuxContextController", "Fail to load gAPI instance");
 			_resultCode = -1;
 			destroy();
 			return;
+		} else {
+			if (auto loop = makeLoop(instance)) {
+				_context->handleGraphicsLoaded(loop);
+			}
 		}
 
 		if (_xcbConnection) {
@@ -142,22 +199,29 @@ int LinuxContextController::run() {
 				_xcbConnection->poll();
 				_withinPoll = false;
 
-				for (auto &it : _resizedWindows) {
-					ContextController::notifyWindowResized(it.first, it.second);
+				notifyPendingWindows();
+
+				return Status::Ok;
+			}, this);
+		}
+
+		if (_waylandDisplay) {
+			_waylandPollHandle = _looper->listenPollableHandle(_waylandDisplay->getFd(),
+					event::PollFlags::In | event::PollFlags::AllowMulti,
+					[this](int fd, event::PollFlags flags) {
+				if (hasFlag(flags, event::PollFlags::Err)) {
+					return Status::ErrorCancelled;
+				}
+				if (hasFlag(flags, event::PollFlags::Out)) {
+					_waylandDisplay->flush();
+				}
+				if (hasFlag(flags, event::PollFlags::In)) {
+					_withinPoll = true;
+					_waylandDisplay->poll();
+					_withinPoll = false;
 				}
 
-				_resizedWindows.clear();
-
-				for (auto &it : _closedWindows) {
-					// Close windows
-					if (it->hasExitGuard()) {
-						ContextController::notifyWindowClosed(it);
-					} else {
-						it->close();
-					}
-				}
-
-				_closedWindows.clear();
+				notifyPendingWindows();
 
 				return Status::Ok;
 			}, this);
@@ -169,11 +233,12 @@ int LinuxContextController::run() {
 	return ContextController::run();
 }
 
-void LinuxContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
+void LinuxContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
+		bool liveResize) {
 	if (_withinPoll) {
 		_resizedWindows.emplace_back(w, liveResize);
 	} else {
-		ContextController::notifyWindowResized(w, liveResize);
+		ContextController::notifyWindowConstraintsChanged(w, liveResize);
 	}
 }
 
@@ -186,8 +251,26 @@ bool LinuxContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) 
 	}
 }
 
+void LinuxContextController::notifyScreenChange(NotNull<DisplayConfigManager> info) {
+	if (_waylandDisplay) {
+		_waylandDisplay->notifyScreenChange();
+	}
+}
+
 void LinuxContextController::handleRootWindowClosed() {
-	_looper->performOnThread([this] { destroy(); }, this);
+	if (_displayConfigManager && _displayConfigManager->hasSavedMode()) {
+		_displayConfigManager->restoreMode([this](Status) {
+			_looper->performOnThread([this] {
+				_displayConfigManager->invalidate();
+				destroy();
+			}, this);
+		}, this);
+	} else {
+		_looper->performOnThread([this] {
+			_displayConfigManager->invalidate();
+			destroy();
+		}, this);
+	}
 }
 
 Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
@@ -196,252 +279,85 @@ Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
 }
 
 Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
-	_xcbConnection->readFromClipboard(sp::move(req));
-	return Status::Ok;
+	if (_xcbConnection) {
+		_xcbConnection->readFromClipboard(sp::move(req));
+		return Status::Ok;
+	}
+	return Status::ErrorNotSupported;
 }
 
-Status LinuxContextController::writeToClipboard(BytesView, StringView contentType) {
+Status LinuxContextController::writeToClipboard(Rc<ClipboardData> &&data) {
+	if (_xcbConnection) {
+		_xcbConnection->writeToClipboard(sp::move(data));
+		return Status::Ok;
+	}
 	return Status::ErrorNotImplemented;
 }
 
 Rc<ScreenInfo> LinuxContextController::getScreenInfo() const {
-	auto xinfo = _xcbConnection->getScreenInfo(_xcbConnection->getDefaultScreen());
-
 	Rc<ScreenInfo> info = ContextController::getScreenInfo();
 
-	for (auto &it : xinfo.monitors) {
-		xenolith::MonitorInfo m;
-		m.name = it.name;
-		m.edid = it.edid;
-		m.rect = it.rect;
-		m.mm = it.mm;
+	_displayConfigManager->exportScreenInfo(info);
 
-		if (it.primary) {
-			info->primaryMonitor = info->monitors.size();
-		}
+	/*if (_xcbConnection) {
+		auto xinfo = _xcbConnection->getScreenInfo(_xcbConnection->getDefaultScreen());
 
-		for (auto &oit : it.outputs) {
-			for (auto &mit : oit->modes) {
-				xenolith::ModeInfo mode;
-				mode.width = mit->width;
-				mode.height = mit->height;
-				mode.rate = mit->rate;
-				if (mit == oit->preferred) {
-					m.preferredMode = m.modes.size();
-				}
-				if (mit == oit->crtc->mode) {
-					m.currentMode = m.modes.size();
-				}
-				m.modes.emplace_back(mode);
+		for (auto &it : xinfo->monitors) {
+			xenolith::MonitorInfo m;
+			m.name = it.id.name;
+			m.edid = it.id.edid;
+			m.rect = it.rect;
+			m.mm = it.mm;
+
+			if (it.primary) {
+				info->primaryMonitor = info->monitors.size();
 			}
-		}
 
-		info->monitors.emplace_back(move(m));
-	}
+			for (auto &oit : it.outputs) {
+				for (auto &mit : oit->modes) {
+					if (mit->available) {
+						xenolith::ModeInfo mode;
+						mode.width = mit->width;
+						mode.height = mit->height;
+						mode.rate = mit->rate;
+						if (mit == oit->preferred) {
+							m.preferredMode = m.modes.size();
+						}
+						if (mit == oit->crtc->mode) {
+							m.currentMode = m.modes.size();
+						}
+						m.modes.emplace_back(mode);
+					}
+				}
+			}
+
+			info->monitors.emplace_back(move(m));
+		}
+	}*/
 
 	return info;
 }
 
-dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const dbus::Event &ev) {
-	switch (ev.type) {
-	case dbus::Event::None: break;
-	case dbus::Event::AddWatch: {
-		if (auto d = _dbus->dbus_watch_get_data(ev.watch)) {
-			auto handle = reinterpret_cast<event::PollHandle *>(d);
-			handle->reset(dbus::getPollFlags(_dbus->dbus_watch_get_flags(ev.watch)));
-			return 1;
+void LinuxContextController::handleThemeInfoChanged(const ThemeInfo &newThemeInfo) {
+	if (_themeInfo != newThemeInfo) {
+		if (_waylandDisplay) {
+			_waylandDisplay->updateThemeInfo(newThemeInfo);
 		}
-
-		auto handle = _looper->listenPollableHandle(_dbus->dbus_watch_get_unix_fd(ev.watch),
-				dbus::getPollFlags(_dbus->dbus_watch_get_flags(ev.watch)),
-				event::CompletionHandle<event::PollHandle>::create<DBusWatch>(ev.watch,
-						[](DBusWatch *watch, event::PollHandle *handle, uint32_t flags,
-								Status status) {
-			if (status::isErrno(status)) {
-				return;
-			}
-
-			auto c = static_cast<dbus::Connection *>(handle->getUserdata());
-			if (!c) {
-				return;
-			}
-
-			if (!c->handle(handle, dbus::Event{dbus::Event::TriggerWatch, {watch}},
-						event::PollFlags(flags))) {
-				handle->cancel();
-			}
-		}),
-				c);
-
-		handle->retain(0);
-		_dbus->dbus_watch_set_data(ev.watch, handle.get(), [](void *ptr) {
-			auto handle = reinterpret_cast<event::PollHandle *>(ptr);
-			handle->cancel(Status::ErrorCancelled);
-			handle->setUserdata(nullptr);
-			handle->release(0);
-		});
-
-		if (!_dbus->dbus_watch_get_enabled(ev.watch)) {
-			handle->pause();
-		}
-
-		return 1;
-		break;
+		ContextController::handleThemeInfoChanged(newThemeInfo);
 	}
-	case dbus::Event::ToggleWatch: {
-		auto handle = reinterpret_cast<event::PollHandle *>(_dbus->dbus_watch_get_data(ev.watch));
-		if (!_dbus->dbus_watch_get_enabled(ev.watch)) {
-			if (handle->getStatus() != Status::Declined) {
-				handle->pause();
-			}
-		} else {
-			if (handle->getStatus() == Status::Declined) {
-				handle->reset(dbus::getPollFlags(_dbus->dbus_watch_get_flags(ev.watch)));
-				handle->resume();
-			}
-		}
-		return 1;
-		break;
-	}
-	case dbus::Event::RemoveWatch: {
-		auto handle = reinterpret_cast<event::PollHandle *>(_dbus->dbus_watch_get_data(ev.watch));
-		handle->cancel(Status::Done);
-		handle->setUserdata(nullptr);
-		_dbus->dbus_watch_set_data(ev.watch, nullptr, nullptr);
-		return 1;
-		break;
-	}
-	case dbus::Event::TriggerWatch: break;
-	case dbus::Event::AddTimeout: {
-		if (auto d = _dbus->dbus_timeout_get_data(ev.timeout)) {
-			auto handle = reinterpret_cast<event::TimerHandle *>(d);
-			handle->reset(event::TimerInfo{
-				.timeout = TimeInterval::milliseconds(_dbus->dbus_timeout_get_interval(ev.timeout)),
-				.count = 1,
-			});
-			return 1;
-		}
-
-		auto handle = _looper->scheduleTimer(
-				event::TimerInfo{
-					.completion = event::CompletionHandle<event::TimerHandle>::create<DBusTimeout>(
-							ev.timeout,
-							[](DBusTimeout *timeout, event::TimerHandle *handle, uint32_t flags,
-									Status status) {
-			if (status::isErrno(status)) {
-				return;
-			}
-
-			auto c = static_cast<dbus::Connection *>(handle->getUserdata());
-			if (!c) {
-				return;
-			}
-
-			if (!c->handle(handle, dbus::Event{dbus::Event::TriggerTimeout, {.timeout = timeout}},
-						event::PollFlags(flags))) {
-				handle->cancel();
-			} else if (c->lib->dbus_timeout_get_enabled(timeout)) {
-				auto ival = TimeInterval::milliseconds(c->lib->dbus_timeout_get_interval(timeout));
-				if (ival) {
-					handle->reset(event::TimerInfo{
-						.timeout = TimeInterval::milliseconds(
-								c->lib->dbus_timeout_get_interval(timeout)),
-						.count = 1,
-					});
-				}
-			}
-		}),
-					.timeout = TimeInterval::milliseconds(
-							_dbus->dbus_timeout_get_interval(ev.timeout)),
-					.count = 1,
-				},
-				c);
-
-		handle->retain(0);
-		_dbus->dbus_timeout_set_data(ev.timeout, handle.get(), [](void *ptr) {
-			auto handle = reinterpret_cast<event::TimerHandle *>(ptr);
-			handle->cancel(Status::ErrorCancelled);
-			handle->setUserdata(nullptr);
-			handle->release(0);
-		});
-
-		if (!_dbus->dbus_timeout_get_enabled(ev.timeout)) {
-			handle->pause();
-		}
-		return 1;
-		break;
-	}
-	case dbus::Event::ToggleTimeout: {
-		auto handle =
-				reinterpret_cast<event::TimerHandle *>(_dbus->dbus_timeout_get_data(ev.timeout));
-		if (!_dbus->dbus_timeout_get_enabled(ev.timeout)) {
-			if (handle->getStatus() != Status::Declined) {
-				handle->pause();
-			}
-		} else {
-			if (handle->getStatus() == Status::Declined) {
-				handle->reset(event::TimerInfo{
-					.timeout = TimeInterval::milliseconds(
-							_dbus->dbus_timeout_get_interval(ev.timeout)),
-					.count = 1,
-				});
-				handle->resume();
-			}
-		}
-		return 1;
-		break;
-	}
-	case dbus::Event::RemoveTimeout: {
-		auto handle =
-				reinterpret_cast<event::TimerHandle *>(_dbus->dbus_timeout_get_data(ev.timeout));
-		handle->cancel(Status::ErrorCancelled);
-		handle->setUserdata(nullptr);
-		_dbus->dbus_timeout_set_data(ev.timeout, nullptr, nullptr);
-		return 1;
-		break;
-	}
-	case dbus::Event::TriggerTimeout: break;
-	case dbus::Event::Dispatch:
-		_looper->performOnThread([c]() { c->dispatchAll(); }, c, true);
-		break;
-	case dbus::Event::Wakeup:
-		_looper->performOnThread([c]() {
-			//c->flush();
-		}, c, true);
-		break;
-	case dbus::Event::Connected:
-		if (c == _systemBus) {
-			if (c->services.find(NM_SERVICE_NAME) != c->services.end()) {
-				_networkConnectionFilter =
-						Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_CONNECTION_FILTER);
-				//_networkVpnFilter = Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_VPN_FILTER);
-
-				updateNetworkState();
-			}
-			log::debug("LinuxContextController", "System bus connected");
-		} else {
-			log::debug("LinuxContextController", "Session bus connected");
-		}
-		tryStart();
-		return 1;
-		break;
-	case dbus::Event::Message: {
-		//dbus::describe(_dbus, ev.message, [](StringView str) { std::cout << str; });
-		if (_dbus->dbus_message_is_signal(ev.message, NM_SERVICE_CONNECTION_NAME, "StateChanged")) {
-			//std::cout << "Connection: StateChanged\n";
-			updateNetworkState();
-			return DBUS_HANDLER_RESULT_HANDLED;
-		}
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		break;
-	}
-	}
-
-	return 0;
 }
 
 void LinuxContextController::tryStart() {
-	if (_sessionBus->connected && _systemBus->connected && _xcbConnection) {
+	if (_dbusController && _dbusController->isConnectied() && (_xcbConnection || _waylandDisplay)) {
+		auto dcm = _dbusController->makeDisplayConfigManager(
+				[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
+		if (dcm) {
+			_displayConfigManager = dcm;
+		} else if (_xcbConnection) {
+			_displayConfigManager = _xcbConnection->makeDisplayConfigManager(
+					[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
+		}
+
 		_looper->performOnThread([this] {
 			if (!resume()) {
 				log::error("LinuxContextController", "Fail to resume Context");
@@ -456,24 +372,8 @@ void LinuxContextController::tryStart() {
 	}
 }
 
-void LinuxContextController::updateNetworkState() {
-	_systemBus->callMethod(NM_SERVICE_NAME, NM_SERVICE_PATH, "org.freedesktop.DBus.Properties",
-			"GetAll", [this](DBusMessage *msg) {
-		_dbus->dbus_message_append_args(msg, DBUS_TYPE_STRING, &NM_SERVICE_NAME, DBUS_TYPE_INVALID);
-	}, [this](NotNull<dbus::Connection> c, DBusMessage *reply) {
-		_networkState = NetworkState(_dbus, reply);
-
-		std::cout << "NetworkState: ";
-		_networkState.description([](StringView str) { std::cout << str; });
-		std::cout << "\n";
-	}, this);
-}
-
-bool LinuxContextController::loadInstance() {
-	if (!_xcbConnection) {
-		return false;
-	}
-
+Rc<core::Instance> LinuxContextController::loadInstance() {
+	Rc<core::Instance> instance;
 #if MODULE_XENOLITH_BACKEND_VK
 	auto instanceInfo = move(_instanceInfo);
 	_instanceInfo = nullptr;
@@ -487,11 +387,11 @@ bool LinuxContextController::loadInstance() {
 				data.enableBackends.set(toInt(vk::SurfaceBackend::Xcb));
 			}
 		}
-#if XL_ENABLE_WAYLAND
-		if (info.availableBackends.test(toInt(vk::SurfaceBackend::Wayland))) {
-			data.enableBackends.set(toInt(vk::SurfaceBackend::Wayland));
+		if (_waylandDisplay) {
+			if (info.availableBackends.test(toInt(vk::SurfaceBackend::Wayland))) {
+				data.enableBackends.set(toInt(vk::SurfaceBackend::Wayland));
+			}
 		}
-#endif
 
 		data.applicationName = ctxInfo->appName;
 		data.applicationVersion = ctxInfo->appVersion;
@@ -504,28 +404,28 @@ bool LinuxContextController::loadInstance() {
 
 	instanceInfo->backend = move(instanceBackendInfo);
 
-	auto instance = core::Instance::create(move(instanceInfo));
-	if (instance) {
-		if (auto loop = makeLoop(instance)) {
-			_context->handleGraphicsLoaded(loop);
-			return true;
-		}
-	}
+	instance = core::Instance::create(move(instanceInfo));
 #else
 	log::error("LinuxContextController", "No available gAPI backends found");
 	_resultCode = -1;
 #endif
-	return false;
+	return instance;
 }
 
 bool LinuxContextController::loadWindow() {
-	if (_xcbConnection) {
-		auto window =
-				Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), _context->getInfo(), this);
-		if (window) {
-			_context->handleNativeWindowCreated(window);
-			return true;
-		}
+	Rc<ContextNativeWindow> window;
+	auto cInfo = _context->getInfo();
+	if (_waylandDisplay) {
+		window = Rc<WaylandWindow>::create(_waylandDisplay, move(_windowInfo), cInfo, this);
+		_waylandDisplay->flush();
+	}
+	if (!window && _xcbConnection) {
+		window = Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), cInfo, this);
+	}
+
+	if (window) {
+		_context->handleNativeWindowCreated(window);
+		return true;
 	}
 
 	return false;
@@ -537,16 +437,9 @@ void LinuxContextController::handleContextWillDestroy() {
 		_xcbPollHandle = nullptr;
 	}
 
-	_networkConnectionFilter = nullptr;
-
-	if (_sessionBus) {
-		_sessionBus->close();
-		_sessionBus = nullptr;
-	}
-
-	if (_systemBus) {
-		_systemBus->close();
-		_systemBus = nullptr;
+	if (_dbusController) {
+		_dbusController->cancel();
+		_dbusController = nullptr;
 	}
 
 	ContextController::handleContextWillDestroy();
@@ -558,6 +451,25 @@ void LinuxContextController::handleContextDidDestroy() {
 	_xcbConnection = nullptr;
 
 	_looper->wakeup(event::WakeupFlags::Graceful);
+}
+
+void LinuxContextController::notifyPendingWindows() {
+	for (auto &it : _resizedWindows) {
+		ContextController::notifyWindowConstraintsChanged(it.first, it.second);
+	}
+
+	_resizedWindows.clear();
+
+	for (auto &it : _closedWindows) {
+		// Close windows
+		if (it->hasExitGuard()) {
+			ContextController::notifyWindowClosed(it);
+		} else {
+			it->close();
+		}
+	}
+
+	_closedWindows.clear();
 }
 
 } // namespace stappler::xenolith::platform

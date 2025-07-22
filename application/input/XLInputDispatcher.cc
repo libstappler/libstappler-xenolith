@@ -21,8 +21,10 @@
  **/
 
 #include "XLInputDispatcher.h"
+#include "SPLog.h"
 #include "XLInputListener.h"
 #include "XLAppWindow.h"
+#include "XLNode.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -273,6 +275,22 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 	}
 	case InputEventName::CloseRequest:
 	case InputEventName::ScreenUpdate: {
+		log::debug("InputDispatcher", "ScreenUpdate");
+		EventHandlersInfo handlers{getEventInfo(event)};
+		_events->foreach ([&](const InputListenerStorage::Rec &l) {
+			if (l.listener->getOwner()) {
+				std::cout << typeid(*l.listener->getOwner()).name() << "\n";
+				if (l.listener->canHandleEvent(handlers.event)) {
+					handlers.listeners.emplace_back(l.listener);
+				}
+			}
+			return true;
+		}, false);
+
+		handlers.handle(false);
+		break;
+	}
+	case InputEventName::Fullscreen: {
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {

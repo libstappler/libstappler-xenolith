@@ -38,6 +38,9 @@ public:
 	virtual void invalidate(AppThread *) = 0;
 
 	virtual void update(AppThread *, const UpdateTime &t) = 0;
+
+	virtual void handleNetworkStateChanged(NetworkFlags) { }
+	virtual void handleThemeInfoChanged(const ThemeInfo &) { }
 };
 
 } // namespace stappler::xenolith

@@ -56,7 +56,7 @@ class ButtonWithLabel : public Button {
 public:
 	virtual ~ButtonWithLabel() { }
 
-	bool init(StringView, Function<void()> &&);
+	bool init(StringView, Function<void()> && = nullptr);
 
 	virtual void handleContentSizeDirty() override;
 

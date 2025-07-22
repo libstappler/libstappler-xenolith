@@ -26,10 +26,12 @@
 
 #include "XLCore.h"
 #include "XLCoreDeviceQueue.h"
+#include "XLCoreInfo.h"
 #include "XLCoreSwapchain.h"
 #include "XLCorePresentationFrame.h"
 #include "SPMovingAverage.h"
 #include "SPEventHandle.h"
+#include "XlCoreMonitorInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -51,8 +53,7 @@ public:
 	virtual void handleFramePresented(NotNull<PresentationFrame>) = 0;
 
 	virtual Rc<Surface> makeSurface(NotNull<Instance>) = 0;
-	virtual FrameConstraints getInitialFrameConstraints() const = 0;
-	virtual uint64_t getInitialFrameInterval() const = 0;
+	virtual FrameConstraints exportFrameConstraints() const = 0;
 
 	virtual void setFrameOrder(uint64_t) = 0;
 };
@@ -60,8 +61,9 @@ public:
 enum class PresentationSwapchainFlags {
 	None,
 	SwitchToFastMode = 1 << 0,
-	EndOfLife = 1 << 1,
-	Finalized = 1 << 2,
+	SwitchToNext = 1 << 1,
+	EndOfLife = 1 << 2,
+	Finalized = 1 << 3,
 };
 
 SP_DEFINE_ENUM_AS_MASK(PresentationSwapchainFlags)
@@ -84,48 +86,20 @@ public:
 		uint64_t clock;
 	};
 
-	struct Options {
-		// Запускать следующий кадр только по запросу либо наличию действий в процессе
-		// В таком случае, PresentationInterval будет считаться на основе реальной презентации
-		// Показательными для производительности остаются интервал подготовки кадра и
-		// таймер использования GPU
-		bool renderOnDemand = true;
-
-		// Использовать внешний сигнал вертикальной синхронизации (система должна поддерживать)
-		// В этом режиме готовые к презентации кадры ожидают сигнала, прежде, чем отправиться
-		// Также, по сигналу система запрашиваает новый буфер для отрисовки следующего кадра
-		// Если система не успела подготовить новый кадр - обновление пропускается
-		bool followDisplayLink = false;
-
-		// Использовать внеэкранный рендеринг для подготовки изображений. В этом режиме презентация нового изображения выполняется
-		// строго синхронно (см. presentImmediate)
-		// TODO -пока не реализовано
-		bool renderImageOffscreen = false;
-
-		// Начинать новый кадр как только предыдущий был отправлен на исполнение (то есть, до его завершения и презентации)
-		bool preStartFrame = true;
-
-		// Использовать временное окно для презентации кадра
-		// Вместо презентации по готовности, система будет стараться удерживать целевую частоту кадров за счёт откладывания
-		// презентации до следующего окна времени
-		// Не работает в режиме followDisplayLink
-		bool usePresentWindow = true;
-
-		// Экспериментально: отправлять кадр на презентацию сразу после его отправки в обработку. Может снизить видимую задержку ввода.
-		// На текущий момент, работает нестабильно для режима FIFO
-		bool earlyPresent = true;
-	};
-
 	virtual ~PresentationEngine();
 
-	virtual bool init(NotNull<Loop>, NotNull<Device>, NotNull<PresentationWindow>);
+	virtual bool init(NotNull<Loop>, NotNull<Device>, NotNull<PresentationWindow>,
+			PresentationOptions);
 
 	virtual bool run();
 	virtual void end();
 
 	virtual bool recreateSwapchain() = 0;
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
-			core::PresentMode presentMode) = 0;
+			core::PresentMode presentMode, bool oldSwapchainValid) = 0;
+
+	virtual Rc<ScreenInfo> getScreenInfo() const = 0;
+	virtual Status setFullscreenSurface(const MonitorId &, const ModeInfo &) = 0;
 
 	// Callback receives true for successful recreation and false for end-of-life
 	virtual void deprecateSwapchain(PresentationSwapchainFlags = PresentationSwapchainFlags::None,
@@ -136,7 +110,11 @@ public:
 
 	virtual void update(PresentationUpdateFlags);
 
+	// 0 - do not target any interval
+	// In FIFO mode WM interval will ba the hard limit
+	// In Mailbox or Immediate - no limit will be applied
 	void setTargetFrameInterval(uint64_t);
+
 	uint64_t getTargetFrameInterval() const { return _targetFrameInterval; }
 
 	bool isFrameValid(const PresentationFrame *) const;
@@ -178,6 +156,8 @@ public:
 	virtual void handleFramePresented(NotNull<PresentationFrame>);
 	virtual void handleFrameComplete(NotNull<PresentationFrame>);
 
+	virtual void captureScreenshot(Function<void(const ImageInfoData &info, BytesView view)> &&cb);
+
 protected:
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override { return true; }
@@ -204,12 +184,16 @@ protected:
 	void presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame,
 			ImageStorage *image);
 
-	Options _options;
+	bool canScheduleNextFrame() const;
+
+	PresentationOptions _options;
 	FrameConstraints _constraints;
 
 	Device *_device = nullptr;
 
 	Rc<Surface> _surface;
+	Rc<Surface> _nextSurface;
+	Rc<Surface> _originalSurface;
 	Rc<Swapchain> _swapchain;
 	Rc<Loop> _loop;
 
@@ -219,7 +203,10 @@ protected:
 	// расчитывается как премя последней презентации + целевой кадроый интервал
 	uint64_t _nextPresentWindow = 0;
 
-	// целевой кадроый интервал в режиме постоянной презентации (в микросекундах)
+	// Целевой кадроый интервал в режиме постоянной презентации (в микросекундах)
+	// Может отличаться от кадрового интервала оконного менеджера (WM)
+	// В режимах Mailbox и Immediate может быть больше интервала WM
+	// Во всех режимах может быть меньше интервала WM
 	uint64_t _targetFrameInterval = 0; // 1'000'000 / 60;
 
 	// интервал обновления системы (приблизительная частота вызова update) (в микросекундах)
@@ -248,6 +235,7 @@ protected:
 	bool _running = false;
 	bool _readyForNextFrame = false;
 	bool _waitUntilFrame = false;
+	bool _waitForDisplayLink = false;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;
@@ -266,6 +254,7 @@ protected:
 
 	Set<PresentationFrame *> _activeFrames;
 	Set<PresentationFrame *> _totalFrames;
+	Set<PresentationFrame *> _detachedFrames;
 
 	PresentationSwapchainFlags _deprecationFlags = PresentationSwapchainFlags::None;
 	Vector<Function<void(bool)>> _deprecationCallbacks;

@@ -25,6 +25,7 @@
 #define XENOLITH_CORE_XLCOREINFO_H_
 
 #include "XLCorePipelineInfo.h"
+#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -50,6 +51,74 @@ using MipLevels = ValueWrapper<uint32_t, class MipLevelFlag>;
 using ArrayLayers = ValueWrapper<uint32_t, class ArrayLayersFlag>;
 using Extent1 = ValueWrapper<uint32_t, class Extent1Flag>;
 using BaseArrayLayer = ValueWrapper<uint32_t, class BaseArrayLayerFlag>;
+
+// Опции работы движка презентации кадров
+// Позволяют балансировать презентацию кадров между нагрузкой на GPU, низкой задержкой ввода
+// и стабильным кадровым интервалом.
+// Настройки по умолчанию выполнены сбалансированно в пользу снижения задержки ввода
+//
+// Ряд опций зависит от реализации оконного менеджера. Для работы движок презантации получает
+// предпочитаемый набор опций от окна файловой системы.
+//
+// При работе нужно помнить, что Xenolith требует стабильной асинхронной работы.
+// Использовать опции, которые могут заблокировать презентацию или получение кадрового буфера
+// категорически не следует, это может нарушить нормальную работу движка.
+// Например, способ презентации в системе в режиме earlyPresent может блокировать презентацию
+// по вертикальной синхронизации (оснвоной поток будет заблокирован до сигнала). В таком случае,
+// этот режим в системе нужно отключить. Функции получения кадра и презентации всегда должны
+// завершаться без блокировки.
+//
+// Особой осторожности требуют старые или экспериментальные системы, где асинхронный режим
+// работы графичского стека не реализован на уровне системы. Для таких систем необходимо
+// использовать собственную реализацию таймеров (режим usePresentWindow) вместо ожидания
+// синхронизации от самой системы
+struct PresentationOptions {
+	// Запускать следующий кадр только по запросу либо наличию действий в процессе.
+	// В таком случае, PresentationInterval будет считаться на основе реальной презентации
+	// Показательными для производительности остаются интервал подготовки кадра и
+	// таймер использования GPU
+	bool renderOnDemand = true;
+
+	// Использовать внешний сигнал вертикальной синхронизации (система должна поддерживать)
+	// В этом режиме готовые к презентации кадры ожидают сигнала, прежде, чем отправиться
+	// Также, по сигналу система запрашиваает новый буфер для отрисовки следующего кадра
+	// Если система не успела подготовить новый кадр - обновление пропускается
+	bool followDisplayLink = false;
+
+	// Начинать новый кадр только по внешнему сигналу вертикальной синхронизации
+	// В этом режиме система нчинает новый кадр по сигналу, и отправляет его на презентацию
+	// по готовности без ожидания. Если новый сигнал синхронизации поступил до презентации
+	// предыдущего кадра - новый кадр будет начат сразу же
+	// Обеспечивает более низкую задержку ввода, чем базовый followDisplayLink, но требует
+	// большей поддержки от ОС и менеджера окон.
+	// Стандартный режим для Linux+Wayland и Android+Choreographer
+	// Несовместим с usePresentWindow
+	//
+	// P.S. Интерфейс к Wayland запрашивает новый сигнал синхронизации только при отправке кадра
+	// на презентацию. То есть, если кадр не укладывается в релизное окно, без поддержки от композитора
+	// можно ожидать жёсткой потери кадров. В таком случае рекомендуется работать в режиме usePresentWindow
+	bool followDisplayLinkBarrier = false;
+
+	// Использовать внеэкранный рендеринг для подготовки изображений. В этом режиме презентация нового изображения выполняется
+	// строго синхронно (см. presentImmediate)
+	// TODO -пока не реализовано
+	bool renderImageOffscreen = false;
+
+	// Начинать новый кадр как только предыдущий был отправлен на исполнение (то есть, до его завершения и презентации)
+	// Позволяет иметь несколько кадров в одновременной обработке для большей загрузке графического процессора
+	// Не стоит применять без выделенного или интегрированного GPU (то есть, для рендеринга на CPU)
+	bool preStartFrame = true;
+
+	// Использовать временное окно для презентации кадра
+	// Вместо презентации по готовности, система будет стараться удерживать целевую частоту кадров за счёт откладывания
+	// презентации до следующего окна времени
+	// Не работает в режиме followDisplayLink и followDisplayLinkBarrier
+	bool usePresentWindow = true;
+
+	// Отправлять кадр на презентацию сразу после его отправки в обработку. Может снизить видимую задержку ввода.
+	// Использовать с осторожностью в режиме FIFO с двойной буферизацией (предпочитать тройную)
+	bool earlyPresent = true;
+};
 
 struct SP_PUBLIC SamplerIndex : ValueWrapper<uint32_t, class SamplerIndexFlag> {
 	// Predefined samplers
@@ -419,11 +488,15 @@ struct SP_PUBLIC ImageData : ImageInfo {
 	size_t writeData(uint8_t *mem, size_t expected) const;
 };
 
+// OS Windows Manager constraints for a frame presentation
 struct SP_PUBLIC FrameConstraints {
 	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
 	float density = 1.0f;
+
+	// WM frame interval (it's not an engine limit, but OS limit)
+	uint64_t frameInterval = 1'000'000 / 60;
 
 	Size2 getScreenSize() const {
 		if ((transform & core::SurfaceTransformFlags::PreRotated)
@@ -512,7 +585,6 @@ struct SP_PUBLIC SurfaceInfo {
 	ImageUsage supportedUsageFlags;
 	Vector<Pair<ImageFormat, ColorSpace>> formats;
 	Vector<PresentMode> presentModes;
-	float surfaceDensity = 1.0f;
 
 	bool isSupported(const SwapchainConfig &) const;
 
@@ -584,6 +656,9 @@ SP_PUBLIC bool hasReadAccess(AccessType);
 SP_PUBLIC bool hasWriteAccess(AccessType);
 
 SP_PUBLIC String getQueueFlagsDesc(QueueFlags);
+
+SP_PUBLIC Bitmap getBitmap(const ImageInfoData &, BytesView);
+SP_PUBLIC bool saveImage(const FileInfo &, const ImageInfoData &, BytesView);
 
 SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const ImageInfoData &value);
 

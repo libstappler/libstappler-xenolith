@@ -85,6 +85,8 @@ public:
 	virtual void setGlobalLight(const Color4F &);
 	virtual const Color4F &getGlobalLight() const;
 
+	virtual bool visitGeometry(FrameInfo &, NodeFlags parentFlags) override;
+
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
 
 protected:
@@ -112,6 +114,8 @@ protected:
 	Map<StringView, SceneLight *> _lightsByName;
 
 	Color4F _globalLight = Color4F(1.0f, 1.0f, 1.0f, 1.0f);
+
+	Vector<Function<void()>> _visitNotification;
 };
 
 } // namespace stappler::xenolith::basic2d

@@ -43,8 +43,11 @@ public:
 	using TextInputRequest = core::TextInputRequest;
 	using TextInputState = core::TextInputState;
 
+	// In most cases, this can be received via InputListener,
+	// but for objects without scene binding you can use this events
 	static EventHeader onBackground;
 	static EventHeader onFocus;
+	static EventHeader onFullscreen;
 
 	virtual ~AppWindow();
 
@@ -67,6 +70,8 @@ public:
 
 	const WindowInfo *getInfo() const;
 
+	WindowCapabilities getCapabilities() const;
+
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
 	Director *getDirector() const { return _director; }
@@ -74,7 +79,8 @@ public:
 	// It's not safe to ask PresentationEngine about current config, use this instead
 	const core::SwapchainConfig &getAppSwapchainConfig() const { return _appSwapchainConfig; }
 
-	void updateConfig(core::PresentationSwapchainFlags); // from any thread
+	// Run constraints update process
+	void updateConstraints(core::PresentationSwapchainFlags); // from any thread
 
 	void setReadyForNextFrame(); // from any thread
 
@@ -106,8 +112,11 @@ public:
 
 	// native window interface for app thread
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
-	void setFullscreen(MonitorId &&, ModeInfo &&, Function<void(Status)> &&, Ref * = nullptr);
+
+	bool setFullscreen(MonitorId &&, ModeInfo &&, Function<void(Status)> &&, Ref * = nullptr);
 	bool isFullscreen() const { return _isFullscreen; }
+
+	void captureScreenshot(Function<void(const core::ImageInfoData &info, BytesView view)> &&cb);
 
 protected:
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;
@@ -123,8 +132,7 @@ protected:
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
-	virtual core::FrameConstraints getInitialFrameConstraints() const override;
-	virtual uint64_t getInitialFrameInterval() const override;
+	virtual core::FrameConstraints exportFrameConstraints() const override;
 
 	virtual void setFrameOrder(uint64_t) override;
 

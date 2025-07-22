@@ -20,13 +20,13 @@
  THE SOFTWARE.
  **/
 
-#include "XLEdid.h"
+#include "XlCoreMonitorInfo.h"
 
 extern "C" {
-#include "XLPNPID.cc"
+#include "XLCorePNPID.cc"
 }
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 static String getManufacturerName(const unsigned char *x) {
 	String name;
@@ -82,7 +82,7 @@ static void parseDetailedBlock(const unsigned char *x, EdidInfo &info) {
 	}
 }
 
-EdidInfo parseEdid(BytesView data) {
+EdidInfo EdidInfo::parse(BytesView data) {
 	// std::cout << base16::encode<Interface>(data) << "\n";
 
 	EdidInfo ret;
@@ -106,4 +106,6 @@ EdidInfo parseEdid(BytesView data) {
 	return ret;
 }
 
-} // namespace stappler::xenolith::platform
+String EdidInfo::getVendorName(StringView data) { return pnp_name(data.data()); }
+
+} // namespace stappler::xenolith::core

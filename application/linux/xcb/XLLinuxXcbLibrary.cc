@@ -51,7 +51,14 @@ bool XcbLibrary::init() {
 }
 
 bool XcbLibrary::open(Dso &handle) {
+	XL_LOAD_PROTO(handle, xcb_grab_server_checked)
+	XL_LOAD_PROTO(handle, xcb_grab_server)
+	XL_LOAD_PROTO(handle, xcb_ungrab_server_checked)
+	XL_LOAD_PROTO(handle, xcb_ungrab_server)
+	XL_LOAD_PROTO(handle, xcb_discard_reply)
+	XL_LOAD_PROTO(handle, xcb_discard_reply64)
 	XL_LOAD_PROTO(handle, xcb_connect)
+	XL_LOAD_PROTO(handle, xcb_get_maximum_request_length)
 	XL_LOAD_PROTO(handle, xcb_get_setup)
 	XL_LOAD_PROTO(handle, xcb_setup_roots_iterator)
 	XL_LOAD_PROTO(handle, xcb_screen_next)
@@ -69,8 +76,10 @@ bool XcbLibrary::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, xcb_destroy_window)
 	XL_LOAD_PROTO(handle, xcb_configure_window)
 	XL_LOAD_PROTO(handle, xcb_change_window_attributes)
+	XL_LOAD_PROTO(handle, xcb_delete_property)
 	XL_LOAD_PROTO(handle, xcb_change_property)
 	XL_LOAD_PROTO(handle, xcb_intern_atom)
+	XL_LOAD_PROTO(handle, xcb_intern_atom_unchecked)
 	XL_LOAD_PROTO(handle, xcb_intern_atom_reply)
 	XL_LOAD_PROTO(handle, xcb_get_property_reply)
 	XL_LOAD_PROTO(handle, xcb_get_property)
@@ -123,29 +132,13 @@ bool XcbLibrary::hasXkb() const { return _xkb ? true : false; }
 
 bool XcbLibrary::hasSync() const { return _sync ? true : false; }
 
-/*XcbConnection *XcbLibrary::getCommonConnection() {
-	std::unique_lock lock(_connectionMutex);
-	if (!_connection) {
-		_connection = Rc<XcbConnection>::alloc(this);
-	}
-	return _connection;
-}
-
-Rc<XcbConnection> XcbLibrary::acquireConnection() {
-	std::unique_lock lock(_connectionMutex);
-	Rc<XcbConnection> ret;
-	if (_connection) {
-		ret = move(_connection);
-		_connection = nullptr;
-	} else {
-		ret = Rc<XcbConnection>::alloc(this);
-	}
-	return ret;
-}*/
+bool XcbLibrary::hasXfixes() const { return _xfixes ? true : false; }
 
 void XcbLibrary::openAux() {
 	if (auto randr = Dso("libxcb-randr.so")) {
 		XL_LOAD_PROTO(randr, xcb_randr_id)
+		XL_LOAD_PROTO(randr, xcb_randr_select_input)
+		XL_LOAD_PROTO(randr, xcb_randr_select_input_checked)
 		XL_LOAD_PROTO(randr, xcb_randr_query_version)
 		XL_LOAD_PROTO(randr, xcb_randr_query_version_reply)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_unchecked)
@@ -155,6 +148,10 @@ void XcbLibrary::openAux() {
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_sizes_iterator)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_rates_length)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_rates_iterator)
+		XL_LOAD_PROTO(randr, xcb_randr_add_output_mode_checked)
+		XL_LOAD_PROTO(randr, xcb_randr_add_output_mode)
+		XL_LOAD_PROTO(randr, xcb_randr_delete_output_mode_checked)
+		XL_LOAD_PROTO(randr, xcb_randr_delete_output_mode)
 		XL_LOAD_PROTO(randr, xcb_randr_refresh_rates_next)
 		XL_LOAD_PROTO(randr, xcb_randr_refresh_rates_end)
 		XL_LOAD_PROTO(randr, xcb_randr_refresh_rates_rates)
@@ -217,6 +214,9 @@ void XcbLibrary::openAux() {
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_outputs_length)
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible)
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible_length)
+		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config)
+		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config_unchecked)
+		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config_reply)
 		XL_LOAD_PROTO(randr, xcb_randr_monitor_info_outputs)
 		XL_LOAD_PROTO(randr, xcb_randr_monitor_info_outputs_length)
 		XL_LOAD_PROTO(randr, xcb_randr_monitor_info_outputs_end)
@@ -227,6 +227,14 @@ void XcbLibrary::openAux() {
 		XL_LOAD_PROTO(randr, xcb_randr_get_monitors_monitors_length)
 		XL_LOAD_PROTO(randr, xcb_randr_get_monitors_monitors_iterator)
 		XL_LOAD_PROTO(randr, xcb_randr_get_monitors_reply)
+		XL_LOAD_PROTO(randr, xcb_randr_get_panning)
+		XL_LOAD_PROTO(randr, xcb_randr_get_panning_unchecked)
+		XL_LOAD_PROTO(randr, xcb_randr_get_panning_reply)
+		XL_LOAD_PROTO(randr, xcb_randr_set_panning)
+		XL_LOAD_PROTO(randr, xcb_randr_set_panning_unchecked)
+		XL_LOAD_PROTO(randr, xcb_randr_set_panning_reply)
+		XL_LOAD_PROTO(randr, xcb_randr_set_output_primary_checked)
+		XL_LOAD_PROTO(randr, xcb_randr_set_output_primary)
 
 		if (!validateFunctionList(&_xcb_randr_first_fn, &_xcb_randr_last_fn)) {
 			log::error("XcbLibrary", "Fail to load libxcb-randr function");
@@ -259,6 +267,7 @@ void XcbLibrary::openAux() {
 	}
 
 	if (auto xkb = Dso("libxcb-xkb.so")) {
+		XL_LOAD_PROTO(xkb, xcb_xkb_id)
 		XL_LOAD_PROTO(xkb, xcb_xkb_select_events)
 
 		if (!validateFunctionList(&_xcb_xkb_first_fn, &_xcb_xkb_last_fn)) {
@@ -292,6 +301,37 @@ void XcbLibrary::openAux() {
 			log::error("XcbLibrary", "Fail to load libxcb-cursor function");
 		} else {
 			_cursor = move(cursor);
+		}
+	}
+
+	if (auto xfixes = Dso("libxcb-xfixes.so")) {
+		XL_LOAD_PROTO(xfixes, xcb_xfixes_id)
+		XL_LOAD_PROTO(xfixes, xcb_xfixes_query_version)
+		XL_LOAD_PROTO(xfixes, xcb_xfixes_query_version_unchecked)
+		XL_LOAD_PROTO(xfixes, xcb_xfixes_query_version_reply)
+		XL_LOAD_PROTO(xfixes, xcb_xfixes_select_selection_input)
+
+		if (!validateFunctionList(&_xcb_xfixes_first_fn, &_xcb_xfixes_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-xfixes function");
+		} else {
+			_xfixes = move(xfixes);
+		}
+	}
+
+	if (auto errors = Dso("libxcb-errors.so")) {
+		XL_LOAD_PROTO(errors, xcb_errors_context_new)
+		XL_LOAD_PROTO(errors, xcb_errors_context_free)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_major_code)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_minor_code)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_core_event)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_xge_event)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_xcb_event)
+		XL_LOAD_PROTO(errors, xcb_errors_get_name_for_error)
+
+		if (!validateFunctionList(&_xcb_errors_first_fn, &_xcb_errors_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-errors function");
+		} else {
+			_errors = move(errors);
 		}
 	}
 }

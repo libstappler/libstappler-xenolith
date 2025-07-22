@@ -559,8 +559,8 @@ Rc<BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(NotNull<Ma
 	return nullptr;
 }
 
-Rc<MaterialSet> MaterialAttachment::allocateSet(const Device &dev) const {
-	return Rc<MaterialSet>::create(_targetLayout->layout->getImageCount(), this);
+Rc<MaterialSet> MaterialAttachment::allocateSet(const Device &dev, uint32_t imageCount) const {
+	return Rc<MaterialSet>::create(imageCount, this);
 }
 
 Rc<MaterialSet> MaterialAttachment::cloneSet(const Rc<MaterialSet> &other) const {

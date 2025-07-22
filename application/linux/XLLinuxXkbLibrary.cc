@@ -21,7 +21,7 @@
  **/
 
 #include "XLLinuxXkbLibrary.h"
-#include "XLLinuxXcbLibrary.h"
+#include "xcb/XLLinuxXcbLibrary.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

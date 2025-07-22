@@ -23,8 +23,10 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XLLINUX_H_
 #define XENOLITH_APPLICATION_LINUX_XLLINUX_H_
 
+#include "SPPlatformInit.h"
 #include "XLCommon.h"
 #include "SPDso.h"
+#include "XLContextInfo.h"
 
 #if LINUX
 
@@ -55,6 +57,8 @@ static bool validateFunctionList(T first, T last) {
 	}
 	return true;
 }
+
+SP_PUBLIC SpanView<StringView> getCursorNames(WindowLayerFlags);
 
 } // namespace stappler::xenolith::platform
 

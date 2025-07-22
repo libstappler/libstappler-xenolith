@@ -24,6 +24,7 @@
 
 #include "XLVkAttachment.h"
 #include "XLVkPipeline.h"
+#include "XLVkTextureSet.h"
 #include "XLVkRenderPass.h"
 #include "XLVkRenderQueueCompiler.h"
 #include "XLVkTransferQueue.h"
@@ -546,7 +547,11 @@ bool RenderQueuePassHandle::prepareMaterials(FrameHandle &iframe, CommandBuffer 
 	// note that in this case setCompiled will be called twice
 	attachment->setCompiled(*_device);
 
-	auto data = attachment->allocateSet(*_device);
+	// note that layout may not be compiled yet, recalculate material layout size manualy
+	auto imageCount =
+			vk::TextureSetLayout::getLayoutImageCount(*_device, *attachment->getTargetLayout());
+
+	auto data = attachment->allocateSet(*_device, imageCount);
 
 	auto buffers = updateMaterials(iframe, data.get(), initial, SpanView<core::MaterialId>(),
 			SpanView<core::MaterialId>());

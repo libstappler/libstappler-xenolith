@@ -20,23 +20,23 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_LINUX_XLLINUXDBUS_H_
-#define XENOLITH_APPLICATION_LINUX_XLLINUXDBUS_H_
+#ifndef XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSLIBRARY_H_
+#define XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSLIBRARY_H_
 
 #include "XLCommon.h"
 
 #if LINUX
 
-#include "XLLinux.h"
+#include "XLContextInfo.h"
+#include "linux/XLLinux.h"
 
 #include <dbus/dbus.h>
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
-
-namespace dbus {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
 
 class Library;
 struct Connection;
+class WriteIterator;
 
 struct Event {
 	enum Type {
@@ -96,7 +96,36 @@ enum class MessageType {
 };
 
 struct BasicValue {
-	Type type;
+	static BasicValue makeBool(bool);
+	static BasicValue makeByte(uint8_t);
+	static BasicValue makeInteger(int16_t);
+	static BasicValue makeInteger(uint16_t);
+	static BasicValue makeInteger(int32_t);
+	static BasicValue makeInteger(uint32_t);
+	static BasicValue makeInteger(int64_t);
+	static BasicValue makeInteger(uint64_t);
+	static BasicValue makeDouble(double);
+	static BasicValue makeString(StringView);
+	static BasicValue makePath(StringView);
+	static BasicValue makeSignature(StringView);
+	static BasicValue makeFd(int);
+
+	BasicValue() = default;
+	BasicValue(bool);
+	BasicValue(uint8_t);
+	BasicValue(int16_t);
+	BasicValue(uint16_t);
+	BasicValue(int32_t);
+	BasicValue(uint32_t);
+	BasicValue(int64_t);
+	BasicValue(uint64_t);
+	BasicValue(float);
+	BasicValue(double);
+	BasicValue(StringView);
+
+	const char *getSig() const;
+
+	Type type = Type::Invalid;
 	DBusBasicValue value;
 };
 
@@ -114,10 +143,16 @@ struct SP_PUBLIC BusFilter : public Ref {
 	DBusError error;
 	Rc<Connection> connection;
 	String filter;
+	String interface;
+	String signal;
+	Function<uint32_t(NotNull<const BusFilter>, NotNull<DBusMessage>)> handler;
 	bool added = false;
 
 	virtual ~BusFilter();
 	BusFilter(NotNull<Connection>, StringView filter);
+
+	BusFilter(NotNull<Connection>, StringView filter, StringView interface, StringView signal,
+			Function<uint32_t(NotNull<const BusFilter>, NotNull<DBusMessage>)> &&);
 };
 
 struct SP_PUBLIC Connection : public Ref {
@@ -131,6 +166,7 @@ struct SP_PUBLIC Connection : public Ref {
 
 	bool connected = false;
 	Set<String> services;
+	Set<BusFilter *> matchFilters;
 
 	virtual ~Connection();
 
@@ -141,8 +177,12 @@ struct SP_PUBLIC Connection : public Ref {
 	explicit operator bool() const { return connection != nullptr; }
 
 	DBusPendingCall *callMethod(StringView bus, StringView path, StringView iface,
-			StringView method, const Callback<void(DBusMessage *)> &,
+			StringView method, const Callback<void(WriteIterator &)> &,
 			Function<void(NotNull<Connection>, DBusMessage *)> &&, Ref * = nullptr);
+
+	DBusPendingCall *callMethod(StringView bus, StringView path, StringView iface,
+			StringView method, Function<void(NotNull<Connection>, DBusMessage *)> &&,
+			Ref * = nullptr);
 
 	bool handle(event::Handle *, const Event &, event::PollFlags);
 
@@ -151,6 +191,9 @@ struct SP_PUBLIC Connection : public Ref {
 	void dispatchAll();
 
 	void close();
+
+	void addMatchFilter(BusFilter *);
+	void removeMatchFilter(BusFilter *);
 };
 
 class SP_PUBLIC Library : public Ref {
@@ -188,6 +231,13 @@ public:
 	XL_DEFINE_PROTO(dbus_message_iter_get_fixed_array)
 	XL_DEFINE_PROTO(dbus_message_iter_get_basic)
 	XL_DEFINE_PROTO(dbus_message_iter_get_signature)
+	XL_DEFINE_PROTO(dbus_message_iter_init_append)
+	XL_DEFINE_PROTO(dbus_message_iter_append_basic)
+	XL_DEFINE_PROTO(dbus_message_iter_append_fixed_array)
+	XL_DEFINE_PROTO(dbus_message_iter_open_container)
+	XL_DEFINE_PROTO(dbus_message_iter_close_container)
+	XL_DEFINE_PROTO(dbus_message_iter_abandon_container)
+	XL_DEFINE_PROTO(dbus_message_iter_abandon_container_if_open)
 	XL_DEFINE_PROTO(dbus_message_get_type)
 	XL_DEFINE_PROTO(dbus_message_get_path)
 	XL_DEFINE_PROTO(dbus_message_get_interface)
@@ -245,81 +295,94 @@ SP_PUBLIC bool isFixedType(Type);
 SP_PUBLIC bool isBasicType(Type);
 SP_PUBLIC bool isContainerType(Type);
 
-} // namespace dbus
-
-static constexpr auto NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
-static constexpr auto NM_SERVICE_CONNECTION_NAME =
-		"org.freedesktop.NetworkManager.Connection.Active";
-static constexpr auto NM_SERVICE_VPN_NAME = "org.freedesktop.NetworkManager.VPN.Plugin";
-static constexpr auto NM_SERVICE_FILTER =
-		"type='signal',interface='org.freedesktop.NetworkManager'";
-static constexpr auto NM_SERVICE_CONNECTION_FILTER =
-		"type='signal',interface='org.freedesktop.NetworkManager.Connection.Active'";
-static constexpr auto NM_SERVICE_VPN_FILTER =
-		"type='signal',interface='org.freedesktop.NetworkManager.VPN.Plugin'";
-static constexpr auto NM_SERVICE_PATH = "/org/freedesktop/NetworkManager";
-static constexpr auto NM_SIGNAL_STATE_CHANGED = "StateChanged";
-static constexpr auto NM_SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
-
-enum NMState {
-	NM_STATE_UNKNOWN = 0, // networking state is unknown
-	NM_STATE_ASLEEP = 10, // networking is not enabled
-	NM_STATE_DISCONNECTED = 20, // there is no active network connection
-	NM_STATE_DISCONNECTING = 30, // network connections are being cleaned up
-	NM_STATE_CONNECTING = 40, // a network connection is being started
-	NM_STATE_CONNECTED_LOCAL = 50, // there is only local IPv4 and/or IPv6 connectivity
-	NM_STATE_CONNECTED_SITE = 60, // there is only site-wide IPv4 and/or IPv6 connectivity
-	NM_STATE_CONNECTED_GLOBAL = 70, // there is global IPv4 and/or IPv6 Internet connectivity
-};
-
-enum NMConnectivityState {
-	NM_CONNECTIVITY_UNKNOWN = 1, // Network connectivity is unknown.
-	NM_CONNECTIVITY_NONE = 2, // The host is not connected to any network.
-	NM_CONNECTIVITY_PORTAL =
-			3, // The host is behind a captive portal and cannot reach the full Internet.
-	NM_CONNECTIVITY_LIMITED =
-			4, // The host is connected to a network, but does not appear to be able to reach the full Internet.
-	NM_CONNECTIVITY_FULL =
-			5, // The host is connected to a network, and appears to be able to reach the full Internet.
-};
-
-enum NMMetered {
-	NM_METERED_UNKNOWN = 0, // The metered status is unknown
-	NM_METERED_YES = 1, // Metered, the value was statically set
-	NM_METERED_NO = 2, // Not metered, the value was statically set
-	NM_METERED_GUESS_YES = 3, // Metered, the value was guessed
-	NM_METERED_GUESS_NO = 4, // Not metered, the value was guessed
-};
-
-struct SP_PUBLIC NetworkState {
-	bool networkingEnabled = false;
-	bool wirelessEnabled = false;
-	bool wwanEnabled = false;
-	bool wimaxEnabled = false;
-	NMMetered metered = NMMetered::NM_METERED_UNKNOWN;
-	NMState state = NMState::NM_STATE_UNKNOWN;
-	NMConnectivityState connectivity = NMConnectivityState::NM_CONNECTIVITY_UNKNOWN;
-	String primaryConnectionType;
-	Vector<uint32_t> capabilities;
-
-	NetworkState() = default;
-	NetworkState(NotNull<dbus::Library>, NotNull<DBusMessage>);
-
-	void description(const CallbackStream &out) const;
-
-	bool operator==(const NetworkState &) const = default;
-	bool operator!=(const NetworkState &) const = default;
-};
-
-} // namespace stappler::xenolith::platform
-
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
-
 template <typename Parser>
 struct MessageParserData {
 	Library *lib = nullptr;
 	Parser *parser = nullptr;
 	BasicValue value;
+};
+
+struct ReadIterator {
+	ReadIterator() = default;
+	ReadIterator(NotNull<Library>, NotNull<DBusMessage>);
+
+	bool is(Type t) const { return type == t; }
+	Type getType() const { return type; }
+
+	uint32_t getIndex() const { return index; }
+
+	Type getElementType() const;
+
+	BasicValue getValue() const;
+
+	bool getBool() const;
+	uint32_t getU32(uint32_t def = 0) const;
+	uint64_t getU64(uint64_t def = 0) const;
+	int32_t getI32(int32_t def = 0) const;
+	int64_t getI64(int64_t def = 0) const;
+	float getFloat(float def = 0) const;
+	double getDouble(double def = 0) const;
+	StringView getString() const;
+
+	ReadIterator recurse() const;
+
+	bool foreach (const Callback<void(const ReadIterator &)> &) const;
+	bool foreachDictEntry(const Callback<void(StringView, const ReadIterator &)> &) const;
+
+	bool next();
+
+	explicit operator bool() const { return type != Type::Invalid; }
+
+	Library *lib = nullptr;
+	DBusMessageIter iter;
+	Type type = Type::Invalid;
+	uint32_t index = 0;
+};
+
+class WriteIterator {
+public:
+	WriteIterator() = default;
+	WriteIterator(NotNull<Library>, NotNull<DBusMessage>);
+
+	bool add(SpanView<bool>);
+	bool add(SpanView<uint8_t>);
+	bool add(SpanView<int16_t>);
+	bool add(SpanView<uint16_t>);
+	bool add(SpanView<int32_t>);
+	bool add(SpanView<uint32_t>);
+	bool add(SpanView<int64_t>);
+	bool add(SpanView<uint64_t>);
+	bool add(SpanView<double>);
+	bool add(SpanView<StringView>);
+	bool addPath(SpanView<StringView>);
+	bool addSignature(SpanView<StringView>);
+	bool addFd(SpanView<int>);
+	bool add(BasicValue);
+
+	bool add(StringView, BasicValue);
+	bool add(StringView, const Callback<void(WriteIterator &)> &);
+
+	bool addVariant(BasicValue);
+
+	bool addArray(const char *sig, const Callback<void(WriteIterator &)> &);
+	bool addVariant(const char *sig, const Callback<void(WriteIterator &)> &);
+	bool addStruct(const Callback<void(WriteIterator &)> &);
+
+	Type getType() const { return type; }
+	Type getSubType() const { return subtype; }
+	explicit operator bool() const { return valid; }
+
+protected:
+	bool canAddType(Type) const;
+
+	WriteIterator(NotNull<Library>, Type);
+
+	Library *lib = nullptr;
+	Type type = Type::Invalid;
+	Type subtype = Type::Invalid;
+	uint32_t index = 0;
+	bool valid = false;
+	DBusMessageIter iter;
 };
 
 template <typename T>
@@ -539,6 +602,24 @@ static inline bool _parseMessage(MessageParserData<Parser> &data, DBusMessageIte
 	return true;
 }
 
+struct MessagePropertyParser {
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, BasicValue &target);
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, Vector<uint32_t> &target);
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, bool &val);
+
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, int32_t &val);
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, uint32_t &val);
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, float &val);
+	static bool parse(Library *lib, NotNull<DBusMessageIter> entry, const char *&val);
+	bool onArray(size_t size, Type type, NotNull<DBusMessageIter> entry);
+	bool onBasicValue(const BasicValue &val);
+
+	Library *lib = nullptr;
+	bool found = false;
+	BasicValue *target = nullptr;
+	Vector<uint32_t> *u32ArrayTarget = nullptr;
+};
+
 template <typename Parser>
 inline bool Library::parseMessage(NotNull<DBusMessage> msg, Parser &parser) {
 	MessageParserData<Parser> data{this, &parser};
@@ -581,9 +662,8 @@ inline const CallbackStream &operator<<(const CallbackStream &stream, Type t) {
 	return stream;
 }
 
-
 } // namespace stappler::xenolith::platform::dbus
 
 #endif
 
-#endif /* XENOLITH_APPLICATION_LINUX_XLLINUXDBUS_H_ */
+#endif /* XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSLIBRARY_H_ */

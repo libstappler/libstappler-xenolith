@@ -53,8 +53,9 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run() { return _resultCode; }
 
-void ContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
-	_context->handleNativeWindowResized(w, liveResize);
+void ContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
+		bool liveResize) {
+	_context->handleNativeWindowConstraintsChanged(w, liveResize);
 }
 void ContextController::notifyWindowInputEvents(NotNull<ContextNativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
@@ -78,19 +79,6 @@ bool ContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
 	}
 }
 
-void ContextController::addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&cb) {
-	auto it = _networkCallbacks.find(key);
-	if (it != _networkCallbacks.end()) {
-		it->second = sp::move(cb);
-	} else {
-		it = _networkCallbacks.emplace(key, sp::move(cb)).first;
-	}
-
-	it->second(_networkFlags);
-}
-
-void ContextController::removeNetworkCallback(Ref *key) { _networkCallbacks.erase(key); }
-
 Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) {
 	return nullptr;
 }
@@ -108,11 +96,21 @@ Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&) {
 	return Status::ErrorNotImplemented;
 }
 
-Status ContextController::writeToClipboard(BytesView, StringView contentType) {
+Status ContextController::writeToClipboard(Rc<ClipboardData> &&) {
 	return Status::ErrorNotImplemented;
 }
 
 Rc<ScreenInfo> ContextController::getScreenInfo() const { return Rc<ScreenInfo>::create(); }
+
+void ContextController::handleNetworkStateChanged(NetworkFlags flags) {
+	_networkFlags = flags;
+	_context->handleNetworkStateChanged(_networkFlags);
+}
+
+void ContextController::handleThemeInfoChanged(const ThemeInfo &theme) {
+	_themeInfo = theme;
+	_context->handleThemeInfoChanged(_themeInfo);
+}
 
 void ContextController::handleStateChanged(ContextState prevState, ContextState newState) {
 	if (prevState == newState) {
@@ -124,7 +122,6 @@ void ContextController::handleStateChanged(ContextState prevState, ContextState 
 	switch (newState) {
 	case ContextState::None:
 		handleContextWillDestroy();
-		_networkCallbacks.clear();
 		_state = newState;
 		_networkFlags = NetworkFlags::None;
 
@@ -177,7 +174,13 @@ void ContextController::handleContextWillPause() { _context->handleWillPause(); 
 void ContextController::handleContextDidPause() { _context->handleDidPause(); }
 
 void ContextController::handleContextWillResume() { _context->handleWillResume(); }
-void ContextController::handleContextDidResume() { _context->handleDidResume(); }
+void ContextController::handleContextDidResume() {
+	_context->handleDidResume();
+
+	// repeat state notifications if they were missed in paused mode
+	_context->handleNetworkStateChanged(_networkFlags);
+	_context->handleThemeInfoChanged(_themeInfo);
+}
 
 void ContextController::handleContextWillStart() { _context->handleWillStart(); }
 void ContextController::handleContextDidStart() { _context->handleDidStart(); }
@@ -299,11 +302,6 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 	auto loop = instance->makeLoop(_looper, move(_loopInfo));
 	_loopInfo = nullptr;
 	return loop;
-}
-
-void ContextController::updateNetworkFlags(NetworkFlags flags) {
-	_networkFlags = flags;
-	for (auto &it : _networkCallbacks) { it.second(flags); }
 }
 
 } // namespace stappler::xenolith::platform

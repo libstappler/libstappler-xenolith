@@ -26,6 +26,8 @@
 
 #include "XLEvent.h"
 #include "XLFontConfig.h"
+#include "SPString.h"
+#include "SPLocaleInfo.h"
 #include "SPMetastring.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -73,9 +75,37 @@ inline constexpr auto localeIndex() {
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
+// Locale module implements system for the locale tags resolution
+// Tag can be a string or an index
+//
+// String, prefixed with '@Locale:' interpreted as string-key accessor.
+// Whole string after prefix is the key in localization table.
+// So, string "@Locale:LOCALE_KEY" will be replaced with the string,
+// that was defined for the key "LOCALE_KEY"
+//
+// Within string, locale tag defined as %LOCALE_TAG%
+// This tag can contain latin symbols (a-z, A-Z), numbers (0-9)
+// and some special symbols (in quotes): ':', '.', '-', '_', '[', ']', '+', '='
+//
+// Tag %=<number>% (like %=1234%) can be used to insert localized string by numeric index
+//
+// Tag $?<number>:<key>% works with special form of localization definition.
+// You can define a list of words as one term like "WORD_ONE:WORD_TWO:WORD_THREE"
+// When you define tag like $?<number>:<key>%, definition with this <key> assumed
+// to be word-list definition, and <number> defines specific word within it.
+// e.g. for definition NUMBER_LIST = "ONE:TWO:THREE:FOUR", after substitution
+// "2 is %=2:NUMBER_LIST%" become "2 is TWO".
+// It's useful when some term has variadic spelling on some condition
+//
+
+// Locale can be set in POSIX format (en_US.utf8, [language[_territory][.codeset]]) or
+// LOWERCASE XML format (en-us, [language]-[subscript])
+//
+// For definitions (`define`) you should always use LOWERCASE XML format.
+
+
 using LocaleInitList = std::initializer_list<Pair<StringView, StringView>>;
 using LocaleIndexList = std::initializer_list<Pair<uint32_t, StringView>>;
-using NumRule = Function<uint8_t(uint32_t)>;
 
 enum class TimeTokens {
 	Today = 0,
@@ -95,20 +125,35 @@ enum class TimeTokens {
 	Max
 };
 
+//Event: Locale was changed
 extern EventHeader onLocale;
 
+// Defines key-value pairs for locale-based substitutuion, locale must be an lowercased XML land-territory pair
 SP_PUBLIC void define(const StringView &locale, LocaleInitList &&);
+
+// Defines index-value pairs for locale-based substitutuion, locale must be an lowercased XML land-territory pair
 SP_PUBLIC void define(const StringView &locale, LocaleIndexList &&);
 SP_PUBLIC void define(const StringView &locale,
 		const std::array<StringView, toInt(TimeTokens::Max)> &);
 
+// Set locale for the default lookup (if none were found for primary locale)
 SP_PUBLIC void setDefault(StringView);
+
+// Returls default locale as it's used by definition lookups
 SP_PUBLIC StringView getDefault();
 
+// Returns default locale in POSIX format [language[_territory][.codeset]]
+SP_PUBLIC LocaleInfo getDefaultInfo();
+
+// Set lookup locale
+// Produces onLocale event if successful
 SP_PUBLIC void setLocale(StringView);
+
+// Returls locale as it's used by definition lookups
 SP_PUBLIC StringView getLocale();
 
-SP_PUBLIC void setNumRule(const String &, NumRule &&);
+// Returns default locale in POSIX format [language[_territory][.codeset]]
+SP_PUBLIC LocaleInfo getLocaleInfo();
 
 SP_PUBLIC WideStringView string(const WideStringView &);
 SP_PUBLIC WideStringView string(size_t);
@@ -128,11 +173,6 @@ SP_PUBLIC WideStringView numeric(const metastring::metastring<Chars...> &str, ui
 SP_PUBLIC bool hasLocaleTagsFast(const WideStringView &);
 SP_PUBLIC bool hasLocaleTags(const WideStringView &);
 SP_PUBLIC WideString resolveLocaleTags(const WideStringView &);
-
-SP_PUBLIC String language(const StringView &locale);
-
-// convert locale name to common form ('en-us', 'ru-ru', 'fr-fr')
-SP_PUBLIC String common(const StringView &locale);
 
 SP_PUBLIC StringView timeToken(TimeTokens);
 

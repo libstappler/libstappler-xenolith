@@ -25,6 +25,7 @@
 #include "XLContext.h"
 #include "SPSharedModule.h"
 #include "SPEventTimerHandle.h"
+#include "XLEvent.h"
 
 #if MODULE_XENOLITH_FONT
 
@@ -34,6 +35,9 @@
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+XL_DECLARE_EVENT_CLASS(AppThread, onNetworkState)
+XL_DECLARE_EVENT_CLASS(AppThread, onThemeInfo)
 
 bool AppThread::init(NotNull<Context> ctx) {
 	_context = ctx;
@@ -107,6 +111,26 @@ void AppThread::wakeup() {
 	performOnAppThread([this] { performUpdate(); }, this, true);
 }
 
+void AppThread::handleNetworkStateChanged(NetworkFlags flags) {
+	performOnAppThread([this, flags] {
+		if (flags != _networkFlags) {
+			_networkFlags = flags;
+			for (auto &it : _extensions) { it.second->handleNetworkStateChanged(flags); }
+			onNetworkState(this, int64_t(toInt(flags)));
+		}
+	}, this);
+}
+
+void AppThread::handleThemeInfoChanged(const ThemeInfo &theme) {
+	performOnAppThread([this, theme] {
+		if (theme != _themeInfo) {
+			_themeInfo = theme;
+			for (auto &it : _extensions) { it.second->handleThemeInfoChanged(theme); }
+			onThemeInfo(this, _themeInfo.encode());
+		}
+	}, this);
+}
+
 void AppThread::performOnAppThread(Function<void()> &&func, Ref *target, bool onNextFrame,
 		StringView tag) {
 	if (isOnThisThread() && !onNextFrame) {
@@ -155,11 +179,29 @@ void AppThread::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
 	}, this);
 }
 
-void AppThread::writeToClipboard(BytesView data, StringView contentType) {
+void AppThread::writeToClipboard(BytesView data, StringView contentType, Ref *ref) {
 	_context->performOnThread(
-			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>()]() {
-		_context->writeToClipboard(data, type);
-	});
+			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>(),
+					ref = Rc<Ref>(ref)]() mutable {
+		_context->writeToClipboard([data = sp::move(data), t = type](StringView type) -> Bytes {
+			if (t == type) {
+				return data;
+			}
+			return Bytes();
+		}, makeSpanView(&type, 1), ref);
+	},
+			this);
+}
+
+void AppThread::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<StringView> types,
+		Ref *ref) {
+	Vector<String> vtypes;
+	vtypes.reserve(types.size());
+	for (auto &it : types) { vtypes.emplace_back(it.str<Interface>()); }
+	_context->performOnThread(
+			[this, cb = sp::move(cb), vtypes = sp::move(vtypes), ref = Rc<Ref>(ref)]() mutable {
+		_context->writeToClipboard(sp::move(cb), vtypes, ref);
+	}, this);
 }
 
 void AppThread::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {

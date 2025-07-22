@@ -20,21 +20,42 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
-#define XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
+#ifndef XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_
+#define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_
 
 #include "XLCommon.h"
+#include "linux/xcb/XLLinuxXcbLibrary.h"
+
+#if LINUX
+
+#include "linux/XLLinuxDisplayConfigManager.h"
+#include "XLLinuxXcbConnection.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-struct EdidInfo {
-	String vendor;
-	String model;
-	String serial;
-};
+class SP_PUBLIC XcbDisplayConfigManager : public DisplayConfigManager {
+public:
+	virtual ~XcbDisplayConfigManager() = default;
 
-EdidInfo parseEdid(BytesView);
+	virtual bool init(NotNull<XcbConnection>, Function<void(NotNull<DisplayConfigManager>)> &&);
+
+	virtual void invalidate() override;
+
+	void update();
+
+protected:
+	void updateDisplayConfig(Function<void(DisplayConfig *)> && = nullptr);
+
+	virtual void prepareDisplayConfigUpdate(Function<void(DisplayConfig *)> &&) override;
+	virtual void applyDisplayConfig(NotNull<DisplayConfig>, Function<void(Status)> &&) override;
+
+	Rc<XcbConnection> _connection;
+	Rc<XcbLibrary> _xcb;
+	xcb_window_t _root = 0;
+};
 
 } // namespace stappler::xenolith::platform
 
-#endif /* XENOLITH_APPLICATION_PLATFORM_XLEDID_H_ */
+#endif
+
+#endif // XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_

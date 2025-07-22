@@ -26,6 +26,7 @@
 #include "XL2dSceneLight.h"
 #include "XLDirector.h"
 #include "XLAppWindow.h"
+#include "XLSceneContent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -85,18 +86,18 @@ void SceneContent2d::replaceLayout(SceneLayout2d *node) {
 
 	for (auto &it : _layouts) {
 		if (it != node) {
-			it->onPopTransitionBegan(this, true);
+			it->hanldePopTransitionBegan(this, true);
 		} else {
-			it->onPush(this, true);
+			it->handlePush(this, true);
 		}
 	}
 
 	auto fn = [this, node] {
 		for (auto &it : _layouts) {
 			if (it != node) {
-				it->onPop(this, true);
+				it->handlePop(this, true);
 			} else {
-				it->onPushTransitionEnded(this, true);
+				it->handlePushTransitionEnded(this, true);
 			}
 		}
 		replaceNodes();
@@ -127,13 +128,13 @@ void SceneContent2d::replaceTopLayout(SceneLayout2d *node) {
 	if (!_layouts.empty()) {
 		auto back = _layouts.back();
 		_layouts.pop_back();
-		back->onPopTransitionBegan(this, false);
+		back->hanldePopTransitionBegan(this, false);
 
 		// just push node, then silently remove previous
 
 		pushNodeInternal(node, [this, back] {
 			eraseLayout(back);
-			back->onPop(this, false);
+			back->handlePop(this, false);
 		});
 	}
 }
@@ -147,16 +148,21 @@ void SceneContent2d::popLayout(SceneLayout2d *node) {
 	auto linkId = node->retain();
 	_layouts.erase(it);
 
-	node->onPopTransitionBegan(this, false);
+	node->hanldePopTransitionBegan(this, false);
 	if (!_layouts.empty()) {
-		_layouts.back()->onForegroundTransitionBegan(this, node);
+		_layouts.back()->handleForegroundTransitionBegan(this, node);
 	}
 
 	auto fn = [this, node, linkId] {
 		eraseLayout(node);
-		node->onPop(this, false);
+		node->handlePop(this, false);
 		if (!_layouts.empty()) {
-			_layouts.back()->onForeground(this, node);
+			_visitNotification.emplace_back(
+					[this, l = _layouts.back(), node = Rc<SceneLayout2d>(node)] {
+				if (!_layouts.empty() && _layouts.back() == l) {
+					l->handleForeground(this, node);
+				}
+			});
 		}
 		node->release(linkId);
 	};
@@ -183,17 +189,17 @@ void SceneContent2d::pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb
 	addChild(node, ZOrder(-1));
 
 	if (_layouts.size() > 1) {
-		_layouts.at(_layouts.size() - 2)->onBackground(this, node);
+		_layouts.at(_layouts.size() - 2)->handleBackground(this, node);
 	}
-	node->onPush(this, false);
+	node->handlePush(this, false);
 
 	auto fn = [this, node, cb = sp::move(cb)] {
 		updateNodesVisibility();
 		updateBackButtonStatus();
 		if (_layouts.size() > 1) {
-			_layouts.at(_layouts.size() - 2)->onBackgroundTransitionEnded(this, node);
+			_layouts.at(_layouts.size() - 2)->handleBackgroundTransitionEnded(this, node);
 		}
-		node->onPushTransitionEnded(this, false);
+		node->handlePushTransitionEnded(this, false);
 		if (cb) {
 			cb();
 		}
@@ -317,7 +323,7 @@ bool SceneContent2d::onBackButton() {
 		return false;
 	} else {
 		if (!_overlays.empty()) {
-			if (!_overlays.back()->onBackButton()) {
+			if (!_overlays.back()->handleBackButton()) {
 				if (!popTopLayout()) {
 					return false;
 				} else {
@@ -327,7 +333,7 @@ bool SceneContent2d::onBackButton() {
 				return true;
 			}
 		}
-		if (!_layouts.back()->onBackButton()) {
+		if (!_layouts.back()->handleBackButton()) {
 			if (!popTopLayout()) {
 				return false;
 			}
@@ -355,10 +361,10 @@ bool SceneContent2d::pushOverlay(SceneLayout2d *l) {
 
 	addChild(l, zIndex);
 
-	l->onPush(this, false);
+	l->handlePush(this, false);
 
 	auto fn = [this, l] {
-		l->onPushTransitionEnded(this, false);
+		l->handlePushTransitionEnded(this, false);
 		updateBackButtonStatus();
 	};
 
@@ -379,11 +385,11 @@ bool SceneContent2d::popOverlay(SceneLayout2d *l) {
 
 	auto linkId = l->retain();
 	_overlays.erase(it);
-	l->onPopTransitionBegan(this, false);
+	l->hanldePopTransitionBegan(this, false);
 
 	auto fn = [this, l, linkId] {
 		eraseOverlay(l);
-		l->onPop(this, false);
+		l->handlePop(this, false);
 		l->release(linkId);
 		updateBackButtonStatus();
 	};
@@ -577,6 +583,17 @@ void SceneContent2d::removeAllLightsByType(SceneLightType type) {
 void SceneContent2d::setGlobalLight(const Color4F &color) { _globalLight = color; }
 
 const Color4F &SceneContent2d::getGlobalLight() const { return _globalLight; }
+
+bool SceneContent2d::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
+	if (_visible) {
+		auto tmp = sp::move(_visitNotification);
+		_visitNotification.clear();
+
+		for (auto &it : tmp) { it(); }
+	}
+
+	return SceneContent::visitGeometry(info, parentFlags);
+}
 
 void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 	SceneContent::draw(info, flags);

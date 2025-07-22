@@ -21,10 +21,14 @@
  **/
 
 #include "XLLinuxXcbConnection.h"
+#include "XLLinuxXcbDisplayConfigManager.h"
+#include "SPCore.h"
+#include "SPMemory.h"
 #include "XLLinuxXcbWindow.h"
 #include <X11/keysym.h>
+#include <xcb/randr.h>
 
-#define XL_X11_DEBUG 1
+#define XL_X11_DEBUG 0
 
 #if XL_X11_DEBUG
 #define XL_X11_LOG(...) log::debug("XCB", __VA_ARGS__)
@@ -36,16 +40,6 @@
 uint32_t _glfwKeySym2Unicode(unsigned int keysym);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
-
-uint16_t ScreenInfoData::getCommonRate() const {
-	uint16_t rate = 0;
-	for (auto &mIt : monitors) {
-		for (auto &oIt : mIt.outputs) { rate = std::max(oIt->crtc->mode->rate, rate); }
-	}
-	return rate;
-}
-
-void ScreenInfoData::describe(const CallbackStream &out) { }
 
 void XcbConnection::ReportError(int error) {
 	switch (error) {
@@ -234,6 +228,11 @@ core::InputKeyCode XcbConnection::getKeysymCode(xcb_keysym_t sym) {
 }
 
 XcbConnection::~XcbConnection() {
+	if (_errors) {
+		_xcb->xcb_errors_context_free(_errors);
+		_errors = nullptr;
+	}
+
 	if (_clipboard.window) {
 		_xcb->xcb_destroy_window(_connection, _clipboard.window);
 	}
@@ -253,15 +252,18 @@ XcbConnection::~XcbConnection() {
 	}
 }
 
-XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, StringView display)
+XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, StringView d)
 : _xkb(xkb) {
 	_xcb = xcb;
 	_xkb.lib = xkb;
 
-	_connection = _xcb->xcb_connect(display.empty()
-					? NULL
-					: (display.terminated() ? display.data() : display.str<Interface>().data()),
+	_connection = _xcb->xcb_connect(
+			d.empty() ? nullptr : (d.terminated() ? d.data() : d.str<Interface>().data()),
 			&_screenNbr); // always not null
+
+	_maxRequestSize = _xcb->xcb_get_maximum_request_length(_connection);
+	_safeReqeustSize = std::min(_maxRequestSize, _safeReqeustSize);
+
 	_setup = _xcb->xcb_get_setup(_connection);
 
 	_socket = _xcb->xcb_get_file_descriptor(_connection); // assume it's non-blocking
@@ -276,6 +278,7 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 	}
 
 	xcb_randr_query_version_cookie_t randrVersionCookie;
+	xcb_xfixes_query_version_cookie_t xfixesVersionCookie;
 
 	if (_xcb->hasRandr()) {
 		auto ext = _xcb->xcb_get_extension_data(_connection, _xcb->xcb_randr_id);
@@ -298,6 +301,18 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		_xkb.initXcb(_xcb, _connection);
 	}
 
+	if (_xcb->hasXfixes()) {
+		auto ext = _xcb->xcb_get_extension_data(_connection, _xcb->xcb_xfixes_id);
+		if (ext) {
+			_xfixes.enabled = true;
+			_xfixes.firstEvent = ext->first_event;
+			_xfixes.firstError = ext->first_error;
+
+			xfixesVersionCookie = _xcb->xcb_xfixes_query_version(_connection,
+					XcbLibrary::XFIXES_MAJOR_VERSION, XcbLibrary::XFIXES_MINOR_VERSION);
+		}
+	}
+
 	// read atoms from connection
 	xcb_intern_atom_cookie_t atomCookies[sizeof(s_atomRequests) / sizeof(XcbAtomInfo)];
 
@@ -308,40 +323,11 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		++i;
 	}
 
-	_xcb->xcb_flush(_connection);
-
-	if (_xcb->xcb_cursor_context_new(_connection, _screen, &_cursorContext) < 0) {
-		log::warn("XcbConnection", "Fail to load cursor context");
-		_cursorContext = nullptr;
-	}
-
-	memcpy(_atoms, s_atomRequests, sizeof(s_atomRequests));
-
-	i = 0;
-	for (auto &it : atomCookies) {
-		auto reply = _xcb->xcb_intern_atom_reply(_connection, it, nullptr);
-		if (reply) {
-			_atoms[i].value = reply->atom;
-			free(reply);
-		} else {
-			_atoms[i].value = 0;
-		}
-		++i;
-	}
-
-	if (_randr.enabled) {
-		if (auto versionReply = _xcb->xcb_randr_query_version_reply(_connection, randrVersionCookie,
-					nullptr)) {
-			_randr.majorVersion = versionReply->major_version;
-			_randr.minorVersion = versionReply->minor_version;
-			_randr.initialized = true;
-			::free(versionReply);
-		}
-	}
-
+	// make fake window for clipboard
 	uint32_t mask = XCB_CW_EVENT_MASK;
 	uint32_t values[2];
-	values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE;
+	values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+			| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY;
 
 	/* Ask for our window's Id */
 	_clipboard.window = _xcb->xcb_generate_id(_connection);
@@ -357,6 +343,82 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 			mask, values);
 
 	_xcb->xcb_flush(_connection);
+
+	if (_xcb->xcb_cursor_context_new(_connection, _screen, &_cursorContext) < 0) {
+		log::warn("XcbConnection", "Fail to load cursor context");
+		_cursorContext = nullptr;
+	}
+
+	memcpy(_atoms, s_atomRequests, sizeof(s_atomRequests));
+
+	i = 0;
+	for (auto &it : atomCookies) {
+		auto reply = perform(_xcb->xcb_intern_atom_reply, it);
+		if (reply) {
+			_atoms[i].value = reply->atom;
+			_namedAtoms.emplace(_atoms[i].name.str<Interface>(), reply->atom);
+			_atomNames.emplace(reply->atom, _atoms[i].name.str<Interface>());
+		} else {
+			_atoms[i].value = 0;
+		}
+		++i;
+	}
+
+	if (_randr.enabled) {
+		if (auto versionReply = perform(_xcb->xcb_randr_query_version_reply, randrVersionCookie)) {
+			_randr.majorVersion = versionReply->major_version;
+			_randr.minorVersion = versionReply->minor_version;
+			_randr.initialized = true;
+
+			_xcb->xcb_randr_select_input(_connection, _clipboard.window,
+					XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE | XCB_RANDR_NOTIFY_MASK_CRTC_CHANGE
+							| XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
+		}
+	}
+
+	if (_xfixes.enabled) {
+		if (auto versionReply =
+						perform(_xcb->xcb_xfixes_query_version_reply, xfixesVersionCookie)) {
+			_xfixes.majorVersion = versionReply->major_version;
+			_xfixes.minorVersion = versionReply->minor_version;
+			_xfixes.initialized = true;
+
+			_xcb->xcb_xfixes_select_selection_input(_connection, _clipboard.window,
+					getAtom(XcbAtomIndex::CLIPBOARD),
+					XCB_XFIXES_SELECTION_EVENT_MASK_SET_SELECTION_OWNER
+							| XCB_XFIXES_SELECTION_EVENT_MASK_SELECTION_WINDOW_DESTROY
+							| XCB_XFIXES_SELECTION_EVENT_MASK_SELECTION_CLIENT_CLOSE);
+		}
+	}
+
+	_xcb->xcb_errors_context_new(_connection, &_errors);
+
+	// try XSETTINGS
+	_xsettings.selection = getAtom(toString("_XSETTINGS_S", d.readInteger(10).get(0)), true);
+	_xsettings.property = getAtom("_XSETTINGS_SETTINGS", true);
+	if (_xsettings.selection && _xsettings.property) {
+		auto cookie = _xcb->xcb_get_selection_owner(_connection, _xsettings.selection);
+		auto reply = perform(_xcb->xcb_get_selection_owner_reply, cookie);
+		if (reply && reply->owner) {
+			_xsettings.window = reply->owner;
+			// subscribe on target window's events
+			const uint32_t values[] = {
+				XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE};
+			_xcb->xcb_change_window_attributes(_connection, reply->owner, XCB_CW_EVENT_MASK,
+					values);
+			readXSettings();
+		}
+	}
+}
+
+Rc<DisplayConfigManager> XcbConnection::makeDisplayConfigManager(
+		Function<void(NotNull<DisplayConfigManager>)> &&cb) {
+	if (_randr.initialized && _randr.firstEvent == 1 && _randr.minorVersion >= 5) {
+		auto ret = Rc<XcbDisplayConfigManager>::create(this, sp::move(cb));
+		_displayConfig = ret;
+		return ret;
+	}
+	return nullptr;
 }
 
 template <typename Event>
@@ -400,14 +462,13 @@ uint32_t XcbConnection::poll() {
 		switch (et) {
 		case 0: {
 			auto err = reinterpret_cast<xcb_generic_error_t *>(e);
+			printError("Connection error", err);
 			log::error("XcbConnection", "X11 error: ", int(err->error_code));
 			break;
 		}
 		case XCB_EXPOSE: XL_X11_LOG("XCB_EXPOSE"); break;
 		case XCB_PROPERTY_NOTIFY:
-			if (reinterpret_cast<xcb_property_notify_event_t *>(e)->window == _clipboard.window) {
-				handlePropertyNotify(reinterpret_cast<xcb_property_notify_event_t *>(e));
-			}
+			handlePropertyNotify(reinterpret_cast<xcb_property_notify_event_t *>(e));
 			break;
 		case XCB_VISIBILITY_NOTIFY: XL_X11_LOG("XCB_VISIBILITY_NOTIFY"); break;
 		case XCB_MAP_NOTIFY: XL_X11_LOG("XCB_MAP_NOTIFY"); break;
@@ -422,7 +483,11 @@ uint32_t XcbConnection::poll() {
 				handleSelectionNotify(reinterpret_cast<xcb_selection_notify_event_t *>(e));
 			}
 			break;
-		case XCB_SELECTION_CLEAR: XL_X11_LOG("XCB_SELECTION_CLEAR"); break;
+		case XCB_SELECTION_CLEAR:
+			if (reinterpret_cast<xcb_selection_clear_event_t *>(e)->owner == _clipboard.window) {
+				handleSelectionClear(reinterpret_cast<xcb_selection_clear_event_t *>(e));
+			}
+			break;
 		case XCB_SELECTION_REQUEST:
 			handleSelectionRequest((xcb_selection_request_event_t *)e);
 			break;
@@ -494,6 +559,20 @@ uint32_t XcbConnection::poll() {
 						value.lo = event->data.data32[2];
 						value.hi = static_cast<int32_t>(event->data.data32[3]);
 						w->handleSyncRequest(event->data.data32[1], value);
+					} else if (event->data.data32[0]
+							== _atoms[toInt(XcbAtomIndex::_NET_WM_PING)].value) {
+						if (event->window == _screen->root) {
+							return;
+						}
+
+						xcb_client_message_event_t reply = *event;
+						reply.response_type = XCB_CLIENT_MESSAGE;
+						reply.window = _screen->root;
+						_xcb->xcb_send_event(_connection, 0, _screen->root,
+								XCB_EVENT_MASK_STRUCTURE_NOTIFY
+										| XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+								(const char *)&reply);
+						_xcb->xcb_flush(_connection);
 					} else {
 						log::error("XcbView", "Unknown protocol message: ", event->window,
 								" of type ", event->type, ": ", event->data.data32[0]);
@@ -528,10 +607,20 @@ uint32_t XcbConnection::poll() {
 			} else if (et == _randr.firstEvent) {
 				switch (e->pad0) {
 				case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
-					XcbConnection_forwardToWindow("XCB_RANDR_SCREEN_CHANGE_NOTIFY", _windows,
-							((xcb_randr_screen_change_notify_event_t *)e)->request_window,
-							(xcb_randr_screen_change_notify_event_t *)e,
-							&XcbWindow::handleScreenChangeNotify, &eventWindows);
+					log::debug("XcbConnection", "XCB_RANDR_SCREEN_CHANGE_NOTIFY");
+					break;
+				case XCB_RANDR_NOTIFY:
+					if (_displayConfig) {
+						_displayConfig->update();
+					}
+					break;
+				default: break;
+				}
+			} else if (et == _xfixes.firstEvent) {
+				switch (e->pad0) {
+				case XCB_XFIXES_SELECTION_NOTIFY:
+					handleSelectionUpdateNotify(
+							reinterpret_cast<xcb_xfixes_selection_notify_event_t *>(e));
 					break;
 				default: break;
 				}
@@ -543,7 +632,7 @@ uint32_t XcbConnection::poll() {
 		}
 
 		/* Free the Generic Event */
-		free(e);
+		::free(e);
 
 		++ret;
 	}
@@ -568,18 +657,18 @@ core::InputKeyCode XcbConnection::getKeyCode(xcb_keycode_t code) const {
 
 xcb_atom_t XcbConnection::getAtom(XcbAtomIndex index) const { return _atoms[toInt(index)].value; }
 
-xcb_atom_t XcbConnection::getAtom(StringView name) {
+xcb_atom_t XcbConnection::getAtom(StringView name, bool onlyIfExists) const {
 	auto it = _namedAtoms.find(name);
 	if (it != _namedAtoms.end()) {
 		return it->second;
 	}
 
-	auto cookie = _xcb->xcb_intern_atom(_connection, 0, name.size(), name.data());
+	auto cookie = _xcb->xcb_intern_atom(_connection, onlyIfExists, name.size(), name.data());
 
 	xcb_generic_error_t *error = nullptr;
 	auto reply = _xcb->xcb_intern_atom_reply(_connection, cookie, &error);
 	if (error || !reply) {
-		log::error("XcbConnection", "Fail to xcb_intern_atom_reply for '", name, "'");
+		printError(toString("Fail to xcb_intern_atom_reply for '", name, "'"), error);
 		if (error) {
 			::free(error);
 		}
@@ -595,7 +684,7 @@ xcb_atom_t XcbConnection::getAtom(StringView name) {
 	return 0;
 }
 
-StringView XcbConnection::getAtomName(xcb_atom_t atom) {
+StringView XcbConnection::getAtomName(xcb_atom_t atom) const {
 	auto it = _atomNames.find(atom);
 	if (it != _atomNames.end()) {
 		return it->second;
@@ -647,6 +736,59 @@ void XcbConnection::getAtomNames(SpanView<xcb_atom_t> ids,
 	cb(names);
 }
 
+void XcbConnection::getAtoms(SpanView<String> names,
+		const Callback<void(SpanView<xcb_atom_t>)> &cb) {
+	Vector<StringView> views;
+	views.reserve(names.size());
+	for (auto &it : names) { views.emplace_back(it); }
+	getAtoms(views, cb);
+}
+
+void XcbConnection::getAtoms(SpanView<StringView> names,
+		const Callback<void(SpanView<xcb_atom_t>)> &cb) {
+	Vector<xcb_atom_t> atoms;
+	atoms.resize(names.size());
+
+	Vector<std::tuple<xcb_intern_atom_cookie_t, StringView, xcb_atom_t *>> cookies;
+
+	uint32_t idx = 0;
+	for (auto &name : names) {
+		auto iit = _namedAtoms.find(name);
+		if (iit != _namedAtoms.end()) {
+			atoms[idx] = iit->second;
+		} else {
+			cookies.emplace_back(_xcb->xcb_intern_atom(_connection, 0, name.size(), name.data()),
+					name, &atoms[idx]);
+		}
+		++idx;
+	}
+
+	for (auto &it : cookies) {
+		auto reply = _xcb->xcb_intern_atom_reply(_connection, std::get<0>(it), nullptr);
+		if (reply) {
+			auto atom = reply->atom;
+			auto aIt = _namedAtoms.emplace(std::get<1>(it).str<Interface>(), atom).first;
+			_atomNames.emplace(atom, std::get<1>(it).str<Interface>());
+			*std::get<2>(it) = aIt->second;
+			::free(reply);
+		}
+	}
+
+	cb(atoms);
+}
+
+const char *XcbConnection::getErrorMajorName(uint8_t major) const {
+	return _xcb->xcb_errors_get_name_for_major_code(_errors, major);
+}
+
+const char *XcbConnection::getErrorMinorName(uint8_t major, uint16_t minor) const {
+	return _xcb->xcb_errors_get_name_for_minor_code(_errors, major, minor);
+}
+
+const char *XcbConnection::getErrorName(uint8_t errorCode) const {
+	return _xcb->xcb_errors_get_name_for_error(_errors, errorCode, nullptr);
+}
+
 bool XcbConnection::createWindow(const WindowInfo *winfo, XcbWindowInfo &xinfo) const {
 	uint32_t mask = /*XCB_CW_BACK_PIXEL | */ XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
 	uint32_t values[3];
@@ -680,11 +822,27 @@ bool XcbConnection::createWindow(const WindowInfo *winfo, XcbWindowInfo &xinfo) 
 				XCB_ATOM_WM_CLASS, XCB_ATOM_STRING, 8, xinfo.wmClass.size(), xinfo.wmClass.data());
 	}
 
+	char buf[512] = {0};
+	if (::gethostname(buf, 512) == 0) {
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, xinfo.window,
+				XCB_ATOM_WM_CLIENT_MACHINE, XCB_ATOM_STRING, 8, strlen(buf), buf);
+	}
+
+	auto pid = ::getpid();
+	if (auto a = getAtom(XcbAtomIndex::_NET_WM_PID)) {
+		_xcb->xcb_change_property(_connection, XCB_PROP_MODE_REPLACE, xinfo.window, a,
+				XCB_ATOM_CARDINAL, 32, 1, &pid);
+	}
+
 	uint32_t nProtocols = 0;
 	xcb_atom_t protocolAtoms[2];
 
 	if (xinfo.overrideClose && _atoms[toInt(XcbAtomIndex::WM_DELETE_WINDOW)].value) {
 		protocolAtoms[nProtocols++] = _atoms[toInt(XcbAtomIndex::WM_DELETE_WINDOW)].value;
+	}
+
+	if (_atoms[toInt(XcbAtomIndex::_NET_WM_PING)].value) {
+		protocolAtoms[nProtocols++] = _atoms[toInt(XcbAtomIndex::_NET_WM_PING)].value;
 	}
 
 	if (_syncEnabled && xinfo.enableSync
@@ -723,363 +881,6 @@ void XcbConnection::attachWindow(xcb_window_t window, XcbWindow *iface) {
 
 void XcbConnection::detachWindow(xcb_window_t window) { _windows.erase(window); }
 
-ScreenInfoData XcbConnection::getScreenInfo(xcb_screen_t *screen) const {
-	return getScreenInfo(screen->root);
-}
-
-ScreenInfoData XcbConnection::getScreenInfo(xcb_window_t root) const {
-	if (!_randr.initialized || _randr.majorVersion < 1 || _randr.minorVersion < 5) {
-		return ScreenInfoData();
-	}
-
-	struct OutputCookie {
-		xcb_randr_get_output_info_cookie_t infoCookie;
-		xcb_randr_list_output_properties_cookie_t listCookie;
-		OutputInfo *info;
-	};
-
-	ScreenInfoData ret;
-
-	auto parseScreenResourcesCurrentReply =
-			[&](xcb_randr_get_screen_resources_current_cookie_t cookie) {
-		xcb_generic_error_t *error = nullptr;
-		auto reply =
-				_xcb->xcb_randr_get_screen_resources_current_reply(_connection, cookie, &error);
-		if (error || !reply) {
-			if (error) {
-				log::error("XcbConnection",
-						"Fail to xcb_randr_get_screen_resources: ", error->error_code);
-				::free(error);
-			}
-			if (reply) {
-				::free(reply);
-			}
-			return;
-		}
-
-		ret.config = reply->config_timestamp;
-
-		auto names = _xcb->xcb_randr_get_screen_resources_current_names(reply);
-		auto modes = _xcb->xcb_randr_get_screen_resources_current_modes(reply);
-		auto nmodes = _xcb->xcb_randr_get_screen_resources_current_modes_length(reply);
-
-		while (nmodes > 0) {
-			auto m = parseModeInfo(modes, names);
-			ret.modes.emplace(m.id, move(m));
-
-			names += modes->name_len;
-
-			++modes;
-			--nmodes;
-		}
-
-		auto outputs = _xcb->xcb_randr_get_screen_resources_current_outputs(reply);
-		auto noutputs = _xcb->xcb_randr_get_screen_resources_current_outputs_length(reply);
-
-		while (noutputs > 0) {
-			ret.outputs.emplace(*outputs, OutputInfo{*outputs});
-			++outputs;
-			--noutputs;
-		}
-
-		auto crtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs(reply);
-		auto ncrtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs_length(reply);
-
-		while (ncrtcs > 0) {
-			ret.crtcs.emplace(*crtcs, CrtcInfo{*crtcs});
-			++crtcs;
-			--ncrtcs;
-		}
-
-		::free(reply);
-	};
-
-	auto parseMonitorsReply = [&](xcb_randr_get_monitors_cookie_t cookie) {
-		xcb_generic_error_t *error = nullptr;
-		auto reply = _xcb->xcb_randr_get_monitors_reply(_connection, cookie, &error);
-		if (error || !reply) {
-			if (error) {
-				log::error("XcbConnection", "Fail to xcb_randr_get_monitors: ", error->error_code);
-				::free(error);
-			}
-			if (reply) {
-				::free(reply);
-			}
-			return;
-		}
-
-		auto it = _xcb->xcb_randr_get_monitors_monitors_iterator(reply);
-		auto nmonitors = _xcb->xcb_randr_get_monitors_monitors_length(reply);
-
-		while (nmonitors > 0) {
-			auto m = it.data;
-
-			auto &mon = ret.monitors.emplace_back(MonitorInfo{
-				getAtomString(m->name),
-				IRect{m->x, m->y, m->width, m->height},
-				Extent2(m->width_in_millimeters, m->height_in_millimeters),
-				m->primary != 0,
-				m->automatic != 0,
-			});
-
-			auto out = _xcb->xcb_randr_monitor_info_outputs(m);
-			auto outLen = _xcb->xcb_randr_monitor_info_outputs_length(m);
-
-			while (outLen > 0) {
-				auto it = ret.outputs.find(*out);
-				if (it != ret.outputs.end()) {
-					mon.outputs.emplace_back(&it->second);
-				}
-				++out;
-				--outLen;
-			}
-
-			_xcb->xcb_randr_monitor_info_next(&it);
-			--nmonitors;
-		}
-
-		::free(reply);
-	};
-
-	auto parseOutputInfo = [&](const OutputCookie &cookie) {
-		xcb_generic_error_t *error = nullptr;
-		auto reply = _xcb->xcb_randr_get_output_info_reply(_connection, cookie.infoCookie, &error);
-		if (error || !reply) {
-			if (error) {
-				log::error("XcbConnection",
-						"Fail to xcb_randr_get_output_info: ", error->error_code);
-				::free(error);
-			}
-			if (reply) {
-				::free(reply);
-			}
-			return;
-		}
-
-		auto cIt = ret.crtcs.find(reply->crtc);
-		if (cIt != ret.crtcs.end()) {
-			cookie.info->crtc = &cIt->second;
-		}
-
-		auto modes = _xcb->xcb_randr_get_output_info_modes(reply);
-		auto nmodes = _xcb->xcb_randr_get_output_info_modes_length(reply);
-		auto preferred = reply->num_preferred;
-
-		int idx = 0;
-		while (idx < nmodes) {
-			auto mIt = ret.modes.find(*modes);
-
-			if (mIt != ret.modes.end()) {
-				cookie.info->modes.emplace_back(&mIt->second);
-				if (idx == preferred) {
-					cookie.info->preferred = &mIt->second;
-				}
-			}
-
-			++idx;
-			++modes;
-		}
-
-		auto crtcs = _xcb->xcb_randr_get_output_info_crtcs(reply);
-		auto ncrtcs = _xcb->xcb_randr_get_output_info_crtcs_length(reply);
-
-		while (ncrtcs > 0) {
-			auto cIt = ret.crtcs.find(*crtcs);
-			if (cIt != ret.crtcs.end()) {
-				cookie.info->crtcs.emplace_back(&cIt->second);
-			}
-
-			++crtcs;
-			--ncrtcs;
-		}
-
-		auto name = _xcb->xcb_randr_get_output_info_name(reply);
-		auto nameLen = _xcb->xcb_randr_get_output_info_name_length(reply);
-
-		cookie.info->name = String((const char *)name, nameLen);
-
-		::free(reply);
-
-		error = nullptr;
-		auto listReply = _xcb->xcb_randr_list_output_properties_reply(_connection,
-				cookie.listCookie, &error);
-		if (error || !listReply) {
-			if (error) {
-				log::error("XcbConnection",
-						"Fail to xcb_randr_list_output_properties: ", error->error_code);
-				::free(error);
-			}
-			if (listReply) {
-				::free(listReply);
-			}
-			return;
-		}
-
-		auto atoms = _xcb->xcb_randr_list_output_properties_atoms(listReply);
-		auto natoms = _xcb->xcb_randr_list_output_properties_atoms_length(listReply);
-
-		while (natoms > 0) {
-			cookie.info->properties.emplace_back(PropertyInfo{*atoms});
-			++atoms;
-			--natoms;
-		}
-	};
-
-	auto parseCrtcInfo = [&](xcb_randr_get_crtc_info_cookie_t cookie, CrtcInfo *crtc) {
-		xcb_generic_error_t *error = nullptr;
-		auto reply = _xcb->xcb_randr_get_crtc_info_reply(_connection, cookie, &error);
-		if (error || !reply) {
-			if (error) {
-				log::error("XcbConnection", "Fail to xcb_randr_get_crtc_info: ", error->error_code);
-				::free(error);
-			}
-			if (reply) {
-				::free(reply);
-			}
-			return;
-		}
-
-		auto outputsPtr = _xcb->xcb_randr_get_crtc_info_outputs(reply);
-		auto noutputs = _xcb->xcb_randr_get_crtc_info_outputs_length(reply);
-
-		while (noutputs) {
-			auto oIt = ret.outputs.find(*outputsPtr);
-			if (oIt != ret.outputs.end()) {
-				crtc->outputs.emplace_back(&oIt->second);
-			}
-			++outputsPtr;
-			--noutputs;
-		}
-
-		auto possiblePtr = _xcb->xcb_randr_get_crtc_info_possible(reply);
-		auto npossible = _xcb->xcb_randr_get_crtc_info_possible_length(reply);
-
-		while (npossible) {
-			auto oIt = ret.outputs.find(*possiblePtr);
-			if (oIt != ret.outputs.end()) {
-				crtc->possible.emplace_back(&oIt->second);
-			}
-			++possiblePtr;
-			--npossible;
-		}
-
-		auto mIt = ret.modes.find(reply->mode);
-		if (mIt != ret.modes.end()) {
-			crtc->mode = &mIt->second;
-		}
-
-		crtc->x = reply->x;
-		crtc->y = reply->y;
-		crtc->width = reply->width;
-		crtc->height = reply->height;
-		crtc->rotation = reply->rotation;
-		crtc->rotations = reply->rotations;
-
-		::free(reply);
-	};
-
-	auto parseAtomNames = [&](xcb_get_atom_name_cookie_t cookie, String *target) {
-		xcb_generic_error_t *error = nullptr;
-		auto nameReply = _xcb->xcb_get_atom_name_reply(_connection, cookie, &error);
-		if (error) {
-			log::error("XcbConnection", "xcb_get_atom_name_reply: error: code=", error->error_code);
-			return;
-		}
-
-		if (nameReply) {
-			auto name = _xcb->xcb_get_atom_name_name(nameReply);
-			auto len = _xcb->xcb_get_atom_name_name_length(nameReply);
-
-			*target = String(name, len);
-
-			::free(nameReply);
-		}
-	};
-
-	auto parseEdidReply = [&](xcb_randr_get_output_property_cookie_t cookie, MonitorInfo *mon) {
-		xcb_generic_error_t *error = nullptr;
-		auto reply = _xcb->xcb_randr_get_output_property_reply(_connection, cookie, &error);
-		if (error || !reply) {
-			if (error) {
-				log::error("XcbConnection",
-						"Fail to xcb_randr_get_output_property: ", error->error_code);
-				::free(error);
-			}
-			if (reply) {
-				::free(reply);
-			}
-			return;
-		}
-
-		auto data = _xcb->xcb_randr_get_output_property_data(reply);
-		auto len = _xcb->xcb_randr_get_output_property_data_length(reply);
-
-		mon->edid = parseEdid(BytesView(data, len));
-	};
-
-	auto screenResCurrentCookie =
-			_xcb->xcb_randr_get_screen_resources_current_unchecked(_connection, _screen->root);
-	auto monitorsCookie = _xcb->xcb_randr_get_monitors(_connection, _screen->root, 1);
-
-	_xcb->xcb_flush(_connection);
-
-	parseScreenResourcesCurrentReply(screenResCurrentCookie);
-	parseMonitorsReply(monitorsCookie);
-
-	Vector<OutputCookie> outputCookies;
-	Vector<Pair<xcb_randr_get_crtc_info_cookie_t, CrtcInfo *>> crtcCookies;
-
-	for (auto &oit : ret.outputs) {
-		auto infoCookie =
-				_xcb->xcb_randr_get_output_info(_connection, oit.second.output, ret.config);
-		auto listCookie = _xcb->xcb_randr_list_output_properties(_connection, oit.second.output);
-		outputCookies.emplace_back(OutputCookie{infoCookie, listCookie, &oit.second});
-	}
-
-	for (auto &cit : ret.crtcs) {
-		auto cookie = _xcb->xcb_randr_get_crtc_info(_connection, cit.second.crtc, ret.config);
-		crtcCookies.emplace_back(cookie, &cit.second);
-	}
-
-	_xcb->xcb_flush(_connection);
-
-	for (auto &it : outputCookies) { parseOutputInfo(it); }
-	for (auto &it : crtcCookies) { parseCrtcInfo(it.first, it.second); }
-
-
-	Vector<Pair<xcb_get_atom_name_cookie_t, String *>> atomCookies;
-
-	for (auto &it : ret.outputs) {
-		for (auto &pIt : it.second.properties) {
-			atomCookies.emplace_back(_xcb->xcb_get_atom_name(_connection, pIt.atom), &pIt.name);
-		}
-	}
-
-	_xcb->xcb_flush(_connection);
-
-	for (auto &it : atomCookies) { parseAtomNames(it.first, it.second); }
-
-	Vector<Pair<xcb_randr_get_output_property_cookie_t, MonitorInfo *>> edidCookies;
-
-	for (auto &it : ret.monitors) {
-		for (auto &oIt : it.outputs) {
-			for (auto &pIt : oIt->properties) {
-				if (pIt.name == "EDID") {
-					edidCookies.emplace_back(_xcb->xcb_randr_get_output_property(_connection,
-													 oIt->output, pIt.atom, 0, 0, 256, 0, 0),
-							&it);
-				}
-			}
-		}
-	}
-
-	_xcb->xcb_flush(_connection);
-
-	for (auto &it : edidCookies) { parseEdidReply(it.first, it.second); }
-
-	return ret;
-}
-
 void XcbConnection::fillTextInputData(core::InputEventData &event, xcb_keycode_t detail,
 		uint16_t state, bool textInputEnabled, bool compose) {
 	if (_xkb.initialized) {
@@ -1113,6 +914,10 @@ void XcbConnection::fillTextInputData(core::InputEventData &event, xcb_keycode_t
 			event.key.keychar = 0;
 		}
 	}
+}
+
+void XcbConnection::notifyScreenChange() {
+	for (auto &it : _windows) { it.second->notifyScreenChange(); }
 }
 
 xcb_keysym_t XcbConnection::getKeysym(xcb_keycode_t code, uint16_t state, bool resolveMods) const {
@@ -1173,12 +978,7 @@ xcb_keysym_t XcbConnection::getKeysym(xcb_keycode_t code, uint16_t state, bool r
 	return XCB_NO_SYMBOL;
 }
 
-xcb_cursor_t XcbConnection::loadCursor(StringView str) {
-	return _xcb->xcb_cursor_load_cursor(_cursorContext,
-			str.terminated() ? str.data() : str.str<Interface>().data());
-}
-
-xcb_cursor_t XcbConnection::loadCursor(std::initializer_list<StringView> list) {
+xcb_cursor_t XcbConnection::loadCursor(SpanView<StringView> list) {
 	xcb_cursor_t cursor = XCB_CURSOR_NONE;
 	for (auto &it : list) {
 		cursor = _xcb->xcb_cursor_load_cursor(_cursorContext,
@@ -1232,13 +1032,32 @@ bool XcbConnection::setCursorId(xcb_window_t window, uint32_t cursorId) {
 }
 
 void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
-	auto cookie = _xcb->xcb_get_selection_owner(getConnection(), getAtom(XcbAtomIndex::CLIPBOARD));
-	auto reply = _xcb->xcb_get_selection_owner_reply(getConnection(), cookie, nullptr);
+	auto owner = _clipboard.owner;
+	if (!owner) {
+		auto reply = perform(_xcb->xcb_get_selection_owner_reply,
+				_xcb->xcb_get_selection_owner(getConnection(), getAtom(XcbAtomIndex::CLIPBOARD)));
+		if (reply) {
+			owner = reply->owner;
+		}
+	}
 
-	if (reply->owner == _clipboard.window) {
+	if (!owner) {
+		// there is no clipboard
+		req->dataCallback(BytesView(), StringView());
+		return;
+	}
 
-
-		//cb(_clipboard.selection, _clipboard.type);
+	if (owner == _clipboard.window) {
+		Vector<StringView> views;
+		views.reserve(_clipboard.data->types.size());
+		for (auto &it : _clipboard.data->types) { views.emplace_back(it); }
+		auto type = req->typeCallback(views);
+		if (type.empty() || std::find(views.begin(), views.end(), type) == views.end()) {
+			req->dataCallback(BytesView(), StringView());
+		} else {
+			auto data = _clipboard.data->encodeCallback(type);
+			req->dataCallback(data, type);
+		}
 	} else {
 		if (_clipboard.requests.empty() && _clipboard.waiters.empty()) {
 			// acquire list of formats
@@ -1252,13 +1071,26 @@ void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	}
 }
 
-void XcbConnection::writeToClipboard(BytesView data, StringView contentType) {
-	_clipboard.selection = data.bytes<Interface>();
-	_clipboard.type = contentType.str<Interface>();
-	if (_clipboard.type.empty()) {
-		_clipboard.type = "text/plain";
+void XcbConnection::writeToClipboard(Rc<ClipboardData> &&data) {
+	Vector<xcb_atom_t> atoms{
+		getAtom(XcbAtomIndex::TARGETS),
+		getAtom(XcbAtomIndex::TIMESTAMP),
+		getAtom(XcbAtomIndex::MULTIPLE),
+		getAtom(XcbAtomIndex::SAVE_TARGETS),
+	};
+
+	getAtoms(data->types, [&](SpanView<xcb_atom_t> a) {
+		for (auto &it : a) { atoms.emplace_back(it); }
+	});
+
+	if (std::find(data->types.begin(), data->types.end(), "text/plain") != data->types.end()) {
+		atoms.emplace_back(getAtom(XcbAtomIndex::UTF8_STRING));
+		atoms.emplace_back(getAtom(XcbAtomIndex::TEXT));
+		atoms.emplace_back(XCB_ATOM_STRING);
 	}
-	_clipboard.typeAtom = getAtom(_clipboard.type);
+
+	_clipboard.data = move(data);
+	_clipboard.typeAtoms = sp::move(atoms);
 
 	_xcb->xcb_set_selection_owner(getConnection(), _clipboard.window,
 			getAtom(XcbAtomIndex::CLIPBOARD), XCB_CURRENT_TIME);
@@ -1266,9 +1098,29 @@ void XcbConnection::writeToClipboard(BytesView data, StringView contentType) {
 	auto cookie = _xcb->xcb_get_selection_owner(getConnection(), getAtom(XcbAtomIndex::CLIPBOARD));
 	auto reply = _xcb->xcb_get_selection_owner_reply(getConnection(), cookie, nullptr);
 	if (reply->owner != _clipboard.window) {
-		log::error("XcbWindow", "Fail to set selection owner");
+		_clipboard.data = nullptr;
+		_clipboard.typeAtoms.clear();
 	}
 	::free(reply);
+}
+
+Value XcbConnection::getSettingsValue(StringView key) const {
+	auto it = _xsettings.settings.find(key);
+	if (it != _xsettings.settings.end()) {
+		return it->second.value;
+	}
+	return Value();
+}
+
+void XcbConnection::printError(StringView message, xcb_generic_error_t *error) const {
+	if (error) {
+		log::error("XcbConnection", message, "; code=", error->error_code,
+				"; major=", getErrorMajorName(error->major_code),
+				"; minor=", getErrorMinorName(error->major_code, error->minor_code),
+				"; name=", getErrorName(error->error_code));
+	} else {
+		log::error("XcbConnection", message, "; no error reported");
+	}
 }
 
 void XcbConnection::updateKeysymMapping() {
@@ -1305,12 +1157,12 @@ void XcbConnection::updateKeysymMapping() {
 				setup->max_keycode - setup->min_keycode + 1);
 	}
 
-	auto numlockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Num_Lock);
-	auto shiftlockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Shift_Lock);
-	auto capslockcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Caps_Lock);
-	auto modeswitchcodes = _xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Mode_switch);
+	auto numlockcodes = Ptr(_xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Num_Lock));
+	auto shiftlockcodes = Ptr(_xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Shift_Lock));
+	auto capslockcodes = Ptr(_xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Caps_Lock));
+	auto modeswitchcodes = Ptr(_xcb->xcb_key_symbols_get_keycode(_keys.keysyms, XK_Mode_switch));
 
-	auto modmap_r = _xcb->xcb_get_modifier_mapping_reply(_connection, modifierCookie, nullptr);
+	auto modmap_r = perform(_xcb->xcb_get_modifier_mapping_reply, modifierCookie);
 	if (!modmap_r) {
 		return;
 	}
@@ -1332,19 +1184,11 @@ void XcbConnection::updateKeysymMapping() {
 		}
 	}
 
-	::free(modmap_r);
-
-	::free(numlockcodes);
-	::free(shiftlockcodes);
-	::free(capslockcodes);
-	::free(modeswitchcodes);
-
 	// only if no xkb available
 	if (!_xkb.lib) {
 		memset(_xkb.keycodes, 0, sizeof(core::InputKeyCode) * 256);
 		// from https://stackoverflow.com/questions/18689863/obtain-keyboard-layout-and-keysyms-with-xcb
-		xcb_get_keyboard_mapping_reply_t *keyboard_mapping =
-				_xcb->xcb_get_keyboard_mapping_reply(_connection, mappingCookie, NULL);
+		auto keyboard_mapping = perform(_xcb->xcb_get_keyboard_mapping_reply, mappingCookie);
 
 		int nkeycodes = keyboard_mapping->length / keyboard_mapping->keysyms_per_keycode;
 
@@ -1354,63 +1198,16 @@ void XcbConnection::updateKeysymMapping() {
 			_xkb.keycodes[setup->min_keycode + keycode_idx] =
 					getKeysymCode(keysyms[keycode_idx * keyboard_mapping->keysyms_per_keycode]);
 		}
-
-		free(keyboard_mapping);
 	}
 }
 
 bool XcbConnection::checkCookie(xcb_void_cookie_t cookie, StringView errMessage) {
-	xcb_generic_error_t *error = _xcb->xcb_request_check(_connection, cookie);
+	auto error = Ptr(_xcb->xcb_request_check(_connection, cookie));
 	if (error) {
-		log::error("XcbConnection", errMessage, "; code=", error->error_code);
+		printError(errMessage, error);
 		return false;
 	}
 	return true;
-}
-
-ModeInfo XcbConnection::parseModeInfo(xcb_randr_mode_info_t *mode, uint8_t *name) const {
-	double vTotal = mode->vtotal;
-
-	if (mode->mode_flags & XCB_RANDR_MODE_FLAG_DOUBLE_SCAN) {
-		/* doublescan doubles the number of lines */
-		vTotal *= 2;
-	}
-
-	if (mode->mode_flags & XCB_RANDR_MODE_FLAG_INTERLACE) {
-		/* interlace splits the frame into two fields */
-		/* the field rate is what is typically reported by monitors */
-		vTotal /= 2;
-	}
-
-	uint16_t rate;
-	if (mode->htotal && vTotal) {
-		rate = uint16_t(floor(double(mode->dot_clock) / (double(mode->htotal) * double(vTotal))));
-	}
-	return ModeInfo{mode->id, mode->width, mode->height, rate,
-		String((const char *)name, mode->name_len)};
-}
-
-String XcbConnection::getAtomString(xcb_atom_t atom) const {
-	xcb_generic_error_t *error = nullptr;
-	auto nameReply = _xcb->xcb_get_atom_name_reply(_connection,
-			_xcb->xcb_get_atom_name(_connection, atom), &error);
-	if (error) {
-		log::error("XcbConnection", "xcb_get_atom_name_reply: error: code=", error->error_code);
-		return String();
-	}
-
-	if (nameReply) {
-		auto name = _xcb->xcb_get_atom_name_name(nameReply);
-		auto len = _xcb->xcb_get_atom_name_name_length(nameReply);
-
-		auto ret = String(name, len);
-
-		::free(nameReply);
-
-		return ret;
-	}
-
-	return String();
 }
 
 void XcbConnection::continueClipboardProcessing() {
@@ -1431,7 +1228,7 @@ void XcbConnection::continueClipboardProcessing() {
 void XcbConnection::finalizeClipboardWaiters(BytesView data, xcb_atom_t type) {
 	auto wIt = _clipboard.waiters.equal_range(type);
 	auto typeName = getAtomName(type);
-	if (typeName == "STRING" || typeName == "UTF8_STRING") {
+	if (typeName == "STRING" || typeName == "UTF8_STRING" || typeName == "TEXT") {
 		typeName = StringView("text/plain");
 	}
 	for (auto it = wIt.first; it != wIt.second; ++it) { it->second->dataCallback(data, typeName); }
@@ -1443,8 +1240,9 @@ void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
 	if (event->property == getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)) {
 		if (event->target == getAtom(XcbAtomIndex::TARGETS)) {
 			auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1, _clipboard.window,
-					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_ATOM_ATOM, 0, maxOf<uint32_t>());
-			auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_ATOM_ATOM, 0,
+					maxOf<uint32_t>() / 4);
+			auto reply = perform(_xcb->xcb_get_property_reply, cookie);
 			if (reply) {
 				auto targets = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
 				auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
@@ -1490,19 +1288,15 @@ void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
 				});
 
 				_clipboard.requests.clear();
-
-				::free(reply);
 			}
 		} else {
 			auto wIt = _clipboard.waiters.equal_range(event->target);
 
 			if (wIt.first != wIt.second) {
-				log::debug("XcbConnection",
-						"Received clipboard data: ", getAtomName(event->target));
 				auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1,
 						_clipboard.window, getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD),
-						XCB_GET_PROPERTY_TYPE_ANY, 0, maxOf<uint32_t>());
-				auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+						XCB_GET_PROPERTY_TYPE_ANY, 0, maxOf<uint32_t>() / 4);
+				auto reply = perform(_xcb->xcb_get_property_reply, cookie);
 				if (reply) {
 					if (reply->type == getAtom(XcbAtomIndex::INCR)) {
 						// wait for an incremental content
@@ -1516,8 +1310,6 @@ void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
 										_xcb->xcb_get_property_value_length(reply)),
 								_clipboard.incrType);
 					}
-
-					free(reply);
 				} else {
 					_clipboard.waiters.erase(wIt.first, wIt.second);
 				}
@@ -1529,9 +1321,9 @@ void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
 				auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1,
 						_clipboard.window, getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD),
 						XCB_GET_PROPERTY_TYPE_ANY, 0, 0);
-				auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+				auto reply = perform(_xcb->xcb_get_property_reply, cookie);
 				if (reply) {
-					::free(reply);
+					reply.clear();
 				}
 			}
 		}
@@ -1539,58 +1331,145 @@ void XcbConnection::handleSelectionNotify(xcb_selection_notify_event_t *event) {
 	continueClipboardProcessing();
 }
 
+void XcbConnection::handleSelectionClear(xcb_selection_clear_event_t *ev) {
+	if (ev->owner == _clipboard.window && ev->selection == getAtom(XcbAtomIndex::CLIPBOARD)) {
+		_clipboard.data = nullptr;
+		_clipboard.typeAtoms.clear();
+	}
+}
+
 void XcbConnection::handlePropertyNotify(xcb_property_notify_event_t *ev) {
-	if (ev->atom == getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)
-			&& ev->state == XCB_PROPERTY_NEW_VALUE) {
-		if (_clipboard.incr) {
-			auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1, _clipboard.window,
-					getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_GET_PROPERTY_TYPE_ANY, 0,
-					maxOf<uint32_t>());
-			auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
-			if (reply) {
-				auto len = _xcb->xcb_get_property_value_length(reply);
+	if (ev->window == _clipboard.window && ev->atom == getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD)
+			&& ev->state == XCB_PROPERTY_NEW_VALUE && _clipboard.incr) {
+		auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 1, _clipboard.window,
+				getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_GET_PROPERTY_TYPE_ANY, 0,
+				maxOf<uint32_t>());
+		auto reply = perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			auto len = _xcb->xcb_get_property_value_length(reply);
 
-				if (len > 0) {
-					auto data = (const uint8_t *)_xcb->xcb_get_property_value(reply);
-					_clipboard.incrBuffer.emplace_back(BytesView(data, len).bytes<Interface>());
-				} else {
-					Bytes data;
-					size_t size = 0;
-					for (auto &it : _clipboard.incrBuffer) { size += it.size(); }
-
-					data.resize(size);
-
-					size = 0;
-					for (auto &it : _clipboard.incrBuffer) {
-						memcpy(data.data() + size, it.data(), it.size());
-						size += it.size();
-					}
-
-					finalizeClipboardWaiters(data, _clipboard.incrType);
-					_clipboard.incrBuffer.clear();
-					_clipboard.incr = false;
-					// finalize transfer
-				}
+			if (len > 0) {
+				auto data = (const uint8_t *)_xcb->xcb_get_property_value(reply);
+				_clipboard.incrBuffer.emplace_back(BytesView(data, len).bytes<Interface>());
 			} else {
-				finalizeClipboardWaiters(BytesView(), _clipboard.incrType);
+				Bytes data;
+				size_t size = 0;
+				for (auto &it : _clipboard.incrBuffer) { size += it.size(); }
+
+				data.resize(size);
+
+				size = 0;
+				for (auto &it : _clipboard.incrBuffer) {
+					memcpy(data.data() + size, it.data(), it.size());
+					size += it.size();
+				}
+
+				finalizeClipboardWaiters(data, _clipboard.incrType);
 				_clipboard.incrBuffer.clear();
 				_clipboard.incr = false;
+				// finalize transfer
+			}
+		} else {
+			finalizeClipboardWaiters(BytesView(), _clipboard.incrType);
+			_clipboard.incrBuffer.clear();
+			_clipboard.incr = false;
+		}
+	} else if (auto t = _clipboard.getTransfer(ev->window, ev->atom)) {
+		if (ev->state == XCB_PROPERTY_DELETE) {
+			if (t->chunks.empty()) {
+				// write zero-length prop to end transfer
+				_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, t->requestor,
+						t->property, t->type, 8, 0, nullptr);
+
+				const uint32_t values[] = {XCB_EVENT_MASK_NO_EVENT};
+				_xcb->xcb_change_window_attributes(_connection, t->requestor, XCB_CW_EVENT_MASK,
+						values);
+
+				_xcb->xcb_flush(_connection);
+				_clipboard.cancelTransfer(ev->window, ev->atom);
+			} else {
+				auto &chunk = t->chunks.front();
+				_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_APPEND, t->requestor,
+						t->property, t->type, 8, chunk.size(), chunk.data());
+				_xcb->xcb_flush(_connection);
+				t->chunks.pop_front();
+				++t->current;
 			}
 		}
-		log::debug("XcbConnection", getAtomName(ev->atom), " ", ev->state);
+	} else if (ev->window == _xsettings.window && ev->atom == _xsettings.property) {
+		readXSettings();
+	} else {
+		auto it = _windows.find(ev->window);
+		if (it != _windows.end()) {
+			it->second->handlePropertyNotify(ev);
+		}
+	}
+}
+
+xcb_atom_t XcbConnection::writeClipboardSelection(xcb_window_t requestor, xcb_atom_t target,
+		xcb_atom_t targetProperty) {
+	if (!_clipboard.data) {
+		return XCB_ATOM_NONE;
+	}
+
+	StringView type;
+	if (target == XCB_ATOM_STRING || target == getAtom(XcbAtomIndex::UTF8_STRING)) {
+		type = StringView("text/plain");
+	} else {
+		type = getAtomName(target);
+	}
+
+	auto it = std::find(_clipboard.data->types.begin(), _clipboard.data->types.end(), type);
+	if (it == _clipboard.data->types.end()) {
+		return XCB_ATOM_NONE;
+	}
+
+	auto data = _clipboard.data->encodeCallback(type);
+	if (data.empty()) {
+		return XCB_ATOM_NONE;
+	}
+
+	if (data.size() > _safeReqeustSize) {
+		// start incr transfer
+
+		auto t = _clipboard.addTransfer(requestor, targetProperty,
+				ClipboardTransfer{
+					requestor,
+					targetProperty,
+					target,
+					_clipboard.data,
+					0,
+				});
+
+		if (!t) {
+			return XCB_ATOM_NONE;
+		}
+
+		uint32_t dataSize = uint32_t(data.size());
+		BytesView dataView(data);
+
+		while (!dataView.empty()) {
+			auto block = dataView.readBytes(_safeReqeustSize);
+			t->chunks.emplace_back(block.bytes<Interface>());
+		}
+
+		// subscribe on target widnow's events
+		const uint32_t values[] = {
+			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE};
+		_xcb->xcb_change_window_attributes(_connection, requestor, XCB_CW_EVENT_MASK, values);
+
+		auto incr = getAtom(XcbAtomIndex::INCR);
+		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, requestor, targetProperty,
+				incr, 32, 1, &dataSize);
+		return target;
+	} else {
+		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, requestor, targetProperty,
+				target, 8, data.size(), data.data());
+		return target;
 	}
 }
 
 void XcbConnection::handleSelectionRequest(xcb_selection_request_event_t *event) {
-	const xcb_atom_t targets[] = {
-		getAtom(XcbAtomIndex::TARGETS),
-		getAtom(XcbAtomIndex::MULTIPLE),
-		_clipboard.typeAtom,
-		getAtom(XcbAtomIndex::OCTET_STREAM),
-		getAtom(XcbAtomIndex::UTF8_STRING),
-		XCB_ATOM_STRING,
-	};
-
 	xcb_selection_notify_event_t notify;
 	notify.response_type = XCB_SELECTION_NOTIFY;
 	notify.pad0 = 0;
@@ -1599,48 +1478,41 @@ void XcbConnection::handleSelectionRequest(xcb_selection_request_event_t *event)
 	notify.requestor = event->requestor;
 	notify.selection = event->selection;
 	notify.target = event->target;
-	notify.property = 0;
-
-	auto ntargets = sizeof(targets) / sizeof(targets[0]);
-
-	if (!_clipboard.type.starts_with("text/")) {
-		ntargets -= 2; // remove text-based targets
-	}
+	notify.property = XCB_ATOM_NONE;
 
 	if (event->target == getAtom(XcbAtomIndex::TARGETS)) {
 		// The list of supported targets was requested
 		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
-				event->property, XCB_ATOM_ATOM, 32, ntargets, (unsigned char *)targets);
+				event->property, XCB_ATOM_ATOM, 32, _clipboard.typeAtoms.size(),
+				(unsigned char *)_clipboard.typeAtoms.data());
+		notify.property = event->property;
+	} else if (event->target == getAtom(XcbAtomIndex::TIMESTAMP)) {
+		// The list of supported targets was requested
+		_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
+				event->property, XCB_ATOM_INTEGER, 32, 1,
+				(unsigned char *)&_clipboard.selectionTimestamp);
 		notify.property = event->property;
 	} else if (event->target == getAtom(XcbAtomIndex::MULTIPLE)) {
-		auto cookie = _xcb->xcb_get_property_unchecked(getConnection(), 0, event->requestor,
-				event->property, getAtom(XcbAtomIndex::ATOM_PAIR), 0, maxOf<uint32_t>());
-		auto reply = _xcb->xcb_get_property_reply(getConnection(), cookie, nullptr);
+		auto cookie = _xcb->xcb_get_property(getConnection(), 0, event->requestor, event->property,
+				getAtom(XcbAtomIndex::ATOM_PAIR), 0, maxOf<uint32_t>() / 4);
+		auto reply = perform(_xcb->xcb_get_property_reply, cookie);
 		if (reply) {
 			xcb_atom_t *requests = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
 			auto count = uint32_t(_xcb->xcb_get_property_value_length(reply)) / sizeof(xcb_atom_t);
 
 			for (uint32_t i = 0; i < count; i += 2) {
-				uint32_t j;
-
-				for (j = 0; j < ntargets; j++) {
-					if (targets[i] == requests[j]) {
-						break;
-					}
-				}
-
-				if (j < ntargets) {
-					_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE,
-							event->requestor, event->property, event->target, 8,
-							_clipboard.selection.size(), _clipboard.selection.data());
-				} else {
+				auto it = std::find(_clipboard.typeAtoms.begin(), _clipboard.typeAtoms.end(),
+						requests[i]);
+				if (it == _clipboard.typeAtoms.end()) {
 					requests[i + 1] = XCB_ATOM_NONE;
+				} else {
+					requests[i + 1] =
+							writeClipboardSelection(event->requestor, requests[i], requests[i + 1]);
 				}
 			}
 
 			_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
 					event->property, getAtom(XcbAtomIndex::ATOM_PAIR), 32, count, requests);
-			::free(reply);
 
 			notify.property = event->property;
 		}
@@ -1649,11 +1521,13 @@ void XcbConnection::handleSelectionRequest(xcb_selection_request_event_t *event)
 				event->property, getAtom(XcbAtomIndex::XNULL), 32, 0, nullptr);
 		notify.property = event->property;
 	} else {
-		for (uint32_t i = 0; i < ntargets; ++i) {
-			if (event->target == targets[i]) {
-				_xcb->xcb_change_property(getConnection(), XCB_PROP_MODE_REPLACE, event->requestor,
-						event->property, event->target, 8, _clipboard.selection.size(),
-						_clipboard.selection.data());
+		auto it =
+				std::find(_clipboard.typeAtoms.begin(), _clipboard.typeAtoms.end(), event->target);
+
+		if (it != _clipboard.typeAtoms.end()) {
+			notify.target =
+					writeClipboardSelection(event->requestor, event->target, event->property);
+			if (notify.target != XCB_ATOM_NONE) {
 				notify.property = event->property;
 			}
 		}
@@ -1665,12 +1539,86 @@ void XcbConnection::handleSelectionRequest(xcb_selection_request_event_t *event)
 	_xcb->xcb_flush(getConnection());
 }
 
-void XcbConnection::notifyClipboard(BytesView data, StringView type) {
-	/*if (type.empty()) {
-		type = StringView("text/plain");
+void XcbConnection::handleSelectionUpdateNotify(xcb_xfixes_selection_notify_event_t *ev) {
+	if (ev->selection != getAtom(XcbAtomIndex::CLIPBOARD)) {
+		return;
 	}
-	for (auto &it : _clipboard.callbacks) { it.first(data, type); }
-	_clipboard.callbacks.clear();*/
+
+	_clipboard.owner = ev->owner;
+
+	if (ev->owner == _clipboard.window) {
+		_clipboard.selectionTimestamp = ev->selection_timestamp;
+	} else if (ev->owner == XCB_WINDOW_NONE) {
+		_clipboard.data = nullptr;
+		_clipboard.typeAtoms.clear();
+	}
+}
+
+static int _getPadding(int length, int increment) {
+	return (increment - (length % increment)) % increment;
+}
+
+void XcbConnection::readXSettings() {
+	auto cookie = _xcb->xcb_get_property(getConnection(), 0, _xsettings.window, _xsettings.property,
+			0, 0, maxOf<uint32_t>() / 4);
+	auto reply = perform(_xcb->xcb_get_property_reply, cookie);
+	if (reply) {
+		auto data = _xcb->xcb_get_property_value(reply);
+		auto len = _xcb->xcb_get_property_value_length(reply);
+
+		Map<String, SettingsValue> settings;
+
+		uint32_t udpi = 0;
+		uint32_t dpi = 0;
+
+		auto d = BytesView(reinterpret_cast<uint8_t *>(data), len);
+		/*auto byteOrder =*/d.readUnsigned32();
+		auto serial = d.readUnsigned32();
+		auto nsettings = d.readUnsigned32();
+
+		while (nsettings > 0 && !d.empty()) {
+			auto type = d.readUnsigned(); //                  1  SETTING_TYPE  type
+			d.readUnsigned(); //                                       1                unused
+			auto len = d.readUnsigned16(); //                2  n             name-len
+			auto name = d.readString(len); // n  STRING8       name
+			d.readBytes(_getPadding(len, 4)); //   P               unused, p=pad(n)
+			auto serial = d.readUnsigned32(); //             4   CARD32      last-change-serial
+
+			if (type == 0) {
+				auto value = d.readUnsigned32();
+				settings.emplace(name.str<Interface>(),
+						SettingsValue{Value(bit_cast<int32_t>(value)), serial});
+				if (name == "Gdk/UnscaledDPI") {
+					udpi = value;
+				} else if (name == "Xft/DPI") {
+					dpi = value;
+				}
+			} else if (type == 1) {
+				auto len = d.readUnsigned32();
+				auto value = d.readString(len);
+				d.readBytes(_getPadding(len, 4));
+				settings.emplace(name.str<Interface>(), SettingsValue{Value(value), serial});
+			} else if (type == 2) {
+				auto r = d.readUnsigned16();
+				auto g = d.readUnsigned16();
+				auto b = d.readUnsigned16();
+				auto a = d.readUnsigned16();
+
+				settings.emplace(name.str<Interface>(),
+						SettingsValue{Value{Value(r), Value(g), Value(b), Value(a)}, serial});
+			} else {
+				break;
+			}
+			--nsettings;
+		}
+
+		_xsettings.serial = serial;
+		_xsettings.settings = sp::move(settings);
+		_xsettings.udpi = udpi;
+		_xsettings.dpi = dpi;
+
+		for (auto &it : _windows) { it.second->handleSettingsUpdated(); }
+	}
 }
 
 } // namespace stappler::xenolith::platform

@@ -603,32 +603,6 @@ void Loop::waitIdle() {
 	}
 }
 
-void Loop::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
-		core::AttachmentLayout l) {
-	auto path = file.path.str<Interface>();
-	auto cat = file.category;
-	captureImage([path, cat](const ImageInfoData &info, BytesView view) mutable {
-		if (!StringView(path).ends_with(".png")) {
-			path = path + String(".png");
-		}
-		if (!view.empty()) {
-			auto fmt = core::getImagePixelFormat(info.format);
-			bitmap::PixelFormat pixelFormat = bitmap::PixelFormat::Auto;
-			switch (fmt) {
-			case core::PixelFormat::A: pixelFormat = bitmap::PixelFormat::A8; break;
-			case core::PixelFormat::IA: pixelFormat = bitmap::PixelFormat::IA88; break;
-			case core::PixelFormat::RGB: pixelFormat = bitmap::PixelFormat::RGB888; break;
-			case core::PixelFormat::RGBA: pixelFormat = bitmap::PixelFormat::RGBA8888; break;
-			default: break;
-			}
-			if (pixelFormat != bitmap::PixelFormat::Auto) {
-				Bitmap bmp(view.data(), info.extent.width, info.extent.height, pixelFormat);
-				bmp.save(FileInfo{path, cat});
-			}
-		}
-	}, image, l);
-}
-
 void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 		const Rc<core::ImageObject> &image, core::AttachmentLayout l) {
 	performOnThread([this, cb = sp::move(cb), image, l]() mutable {
@@ -648,8 +622,9 @@ void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> 
 	}, this, true);
 }
 
-Rc<core::PresentationEngine> Loop::makePresentationEngine(NotNull<core::PresentationWindow> w) {
-	return Rc<PresentationEngine>::create(this, _internal->device.get(), w);
+Rc<core::PresentationEngine> Loop::makePresentationEngine(NotNull<core::PresentationWindow> w,
+		core::PresentationOptions opts) {
+	return Rc<PresentationEngine>::create(this, _internal->device.get(), w, opts);
 }
 
 void Loop::performInit() { }

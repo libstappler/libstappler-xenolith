@@ -164,7 +164,8 @@ public:
 
 	virtual Status readFromClipboard(Function<void(BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
-	virtual Status writeToClipboard(BytesView, StringView contentType = StringView());
+	virtual Status writeToClipboard(Function<Bytes(StringView)> &&, SpanView<String>,
+			Ref * = nullptr);
 
 	virtual void handleConfigurationChanged(Rc<ContextInfo> &&);
 
@@ -184,7 +185,7 @@ public:
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
 	virtual void handleNativeWindowRedrawNeeded(NotNull<NativeWindow>);
-	virtual void handleNativeWindowResized(NotNull<NativeWindow>, bool liveResize);
+	virtual void handleNativeWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize);
 	virtual void handleNativeWindowInputEvents(NotNull<NativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
@@ -206,8 +207,8 @@ public:
 	virtual void handleWillStart();
 	virtual void handleDidStart();
 
-	virtual void addNetworkCallback(Ref *key, Function<void(NetworkFlags)> &&);
-	virtual void removeNetworkCallback(Ref *key);
+	virtual void handleNetworkStateChanged(NetworkFlags);
+	virtual void handleThemeInfoChanged(const ThemeInfo &);
 
 	virtual void updateMessageToken(BytesView tok);
 	virtual void receiveRemoteNotification(Value &&val);
@@ -216,8 +217,6 @@ public:
 
 protected:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<NativeWindow>);
-
-	virtual Rc<core::PresentationEngine> makePresentationEngine(NotNull<core::PresentationWindow>);
 
 	virtual Rc<Scene> makeScene(NotNull<AppWindow>, const core::FrameConstraints &);
 

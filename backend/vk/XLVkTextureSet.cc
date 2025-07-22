@@ -27,7 +27,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
-bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data) {
+uint32_t TextureSetLayout::getLayoutImageCount(const Device &dev,
+		const core::TextureSetLayoutData &data) {
 	auto &devInfo = dev.getInfo();
 
 	uint32_t maxImageCount = data.imageCount;
@@ -42,15 +43,20 @@ bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data)
 	auto imageLimit = std::min(limits.maxPerStageDescriptorSampledImages,
 			limits.maxDescriptorSetSampledImages);
 
-	_imageCount = imageLimit = std::min(imageLimit - 2, maxImageCount);
+	auto imageCount = imageLimit = std::min(imageLimit - 2, maxImageCount);
 
-	if (_imageCount > maxResources) {
-		_imageCount = imageLimit = maxResources - 4;
+	if (imageCount > maxResources) {
+		imageCount = imageLimit = maxResources - 4;
 	}
 
 	if (!devInfo.features.device10.features.shaderSampledImageArrayDynamicIndexing) {
-		_imageCount = imageLimit = 1;
+		imageCount = imageLimit = 1;
 	}
+	return imageCount;
+}
+
+bool TextureSetLayout::init(Device &dev, const core::TextureSetLayoutData &data) {
+	_imageCount = getLayoutImageCount(dev, data);
 
 	Vector<VkSampler> vkSamplers;
 	for (auto &it : data.compiledSamplers) {

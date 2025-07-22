@@ -31,6 +31,7 @@ static SharedSymbol s_xenolithFontSymbols[] = {
 	SharedSymbol{"FontComponent::createFontComponent", FontComponent::createFontComponent},
 	SharedSymbol{"FontComponent::createDefaultController", FontComponent::createDefaultController},
 	SharedSymbol{"locale::setLocale", locale::setLocale},
+	SharedSymbol{"locale::getLocaleInfo", locale::getLocaleInfo},
 };
 
 SP_USED static SharedModule s_xenolithFontModule(buildconfig::MODULE_XENOLITH_FONT_NAME,

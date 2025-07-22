@@ -31,7 +31,7 @@ bool PresentationFrame::init(PresentationEngine *e, FrameConstraints c, uint64_t
 		Flags flags, Function<void(PresentationFrame *, bool)> &&completeCallback) {
 	_constraints = c;
 	_frameOrder = frameOrder;
-	_flags = flags;
+	_flags = (flags & InitFlags);
 
 	_engine = e;
 	_swapchain = _engine->getSwapchain();
