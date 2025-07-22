@@ -82,7 +82,6 @@ event::BusDelegate *EventListener::listenForEvent(const EventHeader &h, EventCal
 					const event::BusEvent &event, event::BusDelegate &d) {
 		if (_enabled && _owner && _running) {
 			auto refId = retain();
-			std::cout << "call: " << this << "\n";
 			callback(static_cast<const Event &>(event));
 			if (removeAfterEvent) {
 				_listeners.erase(static_cast<EventDelegate *>(&d));

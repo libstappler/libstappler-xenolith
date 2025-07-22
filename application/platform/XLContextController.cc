@@ -53,8 +53,9 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run() { return _resultCode; }
 
-void ContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
-	_context->handleNativeWindowResized(w, liveResize);
+void ContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
+		bool liveResize) {
+	_context->handleNativeWindowConstraintsChanged(w, liveResize);
 }
 void ContextController::notifyWindowInputEvents(NotNull<ContextNativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
@@ -108,7 +109,7 @@ Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&) {
 	return Status::ErrorNotImplemented;
 }
 
-Status ContextController::writeToClipboard(BytesView, StringView contentType) {
+Status ContextController::writeToClipboard(Rc<ClipboardData> &&) {
 	return Status::ErrorNotImplemented;
 }
 

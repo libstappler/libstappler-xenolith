@@ -23,10 +23,13 @@
 **/
 
 #include "XLVkInstance.h"
+#include "SPGeometry.h"
+#include "SPMemory.h"
 #include "XLVk.h"
 #include "XLVkInfo.h"
 #include "XLVkLoop.h"
 #include "XLCoreDevice.h"
+#include <vulkan/vulkan_core.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -780,6 +783,91 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 	auto requiredFeatures = DeviceInfo::Features::getRequired();
 	ret.requiredFeaturesExists =
 			ret.features.canEnable(requiredFeatures, deviceProperties.apiVersion);
+
+	if (_optionals.test(toInt(OptionalInstanceExtension::Display))) {
+		uint32_t nprops = 0;
+		vkGetPhysicalDeviceDisplayPropertiesKHR(device, &nprops, nullptr);
+
+		Vector<VkDisplayPropertiesKHR> props;
+		props.resize(nprops);
+		vkGetPhysicalDeviceDisplayPropertiesKHR(device, &nprops, props.data());
+
+		for (auto &it : props) {
+			ret.displays.emplace_back(DisplayInfo{
+				it.display,
+				it.displayName,
+				Extent2(it.physicalDimensions.width, it.physicalDimensions.height),
+				Extent2(it.physicalResolution.width, it.physicalResolution.height),
+			});
+		}
+
+		uint32_t nplanes = 0;
+		vkGetPhysicalDeviceDisplayPlanePropertiesKHR(device, &nplanes, nullptr);
+
+		Vector<VkDisplayPlanePropertiesKHR> planesProperties;
+		planesProperties.resize(nplanes);
+		vkGetPhysicalDeviceDisplayPlanePropertiesKHR(device, &nplanes, planesProperties.data());
+
+		for (auto &it : planesProperties) {
+			auto &plane = ret.planes.emplace_back(PlaneInfo{it.currentStackIndex});
+			for (auto &d : ret.displays) {
+				if (d.display == it.currentDisplay) {
+					plane.current = &d;
+					break;
+				}
+			}
+		}
+
+		for (auto &it : ret.planes) {
+			emplace_ordered(ret.knownPlanes, it.stackIndex);
+
+			uint32_t ndisplays = 0;
+			vkGetDisplayPlaneSupportedDisplaysKHR(device, it.stackIndex, &ndisplays, nullptr);
+
+			Vector<VkDisplayKHR> displays;
+			displays.resize(ndisplays);
+			vkGetDisplayPlaneSupportedDisplaysKHR(device, it.stackIndex, &ndisplays,
+					displays.data());
+
+			for (auto &disp : displays) {
+				for (auto &d : ret.displays) {
+					if (d.display == disp) {
+						d.planes.emplace_back(&it);
+						it.displays.emplace_back(&d);
+					}
+				}
+			}
+		}
+
+		for (auto &it : ret.displays) {
+			uint32_t nmodes = 0;
+			vkGetDisplayModePropertiesKHR(device, it.display, &nmodes, nullptr);
+
+			Vector<VkDisplayModePropertiesKHR> modes;
+			modes.resize(nmodes);
+
+			vkGetDisplayModePropertiesKHR(device, it.display, &nmodes, modes.data());
+
+			for (auto &iit : modes) {
+				auto &mode = it.modes.emplace_back(ModeInfo{iit.displayMode,
+					{
+						iit.parameters.visibleRegion.width,
+						iit.parameters.visibleRegion.height,
+						iit.parameters.refreshRate,
+					}});
+
+				for (auto &p : ret.knownPlanes) {
+					VkDisplayPlaneCapabilitiesKHR caps;
+					if (vkGetDisplayPlaneCapabilitiesKHR(device, mode.mode, p, &caps)
+							== VK_SUCCESS) {
+						auto &plane = mode.planes.emplace_back();
+						plane.index = p;
+						plane.caps = sp::move(caps);
+					}
+				}
+			}
+		}
+	}
 
 	return ret;
 }

@@ -150,8 +150,14 @@ Status Context::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
 	return _controller->readFromClipboard(sp::move(request));
 }
 
-Status Context::writeToClipboard(BytesView data, StringView contentType) {
-	return _controller->writeToClipboard(data, contentType);
+Status Context::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<String> types,
+		Ref *ref) {
+	auto data = Rc<platform::ClipboardData>::create();
+	data->encodeCallback = sp::move(cb);
+	data->types = types.vec<Interface>();
+	data->owner = ref;
+
+	return _controller->writeToClipboard(move(data));
 }
 
 void Context::handleConfigurationChanged(Rc<ContextInfo> &&info) { _info = move(info); }
@@ -234,12 +240,12 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	if (it == info.formats.end()) {
 		ret.imageFormat = info.formats.front().first;
 		ret.colorSpace = info.formats.front().second;
-	} else {
 		log::info("Context",
 			"handleAppWindowSurfaceUpdate: fail to find (imageFormat:colorspace) pair "
 			"for a window, fallback to (",
 			core::getImageFormatName(it->first), ":",
 			core::getColorSpaceName(it->second), ")");
+	} else {
 		ret.imageFormat = it->first;
 		ret.colorSpace = it->second;
 	}
@@ -301,11 +307,12 @@ void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
 	log::info("Context", "handleNativeWindowRedrawNeeded");
 }
-void Context::handleNativeWindowResized(NotNull<NativeWindow> w, bool liveResize) {
+void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w, bool liveResize) {
 	log::info("Context", "handleNativeWindowResized");
 
-	w->getAppWindow()->updateConfig(liveResize ? core::PresentationSwapchainFlags::SwitchToFastMode
-											   : core::PresentationSwapchainFlags::None);
+	w->getAppWindow()->updateConstraints(liveResize
+					? core::PresentationSwapchainFlags::SwitchToFastMode
+					: core::PresentationSwapchainFlags::None);
 }
 void Context::handleNativeWindowInputEvents(NotNull<NativeWindow> w,
 		Vector<core::InputEventData> &&events) {

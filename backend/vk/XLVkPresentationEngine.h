@@ -50,9 +50,12 @@ public:
 
 	virtual bool run() override;
 
+	virtual Rc<core::ScreenInfo> getScreenInfo() const override;
+	virtual Status setFullscreenSurface(const core::MonitorId &, const core::ModeInfo &) override;
+
 	virtual bool recreateSwapchain() override;
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
-			core::PresentMode presentMode) override;
+			core::PresentMode presentMode, bool oldSwapchainValid) override;
 
 protected:
 	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;

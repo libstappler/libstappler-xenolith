@@ -201,9 +201,8 @@ bool PresentationEngine::init(NotNull<Loop> loop, NotNull<Device> device,
 	_loop = loop;
 	_device = device;
 	_window = window;
-	_surface = _window->makeSurface(loop->getInstance());
-	_constraints = _window->getInitialFrameConstraints();
-	_targetFrameInterval = _window->getInitialFrameInterval();
+	_originalSurface = _surface = _window->makeSurface(loop->getInstance());
+	_constraints = _window->exportFrameConstraints();
 	return true;
 }
 
@@ -260,6 +259,11 @@ void PresentationEngine::end() {
 
 bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) {
 	XL_COREPRESENT_LOG("present");
+	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
+		frame->setPresented(Status::Done);
+		return true;
+	}
+
 	if (image) {
 		if (_options.followDisplayLink) {
 			// schedule image for next DispayLink signal
@@ -436,14 +440,24 @@ void PresentationEngine::setContentPadding(const Padding &padding) {
 
 bool PresentationEngine::handleFrameStarted(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameStarted");
-	_totalFrames.emplace(frame);
-	return _activeFrames.emplace(frame).second;
+	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
+		return _detachedFrames.emplace(frame).second;
+	} else {
+		_totalFrames.emplace(frame);
+		return _activeFrames.emplace(frame).second;
+	}
 }
 
 void PresentationEngine::handleFrameInvalidated(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameInvalidated");
+	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
+		_detachedFrames.erase(frame);
+		return;
+	}
+
 	_activeFrames.erase(frame);
 	_totalFrames.erase(frame);
+
 	if (_swapchain->isDeprecated() && _swapchain->getAcquiredImagesCount() == 0) {
 		// perform on next stack frame
 		scheduleSwapchainRecreation();
@@ -457,9 +471,11 @@ void PresentationEngine::handleFrameReady(NotNull<PresentationFrame> frame) {
 	if (_options.earlyPresent) {
 		present(frame, frame->getSwapchainImage());
 	} else if (_options.preStartFrame) {
-		_activeFrames.erase(frame);
-		if ((!_options.renderOnDemand || _readyForNextFrame) && _activeFrames.empty()) {
-			scheduleNextImage();
+		if (!frame->hasFlag(PresentationFrame::DoNotPresent)) {
+			_activeFrames.erase(frame);
+			if ((!_options.renderOnDemand || _readyForNextFrame) && _activeFrames.empty()) {
+				scheduleNextImage();
+			}
 		}
 	}
 }
@@ -467,19 +483,29 @@ void PresentationEngine::handleFrameReady(NotNull<PresentationFrame> frame) {
 void PresentationEngine::handleFramePresented(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFramePresented");
 
-	_window->handleFramePresented(frame);
+	if (!frame->hasFlag(PresentationFrame::DoNotPresent)) {
+		_window->handleFramePresented(frame);
+		_activeFrames.erase(frame);
+	}
 
-	_activeFrames.erase(frame);
 	if (!_options.earlyPresent) {
-		_totalFrames.erase(frame);
-		if (!_framesAwaitingImages.empty()) {
-			acquireScheduledImage();
+		if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
+			_detachedFrames.erase(frame);
+		} else {
+			_totalFrames.erase(frame);
+			if (!_framesAwaitingImages.empty()) {
+				acquireScheduledImage();
+			}
 		}
 	}
 }
 
 void PresentationEngine::handleFrameComplete(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameCancel");
+	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
+		_detachedFrames.erase(frame);
+		return;
+	}
 	if (auto h = frame->getHandle()) {
 		_lastFrameTime = h->getTimeEnd() - h->getTimeStart();
 		_avgFrameTime.addValue(_lastFrameTime);
@@ -514,6 +540,17 @@ void PresentationEngine::handleFrameComplete(NotNull<PresentationFrame> frame) {
 	}
 }
 
+void PresentationEngine::captureScreenshot(
+		Function<void(const ImageInfoData &info, BytesView view)> &&cb) {
+
+	scheduleSwapchainImage(Rc<PresentationFrame>::create(this, _constraints, _frameOrder,
+			PresentationFrame::OffscreenTarget | PresentationFrame::DoNotPresent,
+			[this, cb = sp::move(cb)](PresentationFrame *frame, bool success) mutable {
+		auto target = frame->getTarget();
+		_loop->captureImage(sp::move(cb), target->getImage(), target->getLayout());
+	}));
+}
+
 void PresentationEngine::acquireFrameData(NotNull<PresentationFrame> frame,
 		Function<void(NotNull<PresentationFrame>)> &&cb) {
 	_window->acquireFrameData(frame, sp::move(cb));
@@ -532,6 +569,9 @@ void PresentationEngine::resetFrames() {
 	for (auto &it : frames) { it->invalidate(true); }
 
 	frames = _totalFrames;
+	for (auto &it : frames) { it->invalidate(true); }
+
+	frames = _detachedFrames;
 	for (auto &it : frames) { it->invalidate(true); }
 
 	for (auto &it : _scheduledPresentHandles) { it->cancel(); }

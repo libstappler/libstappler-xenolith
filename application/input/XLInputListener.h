@@ -125,6 +125,7 @@ public:
 	void setFocusCallback(Function<bool(bool)> &&);
 	void setCloseRequestCallback(Function<bool(bool)> &&);
 	void setScreenUpdateCallback(Function<bool(bool)> &&);
+	void setFullscreenCallback(Function<bool(bool)> &&);
 
 	void clear();
 

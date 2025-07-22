@@ -25,8 +25,8 @@
 
 #include "XLApplicationConfig.h"
 #include "XLCoreFrameRequest.h"
+#include "XlCoreMonitorInfo.h"
 #include "XLCoreLoop.h"
-#include "platform/XLEdid.h"
 #include "SPCommandLineParser.h"
 
 #if ANDROID
@@ -38,6 +38,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Context;
 class AppThread;
 class AppWindow;
+
+using core::ModeInfo;
+using core::MonitorId;
+using core::MonitorInfo;
+using core::ScreenInfo;
 
 #if ANDROID
 using NativeContextHandle = ANativeActivity;
@@ -102,44 +107,40 @@ struct WindowLayer {
 enum class WindowFlags {
 	None = 0,
 	FixedBorder = 1 << 0,
-	SingleWindow = 1 << 1, // no subwindows can be created
+
+	// Try to bypass WM composition when in fullscreen mode
+	// To set fullscreen mode as initial use `monitor` property, not this flag
+	//
+	// Note that on Linux ExclusiveFullscreen is seamless when window is fullscreen
+	// and no composition objects (like notifications, cursor) above it, but on Windows
+	// WM context should be switched
+	ExclusiveFullscreen = 1 << 1,
+
+	// Use direct output to display, bypassing whole WM stack
+	// Check if it actually supported with WindowCapabilities::DirectOutput
+	DirectOutput = 1 << 2,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
 
-struct ModeInfo {
-	static const ModeInfo Current;
-	static const ModeInfo Preferred;
+// Cababilities, prowided by OS Window Manager
+enum class WindowCapabilities {
+	None,
+	// Switch between windowed and fullscreen modes
+	// If not provided - window is only windowed or only fullscreen
+	FullscreenSwitch = 1 << 0,
 
-	uint16_t width = 0;
-	uint16_t height = 0;
-	uint16_t rate = 0;
+	// Subwindows are allowed
+	Subwindows = 1 << 1,
 
-	auto operator<=>(const ModeInfo &) const = default;
+	// Direct output is available on platform
+	DirectOutput = 1 << 2,
+
+	// 'Back' action can close application (Android-like)
+	BackIsExit = 1 << 2,
 };
 
-struct MonitorId {
-	static const MonitorId Primary;
-	static const MonitorId None;
-
-	String name;
-	platform::EdidInfo edid;
-};
-
-struct MonitorInfo : MonitorId {
-	IRect rect;
-	Extent2 mm;
-
-	uint32_t preferredMode = 0;
-	uint32_t currentMode = 0;
-
-	Vector<ModeInfo> modes;
-};
-
-struct ScreenInfo : public Ref {
-	Vector<MonitorInfo> monitors;
-	uint32_t primaryMonitor = 0;
-};
+SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
 
 struct SP_PUBLIC WindowInfo final : public Ref {
 	String id;
@@ -158,6 +159,9 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 	core::PresentMode preferredPresentMode = core::PresentMode::Mailbox;
 	core::ImageFormat imageFormat = core::ImageFormat::Undefined;
 	core::ColorSpace colorSpace = core::ColorSpace::SRGB_NONLINEAR_KHR;
+
+	// provided by WM, no reason to set it by user
+	WindowCapabilities capabilities = WindowCapabilities::None;
 
 	core::FrameConstraints exportConstraints() const {
 		return core::FrameConstraints{

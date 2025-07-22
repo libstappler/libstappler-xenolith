@@ -87,23 +87,32 @@ void Button::setCallback(Function<void()> &&cb) { _callback = cb; }
 
 void Button::handleFocusEnter() {
 	stopAllActions();
-	runAction(Rc<TintTo>::create(0.2f, Color::Red_200));
+	if (_callback) {
+		runAction(Rc<TintTo>::create(0.2f, Color::Red_200));
+	}
 }
 
 void Button::handleFocusLeave() {
 	stopAllActions();
-	runAction(Rc<TintTo>::create(0.2f, _enabled ? Color::Grey_400 : Color::Grey_200));
+	if (_callback) {
+		runAction(Rc<TintTo>::create(0.2f, _enabled ? Color::Grey_400 : Color::Grey_200));
+	}
 }
 
-void Button::handleTouch() { _callback(); }
+void Button::handleTouch() {
+	if (_callback) {
+		_callback();
+	}
+}
 
 void Button::updateEnabled() {
 	if (!_focus) {
+		auto enabled = _enabled && _callback != nullptr;
 		if (_running) {
 			stopAllActions();
-			runAction(Rc<TintTo>::create(0.2f, _enabled ? Color::Grey_400 : Color::Grey_200));
+			runAction(Rc<TintTo>::create(0.2f, enabled ? Color::Grey_400 : Color::Grey_200));
 		} else {
-			setColor(_enabled ? Color::Grey_400 : Color::Grey_200);
+			setColor(enabled ? Color::Grey_400 : Color::Grey_200);
 		}
 	}
 }
@@ -115,6 +124,7 @@ bool ButtonWithLabel::init(StringView str, Function<void()> &&cb) {
 
 	_label = addChild(Rc<Label>::create(), ZOrder(1));
 	_label->setAnchorPoint(Anchor::Middle);
+	_label->setAlignment(font::TextAlign::Center);
 	_label->setFontSize(20);
 	_label->setString(str);
 
@@ -125,6 +135,7 @@ void ButtonWithLabel::handleContentSizeDirty() {
 	Button::handleContentSizeDirty();
 
 	_label->setPosition(_contentSize / 2.0f);
+	_label->setWidth(_contentSize.width - 8.0f);
 }
 
 void ButtonWithLabel::setString(StringView str) { _label->setString(str); }

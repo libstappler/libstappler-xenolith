@@ -313,6 +313,16 @@ void InputListener::setScreenUpdateCallback(Function<bool(bool)> &&cb) {
 	}
 }
 
+void InputListener::setFullscreenCallback(Function<bool(bool)> &&cb) {
+	if (cb) {
+		_callbacks.insert_or_assign(InputEventName::Fullscreen, sp::move(cb));
+		_eventMask.set(toInt(InputEventName::Fullscreen));
+	} else {
+		_callbacks.erase(InputEventName::Fullscreen);
+		_eventMask.reset(toInt(InputEventName::Fullscreen));
+	}
+}
+
 void InputListener::clear() {
 	_eventMask.reset();
 	_recognizers.clear();

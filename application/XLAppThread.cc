@@ -155,11 +155,29 @@ void AppThread::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
 	}, this);
 }
 
-void AppThread::writeToClipboard(BytesView data, StringView contentType) {
+void AppThread::writeToClipboard(BytesView data, StringView contentType, Ref *ref) {
 	_context->performOnThread(
-			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>()]() {
-		_context->writeToClipboard(data, type);
-	});
+			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>(),
+					ref = Rc<Ref>(ref)]() mutable {
+		_context->writeToClipboard([data = sp::move(data), t = type](StringView type) -> Bytes {
+			if (t == type) {
+				return data;
+			}
+			return Bytes();
+		}, makeSpanView(&type, 1), ref);
+	},
+			this);
+}
+
+void AppThread::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<StringView> types,
+		Ref *ref) {
+	Vector<String> vtypes;
+	vtypes.reserve(types.size());
+	for (auto &it : types) { vtypes.emplace_back(it.str<Interface>()); }
+	_context->performOnThread(
+			[this, cb = sp::move(cb), vtypes = sp::move(vtypes), ref = Rc<Ref>(ref)]() mutable {
+		_context->writeToClipboard(sp::move(cb), vtypes, ref);
+	}, this);
 }
 
 void AppThread::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {

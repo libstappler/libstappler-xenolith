@@ -63,10 +63,7 @@ struct ClipboardData : public Ref {
 	// Function to convert clipboard's data into target format
 	// You should not assume on what thread this function would be called,
 	// so, assume the worst case
-	Function<Bytes(BytesView, StringView)> encodeCallback;
-
-	// Data itself
-	Bytes data;
+	Function<Bytes(StringView)> encodeCallback;
 
 	// Data owner
 	Rc<Ref> owner;
@@ -86,7 +83,7 @@ public:
 
 	event::Looper *getLooper() const { return _looper; }
 
-	virtual void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize);
+	virtual void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>, bool liveResize);
 	virtual void notifyWindowInputEvents(NotNull<ContextNativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void notifyWindowTextInput(NotNull<ContextNativeWindow>, const core::TextInputState &);
@@ -102,7 +99,7 @@ public:
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&);
-	virtual Status writeToClipboard(BytesView, StringView contentType = StringView());
+	virtual Status writeToClipboard(Rc<ClipboardData> &&);
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;
 

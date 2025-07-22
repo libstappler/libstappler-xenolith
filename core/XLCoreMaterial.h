@@ -173,7 +173,7 @@ public:
 
 	virtual Rc<BufferObject> allocateMaterialPersistentBuffer(NotNull<Material>) const;
 
-	virtual Rc<MaterialSet> allocateSet(const Device &) const;
+	virtual Rc<MaterialSet> allocateSet(const Device &, uint32_t imageCount) const;
 	virtual Rc<MaterialSet> cloneSet(const Rc<MaterialSet> &) const;
 
 	virtual void addDynamicTracker(MaterialId, const Rc<DynamicImage> &) const;

@@ -24,6 +24,7 @@
 #include "XLCommon.h"
 #include "XLCoreObject.h"
 #include "XLCoreInput.h"
+#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -1758,6 +1759,37 @@ String getQueueFlagsDesc(QueueFlags flags) {
 		stream << " Present";
 	}
 	return stream.str();
+}
+
+Bitmap getBitmap(const ImageInfoData &info, BytesView bytes) {
+	if (!bytes.empty()) {
+		auto fmt = core::getImagePixelFormat(info.format);
+		bitmap::PixelFormat pixelFormat = bitmap::PixelFormat::Auto;
+		switch (fmt) {
+		case core::PixelFormat::A: pixelFormat = bitmap::PixelFormat::A8; break;
+		case core::PixelFormat::IA: pixelFormat = bitmap::PixelFormat::IA88; break;
+		case core::PixelFormat::RGB: pixelFormat = bitmap::PixelFormat::RGB888; break;
+		case core::PixelFormat::RGBA: pixelFormat = bitmap::PixelFormat::RGBA8888; break;
+		default: break;
+		}
+
+		bitmap::getBytesPerPixel(pixelFormat);
+
+		auto requiredSize = bitmap::getBytesPerPixel(pixelFormat) * info.extent.width
+				* info.extent.height * info.extent.depth * info.arrayLayers.get();
+
+		if (pixelFormat != bitmap::PixelFormat::Auto && requiredSize == bytes.size()) {
+			return Bitmap(bytes.data(), info.extent.width, info.extent.height, pixelFormat);
+		}
+	}
+	return Bitmap();
+}
+
+bool saveImage(const FileInfo &file, const ImageInfoData &info, BytesView bytes) {
+	if (auto bmp = getBitmap(info, bytes)) {
+		return bmp.save(file);
+	}
+	return false;
 }
 
 std::ostream &operator<<(std::ostream &stream, const ImageInfoData &value) {

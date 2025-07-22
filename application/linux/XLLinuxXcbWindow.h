@@ -23,6 +23,7 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XLLINUXXCBWINDOW_H_
 #define XENOLITH_APPLICATION_LINUX_XLLINUXXCBWINDOW_H_
 
+#include "XLContextInfo.h"
 #include "platform/XLContextNativeWindow.h"
 #include "XLLinuxXcbConnection.h"
 
@@ -30,33 +31,53 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class LinuxContextController;
 
-class XcbWindow : public ContextNativeWindow {
+class XcbWindow final : public ContextNativeWindow {
 public:
+	static constexpr bool SetPrimaryOnFullscreen = false;
+
+	enum StateFlags {
+		None = 0,
+		Modal = 1 << 0,
+		Sticky = 1 << 1,
+		MaximizedVert = 1 << 2,
+		MaximizedHorz = 1 << 3,
+		Shaded = 1 << 4,
+		SkipTaskbar = 1 << 5,
+		SkipPager = 1 << 6,
+		Hidden = 1 << 7,
+		Fullscreen = 1 << 8,
+		Above = 1 << 9,
+		Below = 1 << 10,
+		DemandsAttention = 1 << 11,
+		Focused = 1 << 12,
+	};
+
 	virtual ~XcbWindow();
 
 	XcbWindow();
 
-	virtual bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
+	bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
 			NotNull<LinuxContextController>);
 
-	virtual void handleConfigureNotify(xcb_configure_notify_event_t *);
+	void handleConfigureNotify(xcb_configure_notify_event_t *);
+	void handlePropertyNotify(xcb_property_notify_event_t *);
+	void handleButtonPress(xcb_button_press_event_t *);
+	void handleButtonRelease(xcb_button_release_event_t *);
+	void handleMotionNotify(xcb_motion_notify_event_t *);
+	void handleEnterNotify(xcb_enter_notify_event_t *);
+	void handleLeaveNotify(xcb_leave_notify_event_t *);
+	void handleFocusIn(xcb_focus_in_event_t *);
+	void handleFocusOut(xcb_focus_out_event_t *);
+	void handleKeyPress(xcb_key_press_event_t *);
+	void handleKeyRelease(xcb_key_release_event_t *);
 
-	virtual void handleButtonPress(xcb_button_press_event_t *);
-	virtual void handleButtonRelease(xcb_button_release_event_t *);
-	virtual void handleMotionNotify(xcb_motion_notify_event_t *);
-	virtual void handleEnterNotify(xcb_enter_notify_event_t *);
-	virtual void handleLeaveNotify(xcb_leave_notify_event_t *);
-	virtual void handleFocusIn(xcb_focus_in_event_t *);
-	virtual void handleFocusOut(xcb_focus_out_event_t *);
-	virtual void handleKeyPress(xcb_key_press_event_t *);
-	virtual void handleKeyRelease(xcb_key_release_event_t *);
+	void handleSyncRequest(xcb_timestamp_t, xcb_sync_int64_t);
+	void handleCloseRequest();
 
-	virtual void handleSyncRequest(xcb_timestamp_t, xcb_sync_int64_t);
-	virtual void handleCloseRequest();
+	void handleScreenChangeNotify(xcb_randr_notify_event_t *, NotNull<ScreenInfoData>);
+	void handleSettingsUpdated();
 
-	virtual void handleScreenChangeNotify(xcb_randr_screen_change_notify_event_t *);
-
-	virtual void dispatchPendingEvents();
+	void dispatchPendingEvents();
 
 	xcb_window_t getWindow() const { return _xinfo.window; }
 	xcb_connection_t *getConnection() const;
@@ -89,6 +110,10 @@ protected:
 	void updateWindowAttributes();
 	void configureWindow(xcb_rectangle_t r, uint16_t border_width);
 
+	const MonitorInfo *getMonitor(NotNull<ScreenInfoData> info, const MonitorId &) const;
+	Status setMode(NotNull<ScreenInfoData> info, const MonitorInfo *, const xenolith::ModeInfo &);
+	bool checkIfModeAvailable(const MonitorInfo *, const xenolith::ModeInfo &) const;
+
 	Rc<XcbConnection> _connection;
 
 	XcbLibrary *_xcb = nullptr;
@@ -102,11 +127,20 @@ protected:
 	Vector<core::InputEventData> _pendingEvents;
 
 	uint16_t _borderWidth = 0;
-	uint16_t _rate = 60;
+	uint16_t _rate = 60'000;
+	float _density = 0.0f;
 
 	String _wmClass;
-	ScreenInfoData _screenInfo;
+
+	Rc<ScreenInfoData> _screenInfo;
+	StateFlags _state = StateFlags::None;
+	Map<MonitorId, xenolith::ModeInfo> _capturedModes;
+	MonitorId _originalPrimary = MonitorId::None;
 };
+
+const CallbackStream &operator<<(const CallbackStream &, XcbWindow::StateFlags);
+
+SP_DEFINE_ENUM_AS_MASK(XcbWindow::StateFlags)
 
 } // namespace stappler::xenolith::platform
 

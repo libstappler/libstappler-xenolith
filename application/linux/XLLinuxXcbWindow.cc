@@ -21,7 +21,13 @@
  **/
 
 #include "XLLinuxXcbWindow.h"
+#include "SPLog.h"
+#include "SPNotNull.h"
+#include "SPStatus.h"
+#include "XLContextInfo.h"
 #include "XLLinuxContextController.h"
+#include "linux/XLLinuxXcbConnection.h"
+#include <xcb/xcb.h>
 
 #if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkPresentationEngine.h"
@@ -79,7 +85,8 @@ XcbWindow::XcbWindow() { }
 
 bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c) {
-	if (!ContextNativeWindow::init(c, move(info))) {
+	if (!ContextNativeWindow::init(c, move(info),
+				WindowCapabilities::FullscreenSwitch | WindowCapabilities::Subwindows)) {
 		return false;
 	}
 
@@ -127,9 +134,22 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 	}
 
 	_screenInfo = _connection->getScreenInfo(_defaultScreen);
-	_rate = _screenInfo.getCommonRate();
+	_rate = _screenInfo->getCommonRate();
 
 	_xcb->xcb_flush(_connection->getConnection());
+
+	auto udpi = _connection->getUnscaledDpi();
+	auto dpi = _connection->getDpi();
+
+	if (udpi == 0) {
+		udpi = 122'880;
+	}
+
+	_density = float(dpi) / float(udpi);
+
+	if (_info->monitor != MonitorId::None) {
+		setFullscreen(_info->monitor, _info->mode);
+	}
 
 	return true;
 }
@@ -144,11 +164,86 @@ void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
 	if (ev->width != _xinfo.rect.width || ev->height != _xinfo.rect.height) {
 		_xinfo.rect.width = ev->width;
 		_xinfo.rect.height = ev->height;
-		_controller->notifyWindowResized(this, true);
+		_controller->notifyWindowConstraintsChanged(this, true);
 	}
 
 	_info->rect = URect{uint16_t(_xinfo.rect.x), uint16_t(_xinfo.rect.y), _xinfo.rect.width,
 		_xinfo.rect.height};
+}
+
+void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
+	if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_STATE)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
+				_xinfo.window, _connection->getAtom(XcbAtomIndex::_NET_WM_STATE), XCB_ATOM_ATOM, 0,
+				sizeof(xcb_atom_t) * 16);
+		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			auto values = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
+			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
+
+			auto state = StateFlags::None;
+
+			while (len > 0) {
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MODAL) == *values) {
+					state |= StateFlags::Modal;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_STICKY) == *values) {
+					state |= StateFlags::Sticky;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT) == *values) {
+					state |= StateFlags::MaximizedVert;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ) == *values) {
+					state |= StateFlags::MaximizedHorz;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SHADED) == *values) {
+					state |= StateFlags::Shaded;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_TASKBAR) == *values) {
+					state |= StateFlags::SkipTaskbar;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_PAGER) == *values) {
+					state |= StateFlags::SkipPager;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_HIDDEN) == *values) {
+					state |= StateFlags::Hidden;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN) == *values) {
+					state |= StateFlags::Fullscreen;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_ABOVE) == *values) {
+					state |= StateFlags::Above;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_BELOW) == *values) {
+					state |= StateFlags::Below;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION)
+						== *values) {
+					state |= StateFlags::DemandsAttention;
+				}
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FOCUSED) == *values) {
+					state |= StateFlags::Focused;
+				}
+				++values;
+				--len;
+			}
+
+			if (!hasFlag(_state, Fullscreen) && hasFlag(state, Fullscreen)) {
+				// enter fullscreen
+				_pendingEvents.emplace_back(
+						core::InputEventData::BoolEvent(core::InputEventName::Fullscreen, true));
+			}
+			if (hasFlag(_state, Fullscreen) && !hasFlag(state, Fullscreen)) {
+				// exit fullscreen
+				_pendingEvents.emplace_back(
+						core::InputEventData::BoolEvent(core::InputEventName::Fullscreen, false));
+			}
+
+			_state = state;
+		}
+	} else {
+		log::debug("XcbWindow", "handlePropertyNotify: ", _connection->getAtomName(ev->atom));
+	}
 }
 
 void XcbWindow::handleButtonPress(xcb_button_press_event_t *ev) {
@@ -316,17 +411,33 @@ void XcbWindow::handleSyncRequest(xcb_timestamp_t syncTime, xcb_sync_int64_t val
 
 void XcbWindow::handleCloseRequest() { _controller->notifyWindowClosed(this); }
 
-void XcbWindow::handleScreenChangeNotify(xcb_randr_screen_change_notify_event_t *ev) {
-	_screenInfo = _connection->getScreenInfo(ev->root);
+void XcbWindow::handleScreenChangeNotify(xcb_randr_notify_event_t *ev,
+		NotNull<ScreenInfoData> screenInfo) {
+	_screenInfo = screenInfo;
 
 	core::InputEventData event =
 			core::InputEventData::BoolEvent(core::InputEventName::ScreenUpdate, true);
 
 	_pendingEvents.emplace_back(event);
 
-	auto commonRate = _screenInfo.getCommonRate();
+	auto commonRate = _screenInfo->getCommonRate();
 	if (_rate != commonRate) {
 		_rate = commonRate;
+	}
+}
+
+void XcbWindow::handleSettingsUpdated() {
+	auto udpi = _connection->getUnscaledDpi();
+	auto dpi = _connection->getDpi();
+
+	if (udpi == 0) {
+		udpi = 122'880;
+	}
+
+	auto d = float(dpi) / float(udpi);
+	if (d != _density) {
+		_density = float(dpi) / float(udpi);
+		_controller->notifyWindowConstraintsChanged(this, false);
 	}
 }
 
@@ -337,7 +448,7 @@ void XcbWindow::dispatchPendingEvents() {
 	_pendingEvents.clear();
 }
 
-uint64_t XcbWindow::getScreenFrameInterval() const { return 1'000'000 / _rate; }
+uint64_t XcbWindow::getScreenFrameInterval() const { return 1'000'000'000 / _rate; }
 
 void XcbWindow::mapWindow() {
 	_connection->attachWindow(_xinfo.window, this);
@@ -370,6 +481,10 @@ core::FrameConstraints XcbWindow::exportConstraints(core::FrameConstraints &&c) 
 	if (c.density == 0.0f) {
 		c.density = 1.0f;
 	}
+	if (_density != 0.0f) {
+		c.density *= _density;
+	}
+	c.frameInterval = getScreenFrameInterval();
 	return move(c);
 }
 
@@ -457,7 +572,191 @@ bool XcbWindow::close() {
 }
 
 Status XcbWindow::setFullscreen(const MonitorId &id, const xenolith::ModeInfo &info) {
-	return Status::ErrorNotImplemented;
+	auto switchFullscreen = [&] {
+		auto screenInfo = _connection->getScreenInfo(_connection->getDefaultScreen()->root);
+		auto newMon = getMonitor(screenInfo, id);
+		auto currentMon = getMonitor(screenInfo, _info->monitor);
+
+		if (id != MonitorId::None && !newMon) {
+			log::info("XcbWindow", "Monitor ", id.name, " not available");
+			return Status::ErrorInvalidArguemnt;
+		}
+
+		if (newMon == currentMon) {
+			if (currentMon) {
+				return setMode(screenInfo, newMon, info);
+			}
+		}
+
+		if (newMon == nullptr) {
+			// exit fullscreen
+
+			// restore original mode
+			if (currentMon) {
+				auto it = _capturedModes.find(*currentMon);
+				if (it != _capturedModes.end()) {
+					setMode(screenInfo, currentMon, it->second);
+					_capturedModes.erase(it);
+				}
+			}
+
+			// remove fullscreen state
+			if (hasFlag(_state, Fullscreen)) {
+				_xcb->xcb_delete_property(_connection->getConnection(), _xinfo.window,
+						_connection->getAtom(XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS));
+
+				xcb_client_message_event_t fullscreen;
+				fullscreen.response_type = XCB_CLIENT_MESSAGE;
+				fullscreen.format = 32;
+				fullscreen.sequence = 0;
+				fullscreen.window = _xinfo.window;
+				fullscreen.type = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE);
+				fullscreen.data.data32[0] = 0; // _NET_WM_STATE_REMOVE
+				fullscreen.data.data32[1] =
+						_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
+				fullscreen.data.data32[2] = 0;
+				fullscreen.data.data32[3] = 1; // EWMH says 1 for normal applications
+				fullscreen.data.data32[4] = 0;
+				_xcb->xcb_send_event(_connection->getConnection(), 0,
+						_connection->getDefaultScreen()->root,
+						XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+						(const char *)&fullscreen);
+				_xcb->xcb_flush(_connection->getConnection());
+
+				if (hasFlag(_info->flags, WindowFlags::ExclusiveFullscreen)) {
+					auto a = _connection->getAtom(XcbAtomIndex::_NET_WM_BYPASS_COMPOSITOR);
+					if (a) {
+						_xcb->xcb_delete_property(_connection->getConnection(), _xinfo.window, a);
+					}
+				}
+
+				_info->monitor = id;
+
+				if constexpr (SetPrimaryOnFullscreen) {
+					if (_originalPrimary != MonitorId::None) {
+						auto primaryMon = getMonitor(screenInfo, _originalPrimary);
+						if (primaryMon) {
+							_xcb->xcb_randr_set_output_primary(_connection->getConnection(),
+									_connection->getDefaultScreen()->root,
+									primaryMon->outputs.front()->output);
+							_originalPrimary = MonitorId::None;
+						}
+					}
+				}
+
+				return Status::Ok;
+			}
+
+			log::info("XcbWindow", "Window not in fullscreen mode");
+			return Status::ErrorInvalidArguemnt;
+		} else {
+			// check if mode is available
+			if (!checkIfModeAvailable(newMon, info)) {
+				log::info("XcbWindow", "Monitor ", newMon->name, " has no mode ", info.width, "x",
+						info.height, "@", info.rate);
+				return Status::ErrorNotSupported;
+			}
+
+			// check if we have saved mode, if we have not - save it
+			auto it = _capturedModes.find(*newMon);
+			if (it == _capturedModes.end()) {
+				_capturedModes.emplace(*newMon, *newMon->outputs.front()->crtc->mode);
+			}
+
+			if constexpr (SetPrimaryOnFullscreen) {
+				if (_originalPrimary == MonitorId::None && screenInfo->primary) {
+					_originalPrimary = *screenInfo->primary;
+				}
+
+				if (newMon != screenInfo->primary) {
+					_xcb->xcb_randr_set_output_primary(_connection->getConnection(),
+							_connection->getDefaultScreen()->root, newMon->outputs.front()->output);
+					_xcb->xcb_flush(_connection->getConnection());
+				}
+			}
+
+			auto ret = setMode(screenInfo, newMon, info);
+
+			if (ret == Status::Ok || ret == Status::Done) {
+				xcb_client_message_event_t monitors;
+				monitors.response_type = XCB_CLIENT_MESSAGE;
+				monitors.format = 32;
+				monitors.sequence = 0;
+				monitors.window = _xinfo.window;
+				monitors.type = _connection->getAtom(XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS);
+				monitors.data.data32[0] = 0; //newMon->index;
+				monitors.data.data32[1] = 0; //newMon->index;
+				monitors.data.data32[2] = 0; //newMon->index;
+				monitors.data.data32[3] = 0; //newMon->index;
+				monitors.data.data32[4] = 1; // EWMH says 1 for normal applications
+				_xcb->xcb_send_event(_connection->getConnection(), 0,
+						_connection->getDefaultScreen()->root,
+						XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+						(const char *)&monitors);
+
+				if (!hasFlag(_state, Fullscreen)) {
+					xcb_client_message_event_t fullscreen;
+					fullscreen.response_type = XCB_CLIENT_MESSAGE;
+					fullscreen.format = 32;
+					fullscreen.sequence = 0;
+					fullscreen.window = _xinfo.window;
+					fullscreen.type = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE);
+					fullscreen.data.data32[0] = 1; // _NET_WM_STATE_ADD
+					fullscreen.data.data32[1] =
+							_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
+					fullscreen.data.data32[2] = 0;
+					fullscreen.data.data32[3] = 1; // EWMH says 1 for normal applications
+					fullscreen.data.data32[4] = 0;
+					_xcb->xcb_send_event(_connection->getConnection(), 0,
+							_connection->getDefaultScreen()->root,
+							XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+							(const char *)&fullscreen);
+				}
+
+				const unsigned long value = 1;
+				if (hasFlag(_info->flags, WindowFlags::ExclusiveFullscreen)) {
+					auto a = _connection->getAtom(XcbAtomIndex::_NET_WM_BYPASS_COMPOSITOR);
+					if (a) {
+						_xcb->xcb_change_property(_connection->getConnection(),
+								XCB_PROP_MODE_REPLACE, _xinfo.window, a, XCB_ATOM_CARDINAL, 32, 1,
+								&value);
+					}
+				}
+
+				_xcb->xcb_flush(_connection->getConnection());
+				_info->monitor = id;
+
+				if (currentMon) {
+					// check if we have mode to restore on prev monitor
+					auto prevModeIt = _capturedModes.find(*currentMon);
+					if (prevModeIt != _capturedModes.end()) {
+						setMode(screenInfo, currentMon, prevModeIt->second);
+						_capturedModes.erase(prevModeIt);
+					}
+				}
+			}
+
+			return Status::Ok;
+		}
+
+		return Status::ErrorNotSupported;
+	};
+
+	Status ret = Status::ErrorCancelled;
+
+	// grab server to receive only actual status
+	// All other clients will receive notifications after we done
+	//_xcb->xcb_grab_server(_connection->getConnection());
+	_xcb->xcb_flush(_connection->getConnection());
+	std::cout << "xcb_grab_server\n";
+
+	ret = switchFullscreen();
+
+	std::cout << "xcb_ungrab_server\n";
+	//_xcb->xcb_ungrab_server(_connection->getConnection());
+	_xcb->xcb_flush(_connection->getConnection());
+	std::cout << "done\n";
+	return ret;
 }
 
 bool XcbWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
@@ -482,6 +781,139 @@ void XcbWindow::configureWindow(xcb_rectangle_t r, uint16_t border_width) {
 					| XCB_CONFIG_WINDOW_HEIGHT | XCB_CONFIG_WINDOW_BORDER_WIDTH,
 			values);
 	_xcb->xcb_flush(_connection->getConnection());
+}
+
+const MonitorInfo *XcbWindow::getMonitor(NotNull<ScreenInfoData> info, const MonitorId &id) const {
+	const MonitorInfo *mon = nullptr;
+	if (id == MonitorId::None) {
+		return nullptr;
+	} else if (id == MonitorId::Primary) {
+		mon = info->primary;
+	} else {
+		for (auto &it : info->monitors) {
+			if (it.isMatch(id)) {
+				mon = &it;
+				break;
+			}
+		}
+	}
+	return mon;
+}
+
+Status XcbWindow::setMode(NotNull<ScreenInfoData> info, const MonitorInfo *mon,
+		const xenolith::ModeInfo &mode) {
+
+	log::debug("XcbWindow", mon->name, ": set mode: ", mode.width, "x", mode.height, "@",
+			mode.rate);
+
+	auto output = mon->outputs.front();
+	auto crtc = output->crtc;
+
+	for (auto &it : output->modes) {
+		if (*it == mode) {
+			auto crtcCookie = _xcb->xcb_randr_get_crtc_info(_connection->getConnection(),
+					crtc->crtc, info->config);
+			auto crtcReply = _connection->perform(_xcb->xcb_randr_get_crtc_info_reply, crtcCookie);
+			if (crtcReply) {
+				// re-check if we need to reset mode
+				if (crtcReply->mode == it->id) {
+					log::debug("XcbWindow", mon->name, ": no need to switch");
+					return Status::Done; //  no need to switch
+				}
+
+				// First - disable CRTC (or WM will fail to increse resolution or framerate)
+				auto cookieDisable = _xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
+						crtc->crtc, XCB_CURRENT_TIME, XCB_CURRENT_TIME, 0, 0, 0,
+						crtcReply->rotation, 0, nullptr);
+
+				auto replyDisable =
+						_connection->perform(_xcb->xcb_randr_set_crtc_config_reply, cookieDisable);
+				if (replyDisable) {
+					log::debug("XcbWindow", mon->name, ": disabled");
+					// if CRTC was disabled - re-enable it with the new mode
+					auto cookie = _xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
+							crtc->crtc, XCB_CURRENT_TIME, XCB_CURRENT_TIME, crtcReply->x,
+							crtcReply->y, it->id, crtcReply->rotation,
+							_xcb->xcb_randr_get_crtc_info_outputs_length(crtcReply),
+							_xcb->xcb_randr_get_crtc_info_outputs(crtcReply));
+
+					auto reply =
+							_connection->perform(_xcb->xcb_randr_set_crtc_config_reply, cookie);
+					if (reply) {
+						log::debug("XcbWindow", mon->name, ": enabled");
+						//  Complete!
+						return Status::Ok;
+					}
+				}
+			}
+		}
+	}
+
+	return Status::ErrorCancelled;
+}
+
+bool XcbWindow::checkIfModeAvailable(const MonitorInfo *mon, const xenolith::ModeInfo &mode) const {
+	if (mode == xenolith::ModeInfo::Current) {
+		return true;
+	}
+
+	if (mode == xenolith::ModeInfo::Preferred) {
+		// check if we ACTUALLY have this mode
+		if (mon->outputs.front()->preferred) {
+			return true;
+		}
+	}
+
+	auto output = mon->outputs.front();
+	for (auto &it : output->modes) {
+		if (*it == mode) {
+			return true;
+		}
+	}
+	return false;
+}
+
+const CallbackStream &operator<<(const CallbackStream &out, XcbWindow::StateFlags flags) {
+	if (hasFlag(flags, XcbWindow::StateFlags::Modal)) {
+		out << " Modal";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Sticky)) {
+		out << " Sticky";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::MaximizedVert)) {
+		out << " MaximizedVert";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::MaximizedHorz)) {
+		out << " MaximizedHorz";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Shaded)) {
+		out << " Shaded";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::SkipTaskbar)) {
+		out << " SkipTaskbar";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::SkipPager)) {
+		out << " SkipPager";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Hidden)) {
+		out << " Hidden";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Fullscreen)) {
+		out << " Fullscreen";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Above)) {
+		out << " Above";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Below)) {
+		out << " Below";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::DemandsAttention)) {
+		out << " DemandsAttention";
+	}
+	if (hasFlag(flags, XcbWindow::StateFlags::Focused)) {
+		out << " Focused";
+	}
+	return out;
 }
 
 } // namespace stappler::xenolith::platform

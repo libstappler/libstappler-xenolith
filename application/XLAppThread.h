@@ -74,7 +74,9 @@ public:
 	void readFromClipboard(Function<void(BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
 
-	void writeToClipboard(BytesView, StringView contentType = StringView());
+	void writeToClipboard(BytesView, StringView contentType = StringView("text/plain"),
+			Ref * = nullptr);
+	void writeToClipboard(Function<Bytes(StringView)> &&, SpanView<StringView>, Ref * = nullptr);
 
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 

@@ -294,6 +294,7 @@ enum class InputEventName : uint32_t {
 	FocusGain,
 	CloseRequest, // close request was prevented by ExitGuard
 	ScreenUpdate, // ScreenInfo was changed
+	Fullscreen, // Fullsceen mode enabled or disabled
 
 	Max,
 };
@@ -347,7 +348,8 @@ struct SP_PUBLIC InputEventData {
 		case InputEventName::PointerEnter:
 		case InputEventName::FocusGain:
 		case InputEventName::CloseRequest:
-		case InputEventName::ScreenUpdate: return false; break;
+		case InputEventName::ScreenUpdate:
+		case InputEventName::Fullscreen: return false; break;
 #if ANDROID
 		case InputEventName::KeyPressed:
 		case InputEventName::KeyReleased:

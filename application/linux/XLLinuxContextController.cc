@@ -22,6 +22,7 @@
 
 #include "XLLinuxContextController.h"
 #include "XLContext.h"
+#include "XLContextInfo.h"
 #include "XLCoreInstance.h"
 #include "SPEventLooper.h"
 #include "SPEventPollHandle.h"
@@ -78,6 +79,13 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 
 	if (config.loop) {
 		config.loop->defaultFormat = core::ImageFormat::B8G8R8A8_UNORM;
+	}
+
+	if (config.window) {
+		if (config.window->imageFormat == core::ImageFormat::Undefined) {
+			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
+		}
+		config.window->flags |= WindowFlags::ExclusiveFullscreen;
 	}
 }
 
@@ -143,7 +151,7 @@ int LinuxContextController::run() {
 				_withinPoll = false;
 
 				for (auto &it : _resizedWindows) {
-					ContextController::notifyWindowResized(it.first, it.second);
+					ContextController::notifyWindowConstraintsChanged(it.first, it.second);
 				}
 
 				_resizedWindows.clear();
@@ -169,11 +177,12 @@ int LinuxContextController::run() {
 	return ContextController::run();
 }
 
-void LinuxContextController::notifyWindowResized(NotNull<ContextNativeWindow> w, bool liveResize) {
+void LinuxContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
+		bool liveResize) {
 	if (_withinPoll) {
 		_resizedWindows.emplace_back(w, liveResize);
 	} else {
-		ContextController::notifyWindowResized(w, liveResize);
+		ContextController::notifyWindowConstraintsChanged(w, liveResize);
 	}
 }
 
@@ -196,11 +205,18 @@ Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
 }
 
 Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
-	_xcbConnection->readFromClipboard(sp::move(req));
-	return Status::Ok;
+	if (_xcbConnection) {
+		_xcbConnection->readFromClipboard(sp::move(req));
+		return Status::Ok;
+	}
+	return Status::ErrorNotSupported;
 }
 
-Status LinuxContextController::writeToClipboard(BytesView, StringView contentType) {
+Status LinuxContextController::writeToClipboard(Rc<ClipboardData> &&data) {
+	if (_xcbConnection) {
+		_xcbConnection->writeToClipboard(sp::move(data));
+		return Status::Ok;
+	}
 	return Status::ErrorNotImplemented;
 }
 
@@ -209,7 +225,7 @@ Rc<ScreenInfo> LinuxContextController::getScreenInfo() const {
 
 	Rc<ScreenInfo> info = ContextController::getScreenInfo();
 
-	for (auto &it : xinfo.monitors) {
+	for (auto &it : xinfo->monitors) {
 		xenolith::MonitorInfo m;
 		m.name = it.name;
 		m.edid = it.edid;
@@ -222,17 +238,19 @@ Rc<ScreenInfo> LinuxContextController::getScreenInfo() const {
 
 		for (auto &oit : it.outputs) {
 			for (auto &mit : oit->modes) {
-				xenolith::ModeInfo mode;
-				mode.width = mit->width;
-				mode.height = mit->height;
-				mode.rate = mit->rate;
-				if (mit == oit->preferred) {
-					m.preferredMode = m.modes.size();
+				if (mit->available) {
+					xenolith::ModeInfo mode;
+					mode.width = mit->width;
+					mode.height = mit->height;
+					mode.rate = mit->rate;
+					if (mit == oit->preferred) {
+						m.preferredMode = m.modes.size();
+					}
+					if (mit == oit->crtc->mode) {
+						m.currentMode = m.modes.size();
+					}
+					m.modes.emplace_back(mode);
 				}
-				if (mit == oit->crtc->mode) {
-					m.currentMode = m.modes.size();
-				}
-				m.modes.emplace_back(mode);
 			}
 		}
 
@@ -428,7 +446,6 @@ dbus_bool_t LinuxContextController::handleDbusEvent(dbus::Connection *c, const d
 	case dbus::Event::Message: {
 		//dbus::describe(_dbus, ev.message, [](StringView str) { std::cout << str; });
 		if (_dbus->dbus_message_is_signal(ev.message, NM_SERVICE_CONNECTION_NAME, "StateChanged")) {
-			//std::cout << "Connection: StateChanged\n";
 			updateNetworkState();
 			return DBUS_HANDLER_RESULT_HANDLED;
 		}

@@ -38,6 +38,9 @@ public:
 
 	/// Callback for node creation
 	using NodeFunction = Function<Rc<Node>(const Item &)>;
+
+	// Callback to rebuild scroll list, usually called when scroll ContentSize was changed
+	// Should return true if items was rebuilt, false if no changes performed
 	using RebuildCallback = Function<bool(ScrollController *)>; // return true if item was rebuilded
 
 	struct Item {
@@ -103,8 +106,20 @@ public:
 
 	size_t getItemIndex(Node *);
 
+	bool removeItem(size_t);
+	bool removeItem(const Item *);
+	bool removeItem(Node *);
+	bool removeItem(StringView);
+
 	const Vector<Item> &getItems() const;
 	Vector<Item> &getItems();
+
+	// Apply penging changes to ScrollView
+	// Note that all changes you made in controller (add/remove/reposition/resize items)
+	// will not be reflected in ScrollView immediately, it needs to be commited directly
+	// or contextually (when ScrollView resized or scrolled)
+	// commitChanges has no effect when there are no changes awaits
+	void commitChanges();
 
 	virtual void setScrollRelativeValue(float value);
 

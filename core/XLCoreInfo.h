@@ -25,6 +25,7 @@
 #define XENOLITH_CORE_XLCOREINFO_H_
 
 #include "XLCorePipelineInfo.h"
+#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -419,11 +420,15 @@ struct SP_PUBLIC ImageData : ImageInfo {
 	size_t writeData(uint8_t *mem, size_t expected) const;
 };
 
+// OS Windows Manager constraints for a frame presentation
 struct SP_PUBLIC FrameConstraints {
 	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
 	float density = 1.0f;
+
+	// WM frame interval (it's not an engine limit, but OS limit)
+	uint64_t frameInterval = 1'000'000 / 60;
 
 	Size2 getScreenSize() const {
 		if ((transform & core::SurfaceTransformFlags::PreRotated)
@@ -584,6 +589,9 @@ SP_PUBLIC bool hasReadAccess(AccessType);
 SP_PUBLIC bool hasWriteAccess(AccessType);
 
 SP_PUBLIC String getQueueFlagsDesc(QueueFlags);
+
+SP_PUBLIC Bitmap getBitmap(const ImageInfoData &, BytesView);
+SP_PUBLIC bool saveImage(const FileInfo &, const ImageInfoData &, BytesView);
 
 SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const ImageInfoData &value);
 

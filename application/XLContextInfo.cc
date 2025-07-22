@@ -247,9 +247,10 @@ Value WindowInfo::encode() const {
 	if (hasFlag(flags, WindowFlags::FixedBorder)) {
 		f.addString("FixedBorder");
 	}
-	if (hasFlag(flags, WindowFlags::SingleWindow)) {
-		f.addString("SingleWindow");
+	if (hasFlag(flags, WindowFlags::ExclusiveFullscreen)) {
+		f.addString("ExclusiveFullscreen");
 	}
+
 	if (!f.empty()) {
 		ret.setValue(move(f), "flags");
 	}

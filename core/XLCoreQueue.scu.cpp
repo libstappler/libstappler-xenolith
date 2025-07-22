@@ -69,3 +69,4 @@
 #include "XLCoreFrameRequest.cc"
 #include "XLCoreFrameQueue.cc"
 #include "XLCoreFrameHandle.cc"
+#include "XLCoreMonitorInfo.cc"

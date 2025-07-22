@@ -37,6 +37,8 @@ class Loop;
 // persistent object, part of Device
 class SP_PUBLIC TextureSetLayout : public core::TextureSetLayout {
 public:
+	static uint32_t getLayoutImageCount(const Device &dev, const core::TextureSetLayoutData &);
+
 	using AttachmentLayout = core::AttachmentLayout;
 
 	virtual ~TextureSetLayout() = default;

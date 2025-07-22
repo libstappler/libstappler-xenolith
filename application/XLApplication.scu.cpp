@@ -31,7 +31,6 @@
 
 #include "platform/XLContextController.cc"
 #include "platform/XLContextNativeWindow.cc"
-#include "platform/XLEdid.cc"
 
 #if LINUX
 #include "linux/thirdparty/glfw/xkb_unicode.cc"

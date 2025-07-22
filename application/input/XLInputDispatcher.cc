@@ -272,7 +272,8 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		break;
 	}
 	case InputEventName::CloseRequest:
-	case InputEventName::ScreenUpdate: {
+	case InputEventName::ScreenUpdate:
+	case InputEventName::Fullscreen: {
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->canHandleEvent(handlers.event)) {

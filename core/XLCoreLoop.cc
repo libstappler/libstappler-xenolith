@@ -23,6 +23,7 @@
 #include "XLCoreLoop.h"
 #include "XLCoreInstance.h"
 #include "SPEventLooper.h"
+#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -36,5 +37,17 @@ bool Loop::init(NotNull<event::Looper> looper, NotNull<Instance> inst, Rc<LoopIn
 }
 
 bool Loop::isOnThisThread() const { return _looper->isOnThisThread(); }
+
+void Loop::captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
+		core::AttachmentLayout l) {
+	auto path = file.path.str<Interface>();
+	auto cat = file.category;
+	captureImage([path, cat](const ImageInfoData &info, BytesView view) mutable {
+		if (!StringView(path).ends_with(".png")) {
+			path = path + String(".png");
+		}
+		saveImage(FileInfo{path, cat}, info, view);
+	}, image, l);
+}
 
 } // namespace stappler::xenolith::core

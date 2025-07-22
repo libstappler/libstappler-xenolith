@@ -32,9 +32,11 @@ ContextNativeWindow::~ContextNativeWindow() {
 	}
 }
 
-bool ContextNativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info) {
+bool ContextNativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
+		WindowCapabilities caps) {
 	_controller = c;
 	_info = move(info);
+	_info->capabilities = caps;
 	_textInput = Rc<TextInputProcessor>::create(core::TextInputInfo{
 		.update = [this](const TextInputRequest &req) -> bool { return updateTextInput(req); },
 		.propagate =

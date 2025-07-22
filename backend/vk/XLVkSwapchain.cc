@@ -21,6 +21,7 @@
 **/
 
 #include "XLVkSwapchain.h"
+#include "XLVk.h"
 #include "XLVkConfig.h"
 #include "XLVkInstance.h"
 
@@ -183,6 +184,8 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 
 		return core::Swapchain::init(dev, SwapchainHandle_destroy, core::ObjectType::Swapchain,
 				ObjectHandle(_data->swapchain), _data);
+	} else {
+		log::error("SwapchainHandle", "Fail to create swapchain: ", getStatus(result));
 	}
 	return false;
 }

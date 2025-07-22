@@ -43,11 +43,9 @@ void SceneLayout2d::setDecorationPadding(Padding padding) {
 	}
 }
 
-void SceneLayout2d::setTargetContentSize(const Size2 &size) {
-	_targetContentSize = size;
-}
+void SceneLayout2d::setTargetContentSize(const Size2 &size) { _targetContentSize = size; }
 
-bool SceneLayout2d::onBackButton() {
+bool SceneLayout2d::handleBackButton() {
 	if (_backButtonCallback) {
 		return _backButtonCallback();
 	} else if (_sceneContent) {
@@ -66,37 +64,37 @@ const SceneLayout2d::BackButtonCallback &SceneLayout2d::getBackButtonCallback() 
 	return _backButtonCallback;
 }
 
-void SceneLayout2d::onPush(SceneContent2d *l, bool replace) {
+void SceneLayout2d::handlePush(SceneContent2d *l, bool replace) {
 	_sceneContent = l;
 	_inTransition = true;
 }
-void SceneLayout2d::onPushTransitionEnded(SceneContent2d *l, bool replace) {
+void SceneLayout2d::handlePushTransitionEnded(SceneContent2d *l, bool replace) {
 	_sceneContent = l;
 	_inTransition = false;
 	_contentSizeDirty = true;
 }
 
-void SceneLayout2d::onPopTransitionBegan(SceneContent2d *l, bool replace) {
+void SceneLayout2d::hanldePopTransitionBegan(SceneContent2d *l, bool replace) {
 	_inTransition = true;
 }
-void SceneLayout2d::onPop(SceneContent2d *l, bool replace) {
+void SceneLayout2d::handlePop(SceneContent2d *l, bool replace) {
 	_inTransition = false;
 	_contentSizeDirty = true;
 	_sceneContent = nullptr;
 }
 
-void SceneLayout2d::onBackground(SceneContent2d *l, SceneLayout2d *overlay) {
+void SceneLayout2d::handleBackground(SceneContent2d *l, SceneLayout2d *overlay) {
 	_inTransition = true;
 }
-void SceneLayout2d::onBackgroundTransitionEnded(SceneContent2d *l, SceneLayout2d *overlay) {
+void SceneLayout2d::handleBackgroundTransitionEnded(SceneContent2d *l, SceneLayout2d *overlay) {
 	_inTransition = false;
 	_contentSizeDirty = true;
 }
 
-void SceneLayout2d::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
+void SceneLayout2d::handleForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
 	_inTransition = true;
 }
-void SceneLayout2d::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
+void SceneLayout2d::handleForeground(SceneContent2d *l, SceneLayout2d *overlay) {
 	_inTransition = false;
 	_contentSizeDirty = true;
 }
@@ -108,16 +106,18 @@ Rc<SceneLayout2d::Transition> SceneLayout2d::makeExitTransition(SceneContent2d *
 	return nullptr;
 }
 
-bool SceneLayout2d::hasBackButtonAction() const {
-	return _backButtonCallback != nullptr;
+bool SceneLayout2d::hasBackButtonAction() const { return _backButtonCallback != nullptr; }
+
+void SceneLayout2d::setLayoutName(StringView name) { _name = name.str<Interface>(); }
+
+StringView SceneLayout2d::getLayoutName() const { return _name; }
+
+bool SceneLayout2d::pop() {
+	if (auto c = getSceneContent()) {
+		c->popLayout(this);
+		return true;
+	}
+	return false;
 }
 
-void SceneLayout2d::setLayoutName(StringView name) {
-	_name = name.str<Interface>();
-}
-
-StringView SceneLayout2d::getLayoutName() const {
-	return _name;
-}
-
-}
+} // namespace stappler::xenolith::basic2d

@@ -20,21 +20,62 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
-#define XENOLITH_APPLICATION_PLATFORM_XLEDID_H_
+#ifndef XENOLITH_CORE_XLCOREMONITORINFO_H_
+#define XENOLITH_CORE_XLCOREMONITORINFO_H_
 
-#include "XLCommon.h"
+#include "XLCoreInfo.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 struct EdidInfo {
+	static EdidInfo parse(BytesView);
+
 	String vendor;
 	String model;
 	String serial;
+
+	auto operator<=>(const EdidInfo &) const = default;
 };
 
-EdidInfo parseEdid(BytesView);
+struct ModeInfo {
+	static const ModeInfo Current;
+	static const ModeInfo Preferred;
 
-} // namespace stappler::xenolith::platform
+	uint32_t width = 0;
+	uint32_t height = 0;
+	uint32_t rate = 0; // FPS multiplied by 1000
 
-#endif /* XENOLITH_APPLICATION_PLATFORM_XLEDID_H_ */
+	auto operator<=>(const ModeInfo &) const = default;
+};
+
+struct MonitorId {
+	// Use this to fullscreen into primary monitor
+	static const MonitorId Primary;
+
+	// Use this to disable fullscreen
+	static const MonitorId None;
+
+	String name;
+	EdidInfo edid;
+
+	auto operator<=>(const MonitorId &) const = default;
+};
+
+struct MonitorInfo : MonitorId {
+	IRect rect;
+	Extent2 mm;
+
+	uint32_t preferredMode = 0;
+	uint32_t currentMode = 0;
+
+	Vector<ModeInfo> modes;
+};
+
+struct ScreenInfo : public Ref {
+	Vector<MonitorInfo> monitors;
+	uint32_t primaryMonitor = 0;
+};
+
+} // namespace stappler::xenolith::core
+
+#endif /* XENOLITH_CORE_XLCOREMONITORINFO_H_ */

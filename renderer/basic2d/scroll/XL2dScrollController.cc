@@ -348,6 +348,56 @@ size_t ScrollController::getItemIndex(Node *node) {
 	return std::numeric_limits<size_t>::max();
 }
 
+bool ScrollController::removeItem(size_t idx) {
+	if (idx >= _nodes.size()) {
+		return false;
+	}
+
+	auto &item = _nodes[idx];
+	removeScrollNode(item);
+	if (item.node) {
+		item.node->removeFromParent();
+		item.node = nullptr;
+	}
+
+	_nodes.erase(_nodes.cbegin() + idx);
+	_infoDirty = true;
+	return true;
+}
+
+bool ScrollController::removeItem(const Item *item) {
+	size_t idx = 0;
+	for (auto &it : _nodes) {
+		if (&it == item) {
+			return removeItem(idx);
+		}
+		++idx;
+	}
+	return false;
+}
+
+bool ScrollController::removeItem(Node *node) {
+	auto item = getItemIndex(node);
+	if (item < _nodes.size()) {
+		return removeItem(item);
+	}
+	return false;
+}
+
+bool ScrollController::removeItem(StringView tag) {
+	auto item = getItem(tag);
+	if (item) {
+		return removeItem(item);
+	}
+	return false;
+}
+
+void ScrollController::commitChanges() {
+	if (_infoDirty) {
+		onScrollPosition(true);
+	}
+}
+
 const Vector<ScrollController::Item> &ScrollController::getItems() const { return _nodes; }
 
 Vector<ScrollController::Item> &ScrollController::getItems() {

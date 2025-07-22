@@ -44,7 +44,7 @@ public:
 
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
 
-	void notifyWindowResized(NotNull<ContextNativeWindow>, bool liveResize) override;
+	void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>, bool liveResize) override;
 	bool notifyWindowClosed(NotNull<ContextNativeWindow>) override;
 
 	void handleRootWindowClosed();
@@ -52,7 +52,7 @@ public:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) override;
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
-	virtual Status writeToClipboard(BytesView, StringView contentType = StringView()) override;
+	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
 
 	virtual Rc<ScreenInfo> getScreenInfo() const override;
 

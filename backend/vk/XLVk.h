@@ -128,11 +128,13 @@ static const char * const s_requiredExtension[] = {
 };
 
 enum class OptionalInstanceExtension {
+	Display,
 	SurfaceCapabilities2,
 	Max
 };
 
 static const char * const s_optionalExtension[] = {
+	VK_KHR_DISPLAY_EXTENSION_NAME,
 	VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
 	nullptr
 };

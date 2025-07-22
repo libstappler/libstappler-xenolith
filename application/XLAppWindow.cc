@@ -21,7 +21,9 @@
  **/
 
 #include "XLAppWindow.h"
+#include "SPCore.h"
 #include "XLAppThread.h"
+#include "XLContextInfo.h"
 #include "XLCorePresentationEngine.h"
 #include "platform/XLContextNativeWindow.h"
 #include "director/XLDirector.h"
@@ -31,6 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(AppWindow, onBackground);
 XL_DECLARE_EVENT_CLASS(AppWindow, onFocus);
+XL_DECLARE_EVENT_CLASS(AppWindow, onFullscreen);
 
 AppWindow::~AppWindow() { log::info("AppWindow", "~AppWindow"); }
 
@@ -38,6 +41,8 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 	_context = ctx;
 	_application = app;
 	_window = w;
+
+	_isFullscreen = w->getInfo()->monitor != MonitorId::None;
 
 	_presentationEngine = _context->getGlLoop()->makePresentationEngine(this);
 
@@ -131,6 +136,13 @@ const WindowInfo *AppWindow::getInfo() const {
 	return nullptr;
 }
 
+WindowCapabilities AppWindow::getCapabilities() const {
+	if (_window) {
+		return _window->getInfo()->capabilities;
+	}
+	return WindowCapabilities::None;
+}
+
 core::ImageInfo AppWindow::getSwapchainImageInfo(const core::SwapchainConfig &cfg) const {
 	core::ImageInfo swapchainImageInfo;
 	swapchainImageInfo.format = cfg.imageFormat;
@@ -196,11 +208,9 @@ Rc<core::Surface> AppWindow::makeSurface(NotNull<core::Instance> instance) {
 	return _window->makeSurface(instance);
 }
 
-core::FrameConstraints AppWindow::getInitialFrameConstraints() const {
+core::FrameConstraints AppWindow::exportFrameConstraints() const {
 	return _window->exportConstraints(_window->getInfo()->exportConstraints());
 }
-
-uint64_t AppWindow::getInitialFrameInterval() const { return _window->getScreenFrameInterval(); }
 
 void AppWindow::setFrameOrder(uint64_t frameOrder) {
 	if (_window) {
@@ -208,7 +218,7 @@ void AppWindow::setFrameOrder(uint64_t frameOrder) {
 	}
 }
 
-void AppWindow::updateConfig(core::PresentationSwapchainFlags flags) {
+void AppWindow::updateConstraints(core::PresentationSwapchainFlags flags) {
 	_context->performOnThread([this, flags] { _presentationEngine->deprecateSwapchain(flags); },
 			this, true);
 }
@@ -314,21 +324,50 @@ void AppWindow::updateLayers(Vector<WindowLayer> &&layers) {
 }
 
 void AppWindow::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {
-	_application->acquireScreenInfo(sp::move(cb), ref);
+	_context->performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
+		auto winfo = _window->getInfo();
+		if (hasFlag(winfo->capabilities, WindowCapabilities::DirectOutput)
+				&& hasFlag(winfo->flags, WindowFlags::DirectOutput)) {
+			auto info = _presentationEngine->getScreenInfo();
+			_application->performOnAppThread(
+					[cb = sp::move(cb), ref = move(ref), info = move(info)]() mutable {
+				cb(info);
+				ref = nullptr;
+				info = nullptr;
+			}, this);
+		} else {
+			_application->acquireScreenInfo(sp::move(cb), ref);
+		}
+	}, this);
 }
 
-void AppWindow::setFullscreen(MonitorId &&mon, ModeInfo &&mode, Function<void(Status)> &&cb,
+bool AppWindow::setFullscreen(MonitorId &&mon, ModeInfo &&mode, Function<void(Status)> &&cb,
 		Ref *ref) {
+	if (!hasFlag(getCapabilities(), WindowCapabilities::FullscreenSwitch)) {
+		return false;
+	}
 	_context->performOnThread(
 			[this, mon = move(mon), mode = move(mode), cb = sp::move(cb),
 					ref = Rc<Ref>(ref)]() mutable {
-		auto st = _window->setFullscreen(mon, mode);
+		auto winfo = _window->getInfo();
+		auto useDirect = hasFlag(winfo->capabilities, WindowCapabilities::DirectOutput)
+				&& hasFlag(winfo->flags, WindowFlags::DirectOutput);
+		auto st = useDirect ? _presentationEngine->setFullscreenSurface(mon, mode)
+							: _window->setFullscreen(mon, mode);
 		_application->performOnAppThread([st, cb = sp::move(cb), ref = move(ref)]() mutable {
 			cb(st);
 			ref = nullptr;
 		}, this);
 	},
 			this);
+	return true;
+}
+
+void AppWindow::captureScreenshot(
+		Function<void(const core::ImageInfoData &info, BytesView view)> &&cb) {
+	_context->performOnThread([this, cb = sp::move(cb)]() mutable {
+		_presentationEngine->captureScreenshot(sp::move(cb));
+	}, this);
 }
 
 void AppWindow::propagateInputEvent(core::InputEventData &event) {
@@ -346,6 +385,10 @@ void AppWindow::propagateInputEvent(core::InputEventData &event) {
 	case InputEventName::FocusGain:
 		_hasFocus = event.getValue();
 		onFocus(this, _hasFocus);
+		break;
+	case InputEventName::Fullscreen:
+		_isFullscreen = event.getValue();
+		onFullscreen(this, _isFullscreen);
 		break;
 	default: break;
 	}

@@ -92,8 +92,6 @@ public:
 
 	virtual void waitIdle() override;
 
-	virtual void captureImage(const FileInfo &file, const Rc<core::ImageObject> &image,
-			core::AttachmentLayout l) override;
 	virtual void captureImage(Function<void(const ImageInfoData &info, BytesView view)> &&cb,
 			const Rc<core::ImageObject> &image, core::AttachmentLayout l) override;
 

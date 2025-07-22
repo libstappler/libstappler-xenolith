@@ -42,7 +42,7 @@ public:
 
 	virtual ~ContextNativeWindow();
 
-	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&info);
+	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, WindowCapabilities);
 
 	virtual uint64_t getScreenFrameInterval() const = 0;
 

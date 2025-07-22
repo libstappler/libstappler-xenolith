@@ -30,6 +30,7 @@
 #include "XLCorePresentationFrame.h"
 #include "SPMovingAverage.h"
 #include "SPEventHandle.h"
+#include "XlCoreMonitorInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -51,8 +52,7 @@ public:
 	virtual void handleFramePresented(NotNull<PresentationFrame>) = 0;
 
 	virtual Rc<Surface> makeSurface(NotNull<Instance>) = 0;
-	virtual FrameConstraints getInitialFrameConstraints() const = 0;
-	virtual uint64_t getInitialFrameInterval() const = 0;
+	virtual FrameConstraints exportFrameConstraints() const = 0;
 
 	virtual void setFrameOrder(uint64_t) = 0;
 };
@@ -60,8 +60,9 @@ public:
 enum class PresentationSwapchainFlags {
 	None,
 	SwitchToFastMode = 1 << 0,
-	EndOfLife = 1 << 1,
-	Finalized = 1 << 2,
+	SwitchToNext = 1 << 1,
+	EndOfLife = 1 << 2,
+	Finalized = 1 << 3,
 };
 
 SP_DEFINE_ENUM_AS_MASK(PresentationSwapchainFlags)
@@ -125,7 +126,10 @@ public:
 
 	virtual bool recreateSwapchain() = 0;
 	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
-			core::PresentMode presentMode) = 0;
+			core::PresentMode presentMode, bool oldSwapchainValid) = 0;
+
+	virtual Rc<ScreenInfo> getScreenInfo() const = 0;
+	virtual Status setFullscreenSurface(const MonitorId &, const ModeInfo &) = 0;
 
 	// Callback receives true for successful recreation and false for end-of-life
 	virtual void deprecateSwapchain(PresentationSwapchainFlags = PresentationSwapchainFlags::None,
@@ -136,7 +140,11 @@ public:
 
 	virtual void update(PresentationUpdateFlags);
 
+	// 0 - do not target any interval
+	// In FIFO mode WM interval will ba the hard limit
+	// In Mailbox or Immediate - no limit will be applied
 	void setTargetFrameInterval(uint64_t);
+
 	uint64_t getTargetFrameInterval() const { return _targetFrameInterval; }
 
 	bool isFrameValid(const PresentationFrame *) const;
@@ -178,6 +186,8 @@ public:
 	virtual void handleFramePresented(NotNull<PresentationFrame>);
 	virtual void handleFrameComplete(NotNull<PresentationFrame>);
 
+	virtual void captureScreenshot(Function<void(const ImageInfoData &info, BytesView view)> &&cb);
+
 protected:
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override { return true; }
@@ -210,6 +220,8 @@ protected:
 	Device *_device = nullptr;
 
 	Rc<Surface> _surface;
+	Rc<Surface> _nextSurface;
+	Rc<Surface> _originalSurface;
 	Rc<Swapchain> _swapchain;
 	Rc<Loop> _loop;
 
@@ -219,7 +231,10 @@ protected:
 	// расчитывается как премя последней презентации + целевой кадроый интервал
 	uint64_t _nextPresentWindow = 0;
 
-	// целевой кадроый интервал в режиме постоянной презентации (в микросекундах)
+	// Целевой кадроый интервал в режиме постоянной презентации (в микросекундах)
+	// Может отличаться от кадрового интервала оконного менеджера (WM)
+	// В режимах Mailbox и Immediate может быть больше интервала WM
+	// Во всех режимах может быть меньше интервала WM
 	uint64_t _targetFrameInterval = 0; // 1'000'000 / 60;
 
 	// интервал обновления системы (приблизительная частота вызова update) (в микросекундах)
@@ -266,6 +281,7 @@ protected:
 
 	Set<PresentationFrame *> _activeFrames;
 	Set<PresentationFrame *> _totalFrames;
+	Set<PresentationFrame *> _detachedFrames;
 
 	PresentationSwapchainFlags _deprecationFlags = PresentationSwapchainFlags::None;
 	Vector<Function<void(bool)>> _deprecationCallbacks;
