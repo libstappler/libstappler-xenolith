@@ -213,6 +213,8 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_outputs_length)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_possible)
 	XL_DEFINE_PROTO(xcb_randr_get_crtc_info_possible_length)
+	XL_DEFINE_PROTO(xcb_randr_set_screen_size_checked)
+	XL_DEFINE_PROTO(xcb_randr_set_screen_size)
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config)
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config_reply)
@@ -348,6 +350,7 @@ enum class XcbAtomIndex {
 	_NET_WM_ACTION_CLOSE,
 	_NET_WM_FULLSCREEN_MONITORS,
 	_NET_WM_BYPASS_COMPOSITOR,
+	_NET_SUPPORTED,
 	SAVE_TARGETS,
 	CLIPBOARD,
 	PRIMARY,
@@ -356,11 +359,12 @@ enum class XcbAtomIndex {
 	MULTIPLE,
 	TEXT,
 	UTF8_STRING,
-	OCTET_STREAM, // application/octet-stream
+	OCTET_STREAM,
 	ATOM_PAIR,
 	INCR,
 	XNULL,
 	XENOLITH_CLIPBOARD,
+	_XSETTINGS_SETTINGS,
 };
 
 } // namespace stappler::xenolith::platform

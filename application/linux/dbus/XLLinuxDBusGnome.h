@@ -28,7 +28,7 @@
 #if LINUX
 
 #include "XLLinuxDBusController.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
+#include "platform/XLDisplayConfigManager.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
 

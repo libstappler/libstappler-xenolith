@@ -21,18 +21,21 @@
  **/
 
 #include "XLContextNativeWindow.h"
+#include "SPCore.h"
+#include "SPStatus.h"
 #include "XLContextController.h"
 #include "XLAppWindow.h"
+#include "XlCoreMonitorInfo.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-ContextNativeWindow::~ContextNativeWindow() {
+NativeWindow::~NativeWindow() {
 	if (_appWindow) {
 		_appWindow = nullptr;
 	}
 }
 
-bool ContextNativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
+bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 		WindowCapabilities caps) {
 	_controller = c;
 	_info = move(info);
@@ -48,11 +51,11 @@ bool ContextNativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&in
 	return true;
 }
 
-void ContextNativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->run(req); }
+void NativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->run(req); }
 
-void ContextNativeWindow::releaseTextInput() { _textInput->cancel(); }
+void NativeWindow::releaseTextInput() { _textInput->cancel(); }
 
-bool ContextNativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLayer &)> &cb) const {
+bool NativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLayer &)> &cb) const {
 	bool found = false;
 	for (auto &it : _layers) {
 		if (it.rect.containsPoint(pt)) {
@@ -64,14 +67,14 @@ bool ContextNativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLa
 	return found;
 }
 
-void ContextNativeWindow::setAppWindow(Rc<AppWindow> &&w) {
+void NativeWindow::setAppWindow(Rc<AppWindow> &&w) {
 	_appWindow = move(w);
 	_appWindow->run();
 }
 
-AppWindow *ContextNativeWindow::getAppWindow() const { return _appWindow; }
+AppWindow *NativeWindow::getAppWindow() const { return _appWindow; }
 
-void ContextNativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
+void NativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	_layers = sp::move(layers);
 	if (_handleLayerForMotion) {
 		handleMotionEvent(InputEventData{0, InputEventName::MouseMove, core::InputMouseButton::None,
@@ -79,7 +82,114 @@ void ContextNativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	}
 }
 
-void ContextNativeWindow::handleInputEvents(Vector<InputEventData> &&events) {
+void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &&cb, Ref *ref) {
+	if (!hasFlag(_info->capabilities, WindowCapabilities::Fullscreen)) {
+		cb(Status::ErrorNotImplemented);
+		return;
+	}
+
+	auto dcm = _controller->getDisplayConfigManager();
+
+	if (info == FullscreenInfo::None) {
+		// exit fullscreen
+		dcm->restoreMode(nullptr, this);
+
+		// remove fullscreen state
+		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			cb(setFullscreenState(sp::move(info)));
+		} else {
+			// not in fullsreen
+			cb(Status::Declined);
+		}
+	} else {
+		auto config = dcm->getCurrentConfig();
+
+		auto mon = config->getMonitor(info.id);
+		if (!mon) {
+			cb(Status::ErrorInvalidArguemnt);
+			return;
+		}
+
+		auto m = mon->getMode(info.mode);
+		auto &current = mon->getCurrent();
+		if (!m) {
+			cb(Status::ErrorInvalidArguemnt);
+			return;
+		}
+
+		info.mode = m->mode;
+
+		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			if (_info->fullscreen.id != info.id) {
+				// switch monitor
+
+				if (info.mode == core::ModeInfo::Current || info.mode == current) {
+					if (!dcm->hasSavedMode()) {
+						// no saved mode - just switch to another monitor
+						cb(setFullscreenState(sp::move(info)));
+						return;
+					} else {
+						// with fullscreen engine, mode for other monitor should not be other then saved-current
+						// so, restore saved mode, then fullscreen window on other monitor
+						dcm->restoreMode(
+								[this, cb = sp::move(cb), info = sp::move(info),
+										ref = Rc<Ref>(ref)](Status st) mutable {
+							if (st == Status::Ok) {
+								cb(setFullscreenState(sp::move(info)));
+							} else {
+								log::error("XcbWindow", "Fail to reset mode for fullscreen: ", st);
+								cb(st);
+							}
+							ref = nullptr;
+						},
+								this);
+						return;
+					}
+				} else {
+					// requested fullscreen to another monitor with custom mode
+
+					// unset fullscreen, then set on other monitor with `setModeExclusive`
+					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+				}
+			} else {
+				// requested mode-switch for current monitor
+				if (info.mode == core::ModeInfo::Current || info.mode == current) {
+					// already on mede, decline
+					cb(Status::Declined);
+					return;
+				} else {
+					// exit from fullscreen befoe mode switch
+					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+				}
+			}
+		} else {
+			// not in fullscreen
+			// check if requested mode is current
+			if (info.mode == core::ModeInfo::Current || info.mode == current) {
+				// if it is, - just set fullscreen flag
+				cb(setFullscreenState(sp::move(info)));
+				return;
+			}
+			// now - just set mode
+		}
+
+		// set new mode for monitor
+		dcm->setModeExclusive(mon->id, m->mode,
+				[this, cb = sp::move(cb), info = sp::move(info), ref = Rc<Ref>(ref)](
+						Status st) mutable {
+			if (st == Status::Ok) {
+				cb(setFullscreenState(sp::move(info)));
+			} else {
+				log::error("XcbWindow", "Fail to set mode for fullscreen: ", st);
+				cb(st);
+			}
+			ref = nullptr;
+		},
+				this);
+	}
+}
+
+void NativeWindow::handleInputEvents(Vector<InputEventData> &&events) {
 	for (auto &event : events) {
 		switch (event.event) {
 		case InputEventName::MouseMove: handleMotionEvent(event); break;
@@ -102,7 +212,7 @@ void ContextNativeWindow::handleInputEvents(Vector<InputEventData> &&events) {
 	_controller->notifyWindowInputEvents(this, sp::move(events));
 }
 
-void ContextNativeWindow::handleMotionEvent(const InputEventData &event) {
+void NativeWindow::handleMotionEvent(const InputEventData &event) {
 	if (_handleLayerForMotion) {
 		_layerLocation = Vec2(event.x, event.y);
 		if (!findLayers(_layerLocation, [this](const WindowLayer &layer) {
@@ -116,6 +226,49 @@ void ContextNativeWindow::handleMotionEvent(const InputEventData &event) {
 			}
 		}
 	}
+}
+
+const CallbackStream &operator<<(const CallbackStream &out, NativeWindowStateFlags flags) {
+	if (hasFlag(flags, NativeWindowStateFlags::Modal)) {
+		out << " Modal";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Sticky)) {
+		out << " Sticky";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::MaximizedVert)) {
+		out << " MaximizedVert";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::MaximizedHorz)) {
+		out << " MaximizedHorz";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Shaded)) {
+		out << " Shaded";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::SkipTaskbar)) {
+		out << " SkipTaskbar";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::SkipPager)) {
+		out << " SkipPager";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Hidden)) {
+		out << " Hidden";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Fullscreen)) {
+		out << " Fullscreen";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Above)) {
+		out << " Above";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Below)) {
+		out << " Below";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::DemandsAttention)) {
+		out << " DemandsAttention";
+	}
+	if (hasFlag(flags, NativeWindowStateFlags::Focused)) {
+		out << " Focused";
+	}
+	return out;
 }
 
 } // namespace stappler::xenolith::platform

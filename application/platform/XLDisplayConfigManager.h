@@ -20,22 +20,20 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_LINUX_XLLINUXDISPLAYCONFIGMANAGER_H_
-#define XENOLITH_APPLICATION_LINUX_XLLINUXDISPLAYCONFIGMANAGER_H_
+#ifndef XENOLITH_APPLICATION_PLATFORM_XLDISPLAYCONFIGMANAGER_H_
+#define XENOLITH_APPLICATION_PLATFORM_XLDISPLAYCONFIGMANAGER_H_
 
-#include "XLCommon.h"
 #include "XlCoreMonitorInfo.h"
-
-#if LINUX
-
 #include "XLContextInfo.h"
-#include "XLLinux.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct DisplayMode {
+	static DisplayMode None;
+
 	uint32_t xid = 0; // mode id
 	core::ModeInfo mode;
+	String id;
 	String name;
 
 	float preferredScale = 1.0f;
@@ -50,6 +48,7 @@ struct DisplayMode {
 
 struct PhysicalDisplay {
 	uint32_t xid = 0; // output id
+	uint32_t index = 0;
 	MonitorId id;
 	Extent2 mm;
 	Vector<DisplayMode> modes;
@@ -58,6 +57,7 @@ struct PhysicalDisplay {
 	const DisplayMode &getCurrent() const;
 
 	bool operator==(const PhysicalDisplay &m) const noexcept = default;
+	bool operator!=(const PhysicalDisplay &m) const noexcept = default;
 };
 
 struct LogicalDisplay {
@@ -78,9 +78,16 @@ struct DisplayConfig : public Ref {
 	Vector<PhysicalDisplay> monitors;
 	Vector<LogicalDisplay> logical;
 
+	// OS-native config
+	Rc<Ref> native;
+
 	const PhysicalDisplay *getMonitor(const MonitorId &id) const;
+	const LogicalDisplay *getLogical(const MonitorId &id) const;
 
 	bool isEqual(const DisplayConfig *) const;
+
+	Extent2 getSize() const;
+	Extent2 getSizeMM() const;
 };
 
 class DisplayConfigManager : public Ref {
@@ -125,6 +132,4 @@ protected:
 
 } // namespace stappler::xenolith::platform
 
-#endif
-
-#endif // XENOLITH_APPLICATION_LINUX_XLLINUXDISPLAYCONFIGMANAGER_H_
+#endif // XENOLITH_APPLICATION_PLATFORM_XLDISPLAYCONFIGMANAGER_H_

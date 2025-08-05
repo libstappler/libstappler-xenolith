@@ -27,13 +27,21 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
+enum class FullscreenFlags {
+	None,
+	Exclusive = 1 << 0,
+};
+
+SP_DEFINE_ENUM_AS_MASK(FullscreenFlags)
+
 struct EdidInfo {
 	static EdidInfo parse(BytesView);
-	static String getVendorName(StringView);
+	static StringView getVendorName(StringView);
 
-	String vendor;
+	String vendorId;
 	String model;
 	String serial;
+	StringView vendor;
 
 	auto operator<=>(const EdidInfo &) const = default;
 };
@@ -60,6 +68,16 @@ struct MonitorId {
 	EdidInfo edid;
 
 	auto operator<=>(const MonitorId &) const = default;
+};
+
+struct FullscreenInfo {
+	static const FullscreenInfo None;
+
+	MonitorId id;
+	ModeInfo mode;
+	FullscreenFlags flags = FullscreenFlags::None;
+
+	auto operator<=>(const FullscreenInfo &) const = default;
 };
 
 struct MonitorInfo : MonitorId {

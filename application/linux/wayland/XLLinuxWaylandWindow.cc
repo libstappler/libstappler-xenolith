@@ -120,8 +120,8 @@ WaylandWindow::WaylandWindow() { }
 
 bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 		NotNull<const ContextInfo> content, NotNull<LinuxContextController> c) {
-	if (!ContextNativeWindow::init(c, move(info),
-				WindowCapabilities::FullscreenSwitch | WindowCapabilities::Subwindows)) {
+	auto caps = WindowCapabilities::Fullscreen;
+	if (!NativeWindow::init(c, move(info), caps)) {
 		return false;
 	}
 
@@ -357,16 +357,6 @@ core::PresentationOptions WaylandWindow::getPreferredOptions() const {
 	core::PresentationOptions opts;
 	opts.followDisplayLinkBarrier = true;
 	return opts;
-}
-
-void WaylandWindow::setFullscreen(const core::MonitorId &id, const core::ModeInfo &mode,
-		Function<void(Status)> &&cb, Ref *ref) {
-	if (mode != core::ModeInfo::Current && id != core::MonitorId::None) {
-		auto dcm = _controller.get_cast<LinuxContextController>()->getDisplayConfigManager();
-		if (dcm) {
-			dcm->setModeExclusive(id, mode, sp::move(cb), ref);
-		}
-	}
 }
 
 void WaylandWindow::handleSurfaceEnter(wl_surface *surface, wl_output *output) {

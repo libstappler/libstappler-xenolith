@@ -20,44 +20,42 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_
-#define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_
+#ifndef XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSKDE_H_
+#define XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSKDE_H_
 
 #include "XLCommon.h"
-#include "linux/xcb/XLLinuxXcbLibrary.h"
+#include "XlCoreMonitorInfo.h"
 
 #if LINUX
 
+#include "XLLinuxDBusController.h"
 #include "platform/XLDisplayConfigManager.h"
-#include "XLLinuxXcbConnection.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
 
-class SP_PUBLIC XcbDisplayConfigManager : public DisplayConfigManager {
+class SP_PUBLIC KdeDisplayConfigManager : public DisplayConfigManager {
 public:
-	virtual ~XcbDisplayConfigManager() = default;
+	virtual ~KdeDisplayConfigManager() = default;
 
-	virtual bool init(NotNull<XcbConnection>, Function<void(NotNull<DisplayConfigManager>)> &&);
-
-	void setCallback(Function<void(NotNull<DisplayConfigManager>)> &&);
+	virtual bool init(NotNull<Controller>, Function<void(NotNull<DisplayConfigManager>)> &&);
 
 	virtual void invalidate() override;
-
-	void update();
 
 protected:
 	void updateDisplayConfig(Function<void(DisplayConfig *)> && = nullptr);
 
+	void readDisplayConfig(NotNull<DBusMessage> reply, Function<void(DisplayConfig *)> &&fn);
+
 	virtual void prepareDisplayConfigUpdate(Function<void(DisplayConfig *)> &&) override;
 	virtual void applyDisplayConfig(NotNull<DisplayConfig>, Function<void(Status)> &&) override;
 
-	Rc<XcbConnection> _connection;
-	Rc<XcbLibrary> _xcb;
-	xcb_window_t _root = 0;
+	Rc<Controller> _dbus;
+	Rc<dbus::BusFilter> _configFilter;
+	Map<String, core::EdidInfo> _edidCache;
 };
 
-} // namespace stappler::xenolith::platform
+} // namespace stappler::xenolith::platform::dbus
 
 #endif
 
-#endif // XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBDISPLAYCONFIGMANAGER_H_
+#endif // XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSKDE_H_

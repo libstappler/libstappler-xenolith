@@ -25,6 +25,7 @@
 #include "XLAppThread.h"
 #include "XLContextInfo.h"
 #include "XLCorePresentationEngine.h"
+#include "XlCoreMonitorInfo.h"
 #include "platform/XLContextNativeWindow.h"
 #include "director/XLDirector.h"
 #include "input/XLInputDispatcher.h"
@@ -42,7 +43,7 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 	_application = app;
 	_window = w;
 
-	_isFullscreen = w->getInfo()->monitor != MonitorId::None;
+	_isFullscreen = w->getInfo()->fullscreen != FullscreenInfo::None;
 
 	_presentationEngine =
 			_context->getGlLoop()->makePresentationEngine(this, w->getPreferredOptions());
@@ -342,25 +343,23 @@ void AppWindow::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref 
 	}, this);
 }
 
-bool AppWindow::setFullscreen(MonitorId &&mon, ModeInfo &&mode, Function<void(Status)> &&cb,
-		Ref *ref) {
-	if (!hasFlag(getCapabilities(), WindowCapabilities::FullscreenSwitch)) {
+bool AppWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &&cb, Ref *ref) {
+	if (!hasFlag(getCapabilities(), WindowCapabilities::Fullscreen)) {
 		return false;
 	}
 	_context->performOnThread(
-			[this, mon = move(mon), mode = move(mode), cb = sp::move(cb),
-					ref = Rc<Ref>(ref)]() mutable {
+			[this, info = move(info), cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
 		auto winfo = _window->getInfo();
 		auto useDirect = hasFlag(winfo->capabilities, WindowCapabilities::DirectOutput)
 				&& hasFlag(winfo->flags, WindowFlags::DirectOutput);
 		if (useDirect) {
-			auto st = _presentationEngine->setFullscreenSurface(mon, mode);
+			auto st = _presentationEngine->setFullscreenSurface(info.id, info.mode);
 			_application->performOnAppThread([st, cb = sp::move(cb), ref = move(ref)]() mutable {
 				cb(st);
 				ref = nullptr;
 			}, this);
 		} else {
-			_window->setFullscreen(mon, mode,
+			_window->setFullscreen(move(info),
 					[this, cb = sp::move(cb), ref = move(ref)](Status st) mutable {
 				_application->performOnAppThread(
 						[st, cb = sp::move(cb), ref = move(ref)]() mutable {
@@ -369,8 +368,7 @@ bool AppWindow::setFullscreen(MonitorId &&mon, ModeInfo &&mode, Function<void(St
 				}, this);
 			}, this);
 		}
-	},
-			this);
+	}, this);
 	return true;
 }
 

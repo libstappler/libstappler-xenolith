@@ -31,7 +31,6 @@
 #if LINUX
 
 #include "XLLinuxDBusLibrary.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

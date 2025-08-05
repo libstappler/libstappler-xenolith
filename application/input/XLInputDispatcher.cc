@@ -279,7 +279,6 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->getOwner()) {
-				std::cout << typeid(*l.listener->getOwner()).name() << "\n";
 				if (l.listener->canHandleEvent(handlers.event)) {
 					handlers.listeners.emplace_back(l.listener);
 				}
@@ -293,8 +292,10 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 	case InputEventName::Fullscreen: {
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
+			if (l.listener->getOwner()) {
+				if (l.listener->canHandleEvent(handlers.event)) {
+					handlers.listeners.emplace_back(l.listener);
+				}
 			}
 			return true;
 		}, false);

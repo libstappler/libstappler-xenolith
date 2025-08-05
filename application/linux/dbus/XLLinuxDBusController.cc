@@ -34,6 +34,7 @@
 #include "linux/XLLinuxContextController.h"
 #include "linux/xcb/XLLinuxXcbConnection.h"
 #include "XLLinuxDBusGnome.h"
+#include "XLLinuxDBusKde.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
 
@@ -58,6 +59,8 @@ static constexpr auto DESKTOP_PORTAL_SERVICE_FILTER =
 		"type='signal',interface='org.freedesktop.portal.Settings'";
 
 static constexpr auto GNOME_DISPLAY_CONFIG_SERVICE = "org.gnome.Mutter.DisplayConfig";
+
+static constexpr auto KSCREEN_SERVICE = "org.kde.KScreen";
 
 Controller::Controller(NotNull< Library> dbus, NotNull<event::Looper> looper,
 		NotNull<LinuxContextController> c) {
@@ -111,6 +114,11 @@ Rc<DisplayConfigManager> Controller::makeDisplayConfigManager(
 	if (_sessionBus->services.find(GNOME_DISPLAY_CONFIG_SERVICE) != _sessionBus->services.end()) {
 		return Rc<GnomeDisplayConfigManager>::create(this, sp::move(cb));
 	}
+
+	if (_sessionBus->services.find(KSCREEN_SERVICE) != _sessionBus->services.end()) {
+		return Rc<KdeDisplayConfigManager>::create(this, sp::move(cb));
+	}
+
 	return nullptr;
 }
 
@@ -293,12 +301,20 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 		return 1;
 		break;
 	case dbus::Event::Message: {
-		dbus::describe(_dbus, ev.message, [](StringView str) { std::cout << str; });
+		if (StringView(_dbus->dbus_message_get_interface(ev.message)) == "org.freedesktop.DBus"
+				&& StringView(_dbus->dbus_message_get_sender(ev.message)) == "org.freedesktop.DBus"
+				&& StringView(_dbus->dbus_message_get_member(ev.message)) == "NameAcquired") {
+			ReadIterator iter(_dbus, ev.message);
+			c->name = iter.getString().str<Interface>();
+			return DBUS_HANDLER_RESULT_HANDLED;
+		} else {
+			dbus::describe(_dbus, ev.message, [](StringView str) { std::cout << str; });
+		}
+
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		break;
 	}
 	}
-
 	return 0;
 }
 
@@ -324,8 +340,6 @@ void Controller::updateInterfaceTheme() {
 		StringView array[] = {"org.gnome.desktop.interface", "org.gnome.desktop.peripherals.mouse"};
 		iter.add(makeSpanView(array));
 	}, [this](NotNull<dbus::Connection> c, DBusMessage *reply) {
-		dbus::describe(_dbus, reply, memory::makeCallback(std::cout));
-
 		auto newThemeInfo = readThemeInfo(_dbus, reply);
 
 		if (_controller) {

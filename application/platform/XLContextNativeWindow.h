@@ -23,6 +23,8 @@
 #ifndef XENOLITH_APPLICATION_PLATFORM_XLCONTEXTNATIVEWINDOW_H_
 #define XENOLITH_APPLICATION_PLATFORM_XLCONTEXTNATIVEWINDOW_H_
 
+#include "SPEnum.h"
+#include "SPStatus.h"
 #include "XLContextInfo.h"
 #include "XLCoreTextInput.h"
 #include "XLCorePresentationFrame.h"
@@ -31,7 +33,27 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class ContextController;
 
-class ContextNativeWindow : public Ref {
+// Cross-OS state flags
+enum class NativeWindowStateFlags {
+	None = 0,
+	Modal = 1 << 0,
+	Sticky = 1 << 1,
+	MaximizedVert = 1 << 2,
+	MaximizedHorz = 1 << 3,
+	Shaded = 1 << 4,
+	SkipTaskbar = 1 << 5,
+	SkipPager = 1 << 6,
+	Hidden = 1 << 7,
+	Fullscreen = 1 << 8,
+	Above = 1 << 9,
+	Below = 1 << 10,
+	DemandsAttention = 1 << 11,
+	Focused = 1 << 12,
+};
+
+SP_DEFINE_ENUM_AS_MASK(NativeWindowStateFlags)
+
+class NativeWindow : public Ref {
 public:
 	using TextInputProcessor = core::TextInputProcessor;
 	using InputEventData = core::InputEventData;
@@ -40,7 +62,7 @@ public:
 	using TextInputState = core::TextInputState;
 	using TextInputFlags = core::TextInputFlags;
 
-	virtual ~ContextNativeWindow();
+	virtual ~NativeWindow();
 
 	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, WindowCapabilities);
 
@@ -93,10 +115,7 @@ public:
 
 	virtual void updateLayers(Vector<WindowLayer> &&);
 
-	virtual void setFullscreen(const MonitorId &, const ModeInfo &, Function<void(Status)> &&cb,
-			Ref *ref) {
-		cb(Status::ErrorNotImplemented);
-	}
+	virtual void setFullscreen(FullscreenInfo &&, Function<void(Status)> &&cb, Ref *ref);
 
 protected:
 	// Run text input mode or update text input buffer
@@ -113,6 +132,8 @@ protected:
 	virtual void handleInputEvents(Vector<InputEventData> &&events);
 
 	virtual void handleMotionEvent(const InputEventData &);
+
+	virtual Status setFullscreenState(FullscreenInfo &&) { return Status::ErrorNotImplemented; }
 
 	uint64_t _frameOrder = 0;
 
@@ -134,7 +155,11 @@ protected:
 	Vec2 _layerLocation;
 	Vector<WindowLayer> _layers;
 	WindowLayer _currentLayer;
+
+	NativeWindowStateFlags _state = NativeWindowStateFlags::None;
 };
+
+const CallbackStream &operator<<(const CallbackStream &, NativeWindowStateFlags);
 
 } // namespace stappler::xenolith::platform
 

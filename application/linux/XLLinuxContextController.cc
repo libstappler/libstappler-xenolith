@@ -21,19 +21,18 @@
  **/
 
 #include "XLLinuxContextController.h"
-#include "SPCore.h"
 #include "SPEvent.h"
 #include "XLContext.h"
 #include "XLContextInfo.h"
 #include "XLCoreInstance.h"
 #include "SPEventLooper.h"
 #include "SPEventPollHandle.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
 #include "linux/dbus/XLLinuxDBusController.h"
 #include "linux/wayland/XLLinuxWaylandWindow.h"
 #include "linux/xcb/XLLinuxXcbWindow.h"
 #include "platform/XLContextController.h"
 #include "platform/XLContextNativeWindow.h"
+#include <cstdlib>
 
 #if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkInstance.h"
@@ -85,7 +84,6 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		if (config.window->imageFormat == core::ImageFormat::Undefined) {
 			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
 		}
-		config.window->flags |= WindowFlags::ExclusiveFullscreen;
 	}
 }
 
@@ -121,8 +119,11 @@ int LinuxContextController::run() {
 
 		Rc<core::Instance> instance;
 
-		auto sessionType = ::getenv("XDG_SESSION_TYPE");
-		sessionType = (char *)"x11";
+		auto sessionType = ::getenv("SP_SESSION_TYPE");
+		if (!sessionType) {
+			sessionType = ::getenv("XDG_SESSION_TYPE");
+		}
+
 		if (StringView(sessionType) == "wayland") {
 			if (_wayland && _xkb) {
 				_waylandDisplay = Rc<WaylandDisplay>::create(_wayland, _xkb);
@@ -233,7 +234,7 @@ int LinuxContextController::run() {
 	return ContextController::run();
 }
 
-void LinuxContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
+void LinuxContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
 		bool liveResize) {
 	if (_withinPoll) {
 		_resizedWindows.emplace_back(w, liveResize);
@@ -242,7 +243,7 @@ void LinuxContextController::notifyWindowConstraintsChanged(NotNull<ContextNativ
 	}
 }
 
-bool LinuxContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
+bool LinuxContextController::notifyWindowClosed(NotNull<NativeWindow> w) {
 	if (_withinPoll) {
 		_closedWindows.emplace_back(w);
 		return !w->hasExitGuard();
@@ -254,6 +255,9 @@ bool LinuxContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) 
 void LinuxContextController::notifyScreenChange(NotNull<DisplayConfigManager> info) {
 	if (_waylandDisplay) {
 		_waylandDisplay->notifyScreenChange();
+	}
+	if (_xcbConnection) {
+		_xcbConnection->notifyScreenChange();
 	}
 }
 
@@ -274,7 +278,7 @@ void LinuxContextController::handleRootWindowClosed() {
 }
 
 Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
-		NotNull<ContextNativeWindow> w) {
+		NotNull<NativeWindow> w) {
 	return Rc<AppWindow>::create(_context, app, w);
 }
 
@@ -413,7 +417,7 @@ Rc<core::Instance> LinuxContextController::loadInstance() {
 }
 
 bool LinuxContextController::loadWindow() {
-	Rc<ContextNativeWindow> window;
+	Rc<NativeWindow> window;
 	auto cInfo = _context->getInfo();
 	if (_waylandDisplay) {
 		window = Rc<WaylandWindow>::create(_waylandDisplay, move(_windowInfo), cInfo, this);

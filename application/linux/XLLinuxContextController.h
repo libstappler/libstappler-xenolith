@@ -25,7 +25,6 @@
 
 #include "XLContextInfo.h"
 #include "dbus/XLLinuxDBusLibrary.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
 #include "platform/XLContextController.h"
 
 #include "wayland/XLLinuxWaylandDisplay.h"
@@ -34,7 +33,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class ContextNativeWindow;
+class NativeWindow;
 
 class LinuxContextController : public ContextController {
 public:
@@ -49,19 +48,16 @@ public:
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
 	WaylandDisplay *getWaylandDisplay() const { return _waylandDisplay; }
 
-	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
-
 	bool isInPoll() const { return _withinPoll; }
 
-	virtual void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>,
-			bool liveResize) override;
-	virtual bool notifyWindowClosed(NotNull<ContextNativeWindow>) override;
+	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize) override;
+	virtual bool notifyWindowClosed(NotNull<NativeWindow>) override;
 
 	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
 	void handleRootWindowClosed();
 
-	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) override;
+	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>) override;
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
 	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
@@ -89,14 +85,13 @@ protected:
 	Rc<dbus::Controller> _dbusController;
 	Rc<XcbConnection> _xcbConnection;
 	Rc<WaylandDisplay> _waylandDisplay;
-	Rc<DisplayConfigManager> _displayConfigManager;
 
 	Rc<event::PollHandle> _xcbPollHandle;
 	Rc<event::PollHandle> _waylandPollHandle;
 
 	bool _withinPoll = false;
-	Vector<Pair<ContextNativeWindow *, bool>> _resizedWindows;
-	Vector<ContextNativeWindow *> _closedWindows;
+	Vector<Pair<NativeWindow *, bool>> _resizedWindows;
+	Vector<NativeWindow *> _closedWindows;
 };
 
 } // namespace stappler::xenolith::platform

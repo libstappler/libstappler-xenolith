@@ -43,6 +43,8 @@ using core::ModeInfo;
 using core::MonitorId;
 using core::MonitorInfo;
 using core::ScreenInfo;
+using core::FullscreenFlags;
+using core::FullscreenInfo;
 
 #if ANDROID
 using NativeContextHandle = ANativeActivity;
@@ -131,17 +133,9 @@ enum class WindowFlags {
 	None = 0,
 	FixedBorder = 1 << 0,
 
-	// Try to bypass WM composition when in fullscreen mode
-	// To set fullscreen mode as initial use `monitor` property, not this flag
-	//
-	// Note that on Linux ExclusiveFullscreen is seamless when window is fullscreen
-	// and no composition objects (like notifications, cursor) above it, but on Windows
-	// WM context should be switched
-	ExclusiveFullscreen = 1 << 1,
-
 	// Use direct output to display, bypassing whole WM stack
 	// Check if it actually supported with WindowCapabilities::DirectOutput
-	DirectOutput = 1 << 2,
+	DirectOutput = 1 << 1,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
@@ -151,16 +145,17 @@ enum class WindowCapabilities {
 	None,
 	// Switch between windowed and fullscreen modes
 	// If not provided - window is only windowed or only fullscreen
-	FullscreenSwitch = 1 << 0,
+	Fullscreen = 1 << 0,
+	FullscreenExclusive = 1 << 1,
 
 	// Subwindows are allowed
-	Subwindows = 1 << 1,
+	Subwindows = 1 << 2,
 
 	// Direct output is available on platform
-	DirectOutput = 1 << 2,
+	DirectOutput = 1 << 3,
 
 	// 'Back' action can close application (Android-like)
-	BackIsExit = 1 << 2,
+	BackIsExit = 1 << 4,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
@@ -174,13 +169,12 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 	WindowFlags flags = WindowFlags::None;
 
 	// initial fullscreen mode
-	ModeInfo mode = ModeInfo::Current;
-	MonitorId monitor = MonitorId::None;
+	FullscreenInfo fullscreen = FullscreenInfo::None;
 
 	// TODO: extra window attributes go here
 
 	core::PresentMode preferredPresentMode = core::PresentMode::Mailbox;
-	core::ImageFormat imageFormat = core::ImageFormat::R8G8B8A8_UNORM;
+	core::ImageFormat imageFormat = core::ImageFormat::Undefined;
 	core::ColorSpace colorSpace = core::ColorSpace::SRGB_NONLINEAR_KHR;
 
 	// provided by WM, no reason to set it by user
@@ -287,11 +281,6 @@ struct ThemeInfo {
 
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
-
-constexpr const ModeInfo ModeInfo::Preferred{maxOf<uint16_t>(), maxOf<uint16_t>(), 0};
-constexpr const ModeInfo ModeInfo::Current{maxOf<uint16_t>(), maxOf<uint16_t>(), maxOf<uint16_t>()};
-constexpr const MonitorId MonitorId::Primary{"__primary__"};
-constexpr const MonitorId MonitorId::None;
 
 } // namespace stappler::xenolith
 

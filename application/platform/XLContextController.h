@@ -25,6 +25,7 @@
 
 #include "XLContextInfo.h"
 #include "XLCoreTextInput.h"
+#include "XLDisplayConfigManager.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -34,7 +35,7 @@ class ContextComponent;
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class ContextNativeWindow;
+class NativeWindow;
 
 enum class ContextState {
 	None,
@@ -83,15 +84,16 @@ public:
 
 	event::Looper *getLooper() const { return _looper; }
 
-	virtual void notifyWindowConstraintsChanged(NotNull<ContextNativeWindow>, bool liveResize);
-	virtual void notifyWindowInputEvents(NotNull<ContextNativeWindow>,
-			Vector<core::InputEventData> &&);
-	virtual void notifyWindowTextInput(NotNull<ContextNativeWindow>, const core::TextInputState &);
+	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
+
+	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize);
+	virtual void notifyWindowInputEvents(NotNull<NativeWindow>, Vector<core::InputEventData> &&);
+	virtual void notifyWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
 
 	// true if window should be closed, false otherwise (e.g. ExitGuard)
-	virtual bool notifyWindowClosed(NotNull<ContextNativeWindow>);
+	virtual bool notifyWindowClosed(NotNull<NativeWindow>);
 
-	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>);
+	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
@@ -140,6 +142,8 @@ protected:
 	Rc<WindowInfo> _windowInfo;
 	Rc<core::InstanceInfo> _instanceInfo;
 	Rc<core::LoopInfo> _loopInfo;
+
+	Rc<DisplayConfigManager> _displayConfigManager;
 
 	NetworkFlags _networkFlags = NetworkFlags::None;
 	ThemeInfo _themeInfo;

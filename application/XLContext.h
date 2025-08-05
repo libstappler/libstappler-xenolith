@@ -31,7 +31,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class ContextController;
-class ContextNativeWindow;
+class NativeWindow;
 
 } // namespace stappler::xenolith::platform
 
@@ -79,7 +79,7 @@ SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appCommon
 } \
 DEFINE_CONTEXT_CONSTRUCTOR(__macro_makeContext)
 
-using NativeWindow = platform::ContextNativeWindow;
+using NativeWindow = platform::NativeWindow;
 
 class ContextComponent : public Ref {
 public:

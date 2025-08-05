@@ -20,19 +20,33 @@
  THE SOFTWARE.
  **/
 
-#include "XLLinuxDisplayConfigManager.h"
+#include "XLDisplayConfigManager.h"
+#include "XlCoreMonitorInfo.h"
 #include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 const DisplayMode *PhysicalDisplay::getMode(const core::ModeInfo &m) const {
-	for (auto &it : modes) {
-		if (it.mode == m) {
-			return &it;
+	if (m == core::ModeInfo::Current) {
+		return &getCurrent();
+	} else if (m == core::ModeInfo::Preferred) {
+		for (auto &it : modes) {
+			if (it.preferred) {
+				return &it;
+			}
 		}
+		return &modes.front();
+	} else {
+		for (auto &it : modes) {
+			if (it.mode == m) {
+				return &it;
+			}
+		}
+		return nullptr;
 	}
-	return nullptr;
 }
+
+DisplayMode DisplayMode::None{};
 
 const DisplayMode &PhysicalDisplay::getCurrent() const {
 	for (auto &it : modes) {
@@ -45,9 +59,12 @@ const DisplayMode &PhysicalDisplay::getCurrent() const {
 			return it;
 		}
 	}
-	return modes.front();
+	if (!modes.empty()) {
+		return modes.front();
+	} else {
+		return DisplayMode::None;
+	}
 }
-
 
 bool LogicalDisplay::hasMonitor(const MonitorId &id) const {
 	for (auto &it : monitors) {
@@ -67,8 +84,45 @@ const PhysicalDisplay *DisplayConfig::getMonitor(const MonitorId &id) const {
 	return nullptr;
 }
 
+const LogicalDisplay *DisplayConfig::getLogical(const MonitorId &id) const {
+	for (auto &it : logical) {
+		if (!it.monitors.empty() && it.monitors.front() == id) {
+			return &it;
+		}
+	}
+	for (auto &it : logical) {
+		if (std::find(it.monitors.begin(), it.monitors.end(), id) != it.monitors.end()) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
+
 bool DisplayConfig::isEqual(const DisplayConfig *cfg) const {
 	return serial == cfg->serial && monitors == cfg->monitors && logical == cfg->logical;
+}
+
+Extent2 DisplayConfig::getSize() const {
+	Extent2 ret;
+	for (auto &it : logical) {
+		ret.width = std::max(ret.width, it.rect.x + it.rect.width);
+		ret.height = std::max(ret.height, it.rect.y + it.rect.height);
+	}
+	return ret;
+}
+
+Extent2 DisplayConfig::getSizeMM() const {
+	Extent2 ret = getSize();
+
+	float scale = 0.01f;
+	for (auto &it : monitors) {
+		auto m = it.getMode(core::ModeInfo::Preferred);
+		if (m) {
+			scale = std::max(scale, float(it.mm.width) / float(m->mode.width));
+			scale = std::max(scale, float(it.mm.height) / float(m->mode.height));
+		}
+	}
+	return Extent2(ret.width * scale, ret.height * scale);
 }
 
 bool DisplayConfigManager::init(Function<void(NotNull<DisplayConfigManager>)> &&cb) {
@@ -137,11 +191,17 @@ void DisplayConfigManager::setModeExclusive(core::MonitorId targetId, core::Mode
 		Status status = Status::ErrorNotImplemented;
 
 		auto targetConfig = Rc<DisplayConfig>::create();
+		targetConfig->native = data->native;
 		targetConfig->serial = data->serial;
 
 		// build new monitor info
 		for (auto &it : data->monitors) {
-			auto &m = targetConfig->monitors.emplace_back(PhysicalDisplay{it.xid, it.id, it.mm});
+			auto &m = targetConfig->monitors.emplace_back(PhysicalDisplay{
+				it.xid,
+				it.index,
+				it.id,
+				it.mm,
+			});
 			if (it.id == targetId) {
 				// target monitor: set target mode
 				auto tMode = it.getMode(targetMode);
@@ -220,28 +280,38 @@ void DisplayConfigManager::setMode(xenolith::MonitorId, xenolith::ModeInfo,
 
 void DisplayConfigManager::restoreMode(Function<void(Status)> &&cb, Ref *ref) {
 	if (!_savedConfig) {
-		cb(Status::ErrorInvalidArguemnt);
+		if (cb) {
+			cb(Status::ErrorInvalidArguemnt);
+		}
 		return;
 	}
 
 	prepareDisplayConfigUpdate(
 			[this, cb = sp::move(cb), ref = Rc<Ref>(ref)](DisplayConfig *data) mutable {
 		if (!data) {
-			cb(Status::ErrorNotImplemented);
+			if (cb) {
+				cb(Status::ErrorNotImplemented);
+			}
 			return;
 		}
-		auto current = extractCurrentConfig(data);
+
 		Status status = Status::ErrorInvalidArguemnt;
 
 		auto targetConfig = Rc<DisplayConfig>::create();
+		targetConfig->native = data->native;
 		targetConfig->serial = data->serial;
 
 		bool restored = true;
 		// build new monitor info
 		for (auto &it : data->monitors) {
-			auto &m = targetConfig->monitors.emplace_back(PhysicalDisplay{it.xid, it.id, it.mm});
+			auto &m = targetConfig->monitors.emplace_back(PhysicalDisplay{
+				it.xid,
+				it.index,
+				it.id,
+				it.mm,
+			});
 			auto sourceMon = _savedConfig->getMonitor(m.id);
-			if (sourceMon) {
+			if (sourceMon && !sourceMon->modes.empty()) {
 				auto mode = it.getMode(sourceMon->getCurrent().mode);
 				if (mode) {
 					m.modes.emplace_back(*mode);
@@ -255,12 +325,12 @@ void DisplayConfigManager::restoreMode(Function<void(Status)> &&cb, Ref *ref) {
 			}
 		}
 
-		_savedConfig = nullptr;
-
 		if (restored) {
 			targetConfig->logical = _savedConfig->logical;
+			_savedConfig = nullptr;
 			applyDisplayConfig(targetConfig, sp::move(cb));
 		} else {
+			_savedConfig = nullptr;
 			if (cb) {
 				cb(status);
 			}
@@ -273,6 +343,7 @@ Rc<DisplayConfig> DisplayConfigManager::extractCurrentConfig(NotNull<DisplayConf
 	for (auto &it : config->monitors) {
 		auto &mon = ret->monitors.emplace_back(PhysicalDisplay{
 			it.xid,
+			it.index,
 			it.id,
 			it.mm,
 		});
@@ -295,25 +366,28 @@ Rc<DisplayConfig> DisplayConfigManager::extractCurrentConfig(NotNull<DisplayConf
 			it.monitors,
 		});
 	}
+	ret->native = config->native;
 	return ret;
 }
 
 void DisplayConfigManager::adjustDisplay(NotNull<DisplayConfig> config) const {
 	auto getLogicalMonitorSize = [&](const LogicalDisplay &mon) {
 		auto hMon = config->getMonitor(mon.monitors.front());
-		Extent2 size{hMon->modes.front().mode.width, hMon->modes.front().mode.height};
-		size.width = static_cast<uint32_t>(std::round(size.width * mon.scale));
-		size.height = static_cast<uint32_t>(std::round(size.height * mon.scale));
+		auto mode = hMon->getCurrent();
+		Extent2 size{mode.mode.width, mode.mode.height};
+
+		size.width =
+				static_cast<uint32_t>(std::round(size.width * std::ceil(mon.scale) / mon.scale));
+		size.height =
+				static_cast<uint32_t>(std::round(size.height * std::ceil(mon.scale) / mon.scale));
 		return size;
 	};
 
 	Vector<LogicalDisplay *> data;
 	for (auto &it : config->logical) {
-		if (it.rect.width == 0 || it.rect.height == 0) {
-			auto size = getLogicalMonitorSize(it);
-			it.rect.width = size.width;
-			it.rect.height = size.height;
-		}
+		auto size = getLogicalMonitorSize(it);
+		it.rect.width = size.width;
+		it.rect.height = size.height;
 		data.emplace_back(&it);
 	}
 

@@ -35,7 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class LinuxContextController;
 
-class SP_PUBLIC WaylandWindow : public ContextNativeWindow {
+class SP_PUBLIC WaylandWindow : public NativeWindow {
 public:
 	static constexpr auto DecorWidth = 20;
 	static constexpr auto DecorInset = 16;
@@ -117,9 +117,6 @@ public:
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
 
 	virtual core::PresentationOptions getPreferredOptions() const override;
-
-	virtual void setFullscreen(const core::MonitorId &, const core::ModeInfo &,
-			Function<void(Status)> &&, Ref *) override;
 
 	WaylandDisplay *getDisplay() const { return _display; }
 	wl_surface *getSurface() const { return _surface; }

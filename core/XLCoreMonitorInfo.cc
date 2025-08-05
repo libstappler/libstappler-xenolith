@@ -88,13 +88,13 @@ EdidInfo EdidInfo::parse(BytesView data) {
 	EdidInfo ret;
 	auto x = data.data();
 
-	ret.vendor = getManufacturerName(x + 0x08);
-	if (ret.vendor == "CID") {
-		ret.vendor.clear();
+	ret.vendorId = getManufacturerName(x + 0x08);
+	if (ret.vendorId == "CID") {
+		ret.vendorId.clear();
 	} else {
-		auto vendorName = pnp_name(ret.vendor.data());
-		if (vendorName) {
-			ret.vendor = vendorName;
+		ret.vendor = StringView(pnp_name(ret.vendorId.data()));
+		if (ret.vendor.empty()) {
+			ret.vendor = ret.vendorId;
 		}
 	}
 
@@ -106,6 +106,14 @@ EdidInfo EdidInfo::parse(BytesView data) {
 	return ret;
 }
 
-String EdidInfo::getVendorName(StringView data) { return pnp_name(data.data()); }
+StringView EdidInfo::getVendorName(StringView data) { return pnp_name(data.data()); }
+
+constexpr const ModeInfo ModeInfo::Preferred{maxOf<uint16_t>(), maxOf<uint16_t>(), 0};
+constexpr const ModeInfo ModeInfo::Current{maxOf<uint16_t>(), maxOf<uint16_t>(), maxOf<uint16_t>()};
+constexpr const MonitorId MonitorId::Primary{"__primary__"};
+constexpr const MonitorId MonitorId::None;
+
+constexpr const FullscreenInfo FullscreenInfo::None{MonitorId::None, ModeInfo::Current,
+	FullscreenFlags::None};
 
 } // namespace stappler::xenolith::core

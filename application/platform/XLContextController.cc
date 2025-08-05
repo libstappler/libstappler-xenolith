@@ -53,21 +53,20 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run() { return _resultCode; }
 
-void ContextController::notifyWindowConstraintsChanged(NotNull<ContextNativeWindow> w,
-		bool liveResize) {
+void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w, bool liveResize) {
 	_context->handleNativeWindowConstraintsChanged(w, liveResize);
 }
-void ContextController::notifyWindowInputEvents(NotNull<ContextNativeWindow> w,
+void ContextController::notifyWindowInputEvents(NotNull<NativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
 	_context->handleNativeWindowInputEvents(w, sp::move(ev));
 }
 
-void ContextController::notifyWindowTextInput(NotNull<ContextNativeWindow> w,
+void ContextController::notifyWindowTextInput(NotNull<NativeWindow> w,
 		const core::TextInputState &state) {
 	_context->handleNativeWindowTextInput(w, state);
 }
 
-bool ContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
+bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w) {
 	if (w->hasExitGuard()) {
 		auto event = core::InputEventData::BoolEvent(core::InputEventName::CloseRequest, true);
 		notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
@@ -79,7 +78,7 @@ bool ContextController::notifyWindowClosed(NotNull<ContextNativeWindow> w) {
 	}
 }
 
-Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread>, NotNull<ContextNativeWindow>) {
+Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>) {
 	return nullptr;
 }
 

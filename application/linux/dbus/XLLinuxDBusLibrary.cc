@@ -21,6 +21,7 @@
  **/
 
 #include "XLLinuxDBusLibrary.h"
+#include "SPBytesReader.h"
 #include "SPLog.h"
 #include "SPMemory.h"
 #include "SPString.h"
@@ -56,6 +57,8 @@ BasicValue BasicValue::makeFd(int val) {
 	return ret;
 }
 
+static const char *BasicValue_NullString = "";
+
 BasicValue::BasicValue(bool val) : type(Type::Boolean), value{.bool_val = val} { }
 BasicValue::BasicValue(uint8_t val) : type(Type::Byte), value{.byt = val} { }
 BasicValue::BasicValue(int16_t val) : type(Type::Int16), value{.i16 = val} { }
@@ -67,7 +70,9 @@ BasicValue::BasicValue(uint64_t val) : type(Type::Uint64), value{.u64 = val} { }
 BasicValue::BasicValue(float val) : type(Type::Double), value{.dbl = val} { }
 BasicValue::BasicValue(double val) : type(Type::Double), value{.dbl = val} { }
 BasicValue::BasicValue(StringView val)
-: type(Type::String), value{.str = const_cast<char *>(val.pdup().data())} { }
+: type(Type::String)
+, value{.str = val.empty() ? (char *)BasicValue_NullString
+						   : const_cast<char *>(val.pdup().data())} { }
 
 const char *BasicValue::getSig() const {
 	switch (type) {
@@ -279,6 +284,8 @@ DBusPendingCall *Connection::callMethod(StringView bus, StringView path, StringV
 		perform_temporary([&] {
 			WriteIterator iter(lib, message);
 			argsCallback(iter);
+
+			// describe(lib, message, makeCallback(std::cout));
 		});
 	}
 
@@ -736,6 +743,27 @@ StringView ReadIterator::getString() const {
 	return StringView();
 }
 
+BytesView ReadIterator::getBytes() const {
+	if (getType() != Type::Array) {
+		return BytesView();
+	}
+
+	auto t = Type(lib->dbus_message_iter_get_element_type(const_cast<DBusMessageIter *>(&iter)));
+	if (t != Type::Byte) {
+		return BytesView();
+	}
+
+	DBusMessageIter sub;
+	lib->dbus_message_iter_recurse(const_cast<DBusMessageIter *>(&iter), &sub);
+
+	const uint8_t *bytes = nullptr;
+	int size = 0;
+
+	lib->dbus_message_iter_get_fixed_array(&sub, &bytes, &size);
+
+	return BytesView(bytes, size_t(size));
+}
+
 ReadIterator ReadIterator::recurse() const {
 	ReadIterator val;
 	val.lib = lib;
@@ -750,6 +778,14 @@ bool ReadIterator::foreach (const Callback<void(const ReadIterator &)> &cb) cons
 	}
 
 	ReadIterator val = recurse();
+	if (type == Type::Variant) {
+		if (val.type == Type::Array || val.type == Type::Struct) {
+			auto ret = val.foreach (cb);
+			val.next();
+			return ret;
+		}
+	}
+
 	while (val) {
 		cb(val);
 		val.next();
@@ -759,6 +795,18 @@ bool ReadIterator::foreach (const Callback<void(const ReadIterator &)> &cb) cons
 
 bool ReadIterator::foreachDictEntry(
 		const Callback<void(StringView, const ReadIterator &)> &cb) const {
+	if (type == Type::Variant) {
+		ReadIterator val = recurse();
+		if (val.type == Type::Array) {
+			auto ret = val.foreachDictEntry(cb);
+			if (ret) {
+				val.next();
+			}
+			return ret;
+		}
+		return false;
+	}
+
 	if (type != Type::Array) {
 		return false;
 	}
@@ -942,6 +990,21 @@ bool WriteIterator::add(SpanView<StringView> val) {
 	return false;
 }
 
+bool WriteIterator::add(SpanView<String> val) {
+	if (!canAddType(Type::Array)) {
+		return false;
+	}
+
+	subtype = Type::Array;
+	if (addArray("s", [&](WriteIterator &arrIt) {
+		for (auto &it : val) { arrIt.add(BasicValue(it)); }
+	})) {
+		++index;
+		return true;
+	}
+	return false;
+}
+
 bool WriteIterator::addPath(SpanView<StringView> val) {
 	if (!canAddType(Type::Array)) {
 		return false;
@@ -1035,15 +1098,20 @@ bool WriteIterator::add(StringView key, const Callback<void(WriteIterator &)> &c
 	WriteIterator next(lib, Type::DictEntry);
 
 	String d;
-	lib->dbus_message_iter_open_container(&iter, toInt(Type::DictEntry), nullptr, &next.iter);
+	auto ret = lib->dbus_message_iter_open_container(&iter, toInt(Type::DictEntry), nullptr,
+			&next.iter);
+	if (!ret) {
+		valid = false;
+		return false;
+	}
 
 	if (key.terminated()) {
 		const char *ptr = key.data();
-		lib->dbus_message_iter_append_basic(&iter, toInt(Type::String), &ptr);
+		lib->dbus_message_iter_append_basic(&next.iter, toInt(Type::String), &ptr);
 	} else {
 		d = key.str<Interface>();
 		const char *ptr = d.data();
-		lib->dbus_message_iter_append_basic(&iter, toInt(Type::String), &ptr);
+		lib->dbus_message_iter_append_basic(&next.iter, toInt(Type::String), &ptr);
 	}
 
 	cb(next);
@@ -1068,10 +1136,54 @@ bool WriteIterator::addVariant(BasicValue val) {
 
 	DBusMessageIter sub;
 	lib->dbus_message_iter_open_container(&iter, toInt(Type::Variant), val.getSig(), &sub);
-	lib->dbus_message_iter_append_basic(&iter, toInt(val.type), &val.value);
+	lib->dbus_message_iter_append_basic(&sub, toInt(val.type), &val.value);
 	lib->dbus_message_iter_close_container(&iter, &sub);
 	++index;
 	return true;
+}
+
+bool WriteIterator::addVariant(StringView key, BasicValue val) {
+	return add(key, [&](WriteIterator &iter) { iter.addVariant(val); });
+}
+
+bool WriteIterator::addVariant(StringView key, const char *sig,
+		const Callback<void(WriteIterator &)> &cb) {
+	return add(key, [&](WriteIterator &iter) { iter.addVariant(sig, cb); });
+}
+
+bool WriteIterator::addVariantMap(const Callback<void(WriteIterator &)> &cb) {
+	return addVariant("a{sv}", [&](WriteIterator &iter) {
+		iter.addArray("{sv}", [&](WriteIterator &iter) {
+			iter.subtype = Type::DictEntry;
+			cb(iter);
+		});
+	});
+}
+
+bool WriteIterator::addVariantMap(StringView key, const Callback<void(WriteIterator &)> &cb) {
+	return addVariant(key, "a{sv}", [&](WriteIterator &iter) {
+		iter.addArray("{sv}", [&](WriteIterator &iter) {
+			iter.subtype = Type::DictEntry;
+			cb(iter);
+		});
+	});
+}
+
+bool WriteIterator::addVariantArray(const Callback<void(WriteIterator &)> &cb) {
+	return addVariant("av", [&](WriteIterator &iter) {
+		iter.addArray("v", [&](WriteIterator &iter) {
+			iter.subtype = Type::Variant;
+			cb(iter);
+		});
+	});
+}
+
+bool WriteIterator::addVariantArray(StringView key, const Callback<void(WriteIterator &)> &cb) {
+	return add(key, [&](WriteIterator &iter) { iter.addVariantArray(cb); });
+}
+
+bool WriteIterator::addMap(const Callback<void(WriteIterator &)> &cb) {
+	return addArray("{sv}", cb);
 }
 
 bool WriteIterator::addArray(const char *sig, const Callback<void(WriteIterator &)> &cb) {
@@ -1084,6 +1196,12 @@ bool WriteIterator::addArray(const char *sig, const Callback<void(WriteIterator 
 	WriteIterator next(lib, Type::Array);
 
 	lib->dbus_message_iter_open_container(&iter, toInt(Type::Array), sig, &next.iter);
+
+	if (strlen(sig) == 1) {
+		next.subtype = Type(sig[0]);
+	} else if (memcmp(sig, "{sv}", "{sv}"_len) == 0) {
+		next.subtype = Type::DictEntry;
+	}
 
 	cb(next);
 

@@ -23,12 +23,12 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBCONNECTION_H_
 #define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBCONNECTION_H_
 
+#include "SPBytesReader.h"
 #include "XlCoreMonitorInfo.h"
 
 #if LINUX
 
 #include "linux/XLLinuxXkbLibrary.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
 #include "XLLinuxXcbLibrary.h"
 #include "XLContextInfo.h"
 #include "XLCoreInput.h"
@@ -93,6 +93,7 @@ static XcbAtomInfo s_atomRequests[] = {
 	{XcbAtomIndex::_NET_WM_ACTION_CLOSE, "_NET_WM_ACTION_CLOSE", true, 0},
 	{XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS, "_NET_WM_FULLSCREEN_MONITORS", true, 0},
 	{XcbAtomIndex::_NET_WM_BYPASS_COMPOSITOR, "_NET_WM_BYPASS_COMPOSITOR", true, 0},
+	{XcbAtomIndex::_NET_SUPPORTED, "_NET_SUPPORTED", true, 0},
 	{XcbAtomIndex::SAVE_TARGETS, "SAVE_TARGETS", false, 0},
 	{XcbAtomIndex::CLIPBOARD, "CLIPBOARD", false, 0},
 	{XcbAtomIndex::PRIMARY, "PRIMARY", false, 0},
@@ -106,6 +107,7 @@ static XcbAtomInfo s_atomRequests[] = {
 	{XcbAtomIndex::INCR, "INCR", false, 0},
 	{XcbAtomIndex::XNULL, "NULL", false, 0},
 	{XcbAtomIndex::XENOLITH_CLIPBOARD, "XENOLITH_CLIPBOARD", false, 0},
+	{XcbAtomIndex::_XSETTINGS_SETTINGS, "_XSETTINGS_SETTINGS", true, 0},
 };
 
 struct XcbWindowInfo {
@@ -155,6 +157,8 @@ public:
 	XcbLibrary *getXcb() const { return _xcb; }
 	XkbLibrary *getXkb() const { return _xkb.lib; }
 
+	XcbDisplayConfigManager *getDisplayConfigManager() const { return _displayConfig; }
+
 	int getSocket() const { return _socket; }
 
 	xcb_connection_t *getConnection() const { return _connection; }
@@ -169,6 +173,10 @@ public:
 	xcb_atom_t getAtom(XcbAtomIndex) const;
 	xcb_atom_t getAtom(StringView, bool onlyIfExists = false) const;
 	StringView getAtomName(xcb_atom_t) const;
+
+	bool hasCapability(XcbAtomIndex) const;
+	bool hasCapability(xcb_atom_t) const;
+	bool hasCapability(StringView) const;
 
 	const char *getErrorMajorName(uint8_t) const;
 	const char *getErrorMinorName(uint8_t, uint16_t) const;
@@ -196,8 +204,8 @@ public:
 	void writeToClipboard(Rc<ClipboardData> &&);
 
 	Value getSettingsValue(StringView) const;
-	uint32_t getUnscaledDpi() const { return _xsettings.udpi; }
-	uint32_t getDpi() const { return _xsettings.dpi; }
+	uint32_t getUnscaledDpi() const { return (_xsettings.udpi == 0) ? 122'880 : _xsettings.udpi; }
+	uint32_t getDpi() const { return (_xsettings.dpi == 0) ? 122'880 : _xsettings.dpi; }
 
 	template <typename T>
 	auto wrapXcbReply(T *t) const {
@@ -364,6 +372,8 @@ protected:
 	ClipboardInfo _clipboard;
 	XSettingsInfo _xsettings;
 	Rc<XcbDisplayConfigManager> _displayConfig;
+	Vector<StringView> _capabilitiesByNames;
+	Vector<xcb_atom_t> _capabilitiesByAtoms;
 };
 
 } // namespace stappler::xenolith::platform

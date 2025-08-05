@@ -21,9 +21,10 @@
  **/
 
 #include "XLLinuxDBusGnome.h"
+#include "SPMemory.h"
 #include "SPNotNull.h"
+#include "SPString.h"
 #include "dbus/dbus.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
 #include "linux/dbus/XLLinuxDBusLibrary.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
@@ -34,12 +35,17 @@ static constexpr auto GNOME_DISPLAY_CONFIG_INTERFACE = "org.gnome.Mutter.Display
 static constexpr auto GNOME_DISPLAY_CONFIG_FILTER =
 		"type='signal',interface='org.gnome.Mutter.DisplayConfig'";
 
-
 static void Controller_readGnomeDisplayMonitorName(MonitorId &id, const ReadIterator &it) {
 	it.foreach ([&](const ReadIterator &name) {
 		switch (name.getIndex()) {
 		case 0: id.name = name.getString().str<Interface>(); break;
-		case 1: id.edid.vendor = core::EdidInfo::getVendorName(name.getString()); break;
+		case 1:
+			id.edid.vendorId = name.getString().str<Interface>();
+			id.edid.vendor = core::EdidInfo::getVendorName(id.edid.vendorId);
+			if (id.edid.vendor.empty()) {
+				id.edid.vendor = id.edid.vendorId;
+			}
+			break;
 		case 2: id.edid.model = name.getString().str<Interface>(); break;
 		case 3: id.edid.serial = name.getString().str<Interface>(); break;
 		default: break;
@@ -102,6 +108,7 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 		case 1:
 			iter.foreach ([&](const ReadIterator &it) {
 				auto &mon = ret->monitors.emplace_back();
+				mon.index = it.getIndex();
 				Controller_readGnomeDisplayConfigMonitor(mon, it);
 			});
 			break;
@@ -120,6 +127,10 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 							MonitorId id;
 							Controller_readGnomeDisplayMonitorName(id, names);
 							mon.monitors.emplace_back(id);
+							auto monIndex = it.getIndex();
+							if (auto m = ret->getMonitor(id)) {
+								const_cast<PhysicalDisplay *>(m)->index = monIndex;
+							}
 						});
 						break;
 					default: break;
@@ -230,6 +241,5 @@ void GnomeDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> data,
 		}
 	});
 }
-
 
 } // namespace stappler::xenolith::platform::dbus

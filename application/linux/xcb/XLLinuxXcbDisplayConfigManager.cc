@@ -22,11 +22,6 @@
 
 #include "XLLinuxXcbDisplayConfigManager.h"
 #include "SPLogInit.h"
-#include "SPMemory.h"
-#include "SPStatus.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
-#include "linux/xcb/XLLinuxXcbConnection.h"
-#include <xcb/randr.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -92,9 +87,9 @@ static DisplayMode parseRandrModeInfo(xcb_randr_mode_info_t *mode, uint8_t *name
 		vTotal /= 2;
 	}
 
-	uint16_t rate = 0;
+	uint32_t rate = 0;
 	if (mode->htotal && vTotal) {
-		rate = uint16_t(
+		rate = uint32_t(
 				floor(1'000 * double(mode->dot_clock) / (double(mode->htotal) * double(vTotal))));
 	}
 
@@ -166,7 +161,13 @@ bool XcbDisplayConfigManager::init(NotNull<XcbConnection> c,
 	_xcb = c->getXcb();
 	_root = c->getDefaultScreen()->root;
 
+	updateDisplayConfig();
+
 	return true;
+}
+
+void XcbDisplayConfigManager::setCallback(Function<void(NotNull<DisplayConfigManager>)> &&cb) {
+	_onConfigChanged = sp::move(cb);
 }
 
 void XcbDisplayConfigManager::invalidate() {
@@ -179,15 +180,16 @@ void XcbDisplayConfigManager::invalidate() {
 void XcbDisplayConfigManager::update() { updateDisplayConfig(nullptr); }
 
 void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)> &&cb) {
-	if (!_connection) {
-		cb(nullptr);
-		return;
-	}
 	struct OutputCookie {
 		xcb_randr_get_output_info_cookie_t infoCookie;
 		xcb_randr_list_output_properties_cookie_t listCookie;
 		XrandrOutputInfo *info;
 	};
+
+	if (!_connection) {
+		cb(nullptr);
+		return;
+	}
 
 	auto ret = Rc<DisplayConfig>::create();
 
@@ -397,6 +399,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto it = _xcb->xcb_randr_get_monitors_monitors_iterator(reply);
 		auto nmonitors = _xcb->xcb_randr_get_monitors_monitors_length(reply);
 
+		uint32_t index = 0;
 		while (nmonitors > 0) {
 			Vector<const XrandrCrtcInfo *> crtcs;
 			auto m = it.data;
@@ -419,6 +422,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 				for (auto &oIt : it->outputs) {
 					for (auto &mIt : ret->monitors) {
 						if (mIt.xid == oIt->output) {
+							mIt.index = index;
 							mIt.mm = Extent2(m->width_in_millimeters, m->height_in_millimeters);
 							log.monitors.emplace_back(mIt.id);
 						}
@@ -431,15 +435,31 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 
 			_xcb->xcb_randr_monitor_info_next(&it);
 			--nmonitors;
+			++index;
 		}
 	};
 
 	auto screenResCurrentCookie = _xcb->xcb_randr_get_screen_resources_current_unchecked(
 			_connection->getConnection(), _root);
+	//auto screenInfoCoolie =
+	//		_xcb->xcb_randr_get_screen_info_unchecked(_connection->getConnection(), _root);
 
 	_xcb->xcb_flush(_connection->getConnection());
 
 	parseScreenResourcesCurrentReply(screenResCurrentCookie);
+
+	/*auto screenInfoReply =
+			_connection->perform(_xcb->xcb_randr_get_screen_info_reply, screenInfoCoolie);
+	if (screenInfoReply) {
+		auto sizes = _xcb->xcb_randr_get_screen_info_sizes(screenInfoReply);
+		auto len = _xcb->xcb_randr_get_screen_info_sizes_length(screenInfoReply);
+		while (len > 0) {
+			std::cout << sizes->width << " " << sizes->height << " " << sizes->mwidth << " "
+					  << sizes->mheight << "\n";
+			++sizes;
+			--len;
+		}
+	}*/
 
 	Vector<OutputCookie> outputCookies;
 	Vector<Pair<xcb_randr_get_crtc_info_cookie_t, XrandrCrtcInfo *>> crtcCookies;
@@ -500,28 +520,34 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	Vector<Pair<xcb_randr_get_output_property_cookie_t, PhysicalDisplay *>> edidCookies;
 
 	for (auto &oIt : existedOutputs) {
-		auto &mon = ret->monitors.emplace_back(PhysicalDisplay{
-			oIt.second.output,
-			{
-				oIt.second.name,
-			},
-		});
-		for (auto &it : oIt.second.modes) {
-			auto &mode = mon.modes.emplace_back(*it);
-			if (oIt.second.crtc && oIt.second.crtc->mode == it) {
-				mode.current = true;
-			}
-			if (it == oIt.second.preferred) {
-				mode.preferred = true;
+		if (!oIt.second.modes.empty()) {
+			auto &mon = ret->monitors.emplace_back(PhysicalDisplay{
+				oIt.second.output,
+				0,
+				{
+					oIt.second.name,
+				},
+			});
+			for (auto &it : oIt.second.modes) {
+				auto &mode = mon.modes.emplace_back(*it);
+				if (oIt.second.crtc && oIt.second.crtc->mode == it) {
+					mode.current = true;
+				}
+				if (it == oIt.second.preferred) {
+					mode.preferred = true;
+				}
 			}
 		}
+	}
 
-		for (auto &pIt : oIt.second.properties) {
+	for (auto &it : ret->monitors) {
+		auto oIt = existedOutputs.find(it.xid);
+		for (auto &pIt : oIt->second.properties) {
 			if (pIt.name == "EDID") {
 				edidCookies.emplace_back(
 						_xcb->xcb_randr_get_output_property(_connection->getConnection(),
-								oIt.second.output, pIt.atom, 0, 0, 256, 0, 0),
-						&mon);
+								oIt->second.output, pIt.atom, 0, 0, 256, 0, 0),
+						&it);
 			}
 		}
 	}
@@ -551,11 +577,35 @@ void XcbDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 		cb(Status::ErrorInvalidArguemnt);
 		return;
 	}
+
+	auto current = extractCurrentConfig(getCurrentConfig());
+
+	auto shouldUpdate = [&](const LogicalDisplay &d) {
+		for (auto &it : d.monitors) {
+			auto vA = current->getMonitor(it);
+			auto vB = config->getMonitor(it);
+
+			if (*vA != *vB) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	auto size = config->getSize();
+	auto sizeMM = config->getSizeMM();
+
+	_xcb->xcb_grab_server(_connection->getConnection());
+
 	Vector<xcb_randr_set_crtc_config_cookie_t> updateCookies;
 
-	for (auto &it : config->logical) {
-		updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
-				it.xid, XCB_CURRENT_TIME, XCB_CURRENT_TIME, 0, 0, 0, it.transform, 0, nullptr));
+	/*for (auto &it : config->logical) {
+		if (shouldUpdate(it)) {
+			updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
+					it.xid, XCB_CURRENT_TIME, XCB_CURRENT_TIME, 0, 0, 0, it.transform, 0, nullptr));
+
+			log::debug("XcbDisplayConfigManager", "Disable: ", it.monitors.front().name);
+		}
 	}
 
 	for (auto &it : updateCookies) {
@@ -565,23 +615,32 @@ void XcbDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 		}
 	}
 
-	updateCookies.clear();
+	updateCookies.clear();*/
+
+	_xcb->xcb_randr_set_screen_size(_connection->getConnection(),
+			_connection->getDefaultScreen()->root, size.width, size.height, sizeMM.width,
+			sizeMM.height);
 
 	for (auto &it : config->logical) {
-		Vector<uint32_t> outputs;
-		uint32_t modeId = 0;
+		if (shouldUpdate(it)) {
+			Vector<uint32_t> outputs;
+			uint32_t modeId = 0;
 
-		for (auto &mId : it.monitors) {
-			auto mon = config->getMonitor(mId);
-			if (mon) {
-				outputs.emplace_back(mon->xid);
-				modeId = mon->getCurrent().xid;
+			for (auto &mId : it.monitors) {
+				auto mon = config->getMonitor(mId);
+				if (mon) {
+					outputs.emplace_back(mon->xid);
+					modeId = mon->getCurrent().xid;
+				}
 			}
-		}
 
-		updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
-				it.xid, XCB_CURRENT_TIME, config->serial, it.rect.x, it.rect.y, modeId,
-				it.transform, outputs.size(), outputs.data()));
+			updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
+					it.xid, XCB_CURRENT_TIME, XCB_CURRENT_TIME, it.rect.x, it.rect.y, modeId,
+					it.transform, outputs.size(), outputs.data()));
+
+			log::debug("XcbDisplayConfigManager", "Update: ", it.monitors.front().name, " ",
+					it.rect.x, " ", it.rect.y);
+		}
 	}
 
 	Status status = Status::Ok;
@@ -594,7 +653,13 @@ void XcbDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 		}
 	}
 
-	cb(status);
+	_xcb->xcb_ungrab_server(_connection->getConnection());
+
+	_waitForConfigNotification.emplace_back([cb = sp::move(cb), status] {
+		if (cb) {
+			cb(status);
+		}
+	});
 }
 
 } // namespace stappler::xenolith::platform

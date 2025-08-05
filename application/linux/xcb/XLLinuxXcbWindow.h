@@ -24,7 +24,7 @@
 #define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBWINDOW_H_
 
 #include "XLContextInfo.h"
-#include "linux/XLLinuxDisplayConfigManager.h"
+#include "XlCoreMonitorInfo.h"
 #include "platform/XLContextNativeWindow.h"
 #include "XLLinuxXcbConnection.h"
 
@@ -32,27 +32,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class LinuxContextController;
 
-class XcbWindow final : public ContextNativeWindow {
+class XcbWindow final : public NativeWindow {
 public:
-	static constexpr bool SetPrimaryOnFullscreen = false;
-
-	enum StateFlags {
-		None = 0,
-		Modal = 1 << 0,
-		Sticky = 1 << 1,
-		MaximizedVert = 1 << 2,
-		MaximizedHorz = 1 << 3,
-		Shaded = 1 << 4,
-		SkipTaskbar = 1 << 5,
-		SkipPager = 1 << 6,
-		Hidden = 1 << 7,
-		Fullscreen = 1 << 8,
-		Above = 1 << 9,
-		Below = 1 << 10,
-		DemandsAttention = 1 << 11,
-		Focused = 1 << 12,
-	};
-
 	virtual ~XcbWindow();
 
 	XcbWindow();
@@ -98,9 +79,6 @@ public:
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
 
-	virtual void setFullscreen(const MonitorId &, const core::ModeInfo &, Function<void(Status)> &&,
-			Ref *) override;
-
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
 			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
@@ -111,6 +89,8 @@ protected:
 	void configureWindow(xcb_rectangle_t r, uint16_t border_width);
 
 	uint32_t getCurrentFrameRate() const;
+
+	virtual Status setFullscreenState(FullscreenInfo &&) override;
 
 	Rc<XcbConnection> _connection;
 
@@ -130,14 +110,9 @@ protected:
 
 	String _wmClass;
 
-	StateFlags _state = StateFlags::None;
 	Map<MonitorId, xenolith::ModeInfo> _capturedModes;
 	MonitorId _originalPrimary = MonitorId::None;
 };
-
-const CallbackStream &operator<<(const CallbackStream &, XcbWindow::StateFlags);
-
-SP_DEFINE_ENUM_AS_MASK(XcbWindow::StateFlags)
 
 } // namespace stappler::xenolith::platform
 

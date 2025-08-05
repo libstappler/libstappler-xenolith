@@ -31,6 +31,7 @@
 
 #include "platform/XLContextController.cc"
 #include "platform/XLContextNativeWindow.cc"
+#include "platform/XLDisplayConfigManager.cc"
 
 #if LINUX
 #include "linux/thirdparty/glfw/xkb_unicode.cc"
@@ -39,6 +40,7 @@
 #include "linux/dbus/XLLinuxDBusLibrary.cc"
 #include "linux/dbus/XLLinuxDBusController.cc"
 #include "linux/dbus/XLLinuxDBusGnome.cc"
+#include "linux/dbus/XLLinuxDBusKde.cc"
 #include "linux/xcb/XLLinuxXcbLibrary.cc"
 #include "linux/xcb/XLLinuxXcbConnection.cc"
 #include "linux/xcb/XLLinuxXcbDisplayConfigManager.cc"
@@ -47,7 +49,6 @@
 #include "linux/wayland/XLLinuxWaylandLibrary.cc"
 #include "linux/wayland/XLLinuxWaylandDisplay.cc"
 #include "linux/wayland/XLLinuxWaylandWindow.cc"
-#include "linux/XLLinuxDisplayConfigManager.cc"
 #include "linux/XLLinuxContextController.cc"
 #endif
 

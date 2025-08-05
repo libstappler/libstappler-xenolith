@@ -165,6 +165,7 @@ struct SP_PUBLIC Connection : public Ref {
 	DBusError error;
 
 	bool connected = false;
+	String name;
 	Set<String> services;
 	Set<BusFilter *> matchFilters;
 
@@ -323,6 +324,7 @@ struct ReadIterator {
 	float getFloat(float def = 0) const;
 	double getDouble(double def = 0) const;
 	StringView getString() const;
+	BytesView getBytes() const;
 
 	ReadIterator recurse() const;
 
@@ -354,6 +356,7 @@ public:
 	bool add(SpanView<uint64_t>);
 	bool add(SpanView<double>);
 	bool add(SpanView<StringView>);
+	bool add(SpanView<String>);
 	bool addPath(SpanView<StringView>);
 	bool addSignature(SpanView<StringView>);
 	bool addFd(SpanView<int>);
@@ -363,7 +366,18 @@ public:
 	bool add(StringView, const Callback<void(WriteIterator &)> &);
 
 	bool addVariant(BasicValue);
+	bool addVariant(StringView, BasicValue);
+	bool addVariant(StringView, const char *sig, const Callback<void(WriteIterator &)> &);
 
+	// Adds a{sv} map
+	bool addVariantMap(const Callback<void(WriteIterator &)> &);
+	bool addVariantMap(StringView, const Callback<void(WriteIterator &)> &);
+
+	// Adds av array
+	bool addVariantArray(const Callback<void(WriteIterator &)> &);
+	bool addVariantArray(StringView, const Callback<void(WriteIterator &)> &);
+
+	bool addMap(const Callback<void(WriteIterator &)> &);
 	bool addArray(const char *sig, const Callback<void(WriteIterator &)> &);
 	bool addVariant(const char *sig, const Callback<void(WriteIterator &)> &);
 	bool addStruct(const Callback<void(WriteIterator &)> &);

@@ -214,6 +214,8 @@ void XcbLibrary::openAux() {
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_outputs_length)
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible)
 		XL_LOAD_PROTO(randr, xcb_randr_get_crtc_info_possible_length)
+		XL_LOAD_PROTO(randr, xcb_randr_set_screen_size_checked)
+		XL_LOAD_PROTO(randr, xcb_randr_set_screen_size)
 		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config)
 		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config_unchecked)
 		XL_LOAD_PROTO(randr, xcb_randr_set_crtc_config_reply)

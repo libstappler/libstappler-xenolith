@@ -113,7 +113,7 @@ public:
 	// native window interface for app thread
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 
-	bool setFullscreen(MonitorId &&, ModeInfo &&, Function<void(Status)> &&, Ref * = nullptr);
+	bool setFullscreen(FullscreenInfo &&, Function<void(Status)> &&, Ref * = nullptr);
 	bool isFullscreen() const { return _isFullscreen; }
 
 	void captureScreenshot(Function<void(const core::ImageInfoData &info, BytesView view)> &&cb);

@@ -248,8 +248,8 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 		log::info("Context",
 			"handleAppWindowSurfaceUpdate: fail to find (imageFormat:colorspace) pair "
 			"for a window, fallback to (",
-			core::getImageFormatName(it->first), ":",
-			core::getColorSpaceName(it->second), ")");
+			core::getImageFormatName(ret.imageFormat), ":",
+			core::getColorSpaceName(ret.colorSpace), ")");
 	} else {
 		ret.imageFormat = it->first;
 		ret.colorSpace = it->second;

@@ -21,11 +21,14 @@
  **/
 
 #include "XLLinuxXcbConnection.h"
+#include "SPSpanView.h"
 #include "XLLinuxXcbDisplayConfigManager.h"
 #include "SPCore.h"
 #include "SPMemory.h"
 #include "XLLinuxXcbWindow.h"
+#include "linux/xcb/XLLinuxXcbLibrary.h"
 #include <X11/keysym.h>
+#include <algorithm>
 #include <xcb/randr.h>
 
 #define XL_X11_DEBUG 0
@@ -364,6 +367,12 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 		++i;
 	}
 
+	xcb_get_property_cookie_t netSupportedCookie;
+	if (auto a = getAtom(XcbAtomIndex::_NET_SUPPORTED)) {
+		netSupportedCookie = _xcb->xcb_get_property(_connection, 0, _screen->root, a,
+				XCB_GET_PROPERTY_TYPE_ANY, 0, maxOf<uint32_t>() / 4);
+	}
+
 	if (_randr.enabled) {
 		if (auto versionReply = perform(_xcb->xcb_randr_query_version_reply, randrVersionCookie)) {
 			_randr.majorVersion = versionReply->major_version;
@@ -395,7 +404,7 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 
 	// try XSETTINGS
 	_xsettings.selection = getAtom(toString("_XSETTINGS_S", d.readInteger(10).get(0)), true);
-	_xsettings.property = getAtom("_XSETTINGS_SETTINGS", true);
+	_xsettings.property = getAtom(XcbAtomIndex::_XSETTINGS_SETTINGS);
 	if (_xsettings.selection && _xsettings.property) {
 		auto cookie = _xcb->xcb_get_selection_owner(_connection, _xsettings.selection);
 		auto reply = perform(_xcb->xcb_get_selection_owner_reply, cookie);
@@ -409,16 +418,34 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 			readXSettings();
 		}
 	}
+
+	if (_randr.initialized && _randr.majorVersion == 1 && _randr.minorVersion >= 5) {
+		_displayConfig = Rc<XcbDisplayConfigManager>::create(this, nullptr);
+	}
+
+	if (netSupportedCookie.sequence) {
+		auto reply = perform(_xcb->xcb_get_property_reply, netSupportedCookie);
+		if (reply) {
+			auto atoms = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
+			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
+
+			_capabilitiesByAtoms = makeSpanView(atoms, len).vec<Interface>();
+			std::sort(_capabilitiesByAtoms.begin(), _capabilitiesByAtoms.end());
+
+			getAtomNames(_capabilitiesByAtoms, [&](SpanView<StringView> strs) {
+				_capabilitiesByNames = strs.vec<Interface>();
+				std::sort(_capabilitiesByNames.begin(), _capabilitiesByNames.end());
+			});
+		}
+	}
 }
 
 Rc<DisplayConfigManager> XcbConnection::makeDisplayConfigManager(
 		Function<void(NotNull<DisplayConfigManager>)> &&cb) {
-	if (_randr.initialized && _randr.firstEvent == 1 && _randr.minorVersion >= 5) {
-		auto ret = Rc<XcbDisplayConfigManager>::create(this, sp::move(cb));
-		_displayConfig = ret;
-		return ret;
+	if (_displayConfig) {
+		_displayConfig->setCallback(sp::move(cb));
 	}
-	return nullptr;
+	return _displayConfig;
 }
 
 template <typename Event>
@@ -702,6 +729,29 @@ StringView XcbConnection::getAtomName(xcb_atom_t atom) const {
 	return StringView();
 }
 
+bool XcbConnection::hasCapability(XcbAtomIndex index) const {
+	if (auto a = getAtom(index)) {
+		return hasCapability(a);
+	}
+	return false;
+}
+
+bool XcbConnection::hasCapability(xcb_atom_t atom) const {
+	auto lb = std::lower_bound(_capabilitiesByAtoms.begin(), _capabilitiesByAtoms.end(), atom);
+	if (lb != _capabilitiesByAtoms.end() && *lb == atom) {
+		return true;
+	}
+	return false;
+}
+
+bool XcbConnection::hasCapability(StringView str) const {
+	auto lb = std::lower_bound(_capabilitiesByNames.begin(), _capabilitiesByNames.end(), str);
+	if (lb != _capabilitiesByNames.end() && *lb == str) {
+		return true;
+	}
+	return false;
+}
+
 void XcbConnection::getAtomNames(SpanView<xcb_atom_t> ids,
 		const Callback<void(SpanView<StringView>)> &cb) {
 	Vector<StringView> names;
@@ -803,7 +853,7 @@ bool XcbConnection::createWindow(const WindowInfo *winfo, XcbWindowInfo &xinfo) 
 			xinfo.depth, // depth (same as root)
 			xinfo.window, // window Id
 			xinfo.parent, // parent window
-			winfo->rect.x, winfo->rect.y, winfo->rect.width, winfo->rect.height,
+			xinfo.rect.x, xinfo.rect.y, xinfo.rect.width, xinfo.rect.height,
 			0, // border_width
 			XCB_WINDOW_CLASS_INPUT_OUTPUT, // class
 			xinfo.visual, // visual
