@@ -40,6 +40,8 @@ enum class NativeWindowStateFlags {
 	Sticky = 1 << 1,
 	MaximizedVert = 1 << 2,
 	MaximizedHorz = 1 << 3,
+	Maximized = MaximizedVert | MaximizedHorz,
+
 	Shaded = 1 << 4,
 	SkipTaskbar = 1 << 5,
 	SkipPager = 1 << 6,
@@ -49,6 +51,23 @@ enum class NativeWindowStateFlags {
 	Below = 1 << 10,
 	DemandsAttention = 1 << 11,
 	Focused = 1 << 12,
+
+	Resizing = 1 << 13,
+
+	TiledLeft = 1 << 20,
+	TiledRight = 1 << 21,
+	TiledTop = 1 << 22,
+	TiledBottom = 1 << 23,
+
+	TiledTopLeft = TiledLeft | TiledTop,
+	TiledTopRight = TiledRight | TiledTop,
+	TiledBottomLeft = TiledLeft | TiledBottom,
+	TiledBottomRight = TiledRight | TiledBottom,
+
+	ConstrainedLeft = 1 << 24,
+	ConstrainedRight = 1 << 25,
+	ConstrainedTop = 1 << 26,
+	ConstrainedBottom = 1 << 27,
 };
 
 SP_DEFINE_ENUM_AS_MASK(NativeWindowStateFlags)

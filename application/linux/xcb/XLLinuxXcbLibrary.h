@@ -218,6 +218,15 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config)
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_set_crtc_config_reply)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_unchecked)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_reply)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_current_filter_name)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_current_filter_name_length)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_current_params)
+	XL_DEFINE_PROTO(xcb_randr_get_crtc_transform_current_params_length)
+	XL_DEFINE_PROTO(xcb_randr_set_crtc_transform)
+	XL_DEFINE_PROTO(xcb_randr_set_crtc_transform_checked)
 	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs)
 	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs_length)
 	XL_DEFINE_PROTO(xcb_randr_monitor_info_outputs_end)
@@ -312,6 +321,7 @@ enum class XcbAtomIndex {
 	WM_DELETE_WINDOW,
 	WM_NAME,
 	WM_ICON_NAME,
+	_NET_WM_DESKTOP,
 	_NET_WM_SYNC_REQUEST,
 	_NET_WM_SYNC_REQUEST_COUNTER,
 	_NET_WM_PING,

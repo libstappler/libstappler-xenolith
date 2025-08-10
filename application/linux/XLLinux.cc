@@ -29,11 +29,23 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 void _xl_null_fn() { }
 
-static constexpr StringView s_cursorsArrow[] = {
+static constexpr StringView s_cursorsDefault[] = {
 	StringView("left_ptr"),
 	StringView("top_left_arrow."),
 	StringView("arrow"),
 	StringView("default"),
+};
+
+static constexpr StringView s_cursorsCell[] = {
+	StringView("cell"),
+};
+
+static constexpr StringView s_cursorsCrosshair[] = {
+	StringView("crosshair"),
+};
+
+static constexpr StringView s_cursorsContextMenu[] = {
+	StringView("context-menu"),
 };
 
 static constexpr StringView s_cursorsRightArrow[] = {
@@ -66,6 +78,18 @@ static constexpr StringView s_cursorsGrabbed[] = {
 	StringView("closedhand"),
 	StringView("grabbing"),
 	StringView("size_all"),
+};
+
+static constexpr StringView s_cursorsAllScroll[] = {
+	StringView("all-scroll"),
+};
+
+static constexpr StringView s_cursorsZoomIn[] = {
+	StringView("zoom-in"),
+};
+
+static constexpr StringView s_cursorsZoomOut[] = {
+	StringView("zoom-out"),
 };
 
 static constexpr StringView s_cursorsTarget[] = {
@@ -125,43 +149,43 @@ static constexpr StringView s_cursorsResizeAll[] = {
 };
 
 static constexpr StringView s_cursorsResizeTopLeft[] = {
-	StringView("top_left_corner"),
 	StringView("nw-resize"),
+	StringView("top_left_corner"),
 };
 
 static constexpr StringView s_cursorsResizeTopRight[] = {
-	StringView("top_right_corner"),
 	StringView("ne-resize"),
+	StringView("top_right_corner"),
 };
 
 static constexpr StringView s_cursorsResizeTop[] = {
-	StringView("top_side"),
 	StringView("n-resize"),
+	StringView("top_side"),
 };
 
 static constexpr StringView s_cursorsResizeLeft[] = {
-	StringView("left_side"),
 	StringView("w-resize"),
+	StringView("left_side"),
 };
 
 static constexpr StringView s_cursorsResizeRight[] = {
-	StringView("right_side"),
 	StringView("e-resize"),
+	StringView("right_side"),
 };
 
 static constexpr StringView s_cursorsResizeBottomLeft[] = {
-	StringView("bottom_left_corner"),
 	StringView("sw-resize"),
+	StringView("bottom_left_corner"),
 };
 
 static constexpr StringView s_cursorsResizeBottomRight[] = {
-	StringView("bottom_right_corner"),
 	StringView("se-resize"),
+	StringView("bottom_right_corner"),
 };
 
 static constexpr StringView s_cursorsResizeBottom[] = {
-	StringView("bottom_side"),
 	StringView("s-resize"),
+	StringView("bottom_side"),
 };
 
 static constexpr StringView s_cursorsResizeTopBottom[] = {
@@ -202,25 +226,31 @@ SpanView<StringView> getCursorNames(WindowLayerFlags flags) {
 
 	if (cursor != WindowLayerFlags::None) {
 		switch (cursor) {
-		case WindowLayerFlags::CursorArrow: return makeSpanView(s_cursorsArrow); break;
-		case WindowLayerFlags::CursorRightArrow: return makeSpanView(s_cursorsRightArrow); break;
+		case WindowLayerFlags::CursorDefault: return makeSpanView(s_cursorsDefault); break;
+		case WindowLayerFlags::CursorContextMenu: return makeSpanView(s_cursorsContextMenu); break;
+		case WindowLayerFlags::CursorHelp: return makeSpanView(s_cursorsHelp); break;
+		case WindowLayerFlags::CursorPointer: return makeSpanView(s_cursorsPointer); break;
+		case WindowLayerFlags::CursorProgress: return makeSpanView(s_cursorsProgress); break;
+		case WindowLayerFlags::CursorWait: return makeSpanView(s_cursorsWait); break;
+		case WindowLayerFlags::CursorCell: return makeSpanView(s_cursorsCell); break;
+		case WindowLayerFlags::CursorCrosshair: return makeSpanView(s_cursorsCrosshair); break;
 		case WindowLayerFlags::CursorText: return makeSpanView(s_cursorsText); break;
 		case WindowLayerFlags::CursorVerticalText:
 			return makeSpanView(s_cursorsVerticalText);
 			break;
-		case WindowLayerFlags::CursorPointer: return makeSpanView(s_cursorsPointer); break;
-		case WindowLayerFlags::CursorGrab: return makeSpanView(s_cursorsGrab); break;
-		case WindowLayerFlags::CursorGrabbed: return makeSpanView(s_cursorsGrabbed); break;
-		case WindowLayerFlags::CursorTarget: return makeSpanView(s_cursorsTarget); break;
-		case WindowLayerFlags::CursorPencil: return makeSpanView(s_cursorsPencil); break;
-		case WindowLayerFlags::CursorHelp: return makeSpanView(s_cursorsHelp); break;
-		case WindowLayerFlags::CursorProgress: return makeSpanView(s_cursorsProgress); break;
-		case WindowLayerFlags::CursorWait: return makeSpanView(s_cursorsWait); break;
-		case WindowLayerFlags::CursorCopy: return makeSpanView(s_cursorsCopy); break;
 		case WindowLayerFlags::CursorAlias: return makeSpanView(s_cursorsAlias); break;
+		case WindowLayerFlags::CursorCopy: return makeSpanView(s_cursorsCopy); break;
+		case WindowLayerFlags::CursorMove: return makeSpanView(s_cursorsMove); break;
 		case WindowLayerFlags::CursorNoDrop: return makeSpanView(s_cursorsNoDrop); break;
 		case WindowLayerFlags::CursorNotAllowed: return makeSpanView(s_cursorsNotAllowed); break;
-		case WindowLayerFlags::CursorMove: return makeSpanView(s_cursorsMove); break;
+		case WindowLayerFlags::CursorGrab: return makeSpanView(s_cursorsGrab); break;
+		case WindowLayerFlags::CursorGrabbing: return makeSpanView(s_cursorsGrabbed); break;
+		case WindowLayerFlags::CursorAllScroll: return makeSpanView(s_cursorsAllScroll); break;
+		case WindowLayerFlags::CursorZoomIn: return makeSpanView(s_cursorsZoomIn); break;
+		case WindowLayerFlags::CursorZoomOut: return makeSpanView(s_cursorsZoomOut); break;
+		case WindowLayerFlags::CursorRightPtr: return makeSpanView(s_cursorsRightArrow); break;
+		case WindowLayerFlags::CursorPencil: return makeSpanView(s_cursorsPencil); break;
+		case WindowLayerFlags::CursorTarget: return makeSpanView(s_cursorsTarget); break;
 		case WindowLayerFlags::CursorResizeTop: return makeSpanView(s_cursorsResizeTop); break;
 		case WindowLayerFlags::CursorResizeTopRight:
 			return makeSpanView(s_cursorsResizeTopRight);

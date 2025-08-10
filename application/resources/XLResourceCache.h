@@ -54,7 +54,7 @@ public:
 	virtual void initialize(AppThread *) override;
 	virtual void invalidate(AppThread *) override;
 
-	virtual void update(AppThread *, const UpdateTime &t) override;
+	virtual void update(AppThread *, const UpdateTime &t, bool) override;
 
 	void addImage(StringView, const Rc<core::ImageObject> &);
 	void addResource(const Rc<core::Resource> &);

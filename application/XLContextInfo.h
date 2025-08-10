@@ -77,39 +77,52 @@ SP_DEFINE_ENUM_AS_MASK(NetworkFlags)
 
 enum class WindowLayerFlags : uint32_t {
 	None,
-	CursorArrow,
-	CursorRightArrow,
-	CursorText,
-	CursorVerticalText,
-	CursorPointer,
-	CursorGrab,
-	CursorGrabbed,
-	CursorTarget,
-	CursorPencil,
+
+	CursorDefault,
+	CursorContextMenu,
 	CursorHelp,
+	CursorPointer,
 	CursorProgress,
 	CursorWait,
-	CursorCopy,
+	CursorCell,
+	CursorCrosshair,
+	CursorText,
+	CursorVerticalText,
 	CursorAlias,
+	CursorCopy,
+	CursorMove,
 	CursorNoDrop,
 	CursorNotAllowed,
-	CursorMove,
+	CursorGrab,
+	CursorGrabbing,
+
+	CursorAllScroll,
+	CursorZoomIn,
+	CursorZoomOut,
+	CursorDndAsk,
+
+	CursorRightPtr,
+	CursorPencil,
+	CursorTarget,
+
+	CursorResizeRight,
 	CursorResizeTop,
 	CursorResizeTopRight,
-	CursorResizeRight,
-	CursorResizeBottomRight,
+	CursorResizeTopLeft,
 	CursorResizeBottom,
+	CursorResizeBottomRight,
 	CursorResizeBottomLeft,
 	CursorResizeLeft,
-	CursorResizeTopLeft,
-	CursorResizeTopBottom,
 	CursorResizeLeftRight,
-	CursorResizeTopLeftBottomRight,
+	CursorResizeTopBottom,
 	CursorResizeTopRightBottomLeft,
+	CursorResizeTopLeftBottomRight,
+	CursorResizeCol,
+	CursorResizeRow,
 	CursorResizeAll,
+
 	CursorMask = 0xFF,
 
-	// If this flag is set - use resize flags as markers for the cursor name
 	FlagsMask = 0xFF00,
 
 	ResizableTop = 1 << 27,
@@ -136,6 +149,17 @@ enum class WindowFlags {
 	// Use direct output to display, bypassing whole WM stack
 	// Check if it actually supported with WindowCapabilities::DirectOutput
 	DirectOutput = 1 << 1,
+
+	// Try to use server-side decoration where available
+	PreferServerSideDecoration = 1 << 2,
+
+	// Try to use system-native decoration where available
+	// Used to enable client-side native decorations (libdecor on Wayland)
+	PreferNativeDecoration = 1 << 3,
+
+	// If possible, use server-defined cursors instead of client-side libraries
+	// Note that server-side cursor theme may not contain all cursors
+	PreferServerSideCursors = 1 << 4,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
@@ -148,14 +172,18 @@ enum class WindowCapabilities {
 	Fullscreen = 1 << 0,
 	FullscreenExclusive = 1 << 1,
 
+	ServerSideDecorations = 1 << 2,
+	NativeDecorations = 1 << 3,
+	ServerSideCursors = 1 << 4,
+
 	// Subwindows are allowed
-	Subwindows = 1 << 2,
+	Subwindows = 1 << 5,
 
 	// Direct output is available on platform
-	DirectOutput = 1 << 3,
+	DirectOutput = 1 << 6,
 
 	// 'Back' action can close application (Android-like)
-	BackIsExit = 1 << 4,
+	BackIsExit = 1 << 7,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

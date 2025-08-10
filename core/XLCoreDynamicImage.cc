@@ -37,8 +37,10 @@ bool DynamicImage::init(const Callback<bool(Builder &)> &cb) {
 
 void DynamicImage::finalize() {
 	std::unique_lock<Mutex> lock(_mutex);
-	_instance->userdata = nullptr;
-	_instance = nullptr;
+	if (_instance) {
+		_instance->userdata = nullptr;
+		_instance = nullptr;
+	}
 }
 
 Rc<DynamicImageInstance> DynamicImage::getInstance() {

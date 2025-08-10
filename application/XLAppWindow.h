@@ -53,9 +53,9 @@ public:
 
 	virtual bool init(NotNull<Context>, NotNull<AppThread>, NotNull<NativeWindow>);
 
-	virtual void runWithQueue(const Rc<core::Queue> &);
+	virtual void runWithQueue(const Rc<core::Queue> &); // from view thread
 
-	virtual void run();
+	virtual void run(); // from view thread
 
 	virtual void update(core::PresentationUpdateFlags); // from view thread
 	virtual void end(); // from view thread

@@ -173,6 +173,7 @@ void PresentationEngine::deprecateSwapchain(PresentationSwapchainFlags flags,
 		return;
 	}
 
+	_waitForDisplayLink = false;
 	_swapchain->deprecate();
 
 	_deprecationFlags |= flags;

@@ -33,6 +33,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
+static inline float FixedToFloat(xcb_render_fixed_t val) { return float(val) / 65536.0f; }
+static inline double FixedToDouble(xcb_render_fixed_t val) { return double(val) / 65536.0; }
+
 class SP_PUBLIC XcbDisplayConfigManager : public DisplayConfigManager {
 public:
 	virtual ~XcbDisplayConfigManager() = default;
@@ -44,6 +47,8 @@ public:
 	virtual void invalidate() override;
 
 	void update();
+
+	String getMonitorForPosition(int16_t x, int16_t y);
 
 protected:
 	void updateDisplayConfig(Function<void(DisplayConfig *)> && = nullptr);

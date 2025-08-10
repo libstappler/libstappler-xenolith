@@ -368,7 +368,7 @@ Rc<DisplayConfig> KdeScreenInfo::exportConfig() {
 			m.monitors.emplace_back(it.physical.id);
 			for (auto &cloneId : it.clones) {
 				for (auto &cIt : outputs) {
-					if (cIt.physical.xid == cloneId) {
+					if (cIt.physical.xid == uintptr_t(cloneId)) {
 						m.monitors.emplace_back(cIt.physical.id);
 					}
 				}
@@ -438,7 +438,7 @@ void KdeDisplayConfigManager::readDisplayConfig(NotNull<DBusMessage> reply,
 			++idx;
 			continue;
 		}
-		auto eIt = _edidCache.find(toString(it.physical.xid, ":", it.physical.id.name));
+		auto eIt = _edidCache.find(toString(it.physical.xid.xid, ":", it.physical.id.name));
 		if (eIt != _edidCache.end()) {
 			it.physical.id.edid = eIt->second;
 		} else {
@@ -450,7 +450,7 @@ void KdeDisplayConfigManager::readDisplayConfig(NotNull<DBusMessage> reply,
 				auto edid = core::EdidInfo::parse(iter.getBytes());
 				auto &mon = info->outputs[idx].physical;
 
-				_edidCache.emplace(toString(mon.xid, ":", mon.id.name), edid);
+				_edidCache.emplace(toString(mon.xid.xid, ":", mon.id.name), edid);
 				info->outputs[idx].physical.id.edid = edid;
 				if (--info->requestsInQueue == 0) {
 					auto d = info->exportConfig();

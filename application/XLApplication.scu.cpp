@@ -47,7 +47,10 @@
 #include "linux/xcb/XLLinuxXcbWindow.cc"
 #include "linux/wayland/XLLinuxWaylandProtocol.cc"
 #include "linux/wayland/XLLinuxWaylandLibrary.cc"
+#include "linux/wayland/XLLinuxWaylandSeat.cc"
+#include "linux/wayland/XLLinuxWaylandDataDevice.cc"
 #include "linux/wayland/XLLinuxWaylandDisplay.cc"
+#include "linux/wayland/XLLinuxWaylandKdeDisplayConfigManager.cc"
 #include "linux/wayland/XLLinuxWaylandWindow.cc"
 #include "linux/XLLinuxContextController.cc"
 #endif

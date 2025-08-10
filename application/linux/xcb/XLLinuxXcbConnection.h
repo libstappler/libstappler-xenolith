@@ -55,6 +55,7 @@ static XcbAtomInfo s_atomRequests[] = {
 	{XcbAtomIndex::WM_DELETE_WINDOW, "WM_DELETE_WINDOW", true, 0},
 	{XcbAtomIndex::WM_NAME, "WM_NAME", false, 0},
 	{XcbAtomIndex::WM_ICON_NAME, "WM_ICON_NAME", false, 0},
+	{XcbAtomIndex::_NET_WM_DESKTOP, "_NET_WM_DESKTOP", true, 0},
 	{XcbAtomIndex::_NET_WM_SYNC_REQUEST, "_NET_WM_SYNC_REQUEST", true, 0},
 	{XcbAtomIndex::_NET_WM_SYNC_REQUEST_COUNTER, "_NET_WM_SYNC_REQUEST_COUNTER", true, 0},
 	{XcbAtomIndex::_NET_WM_PING, "_NET_WM_PING", true, 0},
@@ -136,6 +137,8 @@ struct XcbWindowInfo {
 	xcb_sync_counter_t syncCounter;
 
 	xcb_cursor_t cursorId = 0;
+
+	String outputName;
 };
 
 class XcbConnection final : public Ref {
@@ -200,8 +203,8 @@ public:
 
 	bool setCursorId(xcb_window_t window, xcb_cursor_t);
 
-	void readFromClipboard(Rc<ClipboardRequest> &&req);
-	void writeToClipboard(Rc<ClipboardData> &&);
+	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status writeToClipboard(Rc<ClipboardData> &&);
 
 	Value getSettingsValue(StringView) const;
 	uint32_t getUnscaledDpi() const { return (_xsettings.udpi == 0) ? 122'880 : _xsettings.udpi; }

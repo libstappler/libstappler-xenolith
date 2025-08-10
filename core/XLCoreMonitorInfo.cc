@@ -116,4 +116,7 @@ constexpr const MonitorId MonitorId::None;
 constexpr const FullscreenInfo FullscreenInfo::None{MonitorId::None, ModeInfo::Current,
 	FullscreenFlags::None};
 
+constexpr const FullscreenInfo FullscreenInfo::Current{MonitorId{"__current__"}, ModeInfo::Current,
+	FullscreenFlags::None};
+
 } // namespace stappler::xenolith::core

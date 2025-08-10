@@ -24,6 +24,7 @@
 #include "SPCore.h"
 #include "XLAppThread.h"
 #include "XLContextInfo.h"
+#include "XLCoreEnum.h"
 #include "XLCorePresentationEngine.h"
 #include "XlCoreMonitorInfo.h"
 #include "platform/XLContextNativeWindow.h"
@@ -68,7 +69,7 @@ void AppWindow::runWithQueue(const Rc<core::Queue> &queue) {
 
 void AppWindow::run() {
 	_application->performOnAppThread([this, director = _director]() mutable {
-		_context->handleAppWindowCreated(this, director);
+		_context->handleAppWindowCreated(_application, this, director);
 	}, this);
 }
 
@@ -90,7 +91,7 @@ void AppWindow::end() {
 		if (_director) {
 			_director->end();
 		}
-		_context->handleAppWindowDestroyed(this);
+		_context->handleAppWindowDestroyed(_application, this);
 		_context->performOnThread([engine = move(engine)]() mutable { engine = nullptr; }, this);
 		_director = nullptr;
 	}, this);
@@ -182,7 +183,7 @@ core::SwapchainConfig AppWindow::selectConfig(const core::SurfaceInfo &cfg, bool
 	// preserve selected config for app thread
 	_application->performOnAppThread([this, c, fastMode] {
 		_appSwapchainConfig = c;
-		if (fastMode) {
+		if (fastMode && _appSwapchainConfig.presentModeFast != core::PresentMode::Unsupported) {
 			_appSwapchainConfig.presentMode = _appSwapchainConfig.presentModeFast;
 		}
 	}, this);
@@ -221,8 +222,11 @@ void AppWindow::setFrameOrder(uint64_t frameOrder) {
 }
 
 void AppWindow::updateConstraints(core::PresentationSwapchainFlags flags) {
-	_context->performOnThread([this, flags] { _presentationEngine->deprecateSwapchain(flags); },
-			this, true);
+	_context->performOnThread([this, flags] {
+		if (_presentationEngine) {
+			_presentationEngine->deprecateSwapchain(flags);
+		}
+	}, this, true);
 }
 
 void AppWindow::setReadyForNextFrame() {

@@ -93,6 +93,9 @@ public:
 	NetworkFlags getNetworkFlags() const { return _networkFlags; }
 	const ThemeInfo &getThemeInfo() const { return _themeInfo; }
 
+	bool addListener(NotNull<Ref>, Function<void(const UpdateTime &, bool)> &&);
+	bool removeListener(NotNull<Ref>);
+
 	template <typename T>
 	auto addExtension(Rc<T> &&) -> T *;
 
@@ -106,8 +109,8 @@ public:
 	using Thread::waitRunning;
 
 protected:
-	virtual void performAppUpdate(const UpdateTime &);
-	virtual void performUpdate();
+	virtual void performAppUpdate(const UpdateTime &, bool wakeup);
+	virtual void performUpdate(bool wakeup);
 
 	virtual void loadExtensions();
 	virtual void initializeExtensions();
@@ -129,6 +132,7 @@ protected:
 	Rc<ResourceCache> _resourceCache;
 
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
+	Map<Rc<Ref>, Function<void(const UpdateTime &, bool)>> _listeners;
 };
 
 template <typename T>

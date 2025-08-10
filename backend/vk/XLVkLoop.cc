@@ -394,12 +394,18 @@ void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb,
 		res->initialize();
 	}
 	performOnThread([this, res = sp::move(res)]() mutable {
+		if (!_internal) {
+			return;
+		}
 		_internal->compileResource(sp::move(res));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) const {
 	performOnThread([this, req, callback = sp::move(callback)]() mutable {
+		if (!_internal) {
+			return;
+		}
 		_internal->compileQueue(req, sp::move(callback));
 	}, const_cast<Loop *>(this), true);
 }
@@ -407,12 +413,18 @@ void Loop::compileQueue(const Rc<Queue> &req, Function<void(bool)> &&callback) c
 void Loop::compileMaterials(Rc<core::MaterialInputData> &&req,
 		const Vector<Rc<DependencyEvent>> &deps) const {
 	performOnThread([this, req = move(req), deps = deps]() mutable {
+		if (!_internal) {
+			return;
+		}
 		_internal->compileMaterials(sp::move(req), sp::move(deps));
 	}, const_cast<Loop *>(this), true);
 }
 
 void Loop::compileImage(const Rc<core::DynamicImage> &img, Function<void(bool)> &&callback) const {
 	performOnThread([this, img, callback = sp::move(callback)]() mutable {
+		if (!_internal) {
+			return;
+		}
 		_internal->device->compileImage(*this, img, sp::move(callback));
 	}, const_cast<Loop *>(this), true);
 }

@@ -24,6 +24,8 @@
 #include "SPStringDetail.h"
 #include "XLAppThread.h"
 #include "XLAppWindow.h"
+#include "XLContextInfo.h"
+#include "XLCoreEnum.h"
 #include "XLDirector.h"
 #include "XLScene.h"
 #include "platform/XLContextController.h"
@@ -228,9 +230,12 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	}
 
 	// use Immediate mode as fastest for quick transitions (like on manual window resize)
-	if (std::find(info.presentModes.begin(), info.presentModes.end(), core::PresentMode::Immediate)
-			!= info.presentModes.end()) {
-		ret.presentModeFast = core::PresentMode::Immediate;
+	if (ret.presentMode != core::PresentMode::Mailbox) {
+		if (std::find(info.presentModes.begin(), info.presentModes.end(),
+					core::PresentMode::Immediate)
+				!= info.presentModes.end()) {
+			ret.presentModeFast = core::PresentMode::Immediate;
+		}
 	}
 
 	auto it = info.formats.begin();
@@ -275,16 +280,25 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	return ret;
 }
 
-void Context::handleAppWindowCreated(NotNull<AppWindow> w, NotNull<Director> d) {
+void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindow> w,
+		NotNull<Director> d) {
 	log::info("Context", "handleAppWindowCreated");
+
+	thread->addListener(w, [w](const UpdateTime &, bool wakeup) {
+		if (wakeup) {
+			w->setReadyForNextFrame();
+		}
+	});
+
 	auto scene = makeScene(w, d->getFrameConstraints());
 	if (scene) {
 		d->runScene(move(scene));
 	}
 }
 
-void Context::handleAppWindowDestroyed(NotNull<AppWindow> w) {
+void Context::handleAppWindowDestroyed(NotNull<AppThread> thread, NotNull<AppWindow> w) {
 	log::info("Context", "handleAppWindowDestroyed");
+	thread->removeListener(w);
 }
 
 void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {

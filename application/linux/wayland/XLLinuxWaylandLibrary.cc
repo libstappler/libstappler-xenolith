@@ -23,6 +23,8 @@
 #include "XLLinuxWaylandLibrary.h"
 #include "linux/dbus/XLLinuxDBusLibrary.h"
 #include "XLLinuxWaylandWindow.h"
+#include "linux/wayland/XLLinuxWaylandProtocol.h"
+#include <wayland-client-protocol.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -45,6 +47,21 @@ bool WaylandLibrary::init() {
 }
 
 void WaylandLibrary::close() {
+	if (kdeOutputDevice) {
+		delete kdeOutputDevice;
+		kdeOutputDevice = nullptr;
+	}
+
+	if (cursorShape) {
+		delete cursorShape;
+		cursorShape = nullptr;
+	}
+
+	if (xdgDecoration) {
+		delete xdgDecoration;
+		xdgDecoration = nullptr;
+	}
+
 	if (viewporter) {
 		delete viewporter;
 		viewporter = nullptr;
@@ -83,13 +100,10 @@ bool WaylandLibrary::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, wl_subsurface_interface)
 	XL_LOAD_PROTO(handle, wl_shm_pool_interface)
 	XL_LOAD_PROTO(handle, wl_buffer_interface)
-	XL_LOAD_PROTO(handle, wp_viewporter_interface)
-	XL_LOAD_PROTO(handle, wp_viewport_interface)
-	XL_LOAD_PROTO(handle, xdg_wm_base_interface)
-	XL_LOAD_PROTO(handle, xdg_positioner_interface)
-	XL_LOAD_PROTO(handle, xdg_surface_interface)
-	XL_LOAD_PROTO(handle, xdg_toplevel_interface)
-	XL_LOAD_PROTO(handle, xdg_popup_interface)
+	XL_LOAD_PROTO(handle, wl_data_offer_interface)
+	XL_LOAD_PROTO(handle, wl_data_source_interface)
+	XL_LOAD_PROTO(handle, wl_data_device_interface)
+	XL_LOAD_PROTO(handle, wl_data_device_manager_interface)
 
 	XL_LOAD_PROTO(handle, wl_display_connect)
 	XL_LOAD_PROTO(handle, wl_display_get_fd)
@@ -125,6 +139,24 @@ bool WaylandLibrary::open(Dso &handle) {
 	xdg_surface_interface = &xdg->xdg_surface_interface;
 	xdg_toplevel_interface = &xdg->xdg_toplevel_interface;
 	xdg_popup_interface = &xdg->xdg_popup_interface;
+
+	xdgDecoration = new XdgDecorationInterface(xdg_toplevel_interface);
+
+	zxdg_decoration_manager_v1_interface = &xdgDecoration->zxdg_decoration_manager_v1_interface;
+	zxdg_toplevel_decoration_v1_interface = &xdgDecoration->zxdg_toplevel_decoration_v1_interface;
+
+	cursorShape = new CursorShapeInterface(wl_pointer_interface);
+
+	wp_cursor_shape_manager_v1_interface = &cursorShape->wp_cursor_shape_manager_v1_interface;
+	wp_cursor_shape_device_v1_interface = &cursorShape->wp_cursor_shape_device_v1_interface;
+
+	kdeOutputDevice = new KdeOutputDeviceInterface();
+
+	kde_output_device_v2_interface = &kdeOutputDevice->kde_output_device_v2_interface;
+	kde_output_device_mode_v2_interface = &kdeOutputDevice->kde_output_device_mode_v2_interface;
+	kde_output_order_v1_interface = &kdeOutputDevice->kde_output_order_v1_interface;
+	kde_output_management_v2_interface = &kdeOutputDevice->kde_output_management_v2_interface;
+	kde_output_configuration_v2_interface = &kdeOutputDevice->kde_output_configuration_v2_interface;
 
 	_cursor = Dso("libwayland-cursor.so");
 	if (!openWaylandCursor(_cursor)) {

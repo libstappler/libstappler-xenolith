@@ -45,7 +45,7 @@ void ResourceCache::invalidate(AppThread *a) {
 	_loop = nullptr;
 }
 
-void ResourceCache::update(AppThread *a, const UpdateTime &time) {
+void ResourceCache::update(AppThread *a, const UpdateTime &time, bool) {
 	auto it = _temporaries.begin();
 	while (it != _temporaries.end()) {
 		if (it->second->getUsersCount() > 0 && !it->second->isRequested()) {

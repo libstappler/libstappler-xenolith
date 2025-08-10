@@ -138,7 +138,7 @@ public:
 	uint32_t getFamilyIndex(StringView) const;
 	StringView getFamilyName(uint32_t idx) const;
 
-	virtual void update(AppThread *, const UpdateTime &clock) override;
+	virtual void update(AppThread *, const UpdateTime &clock, bool) override;
 
 protected:
 	friend class FontComponent;

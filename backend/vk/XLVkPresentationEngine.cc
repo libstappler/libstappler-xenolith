@@ -140,6 +140,7 @@ bool PresentationEngine::recreateSwapchain() {
 	}
 
 	_device->waitIdle();
+	_waitForDisplayLink = false;
 
 	bool oldSwapchainValid = true;
 	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToNext)) {

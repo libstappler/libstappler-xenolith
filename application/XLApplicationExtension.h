@@ -37,7 +37,7 @@ public:
 	virtual void initialize(AppThread *) = 0;
 	virtual void invalidate(AppThread *) = 0;
 
-	virtual void update(AppThread *, const UpdateTime &t) = 0;
+	virtual void update(AppThread *, const UpdateTime &t, bool wakeup) = 0;
 
 	virtual void handleNetworkStateChanged(NetworkFlags) { }
 	virtual void handleThemeInfoChanged(const ThemeInfo &) { }

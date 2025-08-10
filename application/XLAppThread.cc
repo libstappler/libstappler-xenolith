@@ -58,7 +58,7 @@ void AppThread::threadInit() {
 	_timer = _appLooper->scheduleTimer(event::TimerInfo{
 		.completion = event::TimerInfo::Completion::create<AppThread>(this,
 				[](AppThread *data, event::TimerHandle *self, uint32_t value, Status status) {
-		data->performUpdate();
+		data->performUpdate(false);
 	}),
 		.interval = _context->getInfo()->appUpdateInterval,
 		.count = event::TimerInfo::Infinite,
@@ -75,7 +75,7 @@ void AppThread::threadInit() {
 	_time.app = 0;
 	_time.dt = 0.0f;
 
-	performUpdate();
+	performUpdate(true);
 
 	Thread::threadInit();
 }
@@ -108,7 +108,7 @@ void AppThread::stop() {
 }
 
 void AppThread::wakeup() {
-	performOnAppThread([this] { performUpdate(); }, this, true);
+	performOnAppThread([this] { performUpdate(true); }, this, true);
 }
 
 void AppThread::handleNetworkStateChanged(NetworkFlags flags) {
@@ -215,12 +215,33 @@ void AppThread::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref 
 	}, this);
 }
 
-void AppThread::performAppUpdate(const UpdateTime &time) {
-	_context->handleAppThreadUpdate(this, time);
-	for (auto &it : _extensions) { it.second->update(this, time); }
+bool AppThread::addListener(NotNull<Ref> ref, Function<void(const UpdateTime &, bool)> &&cb) {
+	auto it = _listeners.find(ref);
+	if (it == _listeners.end()) {
+		_listeners.emplace(ref, sp::move(cb));
+		return true;
+	}
+	return false;
 }
 
-void AppThread::performUpdate() {
+bool AppThread::removeListener(NotNull<Ref> ref) {
+	auto it = _listeners.find(ref);
+	if (it != _listeners.end()) {
+		_listeners.erase(it);
+		return true;
+	}
+	return false;
+}
+
+void AppThread::performAppUpdate(const UpdateTime &time, bool wakeup) {
+	_context->handleAppThreadUpdate(this, time);
+	for (auto &it : _extensions) { it.second->update(this, time, wakeup); }
+
+	auto listeners = _listeners;
+	for (auto &it : listeners) { it.second(time, wakeup); }
+}
+
+void AppThread::performUpdate(bool wakeup) {
 	_clock = sp::platform::clock(ClockType::Monotonic);
 
 	_time.delta = _clock - _lastUpdate;
@@ -228,7 +249,7 @@ void AppThread::performUpdate() {
 	_time.app = _startTime - _clock;
 	_time.dt = float(_time.delta) / 1'000'000;
 
-	performAppUpdate(_time);
+	performAppUpdate(_time, wakeup);
 
 	_lastUpdate = _clock;
 }

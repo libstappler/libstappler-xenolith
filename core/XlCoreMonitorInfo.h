@@ -71,7 +71,11 @@ struct MonitorId {
 };
 
 struct FullscreenInfo {
+	// Exit fullscreen mode
 	static const FullscreenInfo None;
+
+	// Use current monitor for the fullscreen
+	static const FullscreenInfo Current;
 
 	MonitorId id;
 	ModeInfo mode;

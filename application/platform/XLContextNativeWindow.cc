@@ -91,7 +91,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 	auto dcm = _controller->getDisplayConfigManager();
 
 	if (info == FullscreenInfo::None) {
-		// exit fullscreen
+		// restore saved mode
 		dcm->restoreMode(nullptr, this);
 
 		// remove fullscreen state
@@ -99,6 +99,12 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 			cb(setFullscreenState(sp::move(info)));
 		} else {
 			// not in fullsreen
+			cb(Status::Declined);
+		}
+	} else if (info == FullscreenInfo::Current) {
+		if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			cb(setFullscreenState(sp::move(info)));
+		} else {
 			cb(Status::Declined);
 		}
 	} else {
@@ -117,6 +123,8 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 			return;
 		}
 
+		// update info with concrete parameters
+		info.id = mon->id;
 		info.mode = m->mode;
 
 		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
@@ -158,7 +166,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 					cb(Status::Declined);
 					return;
 				} else {
-					// exit from fullscreen befoe mode switch
+					// exit from fullscreen before mode switch
 					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
 				}
 			}

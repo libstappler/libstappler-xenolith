@@ -520,7 +520,7 @@ StringView FontController::getFamilyName(uint32_t idx) const {
 	return StringView();
 }
 
-void FontController::update(AppThread *app, const UpdateTime &clock) {
+void FontController::update(AppThread *app, const UpdateTime &clock, bool) {
 	_clock = clock.global;
 	removeUnusedLayouts();
 	if (_dirty && _loaded) {
@@ -571,7 +571,7 @@ void FontController::setLoaded(bool value) {
 		onLoaded(this);
 		UpdateTime t;
 		t.global = sp::platform::clock(ClockType::Monotonic);
-		update(nullptr, t);
+		update(nullptr, t, false);
 	}
 }
 

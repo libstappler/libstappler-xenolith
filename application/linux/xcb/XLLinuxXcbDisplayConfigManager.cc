@@ -59,7 +59,14 @@ struct XrandrCrtcInfo {
 	Vector<const XrandrOutputInfo *> outputs;
 	Vector<const XrandrOutputInfo *> possible;
 
+	float scaleX = 1.0f;
+	float scaleY = 1.0f;
+
 	CrtcPanning panning;
+	xcb_render_transform_t transform;
+
+	String filterName;
+	Vector<xcb_render_fixed_t> filterParams;
 };
 
 struct XrandrOutputInfo {
@@ -71,6 +78,12 @@ struct XrandrOutputInfo {
 	String name;
 	Vector<PropertyInfo> properties;
 	bool primary = false;
+};
+
+struct XrandrConfig : public Ref {
+	Map<xcb_randr_mode_t, DisplayMode> modes;
+	Map<xcb_randr_output_t, XrandrOutputInfo> outputs;
+	Map<xcb_randr_crtc_t, XrandrCrtcInfo> crtcs;
 };
 
 static DisplayMode parseRandrModeInfo(xcb_randr_mode_info_t *mode, uint8_t *name) {
@@ -163,6 +176,9 @@ bool XcbDisplayConfigManager::init(NotNull<XcbConnection> c,
 
 	updateDisplayConfig();
 
+	// XRandR получает заранее расширенные буферы и скейлит их непосредственно
+	_scalingMode = DirectScaling;
+
 	return true;
 }
 
@@ -179,6 +195,43 @@ void XcbDisplayConfigManager::invalidate() {
 
 void XcbDisplayConfigManager::update() { updateDisplayConfig(nullptr); }
 
+String XcbDisplayConfigManager::getMonitorForPosition(int16_t x, int16_t y) {
+	if (!_currentConfig) {
+		return String();
+	}
+
+	auto native = _currentConfig->native.get_cast<XrandrConfig>();
+
+	xcb_randr_crtc_t target = maxOf<xcb_randr_crtc_t>();
+	int64_t distance = maxOf<int64_t>();
+
+	for (auto &it : native->crtcs) {
+		if (!it.second.mode || it.second.outputs.empty()) {
+			continue;
+		}
+		if (x > it.second.x && y > it.second.y) {
+			auto dx = it.second.x - x;
+			auto dy = it.second.y - y;
+			auto d = dx * dx + dy * dy;
+			if (d < distance) {
+				distance = d;
+				target = it.second.crtc;
+			}
+		}
+	}
+
+	if (target == maxOf<xcb_randr_crtc_t>()) {
+		return String();
+	}
+
+	auto it = native->crtcs.find(target);
+	if (it != native->crtcs.end()) {
+		return it->second.outputs.front()->name;
+	}
+
+	return String();
+}
+
 void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)> &&cb) {
 	struct OutputCookie {
 		xcb_randr_get_output_info_cookie_t infoCookie;
@@ -192,10 +245,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	}
 
 	auto ret = Rc<DisplayConfig>::create();
-
-	Map<xcb_randr_mode_t, DisplayMode> existedModes;
-	Map<xcb_randr_output_t, XrandrOutputInfo> existedOutputs;
-	Map<xcb_randr_crtc_t, XrandrCrtcInfo> existedCrtcs;
+	auto cfg = Rc<XrandrConfig>::create();
 
 	auto parseScreenResourcesCurrentReply =
 			[&](xcb_randr_get_screen_resources_current_cookie_t cookie) {
@@ -214,7 +264,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		while (nmodes > 0) {
 			if (!hasFlag(modes->mode_flags, uint32_t(XCB_RANDR_MODE_FLAG_INTERLACE))) {
 				auto m = parseRandrModeInfo(modes, names);
-				existedModes.emplace(m.xid, move(m));
+				cfg->modes.emplace(m.xid, move(m));
 			}
 
 			names += modes->name_len;
@@ -227,7 +277,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto noutputs = _xcb->xcb_randr_get_screen_resources_current_outputs_length(reply);
 
 		while (noutputs > 0) {
-			existedOutputs.emplace(*outputs, XrandrOutputInfo{*outputs});
+			cfg->outputs.emplace(*outputs, XrandrOutputInfo{*outputs});
 			++outputs;
 			--noutputs;
 		}
@@ -236,7 +286,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto ncrtcs = _xcb->xcb_randr_get_screen_resources_current_crtcs_length(reply);
 
 		while (ncrtcs > 0) {
-			existedCrtcs.emplace(*crtcs, XrandrCrtcInfo{*crtcs});
+			cfg->crtcs.emplace(*crtcs, XrandrCrtcInfo{*crtcs});
 			++crtcs;
 			--ncrtcs;
 		}
@@ -248,8 +298,8 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 			return;
 		}
 
-		auto cIt = existedCrtcs.find(reply->crtc);
-		if (cIt != existedCrtcs.end()) {
+		auto cIt = cfg->crtcs.find(reply->crtc);
+		if (cIt != cfg->crtcs.end()) {
 			cookie.info->crtc = &cIt->second;
 		}
 
@@ -260,9 +310,9 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 
 		int idx = 0;
 		while (idx < nmodes) {
-			auto mIt = existedModes.find(*modes);
+			auto mIt = cfg->modes.find(*modes);
 
-			if (mIt != existedModes.end()) {
+			if (mIt != cfg->modes.end()) {
 				cookie.info->modes.emplace_back(&mIt->second);
 				if (preferred && idx + 1 == preferred) {
 					cookie.info->preferred = &mIt->second;
@@ -277,8 +327,8 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto ncrtcs = _xcb->xcb_randr_get_output_info_crtcs_length(reply);
 
 		while (ncrtcs > 0) {
-			auto cIt = existedCrtcs.find(*crtcs);
-			if (cIt != existedCrtcs.end()) {
+			auto cIt = cfg->crtcs.find(*crtcs);
+			if (cIt != cfg->crtcs.end()) {
 				cookie.info->crtcs.emplace_back(&cIt->second);
 			}
 
@@ -317,8 +367,8 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto noutputs = _xcb->xcb_randr_get_crtc_info_outputs_length(reply);
 
 		while (noutputs) {
-			auto oIt = existedOutputs.find(*outputsPtr);
-			if (oIt != existedOutputs.end()) {
+			auto oIt = cfg->outputs.find(*outputsPtr);
+			if (oIt != cfg->outputs.end()) {
 				crtc->outputs.emplace_back(&oIt->second);
 			}
 			++outputsPtr;
@@ -329,16 +379,16 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		auto npossible = _xcb->xcb_randr_get_crtc_info_possible_length(reply);
 
 		while (npossible) {
-			auto oIt = existedOutputs.find(*possiblePtr);
-			if (oIt != existedOutputs.end()) {
+			auto oIt = cfg->outputs.find(*possiblePtr);
+			if (oIt != cfg->outputs.end()) {
 				crtc->possible.emplace_back(&oIt->second);
 			}
 			++possiblePtr;
 			--npossible;
 		}
 
-		auto mIt = existedModes.find(reply->mode);
-		if (mIt != existedModes.end()) {
+		auto mIt = cfg->modes.find(reply->mode);
+		if (mIt != cfg->modes.end()) {
 			crtc->mode = &mIt->second;
 		}
 
@@ -368,6 +418,39 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		crtc->panning.borderTop = reply->border_top;
 		crtc->panning.borderRight = reply->border_right;
 		crtc->panning.borderBottom = reply->border_bottom;
+	};
+
+	auto parseTransform = [&](xcb_randr_get_crtc_transform_cookie_t cookie, XrandrCrtcInfo *crtc) {
+		auto reply = _connection->perform(_xcb->xcb_randr_get_crtc_transform_reply, cookie);
+		if (!reply) {
+			return;
+		}
+
+		crtc->transform = reply->current_transform;
+
+		auto m11 = FixedToDouble(crtc->transform.matrix11);
+		auto m12 = FixedToDouble(crtc->transform.matrix12);
+		auto m21 = FixedToDouble(crtc->transform.matrix21);
+		auto m22 = FixedToDouble(crtc->transform.matrix22);
+
+		crtc->scaleX = std::sqrt(m11 * m11 + m12 * m12);
+		crtc->scaleY = std::sqrt(m21 * m21 + m22 * m22);
+
+		auto name = _xcb->xcb_randr_get_crtc_transform_current_filter_name(reply);
+		auto namelen = _xcb->xcb_randr_get_crtc_transform_current_filter_name_length(reply);
+
+		if (name && namelen) {
+			crtc->filterName = String(name, namelen);
+		}
+
+		auto params = _xcb->xcb_randr_get_crtc_transform_current_params(reply);
+		auto nparams = _xcb->xcb_randr_get_crtc_transform_current_params_length(reply);
+
+		crtc->filterParams.reserve(nparams);
+		while (nparams > 0) {
+			crtc->filterParams.emplace_back(*params);
+			++params;
+		}
 	};
 
 	auto parseAtomNames = [&](xcb_get_atom_name_cookie_t cookie, String *target) {
@@ -408,8 +491,8 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 			auto outLen = _xcb->xcb_randr_monitor_info_outputs_length(m);
 
 			while (outLen > 0) {
-				auto it = existedOutputs.find(*out);
-				if (it != existedOutputs.end()) {
+				auto it = cfg->outputs.find(*out);
+				if (it != cfg->outputs.end()) {
 					emplace_ordered(crtcs, it->second.crtc);
 				}
 				++out;
@@ -417,11 +500,15 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 			}
 
 			for (auto &it : crtcs) {
-				auto &log = ret->logical.emplace_back(LogicalDisplay{it->crtc,
-					IRect{m->x, m->y, m->width, m->height}, 1.0f, it->rotation});
+				auto &log = ret->logical.emplace_back(LogicalDisplay{
+					it->crtc,
+					IRect{m->x, m->y, m->width, m->height},
+					std::max(it->scaleX, it->scaleY),
+					it->rotation,
+				});
 				for (auto &oIt : it->outputs) {
 					for (auto &mIt : ret->monitors) {
-						if (mIt.xid == oIt->output) {
+						if (mIt.xid.xid == oIt->output) {
 							mIt.index = index;
 							mIt.mm = Extent2(m->width_in_millimeters, m->height_in_millimeters);
 							log.monitors.emplace_back(mIt.id);
@@ -441,31 +528,17 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 
 	auto screenResCurrentCookie = _xcb->xcb_randr_get_screen_resources_current_unchecked(
 			_connection->getConnection(), _root);
-	//auto screenInfoCoolie =
-	//		_xcb->xcb_randr_get_screen_info_unchecked(_connection->getConnection(), _root);
 
 	_xcb->xcb_flush(_connection->getConnection());
 
 	parseScreenResourcesCurrentReply(screenResCurrentCookie);
 
-	/*auto screenInfoReply =
-			_connection->perform(_xcb->xcb_randr_get_screen_info_reply, screenInfoCoolie);
-	if (screenInfoReply) {
-		auto sizes = _xcb->xcb_randr_get_screen_info_sizes(screenInfoReply);
-		auto len = _xcb->xcb_randr_get_screen_info_sizes_length(screenInfoReply);
-		while (len > 0) {
-			std::cout << sizes->width << " " << sizes->height << " " << sizes->mwidth << " "
-					  << sizes->mheight << "\n";
-			++sizes;
-			--len;
-		}
-	}*/
-
 	Vector<OutputCookie> outputCookies;
 	Vector<Pair<xcb_randr_get_crtc_info_cookie_t, XrandrCrtcInfo *>> crtcCookies;
 	Vector<Pair<xcb_randr_get_panning_cookie_t, XrandrCrtcInfo *>> panningCookies;
+	Vector<Pair<xcb_randr_get_crtc_transform_cookie_t, XrandrCrtcInfo *>> transformCookies;
 
-	for (auto &oit : existedOutputs) {
+	for (auto &oit : cfg->outputs) {
 		auto infoCookie = _xcb->xcb_randr_get_output_info(_connection->getConnection(),
 				oit.second.output, ret->serial);
 		auto listCookie = _xcb->xcb_randr_list_output_properties(_connection->getConnection(),
@@ -473,15 +546,18 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		outputCookies.emplace_back(OutputCookie{infoCookie, listCookie, &oit.second});
 	}
 
-	for (auto &cit : existedCrtcs) {
-		auto cookie = _xcb->xcb_randr_get_crtc_info(_connection->getConnection(), cit.second.crtc,
-				ret->serial);
-		crtcCookies.emplace_back(cookie, &cit.second);
-	}
+	for (auto &cit : cfg->crtcs) {
+		auto infoCookie = _xcb->xcb_randr_get_crtc_info(_connection->getConnection(),
+				cit.second.crtc, ret->serial);
+		crtcCookies.emplace_back(infoCookie, &cit.second);
 
-	for (auto &cit : existedCrtcs) {
-		auto cookie = _xcb->xcb_randr_get_panning(_connection->getConnection(), cit.second.crtc);
-		panningCookies.emplace_back(cookie, &cit.second);
+		auto panningCookie =
+				_xcb->xcb_randr_get_panning(_connection->getConnection(), cit.second.crtc);
+		panningCookies.emplace_back(panningCookie, &cit.second);
+
+		auto transformCookie =
+				_xcb->xcb_randr_get_crtc_transform(_connection->getConnection(), cit.second.crtc);
+		transformCookies.emplace_back(transformCookie, &cit.second);
 	}
 
 	auto outputPrimaryCookie =
@@ -492,19 +568,20 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	for (auto &it : outputCookies) { parseOutputInfo(it); }
 	for (auto &it : crtcCookies) { parseCrtcInfo(it.first, it.second); }
 	for (auto &it : panningCookies) { parsePanning(it.first, it.second); }
+	for (auto &it : transformCookies) { parseTransform(it.first, it.second); }
 
 	auto outputPrimaryReply =
 			_connection->perform(_xcb->xcb_randr_get_output_primary_reply, outputPrimaryCookie);
 	if (outputPrimaryReply) {
-		auto it = existedOutputs.find(outputPrimaryReply->output);
-		if (it != existedOutputs.end()) {
+		auto it = cfg->outputs.find(outputPrimaryReply->output);
+		if (it != cfg->outputs.end()) {
 			it->second.primary = true;
 		}
 	}
 
 	Vector<Pair<xcb_get_atom_name_cookie_t, String *>> atomCookies;
 
-	for (auto &it : existedOutputs) {
+	for (auto &it : cfg->outputs) {
 		for (auto &pIt : it.second.properties) {
 			atomCookies.emplace_back(
 					_xcb->xcb_get_atom_name(_connection->getConnection(), pIt.atom), &pIt.name);
@@ -519,7 +596,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 
 	Vector<Pair<xcb_randr_get_output_property_cookie_t, PhysicalDisplay *>> edidCookies;
 
-	for (auto &oIt : existedOutputs) {
+	for (auto &oIt : cfg->outputs) {
 		if (!oIt.second.modes.empty()) {
 			auto &mon = ret->monitors.emplace_back(PhysicalDisplay{
 				oIt.second.output,
@@ -541,7 +618,7 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	}
 
 	for (auto &it : ret->monitors) {
-		auto oIt = existedOutputs.find(it.xid);
+		auto oIt = cfg->outputs.find(it.xid);
 		for (auto &pIt : oIt->second.properties) {
 			if (pIt.name == "EDID") {
 				edidCookies.emplace_back(
@@ -559,6 +636,8 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	for (auto &it : edidCookies) { parseEdidReply(it.first, it.second); }
 
 	parseMonitorsReply(monitorsCookie);
+
+	ret->native = cfg;
 
 	if (cb) {
 		cb(ret);
@@ -580,18 +659,6 @@ void XcbDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 
 	auto current = extractCurrentConfig(getCurrentConfig());
 
-	auto shouldUpdate = [&](const LogicalDisplay &d) {
-		for (auto &it : d.monitors) {
-			auto vA = current->getMonitor(it);
-			auto vB = config->getMonitor(it);
-
-			if (*vA != *vB) {
-				return true;
-			}
-		}
-		return false;
-	};
-
 	auto size = config->getSize();
 	auto sizeMM = config->getSizeMM();
 
@@ -599,48 +666,41 @@ void XcbDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 
 	Vector<xcb_randr_set_crtc_config_cookie_t> updateCookies;
 
-	/*for (auto &it : config->logical) {
-		if (shouldUpdate(it)) {
-			updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
-					it.xid, XCB_CURRENT_TIME, XCB_CURRENT_TIME, 0, 0, 0, it.transform, 0, nullptr));
-
-			log::debug("XcbDisplayConfigManager", "Disable: ", it.monitors.front().name);
-		}
-	}
-
-	for (auto &it : updateCookies) {
-		auto replyDisable = _connection->perform(_xcb->xcb_randr_set_crtc_config_reply, it);
-		if (!replyDisable) {
-			log::error("XcbDisplayConfigManager", "Fail to disable CRTC for config update");
-		}
-	}
-
-	updateCookies.clear();*/
-
 	_xcb->xcb_randr_set_screen_size(_connection->getConnection(),
 			_connection->getDefaultScreen()->root, size.width, size.height, sizeMM.width,
 			sizeMM.height);
 
-	for (auto &it : config->logical) {
-		if (shouldUpdate(it)) {
-			Vector<uint32_t> outputs;
-			uint32_t modeId = 0;
+	auto native = config->native.get_cast<XrandrConfig>();
 
-			for (auto &mId : it.monitors) {
-				auto mon = config->getMonitor(mId);
-				if (mon) {
-					outputs.emplace_back(mon->xid);
-					modeId = mon->getCurrent().xid;
-				}
+	for (auto &it : config->logical) {
+		Vector<uint32_t> outputs;
+		uint32_t modeId = 0;
+
+		for (auto &mId : it.monitors) {
+			auto mon = config->getMonitor(mId);
+			if (mon) {
+				outputs.emplace_back(mon->xid);
+				modeId = mon->getCurrent().xid;
 			}
+		}
+
+		auto crtcIt = native->crtcs.find(it.xid);
+		if (crtcIt != native->crtcs.end()) {
+			auto &crtc = crtcIt->second;
 
 			updateCookies.emplace_back(_xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
 					it.xid, XCB_CURRENT_TIME, XCB_CURRENT_TIME, it.rect.x, it.rect.y, modeId,
 					it.transform, outputs.size(), outputs.data()));
 
-			log::debug("XcbDisplayConfigManager", "Update: ", it.monitors.front().name, " ",
-					it.rect.x, " ", it.rect.y);
+			_xcb->xcb_randr_set_crtc_transform(_connection->getConnection(), it.xid, crtc.transform,
+					crtc.filterName.size(),
+					crtc.filterName.empty() ? nullptr : crtc.filterName.data(),
+					crtc.filterParams.size(),
+					crtc.filterParams.empty() ? nullptr : crtc.filterParams.data());
 		}
+
+		log::debug("XcbDisplayConfigManager", "Update: ", it.monitors.front().name, " ", it.rect.x,
+				" ", it.rect.y);
 	}
 
 	Status status = Status::Ok;

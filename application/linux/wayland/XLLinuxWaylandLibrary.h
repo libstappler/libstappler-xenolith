@@ -25,6 +25,9 @@
 #define XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDLIBRARY_H_
 
 #include "XLContextInfo.h"
+#include "linux/thirdparty/wayland-protocols/kde-output-device-v2.h"
+#include "linux/thirdparty/wayland-protocols/kde-output-order-v1.h"
+#include "linux/thirdparty/wayland-protocols/xdg-decoration.h"
 
 #if LINUX
 
@@ -37,13 +40,6 @@
 #include <libdecor-0/libdecor.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
-
-class WaylandWindow;
-
-struct WaylandShm;
-struct WaylandSeat;
-struct WaylandOutput;
-struct WaylandDecoration;
 
 struct XdgInterface;
 struct ViewporterInterface;
@@ -73,6 +69,10 @@ public:
 	XL_DEFINE_PROTO(wl_subsurface_interface)
 	XL_DEFINE_PROTO(wl_shm_pool_interface)
 	XL_DEFINE_PROTO(wl_buffer_interface)
+	XL_DEFINE_PROTO(wl_data_offer_interface)
+	XL_DEFINE_PROTO(wl_data_source_interface)
+	XL_DEFINE_PROTO(wl_data_device_interface)
+	XL_DEFINE_PROTO(wl_data_device_manager_interface)
 
 	XL_DEFINE_PROTO(wl_display_connect)
 	XL_DEFINE_PROTO(wl_display_get_fd)
@@ -101,9 +101,21 @@ public:
 	XL_DEFINE_PROTO(xdg_surface_interface)
 	XL_DEFINE_PROTO(xdg_toplevel_interface)
 	XL_DEFINE_PROTO(xdg_popup_interface)
+	XL_DEFINE_PROTO(zxdg_decoration_manager_v1_interface)
+	XL_DEFINE_PROTO(zxdg_toplevel_decoration_v1_interface)
+	XL_DEFINE_PROTO(wp_cursor_shape_manager_v1_interface)
+	XL_DEFINE_PROTO(wp_cursor_shape_device_v1_interface)
+	XL_DEFINE_PROTO(kde_output_device_v2_interface)
+	XL_DEFINE_PROTO(kde_output_device_mode_v2_interface)
+	XL_DEFINE_PROTO(kde_output_order_v1_interface)
+	XL_DEFINE_PROTO(kde_output_management_v2_interface)
+	XL_DEFINE_PROTO(kde_output_configuration_v2_interface)
 
 	ViewporterInterface *viewporter = nullptr;
 	XdgInterface *xdg = nullptr;
+	XdgDecorationInterface *xdgDecoration = nullptr;
+	KdeOutputDeviceInterface *kdeOutputDevice = nullptr;
+	CursorShapeInterface *cursorShape = nullptr;
 
 	bool ownsProxy(wl_proxy *);
 	bool ownsProxy(wl_output *);
@@ -437,6 +449,167 @@ public:
 	void wl_touch_release(struct wl_touch *wl_touch) {
 		wl_proxy_marshal_flags((struct wl_proxy *)wl_touch, WL_TOUCH_RELEASE, NULL,
 				wl_proxy_get_version((struct wl_proxy *)wl_touch), WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void wl_data_device_manager_set_user_data(struct wl_data_device_manager *wl_data_device_manager,
+			void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wl_data_device_manager, user_data);
+	}
+
+	void *wl_data_device_manager_get_user_data(
+			struct wl_data_device_manager *wl_data_device_manager) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wl_data_device_manager);
+	}
+
+	uint32_t wl_data_device_manager_get_version(
+			struct wl_data_device_manager *wl_data_device_manager) {
+		return wl_proxy_get_version((struct wl_proxy *)wl_data_device_manager);
+	}
+
+	void wl_data_device_manager_destroy(struct wl_data_device_manager *wl_data_device_manager) {
+		wl_proxy_destroy((struct wl_proxy *)wl_data_device_manager);
+	}
+
+	struct wl_data_source *wl_data_device_manager_create_data_source(
+			struct wl_data_device_manager *wl_data_device_manager) {
+		struct wl_proxy *id;
+
+		id = wl_proxy_marshal_flags((struct wl_proxy *)wl_data_device_manager,
+				WL_DATA_DEVICE_MANAGER_CREATE_DATA_SOURCE, wl_data_source_interface,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_device_manager), 0, NULL);
+
+		return (struct wl_data_source *)id;
+	}
+
+	struct wl_data_device *wl_data_device_manager_get_data_device(
+			struct wl_data_device_manager *wl_data_device_manager, struct wl_seat *seat) {
+		struct wl_proxy *id;
+
+		id = wl_proxy_marshal_flags((struct wl_proxy *)wl_data_device_manager,
+				WL_DATA_DEVICE_MANAGER_GET_DATA_DEVICE, wl_data_device_interface,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_device_manager), 0, NULL, seat);
+
+		return (struct wl_data_device *)id;
+	}
+
+	int wl_data_source_add_listener(struct wl_data_source *wl_data_source,
+			const struct wl_data_source_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)wl_data_source, (void (**)(void))listener,
+				data);
+	}
+
+	void wl_data_source_set_user_data(struct wl_data_source *wl_data_source, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wl_data_source, user_data);
+	}
+
+	void *wl_data_source_get_user_data(struct wl_data_source *wl_data_source) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wl_data_source);
+	}
+
+	uint32_t wl_data_source_get_version(struct wl_data_source *wl_data_source) {
+		return wl_proxy_get_version((struct wl_proxy *)wl_data_source);
+	}
+
+	void wl_data_source_offer(struct wl_data_source *wl_data_source, const char *mime_type) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_source, WL_DATA_SOURCE_OFFER, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_source), 0, mime_type);
+	}
+
+	void wl_data_source_destroy(struct wl_data_source *wl_data_source) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_source, WL_DATA_SOURCE_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_source), WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void wl_data_source_set_actions(struct wl_data_source *wl_data_source, uint32_t dnd_actions) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_source, WL_DATA_SOURCE_SET_ACTIONS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_source), 0, dnd_actions);
+	}
+
+	int wl_data_offer_add_listener(struct wl_data_offer *wl_data_offer,
+			const struct wl_data_offer_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)wl_data_offer, (void (**)(void))listener,
+				data);
+	}
+
+	void wl_data_offer_set_user_data(struct wl_data_offer *wl_data_offer, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wl_data_offer, user_data);
+	}
+
+	void *wl_data_offer_get_user_data(struct wl_data_offer *wl_data_offer) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wl_data_offer);
+	}
+
+	uint32_t wl_data_offer_get_version(struct wl_data_offer *wl_data_offer) {
+		return wl_proxy_get_version((struct wl_proxy *)wl_data_offer);
+	}
+
+	void wl_data_offer_accept(struct wl_data_offer *wl_data_offer, uint32_t serial,
+			const char *mime_type) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_offer, WL_DATA_OFFER_ACCEPT, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_offer), 0, serial, mime_type);
+	}
+	void wl_data_offer_receive(struct wl_data_offer *wl_data_offer, const char *mime_type,
+			int32_t fd) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_offer, WL_DATA_OFFER_RECEIVE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_offer), 0, mime_type, fd);
+	}
+
+	void wl_data_offer_destroy(struct wl_data_offer *wl_data_offer) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_offer, WL_DATA_OFFER_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_offer), WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void wl_data_offer_finish(struct wl_data_offer *wl_data_offer) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_offer, WL_DATA_OFFER_FINISH, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_offer), 0);
+	}
+
+	void wl_data_offer_set_actions(struct wl_data_offer *wl_data_offer, uint32_t dnd_actions,
+			uint32_t preferred_action) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_offer, WL_DATA_OFFER_SET_ACTIONS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_offer), 0, dnd_actions,
+				preferred_action);
+	}
+
+	int wl_data_device_add_listener(struct wl_data_device *wl_data_device,
+			const struct wl_data_device_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)wl_data_device, (void (**)(void))listener,
+				data);
+	}
+
+	void wl_data_device_set_user_data(struct wl_data_device *wl_data_device, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wl_data_device, user_data);
+	}
+
+	void *wl_data_device_get_user_data(struct wl_data_device *wl_data_device) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wl_data_device);
+	}
+
+	uint32_t wl_data_device_get_version(struct wl_data_device *wl_data_device) {
+		return wl_proxy_get_version((struct wl_proxy *)wl_data_device);
+	}
+
+	void wl_data_device_destroy(struct wl_data_device *wl_data_device) {
+		wl_proxy_destroy((struct wl_proxy *)wl_data_device);
+	}
+
+	void wl_data_device_start_drag(struct wl_data_device *wl_data_device,
+			struct wl_data_source *source, struct wl_surface *origin, struct wl_surface *icon,
+			uint32_t serial) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_device, WL_DATA_DEVICE_START_DRAG, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_device), 0, source, origin, icon,
+				serial);
+	}
+
+	void wl_data_device_set_selection(struct wl_data_device *wl_data_device,
+			struct wl_data_source *source, uint32_t serial) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_device, WL_DATA_DEVICE_SET_SELECTION,
+				NULL, wl_proxy_get_version((struct wl_proxy *)wl_data_device), 0, source, serial);
+	}
+
+	void wl_data_device_release(struct wl_data_device *wl_data_device) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wl_data_device, WL_DATA_DEVICE_RELEASE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wl_data_device), WL_MARSHAL_FLAG_DESTROY);
 	}
 
 	struct wp_viewport *wp_viewporter_get_viewport(struct wp_viewporter *wp_viewporter,
@@ -774,6 +947,546 @@ public:
 				wl_proxy_get_version((struct wl_proxy *)xdg_popup), 0, positioner, token);
 	}
 
+	void zxdg_decoration_manager_v1_set_user_data(
+			struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)zxdg_decoration_manager_v1, user_data);
+	}
+
+	void *zxdg_decoration_manager_v1_get_user_data(
+			struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1) {
+		return wl_proxy_get_user_data((struct wl_proxy *)zxdg_decoration_manager_v1);
+	}
+	uint32_t zxdg_decoration_manager_v1_get_version(
+			struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1) {
+		return wl_proxy_get_version((struct wl_proxy *)zxdg_decoration_manager_v1);
+	}
+
+	void zxdg_decoration_manager_v1_destroy(
+			struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)zxdg_decoration_manager_v1,
+				ZXDG_DECORATION_MANAGER_V1_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)zxdg_decoration_manager_v1),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	struct zxdg_toplevel_decoration_v1 *zxdg_decoration_manager_v1_get_toplevel_decoration(
+			struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1,
+			struct xdg_toplevel *toplevel) {
+		struct wl_proxy *id;
+
+		id = wl_proxy_marshal_flags((struct wl_proxy *)zxdg_decoration_manager_v1,
+				ZXDG_DECORATION_MANAGER_V1_GET_TOPLEVEL_DECORATION,
+				zxdg_toplevel_decoration_v1_interface,
+				wl_proxy_get_version((struct wl_proxy *)zxdg_decoration_manager_v1), 0, NULL,
+				toplevel);
+
+		return (struct zxdg_toplevel_decoration_v1 *)id;
+	}
+
+	int zxdg_toplevel_decoration_v1_add_listener(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1,
+			const struct zxdg_toplevel_decoration_v1_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)zxdg_toplevel_decoration_v1,
+				(void (**)(void))listener, data);
+	}
+
+	void zxdg_toplevel_decoration_v1_set_user_data(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)zxdg_toplevel_decoration_v1, user_data);
+	}
+
+	void *zxdg_toplevel_decoration_v1_get_user_data(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1) {
+		return wl_proxy_get_user_data((struct wl_proxy *)zxdg_toplevel_decoration_v1);
+	}
+
+	uint32_t zxdg_toplevel_decoration_v1_get_version(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1) {
+		return wl_proxy_get_version((struct wl_proxy *)zxdg_toplevel_decoration_v1);
+	}
+
+	void zxdg_toplevel_decoration_v1_destroy(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)zxdg_toplevel_decoration_v1,
+				ZXDG_TOPLEVEL_DECORATION_V1_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)zxdg_toplevel_decoration_v1),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void zxdg_toplevel_decoration_v1_set_mode(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1, uint32_t mode) {
+		wl_proxy_marshal_flags((struct wl_proxy *)zxdg_toplevel_decoration_v1,
+				ZXDG_TOPLEVEL_DECORATION_V1_SET_MODE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)zxdg_toplevel_decoration_v1), 0, mode);
+	}
+
+	void zxdg_toplevel_decoration_v1_unset_mode(
+			struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)zxdg_toplevel_decoration_v1,
+				ZXDG_TOPLEVEL_DECORATION_V1_UNSET_MODE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)zxdg_toplevel_decoration_v1), 0);
+	}
+
+	int kde_output_device_v2_add_listener(struct kde_output_device_v2 *kde_output_device_v2,
+			const struct kde_output_device_v2_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)kde_output_device_v2,
+				(void (**)(void))listener, data);
+	}
+
+	void kde_output_device_v2_set_user_data(struct kde_output_device_v2 *kde_output_device_v2,
+			void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)kde_output_device_v2, user_data);
+	}
+
+	void *kde_output_device_v2_get_user_data(struct kde_output_device_v2 *kde_output_device_v2) {
+		return wl_proxy_get_user_data((struct wl_proxy *)kde_output_device_v2);
+	}
+
+	uint32_t kde_output_device_v2_get_version(struct kde_output_device_v2 *kde_output_device_v2) {
+		return wl_proxy_get_version((struct wl_proxy *)kde_output_device_v2);
+	}
+
+	void kde_output_device_v2_destroy(struct kde_output_device_v2 *kde_output_device_v2) {
+		wl_proxy_destroy((struct wl_proxy *)kde_output_device_v2);
+	}
+
+	int kde_output_device_mode_v2_add_listener(
+			struct kde_output_device_mode_v2 *kde_output_device_mode_v2,
+			const struct kde_output_device_mode_v2_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)kde_output_device_mode_v2,
+				(void (**)(void))listener, data);
+	}
+
+	void kde_output_device_mode_v2_set_user_data(
+			struct kde_output_device_mode_v2 *kde_output_device_mode_v2, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)kde_output_device_mode_v2, user_data);
+	}
+
+	void *kde_output_device_mode_v2_get_user_data(
+			struct kde_output_device_mode_v2 *kde_output_device_mode_v2) {
+		return wl_proxy_get_user_data((struct wl_proxy *)kde_output_device_mode_v2);
+	}
+
+	uint32_t kde_output_device_mode_v2_get_version(
+			struct kde_output_device_mode_v2 *kde_output_device_mode_v2) {
+		return wl_proxy_get_version((struct wl_proxy *)kde_output_device_mode_v2);
+	}
+
+	void kde_output_device_mode_v2_destroy(
+			struct kde_output_device_mode_v2 *kde_output_device_mode_v2) {
+		wl_proxy_destroy((struct wl_proxy *)kde_output_device_mode_v2);
+	}
+
+	int kde_output_order_v1_add_listener(struct kde_output_order_v1 *kde_output_order_v1,
+			const struct kde_output_order_v1_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)kde_output_order_v1,
+				(void (**)(void))listener, data);
+	}
+
+	void kde_output_order_v1_set_user_data(struct kde_output_order_v1 *kde_output_order_v1,
+			void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)kde_output_order_v1, user_data);
+	}
+
+	void *kde_output_order_v1_get_user_data(struct kde_output_order_v1 *kde_output_order_v1) {
+		return wl_proxy_get_user_data((struct wl_proxy *)kde_output_order_v1);
+	}
+
+	uint32_t kde_output_order_v1_get_version(struct kde_output_order_v1 *kde_output_order_v1) {
+		return wl_proxy_get_version((struct wl_proxy *)kde_output_order_v1);
+	}
+
+	void kde_output_order_v1_destroy(struct kde_output_order_v1 *kde_output_order_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_order_v1, KDE_OUTPUT_ORDER_V1_DESTROY,
+				NULL, wl_proxy_get_version((struct wl_proxy *)kde_output_order_v1),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void kde_output_management_v2_set_user_data(
+			struct kde_output_management_v2 *kde_output_management_v2, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)kde_output_management_v2, user_data);
+	}
+
+	void *kde_output_management_v2_get_user_data(
+			struct kde_output_management_v2 *kde_output_management_v2) {
+		return wl_proxy_get_user_data((struct wl_proxy *)kde_output_management_v2);
+	}
+
+	uint32_t kde_output_management_v2_get_version(
+			struct kde_output_management_v2 *kde_output_management_v2) {
+		return wl_proxy_get_version((struct wl_proxy *)kde_output_management_v2);
+	}
+
+	void kde_output_management_v2_destroy(
+			struct kde_output_management_v2 *kde_output_management_v2) {
+		wl_proxy_destroy((struct wl_proxy *)kde_output_management_v2);
+	}
+
+	struct kde_output_configuration_v2 *kde_output_management_v2_create_configuration(
+			struct kde_output_management_v2 *kde_output_management_v2) {
+		struct wl_proxy *id;
+
+		id = wl_proxy_marshal_flags((struct wl_proxy *)kde_output_management_v2,
+				KDE_OUTPUT_MANAGEMENT_V2_CREATE_CONFIGURATION,
+				kde_output_configuration_v2_interface,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_management_v2), 0, NULL);
+
+		return (struct kde_output_configuration_v2 *)id;
+	}
+
+	int kde_output_configuration_v2_add_listener(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			const struct kde_output_configuration_v2_listener *listener, void *data) {
+		return wl_proxy_add_listener((struct wl_proxy *)kde_output_configuration_v2,
+				(void (**)(void))listener, data);
+	}
+
+	void kde_output_configuration_v2_set_user_data(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)kde_output_configuration_v2, user_data);
+	}
+
+	void *kde_output_configuration_v2_get_user_data(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2) {
+		return wl_proxy_get_user_data((struct wl_proxy *)kde_output_configuration_v2);
+	}
+
+	uint32_t kde_output_configuration_v2_get_version(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2) {
+		return wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2);
+	}
+
+	void kde_output_configuration_v2_enable(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, int32_t enable) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_ENABLE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, enable);
+	}
+
+	void kde_output_configuration_v2_mode(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, struct kde_output_device_mode_v2 *mode) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_MODE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, mode);
+	}
+
+	void kde_output_configuration_v2_transform(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, int32_t transform) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_TRANSFORM, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, transform);
+	}
+
+	void kde_output_configuration_v2_position(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, int32_t x, int32_t y) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_POSITION, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, x, y);
+	}
+
+	void kde_output_configuration_v2_scale(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, wl_fixed_t scale) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SCALE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, scale);
+	}
+
+	void kde_output_configuration_v2_apply(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_APPLY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0);
+	}
+
+	void kde_output_configuration_v2_destroy(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void kde_output_configuration_v2_overscan(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t overscan) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_OVERSCAN, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, overscan);
+	}
+
+	void kde_output_configuration_v2_set_vrr_policy(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t policy) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_VRR_POLICY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, policy);
+	}
+
+	void kde_output_configuration_v2_set_rgb_range(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t rgb_range) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_RGB_RANGE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, rgb_range);
+	}
+
+	void kde_output_configuration_v2_set_primary_output(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *output) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_PRIMARY_OUTPUT, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0, output);
+	}
+
+	void kde_output_configuration_v2_set_priority(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t priority) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_PRIORITY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, priority);
+	}
+
+	void kde_output_configuration_v2_set_high_dynamic_range(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t enable_hdr) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_HIGH_DYNAMIC_RANGE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, enable_hdr);
+	}
+
+	void kde_output_configuration_v2_set_sdr_brightness(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t sdr_brightness) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_SDR_BRIGHTNESS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, sdr_brightness);
+	}
+
+	void kde_output_configuration_v2_set_wide_color_gamut(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t enable_wcg) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_WIDE_COLOR_GAMUT, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, enable_wcg);
+	}
+
+	void kde_output_configuration_v2_set_auto_rotate_policy(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t policy) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_AUTO_ROTATE_POLICY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, policy);
+	}
+
+	void kde_output_configuration_v2_set_icc_profile_path(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, const char *profile_path) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_ICC_PROFILE_PATH, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, profile_path);
+	}
+
+	void kde_output_configuration_v2_set_brightness_overrides(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, int32_t max_peak_brightness,
+			int32_t max_frame_average_brightness, int32_t min_brightness) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_BRIGHTNESS_OVERRIDES, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, max_peak_brightness, max_frame_average_brightness, min_brightness);
+	}
+
+	void kde_output_configuration_v2_set_sdr_gamut_wideness(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t gamut_wideness) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_SDR_GAMUT_WIDENESS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, gamut_wideness);
+	}
+
+	void kde_output_configuration_v2_set_color_profile_source(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t color_profile_source) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_COLOR_PROFILE_SOURCE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, color_profile_source);
+	}
+
+	void kde_output_configuration_v2_set_brightness(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t brightness) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_BRIGHTNESS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, brightness);
+	}
+
+	void kde_output_configuration_v2_set_color_power_tradeoff(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t preference) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_COLOR_POWER_TRADEOFF, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, preference);
+	}
+
+	void kde_output_configuration_v2_set_dimming(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t multiplier) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_DIMMING, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, multiplier);
+	}
+
+	void kde_output_configuration_v2_set_replication_source(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, const char *source) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_REPLICATION_SOURCE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, source);
+	}
+
+	void kde_output_configuration_v2_set_ddc_ci_allowed(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t allowed) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_DDC_CI_ALLOWED, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, allowed);
+	}
+
+	void kde_output_configuration_v2_set_max_bits_per_color(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t max_bpc) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_MAX_BITS_PER_COLOR, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, max_bpc);
+	}
+
+	void kde_output_configuration_v2_set_edr_policy(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t policy) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_EDR_POLICY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, policy);
+	}
+
+	void kde_output_configuration_v2_set_sharpness(
+			struct kde_output_configuration_v2 *kde_output_configuration_v2,
+			struct kde_output_device_v2 *outputdevice, uint32_t sharpness) {
+		wl_proxy_marshal_flags((struct wl_proxy *)kde_output_configuration_v2,
+				KDE_OUTPUT_CONFIGURATION_V2_SET_SHARPNESS, NULL,
+				wl_proxy_get_version((struct wl_proxy *)kde_output_configuration_v2), 0,
+				outputdevice, sharpness);
+	}
+
+	void wp_cursor_shape_manager_v1_set_user_data(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wp_cursor_shape_manager_v1, user_data);
+	}
+
+	void *wp_cursor_shape_manager_v1_get_user_data(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wp_cursor_shape_manager_v1);
+	}
+
+	uint32_t wp_cursor_shape_manager_v1_get_version(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1) {
+		return wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_manager_v1);
+	}
+
+	void wp_cursor_shape_manager_v1_destroy(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wp_cursor_shape_manager_v1,
+				WP_CURSOR_SHAPE_MANAGER_V1_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_manager_v1),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	struct wp_cursor_shape_device_v1 *wp_cursor_shape_manager_v1_get_pointer(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1,
+			struct wl_pointer *pointer) {
+		struct wl_proxy *cursor_shape_device;
+
+		cursor_shape_device = wl_proxy_marshal_flags((struct wl_proxy *)wp_cursor_shape_manager_v1,
+				WP_CURSOR_SHAPE_MANAGER_V1_GET_POINTER, wp_cursor_shape_device_v1_interface,
+				wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_manager_v1), 0, NULL,
+				pointer);
+
+		return (struct wp_cursor_shape_device_v1 *)cursor_shape_device;
+	}
+
+	struct wp_cursor_shape_device_v1 *wp_cursor_shape_manager_v1_get_tablet_tool_v2(
+			struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1,
+			struct zwp_tablet_tool_v2 *tablet_tool) {
+		struct wl_proxy *cursor_shape_device;
+
+		cursor_shape_device = wl_proxy_marshal_flags((struct wl_proxy *)wp_cursor_shape_manager_v1,
+				WP_CURSOR_SHAPE_MANAGER_V1_GET_TABLET_TOOL_V2, wp_cursor_shape_device_v1_interface,
+				wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_manager_v1), 0, NULL,
+				tablet_tool);
+
+		return (struct wp_cursor_shape_device_v1 *)cursor_shape_device;
+	}
+
+	void wp_cursor_shape_device_v1_set_user_data(
+			struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1, void *user_data) {
+		wl_proxy_set_user_data((struct wl_proxy *)wp_cursor_shape_device_v1, user_data);
+	}
+
+	void *wp_cursor_shape_device_v1_get_user_data(
+			struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1) {
+		return wl_proxy_get_user_data((struct wl_proxy *)wp_cursor_shape_device_v1);
+	}
+
+	uint32_t wp_cursor_shape_device_v1_get_version(
+			struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1) {
+		return wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_device_v1);
+	}
+
+	void wp_cursor_shape_device_v1_destroy(
+			struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wp_cursor_shape_device_v1,
+				WP_CURSOR_SHAPE_DEVICE_V1_DESTROY, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_device_v1),
+				WL_MARSHAL_FLAG_DESTROY);
+	}
+
+	void wp_cursor_shape_device_v1_set_shape(
+			struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1, uint32_t serial,
+			uint32_t shape) {
+		wl_proxy_marshal_flags((struct wl_proxy *)wp_cursor_shape_device_v1,
+				WP_CURSOR_SHAPE_DEVICE_V1_SET_SHAPE, NULL,
+				wl_proxy_get_version((struct wl_proxy *)wp_cursor_shape_device_v1), 0, serial,
+				shape);
+	}
+
+
 	decltype(&_xl_null_fn) _wlcursor_first_fn = &_xl_null_fn;
 
 	XL_DEFINE_PROTO(wl_cursor_theme_load)
@@ -842,29 +1555,6 @@ protected:
 	Dso _cursor;
 	Dso _decor;
 };
-
-/*enum class WaylandCursorImage {
-	LeftPtr,
-	EResize,
-	NEResize,
-	NResize,
-	NWResize,
-	SEResize,
-	SResize,
-	SWResize,
-	WResize,
-
-	RightSide = EResize,
-	TopRigntCorner = NEResize,
-	TopSide = NResize,
-	TopLeftCorner = NWResize,
-	BottomRightCorner = SEResize,
-	BottomSide = SResize,
-	BottomLeftCorner = SWResize,
-	LeftSide = WResize,
-
-	Max
-};*/
 
 } // namespace stappler::xenolith::platform
 

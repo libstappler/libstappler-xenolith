@@ -179,8 +179,8 @@ public:
 
 	virtual SwapchainConfig handleAppWindowSurfaceUpdate(NotNull<AppWindow>, const SurfaceInfo &,
 			bool fastMode);
-	virtual void handleAppWindowCreated(NotNull<AppWindow>, NotNull<Director>);
-	virtual void handleAppWindowDestroyed(NotNull<AppWindow>);
+	virtual void handleAppWindowCreated(NotNull<AppThread>, NotNull<AppWindow>, NotNull<Director>);
+	virtual void handleAppWindowDestroyed(NotNull<AppThread>, NotNull<AppWindow>);
 
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);

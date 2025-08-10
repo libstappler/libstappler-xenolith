@@ -23,13 +23,24 @@
 #ifndef XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDDISPLAY_H_
 #define XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDDISPLAY_H_
 
-#include "SPGeometry.h"
 #include "XLContextInfo.h"
-#include "XLLinuxWaylandLibrary.h"
 
 #if LINUX
 
+#include "XLLinuxWaylandSeat.h"
+#include "platform/XLContextController.h"
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+class WaylandWindow;
+
+struct WaylandDataDeviceManager;
+struct WaylandShm;
+struct WaylandOutput;
+struct WaylandDecoration;
+
+class DisplayConfigManager;
+class WaylandKdeDisplayConfigManager;
 
 enum class WaylandUpdateState {
 	None,
@@ -41,6 +52,9 @@ struct SP_PUBLIC WaylandDisplay : Ref {
 	virtual ~WaylandDisplay();
 
 	bool init(NotNull<WaylandLibrary>, NotNull<XkbLibrary>, StringView = StringView());
+
+	Rc<DisplayConfigManager> makeDisplayConfigManager(
+			Function<void(NotNull<DisplayConfigManager>)> &&);
 
 	wl_surface *createSurface(WaylandWindow *);
 	void destroySurface(WaylandWindow *);
@@ -60,37 +74,30 @@ struct SP_PUBLIC WaylandDisplay : Ref {
 
 	void notifyScreenChange();
 
+	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status writeToClipboard(Rc<ClipboardData> &&);
+
 	Rc<WaylandLibrary> wayland;
 	wl_display *display = nullptr;
 
 	Rc<WaylandShm> shm;
 	Rc<WaylandSeat> seat;
 	Rc<XkbLibrary> xkb;
+	Rc<WaylandDataDeviceManager> dataDeviceManager;
+	Rc<WaylandKdeDisplayConfigManager> kdeDisplayConfigManager;
 	Vector<Rc<WaylandOutput>> outputs;
 	wl_compositor *compositor = nullptr;
 	wl_subcompositor *subcompositor = nullptr;
 	wp_viewporter *viewporter = nullptr;
 	xdg_wm_base *xdgWmBase = nullptr;
+	wp_cursor_shape_manager_v1 *cursorManager = nullptr;
+	zxdg_decoration_manager_v1 *decorationManager = nullptr;
+	libdecor *decor = nullptr;
 	Set<wl_surface *> surfaces;
 	Set<wl_surface *> decorations;
 	Set<WaylandWindow *> windows;
 
 	bool seatDirty = false;
-};
-
-struct SP_PUBLIC WaylandCursorTheme : public Ref {
-	~WaylandCursorTheme();
-
-	bool init(WaylandDisplay *, StringView name, int size);
-
-	void setCursor(WaylandSeat *);
-	void setCursor(wl_pointer *, wl_surface *, uint32_t serial, WindowLayerFlags img, int scale);
-
-	Rc<WaylandLibrary> wayland;
-	wl_cursor_theme *cursorTheme = nullptr;
-	int cursorSize = 24;
-	String cursorName;
-	Vector<wl_cursor *> cursors;
 };
 
 struct SP_PUBLIC WaylandShm : Ref {
@@ -153,49 +160,6 @@ struct SP_PUBLIC WaylandOutput : Ref {
 	WaylandUpdateState state = WaylandUpdateState::None;
 };
 
-struct SP_PUBLIC WaylandSeat : Ref {
-	virtual ~WaylandSeat();
-
-	bool init(NotNull<WaylandLibrary>, NotNull<WaylandDisplay>, wl_registry *, uint32_t name,
-			uint32_t version);
-	void setCursors(StringView theme, int size);
-	void tryUpdateCursor();
-
-	void update();
-
-	void clearWindow(WaylandWindow *);
-
-	core::InputKeyCode translateKey(uint32_t scancode) const;
-	xkb_keysym_t composeSymbol(xkb_keysym_t sym, core::InputKeyComposeState &compose) const;
-
-	Rc<WaylandLibrary> wayland;
-	WaylandDisplay *root;
-	uint32_t id;
-	bool hasPointerFrames = false;
-	wl_seat *seat;
-	String name;
-	uint32_t capabilities;
-	wl_pointer *pointer;
-	wl_keyboard *keyboard;
-	wl_touch *touch;
-	float pointerScale = 1.0f;
-	wl_surface *pointerFocus = nullptr;
-	uint32_t serial = 0;
-	wl_surface *cursorSurface = nullptr;
-	xkb_state *state = nullptr;
-	xkb_compose_state *compose = nullptr;
-	KeyState keyState;
-	uint32_t doubleClickInterval = 500'000;
-
-	Rc<WaylandCursorTheme> cursorTheme;
-	WindowLayerFlags cursorImage = WindowLayerFlags::CursorArrow;
-
-	Set<WaylandDecoration *> pointerDecorations;
-	Set<WaylandOutput *> pointerOutputs;
-	Set<WaylandWindow *> pointerViews;
-	Set<WaylandWindow *> keyboardViews;
-};
-
 struct SP_PUBLIC WaylandDecoration : Ref {
 	virtual ~WaylandDecoration();
 
@@ -219,12 +183,15 @@ struct SP_PUBLIC WaylandDecoration : Ref {
 
 	bool isTouchable() const;
 
+	void setLightTheme();
+	void setDarkTheme();
+
 	WaylandLibrary *wayland = nullptr;
 	WaylandDisplay *display = nullptr;
 
 	WaylandWindow *root = nullptr;
 	WaylandDecorationName name = WaylandDecorationName::HeaderCenter;
-	WindowLayerFlags image = WindowLayerFlags::CursorArrow;
+	WindowLayerFlags image = WindowLayerFlags::CursorDefault;
 	wl_surface *surface = nullptr;
 	wl_subsurface *subsurface = nullptr;
 	wp_viewport *viewport = nullptr;

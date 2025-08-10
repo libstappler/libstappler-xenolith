@@ -28,10 +28,34 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
+struct NativeId {
+	union {
+		uintptr_t xid = 0; // mode id
+		void *ptr;
+	};
+
+	NativeId(uintptr_t id) : xid(id) { }
+	NativeId(void *ptr) : ptr(ptr) { }
+
+	operator uintptr_t() const { return xid; }
+	operator void *() const { return ptr; }
+
+	bool operator==(const NativeId &other) const {
+		return memcmp(&xid, &other.xid, sizeof(uintptr_t)) == 0;
+	}
+	bool operator!=(const NativeId &other) const {
+		return memcmp(&xid, &other.xid, sizeof(uintptr_t)) != 0;
+	}
+	bool operator==(const uintptr_t &other) const { return xid == other; }
+	bool operator!=(const uintptr_t &other) const { return xid != other; }
+	bool operator==(void *other) const { return ptr == other; }
+	bool operator!=(void *other) const { return ptr != other; }
+};
+
 struct DisplayMode {
 	static DisplayMode None;
 
-	uint32_t xid = 0; // mode id
+	NativeId xid = uintptr_t(0);
 	core::ModeInfo mode;
 	String id;
 	String name;
@@ -47,7 +71,7 @@ struct DisplayMode {
 };
 
 struct PhysicalDisplay {
-	uint32_t xid = 0; // output id
+	NativeId xid = uintptr_t(0);
 	uint32_t index = 0;
 	MonitorId id;
 	Extent2 mm;
@@ -61,7 +85,7 @@ struct PhysicalDisplay {
 };
 
 struct LogicalDisplay {
-	uint32_t xid = 0; // crtc id
+	NativeId xid = uintptr_t(0);
 	IRect rect;
 	float scale = 1.0f;
 	uint32_t transform = 0;
@@ -115,6 +139,20 @@ public:
 	DisplayConfig *getCurrentConfig() const { return _currentConfig; }
 
 protected:
+	// Как применяется изменение размера для конфигурации
+	// См. реализацию `adjustDisplay`
+	enum ScalingMode {
+		// При пост-скейлинге конфигурация расчитывается для целочисленных параметров
+		// размерности, то есть, параметры режима умножаются на (std::ceil(scale) / scale).
+		// Такие конфигураторы сперва увеличивают изображение на целое значение (2, 3, ... раза)
+		// и снижают разрешение после отрисовки (Wayland)
+		PostScaling,
+
+		// При прямом скейлинге значение scale используется для опредления нового размера непосредственно
+		// Такие конфигураторы сразу рисуют буферы с нужным размером, либо получают уже увеличенные буферы (XRandR)
+		DirectScaling,
+	};
+
 	// extract only current modes
 	Rc<DisplayConfig> extractCurrentConfig(NotNull<DisplayConfig>) const;
 	void adjustDisplay(NotNull<DisplayConfig>) const;
@@ -128,6 +166,7 @@ protected:
 	Vector<Function<void()>> _waitForConfigNotification;
 	Rc<DisplayConfig> _currentConfig;
 	Rc<DisplayConfig> _savedConfig;
+	ScalingMode _scalingMode = PostScaling;
 };
 
 } // namespace stappler::xenolith::platform

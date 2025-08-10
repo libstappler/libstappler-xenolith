@@ -59,6 +59,8 @@ protected:
 	void runPasses(FrameHandle &frame);
 	void runPipelines(FrameHandle &frame);
 
+	void runLayoutCallback();
+
 	struct SamplersCompilationData : public Ref {
 		std::atomic<uint32_t> samplersInProcess = 0;
 		core::TextureSetLayoutData *layout = nullptr;
@@ -68,6 +70,10 @@ protected:
 	};
 
 	Device *_device = nullptr;
+
+	bool _resourceCompiled = false;
+	bool _layoutsCompiled = false;
+	Function<void(bool)> _layoutCallback;
 	std::atomic<size_t> _layoutsInQueue = 0;
 	std::atomic<size_t> _programsInQueue = 0;
 	std::atomic<size_t> _pipelinesInQueue = 0;
@@ -177,16 +183,18 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 	}
 
 	q.getFrame()->waitForDependencies(data->waitDependencies,
-			[this, cb = sp::move(cb)](FrameHandle &handle, bool success) {
+			[this, cb = sp::move(cb)](FrameHandle &handle, bool success) mutable {
 		if (!success || !handle.isValidFlag()) {
 			cb(false);
 			return;
 		}
 
+		_layoutCallback = sp::move(cb);
+
 		if (_input->queue->getInternalResource()) {
+			_resourceCompiled = false;
 			handle.performInQueue(
 					[this](FrameHandle &frame) -> bool {
-				runShaders(frame);
 				_resource = Rc<TransferResource>::create(_device->getAllocator(),
 						_input->queue->getInternalResource());
 				if (_resource->initialize()) {
@@ -194,17 +202,17 @@ void RenderQueueAttachmentHandle::submitInput(FrameQueue &q, Rc<core::Attachment
 				}
 				return false;
 			},
-					[cb = sp::move(cb)](FrameHandle &frame, bool success) {
+					[this](FrameHandle &frame, bool success) {
 				// finalize input receiving
-				cb(success);
+				_resourceCompiled = true;
+				runLayoutCallback();
 			}, nullptr,
 					"RenderQueueAttachmentHandle::submitInput _input->queue->getInternalResource");
 		} else {
-			handle.performOnGlThread([this, cb = sp::move(cb)](FrameHandle &frame) {
-				cb(true);
-				runShaders(frame);
-			}, this, true, "RenderQueueAttachmentHandle::submitInput");
+			_resourceCompiled = true;
 		}
+
+		runShaders(handle);
 	});
 }
 
@@ -228,6 +236,8 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 					[this, req = iit, ref, i](FrameHandle &frame) {
 				if (ref->setSampler(i, Rc<Sampler>::create(*_device, req))) {
 					if (_layoutsInQueue.fetch_sub(1) == 1) {
+						_layoutsCompiled = true;
+						runLayoutCallback();
 						runPasses(frame);
 					}
 				}
@@ -275,6 +285,8 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 
 	if (_input->queue->getTextureSetLayouts().size() == 0
 			&& _input->queue->getPasses().size() > 0) {
+		_layoutsCompiled = true;
+		runLayoutCallback();
 		runPasses(frame);
 	}
 
@@ -352,6 +364,15 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 								"RenderQueueAttachmentHandle::runPipelines - compile " "compute " "pipeline: ",
 								_targetQueueName, "::", it->key));
 			}
+		}
+	}
+}
+
+void RenderQueueAttachmentHandle::runLayoutCallback() {
+	if (_layoutsCompiled && _resourceCompiled) {
+		if (_layoutCallback) {
+			_layoutCallback(true);
+			_layoutCallback = nullptr;
 		}
 	}
 }

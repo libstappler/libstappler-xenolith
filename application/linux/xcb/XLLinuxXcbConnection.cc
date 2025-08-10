@@ -34,7 +34,7 @@
 #define XL_X11_DEBUG 0
 
 #if XL_X11_DEBUG
-#define XL_X11_LOG(...) log::debug("XCB", __VA_ARGS__)
+#define XL_X11_LOG(...) log::format(log::Debug, "XCB", __VA_ARGS__)
 #else
 #define XL_X11_LOG(...)
 #endif
@@ -615,7 +615,7 @@ uint32_t XcbConnection::poll() {
 			if (_keys.keysyms) {
 				_xcb->xcb_refresh_keyboard_mapping(_keys.keysyms, ev);
 			}
-			XL_X11_LOG("XCB_MAPPING_NOTIFY: ", (int)ev->request, " ", (int)ev->first_keycode, " ",
+			XL_X11_LOG("XCB_MAPPING_NOTIFY: %d %d %d", (int)ev->request, (int)ev->first_keycode,
 					(int)ev->count);
 			break;
 		}
@@ -653,7 +653,7 @@ uint32_t XcbConnection::poll() {
 				}
 			} else {
 				/* Unknown event type, ignore it */
-				XL_X11_LOG("Unknown event: ", et);
+				XL_X11_LOG("Unknown event: %d", et);
 			}
 			break;
 		}
@@ -1081,7 +1081,7 @@ bool XcbConnection::setCursorId(xcb_window_t window, uint32_t cursorId) {
 	return true;
 }
 
-void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
+Status XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	auto owner = _clipboard.owner;
 	if (!owner) {
 		auto reply = perform(_xcb->xcb_get_selection_owner_reply,
@@ -1094,7 +1094,7 @@ void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	if (!owner) {
 		// there is no clipboard
 		req->dataCallback(BytesView(), StringView());
-		return;
+		return Status::Declined;
 	}
 
 	if (owner == _clipboard.window) {
@@ -1119,9 +1119,10 @@ void XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
 
 		_clipboard.requests.emplace_back(sp::move(req));
 	}
+	return Status::Ok;
 }
 
-void XcbConnection::writeToClipboard(Rc<ClipboardData> &&data) {
+Status XcbConnection::writeToClipboard(Rc<ClipboardData> &&data) {
 	Vector<xcb_atom_t> atoms{
 		getAtom(XcbAtomIndex::TARGETS),
 		getAtom(XcbAtomIndex::TIMESTAMP),
@@ -1152,6 +1153,8 @@ void XcbConnection::writeToClipboard(Rc<ClipboardData> &&data) {
 		_clipboard.typeAtoms.clear();
 	}
 	::free(reply);
+
+	return Status::Ok;
 }
 
 Value XcbConnection::getSettingsValue(StringView key) const {

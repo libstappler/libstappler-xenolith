@@ -86,6 +86,7 @@ public:
 
 	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
 
+	virtual void notifyWindowCreated(NotNull<NativeWindow>);
 	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize);
 	virtual void notifyWindowInputEvents(NotNull<NativeWindow>, Vector<core::InputEventData> &&);
 	virtual void notifyWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
@@ -147,6 +148,8 @@ protected:
 
 	NetworkFlags _networkFlags = NetworkFlags::None;
 	ThemeInfo _themeInfo;
+
+	Set<Rc<NativeWindow>> _activeWindows;
 };
 
 } // namespace stappler::xenolith::platform

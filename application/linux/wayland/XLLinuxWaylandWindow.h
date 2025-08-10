@@ -28,6 +28,7 @@
 #include "XLLinuxWaylandLibrary.h"
 #include "XLLinuxWaylandDisplay.h"
 #include "platform/XLContextNativeWindow.h"
+#include <libdecor-0/libdecor.h>
 
 #if LINUX
 
@@ -38,9 +39,9 @@ class LinuxContextController;
 class SP_PUBLIC WaylandWindow : public NativeWindow {
 public:
 	static constexpr auto DecorWidth = 20;
-	static constexpr auto DecorInset = 16;
+	static constexpr auto DecorInset = 18;
 	static constexpr auto DecorOffset = 6;
-	static constexpr auto IconSize = DecorInset + DecorOffset;
+	static constexpr auto IconSize = DecorInset + DecorOffset - 2;
 
 	struct PointerEvent {
 		enum Event : uint32_t {
@@ -132,6 +133,11 @@ public:
 	void handleToplevelCapabilities(xdg_toplevel *xdg_toplevel, wl_array *capabilities);
 	void handleSurfaceFrameDone(wl_callback *wl_callback, uint32_t callback_data);
 
+	void handleDecorConfigure(libdecor_frame *, libdecor_configuration *configuration);
+	void handleDecorConfigure(zxdg_toplevel_decoration_v1 *decor, uint32_t mode);
+	void handleDecorClose(libdecor_frame *);
+	void handleDecorCommit(libdecor_frame *);
+
 	void handlePointerEnter(wl_fixed_t surface_x, wl_fixed_t surface_y);
 	void handlePointerLeave();
 	void handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y);
@@ -151,6 +157,7 @@ public:
 	void handleKeyRepeat();
 
 	void notifyScreenChange();
+	void motifyThemeChanged(const ThemeInfo &);
 
 	void handleDecorationPress(WaylandDecoration *, uint32_t serial, uint32_t btn,
 			bool released = false);
@@ -161,6 +168,7 @@ public:
 	void dispatchPendingEvents();
 
 	WindowLayerFlags getCursor() const;
+	bool isServerSideCursors() const { return _serverSideCursors; }
 
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
@@ -170,24 +178,32 @@ protected:
 
 	void createDecorations();
 
+	virtual Status setFullscreenState(FullscreenInfo &&) override;
+
+	void emitAppFrame();
+	bool configureDecorations(Extent2 extent);
+
 	Rc<WaylandDisplay> _display;
 	Rc<WaylandLibrary> _wayland;
 
 	wl_surface *_surface = nullptr;
+	libdecor_frame *_clientDecor = nullptr;
+	zxdg_toplevel_decoration_v1 *_serverDecor = nullptr;
+	libdecor_configuration *_decorConfiguration = nullptr;
+
 	wl_callback *_frameCallback = nullptr;
 	xdg_surface *_xdgSurface = nullptr;
 	xdg_toplevel *_toplevel = nullptr;
 	Extent2 _currentExtent;
 	Extent2 _commitedExtent;
+	Extent2 _awaitingExtent;
 
-	bool _continuousRendering = true;
+	bool _started = false;
 	bool _scheduleNext = false;
-	bool _clientSizeDecoration = true;
 	bool _shouldClose = false;
 	bool _surfaceDirty = false;
-	bool _fullscreen = false;
 	bool _pointerInit = false;
-	bool _decorInit = false;
+	bool _serverSideCursors = false;
 
 	Set<WaylandOutput *> _activeOutputs;
 
@@ -197,11 +213,10 @@ protected:
 	Vector<PointerEvent> _pointerEvents;
 
 	std::bitset<size_t(XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE + 1)> _capabilities;
-	std::bitset<size_t(XDG_TOPLEVEL_STATE_CONSTRAINED_BOTTOM + 1)> _state;
 	Vector<Rc<WaylandDecoration>> _decors;
 	Rc<WaylandDecoration> _iconMaximized;
 
-	uint32_t _configureSerial = maxOf<uint32_t>();
+	uint32_t _configureSerial = 0;
 
 	float _density = 0.0f;
 	uint64_t _frameRate = 0;

@@ -53,6 +53,10 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run() { return _resultCode; }
 
+void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
+	_context->handleNativeWindowCreated(w);
+}
+
 void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w, bool liveResize) {
 	_context->handleNativeWindowConstraintsChanged(w, liveResize);
 }
@@ -72,6 +76,7 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w) {
 		notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
 		return false;
 	} else {
+		_activeWindows.erase(w.get());
 		_context->handleNativeWindowDestroyed(w);
 		w->unmapWindow();
 		return true;
@@ -99,7 +104,15 @@ Status ContextController::writeToClipboard(Rc<ClipboardData> &&) {
 	return Status::ErrorNotImplemented;
 }
 
-Rc<ScreenInfo> ContextController::getScreenInfo() const { return Rc<ScreenInfo>::create(); }
+Rc<ScreenInfo> ContextController::getScreenInfo() const {
+	Rc<ScreenInfo> info = Rc<ScreenInfo>::create();
+
+	if (_displayConfigManager) {
+		_displayConfigManager->exportScreenInfo(info);
+	}
+
+	return info;
+}
 
 void ContextController::handleNetworkStateChanged(NetworkFlags flags) {
 	_networkFlags = flags;

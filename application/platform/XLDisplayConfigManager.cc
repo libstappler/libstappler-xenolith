@@ -76,6 +76,13 @@ bool LogicalDisplay::hasMonitor(const MonitorId &id) const {
 }
 
 const PhysicalDisplay *DisplayConfig::getMonitor(const MonitorId &id) const {
+	if (id == MonitorId::Primary) {
+		for (auto &it : logical) {
+			if (it.primary) {
+				return getMonitor(it.monitors.front());
+			}
+		}
+	}
 	for (auto &it : monitors) {
 		if (it.id == id) {
 			return &it;
@@ -328,6 +335,7 @@ void DisplayConfigManager::restoreMode(Function<void(Status)> &&cb, Ref *ref) {
 		if (restored) {
 			targetConfig->logical = _savedConfig->logical;
 			_savedConfig = nullptr;
+			adjustDisplay(targetConfig);
 			applyDisplayConfig(targetConfig, sp::move(cb));
 		} else {
 			_savedConfig = nullptr;
@@ -376,10 +384,18 @@ void DisplayConfigManager::adjustDisplay(NotNull<DisplayConfig> config) const {
 		auto mode = hMon->getCurrent();
 		Extent2 size{mode.mode.width, mode.mode.height};
 
-		size.width =
-				static_cast<uint32_t>(std::round(size.width * std::ceil(mon.scale) / mon.scale));
-		size.height =
-				static_cast<uint32_t>(std::round(size.height * std::ceil(mon.scale) / mon.scale));
+		switch (_scalingMode) {
+		case PostScaling:
+			size.width = static_cast<uint32_t>(
+					std::round(size.width * std::ceil(mon.scale) / mon.scale));
+			size.height = static_cast<uint32_t>(
+					std::round(size.height * std::ceil(mon.scale) / mon.scale));
+			break;
+		case DirectScaling:
+			size.width = static_cast<uint32_t>(std::round(size.width * mon.scale));
+			size.height = static_cast<uint32_t>(std::round(size.height * mon.scale));
+			break;
+		}
 		return size;
 	};
 

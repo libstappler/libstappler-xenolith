@@ -34,6 +34,11 @@
 
 #include "linux/thirdparty/wayland-protocols/xdg-shell.h"
 #include "linux/thirdparty/wayland-protocols/viewporter.h"
+#include "linux/thirdparty/wayland-protocols/xdg-decoration.h"
+#include "linux/thirdparty/wayland-protocols/kde-output-device-v2.h"
+#include "linux/thirdparty/wayland-protocols/kde-output-order-v1.h"
+#include "linux/thirdparty/wayland-protocols/kde-output-management-v2.h"
+#include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -96,6 +101,248 @@ struct XdgInterface {
 			const struct wl_interface *wl_surface_interface);
 };
 
+struct XdgDecorationInterface {
+	const struct wl_interface *xdg_decoration_unstable_v1_types[3];
+
+	const struct wl_message zxdg_decoration_manager_v1_requests[2];
+	const struct wl_message zxdg_toplevel_decoration_v1_requests[3];
+	const struct wl_message zxdg_toplevel_decoration_v1_events[1];
+
+	const struct wl_interface zxdg_decoration_manager_v1_interface;
+	const struct wl_interface zxdg_toplevel_decoration_v1_interface;
+
+	XdgDecorationInterface(const struct wl_interface *xdg_toplevel_interface);
+};
+
+struct CursorShapeInterface {
+	const struct wl_interface *cursor_shape_v1_types[6];
+
+	const struct wl_message wp_cursor_shape_manager_v1_requests[3];
+	const struct wl_message wp_cursor_shape_device_v1_requests[2];
+
+	const struct wl_interface wp_cursor_shape_manager_v1_interface;
+	const struct wl_interface wp_cursor_shape_device_v1_interface;
+
+	CursorShapeInterface(const struct wl_interface *wl_pointer_interface);
+};
+
+struct KdeOutputDeviceInterface {
+	const struct wl_interface *kde_output_device_v2_types[10] = {
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		&kde_output_device_mode_v2_interface,
+		&kde_output_device_mode_v2_interface,
+	};
+
+	const struct wl_interface *kde_output_order_v1_types[1] = {
+		NULL,
+	};
+
+	const struct wl_interface *kde_output_management_v2_types[56] = {
+		NULL,
+		&kde_output_configuration_v2_interface,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		&kde_output_device_mode_v2_interface,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		NULL,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+		&kde_output_device_v2_interface,
+		NULL,
+	};
+
+	const struct wl_message kde_output_device_v2_events[34] = {
+		{"geometry", "iiiiissi", kde_output_device_v2_types + 0},
+		{"current_mode", "o", kde_output_device_v2_types + 8},
+		{"mode", "n", kde_output_device_v2_types + 9},
+		{"done", "", kde_output_device_v2_types + 0},
+		{"scale", "f", kde_output_device_v2_types + 0},
+		{"edid", "s", kde_output_device_v2_types + 0},
+		{"enabled", "i", kde_output_device_v2_types + 0},
+		{"uuid", "s", kde_output_device_v2_types + 0},
+		{"serial_number", "s", kde_output_device_v2_types + 0},
+		{"eisa_id", "s", kde_output_device_v2_types + 0},
+		{"capabilities", "u", kde_output_device_v2_types + 0},
+		{"overscan", "u", kde_output_device_v2_types + 0},
+		{"vrr_policy", "u", kde_output_device_v2_types + 0},
+		{"rgb_range", "u", kde_output_device_v2_types + 0},
+		{"name", "2s", kde_output_device_v2_types + 0},
+		{"high_dynamic_range", "3u", kde_output_device_v2_types + 0},
+		{"sdr_brightness", "3u", kde_output_device_v2_types + 0},
+		{"wide_color_gamut", "3u", kde_output_device_v2_types + 0},
+		{"auto_rotate_policy", "4u", kde_output_device_v2_types + 0},
+		{"icc_profile_path", "5s", kde_output_device_v2_types + 0},
+		{"brightness_metadata", "6uuu", kde_output_device_v2_types + 0},
+		{"brightness_overrides", "6iii", kde_output_device_v2_types + 0},
+		{"sdr_gamut_wideness", "6u", kde_output_device_v2_types + 0},
+		{"color_profile_source", "7u", kde_output_device_v2_types + 0},
+		{"brightness", "8u", kde_output_device_v2_types + 0},
+		{"color_power_tradeoff", "10u", kde_output_device_v2_types + 0},
+		{"dimming", "11u", kde_output_device_v2_types + 0},
+		{"replication_source", "13s", kde_output_device_v2_types + 0},
+		{"ddc_ci_allowed", "14u", kde_output_device_v2_types + 0},
+		{"max_bits_per_color", "15u", kde_output_device_v2_types + 0},
+		{"max_bits_per_color_range", "15uu", kde_output_device_v2_types + 0},
+		{"automatic_max_bits_per_color_limit", "15u", kde_output_device_v2_types + 0},
+		{"edr_policy", "16u", kde_output_device_v2_types + 0},
+		{"sharpness", "17u", kde_output_device_v2_types + 0},
+	};
+
+	const struct wl_message kde_output_device_mode_v2_events[4] = {
+		{"size", "ii", kde_output_device_v2_types + 0},
+		{"refresh", "i", kde_output_device_v2_types + 0},
+		{"preferred", "", kde_output_device_v2_types + 0},
+		{"removed", "", kde_output_device_v2_types + 0},
+	};
+
+	const struct wl_message kde_output_order_v1_requests[1] = {
+		{"destroy", "", kde_output_order_v1_types + 0},
+	};
+
+	const struct wl_message kde_output_order_v1_events[2] = {
+		{"output", "s", kde_output_order_v1_types + 0},
+		{"done", "", kde_output_order_v1_types + 0},
+	};
+
+	const struct wl_message kde_output_management_v2_requests[1] = {
+		{"create_configuration", "n", kde_output_management_v2_types + 1},
+	};
+
+	const struct wl_message kde_output_configuration_v2_requests[28]{
+		{"enable", "oi", kde_output_management_v2_types + 2},
+		{"mode", "oo", kde_output_management_v2_types + 4},
+		{"transform", "oi", kde_output_management_v2_types + 6},
+		{"position", "oii", kde_output_management_v2_types + 8},
+		{"scale", "of", kde_output_management_v2_types + 11},
+		{"apply", "", kde_output_management_v2_types + 0},
+		{"destroy", "", kde_output_management_v2_types + 0},
+		{"overscan", "ou", kde_output_management_v2_types + 13},
+		{"set_vrr_policy", "ou", kde_output_management_v2_types + 15},
+		{"set_rgb_range", "ou", kde_output_management_v2_types + 17},
+		{"set_primary_output", "2o", kde_output_management_v2_types + 19},
+		{"set_priority", "3ou", kde_output_management_v2_types + 20},
+		{"set_high_dynamic_range", "4ou", kde_output_management_v2_types + 22},
+		{"set_sdr_brightness", "4ou", kde_output_management_v2_types + 24},
+		{"set_wide_color_gamut", "4ou", kde_output_management_v2_types + 26},
+		{"set_auto_rotate_policy", "5ou", kde_output_management_v2_types + 28},
+		{"set_icc_profile_path", "6os", kde_output_management_v2_types + 30},
+		{"set_brightness_overrides", "7oiii", kde_output_management_v2_types + 32},
+		{"set_sdr_gamut_wideness", "7ou", kde_output_management_v2_types + 36},
+		{"set_color_profile_source", "8ou", kde_output_management_v2_types + 38},
+		{"set_brightness", "9ou", kde_output_management_v2_types + 40},
+		{"set_color_power_tradeoff", "10ou", kde_output_management_v2_types + 42},
+		{"set_dimming", "11ou", kde_output_management_v2_types + 44},
+		{"set_replication_source", "13os", kde_output_management_v2_types + 46},
+		{"set_ddc_ci_allowed", "14ou", kde_output_management_v2_types + 48},
+		{"set_max_bits_per_color", "15ou", kde_output_management_v2_types + 50},
+		{"set_edr_policy", "16ou", kde_output_management_v2_types + 52},
+		{"set_sharpness", "17ou", kde_output_management_v2_types + 54},
+	};
+
+	const struct wl_message kde_output_configuration_v2_events[3] = {
+		{"applied", "", kde_output_management_v2_types + 0},
+		{"failed", "", kde_output_management_v2_types + 0},
+		{"failure_reason", "12s", kde_output_management_v2_types + 0},
+	};
+
+	const struct wl_interface kde_output_device_v2_interface = {
+		"kde_output_device_v2",
+		17,
+		0,
+		NULL,
+		34,
+		kde_output_device_v2_events,
+	};
+
+	const struct wl_interface kde_output_device_mode_v2_interface = {
+		"kde_output_device_mode_v2",
+		1,
+		0,
+		NULL,
+		4,
+		kde_output_device_mode_v2_events,
+	};
+
+	const struct wl_interface kde_output_order_v1_interface = {
+		"kde_output_order_v1",
+		1,
+		1,
+		kde_output_order_v1_requests,
+		2,
+		kde_output_order_v1_events,
+	};
+
+	const struct wl_interface kde_output_management_v2_interface = {
+		"kde_output_management_v2",
+		17,
+		1,
+		kde_output_management_v2_requests,
+		0,
+		NULL,
+	};
+
+	const struct wl_interface kde_output_configuration_v2_interface{
+		"kde_output_configuration_v2",
+		17,
+		28,
+		kde_output_configuration_v2_requests,
+		3,
+		kde_output_configuration_v2_events,
+	};
+};
+
 struct SP_PUBLIC WaylandBuffer : Ref {
 	virtual ~WaylandBuffer();
 
@@ -131,8 +378,15 @@ struct ShadowBuffers {
 	Rc<WaylandBuffer> headerLeftActive;
 	Rc<WaylandBuffer> headerRight;
 	Rc<WaylandBuffer> headerRightActive;
-	Rc<WaylandBuffer> headerCenter;
-	Rc<WaylandBuffer> headerCenterActive;
+	Rc<WaylandBuffer> headerLightCenter;
+	Rc<WaylandBuffer> headerLightCenterActive;
+
+	Rc<WaylandBuffer> headerDarkLeft;
+	Rc<WaylandBuffer> headerDarkLeftActive;
+	Rc<WaylandBuffer> headerDarkRight;
+	Rc<WaylandBuffer> headerDarkRightActive;
+	Rc<WaylandBuffer> headerDarkCenter;
+	Rc<WaylandBuffer> headerDarkCenterActive;
 
 	Rc<WaylandBuffer> iconClose;
 	Rc<WaylandBuffer> iconMaximize;
@@ -165,8 +419,19 @@ struct KeyState {
 	KeyState();
 };
 
-SP_PUBLIC bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, ShadowBuffers *ret,
-		uint32_t width, uint32_t inset, const Color3B &header, const Color3B &headerActive);
+struct DecorationInfo {
+	ShadowBuffers *ret = nullptr;
+	Color3B headerLight;
+	Color3B headerLightActive;
+	Color3B headerDark;
+	Color3B headerDarkActive;
+	uint32_t width;
+	uint32_t inset;
+};
+
+SP_PUBLIC bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &);
+
+SP_PUBLIC uint32_t getWaylandCursor(WindowLayerFlags);
 
 SP_PUBLIC std::ostream &operator<<(std::ostream &, WaylandDecorationName);
 

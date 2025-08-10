@@ -91,7 +91,8 @@ XcbWindow::XcbWindow() { }
 bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c) {
 
-	WindowCapabilities caps;
+	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations;
+
 	if (conn->hasCapability(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN)) {
 		caps |= WindowCapabilities::Fullscreen;
 	}
@@ -151,21 +152,28 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 
 	if (!_connection->createWindow(_info, _xinfo)) {
 		log::error("XCB", "Fail to create window");
+		return false;
 	}
 
 	_frameRate = getCurrentFrameRate();
 
 	_xcb->xcb_flush(_connection->getConnection());
 
+	_controller->notifyWindowCreated(this);
+
 	return true;
 }
 
 void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
-	XL_X11_LOG("XCB_CONFIGURE_NOTIFY: %d (%d) rect:%d,%d,%d,%d border:%d override:%d\n", ev->event,
-			ev->window, ev->x, ev->y, ev->width, ev->height, uint32_t(ev->border_width),
-			uint32_t(ev->override_redirect));
+	auto mid = IVec2(ev->x + ev->width / 2, ev->y + ev->height / 2);
+	auto mon = _connection->getDisplayConfigManager()->getMonitorForPosition(mid.x, mid.y);
+
+	XL_X11_LOG("XCB_CONFIGURE_NOTIFY: %d (%d) rect:%d,%d,%d,%d border:%d override:%d monitor:%s",
+			ev->event, ev->window, ev->x, ev->y, ev->width, ev->height, uint32_t(ev->border_width),
+			uint32_t(ev->override_redirect), mon.data());
 	_xinfo.rect.x = ev->x;
 	_xinfo.rect.y = ev->y;
+	_xinfo.outputName = mon;
 	_borderWidth = ev->border_width;
 	if (ev->width != _xinfo.rect.width || ev->height != _xinfo.rect.height) {
 		_xinfo.rect.width = ev->width;
@@ -248,6 +256,16 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 			}
 
 			_state = state;
+		}
+	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_DESKTOP)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
+				_xinfo.window, ev->atom, XCB_ATOM_CARDINAL, 0, 32);
+		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			auto values = (int32_t *)_xcb->xcb_get_property_value(reply);
+			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(int32_t);
+
+			log::debug("XcbWindow", "handlePropertyNotify _NET_WM_DESKTOP: ", *values, " ", len);
 		}
 	} else {
 		log::debug("XcbWindow", "handlePropertyNotify: ", _connection->getAtomName(ev->atom));
@@ -513,7 +531,7 @@ void XcbWindow::handleLayerUpdate(const WindowLayer &layer) {
 		cursorId = _connection->loadCursor(cursors);
 	}
 	if (cursorId == XCB_CURSOR_NONE) {
-		cursorId = _connection->loadCursor(getCursorNames(WindowLayerFlags::CursorArrow));
+		cursorId = _connection->loadCursor(getCursorNames(WindowLayerFlags::CursorDefault));
 	}
 
 	if (_xinfo.cursorId != cursorId) {
@@ -679,6 +697,73 @@ uint32_t XcbWindow::getCurrentFrameRate() const {
 }
 
 Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
+	auto submitMonitorIndex = [&](uint32_t index) {
+		xcb_client_message_event_t monitors;
+		monitors.response_type = XCB_CLIENT_MESSAGE;
+		monitors.format = 32;
+		monitors.sequence = 0;
+		monitors.window = _xinfo.window;
+		monitors.type = _connection->getAtom(XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS);
+		monitors.data.data32[0] = index;
+		monitors.data.data32[1] = index;
+		monitors.data.data32[2] = index;
+		monitors.data.data32[3] = index;
+		monitors.data.data32[4] = 1; // EWMH says 1 for normal applications
+		_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
+				XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+				(const char *)&monitors);
+	};
+
+	auto submitFullscreen = [&](bool enable) {
+		xcb_client_message_event_t fullscreen;
+		fullscreen.response_type = XCB_CLIENT_MESSAGE;
+		fullscreen.format = 32;
+		fullscreen.sequence = 0;
+		fullscreen.window = _xinfo.window;
+		fullscreen.type = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE);
+		fullscreen.data.data32[0] = enable ? 1 : 0; // _NET_WM_STATE_REMOVE
+		fullscreen.data.data32[1] = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
+		fullscreen.data.data32[2] = 0;
+		fullscreen.data.data32[3] = 1; // EWMH says 1 for normal applications
+		fullscreen.data.data32[4] = 0;
+		_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
+				XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+				(const char *)&fullscreen);
+	};
+
+	if (info == FullscreenInfo::Current) {
+		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			return Status::Declined;
+		}
+
+		auto cfg = _connection->getDisplayConfigManager()->getCurrentConfig();
+		for (auto &it : cfg->monitors) {
+			if (it.id.name == _xinfo.outputName) {
+				submitMonitorIndex(it.index);
+				submitFullscreen(true);
+
+				const unsigned long value = 1;
+				if (hasFlag(_info->capabilities, WindowCapabilities::FullscreenExclusive)) {
+					auto a = _connection->getAtom(XcbAtomIndex::_NET_WM_BYPASS_COMPOSITOR);
+					if (a) {
+						_xcb->xcb_change_property(_connection->getConnection(),
+								XCB_PROP_MODE_REPLACE, _xinfo.window, a, XCB_ATOM_CARDINAL, 32, 1,
+								&value);
+						info.flags |= core::FullscreenFlags::Exclusive;
+					}
+				}
+				_xcb->xcb_flush(_connection->getConnection());
+
+				info.id = it.id;
+				info.mode = it.getCurrent().mode;
+				_info->fullscreen = move(info);
+				return Status::Ok;
+			}
+		}
+
+		return Status::ErrorInvalidArguemnt;
+	}
+
 	auto enable = info != FullscreenInfo::None;
 	if (enable) {
 		auto cfg = _connection->getDisplayConfigManager()->getCurrentConfig();
@@ -690,40 +775,13 @@ Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
 		if (!mon) {
 			return Status::ErrorInvalidArguemnt;
 		}
-
-		xcb_client_message_event_t monitors;
-		monitors.response_type = XCB_CLIENT_MESSAGE;
-		monitors.format = 32;
-		monitors.sequence = 0;
-		monitors.window = _xinfo.window;
-		monitors.type = _connection->getAtom(XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS);
-		monitors.data.data32[0] = mon->index;
-		monitors.data.data32[1] = mon->index;
-		monitors.data.data32[2] = mon->index;
-		monitors.data.data32[3] = mon->index;
-		monitors.data.data32[4] = 1; // EWMH says 1 for normal applications
-		_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
-				XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
-				(const char *)&monitors);
+		submitMonitorIndex(mon->index);
 	} else {
 		_xcb->xcb_delete_property(_connection->getConnection(), _xinfo.window,
 				_connection->getAtom(XcbAtomIndex::_NET_WM_FULLSCREEN_MONITORS));
 	}
 
-	xcb_client_message_event_t fullscreen;
-	fullscreen.response_type = XCB_CLIENT_MESSAGE;
-	fullscreen.format = 32;
-	fullscreen.sequence = 0;
-	fullscreen.window = _xinfo.window;
-	fullscreen.type = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE);
-	fullscreen.data.data32[0] = enable ? 1 : 0; // _NET_WM_STATE_REMOVE
-	fullscreen.data.data32[1] = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
-	fullscreen.data.data32[2] = 0;
-	fullscreen.data.data32[3] = 1; // EWMH says 1 for normal applications
-	fullscreen.data.data32[4] = 0;
-	_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
-			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
-			(const char *)&fullscreen);
+	submitFullscreen(enable);
 
 	const unsigned long value = 1;
 	if (hasFlag(info.flags, FullscreenFlags::Exclusive)

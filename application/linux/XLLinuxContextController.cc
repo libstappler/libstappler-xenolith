@@ -84,6 +84,8 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		if (config.window->imageFormat == core::ImageFormat::Undefined) {
 			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
 		}
+		config.window->flags |= WindowFlags::PreferServerSideDecoration;
+		config.window->flags |= WindowFlags::PreferNativeDecoration;
 	}
 }
 
@@ -271,7 +273,9 @@ void LinuxContextController::handleRootWindowClosed() {
 		}, this);
 	} else {
 		_looper->performOnThread([this] {
-			_displayConfigManager->invalidate();
+			if (_displayConfigManager) {
+				_displayConfigManager->invalidate();
+			}
 			destroy();
 		}, this);
 	}
@@ -284,62 +288,22 @@ Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
 
 Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	if (_xcbConnection) {
-		_xcbConnection->readFromClipboard(sp::move(req));
-		return Status::Ok;
+		return _xcbConnection->readFromClipboard(sp::move(req));
+	}
+	if (_waylandDisplay) {
+		return _waylandDisplay->readFromClipboard(sp::move(req));
 	}
 	return Status::ErrorNotSupported;
 }
 
 Status LinuxContextController::writeToClipboard(Rc<ClipboardData> &&data) {
 	if (_xcbConnection) {
-		_xcbConnection->writeToClipboard(sp::move(data));
-		return Status::Ok;
+		return _xcbConnection->writeToClipboard(sp::move(data));
+	}
+	if (_waylandDisplay) {
+		return _waylandDisplay->writeToClipboard(sp::move(data));
 	}
 	return Status::ErrorNotImplemented;
-}
-
-Rc<ScreenInfo> LinuxContextController::getScreenInfo() const {
-	Rc<ScreenInfo> info = ContextController::getScreenInfo();
-
-	_displayConfigManager->exportScreenInfo(info);
-
-	/*if (_xcbConnection) {
-		auto xinfo = _xcbConnection->getScreenInfo(_xcbConnection->getDefaultScreen());
-
-		for (auto &it : xinfo->monitors) {
-			xenolith::MonitorInfo m;
-			m.name = it.id.name;
-			m.edid = it.id.edid;
-			m.rect = it.rect;
-			m.mm = it.mm;
-
-			if (it.primary) {
-				info->primaryMonitor = info->monitors.size();
-			}
-
-			for (auto &oit : it.outputs) {
-				for (auto &mit : oit->modes) {
-					if (mit->available) {
-						xenolith::ModeInfo mode;
-						mode.width = mit->width;
-						mode.height = mit->height;
-						mode.rate = mit->rate;
-						if (mit == oit->preferred) {
-							m.preferredMode = m.modes.size();
-						}
-						if (mit == oit->crtc->mode) {
-							m.currentMode = m.modes.size();
-						}
-						m.modes.emplace_back(mode);
-					}
-				}
-			}
-
-			info->monitors.emplace_back(move(m));
-		}
-	}*/
-
-	return info;
 }
 
 void LinuxContextController::handleThemeInfoChanged(const ThemeInfo &newThemeInfo) {
@@ -357,9 +321,16 @@ void LinuxContextController::tryStart() {
 				[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
 		if (dcm) {
 			_displayConfigManager = dcm;
-		} else if (_xcbConnection) {
-			_displayConfigManager = _xcbConnection->makeDisplayConfigManager(
-					[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
+		}
+
+		if (!_displayConfigManager) {
+			if (_xcbConnection) {
+				_displayConfigManager = _xcbConnection->makeDisplayConfigManager(
+						[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
+			} else if (_waylandDisplay) {
+				_displayConfigManager = _waylandDisplay->makeDisplayConfigManager(
+						[this](NotNull<DisplayConfigManager> m) { notifyScreenChange(m); });
+			}
 		}
 
 		_looper->performOnThread([this] {
@@ -428,7 +399,7 @@ bool LinuxContextController::loadWindow() {
 	}
 
 	if (window) {
-		_context->handleNativeWindowCreated(window);
+		_activeWindows.emplace(window);
 		return true;
 	}
 
