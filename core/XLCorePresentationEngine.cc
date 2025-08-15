@@ -582,7 +582,16 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 		log::warn("core::PresentationEngine",
 				"Scheduling swapchain recreation without frame presentation");
 	}
-	_loop->performOnThread([this] { recreateSwapchain(); }, this, false);
+
+	// prevent to schedule more then one callback
+	if (!_swapchainRecreationScheduled) {
+		_swapchainRecreationScheduled = true;
+		_loop->performOnThread([this] {
+			log::debug("PresentationEngine", "scheduleSwapchainRecreation");
+			_swapchainRecreationScheduled = false;
+			recreateSwapchain();
+		}, this, false);
+	}
 }
 
 void PresentationEngine::resetFrames() {

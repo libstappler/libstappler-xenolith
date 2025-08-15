@@ -29,31 +29,40 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
-	char pathBuf[1024];
+Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
+	if (info->api != core::InstanceApi::Vulkan || !info->backend) {
+		return nullptr;
+	}
+
+	char pathBuf[1'024];
 	uint32_t size = sizeof(pathBuf);
 	if (::_NSGetExecutablePath(pathBuf, &size) != 0) {
 		log::error("Vulkan", "Fail to detect executable path");
 		return nullptr;
 	}
 
-	auto bundledPath = filepath::merge<Interface>(filepath::root(filepath::root(pathBuf)), "Frameworks", "libvulkan.1.dylib");
-	auto flatPath = filepath::merge<Interface>(filepath::root(pathBuf), "vulkan/lib", "libvulkan.1.dylib");
+	auto bundledPath = filepath::merge<Interface>(filepath::root(filepath::root(pathBuf)),
+			"Frameworks", "libvulkan.1.dylib");
+	auto flatPath =
+			filepath::merge<Interface>(filepath::root(pathBuf), "vulkan/lib", "libvulkan.1.dylib");
 
 	bool isBundled = false;
 
-	if (filesystem::exists(bundledPath)) {
+	if (filesystem::exists(FileInfo{bundledPath})) {
 		isBundled = true;
 	}
 
-	if (!isBundled && !filesystem::exists(flatPath)) {
+	if (!isBundled && !filesystem::exists(FileInfo{flatPath})) {
 		log::error("Vulkan", "Vulkan loader is not found on paths: ", bundledPath, "; ", flatPath);
 		return nullptr;
 	}
 
 	String loaderPath = isBundled ? bundledPath : flatPath;
 	if (!isBundled) {
-		::setenv("VK_LAYER_PATH", filepath::merge<Interface>(filepath::root(pathBuf), "vulkan", "explicit_layer.d").data(), 1);
+		::setenv("VK_LAYER_PATH",
+				filepath::merge<Interface>(filepath::root(pathBuf), "vulkan", "explicit_layer.d")
+						.data(),
+				1);
 	}
 
 	Dso handle(loaderPath);
@@ -64,7 +73,8 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 
 	auto getInstanceProcAddr = handle.sym<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
 	if (!getInstanceProcAddr) {
-		log::error("Vulkan", "Fail to find entrypoint 'vkGetInstanceProcAddr' in loader: ", loaderPath);
+		log::error("Vulkan",
+				"Fail to find entrypoint 'vkGetInstanceProcAddr' in loader: ", loaderPath);
 		return nullptr;
 	}
 
@@ -74,13 +84,14 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 		return nullptr;
 	}
 
-	if (auto instance = table.createInstance(cb, move(handle), [] { })) {
+	if (auto instance = table.createInstance(info, info->backend.get_cast<InstanceBackendInfo>(),
+				move(handle))) {
 		return instance;
 	}
 
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif

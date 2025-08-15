@@ -83,14 +83,17 @@ public:
 
 	virtual ~NativeWindow();
 
-	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, WindowCapabilities);
+	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, WindowCapabilities,
+			bool isRootWindow);
 
 	virtual void mapWindow() = 0;
 	virtual void unmapWindow() = 0;
+
+	// true if successfully closed
 	virtual bool close() = 0;
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) { }
-	virtual void handleLayerUpdate(const WindowLayer &) { }
+	virtual void handleLayerUpdate(const WindowLayer &);
 
 	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const {
 		return move(info);
@@ -121,6 +124,8 @@ public:
 
 	const WindowInfo *getInfo() const { return _info; }
 
+	ContextController *getController() const { return _controller; }
+
 	// application requests
 	void acquireTextInput(const TextInputRequest &);
 	void releaseTextInput();
@@ -136,6 +141,8 @@ public:
 
 	virtual void setFullscreen(FullscreenInfo &&, Function<void(Status)> &&cb, Ref *ref);
 
+	virtual void handleInputEvents(Vector<InputEventData> &&events);
+
 protected:
 	// Run text input mode or update text input buffer
 	//
@@ -147,8 +154,6 @@ protected:
 	//
 	// should be forwarded to OS input method
 	virtual void cancelTextInput() = 0; // from view thread
-
-	virtual void handleInputEvents(Vector<InputEventData> &&events);
 
 	virtual void handleMotionEvent(const InputEventData &);
 

@@ -35,7 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct FrameInfo;
 struct FrameContextHandle;
-struct InputListenerStorage;
+class InputListenerStorage;
 
 class Scene;
 class Director;

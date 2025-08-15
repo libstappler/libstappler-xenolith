@@ -62,8 +62,10 @@ void AppWindow::runWithQueue(const Rc<core::Queue> &queue) {
 			_presentationEngine->run();
 		}
 
-		_presentationEngine->scheduleNextImage(
-				[this](core::PresentationFrame *, bool success) { _window->mapWindow(); });
+		_presentationEngine->scheduleNextImage([this](core::PresentationFrame *, bool success) {
+			// Map windows after frame was rendered
+			_window->mapWindow();
+		});
 	}
 }
 
@@ -98,17 +100,29 @@ void AppWindow::end() {
 }
 
 void AppWindow::close(bool graceful) {
-	if (_window) {
-		if (_window->close()) {
-			return;
+	if (_inCloseRequest) {
+		return;
+	}
+
+	_inCloseRequest = true;
+	_context->performOnThread([this, w = _window, graceful] {
+		if (w) {
+			if (!w->close()) {
+				_application->performOnAppThread([this] { _inCloseRequest = false; }, this);
+				return;
+			}
 		}
-	}
-	if (!graceful) {
-		end();
-	} else {
-		_presentationEngine->deprecateSwapchain(core::PresentationSwapchainFlags::EndOfLife,
-				[this](bool) { _context->performOnThread([this] { end(); }, this, false); });
-	}
+
+		if (!graceful) {
+			end();
+		} else {
+			_presentationEngine->deprecateSwapchain(core::PresentationSwapchainFlags::EndOfLife,
+					[this](bool) {
+				// successful stop
+				end();
+			});
+		}
+	}, this);
 }
 
 void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
@@ -212,7 +226,9 @@ Rc<core::Surface> AppWindow::makeSurface(NotNull<core::Instance> instance) {
 }
 
 core::FrameConstraints AppWindow::exportFrameConstraints() const {
-	return _window->exportConstraints(_window->getInfo()->exportConstraints());
+	auto c = _window->getInfo()->exportConstraints();
+	c.extent = _window->getExtent();
+	return _window->exportConstraints(sp::move(c));
 }
 
 void AppWindow::setFrameOrder(uint64_t frameOrder) {

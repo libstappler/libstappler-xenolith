@@ -30,27 +30,7 @@
 #include "XLCommon.h"
 #include "XLCoreEnum.h"
 #include "XLCoreDescriptorInfo.h"
-#include <vulkan/vulkan_core.h>
-
-#if LINUX
-#define VK_USE_PLATFORM_XCB_KHR 1
-#define VK_USE_PLATFORM_WAYLAND_KHR 1
-#endif
-
-#if MACOS
-#define VK_USE_PLATFORM_METAL_EXT 1
-#define VK_ENABLE_BETA_EXTENSIONS 1
-#endif
-
-#if ANDROID
-#define VK_USE_PLATFORM_ANDROID_KHR 1
-#endif
-
-#if WIN32
-#define VK_USE_PLATFORM_WIN32_KHR 1
-#endif
-
-#include <vulkan/vulkan.h>
+#include "XLVkHeader.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 

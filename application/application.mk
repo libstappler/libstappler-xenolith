@@ -47,6 +47,12 @@ ifdef WIN32
 MODULE_XENOLITH_APPLICATION_LIBS += -lshell32
 endif
 
+ifdef MACOS
+
+MODULE_XENOLITH_APPLICATION_GENERAL_LDFLAGS += -framework Cocoa -framework Network -framework Quartz
+
+endif
+
 #spec
 
 MODULE_XENOLITH_APPLICATION_SHARED_SPEC_SUMMARY := Xenolith general application interface

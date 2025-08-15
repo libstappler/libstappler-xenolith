@@ -32,7 +32,6 @@
 #include "linux/xcb/XLLinuxXcbWindow.h"
 #include "platform/XLContextController.h"
 #include "platform/XLContextNativeWindow.h"
-#include <cstdlib>
 
 #if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkInstance.h"
@@ -263,29 +262,6 @@ void LinuxContextController::notifyScreenChange(NotNull<DisplayConfigManager> in
 	}
 }
 
-void LinuxContextController::handleRootWindowClosed() {
-	if (_displayConfigManager && _displayConfigManager->hasSavedMode()) {
-		_displayConfigManager->restoreMode([this](Status) {
-			_looper->performOnThread([this] {
-				_displayConfigManager->invalidate();
-				destroy();
-			}, this);
-		}, this);
-	} else {
-		_looper->performOnThread([this] {
-			if (_displayConfigManager) {
-				_displayConfigManager->invalidate();
-			}
-			destroy();
-		}, this);
-	}
-}
-
-Rc<AppWindow> LinuxContextController::makeAppWindow(NotNull<AppThread> app,
-		NotNull<NativeWindow> w) {
-	return Rc<AppWindow>::create(_context, app, w);
-}
-
 Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	if (_xcbConnection) {
 		return _xcbConnection->readFromClipboard(sp::move(req));
@@ -391,11 +367,11 @@ bool LinuxContextController::loadWindow() {
 	Rc<NativeWindow> window;
 	auto cInfo = _context->getInfo();
 	if (_waylandDisplay) {
-		window = Rc<WaylandWindow>::create(_waylandDisplay, move(_windowInfo), cInfo, this);
+		window = Rc<WaylandWindow>::create(_waylandDisplay, move(_windowInfo), cInfo, this, true);
 		_waylandDisplay->flush();
 	}
 	if (!window && _xcbConnection) {
-		window = Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), cInfo, this);
+		window = Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), cInfo, this, true);
 	}
 
 	if (window) {

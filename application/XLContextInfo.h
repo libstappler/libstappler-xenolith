@@ -267,7 +267,7 @@ enum class CommonFlags {
 SP_DEFINE_ENUM_AS_MASK(CommonFlags)
 
 struct ContextConfig final {
-	static CommandLineParser<ContextConfig> CommandLine;
+	static CommandLineParser<ContextConfig> getCommandLineParser();
 
 	static bool readFromCommandLine(ContextConfig &, int argc, const char *argv[],
 			const Callback<void(StringView)> &cb = nullptr);

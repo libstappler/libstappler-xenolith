@@ -165,8 +165,16 @@ bool PresentationEngine::recreateSwapchain() {
 		return false;
 	}
 
-	auto fastModeSelected =
-			hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToFastMode);
+	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::EnableLiveResize)) {
+		_liveResizeEnabled = true;
+	}
+
+	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::DisableLiveResize)) {
+		_liveResizeEnabled = false;
+	}
+
+	auto fastModeSelected = _liveResizeEnabled
+			|| hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToFastMode);
 	auto info = _window->getSurfaceOptions(
 			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _window->selectConfig(info, fastModeSelected);
@@ -186,6 +194,10 @@ bool PresentationEngine::recreateSwapchain() {
 	auto mode = cfg.presentMode;
 	if (fastModeSelected) {
 		mode = cfg.presentModeFast;
+	}
+
+	if (_liveResizeEnabled) {
+		cfg.liveResize = true;
 	}
 
 	ret = createSwapchain(info, move(cfg), mode, oldSwapchainValid);

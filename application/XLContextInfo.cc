@@ -26,164 +26,167 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 // Опции для аргументов командной строки
-CommandLineParser<ContextConfig> ContextConfig::CommandLine({
-	CommandLineOption<ContextConfig>{.patterns = {"-v", "--verbose"},
-		.description = "Produce more verbose output",
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.context) {
-				target.context = Rc<ContextInfo>::alloc();
+
+CommandLineParser<ContextConfig> ContextConfig::getCommandLineParser() {
+	return CommandLineParser<ContextConfig>({
+		CommandLineOption<ContextConfig>{.patterns = {"-v", "--verbose"},
+			.description = "Produce more verbose output",
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.context) {
+			target.context = Rc<ContextInfo>::alloc();
+		}
+		target.flags |= CommonFlags::Verbose;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"-h", "--help"},
+			.description = StringView("Show help message and exit"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.context) {
+			target.context = Rc<ContextInfo>::alloc();
+		}
+		target.flags |= CommonFlags::Help;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"-q", "--quiet"},
+			.description = StringView("Disable verbose output"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.context) {
+			target.context = Rc<ContextInfo>::alloc();
+		}
+		target.flags |= CommonFlags::Quiet;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"-W<#>", "--width <#>"},
+			.description = StringView("Window width"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.window) {
+			target.window = Rc<WindowInfo>::alloc();
+		}
+		target.window->rect.width = uint32_t(StringView(args[0]).readInteger(10).get(0));
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"-H<#>", "--height <#>"},
+			.description = StringView("Window height"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.window) {
+			target.window = Rc<WindowInfo>::alloc();
+		}
+		target.window->rect.height = uint32_t(StringView(args[0]).readInteger(10).get(0));
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"-D<#.#>", "--density <#.#>"},
+			.description = StringView("Pixel density for a window"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.window) {
+			target.window = Rc<WindowInfo>::alloc();
+		}
+		target.window->density = float(StringView(args[0]).readFloat().get(0));
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--l <locale>", "--locale <locale>"},
+			.description = StringView("User language locale"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.context) {
+			target.context = Rc<ContextInfo>::alloc();
+		}
+		target.context->userLanguage = StringView(args[0]).str<Interface>();
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--bundle <bundle-name>"},
+			.description = StringView("Application bundle name"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.context) {
+			target.context = Rc<ContextInfo>::alloc();
+		}
+		target.context->bundleName = StringView(args[0]).str<Interface>();
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--fixed"},
+			.description = StringView("Use fixed (so, not resizable) window layout"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.window) {
+			target.window = Rc<WindowInfo>::alloc();
+		}
+		target.window->flags |= WindowFlags::FixedBorder;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--renderdoc"},
+			.description = StringView("Open connection for renderdoc"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.instance) {
+			target.instance = Rc<core::InstanceInfo>::alloc();
+		}
+		target.instance->flags |= core::InstanceFlags::RenderDoc;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--novalidation"},
+			.description = StringView("Force-disable Vulkan validation layers"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.instance) {
+			target.instance = Rc<core::InstanceInfo>::alloc();
+		}
+		target.instance->flags |= core::InstanceFlags::Validation;
+		return true;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--decor <decoration-description>"},
+			.description = StringView("Define window decoration paddings"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		auto values = StringView(args[0]);
+		float f[4] = {nan(), nan(), nan(), nan()};
+		uint32_t i = 0;
+		values.split<StringView::Chars<','>>([&](StringView val) {
+			if (i < 4) {
+				f[i] = val.readFloat().get(nan());
 			}
-			target.flags |= CommonFlags::Verbose;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"-h", "--help"},
-		.description = StringView("Show help message and exit"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.context) {
-				target.context = Rc<ContextInfo>::alloc();
+			++i;
+		});
+		if (!isnan(f[0])) {
+			if (isnan(f[1])) {
+				f[1] = f[0];
 			}
-			target.flags |= CommonFlags::Help;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"-q", "--quiet"},
-		.description = StringView("Disable verbose output"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.context) {
-				target.context = Rc<ContextInfo>::alloc();
+			if (isnan(f[2])) {
+				f[2] = f[0];
 			}
-			target.flags |= CommonFlags::Quiet;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"-W<#>", "--width <#>"},
-		.description = StringView("Window width"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
+			if (isnan(f[3])) {
+				f[3] = f[1];
+			}
 			if (!target.window) {
 				target.window = Rc<WindowInfo>::alloc();
 			}
-			target.window->rect.width = uint32_t(StringView(args[0]).readInteger(10).get(0));
+			target.window->decoration = Padding(f[0], f[1], f[2], f[3]);
 			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"-H<#>", "--height <#>"},
-		.description = StringView("Window height"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.window) {
-				target.window = Rc<WindowInfo>::alloc();
-			}
-			target.window->rect.height = uint32_t(StringView(args[0]).readInteger(10).get(0));
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"-D<#.#>", "--density <#.#>"},
-		.description = StringView("Pixel density for a window"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.window) {
-				target.window = Rc<WindowInfo>::alloc();
-			}
-			target.window->density = float(StringView(args[0]).readFloat().get(0));
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--l <locale>", "--locale <locale>"},
-		.description = StringView("User language locale"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.context) {
-				target.context = Rc<ContextInfo>::alloc();
-			}
-			target.context->userLanguage = StringView(args[0]).str<Interface>();
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--bundle <bundle-name>"},
-		.description = StringView("Application bundle name"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.context) {
-				target.context = Rc<ContextInfo>::alloc();
-			}
-			target.context->bundleName = StringView(args[0]).str<Interface>();
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--fixed"},
-		.description = StringView("Use fixed (so, not resizable) window layout"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.window) {
-				target.window = Rc<WindowInfo>::alloc();
-			}
-			target.window->flags |= WindowFlags::FixedBorder;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--renderdoc"},
-		.description = StringView("Open connection for renderdoc"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.instance) {
-				target.instance = Rc<core::InstanceInfo>::alloc();
-			}
-			target.instance->flags |= core::InstanceFlags::RenderDoc;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--novalidation"},
-		.description = StringView("Force-disable Vulkan validation layers"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.instance) {
-				target.instance = Rc<core::InstanceInfo>::alloc();
-			}
-			target.instance->flags |= core::InstanceFlags::Validation;
-			return true;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--decor <decoration-description>"},
-		.description = StringView("Define window decoration paddings"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			auto values = StringView(args[0]);
-			float f[4] = {nan(), nan(), nan(), nan()};
-			uint32_t i = 0;
-			values.split<StringView::Chars<','>>([&](StringView val) {
-				if (i < 4) {
-					f[i] = val.readFloat().get(nan());
-				}
-				++i;
-			});
-			if (!isnan(f[0])) {
-				if (isnan(f[1])) {
-					f[1] = f[0];
-				}
-				if (isnan(f[2])) {
-					f[2] = f[0];
-				}
-				if (isnan(f[3])) {
-					f[3] = f[1];
-				}
-				if (!target.window) {
-					target.window = Rc<WindowInfo>::alloc();
-				}
-				target.window->decoration = Padding(f[0], f[1], f[2], f[3]);
-				return true;
-			}
-			return false;
-		}},
-	CommandLineOption<ContextConfig>{.patterns = {"--device <#>"},
-		.description = StringView("Force-disable Vulkan validation layers"),
-		.callback = [](ContextConfig &target, StringView pattern,
-							SpanView<StringView> args) -> bool {
-			if (!target.loop) {
-				target.loop = Rc<core::LoopInfo>::alloc();
-			}
-			target.loop->deviceIdx =
-					StringView(args.at(0)).readInteger(10).get(core::InstanceDefaultDevice);
-			return true;
-		}},
-});
+		}
+		return false;
+	}},
+		CommandLineOption<ContextConfig>{.patterns = {"--device <#>"},
+			.description = StringView("Force-disable Vulkan validation layers"),
+			.callback = [](ContextConfig &target, StringView pattern,
+								SpanView<StringView> args) -> bool {
+		if (!target.loop) {
+			target.loop = Rc<core::LoopInfo>::alloc();
+		}
+		target.loop->deviceIdx =
+				StringView(args.at(0)).readInteger(10).get(core::InstanceDefaultDevice);
+		return true;
+	}},
+	});
+}
 
 bool ContextConfig::readFromCommandLine(ContextConfig &ret, int argc, const char *argv[],
 		const Callback<void(StringView)> &cb) {
-	return CommandLine.parse(ret, argc, argv,
+	return getCommandLineParser().parse(ret, argc, argv,
 			cb ? Callback<void(ContextConfig &, StringView)>(
 						 [&](ContextConfig &, StringView arg) { cb(arg); })
 			   : nullptr);

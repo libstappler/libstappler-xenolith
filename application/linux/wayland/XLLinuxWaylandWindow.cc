@@ -132,7 +132,7 @@ WaylandWindow::~WaylandWindow() {
 	}
 
 	if (_controller && _isRootWindow) {
-		_controller.get_cast<LinuxContextController>()->handleRootWindowClosed();
+		_viewController->handleRootWindowClosed();
 	}
 
 	if (_serverDecor) {
@@ -165,7 +165,7 @@ WaylandWindow::~WaylandWindow() {
 WaylandWindow::WaylandWindow() { }
 
 bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
-		NotNull<const ContextInfo> content, NotNull<LinuxContextController> c) {
+		NotNull<const ContextInfo> content, NotNull<LinuxContextController> c, bool isRootWindow) {
 	auto caps = WindowCapabilities::Fullscreen;
 
 	if (display->wayland->hasDecor()) {
@@ -180,7 +180,7 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 		caps |= WindowCapabilities::ServerSideCursors;
 	}
 
-	if (!NativeWindow::init(c, move(info), caps)) {
+	if (!NativeWindow::init(c, move(info), caps, isRootWindow)) {
 		return false;
 	}
 
@@ -273,6 +273,7 @@ bool WaylandWindow::close() {
 		_shouldClose = true;
 		if (!_controller->notifyWindowClosed(this)) {
 			_shouldClose = false;
+			return false;
 		}
 		return true;
 	}

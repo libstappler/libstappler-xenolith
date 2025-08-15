@@ -69,7 +69,7 @@ static core::InputMouseButton getButton(xcb_button_t btn) { return core::InputMo
 
 XcbWindow::~XcbWindow() {
 	if (_controller && _isRootWindow) {
-		_controller.get_cast<LinuxContextController>()->handleRootWindowClosed();
+		_controller->handleRootWindowClosed();
 	}
 	if (_connection) {
 		_defaultScreen = nullptr;
@@ -89,7 +89,7 @@ XcbWindow::~XcbWindow() {
 XcbWindow::XcbWindow() { }
 
 bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
-		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c) {
+		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c, bool isRootWindow) {
 
 	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations;
 
@@ -101,7 +101,7 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 		caps |= WindowCapabilities::FullscreenExclusive;
 	}
 
-	if (!NativeWindow::init(c, move(info), caps)) {
+	if (!NativeWindow::init(c, move(info), caps, isRootWindow)) {
 		return false;
 	}
 
@@ -494,6 +494,7 @@ bool XcbWindow::close() {
 		_xinfo.closed = true;
 		if (!_controller->notifyWindowClosed(this)) {
 			_xinfo.closed = false;
+			return false;
 		}
 		return true;
 	}
@@ -589,97 +590,7 @@ void XcbWindow::configureWindow(xcb_rectangle_t r, uint16_t border_width) {
 			values);
 	_xcb->xcb_flush(_connection->getConnection());
 }
-/*
-const MonitorInfo *XcbWindow::getMonitor(NotNull<ScreenInfoData> info, const MonitorId &id) const {
-	const MonitorInfo *mon = nullptr;
-	if (id == MonitorId::None) {
-		return nullptr;
-	} else if (id == MonitorId::Primary) {
-		mon = info->primary;
-	} else {
-		for (auto &it : info->monitors) {
-			if (it.isMatch(id)) {
-				mon = &it;
-				break;
-			}
-		}
-	}
-	return mon;
-}
 
-Status XcbWindow::setMode(NotNull<ScreenInfoData> info, const MonitorInfo *mon,
-		const xenolith::ModeInfo &mode) {
-
-	log::debug("XcbWindow", mon->id.name, ": set mode: ", mode.width, "x", mode.height, "@",
-			mode.rate);
-
-	auto output = mon->outputs.front();
-	auto crtc = output->crtc;
-
-	for (auto &it : output->modes) {
-		if (*it == mode) {
-			auto crtcCookie = _xcb->xcb_randr_get_crtc_info(_connection->getConnection(),
-					crtc->crtc, info->config);
-			auto crtcReply = _connection->perform(_xcb->xcb_randr_get_crtc_info_reply, crtcCookie);
-			if (crtcReply) {
-				// re-check if we need to reset mode
-				if (crtcReply->mode == it->id) {
-					log::debug("XcbWindow", mon->id.name, ": no need to switch");
-					return Status::Done; //  no need to switch
-				}
-
-				// First - disable CRTC (or WM will fail to increse resolution or framerate)
-				auto cookieDisable = _xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
-						crtc->crtc, XCB_CURRENT_TIME, XCB_CURRENT_TIME, 0, 0, 0,
-						crtcReply->rotation, 0, nullptr);
-
-				auto replyDisable =
-						_connection->perform(_xcb->xcb_randr_set_crtc_config_reply, cookieDisable);
-				if (replyDisable) {
-					log::debug("XcbWindow", mon->id.name, ": disabled");
-					// if CRTC was disabled - re-enable it with the new mode
-					auto cookie = _xcb->xcb_randr_set_crtc_config(_connection->getConnection(),
-							crtc->crtc, XCB_CURRENT_TIME, XCB_CURRENT_TIME, crtcReply->x,
-							crtcReply->y, it->id, crtcReply->rotation,
-							_xcb->xcb_randr_get_crtc_info_outputs_length(crtcReply),
-							_xcb->xcb_randr_get_crtc_info_outputs(crtcReply));
-
-					auto reply =
-							_connection->perform(_xcb->xcb_randr_set_crtc_config_reply, cookie);
-					if (reply) {
-						log::debug("XcbWindow", mon->id.name, ": enabled");
-						//  Complete!
-						return Status::Ok;
-					}
-				}
-			}
-		}
-	}
-
-	return Status::ErrorCancelled;
-}
-
-bool XcbWindow::checkIfModeAvailable(const MonitorInfo *mon, const xenolith::ModeInfo &mode) const {
-	if (mode == xenolith::ModeInfo::Current) {
-		return true;
-	}
-
-	if (mode == xenolith::ModeInfo::Preferred) {
-		// check if we ACTUALLY have this mode
-		if (mon->outputs.front()->preferred) {
-			return true;
-		}
-	}
-
-	auto output = mon->outputs.front();
-	for (auto &it : output->modes) {
-		if (*it == mode) {
-			return true;
-		}
-	}
-	return false;
-}
-*/
 uint32_t XcbWindow::getCurrentFrameRate() const {
 	uint32_t rate = 0;
 	auto currentConfig = _controller.get_cast<LinuxContextController>()

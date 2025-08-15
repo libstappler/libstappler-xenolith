@@ -64,6 +64,8 @@ enum class PresentationSwapchainFlags {
 	SwitchToNext = 1 << 1,
 	EndOfLife = 1 << 2,
 	Finalized = 1 << 3,
+	EnableLiveResize = 1 << 4,
+	DisableLiveResize = 1 << 5,
 };
 
 SP_DEFINE_ENUM_AS_MASK(PresentationSwapchainFlags)
@@ -236,6 +238,8 @@ protected:
 	bool _readyForNextFrame = false;
 	bool _waitUntilFrame = false;
 	bool _waitForDisplayLink = false;
+	bool _swapchainRecreationScheduled = false;
+	bool _liveResizeEnabled = false;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;

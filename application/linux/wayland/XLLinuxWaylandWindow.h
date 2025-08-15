@@ -101,7 +101,7 @@ public:
 	WaylandWindow();
 
 	bool init(NotNull<WaylandDisplay>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
-			NotNull<LinuxContextController>);
+			NotNull<LinuxContextController>, bool isRootWindow);
 
 	virtual void mapWindow() override;
 	virtual void unmapWindow() override;

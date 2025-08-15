@@ -107,6 +107,7 @@ public:
 	using Thread::operator new;
 	using Thread::operator delete;
 	using Thread::waitRunning;
+	using Thread::waitStopped;
 
 protected:
 	virtual void performAppUpdate(const UpdateTime &, bool wakeup);

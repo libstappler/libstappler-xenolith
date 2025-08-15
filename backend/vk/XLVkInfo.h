@@ -84,7 +84,7 @@ struct SP_PUBLIC DeviceInfo {
 
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 		VkPhysicalDevicePortabilitySubsetFeaturesKHR devicePortability = {
-			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR, nullptr};
+			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR, nullptr};
 #endif
 		VkPhysicalDevice16BitStorageFeaturesKHR device16bitStorage = {
 			VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR, nullptr};

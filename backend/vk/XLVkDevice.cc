@@ -705,7 +705,7 @@ bool Device::setup(const Instance *instance, VkPhysicalDevice p, const Propertie
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	if ((_enabledFeatures.flags & ExtensionFlags::Portability) != ExtensionFlags::None) {
+	if (_enabledFeatures.optionals.test(toInt(OptionalDeviceExtension::Portability))) {
 		_enabledFeatures.devicePortability.pNext = next;
 		next = &_enabledFeatures.devicePortability;
 	}

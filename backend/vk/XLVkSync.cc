@@ -28,8 +28,6 @@ THE SOFTWARE.
 #define XL_VKAPI_LOG(...)
 #endif
 
-#include "platform/fd/SPEventPollFd.h"
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 Semaphore::~Semaphore() { }
@@ -61,8 +59,10 @@ bool Semaphore::init(Device &dev, core::SemaphoreType type) {
 		_type = type;
 	}
 
-	if (dev.getTable()->vkCreateSemaphore(dev.getDevice(), &semaphoreInfo, nullptr, &_sem) == VK_SUCCESS) {
-		return core::Semaphore::init(dev, Semaphore_destroy, core::ObjectType::Semaphore, core::ObjectHandle(_sem));
+	if (dev.getTable()->vkCreateSemaphore(dev.getDevice(), &semaphoreInfo, nullptr, &_sem)
+			== VK_SUCCESS) {
+		return core::Semaphore::init(dev, Semaphore_destroy, core::ObjectType::Semaphore,
+				core::ObjectHandle(_sem));
 	}
 
 	return false;
@@ -89,9 +89,11 @@ bool Fence::init(Device &dev, core::FenceType type) {
 
 	_state = Disabled;
 
-	if (dev.getTable()->vkCreateFence(dev.getDevice(), &fenceInfo, nullptr, &_fence) == VK_SUCCESS) {
+	if (dev.getTable()->vkCreateFence(dev.getDevice(), &fenceInfo, nullptr, &_fence)
+			== VK_SUCCESS) {
 		_type = type;
-		return core::Fence::init(dev, Fence_destroy, core::ObjectType::Fence, core::ObjectHandle(_fence));
+		return core::Fence::init(dev, Fence_destroy, core::ObjectType::Fence,
+				core::ObjectHandle(_fence));
 	}
 	return false;
 }
@@ -123,7 +125,8 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 
 			return PollFdHandle::create(loop.getLooper()->getQueue(), fd,
 					PollFlags::In | PollFlags::CloseFd,
-					[this, completeCb = sp::move(cb), l = &loop] (int fd, PollFlags flags) -> Status {
+					[this, completeCb = sp::move(cb), l = &loop](int fd,
+							PollFlags flags) -> Status {
 				if (hasFlag(flags, PollFlags::In)) {
 					if (completeCb) {
 						completeCb();
@@ -132,7 +135,8 @@ Rc<event::Handle> Fence::exportFence(Loop &loop, Function<void()> &&cb) {
 					return Status::Done;
 				}
 				return Status::Ok;
-			}, this);
+			},
+					this);
 		} else if (status != VK_ERROR_FEATURE_NOT_PRESENT) {
 			log::error("Fence", "Fail to export fence fd");
 		}
@@ -145,7 +149,7 @@ Status Fence::doCheckFence(bool lockfree) {
 	VkResult status;
 	auto dev = static_cast<Device *>(_object.device);
 
-	dev->makeApiCall([&, this] (const DeviceTable &table, VkDevice device) {
+	dev->makeApiCall([&, this](const DeviceTable &table, VkDevice device) {
 		if (lockfree) {
 			status = table.vkGetFenceStatus(device, _fence);
 		} else {
@@ -160,4 +164,4 @@ void Fence::doResetFence() {
 	dev->getTable()->vkResetFences(dev->getDevice(), 1, &_fence);
 }
 
-}
+} // namespace stappler::xenolith::vk

@@ -1,0 +1,78 @@
+/**
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ **/
+
+#ifndef XENOLITH_APPLICATION_MACOS_XLMACOSWINNOW_H_
+#define XENOLITH_APPLICATION_MACOS_XLMACOSWINNOW_H_
+
+#include "XLMacos.h"
+#include "platform/XLContextNativeWindow.h"
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+class MacosWindow : public NativeWindow {
+public:
+	virtual ~MacosWindow();
+
+	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, bool isRootWindow);
+
+	virtual void mapWindow() override;
+	virtual void unmapWindow() override;
+	virtual bool close() override;
+
+	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
+	virtual void handleLayerUpdate(const WindowLayer &) override;
+
+	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const override;
+
+	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
+
+	virtual Extent2 getExtent() const override;
+
+	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
+
+	virtual core::PresentationOptions getPreferredOptions() const override;
+
+	SpanView<WindowLayer> getLayers() const { return _layers; }
+
+	void handleWindowLoaded();
+	void handleDisplayLink();
+
+	NSWindow *getWindow() const { return _window; }
+
+protected:
+	virtual bool updateTextInput(const TextInputRequest &,
+			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
+
+	virtual void cancelTextInput() override;
+
+	XLMacosViewController *_rootViewController = nullptr;
+	XLMacosView *_rootView = nullptr;
+	NSWindow *_window = nullptr;
+	WindowLayerFlags _currentCursor = WindowLayerFlags::None;
+
+	bool _initialized = false;
+	bool _windowLoaded = false;
+};
+
+} // namespace stappler::xenolith::platform
+
+#endif // XENOLITH_APPLICATION_MACOS_XLMACOSWINNOW_H_

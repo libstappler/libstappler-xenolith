@@ -39,7 +39,7 @@ public:
 	XcbWindow();
 
 	bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
-			NotNull<LinuxContextController>);
+			NotNull<LinuxContextController>, bool isRootWindow);
 
 	void handleConfigureNotify(xcb_configure_notify_event_t *);
 	void handlePropertyNotify(xcb_property_notify_event_t *);

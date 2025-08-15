@@ -185,7 +185,8 @@ public:
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
 	virtual void handleNativeWindowRedrawNeeded(NotNull<NativeWindow>);
-	virtual void handleNativeWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize);
+	virtual void handleNativeWindowConstraintsChanged(NotNull<NativeWindow>,
+			core::PresentationSwapchainFlags);
 	virtual void handleNativeWindowInputEvents(NotNull<NativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);

@@ -565,6 +565,7 @@ struct SP_PUBLIC SwapchainConfig {
 	Extent2 extent;
 	bool clipped = false;
 	bool transfer = true;
+	bool liveResize = false;
 
 	String description() const;
 

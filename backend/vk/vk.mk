@@ -26,6 +26,10 @@ MODULE_XENOLITH_BACKEND_VK_INCLUDES_DIRS :=
 MODULE_XENOLITH_BACKEND_VK_INCLUDES_OBJS := $(XENOLITH_MODULE_DIR)/backend/vk
 MODULE_XENOLITH_BACKEND_VK_DEPENDS_ON := xenolith_core
 
+ifdef VULKAN_SDK_PREFIX
+MODULE_XENOLITH_CORE_INCLUDES_OBJS += $(call sp_os_path,$(VULKAN_SDK_PREFIX)/include)
+endif
+
 #spec
 
 MODULE_XENOLITH_BACKEND_VK_SHARED_SPEC_SUMMARY := Xenolith on Vulkan API
@@ -55,7 +59,7 @@ endif
 
 ifdef MACOS
 
-MODULE_XENOLITH_BACKEND_VK_GENERAL_LDFLAGS := -framework Cocoa -framework Metal -framework Quartz
+MODULE_XENOLITH_BACKEND_VK_GENERAL_LDFLAGS := -framework Metal
 
 $(info VULKAN_SDK_PREFIX $(VULKAN_SDK_PREFIX) $(realpath $(VULKAN_SDK_PREFIX)/lib/libvulkan.1.dylib))
 VULKAN_LOADER_PATH = $(realpath $(VULKAN_SDK_PREFIX)/lib/libvulkan.1.dylib)
@@ -63,14 +67,6 @@ VULKAN_MOLTENVK_PATH = $(realpath $(VULKAN_SDK_PREFIX)/lib/libMoltenVK.dylib)
 VULKAN_MOLTENVK_ICD_PATH = $(realpath $(VULKAN_SDK_PREFIX)/share/vulkan/icd.d/MoltenVK_icd.json)
 VULKAN_LAYERS_PATH = $(realpath $(VULKAN_SDK_PREFIX)/share/vulkan/explicit_layer.d)
 VULKAN_LIBDIR = $(dir $(BUILD_EXECUTABLE))vulkan
-
-$(VULKAN_LIBDIR)/lib/libvulkan.dylib: $(VULKAN_LOADER_PATH)
-	@$(GLOBAL_MKDIR) $(VULKAN_LIBDIR)/lib
-	cp $(VULKAN_LOADER_PATH) $(VULKAN_LIBDIR)/lib/libvulkan.dylib
-
-$(VULKAN_LIBDIR)/lib/libMoltenVK.dylib: $(VULKAN_MOLTENVK_PATH)
-	@$(GLOBAL_MKDIR) $(VULKAN_LIBDIR)/lib
-	cp $(VULKAN_MOLTENVK_PATH) $(VULKAN_LIBDIR)/lib/libMoltenVK.dylib
 
 $(VULKAN_LIBDIR)/icd.d/MoltenVK_icd.json: $(VULKAN_MOLTENVK_ICD_PATH)
 	@$(GLOBAL_MKDIR) $(VULKAN_LIBDIR)/icd.d
@@ -84,14 +80,22 @@ $(VULKAN_LIBDIR)/lib/%.dylib: $(VULKAN_SDK_PREFIX)/lib/%.dylib
 	@$(GLOBAL_MKDIR) $(VULKAN_LIBDIR)/lib
 	cp $(VULKAN_SDK_PREFIX)/lib/$*.dylib $(VULKAN_LIBDIR)/lib/$*.dylib
 
-xenolith-install-loader: $(VULKAN_LIBDIR)/lib/libvulkan.dylib $(VULKAN_LIBDIR)/lib/libMoltenVK.dylib $(VULKAN_LIBDIR)/icd.d/MoltenVK_icd.json \
+$(BUILD_EXECUTABLE): \
+	$(VULKAN_LIBDIR)/lib/libvulkan.1.dylib \
+	$(VULKAN_LIBDIR)/lib/libMoltenVK.dylib \
 	$(subst $(VULKAN_LAYERS_PATH),$(VULKAN_LIBDIR)/explicit_layer.d,$(wildcard $(VULKAN_LAYERS_PATH)/*.json)) \
 	$(subst $(VULKAN_SDK_PREFIX),$(VULKAN_LIBDIR),$(wildcard $(VULKAN_SDK_PREFIX)/lib/libVkLayer_*.dylib))
 
-$(BUILD_EXECUTABLE): xenolith-install-loader
-$(BUILD_SHARED_LIBRARY): xenolith-install-loader
-$(BUILD_STATIC_LIBRARY): xenolith-install-loader
+$(BUILD_SHARED_LIBRARY): \
+	$(VULKAN_LIBDIR)/lib/libvulkan.1.dylib \
+	$(VULKAN_LIBDIR)/lib/libMoltenVK.dylib \
+	$(subst $(VULKAN_LAYERS_PATH),$(VULKAN_LIBDIR)/explicit_layer.d,$(wildcard $(VULKAN_LAYERS_PATH)/*.json)) \
+	$(subst $(VULKAN_SDK_PREFIX),$(VULKAN_LIBDIR),$(wildcard $(VULKAN_SDK_PREFIX)/lib/libVkLayer_*.dylib))
 
-.PHONY: xenolith-install-loader
+$(BUILD_STATIC_LIBRARY): \
+	$(VULKAN_LIBDIR)/lib/libvulkan.1.dylib \
+	$(VULKAN_LIBDIR)/lib/libMoltenVK.dylib \
+	$(subst $(VULKAN_LAYERS_PATH),$(VULKAN_LIBDIR)/explicit_layer.d,$(wildcard $(VULKAN_LAYERS_PATH)/*.json)) \
+	$(subst $(VULKAN_SDK_PREFIX),$(VULKAN_LIBDIR),$(wildcard $(VULKAN_SDK_PREFIX)/lib/libVkLayer_*.dylib))
 
 endif

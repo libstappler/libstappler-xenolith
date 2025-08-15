@@ -149,6 +149,7 @@ protected:
 	bool _hasFocus = true;
 	bool _pointerInWindow = false;
 	bool _isFullscreen = false;
+	bool _inCloseRequest = false;
 
 	uint32_t _exitGuard = 0;
 	bool _insetDecorationVisible = true;

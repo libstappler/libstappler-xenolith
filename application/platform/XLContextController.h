@@ -23,9 +23,10 @@
 #ifndef XENOLITH_APPLICATION_PLATFORM_XLCONTEXTCONTROLLER_H_
 #define XENOLITH_APPLICATION_PLATFORM_XLCONTEXTCONTROLLER_H_
 
-#include "XLContextInfo.h"
+#include "XLContext.h"
 #include "XLCoreTextInput.h"
 #include "XLDisplayConfigManager.h"
+#include "XLContextNativeWindow.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -43,6 +44,15 @@ enum class ContextState {
 	Started,
 	Active,
 };
+
+enum class WindowCloseOptions {
+	None,
+	NotifyExitGuard = 1 << 0,
+	CloseInPlace = 1 << 1,
+	IgnoreExitGuard = 1 << 2,
+};
+
+SP_DEFINE_ENUM_AS_MASK(WindowCloseOptions)
 
 struct ClipboardRequest : public Ref {
 	// receives data from clipboard
@@ -70,6 +80,14 @@ struct ClipboardData : public Ref {
 	Rc<Ref> owner;
 };
 
+// For platforms, that has no return to entry point (like, MacOS [NSApp run])
+// We need a proper way to release context.
+// So, we need some container, from which we can remove context to release it
+struct ContextContainer : public Ref {
+	Rc<Context> context;
+	Rc<ContextController> controller;
+};
+
 class ContextController : public Ref {
 public:
 	static Rc<ContextController> create(NotNull<Context>, ContextConfig &&info);
@@ -80,21 +98,26 @@ public:
 
 	virtual bool init(NotNull<Context>);
 
-	virtual int run();
+	virtual int run(NotNull<ContextContainer>);
 
 	event::Looper *getLooper() const { return _looper; }
 
 	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
 
 	virtual void notifyWindowCreated(NotNull<NativeWindow>);
-	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize);
+	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>,
+			core::PresentationSwapchainFlags);
 	virtual void notifyWindowInputEvents(NotNull<NativeWindow>, Vector<core::InputEventData> &&);
 	virtual void notifyWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
 
 	// true if window should be closed, false otherwise (e.g. ExitGuard)
-	virtual bool notifyWindowClosed(NotNull<NativeWindow>);
+	virtual bool notifyWindowClosed(NotNull<NativeWindow>,
+			WindowCloseOptions = WindowCloseOptions::NotifyExitGuard
+					| WindowCloseOptions::CloseInPlace);
 
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>);
+
+	virtual void handleRootWindowClosed();
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
@@ -103,11 +126,10 @@ public:
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;
 
+	virtual void handleStateChanged(ContextState prevState, ContextState newState);
+
 	virtual void handleNetworkStateChanged(NetworkFlags);
 	virtual void handleThemeInfoChanged(const ThemeInfo &);
-
-protected:
-	virtual void handleStateChanged(ContextState prevState, ContextState newState);
 
 	virtual void handleContextWillDestroy();
 	virtual void handleContextDidDestroy();
@@ -130,6 +152,7 @@ protected:
 	virtual bool stop();
 	virtual bool destroy();
 
+protected:
 	virtual Value saveContextState();
 
 	virtual Rc<core::Loop> makeLoop(NotNull<core::Instance>);

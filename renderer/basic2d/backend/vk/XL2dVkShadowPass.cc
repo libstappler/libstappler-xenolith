@@ -210,23 +210,23 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 							| PipelineStage::DrawIndirect,
 					AccessType::IndirectCommandRead | AccessType::ShaderRead));
 
-	auto layout2d = passBuilder.addDescriptorLayout("Layout2d",
-			[&, this](PipelineLayoutBuilder &layoutBuilder) {
+	auto layout2d =
+			passBuilder.addDescriptorLayout("Layout2d", [&](PipelineLayoutBuilder &layoutBuilder) {
 		layoutBuilder.setTextureSetLayout(texLayout);
 	});
 
-	auto layoutSdf = passBuilder.addDescriptorLayout("LayoutSdf",
-			[&, this](PipelineLayoutBuilder &layoutBuilder) {
-		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
+	auto layoutSdf =
+			passBuilder.addDescriptorLayout("LayoutSdf", [&](PipelineLayoutBuilder &layoutBuilder) {
+		layoutBuilder.addSet([&](DescriptorSetBuilder &setBuilder) {
 			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment,
 					AttachmentLayout::General);
 		});
 	});
 
-	auto layoutShadow = passBuilder.addDescriptorLayout("Layout2d",
-			[&, this](PipelineLayoutBuilder &layoutBuilder) {
+	auto layoutShadow =
+			passBuilder.addDescriptorLayout("Layout2d", [&](PipelineLayoutBuilder &layoutBuilder) {
 		// Vertex input attachment - per-frame vertex list
-		layoutBuilder.addSet([&, this](DescriptorSetBuilder &setBuilder) {
+		layoutBuilder.addSet([&](DescriptorSetBuilder &setBuilder) {
 			setBuilder.addDescriptor(shadowAttachment, DescriptorType::InputAttachment,
 					AttachmentLayout::ShaderReadOnlyOptimal);
 			setBuilder.addDescriptor(sdfAttachment, DescriptorType::InputAttachment,

@@ -23,9 +23,14 @@
 #include "XLContextController.h"
 #include "XLContextNativeWindow.h"
 #include "XLContext.h"
+#include "XLAppWindow.h"
 
 #if LINUX
 #include "linux/XLLinuxContextController.h"
+#endif
+
+#if MACOS
+#include "macos/XLMacosContextController.h"
 #endif
 
 #if MODULE_XENOLITH_BACKEND_VK
@@ -38,11 +43,19 @@ Rc<ContextController> ContextController::create(NotNull<Context> ctx, ContextCon
 #if LINUX
 	return Rc<LinuxContextController>::create(ctx, move(info));
 #endif
+#if MACOS
+	return Rc<MacosContextController>::create(ctx, move(info));
+#endif
+	log::error("ContextController", "Unknown platform");
+	return nullptr;
 }
 
 void ContextController::acquireDefaultConfig(ContextConfig &config, NativeContextHandle *handle) {
 #if LINUX
 	LinuxContextController::acquireDefaultConfig(config, handle);
+#endif
+#if MACOS
+	MacosContextController::acquireDefaultConfig(config, handle);
 #endif
 }
 
@@ -51,14 +64,15 @@ bool ContextController::init(NotNull<Context> ctx) {
 	return true;
 }
 
-int ContextController::run() { return _resultCode; }
+int ContextController::run(NotNull<ContextContainer>) { return _resultCode; }
 
 void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
 	_context->handleNativeWindowCreated(w);
 }
 
-void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w, bool liveResize) {
-	_context->handleNativeWindowConstraintsChanged(w, liveResize);
+void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
+		core::PresentationSwapchainFlags flags) {
+	_context->handleNativeWindowConstraintsChanged(w, flags);
 }
 void ContextController::notifyWindowInputEvents(NotNull<NativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
@@ -70,21 +84,43 @@ void ContextController::notifyWindowTextInput(NotNull<NativeWindow> w,
 	_context->handleNativeWindowTextInput(w, state);
 }
 
-bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w) {
-	if (w->hasExitGuard()) {
-		auto event = core::InputEventData::BoolEvent(core::InputEventName::CloseRequest, true);
-		notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
+bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
+	if (!hasFlag(opts, WindowCloseOptions::IgnoreExitGuard) && w->hasExitGuard()) {
+		if (hasFlag(opts, WindowCloseOptions::NotifyExitGuard)) {
+			auto event = core::InputEventData::BoolEvent(core::InputEventName::CloseRequest, true);
+			notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
+		}
 		return false;
 	} else {
-		_activeWindows.erase(w.get());
-		_context->handleNativeWindowDestroyed(w);
-		w->unmapWindow();
+		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
+			_activeWindows.erase(w.get());
+			_context->handleNativeWindowDestroyed(w);
+			w->unmapWindow();
+		}
 		return true;
 	}
 }
 
-Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>) {
-	return nullptr;
+Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread> app, NotNull<NativeWindow> w) {
+	return Rc<AppWindow>::create(_context, app, w);
+}
+
+void ContextController::handleRootWindowClosed() {
+	if (_displayConfigManager && _displayConfigManager->hasSavedMode()) {
+		_displayConfigManager->restoreMode([this](Status) {
+			_looper->performOnThread([this] {
+				_displayConfigManager->invalidate();
+				destroy();
+			}, this);
+		}, this);
+	} else {
+		_looper->performOnThread([this] {
+			if (_displayConfigManager) {
+				_displayConfigManager->invalidate();
+			}
+			destroy();
+		}, this);
+	}
 }
 
 void ContextController::initializeComponent(NotNull<ContextComponent> comp) {
@@ -134,22 +170,11 @@ void ContextController::handleStateChanged(ContextState prevState, ContextState 
 	switch (newState) {
 	case ContextState::None:
 		handleContextWillDestroy();
-		_state = newState;
-		_networkFlags = NetworkFlags::None;
-
-		_contextInfo = nullptr;
-		_windowInfo = nullptr;
-		_instanceInfo = nullptr;
-		_loopInfo = nullptr;
-
 		handleContextDidDestroy();
-		_context = nullptr;
-		_looper = nullptr;
 		break;
 	case ContextState::Created:
 		if (prevState > newState) {
 			handleContextWillStop();
-			_state = newState;
 			handleContextDidStop();
 		} else {
 			// should not happen - context controller should be created in this state
@@ -158,17 +183,14 @@ void ContextController::handleStateChanged(ContextState prevState, ContextState 
 	case ContextState::Started:
 		if (prevState > newState) {
 			handleContextWillPause();
-			_state = newState;
 			handleContextDidPause();
 		} else {
 			handleContextWillStart();
-			_state = newState;
 			handleContextDidStart();
 		}
 		break;
 	case ContextState::Active:
 		handleContextWillResume();
-		_state = newState;
 		handleContextDidResume();
 		break;
 	}
@@ -176,26 +198,66 @@ void ContextController::handleStateChanged(ContextState prevState, ContextState 
 	release(refId);
 }
 
-void ContextController::handleContextWillDestroy() { _context->handleWillDestroy(); }
-void ContextController::handleContextDidDestroy() { _context->handleDidDestroy(); }
+void ContextController::handleContextWillDestroy() {
+	_context->handleWillDestroy();
+	_looper->poll();
+}
+void ContextController::handleContextDidDestroy() {
+	_state = ContextState::None;
+	_networkFlags = NetworkFlags::None;
+	_contextInfo = nullptr;
+	_windowInfo = nullptr;
+	_instanceInfo = nullptr;
+	_loopInfo = nullptr;
+	_context->handleDidDestroy();
+	_looper->poll();
+	_context = nullptr;
+	_looper = nullptr;
+}
 
-void ContextController::handleContextWillStop() { _context->handleWillStop(); }
-void ContextController::handleContextDidStop() { _context->handleDidStop(); }
+void ContextController::handleContextWillStop() {
+	_context->handleWillStop();
+	_looper->poll();
+}
+void ContextController::handleContextDidStop() {
+	_state = ContextState::Created;
+	_context->handleDidStop();
+	_looper->poll();
+}
 
-void ContextController::handleContextWillPause() { _context->handleWillPause(); }
-void ContextController::handleContextDidPause() { _context->handleDidPause(); }
+void ContextController::handleContextWillPause() {
+	_context->handleWillPause();
+	_looper->poll();
+}
+void ContextController::handleContextDidPause() {
+	_state = ContextState::Started;
+	_context->handleDidPause();
+	_looper->poll();
+}
 
-void ContextController::handleContextWillResume() { _context->handleWillResume(); }
+void ContextController::handleContextWillResume() {
+	_context->handleWillResume();
+	_looper->poll();
+}
 void ContextController::handleContextDidResume() {
+	_state = ContextState::Active;
 	_context->handleDidResume();
+	_looper->poll();
 
 	// repeat state notifications if they were missed in paused mode
 	_context->handleNetworkStateChanged(_networkFlags);
 	_context->handleThemeInfoChanged(_themeInfo);
 }
 
-void ContextController::handleContextWillStart() { _context->handleWillStart(); }
-void ContextController::handleContextDidStart() { _context->handleDidStart(); }
+void ContextController::handleContextWillStart() {
+	_context->handleWillStart();
+	_looper->poll();
+}
+void ContextController::handleContextDidStart() {
+	_state = ContextState::Started;
+	_context->handleDidStart();
+	_looper->poll();
+}
 
 bool ContextController::start() {
 	switch (_state) {

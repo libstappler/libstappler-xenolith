@@ -55,7 +55,8 @@ int Context::run(int argc, const char **argv) {
 				auto appName = filepath::lastComponent(StringView(argv[0]));
 
 				std::cout << appName << " <options>:\n";
-				ContextConfig::CommandLine.describe([&](StringView str) { std::cout << str; });
+				ContextConfig::getCommandLineParser().describe(
+						[&](StringView str) { std::cout << str; });
 
 				auto helpString = SharedModule::acquireTypedSymbol<SymbolHelpStringSignature>(
 						buildconfig::MODULE_APPCOMMON_NAME, SymbolHelpStringName);
@@ -88,7 +89,11 @@ int Context::run(int argc, const char **argv) {
 			return -1;
 		}
 
-		return ctx->_controller->run();
+		auto container = Rc<platform::ContextContainer>::create();
+		container->context = sp::move(ctx);
+		container->controller = container->context->_controller;
+
+		return container->controller->run(container);
 	};
 
 	// access context
@@ -105,6 +110,9 @@ Context::Context() {
 	_alloc = memory::allocator::create();
 	_pool = memory::pool::create(_alloc);
 	_tmpPool = memory::pool::create(_pool);
+
+	// Context pool should be main thread's pool
+	thread::ThreadInfo::setThreadPool(_pool);
 
 	int result = 0;
 	if (!sp::initialize(result)) {
@@ -123,8 +131,13 @@ Context::~Context() {
 
 bool Context::init(ContextConfig &&info) {
 	_info = info.context;
+
 	_controller = platform::ContextController::create(this, move(info));
 
+	if (!_controller) {
+		log::error("Context", "Fail to create ContextController");
+		return false;
+	}
 	_looper = _controller->getLooper();
 
 #if MODULE_XENOLITH_FONT
@@ -318,29 +331,43 @@ void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {
 
 void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 	log::info("Context", "handleNativeWindowDestroyed");
-	w->getAppWindow()->close(true);
-	if (w->isRootWindow()) {
-		_rootWindow = nullptr;
+	auto appWindow = w->getAppWindow();
+	if (appWindow) {
+		appWindow->close(true);
+		if (w->isRootWindow()) {
+			_rootWindow = nullptr;
+		}
 	}
 }
+
 void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
 	log::info("Context", "handleNativeWindowRedrawNeeded");
 }
-void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w, bool liveResize) {
+
+void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w,
+		core::PresentationSwapchainFlags flags) {
 	log::info("Context", "handleNativeWindowConstraintsChanged");
 
-	w->getAppWindow()->updateConstraints(liveResize
-					? core::PresentationSwapchainFlags::SwitchToFastMode
-					: core::PresentationSwapchainFlags::None);
+	auto appWindow = w->getAppWindow();
+	if (appWindow) {
+		appWindow->updateConstraints(flags);
+	}
 }
+
 void Context::handleNativeWindowInputEvents(NotNull<NativeWindow> w,
 		Vector<core::InputEventData> &&events) {
-	w->getAppWindow()->handleInputEvents(sp::move(events));
+	auto appWindow = w->getAppWindow();
+	if (appWindow) {
+		appWindow->handleInputEvents(sp::move(events));
+	}
 }
 
 void Context::handleNativeWindowTextInput(NotNull<NativeWindow> w,
 		const core::TextInputState &state) {
-	w->getAppWindow()->handleTextInput(state);
+	auto appWindow = w->getAppWindow();
+	if (appWindow) {
+		appWindow->handleTextInput(state);
+	}
 }
 
 void Context::handleLowMemory() {
@@ -375,6 +402,7 @@ void Context::handleDidStop() {
 	log::info("Context", "handleDidStop");
 	if (_application) {
 		_application->stop();
+		_application->waitStopped();
 		_application = nullptr;
 	}
 }
@@ -400,7 +428,6 @@ void Context::handleWillStart() {
 void Context::handleDidStart() {
 	log::info("Context", "handleDidStart");
 	if (!_running) {
-
 		/*
 		addTokenCallback(this, [this](StringView str) {
 			_application->performOnAppThread([this, str = str.str<Interface>()]() mutable {

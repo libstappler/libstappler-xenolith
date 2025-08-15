@@ -46,7 +46,7 @@ public:
 
 	virtual ~FpsDisplay() { }
 
-	virtual bool init();
+	virtual bool init() override;
 	virtual void update(const UpdateTime &) override;
 
 	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;

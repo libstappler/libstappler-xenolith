@@ -367,6 +367,10 @@ void Loop::stop() {
 		_internal->updateTimerHandle->cancel();
 		_internal->updateTimerHandle = nullptr;
 
+		if (_frameCache) {
+			_frameCache->invalidate();
+		}
+
 		_internal->waitIdle();
 		_internal->endDevice();
 

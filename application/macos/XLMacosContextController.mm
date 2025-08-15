@@ -1,0 +1,396 @@
+/**
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ **/
+
+#import <AppKit/NSApplication.h>
+#import <Network/Network.h>
+
+#include "XLMacosContextController.h"
+#include "XLMacosWindow.h"
+#include "XLAppWindow.h"
+#include "SPEventLooper.h"
+
+#if MODULE_XENOLITH_BACKEND_VK
+#include "XLVkInstance.h"
+#endif
+
+@interface XLMacosAppDelegate : NSObject <NSApplicationDelegate> {
+	NSApplication *_application;
+	NSWindow *_window;
+	NSXLPL::MacosContextController *_controller;
+	nw_path_monitor_t _pathMonitor;
+	NSXL::ThemeInfo _themeInfo;
+	bool _terminated;
+};
+
+- (id _Nonnull)init:(NSXLPL::MacosContextController *)controller;
+
+- (void)run;
+- (void)terminate;
+
+- (void)doNothing:(id _Nonnull)object;
+
+@end
+
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+void MacosContextController::acquireDefaultConfig(ContextConfig &config, NativeContextHandle *) {
+	if (config.instance->api == core::InstanceApi::None) {
+		config.instance->api = core::InstanceApi::Vulkan;
+	}
+
+	if (config.loop) {
+		config.loop->defaultFormat = core::ImageFormat::B8G8R8A8_UNORM;
+	}
+
+	if (config.window) {
+		if (config.window->imageFormat == core::ImageFormat::Undefined) {
+			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
+		}
+	}
+}
+
+MacosContextController::~MacosContextController() { _appDelegate = nullptr; }
+
+bool MacosContextController::init(NotNull<Context> ctx, ContextConfig &&config) {
+	if (!ContextController::init(ctx)) {
+		return false;
+	}
+
+	_contextInfo = move(config.context);
+	_windowInfo = move(config.window);
+	_instanceInfo = move(config.instance);
+	_loopInfo = move(config.loop);
+
+	_looper = event::Looper::acquire(
+			event::LooperInfo{.workersCount = _contextInfo->mainThreadsCount});
+
+	_appDelegate = [[XLMacosAppDelegate alloc] init:this];
+
+	return true;
+}
+
+int MacosContextController::run(NotNull<ContextContainer> ctx) {
+	_container = ctx;
+
+	[_appDelegate run];
+
+	return ContextController::run(ctx);
+}
+
+void MacosContextController::handleContextDidStop() {
+	ContextController::handleContextDidStop();
+
+	if (_inTerminate) {
+		_looper->poll();
+	}
+}
+
+void MacosContextController::handleContextWillStart() {
+	auto instance = loadInstance();
+	if (!instance) {
+		log::error("MacosContextController", "Fail to load gAPI instance");
+		_resultCode = -1;
+		[_appDelegate terminate];
+		return;
+	} else {
+		if (auto loop = makeLoop(instance)) {
+			_context->handleGraphicsLoaded(loop);
+		}
+	}
+
+	ContextController::handleContextWillStart();
+}
+
+void MacosContextController::handleContextDidStart() {
+	ContextController::handleContextDidStart();
+
+	if (_windowInfo) {
+		auto window = Rc<MacosWindow>::create(this, sp::move(_windowInfo), true);
+		if (window) {
+			_activeWindows.emplace(window);
+		}
+	}
+}
+
+void MacosContextController::handleContextDidDestroy() {
+	ContextController::handleContextDidDestroy();
+	if (!_inTerminate) {
+		[[NSRunLoop mainRunLoop] performBlock:^{ [_appDelegate terminate]; }];
+	}
+}
+
+void MacosContextController::applicationWillTerminate(bool terminated) {
+	_inTerminate = true;
+	auto container = sp::move(_container);
+	if (!terminated) {
+		stop();
+		handleContextWillDestroy();
+		handleContextDidDestroy();
+	}
+	container->controller = nullptr;
+	container->context = nullptr;
+}
+
+Rc<core::Instance> MacosContextController::loadInstance() {
+	Rc<core::Instance> instance;
+#if MODULE_XENOLITH_BACKEND_VK
+	auto instanceInfo = move(_instanceInfo);
+	_instanceInfo = nullptr;
+
+	auto instanceBackendInfo = Rc<vk::InstanceBackendInfo>::create();
+	instanceBackendInfo->setup = [this](vk::InstanceData &data, const vk::InstanceInfo &info) {
+		auto ctxInfo = _context->getInfo();
+
+		if (info.availableBackends.test(toInt(vk::SurfaceBackend::MacOS))) {
+			data.enableBackends.set(toInt(vk::SurfaceBackend::MacOS));
+		}
+
+		if (info.availableBackends.test(toInt(vk::SurfaceBackend::Metal))) {
+			data.enableBackends.set(toInt(vk::SurfaceBackend::Metal));
+		}
+
+		data.applicationName = ctxInfo->appName;
+		data.applicationVersion = ctxInfo->appVersion;
+		data.checkPresentationSupport = [](const vk::Instance *inst, VkPhysicalDevice device,
+												uint32_t queueIdx) -> vk::SurfaceBackendMask {
+			// From Vulkan Doc:
+			// On macOS, all physical devices and queue families must be capable of presentation with any layer.
+			// As a result there is no macOS-specific query for these capabilities.
+			vk::SurfaceBackendMask ret;
+			ret.set(toInt(vk::SurfaceBackend::MacOS));
+			ret.set(toInt(vk::SurfaceBackend::Metal));
+			return ret;
+		};
+		return true;
+	};
+
+	instanceInfo->backend = move(instanceBackendInfo);
+
+	instance = core::Instance::create(move(instanceInfo));
+#else
+	log::error("LinuxContextController", "No available gAPI backends found");
+	_resultCode = -1;
+#endif
+	return instance;
+}
+
+} // namespace stappler::xenolith::platform
+
+
+@implementation XLMacosAppDelegate
+
+- (id _Nonnull)init:(NSXLPL::MacosContextController *)controller {
+	_controller = controller;
+	_application = [NSApplication sharedApplication];
+
+	if (!_application.delegate) {
+		if (!NSSP::hasFlag(_controller->getContextInfo()->flags, NSXL::ContextFlags::Headless)) {
+			_application.activationPolicy = NSApplicationActivationPolicyRegular;
+			_application.presentationOptions = NSApplicationPresentationDefault;
+		}
+
+		_application.delegate = self;
+		_terminated = false;
+
+		[NSThread detachNewThreadSelector:@selector(doNothing:) toTarget:self withObject:nil];
+	}
+
+	return self;
+}
+
+- (void)run {
+	if (![[NSRunningApplication currentApplication] isFinishedLaunching]) {
+		[NSApp run];
+	}
+}
+
+- (void)terminate {
+	_terminated = true;
+	[NSApp terminate:self];
+	[NSApp abortModal];
+}
+
+- (void)doNothing:(id _Nonnull)object {
+	// do nothing
+}
+
+- (void)updateNetworkState:(nw_path_t)path {
+	nw_path_status_t status = nw_path_get_status(path);
+
+	NSXL::NetworkFlags flags = NSXL::NetworkFlags::None;
+
+	if (status == nw_path_status_invalid) {
+		_controller->handleNetworkStateChanged(flags);
+	}
+
+	if (nw_path_uses_interface_type(path, nw_interface_type_wired)) {
+		flags |= NSXL::NetworkFlags::Wired;
+	} else if (nw_path_uses_interface_type(path, nw_interface_type_wifi)) {
+		flags |= NSXL::NetworkFlags::Wireless;
+	} else if (nw_path_uses_interface_type(path, nw_interface_type_cellular)) {
+		flags |= NSXL::NetworkFlags::Wireless;
+	}
+
+	if (nw_path_is_expensive(path)) {
+		flags |= NSXL::NetworkFlags::Metered;
+	}
+
+
+	if (nw_path_is_constrained(path)) {
+		flags |= NSXL::NetworkFlags::Restricted;
+	}
+
+	switch (status) {
+	case nw_path_status_invalid: break;
+	case nw_path_status_unsatisfied: flags |= NSXL::NetworkFlags::Suspended; break;
+	case nw_path_status_satisfied:
+		if ((nw_path_has_ipv4(path) || nw_path_has_ipv6(path)) && nw_path_has_dns(path)) {
+			flags |= NSXL::NetworkFlags::Internet;
+		}
+		flags |= NSXL::NetworkFlags::Validated;
+		break;
+	case nw_path_status_satisfiable:
+		if ((nw_path_has_ipv4(path) || nw_path_has_ipv6(path)) && nw_path_has_dns(path)) {
+			flags |= NSXL::NetworkFlags::Internet;
+		}
+		flags |= NSXL::NetworkFlags::Suspended;
+		break;
+	}
+
+	_controller->handleNetworkStateChanged(flags);
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+					  ofObject:(id)object
+						change:(NSDictionary<NSString *, id> *)change
+					   context:(void *)context {
+	if (object == NSApp && [keyPath isEqualToString:@"effectiveAppearance"]) {
+		NSXL::String str = NSApp.effectiveAppearance.name.UTF8String;
+		NSSP::StringView r(str);
+
+		if (r.starts_with("NSAppearanceName")) {
+			r += strlen("NSAppearanceName");
+		}
+
+		NSXL::String color;
+		if (r.starts_with("Dark")) {
+			color = "Dark";
+		} else {
+			color = "Light";
+		}
+
+		_themeInfo.cursorSize = 24;
+		_themeInfo.colorScheme = color;
+		_themeInfo.iconTheme = r.str<NSXL::Interface>();
+		_themeInfo.cursorTheme = r.str<NSXL::Interface>();
+		_themeInfo.doubleClickInterval = 1'000'000 * [NSEvent doubleClickInterval];
+
+		_controller->handleThemeInfoChanged(_themeInfo);
+	}
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
+	return NSTerminateNow;
+}
+
+- (void)applicationWillFinishLaunching:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillFinishLaunching");
+	_controller->handleContextWillStart();
+}
+
+- (void)applicationDidFinishLaunching:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidFinishLaunching");
+	_controller->handleContextDidStart();
+
+	_pathMonitor = nw_path_monitor_create();
+	nw_path_monitor_set_queue(_pathMonitor, dispatch_get_main_queue());
+	nw_path_monitor_set_update_handler(_pathMonitor,
+			^(nw_path_t _Nonnull path) { [self updateNetworkState:path]; });
+	nw_path_monitor_start(_pathMonitor);
+
+	[NSApp addObserver:self
+			forKeyPath:@"effectiveAppearance"
+			   options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial
+			   context:nullptr];
+}
+
+- (void)applicationWillHide:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillHide");
+	_controller->handleContextWillStart();
+}
+
+- (void)applicationDidHide:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidHide");
+}
+
+- (void)applicationWillUnhide:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillUnhide");
+}
+
+- (void)applicationDidUnhide:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidUnhide");
+}
+
+- (void)applicationWillBecomeActive:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillBecomeActive");
+	_controller->handleContextWillResume();
+}
+- (void)applicationDidBecomeActive:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidBecomeActive");
+	_controller->handleContextDidResume();
+}
+- (void)applicationWillResignActive:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillResignActive");
+	_controller->handleContextWillPause();
+}
+
+- (void)applicationDidResignActive:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidResignActive");
+	_controller->handleContextDidPause();
+}
+
+- (void)applicationWillUpdate:(NSNotification *)notification {
+}
+
+- (void)applicationDidUpdate:(NSNotification *)notification {
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification {
+	if (_pathMonitor) {
+		nw_path_monitor_cancel(_pathMonitor);
+		_pathMonitor = nullptr;
+	}
+
+	NSSP::log::debug("XLMacosAppDelegate", "applicationWillTerminate");
+	_controller->applicationWillTerminate(_terminated);
+	self->_controller = nullptr;
+}
+
+- (void)applicationDidChangeScreenParameters:(NSNotification *)notification {
+	NSSP::log::debug("XLMacosAppDelegate", "applicationDidChangeScreenParameters");
+}
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
+	return NO;
+}
+
+@end

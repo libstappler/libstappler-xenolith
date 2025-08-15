@@ -52,7 +52,7 @@ public:
 	virtual ~SwapchainHandle() = default;
 
 	bool init(Device &dev, const core::SurfaceInfo &, const core::SwapchainConfig &, ImageInfo &&,
-			core::PresentMode, Surface *, uint32_t families[2], SwapchainHandle * = nullptr);
+			core::PresentMode, Surface *, uint32_t families[2], SwapchainHandle *);
 
 	VkSwapchainKHR getSwapchain() const { return _data->swapchain; }
 

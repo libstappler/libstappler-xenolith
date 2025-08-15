@@ -88,6 +88,7 @@ void AppThread::threadDispose() {
 
 	finalizeExtensions();
 
+	_appLooper->poll();
 	_appLooper = nullptr;
 
 	Thread::threadDispose();

@@ -502,7 +502,7 @@ void Instance::getDeviceFeatures(const VkPhysicalDevice &device, DeviceInfo::Fea
 		const DeviceInfo::OptVec &flags, uint32_t api) const {
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	if ((flags & ExtensionFlags::Portability) != ExtensionFlags::None) {
+	if (flags[toInt(OptionalDeviceExtension::Portability)]) {
 		features.devicePortability.pNext = next;
 		next = &features.devicePortability;
 	}
@@ -586,7 +586,7 @@ void Instance::getDeviceProperties(const VkPhysicalDevice &device,
 		DeviceInfo::Properties &properties, const DeviceInfo::OptVec &flags, uint32_t api) const {
 	void *next = nullptr;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-	if ((flags & ExtensionFlags::Portability) != ExtensionFlags::None) {
+	if (flags[toInt(OptionalDeviceExtension::Portability)]) {
 		properties.devicePortability.pNext = next;
 		next = &properties.devicePortability;
 	}

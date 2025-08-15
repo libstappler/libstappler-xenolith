@@ -29,9 +29,7 @@
 #ifndef XENOLITH_BACKEND_VK_XLVKTABLE_H_
 #define XENOLITH_BACKEND_VK_XLVKTABLE_H_
 
-#include <vulkan/vulkan.h>
-
-#include "XLCommon.h"
+#include "XLVkHeader.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 

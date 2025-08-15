@@ -332,7 +332,7 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 
 	if (result == VK_SUCCESS) {
 		++_presentedFrames;
-		if (_presentedFrames == config::MaxSuboptimalFrames
+		if (!_config.liveResize && _presentedFrames == config::MaxSuboptimalFrames
 				&& _presentMode == _config.presentModeFast
 				&& _config.presentModeFast != _config.presentMode) {
 			result = VK_SUBOPTIMAL_KHR;

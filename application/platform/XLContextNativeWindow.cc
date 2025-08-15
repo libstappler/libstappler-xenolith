@@ -36,8 +36,9 @@ NativeWindow::~NativeWindow() {
 }
 
 bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
-		WindowCapabilities caps) {
+		WindowCapabilities caps, bool isRootWindow) {
 	_controller = c;
+	_isRootWindow = isRootWindow;
 	_info = move(info);
 	_info->capabilities = caps;
 	_textInput = Rc<TextInputProcessor>::create(core::TextInputInfo{
@@ -50,6 +51,8 @@ bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 	});
 	return true;
 }
+
+void NativeWindow::handleLayerUpdate(const WindowLayer &layer) { _currentLayer = layer; }
 
 void NativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->run(req); }
 

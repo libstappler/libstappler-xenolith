@@ -278,10 +278,10 @@ void FontComponent::updateImage(event::Looper *looper, const Rc<core::DynamicIma
 	input->image = image;
 	input->ext = this;
 	input->requests = sp::move(data);
-	/*input->output = [] (const core::ImageInfoData &info, BytesView data) {
-		Bitmap bmp(data, info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
-		bmp.save(bitmap::FileFormat::Png, toString(Time::now().toMicros(), ".png"));
-	};*/
+	//input->output = [](const core::ImageInfoData &info, BytesView data) {
+	//	Bitmap bmp(data, info.extent.width, info.extent.height, bitmap::PixelFormat::A8);
+	//	bmp.save(bitmap::FileFormat::Png, FileInfo(toString(Time::now().toMicros(), ".png")));
+	//};
 
 	auto req = Rc<core::FrameRequest>::create(_queue);
 	if (dep) {

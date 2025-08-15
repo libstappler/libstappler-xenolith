@@ -55,10 +55,6 @@ public:
 
 	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
-	void handleRootWindowClosed();
-
-	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>) override;
-
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
 	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
 
