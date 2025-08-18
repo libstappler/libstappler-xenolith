@@ -29,7 +29,8 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
 enum class FullscreenFlags {
 	None,
-	Exclusive = 1 << 0,
+	Current = 1 << 0,
+	Exclusive = 1 << 1,
 };
 
 SP_DEFINE_ENUM_AS_MASK(FullscreenFlags)
@@ -53,6 +54,7 @@ struct ModeInfo {
 	uint32_t width = 0;
 	uint32_t height = 0;
 	uint32_t rate = 0; // FPS multiplied by 1000
+	float scale = 1.0f;
 
 	auto operator<=>(const ModeInfo &) const = default;
 };

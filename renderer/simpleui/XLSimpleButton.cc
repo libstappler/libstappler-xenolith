@@ -127,6 +127,7 @@ bool ButtonWithLabel::init(StringView str, Function<void()> &&cb) {
 	_label->setAlignment(font::TextAlign::Center);
 	_label->setFontSize(20);
 	_label->setString(str);
+	_label->setPersistentGlyphData(true);
 
 	return true;
 }

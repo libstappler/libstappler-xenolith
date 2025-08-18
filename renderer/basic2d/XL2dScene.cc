@@ -76,7 +76,7 @@ bool Scene2d::FpsDisplay::init() {
 	_label->setColor(Color::Black, true);
 	_label->setFontSize(16);
 	_label->setContentSizeDirtyCallback([this] { setContentSize(_label->getContentSize()); });
-	_label->setPersistentLayout(true);
+	_label->setPersistentGlyphData(true);
 	_label->addCommandFlags(CommandFlags::DoNotCount);
 
 	addCommandFlags(CommandFlags::DoNotCount);

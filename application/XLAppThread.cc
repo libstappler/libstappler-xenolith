@@ -161,17 +161,17 @@ void AppThread::perform(Rc<Task> &&task, bool performFirst) const {
 	_appLooper->performAsync(sp::move(task), performFirst);
 }
 
-void AppThread::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
+void AppThread::readFromClipboard(Function<void(Status, BytesView, StringView)> &&cb,
 		Function<StringView(SpanView<StringView>)> &&tcb, Ref *ref) {
 	_context->performOnThread(
 			[this, cb = sp::move(cb), tcb = sp::move(tcb), ref = Rc<Ref>(ref)]() mutable {
 		_context->readFromClipboard(
-				[this, cb = sp::move(cb), ref = sp::move(ref)](BytesView data,
+				[this, cb = sp::move(cb), ref = sp::move(ref)](Status st, BytesView data,
 						StringView type) mutable {
 			performOnAppThread(
-					[data = data.bytes<Interface>(), type = type.str<Interface>(),
+					[st, data = data.bytes<Interface>(), type = type.str<Interface>(),
 							cb = sp::move(cb), ref = move(ref)]() mutable {
-				cb(data, type);
+				cb(st, data, type);
 				ref = nullptr;
 			},
 					this);

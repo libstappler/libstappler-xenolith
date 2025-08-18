@@ -56,11 +56,11 @@ public:
 
 	virtual void applicationWillTerminate(bool terminated);
 
+	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
+	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
+
 protected:
 	Rc<core::Instance> loadInstance();
-
-	//virtual void handleContextWillDestroy() override;
-	//virtual void handleContextDidDestroy() override;
 
 	XLMacosAppDelegate *_appDelegate;
 	Rc<ContextContainer> _container;

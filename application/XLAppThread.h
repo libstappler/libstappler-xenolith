@@ -78,7 +78,7 @@ public:
 	/* Performs task in thread, identified by id */
 	void perform(Rc<Task> &&task, bool performFirst) const;
 
-	void readFromClipboard(Function<void(BytesView, StringView)> &&,
+	void readFromClipboard(Function<void(Status, BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
 
 	void writeToClipboard(BytesView, StringView contentType = StringView("text/plain"),

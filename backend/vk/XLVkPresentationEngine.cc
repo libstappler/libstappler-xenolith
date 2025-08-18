@@ -234,7 +234,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			log::warn("vk::View", "Swapchain replaced without frame presentation");
 		}
 
-		log::verbose("vk::PresentationEngine", "Surface: ", info.description());
+		// log::verbose("vk::PresentationEngine", "Surface: ", info.description());
 		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
 				presentMode, _surface.get_cast<Surface>(), queueFamilyIndices,
 				(oldSwapchain && oldSwapchainValid) ? oldSwapchain.get_cast<SwapchainHandle>()
@@ -260,7 +260,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 
 			for (auto &id : ids) { cache->addImageView(id); }
 
-			log::verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
+			// log::verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
 		} else {
 			log::error("vk::PresentationEngine", "Fail to create swapchain");
 		}

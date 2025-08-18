@@ -160,6 +160,8 @@ enum class WindowFlags {
 	// If possible, use server-defined cursors instead of client-side libraries
 	// Note that server-side cursor theme may not contain all cursors
 	PreferServerSideCursors = 1 << 4,
+
+	Opaque = 1 << 5,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowFlags)
@@ -171,19 +173,21 @@ enum class WindowCapabilities {
 	// If not provided - window is only windowed or only fullscreen
 	Fullscreen = 1 << 0,
 	FullscreenExclusive = 1 << 1,
+	FullscreenWithMode = 1 << 2,
+	FullscreenSeamlessModeSwitch = 1 << 3,
 
-	ServerSideDecorations = 1 << 2,
-	NativeDecorations = 1 << 3,
-	ServerSideCursors = 1 << 4,
+	ServerSideDecorations = 1 << 4,
+	NativeDecorations = 1 << 5,
+	ServerSideCursors = 1 << 6,
 
 	// Subwindows are allowed
-	Subwindows = 1 << 5,
+	Subwindows = 1 << 7,
 
 	// Direct output is available on platform
-	DirectOutput = 1 << 6,
+	DirectOutput = 1 << 8,
 
 	// 'Back' action can close application (Android-like)
-	BackIsExit = 1 << 7,
+	BackIsExit = 1 << 9,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

@@ -49,7 +49,7 @@ endif
 
 ifdef MACOS
 
-MODULE_XENOLITH_APPLICATION_GENERAL_LDFLAGS += -framework Cocoa -framework Network -framework Quartz
+MODULE_XENOLITH_APPLICATION_GENERAL_LDFLAGS += -framework Cocoa -framework Network -framework Quartz -framework IOKit -framework MetalKit
 
 endif
 

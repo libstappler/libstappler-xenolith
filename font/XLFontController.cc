@@ -474,6 +474,12 @@ Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
 			sp::move(data), _component->getLibrary());
 	_layouts.emplace(ret->getName(), ret);
 	ret->touch(_clock, style.persistent);
+
+	// some fonts contains preloaded chars - init dependency for renderer to actually preload them
+	if (ret->getRequiredCharsCount()) {
+		initDependency();
+	}
+
 	return ret;
 }
 
@@ -493,11 +499,7 @@ Rc<FontFaceSet> FontController::getLayoutForString(const FontParameters &f, cons
 Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> &l,
 		SpanView<CharLayoutData> chars) {
 	if (l->addTextureChars(chars)) {
-		if (!_dependency) {
-			_dependency = Rc<core::DependencyEvent>::alloc(
-					core::DependencyEvent::QueueSet{_component->getQueue()}, "FontController");
-		}
-		_dirty = true;
+		initDependency();
 		return _dependency;
 	}
 	return nullptr;
@@ -553,7 +555,10 @@ void FontController::update(AppThread *app, const UpdateTime &clock, bool) {
 		}
 		if (!objects.empty()) {
 			_component->updateImage(app->getLooper(), _image, sp::move(objects), move(_dependency),
-					[app = Rc<AppThread>(app)](bool) { app->wakeup(); });
+					[app = Rc<AppThread>(app)](bool) {
+				// perform views update
+				app->wakeup();
+			});
 			_dependency = nullptr;
 		}
 		_dirty = false;
@@ -697,10 +702,11 @@ void FontController::removeUnusedLayouts() {
 			continue;
 		}
 
-		if (/*_clock - it->second->getAccessTime() > _unusedInterval.toMicros() &&*/ it->second
-						->getReferenceCount()
+		if (/*_clock - it->second->getAccessTime                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           () > _unusedInterval.toMicros() &&*/ it
+						->second->getReferenceCount()
 				== 1) {
-			auto c = it->second->getTexturesCount();
+			auto c = it->second->getRequiredCharsCount();
+			log::debug("FontController", "Removed: ", it->first);
 			it = _layouts.erase(it);
 			if (c > 0) {
 				_dirty = true;
@@ -709,6 +715,14 @@ void FontController::removeUnusedLayouts() {
 			++it;
 		}
 	}
+}
+
+void FontController::initDependency() {
+	if (!_dependency) {
+		_dependency = Rc<core::DependencyEvent>::alloc(
+				core::DependencyEvent::QueueSet{_component->getQueue()}, "FontController");
+	}
+	_dirty = true;
 }
 
 } // namespace stappler::xenolith::font

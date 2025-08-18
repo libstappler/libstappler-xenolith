@@ -160,7 +160,7 @@ void Context::performOnThread(Function<void()> &&func, Ref *target, bool immedia
 	_looper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
-Status Context::readFromClipboard(Function<void(BytesView, StringView)> &&cb,
+Status Context::readFromClipboard(Function<void(Status, BytesView, StringView)> &&cb,
 		Function<StringView(SpanView<StringView>)> &&tcb, Ref *target) {
 	auto request = Rc<platform::ClipboardRequest>::create();
 	request->dataCallback = sp::move(cb);
@@ -299,7 +299,11 @@ void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindo
 
 	thread->addListener(w, [w](const UpdateTime &, bool wakeup) {
 		if (wakeup) {
+			log::debug("Context", "wakeup app window");
 			w->setReadyForNextFrame();
+
+			// force display link to update views
+			w->update(core::PresentationUpdateFlags::DisplayLink);
 		}
 	});
 

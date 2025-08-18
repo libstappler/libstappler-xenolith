@@ -404,8 +404,13 @@ public:
 	void setLocaleEnabled(bool);
 	bool isLocaleEnabled() const;
 
-	void setPersistentLayout(bool);
-	bool isPersistentLayout() const;
+	// Mark label's glyphs as persistent within GPU-side font cache
+	// Useful for a static menu labels or persistent window names.
+	//
+	// Persistent glyphs can not be dropped from cache, so, no glyph rendering required when
+	// label was removed from scene, then added again
+	void setPersistentGlyphData(bool);
+	bool isPersistentGlyphData() const;
 
 protected:
 	virtual bool hasLocaleTags(const WideStringView &) const;
@@ -446,7 +451,7 @@ protected:
 	bool _emplaceAllChars = false;
 	char16_t _fillerChar = u'…';
 
-	bool _persistentLayout = false;
+	bool _persistentGlyphData = false;
 };
 
 } // namespace stappler::xenolith::font

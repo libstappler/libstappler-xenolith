@@ -93,9 +93,12 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseO
 		return false;
 	} else {
 		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
-			_activeWindows.erase(w.get());
-			_context->handleNativeWindowDestroyed(w);
-			w->unmapWindow();
+			auto it = _activeWindows.find(w.get());
+			if (it != _activeWindows.end()) {
+				_activeWindows.erase(it);
+				_context->handleNativeWindowDestroyed(w);
+				w->unmapWindow();
+			}
 		}
 		return true;
 	}
@@ -132,7 +135,8 @@ void ContextController::initializeComponent(NotNull<ContextComponent> comp) {
 	}
 }
 
-Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&) {
+Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
+	req->dataCallback(Status::ErrorNotImplemented, BytesView(), StringView());
 	return Status::ErrorNotImplemented;
 }
 
@@ -199,10 +203,19 @@ void ContextController::handleStateChanged(ContextState prevState, ContextState 
 }
 
 void ContextController::handleContextWillDestroy() {
+	if (!_context) {
+		return;
+	}
+
 	_context->handleWillDestroy();
-	_looper->poll();
+	poll();
 }
+
 void ContextController::handleContextDidDestroy() {
+	if (!_context) {
+		return;
+	}
+
 	_state = ContextState::None;
 	_networkFlags = NetworkFlags::None;
 	_contextInfo = nullptr;
@@ -210,39 +223,69 @@ void ContextController::handleContextDidDestroy() {
 	_instanceInfo = nullptr;
 	_loopInfo = nullptr;
 	_context->handleDidDestroy();
-	_looper->poll();
+	poll();
+	if (_looper) {
+		_looper->wakeup(event::WakeupFlags::Graceful);
+	}
 	_context = nullptr;
 	_looper = nullptr;
 }
 
 void ContextController::handleContextWillStop() {
+	if (!_context) {
+		return;
+	}
+
 	_context->handleWillStop();
-	_looper->poll();
+	poll();
 }
+
 void ContextController::handleContextDidStop() {
+	if (!_context) {
+		return;
+	}
+
 	_state = ContextState::Created;
 	_context->handleDidStop();
-	_looper->poll();
+	poll();
 }
 
 void ContextController::handleContextWillPause() {
+	if (!_context) {
+		return;
+	}
+
 	_context->handleWillPause();
-	_looper->poll();
+	poll();
 }
+
 void ContextController::handleContextDidPause() {
+	if (!_context) {
+		return;
+	}
+
 	_state = ContextState::Started;
 	_context->handleDidPause();
-	_looper->poll();
+	poll();
 }
 
 void ContextController::handleContextWillResume() {
+	if (!_context) {
+		return;
+	}
+
 	_context->handleWillResume();
-	_looper->poll();
+	poll();
 }
+
 void ContextController::handleContextDidResume() {
+	if (!_context) {
+		return;
+	}
+
 	_state = ContextState::Active;
 	_context->handleDidResume();
-	_looper->poll();
+	poll();
 
 	// repeat state notifications if they were missed in paused mode
 	_context->handleNetworkStateChanged(_networkFlags);
@@ -250,13 +293,21 @@ void ContextController::handleContextDidResume() {
 }
 
 void ContextController::handleContextWillStart() {
+	if (!_context) {
+		return;
+	}
+
 	_context->handleWillStart();
-	_looper->poll();
+	poll();
 }
 void ContextController::handleContextDidStart() {
+	if (!_context) {
+		return;
+	}
+
 	_state = ContextState::Started;
 	_context->handleDidStart();
-	_looper->poll();
+	poll();
 }
 
 bool ContextController::start() {
@@ -376,6 +427,12 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 	auto loop = instance->makeLoop(_looper, move(_loopInfo));
 	_loopInfo = nullptr;
 	return loop;
+}
+
+void ContextController::poll() {
+	if (_looper) {
+		_looper->poll();
+	}
 }
 
 } // namespace stappler::xenolith::platform

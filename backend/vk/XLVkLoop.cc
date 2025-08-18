@@ -442,7 +442,7 @@ void Loop::runRenderQueue(Rc<FrameRequest> &&req, uint64_t gen, Function<void(bo
 		auto frame = makeFrame(move(req), gen);
 		if (frame && callback) {
 			frame->setCompleteCallback([this, callback = sp::move(callback)](FrameHandle &handle) {
-				if (_internal || !_internal->_running.load()) {
+				if (!_internal || !_internal->_running.load()) {
 					return;
 				}
 				callback(handle.isValid());

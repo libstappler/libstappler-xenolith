@@ -21,8 +21,9 @@
  **/
 
 #import <AppKit/AppKit.h>
-#import <QuartzCore/CAMetalLayer.h>
-#import <QuartzCore/CADisplayLink.h>
+#import <MetalKit/MetalKit.h>
+
+#import "XLMacosView.h"
 
 #include "XLMacosWindow.h"
 #include "XLAppWindow.h"
@@ -33,45 +34,37 @@
 #endif
 
 @interface XLMacosViewController : NSViewController <NSWindowDelegate> {
-	NSXLPL::MacosWindow *_engineWindow;
 	CADisplayLink *_displayLink;
-	CGSize _currentSize;
-	CGSize _viewScale;
 	CGPoint _currentPointerLocation;
 	NSXL::core::InputModifier _currentModifiers;
 	NSXL::core::InputKeyCode _keycodes[256];
 	uint16_t _scancodes[128];
+	NSXLPL::MacosWindow *_engineWindow;
 };
 
 - (instancetype _Nonnull)init:(NSSP::NotNull<NSXLPL::MacosWindow>)constroller
 					   window:(NSWindow *_Nonnull)window;
 
+- (void)invalidate;
+
+- (XLMacosView *)targetView;
+
+- (void)setEngineLiveResize:(BOOL)value;
+
 @end
 
-@interface XLMacosView : NSView <NSTextInputClient, NSViewLayerContentScaleDelegate> {
-	NSXLPL::MacosWindow *_window;
-	NSArray<NSAttributedStringKey> *_validAttributesForMarkedText;
-	bool _textDirty;
+@interface XLMacosWindow : NSWindow {
+	NSWindowStyleMask _defaultStyle;
+}
 
-	NSTrackingArea *_mainArea;
-	NSArray<NSTrackingArea *> *_cursorAreas;
-};
+- (void)setFrame:(NSRect)frameRect
+				  display:(BOOL)displayFlag
+				 duration:(NSTimeInterval)duration
+		completionHandler:(nullable void (^)(void))completionHandler;
 
-- (instancetype)initWithFrame:(NSRect)frameRect window:(NSXLPL::MacosWindow *)window;
+- (void)toggleFullScreen:(id)sender withScreen:(NSScreen *)screen;
 
-- (void)updateTextCursorWithPosition:(uint32_t)pos length:(uint32_t)len;
-
-- (void)updateTextInputWithText:(stappler::WideStringView)str
-					   position:(uint32_t)pos
-						 length:(uint32_t)len
-						   type:(stappler::xenolith::core::TextInputType)type;
-
-- (void)runTextInputWithText:(stappler::WideStringView)str
-					position:(uint32_t)pos
-					  length:(uint32_t)len
-						type:(stappler::xenolith::core::TextInputType)type;
-
-- (void)cancelTextInput;
+- (NSWindowStyleMask)defaultStyle;
 
 @end
 
@@ -82,7 +75,6 @@ MacosWindow::~MacosWindow() {
 		_controller->handleRootWindowClosed();
 	}
 
-	_rootView = nullptr;
 	_rootViewController = nullptr;
 	if (_window) {
 		_window = nullptr;
@@ -91,8 +83,9 @@ MacosWindow::~MacosWindow() {
 
 bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&info,
 		bool isRootWindow) {
-	WindowCapabilities caps =
-			WindowCapabilities::Fullscreen | WindowCapabilities::ServerSideDecorations;
+	WindowCapabilities caps = WindowCapabilities::FullscreenWithMode
+			| WindowCapabilities::FullscreenSeamlessModeSwitch | WindowCapabilities::Fullscreen
+			| WindowCapabilities::ServerSideDecorations;
 
 	if (!NativeWindow::init(controller, sp::move(info), caps, isRootWindow)) {
 		return false;
@@ -106,28 +99,40 @@ bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&i
 		{static_cast<CGFloat>(_info->rect.width), static_cast<CGFloat>(_info->rect.height)},
 	};
 
-	_window = [[NSWindow alloc] initWithContentRect:rect
-										  styleMask:style
-											backing:NSBackingStoreBuffered
-											  defer:YES];
+	_window = [[XLMacosWindow alloc] initWithContentRect:rect
+											   styleMask:style
+												 backing:NSBackingStoreBuffered
+												   defer:YES];
+
+	_window.animationBehavior = NSWindowAnimationBehaviorNone;
+
 	[_window setReleasedWhenClosed:false];
 	_rootViewController = [[XLMacosViewController alloc] init:this window:_window];
 	_window.contentViewController = _rootViewController;
 	_window.contentView = _window.contentViewController.view;
-	_rootView = (XLMacosView *)_window.contentView;
 	_initialized = true;
 
 	if (_windowLoaded) {
 		_controller->notifyWindowCreated(this);
-		[_window makeKeyAndOrderFront:_rootViewController];
+		[_window display];
+		//[_window makeKeyAndOrderFront:_rootViewController];
 	}
 	return true;
 }
 
-void MacosWindow::mapWindow() { }
+void MacosWindow::mapWindow() {
+	// show window in front and activate;
+	[_window makeKeyAndOrderFront:nil];
+	[_window orderFrontRegardless];
+	[_window orderWindow:NSWindowAbove relativeTo:0];
+
+	if (_isRootWindow) {
+		[NSApp activateIgnoringOtherApps:YES];
+	}
+}
 
 void MacosWindow::unmapWindow() {
-	_rootView = nullptr;
+	[_rootViewController invalidate];
 	_rootViewController = nullptr;
 }
 
@@ -142,10 +147,10 @@ bool MacosWindow::close() {
 	return true;
 }
 
-void MacosWindow::handleFramePresented(NotNull<core::PresentationFrame>) { }
+void MacosWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) { }
 
 void MacosWindow::handleLayerUpdate(const WindowLayer &layer) {
-	/*auto cursor = layer.flags & WindowLayerFlags::CursorMask;
+	auto cursor = layer.flags & WindowLayerFlags::CursorMask;
 	if (cursor != _currentCursor) {
 		NSCursor *targetCursor = nullptr;
 		switch (cursor) {
@@ -233,7 +238,7 @@ void MacosWindow::handleLayerUpdate(const WindowLayer &layer) {
 				_currentCursor = WindowLayerFlags::None;
 			}
 		}
-	}*/
+	}
 	NativeWindow::handleLayerUpdate(layer);
 }
 
@@ -254,7 +259,13 @@ core::FrameConstraints MacosWindow::exportConstraints(core::FrameConstraints &&c
 }
 
 Extent2 MacosWindow::getExtent() const {
-	auto size = _window.frame.size;
+	CGSize size;
+	if (_rootViewController && _rootViewController.targetView) {
+		size = _rootViewController.targetView.layer.frame.size;
+	} else {
+		size = _window.frame.size;
+	}
+
 	size.width *= _window.backingScaleFactor;
 	size.height *= _window.backingScaleFactor;
 	return Extent2(static_cast<uint32_t>(size.width), static_cast<uint32_t>(size.height));
@@ -270,7 +281,7 @@ Rc<core::Surface> MacosWindow::makeSurface(NotNull<core::Instance> cinstance) {
 
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 	VkMetalSurfaceCreateInfoEXT createInfo{VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT, nullptr,
-		0, (CAMetalLayer *)_rootView.layer};
+		0, (CAMetalLayer *)_rootViewController.targetView.layer};
 	if (instance->vkCreateMetalSurfaceEXT(instance->getInstance(), &createInfo, nullptr, &surface)
 			!= VK_SUCCESS) {
 		return nullptr;
@@ -302,6 +313,136 @@ void MacosWindow::handleDisplayLink() {
 	}
 }
 
+void MacosWindow::addMacosStateFlags(NativeWindowStateFlags state) {
+	if (!hasFlagAll(_state, state)) {
+		_state |= state;
+	}
+}
+
+void MacosWindow::clearMacosStateFlags(NativeWindowStateFlags state) {
+	if (hasFlag(_state, state)) {
+		_state &= ~state;
+	}
+}
+
+void MacosWindow::emitAppFrame() {
+	if (_appWindow) {
+		_appWindow->setReadyForNextFrame();
+		_appWindow->update(core::PresentationUpdateFlags::DisplayLink);
+	}
+}
+
+void MacosWindow::handleFullscreenTransitionComplete(MacosFullscreenRequest req) {
+	if (_hasPendingFullscreenOp) {
+		if (_fullscreenRequest == req) {
+			_hasPendingFullscreenOp = false;
+			_nextScreen = nullptr;
+		} else if (req == MacosFullscreenRequest::ExitFullscreen
+				&& _fullscreenRequest == MacosFullscreenRequest::ToggleFullscreen) {
+			_fullscreenRequest = MacosFullscreenRequest::EnterFullscreen;
+		}
+	}
+}
+
+Status MacosWindow::setFullscreenState(FullscreenInfo &&info) {
+	if (_hasPendingFullscreenOp) {
+		return Status::ErrorAgain;
+	}
+
+	auto enable = info != FullscreenInfo::None;
+	if (!enable) {
+		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			_hasPendingFullscreenOp = true;
+			_fullscreenRequest = MacosFullscreenRequest::ExitFullscreen;
+			[_window toggleFullScreen:nil];
+			_info->fullscreen = move(info);
+			_hasOriginalFrame = false;
+			return Status::Ok;
+		} else {
+			return Status::Declined;
+		}
+	} else {
+		auto frame = _window.frame;
+
+		if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			_originalFrame = frame;
+			_hasOriginalFrame = true;
+		}
+
+		if (hasFlag(info.flags, FullscreenFlags::Current)) {
+			if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+				auto current = _controller->getDisplayConfigManager()->getCurrentConfig();
+
+				auto screen = _window.screen;
+				NSNumber *screenNumber = [screen deviceDescription][@"NSScreenNumber"];
+
+				for (auto &it : current->monitors) {
+					if (CGDisplayUnitNumber([screenNumber unsignedIntValue]) == it.index) {
+						info.id = it.id;
+						info.mode = it.getCurrent().mode;
+						_hasPendingFullscreenOp = true;
+						_fullscreenRequest = MacosFullscreenRequest::EnterFullscreen;
+						[_window toggleFullScreen:nil];
+						_info->fullscreen = move(info);
+						return Status::Ok;
+						break;
+					}
+				}
+				return Status::Ok;
+			}
+			return Status::Declined;
+		}
+
+		auto current = _controller->getDisplayConfigManager()->getCurrentConfig();
+		auto mon = current->getMonitor(info.id);
+		if (!mon) {
+			return Status::ErrorInvalidArguemnt;
+		}
+
+		NSScreen *screen = nil;
+		for (screen in [NSScreen screens]) {
+			NSNumber *screenNumber = [screen deviceDescription][@"NSScreenNumber"];
+			if (CGDisplayUnitNumber([screenNumber unsignedIntValue]) == mon->index) {
+				break;
+			}
+		}
+
+		if (!screen) {
+			return Status::ErrorInvalidArguemnt;
+		}
+
+		info.id = mon->id;
+		info.mode = mon->getCurrent().mode;
+
+		// find target output
+		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			if (screen != _window.screen) {
+				_hasPendingFullscreenOp = true;
+				_fullscreenRequest = MacosFullscreenRequest::ToggleFullscreen;
+				_nextScreen = screen;
+				[_window toggleFullScreen:nil];
+				_info->fullscreen = move(info);
+				return Status::Ok;
+			}
+			return Status::Declined;
+		}
+
+		if (screen == _window.screen) {
+			_hasPendingFullscreenOp = true;
+			_fullscreenRequest = MacosFullscreenRequest::EnterFullscreen;
+			[_window toggleFullScreen:nil];
+			_info->fullscreen = move(info);
+			return Status::Ok;
+		}
+
+		_hasPendingFullscreenOp = true;
+		_fullscreenRequest = MacosFullscreenRequest::EnterFullscreen;
+		[_window toggleFullScreen:nil withScreen:screen];
+		_info->fullscreen = move(info);
+		return Status::Ok;
+	}
+}
+
 bool MacosWindow::updateTextInput(const TextInputRequest &req, TextInputFlags flags) {
 	return false;
 }
@@ -316,6 +457,8 @@ void MacosWindow::cancelTextInput() { }
 	if (_engineWindow) {
 		_engineWindow->handleDisplayLink();
 	}
+	[self.view setNeedsDisplay:YES];
+	[self.targetView setNeedsDisplay:YES];
 }
 
 - (instancetype _Nonnull)init:(NSSP::NotNull<NSXLPL::MacosWindow>)w
@@ -323,7 +466,6 @@ void MacosWindow::cancelTextInput() { }
 	self = [super init];
 	_engineWindow = w;
 
-	_currentSize = CGSize{0, 0};
 	_currentPointerLocation = CGPoint{0, 0};
 	_currentModifiers = NSXL::core::InputModifier::None;
 
@@ -338,36 +480,64 @@ void MacosWindow::cancelTextInput() { }
 	return self;
 }
 
+- (void)invalidate {
+	_engineWindow = nullptr;
+}
+
+- (XLMacosView *)targetView {
+	return (XLMacosView *)self.view;
+}
+
+- (void)setEngineLiveResize:(BOOL)value {
+	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
+			value ? NSXL::core::PresentationSwapchainFlags::EnableLiveResize
+				  : NSXL::core::PresentationSwapchainFlags::DisableLiveResize);
+}
+
 - (void)viewDidLoad {
 	[super viewDidLoad];
 
 	_engineWindow->handleWindowLoaded();
+
+	[_engineWindow->getWindow() setHidesOnDeactivate:NO];
+	[_engineWindow->getWindow() setCanHide:NO];
+	_engineWindow->getWindow().displaysWhenScreenProfileChanges = YES;
 }
 
 - (void)viewDidAppear {
+	if (!_engineWindow) {
+		return;
+	}
+
 	[super viewDidAppear];
 	_displayLink.paused = NO;
+	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Hidden);
 }
 
 - (void)viewWillDisappear {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Hidden);
 	_displayLink.paused = YES;
 	[super viewWillDisappear];
 }
 
 - (void)viewDidDisappear {
-	_engineWindow = nullptr;
 	[super viewWillDisappear];
 }
 
 - (void)loadView {
 	auto extent = _engineWindow->getWindow().contentLayoutRect.size;
 
+	//auto view = [[MTKView alloc] initWithFrame:_engineWindow->getWindow().contentLayoutRect
+	//									device:nullptr];
+
 	auto view = [[XLMacosView alloc] initWithFrame:NSRect{{0.0f, 0.0f}, extent}
 											window:_engineWindow];
 
 	view.wantsLayer = YES;
-
-	_currentSize = extent;
 
 	self.view = view;
 }
@@ -377,39 +547,250 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)windowDidResize:(NSNotification *)notification {
+	if (!_engineWindow) {
+		[self.targetView setFrame:self.view.window.contentLayoutRect];
+		return;
+	}
+
 	NSSize size = self.view.window.contentLayoutRect.size;
-	if (_currentSize.width != size.width || _currentSize.height != size.height) {
-		_currentSize = size;
-		_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
-				self.view.inLiveResize ? NSXL::core::PresentationSwapchainFlags::EnableLiveResize
-									   : NSXL::core::PresentationSwapchainFlags::None);
+	NSSP::log::debug("MacosWindow", "windowDidResize: ", size.width, " ", size.height);
+
+	CAMetalLayer *metalLayer = (CAMetalLayer *)self.view.layer; // 3
+	metalLayer.drawableSize = [self.view convertSizeToBacking:self.view.frame.size]; // 4
+
+	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
+			self.view.inLiveResize ? NSXL::core::PresentationSwapchainFlags::EnableLiveResize
+								   : NSXL::core::PresentationSwapchainFlags::None);
+	_engineWindow->emitAppFrame();
+
+	auto isZoomed = _engineWindow->getWindow().zoomed;
+	if (isZoomed) {
+		_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Maximized);
+	} else {
+		_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Maximized);
 	}
 }
 
+- (void)windowWillMove:(NSNotification *)notification {
+}
+
+- (void)windowDidMove:(NSNotification *)notification {
+	//_engineWindow->emitAppFrame();
+}
+
 - (void)windowWillStartLiveResize:(NSNotification *)notification {
-	//NSSP::log::debug("XLMacosViewController", "windowWillStartLiveResize");
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Resizing);
 }
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Resizing);
 	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
 			NSXL::core::PresentationSwapchainFlags::DisableLiveResize);
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
+	if (!_engineWindow) {
+		return YES;
+	}
+
 	return _engineWindow->getController()->notifyWindowClosed(_engineWindow,
 			NSXLPL::WindowCloseOptions::NotifyExitGuard);
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
 	NSSP::log::debug("XLMacosViewController", "windowWillClose");
 	_engineWindow->getWindow().delegate = nullptr;
 	_engineWindow->getController()->notifyWindowClosed(_engineWindow,
 			NSXLPL::WindowCloseOptions::CloseInPlace | NSXLPL::WindowCloseOptions::IgnoreExitGuard);
 }
 
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
+		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, true,
+				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
+	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Focused);
+}
+
+- (void)windowDidResignKey:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Focused);
+	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
+		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, false,
+				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
+}
+
+- (NSRect)windowWillUseStandardFrame:(NSWindow *)window defaultFrame:(NSRect)newFrame {
+	return newFrame;
+}
+
+- (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame {
+	return YES;
+}
+
+- (void)windowDidEnterFullScreen:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
+		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::Fullscreen, true)});
+	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Fullscreen);
+
+	_engineWindow->handleFullscreenTransitionComplete(
+			NSXLPL::MacosFullscreenRequest::EnterFullscreen);
+}
+
+- (void)windowWillExitFullScreen:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Fullscreen);
+	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
+		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::Fullscreen, false)});
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)notification {
+	if (!_engineWindow) {
+		return;
+	}
+
+	if (_engineWindow->getFullscreenRequest() == NSXLPL::MacosFullscreenRequest::ToggleFullscreen) {
+		_engineWindow->handleFullscreenTransitionComplete(
+				NSXLPL::MacosFullscreenRequest::ExitFullscreen);
+		[_engineWindow->getWindow() toggleFullScreen:nil withScreen:_engineWindow->getNextScreen()];
+	} else {
+		_engineWindow->handleFullscreenTransitionComplete(
+				NSXLPL::MacosFullscreenRequest::ExitFullscreen);
+	}
+}
+
+- (NSArray<NSWindow *> *)customWindowsToEnterFullScreenForWindow:(NSWindow *)window
+														onScreen:(NSScreen *)screen;
+{ return @[_engineWindow->getWindow()]; }
+
+- (void)window:(NSWindow *)window
+		startCustomAnimationToEnterFullScreenOnScreen:(NSScreen *)screen
+										 withDuration:(NSTimeInterval)duration {
+	NSSP::log::debug("MacosWindow", "startCustomAnimationToEnterFullScreenOnScreen");
+
+	auto frame = window.frame;
+	[window setStyleMask:([window styleMask] | NSWindowStyleMaskFullScreen)];
+	[window setFrame:frame display:YES];
+
+	[(XLMacosWindow *)window setFrame:screen.frame
+							  display:YES
+							 duration:duration
+					completionHandler:nil];
+}
+
+- (NSArray<NSWindow *> *)customWindowsToExitFullScreenForWindow:(NSWindow *)window {
+	return @[_engineWindow->getWindow()];
+}
+
+- (void)window:(NSWindow *)window
+		startCustomAnimationToExitFullScreenWithDuration:(NSTimeInterval)duration {
+	NSSP::log::debug("MacosWindow", "startCustomAnimationToExitFullScreenWithDuration");
+
+	__weak XLMacosWindow *w = _engineWindow->getWindow();
+
+	auto frame = w.screen.frame;
+	[w setStyleMask:w.defaultStyle];
+	[w setFrame:frame display:YES];
+
+	auto origFrame = _engineWindow->getOriginalFrame();
+
+	auto center = CGPoint{origFrame.origin.x + origFrame.size.width / 2.0,
+		origFrame.origin.y + origFrame.size.height / 2.0};
+
+	NSScreen *screen = nil;
+
+	for (NSScreen *s in NSScreen.screens) {
+		if (NSPointInRect(center, s.frame)) {
+			screen = s;
+			break;
+		}
+	}
+
+	if (_engineWindow->getFullscreenRequest() == NSXLPL::MacosFullscreenRequest::ToggleFullscreen) {
+		auto screenFrame = window.screen.frame;
+		auto x = (screenFrame.size.width - origFrame.size.width) / 2.0;
+		auto y = (screenFrame.size.height - origFrame.size.height) / 2.0;
+		auto targetRect =
+				NSRect{NSPoint{screenFrame.origin.x + x, screenFrame.origin.y + y}, origFrame.size};
+
+		[w setFrame:targetRect
+						  display:YES
+						 duration:duration
+				completionHandler:^() {
+				  NSSP::log::debug("XLMacosWindow",
+						  "startCustomAnimationToExitFullScreenWithDuration complete");
+				}];
+
+	} else if (screen != w.screen) {
+		// this is bypass for the layout bug, when window unfullscreened to other screen
+		// first, we unfullscreen window to screen center, then move to final position.
+		// If we unfullsceen it into another screen - it will disappear from desktop
+
+		auto screenFrame = window.screen.frame;
+		auto x = (screenFrame.size.width - origFrame.size.width) / 2.0;
+		auto y = (screenFrame.size.height - origFrame.size.height) / 2.0;
+		auto targetRect =
+				NSRect{NSPoint{screenFrame.origin.x + x, screenFrame.origin.y + y}, origFrame.size};
+
+		[w setFrame:targetRect
+						  display:YES
+						 duration:duration
+				completionHandler:^() {
+				  [w setFrame:origFrame
+									display:YES
+								   duration:[w animationResizeTime:origFrame]
+						  completionHandler:^() {
+							NSSP::log::debug("XLMacosWindow",
+									"startCustomAnimationToExitFullScreenWithDuration complete");
+						  }];
+				}];
+	} else {
+		[w setFrame:origFrame
+						  display:YES
+						 duration:duration
+				completionHandler:^() {
+				  NSSP::log::debug("XLMacosWindow",
+						  "startCustomAnimationToExitFullScreenWithDuration complete");
+				}];
+	}
+}
+
+- (void)windowDidFailToExitFullScreen:(NSWindow *)window {
+	NSSP::log::debug("XLMacosWindow", "windowDidFailToExitFullScreen");
+}
+
 - (void)mouseDown:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	CGPoint loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -426,8 +807,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)rightMouseDown:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	CGPoint loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -444,8 +829,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)otherMouseDown:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -462,8 +851,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)mouseUp:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	CGPoint loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -480,8 +873,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)rightMouseUp:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -498,8 +895,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)otherMouseUp:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -516,8 +917,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)mouseMoved:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -534,8 +939,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::Vector<NSXL::core::InputEventData> events;
@@ -562,8 +971,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)scrollWheel:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::Vector<NSXL::core::InputEventData> events;
@@ -614,15 +1027,19 @@ void MacosWindow::cancelTextInput() { }
 
 	events.at(1).point.valueX = theEvent.scrollingDeltaX;
 	events.at(1).point.valueY = theEvent.scrollingDeltaY;
-	events.at(1).point.density = 1.0f;
+	events.at(1).point.density = _engineWindow->getWindow().backingScaleFactor;
 
 	_engineWindow->handleInputEvents(move(events));
 	_currentPointerLocation = loc;
 }
 
 - (void)rightMouseDragged:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -639,8 +1056,12 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)otherMouseDragged:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
 	NSXL::core::InputEventData event{
@@ -657,18 +1078,39 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)mouseEntered:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
 
-	_engineWindow->handleInputEvents(
-			NSXL::Vector<NSXL::core::InputEventData>{NSXL::core::InputEventData::BoolEvent(
-					NSXL::core::InputEventName::PointerEnter, true, NSXL::Vec2(loc.x, loc.y))});
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
+	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
+
+	NSXL::Vector<NSXL::core::InputEventData> events;
+
+	events.emplace_back(NSXL::core::InputEventData::BoolEvent(
+			NSXL::core::InputEventName::PointerEnter, true, NSXL::Vec2(loc.x, loc.y)));
+
+	events.emplace_back(NSXL::core::InputEventData{
+		std::numeric_limits<uint32_t>::max(),
+		NSXL::core::InputEventName::MouseMove,
+		NSXL::core::InputMouseButton::None,
+		mods,
+		float(loc.x),
+		float(loc.y),
+	});
+
+	_engineWindow->handleInputEvents(sp::move(events));
 	_currentPointerLocation = loc;
 }
 
 - (void)mouseExited:(NSEvent *)theEvent {
-	auto pointInView = [self.view convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.view convertPointToBacking:pointInView]);
+	if (!_engineWindow) {
+		return;
+	}
+
+	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 
 	_engineWindow->handleInputEvents(
 			NSXL::Vector<NSXL::core::InputEventData>{NSXL::core::InputEventData::BoolEvent(
@@ -684,23 +1126,7 @@ void MacosWindow::cancelTextInput() { }
 	return [super resignFirstResponder];
 }
 
-- (void)windowDidBecomeKey:(NSNotification *)notification {
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, true,
-				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
-}
-
-- (void)windowDidResignKey:(NSNotification *)notification {
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, false,
-				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
-}
-
 - (void)viewDidChangeBackingProperties {
-	_viewScale = [self.view convertSizeToBacking:CGSizeMake(1.0, 1.0)];
-
-	NSSP::log::debug("XLMacosViewController", "viewDidChangeBackingProperties: ", _viewScale.width,
-			" ", _viewScale.height);
 }
 
 - (void)keyDown:(NSEvent *)theEvent {
@@ -717,10 +1143,13 @@ void MacosWindow::cancelTextInput() { }
 		float(_currentPointerLocation.y),
 	};
 
+	NSXL::String chars = theEvent.characters.UTF8String;
+	NSXL::String ichars = theEvent.charactersIgnoringModifiers.UTF8String;
+
 	event.key.keycode = _keycodes[static_cast<uint8_t>(code)];
 	event.key.compose = NSXL::core::InputKeyComposeState::Disabled;
-	event.key.keysym = 0;
-	event.key.keychar = 0;
+	event.key.keysym = NSSP::StringViewUtf8(ichars).getChar();
+	event.key.keychar = NSSP::StringViewUtf8(chars).getChar();
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
 }
@@ -738,10 +1167,13 @@ void MacosWindow::cancelTextInput() { }
 		float(_currentPointerLocation.y),
 	};
 
+	NSXL::String chars = theEvent.characters.UTF8String;
+	NSXL::String ichars = theEvent.charactersIgnoringModifiers.UTF8String;
+
 	event.key.keycode = _keycodes[static_cast<uint8_t>(code)];
 	event.key.compose = NSXL::core::InputKeyComposeState::Disabled;
-	event.key.keysym = 0;
-	event.key.keychar = 0;
+	event.key.keysym = NSSP::StringViewUtf8(ichars).getChar();
+	event.key.keychar = NSSP::StringViewUtf8(chars).getChar();
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
 }
@@ -801,281 +1233,91 @@ void MacosWindow::cancelTextInput() { }
 
 @end
 
+@implementation XLMacosWindow
 
-static const NSRange kEmptyRange = {NSNotFound, 0};
-
-@implementation XLMacosView
-
-+ (Class)layerClass {
-	return [CAMetalLayer class];
-}
-
-- (instancetype)initWithFrame:(NSRect)frameRect window:(NSXLPL::MacosWindow *)window {
-	self = [super initWithFrame:frameRect];
-	_validAttributesForMarkedText = [NSArray array];
-	_textDirty = false;
-	_window = window;
-
-	_mainArea = nullptr;
-	_cursorAreas = nullptr;
-
-	self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-
+- (instancetype)initWithContentRect:(NSRect)contentRect
+						  styleMask:(NSWindowStyleMask)style
+							backing:(NSBackingStoreType)backingStoreType
+							  defer:(BOOL)flag {
+	self = [super initWithContentRect:contentRect
+							styleMask:style
+							  backing:backingStoreType
+								defer:flag];
+	_defaultStyle = style;
 	return self;
 }
 
-- (BOOL)wantsUpdateLayer {
-	return YES;
+- (NSWindowStyleMask)defaultStyle {
+	return _defaultStyle;
 }
 
-- (CALayer *)makeBackingLayer {
-	self.layer = [self.class.layerClass layer];
-
-	CGSize viewScale = [self convertSizeToBacking:CGSizeMake(1.0, 1.0)];
-	self.layer.contentsScale = MIN(viewScale.width, viewScale.height);
-
-	//_displayLink = [[CAMetalDisplayLink alloc] initWithMetalLayer:(CAMetalLayer *)self.layer];
-
-	return self.layer;
+- (void)setFrame:(NSRect)frameRect
+				  display:(BOOL)displayFlag
+				 duration:(NSTimeInterval)duration
+		completionHandler:(nullable void (^)(void))completionHandler {
+	[(XLMacosViewController *)self.contentViewController setEngineLiveResize:YES];
+	[NSAnimationContext
+			runAnimationGroup:^(NSAnimationContext *_Nonnull context) {
+			  context.duration = duration;
+			  [self.animator setFrame:frameRect display:displayFlag];
+			}
+			completionHandler:^(void) {
+			  [(XLMacosViewController *)self.contentViewController setEngineLiveResize:NO];
+			  if (completionHandler) {
+				  completionHandler();
+			  }
+			}];
 }
 
-- (BOOL)layer:(CALayer *)layer
-		shouldInheritContentsScale:(CGFloat)newScale
-						fromWindow:(NSWindow *)window {
-	NSSP::log::debug("XLMacosView", "shouldInheritContentsScale: ", newScale);
-	return YES;
+- (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag {
+	NSSP::log::debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y,
+			" ", frameRect.size.width, " ", frameRect.size.height);
+	[super setFrame:frameRect display:displayFlag];
 }
 
-- (BOOL)acceptsFirstResponder {
-	return YES;
-}
-
-- (void)viewDidMoveToWindow {
-}
-
-- (void)updateTrackingAreas {
-	[self removeTrackingArea:_mainArea];
-
-	_mainArea = [[NSTrackingArea alloc]
-			initWithRect:[self bounds]
-				 options:NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited
-			| NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect
-				   owner:self
-				userInfo:nil];
-	[self addTrackingArea:_mainArea];
-}
-
-- (void)keyDown:(NSEvent *)theEvent {
-	//TextInputManager *m = _textInput.get();
-	//if (m->isInputEnabled()) {
-	//[self interpretKeyEvents:[NSArray arrayWithObject:theEvent]];
-	if (_textDirty) {
-		//[(XLMacViewController *)self.window.contentViewController submitTextData:m->getString() cursor:m->getCursor() marked:m->getMarked()];
-		_textDirty = false;
-	}
-	//}
-	[super keyDown:theEvent];
-}
-
-- (void)deleteForward:(nullable id)sender {
-	std::cout << "deleteForward\n";
-	//TextInputManager *m = _textInput.get();
-	//m->deleteForward();
-}
-
-- (void)deleteBackward:(nullable id)sender {
-	std::cout << "deleteBackward\n";
-	//TextInputManager *m = _textInput.get();
-	//m->deleteBackward();
-}
-
-- (void)insertTab:(nullable id)sender {
-	//TextInputManager *m = _textInput.get();
-	//m->insertText(u"\t");
-}
-
-- (void)insertBacktab:(nullable id)sender {
-}
-
-- (void)insertNewline:(nullable id)sender {
-	//TextInputManager *m = _textInput.get();
-	//m->insertText(u"\n");
-}
-
-/* The receiver inserts string replacing the content specified by replacementRange. string can be either an NSString or NSAttributedString instance. */
-- (void)insertText:(id)string replacementRange:(NSRange)replacementRange {
-	NSString *characters;
-	if ([string isKindOfClass:[NSAttributedString class]]) {
-		characters = [(NSAttributedString *)string string];
+- (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag {
+	NSSP::log::debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y,
+			" ", frameRect.size.width, " ", frameRect.size.height);
+	if (!animateFlag) {
+		[super setFrame:frameRect display:displayFlag animate:NO];
 	} else {
-		characters = string;
+		[self setFrame:frameRect
+						  display:displayFlag
+						 duration:[self animationResizeTime:frameRect]
+				completionHandler:nil];
 	}
-
-	stappler::xenolith::WideString str;
-	str.reserve(characters.length);
-	for (size_t i = 0; i < characters.length; ++i) {
-		str.push_back([characters characterAtIndex:i]);
-	}
-
-	//TextInputManager *m = _textInput.get();
-	//m->insertText(str, TextCursor(uint32_t(replacementRange.location), uint32_t(replacementRange.length)));
 }
 
-/* The receiver inserts string replacing the content specified by replacementRange. string can be either an NSString or NSAttributedString instance. selectedRange specifies the selection inside the string being inserted; hence, the location is relative to the beginning of string. When string is an NSString, the receiver is expected to render the marked text with distinguishing appearance (i.e. NSTextView renders with -markedTextAttributes). */
-- (void)setMarkedText:(id)string
-		   selectedRange:(NSRange)selectedRange
-		replacementRange:(NSRange)replacementRange {
-	std::cout << "setMarkedText\n";
-	NSString *characters;
-	if ([string isKindOfClass:[NSAttributedString class]]) {
-		characters = [(NSAttributedString *)string string];
+- (void)toggleFullScreen:(id)sender withScreen:(NSScreen *)screen {
+	if (screen == self.screen) {
+		[self toggleFullScreen:sender];
 	} else {
-		characters = string;
+		auto screenFrame = screen.frame;
+		auto windowFrame = self.frame;
+		auto x = (screenFrame.size.width - windowFrame.size.width) / 2.0;
+		auto y = (screenFrame.size.height - windowFrame.size.height) / 2.0;
+		auto targetRect = NSRect{NSPoint{screenFrame.origin.x + x, screenFrame.origin.y + y},
+			windowFrame.size};
+
+		__weak NSWindow *ref = self;
+
+		[self setFrame:targetRect
+						  display:YES
+						 duration:[self animationResizeTime:targetRect]
+				completionHandler:^() { [ref toggleFullScreen:sender]; }];
 	}
-
-	stappler::xenolith::WideString str;
-	str.reserve(characters.length);
-	for (size_t i = 0; i < characters.length; ++i) {
-		str.push_back([characters characterAtIndex:i]);
-	}
-
-	//TextInputManager *m = _textInput.get();
-	//m->setMarkedText(str, TextCursor(uint32_t(replacementRange.location), uint32_t(replacementRange.length)), TextCursor(uint32_t(selectedRange.location), uint32_t(selectedRange.length)));
 }
 
-/* The receiver unmarks the marked text. If no marked text, the invocation of this method has no effect. */
-- (void)unmarkText {
-	//TextInputManager *m = _textInput.get();
-	//m->unmarkText();
+- (NSTimeInterval)animationResizeTime:(NSRect)newFrame {
+	return [super animationResizeTime:newFrame];
 }
 
-/* Returns the selection range. The valid location is from 0 to the document length. */
-- (NSRange)selectedRange {
-	//TextInputManager *m = _textInput.get();
-	//auto cursor = m->getCursor();
-	//if (cursor.length > 0) {
-	//	return NSRange{cursor.start, cursor.length};
-	//}
-	return kEmptyRange;
+- (instancetype)animator {
+	return [super animator];
 }
 
-/* Returns the marked range. Returns {NSNotFound, 0} if no marked range. */
-- (NSRange)markedRange {
-	//TextInputManager *m = _textInput.get();
-	//auto cursor = m->getMarked();
-	//if (cursor.length > 0) {
-	//	return NSRange{cursor.start, cursor.length};
-	//}
-	return kEmptyRange;
-}
-
-/* Returns whether or not the receiver has marked text. */
-- (BOOL)hasMarkedText {
-	//TextInputManager *m = _textInput.get();
-	//auto cursor = m->getMarked();
-	//if (cursor.length > 0) {
-	//	return YES;
-	//}
-	return NO;
-}
-
-/* Returns attributed string specified by range. It may return nil. If non-nil return value and actualRange is non-NULL, it contains the actual range for the return value. The range can be adjusted from various reasons (i.e. adjust to grapheme cluster boundary, performance optimization, etc). */
-- (nullable NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range
-														 actualRange:(nullable NSRangePointer)
-																			 actualRange {
-	std::cout << "attributedSubstringForProposedRange\n";
-	//TextInputManager *m = _textInput.get();
-	//WideStringView str = m->getStringByRange(TextCursor{uint32_t(range.location), uint32_t(range.length)});
-	//if (actualRange != nil) {
-	//	auto fullString = m->getString();
-
-	//	actualRange->location = (str.data() - fullString.data());
-	//	actualRange->length = str.size();
-	//}
-
-	//return [[NSAttributedString alloc] initWithString:[NSString stringWithCharacters:(const unichar *)str.data() length:str.size()]];
-	return nil;
-}
-
-/* Returns an array of attribute names recognized by the receiver.
-*/
-- (NSArray<NSAttributedStringKey> *)validAttributesForMarkedText {
-	return _validAttributesForMarkedText;
-}
-
-/* Returns the first logical rectangular area for range. The return value is in the screen coordinate. The size value can be negative if the text flows to the left. If non-NULL, actuallRange contains the character range corresponding to the returned area.
-*/
-- (NSRect)firstRectForCharacterRange:(NSRange)range
-						 actualRange:(nullable NSRangePointer)actualRange {
-	std::cout << "firstRectForCharacterRange\n";
-	return self.frame;
-}
-
-/* Returns the index for character that is nearest to point. point is in the screen coordinate system.
-*/
-- (NSUInteger)characterIndexForPoint:(NSPoint)point {
-	std::cout << "characterIndexForPoint\n";
-	return 0;
-}
-
-- (NSAttributedString *)attributedString {
-	std::cout << "attributedString\n";
-	//TextInputManager *m = _textInput.get();
-	//auto str = m->getString();
-
-	//return [[NSAttributedString alloc] initWithString:[NSString stringWithCharacters:(const unichar *)str.data() length:str.size()]];
-	return nil;
-}
-
-/* Returns the fraction of distance for point from the left side of the character. This allows caller to perform precise selection handling.
-*/
-- (CGFloat)fractionOfDistanceThroughGlyphForPoint:(NSPoint)point {
-	std::cout << "fractionOfDistanceThroughGlyphForPoint\n";
-	return 0.0f;
-}
-
-/* Returns the baseline position relative to the origin of rectangle returned by -firstRectForCharacterRange:actualRange:. This information allows the caller to access finer-grained character position inside the NSTextInputClient document.
-*/
-- (CGFloat)baselineDeltaForCharacterAtIndex:(NSUInteger)anIndex {
-	std::cout << "baselineDeltaForCharacterAtIndex\n";
-	return 0.0f;
-}
-
-/* Returns if the marked text is in vertical layout.
- */
-- (BOOL)drawsVerticallyForCharacterAtIndex:(NSUInteger)charIndex {
-	std::cout << "drawsVerticallyForCharacterAtIndex\n";
-	return NO;
-}
-
-- (void)updateTextCursorWithPosition:(uint32_t)pos length:(uint32_t)len {
-	//TextInputManager *m = _textInput.get();
-	//m->cursorChanged(TextCursor(pos, len));
-}
-
-- (void)updateTextInputWithText:(stappler::WideStringView)str
-					   position:(uint32_t)pos
-						 length:(uint32_t)len
-						   type:(stappler::xenolith::core::TextInputType)type {
-	_textDirty = false;
-	//TextInputManager *m = _textInput.get();
-	//m->run(&_textHandler, str, TextCursor(pos, len), TextCursor::InvalidCursor, type);
-}
-
-- (void)runTextInputWithText:(stappler::WideStringView)str
-					position:(uint32_t)pos
-					  length:(uint32_t)len
-						type:(stappler::xenolith::core::TextInputType)type {
-	_textDirty = false;
-	//TextInputManager *m = _textInput.get();
-	//m->run(&_textHandler, str, TextCursor(pos, len), TextCursor::InvalidCursor, type);
-	//m->setInputEnabled(true);
-}
-
-- (void)cancelTextInput {
-	//TextInputManager *m = _textInput.get();
-	//m->cancel();
-	_textDirty = false;
+- (id)animationForKey:(NSAnimatablePropertyKey)key {
+	return [super animationForKey:key];
 }
 
 @end

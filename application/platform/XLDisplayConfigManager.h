@@ -60,7 +60,6 @@ struct DisplayMode {
 	String id;
 	String name;
 
-	float preferredScale = 1.0f;
 	Vector<float> scales;
 
 	bool preferred = false;
@@ -104,6 +103,7 @@ struct DisplayConfig : public Ref {
 
 	// OS-native config
 	Rc<Ref> native;
+	Time time = Time::now();
 
 	const PhysicalDisplay *getMonitor(const MonitorId &id) const;
 	const LogicalDisplay *getLogical(const MonitorId &id) const;
@@ -126,13 +126,13 @@ public:
 
 	// Set mode for the monitor, and reset modes for all other monitors to default
 	// Only single monitor mode can be set with this function
-	void setModeExclusive(xenolith::MonitorId, xenolith::ModeInfo, Function<void(Status)> &&,
-			Ref *);
+	virtual void setModeExclusive(xenolith::MonitorId, xenolith::ModeInfo,
+			Function<void(Status)> &&, Ref *);
 
-	void setMode(xenolith::MonitorId, xenolith::ModeInfo, Function<void(Status)> &&, Ref *);
+	virtual void setMode(xenolith::MonitorId, xenolith::ModeInfo, Function<void(Status)> &&, Ref *);
 
 	// Reset monitor modes to captured defaults (modes before first setMonitorMode call)
-	void restoreMode(Function<void(Status)> &&, Ref *);
+	virtual void restoreMode(Function<void(Status)> &&, Ref *);
 
 	bool hasSavedMode() const { return _savedConfig; }
 

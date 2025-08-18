@@ -56,7 +56,7 @@ SP_DEFINE_ENUM_AS_MASK(WindowCloseOptions)
 
 struct ClipboardRequest : public Ref {
 	// receives data from clipboard
-	Function<void(BytesView, StringView)> dataCallback;
+	Function<void(Status, BytesView, StringView)> dataCallback;
 
 	// Select one of suggested types to receive
 	// You should not assume on what thread this function would be called,
@@ -156,6 +156,8 @@ protected:
 	virtual Value saveContextState();
 
 	virtual Rc<core::Loop> makeLoop(NotNull<core::Instance>);
+
+	virtual void poll();
 
 	int _resultCode = 0;
 	ContextState _state = ContextState::Created;

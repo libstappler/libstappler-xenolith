@@ -481,20 +481,27 @@ void DisplayConfigManager::adjustDisplay(NotNull<DisplayConfig> config) const {
 }
 
 void DisplayConfigManager::handleConfigChanged(NotNull<DisplayConfig> cfg) {
-	if (!_currentConfig || !cfg->isEqual(_currentConfig)) {
+	bool configUpdated = false;
+	if (!_currentConfig || (!cfg->isEqual(_currentConfig) && cfg->time > _currentConfig->time)) {
+		configUpdated = true;
 		_currentConfig = cfg;
 		if (_onConfigChanged) {
 			_onConfigChanged(this);
 		}
 	} else {
 		// set new config, just in case of WM error in serial
-		_currentConfig = cfg;
+		if (cfg->time > _currentConfig->time) {
+			configUpdated = true;
+			_currentConfig = cfg;
+		}
 	}
 
-	auto tmp = sp::move(_waitForConfigNotification);
-	_waitForConfigNotification.clear();
+	if (configUpdated) {
+		auto tmp = sp::move(_waitForConfigNotification);
+		_waitForConfigNotification.clear();
 
-	for (auto &it : tmp) { it(); }
+		for (auto &it : tmp) { it(); }
+	}
 }
 
 void DisplayConfigManager::prepareDisplayConfigUpdate(Function<void(DisplayConfig *)> &&cb) {

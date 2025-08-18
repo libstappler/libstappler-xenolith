@@ -168,6 +168,7 @@ protected:
 	bool _submitted = false;
 	bool _completed = false;
 	bool _valid = true;
+	bool _persistentMappings = false;
 
 	Vector<Rc<FrameQueue>> _queues;
 	Function<void(FrameHandle &)> _complete;

@@ -59,15 +59,14 @@ void NativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->r
 void NativeWindow::releaseTextInput() { _textInput->cancel(); }
 
 bool NativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLayer &)> &cb) const {
-	bool found = false;
 	for (auto &it : _layers) {
 		if (it.rect.containsPoint(pt)) {
 			if (!cb(it)) {
-				return found;
+				return true;
 			}
 		}
 	}
-	return found;
+	return false;
 }
 
 void NativeWindow::setAppWindow(Rc<AppWindow> &&w) {
@@ -78,17 +77,35 @@ void NativeWindow::setAppWindow(Rc<AppWindow> &&w) {
 AppWindow *NativeWindow::getAppWindow() const { return _appWindow; }
 
 void NativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
-	_layers = sp::move(layers);
-	if (_handleLayerForMotion) {
-		handleMotionEvent(InputEventData{0, InputEventName::MouseMove, core::InputMouseButton::None,
-			core::InputModifier::None, _layerLocation.x, _layerLocation.y});
+	if (_layers != layers) {
+		_layers = sp::move(layers);
+		if (_handleLayerForMotion) {
+			handleMotionEvent(
+					InputEventData{0, InputEventName::MouseMove, core::InputMouseButton::None,
+						core::InputModifier::None, _layerLocation.x, _layerLocation.y});
+		}
 	}
 }
 
 void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &&cb, Ref *ref) {
 	if (!hasFlag(_info->capabilities, WindowCapabilities::Fullscreen)) {
-		cb(Status::ErrorNotImplemented);
+		cb(Status::ErrorNotSupported);
 		return;
+	}
+
+	if (_hasPendingFullscreenOp) {
+		cb(Status::ErrorAgain);
+		return;
+	}
+
+	auto hasModeSetting = false;
+	auto hasSeamlessModeSetting = false;
+	if (hasFlag(_info->capabilities, WindowCapabilities::FullscreenWithMode)) {
+		hasModeSetting = true;
+	}
+
+	if (hasFlag(_info->capabilities, WindowCapabilities::FullscreenSeamlessModeSwitch)) {
+		hasSeamlessModeSetting = true;
 	}
 
 	auto dcm = _controller->getDisplayConfigManager();
@@ -131,6 +148,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 		info.mode = m->mode;
 
 		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			// we already in fullscreen mode
 			if (_info->fullscreen.id != info.id) {
 				// switch monitor
 
@@ -142,13 +160,18 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 					} else {
 						// with fullscreen engine, mode for other monitor should not be other then saved-current
 						// so, restore saved mode, then fullscreen window on other monitor
+						if (!hasModeSetting) {
+							cb(Status::ErrorNotSupported);
+							return;
+						}
 						dcm->restoreMode(
 								[this, cb = sp::move(cb), info = sp::move(info),
 										ref = Rc<Ref>(ref)](Status st) mutable {
 							if (st == Status::Ok) {
 								cb(setFullscreenState(sp::move(info)));
 							} else {
-								log::error("XcbWindow", "Fail to reset mode for fullscreen: ", st);
+								log::error("NativeWindow",
+										"Fail to reset mode for fullscreen: ", st);
 								cb(st);
 							}
 							ref = nullptr;
@@ -158,7 +181,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 					}
 				} else {
 					// requested fullscreen to another monitor with custom mode
-
+					if (!hasModeSetting) {
+						cb(Status::ErrorNotSupported);
+						return;
+					}
 					// unset fullscreen, then set on other monitor with `setModeExclusive`
 					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
 				}
@@ -169,8 +195,15 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 					cb(Status::Declined);
 					return;
 				} else {
-					// exit from fullscreen before mode switch
-					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+					if (!hasModeSetting) {
+						cb(Status::ErrorNotSupported);
+						return;
+					}
+
+					if (!hasSeamlessModeSetting) {
+						// exit from fullscreen before mode switch
+						setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+					}
 				}
 			}
 		} else {
@@ -184,14 +217,26 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 			// now - just set mode
 		}
 
+		if (!hasModeSetting) {
+			cb(Status::ErrorNotSupported);
+			return;
+		}
+
 		// set new mode for monitor
 		dcm->setModeExclusive(mon->id, m->mode,
 				[this, cb = sp::move(cb), info = sp::move(info), ref = Rc<Ref>(ref)](
 						Status st) mutable {
 			if (st == Status::Ok) {
-				cb(setFullscreenState(sp::move(info)));
+				auto status = setFullscreenState(sp::move(info));
+				if (status != Status::Ok && status != Status::Declined) {
+					auto dcm = _controller->getDisplayConfigManager();
+					dcm->restoreMode(nullptr, nullptr);
+					cb(status);
+				} else {
+					cb(status);
+				}
 			} else {
-				log::error("XcbWindow", "Fail to set mode for fullscreen: ", st);
+				log::error("NativeWindow", "Fail to set mode for fullscreen: ", st);
 				cb(st);
 			}
 			ref = nullptr;

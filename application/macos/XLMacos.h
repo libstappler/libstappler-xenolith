@@ -58,8 +58,9 @@
 XL_OBJC_INTERFACE_FORWARD(XLMacosAppDelegate);
 XL_OBJC_INTERFACE_FORWARD(XLMacosViewController);
 XL_OBJC_INTERFACE_FORWARD(XLMacosView);
-XL_OBJC_INTERFACE_FORWARD(NSWindow);
+XL_OBJC_INTERFACE_FORWARD(XLMacosWindow);
 XL_OBJC_INTERFACE_FORWARD(CAMetalLayer);
+XL_OBJC_INTERFACE_FORWARD(NSScreen);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -69,6 +70,8 @@ SP_PUBLIC void createKeyTables(core::InputKeyCode keycodes[256],
 		uint16_t scancodes[stappler::toInt(core::InputKeyCode::Max)]);
 
 SP_PUBLIC core::InputModifier getInputModifiers(uint32_t flags);
+
+class MacosWindow;
 
 } // namespace stappler::xenolith::platform
 

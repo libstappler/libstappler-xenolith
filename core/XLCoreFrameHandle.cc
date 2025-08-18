@@ -129,6 +129,7 @@ bool FrameHandle::init(Loop &loop, Device &dev, Rc<FrameRequest> &&req, uint64_t
 	_loop = &loop;
 	_device = &dev;
 	_request = move(req);
+	_persistentMappings = _request->isPersistentMapping();
 	_pool = _request->getPool();
 	_timeStart = sp::platform::clock(FrameClockType);
 	if (!_request || !_request->getQueue()) {
@@ -274,7 +275,7 @@ bool FrameHandle::isValid() const {
 			&& (!_request->getPresentationFrame() || _request->getPresentationFrame()->isValid());
 }
 
-bool FrameHandle::isPersistentMapping() const { return _request->isPersistentMapping(); }
+bool FrameHandle::isPersistentMapping() const { return _persistentMappings; }
 
 Rc<AttachmentInputData> FrameHandle::getInputData(const AttachmentData *attachment) {
 	return _request->getInputData(attachment);

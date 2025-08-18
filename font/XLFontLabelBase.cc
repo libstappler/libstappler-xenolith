@@ -27,8 +27,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::font {
 
 TextLayout::~TextLayout() { }
 
-TextLayout::TextLayout(FontController *h, size_t nchars, size_t nranges)
-: _handle(h) {
+TextLayout::TextLayout(FontController *h, size_t nchars, size_t nranges) : _handle(h) {
 	if (nchars) {
 		_data.chars.reserve(nchars);
 		_data.lines.reserve(nchars / 60);
@@ -38,9 +37,7 @@ TextLayout::TextLayout(FontController *h, size_t nchars, size_t nranges)
 	}
 }
 
-void TextLayout::reserve(size_t nchars, size_t nranges) {
-	_data.reserve(nchars, nranges);
-}
+void TextLayout::reserve(size_t nchars, size_t nranges) { _data.reserve(nchars, nranges); }
 
 void TextLayout::clear() {
 	_data.chars.clear();
@@ -57,27 +54,22 @@ Rc<FontFaceSet> TextLayout::getLayout(const FontParameters &f) {
 	return font;
 }
 
-RangeLineIterator TextLayout::begin() const {
-	return _data.begin();
-}
+RangeLineIterator TextLayout::begin() const { return _data.begin(); }
 
-RangeLineIterator TextLayout::end() const {
-	return _data.end();
-}
+RangeLineIterator TextLayout::end() const { return _data.end(); }
 
 auto TextLayout::str(bool filter) const -> WideString {
-	WideString ret; ret.reserve(_data.chars.size());
-	_data.str([&] (char16_t ch) {
-		ret.push_back(ch);
-	}, filter);
+	WideString ret;
+	ret.reserve(_data.chars.size());
+	_data.str([&](char16_t ch) { ret.push_back(ch); }, filter);
 	return ret;
 }
 
-auto TextLayout::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis, bool filter) const -> WideString {
-	WideString ret; ret.reserve(s_end - s_start + 2);
-	_data.str([&] (char16_t ch) {
-		ret.push_back(ch);
-	}, s_start, s_end, maxWords, ellipsis, filter);
+auto TextLayout::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis,
+		bool filter) const -> WideString {
+	WideString ret;
+	ret.reserve(s_end - s_start + 2);
+	_data.str([&](char16_t ch) { ret.push_back(ch); }, s_start, s_end, maxWords, ellipsis, filter);
 	return ret;
 }
 
@@ -101,20 +93,22 @@ geom::Rect TextLayout::getLineRect(uint32_t lineId, float density, const geom::V
 	return _data.getLineRect(lineId, density, origin);
 }
 
-geom::Rect TextLayout::getLineRect(const LineLayoutData &line, float density, const geom::Vec2 &origin) const {
+geom::Rect TextLayout::getLineRect(const LineLayoutData &line, float density,
+		const geom::Vec2 &origin) const {
 	return _data.getLineRect(line, density, origin);
 }
 
-auto TextLayout::getLabelRects(uint32_t firstCharId, uint32_t lastCharId, float density, const geom::Vec2 &origin, const geom::Padding &p) const -> Vector<geom::Rect> {
+auto TextLayout::getLabelRects(uint32_t firstCharId, uint32_t lastCharId, float density,
+		const geom::Vec2 &origin, const geom::Padding &p) const -> Vector<geom::Rect> {
 	Vector<geom::Rect> ret;
 	getLabelRects(ret, firstCharId, lastCharId, density, origin, p);
 	return ret;
 }
 
-void TextLayout::getLabelRects(Vector<geom::Rect> &ret, uint32_t firstCharId, uint32_t lastCharId, float density, const geom::Vec2 &origin, const geom::Padding &p) const {
-	_data.getLabelRects([&] (const geom::Rect &rect) {
-		ret.push_back(rect);
-	}, firstCharId, lastCharId, density, origin, p);
+void TextLayout::getLabelRects(Vector<geom::Rect> &ret, uint32_t firstCharId, uint32_t lastCharId,
+		float density, const geom::Vec2 &origin, const geom::Padding &p) const {
+	_data.getLabelRects([&](const geom::Rect &rect) { ret.push_back(rect); }, firstCharId,
+			lastCharId, density, origin, p);
 }
 
 LabelBase::DescriptionStyle::DescriptionStyle() {
@@ -138,38 +132,45 @@ LabelBase::DescriptionStyle LabelBase::DescriptionStyle::merge(
 		case Style::Name::TextDecoration: ret.text.textDecoration = it.value.textDecoration; break;
 		case Style::Name::Hyphens: ret.text.hyphens = it.value.hyphens; break;
 		case Style::Name::VerticalAlign: ret.text.verticalAlign = it.value.verticalAlign; break;
-		case Style::Name::Color: ret.text.color = it.value.color; ret.colorDirty = true; break;
-		case Style::Name::Opacity: ret.text.opacity = it.value.opacity; ret.opacityDirty = true; break;
+		case Style::Name::Color:
+			ret.text.color = it.value.color;
+			ret.colorDirty = true;
+			break;
+		case Style::Name::Opacity:
+			ret.text.opacity = it.value.opacity;
+			ret.opacityDirty = true;
+			break;
 		case Style::Name::FontSize: ret.font.fontSize = it.value.fontSize; break;
 		case Style::Name::FontStyle: ret.font.fontStyle = it.value.fontStyle; break;
 		case Style::Name::FontWeight: ret.font.fontWeight = it.value.fontWeight; break;
 		case Style::Name::FontStretch: ret.font.fontStretch = it.value.fontStretch; break;
-		case Style::Name::FontFamily: ret.font.fontFamily = source->getFamilyName(it.value.fontFamily); break;
+		case Style::Name::FontFamily:
+			ret.font.fontFamily = source->getFamilyName(it.value.fontFamily);
+			break;
 		case Style::Name::FontGrade: ret.font.fontGrade = it.value.fontGrade; break;
 		}
 	}
 	return ret;
 }
 
-bool LabelBase::DescriptionStyle::operator == (const DescriptionStyle &style) const {
-	return font == style.font && text == style.text && colorDirty == style.colorDirty && opacityDirty == style.opacityDirty;
+bool LabelBase::DescriptionStyle::operator==(const DescriptionStyle &style) const {
+	return font == style.font && text == style.text && colorDirty == style.colorDirty
+			&& opacityDirty == style.opacityDirty;
 }
-bool LabelBase::DescriptionStyle::operator != (const DescriptionStyle &style) const {
+bool LabelBase::DescriptionStyle::operator!=(const DescriptionStyle &style) const {
 	return !((*this) == style);
 }
 
-LabelBase::Style::Value::Value() {
-	memset(this, 0, sizeof(Value));
-}
+LabelBase::Style::Value::Value() { memset(this, 0, sizeof(Value)); }
 
 void LabelBase::Style::set(const Param &p, bool force) {
 	if (force) {
 		auto it = params.begin();
-		while(it != params.end()) {
+		while (it != params.end()) {
 			if (it->name == p.name) {
 				it = params.erase(it);
 			} else {
-				it ++;
+				it++;
 			}
 		}
 	}
@@ -177,14 +178,10 @@ void LabelBase::Style::set(const Param &p, bool force) {
 }
 
 void LabelBase::Style::merge(const Style &style) {
-	for (auto &it : style.params) {
-		set(it, true);
-	}
+	for (auto &it : style.params) { set(it, true); }
 }
 
-void LabelBase::Style::clear() {
-	params.clear();
-}
+void LabelBase::Style::clear() { params.clear(); }
 
 LabelBase::ExternalFormatter::~ExternalFormatter() { }
 
@@ -195,9 +192,7 @@ bool LabelBase::ExternalFormatter::init(font::FontController *s, float w, float 
 
 	_density = density;
 	_spec = Rc<TextLayout>::alloc(s);
-	_formatter.setFontCallback([this] (const FontParameters &f) {
-		return _spec->getLayout(f);
-	});
+	_formatter.setFontCallback([this](const FontParameters &f) { return _spec->getLayout(f); });
 	_formatter.reset(_spec->getData());
 	if (w > 0.0f) {
 		_formatter.setWidth(static_cast<uint16_t>(roundf(w * _density)));
@@ -219,10 +214,12 @@ void LabelBase::ExternalFormatter::reserve(size_t chars, size_t ranges) {
 	}
 }
 
-void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style, const StringView &str, bool localized) {
+void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style, const StringView &str,
+		bool localized) {
 	addString(style, string::toUtf16<Interface>(str), localized);
 }
-void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style, const WideStringView &str, bool localized) {
+void LabelBase::ExternalFormatter::addString(const DescriptionStyle &style,
+		const WideStringView &str, bool localized) {
 	if (!begin) {
 		_formatter.begin(0, 0);
 		begin = true;
@@ -266,7 +263,7 @@ float LabelBase::getStringWidth(font::FontController *source, const DescriptionS
 
 	TextLayoutData<Interface> spec;
 
-	font::Formatter fmt([source = Rc<font::FontController>(source)] (const FontParameters &f) {
+	font::Formatter fmt([source = Rc<font::FontController>(source)](const FontParameters &f) {
 		return source->getLayout(f);
 	}, &spec);
 	fmt.begin(0, 0);
@@ -301,7 +298,7 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 
 	TextLayoutData<Interface> spec;
 
-	font::Formatter fmt([source = Rc<font::FontController>(source)] (const FontParameters &f) {
+	font::Formatter fmt([source = Rc<font::FontController>(source)](const FontParameters &f) {
 		return source->getLayout(f);
 	}, &spec);
 	fmt.setWidth(static_cast<uint16_t>(roundf(w * style.font.density)));
@@ -327,9 +324,7 @@ void LabelBase::setAlignment(TextAlign alignment) {
 	}
 }
 
-TextAlign LabelBase::getAlignment() const {
-	return _alignment;
-}
+TextAlign LabelBase::getAlignment() const { return _alignment; }
 
 void LabelBase::setWidth(float width) {
 	if (_width != width) {
@@ -338,9 +333,7 @@ void LabelBase::setWidth(float width) {
 	}
 }
 
-float LabelBase::getWidth() const {
-	return _width;
-}
+float LabelBase::getWidth() const { return _width; }
 
 void LabelBase::setTextIndent(float value) {
 	if (_textIndent != value) {
@@ -348,9 +341,7 @@ void LabelBase::setTextIndent(float value) {
 		setLabelDirty();
 	}
 }
-float LabelBase::getTextIndent() const {
-	return _textIndent;
-}
+float LabelBase::getTextIndent() const { return _textIndent; }
 
 void LabelBase::setTextTransform(const TextTransform &value) {
 	if (value != _style.text.textTransform) {
@@ -359,9 +350,7 @@ void LabelBase::setTextTransform(const TextTransform &value) {
 	}
 }
 
-TextTransform LabelBase::getTextTransform() const {
-	return _style.text.textTransform;
-}
+TextTransform LabelBase::getTextTransform() const { return _style.text.textTransform; }
 
 void LabelBase::setTextDecoration(const TextDecoration &value) {
 	if (value != _style.text.textDecoration) {
@@ -369,9 +358,7 @@ void LabelBase::setTextDecoration(const TextDecoration &value) {
 		setLabelDirty();
 	}
 }
-TextDecoration LabelBase::getTextDecoration() const {
-	return _style.text.textDecoration;
-}
+TextDecoration LabelBase::getTextDecoration() const { return _style.text.textDecoration; }
 
 void LabelBase::setHyphens(const Hyphens &value) {
 	if (value != _style.text.hyphens) {
@@ -379,9 +366,7 @@ void LabelBase::setHyphens(const Hyphens &value) {
 		setLabelDirty();
 	}
 }
-Hyphens LabelBase::getHyphens() const {
-	return _style.text.hyphens;
-}
+Hyphens LabelBase::getHyphens() const { return _style.text.hyphens; }
 
 void LabelBase::setVerticalAlign(const VerticalAlign &value) {
 	if (value != _style.text.verticalAlign) {
@@ -389,13 +374,9 @@ void LabelBase::setVerticalAlign(const VerticalAlign &value) {
 		setLabelDirty();
 	}
 }
-VerticalAlign LabelBase::getVerticalAlign() const {
-	return _style.text.verticalAlign;
-}
+VerticalAlign LabelBase::getVerticalAlign() const { return _style.text.verticalAlign; }
 
-void LabelBase::setFontSize(const uint16_t &value) {
-	setFontSize(FontSize(value));
-}
+void LabelBase::setFontSize(const uint16_t &value) { setFontSize(FontSize(value)); }
 
 void LabelBase::setFontSize(const FontSize &value) {
 	auto realTargetValue = value.scale(_labelDensity).get();
@@ -406,9 +387,7 @@ void LabelBase::setFontSize(const FontSize &value) {
 		setLabelDirty();
 	}
 }
-FontSize LabelBase::getFontSize() const {
-	return _style.font.fontSize;
-}
+FontSize LabelBase::getFontSize() const { return _style.font.fontSize; }
 
 void LabelBase::setFontStyle(const FontStyle &value) {
 	if (value != _style.font.fontStyle) {
@@ -416,9 +395,7 @@ void LabelBase::setFontStyle(const FontStyle &value) {
 		setLabelDirty();
 	}
 }
-FontStyle LabelBase::getFontStyle() const {
-	return _style.font.fontStyle;
-}
+FontStyle LabelBase::getFontStyle() const { return _style.font.fontStyle; }
 
 void LabelBase::setFontWeight(const FontWeight &value) {
 	if (value != _style.font.fontWeight) {
@@ -426,9 +403,7 @@ void LabelBase::setFontWeight(const FontWeight &value) {
 		setLabelDirty();
 	}
 }
-FontWeight LabelBase::getFontWeight() const {
-	return _style.font.fontWeight;
-}
+FontWeight LabelBase::getFontWeight() const { return _style.font.fontWeight; }
 
 void LabelBase::setFontStretch(const FontStretch &value) {
 	if (value != _style.font.fontStretch) {
@@ -436,9 +411,7 @@ void LabelBase::setFontStretch(const FontStretch &value) {
 		setLabelDirty();
 	}
 }
-FontStretch LabelBase::getFontStretch() const {
-	return _style.font.fontStretch;
-}
+FontStretch LabelBase::getFontStretch() const { return _style.font.fontStretch; }
 
 void LabelBase::setFontGrade(const FontGrade &value) {
 	if (value != _style.font.fontGrade) {
@@ -447,9 +420,7 @@ void LabelBase::setFontGrade(const FontGrade &value) {
 	}
 }
 
-FontGrade LabelBase::getFontGrade() const {
-	return _style.font.fontGrade;
-}
+FontGrade LabelBase::getFontGrade() const { return _style.font.fontGrade; }
 
 void LabelBase::setFontFamily(const StringView &value) {
 	if (value != _style.font.fontFamily) {
@@ -458,9 +429,7 @@ void LabelBase::setFontFamily(const StringView &value) {
 		setLabelDirty();
 	}
 }
-StringView LabelBase::getFontFamily() const {
-	return _style.font.fontFamily;
-}
+StringView LabelBase::getFontFamily() const { return _style.font.fontFamily; }
 
 void LabelBase::setLineHeightAbsolute(float value) {
 	if (!_isLineHeightAbsolute || _lineHeight != value) {
@@ -476,12 +445,8 @@ void LabelBase::setLineHeightRelative(float value) {
 		setLabelDirty();
 	}
 }
-float LabelBase::getLineHeight() const {
-	return _lineHeight;
-}
-bool LabelBase::isLineHeightAbsolute() const {
-	return _isLineHeightAbsolute;
-}
+float LabelBase::getLineHeight() const { return _lineHeight; }
+bool LabelBase::isLineHeightAbsolute() const { return _isLineHeightAbsolute; }
 
 void LabelBase::setMaxWidth(float value) {
 	if (_maxWidth != value) {
@@ -489,9 +454,7 @@ void LabelBase::setMaxWidth(float value) {
 		setLabelDirty();
 	}
 }
-float LabelBase::getMaxWidth() const {
-	return _maxWidth;
-}
+float LabelBase::getMaxWidth() const { return _maxWidth; }
 
 void LabelBase::setMaxLines(size_t value) {
 	if (_maxLines != value) {
@@ -499,9 +462,7 @@ void LabelBase::setMaxLines(size_t value) {
 		setLabelDirty();
 	}
 }
-size_t LabelBase::getMaxLines() const {
-	return _maxLines;
-}
+size_t LabelBase::getMaxLines() const { return _maxLines; }
 
 void LabelBase::setMaxChars(size_t value) {
 	if (_maxChars != value) {
@@ -509,9 +470,7 @@ void LabelBase::setMaxChars(size_t value) {
 		setLabelDirty();
 	}
 }
-size_t LabelBase::getMaxChars() const {
-	return _maxChars;
-}
+size_t LabelBase::getMaxChars() const { return _maxChars; }
 
 void LabelBase::setOpticalAlignment(bool value) {
 	if (_opticalAlignment != value) {
@@ -519,9 +478,7 @@ void LabelBase::setOpticalAlignment(bool value) {
 		setLabelDirty();
 	}
 }
-bool LabelBase::isOpticallyAligned() const {
-	return _opticalAlignment;
-}
+bool LabelBase::isOpticallyAligned() const { return _opticalAlignment; }
 
 void LabelBase::setFillerChar(char16_t c) {
 	if (c != _fillerChar) {
@@ -529,9 +486,7 @@ void LabelBase::setFillerChar(char16_t c) {
 		setLabelDirty();
 	}
 }
-char16_t LabelBase::getFillerChar() const {
-	return _fillerChar;
-}
+char16_t LabelBase::getFillerChar() const { return _fillerChar; }
 
 void LabelBase::setLocaleEnabled(bool value) {
 	if (_localeEnabled != value) {
@@ -539,20 +494,16 @@ void LabelBase::setLocaleEnabled(bool value) {
 		setLabelDirty();
 	}
 }
-bool LabelBase::isLocaleEnabled() const {
-	return _localeEnabled;
-}
+bool LabelBase::isLocaleEnabled() const { return _localeEnabled; }
 
-void LabelBase::setPersistentLayout(bool value) {
-	if (_persistentLayout != value) {
-		_persistentLayout = value;
+void LabelBase::setPersistentGlyphData(bool value) {
+	if (_persistentGlyphData != value) {
+		_persistentGlyphData = value;
 		setLabelDirty();
 	}
 }
 
-bool LabelBase::isPersistentLayout() const {
-	return _persistentLayout;
-}
+bool LabelBase::isPersistentGlyphData() const { return _persistentGlyphData; }
 
 void LabelBase::setString(const StringView &newString) {
 	if (newString == _string8) {
@@ -587,13 +538,9 @@ void LabelBase::setLocalizedString(size_t idx) {
 	setLocaleEnabled(true);
 }
 
-WideStringView LabelBase::getString() const {
-	return _string16;
-}
+WideStringView LabelBase::getString() const { return _string16; }
 
-StringView LabelBase::getString8() const {
-	return _string8;
-}
+StringView LabelBase::getString8() const { return _string8; }
 
 void LabelBase::erase16(size_t start, size_t len) {
 	if (start >= _string16.length()) {
@@ -671,13 +618,9 @@ void LabelBase::clearStyles() {
 	setLabelDirty();
 }
 
-const LabelBase::StyleVec &LabelBase::getStyles() const {
-	return _styles;
-}
+const LabelBase::StyleVec &LabelBase::getStyles() const { return _styles; }
 
-const LabelBase::StyleVec &LabelBase::getCompiledStyles() const {
-	return _compiledStyles;
-}
+const LabelBase::StyleVec &LabelBase::getCompiledStyles() const { return _compiledStyles; }
 
 void LabelBase::setStyles(StyleVec &&vec) {
 	_styles = sp::move(vec);
@@ -688,7 +631,8 @@ void LabelBase::setStyles(const StyleVec &vec) {
 	setLabelDirty();
 }
 
-bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledStyles, float density, uint8_t _adjustValue) {
+bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledStyles, float density,
+		uint8_t _adjustValue) {
 	bool success = true;
 	uint16_t adjustValue = maxOf<uint16_t>();
 
@@ -701,7 +645,7 @@ bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledSty
 
 		format->clear();
 
-		font::Formatter formatter([format] (const FontParameters &f) {
+		font::Formatter formatter([format](const FontParameters &f) {
 			return format->getLayout(f);
 		}, format->getData());
 		formatter.setWidth(static_cast<uint16_t>(roundf(_width * density)));
@@ -724,7 +668,8 @@ bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledSty
 
 		size_t drawedChars = 0;
 		for (auto &it : compiledStyles) {
-			DescriptionStyle params = _style.merge(dynamic_cast<font::FontController *>(format->getController()), it.style);
+			DescriptionStyle params = _style.merge(
+					dynamic_cast<font::FontController *>(format->getController()), it.style);
 			specializeStyle(params, density);
 			if (adjustValue > 0) {
 				params.font.fontSize -= FontSize(adjustValue);
@@ -771,11 +716,10 @@ bool LabelBase::updateFormatSpec(TextLayout *format, const StyleVec &compiledSty
 
 LabelBase::~LabelBase() { }
 
-bool LabelBase::isLabelDirty() const {
-	return _labelDirty;
-}
+bool LabelBase::isLabelDirty() const { return _labelDirty; }
 
-static void LabelBase_dumpStyle(LabelBase::StyleVec &ret, size_t pos, size_t len, const LabelBase::Style &style) {
+static void LabelBase_dumpStyle(LabelBase::StyleVec &ret, size_t pos, size_t len,
+		const LabelBase::Style &style) {
 	if (len > 0) {
 		ret.emplace_back(pos, len, style);
 	}
@@ -792,12 +736,12 @@ LabelBase::StyleVec LabelBase::compileStyle() const {
 
 	size_t dumpPos = 0;
 
-	for (pos = 0; pos < max; pos ++) {
+	for (pos = 0; pos < max; pos++) {
 		auto it = vec.begin();
 
 		bool cleaned = false;
 		// check for endings
-		while(it != vec.end()) {
+		while (it != vec.end()) {
 			if (it->start + it->length <= pos) {
 				LabelBase_dumpStyle(ret, dumpPos, pos - dumpPos, compiledStyle);
 				compiledStyle.clear();
@@ -805,13 +749,13 @@ LabelBase::StyleVec LabelBase::compileStyle() const {
 				dumpPos = pos;
 				it = vec.erase(it);
 			} else {
-				it ++;
+				it++;
 			}
 		}
 
 		// checks for continuations and starts
 		it = vec.begin();
-		while(it != vec.end()) {
+		while (it != vec.end()) {
 			if (it->start == pos) {
 				if (dumpPos != pos) {
 					LabelBase_dumpStyle(ret, dumpPos, pos - dumpPos, compiledStyle);
@@ -823,7 +767,7 @@ LabelBase::StyleVec LabelBase::compileStyle() const {
 					compiledStyle.merge(it->style);
 				}
 			}
-			it ++;
+			it++;
 		}
 	}
 
@@ -842,11 +786,9 @@ WideString LabelBase::resolveLocaleTags(const WideStringView &str) const {
 
 void LabelBase::specializeStyle(DescriptionStyle &style, float density) const {
 	style.font.density = density;
-	style.font.persistent = _persistentLayout;
+	style.font.persistent = _persistentGlyphData;
 }
 
-void LabelBase::setLabelDirty() {
-	_labelDirty = true;
-}
+void LabelBase::setLabelDirty() { _labelDirty = true; }
 
-}
+} // namespace stappler::xenolith::font

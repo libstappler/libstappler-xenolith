@@ -21,9 +21,12 @@
  **/
 
 #import <AppKit/NSApplication.h>
+#import <AppKit/NSPasteboardItem.h>
 #import <Network/Network.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #include "XLMacosContextController.h"
+#include "XLMacosDisplayConfigManager.h"
 #include "XLMacosWindow.h"
 #include "XLAppWindow.h"
 #include "SPEventLooper.h"
@@ -47,6 +50,18 @@
 - (void)terminate;
 
 - (void)doNothing:(id _Nonnull)object;
+
+@end
+
+@interface XLMacosPasteboardItem : NSPasteboardItem <NSPasteboardItemDataProvider> {
+	NSSP::Rc<NSXLPL::ClipboardData> _data;
+	NSXL::Map<NSString *, NSSP::StringView> _types;
+	NSArray<NSString *> *_nstypes;
+}
+
+- (instancetype)initWithData:(NSSP::Rc<NSXLPL::ClipboardData> &&)data;
+
+- (NSArray<NSString *> *)dataTypes;
 
 @end
 
@@ -123,6 +138,9 @@ void MacosContextController::handleContextWillStart() {
 void MacosContextController::handleContextDidStart() {
 	ContextController::handleContextDidStart();
 
+	_displayConfigManager =
+			Rc<MacosDisplayConfigManager>::create(this, [](NotNull<DisplayConfigManager> m) { });
+
 	if (_windowInfo) {
 		auto window = Rc<MacosWindow>::create(this, sp::move(_windowInfo), true);
 		if (window) {
@@ -134,7 +152,9 @@ void MacosContextController::handleContextDidStart() {
 void MacosContextController::handleContextDidDestroy() {
 	ContextController::handleContextDidDestroy();
 	if (!_inTerminate) {
-		[[NSRunLoop mainRunLoop] performBlock:^{ [_appDelegate terminate]; }];
+		// Bypass looper with 0.1 sec timeout
+		// This shoul be called outside of Looper an memory::Pool context
+		[_appDelegate performSelector:@selector(terminate) withObject:nil afterDelay:0.1];
 	}
 }
 
@@ -147,7 +167,94 @@ void MacosContextController::applicationWillTerminate(bool terminated) {
 		handleContextDidDestroy();
 	}
 	container->controller = nullptr;
+
 	container->context = nullptr;
+}
+
+
+Status MacosContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
+	auto pasteboard = [NSPasteboard generalPasteboard];
+	auto types = [NSPasteboard generalPasteboard].types;
+
+	Vector<StringView> targetTypes;
+	Map<NSPasteboardType, String> mimeTypes;
+	Map<String, NSPasteboardType> utTypes;
+
+	auto addType = [&](NSPasteboardType v, StringView mime) {
+		mimeTypes.emplace(v, mime.str<Interface>());
+		auto it = utTypes.find(mime);
+		if (it == utTypes.end()) {
+			auto u = utTypes.emplace(mime.str<Interface>(), v).first;
+			targetTypes.emplace_back(u->first);
+		} else {
+			log::warn("MacosContextController", "Pasteboard type dublicate: ", mime, " for ",
+					v.UTF8String);
+		}
+	};
+
+	for (NSPasteboardType v in types) {
+		auto type = [UTType typeWithIdentifier:v];
+		if (type) {
+			auto mime = type.preferredMIMEType;
+			if (mime) {
+				addType(v, mime.UTF8String);
+				continue;
+			}
+		} else if ([v isEqualToString:NSPasteboardTypeString]) {
+			addType(v, "text/plain");
+		} else if ([v isEqualToString:NSPasteboardTypeTabularText]) {
+			addType(v, "text/x-tabular");
+		} else if ([v isEqualToString:NSPasteboardTypeURL]) {
+			addType(v, "text/x-uri");
+		} else if ([v isEqualToString:NSPasteboardTypeFileURL]) {
+			addType(v, "text/x-path");
+		}
+	}
+
+	auto selectedType = req->typeCallback(targetTypes);
+	if (std::find(targetTypes.begin(), targetTypes.end(), selectedType) == targetTypes.end()) {
+		req->dataCallback(Status::ErrorInvalidArguemnt, BytesView(), StringView());
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	auto tIt = utTypes.find(selectedType);
+	if (tIt == utTypes.end()) {
+		req->dataCallback(Status::ErrorInvalidArguemnt, BytesView(), StringView());
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	auto typesArray = @[tIt->second];
+	if (![pasteboard canReadItemWithDataConformingToTypes:typesArray]) {
+		req->dataCallback(Status::ErrorInvalidArguemnt, BytesView(), StringView());
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	for (NSPasteboardItem *item in pasteboard.pasteboardItems) {
+		auto type = [item availableTypeFromArray:typesArray];
+		if (type) {
+			auto data = [item dataForType:type];
+			req->dataCallback(Status::Ok,
+					BytesView(reinterpret_cast<const uint8_t *>(data.bytes), data.length),
+					selectedType);
+			return Status::Ok;
+		}
+	}
+
+	req->dataCallback(Status::ErrorNotImplemented, BytesView(), StringView());
+	return Status::ErrorNotImplemented;
+}
+
+Status MacosContextController::writeToClipboard(Rc<ClipboardData> &&data) {
+	auto pasteboard = [NSPasteboard generalPasteboard];
+
+	[pasteboard prepareForNewContentsWithOptions:0];
+
+	auto item = [[XLMacosPasteboardItem alloc] initWithData:sp::move(data)];
+
+	[pasteboard declareTypes:[item dataTypes] owner:item];
+	[pasteboard writeObjects:@[item]];
+
+	return Status::Ok;
 }
 
 Rc<core::Instance> MacosContextController::loadInstance() {
@@ -391,6 +498,66 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
 	return NO;
+}
+
+@end
+
+@implementation XLMacosPasteboardItem
+
+- (instancetype)initWithData:(NSSP::Rc< NSXLPL::ClipboardData> &&)data {
+	self = [super init];
+
+	_data = NSSP::move(data);
+
+	auto types = [[NSMutableArray alloc] initWithCapacity:_data->types.size()];
+
+	for (auto &it : _data->types) {
+		auto sourceType = it;
+		if (NSSP::StringView(it) == "text/plain") {
+			sourceType = "text/plain;charset=utf-8";
+		}
+		auto type =
+				[UTType typeWithMIMEType:[[NSString alloc] initWithUTF8String:sourceType.data()]];
+		if (type) {
+			auto id = type.identifier;
+			[types addObject:id];
+			_types.emplace(id, it);
+		}
+	}
+
+	_nstypes = types;
+
+	[self setDataProvider:self forTypes:_nstypes];
+
+	return self;
+}
+
+- (NSArray<NSString *> *)dataTypes {
+	return _nstypes;
+}
+
+- (void)pasteboard:(NSPasteboard *)pasteboard
+					  item:(NSPasteboardItem *)item
+		provideDataForType:(NSPasteboardType)type {
+	if (!_data) {
+		return;
+	}
+
+	auto tIt = _types.find(type);
+	if (tIt == _types.end()) {
+		return;
+	}
+
+	auto data = _data->encodeCallback(tIt->second);
+
+	NSSP::log::debug("XLMacosPasteboardItem", "Write clipboard: ", tIt->second, " ", data.size());
+
+	[pasteboard setData:[[NSData alloc] initWithBytes:data.data() length:data.size()] forType:type];
+}
+
+- (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)pasteboard {
+	NSSP::log::debug("XLMacosPasteboardItem", "clear clipboard");
+	_data = nullptr;
 }
 
 @end

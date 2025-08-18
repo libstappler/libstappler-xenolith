@@ -25,8 +25,16 @@
 
 #include "XLMacos.h"
 #include "platform/XLContextNativeWindow.h"
+#include <CoreFoundation/CFCGTypes.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+enum class MacosFullscreenRequest {
+	None,
+	EnterFullscreen,
+	ExitFullscreen,
+	ToggleFullscreen
+};
 
 class MacosWindow : public NativeWindow {
 public:
@@ -56,21 +64,39 @@ public:
 	void handleWindowLoaded();
 	void handleDisplayLink();
 
-	NSWindow *getWindow() const { return _window; }
+	XLMacosWindow *getWindow() const { return _window; }
+
+	void addMacosStateFlags(NativeWindowStateFlags);
+	void clearMacosStateFlags(NativeWindowStateFlags);
+	void emitAppFrame();
+
+	bool hasOriginalFrame() const { return _hasOriginalFrame; }
+	CGRect getOriginalFrame() const { return _originalFrame; }
+
+	void handleFullscreenTransitionComplete(MacosFullscreenRequest);
+
+	MacosFullscreenRequest getFullscreenRequest() const { return _fullscreenRequest; }
+	NSScreen *getNextScreen() const { return _nextScreen; }
 
 protected:
+	virtual Status setFullscreenState(FullscreenInfo &&info) override;
+
 	virtual bool updateTextInput(const TextInputRequest &,
 			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
 
 	virtual void cancelTextInput() override;
 
 	XLMacosViewController *_rootViewController = nullptr;
-	XLMacosView *_rootView = nullptr;
-	NSWindow *_window = nullptr;
+	XLMacosWindow *_window = nullptr;
 	WindowLayerFlags _currentCursor = WindowLayerFlags::None;
 
 	bool _initialized = false;
 	bool _windowLoaded = false;
+
+	bool _hasOriginalFrame = false;
+	CGRect _originalFrame;
+	MacosFullscreenRequest _fullscreenRequest = MacosFullscreenRequest::None;
+	NSScreen *_nextScreen = nullptr;
 };
 
 } // namespace stappler::xenolith::platform

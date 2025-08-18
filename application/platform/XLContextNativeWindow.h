@@ -176,6 +176,10 @@ protected:
 	bool _isRootWindow = true;
 	bool _hasExitGuard = false;
 
+	// On some platforms (MacOS) fullscren op is async, so, we need a flag to check if op is in progress
+	// When this flag is set, fullscreen function should return Status::ErrorAgain
+	bool _hasPendingFullscreenOp = false;
+
 	Vec2 _layerLocation;
 	Vector<WindowLayer> _layers;
 	WindowLayer _currentLayer;

@@ -162,7 +162,7 @@ public:
 	template <typename T>
 	T *getComponent() const;
 
-	virtual Status readFromClipboard(Function<void(BytesView, StringView)> &&,
+	virtual Status readFromClipboard(Function<void(Status, BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
 	virtual Status writeToClipboard(Function<Bytes(StringView)> &&, SpanView<String>,
 			Ref * = nullptr);

@@ -162,6 +162,8 @@ protected:
 			Vector<Rc<FontFaceData>> *);
 	void removeUnusedLayouts();
 
+	void initDependency();
+
 	bool _loaded = false;
 	String _name;
 	std::atomic<uint64_t> _clock;
