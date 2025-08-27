@@ -86,7 +86,7 @@ static struct wl_pointer_listener s_WaylandPointerListener{
 
 		if (seat->pointerFocus == surface) {
 			seat->pointerFocus = NULL;
-			seat->cursorImage = WindowLayerFlags::None;
+			seat->cursorImage = WindowCursor::Undefined;
 		}
 	},
 
@@ -369,7 +369,7 @@ bool WaylandSeat::init(NotNull<WaylandLibrary> lib, NotNull<WaylandDisplay> view
 	return true;
 }
 
-void WaylandSeat::setCursor(WindowLayerFlags image, bool serverSide) {
+void WaylandSeat::setCursor(WindowCursor image, bool serverSide) {
 	cursorImage = image;
 	auto waylandCursor = getWaylandCursor(cursorImage);
 	if (serverSide && cursorShape && waylandCursor) {
@@ -504,9 +504,14 @@ bool WaylandCursorTheme::init(WaylandDisplay *display, StringView name, int size
 	cursorTheme = wayland->wl_cursor_theme_load(name.data(), size, display->shm->shm);
 
 	if (cursorTheme) {
-		for (uint32_t i = 0; i < toInt(WindowLayerFlags::CursorMask); ++i) {
+		for (auto cursor : sp::each<WindowCursor>()) {
+			auto names = getCursorNames(cursor);
+			if (names.empty()) {
+				cursors.emplace_back(nullptr);
+				continue;
+			}
+
 			wl_cursor *c = nullptr;
-			auto names = getCursorNames(WindowLayerFlags(i));
 			for (auto &it : names) {
 				c = wayland->wl_cursor_theme_get_cursor(cursorTheme, it.data());
 				if (c) {
@@ -530,15 +535,14 @@ void WaylandCursorTheme::setCursor(WaylandSeat *seat) {
 }
 
 void WaylandCursorTheme::setCursor(wl_pointer *pointer, wl_surface *cursorSurface, uint32_t serial,
-		WindowLayerFlags img, int scale) {
-	auto cursorIndex = toInt(img & WindowLayerFlags::CursorMask);
+		WindowCursor cursorIndex, int scale) {
 	if (!cursorTheme || cursors.size() <= size_t(cursorIndex)) {
 		return;
 	}
 
-	auto cursor = cursors.at(cursorIndex);
+	auto cursor = cursors.at(toInt(cursorIndex));
 	if (!cursor) {
-		cursor = cursors[1]; // default arrow
+		cursor = cursors[toInt(WindowCursor::Default)]; // default arrow
 	}
 
 	auto image = cursor->images[0];
@@ -549,6 +553,14 @@ void WaylandCursorTheme::setCursor(wl_pointer *pointer, wl_surface *cursorSurfac
 	wayland->wl_surface_set_buffer_scale(cursorSurface, scale);
 	wayland->wl_surface_damage_buffer(cursorSurface, 0, 0, image->width, image->height);
 	wayland->wl_surface_commit(cursorSurface);
+}
+
+bool WaylandCursorTheme::hasCursor(WindowCursor cursor) const {
+	auto idx = toInt(cursor);
+	if (idx < cursors.size()) {
+		return cursors[idx] != nullptr;
+	}
+	return false;
 }
 
 } // namespace stappler::xenolith::platform

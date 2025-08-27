@@ -693,7 +693,7 @@ Rc<Image> Allocator::preallocate(StringView key, const ImageInfoData &info, bool
 	VkImageCreateInfo imageInfo{};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.pNext = nullptr;
-	imageInfo.flags = info.flags;
+	imageInfo.flags = VkImageCreateFlags(info.flags);
 	imageInfo.imageType = VkImageType(info.imageType);
 	imageInfo.format = VkFormat(info.format);
 	imageInfo.extent = VkExtent3D({info.extent.width, info.extent.height, info.extent.depth});

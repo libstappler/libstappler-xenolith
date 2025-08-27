@@ -28,7 +28,7 @@
 #include "XLVkDevice.h"
 #include "XLVkAllocator.h"
 #include "XLCoreObject.h"
-#include "XLCoreImageStorage.h"
+#include "XLCoreImageStorage.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -41,7 +41,7 @@ struct SP_PUBLIC DeviceMemoryInfo {
 	bool dedicated;
 };
 
-enum class DeviceMemoryAccess {
+enum class DeviceMemoryAccess : uint32_t {
 	None = 0,
 	Invalidate = 1 << 0,
 	Flush = 1 << 1,

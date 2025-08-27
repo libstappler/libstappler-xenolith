@@ -35,6 +35,7 @@ extern SpanView<uint32_t> PseudoSdfFrag;
 extern SpanView<uint32_t> PseudoSdfVert;
 extern SpanView<uint32_t> PseudoSdfShadowFrag;
 extern SpanView<uint32_t> PseudoSdfShadowVert;
+extern SpanView<uint32_t> FrameClipperFrag;
 
 extern SpanView<uint32_t> ParticleUpdateComp;
 

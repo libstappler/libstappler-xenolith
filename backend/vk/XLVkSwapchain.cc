@@ -237,7 +237,7 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 
 	Rc<SwapchainAcquiredImage> image;
 	switch (ret) {
-	case VK_SUCCESS:
+	case VK_SUCCESS: {
 		if (sem) {
 			sem->setSignaled(true);
 		}
@@ -245,11 +245,21 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 			fence->setTag("SwapchainHandle::acquire");
 			fence->setArmed();
 		}
-		++_acquiredImages;
+
+		std::unique_lock<Mutex> lock(_resourceMutex);
+		auto it = _acquiredIndexes.find(imageIndex);
+		if (it != _acquiredIndexes.end()) {
+			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " already acquired");
+		} else {
+			_acquiredIndexes.emplace(imageIndex);
+			++_acquiredImages;
+		}
+
 		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex),
 				move(sem), this);
 		break;
-	case VK_SUBOPTIMAL_KHR:
+	}
+	case VK_SUBOPTIMAL_KHR: {
 		if (sem) {
 			sem->setSignaled(true);
 		}
@@ -258,10 +268,20 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 			fence->setArmed();
 		}
 		_deprecated = true;
-		++_acquiredImages;
+
+		std::unique_lock<Mutex> lock(_resourceMutex);
+		auto it = _acquiredIndexes.find(imageIndex);
+		if (it != _acquiredIndexes.end()) {
+			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " already acquired");
+		} else {
+			_acquiredIndexes.emplace(imageIndex);
+			++_acquiredImages;
+		}
+
 		return Rc<SwapchainAcquiredImage>::alloc(imageIndex, &_data->images.at(imageIndex),
 				move(sem), this);
 		break;
+	}
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		_deprecated = true;
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
@@ -319,7 +339,13 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 	do {
 		std::unique_lock<Mutex> lock(_resourceMutex);
 		static_cast<core::SwapchainImage *>(image)->setPresented();
-		--_acquiredImages;
+		auto it = _acquiredIndexes.find(imageIndex);
+		if (it != _acquiredIndexes.end()) {
+			_acquiredIndexes.erase(it);
+			--_acquiredImages;
+		} else {
+			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " was not acquired");
+		}
 	} while (0);
 
 	if (_data->presentSemaphores[imageIndex]) {
@@ -344,10 +370,31 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 	return getStatus(result);
 }
 
-void SwapchainHandle::invalidateImage(const core::ImageStorage *image) {
+void SwapchainHandle::invalidateImage(const core::ImageStorage *image, bool release) {
 	if (!static_cast<const core::SwapchainImage *>(image)->isPresented()) {
-		std::unique_lock<Mutex> lock(_resourceMutex);
+		auto imageIndex = uint32_t(image->getImageIndex());
+		invalidateImage(imageIndex, release);
+	}
+}
+
+void SwapchainHandle::invalidateImage(uint32_t idx, bool release) {
+	std::unique_lock<Mutex> lock(_resourceMutex);
+	auto it = _acquiredIndexes.find(idx);
+	if (it != _acquiredIndexes.end()) {
+		_acquiredIndexes.erase(it);
+		auto dev = static_cast<Device *>(_object.device);
+		if (release && dev->getTable()->vkReleaseSwapchainImagesEXT) {
+			VkReleaseSwapchainImagesInfoEXT info;
+			info.sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_EXT;
+			info.pNext = nullptr;
+			info.swapchain = _data->swapchain;
+			info.imageIndexCount = 1;
+			info.pImageIndices = &idx;
+			dev->getTable()->vkReleaseSwapchainImagesEXT(dev->getDevice(), &info);
+		}
 		--_acquiredImages;
+	} else {
+		log::error("vk::SwapchainHandle", "Image index ", idx, " was not acquired");
 	}
 }
 

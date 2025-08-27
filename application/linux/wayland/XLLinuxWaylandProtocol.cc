@@ -585,86 +585,6 @@ static int createAnonymousFile(off_t size) {
 	return fd;
 }
 
-static void makeGaussianVector(Color4B *retA, Color4B *retB, uint32_t size) {
-	const float sigma = sqrtf((size * size) / (-2.0f * logf(1.0f / 255.0f)));
-	const float sigma_v = -1.0f / (2.0f * sigma * sigma);
-
-	for (uint32_t j = 0; j < size; j++) {
-		retA[j].a = (uint8_t)(24.0f * expf((j * j) * sigma_v));
-		retB[j].a = (uint8_t)(64.0f * expf((j * j) * sigma_v));
-	}
-}
-
-static void makeGaussianRange(Color4B *retA, Color4B *retB, uint32_t size, uint32_t inset) {
-	auto width = size + inset;
-	auto targetA = retA;
-	auto targetB = retA + width * width;
-	auto targetC = retA + width * width * 2;
-	auto targetD = retA + width * width * 3;
-	auto targetE = retB;
-	auto targetF = retB + width * width;
-	auto targetG = retB + width * width * 2;
-	auto targetH = retB + width * width * 3;
-
-	const float sigma = sqrtf((size * size) / (-2.0f * logf(1.0f / 255.0f)));
-	const float sigma_v = -1.0f / (2.0f * sigma * sigma);
-
-	for (uint32_t i = 0; i < width; i++) {
-		for (uint32_t j = 0; j < width; j++) {
-			float dist = sqrtf((i * i) + (j * j));
-			float tmp = 0.0f;
-			if (dist <= inset) {
-				tmp = 1.0f;
-			} else if (dist > size + inset) {
-				tmp = 0.0f;
-			} else {
-				dist = dist - inset;
-				tmp = expf((dist * dist) * sigma_v);
-			}
-
-			auto valueA = (uint8_t)(24.0f * tmp);
-			auto valueB = (uint8_t)(64.0f * tmp);
-			targetA[i * width + j].a = valueA;
-			targetB[(width - i - 1) * width + (width - j - 1)].a = valueA;
-			targetC[(i)*width + (width - j - 1)].a = valueA;
-			targetD[(width - i - 1) * width + (j)].a = valueA;
-			targetE[i * width + j].a = valueB;
-			targetF[(width - i - 1) * width + (width - j - 1)].a = valueB;
-			targetG[(i)*width + (width - j - 1)].a = valueB;
-			targetH[(width - i - 1) * width + (j)].a = valueB;
-		}
-	}
-}
-
-static void makeRoundedHeader(Color4B *retA, uint32_t size, const Color3B &colorA,
-		const Color3B &colorB) {
-	auto targetA = retA;
-	auto targetB = retA + size * size * 1;
-	auto targetC = retA + size * size * 2;
-	auto targetD = retA + size * size * 3;
-
-	Color4B tmpA = Color4B(colorA.b, colorA.g, colorA.r, 255);
-	Color4B tmpB = Color4B(colorB.b, colorB.g, colorB.r, 255);
-	for (uint32_t i = 0; i < size; i++) {
-		for (uint32_t j = 0; j < size; j++) {
-			auto u = size - i - 1;
-			auto v = size - j - 1;
-			float dist = sqrtf((u * u) + (v * v));
-			if (dist >= size) {
-				targetA[i * size + j] = Color4B(0, 0, 0, 0);
-				targetB[i * size + j] = Color4B(0, 0, 0, 0);
-				targetC[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
-				targetD[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
-			} else {
-				targetA[i * size + j] = tmpA;
-				targetB[i * size + j] = tmpB;
-				targetC[i * size + (size - j - 1)] = tmpA;
-				targetD[i * size + (size - j - 1)] = tmpB;
-			}
-		}
-	}
-}
-
 bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &info) {
 	auto size = info.width * sizeof(Color4B) * 8; // plain shadows
 	size += (info.width + info.inset) * (info.width + info.inset) * sizeof(Color4B)
@@ -722,21 +642,25 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 	auto pool = wayland->wl_shm_create_pool(shm, fd, size);
 	::close(fd);
 
-	auto targetA = (Color4B *)data;
-	auto targetB = (Color4B *)data + info.width * 4;
-	makeGaussianVector(targetA, targetB, info.width);
+	auto retA = (Color4B *)data;
+	auto retB = (Color4B *)data + info.width * 4;
+
+	makeShadowVector([&](uint32_t j, float value) {
+		retA[j].a = (uint8_t)(24.0f * value);
+		retA[j].a = (uint8_t)(64.0f * value);
+	}, info.width);
 
 	// make normal
-	::memcpy(targetA + info.width * 2, targetA, info.width * sizeof(Color4B));
-	::memcpy(targetA + info.width * 3, targetA, info.width * sizeof(Color4B));
-	std::reverse(targetA, targetA + info.width);
-	::memcpy(targetA + info.width * 1, targetA, info.width * sizeof(Color4B));
+	::memcpy(retA + info.width * 2, retA, info.width * sizeof(Color4B));
+	::memcpy(retA + info.width * 3, retA, info.width * sizeof(Color4B));
+	std::reverse(retA, retA + info.width);
+	::memcpy(retA + info.width * 1, retA, info.width * sizeof(Color4B));
 
 	// make active
-	::memcpy(targetB + info.width * 2, targetB, info.width * sizeof(Color4B));
-	::memcpy(targetB + info.width * 3, targetB, info.width * sizeof(Color4B));
-	std::reverse(targetB, targetB + info.width);
-	::memcpy(targetB + info.width * 1, targetB, info.width * sizeof(Color4B));
+	::memcpy(retB + info.width * 2, retB, info.width * sizeof(Color4B));
+	::memcpy(retB + info.width * 3, retB, info.width * sizeof(Color4B));
+	std::reverse(retB, retB + info.width);
+	::memcpy(retB + info.width * 1, retB, info.width * sizeof(Color4B));
 
 	info.ret->top = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 0, 1,
 			info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
@@ -759,10 +683,33 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 					1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	auto offset = info.width * 8 * sizeof(Color4B);
-	targetA = (Color4B *)data + info.width * 8;
+	retA = (Color4B *)data + info.width * 8;
 	info.width += info.inset;
-	targetB = targetA + info.width * info.width * 4;
-	makeGaussianRange(targetA, targetB, info.width - info.inset, info.inset);
+	retB = retA + info.width * info.width * 4;
+
+	do {
+		auto targetA = retA;
+		auto targetB = retA + info.width * info.width;
+		auto targetC = retA + info.width * info.width * 2;
+		auto targetD = retA + info.width * info.width * 3;
+		auto targetE = retB;
+		auto targetF = retB + info.width * info.width;
+		auto targetG = retB + info.width * info.width * 2;
+		auto targetH = retB + info.width * info.width * 3;
+
+		makeShadowCorner([&](uint32_t i, uint32_t j, float value) {
+			auto valueA = (uint8_t)(24.0f * value);
+			auto valueB = (uint8_t)(64.0f * value);
+			targetA[i * info.width + j].a = valueA;
+			targetB[(info.width - i - 1) * info.width + (info.width - j - 1)].a = valueA;
+			targetC[(i)*info.width + (info.width - j - 1)].a = valueA;
+			targetD[(info.width - i - 1) * info.width + (j)].a = valueA;
+			targetE[i * info.width + j].a = valueB;
+			targetF[(info.width - i - 1) * info.width + (info.width - j - 1)].a = valueB;
+			targetG[(i)*info.width + (info.width - j - 1)].a = valueB;
+			targetH[(info.width - i - 1) * info.width + (j)].a = valueB;
+		}, info.width, info.inset);
+	} while (0);
 
 	info.ret->bottomRight = Rc<WaylandBuffer>::create(wayland, pool, offset, info.width, info.width,
 			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
@@ -789,9 +736,31 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	offset += info.width * info.width * 8 * sizeof(Color4B);
-	targetA = (Color4B *)((uint8_t *)data + offset);
+	retA = (Color4B *)((uint8_t *)data + offset);
 
-	makeRoundedHeader(targetA, info.inset, info.headerLight, info.headerLightActive);
+	do {
+		auto targetA = retA;
+		auto targetB = retA + info.inset * info.inset * 1;
+		auto targetC = retA + info.inset * info.inset * 2;
+		auto targetD = retA + info.inset * info.inset * 3;
+
+		Color4B tmpA = Color4B(info.headerLight, 255);
+		Color4B tmpB = Color4B(info.headerLightActive, 255);
+
+		makeRoundedCorners([&](uint32_t i, uint32_t j, float value) {
+			if (value > 0.0f) {
+				targetA[i * info.inset + j] = tmpA;
+				targetB[i * info.inset + j] = tmpB;
+				targetC[i * info.inset + (info.inset - j - 1)] = tmpA;
+				targetD[i * info.inset + (info.inset - j - 1)] = tmpB;
+			} else {
+				targetA[i * size + j] = Color4B(0, 0, 0, 0);
+				targetB[i * size + j] = Color4B(0, 0, 0, 0);
+				targetC[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+				targetD[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+			}
+		}, info.inset);
+	} while (0);
 
 	info.ret->headerLeft = Rc<WaylandBuffer>::create(wayland, pool, offset, info.inset, info.inset,
 			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
@@ -806,9 +775,31 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	offset += info.inset * info.inset * sizeof(Color4B) * 4;
-	targetA = (Color4B *)((uint8_t *)data + offset);
+	retA = (Color4B *)((uint8_t *)data + offset);
 
-	makeRoundedHeader(targetA, info.inset, info.headerDark, info.headerDarkActive);
+	do {
+		auto targetA = retA;
+		auto targetB = retA + info.inset * info.inset * 1;
+		auto targetC = retA + info.inset * info.inset * 2;
+		auto targetD = retA + info.inset * info.inset * 3;
+
+		Color4B tmpA = Color4B(info.headerDark, 255);
+		Color4B tmpB = Color4B(info.headerDarkActive, 255);
+
+		makeRoundedCorners([&](uint32_t i, uint32_t j, float value) {
+			if (value > 0.0f) {
+				targetA[i * info.inset + j] = tmpA;
+				targetB[i * info.inset + j] = tmpB;
+				targetC[i * info.inset + (info.inset - j - 1)] = tmpA;
+				targetD[i * info.inset + (info.inset - j - 1)] = tmpB;
+			} else {
+				targetA[i * size + j] = Color4B(0, 0, 0, 0);
+				targetB[i * size + j] = Color4B(0, 0, 0, 0);
+				targetC[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+				targetD[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+			}
+		}, info.inset);
+	} while (0);
 
 	info.ret->headerDarkLeft = Rc<WaylandBuffer>::create(wayland, pool, offset, info.inset,
 			info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
@@ -823,11 +814,11 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	offset += info.inset * info.inset * sizeof(Color4B) * 4;
-	targetA = (Color4B *)((uint8_t *)data + offset);
+	retA = (Color4B *)((uint8_t *)data + offset);
 
-	targetA[0] = Color4B(info.headerLight.b, info.headerLight.g, info.headerLight.r, 255);
-	targetA[1] = Color4B(info.headerLightActive.b, info.headerLightActive.g,
-			info.headerLightActive.r, 255);
+	retA[0] = Color4B(info.headerLight.b, info.headerLight.g, info.headerLight.r, 255);
+	retA[1] = Color4B(info.headerLightActive.b, info.headerLightActive.g, info.headerLightActive.r,
+			255);
 
 	info.ret->headerLightCenter = Rc<WaylandBuffer>::create(wayland, pool, offset, 1, 1,
 			sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
@@ -835,10 +826,10 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			offset + sizeof(Color4B), 1, 1, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	offset += 2 * sizeof(Color4B);
-	targetA += 2;
+	retA += 2;
 
-	targetA[0] = Color4B(info.headerDark.b, info.headerDark.g, info.headerDark.r, 255);
-	targetA[1] =
+	retA[0] = Color4B(info.headerDark.b, info.headerDark.g, info.headerDark.r, 255);
+	retA[1] =
 			Color4B(info.headerDarkActive.b, info.headerDarkActive.g, info.headerDarkActive.r, 255);
 
 	info.ret->headerDarkCenter = Rc<WaylandBuffer>::create(wayland, pool, offset, 1, 1,
@@ -847,7 +838,7 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			offset + sizeof(Color4B), 1, 1, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	offset += 2 * sizeof(Color4B);
-	targetA += 2;
+	retA += 2;
 
 	for (IconData &it : icons) {
 		memcpy((uint8_t *)data + offset, it.data.data(), it.data.size());
@@ -893,84 +884,55 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 	return true;
 }
 
-uint32_t getWaylandCursor(WindowLayerFlags flags) {
-	switch (flags & WindowLayerFlags::CursorMask) {
-	case WindowLayerFlags::CursorDefault: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT; break;
-	case WindowLayerFlags::CursorContextMenu:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CONTEXT_MENU;
-		break;
-	case WindowLayerFlags::CursorHelp: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_HELP; break;
-	case WindowLayerFlags::CursorPointer: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_POINTER; break;
-	case WindowLayerFlags::CursorProgress: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_PROGRESS; break;
-	case WindowLayerFlags::CursorWait: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_WAIT; break;
-	case WindowLayerFlags::CursorCell: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CELL; break;
-	case WindowLayerFlags::CursorCrosshair: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR; break;
-	case WindowLayerFlags::CursorText: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT; break;
-	case WindowLayerFlags::CursorVerticalText:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_VERTICAL_TEXT;
-		break;
-	case WindowLayerFlags::CursorAlias: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALIAS; break;
-	case WindowLayerFlags::CursorCopy: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_COPY; break;
-	case WindowLayerFlags::CursorMove: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_MOVE; break;
-	case WindowLayerFlags::CursorNoDrop: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NO_DROP; break;
-	case WindowLayerFlags::CursorNotAllowed:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NOT_ALLOWED;
-		break;
-	case WindowLayerFlags::CursorGrab: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_GRAB; break;
-	case WindowLayerFlags::CursorGrabbing: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_GRABBING; break;
+uint32_t getWaylandCursor(WindowCursor cursor) {
+	switch (cursor) {
+	case WindowCursor::Undefined: return 0; break;
+	case WindowCursor::Default: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT; break;
+	case WindowCursor::ContextMenu: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CONTEXT_MENU; break;
+	case WindowCursor::Help: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_HELP; break;
+	case WindowCursor::Pointer: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_POINTER; break;
+	case WindowCursor::Progress: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_PROGRESS; break;
+	case WindowCursor::Wait: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_WAIT; break;
+	case WindowCursor::Cell: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CELL; break;
+	case WindowCursor::Crosshair: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR; break;
+	case WindowCursor::Text: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT; break;
+	case WindowCursor::VerticalText: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_VERTICAL_TEXT; break;
+	case WindowCursor::Alias: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALIAS; break;
+	case WindowCursor::Copy: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_COPY; break;
+	case WindowCursor::Move: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_MOVE; break;
+	case WindowCursor::NoDrop: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NO_DROP; break;
+	case WindowCursor::NotAllowed: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NOT_ALLOWED; break;
+	case WindowCursor::Grab: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_GRAB; break;
+	case WindowCursor::Grabbing: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_GRABBING; break;
 
-	case WindowLayerFlags::CursorAllScroll:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL;
-		break;
-	case WindowLayerFlags::CursorZoomIn: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ZOOM_IN; break;
-	case WindowLayerFlags::CursorZoomOut: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ZOOM_OUT; break;
-	case WindowLayerFlags::CursorDndAsk: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DND_ASK; break;
+	case WindowCursor::AllScroll: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL; break;
+	case WindowCursor::ZoomIn: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ZOOM_IN; break;
+	case WindowCursor::ZoomOut: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ZOOM_OUT; break;
+	case WindowCursor::DndAsk: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DND_ASK; break;
 
-	case WindowLayerFlags::CursorRightPtr: return 0; break;
-	case WindowLayerFlags::CursorPencil: return 0; break;
-	case WindowLayerFlags::CursorTarget: return 0; break;
+	case WindowCursor::RightPtr: return 0; break;
+	case WindowCursor::Pencil: return 0; break;
+	case WindowCursor::Target: return 0; break;
 
-	case WindowLayerFlags::CursorResizeRight:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_E_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeTop: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_N_RESIZE; break;
-	case WindowLayerFlags::CursorResizeTopRight:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NE_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeTopLeft:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NW_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeBottom:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_S_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeBottomRight:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_SE_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeBottomLeft:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_SW_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeLeft: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_W_RESIZE; break;
-	case WindowLayerFlags::CursorResizeLeftRight:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeTopBottom:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeTopRightBottomLeft:
+	case WindowCursor::ResizeRight: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_E_RESIZE; break;
+	case WindowCursor::ResizeTop: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_N_RESIZE; break;
+	case WindowCursor::ResizeTopRight: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NE_RESIZE; break;
+	case WindowCursor::ResizeTopLeft: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NW_RESIZE; break;
+	case WindowCursor::ResizeBottom: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_S_RESIZE; break;
+	case WindowCursor::ResizeBottomRight: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_SE_RESIZE; break;
+	case WindowCursor::ResizeBottomLeft: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_SW_RESIZE; break;
+	case WindowCursor::ResizeLeft: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_W_RESIZE; break;
+	case WindowCursor::ResizeLeftRight: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE; break;
+	case WindowCursor::ResizeTopBottom: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE; break;
+	case WindowCursor::ResizeTopRightBottomLeft:
 		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE;
 		break;
-	case WindowLayerFlags::CursorResizeTopLeftBottomRight:
+	case WindowCursor::ResizeTopLeftBottomRight:
 		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE;
 		break;
-	case WindowLayerFlags::CursorResizeCol:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_COL_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeRow:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ROW_RESIZE;
-		break;
-	case WindowLayerFlags::CursorResizeAll:
-		return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_RESIZE;
-		break;
+	case WindowCursor::ResizeCol: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_COL_RESIZE; break;
+	case WindowCursor::ResizeRow: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ROW_RESIZE; break;
+	case WindowCursor::ResizeAll: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_RESIZE; break;
 	default: return 0; break;
 	}
 	return 0;

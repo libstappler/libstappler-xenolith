@@ -24,7 +24,7 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBLIBRARY_H_
 #define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBLIBRARY_H_
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 
 #if LINUX
 
@@ -36,11 +36,32 @@
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xcb_cursor.h>
 #include <xcb/xfixes.h>
+#include <xcb/shape.h>
 #include <xcb/xcb_errors.h>
 
 #define explicit _explicit;
 #include <xcb/xkb.h>
 #undef explicit
+
+#define MWM_HINTS_FUNCTIONS	(1L << 0)
+#define MWM_HINTS_DECORATIONS	(1L << 1)
+#define MWM_HINTS_INPUT_MODE	(1L << 2)
+#define MWM_HINTS_STATUS	(1L << 3)
+
+#define MWM_FUNC_ALL		(1L << 0)
+#define MWM_FUNC_RESIZE		(1L << 1)
+#define MWM_FUNC_MOVE		(1L << 2)
+#define MWM_FUNC_MINIMIZE	(1L << 3)
+#define MWM_FUNC_MAXIMIZE	(1L << 4)
+#define MWM_FUNC_CLOSE		(1L << 5)
+
+#define MWM_DECOR_ALL		(1L << 0)
+#define MWM_DECOR_BORDER	(1L << 1)
+#define MWM_DECOR_RESIZEH	(1L << 2)
+#define MWM_DECOR_TITLE		(1L << 3)
+#define MWM_DECOR_MENU		(1L << 4)
+#define MWM_DECOR_MINIMIZE	(1L << 5)
+#define MWM_DECOR_MAXIMIZE	(1L << 6)
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -50,6 +71,8 @@ public:
 	static constexpr int RANDR_MINOR_VERSION = XCB_RANDR_MINOR_VERSION;
 	static constexpr int XFIXES_MAJOR_VERSION = XCB_XFIXES_MAJOR_VERSION;
 	static constexpr int XFIXES_MINOR_VERSION = XCB_XFIXES_MINOR_VERSION;
+	static constexpr int SHAPE_MAJOR_VERSION = XCB_SHAPE_MAJOR_VERSION;
+	static constexpr int SHAPE_MINOR_VERSION = XCB_SHAPE_MINOR_VERSION;
 
 	static XcbLibrary *getInstance();
 
@@ -67,6 +90,7 @@ public:
 	bool hasXkb() const;
 	bool hasSync() const;
 	bool hasXfixes() const;
+	bool hasShape() const;
 	bool hasErrors() const;
 
 	decltype(&_xl_null_fn) _xcb_first_fn = &_xl_null_fn;
@@ -95,11 +119,30 @@ public:
 	XL_DEFINE_PROTO(xcb_destroy_window)
 	XL_DEFINE_PROTO(xcb_configure_window)
 	XL_DEFINE_PROTO(xcb_change_window_attributes)
+	XL_DEFINE_PROTO(xcb_create_colormap)
+	XL_DEFINE_PROTO(xcb_free_colormap)
+	XL_DEFINE_PROTO(xcb_create_pixmap)
+	XL_DEFINE_PROTO(xcb_free_pixmap)
+	XL_DEFINE_PROTO(xcb_create_gc)
+	XL_DEFINE_PROTO(xcb_change_gc)
+	XL_DEFINE_PROTO(xcb_free_gc)
+	XL_DEFINE_PROTO(xcb_poly_fill_rectangle)
+	XL_DEFINE_PROTO(xcb_poly_fill_arc)
+	XL_DEFINE_PROTO(xcb_put_image)
+	XL_DEFINE_PROTO(xcb_copy_area)
 	XL_DEFINE_PROTO(xcb_delete_property)
 	XL_DEFINE_PROTO(xcb_change_property)
 	XL_DEFINE_PROTO(xcb_intern_atom)
 	XL_DEFINE_PROTO(xcb_intern_atom_unchecked)
 	XL_DEFINE_PROTO(xcb_intern_atom_reply)
+	XL_DEFINE_PROTO(xcb_grab_pointer)
+	XL_DEFINE_PROTO(xcb_ungrab_pointer)
+
+	XL_DEFINE_PROTO(xcb_screen_allowed_depths_iterator)
+	XL_DEFINE_PROTO(xcb_depth_visuals_iterator)
+	XL_DEFINE_PROTO(xcb_visualtype_next)
+	XL_DEFINE_PROTO(xcb_depth_next)
+
 	XL_DEFINE_PROTO(xcb_get_property_reply)
 	XL_DEFINE_PROTO(xcb_get_property)
 	XL_DEFINE_PROTO(xcb_get_property_unchecked)
@@ -292,6 +335,40 @@ public:
 	XL_DEFINE_PROTO(xcb_xfixes_select_selection_input)
 	decltype(&_xl_null_fn) _xcb_xfixes_last_fn = &_xl_null_fn;
 
+	decltype(&_xl_null_fn) _xcb_shape_first_fn = &_xl_null_fn;
+	XL_DEFINE_PROTO(xcb_shape_id)
+	XL_DEFINE_PROTO(xcb_shape_op_next)
+	XL_DEFINE_PROTO(xcb_shape_op_end)
+	XL_DEFINE_PROTO(xcb_shape_kind_next)
+	XL_DEFINE_PROTO(xcb_shape_kind_end)
+	XL_DEFINE_PROTO(xcb_shape_query_version)
+	XL_DEFINE_PROTO(xcb_shape_query_version_unchecked)
+	XL_DEFINE_PROTO(xcb_shape_query_version_reply)
+	XL_DEFINE_PROTO(xcb_shape_rectangles_checked)
+	XL_DEFINE_PROTO(xcb_shape_rectangles)
+	XL_DEFINE_PROTO(xcb_shape_rectangles_rectangles)
+	XL_DEFINE_PROTO(xcb_shape_rectangles_rectangles_length)
+	XL_DEFINE_PROTO(xcb_shape_mask_checked)
+	XL_DEFINE_PROTO(xcb_shape_mask)
+	XL_DEFINE_PROTO(xcb_shape_combine_checked)
+	XL_DEFINE_PROTO(xcb_shape_combine)
+	XL_DEFINE_PROTO(xcb_shape_offset_checked)
+	XL_DEFINE_PROTO(xcb_shape_offset)
+	XL_DEFINE_PROTO(xcb_shape_query_extents)
+	XL_DEFINE_PROTO(xcb_shape_query_extents_unchecked)
+	XL_DEFINE_PROTO(xcb_shape_query_extents_reply)
+	XL_DEFINE_PROTO(xcb_shape_select_input_checked)
+	XL_DEFINE_PROTO(xcb_shape_select_input)
+	XL_DEFINE_PROTO(xcb_shape_input_selected)
+	XL_DEFINE_PROTO(xcb_shape_input_selected_unchecked)
+	XL_DEFINE_PROTO(xcb_shape_input_selected_reply)
+	XL_DEFINE_PROTO(xcb_shape_get_rectangles)
+	XL_DEFINE_PROTO(xcb_shape_get_rectangles_unchecked)
+	XL_DEFINE_PROTO(xcb_shape_get_rectangles_rectangles)
+	XL_DEFINE_PROTO(xcb_shape_get_rectangles_rectangles_length)
+	XL_DEFINE_PROTO(xcb_shape_get_rectangles_reply)
+	decltype(&_xl_null_fn) _xcb_shape_last_fn = &_xl_null_fn;
+
 	decltype(&_xl_null_fn) _xcb_errors_first_fn = &_xl_null_fn;
 	XL_DEFINE_PROTO(xcb_errors_context_new)
 	XL_DEFINE_PROTO(xcb_errors_context_free)
@@ -313,6 +390,7 @@ protected:
 	Dso _sync;
 	Dso _cursor;
 	Dso _xfixes;
+	Dso _shape;
 	Dso _errors;
 };
 
@@ -321,11 +399,13 @@ enum class XcbAtomIndex {
 	WM_DELETE_WINDOW,
 	WM_NAME,
 	WM_ICON_NAME,
+	_NET_FRAME_EXTENTS,
 	_NET_WM_DESKTOP,
 	_NET_WM_SYNC_REQUEST,
 	_NET_WM_SYNC_REQUEST_COUNTER,
 	_NET_WM_PING,
 	_NET_WM_PID,
+	_NET_WM_WINDOW_TYPE,
 	_NET_WM_WINDOW_TYPE_DESKTOP,
 	_NET_WM_WINDOW_TYPE_DOCK,
 	_NET_WM_WINDOW_TYPE_TOOLBAR,
@@ -348,6 +428,7 @@ enum class XcbAtomIndex {
 	_NET_WM_STATE_BELOW,
 	_NET_WM_STATE_DEMANDS_ATTENTION,
 	_NET_WM_STATE_FOCUSED,
+	_NET_WM_ALLOWED_ACTIONS,
 	_NET_WM_ACTION_MOVE,
 	_NET_WM_ACTION_RESIZE,
 	_NET_WM_ACTION_MINIMIZE,
@@ -360,7 +441,13 @@ enum class XcbAtomIndex {
 	_NET_WM_ACTION_CLOSE,
 	_NET_WM_FULLSCREEN_MONITORS,
 	_NET_WM_BYPASS_COMPOSITOR,
+	_NET_WM_WINDOW_OPACITY,
+	_NET_WM_MOVERESIZE,
+	_NET_WM_USER_TIME,
 	_NET_SUPPORTED,
+	_MOTIF_WM_HINTS,
+	_GTK_EDGE_CONSTRAINTS,
+	_GTK_FRAME_EXTENTS,
 	SAVE_TARGETS,
 	CLIPBOARD,
 	PRIMARY,
@@ -376,6 +463,108 @@ enum class XcbAtomIndex {
 	XENOLITH_CLIPBOARD,
 	_XSETTINGS_SETTINGS,
 };
+
+struct XcbAtomInfo {
+	XcbAtomIndex index;
+	StringView name;
+	bool onlyIfExists;
+	xcb_atom_t value;
+};
+
+#define DEFINE_ATOM_REQUEST(Name, OnlyIfExists) {XcbAtomIndex::Name, #Name, OnlyIfExists, 0}
+
+static XcbAtomInfo s_atomRequests[] = {
+	DEFINE_ATOM_REQUEST(WM_PROTOCOLS, true),
+	DEFINE_ATOM_REQUEST(WM_DELETE_WINDOW, true),
+	DEFINE_ATOM_REQUEST(WM_NAME, true),
+	DEFINE_ATOM_REQUEST(WM_ICON_NAME, true),
+	DEFINE_ATOM_REQUEST(_NET_FRAME_EXTENTS, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_DESKTOP, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_SYNC_REQUEST, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_SYNC_REQUEST_COUNTER, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_PING, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_PID, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_DESKTOP, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_DOCK, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_TOOLBAR, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_MENU, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_UTILITY, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_SPLASH, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_DIALOG, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_TYPE_NORMAL, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_MODAL, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_STICKY, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_MAXIMIZED_VERT, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_MAXIMIZED_HORZ, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_SHADED, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_SKIP_TASKBAR, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_SKIP_PAGER, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_HIDDEN, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_FULLSCREEN, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_ABOVE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_BELOW, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_DEMANDS_ATTENTION, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_STATE_FOCUSED, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ALLOWED_ACTIONS, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_MOVE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_RESIZE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_MINIMIZE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_SHADE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_STICK, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_MAXIMIZE_HORZ, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_MAXIMIZE_VERT, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_FULLSCREEN, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_CHANGE_DESKTOP, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_ACTION_CLOSE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_FULLSCREEN_MONITORS, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_BYPASS_COMPOSITOR, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_WINDOW_OPACITY, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_MOVERESIZE, true),
+	DEFINE_ATOM_REQUEST(_NET_WM_USER_TIME, true),
+	DEFINE_ATOM_REQUEST(_NET_SUPPORTED, true),
+	DEFINE_ATOM_REQUEST(_MOTIF_WM_HINTS, true),
+	DEFINE_ATOM_REQUEST(_GTK_EDGE_CONSTRAINTS, true),
+	DEFINE_ATOM_REQUEST(_GTK_FRAME_EXTENTS, true),
+	DEFINE_ATOM_REQUEST(SAVE_TARGETS, false),
+	DEFINE_ATOM_REQUEST(CLIPBOARD, false),
+	DEFINE_ATOM_REQUEST(PRIMARY, false),
+	DEFINE_ATOM_REQUEST(TIMESTAMP, false),
+	DEFINE_ATOM_REQUEST(TARGETS, false),
+	DEFINE_ATOM_REQUEST(MULTIPLE, false),
+	DEFINE_ATOM_REQUEST(TEXT, false),
+	DEFINE_ATOM_REQUEST(UTF8_STRING, false),
+	DEFINE_ATOM_REQUEST(OCTET_STREAM, false),
+	DEFINE_ATOM_REQUEST(ATOM_PAIR, false),
+	DEFINE_ATOM_REQUEST(INCR, false),
+	DEFINE_ATOM_REQUEST(XNULL, false),
+	DEFINE_ATOM_REQUEST(XENOLITH_CLIPBOARD, false),
+	DEFINE_ATOM_REQUEST(_XSETTINGS_SETTINGS, false),
+};
+
+#undef DEFINE_ATOM_REQUEST
+
+struct MotifWmHints {
+	uint32_t flags;
+	uint32_t functions;
+	uint32_t decorations;
+	int32_t inputMode;
+	uint32_t status;
+};
+
+struct FrameExtents {
+	static FrameExtents getExtents(xcb_rectangle_t bounding, xcb_rectangle_t content);
+
+	uint32_t left;
+	uint32_t right;
+	uint32_t top;
+	uint32_t bottom;
+};
+
+inline bool isEqual(xcb_rectangle_t l, xcb_rectangle_t r) {
+	return l.x == r.x && l.y == r.y && l.width == r.width && l.height == r.height;
+}
 
 } // namespace stappler::xenolith::platform
 

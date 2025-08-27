@@ -76,11 +76,30 @@ bool XcbLibrary::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, xcb_destroy_window)
 	XL_LOAD_PROTO(handle, xcb_configure_window)
 	XL_LOAD_PROTO(handle, xcb_change_window_attributes)
+	XL_LOAD_PROTO(handle, xcb_create_colormap)
+	XL_LOAD_PROTO(handle, xcb_free_colormap)
+	XL_LOAD_PROTO(handle, xcb_create_pixmap)
+	XL_LOAD_PROTO(handle, xcb_free_pixmap)
+	XL_LOAD_PROTO(handle, xcb_create_gc)
+	XL_LOAD_PROTO(handle, xcb_change_gc)
+	XL_LOAD_PROTO(handle, xcb_free_gc)
+	XL_LOAD_PROTO(handle, xcb_poly_fill_rectangle)
+	XL_LOAD_PROTO(handle, xcb_poly_fill_arc)
+	XL_LOAD_PROTO(handle, xcb_put_image)
+	XL_LOAD_PROTO(handle, xcb_copy_area)
 	XL_LOAD_PROTO(handle, xcb_delete_property)
 	XL_LOAD_PROTO(handle, xcb_change_property)
 	XL_LOAD_PROTO(handle, xcb_intern_atom)
 	XL_LOAD_PROTO(handle, xcb_intern_atom_unchecked)
 	XL_LOAD_PROTO(handle, xcb_intern_atom_reply)
+	XL_LOAD_PROTO(handle, xcb_grab_pointer)
+	XL_LOAD_PROTO(handle, xcb_ungrab_pointer)
+
+	XL_LOAD_PROTO(handle, xcb_screen_allowed_depths_iterator)
+	XL_LOAD_PROTO(handle, xcb_depth_visuals_iterator)
+	XL_LOAD_PROTO(handle, xcb_visualtype_next)
+	XL_LOAD_PROTO(handle, xcb_depth_next)
+
 	XL_LOAD_PROTO(handle, xcb_get_property_reply)
 	XL_LOAD_PROTO(handle, xcb_get_property)
 	XL_LOAD_PROTO(handle, xcb_get_property_unchecked)
@@ -133,6 +152,8 @@ bool XcbLibrary::hasXkb() const { return _xkb ? true : false; }
 bool XcbLibrary::hasSync() const { return _sync ? true : false; }
 
 bool XcbLibrary::hasXfixes() const { return _xfixes ? true : false; }
+
+bool XcbLibrary::hasShape() const { return _shape ? true : false; }
 
 void XcbLibrary::openAux() {
 	if (auto randr = Dso("libxcb-randr.so")) {
@@ -329,6 +350,46 @@ void XcbLibrary::openAux() {
 		}
 	}
 
+	if (auto shape = Dso("libxcb-shape.so")) {
+		XL_LOAD_PROTO(shape, xcb_shape_id)
+		XL_LOAD_PROTO(shape, xcb_shape_op_next)
+		XL_LOAD_PROTO(shape, xcb_shape_op_end)
+		XL_LOAD_PROTO(shape, xcb_shape_kind_next)
+		XL_LOAD_PROTO(shape, xcb_shape_kind_end)
+		XL_LOAD_PROTO(shape, xcb_shape_query_version)
+		XL_LOAD_PROTO(shape, xcb_shape_query_version_unchecked)
+		XL_LOAD_PROTO(shape, xcb_shape_query_version_reply)
+		XL_LOAD_PROTO(shape, xcb_shape_rectangles_checked)
+		XL_LOAD_PROTO(shape, xcb_shape_rectangles)
+		XL_LOAD_PROTO(shape, xcb_shape_rectangles_rectangles)
+		XL_LOAD_PROTO(shape, xcb_shape_rectangles_rectangles_length)
+		XL_LOAD_PROTO(shape, xcb_shape_mask_checked)
+		XL_LOAD_PROTO(shape, xcb_shape_mask)
+		XL_LOAD_PROTO(shape, xcb_shape_combine_checked)
+		XL_LOAD_PROTO(shape, xcb_shape_combine)
+		XL_LOAD_PROTO(shape, xcb_shape_offset_checked)
+		XL_LOAD_PROTO(shape, xcb_shape_offset)
+		XL_LOAD_PROTO(shape, xcb_shape_query_extents)
+		XL_LOAD_PROTO(shape, xcb_shape_query_extents_unchecked)
+		XL_LOAD_PROTO(shape, xcb_shape_query_extents_reply)
+		XL_LOAD_PROTO(shape, xcb_shape_select_input_checked)
+		XL_LOAD_PROTO(shape, xcb_shape_select_input)
+		XL_LOAD_PROTO(shape, xcb_shape_input_selected)
+		XL_LOAD_PROTO(shape, xcb_shape_input_selected_unchecked)
+		XL_LOAD_PROTO(shape, xcb_shape_input_selected_reply)
+		XL_LOAD_PROTO(shape, xcb_shape_get_rectangles)
+		XL_LOAD_PROTO(shape, xcb_shape_get_rectangles_unchecked)
+		XL_LOAD_PROTO(shape, xcb_shape_get_rectangles_rectangles)
+		XL_LOAD_PROTO(shape, xcb_shape_get_rectangles_rectangles_length)
+		XL_LOAD_PROTO(shape, xcb_shape_get_rectangles_reply)
+
+		if (!validateFunctionList(&_xcb_shape_first_fn, &_xcb_shape_last_fn)) {
+			log::error("XcbLibrary", "Fail to load libxcb-shape function");
+		} else {
+			_shape = move(shape);
+		}
+	}
+
 	if (auto errors = Dso("libxcb-errors.so")) {
 		XL_LOAD_PROTO(errors, xcb_errors_context_new)
 		XL_LOAD_PROTO(errors, xcb_errors_context_free)
@@ -345,6 +406,15 @@ void XcbLibrary::openAux() {
 			_errors = move(errors);
 		}
 	}
+}
+
+FrameExtents FrameExtents::getExtents(xcb_rectangle_t bounding, xcb_rectangle_t content) {
+	FrameExtents ret;
+	ret.left = content.x;
+	ret.top = content.y;
+	ret.right = bounding.width - ret.left - content.width;
+	ret.bottom = bounding.height - ret.top - content.height;
+	return ret;
 }
 
 } // namespace stappler::xenolith::platform

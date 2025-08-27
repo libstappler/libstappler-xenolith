@@ -116,4 +116,77 @@ void getProgramStageDescription(const CallbackStream &stream, ProgramStage fmt) 
 	}
 }
 
+const CallbackStream &operator<<(const CallbackStream &out, ProgramStage stage) {
+	for (auto value : flags(stage)) {
+		switch (value) {
+		case ProgramStage::None: break;
+		case ProgramStage::Vertex: out << " Vertex"; break;
+		case ProgramStage::TesselationControl: out << " TesselationControl"; break;
+		case ProgramStage::TesselationEvaluation: out << " TesselationEvaluation"; break;
+		case ProgramStage::Geometry: out << " Geometry"; break;
+		case ProgramStage::Fragment: out << " Fragment"; break;
+		case ProgramStage::Compute: out << " Compute"; break;
+		case ProgramStage::RayGen: out << " RayGen"; break;
+		case ProgramStage::AnyHit: out << " AnyHit"; break;
+		case ProgramStage::ClosestHit: out << " ClosestHit"; break;
+		case ProgramStage::MissHit: out << " MissHit"; break;
+		case ProgramStage::Intersection: out << " Intersection"; break;
+		case ProgramStage::Callable: out << " Callable"; break;
+		case ProgramStage::Task: out << " Task"; break;
+		case ProgramStage::Mesh: out << " Mesh"; break;
+		}
+	}
+	return out;
+}
+
+const CallbackStream &operator<<(const CallbackStream &out, WindowState f) {
+	for (auto value : flags(f)) {
+		switch (value) {
+		case WindowState::None: break;
+		case WindowState::Modal: out << " Modal"; break;
+		case WindowState::Sticky: out << " Sticky"; break;
+		case WindowState::MaximizedVert: out << " MaximizedVert"; break;
+		case WindowState::MaximizedHorz: out << " MaximizedHorz"; break;
+		case WindowState::Maximized: break;
+		case WindowState::Shaded: out << " Shaded"; break;
+		case WindowState::SkipTaskbar: out << " SkipTaskbar"; break;
+		case WindowState::SkipPager: out << " SkipPager"; break;
+		case WindowState::Minimized: out << " Minimized"; break;
+		case WindowState::Fullscreen: out << " Fullscreen"; break;
+		case WindowState::Above: out << " Above"; break;
+		case WindowState::Below: out << " Below"; break;
+		case WindowState::DemandsAttention: out << " DemandsAttention"; break;
+		case WindowState::Focused: out << " Focused"; break;
+		case WindowState::Resizing: out << " Resizing"; break;
+		case WindowState::Pointer: out << " Pointer"; break;
+		case WindowState::CloseRequest: out << " CloseRequest"; break;
+		case WindowState::InsetDecorationsVisible: out << " InsetDecorationsVisible"; break;
+		case WindowState::AllowedMove: out << " MoveAllowed"; break;
+		case WindowState::AllowedResize: out << " ResizeAllowed"; break;
+		case WindowState::AllowedMinimize: out << " MinimizeAllowed"; break;
+		case WindowState::AllowedShade: out << " ShadeAllowed"; break;
+		case WindowState::AllowedStick: out << " StickAllowed"; break;
+		case WindowState::AllowedMaximizeVert: out << " MaximizeVertAllowed"; break;
+		case WindowState::AllowedMaximizeHorz: out << " MaximizeHorzAllowed"; break;
+		case WindowState::AllowedClose: out << " CloseAllowed"; break;
+		case WindowState::AllowedFullscreen: out << " FullscreenAllowed"; break;
+		case WindowState::AllowedActionsMask: break;
+		case WindowState::TiledLeft: out << " TiledLeft"; break;
+		case WindowState::TiledRight: out << " TiledRight"; break;
+		case WindowState::TiledTop: out << " TiledTop"; break;
+		case WindowState::TiledBottom: out << " TiledBottom"; break;
+		case WindowState::TiledTopLeft: break;
+		case WindowState::TiledTopRight: break;
+		case WindowState::TiledBottomLeft: break;
+		case WindowState::TiledBottomRight: break;
+		case WindowState::ConstrainedLeft: out << " ConstrainedLeft"; break;
+		case WindowState::ConstrainedRight: out << " ConstrainedRight"; break;
+		case WindowState::ConstrainedTop: out << " ConstrainedTop"; break;
+		case WindowState::ConstrainedBottom: out << " ConstrainedBottom"; break;
+		case WindowState::TilingMask: break;
+		}
+	}
+	return out;
+}
+
 } // namespace stappler::xenolith::core

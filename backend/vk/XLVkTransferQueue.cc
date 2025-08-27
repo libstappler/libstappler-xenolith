@@ -120,7 +120,7 @@ TransferResource::BufferAllocInfo::BufferAllocInfo(core::BufferData *d) {
 
 TransferResource::ImageAllocInfo::ImageAllocInfo(core::ImageData *d) {
 	data = d;
-	info.flags = data->flags;
+	info.flags = VkImageCreateFlags(data->flags);
 	info.imageType = VkImageType(data->imageType);
 	info.format = VkFormat(data->format);
 	info.extent = VkExtent3D({data->extent.width, data->extent.height, data->extent.depth});

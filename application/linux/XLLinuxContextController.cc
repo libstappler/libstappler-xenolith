@@ -75,6 +75,10 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		config.instance->api = core::InstanceApi::Vulkan;
 	}
 
+	if (config.context) {
+		config.context->flags |= ContextFlags::DestroyWhenAllWindowsClosed;
+	}
+
 	if (config.loop) {
 		config.loop->defaultFormat = core::ImageFormat::B8G8R8A8_UNORM;
 	}
@@ -83,8 +87,13 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		if (config.window->imageFormat == core::ImageFormat::Undefined) {
 			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
 		}
-		config.window->flags |= WindowFlags::PreferServerSideDecoration;
-		config.window->flags |= WindowFlags::PreferNativeDecoration;
+		config.window->flags |= WindowCreationFlags::Regular
+				| WindowCreationFlags::PreferServerSideDecoration
+				| WindowCreationFlags::PreferNativeDecoration;
+
+		config.window->userDecorations.borderRadius = 16.0f;
+		config.window->userDecorations.shadowWidth = 20.0f;
+		config.window->userDecorations.shadowOffset = Vec2(0.0f, 3.0f);
 	}
 }
 
@@ -109,7 +118,7 @@ bool LinuxContextController::init(NotNull<Context> ctx, ContextConfig &&config) 
 	return true;
 }
 
-int LinuxContextController::run() {
+int LinuxContextController::run(NotNull<ContextContainer> container) {
 	_context->handleConfigurationChanged(move(_contextInfo));
 
 	_contextInfo = nullptr;
@@ -232,21 +241,39 @@ int LinuxContextController::run() {
 
 	_looper->run();
 
-	return ContextController::run();
+	return ContextController::run(container);
+}
+
+bool LinuxContextController::isCursorSupported(WindowCursor cursor, bool serverSize) const {
+	if (_xcbConnection) {
+		return _xcbConnection->isCursorSupported(cursor);
+	} else if (_waylandDisplay) {
+		return _waylandDisplay->isCursorSupported(cursor, serverSize);
+	}
+	return false;
+}
+
+WindowCapabilities LinuxContextController::getCapabilities() const {
+	if (_xcbConnection) {
+		return _xcbConnection->getCapabilities();
+	} else if (_waylandDisplay) {
+		return _waylandDisplay->getCapabilities();
+	}
+	return WindowCapabilities::None;
 }
 
 void LinuxContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
-		bool liveResize) {
+		core::UpdateConstraintsFlags flags) {
 	if (_withinPoll) {
-		_resizedWindows.emplace_back(w, liveResize);
+		_resizedWindows.emplace_back(w, flags);
 	} else {
-		ContextController::notifyWindowConstraintsChanged(w, liveResize);
+		ContextController::notifyWindowConstraintsChanged(w, flags);
 	}
 }
 
-bool LinuxContextController::notifyWindowClosed(NotNull<NativeWindow> w) {
+bool LinuxContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
 	if (_withinPoll) {
-		_closedWindows.emplace_back(w);
+		_closedWindows.emplace_back(w, opts);
 		return !w->hasExitGuard();
 	} else {
 		return ContextController::notifyWindowClosed(w);
@@ -315,9 +342,12 @@ void LinuxContextController::tryStart() {
 				destroy();
 			}
 
-			if (!loadWindow()) {
-				log::error("LinuxContextController", "Fail to load root native window");
-				destroy();
+			// check if root window is defined
+			if (_windowInfo) {
+				if (!loadWindow()) {
+					log::error("LinuxContextController", "Fail to load root native window");
+					destroy();
+				}
 			}
 		}, this);
 	}
@@ -365,18 +395,21 @@ Rc<core::Instance> LinuxContextController::loadInstance() {
 
 bool LinuxContextController::loadWindow() {
 	Rc<NativeWindow> window;
-	auto cInfo = _context->getInfo();
-	if (_waylandDisplay) {
-		window = Rc<WaylandWindow>::create(_waylandDisplay, move(_windowInfo), cInfo, this, true);
-		_waylandDisplay->flush();
-	}
-	if (!window && _xcbConnection) {
-		window = Rc<XcbWindow>::create(_xcbConnection, move(_windowInfo), cInfo, this, true);
-	}
+	auto wInfo = move(_windowInfo);
 
-	if (window) {
-		_activeWindows.emplace(window);
-		return true;
+	if (configureWindow(wInfo)) {
+		if (_waylandDisplay) {
+			window = Rc<WaylandWindow>::create(_waylandDisplay, move(wInfo), this);
+			_waylandDisplay->flush();
+		}
+		if (!window && _xcbConnection) {
+			window = Rc<XcbWindow>::create(_xcbConnection, move(wInfo), this);
+		}
+
+		if (window) {
+			_activeWindows.emplace(window);
+			return true;
+		}
 	}
 
 	return false;
@@ -401,7 +434,9 @@ void LinuxContextController::handleContextDidDestroy() {
 
 	_xcbConnection = nullptr;
 
-	_looper->wakeup(event::WakeupFlags::Graceful);
+	if (_looper) {
+		_looper->wakeup(event::WakeupFlags::Graceful);
+	}
 }
 
 void LinuxContextController::notifyPendingWindows() {
@@ -413,10 +448,10 @@ void LinuxContextController::notifyPendingWindows() {
 
 	for (auto &it : _closedWindows) {
 		// Close windows
-		if (it->hasExitGuard()) {
-			ContextController::notifyWindowClosed(it);
+		if (it.first->hasExitGuard()) {
+			ContextController::notifyWindowClosed(it.first, it.second);
 		} else {
-			it->close();
+			it.first->close();
 		}
 	}
 

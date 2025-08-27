@@ -184,9 +184,7 @@ void Scene::setFrameConstraints(const core::FrameConstraints &constraints) {
 	}
 }
 
-const Size2 &Scene::getContentSize() const {
-	return _content ? _content->getContentSize() : _contentSize;
-}
+Size2 Scene::getContentSize() const { return _content ? _content->getContentSize() : _contentSize; }
 
 void Scene::setClipContent(bool value) {
 	if (_content) {

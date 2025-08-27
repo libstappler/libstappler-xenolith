@@ -77,6 +77,9 @@ struct SP_PUBLIC WaylandDisplay : Ref {
 	Status readFromClipboard(Rc<ClipboardRequest> &&req);
 	Status writeToClipboard(Rc<ClipboardData> &&);
 
+	bool isCursorSupported(WindowCursor, bool serverSide) const;
+	WindowCapabilities getCapabilities() const;
+
 	Rc<WaylandLibrary> wayland;
 	wl_display *display = nullptr;
 
@@ -191,7 +194,7 @@ struct SP_PUBLIC WaylandDecoration : Ref {
 
 	WaylandWindow *root = nullptr;
 	WaylandDecorationName name = WaylandDecorationName::HeaderCenter;
-	WindowLayerFlags image = WindowLayerFlags::CursorDefault;
+	WindowCursor image = WindowCursor::Default;
 	wl_surface *surface = nullptr;
 	wl_subsurface *subsurface = nullptr;
 	wp_viewport *viewport = nullptr;

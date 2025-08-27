@@ -72,7 +72,7 @@ bool GestureRecognizer::init() { return true; }
 
 bool GestureRecognizer::canHandleEvent(const InputEvent &event) const {
 	if (_eventMask.test(toInt(event.data.event))) {
-		if (!_buttonMask.any() || _buttonMask.test(toInt(event.data.button))) {
+		if (!_buttonMask.any() || _buttonMask.test(toInt(event.data.getButton()))) {
 			return true;
 		}
 	}
@@ -84,7 +84,7 @@ InputEventState GestureRecognizer::handleInputEvent(const InputEvent &event, flo
 		return InputEventState::Declined;
 	}
 
-	if (_buttonMask.any() && !_buttonMask.test(toInt(event.data.button))) {
+	if (_buttonMask.any() && !_buttonMask.test(toInt(event.data.getButton()))) {
 		return InputEventState::Declined;
 	}
 
@@ -234,7 +234,7 @@ bool GestureTouchRecognizer::init(InputCallback &&cb, ButtonMask &&mask) {
 
 bool GestureTouchRecognizer::canHandleEvent(const InputEvent &event) const {
 	if (GestureRecognizer::canHandleEvent(event)) {
-		if (_buttonMask.test(toInt(event.data.button))) {
+		if (_buttonMask.test(toInt(event.data.getButton()))) {
 			return true;
 		}
 	}
@@ -251,7 +251,7 @@ void GestureTouchRecognizer::removeRecognizedEvent(uint32_t id) {
 }
 
 InputEventState GestureTouchRecognizer::addEvent(const InputEvent &event, float density) {
-	if (!_buttonMask.test(toInt(event.data.button))) {
+	if (!_buttonMask.test(toInt(event.data.getButton()))) {
 		return InputEventState::Declined;
 	}
 
@@ -950,8 +950,7 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 	if (cb) {
 		_callback = sp::move(cb);
 		_eventMask.set(toInt(InputEventName::MouseMove));
-		_eventMask.set(toInt(InputEventName::FocusGain));
-		_eventMask.set(toInt(InputEventName::PointerEnter));
+		_eventMask.set(toInt(InputEventName::WindowState));
 		return true;
 	}
 
@@ -961,17 +960,16 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 
 InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &event,
 		float density) {
+	bool stateChanged = false;
 	switch (event.data.event) {
-	case InputEventName::FocusGain:
-		if (_viewHasFocus != event.data.getValue()) {
-			_viewHasFocus = event.data.getValue();
-			updateState(event);
+	case InputEventName::WindowState:
+		if (_viewHasFocus != hasFlag(event.data.window.state, core::WindowState::Focused)) {
+			_viewHasFocus = hasFlag(event.data.window.state, core::WindowState::Focused);
+			stateChanged = true;
 		}
-		break;
-	case InputEventName::PointerEnter:
-		if (_viewHasPointer != event.data.getValue()) {
-			_viewHasPointer = event.data.getValue();
-			updateState(event);
+		if (_viewHasPointer != hasFlag(event.data.window.state, core::WindowState::Pointer)) {
+			_viewHasPointer = hasFlag(event.data.window.state, core::WindowState::Pointer);
+			stateChanged = true;
 		}
 		break;
 	case InputEventName::MouseMove:
@@ -979,18 +977,21 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 			auto v = tar->isTouched(event.currentLocation, _padding);
 			if (_hasMouseOver != v) {
 				_hasMouseOver = v;
-				updateState(event);
+				stateChanged = true;
 			} else if (_hasMouseOver) {
-				updateState(event);
+				stateChanged = true;
 			}
 		} else {
 			if (_hasMouseOver) {
+				stateChanged = true;
 				_hasMouseOver = false;
-				updateState(event);
 			}
 		}
 		break;
 	default: break;
+	}
+	if (stateChanged) {
+		updateState(event);
 	}
 	return InputEventState::Processed;
 }

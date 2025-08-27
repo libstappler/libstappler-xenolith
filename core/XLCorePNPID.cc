@@ -20,6 +20,10 @@
 
 // clang-format off
 
+#include <string.h>
+#include <stdint.h>
+#include <stddef.h>
+
 size_t num_ids = 2557;
 
 /* pnp_keys is a string of 3-character PNP IDs */

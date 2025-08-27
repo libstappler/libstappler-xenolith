@@ -21,10 +21,9 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
-#include "XLCoreObject.h"
+#include "XLCommon.h" // IWYU pragma: keep
+#include "XLCoreObject.h" // IWYU pragma: keep
 #include "XLCoreInput.h"
-#include "SPBitmap.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
@@ -2190,15 +2189,13 @@ StringView getInputEventName(InputEventName name) {
 	case InputEventName::MouseMove: return StringView("MouseMove"); break;
 	case InputEventName::Scroll: return StringView("Scroll"); break;
 
-	case InputEventName::Background: return StringView("Background"); break;
-	case InputEventName::PointerEnter: return StringView("PointerEnter"); break;
-	case InputEventName::FocusGain: return StringView("FocusGain"); break;
-
 	case InputEventName::KeyPressed: return StringView("KeyPressed"); break;
 	case InputEventName::KeyRepeated: return StringView("KeyRepeated"); break;
 	case InputEventName::KeyReleased: return StringView("KeyReleased"); break;
 	case InputEventName::KeyCanceled: return StringView("KeyCanceled"); break;
-	default: break;
+	case InputEventName::ScreenUpdate: return StringView("ScreenUpdate"); break;
+	case InputEventName::WindowState: return StringView("WindowState"); break;
+	case InputEventName::Max: break;
 	}
 	return StringView();
 }

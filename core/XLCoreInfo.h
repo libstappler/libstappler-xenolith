@@ -493,10 +493,18 @@ struct SP_PUBLIC FrameConstraints {
 	Extent3 extent;
 	Padding contentPadding;
 	SurfaceTransformFlags transform = SurfaceTransformFlags::Identity;
+
 	float density = 1.0f;
+	float surfaceDensity = 1.0f;
 
 	// WM frame interval (it's not an engine limit, but OS limit)
 	uint64_t frameInterval = 1'000'000 / 60;
+
+	float borderRadius = 0.0f;
+	float shadowRadius = 0.0f;
+	float shadowValue = 0.0f;
+	Vec2 shadowOffset;
+	ViewConstraints viewConstraints = ViewConstraints::None;
 
 	Size2 getScreenSize() const {
 		if ((transform & core::SurfaceTransformFlags::PreRotated)

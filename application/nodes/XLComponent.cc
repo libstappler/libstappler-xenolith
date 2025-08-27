@@ -71,6 +71,7 @@ void Component::update(const UpdateTime &time) { }
 void Component::handleContentSizeDirty() { }
 void Component::handleTransformDirty(const Mat4 &) { }
 void Component::handleReorderChildDirty() { }
+void Component::handleLayout(Node *parent) { }
 
 bool Component::isRunning() const { return _running; }
 
@@ -209,6 +210,14 @@ void CallbackComponent::handleReorderChildDirty() {
 	}
 }
 
+void CallbackComponent::handleLayout(Node *parent) {
+	Component::handleLayout(parent);
+
+	if (_handleLayout) {
+		_handleLayout(this, parent);
+	}
+}
+
 void CallbackComponent::setAddedCallback(Function<void(CallbackComponent *, Node *)> &&cb) {
 	_handleAdded = sp::move(cb);
 	updateFlags();
@@ -282,6 +291,11 @@ void CallbackComponent::setReorderChildDirtyCallback(Function<void(CallbackCompo
 	updateFlags();
 }
 
+void CallbackComponent::setLayutCallback(Function<void(CallbackComponent *, Node *)> &&cb) {
+	_handleLayout = sp::move(cb);
+	updateFlags();
+}
+
 void CallbackComponent::updateFlags() {
 	if (_handleAdded || _handleRemoved) {
 		_componentFlags |= ComponentFlags::HandleOwnerEvents;
@@ -295,7 +309,8 @@ void CallbackComponent::updateFlags() {
 		_componentFlags &= ~ComponentFlags::HandleSceneEvents;
 	}
 
-	if (_handleContentSizeDirty || _handleReorderChildDirty || _handleTransformDirty) {
+	if (_handleContentSizeDirty || _handleReorderChildDirty || _handleTransformDirty
+			|| _handleLayout) {
 		_componentFlags |= ComponentFlags::HandleNodeEvents;
 	} else {
 		_componentFlags &= ~ComponentFlags::HandleNodeEvents;

@@ -26,7 +26,6 @@
 #include "XLVkInstance.h"
 #include "XLVkDevice.h"
 #include "XLVkTextureSet.h"
-#include "XLVkConfig.h"
 #include "XLCoreFrameCache.h"
 
 #include "XLVkTransferQueue.h"
@@ -37,8 +36,6 @@
 
 #include "SPEventLooper.h"
 #include "SPEventTimerHandle.h"
-
-#include "SPBitmap.h"
 
 #define XL_VK_DEPS_DEBUG 0
 #define XL_VK_PAUSE_TIMER 1

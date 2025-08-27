@@ -31,7 +31,7 @@ struct FrameInfo;
 class Node;
 class Scene;
 
-enum class ComponentFlags {
+enum class ComponentFlags : uint32_t {
 	None,
 	HandleOwnerEvents = 1 << 0, // Added/Removed
 	HandleSceneEvents = 1 << 1, // Enter/Exit
@@ -69,6 +69,7 @@ public:
 	virtual void handleContentSizeDirty();
 	virtual void handleTransformDirty(const Mat4 &);
 	virtual void handleReorderChildDirty();
+	virtual void handleLayout(Node *);
 
 	virtual bool isRunning() const;
 
@@ -119,6 +120,7 @@ public:
 	virtual void handleContentSizeDirty() override;
 	virtual void handleTransformDirty(const Mat4 &) override;
 	virtual void handleReorderChildDirty() override;
+	virtual void handleLayout(Node *) override;
 
 	virtual void setUserdata(Rc<Ref> &&d) { _userdata = move(d); }
 	virtual Ref *getUserdata() const { return _userdata; }
@@ -197,6 +199,11 @@ public:
 		return _handleReorderChildDirty;
 	}
 
+	virtual void setLayutCallback(Function<void(CallbackComponent *, Node *)> &&);
+	virtual auto geLayoutCallback() -> const Function<void(CallbackComponent *, Node *)> & {
+		return _handleLayout;
+	}
+
 protected:
 	virtual void updateFlags();
 
@@ -217,6 +224,7 @@ protected:
 	Function<void(CallbackComponent *)> _handleContentSizeDirty;
 	Function<void(CallbackComponent *, const Mat4 &)> _handleTransformDirty;
 	Function<void(CallbackComponent *)> _handleReorderChildDirty;
+	Function<void(CallbackComponent *, Node *)> _handleLayout;
 };
 
 } // namespace stappler::xenolith

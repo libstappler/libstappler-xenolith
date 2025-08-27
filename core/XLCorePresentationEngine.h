@@ -58,19 +58,20 @@ public:
 	virtual void setFrameOrder(uint64_t) = 0;
 };
 
-enum class PresentationSwapchainFlags {
+enum class UpdateConstraintsFlags : uint32_t {
 	None,
-	SwitchToFastMode = 1 << 0,
-	SwitchToNext = 1 << 1,
-	EndOfLife = 1 << 2,
-	Finalized = 1 << 3,
-	EnableLiveResize = 1 << 4,
-	DisableLiveResize = 1 << 5,
+	DeprecateSwapchain = 1 << 0,
+	SwitchToFastMode = 1 << 1,
+	SwitchToNext = 1 << 2,
+	EndOfLife = 1 << 3,
+	Finalized = 1 << 4,
+	EnableLiveResize = 1 << 5,
+	DisableLiveResize = 1 << 6,
 };
 
-SP_DEFINE_ENUM_AS_MASK(PresentationSwapchainFlags)
+SP_DEFINE_ENUM_AS_MASK(UpdateConstraintsFlags)
 
-enum class PresentationUpdateFlags {
+enum class PresentationUpdateFlags : uint32_t {
 	None,
 	DisplayLink = 1 << 0,
 	FlushPending = 1 << 1,
@@ -104,7 +105,7 @@ public:
 	virtual Status setFullscreenSurface(const MonitorId &, const ModeInfo &) = 0;
 
 	// Callback receives true for successful recreation and false for end-of-life
-	virtual void deprecateSwapchain(PresentationSwapchainFlags = PresentationSwapchainFlags::None,
+	virtual void updateConstraints(UpdateConstraintsFlags = UpdateConstraintsFlags::None,
 			Function<void(bool)> && = nullptr);
 
 	virtual bool present(PresentationFrame *frame, ImageStorage *image);
@@ -260,7 +261,7 @@ protected:
 	Set<PresentationFrame *> _totalFrames;
 	Set<PresentationFrame *> _detachedFrames;
 
-	PresentationSwapchainFlags _deprecationFlags = PresentationSwapchainFlags::None;
+	UpdateConstraintsFlags _deprecationFlags = UpdateConstraintsFlags::None;
 	Vector<Function<void(bool)>> _deprecationCallbacks;
 	Rc<event::TimerHandle> _acquisitionTimer;
 };

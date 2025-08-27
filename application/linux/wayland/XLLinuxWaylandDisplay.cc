@@ -443,6 +443,35 @@ Status WaylandDisplay::writeToClipboard(Rc<ClipboardData> &&data) {
 	return Status::ErrorNotImplemented;
 }
 
+bool WaylandDisplay::isCursorSupported(WindowCursor cursor, bool serverSide) const {
+	if (serverSide) {
+		if (getWaylandCursor(cursor)) {
+			return true;
+		}
+		return false;
+	} else {
+		return seat->cursorTheme && seat->cursorTheme->hasCursor(cursor);
+	}
+}
+
+WindowCapabilities WaylandDisplay::getCapabilities() const {
+	auto caps = WindowCapabilities::Fullscreen | WindowCapabilities::FullscreenWithMode;
+
+	if (wayland->hasDecor()) {
+		caps |= WindowCapabilities::NativeDecorations;
+	}
+
+	if (decorationManager) {
+		caps |= WindowCapabilities::ServerSideDecorations;
+	}
+
+	if (seat->cursorShape) {
+		caps |= WindowCapabilities::ServerSideCursors;
+	}
+
+	return caps;
+}
+
 WaylandShm::~WaylandShm() {
 	if (shm) {
 		wayland->wl_shm_destroy(shm);
@@ -522,21 +551,15 @@ bool WaylandDecoration::init(WaylandWindow *view, Rc<WaylandBuffer> &&b, Rc<Wayl
 	surface = display->createDecorationSurface(this);
 	name = n;
 	switch (n) {
-	case WaylandDecorationName::RightSide: image = WindowLayerFlags::CursorResizeRight; break;
-	case WaylandDecorationName::TopRightCorner:
-		image = WindowLayerFlags::CursorResizeTopRight;
-		break;
-	case WaylandDecorationName::TopSide: image = WindowLayerFlags::CursorResizeTop; break;
-	case WaylandDecorationName::TopLeftCorner: image = WindowLayerFlags::CursorResizeTopLeft; break;
-	case WaylandDecorationName::BottomRightCorner:
-		image = WindowLayerFlags::CursorResizeBottomRight;
-		break;
-	case WaylandDecorationName::BottomSide: image = WindowLayerFlags::CursorResizeBottom; break;
-	case WaylandDecorationName::BottomLeftCorner:
-		image = WindowLayerFlags::CursorResizeBottomLeft;
-		break;
-	case WaylandDecorationName::LeftSide: image = WindowLayerFlags::CursorResizeLeft; break;
-	default: image = WindowLayerFlags::CursorDefault; break;
+	case WaylandDecorationName::RightSide: image = WindowCursor::ResizeRight; break;
+	case WaylandDecorationName::TopRightCorner: image = WindowCursor::ResizeTopRight; break;
+	case WaylandDecorationName::TopSide: image = WindowCursor::ResizeTop; break;
+	case WaylandDecorationName::TopLeftCorner: image = WindowCursor::ResizeTopLeft; break;
+	case WaylandDecorationName::BottomRightCorner: image = WindowCursor::ResizeBottomRight; break;
+	case WaylandDecorationName::BottomSide: image = WindowCursor::ResizeBottom; break;
+	case WaylandDecorationName::BottomLeftCorner: image = WindowCursor::ResizeBottomLeft; break;
+	case WaylandDecorationName::LeftSide: image = WindowCursor::ResizeLeft; break;
+	default: image = WindowCursor::Default; break;
 	}
 	buffer = move(b);
 	if (a) {
@@ -574,7 +597,7 @@ void WaylandDecoration::handlePress(WaylandSeat *seat, uint32_t s, uint32_t butt
 		if (state == WL_POINTER_BUTTON_STATE_RELEASED && button == BTN_LEFT) {
 			root->handleDecorationPress(this, serial, button);
 		}
-	} else if (image == WindowLayerFlags::CursorDefault) {
+	} else if (image == WindowCursor::Default) {
 		if (state == WL_POINTER_BUTTON_STATE_PRESSED && button == BTN_RIGHT) {
 			root->handleDecorationPress(this, serial, button, false);
 		} else if (state == WL_POINTER_BUTTON_STATE_RELEASED && button == BTN_LEFT) {

@@ -23,8 +23,7 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBWINDOW_H_
 #define XENOLITH_APPLICATION_LINUX_XCB_XLLINUXXCBWINDOW_H_
 
-#include "XLContextInfo.h"
-#include "XlCoreMonitorInfo.h"
+#include "XLContextInfo.h" // IWYU pragma: keep
 #include "platform/XLContextNativeWindow.h"
 #include "XLLinuxXcbConnection.h"
 
@@ -32,15 +31,43 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 class LinuxContextController;
 
+enum class XcbMoveResize {
+	SizeTopLeft = 0,
+	SizeTop = 1,
+	SizeTopRight = 2,
+	SizeRight = 3,
+	SizeBottomRight = 4,
+	SizeBottom = 5,
+	SizeBottomLeft = 6,
+	SizeLeft = 7,
+	Move = 8,
+	SizeKeyboard = 9,
+	MoveKeyboard = 10,
+	Cancel = 11,
+};
+
+enum class XcbConstraints : uint32_t {
+	TopTiled = 1 << 0,
+	TopResizable = 1 << 1,
+	RightTiled = 1 << 2,
+	RightResizable = 1 << 3,
+	BottomTiled = 1 << 4,
+	BottomResizable = 1 << 5,
+	LeftTiled = 1 << 6,
+	LeftResizable = 1 << 7
+};
+
+SP_DEFINE_ENUM_AS_MASK(XcbConstraints)
+
 class XcbWindow final : public NativeWindow {
 public:
 	virtual ~XcbWindow();
 
 	XcbWindow();
 
-	bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
-			NotNull<LinuxContextController>, bool isRootWindow);
+	bool init(NotNull<XcbConnection>, Rc<WindowInfo> &&, NotNull<LinuxContextController>);
 
+	void handleExpose(xcb_expose_event_t *);
 	void handleConfigureNotify(xcb_configure_notify_event_t *);
 	void handlePropertyNotify(xcb_property_notify_event_t *);
 	void handleButtonPress(xcb_button_press_event_t *);
@@ -60,8 +87,6 @@ public:
 
 	void handleSettingsUpdated();
 
-	void dispatchPendingEvents();
-
 	xcb_window_t getWindow() const { return _xinfo.window; }
 	xcb_connection_t *getConnection() const;
 
@@ -73,11 +98,14 @@ public:
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
-	virtual void handleLayerUpdate(const WindowLayer &) override;
+	virtual void handleLayerEnter(const WindowLayer &) override;
+	virtual void handleLayerExit(const WindowLayer &) override;
 
 	virtual Extent2 getExtent() const override;
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
+
+	void startMoveResize(XcbMoveResize, int32_t x, int32_t y, int32_t button);
 
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
@@ -92,6 +120,18 @@ protected:
 
 	virtual Status setFullscreenState(FullscreenInfo &&) override;
 
+	xcb_rectangle_t getContentRect(xcb_rectangle_t boundingRect) const;
+	void updateContentRect(xcb_rectangle_t);
+	void configureOutputWindow();
+
+	void updateShadows();
+	void generateShadowPixmaps(uint32_t width, uint32_t inset);
+
+	void setCursor(WindowCursor);
+
+	void updateUserTime(uint32_t);
+	void cancelPointerEvents();
+
 	Rc<XcbConnection> _connection;
 
 	XcbLibrary *_xcb = nullptr;
@@ -100,10 +140,13 @@ protected:
 
 	XcbWindowInfo _xinfo;
 
+	WindowLayerFlags _gripFlags = WindowLayerFlags::None;
+	WindowLayerFlags _buttonGripFlags = WindowLayerFlags::None;
+	bool _pendingExpose = false;
 	xcb_timestamp_t _lastInputTime = 0;
 	xcb_timestamp_t _lastSyncTime = 0;
-	Vector<core::InputEventData> _pendingEvents;
 
+	uint32_t _forcedFrames = 0;
 	uint16_t _borderWidth = 0;
 	uint16_t _frameRate = 60'000;
 	float _density = 0.0f;
@@ -112,6 +155,7 @@ protected:
 
 	Map<MonitorId, xenolith::ModeInfo> _capturedModes;
 	MonitorId _originalPrimary = MonitorId::None;
+	std::bitset<64> _buttons;
 };
 
 } // namespace stappler::xenolith::platform

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +31,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
+class WindowHeader;
+
 class SP_PUBLIC SceneContent2d : public SceneContent {
 public:
+	using WindowHeaderCallback = Function<Rc<WindowHeader>(NotNull<SceneContent2d>)>;
+	using DecorationMask = core::ViewConstraints;
+
 	virtual ~SceneContent2d();
 
 	virtual bool init() override;
@@ -89,6 +95,11 @@ public:
 
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
 
+	virtual void setWindowHeaderContructor(WindowHeaderCallback &&);
+	virtual const WindowHeaderCallback &getWindowHeaderContructor() const {
+		return _windowHeaderContructor;
+	}
+
 protected:
 	virtual void pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb);
 
@@ -116,6 +127,9 @@ protected:
 	Color4F _globalLight = Color4F(1.0f, 1.0f, 1.0f, 1.0f);
 
 	Vector<Function<void()>> _visitNotification;
+
+	WindowHeaderCallback _windowHeaderContructor;
+	WindowHeader *_windowHeader = nullptr;
 };
 
 } // namespace stappler::xenolith::basic2d

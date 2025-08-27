@@ -71,7 +71,7 @@ static void Controller_readGnomeDisplayConfigMonitor(PhysicalDisplay &mon, const
 						mode.mode.rate =
 								static_cast<uint32_t>(std::ceil(field.getDouble() * 1'000));
 						break;
-					case 4: mode.preferredScale = field.getFloat(); break;
+					case 4: mode.mode.scale = field.getFloat(); break;
 					case 5:
 						field.foreach ([&](const ReadIterator &scale) {
 							mode.scales.emplace_back(scale.getFloat());

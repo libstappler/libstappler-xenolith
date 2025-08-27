@@ -27,14 +27,8 @@
 #include "XLCoreDevice.h"
 #include "XLCoreEnum.h"
 #include "XLCoreQueueData.h"
-#include "XLAppThread.h"
-#include "XLVkLoop.h"
 #include "XLVkDevice.h"
-#include "XLVkRenderPass.h"
-#include "XLVkPipeline.h"
-#include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
-#include "XLCoreFrameCache.h"
 #include "XL2dFrameContext.h"
 #include "XLVkTextureSet.h"
 #include "glsl/XL2dShaders.h"
@@ -352,18 +346,30 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 				queueBuilder.addProgramByRef("PseudoMergeVert", shaders::PseudoSdfShadowVert);
 		auto shadowFrag =
 				queueBuilder.addProgramByRef("PseudoMergeFrag", shaders::PseudoSdfShadowFrag);
+		auto frameClipperFrag =
+				queueBuilder.addProgramByRef("FrameClipperFrag", shaders::FrameClipperFrag);
 
 		// clang-format off
 		subpassBuilder.addGraphicPipeline(ShadowPass::ShadowPipeline, layoutShadow->defaultFamily,
 			Vector<SpecializationInfo>({// no specialization required for vertex shader
 				shadowVert,
-				// specialization for fragment shader - use platform-dependent array sizes
 				shadowFrag
 			}),
 			PipelineMaterialInfo({
 				BlendInfo(BlendFactor::Zero, BlendFactor::SrcColor, BlendOp::Add,
 					BlendFactor::Zero, BlendFactor::One, BlendOp::Add), DepthInfo()}));
 		// clang-format on
+
+		subpassBuilder.addGraphicPipeline(ShadowPass::FrameClipperPipeline,
+				layoutShadow->defaultFamily,
+				Vector<SpecializationInfo>({
+					shadowVert,
+					frameClipperFrag,
+				}),
+				PipelineMaterialInfo({
+					BlendInfo(BlendFactor::SrcColor, BlendFactor::DstColor, BlendOp::Min),
+					DepthInfo(),
+				}));
 	});
 
 	passBuilder.addSubpassDependency(subpass2d, PipelineStage::LateFragmentTest,
@@ -620,9 +626,11 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 	VertexPassHandle::prepareMaterialCommands(materials, buf);
 
+	uint32_t subpassIdx = 0;
+
 	if (_shadowData->getLightsCount()) {
 		// sdf drawing pipeline
-		auto subpassIdx = buf.cmdNextSubpass();
+		subpassIdx = buf.cmdNextSubpass();
 		auto commands = _vertexBuffer->getCommands();
 		auto solidPipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(
 				StringView(ShadowPass::PseudoSdfSolidPipeline));
@@ -711,9 +719,31 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 				BytesView(reinterpret_cast<const uint8_t *>(&pcb.shadowDataPointer),
 						sizeof(uint64_t)));
 		drawFullscreen(pipeline);
+
 	} else {
-		buf.cmdNextSubpass();
-		buf.cmdNextSubpass();
+		subpassIdx = buf.cmdNextSubpass();
+		subpassIdx = buf.cmdNextSubpass();
+	}
+
+	if (_constraints.borderRadius > 0.0f) {
+		FrameClipperData data;
+		data.frameSize = Vec2(_constraints.extent.width, _constraints.extent.height);
+		data.radius = _constraints.borderRadius * _constraints.surfaceDensity;
+		data.shadow = _constraints.shadowRadius * _constraints.surfaceDensity;
+
+		const float sigma = sqrtf((data.shadow * data.shadow) / (-2.0f * logf(1.0f / 255.0f)));
+		data.sigma = (-1.0f / (2.0f * sigma * sigma));
+		data.value = _constraints.shadowValue;
+		data.offset = _constraints.shadowOffset * _constraints.surfaceDensity;
+
+		data.constraints = toInt(_constraints.viewConstraints);
+
+		auto pipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(
+				StringView(ShadowPass::FrameClipperPipeline));
+		buf.cmdBindPipelineWithDescriptors(pipeline);
+		buf.cmdPushConstants(VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+				BytesView(reinterpret_cast<const uint8_t *>(&data), sizeof(FrameClipperData)));
+		drawFullscreen(pipeline);
 	}
 }
 

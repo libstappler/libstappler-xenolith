@@ -45,8 +45,10 @@ bool SceneContent::init() {
 		return data.event == GestureEvent::Began;
 	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
 
-	_inputListener->setBackgroudCallback([this](bool val) -> bool {
-		handleBackgroundTransition(val);
+	_inputListener->setWindowStateCallback([this](WindowState state, WindowState changes) -> bool {
+		if (hasFlag(changes, WindowState::Background)) {
+			handleBackgroundTransition(hasFlag(state, WindowState::Background));
+		}
 		return true;
 	});
 

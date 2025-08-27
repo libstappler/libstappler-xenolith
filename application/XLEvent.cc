@@ -70,6 +70,9 @@ bool EventHeader::operator==(const Event &event) const { return event.getCategor
 void EventHeader::send(Ref *object, int64_t value) const {
 	EventHeader_send(*this, object, Value(value));
 }
+void EventHeader::send(Ref *object, uint64_t value) const {
+	EventHeader_send(*this, object, Value(value));
+}
 void EventHeader::send(Ref *object, double value) const {
 	EventHeader_send(*this, object, Value(value));
 }

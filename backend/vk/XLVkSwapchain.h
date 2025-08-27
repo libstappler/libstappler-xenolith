@@ -62,7 +62,8 @@ public:
 			Status &) override;
 
 	virtual Status present(core::DeviceQueue &queue, core::ImageStorage *) override;
-	virtual void invalidateImage(const core::ImageStorage *image) override;
+	virtual void invalidateImage(const core::ImageStorage *image, bool release) override;
+	virtual void invalidateImage(uint32_t, bool release) override;
 
 	virtual Rc<core::ImageView> makeView(const Rc<core::ImageObject> &,
 			const ImageViewInfo &) override;
@@ -74,6 +75,7 @@ protected:
 	using core::Object::init;
 
 	SwapchainHandleData *_data = nullptr;
+	Set<uint32_t> _acquiredIndexes;
 };
 
 } // namespace stappler::xenolith::vk

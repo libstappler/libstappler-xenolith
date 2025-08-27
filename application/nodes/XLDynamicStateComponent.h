@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-enum class DynamicStateApplyMode {
+enum class DynamicStateApplyMode : uint32_t {
 	DoNotApply = 0,
 	ApplyForNodesBelow = 1 << 0,
 	ApplyForSelf = 1 << 1,

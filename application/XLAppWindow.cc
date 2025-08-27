@@ -33,9 +33,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-XL_DECLARE_EVENT_CLASS(AppWindow, onBackground);
-XL_DECLARE_EVENT_CLASS(AppWindow, onFocus);
-XL_DECLARE_EVENT_CLASS(AppWindow, onFullscreen);
+XL_DECLARE_EVENT_CLASS(AppWindow, onWindowState);
 
 AppWindow::~AppWindow() { log::info("AppWindow", "~AppWindow"); }
 
@@ -43,8 +41,6 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 	_context = ctx;
 	_application = app;
 	_window = w;
-
-	_isFullscreen = w->getInfo()->fullscreen != FullscreenInfo::None;
 
 	_presentationEngine =
 			_context->getGlLoop()->makePresentationEngine(this, w->getPreferredOptions());
@@ -116,7 +112,7 @@ void AppWindow::close(bool graceful) {
 		if (!graceful) {
 			end();
 		} else {
-			_presentationEngine->deprecateSwapchain(core::PresentationSwapchainFlags::EndOfLife,
+			_presentationEngine->updateConstraints(core::UpdateConstraintsFlags::EndOfLife,
 					[this](bool) {
 				// successful stop
 				end();
@@ -132,8 +128,8 @@ void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
 
 	_application->performOnAppThread([this, events = sp::move(events)]() mutable {
 		for (auto &event : events) { propagateInputEvent(event); }
+		setReadyForNextFrame();
 	}, this, true);
-	setReadyForNextFrame();
 }
 
 void AppWindow::handleTextInput(const TextInputState &state) {
@@ -237,10 +233,10 @@ void AppWindow::setFrameOrder(uint64_t frameOrder) {
 	}
 }
 
-void AppWindow::updateConstraints(core::PresentationSwapchainFlags flags) {
+void AppWindow::updateConstraints(core::UpdateConstraintsFlags flags) {
 	_context->performOnThread([this, flags] {
 		if (_presentationEngine) {
-			_presentationEngine->deprecateSwapchain(flags);
+			_presentationEngine->updateConstraints(flags);
 		}
 	}, this, true);
 }
@@ -349,7 +345,7 @@ void AppWindow::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref 
 	_context->performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
 		auto winfo = _window->getInfo();
 		if (hasFlag(winfo->capabilities, WindowCapabilities::DirectOutput)
-				&& hasFlag(winfo->flags, WindowFlags::DirectOutput)) {
+				&& hasFlag(winfo->flags, WindowCreationFlags::DirectOutput)) {
 			auto info = _presentationEngine->getScreenInfo();
 			_application->performOnAppThread(
 					[cb = sp::move(cb), ref = move(ref), info = move(info)]() mutable {
@@ -371,7 +367,7 @@ bool AppWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &&cb
 			[this, info = move(info), cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
 		auto winfo = _window->getInfo();
 		auto useDirect = hasFlag(winfo->capabilities, WindowCapabilities::DirectOutput)
-				&& hasFlag(winfo->flags, WindowFlags::DirectOutput);
+				&& hasFlag(winfo->flags, WindowCreationFlags::DirectOutput);
 		if (useDirect) {
 			auto st = _presentationEngine->setFullscreenSurface(info.id, info.mode);
 			_application->performOnAppThread([st, cb = sp::move(cb), ref = move(ref)]() mutable {
@@ -406,18 +402,9 @@ void AppWindow::propagateInputEvent(core::InputEventData &event) {
 	}
 
 	switch (event.event) {
-	case InputEventName::Background:
-		_inBackground = event.getValue();
-		onBackground(this, _inBackground);
-		break;
-	case InputEventName::PointerEnter: _pointerInWindow = event.getValue(); break;
-	case InputEventName::FocusGain:
-		_hasFocus = event.getValue();
-		onFocus(this, _hasFocus);
-		break;
-	case InputEventName::Fullscreen:
-		_isFullscreen = event.getValue();
-		onFullscreen(this, _isFullscreen);
+	case InputEventName::WindowState:
+		_state = event.window.state;
+		onWindowState(this, toInt(_state));
 		break;
 	default: break;
 	}

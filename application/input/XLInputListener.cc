@@ -94,12 +94,19 @@ void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flags
 	Component::handleVisitSelf(info, node, flags);
 
 	if (_enabled) {
-		info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
-				_layerFlags,
-				_layerFlags != WindowLayerFlags::None
-						? TransformRect(Rect(Vec2(0, 0), node->getContentSize()),
-								  info.modelTransformStack.back())
-						: Rect());
+		if (_windowLayer) {
+			WindowLayer layer{
+				TransformRect(Rect(Vec2(0, 0), node->getContentSize()),
+						info.modelTransformStack.back()),
+				_windowLayer.cursor,
+				_windowLayer.flags,
+			};
+			info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
+					sp::move(layer));
+		} else {
+			info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
+					WindowLayer(_windowLayer));
+		}
 		info.input->updateFocus(info.focusValue);
 	}
 }
@@ -108,7 +115,9 @@ void InputListener::update(const UpdateTime &dt) {
 	for (auto &it : _recognizers) { it->update(dt.delta); }
 }
 
-void InputListener::setViewLayerFlags(WindowLayerFlags flags) { _layerFlags = flags; }
+void InputListener::setCursor(WindowCursor cursor) { _windowLayer.cursor = cursor; }
+
+void InputListener::setLayerFlags(WindowLayerFlags flags) { _windowLayer.flags = flags; }
 
 void InputListener::setOwner(Node *owner) { _owner = owner; }
 
@@ -201,9 +210,23 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 	InputEventState ret = InputEventState::Declined;
 	auto it = _callbacks.find(event.data.event);
 	if (it != _callbacks.end()) {
-		ret = std::max(it->second(event.data.getValue()) ? InputEventState::Processed
-														 : InputEventState::Declined,
-				ret);
+		switch (event.data.event) {
+		case core::InputEventName::WindowState:
+			if (auto f = std::get_if<Function<bool(WindowState, WindowState)>>(&it->second)) {
+				ret = std::max((*f)(event.data.window.state, event.data.window.changes)
+								? InputEventState::Processed
+								: InputEventState::Declined,
+						ret);
+			}
+			break;
+		case core::InputEventName::ScreenUpdate:
+			if (auto f = std::get_if<Function<bool()>>(&it->second)) {
+				ret = std::max((*f)() ? InputEventState::Processed : InputEventState::Declined,
+						ret);
+			}
+			break;
+		default: break;
+		}
 	}
 	for (auto &it : _recognizers) {
 		if (!_running || !_owner) {
@@ -263,47 +286,7 @@ GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData>
 			Rc<GestureKeyRecognizer>::create(sp::move(cb), sp::move(keys)));
 }
 
-void InputListener::setPointerEnterCallback(Function<bool(bool)> &&cb) {
-	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::PointerEnter, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::PointerEnter));
-	} else {
-		_callbacks.erase(InputEventName::PointerEnter);
-		_eventMask.reset(toInt(InputEventName::PointerEnter));
-	}
-}
-
-void InputListener::setBackgroudCallback(Function<bool(bool)> &&cb) {
-	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::Background, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::Background));
-	} else {
-		_callbacks.erase(InputEventName::Background);
-		_eventMask.reset(toInt(InputEventName::Background));
-	}
-}
-
-void InputListener::setFocusCallback(Function<bool(bool)> &&cb) {
-	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::FocusGain, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::FocusGain));
-	} else {
-		_callbacks.erase(InputEventName::FocusGain);
-		_eventMask.reset(toInt(InputEventName::FocusGain));
-	}
-}
-
-void InputListener::setCloseRequestCallback(Function<bool(bool)> &&cb) {
-	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::CloseRequest, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::CloseRequest));
-	} else {
-		_callbacks.erase(InputEventName::CloseRequest);
-		_eventMask.reset(toInt(InputEventName::CloseRequest));
-	}
-}
-
-void InputListener::setScreenUpdateCallback(Function<bool(bool)> &&cb) {
+void InputListener::setWindowStateCallback(Function<bool(WindowState, WindowState)> &&cb) {
 	if (cb) {
 		_callbacks.insert_or_assign(InputEventName::ScreenUpdate, sp::move(cb));
 		_eventMask.set(toInt(InputEventName::ScreenUpdate));
@@ -313,13 +296,13 @@ void InputListener::setScreenUpdateCallback(Function<bool(bool)> &&cb) {
 	}
 }
 
-void InputListener::setFullscreenCallback(Function<bool(bool)> &&cb) {
+void InputListener::setScreenUpdateCallback(Function<bool()> &&cb) {
 	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::Fullscreen, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::Fullscreen));
+		_callbacks.insert_or_assign(InputEventName::ScreenUpdate, sp::move(cb));
+		_eventMask.set(toInt(InputEventName::ScreenUpdate));
 	} else {
-		_callbacks.erase(InputEventName::Fullscreen);
-		_eventMask.reset(toInt(InputEventName::Fullscreen));
+		_callbacks.erase(InputEventName::ScreenUpdate);
+		_eventMask.reset(toInt(InputEventName::ScreenUpdate));
 	}
 }
 
@@ -346,7 +329,7 @@ bool InputListener::_shouldProcessEvent(const InputEvent &event) const {
 			p = p->getParent();
 		}
 		if (visible
-				&& (!event.data.hasLocation() || event.data.event == InputEventName::MouseMove
+				&& (!event.data.hasLocation()
 						|| node->isTouched(event.currentLocation, _touchPadding))
 				&& node->getOpacity() >= _opacityFilter) {
 			return true;

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -83,18 +84,17 @@ ImageViewInfo Swapchain::getSwapchainImageViewInfo(const ImageInfo &image) const
 }
 
 SwapchainImage::~SwapchainImage() {
-	if (_state != State::Presented) {
-		if (_image) {
-			_swapchain->invalidateImage(this);
-		}
+	if (_image && _swapchain) {
+		_swapchain->invalidateImage(this, false);
 		_image = nullptr;
-		_swapchain = nullptr;
-		_state = State::Presented;
-	} else {
+	}
+	if (_state == State::Presented) {
 		if (_swapchain && _waitSem) {
 			_swapchain->releaseSemaphore((Semaphore *)_waitSem.get());
 		}
 	}
+
+	_swapchain = nullptr;
 	// prevent views from released
 	_views.clear();
 
@@ -125,7 +125,7 @@ bool SwapchainImage::init(Swapchain *swapchain, const Swapchain::SwapchainImageD
 }
 
 void SwapchainImage::cleanup() {
-	// stappler::log::info("SwapchainImage", "cleanup");
+	//stappler::log::info("SwapchainImage", "cleanup");
 }
 
 void SwapchainImage::rearmSemaphores(core::Loop &loop) { ImageStorage::rearmSemaphores(loop); }
@@ -168,17 +168,15 @@ void SwapchainImage::setImage(Rc<Swapchain> &&handle, const Swapchain::Swapchain
 	_signalSem = _swapchain->acquireSemaphore().get();
 }
 
-void SwapchainImage::setPresented() { _state = State::Presented; }
+void SwapchainImage::setPresented() {
+	_state = State::Presented;
+	_image = nullptr;
+}
 
 void SwapchainImage::invalidateImage() {
 	if (_image && _swapchain) {
-		_swapchain->invalidateImage(this);
+		_swapchain->invalidateImage(this, false);
 	}
-	_swapchain = nullptr;
-	_state = State::Presented;
-}
-
-void SwapchainImage::invalidateSwapchain() {
 	_swapchain = nullptr;
 	_image = nullptr;
 	_state = State::Presented;

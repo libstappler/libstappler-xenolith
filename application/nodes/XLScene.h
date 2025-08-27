@@ -72,7 +72,7 @@ public:
 	virtual void setFrameConstraints(const core::FrameConstraints &);
 	const core::FrameConstraints &getFrameConstraints() const { return _constraints; }
 
-	virtual const Size2 &getContentSize() const override;
+	virtual Size2 getContentSize() const override;
 
 	virtual void setClipContent(bool);
 	virtual bool isClipContent() const;

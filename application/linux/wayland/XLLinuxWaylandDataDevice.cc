@@ -236,7 +236,7 @@ void WaylandDataInputTransfer::commit() {
 	}
 
 	if (request && request->dataCallback) {
-		request->dataCallback(data, type);
+		request->dataCallback(Status::Ok, data, type);
 	}
 
 	request = nullptr;
@@ -246,7 +246,7 @@ void WaylandDataInputTransfer::commit() {
 void WaylandDataInputTransfer::cancel() {
 	chunks.clear();
 	if (request && request->dataCallback) {
-		request->dataCallback(BytesView(), StringView());
+		request->dataCallback(Status::ErrorCancelled, BytesView(), StringView());
 	}
 	handle = nullptr;
 }

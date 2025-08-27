@@ -25,11 +25,8 @@ THE SOFTWARE.
 #ifndef XENOLITH_APPLICATION_XLEVENT_H_
 #define XENOLITH_APPLICATION_XLEVENT_H_
 
+#include "XLCommon.h" // IWYU pragma: keep
 #include "SPEventBus.h"
-#include "SPDataValue.h"
-#include "SPMemory.h"
-
-#include "XLCommon.h"
 
 #define XL_DECLARE_EVENT_CLASS(class, event) \
 	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::EventHeader class::event(#class "." #event);
@@ -71,6 +68,7 @@ public:
 
 protected:
 	void send(Ref *object, int64_t value) const;
+	void send(Ref *object, uint64_t value) const;
 	void send(Ref *object, double value) const;
 	void send(Ref *object, bool value) const;
 	void send(Ref *object, Ref *value) const;

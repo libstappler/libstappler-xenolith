@@ -24,7 +24,7 @@
 #ifndef XENOLITH_CORE_XLCOREENUM_H_
 #define XENOLITH_CORE_XLCOREENUM_H_
 
-#include "SPCommon.h"
+#include "SPCommon.h" // IWYU pragma: keep
 #include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -60,7 +60,7 @@ enum class AttachmentType {
 };
 
 // VkPipelineStageFlagBits
-enum class PipelineStage {
+enum class PipelineStage : uint32_t {
 	None,
 	TopOfPipe = 0x0000'0001,
 	DrawIndirect = 0x0000'0002,
@@ -93,7 +93,7 @@ enum class PipelineStage {
 SP_DEFINE_ENUM_AS_MASK(PipelineStage);
 
 // VkAccessFlag
-enum class AccessType {
+enum class AccessType : uint32_t {
 	None,
 	IndirectCommandRead = 0x0000'0001,
 	IndexRead = 0x0000'0002,
@@ -128,7 +128,7 @@ enum class AccessType {
 SP_DEFINE_ENUM_AS_MASK(AccessType);
 
 // read-write operations on attachment within passes
-enum class AttachmentOps {
+enum class AttachmentOps : uint32_t {
 	Undefined,
 	ReadColor = 1,
 	ReadStencil = 2,
@@ -152,7 +152,7 @@ enum class AttachmentStoreOp {
 };
 
 // Attachment usage within subpasses
-enum class AttachmentUsage {
+enum class AttachmentUsage : uint32_t {
 	None,
 	Input = 1,
 	Output = 2,
@@ -182,7 +182,7 @@ enum class DescriptorType : uint32_t {
 };
 
 // mapping to VkShaderStageFlagBits
-enum class ProgramStage {
+enum class ProgramStage : uint32_t {
 	None,
 	Vertex = 0x0000'0001,
 	TesselationControl = 0x0000'0002,
@@ -230,7 +230,7 @@ enum class PassType {
 	Generic
 };
 
-enum class DynamicState {
+enum class DynamicState : uint32_t {
 	None,
 	Viewport = 1,
 	Scissor = 2,
@@ -241,7 +241,7 @@ enum class DynamicState {
 SP_DEFINE_ENUM_AS_MASK(DynamicState)
 
 // Mapping to VkBufferCreateFlagBits
-enum class BufferFlags {
+enum class BufferFlags : uint32_t {
 	None,
 	SparceBinding = 0x0000'0001,
 	SparceResidency = 0x0000'0002,
@@ -253,7 +253,7 @@ SP_DEFINE_ENUM_AS_MASK(BufferFlags)
 
 
 // Mapping to VkBufferUsageFlagBits
-enum class BufferUsage {
+enum class BufferUsage : uint32_t {
 	None,
 	TransferSrc = 0x0000'0001,
 	TransferDst = 0x0000'0002,
@@ -278,7 +278,7 @@ SP_DEFINE_ENUM_AS_MASK(BufferUsage)
 
 
 // Mapping to VkImageCreateFlagBits
-enum ImageFlags {
+enum class ImageFlags : uint32_t {
 	None,
 	SparceBinding = 0x0000'0001,
 	SparceResidency = 0x0000'0002,
@@ -298,7 +298,7 @@ SP_DEFINE_ENUM_AS_MASK(ImageFlags)
 
 
 // Mapping to VkSampleCountFlagBits
-enum class SampleCount {
+enum class SampleCount : uint32_t {
 	None,
 	X1 = 0x0000'0001,
 	X2 = 0x0000'0002,
@@ -602,7 +602,7 @@ enum class ColorSpace {
 };
 
 // VkCompositeAlphaFlagBitsKHR
-enum class CompositeAlphaFlags {
+enum class CompositeAlphaFlags : uint32_t {
 	None = 0,
 	Opaque = 0x0000'0001,
 	Premultiplied = 0x0000'0002,
@@ -619,7 +619,7 @@ enum class ImageTiling {
 };
 
 // mapping to VkImageUsageFlagBits
-enum class ImageUsage {
+enum class ImageUsage : uint32_t {
 	None,
 	TransferSrc = 0x0000'0001,
 	TransferDst = 0x0000'0002,
@@ -669,7 +669,7 @@ enum class AttachmentStorageType {
 	Stateful,
 };
 
-enum class ImageHints {
+enum class ImageHints : uint32_t {
 	None = 0,
 	Opaque = 1 << 0,
 	FixedSize = 1 << 1,
@@ -745,13 +745,15 @@ enum class BlendOp : uint8_t {
 	Max = 4,
 };
 
-enum class ColorComponentFlags {
+enum class ColorComponentFlags : uint32_t {
 	R = 0x0000'0001,
 	G = 0x0000'0002,
 	B = 0x0000'0004,
 	A = 0x0000'0008,
 	All = 0x0000'000F
 };
+
+SP_DEFINE_ENUM_AS_MASK(ColorComponentFlags)
 
 enum class StencilOp : uint8_t {
 	Keep = 0,
@@ -764,9 +766,7 @@ enum class StencilOp : uint8_t {
 	DecrementAndWrap = 7,
 };
 
-SP_DEFINE_ENUM_AS_MASK(ColorComponentFlags)
-
-enum class SurfaceTransformFlags {
+enum class SurfaceTransformFlags : uint32_t {
 	None,
 	Identity = 0x0000'0001,
 	Rotate90 = 0x0000'0002,
@@ -870,7 +870,7 @@ enum class QueueFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
 
-enum class DeviceIdleFlags {
+enum class DeviceIdleFlags : uint32_t {
 	None,
 	PreQueue = 1 << 0,
 	PreDevice = 1 << 1,
@@ -880,6 +880,7 @@ enum class DeviceIdleFlags {
 
 SP_DEFINE_ENUM_AS_MASK(DeviceIdleFlags)
 
+/** Flags for GPU resource descriptors capabilities */
 enum class DescriptorFlags : uint32_t {
 	None = 0,
 	UpdateAfterBind = 0x0000'0001,
@@ -896,6 +897,135 @@ enum class DescriptorFlags : uint32_t {
 };
 
 SP_DEFINE_ENUM_AS_MASK(DescriptorFlags)
+
+/** View tiling constraints flags. If flag is set - window enge is constrained, if not set - resizable  */
+enum class ViewConstraints : uint32_t {
+	None,
+	Top = 1 << 0,
+	Left = 1 << 1,
+	Bottom = 1 << 2,
+	Right = 1 << 3,
+
+	Vertical = Top | Bottom,
+	Horizontal = Left | Right,
+	All = Vertical | Horizontal
+};
+
+SP_DEFINE_ENUM_AS_MASK(ViewConstraints)
+
+// Cross-OS window state flags
+// Some OS/WN can support only some subset of this flags
+enum class WindowState : uint64_t {
+	None = 0,
+
+	// Window is in modal state
+	Modal = 1LLU << 0,
+
+	// Window is sticked to stay in place between virtual desktops
+	Sticky = 1LLU << 1,
+
+	// Window is maximized vertically
+	MaximizedVert = 1LLU << 2,
+
+	// Window is maximized horizontally
+	MaximizedHorz = 1LLU << 3,
+
+	// Window is maximized (both flags should be set)
+	Maximized = MaximizedVert | MaximizedHorz,
+
+	// XCB: _NET_WM_STATE_SHADED
+	Shaded = 1LLU << 4,
+
+	// XCB: _NET_WM_STATE_SKIP_TASKBAR
+	SkipTaskbar = 1LLU << 5,
+
+	// XCB: _NET_WM_STATE_SKIP_PAGER
+	SkipPager = 1LLU << 6,
+
+	// Window was minimized or moved to background
+	Minimized = 1LLU << 7,
+	Background = Minimized,
+
+	// Window in fullscreen state
+	Fullscreen = 1LLU << 8,
+
+	// Window is above most other windows
+	Above = 1LLU << 9,
+
+	// Window is below most other windows
+	Below = 1LLU << 10,
+
+	// Window demands user attention
+	DemandsAttention = 1LLU << 11,
+
+	// Window have input focus
+	Focused = 1LLU << 12,
+
+	// Window in live resize process
+	Resizing = 1LLU << 13,
+
+	// Pointer now within window
+	Pointer = 1LLU << 14,
+
+	// WM asked user to close this window
+	CloseRequest = 1LLU << 15,
+
+	// WM uses inset decorations
+	InsetDecorationsVisible = 1LLU << 16,
+
+	// Extra space here
+
+	// Values for allowed window actions
+	AllowedMove = 1LLU << 47,
+	AllowedResize = 1LLU << 48,
+	AllowedMinimize = 1LLU << 49,
+	AllowedShade = 1LLU << 50,
+	AllowedStick = 1LLU << 51,
+	AllowedMaximizeVert = 1LLU << 52,
+	AllowedMaximizeHorz = 1LLU << 53,
+	AllowedClose = 1LLU << 54,
+	AllowedFullscreen = 1LLU << 55,
+	AllowedActionsMask = AllowedMove | AllowedResize | AllowedMinimize | AllowedShade | AllowedStick
+			| AllowedMaximizeVert | AllowedMaximizeHorz | AllowedClose | AllowedFullscreen,
+
+	// Window tiling constraints flag
+	TiledLeft = 1LLU << 56,
+	TiledRight = 1LLU << 57,
+	TiledTop = 1LLU << 58,
+	TiledBottom = 1LLU << 59,
+
+	TiledTopLeft = TiledLeft | TiledTop,
+	TiledTopRight = TiledRight | TiledTop,
+	TiledBottomLeft = TiledLeft | TiledBottom,
+	TiledBottomRight = TiledRight | TiledBottom,
+
+	ConstrainedLeft = 1LLU << 60,
+	ConstrainedRight = 1LLU << 61,
+	ConstrainedTop = 1LLU << 62,
+	ConstrainedBottom = 1LLU << 63,
+
+	TilingMask = TiledLeft | TiledRight | TiledTop | TiledBottom | ConstrainedLeft
+			| ConstrainedRight | ConstrainedTop | ConstrainedBottom,
+};
+
+SP_DEFINE_ENUM_AS_MASK(WindowState)
+
+static inline ViewConstraints getViewConstraints(WindowState state) {
+	ViewConstraints ct = ViewConstraints::None;
+	if (hasFlag(state, WindowState::TiledLeft)) {
+		ct |= ViewConstraints::Left;
+	}
+	if (hasFlag(state, WindowState::TiledTop)) {
+		ct |= ViewConstraints::Top;
+	}
+	if (hasFlag(state, WindowState::TiledRight)) {
+		ct |= ViewConstraints::Right;
+	}
+	if (hasFlag(state, WindowState::TiledBottom)) {
+		ct |= ViewConstraints::Bottom;
+	}
+	return ct;
+}
 
 enum class FenceType {
 	Default,
@@ -922,15 +1052,18 @@ inline std::ostream &operator<<(std::ostream &stream, DescriptorType t) {
 	return stream;
 }
 
-inline const CallbackStream &operator<<(const CallbackStream &stream, ProgramStage t) {
-	getProgramStageDescription(stream, t);
+inline std::ostream &operator<<(std::ostream &stream, ProgramStage t) {
+	getProgramStageDescription(memory::makeCallback(stream), t);
 	return stream;
 }
 
-inline std::ostream &operator<<(std::ostream &stream, ProgramStage t) {
-	getProgramStageDescription(makeCallback(stream), t);
+SP_PUBLIC const CallbackStream &operator<<(const CallbackStream &, WindowState);
+
+inline std::ostream &operator<<(std::ostream &stream, WindowState f) {
+	memory::makeCallback(stream) << f;
 	return stream;
 }
+
 
 } // namespace stappler::xenolith::core
 

@@ -44,10 +44,8 @@ public:
 	using TextInputState = core::TextInputState;
 
 	// In most cases, this can be received via InputListener,
-	// but for objects without scene binding you can use this events
-	static EventHeader onBackground;
-	static EventHeader onFocus;
-	static EventHeader onFullscreen;
+	// but for objects without scene binding you can use this event
+	static EventHeader onWindowState;
 
 	virtual ~AppWindow();
 
@@ -68,6 +66,12 @@ public:
 	Context *getContext() const { return _context; }
 	AppThread *getApplication() const { return _application; }
 
+	core::WindowState getWindowState() const { return _state; }
+
+	// Note that WindowInfo describes window state in main thread,
+	// you should not use it in app thread, except for constant fields (like flags)
+	//
+	// To access WindowState in app thread, use getWindowState
 	const WindowInfo *getInfo() const;
 
 	WindowCapabilities getCapabilities() const;
@@ -80,7 +84,7 @@ public:
 	const core::SwapchainConfig &getAppSwapchainConfig() const { return _appSwapchainConfig; }
 
 	// Run constraints update process
-	void updateConstraints(core::PresentationSwapchainFlags); // from any thread
+	void updateConstraints(core::UpdateConstraintsFlags); // from any thread
 
 	void setReadyForNextFrame(); // from any thread
 
@@ -114,7 +118,6 @@ public:
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 
 	bool setFullscreen(FullscreenInfo &&, Function<void(Status)> &&, Ref * = nullptr);
-	bool isFullscreen() const { return _isFullscreen; }
 
 	void captureScreenshot(Function<void(const core::ImageInfoData &info, BytesView view)> &&cb);
 
@@ -145,15 +148,13 @@ protected:
 	NativeWindow *_window = nullptr;
 	Rc<core::PresentationEngine> _presentationEngine;
 
-	bool _inBackground = false;
-	bool _hasFocus = true;
-	bool _pointerInWindow = false;
-	bool _isFullscreen = false;
-	bool _inCloseRequest = false;
+	core::WindowState _state = core::WindowState::None;
 
 	uint32_t _exitGuard = 0;
+
+	bool _inCloseRequest = false;
 	bool _insetDecorationVisible = true;
-	float _insetDecorationTone = true;
+	float _insetDecorationTone = 1.0f;
 
 	core::SwapchainConfig _appSwapchainConfig;
 };

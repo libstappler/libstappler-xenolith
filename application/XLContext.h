@@ -45,6 +45,15 @@ class Scene;
 
 // Syntactic sugar for SharedModule definition
 
+// Usage: DEFINE_CONFIG_FUNCTION((ContextConfig &config){ })
+
+#define DEFINE_CONFIG_FUNCTION(Function)\
+SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appMakeConfigSymbol(\
+		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME,\
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeConfigName,\
+		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeConfigSignature(\
+				[]Function));
+
 #define DEFINE_SCENE_FACTORY(SceneFactoryFunction) \
 static_assert(::std::is_same_v<decltype(&SceneFactoryFunction),\
 	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeSceneSignature>, \
@@ -93,6 +102,9 @@ public:
 	virtual void handleStop(Context *a) { }
 	virtual void handleDestroy(Context *a) { }
 	virtual void handleLowMemory(Context *a) { }
+
+	virtual void handleNetworkStateChanged(NetworkFlags) { }
+	virtual void handleThemeInfoChanged(const ThemeInfo &) { }
 };
 
 /** Context: main application class, that allow workflow customization
@@ -136,6 +148,9 @@ public:
 			const core::FrameConstraints &);
 	static constexpr auto SymbolMakeSceneName = "makeScene";
 
+	using SymbolMakeConfigSignature = void (*)(ContextConfig &);
+	static constexpr auto SymbolMakeConfigName = "makeConfig";
+
 	// Symbol name for the MODULE_XENOLITH_APPLICATION
 	static constexpr auto SymbolContextRunName = "Context::run";
 
@@ -162,6 +177,9 @@ public:
 	template <typename T>
 	T *getComponent() const;
 
+	bool isCursorSupported(WindowCursor, bool serverSide) const;
+	WindowCapabilities getWindowCapabilities() const;
+
 	virtual Status readFromClipboard(Function<void(Status, BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
 	virtual Status writeToClipboard(Function<Bytes(StringView)> &&, SpanView<String>,
@@ -186,7 +204,7 @@ public:
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
 	virtual void handleNativeWindowRedrawNeeded(NotNull<NativeWindow>);
 	virtual void handleNativeWindowConstraintsChanged(NotNull<NativeWindow>,
-			core::PresentationSwapchainFlags);
+			core::UpdateConstraintsFlags);
 	virtual void handleNativeWindowInputEvents(NotNull<NativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
@@ -210,6 +228,8 @@ public:
 
 	virtual void handleNetworkStateChanged(NetworkFlags);
 	virtual void handleThemeInfoChanged(const ThemeInfo &);
+
+	virtual bool configureWindow(NotNull<WindowInfo>);
 
 	virtual void updateMessageToken(BytesView tok);
 	virtual void receiveRemoteNotification(Value &&val);
@@ -242,7 +262,6 @@ protected:
 	Rc<core::Loop> _loop;
 
 	Rc<AppThread> _application;
-	Rc<NativeWindow> _rootWindow;
 
 	HashMap<std::type_index, Rc<ContextComponent>> _components;
 };

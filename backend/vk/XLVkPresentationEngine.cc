@@ -24,9 +24,6 @@
 #include "SPStatus.h"
 #include "XLCorePresentationEngine.h"
 #include "XLCorePresentationFrame.h"
-#include "XLCoreFrameRequest.h"
-#include "XLCoreFrameCache.h"
-#include "SPEventLooper.h"
 #include "XLVkInfo.h"
 #include "XLVkSwapchain.h"
 #include "XlCoreMonitorInfo.h"
@@ -73,7 +70,7 @@ Status PresentationEngine::setFullscreenSurface(const core::MonitorId &monId,
 	if (monId == core::MonitorId::None) {
 		if (_surface != _originalSurface) {
 			_nextSurface = _originalSurface;
-			deprecateSwapchain(core::PresentationSwapchainFlags::SwitchToNext);
+			updateConstraints(core::UpdateConstraintsFlags::SwitchToNext);
 			return Status::Ok;
 		}
 		return Status::ErrorInvalidArguemnt;
@@ -128,14 +125,14 @@ Status PresentationEngine::setFullscreenSurface(const core::MonitorId &monId,
 	if (result == VK_SUCCESS) {
 		_nextSurface = Rc<Surface>::create(instance, surface);
 
-		deprecateSwapchain(core::PresentationSwapchainFlags::SwitchToNext);
+		updateConstraints(core::UpdateConstraintsFlags::SwitchToNext);
 	}
 	return Status::Ok;
 }
 
 bool PresentationEngine::recreateSwapchain() {
 	XL_VKPRESENT_LOG("recreateSwapchain");
-	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::Finalized)) {
+	if (hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::Finalized)) {
 		return false;
 	}
 
@@ -143,7 +140,7 @@ bool PresentationEngine::recreateSwapchain() {
 	_waitForDisplayLink = false;
 
 	bool oldSwapchainValid = true;
-	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToNext)) {
+	if (hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::SwitchToNext)) {
 		if (_nextSurface) {
 			_surface = move(_nextSurface);
 			oldSwapchainValid = false;
@@ -152,8 +149,8 @@ bool PresentationEngine::recreateSwapchain() {
 
 	resetFrames();
 
-	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::EndOfLife)) {
-		_deprecationFlags |= core::PresentationSwapchainFlags::Finalized;
+	if (hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::EndOfLife)) {
+		_deprecationFlags |= core::UpdateConstraintsFlags::Finalized;
 
 		auto callbacks = sp::move(_deprecationCallbacks);
 		_deprecationCallbacks.clear();
@@ -165,16 +162,16 @@ bool PresentationEngine::recreateSwapchain() {
 		return false;
 	}
 
-	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::EnableLiveResize)) {
+	if (hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::EnableLiveResize)) {
 		_liveResizeEnabled = true;
 	}
 
-	if (hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::DisableLiveResize)) {
+	if (hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::DisableLiveResize)) {
 		_liveResizeEnabled = false;
 	}
 
 	auto fastModeSelected = _liveResizeEnabled
-			|| hasFlag(_deprecationFlags, core::PresentationSwapchainFlags::SwitchToFastMode);
+			|| hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::SwitchToFastMode);
 	auto info = _window->getSurfaceOptions(
 			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
 	auto cfg = _window->selectConfig(info, fastModeSelected);
@@ -202,7 +199,7 @@ bool PresentationEngine::recreateSwapchain() {
 
 	ret = createSwapchain(info, move(cfg), mode, oldSwapchainValid);
 
-	_deprecationFlags = core::PresentationSwapchainFlags::None;
+	_deprecationFlags = core::UpdateConstraintsFlags::None;
 
 	auto callbacks = sp::move(_deprecationCallbacks);
 	_deprecationCallbacks.clear();

@@ -34,11 +34,12 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d::vk {
 class SP_PUBLIC ShadowPass : public VertexPass {
 public:
 	static constexpr StringView ShadowPipeline = "ShadowPipeline";
+	static constexpr StringView FrameClipperPipeline = "FrameClipperPipeline";
 	static constexpr StringView PseudoSdfPipeline = "PseudoSdfPipeline";
 	static constexpr StringView PseudoSdfSolidPipeline = "PseudoSdfSolidPipeline";
 	static constexpr StringView PseudoSdfBackreadPipeline = "PseudoSdfBackreadPipeline";
 
-	enum class Flags {
+	enum class Flags : uint32_t {
 		None = 0,
 		UsePseudoSdf = 1 << 0,
 	};

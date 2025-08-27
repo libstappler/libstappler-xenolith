@@ -46,7 +46,7 @@ struct SP_PUBLIC WaylandSeat : Ref {
 	bool init(NotNull<WaylandLibrary>, NotNull<WaylandDisplay>, wl_registry *, uint32_t name,
 			uint32_t version);
 
-	void setCursor(WindowLayerFlags, bool serverSide);
+	void setCursor(WindowCursor, bool serverSide);
 
 	void setCursors(StringView theme, int size);
 	void tryUpdateCursor();
@@ -81,7 +81,7 @@ struct SP_PUBLIC WaylandSeat : Ref {
 
 	Rc<WaylandCursorTheme> cursorTheme;
 	Rc<WaylandDataDevice> dataDevice;
-	WindowLayerFlags cursorImage = WindowLayerFlags::None;
+	WindowCursor cursorImage = WindowCursor::Undefined;
 
 	Set<WaylandDecoration *> pointerDecorations;
 	Set<WaylandOutput *> pointerOutputs;
@@ -95,7 +95,9 @@ struct SP_PUBLIC WaylandCursorTheme : public Ref {
 	bool init(WaylandDisplay *, StringView name, int size);
 
 	void setCursor(WaylandSeat *);
-	void setCursor(wl_pointer *, wl_surface *, uint32_t serial, WindowLayerFlags img, int scale);
+	void setCursor(wl_pointer *, wl_surface *, uint32_t serial, WindowCursor img, int scale);
+
+	bool hasCursor(WindowCursor) const;
 
 	Rc<WaylandLibrary> wayland;
 	wl_cursor_theme *cursorTheme = nullptr;

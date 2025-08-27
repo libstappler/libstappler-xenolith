@@ -33,7 +33,7 @@ class TemporaryResource;
 class Texture;
 class MeshIndex;
 
-enum class TemporaryResourceFlags {
+enum class TemporaryResourceFlags : uint32_t {
 	None = 0,
 	Loaded = 1 << 0, // Resource is a wrapper around already loaded data
 	RemoveOnClear = 1 << 1, // Remove whole resource from cache, when no one uses it

@@ -21,21 +21,13 @@
  **/
 
 #include "XLLinuxXcbWindow.h"
-#include "SPCore.h"
-#include "SPLog.h"
-#include "SPNotNull.h"
-#include "SPStatus.h"
-#include "XLContextInfo.h"
-#include "XlCoreMonitorInfo.h"
-#include "linux/XLLinux.h"
 #include "linux/XLLinuxContextController.h"
 #include "XLLinuxXcbConnection.h"
 #include "XLLinuxXcbDisplayConfigManager.h"
 #include "platform/XLContextNativeWindow.h"
-#include <xcb/xcb.h>
 
 #if MODULE_XENOLITH_BACKEND_VK
-#include "XLVkPresentationEngine.h"
+#include "XLVkPresentationEngine.h" // IWYU pragma: keep
 #endif
 
 #ifndef XL_X11_DEBUG
@@ -68,9 +60,6 @@ static core::InputModifier getModifiers(uint32_t mask) {
 static core::InputMouseButton getButton(xcb_button_t btn) { return core::InputMouseButton(btn); }
 
 XcbWindow::~XcbWindow() {
-	if (_controller && _isRootWindow) {
-		_controller->handleRootWindowClosed();
-	}
 	if (_connection) {
 		_defaultScreen = nullptr;
 		if (_xinfo.syncCounter) {
@@ -78,9 +67,19 @@ XcbWindow::~XcbWindow() {
 			_xinfo.syncCounter = 0;
 		}
 
+		if (_xinfo.outputWindow) {
+			_xcb->xcb_destroy_window(_connection->getConnection(), _xinfo.outputWindow);
+			_xinfo.outputWindow = 0;
+		}
+
 		if (_xinfo.window) {
 			_xcb->xcb_destroy_window(_connection->getConnection(), _xinfo.window);
 			_xinfo.window = 0;
+		}
+
+		if (_xinfo.colormap) {
+			_xcb->xcb_free_colormap(_connection->getConnection(), _xinfo.colormap);
+			_xinfo.colormap = 0;
 		}
 		_connection = nullptr;
 	}
@@ -89,24 +88,12 @@ XcbWindow::~XcbWindow() {
 XcbWindow::XcbWindow() { }
 
 bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
-		NotNull<const ContextInfo> ctx, NotNull<LinuxContextController> c, bool isRootWindow) {
-
-	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations;
-
-	if (conn->hasCapability(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN)) {
-		caps |= WindowCapabilities::Fullscreen;
-	}
-
-	if (conn->hasCapability(XcbAtomIndex::_NET_WM_BYPASS_COMPOSITOR)) {
-		caps |= WindowCapabilities::FullscreenExclusive;
-	}
-
-	if (!NativeWindow::init(c, move(info), caps, isRootWindow)) {
+		NotNull<LinuxContextController> c) {
+	if (!NativeWindow::init(c, move(info), conn->getCapabilities())) {
 		return false;
 	}
 
 	_connection = conn;
-	_controller = c;
 
 	_xcb = _connection->getXcb();
 
@@ -114,22 +101,29 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 		return false;
 	}
 
-	_wmClass.resize(_info->title.size() + ctx->bundleName.size() + 1, char(0));
+	StringView bundleName = _controller->getContext()->getInfo()->bundleName;
+
+	_wmClass.resize(_info->title.size() + bundleName.size() + 1, char(0));
 	memcpy(_wmClass.data(), _info->title.data(), _info->title.size());
-	memcpy(_wmClass.data() + _info->title.size() + 1, ctx->bundleName.data(),
-			ctx->bundleName.size());
+	memcpy(_wmClass.data() + _info->title.size() + 1, bundleName.data(), bundleName.size());
 
 	_defaultScreen = _connection->getDefaultScreen();
 
 	_xinfo.parent = _defaultScreen->root;
-	_xinfo.visual = _defaultScreen->root_visual;
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		_xinfo.depth = 32;
+		_xinfo.visual = _connection->getVisualByDepth(32); //_defaultScreen->root_visual;
+	} else {
+		_xinfo.depth = XCB_COPY_FROM_PARENT;
+		_xinfo.visual = _defaultScreen->root_visual;
+	}
 
 	_xinfo.eventMask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_BUTTON_PRESS
 			| XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION
 			| XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_KEY_PRESS
 			| XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_VISIBILITY_CHANGE
 			| XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_STRUCTURE_NOTIFY
-			| XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
+			| XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
 			| XCB_EVENT_MASK_COLOR_MAP_CHANGE | XCB_EVENT_MASK_OWNER_GRAB_BUTTON;
 
 	_xinfo.overrideRedirect = 0;
@@ -141,10 +135,21 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 
 	_density = float(dpi) / float(udpi);
 
-	_xinfo.rect = xcb_rectangle_t{static_cast<int16_t>(_info->rect.x * _density),
-		static_cast<int16_t>(_info->rect.y * _density),
-		static_cast<uint16_t>(_info->rect.width * _density),
-		static_cast<uint16_t>(_info->rect.height * _density)};
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		_xinfo.boundingRect = xcb_rectangle_t{static_cast<int16_t>(_info->rect.x * _density),
+			static_cast<int16_t>(_info->rect.y * _density),
+			static_cast<uint16_t>(
+					(_info->rect.width + _info->userDecorations.shadowWidth * 2) * _density),
+			static_cast<uint16_t>(
+					(_info->rect.height + _info->userDecorations.shadowWidth * 2) * _density)};
+	} else {
+		_xinfo.boundingRect = xcb_rectangle_t{static_cast<int16_t>(_info->rect.x * _density),
+			static_cast<int16_t>(_info->rect.y * _density),
+			static_cast<uint16_t>(_info->rect.width * _density),
+			static_cast<uint16_t>(_info->rect.height * _density)};
+	}
+
+	_xinfo.contentRect = getContentRect(_xinfo.boundingRect);
 
 	_xinfo.title = _info->title;
 	_xinfo.icon = _info->title;
@@ -155,13 +160,167 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 		return false;
 	}
 
+	_xcb->xcb_map_window(_connection->getConnection(), _xinfo.outputWindow);
+
 	_frameRate = getCurrentFrameRate();
+
+	auto windowType = _connection->getAtom(XcbAtomIndex::_NET_WM_WINDOW_TYPE_NORMAL);
+
+	_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE, _xinfo.window,
+			_connection->getAtom(XcbAtomIndex::_NET_WM_WINDOW_TYPE), XCB_ATOM_ATOM, 32, 1,
+			&windowType);
+
+	struct MotifWmHints hints;
+	hints.flags = MWM_HINTS_DECORATIONS | MWM_HINTS_FUNCTIONS;
+	hints.decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MENU;
+	hints.functions = 0;
+	hints.inputMode = 0;
+	hints.status = 0;
+
+	for (auto f : flags(_info->flags)) {
+		switch (f) {
+		case WindowCreationFlags::AllowMove: hints.functions |= MWM_FUNC_MOVE; break;
+		case WindowCreationFlags::AllowResize:
+			hints.decorations |= MWM_DECOR_RESIZEH;
+			hints.functions |= MWM_FUNC_RESIZE;
+			break;
+		case WindowCreationFlags::AllowMinimize:
+			hints.decorations |= MWM_DECOR_MINIMIZE;
+			hints.functions |= MWM_FUNC_MINIMIZE;
+			break;
+		case WindowCreationFlags::AllowMaximize:
+			hints.decorations |= MWM_DECOR_MAXIMIZE;
+			hints.functions |= MWM_FUNC_MAXIMIZE;
+			break;
+		case WindowCreationFlags::AllowClose: hints.functions |= MWM_FUNC_CLOSE; break;
+		default: break;
+		}
+	}
+
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		hints.decorations = 0;
+	}
+
+	_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE, _xinfo.window,
+			_connection->getAtom(XcbAtomIndex::_MOTIF_WM_HINTS), XCB_ATOM_CARDINAL, 32, 5, &hints);
+
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		generateShadowPixmaps(_info->userDecorations.shadowWidth * _density,
+				_info->userDecorations.borderRadius * _density);
+	}
 
 	_xcb->xcb_flush(_connection->getConnection());
 
 	_controller->notifyWindowCreated(this);
 
 	return true;
+}
+
+void XcbWindow::handleExpose(xcb_expose_event_t *ev) {
+	auto writeCorner = [&](XcbShadowCornerContext &ctx, int16_t x, int16_t y) {
+		_xcb->xcb_copy_area(_connection->getConnection(), ctx.pixmap, _xinfo.window,
+				_xinfo.decorationGc, 0, 0, x, y, ctx.width, ctx.width);
+	};
+
+	auto shadowWidth = static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density);
+
+	// Fill internal rect before drawing shadow
+	auto cornerSize = static_cast<uint32_t>(_info->userDecorations.borderRadius * _density);
+	if (cornerSize) {
+		uint32_t color = static_cast<uint32_t>(_info->userDecorations.shadowCurrentValue * 255.0f)
+				<< 24;
+		uint32_t values[2] = {color, 0};
+		_xcb->xcb_change_gc(_connection->getConnection(), _xinfo.decorationGc,
+				XCB_GC_FOREGROUND | XCB_GC_BACKGROUND, values);
+
+		xcb_rectangle_t rects[] = {
+			{int16_t(shadowWidth), int16_t(shadowWidth),
+				uint16_t(_xinfo.boundingRect.width - shadowWidth * 2),
+				uint16_t(_xinfo.boundingRect.height - shadowWidth * 2)},
+		};
+
+		_xcb->xcb_poly_fill_rectangle(_connection->getConnection(), _xinfo.window,
+				_xinfo.decorationGc, 1, rects);
+	}
+
+	// draw rectangles with rounded corners
+	uint32_t paddingLeft_Top = 0;
+	uint32_t paddingLeft_Bottom = 0;
+	uint32_t paddingRight_Top = 0;
+	uint32_t paddingRight_Bottom = 0;
+	uint32_t paddingTop_Left = 0;
+	uint32_t paddingTop_Right = 0;
+	uint32_t paddingBottom_Left = 0;
+	uint32_t paddingBottom_Right = 0;
+
+	if (!hasFlag(_info->state, WindowState::TiledTopLeft)) {
+		writeCorner(_xinfo.shadowTopLeft, 0, 0);
+		paddingLeft_Top += _xinfo.shadowTopLeft.width;
+		paddingTop_Left += _xinfo.shadowTopLeft.width;
+	}
+
+	if (!hasFlag(_info->state, WindowState::TiledTopRight)) {
+		writeCorner(_xinfo.shadowTopRight, _xinfo.boundingRect.width - _xinfo.shadowTopRight.width,
+				0);
+		paddingRight_Top += _xinfo.shadowTopRight.width;
+		paddingTop_Right += _xinfo.shadowTopRight.width;
+	}
+
+	if (!hasFlag(_info->state, WindowState::TiledBottomLeft)) {
+		writeCorner(_xinfo.shadowBottomLeft, 0,
+				_xinfo.boundingRect.height - _xinfo.shadowTopRight.width);
+
+		paddingLeft_Bottom += _xinfo.shadowBottomLeft.width;
+		paddingBottom_Left += _xinfo.shadowBottomLeft.width;
+	}
+
+	if (!hasFlag(_info->state, WindowState::TiledBottomRight)) {
+		writeCorner(_xinfo.shadowBottomRight,
+				_xinfo.boundingRect.width - _xinfo.shadowTopRight.width,
+				_xinfo.boundingRect.height - _xinfo.shadowTopRight.width);
+
+		paddingRight_Bottom += _xinfo.shadowBottomRight.width;
+		paddingBottom_Right += _xinfo.shadowBottomRight.width;
+	}
+
+	// Draw shadows on edges line by line
+	makeShadowVector([&](uint32_t index, float value) {
+		uint32_t color =
+				static_cast<uint32_t>(value * _info->userDecorations.shadowCurrentValue * 255.0f)
+				<< 24;
+
+		uint32_t values[2] = {color, 0};
+		_xcb->xcb_change_gc(_connection->getConnection(), _xinfo.decorationGc,
+				XCB_GC_FOREGROUND | XCB_GC_BACKGROUND, values);
+
+		uint32_t nrects = 0;
+		xcb_rectangle_t rects[4];
+
+		if (!hasFlag(_info->state, WindowState::TiledLeft)) {
+			rects[nrects++] = {int16_t(shadowWidth - index - 1), int16_t(paddingLeft_Top), 1,
+				uint16_t(_xinfo.boundingRect.height - paddingLeft_Top - paddingLeft_Bottom)};
+		}
+
+		if (!hasFlag(_info->state, WindowState::TiledRight)) {
+			rects[nrects++] = {int16_t(_xinfo.boundingRect.width - shadowWidth + index),
+				int16_t(paddingRight_Top), 1,
+				uint16_t(_xinfo.boundingRect.height - paddingRight_Top - paddingRight_Bottom)};
+		}
+
+		if (!hasFlag(_info->state, WindowState::TiledTop)) {
+			rects[nrects++] = {int16_t(paddingTop_Left), int16_t(shadowWidth - index - 1),
+				uint16_t(_xinfo.boundingRect.width - paddingTop_Left - paddingTop_Right), 1};
+		}
+
+		if (!hasFlag(_info->state, WindowState::TiledBottom)) {
+			rects[nrects++] = {int16_t(paddingBottom_Left),
+				int16_t(_xinfo.boundingRect.height - shadowWidth + index),
+				uint16_t(_xinfo.boundingRect.width - paddingBottom_Left - paddingBottom_Right), 1};
+		}
+
+		_xcb->xcb_poly_fill_rectangle(_connection->getConnection(), _xinfo.window,
+				_xinfo.decorationGc, nrects, rects);
+	}, static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density));
 }
 
 void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
@@ -171,18 +330,26 @@ void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
 	XL_X11_LOG("XCB_CONFIGURE_NOTIFY: %d (%d) rect:%d,%d,%d,%d border:%d override:%d monitor:%s",
 			ev->event, ev->window, ev->x, ev->y, ev->width, ev->height, uint32_t(ev->border_width),
 			uint32_t(ev->override_redirect), mon.data());
-	_xinfo.rect.x = ev->x;
-	_xinfo.rect.y = ev->y;
+	_xinfo.boundingRect.x = ev->x;
+	_xinfo.boundingRect.y = ev->y;
 	_xinfo.outputName = mon;
 	_borderWidth = ev->border_width;
-	if (ev->width != _xinfo.rect.width || ev->height != _xinfo.rect.height) {
-		_xinfo.rect.width = ev->width;
-		_xinfo.rect.height = ev->height;
-		_controller->notifyWindowConstraintsChanged(this, true);
+	if (ev->width != _xinfo.boundingRect.width || ev->height != _xinfo.boundingRect.height) {
+		_xinfo.boundingRect.width = ev->width;
+		_xinfo.boundingRect.height = ev->height;
+
+		auto newContentRect = getContentRect(_xinfo.boundingRect);
+		if (!isEqual(_xinfo.contentRect, newContentRect)) {
+			updateContentRect(newContentRect);
+		}
 	}
 
-	_info->rect = URect{uint16_t(_xinfo.rect.x), uint16_t(_xinfo.rect.y), _xinfo.rect.width,
-		_xinfo.rect.height};
+	_info->rect = URect{
+		uint16_t(_xinfo.boundingRect.x + _xinfo.contentRect.x),
+		uint16_t(_xinfo.boundingRect.y + _xinfo.contentRect.y),
+		_xinfo.contentRect.width,
+		_xinfo.contentRect.height,
+	};
 }
 
 void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
@@ -195,95 +362,199 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 			auto values = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
 			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
 
-			auto state = NativeWindowStateFlags::None;
+			auto state = WindowState::None;
 
 			while (len > 0) {
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MODAL) == *values) {
-					state |= NativeWindowStateFlags::Modal;
+					state |= WindowState::Modal;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_STICKY) == *values) {
-					state |= NativeWindowStateFlags::Sticky;
+					state |= WindowState::Sticky;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT) == *values) {
-					state |= NativeWindowStateFlags::MaximizedVert;
+					state |= WindowState::MaximizedVert;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ) == *values) {
-					state |= NativeWindowStateFlags::MaximizedHorz;
+					state |= WindowState::MaximizedHorz;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SHADED) == *values) {
-					state |= NativeWindowStateFlags::Shaded;
+					state |= WindowState::Shaded;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_TASKBAR) == *values) {
-					state |= NativeWindowStateFlags::SkipTaskbar;
+					state |= WindowState::SkipTaskbar;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_PAGER) == *values) {
-					state |= NativeWindowStateFlags::SkipPager;
+					state |= WindowState::SkipPager;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_HIDDEN) == *values) {
-					state |= NativeWindowStateFlags::Hidden;
+					state |= WindowState::Minimized;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN) == *values) {
-					state |= NativeWindowStateFlags::Fullscreen;
+					state |= WindowState::Fullscreen;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_ABOVE) == *values) {
-					state |= NativeWindowStateFlags::Above;
+					state |= WindowState::Above;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_BELOW) == *values) {
-					state |= NativeWindowStateFlags::Below;
+					state |= WindowState::Below;
 				}
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION)
 						== *values) {
-					state |= NativeWindowStateFlags::DemandsAttention;
+					state |= WindowState::DemandsAttention;
 				}
+
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FOCUSED) == *values) {
-					state |= NativeWindowStateFlags::Focused;
+					state |= WindowState::Focused;
 				}
 				++values;
 				--len;
 			}
 
-			if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)
-					&& hasFlag(state, NativeWindowStateFlags::Fullscreen)) {
-				// enter fullscreen
-				_pendingEvents.emplace_back(
-						core::InputEventData::BoolEvent(core::InputEventName::Fullscreen, true));
+			if (hasFlag(_info->state ^ state, WindowState::Focused)) {
+				auto targetValue = _info->userDecorations.shadowMinValue;
+				if (hasFlag(state, WindowState::Focused)) {
+					targetValue = _info->userDecorations.shadowMaxValue;
+				}
+				if (_info->userDecorations.shadowCurrentValue != targetValue) {
+					_info->userDecorations.shadowCurrentValue = targetValue;
+					updateShadows();
+				}
 			}
-			if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)
-					&& !hasFlag(state, NativeWindowStateFlags::Fullscreen)) {
-				// exit fullscreen
-				_pendingEvents.emplace_back(
-						core::InputEventData::BoolEvent(core::InputEventName::Fullscreen, false));
-			}
+			updateState(ev->time, state);
+		}
+	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_ALLOWED_ACTIONS)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
+				_xinfo.window, _connection->getAtom(XcbAtomIndex::_NET_WM_ALLOWED_ACTIONS),
+				XCB_ATOM_ATOM, 0, sizeof(xcb_atom_t) * 16);
+		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			auto values = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
+			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
 
-			_state = state;
+			WindowState actions = WindowState::None;
+			while (len > 0) {
+				if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_MOVE) == *values) {
+					actions |= WindowState::AllowedMove;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_RESIZE) == *values) {
+					actions |= WindowState::AllowedResize;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_MINIMIZE) == *values) {
+					actions |= WindowState::AllowedMinimize;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_MAXIMIZE_HORZ)
+						== *values) {
+					actions |= WindowState::AllowedMaximizeHorz;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_MAXIMIZE_VERT)
+						== *values) {
+					actions |= WindowState::AllowedMaximizeVert;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_FULLSCREEN)
+						== *values) {
+					actions |= WindowState::AllowedFullscreen;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_CLOSE) == *values) {
+					actions |= WindowState::AllowedClose;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_SHADE) == *values) {
+					actions |= WindowState::AllowedShade;
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_ACTION_STICK) == *values) {
+					actions |= WindowState::AllowedStick;
+				} else {
+					XL_X11_LOG("XcbWindow: Unknown action: %s",
+							_connection->getAtomName(*values).data());
+				}
+				++values;
+				--len;
+			}
+			auto current = _info->state & WindowState::AllowedActionsMask;
+			if (current != actions) {
+				auto state = _info->state & ~WindowState::AllowedActionsMask;
+				state |= actions;
+
+				updateState(ev->time, state);
+			}
 		}
 	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_DESKTOP)) {
 		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
 				_xinfo.window, ev->atom, XCB_ATOM_CARDINAL, 0, 32);
 		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
 		if (reply) {
-			auto values = (int32_t *)_xcb->xcb_get_property_value(reply);
-			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(int32_t);
-
-			log::debug("XcbWindow", "handlePropertyNotify _NET_WM_DESKTOP: ", *values, " ", len);
+			XL_X11_LOG("XcbWindow: handlePropertyNotify _NET_WM_DESKTOP: %d %ld",
+					*((int32_t *)_xcb->xcb_get_property_value(reply)),
+					_xcb->xcb_get_property_value_length(reply) / sizeof(int32_t));
 		}
+	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_FRAME_EXTENTS)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
+				_xinfo.window, ev->atom, XCB_ATOM_CARDINAL, 0, 32);
+		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			SP_UNUSED auto values = (uint32_t *)_xcb->xcb_get_property_value(reply);
+
+			XL_X11_LOG("XcbWindow: handlePropertyNotify: %s %d %d %d %d",
+					_connection->getAtomName(ev->atom).data(), values[0], values[1], values[2],
+					values[3]);
+		}
+	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_GTK_EDGE_CONSTRAINTS)) {
+		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
+				_xinfo.window, ev->atom, XCB_ATOM_CARDINAL, 0, 32);
+		auto reply = _connection->perform(_xcb->xcb_get_property_reply, cookie);
+		if (reply) {
+			auto values = (uint32_t *)_xcb->xcb_get_property_value(reply);
+			auto len = _xcb->xcb_get_property_value_length(reply);
+
+			auto state = _info->state;
+			if (len > 0) {
+				for (auto it : flags(XcbConstraints(values[0]))) {
+					switch (it) {
+					case XcbConstraints::TopTiled: state |= WindowState::TiledTop; break;
+					case XcbConstraints::TopResizable: state &= ~WindowState::TiledTop; break;
+					case XcbConstraints::RightTiled: state |= WindowState::TiledRight; break;
+					case XcbConstraints::RightResizable: state &= ~WindowState::TiledRight; break;
+					case XcbConstraints::BottomTiled: state |= WindowState::TiledBottom; break;
+					case XcbConstraints::BottomResizable: state &= ~WindowState::TiledBottom; break;
+					case XcbConstraints::LeftTiled: state |= WindowState::TiledLeft; break;
+					case XcbConstraints::LeftResizable: state &= ~WindowState::TiledLeft; break;
+					}
+				}
+			}
+			if (state != _info->state) {
+				updateState(ev->time, state);
+				auto newContentRect = getContentRect(_xinfo.boundingRect);
+				if (!isEqual(_xinfo.contentRect, newContentRect)) {
+					updateContentRect(newContentRect);
+				}
+			}
+		}
+	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_USER_TIME)) {
+		// do nothing
 	} else {
-		log::debug("XcbWindow", "handlePropertyNotify: ", _connection->getAtomName(ev->atom));
+		SP_UNUSED auto name = _connection->getAtomName(ev->atom);
+		XL_X11_LOG("XcbWindow: handlePropertyNotify: %s", name.data());
 	}
 }
 
 void XcbWindow::handleButtonPress(xcb_button_press_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
+	auto ext = getExtent();
 	auto mod = getModifiers(ev->state);
 	auto btn = getButton(ev->detail);
 
-	core::InputEventData event({ev->detail, core::InputEventName::Begin, btn, mod,
-		float(ev->event_x), float(ext.height - ev->event_y)});
+	_buttons.set(ev->detail);
+
+	if (btn == core::InputMouseButton::MouseLeft) {
+		// Capture current grip flags
+		_buttonGripFlags = _gripFlags;
+	}
+
+	core::InputEventData event({
+		ev->detail,
+		core::InputEventName::Begin,
+		{{
+			btn,
+			mod,
+			float(ev->event_x - _xinfo.contentRect.x),
+			float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+		}},
+	});
 
 	switch (btn) {
 	case core::InputMouseButton::MouseScrollUp:
@@ -315,36 +586,90 @@ void XcbWindow::handleButtonPress(xcb_button_press_event_t *ev) {
 void XcbWindow::handleButtonRelease(xcb_button_release_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
+	auto ext = getExtent();
 	auto mod = getModifiers(ev->state);
 	auto btn = getButton(ev->detail);
 
-	core::InputEventData event({ev->detail, core::InputEventName::End, btn, mod, float(ev->event_x),
-		float(ext.height - ev->event_y)});
-
-	switch (btn) {
-	case core::InputMouseButton::MouseScrollUp:
-	case core::InputMouseButton::MouseScrollDown:
-	case core::InputMouseButton::MouseScrollLeft:
-	case core::InputMouseButton::MouseScrollRight: break;
-	default: _pendingEvents.emplace_back(event); break;
+	if (btn == core::InputMouseButton::MouseLeft) {
+		// Release current grip flags
+		_buttonGripFlags = WindowLayerFlags::None;
 	}
+
+	if (_buttons.test(ev->detail)) {
+		_buttons.reset(ev->detail);
+
+		core::InputEventData event({
+			ev->detail,
+			core::InputEventName::End,
+			{{
+				btn,
+				mod,
+				float(ev->event_x - _xinfo.contentRect.x),
+				float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+			}},
+		});
+
+		switch (btn) {
+		case core::InputMouseButton::MouseScrollUp:
+		case core::InputMouseButton::MouseScrollDown:
+		case core::InputMouseButton::MouseScrollLeft:
+		case core::InputMouseButton::MouseScrollRight: break;
+		default: _pendingEvents.emplace_back(event); break;
+		}
+	} else {
+		startMoveResize(XcbMoveResize::Cancel, ev->root_x, ev->root_y,
+				toInt(core::InputMouseButton::MouseLeft));
+	}
+}
+
+static XcbMoveResize getMoveResizeForGrip(WindowLayerFlags grip) {
+	switch (grip) {
+	case WindowLayerFlags::MoveGrip: return XcbMoveResize::Move; break;
+	case WindowLayerFlags::TopLeftGrip: return XcbMoveResize::SizeTopLeft; break;
+	case WindowLayerFlags::TopGrip: return XcbMoveResize::SizeTop; break;
+	case WindowLayerFlags::TopRightGrip: return XcbMoveResize::SizeTopRight; break;
+	case WindowLayerFlags::RightGrip: return XcbMoveResize::SizeRight; break;
+	case WindowLayerFlags::BottomRightGrip: return XcbMoveResize::SizeBottomRight; break;
+	case WindowLayerFlags::BottomGrip: return XcbMoveResize::SizeBottom; break;
+	case WindowLayerFlags::BottomLeftGrip: return XcbMoveResize::SizeBottomLeft; break;
+	case WindowLayerFlags::LeftGrip: return XcbMoveResize::SizeLeft; break;
+	default: break;
+	}
+	return XcbMoveResize::Cancel;
 }
 
 void XcbWindow::handleMotionNotify(xcb_motion_notify_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
+	if (_buttonGripFlags != WindowLayerFlags::None) {
+		if (_buttons.test(toInt(core::InputMouseButton::MouseLeft)) && _buttons.count() == 1) {
+			auto grip = _buttonGripFlags;
+			cancelPointerEvents();
+			startMoveResize(getMoveResizeForGrip(grip), ev->root_x, ev->root_y,
+					toInt(core::InputMouseButton::MouseLeft));
+			return;
+		}
+	}
+
+	auto ext = getExtent();
 	auto mod = getModifiers(ev->state);
 
-	core::InputEventData event({maxOf<uint32_t>(), core::InputEventName::MouseMove,
-		core::InputMouseButton::None, mod, float(ev->event_x), float(ext.height - ev->event_y)});
+	core::InputEventData event({
+		maxOf<uint32_t>(),
+		core::InputEventName::MouseMove,
+		{{
+			core::InputMouseButton::None,
+			mod,
+			float(ev->event_x - _xinfo.contentRect.x),
+			float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+		}},
+	});
 
 	_pendingEvents.emplace_back(event);
 }
@@ -352,60 +677,73 @@ void XcbWindow::handleMotionNotify(xcb_motion_notify_event_t *ev) {
 void XcbWindow::handleEnterNotify(xcb_enter_notify_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
-	_pendingEvents.emplace_back(core::InputEventData::BoolEvent(core::InputEventName::PointerEnter,
-			true, Vec2(float(ev->event_x), float(ext.height - ev->event_y))));
+	updateState(ev->time, _info->state | WindowState::Pointer);
+
+	auto ext = getExtent();
+	auto mod = getModifiers(ev->state);
+
+	core::InputEventData event({
+		maxOf<uint32_t>(),
+		core::InputEventName::MouseMove,
+		{{
+			core::InputMouseButton::None,
+			mod,
+			float(ev->event_x - _xinfo.contentRect.x),
+			float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+		}},
+	});
+
+	_pendingEvents.emplace_back(event);
 }
 
 void XcbWindow::handleLeaveNotify(xcb_leave_notify_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
-	_pendingEvents.emplace_back(core::InputEventData::BoolEvent(core::InputEventName::PointerEnter,
-			false, Vec2(float(ev->event_x), float(ext.height - ev->event_y))));
+	updateState(ev->time, _info->state & ~WindowState::Pointer);
 }
 
-void XcbWindow::handleFocusIn(xcb_focus_in_event_t *ev) {
-	// xcb_focus_in_event_t *ev = (xcb_focus_in_event_t*) e;
-	_pendingEvents.emplace_back(
-			core::InputEventData::BoolEvent(core::InputEventName::FocusGain, true));
-}
+void XcbWindow::handleFocusIn(xcb_focus_in_event_t *ev) { _forcedFrames += 2; }
 
-void XcbWindow::handleFocusOut(xcb_focus_out_event_t *ev) {
-	_pendingEvents.emplace_back(
-			core::InputEventData::BoolEvent(core::InputEventName::FocusGain, false));
-}
+void XcbWindow::handleFocusOut(xcb_focus_out_event_t *ev) { _forcedFrames += 2; }
 
 void XcbWindow::handleKeyPress(xcb_key_press_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
 	auto mod = getModifiers(ev->state);
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
+	auto ext = getExtent();
 
 	// in case of key autorepeat, ev->time will match
 	// just replace event name from previous InputEventName::KeyReleased to InputEventName::KeyRepeated
 	if (!_pendingEvents.empty()
 			&& _pendingEvents.back().event == core::InputEventName::KeyReleased) {
 		auto &iev = _pendingEvents.back();
-		if (iev.id == ev->time && iev.modifiers == mod && iev.x == float(ev->event_x)
-				&& iev.y == float(ext.height - ev->event_y)
+		if (iev.id == ev->time && iev.getModifiers() == mod && iev.input.x == float(ev->event_x)
+				&& iev.input.y == float(ext.height - ev->event_y)
 				&& iev.key.keysym == _connection->getKeysym(ev->detail, ev->state, false)) {
 			iev.event = core::InputEventName::KeyRepeated;
 			return;
 		}
 	}
 
-	core::InputEventData event({ev->time, core::InputEventName::KeyPressed,
-		core::InputMouseButton::None, mod, float(ev->event_x), float(ext.height - ev->event_y)});
+	core::InputEventData event({
+		ev->time,
+		core::InputEventName::KeyPressed,
+		{{
+			core::InputMouseButton::None,
+			mod,
+			float(ev->event_x - _xinfo.contentRect.x),
+			float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+		}},
+	});
 
 	_connection->fillTextInputData(event, ev->detail, ev->state, isTextInputEnabled(), true);
 
@@ -415,14 +753,22 @@ void XcbWindow::handleKeyPress(xcb_key_press_event_t *ev) {
 void XcbWindow::handleKeyRelease(xcb_key_release_event_t *ev) {
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
-		_lastInputTime = ev->time;
+		updateUserTime(ev->time);
 	}
 
 	auto mod = getModifiers(ev->state);
-	auto ext = Extent2(_xinfo.rect.width, _xinfo.rect.height);
+	auto ext = getExtent();
 
-	core::InputEventData event({ev->time, core::InputEventName::KeyReleased,
-		core::InputMouseButton::None, mod, float(ev->event_x), float(ext.height - ev->event_y)});
+	core::InputEventData event({
+		ev->time,
+		core::InputEventName::KeyReleased,
+		{{
+			core::InputMouseButton::None,
+			mod,
+			float(ev->event_x - _xinfo.contentRect.x),
+			float(int32_t(ext.height) - (ev->event_y - _xinfo.contentRect.y)),
+		}},
+	});
 
 	_connection->fillTextInputData(event, ev->detail, ev->state, isTextInputEnabled(), false);
 
@@ -444,7 +790,7 @@ void XcbWindow::notifyScreenChange() {
 	_pendingEvents.emplace_back(event);
 	_frameRate = getCurrentFrameRate();
 
-	if (!_controller.get_cast<LinuxContextController>()->isInPoll()) {
+	if (!_controller.get_cast<LinuxContextController>()->isWithinPoll()) {
 		dispatchPendingEvents();
 	}
 }
@@ -460,15 +806,9 @@ void XcbWindow::handleSettingsUpdated() {
 	auto d = float(dpi) / float(udpi);
 	if (d != _density) {
 		_density = float(dpi) / float(udpi);
-		_controller->notifyWindowConstraintsChanged(this, false);
+		updateShadows();
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 	}
-}
-
-void XcbWindow::dispatchPendingEvents() {
-	if (!_pendingEvents.empty()) {
-		_controller->notifyWindowInputEvents(this, sp::move(_pendingEvents));
-	}
-	_pendingEvents.clear();
 }
 
 xcb_connection_t *XcbWindow::getConnection() const { return _connection->getConnection(); }
@@ -476,7 +816,10 @@ xcb_connection_t *XcbWindow::getConnection() const { return _connection->getConn
 void XcbWindow::mapWindow() {
 	_connection->attachWindow(_xinfo.window, this);
 	_xcb->xcb_map_window(_connection->getConnection(), _xinfo.window);
+
 	_xcb->xcb_flush(_connection->getConnection());
+
+	configureOutputWindow();
 
 	if (_info->fullscreen != FullscreenInfo::None) {
 		setFullscreen(FullscreenInfo(_info->fullscreen), nullptr, this);
@@ -498,10 +841,17 @@ bool XcbWindow::close() {
 		}
 		return true;
 	}
-	return false;
+	return true;
 }
 
 void XcbWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
+	_xcb->xcb_flush(_connection->getConnection());
+
+	if (_pendingExpose) {
+		handleExpose(nullptr);
+		_pendingExpose = false;
+	}
+
 	if (_xinfo.syncCounter && (_xinfo.syncValue.lo != 0 || _xinfo.syncValue.hi != 0)
 			&& frame->getFrameOrder() > _xinfo.syncFrameOrder) {
 		_xcb->xcb_sync_set_counter(_connection->getConnection(), _xinfo.syncCounter,
@@ -511,37 +861,69 @@ void XcbWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
 		_xinfo.syncValue.lo = 0;
 		_xinfo.syncValue.hi = 0;
 	}
+
+	if (_forcedFrames > 0) {
+		--_forcedFrames;
+		emitAppFrame();
+	}
 }
 
 core::FrameConstraints XcbWindow::exportConstraints(core::FrameConstraints &&c) const {
-	c.extent = Extent3(_xinfo.rect.width, _xinfo.rect.height, 1);
-	if (c.density == 0.0f) {
-		c.density = 1.0f;
+	auto ret = NativeWindow::exportConstraints(sp::move(c));
+
+	ret.extent = Extent3(_xinfo.contentRect.width, _xinfo.contentRect.height, 1);
+	if (ret.density == 0.0f) {
+		ret.density = 1.0f;
 	}
 	if (_density != 0.0f) {
-		c.density *= _density;
+		ret.density *= _density;
+		ret.surfaceDensity = _density;
 	}
-	c.frameInterval = 1'000'000'000 / _frameRate;
-	return move(c);
+
+	ret.frameInterval = 1'000'000'000 / _frameRate;
+	return move(ret);
 }
 
-void XcbWindow::handleLayerUpdate(const WindowLayer &layer) {
-	auto cursors = getCursorNames(layer.flags);
-	uint32_t cursorId = XCB_CURSOR_NONE;
-	if (!cursors.empty()) {
-		cursorId = _connection->loadCursor(cursors);
+void XcbWindow::handleLayerEnter(const WindowLayer &layer) {
+	if (layer.cursor != WindowCursor::Undefined) {
+		setCursor(layer.cursor);
 	}
-	if (cursorId == XCB_CURSOR_NONE) {
-		cursorId = _connection->loadCursor(getCursorNames(WindowLayerFlags::CursorDefault));
-	}
-
-	if (_xinfo.cursorId != cursorId) {
-		_connection->setCursorId(_xinfo.window, cursorId);
-		_xinfo.cursorId = cursorId;
+	if (hasFlag(layer.flags, WindowLayerFlags::GripMask)) {
+		// update grip value only if it's greater then current
+		// so, resize grip has priority over move grip
+		auto newGrip = layer.flags & WindowLayerFlags::GripMask;
+		if (toInt(newGrip) > toInt(_gripFlags)) {
+			_gripFlags = newGrip;
+		}
 	}
 }
 
-Extent2 XcbWindow::getExtent() const { return Extent2(_xinfo.rect.width, _xinfo.rect.height); }
+void XcbWindow::handleLayerExit(const WindowLayer &layer) {
+	auto cursor = WindowCursor::Undefined;
+	auto gripFlags = WindowLayerFlags::None;
+	for (auto &it : _currentLayers) {
+		if (it.cursor != WindowCursor::Undefined) {
+			cursor = it.cursor;
+		}
+		if (hasFlag(it.flags, WindowLayerFlags::GripMask)) {
+			// update grip value only if it's greater then current
+			// so, resize grip has priority over move grip
+			auto newGrip = it.flags & WindowLayerFlags::GripMask;
+			if (toInt(newGrip) > toInt(gripFlags)) {
+				gripFlags = newGrip;
+			}
+		}
+	}
+
+	if (gripFlags != _gripFlags) {
+		_gripFlags = gripFlags;
+	}
+	setCursor(cursor);
+}
+
+Extent2 XcbWindow::getExtent() const {
+	return Extent2(_xinfo.contentRect.width, _xinfo.contentRect.height);
+}
 
 Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 #if MODULE_XENOLITH_BACKEND_VK
@@ -551,11 +933,10 @@ Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 
 	auto instance = static_cast<vk::Instance *>(cinstance.get());
 	auto connection = getConnection();
-	auto window = getWindow();
 
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 	VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR, nullptr, 0,
-		connection, window};
+		connection, _xinfo.outputWindow};
 	if (instance->vkCreateXcbSurfaceKHR(instance->getInstance(), &createInfo, nullptr, &surface)
 			!= VK_SUCCESS) {
 		return nullptr;
@@ -565,6 +946,24 @@ Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 	log::error("XcbWindow", "No available GAPI found for a surface");
 	return nullptr;
 #endif
+}
+
+void XcbWindow::startMoveResize(XcbMoveResize value, int32_t x, int32_t y, int32_t button) {
+	xcb_client_message_event_t message;
+	message.response_type = XCB_CLIENT_MESSAGE;
+	message.format = 32;
+	message.sequence = 0;
+	message.window = _xinfo.window;
+	message.type = _connection->getAtom(XcbAtomIndex::_NET_WM_MOVERESIZE);
+	message.data.data32[0] = x;
+	message.data.data32[1] = y;
+	message.data.data32[2] = toInt(value);
+	message.data.data32[3] = button;
+	message.data.data32[4] = 1; // EWMH says 1 for normal applications
+	_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
+			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+			(const char *)&message);
+	_xcb->xcb_flush(_connection->getConnection());
 }
 
 bool XcbWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
@@ -643,7 +1042,7 @@ Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
 	};
 
 	if (info == FullscreenInfo::Current) {
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			return Status::Declined;
 		}
 
@@ -712,6 +1111,181 @@ Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
 
 	_info->fullscreen = move(info);
 	return Status::Ok;
+}
+
+xcb_rectangle_t XcbWindow::getContentRect(xcb_rectangle_t boundingRect) const {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)
+			&& !hasFlag(_info->state, WindowState::Fullscreen)) {
+		auto offset = static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density);
+
+		auto rect = xcb_rectangle_t{
+			static_cast<int16_t>(offset + _info->userDecorations.shadowOffset.x * _density),
+			static_cast<int16_t>(offset - _info->userDecorations.shadowOffset.y * _density),
+			static_cast<uint16_t>(boundingRect.width - offset * 2),
+			static_cast<uint16_t>(boundingRect.height - offset * 2)};
+
+		auto padding = FrameExtents::getExtents(boundingRect, rect);
+
+		if (hasFlag(_info->state, WindowState::TiledLeft)) {
+			rect.x -= static_cast<int16_t>(padding.left);
+			rect.width += static_cast<int16_t>(padding.left);
+		}
+		if (hasFlag(_info->state, WindowState::TiledTop)) {
+			rect.y -= static_cast<int16_t>(padding.top);
+			rect.height += static_cast<int16_t>(padding.top);
+		}
+		if (hasFlag(_info->state, WindowState::TiledRight)) {
+			rect.width += static_cast<int16_t>(padding.right);
+		}
+		if (hasFlag(_info->state, WindowState::TiledBottom)) {
+			rect.height += static_cast<int16_t>(padding.bottom);
+		}
+		return rect;
+	} else {
+		return xcb_rectangle_t{0, 0, boundingRect.width, boundingRect.height};
+	}
+}
+
+void XcbWindow::updateContentRect(xcb_rectangle_t rect) {
+	if (!isEqual(_xinfo.contentRect, rect)) {
+		_xinfo.contentRect = rect;
+		if (_connection->hasCapability(XcbAtomIndex::_GTK_FRAME_EXTENTS)) {
+			auto padding = FrameExtents::getExtents(_xinfo.boundingRect, _xinfo.contentRect);
+			_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE,
+					_xinfo.window, _connection->getAtom(XcbAtomIndex::_GTK_FRAME_EXTENTS),
+					XCB_ATOM_CARDINAL, 32, 4, &padding);
+		}
+		configureOutputWindow();
+	}
+}
+
+void XcbWindow::configureOutputWindow() {
+	uint32_t mask = XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH
+			| XCB_CONFIG_WINDOW_HEIGHT;
+	uint32_t values[8];
+	uint32_t idx = 0;
+
+	values[idx++] = _xinfo.contentRect.x;
+	values[idx++] = _xinfo.contentRect.y;
+	values[idx++] = _xinfo.contentRect.width;
+	values[idx++] = _xinfo.contentRect.height;
+
+	_xcb->xcb_configure_window(_connection->getConnection(), _xinfo.outputWindow, mask, values);
+	_xcb->xcb_flush(_connection->getConnection());
+
+	_controller->notifyWindowConstraintsChanged(this,
+			core::UpdateConstraintsFlags::DeprecateSwapchain
+					| core::UpdateConstraintsFlags::SwitchToFastMode);
+}
+
+void XcbWindow::updateShadows() {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
+		generateShadowPixmaps(_info->userDecorations.shadowWidth * _density,
+				_info->userDecorations.borderRadius * _density);
+		emitAppFrame();
+		_pendingExpose = true;
+	}
+}
+
+void XcbWindow::generateShadowPixmaps(uint32_t size, uint32_t inset) {
+	if (_xinfo.depth != 32) {
+		log::error("XcbWindow", "Shadows can be generated only with depth 32");
+		return;
+	}
+
+	auto width = size + inset;
+
+	auto updateContext = [&](XcbShadowCornerContext &ctx) {
+		if (ctx.gc) {
+			_xcb->xcb_free_gc(_connection->getConnection(), ctx.gc);
+		} else {
+			ctx.gc = _xcb->xcb_generate_id(_connection->getConnection());
+		}
+		if (ctx.pixmap) {
+			_xcb->xcb_free_pixmap(_connection->getConnection(), ctx.pixmap);
+		} else {
+			ctx.pixmap = _xcb->xcb_generate_id(_connection->getConnection());
+		}
+
+		ctx.width = width;
+		ctx.inset = inset;
+
+		_xcb->xcb_create_pixmap(_connection->getConnection(), _xinfo.depth, ctx.pixmap,
+				_xinfo.window, ctx.width, ctx.width);
+		_xcb->xcb_create_gc(_connection->getConnection(), ctx.gc, ctx.pixmap, 0, nullptr);
+	};
+
+	auto putImage = [&](XcbShadowCornerContext &ctx, const uint8_t *c) {
+		_xcb->xcb_put_image(_connection->getConnection(), XCB_IMAGE_FORMAT_Z_PIXMAP, ctx.pixmap,
+				ctx.gc, ctx.width, ctx.width, 0, 0, 0, _xinfo.depth, ctx.width * ctx.width * 4, c);
+	};
+
+	updateContext(_xinfo.shadowTopLeft);
+	updateContext(_xinfo.shadowTopRight);
+	updateContext(_xinfo.shadowBottomLeft);
+	updateContext(_xinfo.shadowBottomRight);
+
+	Bytes data;
+	data.resize(width * width // shadow rect
+			* _xinfo.depth / 8 // color components, should be 4
+			* 4 // four shadows
+	);
+
+	auto ptr = reinterpret_cast<Color4B *>(data.data());
+
+	auto targetA = ptr;
+	auto targetB = ptr + width * width;
+	auto targetC = ptr + width * width * 2;
+	auto targetD = ptr + width * width * 3;
+
+	makeShadowCorner([&](uint32_t i, uint32_t j, float value) {
+		auto valueA = (uint8_t)(_info->userDecorations.shadowCurrentValue * 255.0f * value);
+		targetA[i * width + j].a = valueA;
+		targetB[(width - i - 1) * width + (width - j - 1)].a = valueA;
+		targetC[(i)*width + (width - j - 1)].a = valueA;
+		targetD[(width - i - 1) * width + (j)].a = valueA;
+	}, width, inset);
+
+	putImage(_xinfo.shadowTopLeft, reinterpret_cast<const uint8_t *>(targetB));
+	putImage(_xinfo.shadowTopRight, reinterpret_cast<const uint8_t *>(targetD));
+	putImage(_xinfo.shadowBottomLeft, reinterpret_cast<const uint8_t *>(targetC));
+	putImage(_xinfo.shadowBottomRight, reinterpret_cast<const uint8_t *>(targetA));
+}
+
+void XcbWindow::setCursor(WindowCursor cursor) {
+	uint32_t cursorId = _connection->loadCursor(cursor);
+	if (_xinfo.cursorId != cursorId) {
+		_connection->setCursorId(_xinfo.window, cursorId);
+		_xinfo.cursorId = cursorId;
+	}
+}
+
+void XcbWindow::updateUserTime(uint32_t t) {
+	_xcb->xcb_change_property(_connection->getConnection(), XCB_PROP_MODE_REPLACE, _xinfo.window,
+			_connection->getAtom(XcbAtomIndex::_NET_WM_USER_TIME), XCB_ATOM_CARDINAL, 32, 1, &t);
+	_lastInputTime = t;
+}
+
+void XcbWindow::cancelPointerEvents() {
+	for (uint32_t i = 0; i < 64; ++i) {
+		if (_buttons.test(i)) {
+			core::InputEventData event({
+				i,
+				core::InputEventName::Cancel,
+				{{
+					core::InputMouseButton(i),
+					core::InputModifier::None,
+					nan(),
+					nan(),
+				}},
+			});
+			_pendingEvents.emplace_back(sp::move(event));
+		}
+	}
+	_buttons.reset();
+	_xcb->xcb_ungrab_pointer(_connection->getConnection(), XCB_CURRENT_TIME);
+	_buttonGripFlags = WindowLayerFlags::None;
 }
 
 } // namespace stappler::xenolith::platform

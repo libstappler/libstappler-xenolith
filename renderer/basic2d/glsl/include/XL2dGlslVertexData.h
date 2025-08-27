@@ -126,6 +126,16 @@ SP_GLSL_INLINE vec4 makeMask(uint value) {
 			((value & XL_GLSL_FLAG_POSITION_MASK_W) != 0) ? 1.0 : 0.0);
 }
 
+struct FrameClipperData {
+	vec2 frameSize;
+	float radius;
+	float shadow;
+	float sigma;
+	float value;
+	vec2 offset;
+	uint constraints;
+};
+
 #ifndef SP_GLSL
 }
 #endif

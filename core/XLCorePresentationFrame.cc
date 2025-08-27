@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +23,6 @@
 
 #include "XLCorePresentationFrame.h"
 #include "XLCorePresentationEngine.h"
-#include "XLCoreFrameQueue.h"
 #include "XLCoreFrameRequest.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -102,7 +102,8 @@ bool PresentationFrame::assignSwapchainImage(Swapchain::SwapchainAcquiredImage *
 	auto sw = getSwapchainImage();
 
 	if (acquiredImage->swapchain != _swapchain) {
-		log::error("vk::ViewFrame", "Image swapchain and ViewFrame swapchain are different");
+		log::error("core::PresentationFrame",
+				"Image swapchain and ViewFrame swapchain are different");
 		return false;
 	}
 
@@ -124,7 +125,7 @@ bool PresentationFrame::assignResult(core::ImageStorage *target) {
 	return true;
 }
 
-void PresentationFrame::invalidate(bool invalidateSwapchain) {
+void PresentationFrame::invalidate() {
 	if (sp::hasFlag(_flags, Invalidated)) {
 		return;
 	}
@@ -133,14 +134,8 @@ void PresentationFrame::invalidate(bool invalidateSwapchain) {
 
 	auto refId = retain();
 
-	if (invalidateSwapchain) {
-		if (auto sw = getSwapchainImage()) {
-			sw->invalidateSwapchain();
-		}
-	} else {
-		if (auto sw = getSwapchainImage()) {
-			sw->invalidateImage();
-		}
+	if (auto sw = getSwapchainImage()) {
+		sw->invalidateImage();
 	}
 
 	if (_target) {
@@ -185,6 +180,7 @@ void PresentationFrame::setPresented(Status st) {
 			_completeCallback(this, true);
 		}
 		_active = false;
+		_target = nullptr;
 	}
 }
 

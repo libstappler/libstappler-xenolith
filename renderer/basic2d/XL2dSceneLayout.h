@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,19 +31,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class SceneContent2d;
 
-enum class DecorationMask {
-	None,
-	Top = 1 << 0,
-	Bottom = 1 << 1,
-	Left = 1 << 2,
-	Right = 1 << 3,
-	Vertical = Top | Bottom,
-	Horizontal = Left | Right,
-	All = Vertical | Horizontal
-};
-
-SP_DEFINE_ENUM_AS_MASK(DecorationMask)
-
 enum class DecorationStatus {
 	DontCare,
 	Visible,
@@ -53,6 +41,7 @@ class SP_PUBLIC SceneLayout2d : public Node {
 public:
 	using BackButtonCallback = Function<bool()>;
 	using Transition = ActionInterval;
+	using DecorationMask = core::ViewConstraints;
 
 	virtual ~SceneLayout2d();
 

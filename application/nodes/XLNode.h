@@ -75,7 +75,7 @@ public:
 	virtual void setScaleY(float scaleY);
 	virtual void setScaleZ(float scaleZ);
 
-	virtual const Vec3 &getScale() const { return _scale; }
+	virtual Vec3 getScale() const { return _scale; }
 
 	virtual void setPosition(const Vec2 &position);
 	virtual void setPosition(const Vec3 &position);
@@ -83,12 +83,12 @@ public:
 	virtual void setPositionY(float);
 	virtual void setPositionZ(float);
 
-	virtual const Vec3 &getPosition() const { return _position; }
+	virtual Vec3 getPosition() const { return _position; }
 
 	virtual void setSkewX(float skewX);
 	virtual void setSkewY(float skewY);
 
-	virtual const Vec2 &getSkew() const { return _skew; }
+	virtual Vec2 getSkew() const { return _skew; }
 
 	/**
 	 * Sets the anchor point in percent.
@@ -103,7 +103,7 @@ public:
 	 * @param anchorPoint   The anchor point of node.
 	 */
 	virtual void setAnchorPoint(const Vec2 &anchorPoint);
-	virtual const Vec2 &getAnchorPoint() const { return _anchorPoint; }
+	virtual Vec2 getAnchorPoint() const { return _anchorPoint; }
 
 	/**
 	 * Sets the untransformed size of the node.
@@ -114,7 +114,7 @@ public:
 	 * @param contentSize   The untransformed size of the node.
 	 */
 	virtual void setContentSize(const Size2 &contentSize);
-	virtual const Size2 &getContentSize() const { return _contentSize; }
+	virtual Size2 getContentSize() const { return _contentSize; }
 
 	virtual void setVisible(bool visible);
 	virtual bool isVisible() const { return _visible; }
@@ -124,8 +124,8 @@ public:
 	virtual void setRotation(const Quaternion &quat);
 
 	virtual float getRotation() const { return _rotation.z; }
-	virtual const Vec3 &getRotation3D() const { return _rotation; }
-	virtual const Quaternion &getRotationQuat() const { return _rotationQuat; }
+	virtual Vec3 getRotation3D() const { return _rotation; }
+	virtual Quaternion getRotationQuat() const { return _rotationQuat; }
 
 	template <typename N, typename... Args>
 	auto addChild(N *child, Args &&...args) -> N * {
@@ -145,7 +145,7 @@ public:
 
 	virtual Node *getChildByTag(uint64_t tag) const;
 
-	virtual const Vector<Rc<Node>> &getChildren() const { return _children; }
+	virtual SpanView<Rc<Node>> getChildren() const { return _children; }
 	virtual size_t getChildrenCount() const { return _children.size(); }
 
 	virtual void setParent(Node *parent);
@@ -241,13 +241,29 @@ public:
 
 	virtual bool isRunning() const { return _running; }
 
+	// Node was added to scene
 	virtual void handleEnter(Scene *);
+
+	// Node was removed from scene
 	virtual void handleExit();
 
+	// New ContentSize applied for the node
+	// There you can setup Node's appearance and layout it's subnodes
 	virtual void handleContentSizeDirty();
+
+	// New Transform applied for the node
+	// Node was repositioned or scaled within it's parent
 	virtual void handleTransformDirty(const Mat4 &);
+
+	// Node was repositioned or scaled within scene
+	// There global parameters (like pixel density) can be recalculated
 	virtual void handleGlobalTransformDirty(const Mat4 &);
+
+	// Children array was updated somehow
 	virtual void handleReorderChildDirty();
+
+	// Node should be positioned within parent
+	virtual void handleLayout(Node *);
 
 	virtual void cleanup();
 
@@ -314,6 +330,7 @@ public:
 	virtual void setContentSizeDirtyCallback(Function<void()> &&);
 	virtual void setTransformDirtyCallback(Function<void(const Mat4 &)> &&);
 	virtual void setReorderChildDirtyCallback(Function<void()> &&);
+	virtual void setLayoutCallback(Function<void(Node *)> &&);
 
 	float getInputDensity() const { return _inputDensity; }
 
@@ -407,6 +424,7 @@ protected:
 	Function<void()> _contentSizeDirtyCallback;
 	Function<void(const Mat4 &)> _transformDirtyCallback;
 	Function<void()> _reorderChildDirtyCallback;
+	Function<void(Node *)> _layoutCallback;
 
 	Vector<Rc<Component>> _components;
 

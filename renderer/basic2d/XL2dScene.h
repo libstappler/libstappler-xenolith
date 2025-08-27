@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +35,7 @@ class SP_PUBLIC Scene2d : public Scene {
 public:
 	class FpsDisplay;
 
-	virtual ~Scene2d() { }
+	virtual ~Scene2d() = default;
 
 	// create with default render queue
 	virtual bool init(NotNull<AppThread> app, NotNull<AppWindow>,

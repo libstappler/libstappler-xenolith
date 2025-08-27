@@ -160,6 +160,12 @@ void Context::performOnThread(Function<void()> &&func, Ref *target, bool immedia
 	_looper->performOnThread(sp::move(func), target, immediate, tag);
 }
 
+bool Context::isCursorSupported(WindowCursor cursor, bool serverSide) const {
+	return _controller->isCursorSupported(cursor, serverSide);
+}
+
+WindowCapabilities Context::getWindowCapabilities() const { return _controller->getCapabilities(); }
+
 Status Context::readFromClipboard(Function<void(Status, BytesView, StringView)> &&cb,
 		Function<StringView(SpanView<StringView>)> &&tcb, Ref *target) {
 	auto request = Rc<platform::ClipboardRequest>::create();
@@ -299,7 +305,6 @@ void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindo
 
 	thread->addListener(w, [w](const UpdateTime &, bool wakeup) {
 		if (wakeup) {
-			log::debug("Context", "wakeup app window");
 			w->setReadyForNextFrame();
 
 			// force display link to update views
@@ -321,13 +326,8 @@ void Context::handleAppWindowDestroyed(NotNull<AppThread> thread, NotNull<AppWin
 void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {
 	log::info("Context", "handleNativeWindowCreated");
 
-	if (w->isRootWindow()) {
-		SPASSERT(_rootWindow == nullptr, "There should be only one Root Window");
-		_rootWindow = w;
-	}
-
 	if (auto appWindow = makeAppWindow(w)) {
-		_rootWindow->setAppWindow(move(appWindow));
+		w->setAppWindow(move(appWindow));
 	} else {
 		log::error("Context", "Fail to create AppWindow for NativeWindow");
 	}
@@ -338,9 +338,6 @@ void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 	auto appWindow = w->getAppWindow();
 	if (appWindow) {
 		appWindow->close(true);
-		if (w->isRootWindow()) {
-			_rootWindow = nullptr;
-		}
 	}
 }
 
@@ -349,7 +346,7 @@ void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
 }
 
 void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w,
-		core::PresentationSwapchainFlags flags) {
+		core::UpdateConstraintsFlags flags) {
 	log::info("Context", "handleNativeWindowConstraintsChanged");
 
 	auto appWindow = w->getAppWindow();
@@ -432,19 +429,6 @@ void Context::handleWillStart() {
 void Context::handleDidStart() {
 	log::info("Context", "handleDidStart");
 	if (!_running) {
-		/*
-		addTokenCallback(this, [this](StringView str) {
-			_application->performOnAppThread([this, str = str.str<Interface>()]() mutable {
-				_application->updateMessageToken(BytesView(StringView(str)));
-			}, this);
-		});
-
-		addRemoteNotificationCallback(this, [this](const Value &val) {
-			_application->performOnAppThread([this, val = val]() mutable {
-				_application->receiveRemoteNotification(move(val));
-			}, this);
-		});*/
-
 		for (auto &it : _components) { it.second->handleStart(this); }
 
 		_application->run();
@@ -454,15 +438,46 @@ void Context::handleDidStart() {
 }
 
 void Context::handleNetworkStateChanged(NetworkFlags flags) {
+	for (auto &it : _components) { it.second->handleNetworkStateChanged(flags); }
+
 	if (_application) {
 		_application->handleNetworkStateChanged(flags);
 	}
 }
 
 void Context::handleThemeInfoChanged(const ThemeInfo &info) {
+	for (auto &it : _components) { it.second->handleThemeInfoChanged(info); }
+
 	if (_application) {
 		_application->handleThemeInfoChanged(info);
 	}
+}
+
+bool Context::configureWindow(NotNull<WindowInfo> w) {
+	auto caps = _controller->getCapabilities();
+
+	for (auto flag : sp::flags(w->flags)) {
+		switch (flag) {
+		case WindowCreationFlags::UserSpaceDecorations:
+			if (!hasFlag(caps, WindowCapabilities::UserSpaceDecorations)) {
+				log::warn("Context", "WindowCreationFlags::UserSpaceDecorations is not supported");
+				w->flags &= ~WindowCreationFlags::UserSpaceDecorations;
+			}
+			break;
+		case WindowCreationFlags::DirectOutput:
+			if (!hasFlag(caps, WindowCapabilities::DirectOutput)) {
+				log::warn("Context", "WindowCreationFlags::DirectOutput is not supported");
+				w->flags &= ~WindowCreationFlags::DirectOutput;
+			}
+			break;
+		case WindowCreationFlags::PreferServerSideDecoration: break;
+		case WindowCreationFlags::PreferNativeDecoration: break;
+		case WindowCreationFlags::PreferServerSideCursors: break;
+		default: break;
+		}
+	}
+
+	return true;
 }
 
 void Context::updateMessageToken(BytesView tok) {

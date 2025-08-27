@@ -23,11 +23,11 @@
 #ifndef XENOLITH_CORE_XLCOREMONITORINFO_H_
 #define XENOLITH_CORE_XLCOREMONITORINFO_H_
 
-#include "XLCoreInfo.h"
+#include "XLCoreInfo.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-enum class FullscreenFlags {
+enum class FullscreenFlags : uint32_t {
 	None,
 	Current = 1 << 0,
 	Exclusive = 1 << 1,

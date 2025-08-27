@@ -43,15 +43,18 @@ public:
 
 	virtual bool init(NotNull<Context>, ContextConfig &&);
 
-	virtual int run() override;
+	virtual int run(NotNull<ContextContainer>) override;
+
+	virtual bool isCursorSupported(WindowCursor, bool serverSide) const override;
+	virtual WindowCapabilities getCapabilities() const override;
 
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
 	WaylandDisplay *getWaylandDisplay() const { return _waylandDisplay; }
 
-	bool isInPoll() const { return _withinPoll; }
-
-	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>, bool liveResize) override;
-	virtual bool notifyWindowClosed(NotNull<NativeWindow>) override;
+	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>,
+			core::UpdateConstraintsFlags) override;
+	virtual bool notifyWindowClosed(NotNull<NativeWindow>,
+			WindowCloseOptions = WindowCloseOptions::CloseInPlace) override;
 
 	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
@@ -83,9 +86,8 @@ protected:
 	Rc<event::PollHandle> _xcbPollHandle;
 	Rc<event::PollHandle> _waylandPollHandle;
 
-	bool _withinPoll = false;
-	Vector<Pair<NativeWindow *, bool>> _resizedWindows;
-	Vector<NativeWindow *> _closedWindows;
+	Vector<Pair<NativeWindow *, core::UpdateConstraintsFlags>> _resizedWindows;
+	Vector<Pair<NativeWindow *, WindowCloseOptions>> _closedWindows;
 };
 
 } // namespace stappler::xenolith::platform

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +24,7 @@
 #ifndef XENOLITH_CORE_XLCOREINSTANCE_H_
 #define XENOLITH_CORE_XLCOREINSTANCE_H_
 
-#include "XLCore.h"
+#include "XLCore.h" // IWYU pragma: keep
 #include "SPDso.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
@@ -39,7 +40,7 @@ enum class InstanceApi {
 	Vulkan = 1,
 };
 
-enum class InstanceFlags {
+enum class InstanceFlags : uint32_t {
 	None = 0,
 	RenderDoc = 1 << 0,
 	Validation = 1 << 1, // try to enable validation layers

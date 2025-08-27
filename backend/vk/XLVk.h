@@ -27,7 +27,7 @@
 #ifndef XENOLITH_BACKEND_VK_XLVK_H_
 #define XENOLITH_BACKEND_VK_XLVK_H_
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 #include "XLCoreEnum.h"
 #include "XLCoreDescriptorInfo.h"
 #include "XLVkHeader.h"
@@ -63,8 +63,8 @@ SPUNUSED static  const char * const s_validationLayers[] = {
 // Для кадров с ошибками ожидать освобождения устройства (vkDeviceWaitIdle) при завершении
 #define XL_VK_FINALIZE_INVALID_FRAMES 0
 
-#include "XLVkConfig.h"
-#include "XLVkTable.h"
+#include "XLVkConfig.h" // IWYU pragma: keep
+#include "XLVkTable.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
@@ -139,6 +139,7 @@ enum class OptionalDeviceExtension {
 	GetMemoryRequirements2,
 	DedicatedAllocation,
 	ExternalFenceFd,
+	SwapchainMaintenance1,
 	Portability,
 	Max
 };
@@ -162,7 +163,7 @@ static const char * const s_optionalDeviceExtensions[] = {
 	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 	VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
 	VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
-	// VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME,
+	VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME,
 #if __APPLE__
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,8 @@
 #include "XL2dFrameContext.h"
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneLight.h"
+#include "XL2dWindowHeader.h"
+#include "XL2dScene.h" // IWYU pragma: keep
 #include "XLDirector.h"
 #include "XLAppWindow.h"
 #include "XLSceneContent.h"
@@ -45,6 +48,10 @@ bool SceneContent2d::init() {
 
 void SceneContent2d::handleEnter(Scene *scene) {
 	SceneContent::handleEnter(scene);
+
+	if (!_windowHeader && _windowHeaderContructor) {
+		_windowHeader = addChild(_windowHeaderContructor(this));
+	}
 
 	for (auto &it : _lights) { it->onEnter(scene); }
 }
@@ -618,6 +625,20 @@ void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 			ctx->lights.addDirectLight(it->getNormal(), it->getColor(), it->getData());
 			break;
 		}
+	}
+}
+
+void SceneContent2d::setWindowHeaderContructor(WindowHeaderCallback &&cb) {
+	_windowHeaderContructor = sp::move(cb);
+
+	if (_windowHeaderContructor) {
+		if (_windowHeader) {
+			_windowHeader->removeFromParent(true);
+			_windowHeader = nullptr;
+		}
+
+		_windowHeader = addChild(_windowHeaderContructor(this));
+		_contentSizeDirty = true; // to place header correctly
 	}
 }
 

@@ -37,7 +37,7 @@
 #include <wayland-client-protocol.h>
 
 #if MODULE_XENOLITH_BACKEND_VK
-#include "XLVkPresentationEngine.h"
+#include "XLVkPresentationEngine.h" // IWYU pragma: keep
 #endif
 
 #include <linux/input.h>
@@ -131,10 +131,6 @@ WaylandWindow::~WaylandWindow() {
 		_frameCallback = nullptr;
 	}
 
-	if (_controller && _isRootWindow) {
-		_viewController->handleRootWindowClosed();
-	}
-
 	if (_serverDecor) {
 		_wayland->zxdg_toplevel_decoration_v1_destroy(_serverDecor);
 		_serverDecor = nullptr;
@@ -165,22 +161,8 @@ WaylandWindow::~WaylandWindow() {
 WaylandWindow::WaylandWindow() { }
 
 bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
-		NotNull<const ContextInfo> content, NotNull<LinuxContextController> c, bool isRootWindow) {
-	auto caps = WindowCapabilities::Fullscreen;
-
-	if (display->wayland->hasDecor()) {
-		caps |= WindowCapabilities::NativeDecorations;
-	}
-
-	if (display->decorationManager) {
-		caps |= WindowCapabilities::ServerSideDecorations;
-	}
-
-	if (display->seat->cursorShape) {
-		caps |= WindowCapabilities::ServerSideCursors;
-	}
-
-	if (!NativeWindow::init(c, move(info), caps, isRootWindow)) {
+		NotNull<LinuxContextController> c) {
+	if (!NativeWindow::init(c, move(info), display->getCapabilities())) {
 		return false;
 	}
 
@@ -190,8 +172,8 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 
 	_currentExtent = Extent2(_info->rect.width, _info->rect.height);
 
-	if (hasFlag(caps, WindowCapabilities::ServerSideCursors)
-			&& hasFlag(_info->flags, WindowFlags::PreferServerSideCursors)) {
+	if (hasFlag(_info->capabilities, WindowCapabilities::ServerSideCursors)
+			&& hasFlag(_info->flags, WindowCreationFlags::PreferServerSideCursors)) {
 		_serverSideCursors = true;
 	}
 
@@ -200,8 +182,8 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 		_wayland->wl_surface_set_user_data(_surface, this);
 		_wayland->wl_surface_add_listener(_surface, &s_WaylandSurfaceListener, this);
 
-		if (hasFlag(caps, WindowCapabilities::ServerSideDecorations)
-				&& hasFlag(_info->flags, WindowFlags::PreferServerSideDecoration)) {
+		if (hasFlag(_info->capabilities, WindowCapabilities::ServerSideDecorations)
+				&& hasFlag(_info->flags, WindowCreationFlags::PreferServerSideDecoration)) {
 			// make server-size decorations
 
 			_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
@@ -224,8 +206,8 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 					_currentExtent.height);
 			_wayland->wl_surface_commit(_surface);
 			_display->flush();
-		} else if (hasFlag(caps, WindowCapabilities::NativeDecorations)
-				&& hasFlag(_info->flags, WindowFlags::PreferNativeDecoration)) {
+		} else if (hasFlag(_info->capabilities, WindowCapabilities::NativeDecorations)
+				&& hasFlag(_info->flags, WindowCreationFlags::PreferNativeDecoration)) {
 			// libdecor decorations
 			_clientDecor = _wayland->libdecor_decorate(_display->decor, _surface,
 					&s_libdecorFrameInterface, this);
@@ -330,7 +312,7 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 
 			auto pos = IVec2(0, 0);
 			auto extent = _commitedExtent;
-			if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen) && _serverDecor == nullptr) {
+			if (!hasFlag(_info->state, WindowState::Fullscreen) && _serverDecor == nullptr) {
 				extent.height += DecorInset + DecorOffset;
 				pos.y -= DecorInset + DecorOffset;
 			}
@@ -379,17 +361,20 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 }
 
 core::FrameConstraints WaylandWindow::exportConstraints(core::FrameConstraints &&c) const {
-	c.extent = _currentExtent;
-	if (c.density == 0.0f) {
-		c.density = 1.0f;
+	auto ret = NativeWindow::exportConstraints(sp::move(c));
+
+	ret.extent = _currentExtent;
+	if (ret.density == 0.0f) {
+		ret.density = 1.0f;
 	}
 	if (_density != 0.0f) {
-		c.density *= _density;
-		c.extent.width *= _density;
-		c.extent.height *= _density;
+		ret.density *= _density;
+		ret.extent.width *= _density;
+		ret.extent.height *= _density;
+		ret.surfaceDensity = _density;
 	}
-	c.frameInterval = 1'000'000'000 / _frameRate;
-	return move(c);
+	ret.frameInterval = 1'000'000'000 / _frameRate;
+	return move(ret);
 }
 
 core::SurfaceInfo WaylandWindow::getSurfaceOptions(core::SurfaceInfo &&info) const {
@@ -460,7 +445,7 @@ void WaylandWindow::handleSurfaceConfigure(xdg_surface *surface, uint32_t serial
 
 	if (_configureSerial == 0 && _xdgSurface) {
 		// initial config
-		if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 			if (!_decors.empty() && _xdgSurface) {
 				configureDecorations(_currentExtent);
 				_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, -DecorInset - DecorOffset,
@@ -477,137 +462,104 @@ void WaylandWindow::handleSurfaceConfigure(xdg_surface *surface, uint32_t serial
 void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t width,
 		int32_t height, wl_array *states) {
 
-	using StateFlags = NativeWindowStateFlags;
-
 	StringStream stream;
 	stream << "handleToplevelConfigure: width: " << width << ", height: " << height << ";";
 
 	bool hasModeSwitch = false;
 
 	if (states) {
-		auto oldState = _state;
-		_state = StateFlags::None;
+		WindowState state = WindowState::None;
 
 		for (uint32_t *it = (uint32_t *)states->data;
 				(const char *)it < ((const char *)states->data + states->size); ++it) {
 			switch (*it) {
-			case XDG_TOPLEVEL_STATE_MAXIMIZED:
-				_state |= StateFlags::Maximized;
-				stream << " MAXIMIZED;";
-				break;
-			case XDG_TOPLEVEL_STATE_FULLSCREEN:
-				_state |= StateFlags::Fullscreen;
-				stream << " FULLSCREEN;";
-				break;
-			case XDG_TOPLEVEL_STATE_RESIZING:
-				_state |= StateFlags::Resizing;
-				stream << " RESIZING;";
-				break;
-			case XDG_TOPLEVEL_STATE_ACTIVATED:
-				_state |= StateFlags::Focused;
-				stream << " ACTIVATED;";
-				break;
-			case XDG_TOPLEVEL_STATE_TILED_LEFT:
-				_state |= StateFlags::TiledLeft;
-				stream << " TILED_LEFT;";
-				break;
-			case XDG_TOPLEVEL_STATE_TILED_RIGHT:
-				_state |= StateFlags::TiledRight;
-				stream << " TILED_RIGHT;";
-				break;
-			case XDG_TOPLEVEL_STATE_TILED_TOP:
-				_state |= StateFlags::TiledTop;
-				stream << " TILED_TOP;";
-				break;
-			case XDG_TOPLEVEL_STATE_TILED_BOTTOM:
-				_state |= StateFlags::TiledBottom;
-				stream << " TILED_BOTTOM;";
-			case XDG_TOPLEVEL_STATE_SUSPENDED:
-				_state |= StateFlags::Hidden;
-				stream << " TILED_SUSPENDED;";
-				break;
-			case XDG_TOPLEVEL_STATE_CONSTRAINED_LEFT:
-				_state |= StateFlags::ConstrainedLeft;
-				stream << " CONSTRAINED_LEFT;";
-				break;
+			case XDG_TOPLEVEL_STATE_MAXIMIZED: state |= WindowState::Maximized; break;
+			case XDG_TOPLEVEL_STATE_FULLSCREEN: state |= WindowState::Fullscreen; break;
+			case XDG_TOPLEVEL_STATE_RESIZING: state |= WindowState::Resizing; break;
+			case XDG_TOPLEVEL_STATE_ACTIVATED: state |= WindowState::Focused; break;
+			case XDG_TOPLEVEL_STATE_TILED_LEFT: state |= WindowState::TiledLeft; break;
+			case XDG_TOPLEVEL_STATE_TILED_RIGHT: state |= WindowState::TiledRight; break;
+			case XDG_TOPLEVEL_STATE_TILED_TOP: state |= WindowState::TiledTop; break;
+			case XDG_TOPLEVEL_STATE_TILED_BOTTOM: state |= WindowState::TiledBottom;
+			case XDG_TOPLEVEL_STATE_SUSPENDED: state |= WindowState::Minimized; break;
+			case XDG_TOPLEVEL_STATE_CONSTRAINED_LEFT: state |= WindowState::ConstrainedLeft; break;
 			case XDG_TOPLEVEL_STATE_CONSTRAINED_RIGHT:
-				_state |= StateFlags::ConstrainedRight;
-				stream << " CONSTRAINED_RIGHT;";
+				state |= WindowState::ConstrainedRight;
 				break;
-			case XDG_TOPLEVEL_STATE_CONSTRAINED_TOP:
-				_state |= StateFlags::ConstrainedTop;
-				stream << " CONSTRAINED_TOP;";
-				break;
+			case XDG_TOPLEVEL_STATE_CONSTRAINED_TOP: state |= WindowState::ConstrainedTop; break;
 			case XDG_TOPLEVEL_STATE_CONSTRAINED_BOTTOM:
-				_state |= StateFlags::ConstrainedBottom;
-				stream << " CONSTRAINED_BOTTOM;";
+				state |= WindowState::ConstrainedBottom;
 				break;
 			}
 		}
-		if (hasFlag(_state, StateFlags::Maximized) != hasFlag(oldState, StateFlags::Maximized)) {
+
+		if (hasFlag(state, WindowState::Maximized)
+				!= hasFlag(_info->state, WindowState::Maximized)) {
 			hasModeSwitch = true;
 		}
 
-		if (hasFlag(_state, StateFlags::Focused) != hasFlag(oldState, StateFlags::Focused)) {
-			_pendingEvents.emplace_back(core::InputEventData::BoolEvent(
-					core::InputEventName::FocusGain, hasFlag(_state, StateFlags::Focused)));
+		if (hasFlag(state, WindowState::Focused) != hasFlag(_info->state, WindowState::Focused)) {
 			hasModeSwitch = true;
 		}
 
-		if (hasFlag(_state, StateFlags::Fullscreen) != hasFlag(oldState, StateFlags::Fullscreen)) {
-			_pendingEvents.emplace_back(core::InputEventData::BoolEvent(
-					core::InputEventName::Fullscreen, hasFlag(_state, StateFlags::Fullscreen)));
+		if (hasFlag(state, WindowState::Fullscreen)
+				!= hasFlag(_info->state, WindowState::Fullscreen)) {
 			hasModeSwitch = true;
 		}
+
+		updateState(0, state);
 	}
 
 	auto checkVisible = [&, this](WaylandDecorationName name) {
 		switch (name) {
 		case WaylandDecorationName::RightSide:
-			if (hasFlag(_state,
-						StateFlags::Maximized | StateFlags::Fullscreen | StateFlags::TiledRight)) {
+			if (hasFlag(_info->state,
+						WindowState::Maximized | WindowState::Fullscreen
+								| WindowState::TiledRight)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::TopRightCorner:
-			if (hasFlag(_state, StateFlags::Maximized | StateFlags::Fullscreen)
-					|| hasFlagAll(_state, StateFlags::TiledTopRight)) {
+			if (hasFlag(_info->state, WindowState::Maximized | WindowState::Fullscreen)
+					|| hasFlagAll(_info->state, WindowState::TiledTopRight)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::TopSide:
-			if (hasFlag(_state,
-						StateFlags::Maximized | StateFlags::Fullscreen | StateFlags::TiledTop)) {
+			if (hasFlag(_info->state,
+						WindowState::Maximized | WindowState::Fullscreen | WindowState::TiledTop)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::TopLeftCorner:
-			if (hasFlag(_state, StateFlags::Maximized | StateFlags::Fullscreen)
-					|| hasFlagAll(_state, StateFlags::TiledTopLeft)) {
+			if (hasFlag(_info->state, WindowState::Maximized | WindowState::Fullscreen)
+					|| hasFlagAll(_info->state, WindowState::TiledTopLeft)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::BottomRightCorner:
-			if (hasFlag(_state, StateFlags::Maximized | StateFlags::Fullscreen)
-					|| hasFlagAll(_state, StateFlags::TiledBottomRight)) {
+			if (hasFlag(_info->state, WindowState::Maximized | WindowState::Fullscreen)
+					|| hasFlagAll(_info->state, WindowState::TiledBottomRight)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::BottomSide:
-			if (hasFlag(_state,
-						StateFlags::Maximized | StateFlags::Fullscreen | StateFlags::TiledBottom)) {
+			if (hasFlag(_info->state,
+						WindowState::Maximized | WindowState::Fullscreen
+								| WindowState::TiledBottom)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::BottomLeftCorner:
-			if (hasFlag(_state, StateFlags::Maximized | StateFlags::Fullscreen)
-					|| hasFlagAll(_state, StateFlags::TiledBottomLeft)) {
+			if (hasFlag(_info->state, WindowState::Maximized | WindowState::Fullscreen)
+					|| hasFlagAll(_info->state, WindowState::TiledBottomLeft)) {
 				return false;
 			}
 			break;
 		case WaylandDecorationName::LeftSide:
-			if (hasFlag(_state,
-						StateFlags::Maximized | StateFlags::Fullscreen | StateFlags::TiledLeft)) {
+			if (hasFlag(_info->state,
+						WindowState::Maximized | WindowState::Fullscreen
+								| WindowState::TiledLeft)) {
 				return false;
 			}
 			break;
@@ -615,7 +567,7 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 		case WaylandDecorationName::HeaderRight:
 		case WaylandDecorationName::HeaderCenter:
 		case WaylandDecorationName::HeaderBottom:
-			if (hasFlag(_state, StateFlags::Fullscreen)) {
+			if (hasFlag(_info->state, WindowState::Fullscreen)) {
 				return false;
 			}
 			break;
@@ -626,14 +578,13 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 	};
 
 	for (auto &it : _decors) {
-		it->setActive(hasFlag(_state, NativeWindowStateFlags::Focused));
+		it->setActive(hasFlag(_info->state, WindowState::Focused));
 		it->setVisible(checkVisible(it->name));
 	}
 
 	if (width && height) {
 		// only for
-		if (!_clientDecor && !_serverDecor
-				&& !hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (!_clientDecor && !_serverDecor && !hasFlag(_info->state, WindowState::Fullscreen)) {
 			height -= (DecorInset + DecorOffset);
 		}
 
@@ -648,7 +599,8 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 					_awaitingExtent = Extent2(0, 0);
 				}
 
-				_controller->notifyWindowConstraintsChanged(this, true);
+				_controller->notifyWindowConstraintsChanged(this,
+						core::UpdateConstraintsFlags::DeprecateSwapchain);
 
 				stream << "surface: " << _currentExtent.width << " " << _currentExtent.height;
 			} else {
@@ -712,8 +664,6 @@ void WaylandWindow::handleSurfaceFrameDone(wl_callback *frame, uint32_t data) {
 void WaylandWindow::handleDecorConfigure(libdecor_frame *frame,
 		libdecor_configuration *configuration) {
 
-	using StateFlags = NativeWindowStateFlags;
-
 	int width = 0, height = 0;
 	_wayland->libdecor_configuration_get_content_size(configuration, frame, &width, &height);
 
@@ -722,50 +672,35 @@ void WaylandWindow::handleDecorConfigure(libdecor_frame *frame,
 
 	libdecor_window_state wstate = LIBDECOR_WINDOW_STATE_NONE;
 	if (_wayland->libdecor_configuration_get_window_state(configuration, &wstate)) {
-		auto oldState = _state;
-		_state = StateFlags::None;
+		WindowState state = WindowState::None;
 
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_ACTIVE)) {
-			_state |= StateFlags::Focused;
-			stream << " ACTIVATED;";
+			state |= WindowState::Focused;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_MAXIMIZED)) {
-			_state |= StateFlags::Maximized;
-			stream << " MAXIMIZED;";
+			state |= WindowState::Maximized;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_FULLSCREEN)) {
-			_state |= StateFlags::Fullscreen;
-			stream << " FULLSCREEN;";
+			state |= WindowState::Fullscreen;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_TILED_LEFT)) {
-			_state |= StateFlags::TiledLeft;
-			stream << " TILED_LEFT;";
+			state |= WindowState::TiledLeft;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_TILED_RIGHT)) {
-			_state |= StateFlags::TiledRight;
-			stream << " TILED_RIGHT;";
+			state |= WindowState::TiledRight;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_TILED_TOP)) {
-			_state |= StateFlags::TiledTop;
-			stream << " TILED_TOP;";
+			state |= WindowState::TiledTop;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_TILED_BOTTOM)) {
-			_state |= StateFlags::TiledBottom;
-			stream << " TILED_BOTTOM;";
+			state |= WindowState::TiledBottom;
 		}
 		if (hasFlag(wstate, LIBDECOR_WINDOW_STATE_SUSPENDED)) {
-			_state |= StateFlags::Hidden;
-			stream << " SUSPENDED;";
+			state |= WindowState::Minimized;
 		}
 
-		if (hasFlag(_state, StateFlags::Focused) != hasFlag(oldState, StateFlags::Focused)) {
-			_pendingEvents.emplace_back(core::InputEventData::BoolEvent(
-					core::InputEventName::FocusGain, hasFlag(_state, StateFlags::Focused)));
-		}
-
-		if (hasFlag(_state, StateFlags::Fullscreen) != hasFlag(oldState, StateFlags::Fullscreen)) {
-			_pendingEvents.emplace_back(core::InputEventData::BoolEvent(
-					core::InputEventName::Fullscreen, hasFlag(_state, StateFlags::Fullscreen)));
+		if (state != _info->state) {
+			updateState(0, state);
 		}
 	}
 
@@ -781,7 +716,8 @@ void WaylandWindow::handleDecorConfigure(libdecor_frame *frame,
 				|| _currentExtent.height != static_cast<uint32_t>(height)) {
 			_currentExtent.width = static_cast<uint32_t>(width);
 			_currentExtent.height = static_cast<uint32_t>(height);
-			_controller->notifyWindowConstraintsChanged(this, true);
+			_controller->notifyWindowConstraintsChanged(this,
+					core::UpdateConstraintsFlags::DeprecateSwapchain);
 
 			stream << "surface: " << _currentExtent.width << " " << _currentExtent.height;
 		}
@@ -818,9 +754,20 @@ void WaylandWindow::handlePointerEnter(wl_fixed_t surface_x, wl_fixed_t surface_
 		_surfaceX = wl_fixed_to_double(surface_x) * d;
 		_surfaceY = _currentExtent.height * d - wl_fixed_to_double(surface_y) * d;
 
-		_pendingEvents.emplace_back(
-				core::InputEventData::BoolEvent(core::InputEventName::PointerEnter, true,
-						Vec2(float(_surfaceX), float(_surfaceY))));
+		updateState(0, _info->state | WindowState::Pointer);
+
+		core::InputEventData event({
+			maxOf<uint32_t>(),
+			core::InputEventName::MouseMove,
+			{{
+				core::InputMouseButton::None,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		});
+
+		_pendingEvents.emplace_back(event);
 	}
 
 	XL_WAYLAND_LOG("handlePointerEnter: x: ", wl_fixed_to_int(surface_x),
@@ -836,8 +783,7 @@ void WaylandWindow::handlePointerLeave() {
 	}
 
 	handlePointerFrame(); // drop pending events
-	_pendingEvents.emplace_back(core::InputEventData::BoolEvent(core::InputEventName::PointerEnter,
-			false, Vec2(float(_surfaceX), float(_surfaceY))));
+	updateState(0, _info->state & ~WindowState::Pointer);
 }
 
 void WaylandWindow::handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
@@ -864,9 +810,16 @@ void WaylandWindow::handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_
 			_surfaceX *= _density;
 		}
 
-		_pendingEvents.emplace_back(core::InputEventData(
-				{maxOf<uint32_t>(), core::InputEventName::MouseMove, core::InputMouseButton::None,
-					_activeModifiers, float(_surfaceX), float(_surfaceY)}));
+		_pendingEvents.emplace_back(core::InputEventData({
+			maxOf<uint32_t>(),
+			core::InputEventName::MouseMove,
+			{{
+				core::InputMouseButton::None,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		}));
 	}
 }
 
@@ -896,10 +849,17 @@ void WaylandWindow::handlePointerButton(uint32_t serial, uint32_t time, uint32_t
 		ev.button.button = button;
 		ev.button.state = state;
 	} else {
-		_pendingEvents.emplace_back(core::InputEventData({button,
+		_pendingEvents.emplace_back(core::InputEventData({
+			button,
 			((state == WL_POINTER_BUTTON_STATE_PRESSED) ? core::InputEventName::Begin
 														: core::InputEventName::End),
-			getButton(button), _activeModifiers, float(_surfaceX), float(_surfaceY)}));
+			{{
+				getButton(button),
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		}));
 	}
 }
 
@@ -934,8 +894,16 @@ void WaylandWindow::handlePointerAxis(uint32_t time, uint32_t axis, float val) {
 			break;
 		}
 
-		core::InputEventData event({toInt(btn), core::InputEventName::Scroll, btn, _activeModifiers,
-			float(_surfaceX), float(_surfaceY)});
+		core::InputEventData event({
+			toInt(btn),
+			core::InputEventName::Scroll,
+			{{
+				btn,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		});
 
 		switch (axis) {
 		case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
@@ -1029,8 +997,18 @@ void WaylandWindow::handlePointerFrame() {
 			x = wl_fixed_to_double(it.enter.x) * d;
 			y = height - wl_fixed_to_double(it.enter.y) * d;
 
-			_pendingEvents.emplace_back(core::InputEventData::BoolEvent(
-					core::InputEventName::PointerEnter, true, Vec2(float(x), float(y))));
+			updateState(0, _info->state | WindowState::Pointer);
+
+			_pendingEvents.emplace_back(core::InputEventData({
+				maxOf<uint32_t>(),
+				core::InputEventName::MouseMove,
+				{{
+					core::InputMouseButton::None,
+					_activeModifiers,
+					static_cast<float>(x),
+					static_cast<float>(y),
+				}},
+			}));
 			break;
 		case PointerEvent::Leave: break;
 		case PointerEvent::Motion:
@@ -1072,15 +1050,29 @@ void WaylandWindow::handlePointerFrame() {
 		_surfaceX = x;
 		_surfaceY = y;
 
-		_pendingEvents.emplace_back(core::InputEventData(
-				{maxOf<uint32_t>(), core::InputEventName::MouseMove, core::InputMouseButton::None,
-					_activeModifiers, float(_surfaceX), float(_surfaceY)}));
+		_pendingEvents.emplace_back(core::InputEventData({
+			maxOf<uint32_t>(),
+			core::InputEventName::MouseMove,
+			{{
+				core::InputMouseButton::None,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		}));
 	}
 
 	if (hasAxis) {
-		auto &event = _pendingEvents.emplace_back(
-				core::InputEventData({axisSource, core::InputEventName::Scroll, axisBtn,
-					_activeModifiers, float(_surfaceX), float(height - _surfaceY)}));
+		auto &event = _pendingEvents.emplace_back(core::InputEventData({
+			axisSource,
+			core::InputEventName::Scroll,
+			{{
+				axisBtn,
+				_activeModifiers,
+				float(_surfaceX),
+				float(height - _surfaceY),
+			}},
+		}));
 
 		event.point.valueX = float(axisX);
 		event.point.valueY = float(axisY);
@@ -1091,18 +1083,20 @@ void WaylandWindow::handlePointerFrame() {
 		switch (it.event) {
 		case PointerEvent::None: break;
 		case PointerEvent::Enter: break;
-		case PointerEvent::Leave:
-			_pendingEvents.emplace_back(
-					core::InputEventData::BoolEvent(core::InputEventName::PointerEnter, false,
-							Vec2(float(_surfaceX), float(_surfaceY))));
-			break;
+		case PointerEvent::Leave: updateState(0, _info->state & ~WindowState::Pointer); break;
 		case PointerEvent::Motion: break;
 		case PointerEvent::Button:
-			_pendingEvents.emplace_back(core::InputEventData({it.button.button,
+			_pendingEvents.emplace_back(core::InputEventData({
+				it.button.button,
 				((it.button.state == WL_POINTER_BUTTON_STATE_PRESSED) ? core::InputEventName::Begin
 																	  : core::InputEventName::End),
-				getButton(it.button.button), _activeModifiers, float(_surfaceX),
-				float(_surfaceY)}));
+				{{
+					getButton(it.button.button),
+					_activeModifiers,
+					float(_surfaceX),
+					float(_surfaceY),
+				}},
+			}));
 			break;
 		case PointerEvent::Axis: break;
 		case PointerEvent::AxisSource: break;
@@ -1127,8 +1121,16 @@ void WaylandWindow::handleKeyboardEnter(Vector<uint32_t> &&keys, uint32_t depres
 void WaylandWindow::handleKeyboardLeave() {
 	uint32_t n = 1;
 	for (auto &it : _keys) {
-		core::InputEventData event({n, core::InputEventName::KeyCanceled,
-			core::InputMouseButton::None, _activeModifiers, float(_surfaceX), float(_surfaceY)});
+		core::InputEventData event({
+			n,
+			core::InputEventName::KeyCanceled,
+			{{
+				core::InputMouseButton::None,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		});
 
 		event.key.keycode = _display->seat->translateKey(it.second.scancode);
 		event.key.keysym = it.second.scancode;
@@ -1141,10 +1143,17 @@ void WaylandWindow::handleKeyboardLeave() {
 }
 
 void WaylandWindow::handleKey(uint32_t time, uint32_t scancode, uint32_t state) {
-	core::InputEventData event({time,
+	core::InputEventData event({
+		time,
 		(state == WL_KEYBOARD_KEY_STATE_PRESSED) ? core::InputEventName::KeyPressed
 												 : core::InputEventName::KeyReleased,
-		core::InputMouseButton::None, _activeModifiers, float(_surfaceX), float(_surfaceY)});
+		{{
+			core::InputMouseButton::None,
+			_activeModifiers,
+			float(_surfaceX),
+			float(_surfaceY),
+		}},
+	});
 
 	event.key.keycode = _display->seat->translateKey(scancode);
 	event.key.compose = core::InputKeyComposeState::Nothing;
@@ -1237,8 +1246,16 @@ void WaylandWindow::handleKeyModifiers(uint32_t depressed, uint32_t latched, uin
 void WaylandWindow::handleKeyRepeat() {
 	Vector<core::InputEventData> events;
 	auto spawnRepeatEvent = [&, this](const KeyData &it) {
-		core::InputEventData event({uint32_t(events.size() + 1), core::InputEventName::KeyRepeated,
-			core::InputMouseButton::None, _activeModifiers, float(_surfaceX), float(_surfaceY)});
+		core::InputEventData event({
+			uint32_t(events.size() + 1),
+			core::InputEventName::KeyRepeated,
+			{{
+				core::InputMouseButton::None,
+				_activeModifiers,
+				float(_surfaceX),
+				float(_surfaceY),
+			}},
+		});
 
 		event.key.keycode = _display->seat->translateKey(it.scancode);
 		event.key.keysym = it.scancode;
@@ -1280,7 +1297,7 @@ void WaylandWindow::notifyScreenChange() {
 
 	_pendingEvents.emplace_back(event);
 
-	if (!_controller.get_cast<LinuxContextController>()->isInPoll()) {
+	if (!_controller.get_cast<LinuxContextController>()->isWithinPoll()) {
 		dispatchPendingEvents();
 	}
 }
@@ -1297,7 +1314,7 @@ void WaylandWindow::motifyThemeChanged(const ThemeInfo &theme) {
 void WaylandWindow::handleDecorationPress(WaylandDecoration *decor, uint32_t serial, uint32_t btn,
 		bool released) {
 	auto switchMaximized = [&, this] {
-		if (!hasFlag(_state, NativeWindowStateFlags::Maximized)) {
+		if (!hasFlag(_info->state, WindowState::Maximized)) {
 			_wayland->xdg_toplevel_set_maximized(_toplevel);
 			_iconMaximized->setAlternative(true);
 		} else {
@@ -1332,19 +1349,15 @@ void WaylandWindow::handleDecorationPress(WaylandDecoration *decor, uint32_t ser
 	}
 	uint32_t edges = 0;
 	switch (decor->image) {
-	case WindowLayerFlags::CursorResizeRight: edges = XDG_TOPLEVEL_RESIZE_EDGE_RIGHT; break;
-	case WindowLayerFlags::CursorResizeTopRight: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP_RIGHT; break;
-	case WindowLayerFlags::CursorResizeTop: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP; break;
-	case WindowLayerFlags::CursorResizeTopLeft: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT; break;
-	case WindowLayerFlags::CursorResizeBottomRight:
-		edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT;
-		break;
-	case WindowLayerFlags::CursorResizeBottom: edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM; break;
-	case WindowLayerFlags::CursorResizeBottomLeft:
-		edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_LEFT;
-		break;
-	case WindowLayerFlags::CursorResizeLeft: edges = XDG_TOPLEVEL_RESIZE_EDGE_LEFT; break;
-	case WindowLayerFlags::CursorDefault:
+	case WindowCursor::ResizeRight: edges = XDG_TOPLEVEL_RESIZE_EDGE_RIGHT; break;
+	case WindowCursor::ResizeTopRight: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP_RIGHT; break;
+	case WindowCursor::ResizeTop: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP; break;
+	case WindowCursor::ResizeTopLeft: edges = XDG_TOPLEVEL_RESIZE_EDGE_TOP_LEFT; break;
+	case WindowCursor::ResizeBottomRight: edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT; break;
+	case WindowCursor::ResizeBottom: edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM; break;
+	case WindowCursor::ResizeBottomLeft: edges = XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_LEFT; break;
+	case WindowCursor::ResizeLeft: edges = XDG_TOPLEVEL_RESIZE_EDGE_LEFT; break;
+	case WindowCursor::Default:
 		if (released) {
 			switchMaximized();
 			emitAppFrame();
@@ -1367,7 +1380,7 @@ void WaylandWindow::setPreferredScale(int32_t scale) {
 	if (_density != float(scale)) {
 		_density = float(scale);
 		_wayland->wl_surface_set_buffer_scale(_surface, scale);
-		_controller->notifyWindowConstraintsChanged(this, false);
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 	}
 }
 
@@ -1399,12 +1412,11 @@ void WaylandWindow::dispatchPendingEvents() {
 	}
 }
 
-WindowLayerFlags WaylandWindow::getCursor() const {
-	auto layerCursor = _layerFlags & WindowLayerFlags::CursorMask;
-	if (layerCursor == WindowLayerFlags::None) {
-		return WindowLayerFlags::CursorDefault;
+WindowCursor WaylandWindow::getCursor() const {
+	if (_layerFlags == WindowCursor::Undefined) {
+		return WindowCursor::Default;
 	}
-	return layerCursor;
+	return _layerFlags;
 }
 
 bool WaylandWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
@@ -1483,7 +1495,7 @@ void WaylandWindow::createDecorations() {
 Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 	auto enable = info != FullscreenInfo::None;
 	if (!enable) {
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			if (_toplevel) {
 				_wayland->xdg_toplevel_unset_fullscreen(_toplevel);
 			} else if (_clientDecor) {
@@ -1496,7 +1508,7 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 		}
 	} else {
 		if (info == FullscreenInfo::Current) {
-			if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 				auto current = (*_activeOutputs.begin());
 				if (_toplevel) {
 					_wayland->xdg_toplevel_set_fullscreen(_toplevel, current->output);
@@ -1524,7 +1536,7 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 		}
 
 		// find target output
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			if (_toplevel) {
 				_wayland->xdg_toplevel_unset_fullscreen(_toplevel);
 			} else if (_clientDecor) {
@@ -1544,17 +1556,6 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 			}
 		}
 		return Status::ErrorInvalidArguemnt;
-	}
-}
-
-void WaylandWindow::emitAppFrame() {
-	if (_appWindow) {
-		_appWindow->setReadyForNextFrame();
-
-		// we do not wait for the DisplayLink, but app window does, emit it
-		if (!_frameCallback) {
-			_appWindow->update(core::PresentationUpdateFlags::DisplayLink);
-		}
 	}
 }
 

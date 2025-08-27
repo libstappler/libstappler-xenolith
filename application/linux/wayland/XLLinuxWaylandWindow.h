@@ -100,8 +100,7 @@ public:
 
 	WaylandWindow();
 
-	bool init(NotNull<WaylandDisplay>, Rc<WindowInfo> &&, NotNull<const ContextInfo>,
-			NotNull<LinuxContextController>, bool isRootWindow);
+	bool init(NotNull<WaylandDisplay>, Rc<WindowInfo> &&, NotNull<LinuxContextController>);
 
 	virtual void mapWindow() override;
 	virtual void unmapWindow() override;
@@ -165,9 +164,9 @@ public:
 	void setPreferredScale(int32_t);
 	void setPreferredTransform(uint32_t);
 
-	void dispatchPendingEvents();
+	virtual void dispatchPendingEvents() override;
 
-	WindowLayerFlags getCursor() const;
+	WindowCursor getCursor() const;
 	bool isServerSideCursors() const { return _serverSideCursors; }
 
 protected:
@@ -180,7 +179,6 @@ protected:
 
 	virtual Status setFullscreenState(FullscreenInfo &&) override;
 
-	void emitAppFrame();
 	bool configureDecorations(Extent2 extent);
 
 	Rc<WaylandDisplay> _display;
@@ -230,8 +228,7 @@ protected:
 	};
 
 	Map<uint32_t, KeyData> _keys;
-	Vector<core::InputEventData> _pendingEvents;
-	WindowLayerFlags _layerFlags = WindowLayerFlags::None;
+	WindowCursor _layerFlags = WindowCursor::Undefined;
 };
 
 

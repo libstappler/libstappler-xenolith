@@ -30,15 +30,17 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 NativeWindow::~NativeWindow() {
+	if (_controller && _allocated) {
+		_controller->notifyWindowDeallocated(this);
+	}
 	if (_appWindow) {
 		_appWindow = nullptr;
 	}
 }
 
 bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
-		WindowCapabilities caps, bool isRootWindow) {
+		WindowCapabilities caps) {
 	_controller = c;
-	_isRootWindow = isRootWindow;
 	_info = move(info);
 	_info->capabilities = caps;
 	_textInput = Rc<TextInputProcessor>::create(core::TextInputInfo{
@@ -49,25 +51,32 @@ bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 	},
 		.cancel = [this]() { cancelTextInput(); },
 	});
+
+	_controller->notifyWindowAllocated(this);
+	_allocated = true;
+
 	return true;
 }
 
-void NativeWindow::handleLayerUpdate(const WindowLayer &layer) { _currentLayer = layer; }
+core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&c) const {
+	if (hasFlag(_info->state, WindowState::Fullscreen)) {
+		c.borderRadius = 0.0f;
+		c.shadowRadius = 0.0f;
+		c.shadowValue = 0.0f;
+		c.shadowOffset = Vec2(0.0f, 0.0f);
+	} else {
+		c.borderRadius = _info->userDecorations.borderRadius;
+		c.shadowRadius = _info->userDecorations.shadowWidth;
+		c.shadowValue = _info->userDecorations.shadowCurrentValue;
+		c.shadowOffset = _info->userDecorations.shadowOffset;
+		c.viewConstraints = core::getViewConstraints(_info->state);
+	}
+	return move(c);
+}
 
 void NativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->run(req); }
 
 void NativeWindow::releaseTextInput() { _textInput->cancel(); }
-
-bool NativeWindow::findLayers(Vec2 pt, const Callback<bool(const WindowLayer &)> &cb) const {
-	for (auto &it : _layers) {
-		if (it.rect.containsPoint(pt)) {
-			if (!cb(it)) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
 
 void NativeWindow::setAppWindow(Rc<AppWindow> &&w) {
 	_appWindow = move(w);
@@ -80,9 +89,16 @@ void NativeWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	if (_layers != layers) {
 		_layers = sp::move(layers);
 		if (_handleLayerForMotion) {
-			handleMotionEvent(
-					InputEventData{0, InputEventName::MouseMove, core::InputMouseButton::None,
-						core::InputModifier::None, _layerLocation.x, _layerLocation.y});
+			handleMotionEvent(InputEventData{
+				0,
+				InputEventName::MouseMove,
+				{{
+					core::InputMouseButton::None,
+					core::InputModifier::None,
+					_layerLocation.x,
+					_layerLocation.y,
+				}},
+			});
 		}
 	}
 }
@@ -115,14 +131,14 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 		dcm->restoreMode(nullptr, this);
 
 		// remove fullscreen state
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			cb(setFullscreenState(sp::move(info)));
 		} else {
 			// not in fullsreen
 			cb(Status::Declined);
 		}
 	} else if (info == FullscreenInfo::Current) {
-		if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 			cb(setFullscreenState(sp::move(info)));
 		} else {
 			cb(Status::Declined);
@@ -147,7 +163,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 		info.id = mon->id;
 		info.mode = m->mode;
 
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			// we already in fullscreen mode
 			if (_info->fullscreen.id != info.id) {
 				// switch monitor
@@ -268,63 +284,78 @@ void NativeWindow::handleInputEvents(Vector<InputEventData> &&events) {
 	_controller->notifyWindowInputEvents(this, sp::move(events));
 }
 
+void NativeWindow::dispatchPendingEvents() {
+	if (!_pendingEvents.empty()) {
+		handleInputEvents(sp::move(_pendingEvents));
+	}
+	_pendingEvents.clear();
+}
+
 void NativeWindow::handleMotionEvent(const InputEventData &event) {
 	if (_handleLayerForMotion) {
-		_layerLocation = Vec2(event.x, event.y);
-		if (!findLayers(_layerLocation, [this](const WindowLayer &layer) {
-			if (layer != _currentLayer) {
-				handleLayerUpdate(layer);
+		_layerLocation = event.getLocation();
+
+		auto it = _currentLayers.begin();
+		while (it != _currentLayers.end()) {
+			if (!it->rect.containsPoint(_layerLocation)) {
+				auto l = *it;
+				it = _currentLayers.erase(it);
+				handleLayerExit(l);
+			} else {
+				++it;
 			}
-			return false;
-		})) {
-			if (WindowLayer() != _currentLayer) {
-				handleLayerUpdate(WindowLayer());
+		}
+
+		for (auto &it : _layers) {
+			if (it.rect.containsPoint(_layerLocation)) {
+				bool found = false;
+				for (auto &cit : _currentLayers) {
+					if (cit == it) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					handleLayerEnter(_currentLayers.emplace_back(it));
+				}
 			}
 		}
 	}
 }
 
-const CallbackStream &operator<<(const CallbackStream &out, NativeWindowStateFlags flags) {
-	if (hasFlag(flags, NativeWindowStateFlags::Modal)) {
-		out << " Modal";
+void NativeWindow::emitAppFrame() {
+	if (_appWindow) {
+		_appWindow->setReadyForNextFrame();
+		_appWindow->update(core::PresentationUpdateFlags::DisplayLink);
 	}
-	if (hasFlag(flags, NativeWindowStateFlags::Sticky)) {
-		out << " Sticky";
+}
+
+void NativeWindow::updateState(uint32_t id, WindowState state) {
+	auto changes = state ^ _info->state;
+
+	_info->state = state;
+	// try to rewrite state in already pending event
+	for (auto &it : _pendingEvents) {
+		if (it.event == core::InputEventName::WindowState) {
+			it.window.state = state;
+			it.window.changes |= changes;
+			return;
+		}
 	}
-	if (hasFlag(flags, NativeWindowStateFlags::MaximizedVert)) {
-		out << " MaximizedVert";
+
+	// add new event
+	core::InputEventData event{
+		id,
+		core::InputEventName::WindowState,
+		{.input = {core::InputMouseButton::None, core::InputModifier::None, nan(), nan()}},
+		{.window = {state, changes}},
+	};
+
+	_pendingEvents.emplace_back(sp::move(event));
+
+	if (!_controller->isWithinPoll()) {
+		dispatchPendingEvents();
 	}
-	if (hasFlag(flags, NativeWindowStateFlags::MaximizedHorz)) {
-		out << " MaximizedHorz";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Shaded)) {
-		out << " Shaded";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::SkipTaskbar)) {
-		out << " SkipTaskbar";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::SkipPager)) {
-		out << " SkipPager";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Hidden)) {
-		out << " Hidden";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Fullscreen)) {
-		out << " Fullscreen";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Above)) {
-		out << " Above";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Below)) {
-		out << " Below";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::DemandsAttention)) {
-		out << " DemandsAttention";
-	}
-	if (hasFlag(flags, NativeWindowStateFlags::Focused)) {
-		out << " Focused";
-	}
-	return out;
 }
 
 } // namespace stappler::xenolith::platform

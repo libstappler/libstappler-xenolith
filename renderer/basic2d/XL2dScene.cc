@@ -177,14 +177,21 @@ bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
 	return init(app, window, [](Queue::Builder &) { }, constraints);
 }
 
-bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow>,
+bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
 		const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
 #if MODULE_XENOLITH_BACKEND_VK
-	basic2d::vk::ShadowPass::RenderQueueInfo info{app->getContext()->getGlLoop(),
+	basic2d::vk::ShadowPass::RenderQueueInfo info{
+		app->getContext()->getGlLoop(),
 		Extent2(constraints.extent.width, constraints.extent.height),
-		basic2d::vk::ShadowPass::Flags::None};
+		basic2d::vk::ShadowPass::Flags::None,
+	};
+
+	if (hasFlag(window->getInfo()->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		// set default alpha to zero for user decorations
+		//info.backgroundColor.a = 0;
+	}
 
 	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
@@ -266,7 +273,7 @@ void Scene2d::initialize() {
 	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
 
 	_listener->addTouchRecognizer([this](const GestureData &ev) {
-		if ((ev.input->data.modifiers & InputModifier::Ctrl) == InputModifier::None) {
+		if ((ev.input->data.getModifiers() & InputModifier::Ctrl) == InputModifier::None) {
 			if (_data1.event != InputEventName::End && _data1.event != InputEventName::Cancel) {
 
 				updateInputEventData(_data1, ev.input->data,
@@ -305,8 +312,8 @@ void Scene2d::initialize() {
 	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}));
 
 	_listener->addTapRecognizer([this](const GestureTap &tap) {
-		if ((tap.input->data.modifiers & InputModifier::Shift) != InputModifier::None
-				&& (tap.input->data.modifiers & InputModifier::Ctrl) != InputModifier::None) {
+		if ((tap.input->data.getModifiers() & InputModifier::Shift) != InputModifier::None
+				&& (tap.input->data.getModifiers() & InputModifier::Ctrl) != InputModifier::None) {
 			_pointerCenter->setPosition(_content->convertToNodeSpace(tap.input->currentLocation));
 		}
 		return true;
@@ -397,10 +404,10 @@ void Scene2d::updateInputEventData(InputEventData &data, const InputEventData &s
 
 	data = source;
 	data.id = id;
-	data.x = pos.x;
-	data.y = pos.y;
-	data.button = InputMouseButton::Touch;
-	data.modifiers |= InputModifier::Unmanaged;
+	data.input.x = pos.x;
+	data.input.y = pos.y;
+	data.input.button = InputMouseButton::Touch;
+	data.input.modifiers |= InputModifier::Unmanaged;
 }
 
 } // namespace stappler::xenolith::basic2d

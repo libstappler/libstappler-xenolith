@@ -20,38 +20,40 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_XLAPPLICATIONCONFIG_H_
-#define XENOLITH_APPLICATION_XLAPPLICATIONCONFIG_H_
+#ifndef XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
+#define XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
 
-#include "XLCoreConfig.h" // IWYU pragma: keep
+#include "XLNode.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::config {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-static constexpr size_t NodePreallocateChilds = 4;
+class Layer;
 
-static constexpr size_t MaxMaterialImages = 4;
+// Window header for user-space window decorations
+class SP_PUBLIC WindowHeader : public Node {
+public:
+	virtual ~WindowHeader() = default;
 
-static constexpr uint32_t MaxAmbientLights = 16;
-static constexpr uint32_t MaxDirectLights = 16;
+	virtual bool init() override;
 
-#if DEBUG
-static constexpr uint64_t MaxDirectorDeltaTime = 10'000'000 / 16;
-#else
-static constexpr uint64_t MaxDirectorDeltaTime = 100'000'000 / 16;
-#endif
+	virtual bool shouldBePresentedOnScene(Scene *) const;
 
-#if THREAD_DEBUG
-static inline uint16_t getDefaultMainThreads() { return 2; }
-static inline uint16_t getDefaultAppThreads() { return 2; }
-#else
-static inline uint16_t getDefaultMainThreads() {
-	return static_cast<uint16_t>(std::thread::hardware_concurrency()) / 2;
-}
-static inline uint16_t getDefaultAppThreads() {
-	return static_cast<uint16_t>(std::thread::hardware_concurrency()) / 2;
-}
-#endif
+	virtual void handleContentSizeDirty() override;
+	virtual void handleLayout(Node *) override;
 
-} // namespace stappler::xenolith::config
+protected:
+	Layer *_move = nullptr;
+	Node *_topLeft = nullptr;
+	Node *_top = nullptr;
+	Node *_topRight = nullptr;
+	Node *_right = nullptr;
+	Node *_bottomRight = nullptr;
+	Node *_bottom = nullptr;
+	Node *_bottomLeft = nullptr;
+	Node *_left = nullptr;
+};
 
-#endif /* XENOLITH_APPLICATION_XLAPPLICATIONCONFIG_H_ */
+
+} // namespace stappler::xenolith::basic2d
+
+#endif // XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_

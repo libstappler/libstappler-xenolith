@@ -61,15 +61,8 @@ bool Button::init(Function<void()> &&cb) {
 		}
 		return true;
 	});
-	_listener->setPointerEnterCallback([this](bool pointerWithinWindow) {
-		if (!pointerWithinWindow && _focus) {
-			_focus = false;
-			handleFocusLeave();
-		}
-		return true;
-	});
 
-	_listener->setViewLayerFlags(WindowLayerFlags::CursorPointer);
+	_listener->setCursor(WindowCursor::Pointer);
 
 	updateEnabled();
 

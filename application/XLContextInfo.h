@@ -23,10 +23,9 @@
 #ifndef XENOLITH_APPLICATION_XLCONTEXTINFO_H_
 #define XENOLITH_APPLICATION_XLCONTEXTINFO_H_
 
-#include "XLApplicationConfig.h"
-#include "XLCoreFrameRequest.h"
-#include "XlCoreMonitorInfo.h"
-#include "XLCoreLoop.h"
+#include "XLWindowInfo.h"
+#include "XLCoreLoop.h" // IWYU pragma: keep
+#include "XLCoreInstance.h"
 #include "SPCommandLineParser.h"
 
 #if ANDROID
@@ -37,14 +36,6 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Context;
 class AppThread;
-class AppWindow;
-
-using core::ModeInfo;
-using core::MonitorId;
-using core::MonitorInfo;
-using core::ScreenInfo;
-using core::FullscreenFlags;
-using core::FullscreenInfo;
 
 #if ANDROID
 using NativeContextHandle = ANativeActivity;
@@ -52,7 +43,7 @@ using NativeContextHandle = ANativeActivity;
 using NativeContextHandle = void;
 #endif
 
-enum class NetworkFlags {
+enum class NetworkFlags : uint32_t {
 	None,
 	Internet = (1 << 0),
 	Congested = (1 << 1),
@@ -75,155 +66,6 @@ enum class NetworkFlags {
 
 SP_DEFINE_ENUM_AS_MASK(NetworkFlags)
 
-enum class WindowLayerFlags : uint32_t {
-	None,
-
-	CursorDefault,
-	CursorContextMenu,
-	CursorHelp,
-	CursorPointer,
-	CursorProgress,
-	CursorWait,
-	CursorCell,
-	CursorCrosshair,
-	CursorText,
-	CursorVerticalText,
-	CursorAlias,
-	CursorCopy,
-	CursorMove,
-	CursorNoDrop,
-	CursorNotAllowed,
-	CursorGrab,
-	CursorGrabbing,
-
-	CursorAllScroll,
-	CursorZoomIn,
-	CursorZoomOut,
-	CursorDndAsk,
-
-	CursorRightPtr,
-	CursorPencil,
-	CursorTarget,
-
-	CursorResizeRight,
-	CursorResizeTop,
-	CursorResizeTopRight,
-	CursorResizeTopLeft,
-	CursorResizeBottom,
-	CursorResizeBottomRight,
-	CursorResizeBottomLeft,
-	CursorResizeLeft,
-	CursorResizeLeftRight,
-	CursorResizeTopBottom,
-	CursorResizeTopRightBottomLeft,
-	CursorResizeTopLeftBottomRight,
-	CursorResizeCol,
-	CursorResizeRow,
-	CursorResizeAll,
-
-	CursorMask = 0xFF,
-
-	FlagsMask = 0xFF00,
-
-	ResizableTop = 1 << 27,
-	ResizableRight = 1 << 28,
-	ResizableBottom = 1 << 29,
-	ResizableLeft = 1 << 30,
-	ResizeMask = ResizableTop | ResizableRight | ResizableBottom | ResizableLeft,
-};
-
-SP_DEFINE_ENUM_AS_MASK(WindowLayerFlags)
-
-struct WindowLayer {
-	Rect rect;
-	WindowLayerFlags flags;
-
-	bool operator==(const WindowLayer &) const = default;
-	bool operator!=(const WindowLayer &) const = default;
-};
-
-enum class WindowFlags {
-	None = 0,
-	FixedBorder = 1 << 0,
-
-	// Use direct output to display, bypassing whole WM stack
-	// Check if it actually supported with WindowCapabilities::DirectOutput
-	DirectOutput = 1 << 1,
-
-	// Try to use server-side decoration where available
-	PreferServerSideDecoration = 1 << 2,
-
-	// Try to use system-native decoration where available
-	// Used to enable client-side native decorations (libdecor on Wayland)
-	PreferNativeDecoration = 1 << 3,
-
-	// If possible, use server-defined cursors instead of client-side libraries
-	// Note that server-side cursor theme may not contain all cursors
-	PreferServerSideCursors = 1 << 4,
-
-	Opaque = 1 << 5,
-};
-
-SP_DEFINE_ENUM_AS_MASK(WindowFlags)
-
-// Cababilities, prowided by OS Window Manager
-enum class WindowCapabilities {
-	None,
-	// Switch between windowed and fullscreen modes
-	// If not provided - window is only windowed or only fullscreen
-	Fullscreen = 1 << 0,
-	FullscreenExclusive = 1 << 1,
-	FullscreenWithMode = 1 << 2,
-	FullscreenSeamlessModeSwitch = 1 << 3,
-
-	ServerSideDecorations = 1 << 4,
-	NativeDecorations = 1 << 5,
-	ServerSideCursors = 1 << 6,
-
-	// Subwindows are allowed
-	Subwindows = 1 << 7,
-
-	// Direct output is available on platform
-	DirectOutput = 1 << 8,
-
-	// 'Back' action can close application (Android-like)
-	BackIsExit = 1 << 9,
-};
-
-SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
-
-struct SP_PUBLIC WindowInfo final : public Ref {
-	String id;
-	String title;
-	URect rect = URect(0, 0, 1'024, 768);
-	Padding decoration;
-	float density = 0.0f;
-	WindowFlags flags = WindowFlags::None;
-
-	// initial fullscreen mode
-	FullscreenInfo fullscreen = FullscreenInfo::None;
-
-	// TODO: extra window attributes go here
-
-	core::PresentMode preferredPresentMode = core::PresentMode::Mailbox;
-	core::ImageFormat imageFormat = core::ImageFormat::Undefined;
-	core::ColorSpace colorSpace = core::ColorSpace::SRGB_NONLINEAR_KHR;
-
-	// provided by WM, no reason to set it by user
-	WindowCapabilities capabilities = WindowCapabilities::None;
-
-	core::FrameConstraints exportConstraints() const {
-		return core::FrameConstraints{
-			.extent = Extent2(rect.width, rect.height),
-			.contentPadding = decoration,
-			.transform = core::SurfaceTransformFlags::Identity,
-			.density = density,
-		};
-	}
-
-	Value encode() const;
-};
-
 struct SP_PUBLIC UpdateTime final {
 	uint64_t global = 0; // global OS timer in microseconds
 	uint64_t app = 0; // microseconds since application was started
@@ -231,9 +73,13 @@ struct SP_PUBLIC UpdateTime final {
 	float dt = 0.0f; // seconds since last update
 };
 
-enum class ContextFlags {
+enum class ContextFlags : uint32_t {
 	None = 0,
-	Headless = 1 << 0, // No application window
+
+	Headless = 1 << 0,
+
+	// Application shold be terminated when all it's windows were closed
+	DestroyWhenAllWindowsClosed = 1 << 1,
 };
 
 SP_DEFINE_ENUM_AS_MASK(ContextFlags)
@@ -243,7 +89,7 @@ struct SP_PUBLIC ContextInfo final : public Ref {
 	String appName = "Xenolith"; // application human-readable name
 	String appVersion = "0.0.1"; // application human-readable version
 	String userLanguage = ""; //"ru-ru"; // current locale name
-	String userAgent = "XenolithTestApp"; // networking user agent
+	String userAgent = "XenolithApp"; // networking user agent
 	String launchUrl; // initial launch URL (deep link)
 
 	uint32_t appVersionCode = 0; // version code in Vulkan format (see SP_MAKE_API_VERSION)
@@ -261,7 +107,7 @@ struct SP_PUBLIC ContextInfo final : public Ref {
 	Value encode() const;
 };
 
-enum class CommonFlags {
+enum class CommonFlags : uint32_t {
 	None = 0,
 	Help = 1 << 0,
 	Verbose = 1 << 1,

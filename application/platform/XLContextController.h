@@ -45,9 +45,8 @@ enum class ContextState {
 	Active,
 };
 
-enum class WindowCloseOptions {
+enum class WindowCloseOptions : uint32_t {
 	None,
-	NotifyExitGuard = 1 << 0,
 	CloseInPlace = 1 << 1,
 	IgnoreExitGuard = 1 << 2,
 };
@@ -101,23 +100,42 @@ public:
 	virtual int run(NotNull<ContextContainer>);
 
 	event::Looper *getLooper() const { return _looper; }
+	Context *getContext() const { return _context; }
 
 	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
 
+	bool isWithinPoll() const { return _withinPoll; }
+
+	virtual bool isCursorSupported(WindowCursor, bool serverSide) const = 0;
+	virtual WindowCapabilities getCapabilities() const = 0;
+
+	virtual bool configureWindow(NotNull<WindowInfo>);
+
+	// Native window was created on WM side and now operational
 	virtual void notifyWindowCreated(NotNull<NativeWindow>);
+
+	// Native window's size, pixel density or transform was changed by WM
 	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>,
-			core::PresentationSwapchainFlags);
+			core::UpdateConstraintsFlags);
+
+	// Some input should be transferred to application
 	virtual void notifyWindowInputEvents(NotNull<NativeWindow>, Vector<core::InputEventData> &&);
+
+	// Internal text input buffer was changed
 	virtual void notifyWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
 
+	// Window was closed (or ask to be closed) by WM
 	// true if window should be closed, false otherwise (e.g. ExitGuard)
 	virtual bool notifyWindowClosed(NotNull<NativeWindow>,
-			WindowCloseOptions = WindowCloseOptions::NotifyExitGuard
-					| WindowCloseOptions::CloseInPlace);
+			WindowCloseOptions = WindowCloseOptions::CloseInPlace);
+
+	// Window was allocated by engine, you should not store references on it within this call
+	virtual void notifyWindowAllocated(NotNull<NativeWindow>);
+
+	// Window was deallocated by engine, you should not store references on it within this call
+	virtual void notifyWindowDeallocated(NotNull<NativeWindow>);
 
 	virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>);
-
-	virtual void handleRootWindowClosed();
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
@@ -145,6 +163,8 @@ public:
 
 	virtual void handleContextWillStart();
 	virtual void handleContextDidStart();
+
+	virtual void handleAllWindowsClosed();
 
 	virtual bool start();
 	virtual bool resume();
@@ -175,6 +195,9 @@ protected:
 	ThemeInfo _themeInfo;
 
 	Set<Rc<NativeWindow>> _activeWindows;
+	Set<NativeWindow *> _allWindows;
+
+	bool _withinPoll = false;
 };
 
 } // namespace stappler::xenolith::platform

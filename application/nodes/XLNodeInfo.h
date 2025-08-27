@@ -35,7 +35,7 @@ static constexpr StateId StateIdNone = maxOf<StateId>();
 
 static constexpr uint64_t InvalidTag = maxOf<uint64_t>();
 
-enum class NodeFlags {
+enum class NodeFlags : uint32_t {
 	None,
 	TransformDirty = 1 << 0,
 	ContentSizeDirty = 1 << 1,

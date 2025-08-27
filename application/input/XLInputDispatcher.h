@@ -36,8 +36,7 @@ public:
 	struct Rec {
 		InputListener *listener;
 		uint32_t focus;
-		WindowLayerFlags flags;
-		Rect rect;
+		WindowLayer layer;
 	};
 
 	virtual ~InputListenerStorage();
@@ -47,7 +46,7 @@ public:
 	void clear();
 	void reserve(const InputListenerStorage *);
 
-	void addListener(InputListener *, uint32_t focusValue, WindowLayerFlags, Rect);
+	void addListener(InputListener *, uint32_t focusValue, WindowLayer &&);
 
 	void updateFocus(uint32_t focusValue);
 

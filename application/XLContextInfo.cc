@@ -109,16 +109,6 @@ CommandLineParser<ContextConfig> ContextConfig::getCommandLineParser() {
 		target.context->bundleName = StringView(args[0]).str<Interface>();
 		return true;
 	}},
-		CommandLineOption<ContextConfig>{.patterns = {"--fixed"},
-			.description = StringView("Use fixed (so, not resizable) window layout"),
-			.callback = [](ContextConfig &target, StringView pattern,
-								SpanView<StringView> args) -> bool {
-		if (!target.window) {
-			target.window = Rc<WindowInfo>::alloc();
-		}
-		target.window->flags |= WindowFlags::FixedBorder;
-		return true;
-	}},
 		CommandLineOption<ContextConfig>{.patterns = {"--renderdoc"},
 			.description = StringView("Open connection for renderdoc"),
 			.callback = [](ContextConfig &target, StringView pattern,
@@ -165,7 +155,7 @@ CommandLineParser<ContextConfig> ContextConfig::getCommandLineParser() {
 			if (!target.window) {
 				target.window = Rc<WindowInfo>::alloc();
 			}
-			target.window->decoration = Padding(f[0], f[1], f[2], f[3]);
+			target.window->decorationInsets = Padding(f[0], f[1], f[2], f[3]);
 			return true;
 		}
 		return false;
@@ -217,46 +207,6 @@ ContextConfig::ContextConfig() {
 	window->title = context->appName;
 }
 
-Value WindowInfo::encode() const {
-	Value ret;
-	ret.setString(title, "title");
-	ret.setValue(
-			Value{
-				Value(rect.x),
-				Value(rect.y),
-				Value(rect.width),
-				Value(rect.height),
-			},
-			"rect");
-
-	ret.setValue(
-			Value{
-				Value(decoration.top),
-				Value(decoration.left),
-				Value(decoration.bottom),
-				Value(decoration.right),
-			},
-			"decoration");
-
-	if (density) {
-		ret.setDouble(density, "density");
-	}
-
-	ret.setString(core::getImageFormatName(imageFormat), "imageFormat");
-	ret.setString(core::getColorSpaceName(colorSpace), "colorSpace");
-	ret.setString(core::getPresentModeName(preferredPresentMode), "preferredPresentMode");
-
-	Value f;
-	if (hasFlag(flags, WindowFlags::FixedBorder)) {
-		f.addString("FixedBorder");
-	}
-
-	if (!f.empty()) {
-		ret.setValue(move(f), "flags");
-	}
-	return ret;
-}
-
 Value ContextInfo::encode() const {
 	Value ret;
 	ret.setString(bundleName, "bundleName");
@@ -273,8 +223,8 @@ Value ContextInfo::encode() const {
 	ret.setInteger(mainThreadsCount, "mainThreadsCount");
 
 	Value f;
-	if (hasFlag(flags, ContextFlags::Headless)) {
-		f.addString("Headless");
+	if (hasFlag(flags, ContextFlags::DestroyWhenAllWindowsClosed)) {
+		f.addString("DestroyWhenAllWindowsClosed");
 	}
 	if (!f.empty()) {
 		ret.setValue(move(f), "flags");

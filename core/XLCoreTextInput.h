@@ -31,9 +31,9 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 struct TextInputState;
 struct TextInputRequest;
 
-enum class TextInputFlags {
+enum class TextInputFlags : uint32_t {
 	None,
-	RunIfDisabled,
+	RunIfDisabled = 1 << 0,
 };
 
 SP_DEFINE_ENUM_AS_MASK(TextInputFlags)

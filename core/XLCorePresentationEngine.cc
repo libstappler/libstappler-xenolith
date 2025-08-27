@@ -137,7 +137,7 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 					frame = nullptr;
 					return false;
 				} else {
-					frame->invalidate(false);
+					frame->invalidate();
 				}
 				frame = nullptr;
 				return true;
@@ -155,7 +155,7 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 			}
 		} else {
 			log::error("core::PresentationEngine", "acquireFrameData - Swapchain was invalidated");
-			frame->invalidate(frame->getSwapchain() != _swapchain);
+			frame->invalidate();
 		}
 	});
 
@@ -166,10 +166,21 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 	return true;
 }
 
-void PresentationEngine::deprecateSwapchain(PresentationSwapchainFlags flags,
+void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 		Function<void(bool)> &&cb) {
 	XL_COREPRESENT_LOG("deprecateSwapchain");
 	if (!_running || !_swapchain) {
+		return;
+	}
+
+	if (flags == UpdateConstraintsFlags::None) {
+		// update should not deprecate swapchain, just update secondary fields
+		auto newConstraints = _window->exportFrameConstraints();
+		newConstraints.extent = _constraints.extent;
+		newConstraints.transform = _constraints.transform;
+
+		_constraints = sp::move(newConstraints);
+		_waitForDisplayLink = false;
 		return;
 	}
 
@@ -191,6 +202,14 @@ void PresentationEngine::deprecateSwapchain(PresentationSwapchainFlags flags,
 		_acquisitionTimer->cancel();
 		_acquisitionTimer = nullptr;
 	}
+
+	for (auto &it : _acquiredSwapchainImages) {
+		if (it->swapchain == _swapchain) {
+			_swapchain->invalidateImage(it->imageIndex, true);
+		}
+	}
+
+	_acquiredSwapchainImages.clear();
 
 	auto acquiredImages = _swapchain->getAcquiredImagesCount();
 	if (acquiredImages == 0) {
@@ -250,9 +269,9 @@ void PresentationEngine::end() {
 	auto scheduledForPresent = sp::move(_scheduledForPresent);
 	auto scheduledPresentHandles = sp::move(_scheduledPresentHandles);
 
-	for (auto &it : framesAwaitingImages) { it->invalidate(true); }
+	for (auto &it : framesAwaitingImages) { it->invalidate(); }
 	for (auto &it : scheduledForPresent) {
-		it.first->invalidate(true);
+		it.first->invalidate();
 		it.second = nullptr;
 	}
 	for (auto &it : scheduledPresentHandles) { it->cancel(); }
@@ -293,7 +312,7 @@ bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) 
 				if (success) {
 					runScheduledPresent(frame, image);
 				} else {
-					frame->invalidate(false);
+					frame->invalidate();
 				}
 				_scheduledPresentHandles.erase(h);
 			},
@@ -467,6 +486,16 @@ bool PresentationEngine::handleFrameStarted(NotNull<PresentationFrame> frame) {
 
 void PresentationEngine::handleFrameInvalidated(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameInvalidated");
+
+	auto it = _framesAwaitingImages.begin();
+	while (it != _framesAwaitingImages.end()) {
+		if (*it == frame) {
+			it = _framesAwaitingImages.erase(it);
+		} else {
+			++it;
+		}
+	}
+
 	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
 		_detachedFrames.erase(frame);
 		return;
@@ -596,13 +625,13 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 
 void PresentationEngine::resetFrames() {
 	auto frames = _activeFrames;
-	for (auto &it : frames) { it->invalidate(true); }
+	for (auto &it : frames) { it->invalidate(); }
 
 	frames = _totalFrames;
-	for (auto &it : frames) { it->invalidate(true); }
+	for (auto &it : frames) { it->invalidate(); }
 
 	frames = _detachedFrames;
-	for (auto &it : frames) { it->invalidate(true); }
+	for (auto &it : frames) { it->invalidate(); }
 
 	for (auto &it : _scheduledPresentHandles) { it->cancel(); }
 	_scheduledPresentHandles.clear();
@@ -687,9 +716,12 @@ void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquir
 	if (!_framesAwaitingImages.empty()) {
 		// send new swapchain image to framebuffer
 		auto target = _framesAwaitingImages.front();
-		_framesAwaitingImages.pop_front();
 
-		target->assignSwapchainImage(image);
+		if (target->assignSwapchainImage(image)) {
+			_framesAwaitingImages.pop_front();
+		} else {
+			target->invalidate();
+		}
 	} else {
 		// hold image until next framebuffer request, if not active queries
 		_acquiredSwapchainImages.emplace_back(move(image));

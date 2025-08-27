@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +34,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-enum class InputFlags {
+enum class InputFlags : uint32_t {
 	None,
 	TouchMouseInput = 1 << 0,
 	KeyboardInput = 1 << 1,
@@ -289,39 +290,104 @@ enum class InputEventName : uint32_t {
 	KeyReleased,
 	KeyCanceled,
 
-	Background,
-	PointerEnter,
-	FocusGain,
-	CloseRequest, // close request was prevented by ExitGuard
 	ScreenUpdate, // ScreenInfo was changed
-	Fullscreen, // Fullsceen mode enabled or disabled
-
+	WindowState, // Window allowed actions or key constraints was changed
 	Max,
+};
+
+enum class InputEventType {
+	None,
+	Input,
+	Custom,
+};
+
+enum class InputEventDataType {
+	None,
+	Point,
+	Key,
+	Window
+};
+
+static constexpr struct {
+	InputEventName name;
+	InputEventType type;
+	InputEventDataType dataType;
+} InputEventInfo[toInt(InputEventName::Max)] = {
+	{InputEventName::None, InputEventType::None, InputEventDataType::None},
+	{InputEventName::Begin, InputEventType::Input, InputEventDataType::Point},
+	{InputEventName::Move, InputEventType::Input, InputEventDataType::Point},
+	{InputEventName::End, InputEventType::Input, InputEventDataType::Point},
+	{InputEventName::Cancel, InputEventType::Input, InputEventDataType::Point},
+	{InputEventName::MouseMove, InputEventType::Input, InputEventDataType::Point},
+	{InputEventName::Scroll, InputEventType::Input, InputEventDataType::Point},
+
+	{InputEventName::KeyPressed, InputEventType::Input, InputEventDataType::Key},
+	{InputEventName::KeyRepeated, InputEventType::Input, InputEventDataType::Key},
+	{InputEventName::KeyReleased, InputEventType::Input, InputEventDataType::Key},
+	{InputEventName::KeyCanceled, InputEventType::Input, InputEventDataType::Key},
+
+	{InputEventName::ScreenUpdate, InputEventType::Custom, InputEventDataType::None},
+	{InputEventName::WindowState, InputEventType::Input, InputEventDataType::Window},
 };
 
 struct SP_PUBLIC InputEventData {
 	static InputEventData BoolEvent(InputEventName event, bool value) {
-		return InputEventData{maxOf<uint32_t>(), event, InputMouseButton::None,
-			value ? InputModifier::ValueTrue : InputModifier::None};
+		return InputEventData{
+			maxOf<uint32_t>(),
+			event,
+			{{
+				InputMouseButton::None,
+				value ? InputModifier::ValueTrue : InputModifier::None,
+			}},
+		};
 	}
 
 	static InputEventData BoolEvent(InputEventName event, bool value, const Vec2 &pt) {
-		return InputEventData{maxOf<uint32_t>(), event, InputMouseButton::None,
-			value ? InputModifier::ValueTrue : InputModifier::None, pt.x, pt.y};
+		return InputEventData{
+			maxOf<uint32_t>(),
+			event,
+			{{
+				InputMouseButton::None,
+				value ? InputModifier::ValueTrue : InputModifier::None,
+				pt.x,
+				pt.y,
+			}},
+		};
 	}
 
 	static InputEventData BoolEvent(InputEventName event, bool value, InputModifier mod,
 			const Vec2 &pt) {
-		return InputEventData{maxOf<uint32_t>(), event, InputMouseButton::None,
-			mod | (value ? InputModifier::ValueTrue : InputModifier::None), pt.x, pt.y};
+		return InputEventData{
+			maxOf<uint32_t>(),
+			event,
+			{{
+				InputMouseButton::None,
+				mod | (value ? InputModifier::ValueTrue : InputModifier::None),
+				pt.x,
+				pt.y,
+			}},
+		};
 	}
 
 	uint32_t id = maxOf<uint32_t>();
 	InputEventName event = InputEventName::None;
-	InputMouseButton button = InputMouseButton::None;
-	InputModifier modifiers = InputModifier::None;
-	float x = 0.0f;
-	float y = 0.0f;
+	union {
+		// default imput data
+		struct {
+			InputMouseButton button;
+			InputModifier modifiers;
+			float x;
+			float y;
+		} input = {InputMouseButton::None, InputModifier::None, nan(), nan()};
+
+		// custom event data
+		struct {
+			uint32_t u0;
+			uint32_t u1;
+			float f0;
+			float f1;
+		} custom;
+	};
 	union {
 		struct {
 			float valueX = 0.0f;
@@ -334,58 +400,67 @@ struct SP_PUBLIC InputEventData {
 			uint32_t keysym; // OS-dependent keysym
 			char32_t keychar; // unicode char for key
 		} key;
+		struct {
+			WindowState state;
+			WindowState changes;
+		} window;
 	};
 
 	bool operator==(const uint32_t &i) const { return id == i; }
 	bool operator!=(const uint32_t &i) const { return id != i; }
 
-	bool getValue() const { return (modifiers & InputModifier::ValueTrue) != InputModifier::None; }
-
 	bool hasLocation() const {
-		switch (event) {
-		case InputEventName::None:
-		case InputEventName::Background:
-		case InputEventName::PointerEnter:
-		case InputEventName::FocusGain:
-		case InputEventName::CloseRequest:
-		case InputEventName::ScreenUpdate:
-		case InputEventName::Fullscreen: return false; break;
-#if ANDROID
-		case InputEventName::KeyPressed:
-		case InputEventName::KeyReleased:
-		case InputEventName::KeyRepeated: return false; break;
-#endif
-		default: break;
-		}
-		return true;
-	}
-
-	bool isPointEvent() const {
-		switch (event) {
-		case InputEventName::Begin:
-		case InputEventName::Move:
-		case InputEventName::End:
-		case InputEventName::Cancel:
-		case InputEventName::MouseMove:
-		case InputEventName::Scroll: return true; break;
-		default: break;
+		if (hasInput()) {
+			return !isnan(input.x) && !isnan(input.y);
 		}
 		return false;
+	}
+
+	bool getValue() const {
+		if (hasInput()) {
+			return (input.modifiers & InputModifier::ValueTrue) != InputModifier::None;
+		}
+		return false;
+	}
+
+	bool hasInput() const { return InputEventInfo[toInt(event)].type == InputEventType::Input; }
+
+	bool isPointEvent() const {
+		return InputEventInfo[toInt(event)].dataType == InputEventDataType::Point;
 	}
 
 	bool isKeyEvent() const {
-		switch (event) {
-		case InputEventName::KeyPressed:
-		case InputEventName::KeyRepeated:
-		case InputEventName::KeyReleased: return true; break;
-		default: break;
+		return InputEventInfo[toInt(event)].dataType == InputEventDataType::Key;
+	}
+
+	InputMouseButton getButton() const {
+		if (hasInput()) {
+			return input.button;
 		}
-		return false;
+		return InputMouseButton::None;
+	}
+
+	InputModifier getModifiers() const {
+		if (hasInput()) {
+			return input.modifiers;
+		}
+		return InputModifier::None;
+	}
+
+	Vec2 getLocation() const {
+		if (hasLocation()) {
+			return Vec2(input.x, input.y);
+		}
+		return Vec2::ZERO;
 	}
 
 	bool operator==(const InputEventData &r) const {
-		if (id != r.id || event != r.event || button != r.button || modifiers != r.modifiers
-				|| x != r.x || y != r.y) {
+		if (id != r.id || event != r.event) {
+			return false;
+		}
+		if (hasInput()
+				&& (input.button != r.input.button || input.modifiers != r.input.modifiers
+						|| input.x != r.input.x || input.y != r.input.y)) {
 			return false;
 		}
 		switch (event) {
@@ -432,23 +507,25 @@ struct SP_PUBLIC InputEventData {
 			return false;
 		}
 
-		if (toInt(button) < toInt(r.button)) {
-			return true;
-		} else if (toInt(button) > toInt(r.button)) {
-			return false;
-		}
+		if (hasInput()) {
+			if (toInt(input.button) < toInt(r.input.button)) {
+				return true;
+			} else if (toInt(input.button) > toInt(r.input.button)) {
+				return false;
+			}
 
-		if (toInt(modifiers) < toInt(r.modifiers)) {
-			return true;
-		} else if (toInt(modifiers) > toInt(r.modifiers)) {
-			return false;
+			if (toInt(input.modifiers) < toInt(r.input.modifiers)) {
+				return true;
+			} else if (toInt(input.modifiers) > toInt(r.input.modifiers)) {
+				return false;
+			}
 		}
 
 		return false;
 	}
 };
 
-enum class TextInputType {
+enum class TextInputType : uint32_t {
 	Empty = 0,
 	Date_Date = 1,
 	Date_DateTime = 2,

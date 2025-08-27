@@ -369,6 +369,7 @@ void Node::addChildNode(Node *child, ZOrder localZOrder, uint64_t tag) {
 
 	if (_running) {
 		child->handleEnter(_scene);
+		child->handleLayout(this);
 	}
 
 	if (_cascadeColorEnabled) {
@@ -742,6 +743,9 @@ void Node::handleContentSizeDirty() {
 			it->handleContentSizeDirty();
 		}
 	}
+
+	auto tmp = _children;
+	for (auto &it : tmp) { it->handleLayout(this); }
 }
 
 void Node::handleTransformDirty(const Mat4 &parentTransform) {
@@ -786,6 +790,19 @@ void Node::handleReorderChildDirty() {
 	for (auto &it : tmpComponents) {
 		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
 			it->handleReorderChildDirty();
+		}
+	}
+}
+
+void Node::handleLayout(Node *parent) {
+	if (_layoutCallback) {
+		_layoutCallback(parent);
+	}
+
+	auto tmpComponents = _components;
+	for (auto &it : tmpComponents) {
+		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
+			it->handleLayout(parent);
 		}
 	}
 }
@@ -1151,6 +1168,8 @@ void Node::setTransformDirtyCallback(Function<void(const Mat4 &)> &&cb) {
 void Node::setReorderChildDirtyCallback(Function<void()> &&cb) {
 	_reorderChildDirtyCallback = sp::move(cb);
 }
+
+void Node::setLayoutCallback(Function<void(Node *)> &&cb) { _layoutCallback = sp::move(cb); }
 
 Mat4 Node::transform(const Mat4 &parentTransform) {
 	return parentTransform * this->getNodeToParentTransform();

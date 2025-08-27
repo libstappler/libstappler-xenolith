@@ -431,7 +431,7 @@ struct DecorationInfo {
 
 SP_PUBLIC bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &);
 
-SP_PUBLIC uint32_t getWaylandCursor(WindowLayerFlags);
+SP_PUBLIC uint32_t getWaylandCursor(WindowCursor);
 
 SP_PUBLIC std::ostream &operator<<(std::ostream &, WaylandDecorationName);
 

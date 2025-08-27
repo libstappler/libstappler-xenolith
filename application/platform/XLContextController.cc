@@ -57,6 +57,12 @@ void ContextController::acquireDefaultConfig(ContextConfig &config, NativeContex
 #if MACOS
 	MacosContextController::acquireDefaultConfig(config, handle);
 #endif
+
+	auto cfgSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeConfigSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeConfigName);
+	if (cfgSymbol) {
+		cfgSymbol(config);
+	}
 }
 
 bool ContextController::init(NotNull<Context> ctx) {
@@ -66,12 +72,16 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run(NotNull<ContextContainer>) { return _resultCode; }
 
+bool ContextController::configureWindow(NotNull<WindowInfo> w) {
+	return _context->configureWindow(w);
+}
+
 void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
 	_context->handleNativeWindowCreated(w);
 }
 
 void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
-		core::PresentationSwapchainFlags flags) {
+		core::UpdateConstraintsFlags flags) {
 	_context->handleNativeWindowConstraintsChanged(w, flags);
 }
 void ContextController::notifyWindowInputEvents(NotNull<NativeWindow> w,
@@ -86,10 +96,6 @@ void ContextController::notifyWindowTextInput(NotNull<NativeWindow> w,
 
 bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
 	if (!hasFlag(opts, WindowCloseOptions::IgnoreExitGuard) && w->hasExitGuard()) {
-		if (hasFlag(opts, WindowCloseOptions::NotifyExitGuard)) {
-			auto event = core::InputEventData::BoolEvent(core::InputEventName::CloseRequest, true);
-			notifyWindowInputEvents(w, Vector<core::InputEventData>{event});
-		}
 		return false;
 	} else {
 		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
@@ -104,26 +110,21 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseO
 	}
 }
 
-Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread> app, NotNull<NativeWindow> w) {
-	return Rc<AppWindow>::create(_context, app, w);
+void ContextController::notifyWindowAllocated(NotNull<NativeWindow> w) { _allWindows.emplace(w); }
+
+
+void ContextController::notifyWindowDeallocated(NotNull<NativeWindow> w) {
+	auto it = _allWindows.find(w);
+	if (it != _allWindows.end()) {
+		_allWindows.erase(it);
+		if (_allWindows.empty()) {
+			handleAllWindowsClosed();
+		}
+	}
 }
 
-void ContextController::handleRootWindowClosed() {
-	if (_displayConfigManager && _displayConfigManager->hasSavedMode()) {
-		_displayConfigManager->restoreMode([this](Status) {
-			_looper->performOnThread([this] {
-				_displayConfigManager->invalidate();
-				destroy();
-			}, this);
-		}, this);
-	} else {
-		_looper->performOnThread([this] {
-			if (_displayConfigManager) {
-				_displayConfigManager->invalidate();
-			}
-			destroy();
-		}, this);
-	}
+Rc<AppWindow> ContextController::makeAppWindow(NotNull<AppThread> app, NotNull<NativeWindow> w) {
+	return Rc<AppWindow>::create(_context, app, w);
 }
 
 void ContextController::initializeComponent(NotNull<ContextComponent> comp) {
@@ -275,7 +276,6 @@ void ContextController::handleContextWillResume() {
 	}
 
 	_context->handleWillResume();
-	poll();
 }
 
 void ContextController::handleContextDidResume() {
@@ -285,7 +285,6 @@ void ContextController::handleContextDidResume() {
 
 	_state = ContextState::Active;
 	_context->handleDidResume();
-	poll();
 
 	// repeat state notifications if they were missed in paused mode
 	_context->handleNetworkStateChanged(_networkFlags);
@@ -298,7 +297,6 @@ void ContextController::handleContextWillStart() {
 	}
 
 	_context->handleWillStart();
-	poll();
 }
 void ContextController::handleContextDidStart() {
 	if (!_context) {
@@ -307,7 +305,27 @@ void ContextController::handleContextDidStart() {
 
 	_state = ContextState::Started;
 	_context->handleDidStart();
-	poll();
+}
+
+void ContextController::handleAllWindowsClosed() {
+	if (_context
+			&& hasFlag(_context->getInfo()->flags, ContextFlags::DestroyWhenAllWindowsClosed)) {
+		if (_displayConfigManager && _displayConfigManager->hasSavedMode()) {
+			_displayConfigManager->restoreMode([this](Status) {
+				_looper->performOnThread([this] {
+					_displayConfigManager->invalidate();
+					destroy();
+				}, this);
+			}, this);
+		} else {
+			_looper->performOnThread([this] {
+				if (_displayConfigManager) {
+					_displayConfigManager->invalidate();
+				}
+				destroy();
+			}, this);
+		}
+	}
 }
 
 bool ContextController::start() {
@@ -401,7 +419,8 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 #if MODULE_XENOLITH_BACKEND_VK
 	if (instance->getApi() == core::InstanceApi::Vulkan) {
 		if (!_loopInfo->backend) {
-			auto isHeadless = hasFlag(_context->getInfo()->flags, ContextFlags::Headless);
+			auto isHeadless =
+					hasFlag(_context->getInfo()->flags, ContextFlags::DestroyWhenAllWindowsClosed);
 			auto data = Rc<vk::LoopBackendInfo>::alloc();
 			data->deviceSupportCallback = [isHeadless](const vk::DeviceInfo &dev) {
 				if (isHeadless) {

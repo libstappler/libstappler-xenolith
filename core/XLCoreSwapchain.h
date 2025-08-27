@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -89,7 +90,8 @@ public:
 	virtual Rc<SwapchainAcquiredImage> acquire(bool lockfree, const Rc<Fence> &fence, Status &) = 0;
 
 	virtual Status present(DeviceQueue &queue, ImageStorage *) = 0;
-	virtual void invalidateImage(const ImageStorage *) = 0;
+	virtual void invalidateImage(const ImageStorage *, bool release) = 0;
+	virtual void invalidateImage(uint32_t, bool release) = 0;
 
 	virtual Rc<core::ImageView> makeView(const Rc<core::ImageObject> &, const ImageViewInfo &) = 0;
 
@@ -151,7 +153,6 @@ public:
 	const Rc<Swapchain> &getSwapchain() const { return _swapchain; }
 
 	void invalidateImage();
-	void invalidateSwapchain();
 
 protected:
 	using core::ImageStorage::init;

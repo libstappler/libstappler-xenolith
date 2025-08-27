@@ -21,9 +21,10 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 
 #include "XLEvent.cc"
+#include "XLWindowInfo.cc"
 #include "XLContextInfo.cc"
 #include "XLContext.cc"
 #include "XLAppThread.cc"
@@ -42,6 +43,7 @@
 #include "linux/dbus/XLLinuxDBusGnome.cc"
 #include "linux/dbus/XLLinuxDBusKde.cc"
 #include "linux/xcb/XLLinuxXcbLibrary.cc"
+#include "linux/xcb/XLLinuxXcbSupportWindow.cc"
 #include "linux/xcb/XLLinuxXcbConnection.cc"
 #include "linux/xcb/XLLinuxXcbDisplayConfigManager.cc"
 #include "linux/xcb/XLLinuxXcbWindow.cc"

@@ -44,6 +44,8 @@
 #include "XL2dLinearProgress.cc"
 #include "XL2dRoundedProgress.cc"
 
+#include "XL2dWindowHeader.cc"
+
 #include "scroll/XL2dScrollController.cc"
 #include "scroll/XL2dScrollItemHandle.cc"
 #include "scroll/XL2dScrollViewBase.cc"

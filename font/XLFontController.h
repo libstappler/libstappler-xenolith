@@ -24,7 +24,7 @@
 #ifndef XENOLITH_FONT_XLFONTCONTROLLER_H_
 #define XENOLITH_FONT_XLFONTCONTROLLER_H_
 
-#include "XLFontConfig.h"
+#include "XLFontConfig.h" // IWYU pragma: keep
 #include "XLEvent.h"
 #include "XLResourceCache.h"
 #include "XLApplicationExtension.h"

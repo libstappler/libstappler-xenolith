@@ -21,7 +21,6 @@
  **/
 
 #include "XLInputDispatcher.h"
-#include "SPLog.h"
 #include "XLInputListener.h"
 #include "XLAppWindow.h"
 #include "XLNode.h"
@@ -57,12 +56,11 @@ void InputListenerStorage::reserve(const InputListenerStorage *st) {
 	_postSceneEvents->reserve(st->_postSceneEvents->size());
 }
 
-void InputListenerStorage::addListener(InputListener *input, uint32_t focus, WindowLayerFlags flags,
-		Rect rect) {
+void InputListenerStorage::addListener(InputListener *input, uint32_t focus, WindowLayer &&layer) {
 	input->retain();
 	auto p = input->getPriority();
 	if (p == 0) {
-		_sceneEvents->emplace_back(Rec{input, focus, flags, rect});
+		_sceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
 	} else if (p < 0) {
 		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(),
 				Rec{input, focus}, [](const Rec &l, const Rec &r) {
@@ -70,9 +68,9 @@ void InputListenerStorage::addListener(InputListener *input, uint32_t focus, Win
 		});
 
 		if (lb == _postSceneEvents->end()) {
-			_postSceneEvents->emplace_back(Rec{input, focus, flags, rect});
+			_postSceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
 		} else {
-			_postSceneEvents->emplace(lb, Rec{input, focus, flags, rect});
+			_postSceneEvents->emplace(lb, Rec{input, focus, sp::move(layer)});
 		}
 	} else {
 		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(),
@@ -81,9 +79,9 @@ void InputListenerStorage::addListener(InputListener *input, uint32_t focus, Win
 		});
 
 		if (lb == _preSceneEvents->end()) {
-			_preSceneEvents->emplace_back(Rec{input, focus, flags, rect});
+			_preSceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
 		} else {
-			_preSceneEvents->emplace(lb, Rec{input, focus, flags, rect});
+			_preSceneEvents->emplace(lb, Rec{input, focus, sp::move(layer)});
 		}
 	}
 }
@@ -122,8 +120,8 @@ void InputDispatcher::commitStorage(AppWindow *window, Rc<InputListenerStorage> 
 
 	Vector<WindowLayer> layers;
 	_events->foreach ([&](const InputListenerStorage::Rec &rec) {
-		if (rec.flags != WindowLayerFlags::None) {
-			layers.emplace_back(WindowLayer{rec.rect, rec.flags});
+		if (rec.layer) {
+			layers.emplace_back(rec.layer);
 		}
 		return true;
 	}, false);
@@ -181,7 +179,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		break;
 	}
 	case InputEventName::MouseMove: {
-		_pointerLocation = Vec2(event.x, event.y);
+		_pointerLocation = event.getLocation();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
@@ -194,12 +192,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 
 		for (auto &it : _activeEvents) {
-			if ((it.second.event.data.modifiers & InputModifier::Unmanaged)
+			if ((it.second.event.data.input.modifiers & InputModifier::Unmanaged)
 					== InputModifier::None) {
-				it.second.event.data.x = event.x;
-				it.second.event.data.y = event.y;
+				it.second.event.data.input.x = event.input.x;
+				it.second.event.data.input.y = event.input.y;
 				it.second.event.data.event = InputEventName::Move;
-				it.second.event.data.modifiers = event.modifiers;
+				it.second.event.data.input.modifiers = event.input.modifiers;
 				handleInputEvent(it.second.event.data);
 			}
 		}
@@ -216,66 +214,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 		break;
 	}
-	case InputEventName::Background: {
-		_inBackground = event.getValue();
-
-		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, false);
-		handlers.handle(false);
-
-		if (handlers.event.data.getValue()) {
-			// Window now in background, cancel active events
-			cancelTouchEvents(event.x, event.y, event.modifiers);
-			cancelKeyEvents(event.x, event.y, event.modifiers);
-		}
-		break;
-	}
-	case InputEventName::FocusGain: {
-		_hasFocus = event.getValue();
-
-		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, false);
-		handlers.handle(false);
-
-		if (!handlers.event.data.getValue()) {
-			// Window lost focus, cancel active events
-			cancelTouchEvents(event.x, event.y, event.modifiers);
-			cancelKeyEvents(event.x, event.y, event.modifiers);
-		}
-		break;
-	}
-	case InputEventName::PointerEnter: {
-		_pointerInWindow = event.getValue();
-
-		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, false);
-
-		handlers.handle(false);
-
-		if (!handlers.event.data.getValue()) {
-			// Mouse left window, cancel active mouse events
-			cancelTouchEvents(event.x, event.y, event.modifiers);
-		}
-		break;
-	}
-	case InputEventName::CloseRequest:
 	case InputEventName::ScreenUpdate: {
-		log::debug("InputDispatcher", "ScreenUpdate");
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->getOwner()) {
@@ -287,9 +226,22 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		}, false);
 
 		handlers.handle(false);
+
+		bool hasFocus = hasFlag(handlers.event.data.window.state, core::WindowState::Focused);
+		bool inBackground =
+				hasFlag(handlers.event.data.window.state, core::WindowState::Background);
+		bool hasPointer = hasFlag(handlers.event.data.window.state, core::WindowState::Pointer);
+
+		if (!hasFocus || inBackground || !hasPointer) {
+			cancelTouchEvents(event.input.x, event.input.y, event.input.modifiers);
+		}
+
+		if (!hasFocus || inBackground) {
+			cancelKeyEvents(event.input.x, event.input.y, event.input.modifiers);
+		}
 		break;
 	}
-	case InputEventName::Fullscreen: {
+	case InputEventName::WindowState: {
 		EventHandlersInfo handlers{getEventInfo(event)};
 		_events->foreach ([&](const InputListenerStorage::Rec &l) {
 			if (l.listener->getOwner()) {
@@ -352,25 +304,27 @@ bool InputDispatcher::hasActiveInput() const {
 }
 
 InputEvent InputDispatcher::getEventInfo(const InputEventData &event) const {
-	auto loc = Vec2(event.x, event.y);
+	auto loc = event.getLocation();
 	return InputEvent{event, loc, loc, loc, _currentTime, _currentTime, _currentTime,
-		event.modifiers, event.modifiers};
+		event.getModifiers(), event.getModifiers()};
 }
 
 void InputDispatcher::updateEventInfo(InputEvent &event, const InputEventData &data) const {
 	event.previousLocation = event.currentLocation;
-	event.currentLocation = Vec2(data.x, data.y);
+	event.currentLocation = data.getLocation();
 
 	event.previousTime = event.currentTime;
 	event.currentTime = _currentTime;
 
-	event.previousModifiers = event.data.modifiers;
+	event.previousModifiers = event.data.getModifiers();
 
 	event.data.event = data.event;
-	event.data.x = data.x;
-	event.data.y = data.y;
-	event.data.button = data.button;
-	event.data.modifiers = data.modifiers;
+	if (event.data.hasInput()) {
+		event.data.input.x = data.input.x;
+		event.data.input.y = data.input.y;
+		event.data.input.button = data.input.button;
+		event.data.input.modifiers = data.input.modifiers;
+	}
 
 	if (event.data.isPointEvent()) {
 		event.data.point.valueX = data.point.valueX;
@@ -534,10 +488,10 @@ void InputDispatcher::handleKey(const InputEventData &event, bool clear) {
 void InputDispatcher::cancelTouchEvents(float x, float y, InputModifier mods) {
 	auto tmpEvents = _activeEvents;
 	for (auto &it : tmpEvents) {
-		it.second.event.data.x = x;
-		it.second.event.data.y = y;
+		it.second.event.data.input.x = x;
+		it.second.event.data.input.y = y;
 		it.second.event.data.event = InputEventName::Cancel;
-		it.second.event.data.modifiers = mods;
+		it.second.event.data.input.modifiers = mods;
 		handleInputEvent(it.second.event.data);
 	}
 	_activeEvents.clear();
@@ -546,10 +500,10 @@ void InputDispatcher::cancelTouchEvents(float x, float y, InputModifier mods) {
 void InputDispatcher::cancelKeyEvents(float x, float y, InputModifier mods) {
 	auto tmpEvents = _activeKeys;
 	for (auto &it : tmpEvents) {
-		it.second.event.data.x = x;
-		it.second.event.data.y = y;
+		it.second.event.data.input.x = x;
+		it.second.event.data.input.y = y;
 		it.second.event.data.event = InputEventName::KeyCanceled;
-		it.second.event.data.modifiers = mods;
+		it.second.event.data.input.modifiers = mods;
 		handleInputEvent(it.second.event.data);
 	}
 	_activeKeys.clear();

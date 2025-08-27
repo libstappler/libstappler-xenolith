@@ -24,7 +24,7 @@
 #define XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
 
 #include "XLCorePresentationEngine.h"
-#include "XLVkSwapchain.h"
+#include "XLVkSwapchain.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 

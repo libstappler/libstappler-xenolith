@@ -62,8 +62,11 @@ public:
 
 	virtual void update(const UpdateTime &) override;
 
-	void setViewLayerFlags(WindowLayerFlags);
-	WindowLayerFlags getViewLayerFlags() const { return _layerFlags; }
+	void setCursor(WindowCursor);
+	WindowCursor getCursor() const { return _windowLayer.cursor; }
+
+	void setLayerFlags(WindowLayerFlags);
+	WindowLayerFlags getLayerFlags() const { return _windowLayer.flags; }
 
 	void setOwner(Node *pOwner);
 	Node *getOwner() const { return _owner; }
@@ -120,12 +123,8 @@ public:
 
 	GestureKeyRecognizer *addKeyRecognizer(InputCallback<GestureData> &&, KeyMask && = KeyMask());
 
-	void setPointerEnterCallback(Function<bool(bool)> &&);
-	void setBackgroudCallback(Function<bool(bool)> &&);
-	void setFocusCallback(Function<bool(bool)> &&);
-	void setCloseRequestCallback(Function<bool(bool)> &&);
-	void setScreenUpdateCallback(Function<bool(bool)> &&);
-	void setFullscreenCallback(Function<bool(bool)> &&);
+	void setWindowStateCallback(Function<bool(WindowState, WindowState)> &&);
+	void setScreenUpdateCallback(Function<bool()> &&);
 
 	void clear();
 
@@ -135,13 +134,15 @@ protected:
 
 	void addEventMask(const EventMask &);
 
+	using EventCallback = std::variant<Function<bool()>, Function<bool(WindowState, WindowState)>>;
+
 	GestureRecognizer *addRecognizer(GestureRecognizer *);
 
 	int32_t _priority = 0; // 0 - scene graph
 	uint32_t _dedicatedFocus = 0; // 0 - unused
 	EventMask _eventMask;
 	EventMask _swallowEvents;
-	WindowLayerFlags _layerFlags = WindowLayerFlags::None;
+	WindowLayer _windowLayer;
 
 	float _touchPadding = 0.0f;
 	float _opacityFilter = 0.0f;
@@ -150,7 +151,7 @@ protected:
 
 	EventFilter _eventFilter;
 	Vector<Rc<GestureRecognizer>> _recognizers;
-	Map<InputEventName, Function<bool(bool)>> _callbacks;
+	Map<InputEventName, EventCallback> _callbacks;
 };
 
 } // namespace stappler::xenolith
