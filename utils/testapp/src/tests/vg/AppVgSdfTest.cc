@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +23,6 @@
 
 #include "AppVgSdfTest.h"
 #include "XL2dCommandList.h"
-#include "XLFrameInfo.h"
 
 namespace stappler::xenolith::app {
 
@@ -73,7 +73,7 @@ bool VgSdfTestCircle::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->openForWriting([] (vg::PathWriter &writer) { writer.addCircle(8, 8, 8); });
+	_image->addPath()->openForWriting([](vg::PathWriter &writer) { writer.addCircle(8, 8, 8); });
 
 	setDepthIndex(4.0f);
 	setColor(Color::Grey_100);
@@ -91,9 +91,11 @@ bool VgSdfTestRect::init(bool value, float radius) {
 	_radius = radius;
 
 	if (_radius > 0.0f) {
-		_image->addPath()->openForWriting([&] (vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8), radius, radius); });
+		_image->addPath()->openForWriting(
+				[&](vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8), radius, radius); });
 	} else {
-		_image->addPath()->openForWriting([&] (vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8)); });
+		_image->addPath()->openForWriting(
+				[&](vg::PathWriter &writer) { writer.addRect(Rect(0, 0, 16, 8)); });
 	}
 
 	setDepthIndex(4.0f);
@@ -109,7 +111,8 @@ bool VgSdfTestPolygon::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->openForWriting([&] (vg::PathWriter &writer) {
+	_image->addPath()
+			->openForWriting([&](vg::PathWriter &writer) {
 		writer.moveTo(0.0f, 0.0f).lineTo(16, 20).lineTo(0, 20).lineTo(16, 0).closePath();
 	}).setAntialiased(false);
 
@@ -126,7 +129,8 @@ bool VgSdfTestTriangle::init(bool value) {
 	}
 
 	_sdfShadow = value;
-	_image->addPath()->openForWriting([&] (vg::PathWriter &writer) {
+	_image->addPath()
+			->openForWriting([&](vg::PathWriter &writer) {
 		writer.moveTo(0.0f, 0.0f).lineTo(8.0f, 16.0f).lineTo(16.0f, 0.0f).closePath();
 	}).setAntialiased(false);
 
@@ -190,7 +194,7 @@ bool VgSdfTest::init() {
 	float initialRotation = 0.0f;
 
 	_sliderScaleX = addChild(Rc<SliderWithLabel>::create(toString("Scale X: ", initialScale),
-			(initialScale - 0.1f) / 2.9f, [this] (float val) {
+			(initialScale - 0.1f) / 2.9f, [this](float val) {
 		// updateScaleValue(val);
 		_circleSprite->setScaleX(val * 2.9f + 0.1f);
 		_circleTestSprite->setScaleX(val * 2.9f + 0.1f);
@@ -208,7 +212,7 @@ bool VgSdfTest::init() {
 	_sliderScaleX->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderScaleY = addChild(Rc<SliderWithLabel>::create(toString("Scale Y: ", initialScale),
-			(initialScale - 0.1f) / 2.9f, [this] (float val) {
+			(initialScale - 0.1f) / 2.9f, [this](float val) {
 		_circleSprite->setScaleY(val * 2.9f + 0.1f);
 		_circleTestSprite->setScaleY(val * 2.9f + 0.1f);
 		_rectSprite->setScaleY(val * 2.9f + 0.1f);
@@ -225,7 +229,7 @@ bool VgSdfTest::init() {
 	_sliderScaleY->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderShadow = addChild(Rc<SliderWithLabel>::create(toString("Shadow: ", initialShadow),
-			initialShadow / maxShadow, [this, maxShadow] (float val) {
+			initialShadow / maxShadow, [this, maxShadow](float val) {
 		_circleSprite->setDepthIndex(val * maxShadow);
 		_circleTestSprite->setDepthIndex(val * maxShadow);
 		_rectSprite->setDepthIndex(val * maxShadow);
@@ -242,7 +246,7 @@ bool VgSdfTest::init() {
 	_sliderShadow->setContentSize(Size2(128.0f, 32.0f));
 
 	_sliderRotation = addChild(Rc<SliderWithLabel>::create(toString("Rotation: ", initialRotation),
-			initialRotation / (numbers::pi * 2.0f), [this] (float val) {
+			initialRotation / (numbers::pi * 2.0f), [this](float val) {
 		_circleSprite->setRotation(val * numbers::pi * 2.0f);
 		_circleTestSprite->setRotation(val * numbers::pi * 2.0f);
 		_rectSprite->setRotation(val * numbers::pi * 2.0f);
@@ -264,7 +268,8 @@ bool VgSdfTest::init() {
 void VgSdfTest::handleEnter(Scene *scene) {
 	LayoutTest::handleEnter(scene);
 
-	auto light = Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, Color::White);
+	auto light =
+			Rc<SceneLight>::create(SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, Color::White);
 
 	auto content = dynamic_cast<SceneContent2d *>(_scene->getContent());
 	content->removeAllLights();
@@ -280,19 +285,27 @@ void VgSdfTest::handleContentSizeDirty() {
 	_sliderRotation->setPosition(Vec2(384.0f + 16.0f, _contentSize.height - 16.0f - 48.0f));
 
 	_circleSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 3.0f, 100.0f));
-	_circleTestSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, 100.0f));
+	_circleTestSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, 100.0f));
 
 	_rectSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 3.0f, 0.0f));
-	_rectTestSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, 0.0f));
+	_rectTestSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, 0.0f));
 
-	_roundedRectSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 3.0f, -100.0f));
-	_roundedRectTestSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, -100.0f));
+	_roundedRectSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 3.0f, -100.0f));
+	_roundedRectTestSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 3.0f, -100.0f));
 
-	_triangleSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 6.0f, 100.0f));
-	_triangleTestSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 6.0f, 100.0f));
+	_triangleSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 6.0f, 100.0f));
+	_triangleTestSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 6.0f, 100.0f));
 
-	_polygonSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 6.0f, -40.0f));
-	_polygonTestSprite->setPosition(Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 6.0f, -40.0f));
+	_polygonSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(_contentSize.width / 6.0f, -40.0f));
+	_polygonTestSprite->setPosition(
+			Vec2(_contentSize / 2.0f) + Vec2(-_contentSize.width / 6.0f, -40.0f));
 }
 
-}
+} // namespace stappler::xenolith::app

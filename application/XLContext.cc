@@ -40,6 +40,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+XL_DECLARE_EVENT_CLASS(Context, onNetworkStateChanged);
 XL_DECLARE_EVENT_CLASS(Context, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Context, onRemoteNotification)
 
@@ -443,6 +444,8 @@ void Context::handleNetworkStateChanged(NetworkFlags flags) {
 	if (_application) {
 		_application->handleNetworkStateChanged(flags);
 	}
+
+	onNetworkStateChanged(this, toInt(flags));
 }
 
 void Context::handleThemeInfoChanged(const ThemeInfo &info) {

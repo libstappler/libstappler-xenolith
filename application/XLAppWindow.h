@@ -66,7 +66,7 @@ public:
 	Context *getContext() const { return _context; }
 	AppThread *getApplication() const { return _application; }
 
-	core::WindowState getWindowState() const { return _state; }
+	core::WindowState getWindowState() const { return _state; } // from any thread
 
 	// Note that WindowInfo describes window state in main thread,
 	// you should not use it in app thread, except for constant fields (like flags)
@@ -97,17 +97,32 @@ public:
 	void setFrameInterval(uint64_t); // from any thread
 	uint64_t getFrameInterval() const; // from any thread
 
-	// exit guard will prevent OS WM to close window on it's side
+	// ExitGuard will prevent OS WM to close window on it's side.
+	// If ExitGuard is enabled, when WM or user tries to close window, it remains open and you will receive
+	// WindowState notification with CloseRequest flag set.
+	// When CloseRequest flag is set, ypu should commit this request with enableState(WindowState::CloseRequest)
+	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable ExitGuard
+	// Also, when CloseRequest flag is set, next `close` call or next WM close action will close this window
 	void retainExitGuard();
 	void releaseExitGuard();
 
-	void setInsetDecoration(const Padding &padding);
+	// State flags you can enable or disable
+	WindowState getUpdatableStateFlags() const;
 
-	void setInsetDecorationVisible(bool);
-	bool isInsetDecorationVisible() const;
+	// try to change WindowState by adding new flag
+	// Only one flag can be set per call
+	//
+	// WindowState::Fullscreen: acts like setFullscreen(FullscreenInfo::Current)
+	// WindowState::CloseRequest: if this flag is NOT set in _state:  calls AppWindow::close() (so, ExitGuard can be triggered)
+	// WindowState::CloseRequest: if this flag IS set in _state: forceы window to be closed by WM
+	bool enableState(WindowState); // from app thread
 
-	void setInsetDecorationTone(float);
-	float getInsetDecorationTone() const;
+	// try to change WindowState by removing flag
+	// Only one flag can be removed per call
+	//
+	// WindowState::Fullscreen: acts like setFullscreen(FullscreenInfo::None)
+	// WindowState::CloseRequest: if this flag IS set in _state: discards close request and re-enables ExitGuard if it is retained
+	bool disableState(WindowState); // from app thread
 
 	void acquireTextInput(TextInputRequest &&);
 	void releaseTextInput();
@@ -153,8 +168,6 @@ protected:
 	uint32_t _exitGuard = 0;
 
 	bool _inCloseRequest = false;
-	bool _insetDecorationVisible = true;
-	float _insetDecorationTone = 1.0f;
 
 	core::SwapchainConfig _appSwapchainConfig;
 };

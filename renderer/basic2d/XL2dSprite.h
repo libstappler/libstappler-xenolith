@@ -182,7 +182,7 @@ protected:
 
 	Rc<LinearGradient> _linearGradient;
 
-	Component *_textureUpdateComponent = nullptr;
+	System *_textureUpdateComponent = nullptr;
 };
 
 } // namespace stappler::xenolith::basic2d

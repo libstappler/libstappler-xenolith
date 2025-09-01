@@ -23,7 +23,7 @@
 #ifndef XENOLITH_APPLICATION_INPUT_XLGESTURERECOGNIZER_H_
 #define XENOLITH_APPLICATION_INPUT_XLGESTURERECOGNIZER_H_
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 #include "XLInput.h"
 #include "SPMovingAverage.h"
 
@@ -130,7 +130,7 @@ public:
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
 
-	virtual ~GestureRecognizer() { }
+	virtual ~GestureRecognizer() = default;
 
 	virtual bool init();
 
@@ -171,7 +171,7 @@ class SP_PUBLIC GestureTouchRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
-	virtual ~GestureTouchRecognizer() { }
+	virtual ~GestureTouchRecognizer() = default;
 
 	virtual bool init(InputCallback &&, ButtonMask &&);
 
@@ -197,7 +197,7 @@ public:
 	using InputCallback = Function<void(const GestureTap &)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
 
-	virtual ~GestureTapRecognizer() { }
+	virtual ~GestureTapRecognizer() = default;
 
 	virtual bool init(InputCallback &&, ButtonMask &&, uint32_t maxTapCount);
 
@@ -224,7 +224,7 @@ class SP_PUBLIC GesturePressRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GesturePress &)>;
 
-	virtual ~GesturePressRecognizer() { }
+	virtual ~GesturePressRecognizer() = default;
 
 	virtual bool init(InputCallback &&, TimeInterval interval, bool continuous, ButtonMask &&);
 
@@ -253,7 +253,7 @@ class SP_PUBLIC GestureSwipeRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureSwipe &)>;
 
-	virtual ~GestureSwipeRecognizer() { }
+	virtual ~GestureSwipeRecognizer() = default;
 
 	virtual bool init(InputCallback &&, float threshold, bool includeThreshold, ButtonMask &&);
 
@@ -284,7 +284,7 @@ class SP_PUBLIC GesturePinchRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<void(const GesturePinch &)>;
 
-	virtual ~GesturePinchRecognizer() { }
+	virtual ~GesturePinchRecognizer() = default;
 
 	virtual bool init(InputCallback &&, ButtonMask &&);
 
@@ -309,7 +309,7 @@ class SP_PUBLIC GestureScrollRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureScroll &)>;
 
-	virtual ~GestureScrollRecognizer() { }
+	virtual ~GestureScrollRecognizer() = default;
 
 	virtual bool init(InputCallback &&);
 
@@ -326,7 +326,7 @@ class SP_PUBLIC GestureMoveRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
-	virtual ~GestureMoveRecognizer() { }
+	virtual ~GestureMoveRecognizer() = default;
 
 	virtual bool init(InputCallback &&, bool withinNode);
 
@@ -350,7 +350,7 @@ public:
 	using InputCallback = Function<bool(const GestureData &)>;
 	using KeyMask = std::bitset<toInt(InputKeyCode::Max)>;
 
-	virtual ~GestureKeyRecognizer() { }
+	virtual ~GestureKeyRecognizer() = default;
 
 	virtual bool init(InputCallback &&, KeyMask &&);
 
@@ -374,7 +374,7 @@ class SP_PUBLIC GestureMouseOverRecognizer : public GestureRecognizer {
 public:
 	using InputCallback = Function<bool(const GestureData &)>;
 
-	virtual ~GestureMouseOverRecognizer() { }
+	virtual ~GestureMouseOverRecognizer() = default;
 
 	virtual bool init(InputCallback &&, float padding = 0.0f);
 

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -165,14 +166,14 @@ void DecoratedLayout::setViewDecorationFlags(ViewDecorationFlags value) {
 
 ViewDecorationFlags DecoratedLayout::getViewDecorationFlags() const { return _viewDecoration; }
 
-void DecoratedLayout::onForeground(SceneContent2d *l, SceneLayout2d *overlay) {
+void DecoratedLayout::handleForeground(SceneContent2d *l, SceneLayout2d *overlay) {
 	updateStatusBar(_decorationTop->getStyleCurrent());
 }
 
 void DecoratedLayout::updateStatusBar(const SurfaceStyleData &style) {
 	if (_director
 			&& (_viewDecoration & ViewDecorationFlags::Visible) != ViewDecorationFlags::None) {
-		_director->getWindow()->setInsetDecorationTone(style.colorOn.data.tone / 50.0f);
+		//_director->getWindow()->setInsetDecorationTone(style.colorOn.data.tone / 50.0f);
 	}
 }
 

@@ -23,8 +23,10 @@
 #include "XLSceneContent.h"
 #include "XLInputListener.h"
 #include "XLDirector.h"
+#include "XLScene.h"
 #include "XLDynamicStateComponent.h"
 #include "XLAppWindow.h"
+#include "XLWindowDecorations.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -63,6 +65,10 @@ void SceneContent::handleEnter(Scene *scene) {
 	if (_retainBackButton && !_backButtonRetained) {
 		_director->getWindow()->retainExitGuard();
 		_backButtonRetained = true;
+	}
+
+	if (!_userDecorations && _windowDecorationsConstructor) {
+		_userDecorations = addChild(_windowDecorationsConstructor(this));
 	}
 
 	if (_handlesViewDecoration) {
@@ -107,7 +113,7 @@ void SceneContent::setHandlesViewDecoration(bool value) {
 void SceneContent::showViewDecoration() {
 	if (_decorationVisible != true) {
 		if (_running && _handlesViewDecoration) {
-			_director->getWindow()->setInsetDecorationVisible(true);
+			//_director->getWindow()->setInsetDecorationVisible(true);
 		}
 		_decorationVisible = true;
 	}
@@ -116,10 +122,22 @@ void SceneContent::showViewDecoration() {
 void SceneContent::hideViewDecoration() {
 	if (_decorationVisible != false) {
 		if (_running && _handlesViewDecoration) {
-			_director->getWindow()->setInsetDecorationVisible(false);
+			//_director->getWindow()->setInsetDecorationVisible(false);
 		}
 		_decorationVisible = false;
 	}
+}
+
+Padding SceneContent::getDecorationPadding() const {
+	if (!_running) {
+		return Padding();
+	}
+	auto &c = _scene->getFrameConstraints();
+	auto padding = c.contentPadding / c.density;
+	if (_userDecorations && _userDecorations->isVisible()) {
+		padding += _userDecorations->getPadding();
+	}
+	return padding;
 }
 
 void SceneContent::enableScissor() {
@@ -134,10 +152,19 @@ void SceneContent::disableScissor() {
 
 bool SceneContent::isScissorEnabled() const { return _scissorComponent->isScissorEnabled(); }
 
-void SceneContent::setDecorationPadding(Padding padding) {
-	if (padding != _decorationPadding) {
-		_decorationPadding = padding;
-		_contentSizeDirty = true;
+void SceneContent::setWindowDecorationsContructor(WindowDecorationsCallback &&cb) {
+	_windowDecorationsConstructor = sp::move(cb);
+
+	if (_windowDecorationsConstructor && _running) {
+		if (_userDecorations) {
+			_userDecorations->removeFromParent(true);
+			_userDecorations = nullptr;
+		}
+
+		if (auto d = _windowDecorationsConstructor(this)) {
+			_userDecorations = addChild(d);
+		}
+		_contentSizeDirty = true; // to place header correctly
 	}
 }
 

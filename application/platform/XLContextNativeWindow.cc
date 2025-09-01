@@ -59,7 +59,8 @@ bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 }
 
 core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&c) const {
-	if (hasFlag(_info->state, WindowState::Fullscreen)) {
+	if (hasFlag(_info->state, WindowState::Fullscreen)
+			|| !hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
 		c.borderRadius = 0.0f;
 		c.shadowRadius = 0.0f;
 		c.shadowValue = 0.0f;
@@ -72,6 +73,46 @@ core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&
 		c.viewConstraints = core::getViewConstraints(_info->state);
 	}
 	return move(c);
+}
+
+void NativeWindow::handleLayerEnter(const WindowLayer &layer) {
+	if (layer.cursor != WindowCursor::Undefined) {
+		setCursor(layer.cursor);
+	}
+	if (hasFlag(layer.flags, WindowLayerFlags::GripMask)) {
+		// update grip value only if it's greater then current
+		// so, resize grip has priority over move grip
+		auto newGrip = layer.flags & WindowLayerFlags::GripMask;
+		if (toInt(newGrip) > toInt(_gripFlags)) {
+			_gripFlags = newGrip;
+		}
+	}
+	_currentLayerFlags |= layer.flags & ~WindowLayerFlags::GripMask;
+}
+
+void NativeWindow::handleLayerExit(const WindowLayer &layer) {
+	auto cursor = WindowCursor::Undefined;
+	auto gripFlags = WindowLayerFlags::None;
+	_currentLayerFlags = WindowLayerFlags::None;
+	for (auto &it : _currentLayers) {
+		if (it.cursor != WindowCursor::Undefined) {
+			cursor = it.cursor;
+		}
+		if (hasFlag(it.flags, WindowLayerFlags::GripMask)) {
+			// update grip value only if it's greater then current
+			// so, resize grip has priority over move grip
+			auto newGrip = it.flags & WindowLayerFlags::GripMask;
+			if (toInt(newGrip) > toInt(gripFlags)) {
+				gripFlags = newGrip;
+			}
+		}
+		_currentLayerFlags |= it.flags & ~WindowLayerFlags::GripMask;
+	}
+
+	if (gripFlags != _gripFlags) {
+		_gripFlags = gripFlags;
+	}
+	setCursor(cursor);
 }
 
 void NativeWindow::acquireTextInput(const TextInputRequest &req) { _textInput->run(req); }
@@ -291,20 +332,46 @@ void NativeWindow::dispatchPendingEvents() {
 	_pendingEvents.clear();
 }
 
+bool NativeWindow::enableState(WindowState state) {
+	if (hasFlag(state, WindowState::Fullscreen)) {
+		setFullscreen(FullscreenInfo(FullscreenInfo::Current), [](Status) { }, nullptr);
+		return true;
+	} else if (hasFlag(state, WindowState::CloseRequest)) {
+		if (!hasFlag(_info->state, WindowState::CloseRequest)) {
+			_appWindow->close(true);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool NativeWindow::disableState(WindowState state) {
+	if (hasFlag(state, WindowState::Fullscreen)) {
+		setFullscreen(FullscreenInfo(FullscreenInfo::None), [](Status) { }, nullptr);
+		return true;
+	}
+
+	return false;
+}
+
 void NativeWindow::handleMotionEvent(const InputEventData &event) {
 	if (_handleLayerForMotion) {
 		_layerLocation = event.getLocation();
+
+		Vector<WindowLayer> layersToExit;
 
 		auto it = _currentLayers.begin();
 		while (it != _currentLayers.end()) {
 			if (!it->rect.containsPoint(_layerLocation)) {
 				auto l = *it;
 				it = _currentLayers.erase(it);
-				handleLayerExit(l);
+				layersToExit.emplace_back(l);
 			} else {
 				++it;
 			}
 		}
+
+		for (auto &it : layersToExit) { handleLayerExit(it); }
 
 		for (auto &it : _layers) {
 			if (it.rect.containsPoint(_layerLocation)) {
@@ -334,6 +401,7 @@ void NativeWindow::updateState(uint32_t id, WindowState state) {
 	auto changes = state ^ _info->state;
 
 	_info->state = state;
+
 	// try to rewrite state in already pending event
 	for (auto &it : _pendingEvents) {
 		if (it.event == core::InputEventName::WindowState) {

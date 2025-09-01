@@ -23,8 +23,9 @@
 
 #include "XLNetworkController.h"
 #include "SPNetworkContext.h"
+#include "XLEventListener.h"
 #include "XLNetworkRequest.h"
-#include <cstddef>
+#include "XLContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
@@ -39,7 +40,7 @@ struct ControllerHandle {
 struct Controller::Data final : thread::Thread {
 	using Context = stappler::network::Context<Interface>;
 
-	Application *_application = nullptr;
+	AppThread *_application = nullptr;
 	Controller *_controller = nullptr;
 	String _name;
 	Bytes _signKey;
@@ -54,9 +55,9 @@ struct Controller::Data final : thread::Thread {
 	Map<String, void *> _sharegroups;
 
 	Map<CURL *, ControllerHandle> _handles;
-	NetworkCapabilities _capabilities = NetworkCapabilities::None;
+	NetworkFlags _capabilities = NetworkFlags::None;
 
-	Data(Application *app, Controller *c, StringView name, Bytes &&signKey);
+	Data(AppThread *app, Controller *c, StringView name, Bytes &&signKey);
 	virtual ~Data();
 
 	bool init();
@@ -67,6 +68,8 @@ struct Controller::Data final : thread::Thread {
 	virtual void threadDispose() override;
 
 	void *getSharegroup(StringView);
+
+	void handleNetworkStateChanged(NetworkFlags);
 
 	void onUploadProgress(Handle *, int64_t total, int64_t now);
 	void onDownloadProgress(Handle *, int64_t total, int64_t now);
@@ -81,28 +84,17 @@ struct Controller::Data final : thread::Thread {
 	bool finalize(Handle &handle, Context *ctx, const Callback<bool(CURL *)> &onAfterPerform);
 };
 
-SPUNUSED static void registerNetworkCallback(Application *, void *,
-		Function<void(NetworkCapabilities)> &&);
-SPUNUSED static void unregisterNetworkCallback(Application *, void *);
-
-XL_DECLARE_EVENT(Controller, "network::Controller", onNetworkCapabilities);
-
-Controller::Data::Data(Application *app, Controller *c, StringView name, Bytes &&signKey)
+Controller::Data::Data(AppThread *app, Controller *c, StringView name, Bytes &&signKey)
 : _application(app), _controller(c), _name(name.str<Interface>()), _signKey(sp::move(signKey)) { }
 
 Controller::Data::~Data() { }
 
 bool Controller::Data::init() {
-	registerNetworkCallback(_application, this, [this](NetworkCapabilities cap) {
-		_application->performOnAppThread([this, cap] {
-			_capabilities = cap;
-			Controller::onNetworkCapabilities(_controller, int64_t(toInt(_capabilities)));
-		}, this);
-	});
+	_capabilities = _application->getNetworkFlags();
 	return true;
 }
 
-void Controller::Data::invalidate() { unregisterNetworkCallback(_application, this); }
+void Controller::Data::invalidate() { }
 
 void Controller::Data::threadInit() {
 	_pending.setQueueLocking(_mutexQueue);
@@ -243,6 +235,8 @@ void *Controller::Data::getSharegroup(StringView name) {
 	return sharegroup;
 }
 
+void Controller::Data::handleNetworkStateChanged(NetworkFlags caps) { _capabilities = caps; }
+
 void Controller::Data::onUploadProgress(Handle *handle, int64_t total, int64_t now) {
 	_application->performOnAppThread([handle, total, now] {
 		auto req = handle->getReqeust();
@@ -272,11 +266,11 @@ bool Controller::Data::onComplete(Handle *handle, bool success) {
 void Controller::Data::sign(NetworkHandle &handle, Context &ctx) const {
 	String date = Time::now().toHttp<Interface>();
 
-	auto &appInfo = _application->getInfo();
+	auto appInfo = _application->getContext()->getInfo();
 
-	auto msg = toString(handle.getUrl(), "\r\n", "X-ApplicationName: ", appInfo.bundleName, "\r\n",
-			"X-ApplicationVersion: ", appInfo.applicationVersion, "\r\n", "X-ClientDate: ", date,
-			"\r\n", "User-Agent: ", _application->getInfo().userAgent, "\r\n");
+	auto msg = toString(handle.getUrl(), "\r\n", "X-ApplicationName: ", appInfo->bundleName, "\r\n",
+			"X-ApplicationVersion: ", appInfo->appVersion, "\r\n", "X-ClientDate: ", date, "\r\n",
+			"User-Agent: ", appInfo->userAgent, "\r\n");
 
 	auto sig = string::Sha512::hmac(msg, _signKey);
 
@@ -284,8 +278,8 @@ void Controller::Data::sign(NetworkHandle &handle, Context &ctx) const {
 	ctx.headers = curl_slist_append(ctx.headers,
 			toString("X-Stappler-Sign: ", base64url::encode<Interface>(sig)).data());
 
-	if (!_application->getInfo().userAgent.empty()) {
-		handle.setUserAgent(_application->getInfo().userAgent);
+	if (!appInfo->userAgent.empty()) {
+		handle.setUserAgent(appInfo->userAgent);
 	}
 }
 
@@ -311,12 +305,12 @@ bool Controller::Data::finalize(Handle &handle, Context *ctx,
 	return handle.finalize(ctx, ret);
 }
 
-Rc<ApplicationExtension> Controller::createController(Application *app, StringView name,
+Rc<ApplicationExtension> Controller::createController(AppThread *app, StringView name,
 		Bytes &&signKey) {
 	return Rc<network::Controller>::alloc(app, name, sp::move(signKey));
 }
 
-Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
+Controller::Controller(AppThread *app, StringView name, Bytes &&signKey) {
 	_data = new (std::nothrow) Data(app, this, name, sp::move(signKey));
 	_data->init();
 	_data->run();
@@ -324,9 +318,9 @@ Controller::Controller(Application *app, StringView name, Bytes &&signKey) {
 
 Controller::~Controller() { }
 
-void Controller::initialize(Application *) { }
+void Controller::initialize(AppThread *) { }
 
-void Controller::invalidate(Application *) {
+void Controller::invalidate(AppThread *) {
 	_data->stop();
 	curl_multi_wakeup(_data->_handle);
 	_data->waitStopped();
@@ -334,9 +328,11 @@ void Controller::invalidate(Application *) {
 	_data = nullptr;
 }
 
-void Controller::update(Application *, const UpdateTime &t) { }
+void Controller::update(AppThread *, const UpdateTime &t, bool) { }
 
-Application *Controller::getApplication() const { return _data->_application; }
+void Controller::handleNetworkStateChanged(NetworkFlags flags) { _data->_capabilities = flags; }
+
+AppThread *Controller::getApplication() const { return _data->_application; }
 
 StringView Controller::getName() const { return _data->_name; }
 
@@ -345,7 +341,7 @@ void Controller::run(Rc<Request> &&handle) { _data->pushTask(move(handle)); }
 void Controller::setSignKey(Bytes &&value) { _data->_signKey = sp::move(value); }
 
 bool Controller::isNetworkOnline() const {
-	return (_data->_capabilities & NetworkCapabilities::Internet) != NetworkCapabilities::None;
+	return (_data->_capabilities & NetworkFlags::Internet) != NetworkFlags::None;
 }
 
 } // namespace stappler::xenolith::network

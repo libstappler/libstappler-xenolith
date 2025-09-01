@@ -25,7 +25,6 @@
 #include "XL2dFrameContext.h"
 #include "XL2dSceneLayout.h"
 #include "XL2dSceneLight.h"
-#include "XL2dWindowHeader.h"
 #include "XL2dScene.h" // IWYU pragma: keep
 #include "XLDirector.h"
 #include "XLAppWindow.h"
@@ -48,10 +47,6 @@ bool SceneContent2d::init() {
 
 void SceneContent2d::handleEnter(Scene *scene) {
 	SceneContent::handleEnter(scene);
-
-	if (!_windowHeader && _windowHeaderContructor) {
-		_windowHeader = addChild(_windowHeaderContructor(this));
-	}
 
 	for (auto &it : _lights) { it->onEnter(scene); }
 }
@@ -93,7 +88,7 @@ void SceneContent2d::replaceLayout(SceneLayout2d *node) {
 
 	for (auto &it : _layouts) {
 		if (it != node) {
-			it->hanldePopTransitionBegan(this, true);
+			it->handlePopTransitionBegan(this, true);
 		} else {
 			it->handlePush(this, true);
 		}
@@ -135,7 +130,7 @@ void SceneContent2d::replaceTopLayout(SceneLayout2d *node) {
 	if (!_layouts.empty()) {
 		auto back = _layouts.back();
 		_layouts.pop_back();
-		back->hanldePopTransitionBegan(this, false);
+		back->handlePopTransitionBegan(this, false);
 
 		// just push node, then silently remove previous
 
@@ -155,7 +150,7 @@ void SceneContent2d::popLayout(SceneLayout2d *node) {
 	auto linkId = node->retain();
 	_layouts.erase(it);
 
-	node->hanldePopTransitionBegan(this, false);
+	node->handlePopTransitionBegan(this, false);
 	if (!_layouts.empty()) {
 		_layouts.back()->handleForegroundTransitionBegan(this, node);
 	}
@@ -392,7 +387,7 @@ bool SceneContent2d::popOverlay(SceneLayout2d *l) {
 
 	auto linkId = l->retain();
 	_overlays.erase(it);
-	l->hanldePopTransitionBegan(this, false);
+	l->handlePopTransitionBegan(this, false);
 
 	auto fn = [this, l, linkId] {
 		eraseOverlay(l);
@@ -411,7 +406,9 @@ bool SceneContent2d::popOverlay(SceneLayout2d *l) {
 }
 
 void SceneContent2d::updateLayoutNode(SceneLayout2d *node) {
-	auto mask = node->getDecodationMask();
+	auto mask = node->getDecorationMask();
+
+	Padding padding = getDecorationPadding();
 
 	Vec2 pos = Vec2::ZERO;
 	Size2 size = _contentSize;
@@ -423,22 +420,22 @@ void SceneContent2d::updateLayoutNode(SceneLayout2d *node) {
 	}
 
 	if ((mask & DecorationMask::Top) != DecorationMask::None) {
-		size.height += _decorationPadding.top;
-		effectiveDecorations.top = _decorationPadding.top;
+		size.height -= padding.top;
+		effectiveDecorations.top = padding.top;
 	}
 	if ((mask & DecorationMask::Right) != DecorationMask::None) {
-		size.width += _decorationPadding.right;
-		effectiveDecorations.right = _decorationPadding.right;
+		size.width -= padding.right;
+		effectiveDecorations.right = padding.right;
 	}
 	if ((mask & DecorationMask::Left) != DecorationMask::None) {
-		size.width += _decorationPadding.left;
-		pos.x -= _decorationPadding.left;
-		effectiveDecorations.left = _decorationPadding.left;
+		size.width -= padding.left;
+		pos.x += padding.left;
+		effectiveDecorations.left = padding.left;
 	}
 	if ((mask & DecorationMask::Bottom) != DecorationMask::None) {
-		size.height += _decorationPadding.bottom;
-		pos.y -= _decorationPadding.bottom;
-		effectiveDecorations.bottom = _decorationPadding.bottom;
+		size.height -= padding.bottom;
+		pos.y += padding.bottom;
+		effectiveDecorations.bottom = padding.bottom;
 	}
 
 	node->setAnchorPoint(Anchor::BottomLeft);
@@ -625,20 +622,6 @@ void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
 			ctx->lights.addDirectLight(it->getNormal(), it->getColor(), it->getData());
 			break;
 		}
-	}
-}
-
-void SceneContent2d::setWindowHeaderContructor(WindowHeaderCallback &&cb) {
-	_windowHeaderContructor = sp::move(cb);
-
-	if (_windowHeaderContructor) {
-		if (_windowHeader) {
-			_windowHeader->removeFromParent(true);
-			_windowHeader = nullptr;
-		}
-
-		_windowHeader = addChild(_windowHeaderContructor(this));
-		_contentSizeDirty = true; // to place header correctly
 	}
 }
 

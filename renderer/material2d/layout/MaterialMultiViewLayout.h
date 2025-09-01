@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,10 +31,11 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 class SP_PUBLIC MultiViewLayout : public FlexibleLayout {
 public:
-	class Generator : public Component {
+	class Generator : public System {
 	public:
 		using IndexViewCallback = Function< Rc<ScrollView>(int64_t) >;
-		using SequenceViewCallback = Function< Rc<ScrollView>(ScrollView *, int64_t viewIndex, int8_t offset) >;
+		using SequenceViewCallback =
+				Function< Rc<ScrollView>(ScrollView *, int64_t viewIndex, int8_t offset) >;
 
 		using ViewCallback = Function< void(ScrollView *, int64_t) >;
 		using ProgressCallback = Function< void(ScrollView *, ScrollView *, float progress) >;
@@ -80,7 +82,7 @@ public:
 
 	virtual bool init(Generator * = nullptr);
 
-	virtual void onPush(SceneContent2d *l, bool replace) override;
+	virtual void handlePush(SceneContent2d *l, bool replace) override;
 
 	void setGenerator(Generator *);
 	Generator *getGenerator() const;
@@ -126,6 +128,6 @@ protected:
 	Generator *_generator = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALMULTIVIEWLAYOUT_H_ */

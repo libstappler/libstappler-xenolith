@@ -47,7 +47,7 @@ bool MaterialColorPicker::init(Type type, const ColorHCT &color, Function<void(f
 	_label->setFontSize(20);
 	_label->setAnchorPoint(Anchor::MiddleLeft);
 	_label->setString(makeString());
-	_label->setPersistentLayout(true);
+	_label->setPersistentGlyphData(true);
 
 	_indicator = addChild(Rc<Layer>::create(Color::Grey_500));
 	_indicator->setAnchorPoint(Anchor::MiddleLeft);

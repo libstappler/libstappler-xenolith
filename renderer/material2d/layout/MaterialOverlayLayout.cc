@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -77,16 +78,16 @@ void OverlayLayout::handleContentSizeDirty() {
 	}
 }
 
-void OverlayLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) {
-	SceneLayout2d::onPushTransitionEnded(l, replace);
+void OverlayLayout::handlePushTransitionEnded(SceneContent2d *l, bool replace) {
+	SceneLayout2d::handlePushTransitionEnded(l, replace);
 
 	emplaceNode(_globalOrigin, _binding);
 	retainFocus();
 }
 
-void OverlayLayout::onPopTransitionBegan(SceneContent2d *l, bool replace) {
+void OverlayLayout::handlePopTransitionBegan(SceneContent2d *l, bool replace) {
 	releaseFocus();
-	SceneLayout2d::onPopTransitionBegan(l, replace);
+	SceneLayout2d::handlePopTransitionBegan(l, replace);
 	if (_readyCallback) {
 		_readyCallback(false);
 	}

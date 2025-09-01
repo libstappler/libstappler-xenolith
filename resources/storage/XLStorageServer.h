@@ -24,8 +24,8 @@
 #ifndef XENOLITH_RESOURCES_STORAGE_XLSTORAGESERVER_H_
 #define XENOLITH_RESOURCES_STORAGE_XLSTORAGESERVER_H_
 
-#include "XLCommon.h"
-#include "XLApplication.h"
+#include "XLCommon.h" // IWYU pragma: keep
+#include "XLAppThread.h" // IWYU pragma: keep
 #include "XLEvent.h"
 #include "SPDbScheme.h"
 
@@ -47,16 +47,16 @@ public:
 
 	static EventHeader onBroadcast;
 
-	static Rc<ApplicationExtension> createServer(Application *, const Value &params);
+	static Rc<ApplicationExtension> createServer(AppThread *, const Value &params);
 
 	virtual ~Server();
 
-	virtual bool init(Application *, const Value &params);
+	virtual bool init(AppThread *, const Value &params);
 
-	virtual void initialize(Application *) override;
-	virtual void invalidate(Application *) override;
+	virtual void initialize(AppThread *) override;
+	virtual void invalidate(AppThread *) override;
 
-	virtual void update(Application *, const UpdateTime &t) override;
+	virtual void update(AppThread *, const UpdateTime &t, bool wakeup) override;
 
 	Rc<ComponentContainer> getComponentContainer(StringView) const;
 	bool addComponentContainer(const Rc<ComponentContainer> &);
@@ -134,7 +134,7 @@ public:
 	// perform on Server's thread
 	bool perform(Function<bool(const Server &, const db::Transaction &)> &&, Ref * = nullptr) const;
 
-	Application *getApplication() const;
+	AppThread *getApplication() const;
 
 protected:
 	bool get(const Scheme &, DataCallback &&, uint64_t oid, Vector<const db::Field *> &&fields,

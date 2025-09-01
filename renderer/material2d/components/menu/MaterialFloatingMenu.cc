@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +41,7 @@ public:
 			Menu *root);
 	;
 
-	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
+	virtual void handlePushTransitionEnded(SceneContent2d *l, bool replace) override;
 
 protected:
 	FloatingMenu *_menu = nullptr;
@@ -67,13 +68,13 @@ bool FloatingMenuLayout::init(MenuSource *source, const Vec2 &globalOrigin, Floa
 	return true;
 }
 
-void FloatingMenuLayout::onPushTransitionEnded(SceneContent2d *l, bool replace) {
+void FloatingMenuLayout::handlePushTransitionEnded(SceneContent2d *l, bool replace) {
 	float w = _menu->getMenuWidth(this);
 	float h = _menu->getMenuHeight(this, w);
 
 	_fullSize = Size2(w, h);
 
-	OverlayLayout::onPushTransitionEnded(l, replace);
+	OverlayLayout::handlePushTransitionEnded(l, replace);
 }
 
 void FloatingMenu::push(SceneContent2d *content, MenuSource *source, const Vec2 &globalOrigin,

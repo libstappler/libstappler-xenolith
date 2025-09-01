@@ -20,11 +20,12 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 
 #include "nodes/XLNode.cc"
 #include "nodes/XLScene.cc"
 #include "nodes/XLSceneContent.cc"
+#include "nodes/XLWindowDecorations.cc"
 #include "nodes/XLComponent.cc"
 #include "nodes/XLDynamicStateComponent.cc"
 #include "nodes/XLSubscriptionListener.cc"

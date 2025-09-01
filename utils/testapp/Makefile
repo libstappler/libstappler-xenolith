@@ -1,4 +1,5 @@
 # Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,14 +34,14 @@ LOCAL_SRCS_OBJS :=
 LOCAL_INCLUDES_DIRS := src
 LOCAL_INCLUDES_OBJS :=
 
-LOCAL_MAIN := main.cpp
+#LOCAL_MAIN := main.cpp
 
 LOCAL_MODULES_PATHS = \
 	core/stappler-modules.mk \
 	xenolith/xenolith-modules.mk
 
 LOCAL_MODULES ?= \
-	xenolith_backend_vkgui \
+	xenolith_backend_vk \
 	xenolith_renderer_material2d \
 	xenolith_resources_assets
 

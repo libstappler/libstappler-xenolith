@@ -580,16 +580,16 @@ CmdInfo Sprite::buildCmdInfo(const FrameInfo &frame) const {
 }
 
 void Sprite::doScheduleTextureUpdate(Rc<Texture> &&tex) {
-	auto comp = Rc<CallbackComponent>::create();
+	auto comp = Rc<CallbackSystem>::create();
 	comp->setUserdata(tex);
 
-	comp->setEnterCallback([](CallbackComponent *comp, Scene *) {
+	comp->setEnterCallback([](CallbackSystem *comp, Scene *) {
 		auto tex = static_cast<Texture *>(comp->getUserdata());
 
 		auto tmp = tex->getTemporary();
 
 		tmp->load(comp, [](Ref *c, bool) {
-			auto comp = static_cast<CallbackComponent *>(c);
+			auto comp = static_cast<CallbackSystem *>(c);
 			if (auto owner = comp->getOwner()) {
 				auto tex = static_cast<Texture *>(comp->getUserdata());
 				auto sprite = static_cast<Sprite *>(owner);

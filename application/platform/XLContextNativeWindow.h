@@ -65,14 +65,11 @@ public:
 	virtual void setExitGuard(bool value) { _hasExitGuard = value; }
 	virtual bool hasExitGuard() const { return _hasExitGuard; }
 
-	virtual void setInsetDecorationVisible(bool) { }
-	virtual void setInsetDecorationTone(float) { }
-
 	// Pointer enter layer
-	virtual void handleLayerEnter(const WindowLayer &) { }
+	virtual void handleLayerEnter(const WindowLayer &);
 
 	// Pointer exit layer
-	virtual void handleLayerExit(const WindowLayer &) { }
+	virtual void handleLayerExit(const WindowLayer &);
 
 	virtual core::PresentationOptions getPreferredOptions() const {
 		return core::PresentationOptions();
@@ -102,6 +99,9 @@ public:
 
 	virtual void dispatchPendingEvents();
 
+	virtual bool enableState(WindowState);
+	virtual bool disableState(WindowState);
+
 protected:
 	// Run text input mode or update text input buffer
 	//
@@ -123,6 +123,8 @@ protected:
 
 	virtual void updateState(uint32_t, WindowState);
 
+	virtual void setCursor(WindowCursor) { }
+
 	uint64_t _frameOrder = 0;
 
 	Rc<ContextController> _controller;
@@ -134,7 +136,8 @@ protected:
 	// usually, text input can be captured from keyboard, but on some systems text input separated from keyboard input
 	bool _handleTextInputFromKeyboard = true;
 
-	// intercept pointer motion event to track current top layer
+	// intercept pointer motion event to track layers enter/exit
+	// On some WM we can offload layers to WM directly and disable this flag
 	bool _handleLayerForMotion = true;
 
 	bool _hasExitGuard = false;
@@ -149,6 +152,9 @@ protected:
 	Vector<WindowLayer> _layers;
 	Vector<WindowLayer> _currentLayers;
 	Vector<core::InputEventData> _pendingEvents;
+
+	WindowLayerFlags _currentLayerFlags = WindowLayerFlags::None;
+	WindowLayerFlags _gripFlags = WindowLayerFlags::None;
 };
 
 } // namespace stappler::xenolith::platform

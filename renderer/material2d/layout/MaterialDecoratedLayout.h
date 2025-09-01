@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-enum class ViewDecorationFlags {
+enum class ViewDecorationFlags : uint32_t {
 	None,
 	Visible = 1 << 0,
 	Tracked = 1 << 1
@@ -39,7 +40,7 @@ SP_DEFINE_ENUM_AS_MASK(ViewDecorationFlags)
 
 class SP_PUBLIC DecoratedLayout : public SceneLayout2d {
 public:
-	virtual ~DecoratedLayout() { }
+	virtual ~DecoratedLayout() = default;
 
 	virtual bool init(ColorRole decorationColorRole = ColorRole::PrimaryContainer);
 	virtual void handleContentSizeDirty() override;
@@ -54,7 +55,7 @@ public:
 	virtual void setViewDecorationFlags(ViewDecorationFlags value);
 	virtual ViewDecorationFlags getViewDecorationFlags() const;
 
-	virtual void onForeground(SceneContent2d *l, SceneLayout2d *overlay) override;
+	virtual void handleForeground(SceneContent2d *l, SceneLayout2d *overlay) override;
 
 	LayerSurface *getBackground() const { return _background; }
 
@@ -72,6 +73,6 @@ protected:
 	ViewDecorationFlags _viewDecoration = ViewDecorationFlags::None;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALDECORATEDLAYOUT_H_ */

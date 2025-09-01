@@ -177,7 +177,7 @@ const ScrollViewBase::OverscrollCallback &ScrollViewBase::getOverscrollCallback(
 	return _overscrollCallback;
 }
 
-bool ScrollViewBase::addComponentItem(Component *cmp) {
+bool ScrollViewBase::addComponentItem(System *cmp) {
 	if (auto c = dynamic_cast<ScrollController *>(cmp)) {
 		setController(c);
 		return true;

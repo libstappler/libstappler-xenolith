@@ -4352,6 +4352,6 @@ SP_PUBLIC bool getIconData(IconName, const Callback<void(BytesView)> &);
 
 SP_PUBLIC void drawIcon(vg::VectorImage &, IconName, float progress);
 
-}
+} // namespace stappler::xenolith
 
 #endif /* XENOLITH_RESOURCES_ICONS_XLICONS_H_ */

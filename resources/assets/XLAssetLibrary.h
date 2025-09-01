@@ -83,18 +83,18 @@ public:
 
 	static String getAssetUrl(StringView);
 
-	static Rc<ApplicationExtension> createLibrary(Application *, network::Controller *,
+	static Rc<ApplicationExtension> createLibrary(AppThread *, network::Controller *,
 			StringView name, const FileInfo &root, const Value & = Value());
 
 	virtual ~AssetLibrary();
 
-	bool init(Application *, network::Controller *, StringView name, const FileInfo &root,
+	bool init(AppThread *, network::Controller *, StringView name, const FileInfo &root,
 			const Value & = Value());
 
-	virtual void initialize(Application *) override;
-	virtual void invalidate(Application *) override;
+	virtual void initialize(AppThread *) override;
+	virtual void invalidate(AppThread *) override;
 
-	virtual void update(Application *, const UpdateTime &t) override;
+	virtual void update(AppThread *, const UpdateTime &t, bool) override;
 
 	String getAssetPath(int64_t);
 
@@ -107,7 +107,7 @@ public:
 
 	bool perform(TaskCallback &&, Ref * = nullptr) const;
 
-	Application *getApplication() const { return _application; }
+	AppThread *getApplication() const { return _application; }
 	network::Controller *getController() const { return _controller; }
 
 protected:
@@ -139,7 +139,7 @@ protected:
 	Map<StringView, Asset *> _assetsByUrl;
 	Map<uint64_t, Asset *> _assetsById;
 
-	Application *_application = nullptr;
+	AppThread *_application = nullptr;
 	network::Controller *_controller = nullptr;
 	Rc<Server> _server;
 

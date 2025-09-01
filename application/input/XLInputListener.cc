@@ -66,7 +66,7 @@ InputListener::KeyMask InputListener::makeKeyMask(std::initializer_list<InputKey
 }
 
 bool InputListener::init(int32_t priority) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -75,7 +75,7 @@ bool InputListener::init(int32_t priority) {
 }
 
 void InputListener::handleEnter(Scene *scene) {
-	Component::handleEnter(scene);
+	System::handleEnter(scene);
 
 	_scene = scene;
 
@@ -87,11 +87,11 @@ void InputListener::handleExit() {
 
 	_scene = nullptr;
 
-	Component::handleExit();
+	System::handleExit();
 }
 
 void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flags) {
-	Component::handleVisitSelf(info, node, flags);
+	System::handleVisitSelf(info, node, flags);
 
 	if (_enabled) {
 		if (_windowLayer) {
@@ -233,7 +233,15 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 			break;
 		}
 
-		ret = std::max(it->handleInputEvent(event, _owner->getInputDensity()), ret);
+		auto result = it->handleInputEvent(event, _owner->getInputDensity());
+		if (result == InputEventState::Retain) {
+			result = InputEventState::Processed;
+			retainEvent(event.data.event);
+		} else if (result == InputEventState::Release) {
+			releaseEvent(event.data.event);
+			result = InputEventState::Processed;
+		}
+		ret = std::max(result, ret);
 	}
 	return ret;
 }
@@ -288,11 +296,11 @@ GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData>
 
 void InputListener::setWindowStateCallback(Function<bool(WindowState, WindowState)> &&cb) {
 	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::ScreenUpdate, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::ScreenUpdate));
+		_callbacks.insert_or_assign(InputEventName::WindowState, sp::move(cb));
+		_eventMask.set(toInt(InputEventName::WindowState));
 	} else {
-		_callbacks.erase(InputEventName::ScreenUpdate);
-		_eventMask.reset(toInt(InputEventName::ScreenUpdate));
+		_callbacks.erase(InputEventName::WindowState);
+		_eventMask.reset(toInt(InputEventName::WindowState));
 	}
 }
 
@@ -312,6 +320,9 @@ void InputListener::clear() {
 }
 
 bool InputListener::shouldProcessEvent(const InputEvent &event) const {
+	if (_retainedEvents.find(event.data.event) != _retainedEvents.end()) {
+		return true;
+	}
 	if (!_eventFilter) {
 		return _shouldProcessEvent(event);
 	} else {
@@ -353,6 +364,26 @@ GestureRecognizer *InputListener::addRecognizer(GestureRecognizer *rec) {
 		ret->onEnter(this);
 	}
 	return ret;
+}
+
+void InputListener::retainEvent(core::InputEventName name) {
+	auto it = _retainedEvents.find(name);
+	if (it != _retainedEvents.end()) {
+		++it->second;
+	} else {
+		_retainedEvents.emplace(name, 1);
+	}
+}
+
+void InputListener::releaseEvent(core::InputEventName name) {
+	auto it = _retainedEvents.find(name);
+	if (it != _retainedEvents.end()) {
+		if (it->second == 1) {
+			_retainedEvents.erase(it);
+		} else {
+			--it->second;
+		}
+	}
 }
 
 } // namespace stappler::xenolith

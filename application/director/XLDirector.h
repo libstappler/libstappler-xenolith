@@ -25,7 +25,7 @@
 
 #include "XLResourceCache.h"
 #include "XLAppThread.h"
-#include "XLInput.h"
+#include "XLInput.h" // IWYU pragma: keep
 #include "SPMovingAverage.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {

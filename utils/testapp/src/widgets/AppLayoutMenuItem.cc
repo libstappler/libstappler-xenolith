@@ -38,40 +38,24 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	_label->setFontWeight(font::FontWeight::Normal);
 	_label->setAnchorPoint(Anchor::Middle);
 	_label->setFontSize(26);
-	_label->setPersistentLayout(true);
+	_label->setPersistentGlyphData(true);
 
 	auto l = addComponent(Rc<InputListener>::create());
 	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});
-	l->setViewLayerFlags(ViewLayerFlags::CursorPointer);
+	l->setCursor(WindowCursor::Pointer);
 
-	/*l->addMouseOverRecognizer([this] (const GestureData &ev) {
+	l->addMouseOverRecognizer([this](const GestureData &ev) {
 		switch (ev.event) {
-		case GestureEvent::Began:
-			handleMouseEnter();
-			return true;
-			break;
-		default:
-			handleMouseLeave();
-			return true;
-			break;
-		}
-		return true;
-	}, false);*/
-
-	l->addMoveRecognizer([this](const GestureData &ev) {
-		bool touched = isTouched(ev.input->currentLocation);
-		if (touched != _focus) {
-			_focus = touched;
-			if (_focus) {
-				handleMouseEnter();
-			} else {
-				handleMouseLeave();
-			}
+		case GestureEvent::Began: handleMouseEnter(); break;
+		case GestureEvent::Ended:
+		case GestureEvent::Cancelled: handleMouseLeave(); break;
+		default: break;
 		}
 		return true;
 	}, false);
+
 	l->addPressRecognizer([this](const GesturePress &press) {
 		if (isTouched(press.pos)) {
 			switch (press.event) {

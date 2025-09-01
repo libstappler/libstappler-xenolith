@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +25,7 @@
 #include "SPFilepath.h"
 #include "XLAssetLibrary.h"
 #include "XLNetworkRequest.h"
-#include "XLApplication.h"
-
-#include "curl/curl.h"
+#include "XLAppThread.h" // IWYU pragma: keep
 
 #if WIN32
 #undef interface

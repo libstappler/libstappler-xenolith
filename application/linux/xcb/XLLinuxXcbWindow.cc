@@ -59,6 +59,87 @@ static core::InputModifier getModifiers(uint32_t mask) {
 
 static core::InputMouseButton getButton(xcb_button_t btn) { return core::InputMouseButton(btn); }
 
+static XcbMoveResize getMoveResizeForGrip(WindowLayerFlags grip) {
+	switch (grip) {
+	case WindowLayerFlags::MoveGrip: return XcbMoveResize::Move; break;
+	case WindowLayerFlags::ResizeTopLeftGrip: return XcbMoveResize::SizeTopLeft; break;
+	case WindowLayerFlags::ResizeTopGrip: return XcbMoveResize::SizeTop; break;
+	case WindowLayerFlags::ResizeTopRightGrip: return XcbMoveResize::SizeTopRight; break;
+	case WindowLayerFlags::ResizeRightGrip: return XcbMoveResize::SizeRight; break;
+	case WindowLayerFlags::ResizeBottomRightGrip: return XcbMoveResize::SizeBottomRight; break;
+	case WindowLayerFlags::ResizeBottomGrip: return XcbMoveResize::SizeBottom; break;
+	case WindowLayerFlags::ResizeBottomLeftGrip: return XcbMoveResize::SizeBottomLeft; break;
+	case WindowLayerFlags::ResizeLeftGrip: return XcbMoveResize::SizeLeft; break;
+	default: break;
+	}
+	return XcbMoveResize::Cancel;
+}
+
+static void XcbWindow_updateState(XcbConnection *conn, WindowState state, xcb_window_t window,
+		bool add) {
+	xcb_client_message_event_t msg;
+	msg.response_type = XCB_CLIENT_MESSAGE;
+	msg.format = 32;
+	msg.sequence = 0;
+	msg.window = window;
+	msg.data.data32[0] = 0;
+	msg.data.data32[1] = 0;
+	msg.data.data32[2] = 0;
+	msg.data.data32[3] = 0;
+	msg.data.data32[4] = 0;
+
+	if (state == WindowState::Minimized) {
+		msg.type = conn->getAtom(XcbAtomIndex::WM_CHANGE_STATE);
+		msg.data.data32[0] = add ? XCB_ICCCM_WM_STATE_ICONIC : XCB_ICCCM_WM_STATE_NORMAL;
+	} else {
+		msg.type = conn->getAtom(XcbAtomIndex::_NET_WM_STATE);
+		msg.data.data32[0] = add ? 1 : 0;
+		msg.data.data32[3] = 1; // EWMH says 1 for normal applications
+
+		switch (state) {
+		case WindowState::Sticky:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_STICKY);
+			break;
+		case WindowState::MaximizedVert:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT);
+			break;
+		case WindowState::MaximizedHorz:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ);
+			break;
+		case WindowState::Maximized:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT);
+			msg.data.data32[2] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ);
+			break;
+		case WindowState::Shaded:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_SHADED);
+			break;
+		case WindowState::SkipTaskbar:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_TASKBAR);
+			break;
+		case WindowState::SkipPager:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_PAGER);
+			break;
+		case WindowState::Fullscreen:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
+			break;
+		case WindowState::Above:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_ABOVE);
+			break;
+		case WindowState::Below:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_BELOW);
+			break;
+		case WindowState::DemandsAttention:
+			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION);
+			break;
+		default: return; break;
+		}
+	}
+
+	conn->getXcb()->xcb_send_event(conn->getConnection(), 0, conn->getDefaultScreen()->root,
+			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+			(const char *)&msg);
+}
+
 XcbWindow::~XcbWindow() {
 	if (_connection) {
 		_defaultScreen = nullptr;
@@ -94,6 +175,10 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 	}
 
 	_connection = conn;
+
+	if (_connection->hasCapability(XcbAtomIndex::_GTK_SHOW_WINDOW_MENU)) {
+		_info->state |= WindowState::AllowedWindowMenu;
+	}
 
 	_xcb = _connection->getXcb();
 
@@ -362,48 +447,45 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 			auto values = (xcb_atom_t *)_xcb->xcb_get_property_value(reply);
 			auto len = _xcb->xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
 
+			const auto stateMask = WindowState::Modal | WindowState::Sticky
+					| WindowState::MaximizedVert | WindowState::MaximizedHorz | WindowState::Shaded
+					| WindowState::SkipTaskbar | WindowState::SkipPager | WindowState::Minimized
+					| WindowState::Fullscreen | WindowState::Above | WindowState::Below
+					| WindowState::DemandsAttention | WindowState::Focused;
 			auto state = WindowState::None;
 
 			while (len > 0) {
 				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MODAL) == *values) {
 					state |= WindowState::Modal;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_STICKY) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_STICKY) == *values) {
 					state |= WindowState::Sticky;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_VERT)
+						== *values) {
 					state |= WindowState::MaximizedVert;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_MAXIMIZED_HORZ)
+						== *values) {
 					state |= WindowState::MaximizedHorz;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SHADED) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SHADED) == *values) {
 					state |= WindowState::Shaded;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_TASKBAR) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_TASKBAR)
+						== *values) {
 					state |= WindowState::SkipTaskbar;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_PAGER) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_SKIP_PAGER)
+						== *values) {
 					state |= WindowState::SkipPager;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_HIDDEN) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_HIDDEN) == *values) {
 					state |= WindowState::Minimized;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN)
+						== *values) {
 					state |= WindowState::Fullscreen;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_ABOVE) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_ABOVE) == *values) {
 					state |= WindowState::Above;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_BELOW) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_BELOW) == *values) {
 					state |= WindowState::Below;
-				}
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION)
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION)
 						== *values) {
 					state |= WindowState::DemandsAttention;
-				}
-
-				if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FOCUSED) == *values) {
+				} else if (_connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FOCUSED) == *values) {
 					state |= WindowState::Focused;
 				}
 				++values;
@@ -420,7 +502,9 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 					updateShadows();
 				}
 			}
-			updateState(ev->time, state);
+			if ((_info->state & stateMask) != state) {
+				updateState(ev->time, (_info->state & ~stateMask) | state);
+			}
 		}
 	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_ALLOWED_ACTIONS)) {
 		auto cookie = _xcb->xcb_get_property_unchecked(_connection->getConnection(), 0,
@@ -463,10 +547,7 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 			}
 			auto current = _info->state & WindowState::AllowedActionsMask;
 			if (current != actions) {
-				auto state = _info->state & ~WindowState::AllowedActionsMask;
-				state |= actions;
-
-				updateState(ev->time, state);
+				updateState(ev->time, (_info->state & ~WindowState::AllowedActionsMask) | actions);
 			}
 		}
 	} else if (ev->atom == _connection->getAtom(XcbAtomIndex::_NET_WM_DESKTOP)) {
@@ -538,12 +619,24 @@ void XcbWindow::handleButtonPress(xcb_button_press_event_t *ev) {
 	auto mod = getModifiers(ev->state);
 	auto btn = getButton(ev->detail);
 
-	_buttons.set(ev->detail);
-
 	if (btn == core::InputMouseButton::MouseLeft) {
 		// Capture current grip flags
-		_buttonGripFlags = _gripFlags;
+		if (hasFlag(_currentLayerFlags, WindowLayerFlags::WindowMenuLeft)
+				&& _connection->hasCapability(XcbAtomIndex::_GTK_SHOW_WINDOW_MENU)) {
+			startGrip(XcbMoveResize::Menu, ev->root_x, ev->root_y, ev->detail);
+			return;
+		} else {
+			_buttonGripFlags = _gripFlags;
+		}
+	} else if (btn == core::InputMouseButton::MouseRight) {
+		if (hasFlag(_currentLayerFlags, WindowLayerFlags::WindowMenuRight)
+				&& _connection->hasCapability(XcbAtomIndex::_GTK_SHOW_WINDOW_MENU)) {
+			startGrip(XcbMoveResize::Menu, ev->root_x, ev->root_y, ev->detail);
+			return;
+		}
 	}
+
+	_buttons.set(ev->detail);
 
 	core::InputEventData event({
 		ev->detail,
@@ -620,25 +713,9 @@ void XcbWindow::handleButtonRelease(xcb_button_release_event_t *ev) {
 		default: _pendingEvents.emplace_back(event); break;
 		}
 	} else {
-		startMoveResize(XcbMoveResize::Cancel, ev->root_x, ev->root_y,
+		startGrip(XcbMoveResize::Cancel, ev->root_x, ev->root_y,
 				toInt(core::InputMouseButton::MouseLeft));
 	}
-}
-
-static XcbMoveResize getMoveResizeForGrip(WindowLayerFlags grip) {
-	switch (grip) {
-	case WindowLayerFlags::MoveGrip: return XcbMoveResize::Move; break;
-	case WindowLayerFlags::TopLeftGrip: return XcbMoveResize::SizeTopLeft; break;
-	case WindowLayerFlags::TopGrip: return XcbMoveResize::SizeTop; break;
-	case WindowLayerFlags::TopRightGrip: return XcbMoveResize::SizeTopRight; break;
-	case WindowLayerFlags::RightGrip: return XcbMoveResize::SizeRight; break;
-	case WindowLayerFlags::BottomRightGrip: return XcbMoveResize::SizeBottomRight; break;
-	case WindowLayerFlags::BottomGrip: return XcbMoveResize::SizeBottom; break;
-	case WindowLayerFlags::BottomLeftGrip: return XcbMoveResize::SizeBottomLeft; break;
-	case WindowLayerFlags::LeftGrip: return XcbMoveResize::SizeLeft; break;
-	default: break;
-	}
-	return XcbMoveResize::Cancel;
 }
 
 void XcbWindow::handleMotionNotify(xcb_motion_notify_event_t *ev) {
@@ -650,8 +727,7 @@ void XcbWindow::handleMotionNotify(xcb_motion_notify_event_t *ev) {
 	if (_buttonGripFlags != WindowLayerFlags::None) {
 		if (_buttons.test(toInt(core::InputMouseButton::MouseLeft)) && _buttons.count() == 1) {
 			auto grip = _buttonGripFlags;
-			cancelPointerEvents();
-			startMoveResize(getMoveResizeForGrip(grip), ev->root_x, ev->root_y,
+			startGrip(getMoveResizeForGrip(grip), ev->root_x, ev->root_y,
 					toInt(core::InputMouseButton::MouseLeft));
 			return;
 		}
@@ -675,6 +751,7 @@ void XcbWindow::handleMotionNotify(xcb_motion_notify_event_t *ev) {
 }
 
 void XcbWindow::handleEnterNotify(xcb_enter_notify_event_t *ev) {
+	XL_X11_LOG("handleEnterNotify");
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
 		updateUserTime(ev->time);
@@ -700,6 +777,7 @@ void XcbWindow::handleEnterNotify(xcb_enter_notify_event_t *ev) {
 }
 
 void XcbWindow::handleLeaveNotify(xcb_leave_notify_event_t *ev) {
+	XL_X11_LOG("handleLeaveNotify");
 	if (_lastInputTime != ev->time) {
 		dispatchPendingEvents();
 		updateUserTime(ev->time);
@@ -884,43 +962,6 @@ core::FrameConstraints XcbWindow::exportConstraints(core::FrameConstraints &&c) 
 	return move(ret);
 }
 
-void XcbWindow::handleLayerEnter(const WindowLayer &layer) {
-	if (layer.cursor != WindowCursor::Undefined) {
-		setCursor(layer.cursor);
-	}
-	if (hasFlag(layer.flags, WindowLayerFlags::GripMask)) {
-		// update grip value only if it's greater then current
-		// so, resize grip has priority over move grip
-		auto newGrip = layer.flags & WindowLayerFlags::GripMask;
-		if (toInt(newGrip) > toInt(_gripFlags)) {
-			_gripFlags = newGrip;
-		}
-	}
-}
-
-void XcbWindow::handleLayerExit(const WindowLayer &layer) {
-	auto cursor = WindowCursor::Undefined;
-	auto gripFlags = WindowLayerFlags::None;
-	for (auto &it : _currentLayers) {
-		if (it.cursor != WindowCursor::Undefined) {
-			cursor = it.cursor;
-		}
-		if (hasFlag(it.flags, WindowLayerFlags::GripMask)) {
-			// update grip value only if it's greater then current
-			// so, resize grip has priority over move grip
-			auto newGrip = it.flags & WindowLayerFlags::GripMask;
-			if (toInt(newGrip) > toInt(gripFlags)) {
-				gripFlags = newGrip;
-			}
-		}
-	}
-
-	if (gripFlags != _gripFlags) {
-		_gripFlags = gripFlags;
-	}
-	setCursor(cursor);
-}
-
 Extent2 XcbWindow::getExtent() const {
 	return Extent2(_xinfo.contentRect.width, _xinfo.contentRect.height);
 }
@@ -948,18 +989,52 @@ Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 #endif
 }
 
-void XcbWindow::startMoveResize(XcbMoveResize value, int32_t x, int32_t y, int32_t button) {
+bool XcbWindow::enableState(WindowState state) {
+	if (NativeWindow::enableState(state)) {
+		return true;
+	}
+
+	XcbWindow_updateState(_connection, state, _xinfo.window, true);
+	return true;
+}
+
+bool XcbWindow::disableState(WindowState state) {
+	if (NativeWindow::disableState(state)) {
+		return true;
+	}
+
+	XcbWindow_updateState(_connection, state, _xinfo.window, false);
+	return true;
+}
+
+void XcbWindow::startGrip(XcbMoveResize value, int32_t x, int32_t y, int32_t button) {
+	if (value != XcbMoveResize::Cancel) {
+		cancelPointerEvents();
+	}
+
 	xcb_client_message_event_t message;
 	message.response_type = XCB_CLIENT_MESSAGE;
 	message.format = 32;
 	message.sequence = 0;
 	message.window = _xinfo.window;
-	message.type = _connection->getAtom(XcbAtomIndex::_NET_WM_MOVERESIZE);
-	message.data.data32[0] = x;
-	message.data.data32[1] = y;
-	message.data.data32[2] = toInt(value);
-	message.data.data32[3] = button;
-	message.data.data32[4] = 1; // EWMH says 1 for normal applications
+
+	switch (value) {
+	case XcbMoveResize::Menu:
+		message.type = _connection->getAtom(XcbAtomIndex::_GTK_SHOW_WINDOW_MENU);
+		message.data.data32[0] = 0; // GtkDeviceId
+		message.data.data32[1] = x;
+		message.data.data32[2] = y;
+		break;
+	default:
+		message.type = _connection->getAtom(XcbAtomIndex::_NET_WM_MOVERESIZE);
+		message.data.data32[0] = x;
+		message.data.data32[1] = y;
+		message.data.data32[2] = toInt(value);
+		message.data.data32[3] = button;
+		message.data.data32[4] = 1; // EWMH says 1 for normal applications
+		break;
+	}
+
 	_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
 			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
 			(const char *)&message);
@@ -1025,20 +1100,7 @@ Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
 	};
 
 	auto submitFullscreen = [&](bool enable) {
-		xcb_client_message_event_t fullscreen;
-		fullscreen.response_type = XCB_CLIENT_MESSAGE;
-		fullscreen.format = 32;
-		fullscreen.sequence = 0;
-		fullscreen.window = _xinfo.window;
-		fullscreen.type = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE);
-		fullscreen.data.data32[0] = enable ? 1 : 0; // _NET_WM_STATE_REMOVE
-		fullscreen.data.data32[1] = _connection->getAtom(XcbAtomIndex::_NET_WM_STATE_FULLSCREEN);
-		fullscreen.data.data32[2] = 0;
-		fullscreen.data.data32[3] = 1; // EWMH says 1 for normal applications
-		fullscreen.data.data32[4] = 0;
-		_xcb->xcb_send_event(_connection->getConnection(), 0, _connection->getDefaultScreen()->root,
-				XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
-				(const char *)&fullscreen);
+		XcbWindow_updateState(_connection, WindowState::Fullscreen, _xinfo.window, enable);
 	};
 
 	if (info == FullscreenInfo::Current) {
@@ -1176,6 +1238,11 @@ void XcbWindow::configureOutputWindow() {
 	_controller->notifyWindowConstraintsChanged(this,
 			core::UpdateConstraintsFlags::DeprecateSwapchain
 					| core::UpdateConstraintsFlags::SwitchToFastMode);
+
+	if (_xcb->hasShape()) {
+		_xcb->xcb_shape_rectangles(_connection->getConnection(), XCB_SHAPE_SO_SET,
+				XCB_SHAPE_SK_INPUT, 0, _xinfo.outputWindow, 0, 0, 0, nullptr);
+	}
 }
 
 void XcbWindow::updateShadows() {

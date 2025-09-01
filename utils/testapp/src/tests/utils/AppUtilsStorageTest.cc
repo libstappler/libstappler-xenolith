@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022-2025 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +24,6 @@
 #include "AppUtilsStorageTest.h"
 #include "XLStorageComponent.h"
 #include "XLStorageServer.h"
-#include "XLApplication.h"
 #include "SPValid.h"
 
 namespace stappler::xenolith::app {

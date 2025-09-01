@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +23,12 @@
 
 #include "AppScene.h"
 
-#include "SPFilepath.h"
-#include "XLVkAttachment.h"
-#include "XLDirector.h"
-#include "XL2dSprite.h"
-#include "XLApplication.h"
+#include "XLContext.h"
 
-#include "XLVkAttachment.h"
+#include "XLDirector.h"
+
 #include "XL2dSceneContent.h"
 
-#include "AppRootLayout.h"
-#include "AppDelegate.h"
 #include "backend/vk/XL2dVkShadowPass.h"
 
 #include "MaterialStyleContainer.h"
@@ -40,7 +36,8 @@
 
 namespace stappler::xenolith::app {
 
-bool AppScene::init(Application *app, const core::FrameConstraints &constraints) {
+bool AppScene::init(NotNull<AppThread> app, NotNull<AppWindow> w,
+		const core::FrameConstraints &constraints) {
 	// build presentation RenderQueue
 	core::Queue::Builder builder("Loader");
 	builder.addImage("xenolith-1-480.png",
@@ -52,7 +49,7 @@ bool AppScene::init(Application *app, const core::FrameConstraints &constraints)
 					core::ImageHints::Opaque),
 			FileInfo("resources/xenolith-2-480.png", FileCategory::Bundled));
 
-	basic2d::vk::ShadowPass::RenderQueueInfo info{app,
+	basic2d::vk::ShadowPass::RenderQueueInfo info{app->getContext()->getGlLoop(),
 		Extent2(constraints.extent.width, constraints.extent.height),
 		basic2d::vk::ShadowPass::Flags::None};
 
@@ -118,5 +115,7 @@ void AppScene::setActiveLayoutId(StringView name, Value &&data) {
 	auto path = FileInfo("org.stappler.xenolith.test.AppScene.cbor", FileCategory::AppCache);
 	data::save(sceneData, path, data::EncodeFormat::CborCompressed);
 }
+
+DEFINE_PRIMARY_SCENE_CLASS(AppScene)
 
 } // namespace stappler::xenolith::app

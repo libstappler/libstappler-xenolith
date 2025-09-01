@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class SP_PUBLIC SurfaceInterior : public Component {
+class SP_PUBLIC SurfaceInterior : public System {
 public:
 	static uint64_t ComponentFrameTag;
 
@@ -51,6 +52,6 @@ protected:
 	SurfaceStyleData _interiorStyle;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSURFACEINTERIOR_H_ */

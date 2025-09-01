@@ -23,12 +23,10 @@
 
 #include "AppConfigMenu.h"
 
-#include "AppDelegate.h"
 #include "AppConfigPresentModeSwitcher.h"
 #include "AppSlider.h"
 #include "XLEventListener.h"
 #include "XLInputListener.h"
-#include "XLView.h"
 
 namespace stappler::xenolith::app {
 
@@ -140,8 +138,8 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 	auto val = 1.0f - float(value - min) / float(max - min);
 
 	_slider = addChild(Rc<SliderWithLabel>::create("60", val, [this](float value) {
-		float max = 1'000'000 / 10;
-		float min = 1'000'000 / 360;
+		float max = 1'000'000.0f / 10;
+		float min = 1'000'000.0f / 360;
 
 		value = progress(max, min, value);
 
@@ -152,9 +150,9 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 	_slider->setFontSize(20);
 
 	auto el = Rc<EventListener>::create();
-	el->listenForEvent(View::onFrameRate, [this](const Event &event) {
+	/*el->listenForEvent(View::onFrameRate, [this](const Event &event) {
 		if (event.getObject() == _director->getView()) {
-			/*_currentRate = uint64_t(event.getIntValue());
+			_currentRate = uint64_t(event.getIntValue());
 
 			uint64_t max = 1'000'000 / 10;
 			uint64_t min = 1'000'000 / 360;
@@ -162,9 +160,9 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 			auto val = 1.0f - float(_currentRate - min) / float(max - min);
 			auto v = 1'000'000 / _currentRate;
 			_slider->setValue(val);
-			_slider->setString(toString(v));*/
+			_slider->setString(toString(v));
 		}
-	});
+	});*/
 	addComponent(move(el));
 	auto v = 1'000'000 / value;
 	_slider->setString(toString(v));
@@ -183,7 +181,7 @@ void ConfigFrameRateSlider::setValue(uint64_t val) {
 	auto v = 1'000'000 / val;
 	_slider->setString(toString(v));
 
-	_director->getView()->setFrameInterval(val);
+	//_director->getView()->setFrameInterval(val);
 }
 
 bool ConfigMenu::init() {
@@ -192,7 +190,7 @@ bool ConfigMenu::init() {
 	}
 
 	auto el = Rc<EventListener>::create();
-	el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
+	/*el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
 		updateAppData((AppDelegate *)event.getObject());
 		updateApplyButton();
 		_contentSizeDirty = true;
@@ -201,7 +199,7 @@ bool ConfigMenu::init() {
 		if (event.getObject() == _director->getView()) {
 			_currentRate = uint64_t(event.getDataValue().asInteger());
 		}
-	});
+	});*/
 	addComponent(move(el));
 
 	_scrollView = addChild(Rc<ScrollView>::create(ScrollView::Vertical));
@@ -217,7 +215,7 @@ bool ConfigMenu::init() {
 void ConfigMenu::handleEnter(Scene *scene) {
 	LayoutTest::handleEnter(scene);
 
-	updateAppData((AppDelegate *)_director->getApplication());
+	//updateAppData((AppDelegate *)_director->getApplication());
 }
 
 void ConfigMenu::handleContentSizeDirty() {
@@ -252,8 +250,8 @@ void ConfigMenu::makeScrollList(ScrollController *controller) {
 void ConfigMenu::updateAppData(AppDelegate *app) {
 	_applyData.clear();
 
-	_currentMode = app->getSwapchainConfig().presentMode;
-	_currentRate = _director->getView()->getFrameInterval();
+	//_currentMode = app->getSwapchainConfig().presentMode;
+	//_currentRate = _director->getView()->getFrameInterval();
 }
 
 void ConfigMenu::updatePresentMode(core::PresentMode mode) {
@@ -279,13 +277,13 @@ void ConfigMenu::applyConfig() {
 		return;
 	}
 
-	for (auto &it : _applyData) {
+	/*for (auto &it : _applyData) {
 		switch (it.first) {
 		case ApplyPresentMode: app->setPreferredPresentMode(core::PresentMode(it.second)); break;
 		}
-	}
+	}*/
 
-	_director->getView()->updateConfig();
+	//_director->getView()->updateConfig();
 }
 
 } // namespace stappler::xenolith::app

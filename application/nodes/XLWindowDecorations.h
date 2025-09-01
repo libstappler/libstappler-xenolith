@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,35 +20,44 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLEMONITOR_H_
-#define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLEMONITOR_H_
+#ifndef XENOLITH_APPLICATION_NODES_XLWINDOWDECORATIONS_H_
+#define XENOLITH_APPLICATION_NODES_XLWINDOWDECORATIONS_H_
 
-#include "MaterialSurfaceStyle.h"
-#include "XLComponent.h"
+#include "XLNode.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SP_PUBLIC StyleMonitor : public System {
+// Window header for user-space window decorations
+class SP_PUBLIC WindowDecorations : public Node {
 public:
-	using StyleCallback = Function<void(const ColorScheme *, const SurfaceStyleData &)>;
+	virtual ~WindowDecorations() = default;
 
-	virtual ~StyleMonitor();
+	virtual bool init() override;
 
-	virtual bool init(StyleCallback && = nullptr);
+	virtual bool shouldBePresentedOnScene(Scene *) const;
 
-	virtual void setStyleCallback(StyleCallback &&);
-	virtual const StyleCallback &getStyleCallback() const;
+	virtual Padding getPadding() const { return Padding(); }
 
-	virtual void setDirty(bool);
-
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags parentFlags) override;
+	virtual void handleContentSizeDirty() override;
+	virtual void handleLayout(Node *) override;
 
 protected:
-	StyleCallback _styleCallback;
-	bool _dirty = true;
-	SurfaceStyleData _interiorData;
+	virtual void updateWindowState(WindowState);
+	virtual void updateWindowTheme(const ThemeInfo &);
+
+	// virtual nodes for resize implementation
+	Node *_resizeTopLeft = nullptr;
+	Node *_resizeTop = nullptr;
+	Node *_resizeTopRight = nullptr;
+	Node *_resizeRight = nullptr;
+	Node *_resizeBottomRight = nullptr;
+	Node *_resizeBottom = nullptr;
+	Node *_resizeBottomLeft = nullptr;
+	Node *_resizeLeft = nullptr;
+
+	WindowState _currentState = WindowState::None;
 };
 
-} // namespace stappler::xenolith::material2d
+} // namespace stappler::xenolith
 
-#endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLEMONITOR_H_ */
+#endif // XENOLITH_APPLICATION_NODES_XLWINDOWDECORATIONS_H_

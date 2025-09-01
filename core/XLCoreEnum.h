@@ -976,6 +976,7 @@ enum class WindowState : uint64_t {
 	// Extra space here
 
 	// Values for allowed window actions
+	AllowedWindowMenu = 1LLU << 46,
 	AllowedMove = 1LLU << 47,
 	AllowedResize = 1LLU << 48,
 	AllowedMinimize = 1LLU << 49,

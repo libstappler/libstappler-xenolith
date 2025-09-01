@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -74,7 +75,7 @@ void SceneLayout2d::handlePushTransitionEnded(SceneContent2d *l, bool replace) {
 	_contentSizeDirty = true;
 }
 
-void SceneLayout2d::hanldePopTransitionBegan(SceneContent2d *l, bool replace) {
+void SceneLayout2d::handlePopTransitionBegan(SceneContent2d *l, bool replace) {
 	_inTransition = true;
 }
 void SceneLayout2d::handlePop(SceneContent2d *l, bool replace) {

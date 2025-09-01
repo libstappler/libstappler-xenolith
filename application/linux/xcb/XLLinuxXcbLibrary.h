@@ -38,6 +38,7 @@
 #include <xcb/xfixes.h>
 #include <xcb/shape.h>
 #include <xcb/xcb_errors.h>
+#include <xcb/xcb_icccm.h>
 
 #define explicit _explicit;
 #include <xcb/xkb.h>
@@ -399,6 +400,7 @@ enum class XcbAtomIndex {
 	WM_DELETE_WINDOW,
 	WM_NAME,
 	WM_ICON_NAME,
+	WM_CHANGE_STATE,
 	_NET_FRAME_EXTENTS,
 	_NET_WM_DESKTOP,
 	_NET_WM_SYNC_REQUEST,
@@ -448,6 +450,7 @@ enum class XcbAtomIndex {
 	_MOTIF_WM_HINTS,
 	_GTK_EDGE_CONSTRAINTS,
 	_GTK_FRAME_EXTENTS,
+	_GTK_SHOW_WINDOW_MENU,
 	SAVE_TARGETS,
 	CLIPBOARD,
 	PRIMARY,
@@ -478,6 +481,7 @@ static XcbAtomInfo s_atomRequests[] = {
 	DEFINE_ATOM_REQUEST(WM_DELETE_WINDOW, true),
 	DEFINE_ATOM_REQUEST(WM_NAME, true),
 	DEFINE_ATOM_REQUEST(WM_ICON_NAME, true),
+	DEFINE_ATOM_REQUEST(WM_CHANGE_STATE, true),
 	DEFINE_ATOM_REQUEST(_NET_FRAME_EXTENTS, true),
 	DEFINE_ATOM_REQUEST(_NET_WM_DESKTOP, true),
 	DEFINE_ATOM_REQUEST(_NET_WM_SYNC_REQUEST, true),
@@ -527,6 +531,7 @@ static XcbAtomInfo s_atomRequests[] = {
 	DEFINE_ATOM_REQUEST(_MOTIF_WM_HINTS, true),
 	DEFINE_ATOM_REQUEST(_GTK_EDGE_CONSTRAINTS, true),
 	DEFINE_ATOM_REQUEST(_GTK_FRAME_EXTENTS, true),
+	DEFINE_ATOM_REQUEST(_GTK_SHOW_WINDOW_MENU, true),
 	DEFINE_ATOM_REQUEST(SAVE_TARGETS, false),
 	DEFINE_ATOM_REQUEST(CLIPBOARD, false),
 	DEFINE_ATOM_REQUEST(PRIMARY, false),

@@ -31,6 +31,8 @@
 
 namespace stappler::xenolith::app {
 
+using namespace basic2d;
+
 enum class LayoutName {
 	Root = 256 * 0,
 	GeneralTests,

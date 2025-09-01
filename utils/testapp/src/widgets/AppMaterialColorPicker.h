@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,7 @@
 #ifndef TEST_SRC_WIDGETS_APPMATERIALCOLORPICKER_H_
 #define TEST_SRC_WIDGETS_APPMATERIALCOLORPICKER_H_
 
+#include "AppTests.h" // IWYU pragma: keep
 #include "XL2dSprite.h"
 
 namespace stappler::xenolith::app {
@@ -67,6 +69,6 @@ protected:
 	InputListener *_input = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_WIDGETS_APPMATERIALCOLORPICKER_H_ */

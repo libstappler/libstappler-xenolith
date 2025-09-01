@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 StyleMonitor::~StyleMonitor() { }
 
 bool StyleMonitor::init(StyleCallback &&cb) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -56,7 +57,7 @@ void StyleMonitor::handleVisitSelf(FrameInfo &frame, Node *node, NodeFlags paren
 		_dirty = false;
 	}
 
-	Component::handleVisitSelf(frame, node, parentFlags);
+	System::handleVisitSelf(frame, node, parentFlags);
 }
 
 } // namespace stappler::xenolith::material2d

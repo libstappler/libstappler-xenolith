@@ -32,7 +32,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 bool MultiViewLayout::Generator::init() {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -40,7 +40,7 @@ bool MultiViewLayout::Generator::init() {
 }
 
 bool MultiViewLayout::Generator::init(size_t count, const IndexViewCallback &gen) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -50,7 +50,7 @@ bool MultiViewLayout::Generator::init(size_t count, const IndexViewCallback &gen
 	return true;
 }
 bool MultiViewLayout::Generator::init(const SequenceViewCallback &seq) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -171,8 +171,8 @@ bool MultiViewLayout::init(Generator *gen) {
 	return true;
 }
 
-void MultiViewLayout::onPush(SceneContent2d *l, bool replace) {
-	FlexibleLayout::onPush(l, replace);
+void MultiViewLayout::handlePush(SceneContent2d *l, bool replace) {
+	FlexibleLayout::handlePush(l, replace);
 
 	if (!_currentView) {
 		if (auto view = makeInitialView()) {

@@ -23,7 +23,6 @@
 
 #include "AppConfigPresentModeSwitcher.h"
 
-#include "AppDelegate.h"
 #include "XL2dLabel.h"
 #include "XL2dLayer.h"
 #include "XL2dVectorSprite.h"
@@ -228,22 +227,22 @@ bool ConfigPresentModeSwitcher::init(AppDelegate *app, uint32_t selected,
 	}
 
 	auto el = Rc<EventListener>::create();
-	el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
+	/*el->listenForEvent(AppDelegate::onSwapchainConfig, [this](const Event &event) {
 		updateAppData((AppDelegate *)event.getObject());
 		_contentSizeDirty = true;
-	});
+	});*/
 	addComponent(move(el));
 
 	return true;
 }
 
 uint32_t ConfigPresentModeSwitcher::getCurrentValue(AppDelegate *app) const {
-	return toInt(app->getSwapchainConfig().presentMode);
+	return 0; // toInt(app->getSwapchainConfig().presentMode);
 }
 
 Vector<uint32_t> ConfigPresentModeSwitcher::getValueList(AppDelegate *app) const {
 	Vector<uint32_t> ret;
-	for (auto &it : app->getSurfaceInfo().presentModes) { ret.emplace_back(toInt(it)); }
+	//	for (auto &it : app->getSurfaceInfo().presentModes) { ret.emplace_back(toInt(it)); }
 	return ret;
 }
 

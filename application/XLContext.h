@@ -129,6 +129,7 @@ public:
 	using SwapchainConfig = core::SwapchainConfig;
 	using SurfaceInfo = core::SurfaceInfo;
 
+	static EventHeader onNetworkStateChanged;
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
 

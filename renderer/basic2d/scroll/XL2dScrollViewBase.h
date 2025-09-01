@@ -75,7 +75,7 @@ public:
 	virtual Node *getRoot() const { return _root; }
 	virtual InputListener *getInputListener() const { return _inputListener; }
 
-	virtual bool addComponentItem(Component *) override;
+	virtual bool addComponentItem(System *) override;
 
 	template <typename T>
 	auto setController(const Rc<T> &ptr) -> T * {

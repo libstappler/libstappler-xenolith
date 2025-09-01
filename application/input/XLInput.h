@@ -23,7 +23,7 @@
 #ifndef XENOLITH_APPLICATION_INPUT_XLINPUT_H_
 #define XENOLITH_APPLICATION_INPUT_XLINPUT_H_
 
-#include "XLNodeInfo.h"
+#include "XLNodeInfo.h" // IWYU pragma: keep
 #include "XLCoreTextInput.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -47,6 +47,8 @@ enum class InputEventState {
 	Declined, // Получатель не заинтересован в этой цепочке событий
 	Processed, // Получатель заинтересован в цепочке событий, но не требует эксклюзивности
 	Captured, // Получатель запрашивает цепочку событий в эксклюзивную обработку
+	Retain, // Получатель просит получать следующие события цепочки в обход фильтрафии
+	Release, // Получатель больше не хочет получать события цепочки в обход фильтрации
 };
 
 struct SP_PUBLIC InputEvent {

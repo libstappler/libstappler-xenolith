@@ -90,15 +90,22 @@ enum class WindowCursor : uint8_t {
 enum class WindowLayerFlags : uint32_t {
 	None,
 	MoveGrip,
-	TopLeftGrip,
-	TopGrip,
-	TopRightGrip,
-	RightGrip,
-	BottomRightGrip,
-	BottomGrip,
-	BottomLeftGrip,
-	LeftGrip,
+	ResizeTopLeftGrip,
+	ResizeTopGrip,
+	ResizeTopRightGrip,
+	ResizeRightGrip,
+	ResizeBottomRightGrip,
+	ResizeBottomGrip,
+	ResizeBottomLeftGrip,
+	ResizeLeftGrip,
+
 	GripMask = 0xF,
+
+	// Grip-like flag to open window menu with left-click
+	WindowMenuLeft = 1 << 4,
+
+	// Grip-like flag to open window menu with right-click
+	WindowMenuRight = 1 << 5,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowLayerFlags)
@@ -128,30 +135,30 @@ struct WindowLayer {
 enum class WindowCreationFlags : uint32_t {
 	None = 0,
 
-	// draw window without server-side decoration borders
-	UserSpaceDecorations = 1 << 0,
-
 	// Ask window manager to allow move requests
-	AllowMove = 1 << 1,
+	AllowMove = 1 << 0,
 
 	// Ask window manager to allow resize requests
-	AllowResize = 1 << 2,
+	AllowResize = 1 << 1,
 
 	// Ask window manager to allow minimize requests
-	AllowMinimize = 1 << 3,
+	AllowMinimize = 1 << 2,
 
 	// Ask window manager to allow maximize requests
-	AllowMaximize = 1 << 4,
+	AllowMaximize = 1 << 3,
 
 	// Ask window manager to allow fullscreen requests
-	AllowFullscreen = 1 << 5,
+	AllowFullscreen = 1 << 4,
 
 	// Ask window manager to allow close requests
-	AllowClose = 1 << 6,
+	AllowClose = 1 << 5,
 
 	// Flags for the regular, common OS window
 	Regular =
 			AllowMove | AllowResize | AllowMinimize | AllowMaximize | AllowFullscreen | AllowClose,
+
+	// draw window without server-side decoration borders
+	UserSpaceDecorations = 1 << 6,
 
 	// Use direct output to display, bypassing whole WM stack
 	// Check if it actually supported with WindowCapabilities::DirectOutput
@@ -222,14 +229,17 @@ enum class WindowCapabilities : uint32_t {
 	// 'Back' action can close application (Android-like)
 	BackIsExit = 1 << 9,
 
+	// Full user-space decoration mode is supported
 	UserSpaceDecorations = 1 << 10,
 
-	// Attributes availability
-	Opaque = 1 << 24,
-	Movable = 1 << 25,
-	Resizeable = 1 << 26,
-	Minimizable = 1 << 27,
-	Maximizable = 1 << 28,
+	// Above and below state supprted
+	AboveBelowState = 1 << 11,
+
+	// DemandsAttention state supprted
+	DemandsAttentionState = 1 << 12,
+
+	// SkipTaskbar and SkipPager state supported
+	SkipTaskbarState = 1 << 13,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

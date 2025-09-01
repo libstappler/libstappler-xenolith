@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Scheduler;
 
-class SP_PUBLIC SubscriptionListener : public Component {
+class SP_PUBLIC SubscriptionListener : public System {
 public:
 	using DirtyCallback = Function<void(SubscriptionFlags)>;
 

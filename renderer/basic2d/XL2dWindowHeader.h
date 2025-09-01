@@ -23,36 +23,50 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
 #define XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
 
-#include "XLNode.h"
+#include "XLWindowDecorations.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class Layer;
+class WindowHeaderButton;
 
-// Window header for user-space window decorations
-class SP_PUBLIC WindowHeader : public Node {
+// Simple window header implementation
+class SP_PUBLIC WindowDecorationsDefault : public WindowDecorations {
 public:
-	virtual ~WindowHeader() = default;
+	enum class ColorTheme {
+		Default,
+		Dark,
+	};
+
+	enum class IconTheme {
+		Default,
+		Macos,
+	};
+
+	static constexpr float HeaderHeight = 24.0f;
+
+	virtual ~WindowDecorationsDefault() = default;
 
 	virtual bool init() override;
 
-	virtual bool shouldBePresentedOnScene(Scene *) const;
-
 	virtual void handleContentSizeDirty() override;
-	virtual void handleLayout(Node *) override;
+
+	virtual Padding getPadding() const override;
 
 protected:
-	Layer *_move = nullptr;
-	Node *_topLeft = nullptr;
-	Node *_top = nullptr;
-	Node *_topRight = nullptr;
-	Node *_right = nullptr;
-	Node *_bottomRight = nullptr;
-	Node *_bottom = nullptr;
-	Node *_bottomLeft = nullptr;
-	Node *_left = nullptr;
-};
+	virtual void updateWindowState(WindowState) override;
+	virtual void updateWindowTheme(const ThemeInfo &) override;
 
+	Layer *_header = nullptr;
+
+	WindowHeaderButton *_buttonClose = nullptr;
+	WindowHeaderButton *_buttonMaximize = nullptr;
+	WindowHeaderButton *_buttonMinimize = nullptr;
+	WindowHeaderButton *_buttonFullscreen = nullptr;
+	WindowHeaderButton *_buttonMenu = nullptr;
+	String _colorScheme;
+	String _theme;
+};
 
 } // namespace stappler::xenolith::basic2d
 

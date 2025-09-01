@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,52 +23,52 @@
 
 #include "SPFilepath.h"
 #include "XLNetworkController.h"
-#include "SPNetworkContext.h"
 #include "XLNetworkRequest.h"
+#include "XLContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::network {
 
-bool Handle::init(StringView url) {
-	return NetworkHandle::init(Method::Get, url);
-}
+bool Handle::init(StringView url) { return NetworkHandle::init(Method::Get, url); }
 
 bool Handle::init(StringView url, const FileInfo &fileName) {
-    if (!init(Method::Get, url)) {
-        return false;
-    }
+	if (!init(Method::Get, url)) {
+		return false;
+	}
 
-    if (!fileName.path.empty()) {
-    	setReceiveFile(fileName, false);
-    }
-    return true;
+	if (!fileName.path.empty()) {
+		setReceiveFile(fileName, false);
+	}
+	return true;
 }
 
-bool Handle::init(Method method, StringView url) {
-	return NetworkHandle::init(method, url);
-}
+bool Handle::init(Method method, StringView url) { return NetworkHandle::init(method, url); }
 
 bool Handle::prepare(Context *ctx) {
-	auto &appInfo = _controller->getApplication()->getInfo();
+	auto appInfo = _controller->getApplication()->getContext()->getInfo();
 
 	if (_mtime > 0) {
 		auto httpTime = Time::microseconds(_mtime).toHttp<Interface>();
-		ctx->headers = curl_slist_append(ctx->headers, toString("If-Modified-Since: ", httpTime).data());
+		ctx->headers =
+				curl_slist_append(ctx->headers, toString("If-Modified-Since: ", httpTime).data());
 	}
 
 	if (!_etag.empty()) {
 		ctx->headers = curl_slist_append(ctx->headers, toString("If-None-Match: ", _etag).data());
 	}
 
-	ctx->headers = curl_slist_append(ctx->headers, toString("X-ApplicationName: ", appInfo.bundleName).data());
-	ctx->headers = curl_slist_append(ctx->headers, toString("X-ApplicationVersion: ", appInfo.applicationVersion).data());
+	ctx->headers = curl_slist_append(ctx->headers,
+			toString("X-ApplicationName: ", appInfo->bundleName).data());
+	ctx->headers = curl_slist_append(ctx->headers,
+			toString("X-ApplicationVersion: ", appInfo->appVersion).data());
 
 	if (!_sharegroup.empty() && ctx->share) {
-		auto cookieFile = toString("network.", _controller->getName(), ".", _sharegroup, ".cookies");
+		auto cookieFile =
+				toString("network.", _controller->getName(), ".", _sharegroup, ".cookies");
 		setCookieFile(FileInfo{cookieFile, FileCategory::AppCache});
 	}
 
-	if (!_controller->getApplication()->getInfo().userAgent.empty()) {
-		setUserAgent(appInfo.userAgent);
+	if (!appInfo->userAgent.empty()) {
+		setUserAgent(appInfo->userAgent);
 	}
 
 	return true;
@@ -99,7 +100,7 @@ bool Request::init(const Callback<bool(Handle &)> &setupCallback, Rc<Ref> &&ref)
 	return setupCallback(_handle);
 }
 
-void Request::perform(Application *app, CompleteCallback &&cb) {
+void Request::perform(AppThread *app, CompleteCallback &&cb) {
 	auto c = app->getExtension<Controller>();
 	if (!c) {
 		return;
@@ -124,13 +125,11 @@ void Request::perform(Controller *c, CompleteCallback &&cb) {
 		if (!_ignoreResponseData) {
 			_targetHeaderCallback = _handle.getHeaderCallback();
 
-			_handle.setHeaderCallback([this] (StringView key, StringView value) {
-				handleHeader(key, value);
-			});
+			_handle.setHeaderCallback(
+					[this](StringView key, StringView value) { handleHeader(key, value); });
 
-			_handle.setReceiveCallback([this] (char *buf, size_t size) -> size_t {
-				return handleReceive(buf, size);
-			});
+			_handle.setReceiveCallback(
+					[this](char *buf, size_t size) -> size_t { return handleReceive(buf, size); });
 			_handle.setVerifyTls(false);
 		}
 	}
@@ -143,13 +142,9 @@ void Request::setIgnoreResponseData(bool value) {
 	}
 }
 
-void Request::setUploadProgress(ProgressCallback &&cb) {
-	_onUploadProgress = sp::move(cb);
-}
+void Request::setUploadProgress(ProgressCallback &&cb) { _onUploadProgress = sp::move(cb); }
 
-void Request::setDownloadProgress(ProgressCallback &&cb) {
-	_onDownloadProgress = sp::move(cb);
-}
+void Request::setDownloadProgress(ProgressCallback &&cb) { _onDownloadProgress = sp::move(cb); }
 
 void Request::handleHeader(StringView key, StringView value) {
 	if (!_ignoreResponseData) {
@@ -181,17 +176,19 @@ void Request::notifyOnComplete(bool success) {
 }
 
 void Request::notifyOnUploadProgress(int64_t total, int64_t now) {
-	_uploadProgress = pair(total, std::max(now, _uploadProgress.second)); // prevent out-of-order updates
+	_uploadProgress =
+			pair(total, std::max(now, _uploadProgress.second)); // prevent out-of-order updates
 	if (_onUploadProgress && _uploadProgress.second == now) {
 		_onUploadProgress(*this, total, now);
 	}
 }
 
 void Request::notifyOnDownloadProgress(int64_t total, int64_t now) {
-	_downloadProgress = pair(total, std::max(now, _downloadProgress.second)); // prevent out-of-order updates
+	_downloadProgress =
+			pair(total, std::max(now, _downloadProgress.second)); // prevent out-of-order updates
 	if (_onDownloadProgress && _downloadProgress.second == now) {
 		_onDownloadProgress(*this, total, now);
 	}
 }
 
-}
+} // namespace stappler::xenolith::network

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +44,7 @@ enum class InputFieldPasswordMode {
 	ShowNone,
 };
 
-enum class InputFieldError {
+enum class InputFieldError : uint32_t {
 	None,
 	Overflow = 1 << 0,
 	InvalidChar = 1 << 1,

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +24,7 @@
 #ifndef XENOLITH_RESOURCES_NETWORK_XLNETWORKCONTROLLER_H_
 #define XENOLITH_RESOURCES_NETWORK_XLNETWORKCONTROLLER_H_
 
-#include "XLApplication.h"
-#include "XLNetwork.h"
+#include "XLAppThread.h"
 #include "SPNetworkHandle.h"
 #include "SPThreadTaskQueue.h"
 #include "SPThread.h"
@@ -35,20 +35,20 @@ class Request;
 
 class SP_PUBLIC Controller final : public ApplicationExtension {
 public:
-	static EventHeader onNetworkCapabilities;
-
-	static Rc<ApplicationExtension> createController(Application *, StringView,
+	static Rc<ApplicationExtension> createController(AppThread *, StringView,
 			Bytes &&signKey = Bytes());
 
-	Controller(Application *, StringView, Bytes &&signKey = Bytes());
+	Controller(AppThread *, StringView, Bytes &&signKey = Bytes());
 	virtual ~Controller();
 
-	virtual void initialize(Application *) override;
-	virtual void invalidate(Application *) override;
+	virtual void initialize(AppThread *) override;
+	virtual void invalidate(AppThread *) override;
 
-	virtual void update(Application *, const UpdateTime &t) override;
+	virtual void update(AppThread *, const UpdateTime &t, bool wakeup) override;
 
-	Application *getApplication() const;
+	virtual void handleNetworkStateChanged(NetworkFlags) override;
+
+	AppThread *getApplication() const;
 	StringView getName() const;
 
 	void run(Rc<Request> &&);

@@ -267,7 +267,7 @@ void ActionEaseTest::setSelected(interpolation::Type type) {
 					_curveSprite->scheduleTextureUpdate(move(tex));
 				}
 			} else {
-				auto tex = cache->addExternalImage(texname,
+				auto tex = cache->addExternalBitmapImage(texname,
 						core::ImageInfo(Extent2(bitmap.width(), bitmap.height()),
 								core::ImageFormat::R8_UNORM, core::ImageUsage::Sampled),
 						bitmap.data());

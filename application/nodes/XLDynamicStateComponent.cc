@@ -30,10 +30,10 @@ bool DynamicStateComponent::init() { return init(DynamicStateApplyMode::DoNotApp
 
 bool DynamicStateComponent::init(DynamicStateApplyMode value) {
 	_applyMode = DynamicStateApplyMode::DoNotApply;
-	_componentFlags = ComponentFlags::HandleOwnerEvents | ComponentFlags::HandleSceneEvents;
+	_componentFlags = SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents;
 
 	setStateApplyMode(value);
-	return Component::init();
+	return System::init();
 }
 
 void DynamicStateComponent::handleVisitBegin(FrameInfo &frameInfo) { _isStateValuesActual = false; }
@@ -71,11 +71,10 @@ void DynamicStateComponent::setStateApplyMode(DynamicStateApplyMode value) {
 	if (value != _applyMode) {
 		_applyMode = value;
 		if (_applyMode != DynamicStateApplyMode::DoNotApply) {
-			setComponentFlags(ComponentFlags::HandleVisitSelf | ComponentFlags::HandleVisitControl
-					| ComponentFlags::HandleOwnerEvents | ComponentFlags::HandleSceneEvents);
+			setComponentFlags(SystemFlags::HandleVisitSelf | SystemFlags::HandleVisitControl
+					| SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents);
 		} else {
-			setComponentFlags(
-					ComponentFlags::HandleOwnerEvents | ComponentFlags::HandleSceneEvents);
+			setComponentFlags(SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents);
 		}
 	}
 }

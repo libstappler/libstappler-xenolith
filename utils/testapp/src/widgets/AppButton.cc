@@ -26,7 +26,6 @@
 #include "XLInputListener.h"
 #include "XLAction.h"
 #include "XL2dLabel.h"
-#include "XLPlatformViewInterface.h"
 
 namespace stappler::xenolith::app {
 
@@ -40,18 +39,6 @@ bool Button::init(Function<void()> &&cb) {
 	_listener = addComponent(Rc<InputListener>::create());
 	_listener->setTouchFilter([](const InputEvent &event,
 									  const InputListener::DefaultEventFilter &) { return true; });
-	_listener->addMoveRecognizer([this](const GestureData &ev) {
-		bool touched = isTouched(ev.input->currentLocation);
-		if (touched != _focus) {
-			_focus = touched;
-			if (_focus) {
-				handleFocusEnter();
-			} else {
-				handleFocusLeave();
-			}
-		}
-		return true;
-	}, false);
 	_listener->addTouchRecognizer([this](const GestureData &ev) -> bool {
 		if (ev.event == GestureEvent::Began) {
 			if (isTouched(ev.input->currentLocation)) {
@@ -67,15 +54,17 @@ bool Button::init(Function<void()> &&cb) {
 		}
 		return true;
 	});
-	_listener->setPointerEnterCallback([this](bool pointerWithinWindow) {
-		if (!pointerWithinWindow && _focus) {
-			_focus = false;
-			handleFocusLeave();
+	_listener->addMouseOverRecognizer([this](const GestureData &ev) {
+		switch (ev.event) {
+		case GestureEvent::Began: handleFocusEnter(); break;
+		case GestureEvent::Ended:
+		case GestureEvent::Cancelled: handleFocusLeave(); break;
+		default: break;
 		}
 		return true;
 	});
 
-	_listener->setViewLayerFlags(ViewLayerFlags::CursorPointer);
+	_listener->setCursor(WindowCursor::Pointer);
 
 	updateEnabled();
 

@@ -44,6 +44,7 @@ enum class XcbMoveResize {
 	SizeKeyboard = 9,
 	MoveKeyboard = 10,
 	Cancel = 11,
+	Menu = 256,
 };
 
 enum class XcbConstraints : uint32_t {
@@ -98,14 +99,14 @@ public:
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
-	virtual void handleLayerEnter(const WindowLayer &) override;
-	virtual void handleLayerExit(const WindowLayer &) override;
-
 	virtual Extent2 getExtent() const override;
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
 
-	void startMoveResize(XcbMoveResize, int32_t x, int32_t y, int32_t button);
+	virtual bool enableState(WindowState) override;
+	virtual bool disableState(WindowState) override;
+
+	void startGrip(XcbMoveResize, int32_t x, int32_t y, int32_t button);
 
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
@@ -127,7 +128,7 @@ protected:
 	void updateShadows();
 	void generateShadowPixmaps(uint32_t width, uint32_t inset);
 
-	void setCursor(WindowCursor);
+	virtual void setCursor(WindowCursor) override;
 
 	void updateUserTime(uint32_t);
 	void cancelPointerEvents();
@@ -140,7 +141,6 @@ protected:
 
 	XcbWindowInfo _xinfo;
 
-	WindowLayerFlags _gripFlags = WindowLayerFlags::None;
 	WindowLayerFlags _buttonGripFlags = WindowLayerFlags::None;
 	bool _pendingExpose = false;
 	xcb_timestamp_t _lastInputTime = 0;

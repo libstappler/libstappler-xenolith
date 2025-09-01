@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +22,6 @@
  **/
 
 #include "AppUtilsAssetTest.h"
-#include "XLApplication.h"
 #include "XLAssetLibrary.h"
 
 namespace stappler::xenolith::app {
@@ -34,16 +34,16 @@ bool UtilsAssetTest::init() {
 	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(1));
 	_background->setAnchorPoint(Anchor::Middle);
 
-	_runButton = _background->addChild(Rc<material2d::Button>::create(material2d::NodeStyle::Filled));
+	_runButton =
+			_background->addChild(Rc<material2d::Button>::create(material2d::NodeStyle::Filled));
 	_runButton->setText("Run");
 	_runButton->setAnchorPoint(Anchor::MiddleTop);
 	_runButton->setFollowContentSize(false);
-	_runButton->setTapCallback([this] {
-		performTest();
-	});
+	_runButton->setTapCallback([this] { performTest(); });
 	_runButton->setVisible(false);
 
-	_result = _background->addChild(Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
+	_result = _background->addChild(
+			Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
 	_result->setFontFamily("default");
 	_result->setString("null");
 	_result->setAnchorPoint(Anchor::MiddleTop);
@@ -51,9 +51,8 @@ bool UtilsAssetTest::init() {
 	_progress = _background->addChild(Rc<Slider>::create(0.0f, nullptr));
 	_progress->setAnchorPoint(Anchor::Middle);
 
-	_listener = addComponent(Rc<DataListener<storage::Asset>>::create([this] (SubscriptionFlags flags) {
-		handleAssetUpdate(flags);
-	}));
+	_listener = addComponent(Rc<DataListener<storage::Asset>>::create(
+			[this](SubscriptionFlags flags) { handleAssetUpdate(flags); }));
 
 	return true;
 }
@@ -78,7 +77,8 @@ void UtilsAssetTest::handleEnter(Scene *scene) {
 	LayoutTest::handleEnter(scene);
 
 	auto lib = _director->getApplication()->getExtension<storage::AssetLibrary>();
-	lib->acquireAsset("https://apps.stappler.org/api/v2/issues/id80417/content", [this] (const Rc<storage::Asset> &asset) {
+	lib->acquireAsset("https://apps.stappler.org/api/v2/issues/id80417/content",
+			[this](const Rc<storage::Asset> &asset) {
 		if (_running) {
 			_listener->setSubscription(asset);
 			_runButton->setVisible(true);
@@ -115,4 +115,4 @@ void UtilsAssetTest::handleAssetUpdate(SubscriptionFlags flags) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

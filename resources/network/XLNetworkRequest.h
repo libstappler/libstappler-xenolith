@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +24,7 @@
 #ifndef XENOLITH_RESOURCES_NETWORK_XLNETWORKREQUEST_H_
 #define XENOLITH_RESOURCES_NETWORK_XLNETWORKREQUEST_H_
 
-#include "XLApplication.h"
+#include "XLAppThread.h" // IWYU pragma: keep
 #include "SPNetworkHandle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::network {
@@ -73,12 +74,12 @@ protected:
 	friend class Controller;
 	friend class Request;
 
-    bool prepare(Context *ctx);
-    bool finalize(Context *ctx, bool success);
+	bool prepare(Context *ctx);
+	bool finalize(Context *ctx, bool success);
 
 	bool _success = false;
 	bool _signRequest = false;
-	std::array<char, 256> _errorBuffer = { 0 };
+	std::array<char, 256> _errorBuffer = {0};
 
 	uint64_t _mtime = 0;
 	String _etag;
@@ -97,7 +98,7 @@ public:
 
 	virtual bool init(const Callback<bool(Handle &)> &setupCallback, Rc<Ref> && = nullptr);
 
-	virtual void perform(Application *, CompleteCallback &&cb);
+	virtual void perform(AppThread *, CompleteCallback &&cb);
 	virtual void perform(Controller *, CompleteCallback &&cb);
 
 	void setIgnoreResponseData(bool);
@@ -107,8 +108,12 @@ public:
 
 	const Handle &getHandle() const { return _handle; }
 
-	float getUploadProgress() const { return float(_uploadProgress.second) / float(_uploadProgress.first); }
-	float getDownloadProgress() const { return float(_downloadProgress.second) / float(_downloadProgress.first); }
+	float getUploadProgress() const {
+		return float(_uploadProgress.second) / float(_uploadProgress.first);
+	}
+	float getDownloadProgress() const {
+		return float(_downloadProgress.second) / float(_downloadProgress.first);
+	}
 
 	Pair<int64_t, int64_t> getUploadProgressCounters() const { return _uploadProgress; }
 	Pair<int64_t, int64_t> getDownloadProgressCounters() const { return _downloadProgress; }
@@ -144,6 +149,6 @@ protected:
 	Bytes _data;
 };
 
-}
+} // namespace stappler::xenolith::network
 
 #endif /* XENOLITH_RESOURCES_NETWORK_XLNETWORKREQUEST_H_ */

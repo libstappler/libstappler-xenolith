@@ -33,7 +33,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class SP_PUBLIC AppThread : protected thread::Thread {
+class SP_PUBLIC AppThread : public thread::Thread {
 public:
 	static EventHeader onNetworkState;
 	static EventHeader onThemeInfo;
@@ -101,13 +101,6 @@ public:
 
 	template <typename T>
 	T *getExtension() const;
-
-	using Thread::retain;
-	using Thread::release;
-	using Thread::operator new;
-	using Thread::operator delete;
-	using Thread::waitRunning;
-	using Thread::waitStopped;
 
 protected:
 	virtual void performAppUpdate(const UpdateTime &, bool wakeup);

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -45,8 +46,8 @@ public:
 
 	virtual void handleContentSizeDirty() override;
 
-	virtual void onPushTransitionEnded(SceneContent2d *l, bool replace) override;
-	virtual void onPopTransitionBegan(SceneContent2d *l, bool replace) override;
+	virtual void handlePushTransitionEnded(SceneContent2d *l, bool replace) override;
+	virtual void handlePopTransitionBegan(SceneContent2d *l, bool replace) override;
 
 	virtual Rc<Transition> makeExitTransition(SceneContent2d *) const override;
 
@@ -65,6 +66,6 @@ protected:
 	Function<void()> _closeCallback;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALOVERLAYLAYOUT_H_ */

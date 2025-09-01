@@ -27,11 +27,9 @@
 #include "SPMemAlloc.h"
 #include "SPMemPoolInterface.h"
 #include "XLStorageComponent.h"
-#include "XLApplication.h"
 #include "SPValid.h"
 #include "SPThread.h"
 #include "SPSqlDriver.h"
-#include <new>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::storage {
 
@@ -93,7 +91,7 @@ struct Server::ServerData : public thread::Thread, public db::ApplicationInterfa
 	memory::pool_t *serverPool = nullptr;
 	memory::pool_t *threadPool = nullptr;
 	memory::pool_t *asyncPool = nullptr;
-	Application *application = nullptr;
+	AppThread *application = nullptr;
 	ServerDataStorage *storage = nullptr;
 
 	std::condition_variable condition;
@@ -150,13 +148,13 @@ struct Server::ServerData : public thread::Thread, public db::ApplicationInterfa
 
 XL_DECLARE_EVENT_CLASS(Server, onBroadcast)
 
-Rc<ApplicationExtension> Server::createServer(Application *app, const Value &params) {
+Rc<ApplicationExtension> Server::createServer(AppThread *app, const Value &params) {
 	return Rc<storage::Server>::create(app, params);
 }
 
 Server::~Server() { }
 
-bool Server::init(Application *app, const Value &params) {
+bool Server::init(AppThread *app, const Value &params) {
 	auto alloc = memory::allocator::create();
 	auto pool = memory::pool::create(alloc);
 
@@ -194,9 +192,9 @@ bool Server::init(Application *app, const Value &params) {
 	return _data->run();
 }
 
-void Server::initialize(Application *) { }
+void Server::initialize(AppThread *) { }
 
-void Server::invalidate(Application *) {
+void Server::invalidate(AppThread *) {
 	if (_data) {
 		for (auto &it : _data->appComponents) { it.second->handleComponentsUnloaded(*this); }
 
@@ -213,7 +211,7 @@ void Server::invalidate(Application *) {
 	}
 }
 
-void Server::update(Application *, const UpdateTime &t) { }
+void Server::update(AppThread *, const UpdateTime &t, bool) { }
 
 Rc<ComponentContainer> Server::getComponentContainer(StringView key) const {
 	auto it = _data->appComponents.find(key);
@@ -775,7 +773,7 @@ bool Server::perform(Function<bool(const Server &, const db::Transaction &)> &&c
 	return true;
 }
 
-Application *Server::getApplication() const { return _data->application; }
+AppThread *Server::getApplication() const { return _data->application; }
 
 bool Server::get(const Scheme &scheme, DataCallback &&cb, uint64_t oid,
 		Vector<const db::Field *> &&fields, db::UpdateFlags flags) const {

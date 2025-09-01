@@ -24,7 +24,7 @@
 #include "AppInputKeyboardTest.h"
 #include "XL2dLayer.h"
 #include "XLDirector.h"
-#include "XLApplication.h"
+#include "XLAppThread.h"
 #include "XLInputDispatcher.h"
 #include "XLInputListener.h"
 
@@ -276,9 +276,16 @@ void InputKeyboardOnScreenKeyboard::sendInputEvent(ActiveButton btn, InputKeyCod
 		return;
 	}
 
-	InputEventData data({uint32_t(btn),
-		enabled ? InputEventName::KeyPressed : InputEventName::KeyReleased, InputMouseButton::None,
-		InputModifier::None, float(_currentLocation.x), float(_currentLocation.y)});
+	InputEventData data({
+		uint32_t(btn),
+		enabled ? InputEventName::KeyPressed : InputEventName::KeyReleased,
+		{{
+			InputMouseButton::None,
+			InputModifier::None,
+			float(_currentLocation.x),
+			float(_currentLocation.y),
+		}},
+	});
 
 	data.key.keycode = code;
 

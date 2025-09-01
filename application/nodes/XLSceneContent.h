@@ -27,8 +27,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+class WindowDecorations;
+
 class SP_PUBLIC SceneContent : public Node {
 public:
+	using WindowDecorationsCallback = Function<Rc<WindowDecorations>(NotNull<SceneContent>)>;
+
 	virtual ~SceneContent();
 
 	virtual bool init() override;
@@ -46,22 +50,25 @@ public:
 	virtual void showViewDecoration();
 	virtual void hideViewDecoration();
 
-	Padding getDecorationPadding() const { return _decorationPadding; }
+	// Decoration padding is WM inset decorations + user window decorations
+	virtual Padding getDecorationPadding() const;
 
 	virtual void enableScissor();
 	virtual void disableScissor();
 	virtual bool isScissorEnabled() const;
 
+	virtual void setWindowDecorationsContructor(WindowDecorationsCallback &&);
+	virtual const WindowDecorationsCallback &getWindowDecorationsContructor() const {
+		return _windowDecorationsConstructor;
+	}
+
 protected:
 	friend class Scene;
-
-	virtual void setDecorationPadding(Padding);
 
 	virtual void updateBackButtonStatus();
 
 	virtual void handleBackgroundTransition(bool value);
 
-	Padding _decorationPadding;
 	InputListener *_inputListener = nullptr;
 	DynamicStateComponent *_scissorComponent = nullptr;
 
@@ -69,6 +76,9 @@ protected:
 	bool _backButtonRetained = false;
 	bool _handlesViewDecoration = true;
 	bool _decorationVisible = true;
+
+	WindowDecorations *_userDecorations = nullptr;
+	WindowDecorationsCallback _windowDecorationsConstructor;
 };
 
 } // namespace stappler::xenolith

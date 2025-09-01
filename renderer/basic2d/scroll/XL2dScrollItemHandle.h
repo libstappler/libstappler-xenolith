@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
 class ScrollController;
 
-class SP_PUBLIC ScrollItemHandle : public Component {
+class SP_PUBLIC ScrollItemHandle : public System {
 public:
 	using Item = ScrollController::Item;
 	using Callback = Function<void(const Item &)>;

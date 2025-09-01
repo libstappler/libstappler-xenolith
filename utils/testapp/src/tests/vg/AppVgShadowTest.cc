@@ -232,17 +232,17 @@ bool VgShadowTest::init() {
 	l->addTouchRecognizer(
 			[this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Ended) {
-			if (data.input->data.button == InputMouseButton::Mouse8
-					|| data.input->data.button == InputMouseButton::MouseScrollRight
-					|| data.input->data.button == InputMouseButton::MouseLeft) {
+			if (data.input->data.getButton() == InputMouseButton::Mouse8
+					|| data.input->data.getButton() == InputMouseButton::MouseScrollRight
+					|| data.input->data.getButton() == InputMouseButton::MouseLeft) {
 				if (_currentName == IconName::Action_3d_rotation_outline) {
 					updateIcon(IconName::Toggle_toggle_on_solid);
 				} else {
 					updateIcon(IconName(toInt(_currentName) - 1));
 				}
-			} else if (data.input->data.button == InputMouseButton::Mouse9
-					|| data.input->data.button == InputMouseButton::MouseScrollLeft
-					|| data.input->data.button == InputMouseButton::MouseRight) {
+			} else if (data.input->data.getButton() == InputMouseButton::Mouse9
+					|| data.input->data.getButton() == InputMouseButton::MouseScrollLeft
+					|| data.input->data.getButton() == InputMouseButton::MouseRight) {
 				if (_currentName == IconName::Toggle_toggle_on_solid) {
 					updateIcon(IconName::Action_3d_rotation_outline);
 				} else {

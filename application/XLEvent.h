@@ -69,6 +69,8 @@ public:
 protected:
 	void send(Ref *object, int64_t value) const;
 	void send(Ref *object, uint64_t value) const;
+	void send(Ref *object, int32_t value) const;
+	void send(Ref *object, uint32_t value) const;
 	void send(Ref *object, double value) const;
 	void send(Ref *object, bool value) const;
 	void send(Ref *object, Ref *value) const;

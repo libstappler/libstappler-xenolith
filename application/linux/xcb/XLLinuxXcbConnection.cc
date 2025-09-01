@@ -735,7 +735,9 @@ bool XcbConnection::isCursorSupported(WindowCursor cursor) {
 }
 
 WindowCapabilities XcbConnection::getCapabilities() const {
-	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations;
+	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations
+			| WindowCapabilities::AboveBelowState | WindowCapabilities::DemandsAttentionState
+			| WindowCapabilities::SkipTaskbarState;
 
 	if (getVisualByDepth(32) != 0 && getAtom(XcbAtomIndex::_MOTIF_WM_HINTS) != 0
 			&& hasCapability(XcbAtomIndex::_GTK_EDGE_CONSTRAINTS)) {

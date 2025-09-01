@@ -73,6 +73,12 @@ void EventHeader::send(Ref *object, int64_t value) const {
 void EventHeader::send(Ref *object, uint64_t value) const {
 	EventHeader_send(*this, object, Value(value));
 }
+void EventHeader::send(Ref *object, int32_t value) const {
+	EventHeader_send(*this, object, Value(value));
+}
+void EventHeader::send(Ref *object, uint32_t value) const {
+	EventHeader_send(*this, object, Value(value));
+}
 void EventHeader::send(Ref *object, double value) const {
 	EventHeader_send(*this, object, Value(value));
 }
@@ -113,6 +119,9 @@ Event::Event(const EventHeader &header, Ref *object)
 : BusEvent(header.getEventId()), _object(object) { }
 
 Event::Event(const EventHeader &header, Ref *object, Value &&dataVal, Ref *objVal)
-: BusEvent(header.getEventId()), _dataValue(move(dataVal)), _objectValue(objVal) { }
+: BusEvent(header.getEventId())
+, _object(object)
+, _dataValue(move(dataVal))
+, _objectValue(objVal) { }
 
 } // namespace stappler::xenolith

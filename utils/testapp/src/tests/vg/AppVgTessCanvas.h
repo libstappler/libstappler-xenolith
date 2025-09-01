@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +24,11 @@
 #ifndef TEST_SRC_TESTS_VG_APPVGTESSCANVAS_H_
 #define TEST_SRC_TESTS_VG_APPVGTESSCANVAS_H_
 
-#include "XL2dLayer.h"
+#include "AppTests.h" // IWYU pragma: keep
+#include "XL2dLayer.h" // IWYU pragma: keep
 #include "XL2dLabel.h"
 #include "XL2dVectorSprite.h"
+#include "XLInput.h"
 
 namespace stappler::xenolith::app {
 
@@ -37,7 +40,7 @@ public:
 		Target
 	};
 
-	virtual ~VgTessCursor() { }
+	virtual ~VgTessCursor() = default;
 
 	virtual bool init() override;
 
@@ -54,7 +57,7 @@ protected:
 
 class VgTessPoint : public VectorSprite {
 public:
-	virtual ~VgTessPoint() { }
+	virtual ~VgTessPoint() = default;
 
 	bool init(const Vec2 &p, uint32_t index);
 
@@ -108,7 +111,7 @@ protected:
 
 	void onActionTouch(const InputEvent &);
 
-	VgTessPoint * getTouchedPoint(const Vec2 &) const;
+	VgTessPoint *getTouchedPoint(const Vec2 &) const;
 
 	void updatePoints();
 	void saveData();
@@ -138,6 +141,6 @@ protected:
 	VectorSprite *_pathLines = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_VG_APPVGTESSCANVAS_H_ */

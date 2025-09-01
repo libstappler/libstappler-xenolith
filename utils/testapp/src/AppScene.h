@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +35,8 @@ class AppScene : public Scene2d {
 public:
 	virtual ~AppScene() { }
 
-	virtual bool init(Application *, const core::FrameConstraints &constraints) override;
+	virtual bool init(NotNull<AppThread>, NotNull<AppWindow>,
+			const core::FrameConstraints &constraints) override;
 
 	virtual void handlePresented(Director *) override;
 	virtual void handleFinished(Director *) override;

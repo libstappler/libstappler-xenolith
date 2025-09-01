@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,10 +29,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-uint64_t SurfaceInterior::ComponentFrameTag = Component::GetNextComponentId();
+uint64_t SurfaceInterior::ComponentFrameTag = System::GetNextComponentId();
 
 bool SurfaceInterior::init() {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -40,7 +41,7 @@ bool SurfaceInterior::init() {
 }
 
 bool SurfaceInterior::init(SurfaceStyle &&style) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -50,14 +51,14 @@ bool SurfaceInterior::init(SurfaceStyle &&style) {
 }
 
 void SurfaceInterior::handleAdded(Node *owner) {
-	Component::handleAdded(owner);
+	System::handleAdded(owner);
 
 	_ownerIsMaterialNode = ((dynamic_cast<Surface *>(_owner) != nullptr)
 			|| (dynamic_cast<LayerSurface *>(_owner) != nullptr));
 }
 
 void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags parentFlags) {
-	Component::handleVisitSelf(info, node, parentFlags);
+	System::handleVisitSelf(info, node, parentFlags);
 
 	if (!_ownerIsMaterialNode) {
 		auto style = info.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);

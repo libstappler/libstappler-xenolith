@@ -50,29 +50,29 @@ void EventDelegate::disable() {
 EventListener::~EventListener() { }
 
 bool EventListener::init() {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
-	_componentFlags = ComponentFlags::HandleOwnerEvents | ComponentFlags::HandleSceneEvents;
+	_systemFlags = SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents;
 
 	return true;
 }
 
 void EventListener::handleEnter(Scene *scene) {
-	Component::handleEnter(scene);
+	System::handleEnter(scene);
 
 	for (auto &it : _listeners) { it->enable(scene->getDirector()->getApplication()->getLooper()); }
 }
 
 void EventListener::handleExit() {
 	for (auto &it : _listeners) { it->disable(); }
-	Component::handleExit();
+	System::handleExit();
 }
 
 void EventListener::handleRemoved() {
 	clear();
-	Component::handleRemoved();
+	System::handleRemoved();
 }
 
 event::BusDelegate *EventListener::listenForEvent(const EventHeader &h, EventCallback &&callback,

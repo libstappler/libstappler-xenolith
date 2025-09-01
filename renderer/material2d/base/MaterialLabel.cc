@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -251,7 +252,7 @@ void TypescaleLabel::specializeStyle(DescriptionStyle &style, float density) con
 	}
 
 	Label::specializeStyle(style, density);
-	if (!_persistentLayout) {
+	if (!_persistentGlyphData) {
 		if ((style.font.fontGrade == font::FontGrade::Normal
 					|| style.font.fontGrade == font::FontGrade::Normal)
 				&& style.font.fontStretch.get() % 100 == 0

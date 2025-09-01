@@ -41,7 +41,7 @@ public:
 	void disable();
 };
 
-class SP_PUBLIC EventListener : public Component {
+class SP_PUBLIC EventListener : public System {
 public:
 	virtual ~EventListener();
 

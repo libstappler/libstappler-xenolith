@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class Component;
+class System;
 class DynamicStateComponent;
 class Scene;
 class Scheduler;
@@ -201,7 +201,6 @@ public:
 	Action *getActionByTag(uint32_t tag);
 	size_t getNumberOfRunningActions() const;
 
-
 	template <typename C>
 	auto addComponent(C *component) -> C * {
 		if (addComponentItem(component)) {
@@ -218,8 +217,8 @@ public:
 		return nullptr;
 	}
 
-	virtual bool addComponentItem(Component *);
-	virtual bool removeComponent(Component *);
+	virtual bool addComponentItem(System *);
+	virtual bool removeComponent(System *);
 	virtual bool removeComponentByTag(uint64_t);
 	virtual bool removeAllComponentByTag(uint64_t);
 	virtual void removeAllComponents();
@@ -360,7 +359,7 @@ protected:
 		mutable NodeFlags flags = NodeFlags::None;
 		mutable FrameInfo *frameInfo = nullptr;
 		mutable bool visibleByCamera = true;
-		mutable Vector<Rc<Component>> visitableComponents;
+		mutable Vector<Rc<System>> visitableComponents;
 	};
 
 	virtual void updateCascadeOpacity();
@@ -426,7 +425,7 @@ protected:
 	Function<void()> _reorderChildDirtyCallback;
 	Function<void(Node *)> _layoutCallback;
 
-	Vector<Rc<Component>> _components;
+	Vector<Rc<System>> _components;
 
 	Scene *_scene = nullptr;
 	Director *_director = nullptr;

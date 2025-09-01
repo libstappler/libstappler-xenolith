@@ -33,7 +33,7 @@ ScrollController::Item::Item(NodeFunction &&f, Vec2 pos, Size2 size, ZOrder z, S
 ScrollController::~ScrollController() { }
 
 void ScrollController::handleAdded(Node *owner) {
-	Component::handleAdded(owner);
+	System::handleAdded(owner);
 	_scroll = dynamic_cast<ScrollViewBase *>(getOwner());
 	if (_scroll) {
 		_root = _scroll->getRoot();
@@ -43,14 +43,14 @@ void ScrollController::handleAdded(Node *owner) {
 
 void ScrollController::handleRemoved() {
 	clear();
-	Component::handleRemoved();
+	System::handleRemoved();
 	_scroll = nullptr;
 	_root = nullptr;
 	_savedSize = 0.0f;
 }
 
 void ScrollController::handleContentSizeDirty() {
-	Component::handleContentSizeDirty();
+	System::handleContentSizeDirty();
 	if (!_scroll) {
 		return;
 	}

@@ -378,8 +378,8 @@ float FlexibleLayout::getCurrentFlexibleMax() const {
 							: 0);
 }
 
-void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
-	DecoratedLayout::onPush(l, replace);
+void FlexibleLayout::handlePush(SceneContent2d *l, bool replace) {
+	DecoratedLayout::handlePush(l, replace);
 
 	if (_appBar && !replace) {
 		if (auto prev = l->getPrevLayout()) {
@@ -396,7 +396,7 @@ void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 							nav->setLeadingIconProgress(1.0f, 0.25f);
 						}
 						if (!_appBar->getNavCallback()) {
-							_appBar->setNavCallback([this] { onBackButton(); });
+							_appBar->setNavCallback([this] { handleBackButton(); });
 						}
 					}
 					return;
@@ -406,15 +406,15 @@ void FlexibleLayout::onPush(SceneContent2d *l, bool replace) {
 			if (_appBar->getNavButtonIcon() == IconName::Dynamic_Nav) {
 				_appBar->getNavNode()->setLeadingIconProgress(1.0f, 0.25f);
 				if (!_appBar->getNavCallback()) {
-					_appBar->setNavCallback([this] { onBackButton(); });
+					_appBar->setNavCallback([this] { handleBackButton(); });
 				}
 			}
 		}
 	}
 }
 
-void FlexibleLayout::onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
-	DecoratedLayout::onForegroundTransitionBegan(l, overlay);
+void FlexibleLayout::handleForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) {
+	DecoratedLayout::handleForegroundTransitionBegan(l, overlay);
 
 	if (_appBar) {
 		if (auto overlayL = dynamic_cast<FlexibleLayout *>(overlay)) {

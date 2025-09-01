@@ -165,7 +165,7 @@ bool MaterialNodeTest::init() {
 	el = _nodeStyle->addComponent(Rc<InputListener>::create());
 	el->addTapRecognizer(
 			[this](GestureTap tap) {
-		if (tap.input->data.button == InputMouseButton::MouseLeft) {
+		if (tap.input->data.getButton() == InputMouseButton::MouseLeft) {
 			auto style = _nodeStyle->getStyleTarget();
 			style.nodeStyle = material2d::NodeStyle(
 					(toInt(style.nodeStyle) + 1) % (toInt(material2d::NodeStyle::Text) + 1));

@@ -26,7 +26,6 @@
 #include "XLInputDispatcher.h"
 #include "XLDirector.h"
 #include "XLSceneContent.h"
-#include "XLCoreFrameRequest.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -211,13 +210,9 @@ auto Scene::makeQueue(Queue::Builder &&builder) -> Rc<Queue> {
 
 void Scene::updateContentNode(SceneContent *content) {
 	if (content) {
-		auto padding = _constraints.contentPadding / _constraints.density;
-
-		content->setPosition(Vec2(padding.left, padding.bottom));
-		content->setContentSize(Size2(_contentSize.width - padding.horizontal(),
-				_contentSize.height - padding.vertical()));
+		content->setPosition(Vec2(0.0f, 0.0f));
+		content->setContentSize(Size2(_contentSize.width, _contentSize.height));
 		content->setAnchorPoint(Anchor::BottomLeft);
-		content->setDecorationPadding(padding);
 	}
 }
 

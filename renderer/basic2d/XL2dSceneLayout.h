@@ -45,8 +45,9 @@ public:
 
 	virtual ~SceneLayout2d();
 
+	// Which decorations we should honor in layout placement
 	virtual void setDecorationMask(DecorationMask mask);
-	virtual DecorationMask getDecodationMask() const { return _decorationMask; }
+	virtual DecorationMask getDecorationMask() const { return _decorationMask; }
 
 	virtual void setDecorationPadding(Padding);
 	virtual Padding getDecorationPadding() const { return _decorationPadding; }
@@ -62,7 +63,7 @@ public:
 	virtual void handlePush(SceneContent2d *l, bool replace);
 	virtual void handlePushTransitionEnded(SceneContent2d *l, bool replace);
 
-	virtual void hanldePopTransitionBegan(SceneContent2d *l, bool replace);
+	virtual void handlePopTransitionBegan(SceneContent2d *l, bool replace);
 	virtual void handlePop(SceneContent2d *l, bool replace);
 
 	virtual void handleBackground(SceneContent2d *l, SceneLayout2d *overlay);
@@ -85,7 +86,9 @@ public:
 	virtual SceneContent2d *getSceneContent() const { return _sceneContent; }
 
 protected:
-	DecorationMask _decorationMask = DecorationMask::None;
+	// Which decorations we should honor in layout placement
+	// All - by default
+	DecorationMask _decorationMask = DecorationMask::All;
 	Padding _decorationPadding;
 	bool _inTransition = false;
 	BackButtonCallback _backButtonCallback;

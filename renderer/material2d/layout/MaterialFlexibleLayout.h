@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -63,14 +64,14 @@ public:
 	virtual bool init() override;
 	virtual void handleContentSizeDirty() override;
 
-	template <typename T, typename ... Args>
-	auto setBaseNode(const Rc<T> &ptr, Args && ... args) -> T * {
+	template <typename T, typename... Args>
+	auto setBaseNode(const Rc<T> &ptr, Args &&...args) -> T * {
 		setBaseNode(ptr.get(), std::forward<Args>(args)...);
 		return ptr.get();
 	}
 
-	template <typename T, typename ... Args>
-	auto setFlexibleNode(const Rc<T> &ptr, Args && ... args) -> T * {
+	template <typename T, typename... Args>
+	auto setFlexibleNode(const Rc<T> &ptr, Args &&...args) -> T * {
 		setFlexibleNode(ptr.get(), std::forward<Args>(args)...);
 		return ptr.get();
 	}
@@ -103,8 +104,9 @@ public:
 	float getCurrentFlexibleHeight() const;
 	float getCurrentFlexibleMax() const;
 
-	virtual void onPush(SceneContent2d *l, bool replace) override;
-	virtual void onForegroundTransitionBegan(SceneContent2d *l, SceneLayout2d *overlay) override;
+	virtual void handlePush(SceneContent2d *l, bool replace) override;
+	virtual void handleForegroundTransitionBegan(SceneContent2d *l,
+			SceneLayout2d *overlay) override;
 
 	// Безопасный триггер препятствует анимации, пока достаточный объём скролла не пройден
 	virtual void setSafeTrigger(bool value);
@@ -148,6 +150,6 @@ protected:
 	AppBar *_appBar = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALFLEXIBLELAYOUT_H_ */

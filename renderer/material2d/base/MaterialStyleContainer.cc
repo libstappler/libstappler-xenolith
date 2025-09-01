@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,28 +29,29 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 XL_DECLARE_EVENT_CLASS(StyleContainer, onColorSchemeUpdate)
 
-uint64_t StyleContainer::ComponentFrameTag = Component::GetNextComponentId();
+uint64_t StyleContainer::ComponentFrameTag = System::GetNextComponentId();
 
 bool StyleContainer::init() {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
 	setFrameTag(ComponentFrameTag);
 
-	_schemes.emplace(PrimarySchemeTag, ColorScheme(ThemeType::LightTheme, ColorHCT(292, 100, 50, 1.0f), false));
+	_schemes.emplace(PrimarySchemeTag,
+			ColorScheme(ThemeType::LightTheme, ColorHCT(292, 100, 50, 1.0f), false));
 
 	return true;
 }
 
 void StyleContainer::handleEnter(Scene *scene) {
-	Component::handleEnter(scene);
+	System::handleEnter(scene);
 	_scene = scene;
 }
 
 void StyleContainer::handleExit() {
 	_scene = nullptr;
-	Component::handleExit();
+	System::handleExit();
 }
 
 void StyleContainer::setPrimaryScheme(ColorScheme &&scheme) {
@@ -68,9 +70,7 @@ void StyleContainer::setPrimaryScheme(ThemeType type, const ColorHCT &color, boo
 	setScheme(PrimarySchemeTag, type, color, isContent);
 }
 
-const ColorScheme &StyleContainer::getPrimaryScheme() const {
-	return *getScheme(PrimarySchemeTag);
-}
+const ColorScheme &StyleContainer::getPrimaryScheme() const { return *getScheme(PrimarySchemeTag); }
 
 const ColorScheme *StyleContainer::setScheme(uint32_t tag, ColorScheme &&scheme) {
 	auto it = _schemes.find(tag);
@@ -85,7 +85,8 @@ const ColorScheme *StyleContainer::setScheme(uint32_t tag, ColorScheme &&scheme)
 	return &it->second;
 }
 
-const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const CorePalette &palette) {
+const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type,
+		const CorePalette &palette) {
 	auto it = _schemes.find(tag);
 	if (it != _schemes.end()) {
 		it->second.set(type, palette);
@@ -98,7 +99,8 @@ const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const
 	return &it->second;
 }
 
-const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const Color4F &color, bool isContent) {
+const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const Color4F &color,
+		bool isContent) {
 	auto it = _schemes.find(tag);
 	if (it != _schemes.end()) {
 		it->second.set(type, color, isContent);
@@ -111,7 +113,8 @@ const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const
 	return &it->second;
 }
 
-const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const ColorHCT &color, bool isContent) {
+const ColorScheme *StyleContainer::setScheme(uint32_t tag, ThemeType type, const ColorHCT &color,
+		bool isContent) {
 	auto it = _schemes.find(tag);
 	if (it != _schemes.end()) {
 		it->second.set(type, color, isContent);
@@ -132,4 +135,4 @@ const ColorScheme *StyleContainer::getScheme(uint32_t tag) const {
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::material2d

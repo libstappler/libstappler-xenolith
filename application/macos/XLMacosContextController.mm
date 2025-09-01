@@ -400,9 +400,9 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 		NSXL::String color;
 		if (r.starts_with("Dark")) {
-			color = "Dark";
+			color = "prefer-dark";
 		} else {
-			color = "Light";
+			color = "prefer-light";
 		}
 
 		_themeInfo.cursorSize = 24;

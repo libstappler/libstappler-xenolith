@@ -960,16 +960,21 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 
 InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &event,
 		float density) {
+	InputEventState ret = InputEventState::Processed;
 	bool stateChanged = false;
 	switch (event.data.event) {
 	case InputEventName::WindowState:
-		if (_viewHasFocus != hasFlag(event.data.window.state, core::WindowState::Focused)) {
-			_viewHasFocus = hasFlag(event.data.window.state, core::WindowState::Focused);
-			stateChanged = true;
+		if (hasFlag(event.data.window.changes, core::WindowState::Focused)) {
+			if (_viewHasFocus != hasFlag(event.data.window.state, core::WindowState::Focused)) {
+				_viewHasFocus = hasFlag(event.data.window.state, core::WindowState::Focused);
+				stateChanged = true;
+			}
 		}
-		if (_viewHasPointer != hasFlag(event.data.window.state, core::WindowState::Pointer)) {
-			_viewHasPointer = hasFlag(event.data.window.state, core::WindowState::Pointer);
-			stateChanged = true;
+		if (hasFlag(event.data.window.changes, core::WindowState::Pointer)) {
+			if (_viewHasPointer != hasFlag(event.data.window.state, core::WindowState::Pointer)) {
+				_viewHasPointer = hasFlag(event.data.window.state, core::WindowState::Pointer);
+				stateChanged = true;
+			}
 		}
 		break;
 	case InputEventName::MouseMove:
@@ -978,11 +983,17 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 			if (_hasMouseOver != v) {
 				_hasMouseOver = v;
 				stateChanged = true;
+				if (v) {
+					ret = InputEventState::Retain;
+				} else {
+					ret = InputEventState::Release;
+				}
 			} else if (_hasMouseOver) {
 				stateChanged = true;
 			}
 		} else {
 			if (_hasMouseOver) {
+				std::cout << "_hasMouseOver false\n";
 				stateChanged = true;
 				_hasMouseOver = false;
 			}
@@ -993,7 +1004,7 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 	if (stateChanged) {
 		updateState(event);
 	}
-	return InputEventState::Processed;
+	return ret;
 }
 
 void GestureMouseOverRecognizer::onEnter(InputListener *l) {

@@ -33,7 +33,7 @@ class Node;
 class Scene;
 class GestureRecognizer;
 
-class SP_PUBLIC InputListener : public Component {
+class SP_PUBLIC InputListener : public System {
 public:
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 	using ButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
@@ -138,6 +138,9 @@ protected:
 
 	GestureRecognizer *addRecognizer(GestureRecognizer *);
 
+	void retainEvent(core::InputEventName);
+	void releaseEvent(core::InputEventName);
+
 	int32_t _priority = 0; // 0 - scene graph
 	uint32_t _dedicatedFocus = 0; // 0 - unused
 	EventMask _eventMask;
@@ -152,6 +155,7 @@ protected:
 	EventFilter _eventFilter;
 	Vector<Rc<GestureRecognizer>> _recognizers;
 	Map<InputEventName, EventCallback> _callbacks;
+	Map<InputEventName, uint32_t> _retainedEvents;
 };
 
 } // namespace stappler::xenolith

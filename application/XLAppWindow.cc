@@ -297,34 +297,68 @@ void AppWindow::releaseExitGuard() {
 	}, this);
 }
 
-void AppWindow::setInsetDecoration(const Padding &padding) {
-	_context->performOnThread([this, padding] { _presentationEngine->setContentPadding(padding); },
-			this, true);
-}
+WindowState AppWindow::getUpdatableStateFlags() const {
+	auto caps = getCapabilities();
+	WindowState flags = WindowState::None;
 
-void AppWindow::setInsetDecorationVisible(bool val) {
-	_insetDecorationVisible = val;
+	if (hasFlag(caps, WindowCapabilities::AboveBelowState)) {
+		flags |= WindowState::Above | WindowState::Below;
+	}
 
-	_context->performOnThread([this, val]() {
-		if (_window) {
-			_window->setInsetDecorationVisible(val);
+	if (hasFlag(caps, WindowCapabilities::AboveBelowState)) {
+		flags |= WindowState::DemandsAttention;
+	}
+
+	if (hasFlag(caps, WindowCapabilities::SkipTaskbarState)) {
+		flags |= WindowState::SkipTaskbar | WindowState::SkipPager;
+	}
+
+	for (auto it : sp::flags(_state)) {
+		switch (it) {
+		case WindowState::AllowedMinimize: flags |= WindowState::Minimized; break;
+		case WindowState::AllowedShade: flags |= WindowState::Shaded; break;
+		case WindowState::AllowedStick: flags |= WindowState::Sticky; break;
+		case WindowState::AllowedMaximizeVert: flags |= WindowState::MaximizedVert; break;
+		case WindowState::AllowedMaximizeHorz: flags |= WindowState::MaximizedHorz; break;
+		case WindowState::AllowedClose: flags |= WindowState::CloseRequest; break;
+		case WindowState::AllowedFullscreen: flags |= WindowState::Fullscreen; break;
+		default: break;
 		}
-	}, this);
+	}
+	return flags;
 }
 
-bool AppWindow::isInsetDecorationVisible() const { return _insetDecorationVisible; }
+bool AppWindow::enableState(WindowState state) {
+	auto c = std::popcount(toInt(state));
+	if (c != 1 && state != WindowState::Maximized) {
+		log::error("AppWindow", "enableState: only one flag should be defined in state");
+		return false;
+	}
 
-void AppWindow::setInsetDecorationTone(float val) {
-	_insetDecorationVisible = val;
+	if ((state & getUpdatableStateFlags()) != state) {
+		log::error("AppWindow", "enableState:", state, " is not updatable");
+		return false;
+	}
 
-	_context->performOnThread([this, val]() {
-		if (_window) {
-			_window->setInsetDecorationTone(val);
-		}
-	}, this);
+	_context->performOnThread([this, state]() { _window->enableState(state); }, this);
+	return true;
 }
 
-float AppWindow::getInsetDecorationTone() const { return _insetDecorationTone; }
+bool AppWindow::disableState(WindowState state) {
+	auto c = std::popcount(toInt(state));
+	if (c != 1 && state != WindowState::Maximized) {
+		log::error("AppWindow", "enableState: only one flag should be defined in state");
+		return false;
+	}
+
+	if ((state & getUpdatableStateFlags()) != state) {
+		log::error("AppWindow", "disableState:", state, " is not updatable");
+		return false;
+	}
+
+	_context->performOnThread([this, state]() { _window->disableState(state); }, this);
+	return true;
+}
 
 void AppWindow::acquireTextInput(TextInputRequest &&req) {
 	_context->performOnThread([this, data = move(req)]() { _window->acquireTextInput(data); },

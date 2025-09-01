@@ -38,7 +38,7 @@ enum class DynamicStateApplyMode : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(DynamicStateApplyMode)
 
-class SP_PUBLIC DynamicStateComponent : public Component, protected FrameStateOwnerInterface {
+class SP_PUBLIC DynamicStateComponent : public System, protected FrameStateOwnerInterface {
 public:
 	virtual ~DynamicStateComponent() = default;
 
@@ -67,7 +67,7 @@ public:
 	virtual Padding getScissorOutline() const { return _scissorOutline; }
 
 protected:
-	using Component::init;
+	using System::init;
 
 	virtual DrawStateValues updateDynamicState(const DrawStateValues &) const;
 

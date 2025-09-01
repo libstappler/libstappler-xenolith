@@ -165,14 +165,14 @@ struct SP_PUBLIC FrameInfo {
 	memory::vector<Mat4> modelTransformStack;
 	memory::vector<float> depthStack;
 	memory::vector<Rc<FrameContextHandle>> contextStack;
-	memory::map<uint64_t, memory::vector<Rc<Component>>> componentsStack;
+	memory::map<uint64_t, memory::vector<Rc<System>>> componentsStack;
 	memory::set<const core::AttachmentData *> resolvedInputs;
 
 	uint32_t focusValue = 0;
 
 	FrameContextHandle *currentContext = nullptr;
 
-	memory::vector<Rc<Component>> *pushComponent(const Rc<Component> &comp) {
+	memory::vector<Rc<System>> *pushComponent(const Rc<System> &comp) {
 		auto it = componentsStack.find(comp->getFrameTag());
 		if (it == componentsStack.end()) {
 			it = componentsStack.emplace(comp->getFrameTag()).first;
@@ -181,9 +181,9 @@ struct SP_PUBLIC FrameInfo {
 		return &it->second;
 	}
 
-	void popComponent(memory::vector<Rc<Component>> *vec) { vec->pop_back(); }
+	void popComponent(memory::vector<Rc<System>> *vec) { vec->pop_back(); }
 
-	template <typename T = Component>
+	template <typename T = System>
 	auto getComponent(uint64_t tag) const -> Rc<T> {
 		auto it = componentsStack.find(tag);
 		if (it != componentsStack.end() && !it->second.empty()) {

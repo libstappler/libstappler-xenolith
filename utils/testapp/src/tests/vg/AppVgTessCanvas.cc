@@ -22,10 +22,11 @@
  **/
 
 #include "AppVgTessCanvas.h"
+#include "XL2dVectorSprite.h"
 #include "SPFilepath.h"
 #include "XLInputListener.h"
 #include "XLDirector.h"
-#include "XLView.h"
+#include "XLAppWindow.h"
 
 namespace stappler::xenolith::app {
 
@@ -196,8 +197,12 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 		return true;
 	}, sp::move(keys));
 
-	inputListener->setPointerEnterCallback(
-			[this](bool pointerEnter) { return onPointerEnter(pointerEnter); });
+	inputListener->setWindowStateCallback([this](WindowState state, WindowState changes) {
+		if (hasFlag(changes, WindowState::Pointer)) {
+			return onPointerEnter(hasFlag(state, WindowState::Pointer));
+		}
+		return true;
+	});
 
 	_cursor = addChild(Rc<VgTessCursor>::create());
 	_cursor->setColor(Color::Black);
@@ -260,7 +265,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 void VgTessCanvas::handleEnter(Scene *scene) {
 	Node::handleEnter(scene);
 
-	_pointerInWindow = _director->getView()->isPointerWithinWindow();
+	_pointerInWindow = hasFlag(_director->getWindow()->getWindowState(), WindowState::Pointer);
 }
 
 void VgTessCanvas::handleContentSizeDirty() {
@@ -323,7 +328,7 @@ float VgTessCanvas::getStrokeWidth() const { return _strokeWidth; }
 void VgTessCanvas::onTouch(const InputEvent &ev) {
 	switch (ev.data.event) {
 	case InputEventName::Begin:
-		if ((ev.data.modifiers & InputModifier::Ctrl) == InputModifier::None) {
+		if ((ev.data.getModifiers() & InputModifier::Ctrl) == InputModifier::None) {
 			if (auto pt = getTouchedPoint(ev.currentLocation)) {
 				_capturedPoint = pt;
 			}
@@ -394,7 +399,7 @@ bool VgTessCanvas::onPointerEnter(bool value) {
 }
 
 void VgTessCanvas::onActionTouch(const InputEvent &ev) {
-	if ((ev.data.modifiers & InputModifier::Ctrl) != InputModifier::None) {
+	if ((ev.data.getModifiers() & InputModifier::Ctrl) != InputModifier::None) {
 		auto cIt = _contours.begin();
 		while (cIt != _contours.end()) {
 			auto it = cIt->points.begin();

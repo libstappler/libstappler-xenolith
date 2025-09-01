@@ -30,7 +30,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-class SP_PUBLIC StyleContainer : public Component {
+class SP_PUBLIC StyleContainer : public System {
 public:
 	static EventHeader onColorSchemeUpdate;
 	static uint64_t ComponentFrameTag;

@@ -28,7 +28,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 bool SubscriptionListener::init(DirtyCallback &&cb) {
-	if (!Component::init()) {
+	if (!System::init()) {
 		return false;
 	}
 
@@ -37,7 +37,7 @@ bool SubscriptionListener::init(DirtyCallback &&cb) {
 }
 
 void SubscriptionListener::handleEnter(Scene *scene) {
-	Component::handleEnter(scene);
+	System::handleEnter(scene);
 
 	_scheduler = scene->getDirector()->getScheduler();
 
@@ -51,7 +51,7 @@ void SubscriptionListener::handleExit() {
 
 	_scheduler = nullptr;
 
-	Component::handleExit();
+	System::handleExit();
 }
 
 void SubscriptionListener::setCallback(DirtyCallback &&cb) { _callback = sp::move(cb); }

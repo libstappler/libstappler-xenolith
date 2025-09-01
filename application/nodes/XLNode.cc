@@ -22,7 +22,6 @@
 
 #include "XLNode.h"
 
-#include "XLInputDispatcher.h"
 #include "XLInputListener.h"
 #include "XLComponent.h"
 #include "XLScene.h"
@@ -546,7 +545,7 @@ size_t Node::getNumberOfRunningActions() const {
 
 void Node::setTag(uint64_t tag) { _tag = tag; }
 
-bool Node::addComponentItem(Component *com) {
+bool Node::addComponentItem(System *com) {
 	XLASSERT(com != nullptr, "Argument must be non-nil");
 	XLASSERT(com->getOwner() == nullptr, "Component already added. It can't be added again");
 
@@ -554,14 +553,14 @@ bool Node::addComponentItem(Component *com) {
 
 	com->handleAdded(this);
 
-	if (this->isRunning() && hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+	if (this->isRunning() && hasFlag(com->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 		com->handleEnter(_scene);
 	}
 
 	return true;
 }
 
-bool Node::removeComponent(Component *com) {
+bool Node::removeComponent(System *com) {
 	if (_components.empty()) {
 		return false;
 	}
@@ -569,7 +568,7 @@ bool Node::removeComponent(Component *com) {
 	for (auto iter = _components.begin(); iter != _components.end(); ++iter) {
 		if ((*iter) == com) {
 			if (this->isRunning()
-					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+					&& hasFlag(com->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
 
@@ -591,10 +590,10 @@ bool Node::removeComponentByTag(uint64_t tag) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
 			if (this->isRunning()
-					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+					&& hasFlag(com->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
-			if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
+			if (hasFlag(com->getSystemFlags(), SystemFlags::HandleOwnerEvents)) {
 				com->handleRemoved();
 			}
 			_components.erase(iter);
@@ -614,10 +613,10 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
 			if (this->isRunning()
-					&& hasFlag(com->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+					&& hasFlag(com->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 				com->handleExit();
 			}
-			if (hasFlag(com->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
+			if (hasFlag(com->getSystemFlags(), SystemFlags::HandleOwnerEvents)) {
 				com->handleRemoved();
 			}
 			iter = _components.erase(iter);
@@ -633,11 +632,10 @@ void Node::removeAllComponents() {
 	_components.clear();
 
 	for (auto iter : tmp) {
-		if (this->isRunning()
-				&& hasFlag(iter->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+		if (this->isRunning() && hasFlag(iter->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 			iter->handleExit();
 		}
-		if (hasFlag(iter->getComponentFlags(), ComponentFlags::HandleOwnerEvents)) {
+		if (hasFlag(iter->getSystemFlags(), SystemFlags::HandleOwnerEvents)) {
 			iter->handleRemoved();
 		}
 	}
@@ -678,7 +676,7 @@ void Node::handleEnter(Scene *scene) {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 			it->handleEnter(scene);
 		}
 	}
@@ -710,7 +708,7 @@ void Node::handleExit() {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleSceneEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 			it->handleExit();
 		}
 	}
@@ -739,7 +737,7 @@ void Node::handleContentSizeDirty() {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleContentSizeDirty();
 		}
 	}
@@ -755,7 +753,7 @@ void Node::handleTransformDirty(const Mat4 &parentTransform) {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleTransformDirty(parentTransform);
 		}
 	}
@@ -788,7 +786,7 @@ void Node::handleReorderChildDirty() {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleReorderChildDirty();
 		}
 	}
@@ -801,7 +799,7 @@ void Node::handleLayout(Node *parent) {
 
 	auto tmpComponents = _components;
 	for (auto &it : tmpComponents) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleNodeEvents)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleLayout(parent);
 		}
 	}
@@ -1204,7 +1202,7 @@ NodeFlags Node::processParentFlags(FrameInfo &info, NodeFlags parentFlags) {
 
 void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 	for (auto &it : _components) {
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleVisitSelf)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleVisitSelf)) {
 			it->handleVisitSelf(info, this, flags);
 		}
 	}
@@ -1254,13 +1252,13 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 		info.depthStack.push_back(std::max(info.depthStack.back(), _depthIndex));
 	}
 
-	memory::vector< memory::vector<Rc<Component>> * > components;
+	memory::vector< memory::vector<Rc<System>> * > components;
 
 	for (auto &it : _components) {
 		if (it->isEnabled() && it->getFrameTag() != InvalidTag) {
 			components.emplace_back(info.pushComponent(it));
 		}
-		if (hasFlag(it->getComponentFlags(), ComponentFlags::HandleVisitControl)) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleVisitControl)) {
 			visitInfo.visitableComponents.emplace_back(it);
 		}
 	}

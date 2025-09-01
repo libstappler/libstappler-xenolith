@@ -35,7 +35,6 @@ class WindowHeader;
 
 class SP_PUBLIC SceneContent2d : public SceneContent {
 public:
-	using WindowHeaderCallback = Function<Rc<WindowHeader>(NotNull<SceneContent2d>)>;
 	using DecorationMask = core::ViewConstraints;
 
 	virtual ~SceneContent2d();
@@ -69,8 +68,6 @@ public:
 	virtual const Vector<Rc<SceneLayout2d>> &getLayouts() const;
 	virtual const Vector<Rc<SceneLayout2d>> &getOverlays() const;
 
-	Padding getDecorationPadding() const { return _decorationPadding; }
-
 	virtual void updateLayoutNode(SceneLayout2d *);
 
 	// drops all lights and sets system defaults
@@ -94,11 +91,6 @@ public:
 	virtual bool visitGeometry(FrameInfo &, NodeFlags parentFlags) override;
 
 	virtual void draw(FrameInfo &, NodeFlags flags) override;
-
-	virtual void setWindowHeaderContructor(WindowHeaderCallback &&);
-	virtual const WindowHeaderCallback &getWindowHeaderContructor() const {
-		return _windowHeaderContructor;
-	}
 
 protected:
 	virtual void pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb);
@@ -127,9 +119,6 @@ protected:
 	Color4F _globalLight = Color4F(1.0f, 1.0f, 1.0f, 1.0f);
 
 	Vector<Function<void()>> _visitNotification;
-
-	WindowHeaderCallback _windowHeaderContructor;
-	WindowHeader *_windowHeader = nullptr;
 };
 
 } // namespace stappler::xenolith::basic2d

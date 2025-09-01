@@ -25,7 +25,7 @@
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPLog.h"
-#include "XLApplication.h"
+#include "XLAppThread.h" // IWYU pragma: keep
 #include "XLAsset.h"
 #include "XLStorageComponent.h"
 #include "XLStorageServer.h"
@@ -191,14 +191,14 @@ String AssetLibrary::getAssetUrl(StringView url) {
 	}
 }
 
-Rc<ApplicationExtension> AssetLibrary::createLibrary(Application *app, network::Controller *c,
+Rc<ApplicationExtension> AssetLibrary::createLibrary(AppThread *app, network::Controller *c,
 		StringView name, const FileInfo &root, const Value &dbParams) {
 	return Rc<storage::AssetLibrary>::create(app, c, name, root, dbParams);
 }
 
 AssetLibrary::~AssetLibrary() { _server = nullptr; }
 
-bool AssetLibrary::init(Application *app, network::Controller *c, StringView name,
+bool AssetLibrary::init(AppThread *app, network::Controller *c, StringView name,
 		const FileInfo &root, const Value &dbParams) {
 	_rootPath = filesystem::findWritablePath<Interface>(root);
 
@@ -226,11 +226,11 @@ bool AssetLibrary::init(Application *app, network::Controller *c, StringView nam
 	return true;
 }
 
-void AssetLibrary::initialize(Application *) { }
+void AssetLibrary::initialize(AppThread *) { }
 
-void AssetLibrary::invalidate(Application *app) {
+void AssetLibrary::invalidate(AppThread *app) {
 	UpdateTime t;
-	update(app, t);
+	update(app, t, false);
 	_liveAssets.clear();
 	_assetsByUrl.clear();
 	_assetsById.clear();
@@ -241,7 +241,7 @@ void AssetLibrary::invalidate(Application *app) {
 	_server = nullptr;
 }
 
-void AssetLibrary::update(Application *, const UpdateTime &t) {
+void AssetLibrary::update(AppThread *, const UpdateTime &t, bool) {
 	auto it = _liveAssets.begin();
 	while (it != _liveAssets.end()) {
 		if ((*it)->isStorageDirty()) {

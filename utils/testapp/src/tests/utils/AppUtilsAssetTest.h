@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,9 @@
 #define TEST_SRC_TESTS_UTILS_APPUTILSASSETTEST_H_
 
 #include "AppLayoutTest.h"
+#include "AppMaterialBackground.h"
+#include "AppSlider.h"
+#include "MaterialButton.h"
 #include "XLAsset.h"
 
 namespace stappler::xenolith::app {
@@ -55,6 +59,6 @@ protected:
 	DataListener<storage::Asset> *_listener = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_UTILS_APPUTILSASSETTEST_H_ */

@@ -127,7 +127,7 @@ void Menu::handleContentSizeDirty() {
 }
 
 void Menu::layoutSubviews() {
-	auto &size = getContentSize();
+	auto size = getContentSize();
 	_scroll->setPosition(Vec2(0, size.height));
 	_scroll->setContentSize(Size2(size.width, size.height));
 }

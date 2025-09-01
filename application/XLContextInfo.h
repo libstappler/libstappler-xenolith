@@ -139,6 +139,10 @@ private:
 };
 
 struct ThemeInfo {
+	static constexpr StringView SchemePreferDark = StringView("prefer-dark");
+	static constexpr StringView SchemePreferLight = StringView("prefer-dark");
+	static constexpr StringView SchemeDefault = StringView("default");
+
 	String colorScheme;
 	String iconTheme;
 	String cursorTheme;
