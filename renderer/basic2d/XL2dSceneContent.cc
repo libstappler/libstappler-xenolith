@@ -588,7 +588,7 @@ void SceneContent2d::setGlobalLight(const Color4F &color) { _globalLight = color
 
 const Color4F &SceneContent2d::getGlobalLight() const { return _globalLight; }
 
-bool SceneContent2d::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
+bool SceneContent2d::visitGeometry(FrameInfo &info, NodeVisitFlags parentFlags) {
 	if (_visible) {
 		auto tmp = sp::move(_visitNotification);
 		_visitNotification.clear();
@@ -599,7 +599,7 @@ bool SceneContent2d::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	return SceneContent::visitGeometry(info, parentFlags);
 }
 
-void SceneContent2d::draw(FrameInfo &info, NodeFlags flags) {
+void SceneContent2d::draw(FrameInfo &info, NodeVisitFlags flags) {
 	SceneContent::draw(info, flags);
 
 	FrameContextHandle2d *ctx = reinterpret_cast<FrameContextHandle2d *>(info.currentContext);

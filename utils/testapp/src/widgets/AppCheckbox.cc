@@ -39,7 +39,7 @@ bool Checkbox::init(bool value, Function<void(bool)> &&cb) {
 	setColor(_backgroundColor);
 	setContentSize(Size2(32.0f, 32.0f));
 
-	_input = addComponent(Rc<InputListener>::create());
+	_input = addSystem(Rc<InputListener>::create());
 	_input->addTapRecognizer([this](const GestureTap &data) {
 		switch (data.event) {
 		case GestureEvent::Activated: setValue(!_value); break;

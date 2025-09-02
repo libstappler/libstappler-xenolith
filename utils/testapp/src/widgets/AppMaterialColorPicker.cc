@@ -52,7 +52,7 @@ bool MaterialColorPicker::init(Type type, const ColorHCT &color, Function<void(f
 	_indicator = addChild(Rc<Layer>::create(Color::Grey_500));
 	_indicator->setAnchorPoint(Anchor::MiddleLeft);
 
-	_input = addComponent(Rc<InputListener>::create());
+	_input = addSystem(Rc<InputListener>::create());
 	_input->addTouchRecognizer([this](const GestureData &data) {
 		switch (data.event) {
 		case GestureEvent::Began:

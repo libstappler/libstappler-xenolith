@@ -67,7 +67,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 	InputListener *l = nullptr;
 	_layerLeft = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerLeft->setAnchorPoint(Anchor::MiddleLeft);
-	l = _layerLeft->addComponent(Rc<InputListener>::create());
+	l = _layerLeft->addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedLeft = data.event == GestureEvent::Began;
 		updateState();
@@ -82,7 +82,7 @@ bool ConfigSwitcher::init(AppDelegate *app, uint32_t selected, Function<void(uin
 
 	_layerRight = addChild(Rc<Layer>::create(SimpleGradient(Color::Grey_100)), ZOrder(1));
 	_layerRight->setAnchorPoint(Anchor::MiddleRight);
-	l = _layerRight->addComponent(Rc<InputListener>::create());
+	l = _layerRight->addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		_selectedRight = data.event == GestureEvent::Began;
 		updateState();
@@ -231,7 +231,7 @@ bool ConfigPresentModeSwitcher::init(AppDelegate *app, uint32_t selected,
 		updateAppData((AppDelegate *)event.getObject());
 		_contentSizeDirty = true;
 	});*/
-	addComponent(move(el));
+	addSystem(move(el));
 
 	return true;
 }

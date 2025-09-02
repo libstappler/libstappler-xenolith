@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -41,11 +42,13 @@ enum class AppBarLayout {
 
 class SP_PUBLIC AppBar : public Surface {
 public:
-	static constexpr SurfaceStyle DefaultAppBarStyle = SurfaceStyle(NodeStyle::SurfaceTonal, ColorRole::Primary, Elevation::Level0);
+	static constexpr SurfaceStyle DefaultAppBarStyle =
+			SurfaceStyle(NodeStyle::SurfaceTonal, ColorRole::Primary, Elevation::Level0);
 
 	virtual ~AppBar() { }
 
-	virtual bool init(AppBarLayout = AppBarLayout::Small, const SurfaceStyle & = DefaultAppBarStyle);
+	virtual bool init(AppBarLayout = AppBarLayout::Small,
+			const SurfaceStyle & = DefaultAppBarStyle);
 	virtual void handleContentSizeDirty() override;
 
 	virtual void setLayout(AppBarLayout);
@@ -62,19 +65,19 @@ public:
 
 	virtual void setActionMenuSource(MenuSource *);
 	virtual void replaceActionMenuSource(MenuSource *, size_t maxIcons = maxOf<size_t>());
-	virtual MenuSource * getActionMenuSource() const;
+	virtual MenuSource *getActionMenuSource() const;
 
 	virtual void setBasicHeight(float value);
 	virtual float getBasicHeight() const;
 
 	virtual void setNavCallback(Function<void()> &&);
-	virtual const Function<void()> & getNavCallback() const;
+	virtual const Function<void()> &getNavCallback() const;
 
 	virtual void setSwallowTouches(bool value);
 	virtual bool isSwallowTouches() const;
 
 	virtual void setBarCallback(Function<void()> &&);
-	virtual const Function<void()> & getBarCallback() const;
+	virtual const Function<void()> &getBarCallback() const;
 
 	Button *getNavNode() const;
 
@@ -110,9 +113,9 @@ protected:
 	float _iconWidth = 0.0f;
 
 	InputListener *_inputListener = nullptr;
-	DynamicStateComponent *_scissorComponent = nullptr;
+	DynamicStateSystem *_scissorComponent = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_APPBAR_MATERIALAPPBAR_H_ */

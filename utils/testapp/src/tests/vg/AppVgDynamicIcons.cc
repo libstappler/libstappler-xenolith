@@ -48,7 +48,7 @@ bool VgDynamicIcons::init() {
 	_iconProgress->setColor(Color::Black);
 	_iconProgress->setContentSize(Size2(96.0f, 96.0f));
 
-	_listener = addComponent(Rc<InputListener>::create());
+	_listener = addSystem(Rc<InputListener>::create());
 	_listener->addTapRecognizer([this](const GestureTap &tap) {
 		if (_iconLoader->isTouched(tap.input->currentLocation)) {
 			_iconLoader->animate((_iconLoader->getProgress() > 0.0f) ? 0.0f : 1.0f, 2.0f);

@@ -43,11 +43,11 @@ bool MenuSeparator::init(Menu *menu, MenuSourceItem *item) {
 
 	_contentSizeDirty = true;
 
-	_itemListener = addComponent(Rc<DataListener<MenuSourceItem>>::create(
+	_itemListener = addSystem(Rc<DataListener<MenuSourceItem>>::create(
 			[this](SubscriptionFlags flags) { handleSourceDirty(); }));
 	_itemListener->setSubscription(item);
 
-	addComponent(Rc<StyleMonitor>::create(
+	addSystem(Rc<StyleMonitor>::create(
 			[this](const ColorScheme *scheme, const SurfaceStyleData &data) {
 		_color->setColor(scheme->get(ColorRole::Outline));
 	}));

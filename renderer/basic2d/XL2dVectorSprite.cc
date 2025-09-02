@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@
 #include "XLAppThread.h"
 #include "XLTexture.h"
 #include "XLDirector.h"
-#include "XLDynamicStateComponent.h"
+#include "XLDynamicStateSystem.h"
 #include "XLCoreFrameRequest.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
@@ -76,7 +77,7 @@ bool VectorSprite::init(Rc<VectorImage> &&img) {
 		_contentSize = _image->getImageSize();
 	}
 
-	_imageScissorComponent = addComponent(Rc<DynamicStateComponent>::create());
+	_imageScissorComponent = addSystem(Rc<DynamicStateSystem>::create());
 
 	return true;
 }
@@ -184,7 +185,7 @@ void VectorSprite::handleTransformDirty(const Mat4 &parent) {
 	Sprite::handleTransformDirty(parent);
 }
 
-bool VectorSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool VectorSprite::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (_image && _image->isDirty()) {
 		_vertexesDirty = true;
 	}
@@ -292,7 +293,7 @@ Vec2 VectorSprite::convertFromImageToWorld(const Vec2 &imageLocation) const {
 	return tmp.transformPoint(imageLocation);
 }
 
-void VectorSprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
+void VectorSprite::pushCommands(FrameInfo &frame, NodeVisitFlags flags) {
 	if (!_image) {
 		return;
 	}

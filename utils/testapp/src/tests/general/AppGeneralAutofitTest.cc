@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -141,7 +142,7 @@ bool GeneralAutofitTest::init() {
 	_nodeResize->setContentSize(Size2(48, 48));
 	_nodeResize->setRotation(-45.0_to_rad);
 
-	auto l = _nodeResize->addComponent(Rc<InputListener>::create());
+	auto l = _nodeResize->addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		switch (data.event) {
 		case GestureEvent::Began: _nodeResize->setColor(Color::Grey_600); break;

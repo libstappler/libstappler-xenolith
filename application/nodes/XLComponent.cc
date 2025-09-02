@@ -20,21 +20,35 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_
-#define XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_
+#include "XLComponent.h"
 
-#include "XL2d.h" // IWYU pragma: keep
-#include "XL2dLabel.h" // IWYU pragma: keep
-#include "XL2dLayer.h" // IWYU pragma: keep
-#include "XL2dVectorSprite.h" // IWYU pragma: keep
-#include "XLInputListener.h" // IWYU pragma: keep
-#include "XLAction.h" // IWYU pragma: keep
-#include "XLActionEase.h" // IWYU pragma: keep
+namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
+ComponentId::ComponentId() : value(Component::GetNextId()) { }
 
-using namespace basic2d;
-
+uint32_t Component::GetNextId() {
+	static std::atomic<uint32_t> s_counter = 1;
+	return s_counter.fetch_add(1);
 }
 
-#endif /* XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEUICONFIG_H_ */
+void Component::clear() const {
+	if (destructor) {
+		if (soo) {
+			destructor(staticStorage.bytes);
+		} else if (dynamicStorage.data) {
+			destructor(dynamicStorage.data);
+		}
+	}
+
+	soo = 0;
+	destructor = nullptr;
+	dynamicStorage.size = 0;
+	dynamicStorage.data = nullptr;
+}
+
+void ComponentContainer::removeAllComponents() {
+	_components.clear();
+	_componentsDirty = true;
+}
+
+} // namespace stappler::xenolith

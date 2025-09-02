@@ -40,7 +40,7 @@ public:
 	virtual void handleEnter(Scene *) override;
 	virtual void handleExit() override;
 
-	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
+	virtual void pushCommands(FrameInfo &, NodeVisitFlags flags) override;
 
 protected:
 	Rc<ParticleSystem> _system;

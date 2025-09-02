@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +41,7 @@ bool Sidebar::init(Position pos) {
 
 	_position = pos;
 
-	_listener = addComponent(Rc<InputListener>::create());
+	_listener = addSystem(Rc<InputListener>::create());
 	_listener->setTouchFilter(
 			[this](const InputEvent &ev, const InputListener::DefaultEventFilter &) -> bool {
 		if (!_node) {
@@ -95,8 +96,7 @@ bool Sidebar::init(Position pos) {
 	});
 	_listener->setSwallowEvents(InputListener::EventMaskTouch);
 
-	addComponent(
-			Rc<StyleMonitor>::create([this](const ColorScheme *scheme, const SurfaceStyleData &) {
+	addSystem(Rc<StyleMonitor>::create([this](const ColorScheme *scheme, const SurfaceStyleData &) {
 		_background->setColor(scheme->get(ColorRole::Scrim));
 	}));
 

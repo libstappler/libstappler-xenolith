@@ -94,7 +94,7 @@ bool ImageLayer::init() {
 	}
 
 	setOpacity(1.0f);
-	_gestureListener = addComponent(Rc<InputListener>::create());
+	_gestureListener = addSystem(Rc<InputListener>::create());
 	_gestureListener->setTouchFilter(
 			[](const InputEvent &ev, const InputListener::DefaultEventFilter &f) { return f(ev); });
 	_gestureListener->addTapRecognizer([this](const GestureTap &tap) {

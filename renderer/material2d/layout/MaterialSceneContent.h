@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +41,7 @@ public:
 	virtual bool init() override;
 
 	virtual void handleContentSizeDirty() override;
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	virtual void showSnackbar(SnackbarData &&);
 	virtual const String &getSnackbarString() const;
@@ -66,6 +67,6 @@ protected:
 	NavigationDrawer *_navigation = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALSCENECONTENT_H_ */

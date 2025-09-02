@@ -20,23 +20,11 @@
  THE SOFTWARE.
  **/
 
-#include "XL2dWindowHeader.h"
-#include "XL2dLayer.h"
-#include "XL2dVectorSprite.h"
-#include "XLAction.h"
-#include "XLInputListener.h"
-#include "XLDirector.h"
+#include "XLSimpleWindowDecorations.h"
 #include "XLAppWindow.h"
+#include "XLDirector.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
-
-enum class WindowHeaderButtonType {
-	Close,
-	Maximize,
-	Minimize,
-	Fullscreen,
-	ContextMenu,
-};
+namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
 static constexpr StringView s_windowHeaderClose =
 		R"(<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
@@ -80,54 +68,20 @@ static constexpr StringView s_windowHeaderMenu =
 </svg>
 )";
 
-class WindowHeaderButton : public Node {
-public:
-	virtual ~WindowHeaderButton() = default;
+const ComponentId WindowDecorationsState::Id;
+const ComponentId WindowDecorationsTheme::Id;
 
-	virtual bool init(WindowHeaderButtonType);
-
-	virtual void handleContentSizeDirty() override;
-
-	virtual void updateWindowState(WindowState);
-
-protected:
-	virtual void handleTap();
-
-	WindowHeaderButtonType _type = WindowHeaderButtonType::Close;
-	VectorSprite *_icon = nullptr;
-	VectorSprite *_background = nullptr;
-	WindowState _state = WindowState::None;
-	bool _selected = false;
-};
-
-bool WindowHeaderButton::init(WindowHeaderButtonType type) {
+bool WindowDecorationsButton::init(WindowDecorationsButtonType type) {
 	if (!Node::init()) {
 		return false;
 	}
 
+	setEventFlags(NodeEventFlags::HandleComponents);
+
 	_type = type;
 
-	switch (_type) {
-	case WindowHeaderButtonType::Close:
-		_icon = addChild(Rc<VectorSprite>::create(s_windowHeaderClose), ZOrder(2));
-		break;
-	case WindowHeaderButtonType::Minimize:
-		_icon = addChild(Rc<VectorSprite>::create(s_windowHeaderMinimize), ZOrder(2));
-		break;
-	case WindowHeaderButtonType::Maximize:
-		_icon = addChild(Rc<VectorSprite>::create(s_windowHeaderMaximize), ZOrder(2));
-		break;
-	case WindowHeaderButtonType::Fullscreen:
-		_icon = addChild(Rc<VectorSprite>::create(s_windowHeaderFullscreen), ZOrder(2));
-		break;
-	case WindowHeaderButtonType::ContextMenu:
-		_icon = addChild(Rc<VectorSprite>::create(s_windowHeaderMenu), ZOrder(2));
-		break;
-	}
-
-	if (_icon) {
-		_icon->setColor(Color::Grey_500);
-	}
+	_icon = addChild(Rc<VectorSprite>::create(Size2(24.0f, 24.0f)), ZOrder(2));
+	_icon->setColor(Color::Grey_500);
 
 	_background = addChild(Rc<VectorSprite>::create(Size2(24.0f, 24.0f)), ZOrder(1));
 	_background->getImage()
@@ -137,9 +91,9 @@ bool WindowHeaderButton::init(WindowHeaderButtonType type) {
 			.setFillColor(Color::White);
 	_background->setColor(Color::White);
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 
-	if (_type == WindowHeaderButtonType::ContextMenu) {
+	if (_type == WindowDecorationsButtonType::ContextMenu) {
 		l->setLayerFlags(WindowLayerFlags::WindowMenuLeft);
 	}
 
@@ -173,7 +127,7 @@ bool WindowHeaderButton::init(WindowHeaderButtonType type) {
 	return true;
 }
 
-void WindowHeaderButton::handleContentSizeDirty() {
+void WindowDecorationsButton::handleContentSizeDirty() {
 	Node::handleContentSizeDirty();
 
 	if (_icon) {
@@ -189,38 +143,35 @@ void WindowHeaderButton::handleContentSizeDirty() {
 	}
 }
 
-void WindowHeaderButton::updateWindowState(WindowState state) {
-	switch (_type) {
-	case WindowHeaderButtonType::Close:
-		setVisible(hasFlag(state, WindowState::AllowedClose));
-		break;
-	case WindowHeaderButtonType::Minimize:
-		setVisible(hasFlag(state, WindowState::AllowedMinimize));
-		break;
-	case WindowHeaderButtonType::Maximize:
-		if (hasFlagAll(state, WindowState::Maximized)) {
-			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMaximizeExit));
-		} else {
-			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMaximize));
+void WindowDecorationsButton::handleComponentsDirty() {
+	Node::handleComponentsDirty();
+
+	bool dirty = false;
+
+	findParentWithComponent<WindowDecorationsState>(
+			[&](NotNull<Node>, NotNull<const WindowDecorationsState> state, uint32_t) {
+		if (_state != state->state) {
+			_state = state->state;
+			dirty = true;
 		}
-		setVisible(hasFlag(state, WindowState::AllowedWindowMenu));
-		break;
-	case WindowHeaderButtonType::Fullscreen:
-		if (hasFlagAll(state, WindowState::Fullscreen)) {
-			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderFullscreenExit));
-		} else {
-			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderFullscreen));
+		return false; // stop iteration
+	});
+
+	findParentWithComponent<WindowDecorationsTheme>(
+			[&](NotNull<Node>, NotNull<const WindowDecorationsTheme> theme, uint32_t) {
+		if (theme->icon != _iconTheme) {
+			_iconTheme = theme->icon;
+			dirty = true;
 		}
-		setVisible(hasFlag(state, WindowState::AllowedFullscreen));
-		break;
-	case WindowHeaderButtonType::ContextMenu:
-		setVisible(hasFlag(state, WindowState::AllowedWindowMenu));
-		break;
+		return false; // stop iteration
+	});
+
+	if (dirty) {
+		updateState();
 	}
-	_state = state;
 }
 
-void WindowHeaderButton::handleTap() {
+void WindowDecorationsButton::handleTap() {
 	if (!_director) {
 		return;
 	}
@@ -231,23 +182,82 @@ void WindowHeaderButton::handleTap() {
 	}
 
 	switch (_type) {
-	case WindowHeaderButtonType::Close: w->close(true); break;
-	case WindowHeaderButtonType::Minimize: w->enableState(WindowState::Minimized); break;
-	case WindowHeaderButtonType::Maximize:
+	case WindowDecorationsButtonType::Close: w->close(true); break;
+	case WindowDecorationsButtonType::Minimize: w->enableState(WindowState::Minimized); break;
+	case WindowDecorationsButtonType::Maximize:
 		if (hasFlagAll(_state, WindowState::Maximized)) {
 			w->disableState(WindowState::Maximized);
 		} else {
 			w->enableState(WindowState::Maximized);
 		}
 		break;
-	case WindowHeaderButtonType::Fullscreen:
+	case WindowDecorationsButtonType::Fullscreen:
 		if (hasFlagAll(_state, WindowState::Fullscreen)) {
 			w->disableState(WindowState::Fullscreen);
 		} else {
 			w->enableState(WindowState::Fullscreen);
 		}
 		break;
-	case WindowHeaderButtonType::ContextMenu: break;
+	case WindowDecorationsButtonType::ContextMenu: break;
+	}
+}
+
+void WindowDecorationsButton::updateState() {
+	switch (_iconTheme) {
+	case WindowDecorationsTheme::IconTheme::Default:
+		switch (_type) {
+		case WindowDecorationsButtonType::Close:
+			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderClose));
+			break;
+		case WindowDecorationsButtonType::Minimize:
+			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMinimize));
+			break;
+		case WindowDecorationsButtonType::Maximize:
+			if (hasFlagAll(_state, WindowState::Maximized)) {
+				_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMaximizeExit));
+			} else {
+				_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMaximize));
+			}
+			break;
+		case WindowDecorationsButtonType::Fullscreen:
+			if (hasFlagAll(_state, WindowState::Fullscreen)) {
+				_icon->setImage(Rc<VectorImage>::create(s_windowHeaderFullscreenExit));
+			} else {
+				_icon->setImage(Rc<VectorImage>::create(s_windowHeaderFullscreen));
+			}
+			break;
+		case WindowDecorationsButtonType::ContextMenu:
+			_icon->setImage(Rc<VectorImage>::create(s_windowHeaderMenu));
+			break;
+		}
+		_icon->setColor(Color::Grey_500);
+		break;
+	case WindowDecorationsTheme::IconTheme::Macos: {
+		auto image = Rc<VectorImage>::create(Size2(24.0f, 24.0f));
+		image->addPath()
+				->setStyle(vg::DrawFlags::FillAndStroke)
+				.setFillColor(Color::White)
+				.setStrokeColor(Color::Grey_200)
+				.setStrokeWidth(0.25f)
+				.openForWriting([&](PathWriter &writer) { writer.addCircle(12.0f, 12.0f, 10.0f); });
+		_icon->setImage(sp::move(image));
+
+		_background->setVisible(false);
+		switch (_type) {
+		case WindowDecorationsButtonType::Close:
+			_icon->setColor(Color4F(0.992f, 0.373f, 0.361f, 1.0f));
+			break;
+		case WindowDecorationsButtonType::Minimize:
+			_icon->setColor(Color4F(0.188f, 0.792f, 0.294f, 1.0f));
+			break;
+		case WindowDecorationsButtonType::Maximize:
+			_icon->setColor(Color4F(0.996f, 0.741f, 0.263f, 1.0f));
+			break;
+		case WindowDecorationsButtonType::Fullscreen:
+		case WindowDecorationsButtonType::ContextMenu: _icon->setVisible(false); break;
+		}
+		break;
+	}
 	}
 }
 
@@ -256,19 +266,23 @@ bool WindowDecorationsDefault::init() {
 		return false;
 	}
 
-	_header = addChild(Rc<Layer>::create(Color4F(0.0f, 0.0f, 0.0f, 0.2f)));
+	_header = addChild(Rc<Layer>::create(Color4F(0.0f, 0.0f, 0.0f, 0.1f)));
 	_header->setAnchorPoint(Anchor::MiddleTop);
 	_header->setVisible(true);
 
-	auto l = _header->addComponent(Rc<InputListener>::create());
+	auto l = _header->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::MoveGrip | WindowLayerFlags::WindowMenuRight);
 
-	_buttonClose = addChild(Rc<WindowHeaderButton>::create(WindowHeaderButtonType::Close));
-	_buttonMaximize = addChild(Rc<WindowHeaderButton>::create(WindowHeaderButtonType::Maximize));
-	_buttonMinimize = addChild(Rc<WindowHeaderButton>::create(WindowHeaderButtonType::Minimize));
+	_buttonClose =
+			addChild(Rc<WindowDecorationsButton>::create(WindowDecorationsButtonType::Close));
+	_buttonMaximize =
+			addChild(Rc<WindowDecorationsButton>::create(WindowDecorationsButtonType::Maximize));
+	_buttonMinimize =
+			addChild(Rc<WindowDecorationsButton>::create(WindowDecorationsButtonType::Minimize));
 	_buttonFullscreen =
-			addChild(Rc<WindowHeaderButton>::create(WindowHeaderButtonType::Fullscreen));
-	_buttonMenu = addChild(Rc<WindowHeaderButton>::create(WindowHeaderButtonType::ContextMenu));
+			addChild(Rc<WindowDecorationsButton>::create(WindowDecorationsButtonType::Fullscreen));
+	_buttonMenu =
+			addChild(Rc<WindowDecorationsButton>::create(WindowDecorationsButtonType::ContextMenu));
 
 	return true;
 }
@@ -276,11 +290,17 @@ bool WindowDecorationsDefault::init() {
 void WindowDecorationsDefault::handleContentSizeDirty() {
 	WindowDecorations::handleContentSizeDirty();
 
-	float buttonSize = HeaderHeight - 4.0f;
-	float buttonPadding = 2.0f;
-
 	_header->setContentSize(Size2(_contentSize.width, HeaderHeight));
 	_header->setPosition(Vec2(_contentSize.width / 2.0f, _contentSize.height));
+
+	_componentsDirty = true;
+}
+
+void WindowDecorationsDefault::handleComponentsDirty() {
+	WindowDecorations::handleComponentsDirty();
+
+	float buttonSize = HeaderHeight - 4.0f;
+	float buttonPadding = 2.0f;
 
 	auto pos = Vec2(_contentSize.width - (HeaderHeight - buttonSize),
 			_contentSize.height - HeaderHeight / 2.0f);
@@ -288,10 +308,15 @@ void WindowDecorationsDefault::handleContentSizeDirty() {
 	auto increment = -(size.width + (HeaderHeight - buttonSize) + buttonPadding);
 	auto anchor = Anchor::MiddleRight;
 
-	if (StringView(_theme).starts_with("Aqua")) {
-		pos.x = (HeaderHeight - buttonSize);
-		increment = -increment;
-		anchor = Anchor::MiddleLeft;
+	if (auto theme = getComponent<WindowDecorationsTheme>()) {
+		switch (theme->icon) {
+		case WindowDecorationsTheme::IconTheme::Default: break;
+		case WindowDecorationsTheme::IconTheme::Macos:
+			pos.x = (HeaderHeight - buttonSize);
+			increment = -increment - 4.0f;
+			anchor = Anchor::MiddleLeft;
+			break;
+		}
 	}
 
 	if (_buttonClose->isVisible()) {
@@ -338,25 +363,40 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 			&& !hasFlag(state, WindowState::Fullscreen)
 			&& !hasFlagAll(state, WindowState::Maximized);
 
-	_header->getComponentByType<InputListener>()->setEnabled(allowedMove);
+	_header->getSystemByType<InputListener>()->setEnabled(allowedMove);
 
-	_buttonClose->updateWindowState(state);
-	_buttonMaximize->updateWindowState(state);
-	_buttonMinimize->updateWindowState(state);
-	_buttonFullscreen->updateWindowState(state);
-	_buttonMenu->updateWindowState(state);
+	_buttonClose->setVisible(hasFlag(state, WindowState::AllowedClose));
+	_buttonMaximize->setVisible(
+			hasFlagAll(state, WindowState::AllowedMaximizeHorz | WindowState::AllowedMaximizeVert));
+	_buttonMinimize->setVisible(hasFlag(state, WindowState::AllowedMinimize));
+	_buttonFullscreen->setVisible(hasFlag(state, WindowState::AllowedFullscreen));
+	_buttonMenu->setVisible(hasFlag(state, WindowState::AllowedWindowMenu));
+
+	setOrUpdateComponent<WindowDecorationsState>([&](WindowDecorationsState *value) {
+		if (value->state != state) {
+			// Data was updated - return true
+			value->state = state;
+			return true;
+		}
+		// data was not modified - return false
+		return false;
+	});
 
 	_contentSizeDirty = true;
 }
 
 void WindowDecorationsDefault::updateWindowTheme(const ThemeInfo &theme) {
-	if (_theme != theme.iconTheme || _colorScheme != theme.colorScheme) {
-		_theme = theme.iconTheme;
-		_colorScheme = theme.colorScheme;
-		_contentSizeDirty = true;
+	WindowDecorationsTheme decTheme;
 
-		_theme = "Aqua";
-	}
+	setOrUpdateComponent<WindowDecorationsTheme>([&](WindowDecorationsTheme *value) {
+		if (value->color != decTheme.color || value->icon != decTheme.icon) {
+			// Data was updated - return true
+			*value = decTheme;
+			return true;
+		}
+		// data was not modified - return false
+		return false;
+	});
 }
 
-} // namespace stappler::xenolith::basic2d
+} // namespace stappler::xenolith::simpleui

@@ -23,3 +23,4 @@
 #include "XLCommon.h"
 
 #include "XLSimpleButton.cc"
+#include "XLSimpleWindowDecorations.cc"

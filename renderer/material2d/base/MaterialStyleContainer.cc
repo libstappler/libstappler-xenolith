@@ -29,14 +29,14 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
 XL_DECLARE_EVENT_CLASS(StyleContainer, onColorSchemeUpdate)
 
-uint64_t StyleContainer::ComponentFrameTag = System::GetNextComponentId();
+uint64_t StyleContainer::SystemFrameTag = System::GetNextSystemId();
 
 bool StyleContainer::init() {
 	if (!System::init()) {
 		return false;
 	}
 
-	setFrameTag(ComponentFrameTag);
+	setFrameTag(SystemFrameTag);
 
 	_schemes.emplace(PrimarySchemeTag,
 			ColorScheme(ThemeType::LightTheme, ColorHCT(292, 100, 50, 1.0f), false));

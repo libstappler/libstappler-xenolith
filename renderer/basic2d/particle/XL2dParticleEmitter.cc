@@ -65,7 +65,7 @@ void ParticleEmitter::handleExit() {
 	Sprite::handleExit();
 }
 
-void ParticleEmitter::pushCommands(FrameInfo &frame, NodeFlags flags) {
+void ParticleEmitter::pushCommands(FrameInfo &frame, NodeVisitFlags flags) {
 	auto data = _vertexes.pop();
 	Mat4 newMV;
 	if (_normalized) {

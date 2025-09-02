@@ -95,7 +95,7 @@ bool VgShadowTest::LightNormalSelector::init() {
 	_point->setColor(Color::Red_500);
 	_point->setAnchorPoint(Anchor::Middle);
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addTouchRecognizer([this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Moved || data.event == GestureEvent::Ended) {
 			auto maxDist = (_contentSize.width + _contentSize.height) / 5.0f;
@@ -228,7 +228,7 @@ bool VgShadowTest::init() {
 	_checkboxAmbient->setAnchorPoint(Anchor::TopLeft);
 	_checkboxAmbient->setContentSize(Size2(32.0f, 32.0f));
 
-	auto l = _sprite->addComponent(Rc<InputListener>::create());
+	auto l = _sprite->addSystem(Rc<InputListener>::create());
 	l->addTouchRecognizer(
 			[this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Ended) {

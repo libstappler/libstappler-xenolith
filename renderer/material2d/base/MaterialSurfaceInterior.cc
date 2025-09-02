@@ -29,14 +29,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
-uint64_t SurfaceInterior::ComponentFrameTag = System::GetNextComponentId();
+uint64_t SurfaceInterior::SystemFrameTag = System::GetNextSystemId();
 
 bool SurfaceInterior::init() {
 	if (!System::init()) {
 		return false;
 	}
 
-	setFrameTag(ComponentFrameTag);
+	setFrameTag(SystemFrameTag);
 	return true;
 }
 
@@ -45,7 +45,7 @@ bool SurfaceInterior::init(SurfaceStyle &&style) {
 		return false;
 	}
 
-	setFrameTag(ComponentFrameTag);
+	setFrameTag(SystemFrameTag);
 	_assignedStyle = move(style);
 	return true;
 }
@@ -57,17 +57,17 @@ void SurfaceInterior::handleAdded(Node *owner) {
 			|| (dynamic_cast<LayerSurface *>(_owner) != nullptr));
 }
 
-void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags parentFlags) {
+void SurfaceInterior::handleVisitSelf(FrameInfo &info, Node *node, NodeVisitFlags parentFlags) {
 	System::handleVisitSelf(info, node, parentFlags);
 
 	if (!_ownerIsMaterialNode) {
-		auto style = info.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+		auto style = info.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 		if (!style) {
 			return;
 		}
 
 		_assignedStyle.apply(_interiorStyle, _owner->getContentSize(), style,
-				info.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag));
+				info.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag));
 	}
 }
 

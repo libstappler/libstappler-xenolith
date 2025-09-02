@@ -39,60 +39,60 @@ bool WindowDecorations::init() {
 	_resizeTopLeft = addChild(Rc<Node>::create());
 	_resizeTopLeft->setAnchorPoint(Anchor::BottomRight);
 	_resizeTopLeft->setVisible(true);
-	l = _resizeTopLeft->addComponent(Rc<InputListener>::create());
+	l = _resizeTopLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopLeftGrip);
 	l->setCursor(WindowCursor::ResizeTopLeft);
 
 	_resizeTop = addChild(Rc<Node>::create());
 	_resizeTop->setAnchorPoint(Anchor::MiddleBottom);
 	_resizeTop->setVisible(true);
-	l = _resizeTop->addComponent(Rc<InputListener>::create());
+	l = _resizeTop->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopGrip);
 	l->setCursor(WindowCursor::ResizeTop);
 
 	_resizeTopRight = addChild(Rc<Node>::create());
 	_resizeTopRight->setAnchorPoint(Anchor::BottomLeft);
 	_resizeTopRight->setVisible(true);
-	l = _resizeTopRight->addComponent(Rc<InputListener>::create());
+	l = _resizeTopRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopRightGrip);
 	l->setCursor(WindowCursor::ResizeTopRight);
 
 	_resizeRight = addChild(Rc<Node>::create());
 	_resizeRight->setAnchorPoint(Anchor::MiddleLeft);
 	_resizeRight->setVisible(true);
-	l = _resizeRight->addComponent(Rc<InputListener>::create());
+	l = _resizeRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeRightGrip);
 	l->setCursor(WindowCursor::ResizeRight);
 
 	_resizeBottomRight = addChild(Rc<Node>::create());
 	_resizeBottomRight->setAnchorPoint(Anchor::TopLeft);
 	_resizeBottomRight->setVisible(true);
-	l = _resizeBottomRight->addComponent(Rc<InputListener>::create());
+	l = _resizeBottomRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomRightGrip);
 	l->setCursor(WindowCursor::ResizeBottomRight);
 
 	_resizeBottom = addChild(Rc<Node>::create());
 	_resizeBottom->setAnchorPoint(Anchor::MiddleTop);
 	_resizeBottom->setVisible(true);
-	l = _resizeBottom->addComponent(Rc<InputListener>::create());
+	l = _resizeBottom->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomGrip);
 	l->setCursor(WindowCursor::ResizeBottom);
 
 	_resizeBottomLeft = addChild(Rc<Node>::create());
 	_resizeBottomLeft->setAnchorPoint(Anchor::TopRight);
 	_resizeBottomLeft->setVisible(true);
-	l = _resizeBottomLeft->addComponent(Rc<InputListener>::create());
+	l = _resizeBottomLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomLeftGrip);
 	l->setCursor(WindowCursor::ResizeBottomLeft);
 
 	_resizeLeft = addChild(Rc<Node>::create());
 	_resizeLeft->setAnchorPoint(Anchor::MiddleRight);
 	_resizeLeft->setVisible(true);
-	l = _resizeLeft->addComponent(Rc<InputListener>::create());
+	l = _resizeLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeLeftGrip);
 	l->setCursor(WindowCursor::ResizeLeft);
 
-	l = addComponent(Rc<InputListener>::create());
+	l = addSystem(Rc<InputListener>::create());
 	l->setWindowStateCallback([this](WindowState state, WindowState changes) {
 		if (state != _currentState) {
 			updateWindowState(state);
@@ -100,7 +100,7 @@ bool WindowDecorations::init() {
 		return true;
 	});
 
-	auto el = addComponent(Rc<EventListener>::create());
+	auto el = addSystem(Rc<EventListener>::create());
 	el->listenForEvent(AppThread::onThemeInfo, [this](const Event &event) {
 		updateWindowTheme(event.getObject<AppThread>()->getThemeInfo());
 	});

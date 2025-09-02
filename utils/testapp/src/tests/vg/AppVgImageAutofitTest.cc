@@ -153,7 +153,7 @@ bool VgImageAutofitTest::init() {
 	_nodeResize->setContentSize(Size2(48, 48));
 	_nodeResize->setRotation(-45.0_to_rad);
 
-	auto l = _nodeResize->addComponent(Rc<InputListener>::create());
+	auto l = _nodeResize->addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		switch (data.event) {
 		case GestureEvent::Began: _nodeResize->setColor(Color::Grey_600); break;

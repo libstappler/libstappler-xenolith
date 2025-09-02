@@ -39,7 +39,7 @@ bool InputSwipeTest::init() {
 	_node->setAnchorPoint(Anchor::Middle);
 	_node->setContentSize(Size2(48.0f, 48.0f));
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addSwipeRecognizer([this](const GestureSwipe &swipe) {
 		switch (swipe.event) {
 		case GestureEvent::Began:

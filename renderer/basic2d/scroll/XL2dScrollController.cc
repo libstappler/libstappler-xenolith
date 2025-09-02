@@ -221,7 +221,7 @@ void ScrollController::onNextObject(Item &h, float pos, float size) {
 			h.node = node;
 			addScrollNode(h);
 
-			if (auto handle = node->getComponentByType<ScrollItemHandle>()) {
+			if (auto handle = node->getSystemByType<ScrollItemHandle>()) {
 				h.handle = handle;
 				_scroll->updateScrollNode(node, h.pos, h.size, h.zIndex, h.name);
 				handle->onNodeInserted(this, h, size_t(&h - _nodes.data()));

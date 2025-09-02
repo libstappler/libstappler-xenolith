@@ -24,7 +24,6 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLITEMHANDLE_H_
 #define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLITEMHANDLE_H_
 
-#include "XLComponent.h"
 #include "XL2dScrollController.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {

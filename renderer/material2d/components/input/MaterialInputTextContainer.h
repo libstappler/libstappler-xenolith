@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +39,7 @@ public:
 	virtual void update(const UpdateTime &time) override;
 	virtual void handleContentSizeDirty() override;
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	TypescaleLabel *getLabel() const { return _label; }
 
@@ -86,7 +87,7 @@ protected:
 	IconSprite *_cursorPointer = nullptr;
 	IconSprite *_selectionPointerStart = nullptr;
 	IconSprite *_selectionPointerEnd = nullptr;
-	DynamicStateComponent *_scissorComponent = nullptr;
+	DynamicStateSystem *_scissorComponent = nullptr;
 
 	float _cursorAnchor = 1.2f;
 	TextCursor _cursor = TextCursor::InvalidCursor;
@@ -96,6 +97,6 @@ protected:
 	Function<void(TextCursor)> _cursorCallback;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_INPUT_MATERIALINPUTTEXTCONTAINER_H_ */

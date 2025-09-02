@@ -117,7 +117,7 @@ void DecoratedLayout::handleContentSizeDirty() {
 	updateStatusBar(_decorationTop->getStyleCurrent());
 }
 
-bool DecoratedLayout::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
+bool DecoratedLayout::visitDraw(FrameInfo &info, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}

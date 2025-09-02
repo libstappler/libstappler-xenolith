@@ -22,7 +22,9 @@
  **/
 
 #include "AppUtilsAssetTest.h"
+#include "MaterialLabel.h"
 #include "XLAssetLibrary.h"
+#include "XLDirector.h"
 
 namespace stappler::xenolith::app {
 
@@ -51,7 +53,7 @@ bool UtilsAssetTest::init() {
 	_progress = _background->addChild(Rc<Slider>::create(0.0f, nullptr));
 	_progress->setAnchorPoint(Anchor::Middle);
 
-	_listener = addComponent(Rc<DataListener<storage::Asset>>::create(
+	_listener = addSystem(Rc<DataListener<storage::Asset>>::create(
 			[this](SubscriptionFlags flags) { handleAssetUpdate(flags); }));
 
 	return true;

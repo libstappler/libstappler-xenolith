@@ -88,9 +88,9 @@ public:
 	virtual void setGlobalLight(const Color4F &);
 	virtual const Color4F &getGlobalLight() const;
 
-	virtual bool visitGeometry(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitGeometry(FrameInfo &, NodeVisitFlags parentFlags) override;
 
-	virtual void draw(FrameInfo &, NodeFlags flags) override;
+	virtual void draw(FrameInfo &, NodeVisitFlags flags) override;
 
 protected:
 	virtual void pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb);

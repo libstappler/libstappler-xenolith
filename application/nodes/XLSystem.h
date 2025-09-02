@@ -38,15 +38,30 @@ enum class SystemFlags : uint32_t {
 	HandleNodeEvents = 1 << 2, // ContentSize/Transform/Reorder
 	HandleVisitSelf = 1 << 3, // VisitSelf
 	HandleVisitControl = 1 << 4, // VisitBegin/VisitNodesBelow/VisitNodesAbove/VisitEnd
+	HandleComponents = 1 << 5,
 
 	Default = HandleOwnerEvents | HandleSceneEvents | HandleNodeEvents | HandleVisitSelf
 };
 
 SP_DEFINE_ENUM_AS_MASK(SystemFlags)
 
+/** System is the way to implement or change Node's behavior on scene
+
+System can handle all key node's events and modify basic node's paramenters in response
+
+In most cases, you should consider to implement some System instead of subclassing Node
+
+To accees some additional data from Node, consider to implement Component subclass
+
+Regular System examples is:
+- InputListener
+- EventListener
+- Some layout engines like ScrollContrller
+*/
+
 class SP_PUBLIC System : public Ref {
 public:
-	static uint64_t GetNextComponentId();
+	static uint64_t GetNextSystemId();
 
 	System();
 	virtual ~System();
@@ -59,14 +74,15 @@ public:
 	virtual void handleExit();
 
 	virtual void handleVisitBegin(FrameInfo &);
-	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags);
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags);
-	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags);
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags);
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags flags);
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags);
 	virtual void handleVisitEnd(FrameInfo &);
 
 	virtual void update(const UpdateTime &time);
 
 	virtual void handleContentSizeDirty();
+	virtual void handleComponentsDirty();
 	virtual void handleTransformDirty(const Mat4 &);
 	virtual void handleReorderChildDirty();
 	virtual void handleLayout(Node *);
@@ -110,14 +126,17 @@ public:
 	virtual void handleExit() override;
 
 	virtual void handleVisitBegin(FrameInfo &) override;
-	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
-	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>,
+			NodeVisitFlags flags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags flags) override;
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>,
+			NodeVisitFlags flags) override;
 	virtual void handleVisitEnd(FrameInfo &) override;
 
 	virtual void update(const UpdateTime &time) override;
 
 	virtual void handleContentSizeDirty() override;
+	virtual void handleComponentsDirty() override;
 	virtual void handleTransformDirty(const Mat4 &) override;
 	virtual void handleReorderChildDirty() override;
 	virtual void handleLayout(Node *) override;
@@ -151,23 +170,23 @@ public:
 	}
 
 	virtual void setVisitNodesBelowCallback(
-			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> &&);
+			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags)> &&);
 	virtual auto getVisitNodesBelowCallback() -> const
-			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> & {
+			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags)> & {
 		return _handleVisitNodesBelow;
 	}
 
 	virtual void setVisitSelfCallback(
-			Function<void(CallbackSystem *, FrameInfo &, Node *, NodeFlags)> &&);
+			Function<void(CallbackSystem *, FrameInfo &, Node *, NodeVisitFlags)> &&);
 	virtual auto getVisitSelfCallback()
-			-> const Function<void(CallbackSystem *, FrameInfo &, Node *, NodeFlags)> & {
+			-> const Function<void(CallbackSystem *, FrameInfo &, Node *, NodeVisitFlags)> & {
 		return _handleVisitSelf;
 	}
 
 	virtual void setVisitNodesAboveCallback(
-			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> &&);
+			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags)> &&);
 	virtual auto getVisitNodesAboveCallback() -> const
-			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags)> & {
+			Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags)> & {
 		return _handleVisitNodesAbove;
 	}
 
@@ -185,6 +204,11 @@ public:
 	virtual void setContentSizeDirtyCallback(Function<void(CallbackSystem *)> &&);
 	virtual auto getContentSizeDirtyCallback() -> const Function<void(CallbackSystem *)> & {
 		return _handleContentSizeDirty;
+	}
+
+	virtual void setComponentsDirtyCallback(Function<void(CallbackSystem *)> &&);
+	virtual auto getComponentsDirtyCallback() -> const Function<void(CallbackSystem *)> & {
+		return _handleComponentsDirty;
 	}
 
 	virtual void setTransformDirtyCallback(Function<void(CallbackSystem *, const Mat4 &)> &&);
@@ -213,14 +237,15 @@ protected:
 	Function<void(CallbackSystem *, Scene *)> _handleEnter;
 	Function<void(CallbackSystem *)> _handleExit;
 	Function<void(CallbackSystem *, FrameInfo &)> _handleVisitBegin;
-	Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)>
+	Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags)>
 			_handleVisitNodesBelow;
-	Function<void(CallbackSystem *, FrameInfo &, Node *, NodeFlags flags)> _handleVisitSelf;
-	Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)>
+	Function<void(CallbackSystem *, FrameInfo &, Node *, NodeVisitFlags flags)> _handleVisitSelf;
+	Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags)>
 			_handleVisitNodesAbove;
 	Function<void(CallbackSystem *, FrameInfo &)> _handleVisitEnd;
 	Function<void(CallbackSystem *, const UpdateTime &time)> _handleUpdate;
 	Function<void(CallbackSystem *)> _handleContentSizeDirty;
+	Function<void(CallbackSystem *)> _handleComponentsDirty;
 	Function<void(CallbackSystem *, const Mat4 &)> _handleTransformDirty;
 	Function<void(CallbackSystem *)> _handleReorderChildDirty;
 	Function<void(CallbackSystem *, Node *)> _handleLayout;

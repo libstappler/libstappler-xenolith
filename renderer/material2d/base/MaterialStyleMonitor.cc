@@ -46,9 +46,9 @@ const StyleMonitor::StyleCallback &StyleMonitor::getStyleCallback() const { retu
 
 void StyleMonitor::setDirty(bool value) { _dirty = value; }
 
-void StyleMonitor::handleVisitSelf(FrameInfo &frame, Node *node, NodeFlags parentFlags) {
-	auto container = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
-	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
+void StyleMonitor::handleVisitSelf(FrameInfo &frame, Node *node, NodeVisitFlags parentFlags) {
+	auto container = frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
+	auto style = frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
 	if (style && (_dirty || style->getStyle() != _interiorData)) {
 		_interiorData = style->getStyle();
 

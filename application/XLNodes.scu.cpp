@@ -26,8 +26,9 @@
 #include "nodes/XLScene.cc"
 #include "nodes/XLSceneContent.cc"
 #include "nodes/XLWindowDecorations.cc"
+#include "nodes/XLSystem.cc"
 #include "nodes/XLComponent.cc"
-#include "nodes/XLDynamicStateComponent.cc"
+#include "nodes/XLDynamicStateSystem.cc"
 #include "nodes/XLSubscriptionListener.cc"
 #include "nodes/XLEventListener.cc"
 

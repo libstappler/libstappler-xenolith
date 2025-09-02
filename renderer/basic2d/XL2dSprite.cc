@@ -23,7 +23,6 @@
 
 #include "XL2dSprite.h"
 
-#include "XLComponent.h"
 #include "XLResourceCache.h"
 #include "XLTemporaryResource.h"
 #include "XLTexture.h"
@@ -178,7 +177,7 @@ void Sprite::setTextureRect(const Rect &rect) {
 	}
 }
 
-bool Sprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool Sprite::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (_texture) {
 		auto loaded = _texture->isLoaded();
 		if (loaded != _isTextureLoaded && loaded) {
@@ -189,7 +188,7 @@ bool Sprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 	return Node::visitDraw(frame, parentFlags);
 }
 
-void Sprite::draw(FrameInfo &frame, NodeFlags flags) {
+void Sprite::draw(FrameInfo &frame, NodeVisitFlags flags) {
 	bool hasExtraState = false;
 
 	if (!_texture || !_texture->isLoaded()) {
@@ -389,7 +388,7 @@ void Sprite::setOutlineOffset(float val) { _outlineOffset = val; }
 
 void Sprite::setOutlineColor(const Color4F &color) { _outlineColor = color; }
 
-void Sprite::pushCommands(FrameInfo &frame, NodeFlags flags) {
+void Sprite::pushCommands(FrameInfo &frame, NodeVisitFlags flags) {
 	auto data = _vertexes.pop();
 	Mat4 newMV;
 	if (_normalized) {
@@ -600,10 +599,10 @@ void Sprite::doScheduleTextureUpdate(Rc<Texture> &&tex) {
 	});
 
 	if (_textureUpdateComponent) {
-		removeComponent(_textureUpdateComponent);
+		removeSystem(_textureUpdateComponent);
 	}
 
-	_textureUpdateComponent = addComponent(comp);
+	_textureUpdateComponent = addSystem(comp);
 }
 
 } // namespace stappler::xenolith::basic2d

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +30,13 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 void Scene::addContentNodes(SceneContent *content) {
 	Scene2d::addContentNodes(content);
 
-	_styleContainer = content->addComponent(Rc<material2d::StyleContainer>::create());
-	_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, Color::Teal_500.asColor4F(), false);
+	_styleContainer = content->addSystem(Rc<material2d::StyleContainer>::create());
+	_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme,
+			Color::Teal_500.asColor4F(), false);
 
-	_surfaceInterior = content->addComponent(Rc<material2d::SurfaceInterior>::create(material2d::SurfaceStyle(
-		material2d::ColorRole::Background,
-		material2d::NodeStyle::SurfaceTonal,
-		material2d::Elevation::Level0
-	)));
+	_surfaceInterior = content->addSystem(Rc<material2d::SurfaceInterior>::create(
+			material2d::SurfaceStyle(material2d::ColorRole::Background,
+					material2d::NodeStyle::SurfaceTonal, material2d::Elevation::Level0)));
 
 	if (auto c2d = dynamic_cast<SceneContent2d *>(content)) {
 		// standart material light model
@@ -44,8 +44,10 @@ void Scene::addContentNodes(SceneContent *content) {
 		auto color = Color4F::WHITE;
 		color.a = 0.5f;
 
-		auto light = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.3f), 1.5f, color);
-		auto ambient = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient, Vec2(0.0f, 0.0f), 1.5f, color);
+		auto light = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient,
+				Vec2(0.0f, 0.3f), 1.5f, color);
+		auto ambient = Rc<basic2d::SceneLight>::create(basic2d::SceneLightType::Ambient,
+				Vec2(0.0f, 0.0f), 1.5f, color);
 
 		c2d->setGlobalLight(Color4F::WHITE);
 		c2d->removeAllLights();
@@ -54,4 +56,4 @@ void Scene::addContentNodes(SceneContent *content) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::material2d

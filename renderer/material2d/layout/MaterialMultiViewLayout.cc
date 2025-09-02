@@ -22,7 +22,6 @@
  **/
 
 #include "MaterialMultiViewLayout.h"
-#include "XL2dScrollController.h"
 #include "XL2dActionAcceleratedMove.h"
 #include "XLInputListener.h"
 #include "XL2dScrollView.h"
@@ -147,12 +146,12 @@ bool MultiViewLayout::init(Generator *gen) {
 	}
 
 	if (!gen) {
-		_generator = addComponent(Rc<Generator>::create());
+		_generator = addSystem(Rc<Generator>::create());
 	} else {
-		_generator = addComponent(Rc<Generator>(gen));
+		_generator = addSystem(Rc<Generator>(gen));
 	}
 
-	_swipeListener = addComponent(Rc<InputListener>::create());
+	_swipeListener = addSystem(Rc<InputListener>::create());
 	_swipeListener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		if (s.event == GestureEvent::Began) {
 			if (beginSwipe(s.delta)) {
@@ -188,9 +187,9 @@ void MultiViewLayout::handlePush(SceneContent2d *l, bool replace) {
 
 void MultiViewLayout::setGenerator(Generator *gen) {
 	if (_generator) {
-		removeComponent(_generator);
+		removeSystem(_generator);
 	}
-	addComponentItem(gen);
+	addSystemItem(gen);
 	_generator = gen;
 }
 

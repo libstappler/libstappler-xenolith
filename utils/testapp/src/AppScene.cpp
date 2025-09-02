@@ -23,6 +23,7 @@
 
 #include "AppScene.h"
 
+#include "XLSimpleWindowDecorations.h"
 #include "XLContext.h"
 
 #include "XLDirector.h"
@@ -59,9 +60,13 @@ bool AppScene::init(NotNull<AppThread> app, NotNull<AppWindow> w,
 		return false;
 	}
 
-	addComponent(Rc<material2d::StyleContainer>::create());
+	addSystem(Rc<material2d::StyleContainer>::create());
 
 	auto content = Rc<material2d::SceneContent>::create();
+
+	content->setWindowDecorationsContructor([](NotNull<SceneContent>) -> Rc<WindowDecorations> {
+		return Rc<simpleui::WindowDecorationsDefault>::create();
+	});
 
 	setContent(content);
 
@@ -117,5 +122,8 @@ void AppScene::setActiveLayoutId(StringView name, Value &&data) {
 }
 
 DEFINE_PRIMARY_SCENE_CLASS(AppScene)
+
+DEFINE_CONFIG_FUNCTION(
+		(ContextConfig &cfg) { cfg.window->flags |= WindowCreationFlags::UserSpaceDecorations; })
 
 } // namespace stappler::xenolith::app

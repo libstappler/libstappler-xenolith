@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +51,7 @@ public:
 	virtual void setPreserveOpacity(bool);
 	virtual bool isPreserveOpacity() const;
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	virtual void animate();
 	virtual void animate(float targetProgress, float duration);
@@ -69,6 +70,6 @@ protected:
 	float _progress = 0.0f;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALICONSPRITE_H_ */

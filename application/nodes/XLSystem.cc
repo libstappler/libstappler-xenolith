@@ -20,14 +20,14 @@
  THE SOFTWARE.
 **/
 
-#include "XLComponent.h"
+#include "XLSystem.h"
 #include "XLScene.h"
 #include "XLDirector.h"
 #include "XLScheduler.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-uint64_t System::GetNextComponentId() {
+uint64_t System::GetNextSystemId() {
 	static std::atomic<uint64_t> s_value = 1;
 	return s_value.fetch_add(1);
 }
@@ -58,17 +58,18 @@ void System::handleExit() {
 
 void System::handleVisitBegin(FrameInfo &) { }
 
-void System::handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) { }
+void System::handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags) { }
 
-void System::handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) { }
+void System::handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags flags) { }
 
-void System::handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) { }
+void System::handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags) { }
 
 void System::handleVisitEnd(FrameInfo &) { }
 
 void System::update(const UpdateTime &time) { }
 
 void System::handleContentSizeDirty() { }
+void System::handleComponentsDirty() { }
 void System::handleTransformDirty(const Mat4 &) { }
 void System::handleReorderChildDirty() { }
 void System::handleLayout(Node *parent) { }
@@ -79,7 +80,7 @@ bool System::isEnabled() const { return _enabled; }
 
 void System::setEnabled(bool b) { _enabled = b; }
 
-void System::setComponentFlags(SystemFlags flags) { _componentFlags = flags; }
+void System::setSystemFlags(SystemFlags flags) { _systemFlags = flags; }
 
 bool System::isScheduled() const { return _scheduled; }
 
@@ -103,7 +104,7 @@ void System::unscheduleUpdate() {
 
 void System::setFrameTag(uint64_t tag) { _frameTag = tag; }
 
-CallbackSystem::CallbackSystem() { _componentFlags = SystemFlags::None; }
+CallbackSystem::CallbackSystem() { _systemFlags = SystemFlags::None; }
 
 void CallbackSystem::handleAdded(Node *owner) {
 	System::handleAdded(owner);
@@ -145,7 +146,7 @@ void CallbackSystem::handleVisitBegin(FrameInfo &info) {
 }
 
 void CallbackSystem::handleVisitNodesBelow(FrameInfo &info, SpanView<Rc<Node>> nodes,
-		NodeFlags flags) {
+		NodeVisitFlags flags) {
 	System::handleVisitNodesBelow(info, nodes, flags);
 
 	if (_handleVisitNodesBelow) {
@@ -153,7 +154,7 @@ void CallbackSystem::handleVisitNodesBelow(FrameInfo &info, SpanView<Rc<Node>> n
 	}
 }
 
-void CallbackSystem::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flags) {
+void CallbackSystem::handleVisitSelf(FrameInfo &info, Node *node, NodeVisitFlags flags) {
 	System::handleVisitSelf(info, node, flags);
 
 	if (_handleVisitSelf) {
@@ -162,7 +163,7 @@ void CallbackSystem::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flag
 }
 
 void CallbackSystem::handleVisitNodesAbove(FrameInfo &info, SpanView<Rc<Node>> nodes,
-		NodeFlags flags) {
+		NodeVisitFlags flags) {
 	System::handleVisitNodesAbove(info, nodes, flags);
 
 	if (_handleVisitNodesAbove) {
@@ -191,6 +192,14 @@ void CallbackSystem::handleContentSizeDirty() {
 
 	if (_handleContentSizeDirty) {
 		_handleContentSizeDirty(this);
+	}
+}
+
+void CallbackSystem::handleComponentsDirty() {
+	System::handleComponentsDirty();
+
+	if (_handleComponentsDirty) {
+		_handleComponentsDirty(this);
 	}
 }
 
@@ -244,19 +253,21 @@ void CallbackSystem::setVisitBeginCallback(Function<void(CallbackSystem *, Frame
 }
 
 void CallbackSystem::setVisitNodesBelowCallback(
-		Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> &&cb) {
+		Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags)>
+				&&cb) {
 	_handleVisitNodesBelow = sp::move(cb);
 	updateFlags();
 }
 
 void CallbackSystem::setVisitSelfCallback(
-		Function<void(CallbackSystem *, FrameInfo &, Node *, NodeFlags flags)> &&cb) {
+		Function<void(CallbackSystem *, FrameInfo &, Node *, NodeVisitFlags flags)> &&cb) {
 	_handleVisitSelf = sp::move(cb);
 	updateFlags();
 }
 
 void CallbackSystem::setVisitNodesAboveCallback(
-		Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags)> &&cb) {
+		Function<void(CallbackSystem *, FrameInfo &, SpanView<Rc<Node>>, NodeVisitFlags flags)>
+				&&cb) {
 	_handleVisitNodesAbove = sp::move(cb);
 	updateFlags();
 }
@@ -273,6 +284,11 @@ void CallbackSystem::setUpdateCallback(Function<void(CallbackSystem *, const Upd
 
 void CallbackSystem::setContentSizeDirtyCallback(Function<void(CallbackSystem *)> &&cb) {
 	_handleContentSizeDirty = sp::move(cb);
+	updateFlags();
+}
+
+void CallbackSystem::setComponentsDirtyCallback(Function<void(CallbackSystem *)> &&cb) {
+	_handleComponentsDirty = sp::move(cb);
 	updateFlags();
 }
 
@@ -294,34 +310,40 @@ void CallbackSystem::setLayutCallback(Function<void(CallbackSystem *, Node *)> &
 
 void CallbackSystem::updateFlags() {
 	if (_handleAdded || _handleRemoved) {
-		_componentFlags |= SystemFlags::HandleOwnerEvents;
+		_systemFlags |= SystemFlags::HandleOwnerEvents;
 	} else {
-		_componentFlags &= ~SystemFlags::HandleOwnerEvents;
+		_systemFlags &= ~SystemFlags::HandleOwnerEvents;
 	}
 
 	if (_handleEnter || _handleExit) {
-		_componentFlags |= SystemFlags::HandleSceneEvents;
+		_systemFlags |= SystemFlags::HandleSceneEvents;
 	} else {
-		_componentFlags &= ~SystemFlags::HandleSceneEvents;
+		_systemFlags &= ~SystemFlags::HandleSceneEvents;
 	}
 
 	if (_handleContentSizeDirty || _handleReorderChildDirty || _handleTransformDirty
 			|| _handleLayout) {
-		_componentFlags |= SystemFlags::HandleNodeEvents;
+		_systemFlags |= SystemFlags::HandleNodeEvents;
 	} else {
-		_componentFlags &= ~SystemFlags::HandleNodeEvents;
+		_systemFlags &= ~SystemFlags::HandleNodeEvents;
 	}
 
 	if (_handleVisitSelf) {
-		_componentFlags |= SystemFlags::HandleVisitSelf;
+		_systemFlags |= SystemFlags::HandleVisitSelf;
 	} else {
-		_componentFlags &= ~SystemFlags::HandleVisitSelf;
+		_systemFlags &= ~SystemFlags::HandleVisitSelf;
 	}
 
 	if (_handleVisitBegin || _handleVisitNodesBelow || _handleVisitNodesAbove || _handleVisitEnd) {
-		_componentFlags |= SystemFlags::HandleVisitControl;
+		_systemFlags |= SystemFlags::HandleVisitControl;
 	} else {
-		_componentFlags &= ~SystemFlags::HandleVisitControl;
+		_systemFlags &= ~SystemFlags::HandleVisitControl;
+	}
+
+	if (_handleComponentsDirty) {
+		_systemFlags |= SystemFlags::HandleComponents;
+	} else {
+		_systemFlags &= ~SystemFlags::HandleComponents;
 	}
 
 	if (_handleUpdate) {

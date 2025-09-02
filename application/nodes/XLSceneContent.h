@@ -70,7 +70,7 @@ protected:
 	virtual void handleBackgroundTransition(bool value);
 
 	InputListener *_inputListener = nullptr;
-	DynamicStateComponent *_scissorComponent = nullptr;
+	DynamicStateSystem *_scissor = nullptr;
 
 	bool _retainBackButton = false;
 	bool _backButtonRetained = false;

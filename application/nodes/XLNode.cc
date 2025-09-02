@@ -23,7 +23,6 @@
 #include "XLNode.h"
 
 #include "XLInputListener.h"
-#include "XLComponent.h"
 #include "XLScene.h"
 #include "XLDirector.h"
 #include "XLScheduler.h"
@@ -459,14 +458,17 @@ void Node::reorderChild(Node *child, ZOrder localZOrder) {
 	child->setLocalZOrder(localZOrder);
 }
 
-void Node::sortAllChildren() {
+bool Node::sortAllChildren() {
+	bool ret = false;
 	if (_reorderChildDirty && !_children.empty()) {
 		std::sort(std::begin(_children), std::end(_children), [&](const Node *l, const Node *r) {
 			return l->getLocalZOrder() < r->getLocalZOrder();
 		});
 		handleReorderChildDirty();
+		ret = true;
 	}
 	_reorderChildDirty = false;
+	return ret;
 }
 
 void Node::runActionObject(Action *action) {
@@ -545,11 +547,13 @@ size_t Node::getNumberOfRunningActions() const {
 
 void Node::setTag(uint64_t tag) { _tag = tag; }
 
-bool Node::addComponentItem(System *com) {
-	XLASSERT(com != nullptr, "Argument must be non-nil");
-	XLASSERT(com->getOwner() == nullptr, "Component already added. It can't be added again");
+void Node::setEventFlags(NodeEventFlags flags) { _eventFlags = flags; }
 
-	_components.push_back(com);
+bool Node::addSystemItem(System *com) {
+	XLASSERT(com != nullptr, "Argument must be non-nil");
+	XLASSERT(com->getOwner() == nullptr, "System already added. It can't be added again");
+
+	_systems.push_back(com);
 
 	com->handleAdded(this);
 
@@ -560,12 +564,12 @@ bool Node::addComponentItem(System *com) {
 	return true;
 }
 
-bool Node::removeComponent(System *com) {
-	if (_components.empty()) {
+bool Node::removeSystem(System *com) {
+	if (_systems.empty()) {
 		return false;
 	}
 
-	for (auto iter = _components.begin(); iter != _components.end(); ++iter) {
+	for (auto iter = _systems.begin(); iter != _systems.end(); ++iter) {
 		if ((*iter) == com) {
 			if (this->isRunning()
 					&& hasFlag(com->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
@@ -574,19 +578,19 @@ bool Node::removeComponent(System *com) {
 
 			com->handleRemoved();
 
-			_components.erase(iter);
+			_systems.erase(iter);
 			return true;
 		}
 	}
 	return false;
 }
 
-bool Node::removeComponentByTag(uint64_t tag) {
-	if (_components.empty()) {
+bool Node::removeSystemByTag(uint64_t tag) {
+	if (_systems.empty()) {
 		return false;
 	}
 
-	for (auto iter = _components.begin(); iter != _components.end(); ++iter) {
+	for (auto iter = _systems.begin(); iter != _systems.end(); ++iter) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
 			if (this->isRunning()
@@ -596,20 +600,20 @@ bool Node::removeComponentByTag(uint64_t tag) {
 			if (hasFlag(com->getSystemFlags(), SystemFlags::HandleOwnerEvents)) {
 				com->handleRemoved();
 			}
-			_components.erase(iter);
+			_systems.erase(iter);
 			return true;
 		}
 	}
 	return false;
 }
 
-bool Node::removeAllComponentByTag(uint64_t tag) {
-	if (_components.empty()) {
+bool Node::removeAllSystemByTag(uint64_t tag) {
+	if (_systems.empty()) {
 		return false;
 	}
 
-	auto iter = _components.begin();
-	while (iter != _components.end()) {
+	auto iter = _systems.begin();
+	while (iter != _systems.end()) {
 		if ((*iter)->getFrameTag() == tag) {
 			auto com = (*iter);
 			if (this->isRunning()
@@ -619,7 +623,7 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 			if (hasFlag(com->getSystemFlags(), SystemFlags::HandleOwnerEvents)) {
 				com->handleRemoved();
 			}
-			iter = _components.erase(iter);
+			iter = _systems.erase(iter);
 		} else {
 			++iter;
 		}
@@ -627,9 +631,9 @@ bool Node::removeAllComponentByTag(uint64_t tag) {
 	return false;
 }
 
-void Node::removeAllComponents() {
-	auto tmp = sp::move(_components);
-	_components.clear();
+void Node::removeAllSystems() {
+	auto tmp = sp::move(_systems);
+	_systems.clear();
 
 	for (auto iter : tmp) {
 		if (this->isRunning() && hasFlag(iter->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
@@ -674,8 +678,8 @@ void Node::handleEnter(Scene *scene) {
 		_enterCallback(scene);
 	}
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmSystems = _systems;
+	for (auto &it : tmSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 			it->handleEnter(scene);
 		}
@@ -706,8 +710,8 @@ void Node::handleExit() {
 	auto childs = _children;
 	for (auto &child : childs) { child->handleExit(); }
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
 			it->handleExit();
 		}
@@ -735,8 +739,8 @@ void Node::handleContentSizeDirty() {
 		_contentSizeDirtyCallback();
 	}
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleContentSizeDirty();
 		}
@@ -746,13 +750,26 @@ void Node::handleContentSizeDirty() {
 	for (auto &it : tmp) { it->handleLayout(this); }
 }
 
+void Node::handleComponentsDirty() {
+	if (_componentsDirtyCallback) {
+		_componentsDirtyCallback();
+	}
+
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
+		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleComponents)) {
+			it->handleComponentsDirty();
+		}
+	}
+}
+
 void Node::handleTransformDirty(const Mat4 &parentTransform) {
 	if (_transformDirtyCallback) {
 		_transformDirtyCallback(parentTransform);
 	}
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleTransformDirty(parentTransform);
 		}
@@ -784,8 +801,8 @@ void Node::handleReorderChildDirty() {
 		_reorderChildDirtyCallback();
 	}
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleReorderChildDirty();
 		}
@@ -797,8 +814,8 @@ void Node::handleLayout(Node *parent) {
 		_layoutCallback(parent);
 	}
 
-	auto tmpComponents = _components;
-	for (auto &it : tmpComponents) {
+	auto tmpSystems = _systems;
+	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
 			it->handleLayout(parent);
 		}
@@ -815,7 +832,7 @@ void Node::cleanup() {
 
 	for (auto &child : _children) { child->cleanup(); }
 
-	this->removeAllComponents();
+	this->removeAllSystems();
 }
 
 Rect Node::getBoundingBox() const {
@@ -1059,10 +1076,11 @@ void Node::disableCascadeColor() {
 	for (const auto &child : _children) { child->updateDisplayedColor(Color4F::WHITE); }
 }
 
-void Node::draw(FrameInfo &info, NodeFlags flags) { }
+void Node::draw(FrameInfo &info, NodeVisitFlags flags) { }
 
-bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
+bool Node::visitGeometry(FrameInfo &info, NodeVisitFlags parentFlags) {
 	VisitInfo visitInfo;
+
 	visitInfo.visitNodesBelow = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
 		for (auto &it : nodes) { it->visitGeometry(*visitInfo.frameInfo, visitInfo.flags); }
 	};
@@ -1076,17 +1094,15 @@ bool Node::visitGeometry(FrameInfo &info, NodeFlags parentFlags) {
 	return wrapVisit(info, parentFlags, visitInfo, false);
 }
 
-bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
+bool Node::visitDraw(FrameInfo &info, NodeVisitFlags parentFlags) {
 	VisitInfo visitInfo;
 
 	visitInfo.visitBegin = [](const VisitInfo &visitInfo) {
-		for (auto &it : visitInfo.visitableComponents) {
-			it->handleVisitBegin(*visitInfo.frameInfo);
-		}
+		for (auto &it : visitInfo.visitableSystems) { it->handleVisitBegin(*visitInfo.frameInfo); }
 	};
 
 	visitInfo.visitNodesBelow = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
-		for (auto &it : visitInfo.visitableComponents) {
+		for (auto &it : visitInfo.visitableSystems) {
 			it->handleVisitNodesBelow(*visitInfo.frameInfo, nodes, visitInfo.flags);
 		}
 
@@ -1098,7 +1114,7 @@ bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	};
 
 	visitInfo.visitNodesAbove = [](const VisitInfo &visitInfo, SpanView<Rc<Node>> nodes) {
-		for (auto &it : visitInfo.visitableComponents) {
+		for (auto &it : visitInfo.visitableSystems) {
 			it->handleVisitNodesAbove(*visitInfo.frameInfo, nodes, visitInfo.flags);
 		}
 
@@ -1106,7 +1122,7 @@ bool Node::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
 	};
 
 	visitInfo.visitEnd = [](const VisitInfo &visitInfo) {
-		for (auto &it : visitInfo.visitableComponents) { it->handleVisitEnd(*visitInfo.frameInfo); }
+		for (auto &it : visitInfo.visitableSystems) { it->handleVisitEnd(*visitInfo.frameInfo); }
 	};
 
 	visitInfo.node = this;
@@ -1159,6 +1175,10 @@ void Node::setContentSizeDirtyCallback(Function<void()> &&cb) {
 	_contentSizeDirtyCallback = sp::move(cb);
 }
 
+void Node::setComponentsDirtyCallback(Function<void()> &&cb) {
+	_componentsDirtyCallback = sp::move(cb);
+}
+
 void Node::setTransformDirtyCallback(Function<void(const Mat4 &)> &&cb) {
 	_transformDirtyCallback = sp::move(cb);
 }
@@ -1173,14 +1193,17 @@ Mat4 Node::transform(const Mat4 &parentTransform) {
 	return parentTransform * this->getNodeToParentTransform();
 }
 
-NodeFlags Node::processParentFlags(FrameInfo &info, NodeFlags parentFlags) {
-	NodeFlags flags = parentFlags;
+NodeVisitFlags Node::processParentFlags(FrameInfo &info, NodeVisitFlags parentFlags) {
+	NodeVisitFlags flags = parentFlags;
 
-	if (_transformDirty) {
+	if (_transformDirty
+			|| (hasFlag(_eventFlags, NodeEventFlags::HandleParentTransform)
+					&& hasFlag(parentFlags, NodeVisitFlags::TransformDirty))) {
 		handleTransformDirty(info.modelTransformStack.back());
 	}
 
-	if ((flags & NodeFlags::DirtyMask) != NodeFlags::None || _transformDirty || _contentSizeDirty) {
+	if ((flags & NodeVisitFlags::GlobalTransformDirtyMask) != NodeVisitFlags::None
+			|| _transformDirty || _contentSizeDirty) {
 		_modelViewTransform = this->transform(info.modelTransformStack.back());
 
 		handleGlobalTransformDirty(info.modelTransformStack.back());
@@ -1188,20 +1211,30 @@ NodeFlags Node::processParentFlags(FrameInfo &info, NodeFlags parentFlags) {
 
 	if (_transformDirty) {
 		_transformDirty = false;
-		flags |= NodeFlags::TransformDirty;
+		flags |= NodeVisitFlags::TransformDirty;
 	}
 
-	if (_contentSizeDirty) {
+	if (_contentSizeDirty
+			|| (hasFlag(_eventFlags, NodeEventFlags::HandleParentContentSize)
+					&& hasFlag(parentFlags, NodeVisitFlags::ContentSizeDirty))) {
 		handleContentSizeDirty();
 		_contentSizeDirty = false;
-		flags |= NodeFlags::ContentSizeDirty;
+		flags |= NodeVisitFlags::ContentSizeDirty;
+	}
+
+	if (_componentsDirty
+			|| (hasFlag(_eventFlags, NodeEventFlags::HandleComponents)
+					&& hasFlag(parentFlags, NodeVisitFlags::ComponentsDirty))) {
+		handleComponentsDirty();
+		_componentsDirty = false;
+		flags |= NodeVisitFlags::ComponentsDirty;
 	}
 
 	return flags;
 }
 
-void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
-	for (auto &it : _components) {
+void Node::visitSelf(FrameInfo &info, NodeVisitFlags flags, bool visibleByCamera) {
+	for (auto &it : _systems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleVisitSelf)) {
 			it->handleVisitSelf(info, this, flags);
 		}
@@ -1213,7 +1246,7 @@ void Node::visitSelf(FrameInfo &info, NodeFlags flags, bool visibleByCamera) {
 	}
 }
 
-bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &visitInfo,
+bool Node::wrapVisit(FrameInfo &info, NodeVisitFlags parentFlags, const VisitInfo &visitInfo,
 		bool useContext) {
 	if (!_visible) {
 		return false;
@@ -1227,7 +1260,7 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 		}
 	}
 
-	NodeFlags flags = processParentFlags(info, parentFlags);
+	NodeVisitFlags flags = processParentFlags(info, parentFlags);
 
 	if (!_running || !_visible) {
 		if (hasFrameContext) {
@@ -1252,14 +1285,14 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 		info.depthStack.push_back(std::max(info.depthStack.back(), _depthIndex));
 	}
 
-	memory::vector< memory::vector<Rc<System>> * > components;
+	memory::vector< memory::vector<Rc<System>> * > systems;
 
-	for (auto &it : _components) {
+	for (auto &it : _systems) {
 		if (it->isEnabled() && it->getFrameTag() != InvalidTag) {
-			components.emplace_back(info.pushComponent(it));
+			systems.emplace_back(info.pushSystem(it));
 		}
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleVisitControl)) {
-			visitInfo.visitableComponents.emplace_back(it);
+			visitInfo.visitableSystems.emplace_back(it);
 		}
 	}
 
@@ -1269,7 +1302,12 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 	visitInfo.frameInfo = &info;
 	visitInfo.visibleByCamera = visibleByCamera;
 
-	sortAllChildren();
+	if (!_reorderChildDirty && hasFlag(_eventFlags, NodeEventFlags::HandleParentReorderChild)
+			&& hasFlag(parentFlags, NodeVisitFlags::ReorderChildDirty)) {
+		handleReorderChildDirty();
+	} else if (sortAllChildren()) {
+		visitInfo.flags |= NodeVisitFlags::ReorderChildDirty;
+	}
 
 	if (visitInfo.visitBegin) {
 		visitInfo.visitBegin(visitInfo);
@@ -1318,7 +1356,7 @@ bool Node::wrapVisit(FrameInfo &info, NodeFlags parentFlags, const VisitInfo &vi
 		visitInfo.visitEnd(visitInfo);
 	}
 
-	for (auto &it : components) { info.popComponent(it); }
+	for (auto &it : systems) { info.popSystem(it); }
 
 	if (_depthIndex > 0.0f) {
 		info.depthStack.pop_back();

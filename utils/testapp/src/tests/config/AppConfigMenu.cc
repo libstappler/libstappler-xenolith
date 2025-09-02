@@ -79,7 +79,7 @@ bool ConfigApplyButton::init(bool enabled, Function<void()> &&cb) {
 	_label->setAnchorPoint(Anchor::Middle);
 	_label->setString("Apply");
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		if (_enabled) {
 			stopAllActionsByTag(1);
@@ -163,7 +163,7 @@ bool ConfigFrameRateSlider::init(uint64_t value, Function<void(uint64_t)> &&) {
 			_slider->setString(toString(v));
 		}
 	});*/
-	addComponent(move(el));
+	addSystem(move(el));
 	auto v = 1'000'000 / value;
 	_slider->setString(toString(v));
 
@@ -200,7 +200,7 @@ bool ConfigMenu::init() {
 			_currentRate = uint64_t(event.getDataValue().asInteger());
 		}
 	});*/
-	addComponent(move(el));
+	addSystem(move(el));
 
 	_scrollView = addChild(Rc<ScrollView>::create(ScrollView::Vertical));
 	_scrollView->setAnchorPoint(Anchor::MiddleTop);

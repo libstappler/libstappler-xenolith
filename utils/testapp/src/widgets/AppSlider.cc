@@ -38,7 +38,7 @@ bool Slider::init(float value, Function<void(float)> &&cb) {
 	_foreground->setPosition(Vec2::ZERO);
 	_foreground->setAnchorPoint(Anchor::BottomLeft);
 
-	_input = addComponent(Rc<InputListener>::create());
+	_input = addSystem(Rc<InputListener>::create());
 	_input->addTouchRecognizer([this](const GestureData &data) {
 		switch (data.event) {
 		case GestureEvent::Began:

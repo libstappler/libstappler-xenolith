@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +61,7 @@ bool Button::init(const SurfaceStyle &style) {
 	_trailingIcon->setAnchorPoint(Anchor::MiddleLeft);
 	_trailingIcon->setContentSize(Size2(18.0f, 18.0f));
 
-	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener = addSystem(Rc<InputListener>::create());
 	_inputListener->addMouseOverRecognizer([this](const GestureData &data) {
 		_mouseOver = (data.event == GestureEvent::Began);
 		updateActivityState();
@@ -105,7 +106,7 @@ bool Button::init(const SurfaceStyle &style) {
 		return true;
 	});
 
-	_menuButtonListener = addComponent(Rc<DataListener<MenuSourceButton>>::create(
+	_menuButtonListener = addSystem(Rc<DataListener<MenuSourceButton>>::create(
 			[this](SubscriptionFlags flags) { updateMenuButtonSource(); }));
 
 	return true;

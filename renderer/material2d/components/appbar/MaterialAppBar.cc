@@ -25,7 +25,7 @@
 #include "MaterialButton.h"
 #include "XLInputListener.h"
 #include "XLAction.h"
-#include "XLDynamicStateComponent.h"
+#include "XLDynamicStateSystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -36,7 +36,7 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle &style) {
 
 	_layout = layout;
 
-	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener = addSystem(Rc<InputListener>::create());
 	_inputListener->addTouchRecognizer(
 			[this](const GestureData &) -> bool { return isSwallowTouches(); });
 	_inputListener->addPressRecognizer([this](const GesturePress &press) -> bool {
@@ -50,7 +50,7 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle &style) {
 	}, TimeInterval::milliseconds(425), true);
 	_inputListener->setSwallowEvents(InputListener::EventMaskTouch);
 
-	_actionMenuSourceListener = addComponent(
+	_actionMenuSourceListener = addSystem(
 			Rc<DataListener<MenuSource>>::create(std::bind(&AppBar::layoutSubviews, this)));
 
 	_navButton = addChild(Rc<Button>::create(NodeStyle::Text), ZOrder(1));
@@ -76,7 +76,7 @@ bool AppBar::init(AppBarLayout layout, const SurfaceStyle &style) {
 	updateDefaultHeight();
 
 	_scissorComponent =
-			addComponent(Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+			addSystem(Rc<DynamicStateSystem>::create(DynamicStateApplyMode::ApplyForAll));
 	_scissorComponent->enableScissor();
 
 	return true;

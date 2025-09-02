@@ -83,7 +83,7 @@ bool MaterialNodeTest::init() {
 	_nodeElevation->setContentSize(Size2(160.0f, 100.0f));
 	_nodeElevation->setAnchorPoint(Anchor::Middle);
 
-	auto el = _nodeElevation->addComponent(Rc<InputListener>::create());
+	auto el = _nodeElevation->addSystem(Rc<InputListener>::create());
 	el->addTapRecognizer([this](GestureTap tap) {
 		auto style = _nodeElevation->getStyleTarget();
 		style.elevation = material2d::Elevation(
@@ -102,7 +102,7 @@ bool MaterialNodeTest::init() {
 	_nodeShadow->setContentSize(Size2(160.0f, 100.0f));
 	_nodeShadow->setAnchorPoint(Anchor::Middle);
 
-	el = _nodeShadow->addComponent(Rc<InputListener>::create());
+	el = _nodeShadow->addSystem(Rc<InputListener>::create());
 	el->addTapRecognizer([this](GestureTap tap) {
 		auto style = _nodeShadow->getStyleTarget();
 		style.elevation = material2d::Elevation(
@@ -122,7 +122,7 @@ bool MaterialNodeTest::init() {
 	_nodeCornerRounded->setContentSize(Size2(160.0f, 100.0f));
 	_nodeCornerRounded->setAnchorPoint(Anchor::Middle);
 
-	el = _nodeCornerRounded->addComponent(Rc<InputListener>::create());
+	el = _nodeCornerRounded->addSystem(Rc<InputListener>::create());
 	el->addTapRecognizer([this](GestureTap tap) {
 		auto style = _nodeCornerRounded->getStyleTarget();
 		style.shapeStyle = material2d::ShapeStyle(
@@ -142,7 +142,7 @@ bool MaterialNodeTest::init() {
 	_nodeCornerCut->setContentSize(Size2(160.0f, 100.0f));
 	_nodeCornerCut->setAnchorPoint(Anchor::Middle);
 
-	el = _nodeCornerCut->addComponent(Rc<InputListener>::create());
+	el = _nodeCornerCut->addSystem(Rc<InputListener>::create());
 	el->addTapRecognizer([this](GestureTap tap) {
 		auto style = _nodeCornerCut->getStyleTarget();
 		style.shapeStyle = material2d::ShapeStyle(
@@ -162,7 +162,7 @@ bool MaterialNodeTest::init() {
 	_nodeStyle->setContentSize(Size2(160.0f, 100.0f));
 	_nodeStyle->setAnchorPoint(Anchor::Middle);
 
-	el = _nodeStyle->addComponent(Rc<InputListener>::create());
+	el = _nodeStyle->addSystem(Rc<InputListener>::create());
 	el->addTapRecognizer(
 			[this](GestureTap tap) {
 		if (tap.input->data.getButton() == InputMouseButton::MouseLeft) {

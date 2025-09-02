@@ -43,6 +43,7 @@ LOCAL_MODULES_PATHS = \
 LOCAL_MODULES ?= \
 	xenolith_backend_vk \
 	xenolith_renderer_material2d \
+	xenolith_renderer_simpleui \
 	xenolith_resources_assets
 
 # Android config

@@ -20,10 +20,10 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_NODES_XLDYNAMICSTATECOMPONENT_H_
-#define XENOLITH_APPLICATION_NODES_XLDYNAMICSTATECOMPONENT_H_
+#ifndef XENOLITH_APPLICATION_NODES_XLDYNAMICSTATESYSTEM_H_
+#define XENOLITH_APPLICATION_NODES_XLDYNAMICSTATESYSTEM_H_
 
-#include "XLComponent.h"
+#include "XLSystem.h"
 #include "XLFrameContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -38,17 +38,19 @@ enum class DynamicStateApplyMode : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(DynamicStateApplyMode)
 
-class SP_PUBLIC DynamicStateComponent : public System, protected FrameStateOwnerInterface {
+class SP_PUBLIC DynamicStateSystem : public System, protected FrameStateOwnerInterface {
 public:
-	virtual ~DynamicStateComponent() = default;
+	virtual ~DynamicStateSystem() = default;
 
 	virtual bool init() override;
 	virtual bool init(DynamicStateApplyMode value);
 
 	virtual void handleVisitBegin(FrameInfo &) override;
-	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
-	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>, NodeFlags flags) override;
+	virtual void handleVisitNodesBelow(FrameInfo &, SpanView<Rc<Node>>,
+			NodeVisitFlags flags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags flags) override;
+	virtual void handleVisitNodesAbove(FrameInfo &, SpanView<Rc<Node>>,
+			NodeVisitFlags flags) override;
 	virtual void handleVisitEnd(FrameInfo &) override;
 
 	virtual DynamicStateApplyMode getStateApplyMode() const { return _applyMode; }
@@ -91,4 +93,4 @@ protected:
 
 } // namespace stappler::xenolith
 
-#endif /* XENOLITH_APPLICATION_NODES_XLDYNAMICSTATECOMPONENT_H_ */
+#endif /* XENOLITH_APPLICATION_NODES_XLDYNAMICSTATESYSTEM_H_ */

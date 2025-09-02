@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -48,26 +49,29 @@ public:
 	virtual bool init(BytesView);
 	virtual bool init(const FileInfo &);
 
-    virtual Rc<VectorPathRef> addPath(StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
-    virtual Rc<VectorPathRef> addPath(const VectorPath & path, StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
-    virtual Rc<VectorPathRef> addPath(VectorPath && path, StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
+	virtual Rc<VectorPathRef> addPath(StringView id = StringView(), StringView cache = StringView(),
+			Mat4 = Mat4::IDENTITY);
+	virtual Rc<VectorPathRef> addPath(const VectorPath &path, StringView id = StringView(),
+			StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
+	virtual Rc<VectorPathRef> addPath(VectorPath &&path, StringView id = StringView(),
+			StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
 
-    virtual Rc<VectorPathRef> getPath(StringView);
+	virtual Rc<VectorPathRef> getPath(StringView);
 
-    virtual void removePath(const Rc<VectorPathRef> &);
-    virtual void removePath(StringView);
+	virtual void removePath(const Rc<VectorPathRef> &);
+	virtual void removePath(StringView);
 
-    virtual void clear();
+	virtual void clear();
 
-    virtual void setImage(Rc<VectorImage> &&);
-    virtual const Rc<VectorImage> &getImage() const;
+	virtual void setImage(Rc<VectorImage> &&);
+	virtual const Rc<VectorImage> &getImage() const;
 
-    virtual void setQuality(float);
-    virtual float getQuality() const { return _quality; }
+	virtual void setQuality(float);
+	virtual float getQuality() const { return _quality; }
 
 	virtual void handleTransformDirty(const Mat4 &) override;
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	virtual uint32_t getTrianglesCount() const;
 	virtual uint32_t getVertexesCount() const;
@@ -98,7 +102,7 @@ public:
 protected:
 	using Sprite::init;
 
-	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
+	virtual void pushCommands(FrameInfo &, NodeVisitFlags flags) override;
 
 	virtual void initVertexes() override;
 	virtual void updateVertexes(FrameInfo &frame) override;
@@ -124,9 +128,9 @@ protected:
 	Size2 _imageTargetSize;
 	Mat4 _imageTargetTransform;
 
-	DynamicStateComponent *_imageScissorComponent = nullptr;
+	DynamicStateSystem *_imageScissorComponent = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DVECTORSPRITE_H_ */

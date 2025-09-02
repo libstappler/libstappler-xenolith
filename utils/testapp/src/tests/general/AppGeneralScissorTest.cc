@@ -25,7 +25,7 @@
 #include "AppGeneralAutofitTest.h"
 #include "XL2dLayer.h"
 #include "XLInputListener.h"
-#include "XLDynamicStateComponent.h"
+#include "XLDynamicStateSystem.h"
 
 namespace stappler::xenolith::app {
 
@@ -39,8 +39,8 @@ bool GeneralScissorTest::init() {
 	_node->setContentSizeDirtyCallback(
 			[this] { _layer->setPosition(_node->getContentSize() / 2.0f); });
 
-	auto comp = _node->addComponent(
-			Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForAll));
+	auto comp =
+			_node->addSystem(Rc<DynamicStateSystem>::create(DynamicStateApplyMode::ApplyForAll));
 	comp->enableScissor(Padding(-2.0f));
 
 	_layer = _node->addChild(Rc<Layer>::create(Color::Red_500));
@@ -52,7 +52,7 @@ bool GeneralScissorTest::init() {
 	_nodeResize->setContentSize(Size2(48, 48));
 	_nodeResize->setRotation(-45.0_to_rad);
 
-	auto l = _nodeResize->addComponent(Rc<InputListener>::create());
+	auto l = _nodeResize->addSystem(Rc<InputListener>::create());
 	l->addMouseOverRecognizer([this](const GestureData &data) {
 		switch (data.event) {
 		case GestureEvent::Began: _nodeResize->setColor(Color::Grey_600); break;

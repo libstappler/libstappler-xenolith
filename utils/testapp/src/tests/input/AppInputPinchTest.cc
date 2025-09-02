@@ -27,10 +27,13 @@
 namespace stappler::xenolith::app {
 
 bool InputPinchTest::init() {
-	if (
-			!LayoutTest::init(LayoutName::InputPinchTest,
-					"On PC:\n" "Ctrl + Right click to run gesture\n" "Ctrl + Shift + Right click "
-																	 "to " "set origin point")) {
+	if (!LayoutTest::
+					init(LayoutName::InputPinchTest,
+							"On PC:\n" "Ctrl + Right click to run gesture\n" "Ctrl + Shift + Right "
+																			 "click " "to " "set "
+																							"origin"
+																							" poin"
+																							"t")) {
 		return false;
 	}
 
@@ -38,7 +41,7 @@ bool InputPinchTest::init() {
 	_node->setAnchorPoint(Anchor::Middle);
 	_node->setContentSize(Size2(48.0f, 48.0f));
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addPinchRecognizer([this](const GesturePinch &pinch) {
 		if (pinch.event == GestureEvent::Began) {
 			_node->setPosition(convertToNodeSpace(pinch.center));

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,7 +56,8 @@ void MaterialColorSchemeNode::handleContentSizeDirty() {
 	_labelDesc->setPosition(Vec2(_contentSize.width - 4.0f, 4.0f));
 }
 
-void MaterialColorSchemeNode::setSchemeColor(material2d::ThemeType type, Color4F background, Color4F label) {
+void MaterialColorSchemeNode::setSchemeColor(material2d::ThemeType type, Color4F background,
+		Color4F label) {
 	setColor(background);
 	_labelName->setColor(label);
 	_labelDesc->setColor(label);
@@ -68,70 +70,244 @@ void MaterialColorSchemeNode::updateLabels() {
 	case material2d::ThemeType::LightTheme:
 	case material2d::ThemeType::Custom:
 		switch (_name) {
-		case material2d::ColorRole::Primary: _labelName->setString("Primary"); _labelDesc->setString("Primary40"); break;
-		case material2d::ColorRole::OnPrimary: _labelName->setString("On Primary"); _labelDesc->setString("Primary100"); break;
-		case material2d::ColorRole::PrimaryContainer: _labelName->setString("Primary Container"); _labelDesc->setString("Primary90"); break;
-		case material2d::ColorRole::OnPrimaryContainer: _labelName->setString("On Primary Container"); _labelDesc->setString("Primary10"); break;
-		case material2d::ColorRole::Secondary: _labelName->setString("Secondary"); _labelDesc->setString("Secondary40"); break;
-		case material2d::ColorRole::OnSecondary: _labelName->setString("On Secondary"); _labelDesc->setString("Secondary100"); break;
-		case material2d::ColorRole::SecondaryContainer: _labelName->setString("Secondary Container"); _labelDesc->setString("Secondary90"); break;
-		case material2d::ColorRole::OnSecondaryContainer: _labelName->setString("On Secondary Container"); _labelDesc->setString("Secondary10"); break;
-		case material2d::ColorRole::Tertiary: _labelName->setString("Tertiary"); _labelDesc->setString("Tertiary40"); break;
-		case material2d::ColorRole::OnTertiary: _labelName->setString("On Tertiary"); _labelDesc->setString("Tertiary100"); break;
-		case material2d::ColorRole::TertiaryContainer: _labelName->setString("Tertiary Container"); _labelDesc->setString("Tertiary90"); break;
-		case material2d::ColorRole::OnTertiaryContainer: _labelName->setString("On Tertiary Container"); _labelDesc->setString("Tertiary10"); break;
-		case material2d::ColorRole::Error: _labelName->setString("Error"); _labelDesc->setString("Error40"); break;
-		case material2d::ColorRole::OnError: _labelName->setString("On Error"); _labelDesc->setString("Error100"); break;
-		case material2d::ColorRole::ErrorContainer: _labelName->setString("Error Container"); _labelDesc->setString("Error90"); break;
-		case material2d::ColorRole::OnErrorContainer: _labelName->setString("On Error Container"); _labelDesc->setString("Error10"); break;
-		case material2d::ColorRole::Background: _labelName->setString("Background"); _labelDesc->setString("Neutral99"); break;
-		case material2d::ColorRole::OnBackground: _labelName->setString("On Background"); _labelDesc->setString("Neutral10"); break;
-		case material2d::ColorRole::Surface: _labelName->setString("Surface"); _labelDesc->setString("Neutral99"); break;
-		case material2d::ColorRole::OnSurface: _labelName->setString("On Surface"); _labelDesc->setString("Neutral10"); break;
-		case material2d::ColorRole::SurfaceVariant: _labelName->setString("Surface Variant"); _labelDesc->setString("Neutral-variant90"); break;
-		case material2d::ColorRole::OnSurfaceVariant: _labelName->setString("On Surface Variant"); _labelDesc->setString("Neutral-variant30"); break;
-		case material2d::ColorRole::Outline: _labelName->setString("Outline"); _labelDesc->setString("Neutral-variant50"); break;
-		case material2d::ColorRole::OutlineVariant: _labelName->setString("Outline Variant"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::Shadow: _labelName->setString("Shadow"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::Scrim: _labelName->setString("Scrim"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InverseSurface: _labelName->setString("Inverse Surface"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InverseOnSurface: _labelName->setString("Inverse On Surface"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InversePrimary: _labelName->setString("Inverse Primary"); _labelDesc->setString(""); break;
+		case material2d::ColorRole::Primary:
+			_labelName->setString("Primary");
+			_labelDesc->setString("Primary40");
+			break;
+		case material2d::ColorRole::OnPrimary:
+			_labelName->setString("On Primary");
+			_labelDesc->setString("Primary100");
+			break;
+		case material2d::ColorRole::PrimaryContainer:
+			_labelName->setString("Primary Container");
+			_labelDesc->setString("Primary90");
+			break;
+		case material2d::ColorRole::OnPrimaryContainer:
+			_labelName->setString("On Primary Container");
+			_labelDesc->setString("Primary10");
+			break;
+		case material2d::ColorRole::Secondary:
+			_labelName->setString("Secondary");
+			_labelDesc->setString("Secondary40");
+			break;
+		case material2d::ColorRole::OnSecondary:
+			_labelName->setString("On Secondary");
+			_labelDesc->setString("Secondary100");
+			break;
+		case material2d::ColorRole::SecondaryContainer:
+			_labelName->setString("Secondary Container");
+			_labelDesc->setString("Secondary90");
+			break;
+		case material2d::ColorRole::OnSecondaryContainer:
+			_labelName->setString("On Secondary Container");
+			_labelDesc->setString("Secondary10");
+			break;
+		case material2d::ColorRole::Tertiary:
+			_labelName->setString("Tertiary");
+			_labelDesc->setString("Tertiary40");
+			break;
+		case material2d::ColorRole::OnTertiary:
+			_labelName->setString("On Tertiary");
+			_labelDesc->setString("Tertiary100");
+			break;
+		case material2d::ColorRole::TertiaryContainer:
+			_labelName->setString("Tertiary Container");
+			_labelDesc->setString("Tertiary90");
+			break;
+		case material2d::ColorRole::OnTertiaryContainer:
+			_labelName->setString("On Tertiary Container");
+			_labelDesc->setString("Tertiary10");
+			break;
+		case material2d::ColorRole::Error:
+			_labelName->setString("Error");
+			_labelDesc->setString("Error40");
+			break;
+		case material2d::ColorRole::OnError:
+			_labelName->setString("On Error");
+			_labelDesc->setString("Error100");
+			break;
+		case material2d::ColorRole::ErrorContainer:
+			_labelName->setString("Error Container");
+			_labelDesc->setString("Error90");
+			break;
+		case material2d::ColorRole::OnErrorContainer:
+			_labelName->setString("On Error Container");
+			_labelDesc->setString("Error10");
+			break;
+		case material2d::ColorRole::Background:
+			_labelName->setString("Background");
+			_labelDesc->setString("Neutral99");
+			break;
+		case material2d::ColorRole::OnBackground:
+			_labelName->setString("On Background");
+			_labelDesc->setString("Neutral10");
+			break;
+		case material2d::ColorRole::Surface:
+			_labelName->setString("Surface");
+			_labelDesc->setString("Neutral99");
+			break;
+		case material2d::ColorRole::OnSurface:
+			_labelName->setString("On Surface");
+			_labelDesc->setString("Neutral10");
+			break;
+		case material2d::ColorRole::SurfaceVariant:
+			_labelName->setString("Surface Variant");
+			_labelDesc->setString("Neutral-variant90");
+			break;
+		case material2d::ColorRole::OnSurfaceVariant:
+			_labelName->setString("On Surface Variant");
+			_labelDesc->setString("Neutral-variant30");
+			break;
+		case material2d::ColorRole::Outline:
+			_labelName->setString("Outline");
+			_labelDesc->setString("Neutral-variant50");
+			break;
+		case material2d::ColorRole::OutlineVariant:
+			_labelName->setString("Outline Variant");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::Shadow:
+			_labelName->setString("Shadow");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::Scrim:
+			_labelName->setString("Scrim");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InverseSurface:
+			_labelName->setString("Inverse Surface");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InverseOnSurface:
+			_labelName->setString("Inverse On Surface");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InversePrimary:
+			_labelName->setString("Inverse Primary");
+			_labelDesc->setString("");
+			break;
 		case material2d::ColorRole::Undefined: break;
 		case material2d::ColorRole::Max: break;
 		}
 		break;
 	case material2d::ThemeType::DarkTheme:
 		switch (_name) {
-		case material2d::ColorRole::Primary: _labelName->setString("Primary"); _labelDesc->setString("Primary80"); break;
-		case material2d::ColorRole::OnPrimary: _labelName->setString("On Primary"); _labelDesc->setString("Primary20"); break;
-		case material2d::ColorRole::PrimaryContainer: _labelName->setString("Primary Container"); _labelDesc->setString("Primary30"); break;
-		case material2d::ColorRole::OnPrimaryContainer: _labelName->setString("On Primary Container"); _labelDesc->setString("Primary90"); break;
-		case material2d::ColorRole::Secondary: _labelName->setString("Secondary"); _labelDesc->setString("Secondary80"); break;
-		case material2d::ColorRole::OnSecondary: _labelName->setString("On Secondary"); _labelDesc->setString("Secondary20"); break;
-		case material2d::ColorRole::SecondaryContainer: _labelName->setString("Secondary Container"); _labelDesc->setString("Secondary30"); break;
-		case material2d::ColorRole::OnSecondaryContainer: _labelName->setString("On Secondary Container"); _labelDesc->setString("Secondary90"); break;
-		case material2d::ColorRole::Tertiary: _labelName->setString("Tertiary"); _labelDesc->setString("Tertiary80"); break;
-		case material2d::ColorRole::OnTertiary: _labelName->setString("On Tertiary"); _labelDesc->setString("Tertiary20"); break;
-		case material2d::ColorRole::TertiaryContainer: _labelName->setString("Tertiary Container"); _labelDesc->setString("Tertiary30"); break;
-		case material2d::ColorRole::OnTertiaryContainer: _labelName->setString("On Tertiary Container"); _labelDesc->setString("Tertiary90"); break;
-		case material2d::ColorRole::Error: _labelName->setString("Error"); _labelDesc->setString("Error80"); break;
-		case material2d::ColorRole::OnError: _labelName->setString("On Error"); _labelDesc->setString("Error20"); break;
-		case material2d::ColorRole::ErrorContainer: _labelName->setString("Error Container"); _labelDesc->setString("Error30"); break;
-		case material2d::ColorRole::OnErrorContainer: _labelName->setString("On Error Container"); _labelDesc->setString("Error90"); break;
-		case material2d::ColorRole::Background: _labelName->setString("Background"); _labelDesc->setString("Neutral10"); break;
-		case material2d::ColorRole::OnBackground: _labelName->setString("On Background"); _labelDesc->setString("Neutral90"); break;
-		case material2d::ColorRole::Surface: _labelName->setString("Surface"); _labelDesc->setString("Neutral10"); break;
-		case material2d::ColorRole::OnSurface: _labelName->setString("On Surface"); _labelDesc->setString("Neutral90"); break;
-		case material2d::ColorRole::SurfaceVariant: _labelName->setString("Surface Variant"); _labelDesc->setString("Neutral-variant30"); break;
-		case material2d::ColorRole::OnSurfaceVariant: _labelName->setString("On Surface Variant"); _labelDesc->setString("Neutral-variant80"); break;
-		case material2d::ColorRole::Outline: _labelName->setString("Outline"); _labelDesc->setString("Neutral-variant60"); break;
-		case material2d::ColorRole::OutlineVariant: _labelName->setString("Outline Variant"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::Shadow: _labelName->setString("Shadow"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::Scrim: _labelName->setString("Scrim"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InverseSurface: _labelName->setString("Inverse Surface"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InverseOnSurface: _labelName->setString("Inverse On Surface"); _labelDesc->setString(""); break;
-		case material2d::ColorRole::InversePrimary: _labelName->setString("Inverse Primary"); _labelDesc->setString(""); break;
+		case material2d::ColorRole::Primary:
+			_labelName->setString("Primary");
+			_labelDesc->setString("Primary80");
+			break;
+		case material2d::ColorRole::OnPrimary:
+			_labelName->setString("On Primary");
+			_labelDesc->setString("Primary20");
+			break;
+		case material2d::ColorRole::PrimaryContainer:
+			_labelName->setString("Primary Container");
+			_labelDesc->setString("Primary30");
+			break;
+		case material2d::ColorRole::OnPrimaryContainer:
+			_labelName->setString("On Primary Container");
+			_labelDesc->setString("Primary90");
+			break;
+		case material2d::ColorRole::Secondary:
+			_labelName->setString("Secondary");
+			_labelDesc->setString("Secondary80");
+			break;
+		case material2d::ColorRole::OnSecondary:
+			_labelName->setString("On Secondary");
+			_labelDesc->setString("Secondary20");
+			break;
+		case material2d::ColorRole::SecondaryContainer:
+			_labelName->setString("Secondary Container");
+			_labelDesc->setString("Secondary30");
+			break;
+		case material2d::ColorRole::OnSecondaryContainer:
+			_labelName->setString("On Secondary Container");
+			_labelDesc->setString("Secondary90");
+			break;
+		case material2d::ColorRole::Tertiary:
+			_labelName->setString("Tertiary");
+			_labelDesc->setString("Tertiary80");
+			break;
+		case material2d::ColorRole::OnTertiary:
+			_labelName->setString("On Tertiary");
+			_labelDesc->setString("Tertiary20");
+			break;
+		case material2d::ColorRole::TertiaryContainer:
+			_labelName->setString("Tertiary Container");
+			_labelDesc->setString("Tertiary30");
+			break;
+		case material2d::ColorRole::OnTertiaryContainer:
+			_labelName->setString("On Tertiary Container");
+			_labelDesc->setString("Tertiary90");
+			break;
+		case material2d::ColorRole::Error:
+			_labelName->setString("Error");
+			_labelDesc->setString("Error80");
+			break;
+		case material2d::ColorRole::OnError:
+			_labelName->setString("On Error");
+			_labelDesc->setString("Error20");
+			break;
+		case material2d::ColorRole::ErrorContainer:
+			_labelName->setString("Error Container");
+			_labelDesc->setString("Error30");
+			break;
+		case material2d::ColorRole::OnErrorContainer:
+			_labelName->setString("On Error Container");
+			_labelDesc->setString("Error90");
+			break;
+		case material2d::ColorRole::Background:
+			_labelName->setString("Background");
+			_labelDesc->setString("Neutral10");
+			break;
+		case material2d::ColorRole::OnBackground:
+			_labelName->setString("On Background");
+			_labelDesc->setString("Neutral90");
+			break;
+		case material2d::ColorRole::Surface:
+			_labelName->setString("Surface");
+			_labelDesc->setString("Neutral10");
+			break;
+		case material2d::ColorRole::OnSurface:
+			_labelName->setString("On Surface");
+			_labelDesc->setString("Neutral90");
+			break;
+		case material2d::ColorRole::SurfaceVariant:
+			_labelName->setString("Surface Variant");
+			_labelDesc->setString("Neutral-variant30");
+			break;
+		case material2d::ColorRole::OnSurfaceVariant:
+			_labelName->setString("On Surface Variant");
+			_labelDesc->setString("Neutral-variant80");
+			break;
+		case material2d::ColorRole::Outline:
+			_labelName->setString("Outline");
+			_labelDesc->setString("Neutral-variant60");
+			break;
+		case material2d::ColorRole::OutlineVariant:
+			_labelName->setString("Outline Variant");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::Shadow:
+			_labelName->setString("Shadow");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::Scrim:
+			_labelName->setString("Scrim");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InverseSurface:
+			_labelName->setString("Inverse Surface");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InverseOnSurface:
+			_labelName->setString("Inverse On Surface");
+			_labelDesc->setString("");
+			break;
+		case material2d::ColorRole::InversePrimary:
+			_labelName->setString("Inverse Primary");
+			_labelDesc->setString("");
+			break;
 		case material2d::ColorRole::Undefined: break;
 		case material2d::ColorRole::Max: break;
 		}
@@ -146,17 +322,18 @@ bool MaterialColorPickerTest::init() {
 
 	_colorHct = ColorHCT(Color::Purple_500);
 
-	_style = addComponent(Rc<material2d::StyleContainer>::create());
+	_style = addSystem(Rc<material2d::StyleContainer>::create());
 	_style->setPrimaryScheme(material2d::ThemeType::LightTheme, _colorHct, false);
 
-	addComponent(Rc<material2d::SurfaceInterior>::create(material2d::SurfaceStyle{
-		material2d::ColorRole::Primary
-	}));
+	addSystem(Rc<material2d::SurfaceInterior>::create(
+			material2d::SurfaceStyle{material2d::ColorRole::Primary}));
 
-	_background = addChild(Rc<material2d::Surface>::create(material2d::SurfaceStyle::Background), ZOrder(-1));
+	_background = addChild(Rc<material2d::Surface>::create(material2d::SurfaceStyle::Background),
+			ZOrder(-1));
 	_background->setAnchorPoint(Anchor::Middle);
 
-	_lightCheckbox = addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
+	_lightCheckbox =
+			addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this](bool value) {
 		if (value) {
 			_themeType = material2d::ThemeType::DarkTheme;
 		} else {
@@ -167,26 +344,30 @@ bool MaterialColorPickerTest::init() {
 	_lightCheckbox->setAnchorPoint(Anchor::TopLeft);
 	_lightCheckbox->setContentSize(Size2(24.0f, 24.0f));
 
-	_contentCheckbox = addChild(Rc<CheckboxWithLabel>::create("Content theme", false, [this] (bool value) {
+	_contentCheckbox =
+			addChild(Rc<CheckboxWithLabel>::create("Content theme", false, [this](bool value) {
 		_isContentColor = value;
 		updateColor(ColorHCT(_colorHct));
 	}));
 	_contentCheckbox->setAnchorPoint(Anchor::TopLeft);
 	_contentCheckbox->setContentSize(Size2(24.0f, 24.0f));
 
-	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue,_colorHct, [this] (float val) {
+	_huePicker = addChild(
+			Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, _colorHct, [this](float val) {
 		updateColor(ColorHCT(val, _colorHct.data.chroma, _colorHct.data.tone, 1.0f));
 	}));
 	_huePicker->setAnchorPoint(Anchor::TopLeft);
 	_huePicker->setContentSize(Size2(240.0f, 24.0f));
 
-	_chromaPicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Chroma,_colorHct, [this] (float val) {
+	_chromaPicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Chroma, _colorHct,
+			[this](float val) {
 		updateColor(ColorHCT(_colorHct.data.hue, val, _colorHct.data.tone, 1.0f));
 	}));
 	_chromaPicker->setAnchorPoint(Anchor::TopLeft);
 	_chromaPicker->setContentSize(Size2(240.0f, 24.0f));
 
-	_tonePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Tone,_colorHct, [this] (float val) {
+	_tonePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Tone, _colorHct,
+			[this](float val) {
 		updateColor(ColorHCT(_colorHct.data.hue, _colorHct.data.chroma, val, 1.0f));
 	}));
 	_tonePicker->setAnchorPoint(Anchor::TopLeft);
@@ -196,7 +377,8 @@ bool MaterialColorPickerTest::init() {
 	_spriteLayer->setContentSize(Size2(98, 98));
 	_spriteLayer->setAnchorPoint(Anchor::TopLeft);
 
-	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max); ++ i) {
+	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max);
+			++i) {
 		auto v = addChild(Rc<MaterialColorSchemeNode>::create(material2d::ColorRole(i)));
 		v->setAnchorPoint(Anchor::TopLeft);
 		_nodes[i] = v;
@@ -207,13 +389,9 @@ bool MaterialColorPickerTest::init() {
 	return true;
 }
 
-void MaterialColorPickerTest::handleEnter(Scene *scene) {
-	MaterialTest::handleEnter(scene);
-}
+void MaterialColorPickerTest::handleEnter(Scene *scene) { MaterialTest::handleEnter(scene); }
 
-void MaterialColorPickerTest::handleExit() {
-	MaterialTest::handleExit();
-}
+void MaterialColorPickerTest::handleExit() { MaterialTest::handleExit(); }
 
 void MaterialColorPickerTest::handleContentSizeDirty() {
 	MaterialTest::handleContentSizeDirty();
@@ -222,21 +400,32 @@ void MaterialColorPickerTest::handleContentSizeDirty() {
 	_background->setPosition(_contentSize / 2.0f);
 
 	_lightCheckbox->setPosition(Vec2(16.0f, _contentSize.height - _decorationPadding.top - 128.0f));
-	_contentCheckbox->setPosition(Vec2(240.0f, _contentSize.height - _decorationPadding.top - 128.0f));
+	_contentCheckbox->setPosition(
+			Vec2(240.0f, _contentSize.height - _decorationPadding.top - 128.0f));
 
-	_huePicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f), 24.0f));
-	_chromaPicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f), 24.0f));
-	_tonePicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f), 24.0f));
+	_huePicker->setContentSize(
+			Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f),
+					24.0f));
+	_chromaPicker->setContentSize(
+			Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f),
+					24.0f));
+	_tonePicker->setContentSize(
+			Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f),
+					24.0f));
 
-	_huePicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f, _contentSize.height - _decorationPadding.top - 16.0f));
-	_chromaPicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f, _contentSize.height - _decorationPadding.top - 16.0f - 36.0f));
-	_tonePicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f, _contentSize.height - _decorationPadding.top - 16.0f - 72.0f));
+	_huePicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f,
+			_contentSize.height - _decorationPadding.top - 16.0f));
+	_chromaPicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f,
+			_contentSize.height - _decorationPadding.top - 16.0f - 36.0f));
+	_tonePicker->setPosition(Vec2(_spriteLayer->getContentSize().width + 32.0f,
+			_contentSize.height - _decorationPadding.top - 16.0f - 72.0f));
 	_spriteLayer->setPosition(Vec2(16.0f, _contentSize.height - _decorationPadding.top - 16.0f));
 
 	Vec2 origin(16.0f, _contentSize.height - _decorationPadding.top - 164.0f);
 	Size2 size((_contentSize.width - 32.0f) / 4.0f, 48.0f);
 
-	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max); ++ i) {
+	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max);
+			++i) {
 		auto row = i % 4;
 
 		_nodes[i]->setContentSize(size);
@@ -258,8 +447,10 @@ void MaterialColorPickerTest::updateColor(ColorHCT &&color) {
 	_colorScheme = material2d::ColorScheme(_themeType, _colorHct, _isContentColor);
 	_style->setPrimaryScheme(_themeType, _colorHct, _isContentColor);
 
-	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max); ++ i) {
-		_nodes[i]->setSchemeColor(_themeType, _colorScheme.get(material2d::ColorRole(i)), _colorScheme.on(material2d::ColorRole(i)));
+	for (auto i = toInt(material2d::ColorRole::Primary); i < toInt(material2d::ColorRole::Max);
+			++i) {
+		_nodes[i]->setSchemeColor(_themeType, _colorScheme.get(material2d::ColorRole(i)),
+				_colorScheme.on(material2d::ColorRole(i)));
 	}
 
 	switch (_themeType) {
@@ -281,4 +472,4 @@ void MaterialColorPickerTest::updateColor(ColorHCT &&color) {
 	}
 }
 
-}
+} // namespace stappler::xenolith::app

@@ -24,8 +24,7 @@
 #include "AppMaterialToolbarTest.h"
 #include "MaterialStyleContainer.h"
 #include "MaterialSceneContent.h"
-#include "XLDirector.h"
-#include "XLAppWindow.h"
+#include "AppScene.h"
 
 namespace stappler::xenolith::app {
 
@@ -36,7 +35,7 @@ bool MaterialToolbarTest::init() {
 
 	_colorHct = ColorHCT(Color::Red_500);
 
-	_style = addComponent(Rc<material2d::StyleContainer>::create());
+	_style = addSystem(Rc<material2d::StyleContainer>::create());
 	_style->setPrimaryScheme(material2d::ThemeType::LightTheme, _colorHct, false);
 
 	_huePicker = addChild(
@@ -71,7 +70,7 @@ bool MaterialToolbarTest::init() {
 	});
 	actionMenu->addButton("", IconName::Editor_vertical_align_top_solid,
 			[this](material2d::Button *, material2d::MenuSourceButton *) {
-		_director->getWindow()->setInsetDecorationVisible(!_decorationVisible);
+		//_director->getWindow()->setInsetDecorationVisible(!_decorationVisible);
 		_decorationVisible = !_decorationVisible;
 	});
 	actionMenu->addButton("", IconName::Notification_do_disturb_on_outline,

@@ -176,9 +176,9 @@ protected:
 
 	virtual bool checkVertexDirty() const override;
 
-	virtual NodeFlags processParentFlags(FrameInfo &info, NodeFlags parentFlags) override;
+	virtual NodeVisitFlags processParentFlags(FrameInfo &info, NodeVisitFlags parentFlags) override;
 
-	virtual void pushCommands(FrameInfo &, NodeFlags flags) override;
+	virtual void pushCommands(FrameInfo &, NodeVisitFlags flags) override;
 
 	void updateLabelScale(const Mat4 &parent);
 

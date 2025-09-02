@@ -44,7 +44,7 @@ public:
 
 	virtual bool init(ColorRole decorationColorRole = ColorRole::PrimaryContainer);
 	virtual void handleContentSizeDirty() override;
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	virtual void setDecorationColorRole(ColorRole);
 	virtual ColorRole getDecorationColorRole() const;

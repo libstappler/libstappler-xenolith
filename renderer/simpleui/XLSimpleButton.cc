@@ -31,7 +31,7 @@ bool Button::init(Function<void()> &&cb) {
 
 	_callback = sp::move(cb);
 
-	_listener = addComponent(Rc<InputListener>::create());
+	_listener = addSystem(Rc<InputListener>::create());
 	_listener->setTouchFilter([](const InputEvent &event,
 									  const InputListener::DefaultEventFilter &) { return true; });
 	_listener->addMoveRecognizer([this](const GestureData &ev) {

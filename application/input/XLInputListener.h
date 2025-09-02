@@ -23,7 +23,7 @@
 #ifndef XENOLITH_APPLICATION_INPUT_XLINPUTLISTENER_H_
 #define XENOLITH_APPLICATION_INPUT_XLINPUTLISTENER_H_
 
-#include "XLComponent.h"
+#include "XLSystem.h"
 #include "XLNodeInfo.h"
 #include "XLGestureRecognizer.h"
 
@@ -58,7 +58,7 @@ public:
 
 	virtual void handleEnter(Scene *) override;
 	virtual void handleExit() override;
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags flags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags flags) override;
 
 	virtual void update(const UpdateTime &) override;
 

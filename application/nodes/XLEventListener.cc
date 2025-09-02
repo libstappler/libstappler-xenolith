@@ -22,7 +22,6 @@
 
 #include "XLEventListener.h"
 #include "SPEventBus.h"
-#include "XLComponent.h"
 #include "XLAppThread.h"
 #include "XLScene.h"
 #include "XLDirector.h"

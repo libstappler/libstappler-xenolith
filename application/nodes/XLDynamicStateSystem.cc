@@ -20,32 +20,32 @@
  THE SOFTWARE.
  **/
 
-#include "XLDynamicStateComponent.h"
+#include "XLDynamicStateSystem.h"
 #include "XLNode.h"
 #include "XLFrameContext.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-bool DynamicStateComponent::init() { return init(DynamicStateApplyMode::DoNotApply); }
+bool DynamicStateSystem::init() { return init(DynamicStateApplyMode::DoNotApply); }
 
-bool DynamicStateComponent::init(DynamicStateApplyMode value) {
+bool DynamicStateSystem::init(DynamicStateApplyMode value) {
 	_applyMode = DynamicStateApplyMode::DoNotApply;
-	_componentFlags = SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents;
+	_systemFlags = SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents;
 
 	setStateApplyMode(value);
 	return System::init();
 }
 
-void DynamicStateComponent::handleVisitBegin(FrameInfo &frameInfo) { _isStateValuesActual = false; }
+void DynamicStateSystem::handleVisitBegin(FrameInfo &frameInfo) { _isStateValuesActual = false; }
 
-void DynamicStateComponent::handleVisitNodesBelow(FrameInfo &frameInfo, SpanView<Rc<Node>> nodes,
-		NodeFlags flags) {
+void DynamicStateSystem::handleVisitNodesBelow(FrameInfo &frameInfo, SpanView<Rc<Node>> nodes,
+		NodeVisitFlags flags) {
 	if (!nodes.empty() && hasFlag(_applyMode, DynamicStateApplyMode::ApplyForNodesBelow)) {
 		pushState(frameInfo);
 	}
 }
 
-void DynamicStateComponent::handleVisitSelf(FrameInfo &frameInfo, Node *, NodeFlags flags) {
+void DynamicStateSystem::handleVisitSelf(FrameInfo &frameInfo, Node *, NodeVisitFlags flags) {
 	if (hasFlag(_applyMode, DynamicStateApplyMode::ApplyForSelf)) {
 		pushState(frameInfo);
 	} else {
@@ -53,8 +53,8 @@ void DynamicStateComponent::handleVisitSelf(FrameInfo &frameInfo, Node *, NodeFl
 	}
 }
 
-void DynamicStateComponent::handleVisitNodesAbove(FrameInfo &frameInfo, SpanView<Rc<Node>> nodes,
-		NodeFlags flags) {
+void DynamicStateSystem::handleVisitNodesAbove(FrameInfo &frameInfo, SpanView<Rc<Node>> nodes,
+		NodeVisitFlags flags) {
 	if (!nodes.empty() && hasFlag(_applyMode, DynamicStateApplyMode::ApplyForNodesAbove)) {
 		pushState(frameInfo);
 	} else {
@@ -62,33 +62,33 @@ void DynamicStateComponent::handleVisitNodesAbove(FrameInfo &frameInfo, SpanView
 	}
 }
 
-void DynamicStateComponent::handleVisitEnd(FrameInfo &frameInfo) {
+void DynamicStateSystem::handleVisitEnd(FrameInfo &frameInfo) {
 	popState(frameInfo);
 	_isStateValuesActual = false;
 }
 
-void DynamicStateComponent::setStateApplyMode(DynamicStateApplyMode value) {
+void DynamicStateSystem::setStateApplyMode(DynamicStateApplyMode value) {
 	if (value != _applyMode) {
 		_applyMode = value;
 		if (_applyMode != DynamicStateApplyMode::DoNotApply) {
-			setComponentFlags(SystemFlags::HandleVisitSelf | SystemFlags::HandleVisitControl
+			setSystemFlags(SystemFlags::HandleVisitSelf | SystemFlags::HandleVisitControl
 					| SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents);
 		} else {
-			setComponentFlags(SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents);
+			setSystemFlags(SystemFlags::HandleOwnerEvents | SystemFlags::HandleSceneEvents);
 		}
 	}
 }
 
-void DynamicStateComponent::setIgnoreParentState(bool val) { _ignoreParentState = val; }
+void DynamicStateSystem::setIgnoreParentState(bool val) { _ignoreParentState = val; }
 
-void DynamicStateComponent::enableScissor(Padding outline) {
+void DynamicStateSystem::enableScissor(Padding outline) {
 	_scissorEnabled = true;
 	_scissorOutline = outline;
 }
 
-void DynamicStateComponent::disableScissor() { _scissorEnabled = false; }
+void DynamicStateSystem::disableScissor() { _scissorEnabled = false; }
 
-DrawStateValues DynamicStateComponent::updateDynamicState(const DrawStateValues &values) const {
+DrawStateValues DynamicStateSystem::updateDynamicState(const DrawStateValues &values) const {
 	auto getViewRect = [&, this] {
 		auto contentSize = _owner->getContentSize();
 		Vec2 bottomLeft =
@@ -132,7 +132,7 @@ DrawStateValues DynamicStateComponent::updateDynamicState(const DrawStateValues 
 	return ret;
 }
 
-void DynamicStateComponent::pushState(FrameInfo &info) {
+void DynamicStateSystem::pushState(FrameInfo &info) {
 	if (_isStateActive) {
 		return;
 	}
@@ -155,7 +155,7 @@ void DynamicStateComponent::pushState(FrameInfo &info) {
 	_isStatePushed = true;
 }
 
-void DynamicStateComponent::popState(FrameInfo &info) {
+void DynamicStateSystem::popState(FrameInfo &info) {
 	if (!_isStateActive) {
 		return;
 	}
@@ -194,7 +194,7 @@ void DynamicStateComponent::popState(FrameInfo &info) {
 	_isStateActive = false;
 }
 
-StateId DynamicStateComponent::rebuildState(FrameContextHandle &ctx) {
+StateId DynamicStateSystem::rebuildState(FrameContextHandle &ctx) {
 	auto prevStateId = ctx.getCurrentState();
 	auto currentState = ctx.getState(prevStateId);
 

@@ -154,7 +154,7 @@ bool TabBar::init(MenuSource *source, ButtonStyle button, BarStyle bar, Alignmen
 	_buttonStyle = button;
 	_barStyle = bar;
 
-	_source = addComponent(Rc<DataListener<MenuSource>>::create(
+	_source = addSystem(Rc<DataListener<MenuSource>>::create(
 			[this](SubscriptionFlags flags) { onMenuSource(); }));
 	_source->setSubscription(source);
 
@@ -182,13 +182,13 @@ bool TabBar::init(MenuSource *source, ButtonStyle button, BarStyle bar, Alignmen
 	_layer->setVisible(false);
 
 	_left = addChild(Rc<IconSprite>::create(IconName::Navigation_chevron_left_solid));
-	auto leftListener = _left->addComponent(Rc<InputListener>::create());
+	auto leftListener = _left->addSystem(Rc<InputListener>::create());
 	leftListener->addTouchRecognizer([](const GestureData &) -> bool { return true; },
 			InputListener::makeButtonMask({InputMouseButton::Touch}));
 	leftListener->setSwallowEvents(InputListener::EventMaskTouch);
 
 	_right = addChild(Rc<IconSprite>::create(IconName::Navigation_chevron_right_solid));
-	auto rightListener = _right->addComponent(Rc<InputListener>::create());
+	auto rightListener = _right->addSystem(Rc<InputListener>::create());
 	rightListener->addTouchRecognizer([](const GestureData &) -> bool { return true; },
 			InputListener::makeButtonMask({InputMouseButton::Touch}));
 	rightListener->setSwallowEvents(InputListener::EventMaskTouch);

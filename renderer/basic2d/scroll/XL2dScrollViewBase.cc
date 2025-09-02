@@ -34,7 +34,7 @@ bool ScrollViewBase::init(Layout layout) {
 
 	_layout = layout;
 
-	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener = addSystem(Rc<InputListener>::create());
 	_inputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			onTap(tap.count, tap.pos);
@@ -97,7 +97,7 @@ void ScrollViewBase::setLayout(Layout l) {
 	_contentSizeDirty = true;
 }
 
-bool ScrollViewBase::visitDraw(FrameInfo &info, NodeFlags parentFlags) {
+bool ScrollViewBase::visitDraw(FrameInfo &info, NodeVisitFlags parentFlags) {
 	if (_scrollDirty) {
 		updateScrollBounds();
 	}
@@ -177,24 +177,24 @@ const ScrollViewBase::OverscrollCallback &ScrollViewBase::getOverscrollCallback(
 	return _overscrollCallback;
 }
 
-bool ScrollViewBase::addComponentItem(System *cmp) {
+bool ScrollViewBase::addSystemItem(System *cmp) {
 	if (auto c = dynamic_cast<ScrollController *>(cmp)) {
 		setController(c);
 		return true;
 	} else {
-		return Node::addComponentItem(cmp);
+		return Node::addSystemItem(cmp);
 	}
 }
 
 void ScrollViewBase::setController(ScrollController *c) {
 	if (c != _controller) {
 		if (_controller) {
-			Node::removeComponent(_controller);
+			Node::removeSystem(_controller);
 			_controller = nullptr;
 		}
 		_controller = c;
 		if (_controller) {
-			Node::addComponentItem(_controller);
+			Node::addSystemItem(_controller);
 		}
 	}
 }

@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,7 @@ bool Surface::init(const SurfaceStyle &style) {
 		return false;
 	}
 
-	_interior = addComponent(Rc<SurfaceInterior>::create());
+	_interior = addSystem(Rc<SurfaceInterior>::create());
 
 	_styleOrigin = _styleTarget = style;
 	_styleDirty = true;
@@ -168,7 +169,7 @@ void Surface::setStyleDirtyCallback(Function<void(const SurfaceStyleData &)> &&c
 	_styleDirty = true;
 }
 
-bool Surface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool Surface::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}
@@ -310,11 +311,11 @@ void Surface::updateBackgroundImage(VectorImage *img, const SurfaceStyleData &st
 }
 
 StyleContainer *Surface::getStyleContainerForFrame(FrameInfo &frame) const {
-	return frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+	return frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 }
 
 SurfaceInterior *Surface::getSurfaceInteriorForFrame(FrameInfo &frame) const {
-	return frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
+	return frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
 }
 
 RenderingLevel Surface::getRealRenderingLevel() const {
@@ -332,7 +333,7 @@ bool BackgroundSurface::init(const SurfaceStyle &style) {
 		return false;
 	}
 
-	_styleContainer = addComponent(Rc<StyleContainer>::create());
+	_styleContainer = addSystem(Rc<StyleContainer>::create());
 
 	return true;
 }

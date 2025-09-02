@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -65,7 +66,7 @@ bool Snackbar::init() {
 
 	setAnchorPoint(Anchor::MiddleBottom);
 
-	_listener = addComponent(Rc<InputListener>::create());
+	_listener = addSystem(Rc<InputListener>::create());
 	_listener->addTouchRecognizer([this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Began) {
 			stopAllActions();
@@ -214,7 +215,7 @@ void SceneContent::handleContentSizeDirty() {
 	_navigation->setContentSize(_contentSize);
 }
 
-bool SceneContent::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool SceneContent::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}

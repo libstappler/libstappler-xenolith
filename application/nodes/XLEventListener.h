@@ -25,7 +25,7 @@
 
 #include "SPEventBus.h"
 #include "XLEvent.h"
-#include "XLComponent.h"
+#include "XLSystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 

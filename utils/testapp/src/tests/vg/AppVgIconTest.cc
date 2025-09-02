@@ -97,7 +97,7 @@ bool VgIconTest::init() {
 	_checkboxAntialias->setAnchorPoint(Anchor::TopLeft);
 	_checkboxAntialias->setContentSize(Size2(32.0f, 32.0f));
 
-	auto l = _sprite->addComponent(Rc<InputListener>::create());
+	auto l = _sprite->addSystem(Rc<InputListener>::create());
 	l->addTouchRecognizer(
 			[this](const GestureData &data) -> bool {
 		if (data.event == GestureEvent::Ended) {

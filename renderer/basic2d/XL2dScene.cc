@@ -49,7 +49,7 @@ public:
 	virtual bool init() override;
 	virtual void update(const UpdateTime &) override;
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	void incrementMode();
 
@@ -141,7 +141,7 @@ void Scene2d::FpsDisplay::update(const UpdateTime &) {
 	}
 }
 
-bool Scene2d::FpsDisplay::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool Scene2d::FpsDisplay::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	// place above any shadows
 	frame.depthStack.emplace_back(100.0f);
 	auto ret = Layer::visitDraw(frame, parentFlags);
@@ -247,7 +247,7 @@ void Scene2d::setContent(SceneContent *content) {
 }
 
 void Scene2d::initialize() {
-	_listener = addComponent(Rc<InputListener>::create());
+	_listener = addSystem(Rc<InputListener>::create());
 	_listener->addKeyRecognizer([this](const GestureData &ev) {
 		if (ev.event == GestureEvent::Ended) {
 			_fps->incrementMode();

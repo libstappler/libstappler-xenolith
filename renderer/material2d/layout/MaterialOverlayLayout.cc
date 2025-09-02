@@ -45,7 +45,7 @@ bool OverlayLayout::init(const Vec2 &globalOrigin, Binding b, Surface *node, Siz
 	_binding = b;
 	_fullSize = targetSize;
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->setSwallowEvents(InputListener::makeEventMask(
 			{InputEventName::Begin, InputEventName::MouseMove, InputEventName::Scroll}));
 	l->setTouchFilter([this](const InputEvent &ev, const InputListener::DefaultEventFilter &def) {

@@ -60,8 +60,8 @@ public:
 	virtual void setTextureRect(const Rect &);
 	virtual const Rect &getTextureRect() const { return _texturePlacement.textureRect; }
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
-	virtual void draw(FrameInfo &, NodeFlags flags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
+	virtual void draw(FrameInfo &, NodeVisitFlags flags) override;
 
 	virtual void handleEnter(xenolith::Scene *) override;
 	virtual void handleExit() override;
@@ -118,7 +118,7 @@ public:
 protected:
 	using Node::init;
 
-	virtual void pushCommands(FrameInfo &, NodeFlags flags);
+	virtual void pushCommands(FrameInfo &, NodeVisitFlags flags);
 
 	virtual MaterialInfo getMaterialInfo() const;
 	virtual Vector<core::MaterialImage> getMaterialImages() const;

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -67,8 +68,8 @@ bool InputTextContainer::init() {
 	_selectionPointerEnd->setBlendColor(ColorRole::Primary, 1.0f);
 	_selectionPointerEnd->setVisible(false);
 
-	_scissorComponent = addComponent(
-			Rc<DynamicStateComponent>::create(DynamicStateApplyMode::ApplyForNodesBelow));
+	_scissorComponent =
+			addSystem(Rc<DynamicStateSystem>::create(DynamicStateApplyMode::ApplyForNodesBelow));
 	_scissorComponent->enableScissor(Padding(0.0f, 2.0f));
 
 	return true;
@@ -108,7 +109,7 @@ void InputTextContainer::handleContentSizeDirty() {
 	_caret->setContentSize(Size2(1.5f, _label->getFontHeight()));
 }
 
-bool InputTextContainer::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool InputTextContainer::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}
@@ -118,8 +119,8 @@ bool InputTextContainer::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
 		_cursorDirty = false;
 	}
 
-	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
-	auto styleContainer = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+	auto style = frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
+	auto styleContainer = frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 	if (style && styleContainer) {
 		if (auto scheme = styleContainer->getScheme(style->getStyle().schemeTag)) {
 			auto c = scheme->get(ColorRole::Primary);

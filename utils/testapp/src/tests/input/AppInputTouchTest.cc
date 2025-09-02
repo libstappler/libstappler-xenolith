@@ -33,7 +33,7 @@ bool InputTouchTest::init() {
 		return false;
 	}
 
-	_input = addComponent(Rc<InputListener>::create());
+	_input = addSystem(Rc<InputListener>::create());
 	_input->addScrollRecognizer([](const GestureScroll &scroll) {
 		std::cout << "Scroll: " << scroll.event << ": " << scroll.pos << " - " << scroll.amount
 				  << "\n";
@@ -72,7 +72,7 @@ void InputTouchTest::handleClick(const Vec2 &loc) {
 	node->setAnchorPoint(Anchor::Middle);
 	node->setPosition(loc);
 
-	auto l = node->addComponent(Rc<InputListener>::create());
+	auto l = node->addSystem(Rc<InputListener>::create());
 	l->setSwallowEvents(InputListener::EventMaskTouch);
 	l->addTouchRecognizer([node](const GestureData &ev) {
 		std::cout << "Touch (node): " << ev.event << ": " << ev.input->currentLocation << "\n";

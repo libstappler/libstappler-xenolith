@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,29 +34,41 @@ bool MaterialBackground::init() {
 		return false;
 	}
 
-	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, ColorHCT(), [this] (float val) {
+	_huePicker = addChild(Rc<MaterialColorPicker>::create(MaterialColorPicker::Hue, ColorHCT(),
+			[this](float val) {
 		auto color = ColorHCT(val, 100.0f, 50.0f, 1.0f);
-		_styleContainer->setPrimaryScheme(_lightCheckbox->getValue() ? material2d::ThemeType::DarkTheme : material2d::ThemeType::LightTheme, color, false);
+		_styleContainer->setPrimaryScheme(_lightCheckbox->getValue()
+						? material2d::ThemeType::DarkTheme
+						: material2d::ThemeType::LightTheme,
+				color, false);
 
 		if (_sceneStyleContainer) {
-			_sceneStyleContainer->setPrimaryScheme(_lightCheckbox->getValue() ? material2d::ThemeType::DarkTheme : material2d::ThemeType::LightTheme, color, false);
+			_sceneStyleContainer->setPrimaryScheme(_lightCheckbox->getValue()
+							? material2d::ThemeType::DarkTheme
+							: material2d::ThemeType::LightTheme,
+					color, false);
 		}
 		_huePicker->setTargetColor(color);
 	}));
 	_huePicker->setAnchorPoint(Anchor::TopLeft);
 	_huePicker->setContentSize(Size2(240.0f, 24.0f));
 
-	_lightCheckbox = addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this] (bool value) {
+	_lightCheckbox =
+			addChild(Rc<CheckboxWithLabel>::create("Dark theme", false, [this](bool value) {
 		if (value) {
-			_styleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme, _huePicker->getTargetColor(), false);
+			_styleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme,
+					_huePicker->getTargetColor(), false);
 		} else {
-			_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, _huePicker->getTargetColor(), false);
+			_styleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme,
+					_huePicker->getTargetColor(), false);
 		}
 		if (_sceneStyleContainer) {
 			if (value) {
-				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme, _huePicker->getTargetColor(), false);
+				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::DarkTheme,
+						_huePicker->getTargetColor(), false);
 			} else {
-				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme, _huePicker->getTargetColor(), false);
+				_sceneStyleContainer->setPrimaryScheme(material2d::ThemeType::LightTheme,
+						_huePicker->getTargetColor(), false);
 			}
 		}
 	}));
@@ -69,14 +82,16 @@ void MaterialBackground::handleContentSizeDirty() {
 	BackgroundSurface::handleContentSizeDirty();
 
 	_huePicker->setPosition(Vec2(16.0f, _contentSize.height - 16.0f));
-	_huePicker->setContentSize(Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f), 24.0f));
+	_huePicker->setContentSize(
+			Size2(std::min(std::max(160.0f, _contentSize.width - 200.0f - 98.0f - 48.0f), 360.0f),
+					24.0f));
 	_lightCheckbox->setPosition(Vec2(16.0f, _contentSize.height - 48.0f));
 }
 
 void MaterialBackground::handleEnter(xenolith::Scene *scene) {
 	BackgroundSurface::handleEnter(scene);
 
-	if (auto sceneStyle = scene->getComponentByType<material2d::StyleContainer>()) {
+	if (auto sceneStyle = scene->getSystemByType<material2d::StyleContainer>()) {
 		auto color = sceneStyle->getPrimaryScheme().hct(material2d::ColorRole::Primary);
 		auto themeType = sceneStyle->getPrimaryScheme().type;
 
@@ -102,4 +117,4 @@ void MaterialBackground::handleEnter(xenolith::Scene *scene) {
 	content->addLight(move(ambient));
 }
 
-}
+} // namespace stappler::xenolith::app

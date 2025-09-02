@@ -40,7 +40,7 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	_label->setFontSize(26);
 	_label->setPersistentGlyphData(true);
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});

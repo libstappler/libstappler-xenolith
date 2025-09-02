@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +33,7 @@ bool LayerSurface::init(const SurfaceStyle &style) {
 		return false;
 	}
 
-	_interior = addComponent(Rc<SurfaceInterior>::create());
+	_interior = addSystem(Rc<SurfaceInterior>::create());
 
 	_styleOrigin = _styleTarget = style;
 	_styleDirty = true;
@@ -162,7 +163,7 @@ void LayerSurface::setStyleDirtyCallback(Function<void(const SurfaceStyleData &)
 	_styleDirty = true;
 }
 
-bool LayerSurface::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool LayerSurface::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}
@@ -207,11 +208,11 @@ void LayerSurface::applyStyle(const SurfaceStyleData &style) {
 }
 
 StyleContainer *LayerSurface::getStyleContainerForFrame(FrameInfo &frame) const {
-	return frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+	return frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 }
 
 SurfaceInterior *LayerSurface::getSurfaceInteriorForFrame(FrameInfo &frame) const {
-	return frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
+	return frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
 }
 
 RenderingLevel LayerSurface::getRealRenderingLevel() const {

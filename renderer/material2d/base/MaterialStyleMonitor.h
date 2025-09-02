@@ -25,7 +25,7 @@
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLEMONITOR_H_
 
 #include "MaterialSurfaceStyle.h"
-#include "XLComponent.h"
+#include "XLSystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -42,7 +42,7 @@ public:
 
 	virtual void setDirty(bool);
 
-	virtual void handleVisitSelf(FrameInfo &, Node *, NodeFlags parentFlags) override;
+	virtual void handleVisitSelf(FrameInfo &, Node *, NodeVisitFlags parentFlags) override;
 
 protected:
 	StyleCallback _styleCallback;

@@ -29,7 +29,7 @@
 #include "XLCoreMaterial.h"
 #include "XLCoreFrameRequest.h"
 #include "XLNodeInfo.h"
-#include "XLComponent.h"
+#include "XLSystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -165,28 +165,28 @@ struct SP_PUBLIC FrameInfo {
 	memory::vector<Mat4> modelTransformStack;
 	memory::vector<float> depthStack;
 	memory::vector<Rc<FrameContextHandle>> contextStack;
-	memory::map<uint64_t, memory::vector<Rc<System>>> componentsStack;
+	memory::map<uint64_t, memory::vector<Rc<System>>> systemStack;
 	memory::set<const core::AttachmentData *> resolvedInputs;
 
 	uint32_t focusValue = 0;
 
 	FrameContextHandle *currentContext = nullptr;
 
-	memory::vector<Rc<System>> *pushComponent(const Rc<System> &comp) {
-		auto it = componentsStack.find(comp->getFrameTag());
-		if (it == componentsStack.end()) {
-			it = componentsStack.emplace(comp->getFrameTag()).first;
+	memory::vector<Rc<System>> *pushSystem(const Rc<System> &comp) {
+		auto it = systemStack.find(comp->getFrameTag());
+		if (it == systemStack.end()) {
+			it = systemStack.emplace(comp->getFrameTag()).first;
 		}
 		it->second.emplace_back(comp);
 		return &it->second;
 	}
 
-	void popComponent(memory::vector<Rc<System>> *vec) { vec->pop_back(); }
+	void popSystem(memory::vector<Rc<System>> *vec) { vec->pop_back(); }
 
 	template <typename T = System>
-	auto getComponent(uint64_t tag) const -> Rc<T> {
-		auto it = componentsStack.find(tag);
-		if (it != componentsStack.end() && !it->second.empty()) {
+	auto getSystem(uint64_t tag) const -> Rc<T> {
+		auto it = systemStack.find(tag);
+		if (it != systemStack.end() && !it->second.empty()) {
 			return it->second.back().cast<T>();
 		}
 		return nullptr;

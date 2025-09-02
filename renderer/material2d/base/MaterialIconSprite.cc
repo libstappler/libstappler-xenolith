@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -75,13 +76,13 @@ void IconSprite::setPreserveOpacity(bool value) { _preserveOpacity = value; }
 
 bool IconSprite::isPreserveOpacity() const { return _preserveOpacity; }
 
-bool IconSprite::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool IconSprite::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible) {
 		return false;
 	}
 
-	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
-	auto styleContainer = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+	auto style = frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
+	auto styleContainer = frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 	if (style) {
 		auto &s = style->getStyle();
 

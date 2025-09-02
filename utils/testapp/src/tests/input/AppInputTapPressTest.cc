@@ -69,7 +69,7 @@ bool InputTapPressTest::init() {
 
 	_nodeTap = addChild(Rc<InputTapPressTestNode>::create("Tap"));
 	_nodeTap->setAnchorPoint(Anchor::Middle);
-	l = _nodeTap->addComponent(Rc<InputListener>::create());
+	l = _nodeTap->addSystem(Rc<InputListener>::create());
 	l->addTapRecognizer([node = _nodeTap](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 1) {
 			node->handleTap();
@@ -79,7 +79,7 @@ bool InputTapPressTest::init() {
 
 	_nodeDoubleTap = addChild(Rc<InputTapPressTestNode>::create("Double tap"));
 	_nodeDoubleTap->setAnchorPoint(Anchor::Middle);
-	l = _nodeDoubleTap->addComponent(Rc<InputListener>::create());
+	l = _nodeDoubleTap->addSystem(Rc<InputListener>::create());
 	l->addTapRecognizer([node = _nodeDoubleTap](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 2) {
 			node->handleTap();
@@ -89,7 +89,7 @@ bool InputTapPressTest::init() {
 
 	_nodePress = addChild(Rc<InputTapPressTestNode>::create("Press"));
 	_nodePress->setAnchorPoint(Anchor::Middle);
-	l = _nodePress->addComponent(Rc<InputListener>::create());
+	l = _nodePress->addSystem(Rc<InputListener>::create());
 	l->addPressRecognizer([node = _nodePress](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Ended) {
 			node->handleTap();
@@ -99,7 +99,7 @@ bool InputTapPressTest::init() {
 
 	_nodeLongPress = addChild(Rc<InputTapPressTestNode>::create("Long press"));
 	_nodeLongPress->setAnchorPoint(Anchor::Middle);
-	l = _nodeLongPress->addComponent(Rc<InputListener>::create());
+	l = _nodeLongPress->addSystem(Rc<InputListener>::create());
 	l->addPressRecognizer([node = _nodeLongPress](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			node->handleTap();
@@ -109,7 +109,7 @@ bool InputTapPressTest::init() {
 
 	_nodeTick = addChild(Rc<InputTapPressTestNode>::create("Press tick"));
 	_nodeTick->setAnchorPoint(Anchor::Middle);
-	l = _nodeTick->addComponent(Rc<InputListener>::create());
+	l = _nodeTick->addSystem(Rc<InputListener>::create());
 	l->addPressRecognizer([node = _nodeTick](const GesturePress &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			node->handleTap();

@@ -66,7 +66,7 @@ bool InputTextTest::init() {
 		}
 	};
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		handleTap(tap.pos);
 		return true;

@@ -24,7 +24,7 @@
 #include "XLInputListener.h"
 #include "XLDirector.h"
 #include "XLScene.h"
-#include "XLDynamicStateComponent.h"
+#include "XLDynamicStateSystem.h"
 #include "XLAppWindow.h"
 #include "XLWindowDecorations.h"
 
@@ -37,7 +37,7 @@ bool SceneContent::init() {
 		return false;
 	}
 
-	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener = addSystem(Rc<InputListener>::create());
 	_inputListener->setPriority(-1);
 	_inputListener->setDedicatedFocus(maxOf<uint32_t>());
 	_inputListener->addKeyRecognizer([this](GestureData data) {
@@ -54,7 +54,7 @@ bool SceneContent::init() {
 		return true;
 	});
 
-	_scissorComponent = addComponent(Rc<DynamicStateComponent>::create());
+	_scissor = addSystem(Rc<DynamicStateSystem>::create());
 
 	return true;
 }
@@ -141,16 +141,16 @@ Padding SceneContent::getDecorationPadding() const {
 }
 
 void SceneContent::enableScissor() {
-	_scissorComponent->enableScissor();
-	_scissorComponent->setStateApplyMode(DynamicStateApplyMode::ApplyForAll);
+	_scissor->enableScissor();
+	_scissor->setStateApplyMode(DynamicStateApplyMode::ApplyForAll);
 }
 
 void SceneContent::disableScissor() {
-	_scissorComponent->disableScissor();
-	_scissorComponent->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
+	_scissor->disableScissor();
+	_scissor->setStateApplyMode(DynamicStateApplyMode::DoNotApply);
 }
 
-bool SceneContent::isScissorEnabled() const { return _scissorComponent->isScissorEnabled(); }
+bool SceneContent::isScissorEnabled() const { return _scissor->isScissorEnabled(); }
 
 void SceneContent::setWindowDecorationsContructor(WindowDecorationsCallback &&cb) {
 	_windowDecorationsConstructor = sp::move(cb);

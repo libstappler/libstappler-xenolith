@@ -21,7 +21,6 @@
  **/
 
 #include "XLInputListener.h"
-#include "XLComponent.h"
 #include "XLDirector.h"
 #include "XLInputDispatcher.h"
 #include "XLGestureRecognizer.h"
@@ -90,7 +89,7 @@ void InputListener::handleExit() {
 	System::handleExit();
 }
 
-void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeFlags flags) {
+void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeVisitFlags flags) {
 	System::handleVisitSelf(info, node, flags);
 
 	if (_enabled) {

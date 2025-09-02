@@ -173,7 +173,7 @@ bool VgTessCanvas::init(Function<void()> &&cb) {
 
 	_onContourUpdated = sp::move(cb);
 
-	auto inputListener = addComponent(Rc<InputListener>::create());
+	auto inputListener = addSystem(Rc<InputListener>::create());
 	inputListener->addTouchRecognizer([this](const GestureData &ev) {
 		onTouch(*ev.input);
 		return true;

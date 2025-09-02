@@ -20,19 +20,23 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
-#define XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
-
+#include "XLSimpleUiConfig.h" // IWYU pragma: keep
 #include "XLWindowDecorations.h"
+#include "XL2dLayer.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
-class Layer;
-class WindowHeaderButton;
+class WindowDecorationsButton;
 
-// Simple window header implementation
-class SP_PUBLIC WindowDecorationsDefault : public WindowDecorations {
-public:
+struct WindowDecorationsState {
+	static const ComponentId Id;
+
+	WindowState state = WindowState::None;
+};
+
+struct WindowDecorationsTheme {
+	static const ComponentId Id;
+
 	enum class ColorTheme {
 		Default,
 		Dark,
@@ -43,6 +47,42 @@ public:
 		Macos,
 	};
 
+	ColorTheme color = ColorTheme::Default;
+	IconTheme icon = IconTheme::Default;
+};
+
+enum class WindowDecorationsButtonType {
+	Close,
+	Maximize,
+	Minimize,
+	Fullscreen,
+	ContextMenu,
+};
+
+class WindowDecorationsButton : public Node {
+public:
+	virtual ~WindowDecorationsButton() = default;
+
+	virtual bool init(WindowDecorationsButtonType);
+
+	virtual void handleContentSizeDirty() override;
+	virtual void handleComponentsDirty() override;
+
+protected:
+	virtual void handleTap();
+	virtual void updateState();
+
+	WindowDecorationsButtonType _type = WindowDecorationsButtonType::Close;
+	VectorSprite *_icon = nullptr;
+	VectorSprite *_background = nullptr;
+	WindowState _state = WindowState::None;
+	WindowDecorationsTheme::IconTheme _iconTheme = WindowDecorationsTheme::IconTheme::Default;
+	bool _selected = false;
+};
+
+// Simple window header implementation
+class SP_PUBLIC WindowDecorationsDefault : public WindowDecorations {
+public:
 	static constexpr float HeaderHeight = 24.0f;
 
 	virtual ~WindowDecorationsDefault() = default;
@@ -50,6 +90,7 @@ public:
 	virtual bool init() override;
 
 	virtual void handleContentSizeDirty() override;
+	virtual void handleComponentsDirty() override;
 
 	virtual Padding getPadding() const override;
 
@@ -59,15 +100,11 @@ protected:
 
 	Layer *_header = nullptr;
 
-	WindowHeaderButton *_buttonClose = nullptr;
-	WindowHeaderButton *_buttonMaximize = nullptr;
-	WindowHeaderButton *_buttonMinimize = nullptr;
-	WindowHeaderButton *_buttonFullscreen = nullptr;
-	WindowHeaderButton *_buttonMenu = nullptr;
-	String _colorScheme;
-	String _theme;
+	WindowDecorationsButton *_buttonClose = nullptr;
+	WindowDecorationsButton *_buttonMaximize = nullptr;
+	WindowDecorationsButton *_buttonMinimize = nullptr;
+	WindowDecorationsButton *_buttonFullscreen = nullptr;
+	WindowDecorationsButton *_buttonMenu = nullptr;
 };
 
-} // namespace stappler::xenolith::basic2d
-
-#endif // XENOLITH_RENDERER_BASIC2D_XL2DWINDOWHEADER_H_
+} // namespace stappler::xenolith::simpleui

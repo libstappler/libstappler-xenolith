@@ -71,7 +71,7 @@ bool VgIconListNode::init(IconName iconName, Function<void(IconName)> &&cb) {
 	//_image->setDeferred(true);
 	_iconName = iconName;
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated && tap.count == 2 && _callback) {
 			_callback(_iconName);
@@ -152,7 +152,7 @@ bool VgIconList::init() {
 	_popup = addChild(Rc<VgIconListPopup>::create(), ZOrder(1));
 	_popup->setContentSize(Size2(192.0f, 32.0f));
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addMoveRecognizer([this](const GestureData &input) {
 		updatePopupLocation(input.input->currentLocation);
 		return true;

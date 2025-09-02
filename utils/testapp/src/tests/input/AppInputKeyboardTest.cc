@@ -157,7 +157,7 @@ bool InputKeyboardOnScreenKeyboard::init() {
 
 	setContentSize(Size2(120.0f, 120.0f));
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->addTouchRecognizer([this](const GestureData &input) {
 		_currentLocation = input.input->currentLocation;
 		switch (input.event) {
@@ -299,7 +299,7 @@ bool InputKeyboardTest::init() {
 		return false;
 	}
 
-	_input = addComponent(Rc<InputListener>::create());
+	_input = addSystem(Rc<InputListener>::create());
 	_key = _input->addKeyRecognizer(
 			[this](const GestureData &input) {
 		if (!_useUpdate) {

@@ -24,12 +24,13 @@
 #define XENOLITH_APPLICATION_NODES_XLNODE_H_
 
 #include "XLNodeInfo.h"
+#include "XLSystem.h"
 #include "XLComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class System;
-class DynamicStateComponent;
+class DynamicStateSystem;
 class Scene;
 class Scheduler;
 class InputListener;
@@ -49,7 +50,7 @@ struct SP_PUBLIC ActionStorage : public Ref {
 	Action *getActionByTag(uint32_t);
 };
 
-class SP_PUBLIC Node : public Ref {
+class SP_PUBLIC Node : public Ref, public ComponentContainer {
 public:
 	/* Nodes with transparent zOrder will not be added into zPath */
 	static constexpr ZOrder ZOrderTransparent = ZOrder::min();
@@ -163,7 +164,7 @@ public:
 	 * This appraoch can improves the performance massively.
 	 * @note Don't call this manually unless a child added needs to be removed in the same frame.
 	 */
-	virtual void sortAllChildren();
+	virtual bool sortAllChildren();
 
 	template <typename A>
 	auto runAction(A *action) -> A * {
@@ -202,32 +203,32 @@ public:
 	size_t getNumberOfRunningActions() const;
 
 	template <typename C>
-	auto addComponent(C *component) -> C * {
-		if (addComponentItem(component)) {
-			return component;
+	auto addSystem(C *system) -> C * {
+		if (addSystemItem(system)) {
+			return system;
 		}
 		return nullptr;
 	}
 
 	template <typename C>
-	auto addComponent(const Rc<C> &component) -> C * {
-		if (addComponentItem(component.get())) {
-			return component.get();
+	auto addSystem(const Rc<C> &system) -> C * {
+		if (addSystemItem(system.get())) {
+			return system.get();
 		}
 		return nullptr;
 	}
 
-	virtual bool addComponentItem(System *);
-	virtual bool removeComponent(System *);
-	virtual bool removeComponentByTag(uint64_t);
-	virtual bool removeAllComponentByTag(uint64_t);
-	virtual void removeAllComponents();
+	virtual bool addSystemItem(System *);
+	virtual bool removeSystem(System *);
+	virtual bool removeSystemByTag(uint64_t);
+	virtual bool removeAllSystemByTag(uint64_t);
+	virtual void removeAllSystems();
 
 	template <typename T>
-	T *getComponentByType() const;
+	T *getSystemByType() const;
 
 	template <typename T>
-	T *getComponentByType(uint32_t tag) const;
+	T *getSystemByType(uint32_t tag) const;
 
 	virtual StringView getName() const { return _name; }
 	virtual void setName(StringView str) { _name = str.str<Interface>(); }
@@ -240,6 +241,9 @@ public:
 
 	virtual bool isRunning() const { return _running; }
 
+	virtual void setEventFlags(NodeEventFlags);
+	virtual NodeEventFlags getEventFlags() const { return _eventFlags; }
+
 	// Node was added to scene
 	virtual void handleEnter(Scene *);
 
@@ -248,7 +252,12 @@ public:
 
 	// New ContentSize applied for the node
 	// There you can setup Node's appearance and layout it's subnodes
+	// ContentSize processed after Transform, be sure not to modify it there
 	virtual void handleContentSizeDirty();
+
+	// Some of node's components was updated
+	// Components processed after ContentSize and Transform, be sure not to modify them here
+	virtual void handleComponentsDirty();
 
 	// New Transform applied for the node
 	// Node was repositioned or scaled within it's parent
@@ -256,9 +265,11 @@ public:
 
 	// Node was repositioned or scaled within scene
 	// There global parameters (like pixel density) can be recalculated
+	// Called after `handleTransformDirty` if node's transform was also dirty
 	virtual void handleGlobalTransformDirty(const Mat4 &);
 
 	// Children array was updated somehow
+	// Called after all other processing
 	virtual void handleReorderChildDirty();
 
 	// Node should be positioned within parent
@@ -306,17 +317,17 @@ public:
 	virtual void setDepthIndex(float value) { _depthIndex = value; }
 	virtual float getDepthIndex() const { return _depthIndex; }
 
-	virtual void draw(FrameInfo &, NodeFlags flags);
+	virtual void draw(FrameInfo &, NodeVisitFlags flags);
 
 	// visit on unsorted nodes, commit most of geometry changes
 	// on this step, we process child-to-parent changes (like nodes, based on label's size)
-	virtual bool visitGeometry(FrameInfo &, NodeFlags parentFlags);
+	virtual bool visitGeometry(FrameInfo &, NodeVisitFlags parentFlags);
 
 	// visit on sorted nodes, push draw commands
 	// on this step, we also process parent-to-child geometry changes
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags);
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags);
 
-	virtual void visitSelf(FrameInfo &, NodeFlags flags, bool visibleByCamera);
+	virtual void visitSelf(FrameInfo &, NodeVisitFlags flags, bool visibleByCamera);
 
 	void scheduleUpdate();
 	void unscheduleUpdate();
@@ -327,6 +338,7 @@ public:
 	virtual void setEnterCallback(Function<void(Scene *)> &&);
 	virtual void setExitCallback(Function<void()> &&);
 	virtual void setContentSizeDirtyCallback(Function<void()> &&);
+	virtual void setComponentsDirtyCallback(Function<void()> &&);
 	virtual void setTransformDirtyCallback(Function<void(const Mat4 &)> &&);
 	virtual void setReorderChildDirtyCallback(Function<void()> &&);
 	virtual void setLayoutCallback(Function<void(Node *)> &&);
@@ -347,6 +359,26 @@ public:
 
 	virtual uint32_t getFocus() const { return _focus; }
 
+	// Recurse into parent tree to find node with specific component.
+	// Node that have specific component will be returned to callback.
+	// `depth` will be set to recursion depth where 0 - direct parent.
+	// You should return false from Callback to stop recursion.
+	// function returns true if node was found or false otherwise
+	template <typename T>
+	bool findParentWithComponent(
+			const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &) const;
+
+	// Enumerate childrens to find nodes with specific components.
+	// You can set maximal recursion depth for enumeration to walk through subchilds, 0 means only direct childs.
+	// Nodes that have specific component will be returned to callback.
+	// `depth` will be set to recursion depth where 0 - direct childs
+	// You should return false from Callback to stop iterating.
+	// function returns true if some nodes was found or false if nothing was found
+	template <typename T>
+	bool enumerateChildsWithComponent(
+			const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &,
+			uint32_t maxDepth = 0);
+
 protected:
 	struct VisitInfo {
 		void (*visitBegin)(const VisitInfo &) = nullptr;
@@ -356,10 +388,10 @@ protected:
 		void (*visitEnd)(const VisitInfo &) = nullptr;
 		Node *node = nullptr;
 
-		mutable NodeFlags flags = NodeFlags::None;
+		mutable NodeVisitFlags flags = NodeVisitFlags::None;
 		mutable FrameInfo *frameInfo = nullptr;
 		mutable bool visibleByCamera = true;
-		mutable Vector<Rc<System>> visitableComponents;
+		mutable Vector<Rc<System>> visitableSystems;
 	};
 
 	virtual void updateCascadeOpacity();
@@ -369,9 +401,14 @@ protected:
 	virtual void updateColor() { }
 
 	Mat4 transform(const Mat4 &parentTransform);
-	virtual NodeFlags processParentFlags(FrameInfo &info, NodeFlags parentFlags);
+	virtual NodeVisitFlags processParentFlags(FrameInfo &info, NodeVisitFlags parentFlags);
 
-	virtual bool wrapVisit(FrameInfo &, NodeFlags flags, const VisitInfo &, bool useContext);
+	virtual bool wrapVisit(FrameInfo &, NodeVisitFlags flags, const VisitInfo &, bool useContext);
+
+	template <typename T>
+	bool enumerateChildsWithComponent(
+			const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &cb,
+			uint32_t maxDepth, uint32_t depth, bool &shouldStop);
 
 	bool _is3d = false;
 	bool _running = false;
@@ -384,9 +421,11 @@ protected:
 
 	bool _contentSizeDirty = true;
 	bool _reorderChildDirty = true;
+	bool _transformDirty = true;
 	mutable bool _transformCacheDirty = true; // dynamic value
 	mutable bool _transformInverseDirty = true; // dynamic value
-	bool _transformDirty = true;
+
+	NodeEventFlags _eventFlags = NodeEventFlags::None;
 
 	String _name;
 	Value _dataValue;
@@ -421,11 +460,12 @@ protected:
 	Function<void(Scene *)> _enterCallback;
 	Function<void()> _exitCallback;
 	Function<void()> _contentSizeDirtyCallback;
+	Function<void()> _componentsDirtyCallback;
 	Function<void(const Mat4 &)> _transformDirtyCallback;
 	Function<void()> _reorderChildDirtyCallback;
 	Function<void(Node *)> _layoutCallback;
 
-	Vector<Rc<System>> _components;
+	Vector<Rc<System>> _systems;
 
 	Scene *_scene = nullptr;
 	Director *_director = nullptr;
@@ -436,10 +476,9 @@ protected:
 	Rc<ActionStorage> _actionStorage;
 };
 
-
 template <typename T>
-auto Node::getComponentByType() const -> T * {
-	for (auto &it : _components) {
+auto Node::getSystemByType() const -> T * {
+	for (auto &it : _systems) {
 		if (auto ret = dynamic_cast<T *>(it.get())) {
 			return ret;
 		}
@@ -448,8 +487,8 @@ auto Node::getComponentByType() const -> T * {
 }
 
 template <typename T>
-auto Node::getComponentByType(uint32_t tag) const -> T * {
-	for (auto &it : _components) {
+auto Node::getSystemByType(uint32_t tag) const -> T * {
+	for (auto &it : _systems) {
 		if (it->getFrameTag() == tag) {
 			if (auto ret = dynamic_cast<T *>(it.get())) {
 				return ret;
@@ -459,6 +498,57 @@ auto Node::getComponentByType(uint32_t tag) const -> T * {
 	return nullptr;
 }
 
+template <typename T>
+bool Node::findParentWithComponent(
+		const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &cb) const {
+	bool found = false;
+	uint32_t depth = 0;
+	auto parent = _parent;
+	while (parent) {
+		if (auto c = parent->getComponent<T>()) {
+			found = true;
+			if (!cb(parent, c, depth)) {
+				return true;
+			}
+		}
+		parent = parent->getParent();
+		++depth;
+	}
+	return found;
+}
+
+template <typename T>
+bool Node::enumerateChildsWithComponent(
+		const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &cb,
+		uint32_t maxDepth) {
+	bool shouldStop = false;
+	return enumerateChildsWithComponent(cb, maxDepth, 0, shouldStop);
+}
+
+template <typename T>
+bool Node::enumerateChildsWithComponent(
+		const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &cb,
+		uint32_t maxDepth, uint32_t depth, bool &shouldStop) {
+	bool found = false;
+	for (auto &it : _children) {
+		if (auto c = it->getComponent<T>()) {
+			found = true;
+			if (!cb(it, c, depth)) {
+				shouldStop = true;
+				return true;
+			}
+		}
+		if (depth != maxDepth) {
+			if (it->enumerateChildsWithComponent(cb, maxDepth, depth + 1, shouldStop, found)) {
+				found = true;
+			}
+			if (shouldStop == true) {
+				return true;
+			}
+		}
+	}
+	return found;
+}
 
 } // namespace stappler::xenolith
 

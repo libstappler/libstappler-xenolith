@@ -24,8 +24,8 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLCONTROLLER_H_
 #define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLCONTROLLER_H_
 
-#include "XLComponent.h"
-#include "XL2d.h"
+#include "XL2d.h" // IWYU pragma: keep
+#include "XLSystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 

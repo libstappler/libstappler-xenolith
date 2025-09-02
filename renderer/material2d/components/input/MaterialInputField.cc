@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -75,7 +76,7 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 			ZOrder(1));
 	_indicator->setAnchorPoint(Anchor::BottomLeft);
 
-	_inputListener = addComponent(Rc<InputListener>::create());
+	_inputListener = addSystem(Rc<InputListener>::create());
 
 	_inputListener->setTouchFilter(
 			[this](const InputEvent &event, const InputListener::DefaultEventFilter &cb) {
@@ -130,7 +131,7 @@ bool InputField::init(InputFieldStyle fieldStyle, const SurfaceStyle &surfaceSty
 		return false;
 	});
 
-	_focusInputListener = addComponent(Rc<InputListener>::create());
+	_focusInputListener = addSystem(Rc<InputListener>::create());
 	_focusInputListener->setPriority(1);
 	_focusInputListener->addTapRecognizer([this](const GestureTap &tap) {
 		if (_handler.isActive()) {

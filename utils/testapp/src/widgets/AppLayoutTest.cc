@@ -46,7 +46,7 @@ bool LayoutTestBackButton::init(Function<void()> &&cb) {
 
 	setColor(Color::Grey_600);
 
-	auto l = addComponent(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
 		return true;
 	});

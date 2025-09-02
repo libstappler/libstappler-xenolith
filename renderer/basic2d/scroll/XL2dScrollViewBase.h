@@ -49,7 +49,7 @@ public:
 	virtual bool init(Layout l);
 	virtual void setLayout(Layout l);
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 	virtual void handleEnter(Scene *) override;
 
@@ -75,7 +75,7 @@ public:
 	virtual Node *getRoot() const { return _root; }
 	virtual InputListener *getInputListener() const { return _inputListener; }
 
-	virtual bool addComponentItem(System *) override;
+	virtual bool addSystemItem(System *) override;
 
 	template <typename T>
 	auto setController(const Rc<T> &ptr) -> T * {

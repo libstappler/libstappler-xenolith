@@ -23,7 +23,7 @@
 #ifndef XENOLITH_APPLICATION_NODES_XLSUBSCRIPTIONLISTENER_H_
 #define XENOLITH_APPLICATION_NODES_XLSUBSCRIPTIONLISTENER_H_
 
-#include "XLComponent.h"
+#include "XLSystem.h"
 #include "SPSubscription.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {

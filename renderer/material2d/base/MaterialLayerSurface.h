@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,9 +56,11 @@ public:
 	virtual void setActivityState(ActivityState value);
 
 	virtual void setStyleDirtyCallback(Function<void(const SurfaceStyleData &)> &&);
-	virtual const Function<void(const SurfaceStyleData &)> &getStyleDirtyCallback() const { return _styleDirtyCallback; }
+	virtual const Function<void(const SurfaceStyleData &)> &getStyleDirtyCallback() const {
+		return _styleDirtyCallback;
+	}
 
-	virtual bool visitDraw(FrameInfo &, NodeFlags parentFlags) override;
+	virtual bool visitDraw(FrameInfo &, NodeVisitFlags parentFlags) override;
 
 protected:
 	virtual void applyStyle(const SurfaceStyleData &);
@@ -82,6 +85,6 @@ protected:
 	bool _inTransition = false;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALLAYERSURFACE_H_ */

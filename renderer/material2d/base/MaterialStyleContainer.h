@@ -25,7 +25,7 @@
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSTYLECONTAINER_H_
 
 #include "MaterialSurfaceStyle.h"
-#include "XLComponent.h"
+#include "XLSystem.h"
 #include "XLEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
@@ -33,7 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 class SP_PUBLIC StyleContainer : public System {
 public:
 	static EventHeader onColorSchemeUpdate;
-	static uint64_t ComponentFrameTag;
+	static uint64_t SystemFrameTag;
 	static constexpr uint32_t PrimarySchemeTag = SurfaceStyle::PrimarySchemeTag;
 
 	virtual ~StyleContainer() { }

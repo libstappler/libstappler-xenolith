@@ -197,13 +197,13 @@ void TypescaleLabel::setPreserveOpacity(bool value) { _preserveOpacity = value; 
 
 bool TypescaleLabel::isPreserveOpacity() const { return _preserveOpacity; }
 
-bool TypescaleLabel::visitDraw(FrameInfo &frame, NodeFlags parentFlags) {
+bool TypescaleLabel::visitDraw(FrameInfo &frame, NodeVisitFlags parentFlags) {
 	if (!_visible || empty()) {
 		return false;
 	}
 
-	auto style = frame.getComponent<SurfaceInterior>(SurfaceInterior::ComponentFrameTag);
-	auto styleContainer = frame.getComponent<StyleContainer>(StyleContainer::ComponentFrameTag);
+	auto style = frame.getSystem<SurfaceInterior>(SurfaceInterior::SystemFrameTag);
+	auto styleContainer = frame.getSystem<StyleContainer>(StyleContainer::SystemFrameTag);
 	if (style) {
 		auto &s = style->getStyle();
 

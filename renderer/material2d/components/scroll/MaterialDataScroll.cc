@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -113,7 +114,7 @@ bool DataScroll::init(DataSource *source, Layout l) {
 
 	setScrollMaxVelocity(5000.0f);
 
-	_sourceListener = addComponent(Rc<DataListener<DataSource>>::create(
+	_sourceListener = addSystem(Rc<DataListener<DataSource>>::create(
 			std::bind(&DataScroll::onSourceDirty, this), source));
 	_sourceListener->setSubscription(source);
 

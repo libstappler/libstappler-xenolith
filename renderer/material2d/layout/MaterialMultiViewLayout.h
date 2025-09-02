@@ -25,7 +25,6 @@
 #define XENOLITH_RENDERER_MATERIAL2D_LAYOUT_MATERIALMULTIVIEWLAYOUT_H_
 
 #include "MaterialFlexibleLayout.h"
-#include "XLComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

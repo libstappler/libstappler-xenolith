@@ -53,7 +53,7 @@ bool ActionEaseNode::init(StringView str, Function<Rc<ActionInterval>(Rc<ActionI
 	_callback = sp::move(cb);
 	_activated = onActivated;
 
-	auto l = _layer->addComponent(Rc<InputListener>::create());
+	auto l = _layer->addSystem(Rc<InputListener>::create());
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		run();
 		return true;

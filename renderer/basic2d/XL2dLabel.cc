@@ -273,7 +273,7 @@ bool Label::init(font::FontController *source, const DescriptionStyle &style, St
 	setColorMode(core::ColorMode::AlphaChannel);
 	setRenderingLevel(RenderingLevel::Surface);
 
-	_listener = addComponent(Rc<EventListener>::create());
+	_listener = addSystem(Rc<EventListener>::create());
 
 	_selection = addChild(Rc<Selection>::create());
 	_selection->setAnchorPoint(Vec2(0.0f, 0.0f));
@@ -467,7 +467,7 @@ void Label::updateQuadsForeground(font::FontController *controller, TextLayout *
 
 bool Label::checkVertexDirty() const { return _vertexesDirty || _labelDirty; }
 
-NodeFlags Label::processParentFlags(FrameInfo &info, NodeFlags parentFlags) {
+NodeVisitFlags Label::processParentFlags(FrameInfo &info, NodeVisitFlags parentFlags) {
 	if (_labelDirty) {
 		updateLabel();
 	}
@@ -475,7 +475,7 @@ NodeFlags Label::processParentFlags(FrameInfo &info, NodeFlags parentFlags) {
 	return Sprite::processParentFlags(info, parentFlags);
 }
 
-void Label::pushCommands(FrameInfo &frame, NodeFlags flags) {
+void Label::pushCommands(FrameInfo &frame, NodeVisitFlags flags) {
 	if (_deferred) {
 		if (!_deferredResult
 				|| (_deferredResult->isReady() && _deferredResult->getResult()->data.empty())) {

@@ -35,15 +35,38 @@ static constexpr StateId StateIdNone = maxOf<StateId>();
 
 static constexpr uint64_t InvalidTag = maxOf<uint64_t>();
 
-enum class NodeFlags : uint32_t {
+enum class NodeVisitFlags : uint32_t {
 	None,
 	TransformDirty = 1 << 0,
 	ContentSizeDirty = 1 << 1,
+	ComponentsDirty = 1 << 2,
+	ReorderChildDirty = 1 << 3,
 
-	DirtyMask = TransformDirty | ContentSizeDirty
+	GlobalTransformDirtyMask = TransformDirty | ContentSizeDirty
 };
 
-SP_DEFINE_ENUM_AS_MASK(NodeFlags)
+SP_DEFINE_ENUM_AS_MASK(NodeVisitFlags)
+
+// This flags used to alter Node::handle<X> behavior
+// If some flag is set, corresponding function will be called not only when node's
+// own dirty flag is set. but when dirty flag was set in some of node's parents
+enum class NodeEventFlags : uint32_t {
+	None,
+
+	// Call Node::handleTransformDirty if parent transform was dirty
+	HandleParentTransform = 1 << 0,
+
+	// Call Node::handleContentSizeDirty if parent ContentSize was dirty
+	HandleParentContentSize = 1 << 1,
+
+	// Call Node::handleComponentsDirty if parent components was updated
+	HandleComponents = 1 << 2,
+
+	// Call Node::handleReorderChildDirty if parent childs was updated
+	HandleParentReorderChild = 1 << 3,
+};
+
+SP_DEFINE_ENUM_AS_MASK(NodeEventFlags)
 
 enum class CommandFlags : uint16_t {
 	None,
