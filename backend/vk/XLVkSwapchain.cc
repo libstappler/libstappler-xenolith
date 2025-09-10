@@ -185,7 +185,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 		return core::Swapchain::init(dev, SwapchainHandle_destroy, core::ObjectType::Swapchain,
 				ObjectHandle(_data->swapchain), _data);
 	} else {
-		log::error("SwapchainHandle", "Fail to create swapchain: ", getStatus(result));
+		log::source().error("SwapchainHandle", "Fail to create swapchain: ", getStatus(result));
 	}
 	return false;
 }
@@ -249,7 +249,8 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 		std::unique_lock<Mutex> lock(_resourceMutex);
 		auto it = _acquiredIndexes.find(imageIndex);
 		if (it != _acquiredIndexes.end()) {
-			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " already acquired");
+			log::source().error("vk::SwapchainHandle", "Image index ", imageIndex,
+					" already acquired");
 		} else {
 			_acquiredIndexes.emplace(imageIndex);
 			++_acquiredImages;
@@ -272,7 +273,8 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 		std::unique_lock<Mutex> lock(_resourceMutex);
 		auto it = _acquiredIndexes.find(imageIndex);
 		if (it != _acquiredIndexes.end()) {
-			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " already acquired");
+			log::source().error("vk::SwapchainHandle", "Image index ", imageIndex,
+					" already acquired");
 		} else {
 			_acquiredIndexes.emplace(imageIndex);
 			++_acquiredImages;
@@ -289,7 +291,7 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 	case VK_TIMEOUT: releaseSemaphore(ref_cast<Semaphore>(move(sem))); break;
 	default:
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
-		log::error("vk::SwapchainHandle", "Fail to acquire image: ", getStatus(ret));
+		log::source().error("vk::SwapchainHandle", "Fail to acquire image: ", getStatus(ret));
 		break;
 	}
 
@@ -344,7 +346,8 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 			_acquiredIndexes.erase(it);
 			--_acquiredImages;
 		} else {
-			log::error("vk::SwapchainHandle", "Image index ", imageIndex, " was not acquired");
+			log::source().error("vk::SwapchainHandle", "Image index ", imageIndex,
+					" was not acquired");
 		}
 	} while (0);
 
@@ -394,7 +397,7 @@ void SwapchainHandle::invalidateImage(uint32_t idx, bool release) {
 		}
 		--_acquiredImages;
 	} else {
-		log::error("vk::SwapchainHandle", "Image index ", idx, " was not acquired");
+		log::source().error("vk::SwapchainHandle", "Image index ", idx, " was not acquired");
 	}
 }
 

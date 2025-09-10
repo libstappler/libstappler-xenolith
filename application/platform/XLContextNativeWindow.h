@@ -62,9 +62,6 @@ public:
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) = 0;
 
-	virtual void setExitGuard(bool value) { _hasExitGuard = value; }
-	virtual bool hasExitGuard() const { return _hasExitGuard; }
-
 	// Pointer enter layer
 	virtual void handleLayerEnter(const WindowLayer &);
 
@@ -139,8 +136,6 @@ protected:
 	// intercept pointer motion event to track layers enter/exit
 	// On some WM we can offload layers to WM directly and disable this flag
 	bool _handleLayerForMotion = true;
-
-	bool _hasExitGuard = false;
 
 	// On some platforms (MacOS) fullscren op is async, so, we need a flag to check if op is in progress
 	// When this flag is set, fullscreen function should return Status::ErrorAgain

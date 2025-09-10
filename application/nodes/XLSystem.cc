@@ -34,8 +34,6 @@ uint64_t System::GetNextSystemId() {
 
 System::System() : _owner(nullptr), _enabled(true) { }
 
-System::~System() { }
-
 bool System::init() { return true; }
 
 void System::handleAdded(Node *owner) { _owner = owner; }
@@ -303,7 +301,7 @@ void CallbackSystem::setReorderChildDirtyCallback(Function<void(CallbackSystem *
 	updateFlags();
 }
 
-void CallbackSystem::setLayutCallback(Function<void(CallbackSystem *, Node *)> &&cb) {
+void CallbackSystem::setLayoutCallback(Function<void(CallbackSystem *, Node *)> &&cb) {
 	_handleLayout = sp::move(cb);
 	updateFlags();
 }

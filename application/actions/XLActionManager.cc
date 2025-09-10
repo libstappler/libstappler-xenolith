@@ -277,7 +277,7 @@ void ActionManager::update(const UpdateTime &time) {
 			if (iit != _actions.end()) {
 				it = _actions.erase(it);
 			} else {
-				log::debug("ActionManager", "update: ", time.app,
+				log::source().debug("ActionManager", "update: ", time.app,
 						" erase: ", (void *)it->target.get());
 			}
 		} else {

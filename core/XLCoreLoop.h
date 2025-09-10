@@ -81,7 +81,7 @@ public:
 	virtual void performInQueue(Function<void()> &&func, Ref *target = nullptr) const = 0;
 
 	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr,
-			bool immediate = false, StringView tag = STAPPLER_LOCATION) const = 0;
+			bool immediate = false, StringView tag = SP_FUNC) const = 0;
 
 	virtual Rc<FrameHandle> makeFrame(Rc<FrameRequest> &&, uint64_t gen) = 0;
 

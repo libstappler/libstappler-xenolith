@@ -145,7 +145,7 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 				}
 
 				if (!_xcbConnection) {
-					log::error("LinuxContextController",
+					log::source().error("LinuxContextController",
 							"Fail to connect to X server or Wayland server");
 					_resultCode = -1;
 					destroy();
@@ -182,9 +182,11 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 			}
 			instance = loadInstance();
 		} else {
-			log::error("LinuxContextController",
-				"No X11 or Wayland session detected; If there were, please consider to "
-				"set XDG_SESSION_TYPE appropiriately");
+			log::
+					source()
+							.error("LinuxContextController",
+									"No X11 or Wayland session detected; If there were, please "
+									"consider to " "set XDG_SESSION_TYPE appropiriately");
 
 			// maybe, on a rainy day, we implement DirectFramebuffer or something but for now in't time to...
 			destroy();
@@ -192,7 +194,7 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 		}
 
 		if (!instance) {
-			log::error("LinuxContextController", "Fail to load gAPI instance");
+			log::source().error("LinuxContextController", "Fail to load gAPI instance");
 			_resultCode = -1;
 			destroy();
 			return;
@@ -262,24 +264,6 @@ WindowCapabilities LinuxContextController::getCapabilities() const {
 	return WindowCapabilities::None;
 }
 
-void LinuxContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
-		core::UpdateConstraintsFlags flags) {
-	if (_withinPoll) {
-		_resizedWindows.emplace_back(w, flags);
-	} else {
-		ContextController::notifyWindowConstraintsChanged(w, flags);
-	}
-}
-
-bool LinuxContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
-	if (_withinPoll) {
-		_closedWindows.emplace_back(w, opts);
-		return !w->hasExitGuard();
-	} else {
-		return ContextController::notifyWindowClosed(w);
-	}
-}
-
 void LinuxContextController::notifyScreenChange(NotNull<DisplayConfigManager> info) {
 	if (_waylandDisplay) {
 		_waylandDisplay->notifyScreenChange();
@@ -338,14 +322,15 @@ void LinuxContextController::tryStart() {
 
 		_looper->performOnThread([this] {
 			if (!resume()) {
-				log::error("LinuxContextController", "Fail to resume Context");
+				log::source().error("LinuxContextController", "Fail to resume Context");
 				destroy();
 			}
 
 			// check if root window is defined
 			if (_windowInfo) {
 				if (!loadWindow()) {
-					log::error("LinuxContextController", "Fail to load root native window");
+					log::source().error("LinuxContextController",
+							"Fail to load root native window");
 					destroy();
 				}
 			}
@@ -387,7 +372,7 @@ Rc<core::Instance> LinuxContextController::loadInstance() {
 
 	instance = core::Instance::create(move(instanceInfo));
 #else
-	log::error("LinuxContextController", "No available gAPI backends found");
+	log::source().error("LinuxContextController", "No available gAPI backends found");
 	_resultCode = -1;
 #endif
 	return instance;
@@ -437,25 +422,6 @@ void LinuxContextController::handleContextDidDestroy() {
 	if (_looper) {
 		_looper->wakeup(event::WakeupFlags::Graceful);
 	}
-}
-
-void LinuxContextController::notifyPendingWindows() {
-	for (auto &it : _resizedWindows) {
-		ContextController::notifyWindowConstraintsChanged(it.first, it.second);
-	}
-
-	_resizedWindows.clear();
-
-	for (auto &it : _closedWindows) {
-		// Close windows
-		if (it.first->hasExitGuard()) {
-			ContextController::notifyWindowClosed(it.first, it.second);
-		} else {
-			it.first->close();
-		}
-	}
-
-	_closedWindows.clear();
 }
 
 } // namespace stappler::xenolith::platform

@@ -76,4 +76,55 @@ Value WindowInfo::encode() const {
 	return ret;
 }
 
+StringView getWindowCursorName(WindowCursor cursor) {
+	switch (cursor) {
+	case WindowCursor::Undefined: return StringView("Undefined"); break;
+	case WindowCursor::Default: return StringView("Default"); break;
+	case WindowCursor::ContextMenu: return StringView("ContextMenu"); break;
+	case WindowCursor::Help: return StringView("Help"); break;
+	case WindowCursor::Pointer: return StringView("Pointer"); break;
+	case WindowCursor::Progress: return StringView("Progress"); break;
+	case WindowCursor::Wait: return StringView("Wait"); break;
+	case WindowCursor::Cell: return StringView("Cell"); break;
+	case WindowCursor::Crosshair: return StringView("Crosshair"); break;
+	case WindowCursor::Text: return StringView("Text"); break;
+	case WindowCursor::VerticalText: return StringView("VerticalText"); break;
+	case WindowCursor::Alias: return StringView("Alias"); break;
+	case WindowCursor::Copy: return StringView("Copy"); break;
+	case WindowCursor::Move: return StringView("Move"); break;
+	case WindowCursor::NoDrop: return StringView("NoDrop"); break;
+	case WindowCursor::NotAllowed: return StringView("NotAllowed"); break;
+	case WindowCursor::Grab: return StringView("Grab"); break;
+	case WindowCursor::Grabbing: return StringView("Grabbing"); break;
+	case WindowCursor::AllScroll: return StringView("AllScroll"); break;
+	case WindowCursor::ZoomIn: return StringView("ZoomIn"); break;
+	case WindowCursor::ZoomOut: return StringView("ZoomOut"); break;
+	case WindowCursor::DndAsk: return StringView("DndAsk"); break;
+	case WindowCursor::RightPtr: return StringView("RightPtr"); break;
+	case WindowCursor::Pencil: return StringView("Pencil"); break;
+	case WindowCursor::Target: return StringView("Target"); break;
+	case WindowCursor::ResizeRight: return StringView("ResizeRight"); break;
+	case WindowCursor::ResizeTop: return StringView("ResizeTop"); break;
+	case WindowCursor::ResizeTopRight: return StringView("ResizeTopRight"); break;
+	case WindowCursor::ResizeTopLeft: return StringView("ResizeTopLeft"); break;
+	case WindowCursor::ResizeBottom: return StringView("ResizeBottom"); break;
+	case WindowCursor::ResizeBottomRight: return StringView("ResizeBottomRight"); break;
+	case WindowCursor::ResizeBottomLeft: return StringView("ResizeBottomLeft"); break;
+	case WindowCursor::ResizeLeft: return StringView("ResizeLeft"); break;
+	case WindowCursor::ResizeLeftRight: return StringView("ResizeLeftRight"); break;
+	case WindowCursor::ResizeTopBottom: return StringView("ResizeTopBottom"); break;
+	case WindowCursor::ResizeTopRightBottomLeft:
+		return StringView("ResizeTopRightBottomLeft");
+		break;
+	case WindowCursor::ResizeTopLeftBottomRight:
+		return StringView("ResizeTopLeftBottomRight");
+		break;
+	case WindowCursor::ResizeCol: return StringView("ResizeCol"); break;
+	case WindowCursor::ResizeRow: return StringView("ResizeRow"); break;
+	case WindowCursor::ResizeAll: return StringView("ResizeAll"); break;
+	case WindowCursor::Max: break;
+	}
+	return StringView();
+}
+
 } // namespace stappler::xenolith

@@ -24,6 +24,7 @@
 #define TEST_SRC_TESTS_INPUT_APPINPUTKEYBOARDTEST_H_
 
 #include "AppLayoutTest.h"
+#include "XLGestureRecognizer.h"
 
 namespace stappler::xenolith::app {
 
@@ -46,9 +47,8 @@ protected:
 	Layer *_layer = nullptr;
 	Node *_handleUpdateCheckbox = nullptr;
 	Node *_onScreenKeyboard = nullptr;
-
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_INPUT_APPINPUTKEYBOARDTEST_H_ */

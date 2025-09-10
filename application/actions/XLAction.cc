@@ -41,10 +41,10 @@ void Action::stop() { _target = nullptr; }
 bool Action::isDone() const { return _target == nullptr; }
 
 SP_COVERAGE_TRIVIAL
-void Action::step(float dt) { log::warn("Action", "[step]: override me"); }
+void Action::step(float dt) { log::source().warn("Action", "[step]: override me"); }
 
 SP_COVERAGE_TRIVIAL
-void Action::update(float time) { log::warn("Action", "[update]: override me"); }
+void Action::update(float time) { log::source().warn("Action", "[update]: override me"); }
 
 void Action::startWithTarget(Node *aTarget) { _target = aTarget; }
 

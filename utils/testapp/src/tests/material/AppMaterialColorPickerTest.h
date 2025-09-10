@@ -28,7 +28,7 @@
 #include "MaterialColorScheme.h"
 #include "AppMaterialTest.h"
 #include "AppMaterialColorPicker.h"
-#include "AppSlider.h"
+#include "AppCheckbox.h"
 #include "XL2dLayerRounded.h"
 
 namespace stappler::xenolith::app {
@@ -86,6 +86,6 @@ protected:
 	std::array<MaterialColorSchemeNode *, toInt(material2d::ColorRole::Max)> _nodes;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_TESTS_MATERIAL_APPMATERIALCOLORPICKERTEST_H_ */

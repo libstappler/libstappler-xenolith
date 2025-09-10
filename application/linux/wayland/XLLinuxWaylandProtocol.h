@@ -23,22 +23,22 @@
 #ifndef XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDPROTOCOL_H_
 #define XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDPROTOCOL_H_
 
-#include "XLCommon.h"
-#include "XLContextInfo.h"
+#include "XLCommon.h" // IWYU pragma: keep
+#include "XLContextInfo.h" // IWYU pragma: keep
 
 #if LINUX
 
-#include "linux/XLLinux.h"
-#include "linux/XLLinuxXkbLibrary.h"
+#include "linux/XLLinux.h" // IWYU pragma: keep
+#include "linux/XLLinuxXkbLibrary.h" // IWYU pragma: keep
 #include "XLCoreInput.h"
 
-#include "linux/thirdparty/wayland-protocols/xdg-shell.h"
-#include "linux/thirdparty/wayland-protocols/viewporter.h"
-#include "linux/thirdparty/wayland-protocols/xdg-decoration.h"
-#include "linux/thirdparty/wayland-protocols/kde-output-device-v2.h"
-#include "linux/thirdparty/wayland-protocols/kde-output-order-v1.h"
-#include "linux/thirdparty/wayland-protocols/kde-output-management-v2.h"
-#include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h"
+#include "linux/thirdparty/wayland-protocols/xdg-shell.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/viewporter.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/xdg-decoration.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/kde-output-device-v2.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/kde-output-order-v1.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/kde-output-management-v2.h" // IWYU pragma: keep
+#include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -427,6 +427,8 @@ struct DecorationInfo {
 	Color3B headerDarkActive;
 	uint32_t width;
 	uint32_t inset;
+	float shadowMin = 0.0f;
+	float shadowMax = 0.0f;
 };
 
 SP_PUBLIC bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &);

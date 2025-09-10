@@ -21,6 +21,8 @@
  **/
 
 #include "AppUtilsNetworkTest.h"
+#include "MaterialLabel.h"
+#include "XLDirector.h"
 #include "XLNetworkRequest.h"
 
 namespace stappler::xenolith::app {
@@ -33,15 +35,15 @@ bool UtilsNetworkTest::init() {
 	_background = addChild(Rc<MaterialBackground>::create(), ZOrder(1));
 	_background->setAnchorPoint(Anchor::Middle);
 
-	_runButton = _background->addChild(Rc<material2d::Button>::create(material2d::NodeStyle::Filled));
+	_runButton =
+			_background->addChild(Rc<material2d::Button>::create(material2d::NodeStyle::Filled));
 	_runButton->setText("Run");
 	_runButton->setAnchorPoint(Anchor::MiddleTop);
 	_runButton->setFollowContentSize(false);
-	_runButton->setTapCallback([this] {
-		performTest();
-	});
+	_runButton->setTapCallback([this] { performTest(); });
 
-	_result = _background->addChild(Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
+	_result = _background->addChild(
+			Rc<material2d::TypescaleLabel>::create(material2d::TypescaleRole::BodyLarge));
 	_result->setFontFamily("default");
 	_result->setString("null");
 	_result->setAnchorPoint(Anchor::MiddleTop);
@@ -63,14 +65,14 @@ void UtilsNetworkTest::handleContentSizeDirty() {
 }
 
 void UtilsNetworkTest::performTest() {
-	auto req = Rc<network::Request>::create([&] (network::Handle &handle) {
+	auto req = Rc<network::Request>::create([&](network::Handle &handle) {
 		handle.init(network::Method::Get, "https://geobase.stappler.org/proxy/getHeaders");
 		handle.addHeader("X-Test", "123");
 		handle.setVerifyTls(false);
 		return true;
 	}, this);
 
-	req->perform(_director->getApplication(), [this] (const network::Request &req, bool success) {
+	req->perform(_director->getApplication(), [this](const network::Request &req, bool success) {
 		StringStream stream;
 		auto data = data::read<Interface>(req.getData());
 
@@ -79,4 +81,4 @@ void UtilsNetworkTest::performTest() {
 	});
 }
 
-}
+} // namespace stappler::xenolith::app

@@ -63,7 +63,7 @@ public:
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */
 	void performOnAppThread(Function<void()> &&func, Ref *target = nullptr,
-			bool onNextFrame = false, StringView tag = STAPPLER_LOCATION);
+			bool onNextFrame = false, StringView tag = SP_FUNC);
 
 	/* If current thread is main thread: executes function/task
 	   If not: adds function/task to main thread queue */

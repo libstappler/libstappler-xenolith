@@ -107,6 +107,7 @@ bool WindowDecorationsButton::init(WindowDecorationsButtonType type) {
 			}
 			break;
 		case GestureEvent::Ended:
+		case GestureEvent::Cancelled:
 			if (_selected) {
 				_selected = false;
 				_background->stopAllActions();
@@ -266,7 +267,7 @@ bool WindowDecorationsDefault::init() {
 		return false;
 	}
 
-	_header = addChild(Rc<Layer>::create(Color4F(0.0f, 0.0f, 0.0f, 0.1f)));
+	_header = addChild(Rc<Layer>::create(Color::Grey_500));
 	_header->setAnchorPoint(Anchor::MiddleTop);
 	_header->setVisible(true);
 

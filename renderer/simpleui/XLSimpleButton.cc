@@ -32,24 +32,19 @@ bool Button::init(Function<void()> &&cb) {
 	_callback = sp::move(cb);
 
 	_listener = addSystem(Rc<InputListener>::create());
-	_listener->setTouchFilter([](const InputEvent &event,
-									  const InputListener::DefaultEventFilter &) { return true; });
-	_listener->addMoveRecognizer([this](const GestureData &ev) {
-		bool touched = isTouched(ev.input->currentLocation);
-		if (touched != _focus) {
-			_focus = touched;
-			if (_focus) {
-				handleFocusEnter();
-			} else {
-				handleFocusLeave();
-			}
+	_listener->addMouseOverRecognizer([this](const GestureData &data) {
+		switch (data.event) {
+		case GestureEvent::Began: handleFocusEnter(); break;
+		case GestureEvent::Ended:
+		case GestureEvent::Cancelled: handleFocusLeave(); break;
+		default: break;
 		}
 		return true;
 	}, false);
 	_listener->addTouchRecognizer([this](const GestureData &ev) -> bool {
 		if (ev.event == GestureEvent::Began) {
 			if (isTouched(ev.input->currentLocation)) {
-				_listener->setExclusive();
+				_listener->setExclusiveForTouch(ev.getId());
 				return true;
 			} else {
 				return false;
@@ -64,15 +59,15 @@ bool Button::init(Function<void()> &&cb) {
 
 	_listener->setCursor(WindowCursor::Pointer);
 
-	updateEnabled();
+	updateState();
 
 	return true;
 }
 
 void Button::setEnabled(bool value) {
-	if (_enabled != value) {
-		_enabled = value;
-		updateEnabled();
+	if (isEnabled() != value) {
+		_state |= InputNodeState::Enabled;
+		updateState();
 	}
 }
 
@@ -88,7 +83,7 @@ void Button::handleFocusEnter() {
 void Button::handleFocusLeave() {
 	stopAllActions();
 	if (_callback) {
-		runAction(Rc<TintTo>::create(0.2f, _enabled ? Color::Grey_400 : Color::Grey_200));
+		runAction(Rc<TintTo>::create(0.2f, isEnabled() ? Color::Grey_400 : Color::Grey_200));
 	}
 }
 
@@ -98,9 +93,9 @@ void Button::handleTouch() {
 	}
 }
 
-void Button::updateEnabled() {
-	if (!_focus) {
-		auto enabled = _enabled && _callback != nullptr;
+void Button::updateState() {
+	auto enabled = isEnabled() && _callback != nullptr;
+	if (!hasFlag(_state, InputNodeState::Hovered)) {
 		if (_running) {
 			stopAllActions();
 			runAction(Rc<TintTo>::create(0.2f, enabled ? Color::Grey_400 : Color::Grey_200));

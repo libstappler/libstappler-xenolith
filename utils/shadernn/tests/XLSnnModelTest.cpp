@@ -42,7 +42,7 @@ void MnistTrainData::loadVectors(StringView ipath) {
 		::fseek(vectors, 0, SEEK_SET);
 
 		if (::fread(&vectorsHeader, sizeof(VectorsHeader), 1, vectors) == 0) {
-			log::error("shadernn::MnistTrainData", "Fail to read model file");
+			log::source().error("shadernn::MnistTrainData", "Fail to read model file");
 		}
 
 		vectorsHeader.magic = byteorder::bswap32(vectorsHeader.magic);
@@ -52,7 +52,7 @@ void MnistTrainData::loadVectors(StringView ipath) {
 
 		uint8_t *buf = (uint8_t *)::malloc(dataSize);
 		if (::fread(buf, dataSize, 1, vectors) == 0) {
-			log::error("shadernn::MnistTrainData", "Fail to read model file");
+			log::source().error("shadernn::MnistTrainData", "Fail to read model file");
 		}
 
 		vectorsData = (float *)malloc(dataSize * sizeof(float) * 10);
@@ -78,7 +78,7 @@ void MnistTrainData::loadImages(StringView ipath) {
 		::fseek(images, 0, SEEK_SET);
 
 		if (::fread(&vectorsHeader, sizeof(ImagesHeader), 1, images) == 0) {
-			log::error("shadernn::MnistTrainData", "Fail to read model file");
+			log::source().error("shadernn::MnistTrainData", "Fail to read model file");
 		}
 
 		imagesHeader.magic = byteorder::bswap32(imagesHeader.magic);
@@ -91,7 +91,7 @@ void MnistTrainData::loadImages(StringView ipath) {
 		uint8_t *buf = (uint8_t *)::malloc(dataSize);
 
 		if (::fread(buf, dataSize, 1, images) == 0) {
-			log::error("shadernn::MnistTrainData", "Fail to read model file");
+			log::source().error("shadernn::MnistTrainData", "Fail to read model file");
 		}
 
 		imagesData = (float *)malloc(dataSize * sizeof(float));
@@ -336,7 +336,7 @@ bool ModelQueue::init(StringView modelPath, ModelFlags flags, StringView input) 
 		}
 	} else {
 		if (!bitmap::getImageSize(FileInfo{input}, frameExtent.width, frameExtent.height)) {
-			log::error("InputQueue", "fail to read image: ", input);
+			log::source().error("InputQueue", "fail to read image: ", input);
 			return false;
 		}
 	}
@@ -381,7 +381,7 @@ void ModelQueue::run(Application *app) {
 	Extent3 frameExtent(1, 1, 1);
 	if (!_trainData && !_csvData) {
 		if (!bitmap::getImageSize(StringView(_image), frameExtent.width, frameExtent.height)) {
-			log::error("InputQueue", "fail to read image: ", _image);
+			log::source().error("InputQueue", "fail to read image: ", _image);
 			return;
 		}
 	} else if (_csvData) {
@@ -399,7 +399,7 @@ void ModelQueue::run(Application *app) {
 			if (auto img = dynamic_cast<vk::ImageAttachment *>(a->attachment.get())) {
 				core::ImageInfoData info = img->getImageInfo();
 				info.extent = it.second;
-				log::debug("ModelQueue", "Specialize attachment ", it.first->getName(),
+				log::source().debug("ModelQueue", "Specialize attachment ", it.first->getName(),
 						" for extent ", info.extent);
 				req->addImageSpecialization(img, move(info));
 			}

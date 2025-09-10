@@ -253,7 +253,7 @@ bool Device::init(const vk::Instance *inst, DeviceInfo &&info, const Features &f
 	_info = move(info);
 
 	if constexpr (s_printVkInfo) {
-		log::verbose("Vk-Info", "Device info:\n", info.description());
+		log::source().verbose("Vk-Info", "Device info:\n", info.description());
 	}
 
 	for (auto &it : _families) {
@@ -332,7 +332,7 @@ const DeviceTable *Device::getTable() const {
 	}, [](void *ctx, const char *name, PFN_vkVoidFunction fn) {
 		auto dt = platform::device::_clock() - s_vkFnCallStart;
 		if (dt > 200'000) {
-			log::debug("Vk-Call-Timeout", name, ": ", dt);
+			log::source().debug("Vk-Call-Timeout", name, ": ", dt);
 		}
 	}, _original, nullptr, (void *)this);
 #endif
@@ -658,7 +658,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 void Device::readImage(Loop &loop, const Rc<Image> &image, core::AttachmentLayout l,
 		Function<void(const ImageInfoData &, BytesView)> &&cb) {
 	if (!image) {
-		log::error("vk::Device", "readImage: Image is null");
+		log::source().error("vk::Device", "readImage: Image is null");
 		return;
 	}
 
@@ -668,7 +668,7 @@ void Device::readImage(Loop &loop, const Rc<Image> &image, core::AttachmentLayou
 void Device::readBuffer(Loop &loop, const Rc<Buffer> &buf,
 		Function<void(const BufferInfo &, BytesView)> &&cb) {
 	if (!buf) {
-		log::error("vk::Device", "readBuffer: Buffer is null");
+		log::source().error("vk::Device", "readBuffer: Buffer is null");
 		return;
 	}
 

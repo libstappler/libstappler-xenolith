@@ -26,12 +26,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+Rc<core::Instance> createInstance(
+		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
 	auto handle = Dso("libvulkan.so.1");
 	if (!handle) {
 		handle = Dso("libvulkan.so");
 		if (!handle) {
-			log::error("Vk", "Fail to open libvulkan.so");
+			log::source().error("Vk", "Fail to open libvulkan.so");
 			return nullptr;
 		}
 	}
@@ -54,6 +55,6 @@ Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, cons
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif

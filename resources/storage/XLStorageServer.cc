@@ -184,7 +184,7 @@ bool Server::init(AppThread *app, const Value &params) {
 
 	_data->driver = db::sql::Driver::open(pool, _data, driver);
 	if (!_data->driver) {
-		log::error("storage::Server", "Fail to open DB driver: ", driver);
+		log::source().error("storage::Server", "Fail to open DB driver: ", driver);
 		return false;
 	}
 
@@ -223,7 +223,8 @@ Rc<ComponentContainer> Server::getComponentContainer(StringView key) const {
 
 bool Server::addComponentContainer(const Rc<ComponentContainer> &comp) {
 	if (getComponentContainer(comp->getName()) != nullptr) {
-		log::error("storage::Server", "Component with name ", comp->getName(), " already loaded");
+		log::source().error("storage::Server", "Component with name ", comp->getName(),
+				" already loaded");
 		return false;
 	}
 
@@ -245,12 +246,13 @@ bool Server::removeComponentContainer(const Rc<ComponentContainer> &comp) {
 
 	auto it = _data->appComponents.find(comp->getName());
 	if (it == _data->appComponents.end()) {
-		log::error("storage::Server", "Component with name ", comp->getName(), " is not loaded");
+		log::source().error("storage::Server", "Component with name ", comp->getName(),
+				" is not loaded");
 		return false;
 	}
 
 	if (it->second != comp) {
-		log::error("storage::Server",
+		log::source().error("storage::Server",
 				"Component you try to remove is not the same that was loaded");
 		return false;
 	}
@@ -876,7 +878,7 @@ void Server::ServerData::threadInit() {
 		if (!handle.get()) {
 			StringStream out;
 			for (auto &it : storage->params) { out << "\n\t" << it.first << ": " << it.second; }
-			log::error("StorageServer", "Fail to initialize DB with params: ", out.str());
+			log::source().error("StorageServer", "Fail to initialize DB with params: ", out.str());
 		}
 	}, serverPool);
 
@@ -1045,11 +1047,11 @@ const db::Scheme *Server::ServerData::getFileScheme() const { return nullptr; }
 const db::Scheme *Server::ServerData::getUserScheme() const { return nullptr; }
 
 void Server::ServerData::pushErrorMessage(db::Value &&val) const {
-	log::error("xenolith::Server", data::EncodeFormat::Pretty, val);
+	log::source().error("xenolith::Server", data::EncodeFormat::Pretty, val);
 }
 
 void Server::ServerData::pushDebugMessage(db::Value &&val) const {
-	log::debug("xenolith::Server", data::EncodeFormat::Pretty, val);
+	log::source().debug("xenolith::Server", data::EncodeFormat::Pretty, val);
 }
 
 void Server::ServerData::initTransaction(db::Transaction &t) const {

@@ -56,7 +56,7 @@ public:
 
 	virtual float getMaxDepthIndex() const override;
 
-	virtual bool onBackButton() override;
+	virtual bool handleBackButton() override;
 
 protected:
 	virtual void updateNodesVisibility() override;

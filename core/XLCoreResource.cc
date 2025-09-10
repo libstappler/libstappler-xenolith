@@ -131,7 +131,7 @@ static uint64_t Resource_loadImageConverted(StringView path, uint8_t *glBuffer,
 		}
 		break;
 	default:
-		log::error("Resource", "loadImageConverted: ", path,
+		log::source().error("Resource", "loadImageConverted: ", path,
 				": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
@@ -158,7 +158,7 @@ static uint64_t Resource_loadImageDefault(StringView path, BytesView encodedImag
 	case ImageFormat::R8_UINT: bmp.convert(bitmap::PixelFormat::A8); break;
 	default:
 		availableFormat = false;
-		log::error("Resource", "loadImageDefault: ", path,
+		log::source().error("Resource", "loadImageDefault: ", path,
 				": Invalid image format: ", getImageFormatName(fmt));
 		break;
 	}
@@ -176,7 +176,7 @@ uint64_t Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, Byte
 		ImageFormat fmt, const ImageData::DataCallback &dcb) {
 	bitmap::ImageInfo info;
 	if (!bitmap::getImageInfo(data, info)) {
-		log::error("Resource", "loadImageMmmoryData: fail to read image info");
+		log::source().error("Resource", "loadImageMmmoryData: fail to read image info");
 	} else {
 		if (ptr) {
 			// check if we can load directly into GL memory
@@ -231,7 +231,7 @@ uint64_t Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, Byte
 				}
 				break;
 			default:
-				log::error("Resource", "loadImageMemoryData: Unknown format");
+				log::source().error("Resource", "loadImageMemoryData: Unknown format");
 				dcb(BytesView());
 				break;
 			}
@@ -256,7 +256,7 @@ uint64_t Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, String
 
 			return loadImageMemoryData(ptr, expectedSize, BytesView(mem, fsize), fmt, dcb);
 		} else {
-			log::error("Resource", "loadImageFileData: ", path, ": fail to load file");
+			log::source().error("Resource", "loadImageFileData: ", path, ": fail to load file");
 			dcb(BytesView());
 		}
 		return 0;
@@ -382,7 +382,7 @@ Resource::Builder::~Builder() {
 const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &&info,
 		BytesView data, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -398,7 +398,7 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Buffer already added: ", key);
+		log::source().error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -406,7 +406,7 @@ const BufferData *Resource::Builder::addBufferByRef(StringView key, BufferInfo &
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info,
 		const FileInfo &path, Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -418,7 +418,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 	});
 
 	if (npath.empty()) {
-		log::error("Resource", "Fail to add buffer: ", key, ", file not found: ", path);
+		log::source().error("Resource", "Fail to add buffer: ", key, ", file not found: ", path);
 		return nullptr;
 	}
 
@@ -441,7 +441,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Buffer already added: ", key);
+		log::source().error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -450,7 +450,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info, BytesView data,
 		Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -466,7 +466,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Buffer already added: ", key);
+		log::source().error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -475,7 +475,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		const memory::function<void(uint8_t *, uint64_t, const BufferData::DataCallback &)> &cb,
 		Rc<DataAtlas> &&atlas, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add buffer: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add buffer: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -490,7 +490,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Buffer already added: ", key);
+		log::source().error("Resource", _data->key, ": Buffer already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -499,7 +499,7 @@ const BufferData *Resource::Builder::addBuffer(StringView key, BufferInfo &&info
 const ImageData *Resource::Builder::addBitmapImage(StringView key, ImageInfo &&img, BytesView data,
 		AttachmentLayout layout, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -513,7 +513,7 @@ const ImageData *Resource::Builder::addBitmapImage(StringView key, ImageInfo &&i
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -525,7 +525,7 @@ const ImageData *Resource::Builder::addEncodedImageByRef(StringView key, ImageIn
 	extent.depth = 1;
 	CoderSource source(data);
 	if (!bitmap::getImageSize(source, extent.width, extent.height)) {
-		log::error("Resource", "Fail to add image: ", key,
+		log::source().error("Resource", "Fail to add image: ", key,
 				", fail to find image dimensions from data provided");
 		return nullptr;
 	}
@@ -544,7 +544,7 @@ const ImageData *Resource::Builder::addEncodedImageByRef(StringView key, ImageIn
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -557,7 +557,7 @@ const ImageData *Resource::Builder::addEncodedImage(StringView key, ImageInfo &&
 
 	CoderSource source(data);
 	if (!bitmap::getImageSize(source, extent.width, extent.height)) {
-		log::error("Resource", "Fail to add image: ", key,
+		log::source().error("Resource", "Fail to add image: ", key,
 				", fail to find image dimensions from data provided");
 		return nullptr;
 	}
@@ -577,7 +577,7 @@ const ImageData *Resource::Builder::addEncodedImage(StringView key, ImageInfo &&
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -586,7 +586,7 @@ const ImageData *Resource::Builder::addEncodedImage(StringView key, ImageInfo &&
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, const FileInfo &path,
 		AttachmentLayout layout, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -598,14 +598,14 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, co
 	});
 
 	if (npath.empty()) {
-		log::error("Resource", "Fail to add image: ", key, ", file not found: ", path);
+		log::source().error("Resource", "Fail to add image: ", key, ", file not found: ", path);
 		return nullptr;
 	}
 
 	Extent3 extent;
 	extent.depth = 1;
 	if (!bitmap::getImageSize(FileInfo(npath), extent.width, extent.height)) {
-		log::error("Resource", "Fail to add image: ", key,
+		log::source().error("Resource", "Fail to add image: ", key,
 				", fail to find image dimensions: ", path);
 		return nullptr;
 	}
@@ -625,7 +625,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, co
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -634,7 +634,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, co
 const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		SpanView<FileInfo> data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -654,21 +654,21 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		});
 
 		if (npath.empty()) {
-			log::error("Resource", "Fail to add image: ", key, ", file not found: ", it);
+			log::source().error("Resource", "Fail to add image: ", key, ", file not found: ", it);
 			return nullptr;
 		}
 
 		Extent3 extent;
 		extent.depth = 1;
 		if (!bitmap::getImageSize(StringView(npath), extent.width, extent.height)) {
-			log::error("Resource", "Fail to add image: ", key,
+			log::source().error("Resource", "Fail to add image: ", key,
 					", fail to find image dimensions: ", it);
 			return nullptr;
 		}
 
 		if (!images.empty()) {
 			if (images.front().extent != extent) {
-				log::error("Resource", "Fail to add image: ", key,
+				log::source().error("Resource", "Fail to add image: ", key,
 						", fail to find image layer: ", it,
 						", all images should have same extent (", images.front().extent,
 						"), but layer have ", extent);
@@ -711,7 +711,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -720,7 +720,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 const ImageData *Resource::Builder::addBitmapImageByRef(StringView key, ImageInfo &&img,
 		BytesView data, AttachmentLayout layout, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -734,7 +734,7 @@ const ImageData *Resource::Builder::addBitmapImageByRef(StringView key, ImageInf
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -743,7 +743,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		const memory::function<void(uint8_t *, uint64_t, const ImageData::DataCallback &)> &cb,
 		AttachmentLayout layout, AccessType access) {
 	if (!_data) {
-		log::error("Resource", "Fail to add image: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add image: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -757,7 +757,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		return buf;
 	}, _data->pool);
 	if (!p) {
-		log::error("Resource", _data->key, ": Image already added: ", key);
+		log::source().error("Resource", _data->key, ": Image already added: ", key);
 		return nullptr;
 	}
 	return p;
@@ -766,13 +766,13 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 const ImageViewData *Resource::Builder::addImageView(const ImageData *data, ImageViewInfo &&info) {
 	auto image = getImage(data->key);
 	if (!image) {
-		log::error("Resource", "Fail to add image view: no image for key: ", data->key);
+		log::source().error("Resource", "Fail to add image view: no image for key: ", data->key);
 		return nullptr;
 	}
 
 	for (auto &it : image->views) {
 		if (info == *it) {
-			log::error("Resource", "Fail to add image view: already exists: ", data->key);
+			log::source().error("Resource", "Fail to add image view: already exists: ", data->key);
 			return it;
 		}
 	}

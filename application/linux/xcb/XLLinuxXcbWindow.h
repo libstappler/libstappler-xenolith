@@ -154,7 +154,6 @@ protected:
 	String _wmClass;
 
 	Map<MonitorId, xenolith::ModeInfo> _capturedModes;
-	MonitorId _originalPrimary = MonitorId::None;
 	std::bitset<64> _buttons;
 };
 

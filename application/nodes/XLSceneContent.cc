@@ -27,6 +27,7 @@
 #include "XLDynamicStateSystem.h"
 #include "XLAppWindow.h"
 #include "XLWindowDecorations.h"
+#include "XLCloseGuardWidget.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -39,18 +40,15 @@ bool SceneContent::init() {
 
 	_inputListener = addSystem(Rc<InputListener>::create());
 	_inputListener->setPriority(-1);
-	_inputListener->setDedicatedFocus(maxOf<uint32_t>());
 	_inputListener->addKeyRecognizer([this](GestureData data) {
 		if (data.event == GestureEvent::Ended) {
-			return onBackButton();
+			return handleBackButton();
 		}
 		return data.event == GestureEvent::Began;
 	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
 
 	_inputListener->setWindowStateCallback([this](WindowState state, WindowState changes) -> bool {
-		if (hasFlag(changes, WindowState::Background)) {
-			handleBackgroundTransition(hasFlag(state, WindowState::Background));
-		}
+		handleWindowStateChanged(state, changes);
 		return true;
 	});
 
@@ -62,9 +60,9 @@ bool SceneContent::init() {
 void SceneContent::handleEnter(Scene *scene) {
 	Node::handleEnter(scene);
 
-	if (_retainBackButton && !_backButtonRetained) {
-		_director->getWindow()->retainExitGuard();
-		_backButtonRetained = true;
+	if (_closeGuard && !_closeGuardRetained) {
+		_director->getWindow()->retainCloseGuard();
+		_closeGuardRetained = true;
 	}
 
 	if (!_userDecorations && _windowDecorationsConstructor) {
@@ -81,9 +79,9 @@ void SceneContent::handleEnter(Scene *scene) {
 }
 
 void SceneContent::handleExit() {
-	if (_retainBackButton && _backButtonRetained) {
-		_director->getWindow()->releaseExitGuard();
-		_backButtonRetained = false;
+	if (_closeGuard && _closeGuardRetained) {
+		_director->getWindow()->releaseCloseGuard();
+		_closeGuardRetained = false;
 	}
 
 	Node::handleExit();
@@ -92,12 +90,7 @@ void SceneContent::handleExit() {
 void SceneContent::handleContentSizeDirty() { Node::handleContentSizeDirty(); }
 
 SP_COVERAGE_TRIVIAL
-void SceneContent::updateBackButtonStatus() { }
-
-void SceneContent::handleBackgroundTransition(bool val) { }
-
-SP_COVERAGE_TRIVIAL
-bool SceneContent::onBackButton() { return false; }
+bool SceneContent::handleBackButton() { return false; }
 
 void SceneContent::setHandlesViewDecoration(bool value) {
 	if (_handlesViewDecoration != value) {
@@ -127,6 +120,23 @@ void SceneContent::hideViewDecoration() {
 		_decorationVisible = false;
 	}
 }
+
+void SceneContent::setCloseGuardEnabled(bool value) {
+	if (_closeGuard != value) {
+		_closeGuard = value;
+		if (_running) {
+			if (_closeGuard && !_closeGuardRetained) {
+				_director->getWindow()->retainCloseGuard();
+				_closeGuardRetained = true;
+			} else if (!_closeGuard && _closeGuardRetained) {
+				_director->getWindow()->releaseCloseGuard();
+				_closeGuardRetained = false;
+			}
+		}
+	}
+}
+
+bool SceneContent::isCloseGuardEnabled() const { return _closeGuard; }
 
 Padding SceneContent::getDecorationPadding() const {
 	if (!_running) {
@@ -162,9 +172,47 @@ void SceneContent::setWindowDecorationsContructor(WindowDecorationsCallback &&cb
 		}
 
 		if (auto d = _windowDecorationsConstructor(this)) {
-			_userDecorations = addChild(d);
+			if (!d->isRunning()) {
+				_userDecorations = addChild(d);
+			} else {
+				_userDecorations = d;
+			}
 		}
 		_contentSizeDirty = true; // to place header correctly
+	}
+}
+
+void SceneContent::setCloseGuardWidgetContructor(CloseGuardWidgetCallback &&cb) {
+	_closeGuardWidgetConstructor = sp::move(cb);
+}
+
+void SceneContent::handleBackgroundTransition(bool val) { }
+
+void SceneContent::handleCloseRequest(bool value) {
+	if (value) {
+		if (_closeGuardWidget) {
+			return;
+		}
+
+		if (_closeGuardWidgetConstructor) {
+			auto w = _closeGuardWidgetConstructor(this);
+			if (!w->isRunning()) {
+				_closeGuardWidget = addChild(w);
+			} else {
+				_closeGuardWidget = w;
+			}
+			auto cb = _closeGuardWidget->addSystem(Rc<CallbackSystem>::create());
+			cb->setExitCallback([this](CallbackSystem *) { _closeGuardWidget = nullptr; });
+		}
+	}
+}
+
+void SceneContent::handleWindowStateChanged(WindowState state, WindowState changes) {
+	if (hasFlag(changes, WindowState::Background)) {
+		handleBackgroundTransition(hasFlag(state, WindowState::Background));
+	}
+	if (hasFlag(changes, WindowState::CloseRequest)) {
+		handleCloseRequest(hasFlag(state, WindowState::CloseRequest));
 	}
 }
 

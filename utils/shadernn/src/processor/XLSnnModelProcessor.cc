@@ -148,7 +148,7 @@ bool ModelProcessor::loadFromJson(Model *m, Value &&data) const {
 		if (auto l = makeLayer(m, tag, idx, move(it.second))) {
 			m->addLayer(move(l));
 		} else {
-			log::error("ModelProcessor", "Fail to load layer: ", tag);
+			log::source().error("ModelProcessor", "Fail to load layer: ", tag);
 			return false;
 		}
 	}

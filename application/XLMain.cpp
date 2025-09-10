@@ -20,7 +20,7 @@
  THE SOFTWARE.
  **/
 
-#include "SPCommon.h"
+#include "SPCommon.h" // IWYU pragma: keep
 #include "SPSharedModule.h"
 #include "SPLog.h"
 
@@ -39,11 +39,11 @@ int main(int argc, const char *argv[]) {
 	if (runFn) {
 		return runFn(argc, argv);
 	}
-	stappler::log::error("main",
+	stappler::log::source().error("main",
 			"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
 	return -1;
 #else
-	stappler::log::error("main",
+	stappler::log::source().error("main",
 			"MODULE_XENOLITH_APPLICATION is not defined for the default entry point");
 	return -1;
 #endif

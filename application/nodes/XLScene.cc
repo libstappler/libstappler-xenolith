@@ -34,7 +34,7 @@ static void Scene_findUnresolvedInputs(const memory::vector<core::AttachmentData
 	for (auto &it : queue) {
 		auto iit = resolved.find(it);
 		if (iit == resolved.end()) {
-			log::warn("Scene", "No input defined for attachment: ", it->key);
+			log::source().warn("Scene", "No input defined for attachment: ", it->key);
 		}
 	}
 }
@@ -111,7 +111,7 @@ void Scene::handleContentSizeDirty() {
 	updateContentNode(_content);
 
 #if DEBUG
-	log::info("Scene", "ContentSize: ", _contentSize, " density: ", _constraints.density);
+	log::source().info("Scene", "ContentSize: ", _contentSize, " density: ", _constraints.density);
 #endif
 }
 
@@ -137,7 +137,7 @@ void Scene::handlePresented(Director *dir) {
 		if (cache) {
 			cache->addResource(res);
 		} else {
-			log::error("Director", "ResourceCache is not loaded");
+			log::source().error("Director", "ResourceCache is not loaded");
 		}
 	}
 

@@ -122,7 +122,7 @@ void MacosContextController::handleContextDidStop() {
 void MacosContextController::handleContextWillStart() {
 	auto instance = loadInstance();
 	if (!instance) {
-		log::error("MacosContextController", "Fail to load gAPI instance");
+		log::source().error("MacosContextController", "Fail to load gAPI instance");
 		_resultCode = -1;
 		[_appDelegate terminate];
 		return;
@@ -187,8 +187,8 @@ Status MacosContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 			auto u = utTypes.emplace(mime.str<Interface>(), v).first;
 			targetTypes.emplace_back(u->first);
 		} else {
-			log::warn("MacosContextController", "Pasteboard type dublicate: ", mime, " for ",
-					v.UTF8String);
+			log::source().warn("MacosContextController", "Pasteboard type dublicate: ", mime,
+					" for ", v.UTF8String);
 		}
 	};
 
@@ -294,7 +294,7 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 	instance = core::Instance::create(move(instanceInfo));
 #else
-	log::error("LinuxContextController", "No available gAPI backends found");
+	log::source().error("LinuxContextController", "No available gAPI backends found");
 	_resultCode = -1;
 #endif
 	return instance;
@@ -420,12 +420,12 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillFinishLaunching");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillFinishLaunching");
 	_controller->handleContextWillStart();
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidFinishLaunching");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidFinishLaunching");
 	_controller->handleContextDidStart();
 
 	_pathMonitor = nw_path_monitor_create();
@@ -441,37 +441,37 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 }
 
 - (void)applicationWillHide:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillHide");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillHide");
 	_controller->handleContextWillStart();
 }
 
 - (void)applicationDidHide:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidHide");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidHide");
 }
 
 - (void)applicationWillUnhide:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillUnhide");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillUnhide");
 }
 
 - (void)applicationDidUnhide:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidUnhide");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidUnhide");
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillBecomeActive");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillBecomeActive");
 	_controller->handleContextWillResume();
 }
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidBecomeActive");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidBecomeActive");
 	_controller->handleContextDidResume();
 }
 - (void)applicationWillResignActive:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillResignActive");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillResignActive");
 	_controller->handleContextWillPause();
 }
 
 - (void)applicationDidResignActive:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidResignActive");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidResignActive");
 	_controller->handleContextDidPause();
 }
 
@@ -487,13 +487,13 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 		_pathMonitor = nullptr;
 	}
 
-	NSSP::log::debug("XLMacosAppDelegate", "applicationWillTerminate");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillTerminate");
 	_controller->applicationWillTerminate(_terminated);
 	self->_controller = nullptr;
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)notification {
-	NSSP::log::debug("XLMacosAppDelegate", "applicationDidChangeScreenParameters");
+	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidChangeScreenParameters");
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
@@ -550,13 +550,14 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 	auto data = _data->encodeCallback(tIt->second);
 
-	NSSP::log::debug("XLMacosPasteboardItem", "Write clipboard: ", tIt->second, " ", data.size());
+	NSSP::log::source().debug("XLMacosPasteboardItem", "Write clipboard: ", tIt->second, " ",
+			data.size());
 
 	[pasteboard setData:[[NSData alloc] initWithBytes:data.data() length:data.size()] forType:type];
 }
 
 - (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)pasteboard {
-	NSSP::log::debug("XLMacosPasteboardItem", "clear clipboard");
+	NSSP::log::source().debug("XLMacosPasteboardItem", "clear clipboard");
 	_data = nullptr;
 }
 

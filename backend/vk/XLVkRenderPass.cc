@@ -50,7 +50,7 @@ bool Framebuffer::init(Device &dev, RenderPass *renderPass,
 		_imageViews.emplace_back(it);
 
 		if (extent != it->getFramebufferExtent()) {
-			log::error("Framebuffer",
+			log::source().error("Framebuffer",
 					"Invalid extent for framebuffer image: ", it->getFramebufferExtent());
 			return false;
 		}
@@ -137,7 +137,7 @@ bool PipelineLayout::init(Device &dev, const core::PipelineLayoutData &data, uin
 			b.stageFlags = VkShaderStageFlags(binding->stages);
 			if (binding->type == core::DescriptorType::Sampler) {
 				// do nothing
-				log::warn("vk::RenderPass",
+				log::source().warn("vk::RenderPass",
 						"gl::DescriptorType::Sampler is not supported for descriptors");
 			} else {
 				incrementSize(VkDescriptorType(binding->type), binding->count);
@@ -592,10 +592,12 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 		auto flushArray = [&](uint32_t idx) {
 			if (idx != nextIdx) {
 				if (idx < nextIdx) {
-					log::warn("vk::RenderPass", "\"", _name, "\": descriptor [", set->idx, "][",
-							currentDescriptor, "] (", bindings.type,
-							"): enumerateDirtyDescriptors should return dirty indexes in "
-							"monotomically incremented order");
+					log::
+							source()
+									.warn("vk::RenderPass", "\"", _name, "\": descriptor [",
+											set->idx, "][", currentDescriptor, "] (", bindings.type,
+											"): enumerateDirtyDescriptors should return dirty "
+											"indexes in " "monotomically incremented order");
 				}
 
 				if (!hasFlag(bindings.flags, core::DescriptorFlags::PartiallyBound)
@@ -670,9 +672,13 @@ bool RenderPass::writeDescriptors(const QueuePassHandle &handle, DescriptorPool 
 					}
 				}
 			} else {
-				log::warn("vk::RenderPass", "\"", _name, "\": descriptor [", set->idx, "][", currentDescriptor, "] (",
-					bindings.type, "): DescriptorFlags::PartiallyBound is not available on device "
-					"but descriptor array was not fully bound: ", bindings.bound , " of ", bindings.size());
+				log::
+						source()
+								.warn("vk::RenderPass", "\"", _name, "\": descriptor [", set->idx,
+										"][", currentDescriptor, "] (", bindings.type,
+										"): DescriptorFlags::PartiallyBound is not available on "
+										"device " "but descriptor array was not fully bound: ",
+										bindings.bound, " of ", bindings.size());
 			}
 		}
 

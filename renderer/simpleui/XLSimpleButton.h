@@ -23,18 +23,36 @@
 #ifndef XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEBUTTON_H_
 #define XENOLITH_RENDERER_SIMPLEUI_XLSIMPLEBUTTON_H_
 
-#include "XLSimpleUiConfig.h"
+#include "XLSimpleUiConfig.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
+enum class InputNodeState : uint32_t {
+	None,
+
+	// Node is interactable by user. If not set - node should be completely inert.
+	Enabled = 1 << 0,
+
+	// Node has input focus and responds to keyboard events
+	Focused = 1 << 1,
+
+	// Node has mouse pointer over it or another way highlighted
+	Hovered = 1 << 2,
+
+	// Node is currently under user active interaction (active keyboard input or button pressed)
+	Activated = 1 << 3,
+};
+
+SP_DEFINE_ENUM_AS_MASK(InputNodeState)
+
 class Button : public Layer {
 public:
-	virtual ~Button() { }
+	virtual ~Button() = default;
 
 	bool init(Function<void()> &&);
 
 	void setEnabled(bool);
-	bool isEnabled() const { return _enabled; }
+	bool isEnabled() const { return hasFlag(_state, InputNodeState::Enabled); }
 
 	void setCallback(Function<void()> &&);
 
@@ -44,17 +62,17 @@ protected:
 	virtual void handleFocusEnter();
 	virtual void handleFocusLeave();
 	virtual void handleTouch();
-	virtual void updateEnabled();
+
+	virtual void updateState();
 
 	Function<void()> _callback;
 	InputListener *_listener = nullptr;
-	bool _focus = false;
-	bool _enabled = false;
+	InputNodeState _state = InputNodeState::Enabled;
 };
 
 class ButtonWithLabel : public Button {
 public:
-	virtual ~ButtonWithLabel() { }
+	virtual ~ButtonWithLabel() = default;
 
 	bool init(StringView, Function<void()> && = nullptr);
 

@@ -35,19 +35,21 @@ InputListenerStorage::InputListenerStorage(PoolRef *p) : PoolRef(p) {
 		_sceneEvents = new (_pool) memory::vector<Rec>;
 		_postSceneEvents = new (_pool) memory::vector<Rec>;
 
+		_focus = new (_pool) memory::map<FocusGroup *, memory::vector<Rec *>>;
+		_focus->set_memory_persistent(true);
+
 		_sceneEvents->reserve(256);
 	});
 }
 
 void InputListenerStorage::clear() {
-	for (auto &it : *_preSceneEvents) { it.listener->release(0); }
-	for (auto &it : *_sceneEvents) { it.listener->release(0); }
-	for (auto &it : *_postSceneEvents) { it.listener->release(0); }
-
-	_preSceneEvents->clear();
-	_sceneEvents->clear();
-	_postSceneEvents->clear();
-	_maxFocusValue = 0;
+	perform([&, this] {
+		_focus->clear();
+		_preSceneEvents->clear();
+		_sceneEvents->clear();
+		_postSceneEvents->clear();
+		_order = 0;
+	});
 }
 
 void InputListenerStorage::reserve(const InputListenerStorage *st) {
@@ -56,42 +58,82 @@ void InputListenerStorage::reserve(const InputListenerStorage *st) {
 	_postSceneEvents->reserve(st->_postSceneEvents->size());
 }
 
-void InputListenerStorage::addListener(InputListener *input, uint32_t focus, WindowLayer &&layer) {
-	input->retain();
-	auto p = input->getPriority();
-	if (p == 0) {
-		_sceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
-	} else if (p < 0) {
-		auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(),
-				Rec{input, focus}, [](const Rec &l, const Rec &r) {
-			return l.listener->getPriority() < r.listener->getPriority();
-		});
+void InputListenerStorage::addListener(NotNull<InputListener> input, FocusGroup *focus,
+		WindowLayer &&layer) {
+	perform([&, this] {
+		Rec *record = nullptr;
+		auto p = input->getPriority();
+		if (p == 0) {
+			record =
+					&_sceneEvents->emplace_back(Rec{input.get(), focus, sp::move(layer), ++_order});
+		} else if (p < 0) {
+			auto lb = std::lower_bound(_postSceneEvents->begin(), _postSceneEvents->end(),
+					Rec{input.get(), focus}, [](const Rec &l, const Rec &r) {
+				return l.listener->getPriority() < r.listener->getPriority();
+			});
 
-		if (lb == _postSceneEvents->end()) {
-			_postSceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
+			if (lb == _postSceneEvents->end()) {
+				record = &_postSceneEvents->emplace_back(
+						Rec{input.get(), focus, sp::move(layer), ++_order});
+			} else {
+				record = &*_postSceneEvents->emplace(lb,
+						Rec{input.get(), focus, sp::move(layer), ++_order});
+			}
 		} else {
-			_postSceneEvents->emplace(lb, Rec{input, focus, sp::move(layer)});
-		}
-	} else {
-		auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(),
-				Rec{input, focus}, [](const Rec &l, const Rec &r) {
-			return l.listener->getPriority() < r.listener->getPriority();
-		});
+			auto lb = std::lower_bound(_preSceneEvents->begin(), _preSceneEvents->end(),
+					Rec{input.get(), focus}, [](const Rec &l, const Rec &r) {
+				return l.listener->getPriority() < r.listener->getPriority();
+			});
 
-		if (lb == _preSceneEvents->end()) {
-			_preSceneEvents->emplace_back(Rec{input, focus, sp::move(layer)});
-		} else {
-			_preSceneEvents->emplace(lb, Rec{input, focus, sp::move(layer)});
+			if (lb == _preSceneEvents->end()) {
+				record = &_preSceneEvents->emplace_back(
+						Rec{input.get(), focus, sp::move(layer), ++_order});
+			} else {
+				record = &*_preSceneEvents->emplace(lb,
+						Rec{input.get(), focus, sp::move(layer), ++_order});
+			}
 		}
+		if (focus) {
+			auto it = _focus->find(focus);
+			if (it == _focus->end()) {
+				it = _focus->emplace(focus, memory::vector<Rec *>()).first;
+				it->second.reserve_block_optimal();
+			}
+			it->second.emplace_back(record);
+		}
+	});
+}
+
+void InputListenerStorage::sort() {
+	for (auto &it : *_focus) {
+		std::sort(it.second.begin(), it.second.end(), [](const Rec *l, const Rec *r) {
+			auto lp = l->listener->getPriority();
+			auto rp = r->listener->getPriority();
+			// у кого приоритет больше - идёт первым
+			if (lp > rp) {
+				return true;
+			} else if (lp < rp) {
+				return false;
+			} else {
+				// при равном приоритете раньше тот, кто добавлен позже
+				return l->order > r->order;
+			}
+		});
 	}
 }
 
-void InputListenerStorage::updateFocus(uint32_t focusValue) {
-	_maxFocusValue = max(focusValue, _maxFocusValue);
+SpanView<InputListenerStorage::Rec *> InputListenerStorage::getFocusGroupListener(
+		FocusGroup *group) const {
+	auto it = _focus->find(group);
+	if (it != _focus->end()) {
+		return it->second;
+	}
+	return SpanView<Rec *>();
 }
 
-bool InputDispatcher::init(PoolRef *pool) {
+bool InputDispatcher::init(PoolRef *pool, WindowState state) {
 	_pool = pool;
+	_windowState = state;
 	return true;
 }
 
@@ -118,13 +160,24 @@ void InputDispatcher::commitStorage(AppWindow *window, Rc<InputListenerStorage> 
 		_tmpEvents->clear();
 	}
 
+	// Sort focus groups
+	_events->sort();
+
+	_events->foreachFocusGroup(
+			[](NotNull<FocusGroup> group, SpanView<InputListenerStorage::Rec *> l) {
+		Vector<InputListener *> listeners;
+		for (auto &it : l) { listeners.emplace_back(it->listener); }
+		group->updateWithListeners(listeners);
+		return true;
+	}, nullptr);
+
 	Vector<WindowLayer> layers;
-	_events->foreach ([&](const InputListenerStorage::Rec &rec) {
+	_events->foreachListener([&](const InputListenerStorage::Rec &rec) {
 		if (rec.layer) {
 			layers.emplace_back(rec.layer);
 		}
 		return true;
-	}, false);
+	}, nullptr);
 
 	window->updateLayers(sp::move(layers));
 }
@@ -145,17 +198,12 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 								EventHandlersInfo{getEventInfo(event), Vector<Rc<InputListener>>()})
 						.first;
 		} else {
+			// Cancel event with same id
 			v->second.clear(true);
 			v->second.event = getEventInfo(event);
 		}
 
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(v->second.event)) {
-				v->second.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, true);
-
+		v->second.addListenersFromStorage(_events);
 		v->second.handle(true);
 		break;
 	}
@@ -182,13 +230,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		_pointerLocation = event.getLocation();
 
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, false);
-
+		handlers.addListenersFromStorage(_events);
 		handlers.handle(false);
 
 		for (auto &it : _activeEvents) {
@@ -205,26 +247,13 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 	}
 	case InputEventName::Scroll: {
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(handlers.event)) {
-				handlers.listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, false);
+		handlers.addListenersFromStorage(_events);
 		handlers.handle(false);
 		break;
 	}
 	case InputEventName::ScreenUpdate: {
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->getOwner()) {
-				if (l.listener->canHandleEvent(handlers.event)) {
-					handlers.listeners.emplace_back(l.listener);
-				}
-			}
-			return true;
-		}, false);
-
+		handlers.addListenersFromStorage(_events);
 		handlers.handle(false);
 
 		bool hasFocus = hasFlag(handlers.event.data.window.state, core::WindowState::Focused);
@@ -242,28 +271,15 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		break;
 	}
 	case InputEventName::WindowState: {
+		_windowState = event.window.state;
 		EventHandlersInfo handlers{getEventInfo(event)};
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->getOwner()) {
-				if (l.listener->canHandleEvent(handlers.event)) {
-					handlers.listeners.emplace_back(l.listener);
-				}
-			}
-			return true;
-		}, false);
-
+		handlers.addListenersFromStorage(_events);
 		handlers.handle(false);
 		break;
 	}
 	case InputEventName::KeyPressed: {
 		auto v = resetKey(event);
-
-		_events->foreach ([&](const InputListenerStorage::Rec &l) {
-			if (l.listener->canHandleEvent(v->event)) {
-				v->listeners.emplace_back(l.listener);
-			}
-			return true;
-		}, true);
+		v->addListenersFromStorage(_events);
 		v->handle(true);
 		break;
 	}
@@ -351,7 +367,7 @@ void InputDispatcher::EventHandlersInfo::handle(bool removeOnFail) {
 		for (auto &it : vec) {
 			processed.emplace_back(it.get());
 			auto res = it->handleEvent(event);
-			if (res == InputEventState::Captured && !exclusive && it->shouldSwallowEvent(event)) {
+			if (res == InputEventState::Captured && !exclusive) {
 				setExclusive(it);
 			}
 
@@ -389,6 +405,7 @@ void InputDispatcher::EventHandlersInfo::clear(bool cancel) {
 
 	listeners.clear();
 	exclusive = nullptr;
+	exclusiveGroup = nullptr;
 }
 
 void InputDispatcher::EventHandlersInfo::setExclusive(const InputListener *l) {
@@ -408,6 +425,42 @@ void InputDispatcher::EventHandlersInfo::setExclusive(const InputListener *l) {
 			}
 		}
 		listeners.clear();
+	}
+}
+
+void InputDispatcher::EventHandlersInfo::addListenersFromStorage(
+		NotNull<InputListenerStorage> storage) {
+	storage->foreachListener([&](const InputListenerStorage::Rec &l) {
+		if (l.listener->getOwner() && l.listener->canHandleEvent(event)) {
+			if (l.focus && l.focus->canHandleEvent(event)) {
+				if (hasFlag(l.focus->getFlags(), FocusGroup::Flags::Exclusive)) {
+					// stop iteration, clear listeners, then use listeners from exclusive focus group
+					if (!exclusiveGroup || l.focus->getPriority() > exclusiveGroup->getPriority()
+							|| (l.focus->getPriority() <= exclusiveGroup->getPriority()
+									&& l.focus->isParentGroup(exclusiveGroup))) {
+						exclusiveGroup = l.focus;
+					}
+				} else if (!exclusiveGroup
+						&& l.focus->canHandleEventWithListener(event, l.listener)) {
+					listeners.emplace_back(l.listener);
+				}
+			} else if (!exclusiveGroup) {
+				listeners.emplace_back(l.listener);
+			}
+		}
+		return true;
+	}, nullptr);
+
+	if (exclusiveGroup) {
+		listeners.clear();
+		storage->foreachListener([&](const InputListenerStorage::Rec &l) {
+			if (l.listener->getOwner() && l.listener->canHandleEvent(event)) {
+				if (!l.focus || l.focus->canHandleEventWithListener(event, l.listener)) {
+					listeners.emplace_back(l.listener);
+				}
+			}
+			return true;
+		}, exclusiveGroup);
 	}
 }
 

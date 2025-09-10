@@ -106,7 +106,8 @@ bool FrameQueue::setup() {
 			auto &last = it.first->passes.back();
 			it.second.final = last->dependency.requiredRenderPassState;
 		} else {
-			log::error("FrameQueue", "Attachment ", it.first->key, " not attached to any pass");
+			log::source().error("FrameQueue", "Attachment ", it.first->key,
+					" not attached to any pass");
 		}
 	}
 
@@ -323,7 +324,7 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 			attachment.handle->getAttachment()->acquireInput(*this, *attachment.handle,
 					[this, guard = Rc<FrameQueue>(this), attachment = &attachment](bool success) {
 				if (!success) {
-					log::warn("FrameQueue", "Fail to acquire input for attachment: ",
+					log::source().warn("FrameQueue", "Fail to acquire input for attachment: ",
 							attachment->handle->getName());
 				}
 				_loop->performOnThread([this, attachment, success] {
@@ -377,7 +378,7 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 			}
 			attachment.image = _loop->acquireImage(img, attachment.handle.get(), attachment.info);
 			if (!attachment.image) {
-				log::warn("FrameQueue", "Fail to acquire image for attachment ",
+				log::source().warn("FrameQueue", "Fail to acquire image for attachment ",
 						attachment.handle->getName());
 				invalidate(attachment);
 				return;
@@ -401,7 +402,7 @@ void FrameQueue::onAttachmentAcquire(FrameAttachmentData &attachment) {
 		if (isResourcePending(attachment)) {
 			waitForResource(attachment, [this, attachment = &attachment](bool success) {
 				if (!success) {
-					log::warn("FrameQueue",
+					log::source().warn("FrameQueue",
 							"Waiting on attachment failed: ", attachment->handle->getName());
 					invalidate();
 					return;
@@ -624,7 +625,7 @@ void FrameQueue::onRenderPassReady(FramePassData &data) {
 			auto it = imageViews.begin();
 			while (it != imageViews.end()) {
 				if ((*it)->getFramebufferExtent() != extent) {
-					log::warn("FrameQueue", "Invalid extent for framebuffer image: ",
+					log::source().warn("FrameQueue", "Invalid extent for framebuffer image: ",
 							(*it)->getFramebufferExtent());
 					it = imageViews.erase(it);
 				} else {
@@ -635,7 +636,7 @@ void FrameQueue::onRenderPassReady(FramePassData &data) {
 			if (data.handle->isFramebufferRequired()) {
 				data.framebuffer = _loop->acquireFramebuffer(data.handle->getData(), imageViews);
 				if (!data.framebuffer) {
-					log::warn("FrameQueue", "Fail to acquire framebuffer");
+					log::source().warn("FrameQueue", "Fail to acquire framebuffer");
 					invalidate();
 				}
 				_autorelease.emplace_front(data.framebuffer);
@@ -701,7 +702,8 @@ void FrameQueue::onRenderPassResourcesAcquired(FramePassData &data) {
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Prepared);
 			} else {
-				log::warn("FrameQueue", "Fail to prepare render pass: ", data->handle->getName());
+				log::source().warn("FrameQueue",
+						"Fail to prepare render pass: ", data->handle->getName());
 				invalidate(*data);
 			}
 		}, guard, true);
@@ -737,7 +739,8 @@ void FrameQueue::onRenderPassSubmission(FramePassData &data) {
 				updateRenderPassState(*data, FrameRenderPassState::Submitted);
 			} else {
 				data->waitForResult = false;
-				log::warn("FrameQueue", "Fail to submit render pass: ", data->handle->getName());
+				log::source().warn("FrameQueue",
+						"Fail to submit render pass: ", data->handle->getName());
 				invalidate(*data);
 			}
 		}, guard, true);
@@ -747,7 +750,7 @@ void FrameQueue::onRenderPassSubmission(FramePassData &data) {
 			if (success && !_finalized) {
 				updateRenderPassState(*data, FrameRenderPassState::Complete);
 			} else {
-				log::warn("FrameQueue", "Render pass operation completed unsuccessfully: ",
+				log::source().warn("FrameQueue", "Render pass operation completed unsuccessfully: ",
 						data->handle->getName());
 				invalidate(*data);
 			}

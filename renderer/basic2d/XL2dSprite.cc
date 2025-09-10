@@ -222,8 +222,8 @@ void Sprite::draw(FrameInfo &frame, NodeVisitFlags flags) {
 			_materialId = frame.currentContext->context->acquireMaterial(_pipelineFamily, info,
 					getMaterialImages(), nullptr, isMaterialRevokable());
 			if (_materialId == 0) {
-				log::warn("Sprite", "Material for sprite with texture '", _texture->getName(),
-						"' not found");
+				log::source().warn("Sprite", "Material for sprite with texture '",
+						_texture->getName(), "' not found");
 			}
 		}
 		_materialDirty = false;

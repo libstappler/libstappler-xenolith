@@ -80,7 +80,7 @@ Rc<core::BufferObject> MaterialAttachment::allocateMaterialPersistentBuffer(
 	Rc<Buffer> buf;
 	auto lastPass = getLastRenderPass();
 	if (!lastPass) {
-		log::warn("MaterialAttachment", "Attachment '", _data->key,
+		log::source().warn("MaterialAttachment", "Attachment '", _data->key,
 				"' was not attached to any RenderPass");
 		buf = _pool->spawn(AllocationUsage::DeviceLocal,
 				BufferInfo(core::BufferUsage::ShaderDeviceAddress, getMaterialSize(m)));

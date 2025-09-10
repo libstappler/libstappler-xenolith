@@ -63,7 +63,8 @@ void FrameContext2d::onEnter(Scene *scene) {
 	FrameContext::onEnter(scene);
 	if (!_init || _queue) {
 		if (!initWithQueue(_queue)) {
-			log::error("FrameContext2d", "Fail to initialize with queue: ", _queue->getName());
+			log::source().error("FrameContext2d",
+					"Fail to initialize with queue: ", _queue->getName());
 		}
 	}
 }

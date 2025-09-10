@@ -757,8 +757,8 @@ String BufferInfo::description() const {
 
 size_t BufferData::writeData(uint8_t *mem, size_t expected) const {
 	if (size > expected) {
-		log::error("core::BufferData", "Not enoudh space for buffer: ", size, " required, ",
-				expected, " allocated");
+		log::source().error("core::BufferData", "Not enoudh space for buffer: ", size,
+				" required, ", expected, " allocated");
 		return 0;
 	}
 
@@ -833,8 +833,8 @@ size_t ImageData::writeData(uint8_t *mem, size_t expected) const {
 	uint64_t expectedSize = getFormatBlockSize(format) * extent.width * extent.height * extent.depth
 			* arrayLayers.get();
 	if (expectedSize > expected) {
-		log::error("core::ImageData", "Not enoudh space for image: ", expectedSize, " required, ",
-				expected, " allocated");
+		log::source().error("core::ImageData", "Not enoudh space for image: ", expectedSize,
+				" required, ", expected, " allocated");
 		return 0;
 	}
 
@@ -1062,47 +1062,47 @@ String SwapchainConfig::description() const {
 bool SurfaceInfo::isSupported(const SwapchainConfig &cfg) const {
 	if (std::find(presentModes.begin(), presentModes.end(), cfg.presentMode)
 			== presentModes.end()) {
-		log::error("Vk-Error", "SurfaceInfo: presentMode is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: presentMode is not supported");
 		return false;
 	}
 
 	if (cfg.presentModeFast != PresentMode::Unsupported
 			&& std::find(presentModes.begin(), presentModes.end(), cfg.presentModeFast)
 					== presentModes.end()) {
-		log::error("Vk-Error", "SurfaceInfo: presentModeFast is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: presentModeFast is not supported");
 		return false;
 	}
 
 	if (std::find(formats.begin(), formats.end(), pair(cfg.imageFormat, cfg.colorSpace))
 			== formats.end()) {
-		log::error("Vk-Error", "SurfaceInfo: imageFormat or colorSpace is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: imageFormat or colorSpace is not supported");
 		return false;
 	}
 
 	if ((supportedCompositeAlpha & cfg.alpha) == CompositeAlphaFlags::None) {
-		log::error("Vk-Error", "SurfaceInfo: alpha is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: alpha is not supported");
 		return false;
 	}
 
 	if ((supportedTransforms & cfg.transform) == SurfaceTransformFlags::None) {
-		log::error("Vk-Error", "SurfaceInfo: transform is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: transform is not supported");
 		return false;
 	}
 
 	if (cfg.imageCount < minImageCount || (maxImageCount != 0 && cfg.imageCount > maxImageCount)) {
-		log::error("Vk-Error", "SurfaceInfo: imageCount is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: imageCount is not supported");
 		return false;
 	}
 
 	if (cfg.extent.width < minImageExtent.width || cfg.extent.width > maxImageExtent.width
 			|| cfg.extent.height < minImageExtent.height
 			|| cfg.extent.height > maxImageExtent.height) {
-		log::error("Vk-Error", "SurfaceInfo: extent is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: extent is not supported");
 		return false;
 	}
 
 	if (cfg.transfer && (supportedUsageFlags & ImageUsage::TransferDst) == ImageUsage::None) {
-		log::error("Vk-Error", "SurfaceInfo: supportedUsageFlags is not supported");
+		log::source().error("Vk-Error", "SurfaceInfo: supportedUsageFlags is not supported");
 		return false;
 	}
 

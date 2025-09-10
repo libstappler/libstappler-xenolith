@@ -31,6 +31,20 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+// Component to store additional Node's data (to reduce Node's memory footprint)
+// Most nodes does not need this data to be stored within it
+//
+// When you use setTag, setName or setValue, this component will be added into Node
+struct NodeData {
+	static ComponentId Id;
+
+	uint64_t tag = InvalidTag;
+	String name;
+	Value value;
+};
+
+ComponentId NodeData::Id;
+
 void ActionStorage::addAction(Rc<Action> &&a) { actionToStart.emplace_back(move(a)); }
 
 void ActionStorage::removeAction(Action *a) {
@@ -341,10 +355,10 @@ void Node::setRotation(const Quaternion &quat) {
 	_transformInverseDirty = _transformCacheDirty = _transformDirty = true;
 }
 
-void Node::addChildNode(Node *child) { addChildNode(child, child->_zOrder, child->_tag); }
+void Node::addChildNode(Node *child) { addChildNode(child, child->_zOrder, InvalidTag); }
 
 void Node::addChildNode(Node *child, ZOrder localZOrder) {
-	addChildNode(child, localZOrder, child->_tag);
+	addChildNode(child, localZOrder, InvalidTag);
 }
 
 void Node::addChildNode(Node *child, ZOrder localZOrder, uint64_t tag) {
@@ -382,7 +396,7 @@ void Node::addChildNode(Node *child, ZOrder localZOrder, uint64_t tag) {
 Node *Node::getChildByTag(uint64_t tag) const {
 	XLASSERT(tag != InvalidTag, "Invalid tag");
 	for (const auto &child : _children) {
-		if (child && child->_tag == tag) {
+		if (child && child->getTag() == tag) {
 			return child;
 		}
 	}
@@ -430,7 +444,7 @@ void Node::removeChildByTag(uint64_t tag, bool cleanup) {
 
 	Node *child = this->getChildByTag(tag);
 	if (child == nullptr) {
-		log::warn("Node", "removeChildByTag(tag = ", tag, "): child not found!");
+		log::source().warn("Node", "removeChildByTag(tag = ", tag, "): child not found!");
 	} else {
 		this->removeChild(child, cleanup);
 	}
@@ -545,7 +559,54 @@ size_t Node::getNumberOfRunningActions() const {
 	return 0;
 }
 
-void Node::setTag(uint64_t tag) { _tag = tag; }
+StringView Node::getName() const {
+	if (auto d = getComponent<NodeData>()) {
+		return d->name;
+	}
+	return StringView();
+}
+
+void Node::setName(StringView str) {
+	setOrUpdateComponent<NodeData>([&](NodeData *data) {
+		if (data->name != str) {
+			data->name = str.str<Interface>();
+			return true;
+		}
+		return false;
+	});
+}
+
+const Value &Node::getDataValue() const {
+	if (auto d = getComponent<NodeData>()) {
+		return d->value;
+	}
+	return Value::Null;
+}
+
+void Node::setDataValue(Value &&val) {
+	setOrUpdateComponent<NodeData>([&](NodeData *data) {
+		data->value = sp::move(val);
+		return true;
+	});
+}
+
+uint64_t Node::getTag() const {
+	if (auto d = getComponent<NodeData>()) {
+		return d->tag;
+	}
+	return InvalidTag;
+}
+
+void Node::setTag(uint64_t tag) {
+	setOrUpdateComponent<NodeData>([&](NodeData *data) {
+		if (data->tag != tag) {
+			data->tag = tag;
+			return true;
+		}
+		return false;
+	});
+}
+
 
 void Node::setEventFlags(NodeEventFlags flags) { _eventFlags = flags; }
 
@@ -674,10 +735,6 @@ void Node::handleEnter(Scene *scene) {
 		}
 	}
 
-	if (_enterCallback) {
-		_enterCallback(scene);
-	}
-
 	auto tmSystems = _systems;
 	for (auto &it : tmSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleSceneEvents)) {
@@ -717,10 +774,6 @@ void Node::handleExit() {
 		}
 	}
 
-	if (_exitCallback) {
-		_exitCallback();
-	}
-
 	if (_frameContext && _parent && _parent->getFrameContext() != _frameContext) {
 		_frameContext->onExit();
 	} else {
@@ -735,10 +788,6 @@ void Node::handleExit() {
 }
 
 void Node::handleContentSizeDirty() {
-	if (_contentSizeDirtyCallback) {
-		_contentSizeDirtyCallback();
-	}
-
 	auto tmpSystems = _systems;
 	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
@@ -751,10 +800,6 @@ void Node::handleContentSizeDirty() {
 }
 
 void Node::handleComponentsDirty() {
-	if (_componentsDirtyCallback) {
-		_componentsDirtyCallback();
-	}
-
 	auto tmpSystems = _systems;
 	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleComponents)) {
@@ -764,10 +809,6 @@ void Node::handleComponentsDirty() {
 }
 
 void Node::handleTransformDirty(const Mat4 &parentTransform) {
-	if (_transformDirtyCallback) {
-		_transformDirtyCallback(parentTransform);
-	}
-
 	auto tmpSystems = _systems;
 	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
@@ -797,10 +838,6 @@ void Node::handleGlobalTransformDirty(const Mat4 &parentTransform) {
 }
 
 void Node::handleReorderChildDirty() {
-	if (_reorderChildDirtyCallback) {
-		_reorderChildDirtyCallback();
-	}
-
 	auto tmpSystems = _systems;
 	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
@@ -810,10 +847,6 @@ void Node::handleReorderChildDirty() {
 }
 
 void Node::handleLayout(Node *parent) {
-	if (_layoutCallback) {
-		_layoutCallback(parent);
-	}
-
 	auto tmpSystems = _systems;
 	for (auto &it : tmpSystems) {
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleNodeEvents)) {
@@ -1167,27 +1200,39 @@ bool Node::isTouchedNodeSpace(const Vec2 &point, float padding) {
 	}
 }
 
-void Node::setEnterCallback(Function<void(Scene *)> &&cb) { _enterCallback = sp::move(cb); }
+void Node::setEnterCallback(Function<void(Scene *)> &&cb) {
+	makeDefaultCallbackSystem()->setEnterCallback(
+			[cb = sp::move(cb)](CallbackSystem *, Scene *scene) { cb(scene); });
+}
 
-void Node::setExitCallback(Function<void()> &&cb) { _exitCallback = sp::move(cb); }
+void Node::setExitCallback(Function<void()> &&cb) {
+	makeDefaultCallbackSystem()->setExitCallback([cb = sp::move(cb)](CallbackSystem *) { cb(); });
+}
 
 void Node::setContentSizeDirtyCallback(Function<void()> &&cb) {
-	_contentSizeDirtyCallback = sp::move(cb);
+	makeDefaultCallbackSystem()->setContentSizeDirtyCallback(
+			[cb = sp::move(cb)](CallbackSystem *) { cb(); });
 }
 
 void Node::setComponentsDirtyCallback(Function<void()> &&cb) {
-	_componentsDirtyCallback = sp::move(cb);
+	makeDefaultCallbackSystem()->setComponentsDirtyCallback(
+			[cb = sp::move(cb)](CallbackSystem *) { cb(); });
 }
 
 void Node::setTransformDirtyCallback(Function<void(const Mat4 &)> &&cb) {
-	_transformDirtyCallback = sp::move(cb);
+	makeDefaultCallbackSystem()->setTransformDirtyCallback(
+			[cb = sp::move(cb)](CallbackSystem *, const Mat4 &m) { cb(m); });
 }
 
 void Node::setReorderChildDirtyCallback(Function<void()> &&cb) {
-	_reorderChildDirtyCallback = sp::move(cb);
+	makeDefaultCallbackSystem()->setReorderChildDirtyCallback(
+			[cb = sp::move(cb)](CallbackSystem *) { cb(); });
 }
 
-void Node::setLayoutCallback(Function<void(Node *)> &&cb) { _layoutCallback = sp::move(cb); }
+void Node::setLayoutCallback(Function<void(Node *)> &&cb) {
+	makeDefaultCallbackSystem()->setLayoutCallback(
+			[cb = sp::move(cb)](CallbackSystem *, Node *node) { cb(node); });
+}
 
 Mat4 Node::transform(const Mat4 &parentTransform) {
 	return parentTransform * this->getNodeToParentTransform();
@@ -1269,9 +1314,6 @@ bool Node::wrapVisit(FrameInfo &info, NodeVisitFlags parentFlags, const VisitInf
 		return false;
 	}
 
-	auto focus = _focus;
-	info.focusValue += focus;
-
 	auto order = getLocalZOrder();
 
 	bool visibleByCamera = true;
@@ -1288,7 +1330,8 @@ bool Node::wrapVisit(FrameInfo &info, NodeVisitFlags parentFlags, const VisitInf
 	memory::vector< memory::vector<Rc<System>> * > systems;
 
 	for (auto &it : _systems) {
-		if (it->isEnabled() && it->getFrameTag() != InvalidTag) {
+		if (it->isEnabled() && hasFlag(it->getSystemFlags(), SystemFlags::AddToFrameStack)
+				&& it->getFrameTag() != InvalidTag) {
 			systems.emplace_back(info.pushSystem(it));
 		}
 		if (hasFlag(it->getSystemFlags(), SystemFlags::HandleVisitControl)) {
@@ -1371,9 +1414,16 @@ bool Node::wrapVisit(FrameInfo &info, NodeVisitFlags parentFlags, const VisitInf
 		info.popContext();
 	}
 
-	info.focusValue -= focus;
-
 	return true;
+}
+
+CallbackSystem *Node::makeDefaultCallbackSystem() {
+	auto system = getSystemByType<CallbackSystem>(DefaultCallbackSystemTag);
+	if (!system) {
+		system = addSystem(Rc<CallbackSystem>::create());
+		system->setFrameTag(DefaultCallbackSystemTag);
+	}
+	return system;
 }
 
 float Node::getMaxDepthIndex() const {
@@ -1385,15 +1435,5 @@ float Node::getMaxDepthIndex() const {
 	}
 	return val;
 }
-
-void Node::retainFocus() { ++_focus; }
-
-void Node::releaseFocus() {
-	if (_focus > 0) {
-		--_focus;
-	}
-}
-
-void Node::clearFocus() { _focus = 0; }
 
 } // namespace stappler::xenolith

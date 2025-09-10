@@ -21,8 +21,6 @@
  **/
 
 #include "XLLinuxWaylandProtocol.h"
-#include "SPLog.h"
-#include "XLContextInfo.h"
 #include "XLLinuxWaylandLibrary.h"
 #include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h"
 
@@ -585,6 +583,32 @@ static int createAnonymousFile(off_t size) {
 	return fd;
 }
 
+template <typename T>
+struct SharedSuballocation {
+	T *data = nullptr;
+	uint32_t offset = 0; // in bytes
+	uint32_t size = 0; // in bytes
+};
+
+struct SharedDataBlock {
+	uint8_t *data = nullptr;
+	uint32_t size = 0;
+	uint32_t offset = 0;
+
+	template <typename T>
+	SharedSuballocation<T> allocate(uint32_t allocSize) {
+		uint32_t totalSize = allocSize * sizeof(T);
+		if (offset + totalSize <= size) {
+			auto ret = data + offset;
+			auto off = offset;
+			offset += totalSize;
+			return SharedSuballocation<T>{reinterpret_cast<T *>(ret), off, totalSize};
+		}
+		log::source().error("Wayland", "Fail to suballocate shared memory for decorations");
+		return SharedSuballocation<T>{nullptr};
+	}
+};
+
 bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &info) {
 	auto size = info.width * sizeof(Color4B) * 8; // plain shadows
 	size += (info.width + info.inset) * (info.width + info.inset) * sizeof(Color4B)
@@ -600,6 +624,7 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 		uint32_t height = 0;
 		BytesView data;
 	};
+
 
 	Vector<IconData> icons;
 
@@ -633,216 +658,191 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 		return false;
 	}
 
-	auto data = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (data == MAP_FAILED) {
+	auto sharedMemData = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (sharedMemData == MAP_FAILED) {
 		::close(fd);
 		return false;
 	}
 
+	SharedDataBlock data{reinterpret_cast<uint8_t *>(sharedMemData), static_cast<uint32_t>(size)};
+
 	auto pool = wayland->wl_shm_create_pool(shm, fd, size);
 	::close(fd);
 
-	auto retA = (Color4B *)data;
-	auto retB = (Color4B *)data + info.width * 4;
+	auto bufferTopLeftInactive = data.allocate<Color4B>(info.width);
+	auto bufferBottomRightInactive = data.allocate<Color4B>(info.width);
+	auto bufferTopLeftActive = data.allocate<Color4B>(info.width);
+	auto bufferBottomRightActive = data.allocate<Color4B>(info.width);
 
 	makeShadowVector([&](uint32_t j, float value) {
-		retA[j].a = (uint8_t)(24.0f * value);
-		retA[j].a = (uint8_t)(64.0f * value);
+		bufferTopLeftInactive.data[j].a = (uint8_t)(255.0 * info.shadowMin * value);
+		bufferTopLeftActive.data[j].a = (uint8_t)(255.0 * info.shadowMax * value);
 	}, info.width);
 
 	// make normal
-	::memcpy(retA + info.width * 2, retA, info.width * sizeof(Color4B));
-	::memcpy(retA + info.width * 3, retA, info.width * sizeof(Color4B));
-	std::reverse(retA, retA + info.width);
-	::memcpy(retA + info.width * 1, retA, info.width * sizeof(Color4B));
+	::memcpy(bufferBottomRightInactive.data, bufferTopLeftInactive.data,
+			bufferTopLeftInactive.size);
+	std::reverse(bufferTopLeftInactive.data, bufferTopLeftInactive.data + info.width);
 
-	// make active
-	::memcpy(retB + info.width * 2, retB, info.width * sizeof(Color4B));
-	::memcpy(retB + info.width * 3, retB, info.width * sizeof(Color4B));
-	std::reverse(retB, retB + info.width);
-	::memcpy(retB + info.width * 1, retB, info.width * sizeof(Color4B));
+	::memcpy(bufferBottomRightActive.data, bufferTopLeftActive.data, bufferTopLeftActive.size);
+	std::reverse(bufferTopLeftActive.data, bufferTopLeftActive.data + info.width);
 
-	info.ret->top = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 0, 1,
+	info.ret->top = Rc<WaylandBuffer>::create(wayland, pool, bufferTopLeftInactive.offset, 1,
 			info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->left = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 0,
+	info.ret->left = Rc<WaylandBuffer>::create(wayland, pool, bufferTopLeftInactive.offset,
 			info.width, 1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->bottom = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 2, 1,
+	info.ret->bottom = Rc<WaylandBuffer>::create(wayland, pool, bufferBottomRightInactive.offset, 1,
 			info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->right = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 2,
+	info.ret->right = Rc<WaylandBuffer>::create(wayland, pool, bufferBottomRightInactive.offset,
 			info.width, 1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->topActive = Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 4,
-			1, info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->leftActive =
-			Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 4, info.width,
-					1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->bottomActive =
-			Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 6, 1,
-					info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->rightActive =
-			Rc<WaylandBuffer>::create(wayland, pool, info.width * sizeof(Color4B) * 6, info.width,
-					1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
-	auto offset = info.width * 8 * sizeof(Color4B);
-	retA = (Color4B *)data + info.width * 8;
-	info.width += info.inset;
-	retB = retA + info.width * info.width * 4;
+	info.ret->topActive = Rc<WaylandBuffer>::create(wayland, pool, bufferTopLeftActive.offset, 1,
+			info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+	info.ret->leftActive = Rc<WaylandBuffer>::create(wayland, pool, bufferTopLeftActive.offset,
+			info.width, 1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+	info.ret->bottomActive = Rc<WaylandBuffer>::create(wayland, pool,
+			bufferBottomRightActive.offset, 1, info.width, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+	info.ret->rightActive = Rc<WaylandBuffer>::create(wayland, pool, bufferBottomRightActive.offset,
+			info.width, 1, info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	do {
-		auto targetA = retA;
-		auto targetB = retA + info.width * info.width;
-		auto targetC = retA + info.width * info.width * 2;
-		auto targetD = retA + info.width * info.width * 3;
-		auto targetE = retB;
-		auto targetF = retB + info.width * info.width;
-		auto targetG = retB + info.width * info.width * 2;
-		auto targetH = retB + info.width * info.width * 3;
+		auto cWidth = (info.width + info.inset);
+
+		auto targetA = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetB = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetC = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetD = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetE = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetF = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetG = data.allocate<Color4B>(cWidth * cWidth);
+		auto targetH = data.allocate<Color4B>(cWidth * cWidth);
 
 		makeShadowCorner([&](uint32_t i, uint32_t j, float value) {
-			auto valueA = (uint8_t)(24.0f * value);
-			auto valueB = (uint8_t)(64.0f * value);
-			targetA[i * info.width + j].a = valueA;
-			targetB[(info.width - i - 1) * info.width + (info.width - j - 1)].a = valueA;
-			targetC[(i)*info.width + (info.width - j - 1)].a = valueA;
-			targetD[(info.width - i - 1) * info.width + (j)].a = valueA;
-			targetE[i * info.width + j].a = valueB;
-			targetF[(info.width - i - 1) * info.width + (info.width - j - 1)].a = valueB;
-			targetG[(i)*info.width + (info.width - j - 1)].a = valueB;
-			targetH[(info.width - i - 1) * info.width + (j)].a = valueB;
-		}, info.width, info.inset);
+			auto valueA = (uint8_t)(255.0 * info.shadowMin * value);
+			auto valueB = (uint8_t)(255.0 * info.shadowMax * value);
+			targetA.data[i * cWidth + j].a = valueA;
+			targetB.data[(cWidth - i - 1) * cWidth + (cWidth - j - 1)].a = valueA;
+			targetC.data[(i)*cWidth + (cWidth - j - 1)].a = valueA;
+			targetD.data[(cWidth - i - 1) * cWidth + (j)].a = valueA;
+			targetE.data[i * cWidth + j].a = valueB;
+			targetF.data[(cWidth - i - 1) * cWidth + (cWidth - j - 1)].a = valueB;
+			targetG.data[(i)*cWidth + (cWidth - j - 1)].a = valueB;
+			targetH.data[(cWidth - i - 1) * cWidth + (j)].a = valueB;
+		}, cWidth, info.inset);
+
+		info.ret->bottomRight = Rc<WaylandBuffer>::create(wayland, pool, targetA.offset, cWidth,
+				cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->topLeft = Rc<WaylandBuffer>::create(wayland, pool, targetB.offset, cWidth, cWidth,
+				cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->bottomLeft = Rc<WaylandBuffer>::create(wayland, pool, targetC.offset, cWidth,
+				cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->topRight = Rc<WaylandBuffer>::create(wayland, pool, targetD.offset, cWidth,
+				cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->bottomRightActive = Rc<WaylandBuffer>::create(wayland, pool, targetE.offset,
+				cWidth, cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->topLeftActive = Rc<WaylandBuffer>::create(wayland, pool, targetF.offset, cWidth,
+				cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->bottomLeftActive = Rc<WaylandBuffer>::create(wayland, pool, targetG.offset,
+				cWidth, cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->topRightActive = Rc<WaylandBuffer>::create(wayland, pool, targetH.offset, cWidth,
+				cWidth, cWidth * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 	} while (0);
 
-	info.ret->bottomRight = Rc<WaylandBuffer>::create(wayland, pool, offset, info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->topLeft = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->bottomLeft = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 2 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->topRight = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 3 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->bottomRightActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 4 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->topLeftActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 5 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->bottomLeftActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 6 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->topRightActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.width * info.width * 7 * sizeof(Color4B), info.width, info.width,
-			info.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-
-	offset += info.width * info.width * 8 * sizeof(Color4B);
-	retA = (Color4B *)((uint8_t *)data + offset);
-
 	do {
-		auto targetA = retA;
-		auto targetB = retA + info.inset * info.inset * 1;
-		auto targetC = retA + info.inset * info.inset * 2;
-		auto targetD = retA + info.inset * info.inset * 3;
+		auto targetA = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetB = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetC = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetD = data.allocate<Color4B>(info.inset * info.inset);
 
 		Color4B tmpA = Color4B(info.headerLight, 255);
 		Color4B tmpB = Color4B(info.headerLightActive, 255);
 
 		makeRoundedCorners([&](uint32_t i, uint32_t j, float value) {
 			if (value > 0.0f) {
-				targetA[i * info.inset + j] = tmpA;
-				targetB[i * info.inset + j] = tmpB;
-				targetC[i * info.inset + (info.inset - j - 1)] = tmpA;
-				targetD[i * info.inset + (info.inset - j - 1)] = tmpB;
+				targetA.data[i * info.inset + j] = tmpA;
+				targetB.data[i * info.inset + j] = tmpB;
+				targetC.data[i * info.inset + (info.inset - j - 1)] = tmpA;
+				targetD.data[i * info.inset + (info.inset - j - 1)] = tmpB;
 			} else {
-				targetA[i * size + j] = Color4B(0, 0, 0, 0);
-				targetB[i * size + j] = Color4B(0, 0, 0, 0);
-				targetC[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
-				targetD[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+				targetA.data[i * info.inset + j] = Color4B(0, 0, 0, 0);
+				targetB.data[i * info.inset + j] = Color4B(0, 0, 0, 0);
+				targetC.data[i * info.inset + (info.inset - j - 1)] = Color4B(0, 0, 0, 0);
+				targetD.data[i * info.inset + (info.inset - j - 1)] = Color4B(0, 0, 0, 0);
 			}
 		}, info.inset);
+
+		info.ret->headerLeft = Rc<WaylandBuffer>::create(wayland, pool, targetA.offset, info.inset,
+				info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerLeftActive = Rc<WaylandBuffer>::create(wayland, pool, targetB.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerRight = Rc<WaylandBuffer>::create(wayland, pool, targetC.offset, info.inset,
+				info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerRightActive = Rc<WaylandBuffer>::create(wayland, pool, targetD.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 	} while (0);
 
-	info.ret->headerLeft = Rc<WaylandBuffer>::create(wayland, pool, offset, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerLeftActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 1, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerRight = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 2, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerRightActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 3, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-
-	offset += info.inset * info.inset * sizeof(Color4B) * 4;
-	retA = (Color4B *)((uint8_t *)data + offset);
-
 	do {
-		auto targetA = retA;
-		auto targetB = retA + info.inset * info.inset * 1;
-		auto targetC = retA + info.inset * info.inset * 2;
-		auto targetD = retA + info.inset * info.inset * 3;
+		auto targetA = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetB = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetC = data.allocate<Color4B>(info.inset * info.inset);
+		auto targetD = data.allocate<Color4B>(info.inset * info.inset);
 
 		Color4B tmpA = Color4B(info.headerDark, 255);
 		Color4B tmpB = Color4B(info.headerDarkActive, 255);
 
 		makeRoundedCorners([&](uint32_t i, uint32_t j, float value) {
 			if (value > 0.0f) {
-				targetA[i * info.inset + j] = tmpA;
-				targetB[i * info.inset + j] = tmpB;
-				targetC[i * info.inset + (info.inset - j - 1)] = tmpA;
-				targetD[i * info.inset + (info.inset - j - 1)] = tmpB;
+				targetA.data[i * info.inset + j] = tmpA;
+				targetB.data[i * info.inset + j] = tmpB;
+				targetC.data[i * info.inset + (info.inset - j - 1)] = tmpA;
+				targetD.data[i * info.inset + (info.inset - j - 1)] = tmpB;
 			} else {
-				targetA[i * size + j] = Color4B(0, 0, 0, 0);
-				targetB[i * size + j] = Color4B(0, 0, 0, 0);
-				targetC[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
-				targetD[i * size + (size - j - 1)] = Color4B(0, 0, 0, 0);
+				targetA.data[i * info.inset + j] = Color4B(0, 0, 0, 0);
+				targetB.data[i * info.inset + j] = Color4B(0, 0, 0, 0);
+				targetC.data[i * info.inset + (info.inset - j - 1)] = Color4B(0, 0, 0, 0);
+				targetD.data[i * info.inset + (info.inset - j - 1)] = Color4B(0, 0, 0, 0);
 			}
 		}, info.inset);
+
+		info.ret->headerDarkLeft = Rc<WaylandBuffer>::create(wayland, pool, targetA.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerDarkLeftActive = Rc<WaylandBuffer>::create(wayland, pool, targetB.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerDarkRight = Rc<WaylandBuffer>::create(wayland, pool, targetB.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+		info.ret->headerDarkRightActive = Rc<WaylandBuffer>::create(wayland, pool, targetD.offset,
+				info.inset, info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 	} while (0);
 
-	info.ret->headerDarkLeft = Rc<WaylandBuffer>::create(wayland, pool, offset, info.inset,
-			info.inset, info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerDarkLeftActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 1, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerDarkRight = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 2, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerDarkRightActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + info.inset * info.inset * sizeof(Color4B) * 3, info.inset, info.inset,
-			info.inset * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+	auto retA = data.allocate<Color4B>(1);
+	auto retB = data.allocate<Color4B>(1);
 
-	offset += info.inset * info.inset * sizeof(Color4B) * 4;
-	retA = (Color4B *)((uint8_t *)data + offset);
+	retA.data[0] = Color4B(info.headerLight.b, info.headerLight.g, info.headerLight.r, 255);
+	retB.data[0] = Color4B(info.headerLightActive.b, info.headerLightActive.g,
+			info.headerLightActive.r, 255);
 
-	retA[0] = Color4B(info.headerLight.b, info.headerLight.g, info.headerLight.r, 255);
-	retA[1] = Color4B(info.headerLightActive.b, info.headerLightActive.g, info.headerLightActive.r,
-			255);
-
-	info.ret->headerLightCenter = Rc<WaylandBuffer>::create(wayland, pool, offset, 1, 1,
+	info.ret->headerLightCenter = Rc<WaylandBuffer>::create(wayland, pool, retA.offset, 1, 1,
 			sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerLightCenterActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + sizeof(Color4B), 1, 1, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
+	info.ret->headerLightCenterActive = Rc<WaylandBuffer>::create(wayland, pool, retB.offset, 1, 1,
+			sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
-	offset += 2 * sizeof(Color4B);
-	retA += 2;
+	retA = data.allocate<Color4B>(1);
+	retB = data.allocate<Color4B>(1);
 
-	retA[0] = Color4B(info.headerDark.b, info.headerDark.g, info.headerDark.r, 255);
-	retA[1] =
+	retA.data[0] = Color4B(info.headerDark.b, info.headerDark.g, info.headerDark.r, 255);
+	retB.data[0] =
 			Color4B(info.headerDarkActive.b, info.headerDarkActive.g, info.headerDarkActive.r, 255);
 
-	info.ret->headerDarkCenter = Rc<WaylandBuffer>::create(wayland, pool, offset, 1, 1,
+	info.ret->headerDarkCenter = Rc<WaylandBuffer>::create(wayland, pool, retA.offset, 1, 1,
 			sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-	info.ret->headerDarkCenterActive = Rc<WaylandBuffer>::create(wayland, pool,
-			offset + sizeof(Color4B), 1, 1, sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
-
-	offset += 2 * sizeof(Color4B);
-	retA += 2;
+	info.ret->headerDarkCenterActive = Rc<WaylandBuffer>::create(wayland, pool, retB.offset, 1, 1,
+			sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 
 	for (IconData &it : icons) {
-		memcpy((uint8_t *)data + offset, it.data.data(), it.data.size());
-		Rc<WaylandBuffer> buf = Rc<WaylandBuffer>::create(wayland, pool, offset, it.width,
+		auto iconBuf = data.allocate<uint8_t>(it.data.size());
+		memcpy(iconBuf.data, it.data.data(), it.data.size());
+
+		Rc<WaylandBuffer> buf = Rc<WaylandBuffer>::create(wayland, pool, iconBuf.offset, it.width,
 				it.height, it.width * sizeof(Color4B), WL_SHM_FORMAT_ARGB8888);
 		switch (it.name) {
 		case WaylandDecorationName::IconClose:
@@ -875,10 +875,9 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 			break;
 		default: break;
 		}
-		offset += it.data.size();
 	}
 
-	::munmap(data, size);
+	::munmap(sharedMemData, size);
 	wayland->wl_shm_pool_destroy(pool);
 
 	return true;

@@ -44,7 +44,7 @@
 
 #ifndef XL_WAYLAND_LOG
 #if XL_WAYLAND_DEBUG
-#define XL_WAYLAND_LOG(...) log::debug("Wayland", __VA_ARGS__)
+#define XL_WAYLAND_LOG(...) log::source().debug("Wayland", __VA_ARGS__)
 #else
 #define XL_WAYLAND_LOG(...)
 #endif
@@ -182,51 +182,24 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 		_wayland->wl_surface_set_user_data(_surface, this);
 		_wayland->wl_surface_add_listener(_surface, &s_WaylandSurfaceListener, this);
 
-		if (hasFlag(_info->capabilities, WindowCapabilities::ServerSideDecorations)
+		if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+			if (!initWithAppDecor()) {
+				return false;
+			}
+		} else if (hasFlag(_info->capabilities, WindowCapabilities::ServerSideDecorations)
 				&& hasFlag(_info->flags, WindowCreationFlags::PreferServerSideDecoration)) {
-			// make server-size decorations
-
-			_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
-
-			_wayland->xdg_surface_add_listener(_xdgSurface, &s_XdgSurfaceListener, this);
-
-			_toplevel = _wayland->xdg_surface_get_toplevel(_xdgSurface);
-
-			_wayland->xdg_toplevel_set_title(_toplevel, _info->title.data());
-			_wayland->xdg_toplevel_set_app_id(_toplevel, _info->id.data());
-			_wayland->xdg_toplevel_add_listener(_toplevel, &s_XdgToplevelListener, this);
-
-			_serverDecor = _wayland->zxdg_decoration_manager_v1_get_toplevel_decoration(
-					_display->decorationManager, _toplevel);
-			_wayland->zxdg_toplevel_decoration_v1_add_listener(_serverDecor,
-					&s_serverDecorationListener, this);
-			_wayland->zxdg_toplevel_decoration_v1_set_mode(_serverDecor,
-					ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-			_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, 0, _currentExtent.width,
-					_currentExtent.height);
-			_wayland->wl_surface_commit(_surface);
-			_display->flush();
+			if (!initWithServerDecor()) {
+				return false;
+			}
 		} else if (hasFlag(_info->capabilities, WindowCapabilities::NativeDecorations)
 				&& hasFlag(_info->flags, WindowCreationFlags::PreferNativeDecoration)) {
-			// libdecor decorations
-			_clientDecor = _wayland->libdecor_decorate(_display->decor, _surface,
-					&s_libdecorFrameInterface, this);
-
-			_wayland->libdecor_frame_set_title(_clientDecor, _info->title.data());
-			_wayland->libdecor_frame_set_app_id(_clientDecor, _info->id.data());
+			if (!initWithLibdecor()) {
+				return false;
+			}
 		} else {
-			// application-based decorations
-
-			_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
-
-			_wayland->xdg_surface_add_listener(_xdgSurface, &s_XdgSurfaceListener, this);
-
-			_toplevel = _wayland->xdg_surface_get_toplevel(_xdgSurface);
-			_wayland->xdg_toplevel_set_title(_toplevel, _info->title.data());
-			_wayland->xdg_toplevel_set_app_id(_toplevel, _info->id.data());
-			_wayland->xdg_toplevel_add_listener(_toplevel, &s_XdgToplevelListener, this);
-
-			createDecorations();
+			if (!initWithAppDecor()) {
+				return false;
+			}
 		}
 	}
 
@@ -254,6 +227,9 @@ bool WaylandWindow::close() {
 	if (!_shouldClose) {
 		_shouldClose = true;
 		if (!_controller->notifyWindowClosed(this)) {
+			if (hasFlag(_info->state, WindowState::CloseGuard)) {
+				updateState(_configureSerial, _info->state | WindowState::CloseRequest);
+			}
 			_shouldClose = false;
 			return false;
 		}
@@ -303,6 +279,7 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 
 	if (_configureSerial != maxOf<uint32_t>()) {
 		if (_toplevel) {
+			// TODO: configure it the right way
 			_wayland->xdg_toplevel_set_min_size(_toplevel, DecorWidth * 2 + IconSize * 3,
 					DecorWidth * 2 + DecorOffset + DecorInset);
 		}
@@ -312,7 +289,8 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 
 			auto pos = IVec2(0, 0);
 			auto extent = _commitedExtent;
-			if (!hasFlag(_info->state, WindowState::Fullscreen) && _serverDecor == nullptr) {
+			if (!hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)
+					&& !hasFlag(_info->state, WindowState::Fullscreen) && _serverDecor == nullptr) {
 				extent.height += DecorInset + DecorOffset;
 				pos.y -= DecorInset + DecorOffset;
 			}
@@ -405,7 +383,7 @@ Rc<core::Surface> WaylandWindow::makeSurface(NotNull<core::Instance> cinstance) 
 	}
 	return Rc<vk::Surface>::create(instance, surface, this);
 #else
-	log::error("XcbWindow", "No available GAPI found for a surface");
+	log::source().error("XcbWindow", "No available GAPI found for a surface");
 	return nullptr;
 #endif
 }
@@ -447,10 +425,15 @@ void WaylandWindow::handleSurfaceConfigure(xdg_surface *surface, uint32_t serial
 		// initial config
 		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 			if (!_decors.empty() && _xdgSurface) {
+				auto headerHeight = DecorInset + DecorOffset;
+				if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+					headerHeight = 0;
+				}
+
 				configureDecorations(_currentExtent);
-				_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, -DecorInset - DecorOffset,
-						_currentExtent.width, _currentExtent.height + DecorInset + DecorOffset);
-			} else {
+				_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, -headerHeight,
+						_currentExtent.width, _currentExtent.height + headerHeight);
+			} else if (_xdgSurface) {
 				_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, 0, _currentExtent.width,
 						_currentExtent.height);
 			}
@@ -468,6 +451,8 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 	bool hasModeSwitch = false;
 
 	if (states) {
+		WindowState mask = WindowState::Maximized | WindowState::Fullscreen | WindowState::Resizing
+				| WindowState::Focused | WindowState::Minimized | WindowState::TilingMask;
 		WindowState state = WindowState::None;
 
 		for (uint32_t *it = (uint32_t *)states->data;
@@ -507,7 +492,7 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 			hasModeSwitch = true;
 		}
 
-		updateState(0, state);
+		updateState(_configureSerial, (_info->state & ~mask) | state);
 	}
 
 	auto checkVisible = [&, this](WaylandDecorationName name) {
@@ -582,9 +567,10 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 		it->setVisible(checkVisible(it->name));
 	}
 
-	if (width && height) {
+	if (width && height && _commitedExtent.width && _commitedExtent.height) {
 		// only for
-		if (!_clientDecor && !_serverDecor && !hasFlag(_info->state, WindowState::Fullscreen)) {
+		if (!_clientDecor && !_serverDecor && !hasFlag(_info->state, WindowState::Fullscreen)
+				&& !hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
 			height -= (DecorInset + DecorOffset);
 		}
 
@@ -631,22 +617,28 @@ void WaylandWindow::handleToplevelBounds(xdg_toplevel *xdg_toplevel, int32_t wid
 }
 
 void WaylandWindow::handleToplevelCapabilities(xdg_toplevel *xdg_toplevel, wl_array *capabilities) {
-	StringStream stream;
-
-	_capabilities.reset();
+	WindowState capState =
+			WindowState::AllowedClose | WindowState::AllowedMove | WindowState::AllowedResize;
 
 	for (uint32_t *it = (uint32_t *)capabilities->data;
 			(const char *)it < ((const char *)capabilities->data + capabilities->size); ++it) {
-		_capabilities.set(*it);
 		switch (*it) {
-		case XDG_TOPLEVEL_WM_CAPABILITIES_WINDOW_MENU: stream << " WINDOW_MENU;"; break;
-		case XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE: stream << " MAXIMIZE;"; break;
-		case XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN: stream << " FULLSCREEN;"; break;
-		case XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE: stream << " MINIMIZE;"; break;
+		case XDG_TOPLEVEL_WM_CAPABILITIES_WINDOW_MENU:
+			capState |= WindowState::AllowedWindowMenu;
+			break;
+		case XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE:
+			capState |= WindowState::AllowedMaximizeHorz | WindowState::AllowedMaximizeVert;
+			break;
+		case XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN:
+			capState |= WindowState::AllowedFullscreen;
+			break;
+		case XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE:
+			capState |= WindowState::AllowedMaximizeHorz | WindowState::AllowedMinimize;
+			break;
 		}
 	}
 
-	XL_WAYLAND_LOG("handleToplevelCapabilities: ", stream.str());
+	updateState(_configureSerial, (_info->state & ~WindowState::AllowedActionsMask) | capState);
 }
 
 void WaylandWindow::handleSurfaceFrameDone(wl_callback *frame, uint32_t data) {
@@ -751,10 +743,13 @@ void WaylandWindow::handlePointerEnter(wl_fixed_t surface_x, wl_fixed_t surface_
 			d = 1.0f;
 		}
 
+		_surfaceFX = surface_x;
+		_surfaceFY = surface_y;
+
 		_surfaceX = wl_fixed_to_double(surface_x) * d;
 		_surfaceY = _currentExtent.height * d - wl_fixed_to_double(surface_y) * d;
 
-		updateState(0, _info->state | WindowState::Pointer);
+		updateState(_configureSerial, _info->state | WindowState::Pointer);
 
 		core::InputEventData event({
 			maxOf<uint32_t>(),
@@ -783,11 +778,51 @@ void WaylandWindow::handlePointerLeave() {
 	}
 
 	handlePointerFrame(); // drop pending events
-	updateState(0, _info->state & ~WindowState::Pointer);
+	updateState(_configureSerial, _info->state & ~WindowState::Pointer);
+}
+
+static uint32_t getWaylandGripEdge(WindowLayerFlags grip) {
+	switch (grip) {
+	case WindowLayerFlags::ResizeTopLeftGrip: return 5; break;
+	case WindowLayerFlags::ResizeTopGrip: return 1; break;
+	case WindowLayerFlags::ResizeTopRightGrip: return 9; break;
+	case WindowLayerFlags::ResizeRightGrip: return 8; break;
+	case WindowLayerFlags::ResizeBottomRightGrip: return 10; break;
+	case WindowLayerFlags::ResizeBottomGrip: return 2; break;
+	case WindowLayerFlags::ResizeBottomLeftGrip: return 6; break;
+	case WindowLayerFlags::ResizeLeftGrip: return 4; break;
+	default: break;
+	}
+	return 0;
 }
 
 void WaylandWindow::handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
 	// XL_WAYLAND_LOG("handlePointerMotion: x: ", wl_fixed_to_int(surface_x), ", y: ", wl_fixed_to_int(surface_y));
+
+	if (_buttonGripFlags != WindowLayerFlags::None) {
+		if (_buttons.test(toInt(core::InputMouseButton::MouseLeft)) && _buttons.count() == 1) {
+			auto grip = _buttonGripFlags;
+			switch (grip) {
+			case WindowLayerFlags::MoveGrip:
+				_wayland->xdg_toplevel_move(_toplevel, _display->seat->seat, _buttonGripSerial);
+				break;
+			case WindowLayerFlags::ResizeTopLeftGrip:
+			case WindowLayerFlags::ResizeTopGrip:
+			case WindowLayerFlags::ResizeTopRightGrip:
+			case WindowLayerFlags::ResizeRightGrip:
+			case WindowLayerFlags::ResizeBottomRightGrip:
+			case WindowLayerFlags::ResizeBottomGrip:
+			case WindowLayerFlags::ResizeBottomLeftGrip:
+			case WindowLayerFlags::ResizeLeftGrip:
+				_wayland->xdg_toplevel_resize(_toplevel, _display->seat->seat, _buttonGripSerial,
+						getWaylandGripEdge(grip));
+				break;
+			default: break;
+			}
+			cancelPointerEvents();
+			return;
+		}
+	}
 
 	if (!_pointerInit) {
 		_pointerInit = true;
@@ -802,6 +837,9 @@ void WaylandWindow::handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_
 		ev.motion.x = surface_x;
 		ev.motion.y = surface_y;
 	} else {
+		_surfaceFX = surface_x;
+		_surfaceFY = surface_y;
+
 		_surfaceX = wl_fixed_to_double(surface_x);
 		_surfaceY = _currentExtent.height - wl_fixed_to_double(surface_y);
 
@@ -823,7 +861,7 @@ void WaylandWindow::handlePointerMotion(uint32_t time, wl_fixed_t surface_x, wl_
 	}
 }
 
-static core::InputMouseButton getButton(uint32_t button) {
+static core::InputMouseButton getWaylandButton(uint32_t button) {
 	switch (button) {
 	case BTN_LEFT: return core::InputMouseButton::MouseLeft; break;
 	case BTN_RIGHT: return core::InputMouseButton::MouseRight; break;
@@ -841,6 +879,34 @@ void WaylandWindow::handlePointerButton(uint32_t serial, uint32_t time, uint32_t
 		return;
 	}
 
+	auto btn = getWaylandButton(button);
+
+	if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+		if (btn == core::InputMouseButton::MouseLeft) {
+			// Capture current grip flags
+			if (hasFlag(_currentLayerFlags, WindowLayerFlags::WindowMenuLeft)) {
+				cancelPointerEvents();
+				_wayland->xdg_toplevel_show_window_menu(_toplevel, _display->seat->seat, serial,
+						wl_fixed_to_int(_surfaceFX), wl_fixed_to_int(_surfaceFY));
+				return;
+			} else {
+				_buttonGripSerial = serial;
+				_buttonGripFlags = _gripFlags;
+			}
+		} else if (btn == core::InputMouseButton::MouseRight) {
+			if (hasFlag(_currentLayerFlags, WindowLayerFlags::WindowMenuRight)) {
+				cancelPointerEvents();
+				_wayland->xdg_toplevel_show_window_menu(_toplevel, _display->seat->seat, serial,
+						wl_fixed_to_int(_surfaceFX), wl_fixed_to_int(_surfaceFY));
+				return;
+			}
+		}
+	} else {
+		if (btn == core::InputMouseButton::MouseLeft) {
+			_buttonGripFlags = WindowLayerFlags::None;
+		}
+	}
+
 	XL_WAYLAND_LOG("handlePointerButton");
 	if (_display->seat->hasPointerFrames) {
 		auto &ev = _pointerEvents.emplace_back(PointerEvent{PointerEvent::Button});
@@ -849,17 +915,31 @@ void WaylandWindow::handlePointerButton(uint32_t serial, uint32_t time, uint32_t
 		ev.button.button = button;
 		ev.button.state = state;
 	} else {
-		_pendingEvents.emplace_back(core::InputEventData({
-			button,
-			((state == WL_POINTER_BUTTON_STATE_PRESSED) ? core::InputEventName::Begin
-														: core::InputEventName::End),
-			{{
-				getButton(button),
-				_activeModifiers,
-				float(_surfaceX),
-				float(_surfaceY),
-			}},
-		}));
+		if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+			_buttons.set(toInt(btn));
+			_pendingEvents.emplace_back(core::InputEventData({
+				button,
+				core::InputEventName::Begin,
+				{{
+					btn,
+					_activeModifiers,
+					float(_surfaceX),
+					float(_surfaceY),
+				}},
+			}));
+		} else if (state == WL_POINTER_BUTTON_STATE_RELEASED && _buttons.test(toInt(btn))) {
+			_buttons.reset(toInt(btn));
+			_pendingEvents.emplace_back(core::InputEventData({
+				button,
+				core::InputEventName::End,
+				{{
+					btn,
+					_activeModifiers,
+					float(_surfaceX),
+					float(_surfaceY),
+				}},
+			}));
+		}
 	}
 }
 
@@ -997,7 +1077,7 @@ void WaylandWindow::handlePointerFrame() {
 			x = wl_fixed_to_double(it.enter.x) * d;
 			y = height - wl_fixed_to_double(it.enter.y) * d;
 
-			updateState(0, _info->state | WindowState::Pointer);
+			updateState(_configureSerial, _info->state | WindowState::Pointer);
 
 			_pendingEvents.emplace_back(core::InputEventData({
 				maxOf<uint32_t>(),
@@ -1013,6 +1093,10 @@ void WaylandWindow::handlePointerFrame() {
 		case PointerEvent::Leave: break;
 		case PointerEvent::Motion:
 			positionChanged = true;
+
+			_surfaceFX = it.motion.x;
+			_surfaceFY = it.motion.y;
+
 			x = wl_fixed_to_double(it.motion.x) * d;
 			y = height - wl_fixed_to_double(it.motion.y) * d;
 			break;
@@ -1083,20 +1167,37 @@ void WaylandWindow::handlePointerFrame() {
 		switch (it.event) {
 		case PointerEvent::None: break;
 		case PointerEvent::Enter: break;
-		case PointerEvent::Leave: updateState(0, _info->state & ~WindowState::Pointer); break;
+		case PointerEvent::Leave:
+			updateState(_configureSerial, _info->state & ~WindowState::Pointer);
+			break;
 		case PointerEvent::Motion: break;
 		case PointerEvent::Button:
-			_pendingEvents.emplace_back(core::InputEventData({
-				it.button.button,
-				((it.button.state == WL_POINTER_BUTTON_STATE_PRESSED) ? core::InputEventName::Begin
-																	  : core::InputEventName::End),
-				{{
-					getButton(it.button.button),
-					_activeModifiers,
-					float(_surfaceX),
-					float(_surfaceY),
-				}},
-			}));
+			if (it.button.state == WL_POINTER_BUTTON_STATE_PRESSED) {
+				_buttons.set(toInt(getWaylandButton(it.button.button)));
+				_pendingEvents.emplace_back(core::InputEventData({
+					it.button.button,
+					core::InputEventName::Begin,
+					{{
+						getWaylandButton(it.button.button),
+						_activeModifiers,
+						float(_surfaceX),
+						float(_surfaceY),
+					}},
+				}));
+			} else if (it.button.state == WL_POINTER_BUTTON_STATE_RELEASED
+					&& _buttons.test(toInt(getWaylandButton(it.button.button)))) {
+				_buttons.reset(toInt(getWaylandButton(it.button.button)));
+				_pendingEvents.emplace_back(core::InputEventData({
+					it.button.button,
+					core::InputEventName::End,
+					{{
+						getWaylandButton(it.button.button),
+						_activeModifiers,
+						float(_surfaceX),
+						float(_surfaceY),
+					}},
+				}));
+			}
 			break;
 		case PointerEvent::Axis: break;
 		case PointerEvent::AxisSource: break;
@@ -1394,10 +1495,7 @@ void WaylandWindow::dispatchPendingEvents() {
 	}
 
 	if (_appWindow) {
-		if (!_pendingEvents.empty()) {
-			_controller->notifyWindowInputEvents(this, sp::move(_pendingEvents));
-		}
-		_pendingEvents.clear();
+		NativeWindow::dispatchPendingEvents();
 	}
 
 	bool surfacesDirty = false;
@@ -1413,84 +1511,57 @@ void WaylandWindow::dispatchPendingEvents() {
 }
 
 WindowCursor WaylandWindow::getCursor() const {
-	if (_layerFlags == WindowCursor::Undefined) {
+	if (_cursor == WindowCursor::Undefined) {
 		return WindowCursor::Default;
 	}
-	return _layerFlags;
+	return _cursor;
+}
+
+bool WaylandWindow::enableState(WindowState state) {
+	if (NativeWindow::enableState(state)) {
+		return true;
+	}
+
+	switch (state) {
+	case WindowState::Minimized:
+		if (_toplevel) {
+			_wayland->xdg_toplevel_set_minimized(_toplevel);
+			return true;
+		}
+		break;
+	case WindowState::Maximized:
+		if (_toplevel) {
+			_wayland->xdg_toplevel_set_maximized(_toplevel);
+			return true;
+		}
+		break;
+	default: break;
+	}
+
+	return false;
+}
+
+bool WaylandWindow::disableState(WindowState state) {
+	if (NativeWindow::disableState(state)) {
+		return true;
+	}
+
+	switch (state) {
+	case WindowState::Maximized:
+		if (_toplevel) {
+			_wayland->xdg_toplevel_unset_maximized(_toplevel);
+			return true;
+		}
+		break;
+	default: break;
+	}
+
+	return false;
 }
 
 bool WaylandWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
 
 void WaylandWindow::cancelTextInput() { }
-
-void WaylandWindow::createDecorations() {
-	if (!_display->viewporter) {
-		return;
-	}
-
-	ShadowBuffers buf;
-
-	DecorationInfo info{
-		&buf,
-		Color::Grey_100,
-		Color::Grey_300,
-		Color::Grey_900,
-		Color::Grey_700,
-		DecorWidth,
-		DecorInset,
-	};
-
-	if (!allocateDecorations(_wayland, _display->shm->shm, info)) {
-		return;
-	}
-
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.top), move(buf.topActive),
-			WaylandDecorationName::TopSide));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottom),
-			move(buf.bottomActive), WaylandDecorationName::BottomSide));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.left), move(buf.leftActive),
-			WaylandDecorationName::LeftSide));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.right), move(buf.rightActive),
-			WaylandDecorationName::RightSide));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.topLeft),
-			move(buf.topLeftActive), WaylandDecorationName::TopLeftCorner));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.topRight),
-			move(buf.topRightActive), WaylandDecorationName::TopRightCorner));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottomLeft),
-			move(buf.bottomLeftActive), WaylandDecorationName::BottomLeftCorner));
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottomRight),
-			move(buf.bottomRightActive), WaylandDecorationName::BottomRightCorner));
-
-	auto hLeft = _decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.headerLeft),
-			move(buf.headerLeftActive), WaylandDecorationName::HeaderLeft));
-	hLeft->setAltBuffers(move(buf.headerDarkLeft), move(buf.headerDarkLeftActive));
-
-	auto hRight = _decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.headerRight),
-			move(buf.headerRightActive), WaylandDecorationName::HeaderRight));
-	hRight->setAltBuffers(move(buf.headerDarkRight), move(buf.headerDarkRightActive));
-
-	auto hCenter = _decors.emplace_back(Rc<WaylandDecoration>::create(this,
-			Rc<WaylandBuffer>(buf.headerLightCenter),
-			Rc<WaylandBuffer>(buf.headerLightCenterActive), WaylandDecorationName::HeaderCenter));
-	hCenter->setAltBuffers(Rc<WaylandBuffer>(buf.headerDarkCenter),
-			Rc<WaylandBuffer>(buf.headerDarkCenterActive));
-
-	auto hBottom = _decors.emplace_back(Rc<WaylandDecoration>::create(this,
-			Rc<WaylandBuffer>(buf.headerLightCenter),
-			Rc<WaylandBuffer>(buf.headerLightCenterActive), WaylandDecorationName::HeaderBottom));
-	hBottom->setAltBuffers(Rc<WaylandBuffer>(buf.headerDarkCenter),
-			Rc<WaylandBuffer>(buf.headerDarkCenterActive));
-
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconClose),
-			move(buf.iconCloseActive), WaylandDecorationName::IconClose));
-	_iconMaximized =
-			_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconMaximize),
-					move(buf.iconMaximizeActive), WaylandDecorationName::IconMaximize));
-	_iconMaximized->setAltBuffers(move(buf.iconRestore), move(buf.iconRestoreActive));
-
-	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconMinimize),
-			move(buf.iconMinimizeActive), WaylandDecorationName::IconMinimize));
-}
 
 Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 	auto enable = info != FullscreenInfo::None;
@@ -1559,61 +1630,85 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 	}
 }
 
+void WaylandWindow::setCursor(WindowCursor cursor) {
+	_cursor = cursor;
+	_display->seat->setCursor(_cursor, isServerSideCursors());
+}
+
 bool WaylandWindow::configureDecorations(Extent2 extent) {
-	auto insetWidth = extent.width - DecorInset * 2;
-	auto insetHeight = extent.height - DecorInset;
-	auto cornerSize = DecorWidth + DecorInset;
+	bool userDecor = hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations);
+	int32_t x = 0;
+	int32_t y = 0;
+	int32_t width =
+			userDecor ? static_cast<uint32_t>(_info->userDecorations.shadowWidth) : DecorWidth;
+	int32_t inset =
+			userDecor ? static_cast<uint32_t>(_info->userDecorations.borderRadius) : DecorInset;
+
+	int32_t topOffet = -width - inset;
+	int32_t topInset = 0;
+
+	auto insetWidth = extent.width - inset * 2;
+	auto insetHeight = extent.height - inset;
+	auto cornerSize = width + inset;
+
+	if (userDecor) {
+		topOffet = -width;
+		insetHeight = extent.height - inset * 2;
+		topInset = inset;
+
+		x = static_cast<uint32_t>(_info->userDecorations.shadowOffset.x);
+		y = static_cast<uint32_t>(_info->userDecorations.shadowOffset.y);
+	}
 
 	for (auto &it : _decors) {
 		switch (it->name) {
 		case WaylandDecorationName::TopSide:
-			it->setGeometry(DecorInset, -DecorWidth - DecorInset, insetWidth, DecorWidth);
+			it->setGeometry(x + inset, y + topOffet, insetWidth, width);
 			break;
 		case WaylandDecorationName::BottomSide:
-			it->setGeometry(DecorInset, extent.height, insetWidth, DecorWidth);
+			it->setGeometry(x + inset, y + extent.height, insetWidth, width);
 			break;
 		case WaylandDecorationName::LeftSide:
-			it->setGeometry(-DecorWidth, 0, DecorWidth, insetHeight);
+			it->setGeometry(x - width, y + topInset, width, insetHeight);
 			break;
 		case WaylandDecorationName::RightSide:
-			it->setGeometry(extent.width, 0, DecorWidth, insetHeight);
+			it->setGeometry(x + extent.width, y + topInset, width, insetHeight);
 			break;
 		case WaylandDecorationName::TopLeftCorner:
-			it->setGeometry(-DecorWidth, -DecorWidth - DecorInset, cornerSize, cornerSize);
+			it->setGeometry(x - width, y + topOffet, cornerSize, cornerSize);
 			break;
 		case WaylandDecorationName::TopRightCorner:
-			it->setGeometry(extent.width - DecorInset, -DecorWidth - DecorInset, cornerSize,
-					cornerSize);
+			it->setGeometry(x + extent.width - inset, y + topOffet, cornerSize, cornerSize);
 			break;
 		case WaylandDecorationName::BottomLeftCorner:
-			it->setGeometry(-DecorWidth, extent.height - DecorInset, cornerSize, cornerSize);
+			it->setGeometry(x - width, y + extent.height - inset, cornerSize, cornerSize);
 			break;
 		case WaylandDecorationName::BottomRightCorner:
-			it->setGeometry(extent.width - DecorInset, extent.height - DecorInset, cornerSize,
+			it->setGeometry(x + extent.width - inset, y + extent.height - inset, cornerSize,
 					cornerSize);
 			break;
 		case WaylandDecorationName::HeaderLeft:
-			it->setGeometry(0, -DecorInset - DecorOffset, DecorInset, DecorInset);
+			it->setGeometry(x, y - inset - DecorOffset, inset, inset);
 			break;
 		case WaylandDecorationName::HeaderRight:
-			it->setGeometry(extent.width - DecorInset, -DecorInset - DecorOffset, DecorInset,
-					DecorInset);
+			it->setGeometry(x + extent.width - inset, y - inset - DecorOffset, inset, inset);
 			break;
 		case WaylandDecorationName::HeaderCenter:
-			it->setGeometry(DecorInset, -DecorInset - DecorOffset, extent.width - DecorInset * 2,
-					DecorInset);
+			it->setGeometry(x + inset, y - inset - DecorOffset, extent.width - inset * 2, inset);
 			break;
 		case WaylandDecorationName::HeaderBottom:
-			it->setGeometry(0, -DecorOffset, extent.width, DecorOffset);
+			it->setGeometry(x, y - DecorOffset, extent.width, DecorOffset);
 			break;
 		case WaylandDecorationName::IconClose:
-			it->setGeometry(extent.width - (IconSize + 4), -IconSize, IconSize, IconSize);
+			it->setGeometry(x + extent.width - (IconSize + 4), y - IconSize, IconSize, IconSize);
 			break;
 		case WaylandDecorationName::IconMaximize:
-			it->setGeometry(extent.width - (IconSize + 4) * 2, -IconSize, IconSize, IconSize);
+			it->setGeometry(x + extent.width - (IconSize + 4) * 2, y - IconSize, IconSize,
+					IconSize);
 			break;
 		case WaylandDecorationName::IconMinimize:
-			it->setGeometry(extent.width - (IconSize + 4) * 3, -IconSize, IconSize, IconSize);
+			it->setGeometry(x + extent.width - (IconSize + 4) * 3, y - IconSize, IconSize,
+					IconSize);
 			break;
 		default: break;
 		}
@@ -1627,6 +1722,159 @@ bool WaylandWindow::configureDecorations(Extent2 extent) {
 	}
 
 	return surfacesDirty;
+}
+
+bool WaylandWindow::initWithServerDecor() {
+	// make server-size decorations
+	_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
+
+	_wayland->xdg_surface_add_listener(_xdgSurface, &s_XdgSurfaceListener, this);
+
+	_toplevel = _wayland->xdg_surface_get_toplevel(_xdgSurface);
+
+	_wayland->xdg_toplevel_set_title(_toplevel, _info->title.data());
+	_wayland->xdg_toplevel_set_app_id(_toplevel, _info->id.data());
+	_wayland->xdg_toplevel_add_listener(_toplevel, &s_XdgToplevelListener, this);
+
+	_serverDecor = _wayland->zxdg_decoration_manager_v1_get_toplevel_decoration(
+			_display->decorationManager, _toplevel);
+	_wayland->zxdg_toplevel_decoration_v1_add_listener(_serverDecor, &s_serverDecorationListener,
+			this);
+	_wayland->zxdg_toplevel_decoration_v1_set_mode(_serverDecor,
+			ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+	_wayland->xdg_surface_set_window_geometry(_xdgSurface, 0, 0, _currentExtent.width,
+			_currentExtent.height);
+	_wayland->wl_surface_commit(_surface);
+	_display->flush();
+	return true;
+}
+
+bool WaylandWindow::initWithLibdecor() {
+	// libdecor decorations
+	_clientDecor =
+			_wayland->libdecor_decorate(_display->decor, _surface, &s_libdecorFrameInterface, this);
+
+	_wayland->libdecor_frame_set_title(_clientDecor, _info->title.data());
+	_wayland->libdecor_frame_set_app_id(_clientDecor, _info->id.data());
+	return true;
+}
+
+bool WaylandWindow::initWithAppDecor() {
+	// application-based decorations
+	_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
+
+	_wayland->xdg_surface_add_listener(_xdgSurface, &s_XdgSurfaceListener, this);
+
+	_toplevel = _wayland->xdg_surface_get_toplevel(_xdgSurface);
+	_wayland->xdg_toplevel_set_title(_toplevel, _info->title.data());
+	_wayland->xdg_toplevel_set_app_id(_toplevel, _info->id.data());
+	_wayland->xdg_toplevel_add_listener(_toplevel, &s_XdgToplevelListener, this);
+
+	if (!_display->viewporter) {
+		log::source().error("WaylandWindow",
+				"Viewporter interface should be available for the app decorations");
+		return false;
+	}
+
+	ShadowBuffers buf;
+
+	DecorationInfo info{
+		&buf,
+		Color::Grey_100,
+		Color::Grey_300,
+		Color::Grey_900,
+		Color::Grey_700,
+		DecorWidth,
+		DecorInset,
+		24.0f / 256.0f,
+		64.0f / 256.0f,
+	};
+
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		info.width = static_cast<uint32_t>(_info->userDecorations.shadowWidth);
+		info.inset = static_cast<uint32_t>(_info->userDecorations.borderRadius);
+		info.shadowMin = _info->userDecorations.shadowMinValue;
+		info.shadowMax = _info->userDecorations.shadowMaxValue;
+	}
+
+	if (!allocateDecorations(_wayland, _display->shm->shm, info)) {
+		log::source().error("WaylandWindow", "Fail to allocate decorations shared buffers");
+		return false;
+	}
+
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.top), move(buf.topActive),
+			WaylandDecorationName::TopSide));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottom),
+			move(buf.bottomActive), WaylandDecorationName::BottomSide));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.left), move(buf.leftActive),
+			WaylandDecorationName::LeftSide));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.right), move(buf.rightActive),
+			WaylandDecorationName::RightSide));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.topLeft),
+			move(buf.topLeftActive), WaylandDecorationName::TopLeftCorner));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.topRight),
+			move(buf.topRightActive), WaylandDecorationName::TopRightCorner));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottomLeft),
+			move(buf.bottomLeftActive), WaylandDecorationName::BottomLeftCorner));
+	_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.bottomRight),
+			move(buf.bottomRightActive), WaylandDecorationName::BottomRightCorner));
+
+	if (!hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		auto hLeft = _decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.headerLeft),
+				move(buf.headerLeftActive), WaylandDecorationName::HeaderLeft));
+		hLeft->setAltBuffers(move(buf.headerDarkLeft), move(buf.headerDarkLeftActive));
+
+		auto hRight =
+				_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.headerRight),
+						move(buf.headerRightActive), WaylandDecorationName::HeaderRight));
+		hRight->setAltBuffers(move(buf.headerDarkRight), move(buf.headerDarkRightActive));
+
+		auto hCenter = _decors.emplace_back(
+				Rc<WaylandDecoration>::create(this, Rc<WaylandBuffer>(buf.headerLightCenter),
+						Rc<WaylandBuffer>(buf.headerLightCenterActive),
+						WaylandDecorationName::HeaderCenter));
+		hCenter->setAltBuffers(Rc<WaylandBuffer>(buf.headerDarkCenter),
+				Rc<WaylandBuffer>(buf.headerDarkCenterActive));
+
+		auto hBottom = _decors.emplace_back(
+				Rc<WaylandDecoration>::create(this, Rc<WaylandBuffer>(buf.headerLightCenter),
+						Rc<WaylandBuffer>(buf.headerLightCenterActive),
+						WaylandDecorationName::HeaderBottom));
+		hBottom->setAltBuffers(Rc<WaylandBuffer>(buf.headerDarkCenter),
+				Rc<WaylandBuffer>(buf.headerDarkCenterActive));
+
+		_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconClose),
+				move(buf.iconCloseActive), WaylandDecorationName::IconClose));
+		_iconMaximized =
+				_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconMaximize),
+						move(buf.iconMaximizeActive), WaylandDecorationName::IconMaximize));
+		_iconMaximized->setAltBuffers(move(buf.iconRestore), move(buf.iconRestoreActive));
+
+		_decors.emplace_back(Rc<WaylandDecoration>::create(this, move(buf.iconMinimize),
+				move(buf.iconMinimizeActive), WaylandDecorationName::IconMinimize));
+	}
+
+	return true;
+}
+
+void WaylandWindow::cancelPointerEvents() {
+	for (uint32_t i = 0; i < 64; ++i) {
+		if (_buttons.test(i)) {
+			core::InputEventData event({
+				i,
+				core::InputEventName::Cancel,
+				{{
+					core::InputMouseButton(i),
+					core::InputModifier::None,
+					nan(),
+					nan(),
+				}},
+			});
+			_pendingEvents.emplace_back(sp::move(event));
+		}
+	}
+	_buttons.reset();
+	_buttonGripFlags = WindowLayerFlags::None;
 }
 
 } // namespace stappler::xenolith::platform

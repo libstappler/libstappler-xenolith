@@ -24,8 +24,9 @@
 #ifndef TEST_SRC_WIDGETS_APPCHECKBOX_H_
 #define TEST_SRC_WIDGETS_APPCHECKBOX_H_
 
-#include "AppWidgets.h"
+#include "AppWidgets.h" // IWYU pragma: keep
 #include "XL2dLayer.h"
+#include "XL2dLabel.h"
 
 namespace stappler::xenolith::app {
 
@@ -73,6 +74,6 @@ protected:
 	Label *_label = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_WIDGETS_APPCHECKBOX_H_ */

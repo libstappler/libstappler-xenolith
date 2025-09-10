@@ -68,7 +68,7 @@ static const NSRange kEmptyRange = {NSNotFound, 0};
 		shouldInheritContentsScale:(CGFloat)newScale
 						fromWindow:(NSWindow *)window {
 	_window->emitAppFrame();
-	NSSP::log::debug("XLMacosView", "shouldInheritContentsScale: ", newScale);
+	NSSP::log::source().debug("XLMacosView", "shouldInheritContentsScale: ", newScale);
 	return YES;
 }
 

@@ -169,7 +169,7 @@ void BootstrapApplication::loadExtensions() {
 		if (_storageServer) {
 			addExtension(Rc<xenolith::ApplicationExtension>(_storageServer));
 		} else {
-			log::error("Application", "Fail to create storage server");
+			log::source().error("Application", "Fail to create storage server");
 		}
 	}
 #endif

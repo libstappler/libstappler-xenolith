@@ -288,7 +288,7 @@ Rc<core::Surface> MacosWindow::makeSurface(NotNull<core::Instance> cinstance) {
 	}
 	return Rc<vk::Surface>::create(instance, surface, this);
 #else
-	log::error("XcbWindow", "No available gAPI found for a surface");
+	log::source().error("XcbWindow", "No available gAPI found for a surface");
 	return nullptr;
 #endif
 }
@@ -553,7 +553,7 @@ void MacosWindow::cancelTextInput() { }
 	}
 
 	NSSize size = self.view.window.contentLayoutRect.size;
-	NSSP::log::debug("MacosWindow", "windowDidResize: ", size.width, " ", size.height);
+	NSSP::log::source().debug("MacosWindow", "windowDidResize: ", size.width, " ", size.height);
 
 	CAMetalLayer *metalLayer = (CAMetalLayer *)self.view.layer; // 3
 	metalLayer.drawableSize = [self.view convertSizeToBacking:self.view.frame.size]; // 4
@@ -610,7 +610,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	NSSP::log::debug("XLMacosViewController", "windowWillClose");
+	NSSP::log::source().debug("XLMacosViewController", "windowWillClose");
 	_engineWindow->getWindow().delegate = nullptr;
 	_engineWindow->getController()->notifyWindowClosed(_engineWindow,
 			NSXLPL::WindowCloseOptions::CloseInPlace | NSXLPL::WindowCloseOptions::IgnoreExitGuard);
@@ -691,7 +691,7 @@ void MacosWindow::cancelTextInput() { }
 - (void)window:(NSWindow *)window
 		startCustomAnimationToEnterFullScreenOnScreen:(NSScreen *)screen
 										 withDuration:(NSTimeInterval)duration {
-	NSSP::log::debug("MacosWindow", "startCustomAnimationToEnterFullScreenOnScreen");
+	NSSP::log::source().debug("MacosWindow", "startCustomAnimationToEnterFullScreenOnScreen");
 
 	auto frame = window.frame;
 	[window setStyleMask:([window styleMask] | NSWindowStyleMaskFullScreen)];
@@ -709,7 +709,7 @@ void MacosWindow::cancelTextInput() { }
 
 - (void)window:(NSWindow *)window
 		startCustomAnimationToExitFullScreenWithDuration:(NSTimeInterval)duration {
-	NSSP::log::debug("MacosWindow", "startCustomAnimationToExitFullScreenWithDuration");
+	NSSP::log::source().debug("MacosWindow", "startCustomAnimationToExitFullScreenWithDuration");
 
 	__weak XLMacosWindow *w = _engineWindow->getWindow();
 
@@ -742,7 +742,7 @@ void MacosWindow::cancelTextInput() { }
 						  display:YES
 						 duration:duration
 				completionHandler:^() {
-				  NSSP::log::debug("XLMacosWindow",
+				  NSSP::log::source().debug("XLMacosWindow",
 						  "startCustomAnimationToExitFullScreenWithDuration complete");
 				}];
 
@@ -765,7 +765,7 @@ void MacosWindow::cancelTextInput() { }
 									display:YES
 								   duration:[w animationResizeTime:origFrame]
 						  completionHandler:^() {
-							NSSP::log::debug("XLMacosWindow",
+							NSSP::log::source().debug("XLMacosWindow",
 									"startCustomAnimationToExitFullScreenWithDuration complete");
 						  }];
 				}];
@@ -774,14 +774,14 @@ void MacosWindow::cancelTextInput() { }
 						  display:YES
 						 duration:duration
 				completionHandler:^() {
-				  NSSP::log::debug("XLMacosWindow",
+				  NSSP::log::source().debug("XLMacosWindow",
 						  "startCustomAnimationToExitFullScreenWithDuration complete");
 				}];
 	}
 }
 
 - (void)windowDidFailToExitFullScreen:(NSWindow *)window {
-	NSSP::log::debug("XLMacosWindow", "windowDidFailToExitFullScreen");
+	NSSP::log::source().debug("XLMacosWindow", "windowDidFailToExitFullScreen");
 }
 
 - (void)mouseDown:(NSEvent *)theEvent {
@@ -1270,14 +1270,14 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag {
-	NSSP::log::debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y,
-			" ", frameRect.size.width, " ", frameRect.size.height);
+	NSSP::log::source().debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ",
+			frameRect.origin.y, " ", frameRect.size.width, " ", frameRect.size.height);
 	[super setFrame:frameRect display:displayFlag];
 }
 
 - (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag {
-	NSSP::log::debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y,
-			" ", frameRect.size.width, " ", frameRect.size.height);
+	NSSP::log::source().debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ",
+			frameRect.origin.y, " ", frameRect.size.width, " ", frameRect.size.height);
 	if (!animateFlag) {
 		[super setFrame:frameRect display:displayFlag animate:NO];
 	} else {

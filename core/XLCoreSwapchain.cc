@@ -125,7 +125,7 @@ bool SwapchainImage::init(Swapchain *swapchain, const Swapchain::SwapchainImageD
 }
 
 void SwapchainImage::cleanup() {
-	//stappler::log::info("SwapchainImage", "cleanup");
+	//stappler::log::source().info("SwapchainImage", "cleanup");
 }
 
 void SwapchainImage::rearmSemaphores(core::Loop &loop) { ImageStorage::rearmSemaphores(loop); }

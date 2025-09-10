@@ -28,10 +28,12 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class WindowDecorations;
+class CloseGuardWidget;
 
 class SP_PUBLIC SceneContent : public Node {
 public:
 	using WindowDecorationsCallback = Function<Rc<WindowDecorations>(NotNull<SceneContent>)>;
+	using CloseGuardWidgetCallback = Function<Rc<CloseGuardWidget>(NotNull<SceneContent>)>;
 
 	virtual ~SceneContent();
 
@@ -42,13 +44,16 @@ public:
 
 	virtual void handleContentSizeDirty() override;
 
-	virtual bool onBackButton();
+	virtual bool handleBackButton();
 
 	virtual void setHandlesViewDecoration(bool);
 	virtual bool isHandlesViewDecoration() const { return _handlesViewDecoration; }
 
 	virtual void showViewDecoration();
 	virtual void hideViewDecoration();
+
+	virtual void setCloseGuardEnabled(bool);
+	virtual bool isCloseGuardEnabled() const;
 
 	// Decoration padding is WM inset decorations + user window decorations
 	virtual Padding getDecorationPadding() const;
@@ -62,23 +67,31 @@ public:
 		return _windowDecorationsConstructor;
 	}
 
+	virtual void setCloseGuardWidgetContructor(CloseGuardWidgetCallback &&);
+	virtual const CloseGuardWidgetCallback &getCloseGuardWidgetContructor() const {
+		return _closeGuardWidgetConstructor;
+	}
+
 protected:
 	friend class Scene;
 
-	virtual void updateBackButtonStatus();
-
 	virtual void handleBackgroundTransition(bool value);
+	virtual void handleCloseRequest(bool value);
+	virtual void handleWindowStateChanged(WindowState state, WindowState changes);
 
 	InputListener *_inputListener = nullptr;
 	DynamicStateSystem *_scissor = nullptr;
 
-	bool _retainBackButton = false;
-	bool _backButtonRetained = false;
+	bool _closeGuard = false;
+	bool _closeGuardRetained = false;
 	bool _handlesViewDecoration = true;
 	bool _decorationVisible = true;
 
 	WindowDecorations *_userDecorations = nullptr;
 	WindowDecorationsCallback _windowDecorationsConstructor;
+
+	CloseGuardWidget *_closeGuardWidget = nullptr;
+	CloseGuardWidgetCallback _closeGuardWidgetConstructor;
 };
 
 } // namespace stappler::xenolith

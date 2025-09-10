@@ -41,9 +41,6 @@ bool LayoutMenuItem::init(StringView str, Function<void()> &&cb) {
 	_label->setPersistentGlyphData(true);
 
 	auto l = addSystem(Rc<InputListener>::create());
-	l->setTouchFilter([](const InputEvent &event, const InputListener::DefaultEventFilter &) {
-		return true;
-	});
 	l->setCursor(WindowCursor::Pointer);
 
 	l->addMouseOverRecognizer([this](const GestureData &ev) {

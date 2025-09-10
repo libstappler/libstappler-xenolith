@@ -126,7 +126,7 @@ bool FontComponent::init(Context *ctx) {
 #endif
 
 	if (!_queue) {
-		log::error("FontComponent", "Fail to create FontQueue for GAPI");
+		log::source().error("FontComponent", "Fail to create FontQueue for GAPI");
 	}
 
 	_library = Rc<FontLibrary>::alloc();

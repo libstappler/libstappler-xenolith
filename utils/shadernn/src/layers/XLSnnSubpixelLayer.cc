@@ -41,14 +41,15 @@ const core::QueuePassData *SubpixelLayer::prepare(core::Queue::Builder &builder,
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == attachments.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::SubpixelLayer>::create(builder, passBuilder, this, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::SubpixelLayer>::create(builder, passBuilder, this, inputIt->second,
+				outputIt->second);
 	});
 }
 
-}
+} // namespace stappler::xenolith::shadernn

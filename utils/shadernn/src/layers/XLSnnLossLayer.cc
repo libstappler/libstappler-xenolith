@@ -74,34 +74,37 @@ void CrossEntropyLossLayer::setInputExtent(uint32_t index, Attachment *a, Extent
 }
 
 const core::QueuePassData *CrossEntropyLossLayer::prepare(core::Queue::Builder &builder,
-			Map<Layer *, const core::AttachmentData *> inputs,
-			Map<Attachment *, const core::AttachmentData *> attachments) {
+		Map<Layer *, const core::AttachmentData *> inputs,
+		Map<Attachment *, const core::AttachmentData *> attachments) {
 	auto inputLabelsIt = attachments.find(_inputs[0].attachment);
 	auto inputNetworkIt = attachments.find(_inputs[1].attachment);
 	auto outputIt = attachments.find(getOutput());
 
-	if (inputLabelsIt == attachments.end() || inputNetworkIt == attachments.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+	if (inputLabelsIt == attachments.end() || inputNetworkIt == attachments.end()
+			|| outputIt == attachments.end()) {
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::CrossEntropyLossLayer>::create(builder, passBuilder, this, inputLabelsIt->second, inputNetworkIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::CrossEntropyLossLayer>::create(builder, passBuilder, this,
+				inputLabelsIt->second, inputNetworkIt->second, outputIt->second);
 	});
 }
 
-const core::AttachmentData *CrossEntropyLossLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *CrossEntropyLossLayer::makeOutputAttachment(
+		core::Queue::Builder &builder, bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput(core::FrameRenderPassState::Complete);
 		}
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(1 * 4 * sizeof(float)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(1 * 4 * sizeof(float)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-}
+} // namespace stappler::xenolith::shadernn

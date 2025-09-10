@@ -24,6 +24,7 @@
 #include "AppScene.h"
 
 #include "XLSimpleWindowDecorations.h"
+#include "XLSimpleCloseGuardWidget.h"
 #include "XLContext.h"
 
 #include "XLDirector.h"
@@ -67,6 +68,12 @@ bool AppScene::init(NotNull<AppThread> app, NotNull<AppWindow> w,
 	content->setWindowDecorationsContructor([](NotNull<SceneContent>) -> Rc<WindowDecorations> {
 		return Rc<simpleui::WindowDecorationsDefault>::create();
 	});
+
+	content->setCloseGuardWidgetContructor([](NotNull<SceneContent>) -> Rc<CloseGuardWidget> {
+		return Rc<simpleui::CloseGuardWidgetDefault>::create();
+	});
+
+	content->setCloseGuardEnabled(true);
 
 	setContent(content);
 
@@ -123,7 +130,9 @@ void AppScene::setActiveLayoutId(StringView name, Value &&data) {
 
 DEFINE_PRIMARY_SCENE_CLASS(AppScene)
 
-DEFINE_CONFIG_FUNCTION(
-		(ContextConfig &cfg) { cfg.window->flags |= WindowCreationFlags::UserSpaceDecorations; })
+DEFINE_CONFIG_FUNCTION((ContextConfig &cfg) {
+	// Set user-space decorations
+	cfg.window->flags |= WindowCreationFlags::UserSpaceDecorations;
+})
 
 } // namespace stappler::xenolith::app

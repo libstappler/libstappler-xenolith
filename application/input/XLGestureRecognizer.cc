@@ -895,7 +895,7 @@ bool GestureKeyRecognizer::init(InputCallback &&cb, KeyMask &&mask) {
 		return true;
 	}
 
-	log::error("GestureKeyRecognizer", "Callback or key mask is not defined");
+	log::source().error("GestureKeyRecognizer", "Callback or key mask is not defined");
 	return false;
 }
 
@@ -954,7 +954,7 @@ bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
 		return true;
 	}
 
-	log::error("GestureKeyRecognizer", "Callback or key mask is not defined");
+	log::source().error("GestureKeyRecognizer", "Callback or key mask is not defined");
 	return false;
 }
 
@@ -964,17 +964,13 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 	bool stateChanged = false;
 	switch (event.data.event) {
 	case InputEventName::WindowState:
-		if (hasFlag(event.data.window.changes, core::WindowState::Focused)) {
-			if (_viewHasFocus != hasFlag(event.data.window.state, core::WindowState::Focused)) {
-				_viewHasFocus = hasFlag(event.data.window.state, core::WindowState::Focused);
-				stateChanged = true;
-			}
+		if (_viewHasFocus != hasFlag(event.data.window.state, core::WindowState::Focused)) {
+			_viewHasFocus = hasFlag(event.data.window.state, core::WindowState::Focused);
+			stateChanged = true;
 		}
-		if (hasFlag(event.data.window.changes, core::WindowState::Pointer)) {
-			if (_viewHasPointer != hasFlag(event.data.window.state, core::WindowState::Pointer)) {
-				_viewHasPointer = hasFlag(event.data.window.state, core::WindowState::Pointer);
-				stateChanged = true;
-			}
+		if (_viewHasPointer != hasFlag(event.data.window.state, core::WindowState::Pointer)) {
+			_viewHasPointer = hasFlag(event.data.window.state, core::WindowState::Pointer);
+			stateChanged = true;
 		}
 		break;
 	case InputEventName::MouseMove:
@@ -993,7 +989,6 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 			}
 		} else {
 			if (_hasMouseOver) {
-				std::cout << "_hasMouseOver false\n";
 				stateChanged = true;
 				_hasMouseOver = false;
 			}
@@ -1013,8 +1008,8 @@ void GestureMouseOverRecognizer::onEnter(InputListener *l) {
 
 	auto dispatcher = l->getOwner()->getDirector()->getInputDispatcher();
 
-	_viewHasPointer = dispatcher->isPointerWithinWindow();
-	_viewHasFocus = dispatcher->hasFocus();
+	_viewHasPointer = hasFlag(dispatcher->getWindowState(), WindowState::Pointer);
+	_viewHasFocus = hasFlag(dispatcher->getWindowState(), WindowState::Focused);
 }
 
 void GestureMouseOverRecognizer::onExit() {
@@ -1023,6 +1018,13 @@ void GestureMouseOverRecognizer::onExit() {
 }
 
 void GestureMouseOverRecognizer::updateState(const InputEvent &event) {
+	if (_listener) {
+		auto dispatcher = _listener->getOwner()->getDirector()->getInputDispatcher();
+
+		_viewHasPointer = hasFlag(dispatcher->getWindowState(), WindowState::Pointer);
+		_viewHasFocus = hasFlag(dispatcher->getWindowState(), WindowState::Focused);
+	}
+
 	auto value = _viewHasFocus && _viewHasPointer && _hasMouseOver;
 	if (value != _value) {
 		_value = value;

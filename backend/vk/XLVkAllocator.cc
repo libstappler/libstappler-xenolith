@@ -279,7 +279,7 @@ bool Allocator::init(Device &dev, VkPhysicalDevice device, const DeviceInfo::Fea
 				stream << "\n";
 			}
 		}
-		log::verbose("Vk-Info", stream.str());
+		log::source().verbose("Vk-Info", stream.str());
 	}
 
 	return true;
@@ -572,7 +572,7 @@ Allocator::MemType *Allocator::findMemoryType(uint32_t typeFilter, AllocationUsa
 		return StringView("Unknown");
 	};
 
-	log::error("Vk-Error", "Fail to find required memory type for ", getTypeName(type));
+	log::source().error("Vk-Error", "Fail to find required memory type for ", getTypeName(type));
 	return nullptr;
 }
 
@@ -747,7 +747,7 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Image
 			mask &= req.requirements.memoryTypeBits;
 		}
 		if (mask == 0) {
-			log::error("vk::Allocator", "emplaceObjects: fail to find common memory type");
+			log::source().error("vk::Allocator", "emplaceObjects: fail to find common memory type");
 			return nullptr;
 		}
 		bufferRequirements.emplace_back(req);
@@ -760,7 +760,7 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Image
 			mask &= req.requirements.memoryTypeBits;
 		}
 		if (mask == 0) {
-			log::error("vk::Allocator", "emplaceObjects: fail to find common memory type");
+			log::source().error("vk::Allocator", "emplaceObjects: fail to find common memory type");
 			return nullptr;
 		}
 		imageRequirements.emplace_back(req);
@@ -774,7 +774,7 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Image
 
 	auto allocMemType = findMemoryType(mask, usage);
 	if (!allocMemType) {
-		log::error("vk::Allocator", "emplaceObjects: fail to find memory type");
+		log::source().error("vk::Allocator", "emplaceObjects: fail to find memory type");
 		return nullptr;
 	}
 
@@ -855,7 +855,7 @@ Rc<DeviceMemory> Allocator::emplaceObjects(AllocationUsage usage, SpanView<Image
 		if (_device->getTable()->vkAllocateMemory(_device->getDevice(), &allocInfo, nullptr,
 					&memObject)
 				!= VK_SUCCESS) {
-			log::error("vk::Allocator", "emplaceObjects: fail to allocate memory");
+			log::source().error("vk::Allocator", "emplaceObjects: fail to allocate memory");
 			return nullptr;
 		}
 	}
@@ -910,7 +910,7 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Buffer *target) {
 	auto req = getBufferMemoryRequirements(target->getBuffer());
 	auto type = findMemoryType(req.requirements.memoryTypeBits, usage);
 	if (!type) {
-		log::error("vk::Allocator", "Buffer: allocateDedicated: Fail to find memory type");
+		log::source().error("vk::Allocator", "Buffer: allocateDedicated: Fail to find memory type");
 		return false;
 	}
 
@@ -963,7 +963,7 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Image *target) {
 	auto req = getImageMemoryRequirements(target->getImage());
 	auto type = findMemoryType(req.requirements.memoryTypeBits, usage);
 	if (!type) {
-		log::error("vk::Allocator", "Image: allocateDedicated: Fail to find memory type");
+		log::source().error("vk::Allocator", "Image: allocateDedicated: Fail to find memory type");
 		return false;
 	}
 
@@ -991,7 +991,7 @@ bool Allocator::allocateDedicated(AllocationUsage usage, Image *target) {
 		result = table.vkAllocateMemory(device, &allocInfo, nullptr, &memory);
 	});
 	if (result != VK_SUCCESS) {
-		log::error("vk::Allocator",
+		log::source().error("vk::Allocator",
 				"Image: allocateDedicated: Fail to allocate memory for dedicated allocation");
 		return false;
 	}
@@ -1026,7 +1026,7 @@ Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info)
 
 	if (requirements.requiresDedicated) {
 		// TODO: deal with dedicated allocations
-		log::error("DeviceMemoryPool", "Dedicated allocation required");
+		log::source().error("DeviceMemoryPool", "Dedicated allocation required");
 	} else {
 		auto memType = _allocator->findMemoryType(requirements.requirements.memoryTypeBits, type);
 		if (!memType) {
@@ -1048,10 +1048,10 @@ Rc<Buffer> DeviceMemoryPool::spawn(AllocationUsage type, const BufferInfo &info)
 				_buffers.emplace_front(buffer);
 				return buffer;
 			} else {
-				log::error("DeviceMemoryPool", "Fail to bind memory for buffer: ", type);
+				log::source().error("DeviceMemoryPool", "Fail to bind memory for buffer: ", type);
 			}
 		} else {
-			log::error("DeviceMemoryPool", "Fail to allocate memory for buffer: ", type);
+			log::source().error("DeviceMemoryPool", "Fail to allocate memory for buffer: ", type);
 		}
 	}
 	return nullptr;
@@ -1063,7 +1063,7 @@ Rc<Image> DeviceMemoryPool::spawn(AllocationUsage type, StringView key, const Im
 
 	if (requirements.requiresDedicated) {
 		// TODO: deal with dedicated allocations
-		log::error("DeviceMemoryPool", "Dedicated allocation required");
+		log::source().error("DeviceMemoryPool", "Dedicated allocation required");
 	} else {
 		auto memType = _allocator->findMemoryType(requirements.requirements.memoryTypeBits, type);
 		if (!memType) {
@@ -1088,10 +1088,10 @@ Rc<Image> DeviceMemoryPool::spawn(AllocationUsage type, StringView key, const Im
 				_images.emplace_front(image);
 				return image;
 			} else {
-				log::error("DeviceMemoryPool", "Fail to bind memory for image");
+				log::source().error("DeviceMemoryPool", "Fail to bind memory for image");
 			}
 		} else {
-			log::error("DeviceMemoryPool", "Fail to allocate memory for image: ", type);
+			log::source().error("DeviceMemoryPool", "Fail to allocate memory for image: ", type);
 		}
 	}
 

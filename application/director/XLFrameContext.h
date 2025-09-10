@@ -122,11 +122,11 @@ struct SP_PUBLIC FrameContextHandle : public core::AttachmentInputData {
 	StateId addState(DrawStateValues values) {
 		auto it = std::find(states.begin(), states.end(), values);
 		if (it != states.end()) {
-			//log::verbose("FrameContextHandle", "addStateRet ", it - states.begin(), " ", values.scissor);
+			//log::source().verbose("FrameContextHandle", "addStateRet ", it - states.begin(), " ", values.scissor);
 			return StateId(it - states.begin());
 		} else {
 			states.emplace_back(values);
-			//log::verbose("FrameContextHandle", "addState ", states.size() - 1, " ", values.scissor);
+			//log::source().verbose("FrameContextHandle", "addState ", states.size() - 1, " ", values.scissor);
 			return StateId(states.size() - 1);
 		}
 	}
@@ -167,8 +167,6 @@ struct SP_PUBLIC FrameInfo {
 	memory::vector<Rc<FrameContextHandle>> contextStack;
 	memory::map<uint64_t, memory::vector<Rc<System>>> systemStack;
 	memory::set<const core::AttachmentData *> resolvedInputs;
-
-	uint32_t focusValue = 0;
 
 	FrameContextHandle *currentContext = nullptr;
 

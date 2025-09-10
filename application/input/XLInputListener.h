@@ -32,6 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 class Node;
 class Scene;
 class GestureRecognizer;
+class FocusGroup;
 
 class SP_PUBLIC InputListener : public System {
 public:
@@ -62,6 +63,9 @@ public:
 
 	virtual void update(const UpdateTime &) override;
 
+	// Unique listener id; always > 0
+	uint64_t getId() const;
+
 	void setCursor(WindowCursor);
 	WindowCursor getCursor() const { return _windowLayer.cursor; }
 
@@ -74,22 +78,31 @@ public:
 	void setPriority(int32_t);
 	int32_t getPriority() const { return _priority; }
 
-	void setDedicatedFocus(uint32_t);
-	uint32_t getDedicatedFocus() const { return _dedicatedFocus; }
-
 	void setOpacityFilter(float value) { _opacityFilter = value; }
 	float getOpacityFilter() const { return _opacityFilter; }
 
 	void setTouchPadding(float value) { _touchPadding = value; }
 	float getTouchPadding() const { return _touchPadding; }
 
+	// For all currently active events (pointer/touch or keyboard) with this listener,
+	// make this listener exclusive responder. All other listeners will receive Cancel events
 	void setExclusive();
+
+	// For all currently active pointer/touch events with specific id and this listener,
+	// make this listener exclusive responder. All other listeners will receive Cancel events
 	void setExclusiveForTouch(uint32_t eventId);
 
+	// Event swallow means that for eny event with this name, InputEventState::Processed will become
+	// InputEventState::Captured.
+	// In other words, any event in swallow mask can be declined or processed exclusively
+	//
+	// Note that this listener can be not the first listener, that recevies this event. In this case,
+	// previous listener will receive cancel event.
 	void setSwallowEvents(EventMask &&);
 	void setSwallowEvents(const EventMask &);
 	void setSwallowAllEvents();
 	void setSwallowEvent(InputEventName);
+
 	void clearSwallowAllEvents();
 	void clearSwallowEvent(InputEventName);
 	void clearSwallowEvents(const EventMask &);
@@ -104,6 +117,12 @@ public:
 	bool shouldSwallowEvent(const InputEvent &) const;
 	bool canHandleEvent(const InputEvent &event) const;
 	InputEventState handleEvent(const InputEvent &event);
+
+	// try to set focus on this listener
+	bool setFocused();
+	bool isFocused() const;
+
+	FocusGroup *getFocusGroup() const;
 
 	GestureRecognizer *addTouchRecognizer(InputCallback<GestureData> &&,
 			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
@@ -129,6 +148,11 @@ public:
 	void clear();
 
 protected:
+	friend class FocusGroup;
+
+	void handleFocusIn(FocusGroup *);
+	void handleFocusOut(FocusGroup *);
+
 	bool shouldProcessEvent(const InputEvent &) const;
 	bool _shouldProcessEvent(const InputEvent &) const; // default realization
 
@@ -142,13 +166,17 @@ protected:
 	void releaseEvent(core::InputEventName);
 
 	int32_t _priority = 0; // 0 - scene graph
-	uint32_t _dedicatedFocus = 0; // 0 - unused
+	uint64_t _id = 0;
 	EventMask _eventMask;
 	EventMask _swallowEvents;
 	WindowLayer _windowLayer;
 
+	// Set if listener is in focus
+	FocusGroup *_focusGroup = nullptr;
+
 	float _touchPadding = 0.0f;
 	float _opacityFilter = 0.0f;
+	bool _hasFocus = false;
 
 	Scene *_scene = nullptr;
 
@@ -156,6 +184,7 @@ protected:
 	Vector<Rc<GestureRecognizer>> _recognizers;
 	Map<InputEventName, EventCallback> _callbacks;
 	Map<InputEventName, uint32_t> _retainedEvents;
+	Function<void(bool)> _focusCallback;
 };
 
 } // namespace stappler::xenolith

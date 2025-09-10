@@ -211,8 +211,8 @@ bool TransferResource::initialize(AllocationUsage usage) {
 	auto cleanup = [&, this](StringView reason) {
 		_resource->clear();
 		invalidate(*_alloc->getDevice());
-		log::error("DeviceResourceTransfer", "Fail to init transfer for ", _resource->getName(),
-				": ", reason);
+		log::source().error("DeviceResourceTransfer", "Fail to init transfer for ",
+				_resource->getName(), ": ", reason);
 		return false;
 	};
 
@@ -261,7 +261,7 @@ bool TransferResource::initialize(AllocationUsage usage) {
 	auto allocMemType = _alloc->findMemoryType(mask, _targetUsage);
 
 	if (!allocMemType) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to find memory type for static resource: ", _resource->getName());
 		return cleanup("Memory type not found");
 	}
@@ -322,8 +322,8 @@ bool TransferResource::allocate() {
 
 	auto cleanup = [&, this](StringView reason) {
 		invalidate(*_alloc->getDevice());
-		log::error("DeviceResourceTransfer", "Fail to allocate memory for ", _resource->getName(),
-				": ", reason);
+		log::source().error("DeviceResourceTransfer", "Fail to allocate memory for ",
+				_resource->getName(), ": ", reason);
 		return false;
 	};
 
@@ -335,7 +335,7 @@ bool TransferResource::allocate() {
 
 		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &_memory)
 				!= VK_SUCCESS) {
-			log::error("Vk-Error",
+			log::source().error("Vk-Error",
 					"Fail to allocate memory for static resource: ", _resource->getName());
 			return cleanup("Fail to allocate memory");
 		}
@@ -643,7 +643,7 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, BufferAlloc
 
 	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated)
 			!= VK_SUCCESS) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to allocate memory for static resource: ", _resource->getName());
 		return false;
 	}
@@ -676,7 +676,7 @@ bool TransferResource::allocateDedicated(const Rc<Allocator> &alloc, ImageAllocI
 
 	if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &it.dedicated)
 			!= VK_SUCCESS) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to allocate memory for static resource: ", _resource->getName());
 		return false;
 	}
@@ -705,7 +705,7 @@ size_t TransferResource::preTransferData() {
 		void *targetMem = nullptr;
 		if (table->vkMapMemory(dev->getDevice(), _memory, 0, VK_WHOLE_SIZE, 0, &targetMem)
 				!= VK_SUCCESS) {
-			log::error("Vk-Error", "Fail to map internal memory: ", _resource->getName());
+			log::source().error("Vk-Error", "Fail to map internal memory: ", _resource->getName());
 			return maxOf<size_t>();
 		}
 		generalMem = (uint8_t *)targetMem;
@@ -720,7 +720,8 @@ size_t TransferResource::preTransferData() {
 			void *targetMem = nullptr;
 			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem)
 					!= VK_SUCCESS) {
-				log::error("Vk-Error", "Fail to map dedicated memory: ", _resource->getName());
+				log::source().error("Vk-Error",
+						"Fail to map dedicated memory: ", _resource->getName());
 				return maxOf<size_t>();
 			}
 			writeData((uint8_t *)targetMem, it);
@@ -751,7 +752,8 @@ size_t TransferResource::preTransferData() {
 			void *targetMem = nullptr;
 			if (table->vkMapMemory(dev->getDevice(), it.dedicated, 0, VK_WHOLE_SIZE, 0, &targetMem)
 					!= VK_SUCCESS) {
-				log::error("Vk-Error", "Fail to map dedicated memory: ", _resource->getName());
+				log::source().error("Vk-Error",
+						"Fail to map dedicated memory: ", _resource->getName());
 				return maxOf<size_t>();
 			}
 			writeData((uint8_t *)targetMem, it);
@@ -803,7 +805,7 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 
 	if (table->vkCreateBuffer(dev->getDevice(), &buffer.buffer.info, nullptr, &buffer.buffer.buffer)
 			!= VK_SUCCESS) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to create staging buffer for static resource: ", _resource->getName());
 		return false;
 	}
@@ -814,7 +816,7 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 	mask &= buffer.buffer.req.requirements.memoryTypeBits;
 
 	if (mask == 0) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to find staging memory mask for static resource: ", _resource->getName());
 		return false;
 	}
@@ -822,7 +824,7 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 	auto type = _alloc->findMemoryType(mask, AllocationUsage::HostTransitionSource);
 
 	if (!type) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to find staging memory type for static resource: ", _resource->getName());
 		return false;
 	}
@@ -844,7 +846,7 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 
 		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated)
 				!= VK_SUCCESS) {
-			log::error("Vk-Error",
+			log::source().error("Vk-Error",
 					"Fail to allocate staging memory for static resource: ", _resource->getName());
 			return false;
 		}
@@ -860,7 +862,7 @@ bool TransferResource::createStagingBuffer(StagingBuffer &buffer, size_t staging
 
 		if (table->vkAllocateMemory(dev->getDevice(), &allocInfo, nullptr, &buffer.buffer.dedicated)
 				!= VK_SUCCESS) {
-			log::error("Vk-Error",
+			log::source().error("Vk-Error",
 					"Fail to allocate staging memory for static resource: ", _resource->getName());
 			return false;
 		}
@@ -888,7 +890,7 @@ bool TransferResource::writeStaging(StagingBuffer &buffer) {
 	} while (0);
 
 	if (!stagingMem) {
-		log::error("Vk-Error",
+		log::source().error("Vk-Error",
 				"Fail to map staging memory for static resource: ", _resource->getName());
 		return false;
 	}

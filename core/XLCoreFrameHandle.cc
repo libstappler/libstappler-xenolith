@@ -92,7 +92,7 @@ void FrameHandle::DescribeActiveFrames() {
 				for (auto &it : vec) { stream << "\t" << it << "\n"; }
 			});
 		}
-		stappler::log::debug("FrameHandle", stream.str());
+		stappler::log::source().debug("FrameHandle", stream.str());
 	}
 #endif
 
@@ -247,7 +247,7 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&cb, Ref *r
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (!success) {
 			task->invalidate();
-			log::error("FrameHandle", "Async task failed: ", tag);
+			log::source().error("FrameHandle", "Async task failed: ", tag);
 		}
 	}, task));
 }
@@ -264,7 +264,7 @@ void FrameHandle::performRequiredTask(Function<bool(FrameHandle &)> &&perform,
 		XL_FRAME_LOG(XL_FRAME_LOG_INFO, "thread performed: '", tag, "'");
 		if (!success) {
 			task->invalidate();
-			log::error("FrameHandle", "Async task failed: ", tag);
+			log::source().error("FrameHandle", "Async task failed: ", tag);
 		}
 	},
 			task));
@@ -379,7 +379,7 @@ void FrameHandle::releaseTask(FrameExternalTask *task, bool success) {
 			++_tasksCompleted;
 			tryComplete();
 		} else {
-			log::info("FrameHandle", "Task '", tag, "' failed, invalidate frame");
+			log::source().info("FrameHandle", "Task '", tag, "' failed, invalidate frame");
 			invalidate();
 		}
 	}, this, true);

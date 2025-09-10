@@ -203,7 +203,7 @@ bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
 
 	return true;
 #else
-	log::error("Scene2d", "No available GAPI found");
+	log::source().error("Scene2d", "No available GAPI found");
 	return false;
 #endif
 }

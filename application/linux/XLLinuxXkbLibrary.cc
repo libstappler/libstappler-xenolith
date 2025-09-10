@@ -245,7 +245,7 @@ XkbLibrary::~XkbLibrary() { close(); }
 bool XkbLibrary::init() {
 	_handle = Dso("libxkbcommon.so");
 	if (!_handle) {
-		log::error("XkbLibrary", "Fail to open libxkbcommon.so");
+		log::source().error("XkbLibrary", "Fail to open libxkbcommon.so");
 		return false;
 	}
 
@@ -295,7 +295,7 @@ bool XkbLibrary::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, xkb_compose_state_unref)
 
 	if (!validateFunctionList(&_xkb_first_fn, &_xkb_last_fn)) {
-		log::error("XkbLibrary", "Fail to load libxkb");
+		log::source().error("XkbLibrary", "Fail to load libxkb");
 		return false;
 	}
 
@@ -311,7 +311,7 @@ void XkbLibrary::openAux() {
 		XL_LOAD_PROTO(handle, xkb_x11_state_new_from_device)
 
 		if (!validateFunctionList(&_xkb_x11_first_fn, &_xkb_x11_last_fn)) {
-			log::error("XcbLibrary", "Fail to load libxcb-randr function");
+			log::source().error("XcbLibrary", "Fail to load libxcb-randr function");
 		} else {
 			_x11 = move(handle);
 		}

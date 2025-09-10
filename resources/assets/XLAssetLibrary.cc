@@ -214,7 +214,8 @@ bool AssetLibrary::init(AppThread *app, network::Controller *c, StringView name,
 
 	_server = Rc<Server>::create(app, targetDbParams);
 	if (!_server) {
-		log::error("AssetLibrary", "Fail to create DB server connection for asset library");
+		log::source().error("AssetLibrary",
+				"Fail to create DB server connection for asset library");
 		return false;
 	}
 

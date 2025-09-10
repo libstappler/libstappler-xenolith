@@ -179,6 +179,8 @@ protected:
 
 	virtual void poll();
 
+	virtual void notifyPendingWindows();
+
 	int _resultCode = 0;
 	ContextState _state = ContextState::Created;
 	Context *_context = nullptr;
@@ -198,6 +200,9 @@ protected:
 	Set<NativeWindow *> _allWindows;
 
 	bool _withinPoll = false;
+
+	Vector<Pair<NativeWindow *, core::UpdateConstraintsFlags>> _resizedWindows;
+	Vector<Pair<NativeWindow *, WindowCloseOptions>> _closedWindows;
 };
 
 } // namespace stappler::xenolith::platform

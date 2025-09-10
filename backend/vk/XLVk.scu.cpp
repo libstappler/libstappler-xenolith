@@ -35,13 +35,13 @@ THE SOFTWARE.
 #endif
 
 #if XL_VKDEVICE_DEBUG
-#define XL_VKDEVICE_LOG(...) log::debug("Vk::Device", __VA_ARGS__)
+#define XL_VKDEVICE_LOG(...) log::source().debug("Vk::Device", __VA_ARGS__)
 #else
 #define XL_VKDEVICE_LOG(...)
 #endif
 
 #if XL_VKAPI_DEBUG
-#define XL_VKAPI_LOG(...) log::debug("vk::Api", __VA_ARGS__)
+#define XL_VKAPI_LOG(...) log::source().debug("vk::Api", __VA_ARGS__)
 #else
 #define XL_VKAPI_LOG(...)
 #endif

@@ -1194,7 +1194,7 @@ bool checkIfExtensionAvailable(uint32_t apiVersion, const char *name,
 		Vector<StringView> &promoted, std::bitset<toInt(OptionalDeviceExtension::Max)> &flags) {
 	auto index = getIndexForExtension(name);
 	if (index == maxOf<uint32_t>()) {
-		log::error("Vk", "Extension is not registered as optional: ", name);
+		log::source().error("Vk", "Extension is not registered as optional: ", name);
 		return false;
 	}
 

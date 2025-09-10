@@ -36,7 +36,7 @@
 #endif
 
 #if XL_VKPRESENT_DEBUG
-#define XL_VKPRESENT_LOG(...) log::debug("vk::PresentationEngine", __VA_ARGS__)
+#define XL_VKPRESENT_LOG(...) log::source().debug("vk::PresentationEngine", __VA_ARGS__)
 #else
 #define XL_VKPRESENT_LOG(...)
 #endif
@@ -177,7 +177,7 @@ bool PresentationEngine::recreateSwapchain() {
 	auto cfg = _window->selectConfig(info, fastModeSelected);
 
 	if (!info.isSupported(cfg)) {
-		log::error("Vk-Error", "Presentation with config ", cfg.description(),
+		log::source().error("Vk-Error", "Presentation with config ", cfg.description(),
 				" is not supported for ", info.description());
 		return false;
 	}
@@ -228,10 +228,10 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 		auto oldSwapchain = move(_swapchain);
 
 		if (oldSwapchain && oldSwapchain->getPresentedFramesCount() == 0) {
-			log::warn("vk::View", "Swapchain replaced without frame presentation");
+			log::source().warn("vk::View", "Swapchain replaced without frame presentation");
 		}
 
-		// log::verbose("vk::PresentationEngine", "Surface: ", info.description());
+		// log::source().verbose("vk::PresentationEngine", "Surface: ", info.description());
 		_swapchain = Rc<SwapchainHandle>::create(*dev, info, cfg, move(swapchainImageInfo),
 				presentMode, _surface.get_cast<Surface>(), queueFamilyIndices,
 				(oldSwapchain && oldSwapchainValid) ? oldSwapchain.get_cast<SwapchainHandle>()
@@ -241,6 +241,10 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			auto newConstraints = _window->exportFrameConstraints();
 			newConstraints.extent = cfg.extent;
 			newConstraints.transform = cfg.transform;
+
+			if (cfg.alpha == core::CompositeAlphaFlags::Premultiplied) {
+				newConstraints.viewConstraints |= core::ViewConstraints::Transparent;
+			}
 
 			_constraints = sp::move(newConstraints);
 
@@ -257,9 +261,9 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 
 			for (auto &id : ids) { cache->addImageView(id); }
 
-			// log::verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
+			// log::source().verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
 		} else {
-			log::error("vk::PresentationEngine", "Fail to create swapchain");
+			log::source().error("vk::PresentationEngine", "Fail to create swapchain");
 		}
 	} while (0);
 
@@ -280,7 +284,7 @@ bool PresentationEngine::isImagePresentable(const core::ImageObject &image,
 	auto &sourceImageInfo = image.getInfo();
 	if (sourceImageInfo.extent.depth != 1 || sourceImageInfo.format != config.imageFormat
 			|| (sourceImageInfo.usage & core::ImageUsage::TransferSrc) == core::ImageUsage::None) {
-		log::error("Swapchain", "Image can not be presented on swapchain");
+		log::source().error("Swapchain", "Image can not be presented on swapchain");
 		return false;
 	}
 

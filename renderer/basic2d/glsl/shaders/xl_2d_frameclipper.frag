@@ -19,11 +19,11 @@ void main() {
 	vec2 pos = data.frameSize * abs(normCoord);
 
 	/*
-
 	Top = 1 << 0,
 	Left = 1 << 1,
 	Bottom = 1 << 2,
 	Right = 1 << 3,
+	Transparent = 1 << 4,
 	*/
 
 	if (s.x > 0.0 && s.y > 0.0) {
@@ -52,11 +52,15 @@ void main() {
 	if (d.x < data.radius && d.y < data.radius) {
 		float dist = length(data.radius.xx - d);
 		if (dist > data.radius) {
-			dist = length(data.radius.xx - d - data.offset * s);
-			// correct subpixel position by 0.5
-			// WS operates in pixels, but Vulkan operates with pixel midpoints
-			dist = dist - data.radius - 0.5;
-			outColor = vec4(0.0, 0.0, 0.0, exp((dist * dist) * data.sigma) * data.value);
+			if ((data.constraints & (1 << 4)) != 0 ) {
+				outColor = 0.0.xxxx;
+			} else {
+				dist = length(data.radius.xx - d - data.offset * s);
+				// correct subpixel position by 0.5
+				// WS operates in pixels, but Vulkan operates with pixel midpoints
+				dist = dist - data.radius - 0.5;
+				outColor = vec4(0.0, 0.0, 0.0, exp((dist * dist) * data.sigma) * data.value);
+			}
 		} else {
 			outColor = 1.0.xxxx;
 		}

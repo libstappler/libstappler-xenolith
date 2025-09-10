@@ -256,12 +256,12 @@ float SceneContent::getMaxDepthIndex() const {
 	return maxIndex;
 }
 
-bool SceneContent::onBackButton() {
+bool SceneContent::handleBackButton() {
 	if (_navigation->isNodeVisible()) {
 		_navigation->hide();
 		return true;
 	}
-	return SceneContent2d::onBackButton();
+	return SceneContent2d::handleBackButton();
 }
 
 void SceneContent::updateNodesVisibility() {

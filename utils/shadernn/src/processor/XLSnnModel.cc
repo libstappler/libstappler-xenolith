@@ -58,7 +58,8 @@ void Model::loadBlob(const char *path, const std::function<void(const uint8_t *,
 }
 
 bool Model::compareBlob(const uint8_t *a, size_t na, const uint8_t *b, size_t nb, float v) {
-	return compareBlob((const float *)a, na / sizeof(float), (const float *)b, nb / sizeof(float), v);
+	return compareBlob((const float *)a, na / sizeof(float), (const float *)b, nb / sizeof(float),
+			v);
 }
 
 bool Model::compareBlob(const float *a, size_t na, const float *b, size_t nb, float v) {
@@ -70,7 +71,9 @@ bool Model::compareBlob(const float *a, size_t na, const float *b, size_t nb, fl
 		if (std::abs(*a - *b) > v) {
 			return false;
 		}
-		++ a; ++ b; -- na;
+		++a;
+		++b;
+		--na;
 	}
 	return true;
 }
@@ -84,7 +87,7 @@ bool Model::init(ModelFlags f, const Value &val, uint32_t numLayers, StringView 
 	if (!dataFilePath.empty()) {
 		_dataFile = filesystem::openForReading(dataFilePath);
 		if (!_dataFile) {
-			log::error("snn::Model", "Fail to open model data file: ", dataFilePath);
+			log::source().error("snn::Model", "Fail to open model data file: ", dataFilePath);
 			return false;
 		}
 	}
@@ -125,16 +128,15 @@ bool Model::init(ModelFlags f, const Value &val, uint32_t numLayers, StringView 
 	return true;
 }
 
-void Model::addLayer(Rc<Layer> &&l) {
-	_layers.emplace(l->getInputIndex(), move(l));
-}
+void Model::addLayer(Rc<Layer> &&l) { _layers.emplace(l->getInputIndex(), move(l)); }
 
 bool Model::link() {
 	// find inputs
 	Vector<Layer *> linkedLayers;
 	for (auto &it : _layers) {
 		if (it.second->isInput()) {
-			auto attachment = Rc<Attachment>::create(_attachments.size(), it.second->getOutputExtent(), it.second);
+			auto attachment = Rc<Attachment>::create(_attachments.size(),
+					it.second->getOutputExtent(), it.second);
 			it.second->setOutput(attachment);
 			linkedLayers.emplace_back(it.second.get());
 			linkInput(linkedLayers, it.second, _attachments.emplace_back(move(attachment)));
@@ -146,13 +148,13 @@ bool Model::link() {
 		return true;
 	}
 
-	log::error("snn::Model", "Fail to link model: potential loop in execution tree");
+	log::source().error("snn::Model", "Fail to link model: potential loop in execution tree");
 	return false;
 }
 
 float Model::readFloatData() {
 	float value = 0.0f;
-	if (_dataFile.read((uint8_t*) &value, sizeof(float)) == sizeof(float)) {
+	if (_dataFile.read((uint8_t *)&value, sizeof(float)) == sizeof(float)) {
 		if (isHalfPrecision()) {
 			value = convertToMediumPrecision(value);
 		}
@@ -186,10 +188,12 @@ void Model::linkInput(Vector<Layer *> &layers, Layer *inputLayer, Attachment *at
 				it.second->setInputExtent(input.index, attachment, inputLayer->getOutputExtent());
 				if (it.second->isInputDefined()) {
 					if (std::find(layers.begin(), layers.end(), it.second.get()) == layers.end()) {
-						auto attachment = Rc<Attachment>::create(_attachments.size(), it.second->getOutputExtent(), it.second);
+						auto attachment = Rc<Attachment>::create(_attachments.size(),
+								it.second->getOutputExtent(), it.second);
 						it.second->setOutput(attachment);
 						layers.emplace_back(it.second.get());
-						std::cout << "Layer " << it.second->getName() << " (" << it.second->getTag() << ") " << it.second->getOutputExtent() << "\n";
+						std::cout << "Layer " << it.second->getName() << " (" << it.second->getTag()
+								  << ") " << it.second->getOutputExtent() << "\n";
 						linkInput(layers, it.second, _attachments.emplace_back(move(attachment)));
 					}
 				}
@@ -216,7 +220,7 @@ Activation getActivationValue(StringView istr) {
 	} else if (str == "LINEAR") {
 		return Activation::None;
 	}
-	log::error("snn::Model", "Unknown activation: ", istr);
+	log::source().error("snn::Model", "Unknown activation: ", istr);
 	return Activation::None;
 }
 
@@ -230,9 +234,9 @@ float convertToMediumPrecision(float in) {
 
 	_32to16.flt = in;
 
-	unsigned short sign = (_32to16.unsint & 0x80000000) >> 31;
-	unsigned short exponent = (_32to16.unsint & 0x7F800000) >> 23;
-	unsigned int mantissa = _32to16.unsint & 0x7FFFFF;
+	unsigned short sign = (_32to16.unsint & 0x8000'0000) >> 31;
+	unsigned short exponent = (_32to16.unsint & 0x7F80'0000) >> 23;
+	unsigned int mantissa = _32to16.unsint & 0x7F'FFFF;
 
 	short newexp = exponent + (-127 + 15);
 
@@ -293,15 +297,11 @@ float convertToHighPrecision(uint16_t in) {
 }
 
 void convertToMediumPrecision(Vector<float> &in) {
-	for (auto &val : in) {
-		val = convertToMediumPrecision(val);
-	}
+	for (auto &val : in) { val = convertToMediumPrecision(val); }
 }
 
 void convertToMediumPrecision(Vector<double> &in) {
-	for (auto &val : in) {
-		val = convertToMediumPrecision(val);
-	}
+	for (auto &val : in) { val = convertToMediumPrecision(val); }
 }
 
 void getByteRepresentation(float in, Vector<unsigned char> &byteRep, bool fp16) {
@@ -314,9 +314,9 @@ void getByteRepresentation(float in, Vector<unsigned char> &byteRep, bool fp16) 
 		_32to16.flt = in;
 		unsigned short fp16Val;
 
-		unsigned short sign = (_32to16.unsint & 0x80000000) >> 31;
-		unsigned short exponent = (_32to16.unsint & 0x7F800000) >> 23;
-		unsigned int mantissa = (_32to16.unsint & 0x7FFFFF);
+		unsigned short sign = (_32to16.unsint & 0x8000'0000) >> 31;
+		unsigned short exponent = (_32to16.unsint & 0x7F80'0000) >> 23;
+		unsigned int mantissa = (_32to16.unsint & 0x7F'FFFF);
 
 		short newexp = exponent + (-127 + 15);
 
@@ -340,10 +340,8 @@ void getByteRepresentation(float in, Vector<unsigned char> &byteRep, bool fp16) 
 	} else {
 		uint32_t fp32Val;
 		::memcpy(&fp32Val, &in, 4);
-		for (int i = 0; i < 4; i++) {
-			byteRep.push_back((fp32Val >> 8 * i) & 0xFF);
-		}
+		for (int i = 0; i < 4; i++) { byteRep.push_back((fp32Val >> 8 * i) & 0xFF); }
 	}
 }
 
-}
+} // namespace stappler::xenolith::shadernn

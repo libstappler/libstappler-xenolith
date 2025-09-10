@@ -128,7 +128,7 @@ void FrameCache::releaseImage(Rc<ImageStorage> &&img) {
 	auto info = img->getInfo();
 	auto imageIt = _images.find(info);
 	if (imageIt == _images.end()) {
-		log::warn("FrameCache", "releaseImage: cache miss: ", img->getInfo());
+		log::source().warn("FrameCache", "releaseImage: cache miss: ", img->getInfo());
 		return;
 	}
 

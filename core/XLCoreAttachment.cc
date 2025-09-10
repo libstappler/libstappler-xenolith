@@ -213,7 +213,7 @@ bool ImageAttachment::init(AttachmentBuilder &builder, const ImageData *data, At
 	if (Attachment::init(builder)) {
 		_imageInfo = *data; // copy info
 		if ((_imageInfo.hints & ImageHints::Static) != ImageHints::Static) {
-			log::error("ImageAttachment", "Image ", data->key,
+			log::source().error("ImageAttachment", "Image ", data->key,
 					" is not defined as ImageHint::Static to be used as static image attachment");
 		}
 		_staticImage = data;

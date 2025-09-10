@@ -34,7 +34,7 @@
 
 #ifndef XL_WAYLAND_LOG
 #if XL_WAYLAND_DEBUG
-#define XL_WAYLAND_LOG(...) log::debug("Wayland", __VA_ARGS__)
+#define XL_WAYLAND_LOG(...) log::source().debug("Wayland", __VA_ARGS__)
 #else
 #define XL_WAYLAND_LOG(...)
 #endif
@@ -139,10 +139,10 @@ static struct libdecor_interface s_libdecorInterface {
 	.error = [](libdecor *context, enum libdecor_error error, const char *message) {
 		switch (error) {
 		case LIBDECOR_ERROR_COMPOSITOR_INCOMPATIBLE:
-			log::error("WaylandDisplay", "LIBDECOR_ERROR_COMPOSITOR_INCOMPATIBLE: ", message);
+			log::source().error("WaylandDisplay", "LIBDECOR_ERROR_COMPOSITOR_INCOMPATIBLE: ", message);
 			break;
 		case LIBDECOR_ERROR_INVALID_FRAME_CONFIGURATION:
-			log::error("WaylandDisplay", "LIBDECOR_ERROR_INVALID_FRAME_CONFIGURATION: ", message);
+			log::source().error("WaylandDisplay", "LIBDECOR_ERROR_INVALID_FRAME_CONFIGURATION: ", message);
 			break;
 		}
 	}
@@ -318,7 +318,7 @@ bool WaylandDisplay::init(NotNull<WaylandLibrary> lib, NotNull<XkbLibrary> xkbLi
 	display = wayland->wl_display_connect(
 			d.empty() ? nullptr : (d.terminated() ? d.data() : d.str<Interface>().data()));
 	if (!display) {
-		log::error("WaylandDisplay", "Fail to connect to Wayland Display");
+		log::source().error("WaylandDisplay", "Fail to connect to Wayland Display");
 		return false;
 	}
 
@@ -455,7 +455,8 @@ bool WaylandDisplay::isCursorSupported(WindowCursor cursor, bool serverSide) con
 }
 
 WindowCapabilities WaylandDisplay::getCapabilities() const {
-	auto caps = WindowCapabilities::Fullscreen | WindowCapabilities::FullscreenWithMode;
+	auto caps = WindowCapabilities::Fullscreen | WindowCapabilities::FullscreenWithMode
+			| WindowCapabilities::UserSpaceDecorations | WindowCapabilities::CloseGuard;
 
 	if (wayland->hasDecor()) {
 		caps |= WindowCapabilities::NativeDecorations;

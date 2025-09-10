@@ -906,6 +906,9 @@ enum class ViewConstraints : uint32_t {
 	Bottom = 1 << 2,
 	Right = 1 << 3,
 
+	// View corners is transparent, no need to decorate
+	Transparent = 1 << 4,
+
 	Vertical = Top | Bottom,
 	Horizontal = Left | Right,
 	All = Vertical | Horizontal
@@ -967,11 +970,17 @@ enum class WindowState : uint64_t {
 	// Pointer now within window
 	Pointer = 1LLU << 14,
 
+	// Block any close request for a window
+	// If user or WM want window to be closed, framework will set CloseRequest state flag.
+	// You can commit CloseRequest with enabling CloseRequest state when it's already enabled
+	// or you can discard CloseRequest by disabling it
+	CloseGuard = 1LLU << 15,
+
 	// WM asked user to close this window
-	CloseRequest = 1LLU << 15,
+	CloseRequest = 1LLU << 16,
 
 	// WM uses inset decorations
-	InsetDecorationsVisible = 1LLU << 16,
+	InsetDecorationsVisible = 1LLU << 17,
 
 	// Extra space here
 
@@ -1007,6 +1016,10 @@ enum class WindowState : uint64_t {
 
 	TilingMask = TiledLeft | TiledRight | TiledTop | TiledBottom | ConstrainedLeft
 			| ConstrainedRight | ConstrainedTop | ConstrainedBottom,
+
+	All = TilingMask | AllowedActionsMask | Modal | Sticky | Maximized | Shaded | SkipTaskbar
+			| Minimized | Fullscreen | Above | Below | DemandsAttention | Focused | Resizing
+			| Pointer | CloseGuard | CloseRequest | InsetDecorationsVisible,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowState)

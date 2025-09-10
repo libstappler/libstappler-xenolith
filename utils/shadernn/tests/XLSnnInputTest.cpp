@@ -79,7 +79,7 @@ const core::AttachmentData *InputQueue::getDataAttachment() const {
 void InputQueue::run(Application *app, StringView image) {
 	Extent3 frameExtent(1, 1, 1);
 	if (!bitmap::getImageSize(FileInfo{image}, frameExtent.width, frameExtent.height)) {
-		log::error("InputQueue", "fail to read image: ", image);
+		log::source().error("InputQueue", "fail to read image: ", image);
 		return;
 	}
 

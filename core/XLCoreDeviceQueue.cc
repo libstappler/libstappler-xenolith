@@ -99,7 +99,7 @@ uint32_t QueryPool::armNextQuery(uint32_t tag) {
 		ret = _usedQueries;
 		++_usedQueries;
 	} else {
-		log::error("QueryPool", "Exceeded timestamps limit, ", _usedQueries,
+		log::source().error("QueryPool", "Exceeded timestamps limit, ", _usedQueries,
 				" timestamps already in use");
 	}
 	return ret;

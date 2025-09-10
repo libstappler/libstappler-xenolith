@@ -38,19 +38,19 @@
 #endif
 
 #if XL_FRAME_EMITTER_DEBUG
-#define XL_FRAME_EMITTER_LOG(...) log::debug("FrameEmitter", __VA_ARGS__)
+#define XL_FRAME_EMITTER_LOG(...) log::source().debug("FrameEmitter", __VA_ARGS__)
 #else
 #define XL_FRAME_EMITTER_LOG(...)
 #endif
 
 #if XL_FRAME_QUEUE_DEBUG
-#define XL_FRAME_QUEUE_LOG(...) log::debug("FrameQueue", "[", _queue->getName(), ": ",  _order, "] ", __VA_ARGS__)
+#define XL_FRAME_QUEUE_LOG(...) log::source().debug("FrameQueue", "[", _queue->getName(), ": ",  _order, "] ", __VA_ARGS__)
 #else
 #define XL_FRAME_QUEUE_LOG(...)
 #endif
 
 #if XL_FRAME_DEBUG
-#define XL_FRAME_LOG(...) log::debug("Frame", __VA_ARGS__)
+#define XL_FRAME_LOG(...) log::source().debug("Frame", __VA_ARGS__)
 #else
 #define XL_FRAME_LOG(...)
 #endif

@@ -34,7 +34,7 @@ Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 
 	auto handle = Dso("libvulkan.so.1");
 	if (!handle) {
-		log::error("Vk", "Fail to open libvulkan.so.1");
+		log::source().error("Vk", "Fail to open libvulkan.so.1");
 		return nullptr;
 	}
 

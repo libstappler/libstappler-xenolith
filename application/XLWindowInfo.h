@@ -240,6 +240,12 @@ enum class WindowCapabilities : uint32_t {
 
 	// SkipTaskbar and SkipPager state supported
 	SkipTaskbarState = 1 << 13,
+
+	// Platform supports CloseGuard
+	CloseGuard = 1 << 14,
+
+	// Window supports separate MaximizeVert/MaximizeHorz in enableState/disableState
+	SeparateMaximize = 1 << 15,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
@@ -251,7 +257,6 @@ struct SP_PUBLIC DecorationInfo {
 	float shadowMaxValue = 0.25f;
 	float shadowCurrentValue = 0.3f;
 	Vec2 shadowOffset;
-	Padding extents; // set by WM integration
 
 	operator bool() const { return borderRadius > 0.0f || shadowWidth > 0.0f; }
 };
@@ -298,6 +303,19 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 
 	Value encode() const;
 };
+
+SP_PUBLIC StringView getWindowCursorName(WindowCursor);
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, WindowCursor t) {
+	stream << getWindowCursorName(t);
+	return stream;
+}
+
+inline std::ostream &operator<<(std::ostream &stream, WindowCursor t) {
+	stream << getWindowCursorName(t);
+	return stream;
+}
+
 
 } // namespace stappler::xenolith
 

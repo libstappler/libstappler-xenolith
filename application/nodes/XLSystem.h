@@ -33,12 +33,22 @@ class Scene;
 
 enum class SystemFlags : uint32_t {
 	None,
+
 	HandleOwnerEvents = 1 << 0, // Added/Removed
 	HandleSceneEvents = 1 << 1, // Enter/Exit
 	HandleNodeEvents = 1 << 2, // ContentSize/Transform/Reorder
 	HandleVisitSelf = 1 << 3, // VisitSelf
 	HandleVisitControl = 1 << 4, // VisitBegin/VisitNodesBelow/VisitNodesAbove/VisitEnd
-	HandleComponents = 1 << 5,
+	HandleComponents = 1 << 5, // Components
+
+	// This flags reflects what kind of Node's events system can handle
+	// To work effectively, set flags you actually needed
+	EventFlagMask = HandleOwnerEvents | HandleSceneEvents | HandleNodeEvents | HandleVisitSelf
+			| HandleVisitControl | HandleComponents,
+
+	// When this flag is set and FrameTag != InvalidTag, system will be added to frame stack by it's owner.
+	// It means, that child nodes can access this system with FrameInfo::systemStack and FrameTag
+	AddToFrameStack = 1 << 6,
 
 	Default = HandleOwnerEvents | HandleSceneEvents | HandleNodeEvents | HandleVisitSelf
 };
@@ -63,8 +73,10 @@ class SP_PUBLIC System : public Ref {
 public:
 	static uint64_t GetNextSystemId();
 
+	virtual ~System() = default;
+
 	System();
-	virtual ~System();
+
 	virtual bool init();
 
 	virtual void handleAdded(Node *owner);
@@ -222,8 +234,8 @@ public:
 		return _handleReorderChildDirty;
 	}
 
-	virtual void setLayutCallback(Function<void(CallbackSystem *, Node *)> &&);
-	virtual auto geLayoutCallback() -> const Function<void(CallbackSystem *, Node *)> & {
+	virtual void setLayoutCallback(Function<void(CallbackSystem *, Node *)> &&);
+	virtual auto getLayoutCallback() -> const Function<void(CallbackSystem *, Node *)> & {
 		return _handleLayout;
 	}
 

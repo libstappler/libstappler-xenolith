@@ -24,6 +24,7 @@
 #define TEST_SRC_WIDGETS_APPMATERIALTEST_H_
 
 #include "AppTests.h"
+#include "MaterialLabel.h" // IWYU pragma: keep
 #include "MaterialFlexibleLayout.h"
 
 namespace stappler::xenolith::app {
@@ -49,6 +50,6 @@ protected:
 	Label *_infoLabel = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::app
 
 #endif /* TEST_SRC_WIDGETS_APPMATERIALTEST_H_ */

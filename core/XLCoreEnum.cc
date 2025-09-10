@@ -159,6 +159,7 @@ const CallbackStream &operator<<(const CallbackStream &out, WindowState f) {
 		case WindowState::Focused: out << " Focused"; break;
 		case WindowState::Resizing: out << " Resizing"; break;
 		case WindowState::Pointer: out << " Pointer"; break;
+		case WindowState::CloseGuard: out << " CloseGuard"; break;
 		case WindowState::CloseRequest: out << " CloseRequest"; break;
 		case WindowState::InsetDecorationsVisible: out << " InsetDecorationsVisible"; break;
 		case WindowState::AllowedWindowMenu: out << " AllowedWindowMenu"; break;
@@ -185,6 +186,7 @@ const CallbackStream &operator<<(const CallbackStream &out, WindowState f) {
 		case WindowState::ConstrainedTop: out << " ConstrainedTop"; break;
 		case WindowState::ConstrainedBottom: out << " ConstrainedBottom"; break;
 		case WindowState::TilingMask: break;
+		case WindowState::All: break;
 		}
 	}
 	return out;

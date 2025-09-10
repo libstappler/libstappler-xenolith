@@ -103,8 +103,8 @@ public:
 	// When CloseRequest flag is set, ypu should commit this request with enableState(WindowState::CloseRequest)
 	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable ExitGuard
 	// Also, when CloseRequest flag is set, next `close` call or next WM close action will close this window
-	void retainExitGuard();
-	void releaseExitGuard();
+	void retainCloseGuard();
+	void releaseCloseGuard();
 
 	// State flags you can enable or disable
 	WindowState getUpdatableStateFlags() const;

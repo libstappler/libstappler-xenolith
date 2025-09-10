@@ -76,7 +76,7 @@ Rc<Instance> Instance::create(Rc<InstanceInfo> &&info) {
 Instance::~Instance() {
 	_dsoModule.close();
 
-	log::debug("core::Instance", "~Instance");
+	log::source().debug("core::Instance", "~Instance");
 }
 
 Instance::Instance(InstanceApi api, InstanceFlags flags, Dso &&dso)

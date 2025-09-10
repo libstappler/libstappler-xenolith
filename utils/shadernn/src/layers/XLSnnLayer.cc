@@ -39,7 +39,7 @@ bool Layer::init(Model *model, StringView tag, size_t idx, const Value &data) {
 	uint32_t i = 0;
 	for (auto &it : data.getArray("inputId")) {
 		_inputs.emplace_back(LayerInputInfo({i, static_cast<uint32_t>(it.getInteger())}));
-		++ i;
+		++i;
 	}
 
 	i = 0;
@@ -47,7 +47,7 @@ bool Layer::init(Model *model, StringView tag, size_t idx, const Value &data) {
 		if (i < _inputs.size()) {
 			_inputs[i].name = it.getString();
 		}
-		++ i;
+		++i;
 	}
 
 	return true;
@@ -72,22 +72,30 @@ bool Layer::isInputDefined() const {
 
 Extent3 Layer::getOutputExtent() const {
 	Extent3 ret;
-	LayerTransformInfo accumulatedTransform( { 0, { { 0.0f, 0.0f, 0.0f, 0.0f } } });
+	LayerTransformInfo accumulatedTransform({0, {{0.0f, 0.0f, 0.0f, 0.0f}}});
 	auto t = getOutputTransform();
 	for (auto &dim : _inputs) {
 		if (!t.isFixed) {
-			accumulatedTransform.scaleWidth = std::max(accumulatedTransform.scaleWidth, t.scaleWidth * dim.extent.width);
-			accumulatedTransform.translateWidth = std::max(accumulatedTransform.translateWidth, t.translateWidth);
-			accumulatedTransform.scaleHeight = std::max(accumulatedTransform.scaleHeight, t.scaleHeight * dim.extent.height);
-			accumulatedTransform.translateHeight = std::max(accumulatedTransform.translateHeight, t.translateHeight);
+			accumulatedTransform.scaleWidth =
+					std::max(accumulatedTransform.scaleWidth, t.scaleWidth * dim.extent.width);
+			accumulatedTransform.translateWidth =
+					std::max(accumulatedTransform.translateWidth, t.translateWidth);
+			accumulatedTransform.scaleHeight =
+					std::max(accumulatedTransform.scaleHeight, t.scaleHeight * dim.extent.height);
+			accumulatedTransform.translateHeight =
+					std::max(accumulatedTransform.translateHeight, t.translateHeight);
 			ret.width = accumulatedTransform.scaleWidth + accumulatedTransform.translateWidth;
 			ret.height = accumulatedTransform.scaleHeight + accumulatedTransform.translateHeight;
 			ret.depth = std::max(ret.depth, dim.extent.depth);
 		} else {
-			accumulatedTransform.fixedWidth = std::max(accumulatedTransform.fixedWidth, t.fixedWidth);
-			accumulatedTransform.fixedHeight = std::max(accumulatedTransform.fixedHeight, t.fixedHeight);
-			accumulatedTransform.fixedDepth = std::max(accumulatedTransform.fixedDepth, t.fixedDepth);
-			accumulatedTransform.fixedBatch = std::max(accumulatedTransform.fixedBatch, t.fixedBatch);
+			accumulatedTransform.fixedWidth =
+					std::max(accumulatedTransform.fixedWidth, t.fixedWidth);
+			accumulatedTransform.fixedHeight =
+					std::max(accumulatedTransform.fixedHeight, t.fixedHeight);
+			accumulatedTransform.fixedDepth =
+					std::max(accumulatedTransform.fixedDepth, t.fixedDepth);
+			accumulatedTransform.fixedBatch =
+					std::max(accumulatedTransform.fixedBatch, t.fixedBatch);
 			ret.width = accumulatedTransform.fixedWidth + accumulatedTransform.translateWidth;
 			ret.height = accumulatedTransform.fixedHeight + accumulatedTransform.translateHeight;
 			ret.depth = std::max(ret.depth, dim.extent.depth);
@@ -99,35 +107,45 @@ Extent3 Layer::getOutputExtent() const {
 
 Extent3 Layer::getOutputExtent(const ModelSpecialization &spec) const {
 	Extent3 ret;
-	LayerTransformInfo accumulatedTransform( { 0, { { 0.0f, 0.0f, 0.0f, 0.0f } } });
+	LayerTransformInfo accumulatedTransform({0, {{0.0f, 0.0f, 0.0f, 0.0f}}});
 	auto t = getOutputTransform();
 	for (auto &d : _inputs) {
 		auto iit = spec.attachments.find(d.attachment);
 		if (iit != spec.attachments.end()) {
 			auto extent = iit->second;
 			if (!t.isFixed) {
-				accumulatedTransform.scaleWidth = std::max(accumulatedTransform.scaleWidth, t.scaleWidth * extent.width);
-				accumulatedTransform.translateWidth = std::max(accumulatedTransform.translateWidth, t.translateWidth);
-				accumulatedTransform.scaleHeight = std::max(accumulatedTransform.scaleHeight, t.scaleHeight * extent.height);
-				accumulatedTransform.translateHeight = std::max(accumulatedTransform.translateHeight, t.translateHeight);
+				accumulatedTransform.scaleWidth =
+						std::max(accumulatedTransform.scaleWidth, t.scaleWidth * extent.width);
+				accumulatedTransform.translateWidth =
+						std::max(accumulatedTransform.translateWidth, t.translateWidth);
+				accumulatedTransform.scaleHeight =
+						std::max(accumulatedTransform.scaleHeight, t.scaleHeight * extent.height);
+				accumulatedTransform.translateHeight =
+						std::max(accumulatedTransform.translateHeight, t.translateHeight);
 				ret.width = accumulatedTransform.scaleWidth + accumulatedTransform.translateWidth;
-				ret.height = accumulatedTransform.scaleHeight + accumulatedTransform.translateHeight;
+				ret.height =
+						accumulatedTransform.scaleHeight + accumulatedTransform.translateHeight;
 				ret.depth = std::max(ret.depth, extent.depth);
 			} else {
-				accumulatedTransform.fixedWidth = std::max(accumulatedTransform.fixedWidth, t.fixedWidth);
-				accumulatedTransform.fixedHeight = std::max(accumulatedTransform.fixedHeight, t.fixedHeight);
-				accumulatedTransform.fixedDepth = std::max(accumulatedTransform.fixedDepth, t.fixedDepth);
-				accumulatedTransform.fixedBatch = std::max(accumulatedTransform.fixedBatch, t.fixedBatch);
+				accumulatedTransform.fixedWidth =
+						std::max(accumulatedTransform.fixedWidth, t.fixedWidth);
+				accumulatedTransform.fixedHeight =
+						std::max(accumulatedTransform.fixedHeight, t.fixedHeight);
+				accumulatedTransform.fixedDepth =
+						std::max(accumulatedTransform.fixedDepth, t.fixedDepth);
+				accumulatedTransform.fixedBatch =
+						std::max(accumulatedTransform.fixedBatch, t.fixedBatch);
 				ret.width = accumulatedTransform.fixedWidth + accumulatedTransform.translateWidth;
-				ret.height = accumulatedTransform.fixedHeight + accumulatedTransform.translateHeight;
+				ret.height =
+						accumulatedTransform.fixedHeight + accumulatedTransform.translateHeight;
 				ret.depth = std::max(ret.depth, extent.depth);
 			}
 		} else {
-			log::error("snn::Layer", "Extent is not defined for layer : ", _name);
+			log::source().error("snn::Layer", "Extent is not defined for layer : ", _name);
 		}
 	}
 	ret.depth = (_numOutputPlanes + 3) / 4;
 	return ret;
 }
 
-}
+} // namespace stappler::xenolith::shadernn

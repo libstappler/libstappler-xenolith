@@ -246,8 +246,9 @@ static void Queue_buildLoadStore(QueueData *data) {
 					bool isWrite =
 							((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
 					if (isRead && !isWrite) {
-						log::error("Gl-Error", "Attachment's color component '", attachment->key,
-								"' is read in renderpass ", desc->pass->key, " before written");
+						log::source().error("Gl-Error", "Attachment's color component '",
+								attachment->key, "' is read in renderpass ", desc->pass->key,
+								" before written");
 					}
 
 					auto img = (ImageAttachment *)attachment->attachment.get();
@@ -267,8 +268,9 @@ static void Queue_buildLoadStore(QueueData *data) {
 					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil)
 							!= AttachmentOps::Undefined);
 					if (isRead && !isWrite) {
-						log::error("Gl-Error", "Attachment's stencil component '", attachment->key,
-								"' is read in renderpass ", desc->pass->key, " before written");
+						log::source().error("Gl-Error", "Attachment's stencil component '",
+								attachment->key, "' is read in renderpass ", desc->pass->key,
+								" before written");
 					}
 					auto img = (ImageAttachment *)attachment->attachment.get();
 					desc->stencilLoadOp = img->shouldClearOnLoad() ? AttachmentLoadOp::Clear
@@ -287,8 +289,9 @@ static void Queue_buildLoadStore(QueueData *data) {
 					bool isWrite =
 							((desc->ops & AttachmentOps::WritesColor) != AttachmentOps::Undefined);
 					if (!isRead && isWrite) {
-						log::error("Gl-Error", "Attachment's color component '", attachment->key,
-								"' is written in renderpass ", desc->pass->key, " but never read");
+						log::source().error("Gl-Error", "Attachment's color component '",
+								attachment->key, "' is written in renderpass ", desc->pass->key,
+								" but never read");
 					}
 					desc->storeOp = AttachmentStoreOp::DontCare;
 				}
@@ -305,8 +308,9 @@ static void Queue_buildLoadStore(QueueData *data) {
 					bool isWrite = ((desc->ops & AttachmentOps::WritesStencil)
 							!= AttachmentOps::Undefined);
 					if (!isRead && isWrite) {
-						log::error("Gl-Error", "Attachment's stencil component '", attachment->key,
-								"' is writen in renderpass ", desc->pass->key, " but never read");
+						log::source().error("Gl-Error", "Attachment's stencil component '",
+								attachment->key, "' is writen in renderpass ", desc->pass->key,
+								" but never read");
 					}
 					desc->stencilStoreOp = AttachmentStoreOp::DontCare;
 				}
@@ -557,7 +561,7 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 			}
 			break;
 		default:
-			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
+			log::source().error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
 					"' in renderpass ", attachemnt->pass->pass->key, ":",
 					attachemnt->subpass->index);
 			break;
@@ -572,7 +576,7 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 			attachemnt->layout = AttachmentLayout::ColorAttachmentOptimal;
 			break;
 		default:
-			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
+			log::source().error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
 					"' in renderpass ", attachemnt->pass->pass->key, ":",
 					attachemnt->subpass->index);
 			break;
@@ -583,7 +587,7 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 		case AttachmentLayout::General: break;
 		case AttachmentLayout::Ignored: attachemnt->layout = AttachmentLayout::General; break;
 		default:
-			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
+			log::source().error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
 					"' in renderpass ", attachemnt->pass->pass->key, ":",
 					attachemnt->subpass->index);
 			break;
@@ -612,7 +616,7 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 			}
 			break;
 		default:
-			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
+			log::source().error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
 					"' in renderpass ", attachemnt->pass->pass->key, ":",
 					attachemnt->subpass->index);
 			break;
@@ -626,14 +630,14 @@ static void Queue_updateLayout(AttachmentSubpassData *attachemnt, Device &dev) {
 		case AttachmentLayout::General: break;
 		case AttachmentLayout::Ignored: attachemnt->layout = AttachmentLayout::General; break;
 		default:
-			log::error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
+			log::source().error("Gl-Error", "Invalid layout for attachment '", attachemnt->key,
 					"' in renderpass ", attachemnt->pass->pass->key, ":",
 					attachemnt->subpass->index);
 			break;
 		}
 		break;
 	default:
-		log::error("Gl-Error", "Invalid usage for attachment '", attachemnt->key,
+		log::source().error("Gl-Error", "Invalid usage for attachment '", attachemnt->key,
 				"' in renderpass ", attachemnt->pass->pass->key, ":", attachemnt->subpass->index);
 		break;
 	}
@@ -674,8 +678,9 @@ static void Queue_sortDescriptors(AttachmentData *attachemnt, Device &dev) {
 		if (iit == priorities.end()) {
 			priorities.emplace(pass->ordering.get());
 		} else {
-			log::error("Gl-Error", "Duplicate render pass priority '", pass->ordering.get(),
-					"' for attachment '", attachemnt->key, "', render ordering can be invalid");
+			log::source().error("Gl-Error", "Duplicate render pass priority '",
+					pass->ordering.get(), "' for attachment '", attachemnt->key,
+					"', render ordering can be invalid");
 		}
 	}
 
@@ -704,8 +709,8 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName,
 				if (d->type == DescriptorType::Unknown) {
 					d->type = binding.type;
 				} else if (d->type != binding.type) {
-					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set,
-							":", desc, "] descriptor type conflict: (code)",
+					log::source().warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
+							":", set, ":", desc, "] descriptor type conflict: (code)",
 							getDescriptorTypeName(d->type), " vs. (shader)",
 							getDescriptorTypeName(binding.type));
 				}
@@ -715,13 +720,13 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName,
 						d->count = std::max(binding.count, d->count);
 					}
 				} else if (binding.count < maxOf<uint32_t>() && binding.count > d->count) {
-					log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set,
-							":", desc, "] descriptor requires ", binding.count,
+					log::source().warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
+							":", set, ":", desc, "] descriptor requires ", binding.count,
 							" objects, but only ", d->count, "defined with addDescriptorArray");
 				}
 			} else {
-				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":",
-						desc, "] descriptor target not found");
+				log::source().warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":",
+						set, ":", desc, "] descriptor target not found");
 			}
 		} else {
 			if (desc == 0 && binding.type == DescriptorType::Sampler) {
@@ -731,15 +736,15 @@ static void Queue_validateShaderPipelineLayout(StringView pipelineName,
 			} else if (desc == 2 && binding.type == DescriptorType::StorageBuffer) {
 				hasAtlasArray = true;
 			} else {
-				log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":", set, ":",
-						desc, "] descriptor set not found");
+				log::source().warn("renderqueue::Queue", "[", layout->key, ":", pipelineName, ":",
+						set, ":", desc, "] descriptor set not found");
 			}
 		}
 	}
 
 	if (hasTexturesArray || hasSamplersArray || hasAtlasArray) {
 		if (layout->textureSetLayout == nullptr) {
-			log::warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
+			log::source().warn("renderqueue::Queue", "[", layout->key, ":", pipelineName,
 					"] uses TextureSetLayout, that was not defined");
 		}
 	}
@@ -1356,7 +1361,7 @@ const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key,
 		const PipelineFamilyData *family, SpecializationInfo &&spec) {
 	auto it = _data->computePipelines.find(key);
 	if (it != _data->computePipelines.end()) {
-		log::error("Resource", _data->key, ": Pipeline '", key, "' already added");
+		log::source().error("Resource", _data->key, ": Pipeline '", key, "' already added");
 		return nullptr;
 	}
 
@@ -1392,7 +1397,7 @@ GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key,
 		const PipelineFamilyData *family) {
 	auto it = _data->graphicPipelines.find(key);
 	if (it != _data->graphicPipelines.end()) {
-		log::error("Resource", _data->key, ": Pipeline '", key, "' already added");
+		log::source().error("Resource", _data->key, ": Pipeline '", key, "' already added");
 		return nullptr;
 	}
 
@@ -1433,7 +1438,7 @@ bool SubpassBuilder::setPipelineOption(GraphicPipelineData &f,
 	for (auto &it : programs) {
 		auto p = _data->pass->queue->programs.get(it.data->key);
 		if (!p) {
-			log::error("PipelineRequest", _data->key,
+			log::source().error("PipelineRequest", _data->key,
 					": Shader not found in request: ", it.data->key);
 			return false;
 		}
@@ -1652,7 +1657,7 @@ const AttachmentData *Queue::Builder::addAttachemnt(StringView name,
 		}, _data->pool);
 		return ret;
 	} else {
-		log::error("Queue::Builder", "Attachment for name already defined: ", name);
+		log::source().error("Queue::Builder", "Attachment for name already defined: ", name);
 	}
 	return nullptr;
 }
@@ -1677,7 +1682,7 @@ const QueuePassData *Queue::Builder::addPass(StringView name, PassType type,
 		}, _data->pool);
 		return ret;
 	} else {
-		log::error("Queue::Builder", "RenderPass for name already defined: ", name);
+		log::source().error("Queue::Builder", "RenderPass for name already defined: ", name);
 	}
 	return nullptr;
 }
@@ -1685,7 +1690,7 @@ const QueuePassData *Queue::Builder::addPass(StringView name, PassType type,
 const ProgramData *Queue::Builder::addProgram(StringView key, SpanView<uint32_t> data,
 		const ProgramInfo *info) {
 	if (!_data) {
-		log::error("Resource", "Fail to add shader: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -1704,14 +1709,14 @@ const ProgramData *Queue::Builder::addProgram(StringView key, SpanView<uint32_t>
 		return r;
 	}
 
-	log::error("Resource", _data->key, ": Shader already added: ", key);
+	log::source().error("Resource", _data->key, ": Shader already added: ", key);
 	return nullptr;
 }
 
 const ProgramData *Queue::Builder::addProgramByRef(StringView key, SpanView<uint32_t> data,
 		const ProgramInfo *info) {
 	if (!_data) {
-		log::error("Resource", "Fail tom add shader: ", key, ", not initialized");
+		log::source().error("Resource", "Fail tom add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -1730,7 +1735,7 @@ const ProgramData *Queue::Builder::addProgramByRef(StringView key, SpanView<uint
 		return r;
 	}
 
-	log::error("Resource", _data->key, ": Shader already added: ", key);
+	log::source().error("Resource", _data->key, ": Shader already added: ", key);
 	return nullptr;
 }
 
@@ -1738,7 +1743,7 @@ const ProgramData *Queue::Builder::addProgram(StringView key,
 		const memory::function<void(Device &, const ProgramData::DataCallback &)> &cb,
 		const ProgramInfo *info) {
 	if (!_data) {
-		log::error("Resource", "Fail to add shader: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add shader: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -1757,7 +1762,7 @@ const ProgramData *Queue::Builder::addProgram(StringView key,
 		return r;
 	}
 
-	log::error("Resource", _data->key, ": Shader already added: ", key);
+	log::source().error("Resource", _data->key, ": Shader already added: ", key);
 	return nullptr;
 }
 
@@ -1765,7 +1770,7 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key,
 		SpanView<SamplerInfo> samplers, uint32_t images, uint32_t buffers, uint32_t imagesIndexed,
 		uint32_t buffersIndexed) {
 	if (!_data) {
-		log::error("Resource", "Fail to add TextureSetLayout: ", key, ", not initialized");
+		log::source().error("Resource", "Fail to add TextureSetLayout: ", key, ", not initialized");
 		return nullptr;
 	}
 
@@ -1785,23 +1790,23 @@ const TextureSetLayoutData *Queue::Builder::addTextureSetLayout(StringView key,
 		return r;
 	}
 
-	log::error("Resource", _data->key, ": TextureSetLayout already added: ", key);
+	log::source().error("Resource", _data->key, ": TextureSetLayout already added: ", key);
 	return nullptr;
 }
 
 void Queue::Builder::addLinkedResource(const Rc<Resource> &res) {
 	if (!_data) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(),
+		log::source().error("Resource", "Fail to add linked resource: ", res->getName(),
 				", not initialized");
 		return;
 	}
 	if (res->getOwner() != nullptr) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(), ", it's owned by ",
-				res->getOwner()->getName());
+		log::source().error("Resource", "Fail to add linked resource: ", res->getName(),
+				", it's owned by ", res->getOwner()->getName());
 		return;
 	}
 	if (!res->isCompiled()) {
-		log::error("Resource", "Fail to add linked resource: ", res->getName(),
+		log::source().error("Resource", "Fail to add linked resource: ", res->getName(),
 				", resource is not compiled");
 		return;
 	}

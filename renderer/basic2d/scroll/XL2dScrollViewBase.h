@@ -24,7 +24,7 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEWBASE_H_
 #define XENOLITH_RENDERER_BASIC2D_SCROLL_XL2DSCROLLVIEWBASE_H_
 
-#include "XL2d.h"
+#include "XL2d.h" // IWYU pragma: keep
 #include "XLNode.h"
 #include "XL2dActionAcceleratedMove.h"
 
@@ -44,7 +44,7 @@ public:
 		Horizontal
 	};
 
-	virtual ~ScrollViewBase() { }
+	virtual ~ScrollViewBase() = default;
 
 	virtual bool init(Layout l);
 	virtual void setLayout(Layout l);
@@ -168,8 +168,6 @@ public:
 	virtual void onTap(int count, const Vec2 &loc);
 
 protected:
-	using Node::init;
-
 	Layout _layout = Vertical;
 
 	enum class Movement {
@@ -208,6 +206,9 @@ protected:
 	bool _animationDirty = false;
 
 	Padding _paddingGlobal;
+
+private:
+	using Node::init;
 };
 
 } // namespace stappler::xenolith::basic2d

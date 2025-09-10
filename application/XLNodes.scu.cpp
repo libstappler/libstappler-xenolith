@@ -25,6 +25,7 @@
 #include "nodes/XLNode.cc"
 #include "nodes/XLScene.cc"
 #include "nodes/XLSceneContent.cc"
+#include "nodes/XLCloseGuardWidget.cc"
 #include "nodes/XLWindowDecorations.cc"
 #include "nodes/XLSystem.cc"
 #include "nodes/XLComponent.cc"
@@ -35,6 +36,7 @@
 #include "input/XLGestureRecognizer.cc"
 #include "input/XLInputDispatcher.cc"
 #include "input/XLInputListener.cc"
+#include "input/XLFocusGroup.cc"
 #include "input/XLTextInputManager.cc"
 
 #include "actions/XLAction.cc"

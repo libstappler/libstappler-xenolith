@@ -64,16 +64,16 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
 					|| StringView(pCallbackData->pMessage).starts_with("Device Extension: ")) {
 				return VK_FALSE;
 			}
-			log::verbose("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ",
+			log::source().verbose("Vk-Validation-Verbose", "[", pCallbackData->pMessageIdName, "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-			log::info("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ",
+			log::source().info("Vk-Validation-Info", "[", pCallbackData->pMessageIdName, "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			log::warn("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ",
+			log::source().warn("Vk-Validation-Warning", "[", pCallbackData->pMessageIdName, "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			log::error("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ",
+			log::source().error("Vk-Validation-Error", "[", pCallbackData->pMessageIdName, "] ",
 					pCallbackData->pMessage);
 		}
 		return VK_FALSE;
@@ -86,19 +86,19 @@ SPUNUSED static VKAPI_ATTR VkBool32 VKAPI_CALL s_debugMessageCallback(
 			if (StringView(pCallbackData->pMessage).starts_with("Device Extension: ")) {
 				return VK_FALSE;
 			}
-			log::verbose("Vk-Validation-Verbose", "[",
+			log::source().verbose("Vk-Validation-Verbose", "[",
 					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-			log::info("Vk-Validation-Info", "[",
+			log::source().info("Vk-Validation-Info", "[",
 					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-			log::warn("Vk-Validation-Warning", "[",
+			log::source().warn("Vk-Validation-Warning", "[",
 					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
 					pCallbackData->pMessage);
 		} else if (messageSeverity <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-			log::error("Vk-Validation-Error", "[",
+			log::source().error("Vk-Validation-Error", "[",
 					pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "(null)", "] ",
 					pCallbackData->pMessage);
 		}
@@ -149,7 +149,7 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 		if (s_createDebugUtilsMessengerEXT(_instance, vkGetInstanceProcAddr, &debugCreateInfo,
 					nullptr, &debugMessenger)
 				!= VK_SUCCESS) {
-			log::warn("Vk", "failed to set up debug messenger!");
+			log::source().warn("Vk", "failed to set up debug messenger!");
 		}
 	}
 
@@ -169,7 +169,7 @@ Instance::Instance(VkInstance inst, const PFN_vkGetInstanceProcAddr getInstanceP
 				it.properties.device10.properties.driverVersion, it.supportsPresentation()});
 		}
 	} else {
-		log::info("Vk", "No devices available on this instance");
+		log::source().info("Vk", "No devices available on this instance");
 	}
 }
 
@@ -187,7 +187,8 @@ Rc<core::Loop> Instance::makeLoop(NotNull<event::Looper> looper, Rc<core::LoopIn
 Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	auto data = info.backend.get_cast<LoopBackendInfo>();
 	if (!data) {
-		log::error("vk::Instance", "Fail to create device: loop platform data is not defined");
+		log::source().error("vk::Instance",
+				"Fail to create device: loop platform data is not defined");
 		return nullptr;
 	}
 
@@ -268,19 +269,21 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	if (info.deviceIdx == core::InstanceDefaultDevice) {
 		for (auto &it : _devices) {
 			if (!isDeviceSupported(it)) {
-				log::warn("vk::Instance", "Device rejected: device is not supported");
+				log::source().warn("vk::Instance", "Device rejected: device is not supported");
 				continue;
 			}
 
 			auto requiredExtensions = getDeviceExtensions(it);
 			if (!isExtensionsSupported(it, requiredExtensions)) {
-				log::warn("vk::Instance", "Device rejected: required extensions is not available");
+				log::source().warn("vk::Instance",
+						"Device rejected: required extensions is not available");
 				continue;
 			}
 
 			DeviceInfo::Features targetFeatures;
 			if (!buildFeaturesList(it, targetFeatures)) {
-				log::warn("vk::Instance", "Device rejected: required features is not available");
+				log::source().warn("vk::Instance",
+						"Device rejected: required features is not available");
 				continue;
 			}
 
@@ -293,20 +296,21 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 	} else if (info.deviceIdx < _devices.size()) {
 		auto &dev = _devices[info.deviceIdx];
 		if (!isDeviceSupported(dev)) {
-			log::error("vk::Instance", "Fail to create device: device is not supported");
+			log::source().error("vk::Instance", "Fail to create device: device is not supported");
 			return nullptr;
 		}
 
 		auto requiredExtensions = getDeviceExtensions(dev);
 		if (!isExtensionsSupported(dev, requiredExtensions)) {
-			log::error("vk::Instance",
+			log::source().error("vk::Instance",
 					"Fail to create device: required extensions is not available");
 			return nullptr;
 		}
 
 		DeviceInfo::Features targetFeatures;
 		if (!buildFeaturesList(dev, targetFeatures)) {
-			log::error("vk::Instance", "Fail to create device: required features is not available");
+			log::source().error("vk::Instance",
+					"Fail to create device: required features is not available");
 			return nullptr;
 		}
 
@@ -316,7 +320,7 @@ Rc<Device> Instance::makeDevice(const core::LoopInfo &info) const {
 		}
 	}
 
-	log::error("vk::Instance", "Fail to create device: no acceptable devices found");
+	log::source().error("vk::Instance", "Fail to create device: no acceptable devices found");
 	return nullptr;
 }
 
@@ -739,7 +743,8 @@ DeviceInfo Instance::getDeviceInfo(VkPhysicalDevice device) const {
 
 		if (!found) {
 			if constexpr (s_printVkInfo) {
-				log::verbose("Vk-Info", "Required device extension not found: %s", extensionName);
+				log::source().verbose("Vk-Info", "Required device extension not found: %s",
+						extensionName);
 			}
 			notFound = true;
 			break;

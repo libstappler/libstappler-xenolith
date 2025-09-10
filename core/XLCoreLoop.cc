@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
-Loop::~Loop() { log::debug("core::Loop", "~Loop"); }
+Loop::~Loop() { log::source().debug("core::Loop", "~Loop"); }
 
 bool Loop::init(NotNull<event::Looper> looper, NotNull<Instance> inst, Rc<LoopInfo> &&info) {
 	_instance = inst;

@@ -23,12 +23,12 @@
 #ifndef XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDSEAT_H_
 #define XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDSEAT_H_
 
-#include "XLContextInfo.h"
+#include "XLContextInfo.h" // IWYU pragma: keep
 
 #if LINUX
 
 #include "XLLinuxWaylandLibrary.h"
-#include "platform/XLContextController.h"
+#include "platform/XLContextController.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

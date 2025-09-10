@@ -607,7 +607,7 @@ void CommandBuffer::cmdSetViewport(uint32_t firstViewport, SpanView<VkViewport> 
 }
 
 void CommandBuffer::cmdSetScissor(uint32_t firstScissor, SpanView<VkRect2D> scissors) {
-	// log::verbose("CommandBuffer", "cmdSetScissor: ", scissors.front().offset.x,
+	// log::source().verbose("CommandBuffer", "cmdSetScissor: ", scissors.front().offset.x,
 	// " ", scissors.front().offset.y, " ", 		scissors.front().extent.width, " ",
 	//scissors.front().extent.height);
 	_table->vkCmdSetScissor(_buffer, firstScissor, uint32_t(scissors.size()), scissors.data());
@@ -640,7 +640,7 @@ void CommandBuffer::cmdBindPipelineWithDescriptors(const core::GraphicPipelineDa
 		pt->boundLayout = renderPass->getPipelineLayout(data->layout->index);
 		pt->boundLayoutIndex = data->layout->index;
 	} else {
-		log::error("CommandBuffer", "Fail to bind set with index ", firstSet,
+		log::source().error("CommandBuffer", "Fail to bind set with index ", firstSet,
 				": no sets available");
 	}
 	cmdBindPipeline(static_cast<GraphicPipeline *>(data->pipeline.get()));
@@ -658,7 +658,7 @@ void CommandBuffer::cmdBindPipelineWithDescriptors(const core::ComputePipelineDa
 		pt->boundLayout = renderPass->getPipelineLayout(data->layout->index);
 		pt->boundLayoutIndex = data->layout->index;
 	} else {
-		log::error("CommandBuffer", "Fail to bind set with index ", firstSet,
+		log::source().error("CommandBuffer", "Fail to bind set with index ", firstSet,
 				": no sets available");
 	}
 	cmdBindPipeline(static_cast<ComputePipeline *>(data->pipeline.get()));
@@ -682,7 +682,7 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, const Rc<DescriptorP
 	auto pt = getBindPoint(passType);
 
 	if (!pt) {
-		log::error("vk::CommandBuffer", "Invalid bind point");
+		log::source().error("vk::CommandBuffer", "Invalid bind point");
 		return;
 	}
 
@@ -721,7 +721,7 @@ void CommandBuffer::cmdBindDescriptorSets(RenderPass *pass, SpanView<VkDescripto
 	auto pt = getBindPoint(pass->getType());
 
 	if (!pt || !pt->boundLayout) {
-		log::error("vk::CommandBuffer", "Try to rebind sets when no layout is bound");
+		log::source().error("vk::CommandBuffer", "Try to rebind sets when no layout is bound");
 	}
 
 	if (!updateBoundSets(*pt, sets, firstSet)) {
@@ -782,7 +782,8 @@ void CommandBuffer::cmdPushConstants(XPipelineStage stageFlags, uint32_t offset,
 	if (point) {
 		cmdPushConstants(point->boundLayout, stageFlags, offset, data);
 	} else {
-		log::error("CommandBuffer", "No bound point available for stageFlags: ", stageFlags.value);
+		log::source().error("CommandBuffer",
+				"No bound point available for stageFlags: ", stageFlags.value);
 	}
 }
 
@@ -917,7 +918,7 @@ void CommandBuffer::writeImageTransfer(uint32_t sourceFamily, uint32_t targetFam
 uint64_t CommandBuffer::bindBufferAddress(NotNull<core::BufferObject> buffer) {
 	auto dev = buffer->getDeviceAddress();
 	if (!dev) {
-		log::error("CommandBuffer", "BufferDeviceAddress is not available for the buffer");
+		log::source().error("CommandBuffer", "BufferDeviceAddress is not available for the buffer");
 		return 0;
 	} else {
 		bindBuffer(buffer);
@@ -1041,7 +1042,7 @@ const CommandBuffer *CommandPool::recordBuffer(Device &dev,
 					&& !hasFlag(_class, core::QueueFlags::Compute))
 				|| limits.timestampPeriod == 0
 				|| dev.getQueueFamily(_familyIdx)->timestampValidBits == 0) {
-			log::error("CommandPool", "Timestamps for this queue is not available");
+			log::source().error("CommandPool", "Timestamps for this queue is not available");
 			return nullptr;
 		}
 	}

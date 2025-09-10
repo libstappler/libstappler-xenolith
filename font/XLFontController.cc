@@ -89,7 +89,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -103,7 +103,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -120,7 +120,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -134,7 +134,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -149,7 +149,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -164,7 +164,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -182,7 +182,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -197,7 +197,7 @@ const FontController::FontSource *FontController::Builder::addFontSource(StringV
 		return &it->second;
 	}
 
-	log::warn("FontController", "Duplicate font source: ", name);
+	log::source().warn("FontController", "Duplicate font source: ", name);
 	return nullptr;
 }
 
@@ -500,9 +500,9 @@ Rc<core::DependencyEvent> FontController::addTextureChars(const Rc<FontFaceSet> 
 		SpanView<CharLayoutData> chars) {
 	if (l->addTextureChars(chars)) {
 		initDependency();
-		return _dependency;
 	}
-	return nullptr;
+	// return dependency if it set
+	return _dependency;
 }
 
 uint32_t FontController::getFamilyIndex(StringView name) const {
@@ -706,7 +706,7 @@ void FontController::removeUnusedLayouts() {
 						->second->getReferenceCount()
 				== 1) {
 			auto c = it->second->getRequiredCharsCount();
-			log::debug("FontController", "Removed: ", it->first);
+			log::source().debug("FontController", "Removed: ", it->first);
 			it = _layouts.erase(it);
 			if (c > 0) {
 				_dirty = true;

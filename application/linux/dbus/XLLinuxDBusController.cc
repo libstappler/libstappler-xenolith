@@ -358,7 +358,7 @@ void Controller::handleSessionConnected(NotNull<dbus::Connection> c) {
 		});
 		updateInterfaceTheme();
 	}
-	log::debug("dbus::Controller", "Session bus connected");
+	log::source().debug("dbus::Controller", "Session bus connected");
 }
 
 void Controller::handleSystemConnected(NotNull<dbus::Connection> c) {
@@ -373,7 +373,7 @@ void Controller::handleSystemConnected(NotNull<dbus::Connection> c) {
 
 		updateNetworkState();
 	}
-	log::debug("dbus::Controller", "System bus connected");
+	log::source().debug("dbus::Controller", "System bus connected");
 }
 
 struct MessageNetworkStateParser {
@@ -504,7 +504,7 @@ struct MessageSettingsInfoParser {
 					target->doubleClickInterval = value * 1'000;
 				}
 			} else {
-				//log::info("DBus", "Unknown settings key:", prop);
+				//log::source().info("DBus", "Unknown settings key:", prop);
 			}
 		}
 		return true;

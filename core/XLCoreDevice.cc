@@ -40,12 +40,12 @@ void Device::end() {
 
 #if SP_REF_DEBUG
 	if (isRetainTrackerEnabled()) {
-		log::debug("Gl-Device", "Backtrace for ", (void *)this);
+		log::source().debug("Gl-Device", "Backtrace for ", (void *)this);
 		foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
 			for (auto &it : vec) { stream << "\t" << it << "\n"; }
-			log::debug("Gl-Device-Backtrace", stream.str());
+			log::source().debug("Gl-Device-Backtrace", stream.str());
 		});
 	}
 #endif
@@ -120,8 +120,11 @@ const DeviceQueueFamily *Device::getQueueFamily(core::PassType type) const {
 	case core::PassType::Compute: return getQueueFamily(QueueFlags::Compute); break;
 	case core::PassType::Transfer: return getQueueFamily(QueueFlags::Transfer); break;
 	case core::PassType::Generic:
-		log::warn("core::Device", "core::PassType::Generic can not be assigned to queue family by it's type;"
-				" please acquire queue family through flags");
+		log::
+				source()
+						.warn("core::Device",
+								"core::PassType::Generic can not be assigned to queue family by "
+								"it's type;" " please acquire queue family through flags");
 		return nullptr;
 		break;
 	}
@@ -520,36 +523,36 @@ void Device::invalidateObjects() {
 	std::unique_lock<Mutex> lock(_objectMutex);
 	for (auto &it : _objects) {
 		if (auto img = dynamic_cast<ImageObject *>(it)) {
-			log::warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((",
+			log::source().warn("Gl-Device", "Image ", (void *)it, " \"", img->getName(), "\" ((",
 					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
 					"] was not destroyed before device destruction");
 		} else if (auto pass = dynamic_cast<RenderPass *>(it)) {
-			log::warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(), "\" (",
-					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
+			log::source().warn("Gl-Device", "RenderPass ", (void *)it, " \"", pass->getName(),
+					"\" (", typeid(*it).name(), ") [rc:", it->getReferenceCount(),
 					"] was not destroyed before device destruction");
 		} else if (auto obj = dynamic_cast<BufferObject *>(it)) {
-			log::warn("Gl-Device", "Buffer ", (void *)it, " \"", obj->getName(), "\" ((",
+			log::source().warn("Gl-Device", "Buffer ", (void *)it, " \"", obj->getName(), "\" ((",
 					typeid(*it).name(), ") [rc:", it->getReferenceCount(),
 					"] was not destroyed before device destruction");
 		} else {
 			auto name = it->getName();
 			if (!name.empty()) {
-				log::warn("Gl-Device", "Object ", (void *)it, " \"", name, "\" ((",
+				log::source().warn("Gl-Device", "Object ", (void *)it, " \"", name, "\" ((",
 						typeid(*it).name(), ") [rc:", it->getReferenceCount(),
 						"] was not destroyed before device destruction");
 			} else {
-				log::warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
+				log::source().warn("Gl-Device", "Object ", (void *)it, " (", typeid(*it).name(),
 						") [rc:", it->getReferenceCount(),
 						"] was not destroyed before device destruction");
 			}
 		}
 #if SP_REF_DEBUG
-		log::warn("Gl-Device", "Backtrace for ", (void *)it);
+		log::source().warn("Gl-Device", "Backtrace for ", (void *)it);
 		it->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 			StringStream stream;
 			stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
 			for (auto &it : vec) { stream << "\t" << it << "\n"; }
-			log::warn("Gl-Device-Backtrace", stream.str());
+			log::source().warn("Gl-Device-Backtrace", stream.str());
 		});
 #endif
 

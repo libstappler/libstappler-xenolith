@@ -37,7 +37,7 @@ Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 	char pathBuf[1'024];
 	uint32_t size = sizeof(pathBuf);
 	if (::_NSGetExecutablePath(pathBuf, &size) != 0) {
-		log::error("Vulkan", "Fail to detect executable path");
+		log::source().error("Vulkan", "Fail to detect executable path");
 		return nullptr;
 	}
 
@@ -53,7 +53,8 @@ Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 	}
 
 	if (!isBundled && !filesystem::exists(FileInfo{flatPath})) {
-		log::error("Vulkan", "Vulkan loader is not found on paths: ", bundledPath, "; ", flatPath);
+		log::source().error("Vulkan", "Vulkan loader is not found on paths: ", bundledPath, "; ",
+				flatPath);
 		return nullptr;
 	}
 
@@ -67,13 +68,13 @@ Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 
 	Dso handle(loaderPath);
 	if (!handle) {
-		log::error("Vulkan", "Fail to dlopen loader: ", loaderPath);
+		log::source().error("Vulkan", "Fail to dlopen loader: ", loaderPath);
 		return nullptr;
 	}
 
 	auto getInstanceProcAddr = handle.sym<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
 	if (!getInstanceProcAddr) {
-		log::error("Vulkan",
+		log::source().error("Vulkan",
 				"Fail to find entrypoint 'vkGetInstanceProcAddr' in loader: ", loaderPath);
 		return nullptr;
 	}

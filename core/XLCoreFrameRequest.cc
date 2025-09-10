@@ -127,7 +127,7 @@ bool FrameRequest::addInput(const AttachmentData *a, Rc<AttachmentInputData> &&d
 		return true;
 	}
 	if (a) {
-		log::error("FrameRequest", "Invalid input for attachment ", a->key);
+		log::source().error("FrameRequest", "Invalid input for attachment ", a->key);
 	}
 	return false;
 }

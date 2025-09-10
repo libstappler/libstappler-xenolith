@@ -38,7 +38,7 @@
 
 #ifndef XL_WAYLAND_KDE_LOG
 #if XL_WAYLAND_KDE_DEBUG
-#define XL_WAYLAND_KDE_LOG(...) log::debug("WaylandKdeDisplayConfigManager", __VA_ARGS__)
+#define XL_WAYLAND_KDE_LOG(...) log::source().debug("WaylandKdeDisplayConfigManager", __VA_ARGS__)
 #else
 #define XL_WAYLAND_KDE_LOG(...)
 #endif
@@ -379,7 +379,7 @@ static kde_output_configuration_v2_listener s_kdeOutputConfigurationListener{
 },
 
 .failure_reason = [](void *data, struct kde_output_configuration_v2 *kde_output_configuration_v2, const char *reason) {
-	log::error("WaylandKdeDisplayConfigManager", "Fail to update display configuration: ", reason);
+	log::source().error("WaylandKdeDisplayConfigManager", "Fail to update display configuration: ", reason);
 }
 
 };

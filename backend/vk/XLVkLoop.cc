@@ -167,7 +167,7 @@ struct Loop::Internal final : memory::AllocPool {
 		}
 
 		if (!device) {
-			log::error("vk::Loop", "No device to compileQueue");
+			log::source().error("vk::Loop", "No device to compileQueue");
 			return;
 		}
 
@@ -221,7 +221,7 @@ struct Loop::Internal final : memory::AllocPool {
 						str << "signalDependencies:";
 						for (auto &it : v->events) { str << " " << it->getId(); }
 						str << "\n";
-						log::debug("vk::Loop", "Signal: ", str.str());
+						log::source().debug("vk::Loop", "Signal: ", str.str());
 #endif
 						v->callback(iit.first->second->success);
 					}
@@ -238,7 +238,7 @@ struct Loop::Internal final : memory::AllocPool {
 		StringStream str;
 		str << "waitForDependencies:";
 		for (auto &it : events) { str << " " << it->getId(); }
-		log::debug("vk::Loop", "Wait: ", str.str());
+		log::source().debug("vk::Loop", "Wait: ", str.str());
 #endif
 
 		auto req = Rc<DependencyRequest>::alloc();
@@ -259,7 +259,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 		if (req->signaled == req->events.size()) {
 #if XL_VK_DEPS_DEBUG
-			log::debug("vk::Loop", "Run: ", str.str());
+			log::source().debug("vk::Loop", "Run: ", str.str());
 #endif
 			req->callback(req->success);
 		}
@@ -273,7 +273,7 @@ struct Loop::Internal final : memory::AllocPool {
 #if XL_VK_PAUSE_TIMER
 				auto status = updateTimerHandle->resume();
 				if (status != Status::Ok) {
-					log::error("vk::Loop", "Fail to resume fence scheduler: ", status);
+					log::source().error("vk::Loop", "Fail to resume fence scheduler: ", status);
 				}
 #endif
 			}
@@ -325,18 +325,18 @@ bool Loop::init(NotNull<event::Looper> looper, NotNull<core::Instance> instance,
 			_internal->setDevice(move(dev));
 			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 		} else if (_info->deviceIdx != core::InstanceDefaultDevice) {
-			log::warn("vk::Loop", "Unable to create device with index: ", _info->deviceIdx,
+			log::source().warn("vk::Loop", "Unable to create device with index: ", _info->deviceIdx,
 					", fallback to default");
 			_info->deviceIdx = core::InstanceDefaultDevice;
 			if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
 				_internal->setDevice(move(dev));
 				_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
 			} else {
-				log::error("vk::Loop", "Unable to create device");
+				log::source().error("vk::Loop", "Unable to create device");
 				return;
 			}
 		} else {
-			log::error("vk::Loop", "Unable to create device");
+			log::source().error("vk::Loop", "Unable to create device");
 			return;
 		}
 	}, this, true);
@@ -626,7 +626,7 @@ void Loop::captureImage(Function<void(const ImageInfoData &info, BytesView view)
 void Loop::captureBuffer(Function<void(const BufferInfo &info, BytesView view)> &&cb,
 		const Rc<core::BufferObject> &buf) {
 	if ((buf->getInfo().usage & core::BufferUsage::TransferSrc) != core::BufferUsage::TransferSrc) {
-		log::error("vk::Loop::captureBuffer", "Buffer '", buf->getName(),
+		log::source().error("vk::Loop::captureBuffer", "Buffer '", buf->getName(),
 				"' has no BufferUsage::TransferSrc flag to being captured");
 	}
 

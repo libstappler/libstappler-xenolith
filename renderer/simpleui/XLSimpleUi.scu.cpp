@@ -20,7 +20,8 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 
 #include "XLSimpleButton.cc"
 #include "XLSimpleWindowDecorations.cc"
+#include "XLSimpleCloseGuardWidget.cc"

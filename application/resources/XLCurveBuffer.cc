@@ -342,13 +342,13 @@ Bitmap CurveBuffer::renderComponent(const RenderInfo &info, uint8_t component) {
 	if (info.zero.x > info.size.width || info.zero.y > info.size.height
 			|| info.one.x > info.size.width || info.one.y > info.size.height
 			|| info.zero.x > info.one.x || info.zero.y > info.one.y) {
-		log::error("CurveBuffer", "Invalid RenderInfo format");
+		log::source().error("CurveBuffer", "Invalid RenderInfo format");
 		return Bitmap();
 	}
 
 	auto ncomp = getElementSize();
 	if (component >= ncomp) {
-		log::error("CurveBuffer", "Invalid component index: ", uint32_t(component));
+		log::source().error("CurveBuffer", "Invalid component index: ", uint32_t(component));
 		return Bitmap();
 	}
 

@@ -468,8 +468,8 @@ bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char16_t c) {
 
 void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharTexture &texData) {
 	if (texData.width != texData.bitmapWidth || texData.height != texData.bitmapRows) {
-		log::error("FontAttachmentHandle", "Invalid size: ", texData.width, ";", texData.height,
-				" vs. ", texData.bitmapWidth, ";", texData.bitmapRows, "\n");
+		log::source().error("FontAttachmentHandle", "Invalid size: ", texData.width, ";",
+				texData.height, " vs. ", texData.bitmapWidth, ";", texData.bitmapRows, "\n");
 	}
 
 	auto size = uint32_t(texData.bitmapRows * std::abs(texData.pitch));

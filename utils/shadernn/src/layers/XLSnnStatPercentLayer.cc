@@ -46,26 +46,28 @@ const core::QueuePassData *StatPercentLayer::prepare(core::Queue::Builder &build
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == attachments.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::StatPercentLayer>::create(builder, passBuilder, this, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::StatPercentLayer>::create(builder, passBuilder, this,
+				inputIt->second, outputIt->second);
 	});
 }
 
-const core::AttachmentData *StatPercentLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *StatPercentLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(_classCount * 4 * sizeof(float)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(_classCount * 4 * sizeof(float)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
@@ -95,28 +97,31 @@ const core::QueuePassData *StatAnalysisLayer::prepare(core::Queue::Builder &buil
 	auto inputClasseIt = attachments.find(_inputs[1].attachment);
 	auto outputIt = attachments.find(getOutput());
 
-	if (inputDataIt == attachments.end() || inputClasseIt == attachments.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+	if (inputDataIt == attachments.end() || inputClasseIt == attachments.end()
+			|| outputIt == attachments.end()) {
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::StatAnalysisLayer>::create(builder, passBuilder, this, inputDataIt->second, inputClasseIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::StatAnalysisLayer>::create(builder, passBuilder, this,
+				inputDataIt->second, inputClasseIt->second, outputIt->second);
 	});
 }
 
-const core::AttachmentData *StatAnalysisLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *StatAnalysisLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(1 * 4 * sizeof(float)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(1 * 4 * sizeof(float)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-}
+} // namespace stappler::xenolith::shadernn

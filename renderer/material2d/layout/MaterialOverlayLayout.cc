@@ -82,11 +82,9 @@ void OverlayLayout::handlePushTransitionEnded(SceneContent2d *l, bool replace) {
 	SceneLayout2d::handlePushTransitionEnded(l, replace);
 
 	emplaceNode(_globalOrigin, _binding);
-	retainFocus();
 }
 
 void OverlayLayout::handlePopTransitionBegan(SceneContent2d *l, bool replace) {
-	releaseFocus();
 	SceneLayout2d::handlePopTransitionBegan(l, replace);
 	if (_readyCallback) {
 		_readyCallback(false);

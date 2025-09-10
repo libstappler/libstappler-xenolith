@@ -101,7 +101,7 @@ BusFilter::~BusFilter() {
 		}
 		connection->lib->dbus_bus_remove_match(connection->connection, filter.data(), &error);
 		if (connection->lib->dbus_error_is_set(&error)) {
-			log::error("DBus", "Fail to remove filter: ", error.name, ": ", error.message);
+			log::source().error("DBus", "Fail to remove filter: ", error.name, ": ", error.message);
 		}
 	}
 	if (connection->lib->dbus_error_is_set(&error)) {
@@ -116,7 +116,7 @@ BusFilter::BusFilter(NotNull<Connection> c, StringView filter)
 	connection->lib->dbus_error_init(&error);
 	connection->lib->dbus_bus_add_match(connection->connection, filter.data(), &error);
 	if (connection->lib->dbus_error_is_set(&error)) {
-		log::error("DBus", "Fail to add filter: ", error.name, ": ", error.message);
+		log::source().error("DBus", "Fail to add filter: ", error.name, ": ", error.message);
 		connection->lib->dbus_bus_remove_match(connection->connection, filter.data(), nullptr);
 	} else {
 		added = true;
@@ -150,7 +150,7 @@ Connection::Connection(Library *lib, EventCallback &&cb, DBusBusType type)
 	lib->dbus_connection_set_exit_on_disconnect(connection, false);
 
 	if (lib->dbus_error_is_set(&error)) {
-		log::error("DBus", "Fail to connect: ", error.name, ": ", error.message);
+		log::source().error("DBus", "Fail to connect: ", error.name, ": ", error.message);
 	}
 
 	if (connection) {
@@ -363,7 +363,7 @@ void Connection::removeMatchFilter(BusFilter *f) { matchFilters.erase(f); }
 bool Library::init() {
 	_handle = Dso("libdbus-1.so");
 	if (!_handle) {
-		log::error("DBusLibrary", "Fail to open libdbus-1.so");
+		log::source().error("DBusLibrary", "Fail to open libdbus-1.so");
 		return false;
 	}
 
@@ -444,7 +444,7 @@ bool Library::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, dbus_timeout_get_enabled)
 
 	if (!validateFunctionList(&_dbus_first_fn, &_dbus_last_fn)) {
-		log::error("XcbLibrary", "Fail to load libxcb");
+		log::source().error("XcbLibrary", "Fail to load libxcb");
 		return false;
 	}
 
@@ -1369,7 +1369,7 @@ bool MessagePropertyParser::parse(Library *lib, NotNull<DBusMessageIter> entry, 
 		switch (ret.type) {
 		case Type::Boolean: val = ret.value.bool_val; break;
 		default:
-			log::error("DBus", "Fail to read int32_t property: invalid type");
+			log::source().error("DBus", "Fail to read int32_t property: invalid type");
 			return false;
 			break;
 		}
@@ -1387,7 +1387,7 @@ bool MessagePropertyParser::parse(Library *lib, NotNull<DBusMessageIter> entry, 
 		case Type::Int16: val = ret.value.i16; break;
 		case Type::Int32: val = ret.value.i32; break;
 		default:
-			log::error("DBus", "Fail to read int32_t property: invalid type");
+			log::source().error("DBus", "Fail to read int32_t property: invalid type");
 			return false;
 			break;
 		}
@@ -1405,7 +1405,7 @@ bool MessagePropertyParser::parse(Library *lib, NotNull<DBusMessageIter> entry, 
 		case Type::Uint16: val = ret.value.u16; break;
 		case Type::Uint32: val = ret.value.u32; break;
 		default:
-			log::error("DBus", "Fail to read uint32_t property: invalid type");
+			log::source().error("DBus", "Fail to read uint32_t property: invalid type");
 			return false;
 			break;
 		}
@@ -1424,7 +1424,7 @@ bool MessagePropertyParser::parse(Library *lib, NotNull<DBusMessageIter> entry, 
 		case Type::Uint32: val = ret.value.u32; break;
 		case Type::Double: val = static_cast<float>(ret.value.dbl); break;
 		default:
-			log::error("DBus", "Fail to read float property: invalid type");
+			log::source().error("DBus", "Fail to read float property: invalid type");
 			return false;
 			break;
 		}
@@ -1441,7 +1441,7 @@ bool MessagePropertyParser::parse(Library *lib, NotNull<DBusMessageIter> entry, 
 		case Type::Path: val = ret.value.str; break;
 		case Type::Signature: val = ret.value.str; break;
 		default:
-			log::error("DBus", "Fail to read string property: invalid type");
+			log::source().error("DBus", "Fail to read string property: invalid type");
 			return false;
 			break;
 		}

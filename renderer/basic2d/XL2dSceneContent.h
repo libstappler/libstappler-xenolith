@@ -62,7 +62,7 @@ public:
 	virtual bool popTopLayout();
 	virtual bool isActive() const;
 
-	virtual bool onBackButton() override;
+	virtual bool handleBackButton() override;
 	virtual size_t getLayoutsCount() const;
 
 	virtual const Vector<Rc<SceneLayout2d>> &getLayouts() const;
@@ -99,8 +99,6 @@ protected:
 	virtual void eraseOverlay(SceneLayout2d *);
 	virtual void replaceNodes();
 	virtual void updateNodesVisibility();
-
-	virtual void updateBackButtonStatus() override;
 
 	Vector<Rc<SceneLight>>::iterator removeLight(Vector<Rc<SceneLight>>::iterator);
 

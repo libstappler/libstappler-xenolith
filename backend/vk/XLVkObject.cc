@@ -446,7 +446,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 	switch (info.type) {
 	case core::ImageViewType::ImageView1D:
 		if (image->getInfo().imageType != core::ImageType::Image1D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -455,7 +455,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		break;
 	case core::ImageViewType::ImageView1DArray:
 		if (image->getInfo().imageType != core::ImageType::Image1D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -465,7 +465,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 	case core::ImageViewType::ImageView2D:
 		if (image->getInfo().imageType != core::ImageType::Image2D
 				&& image->getInfo().imageType != core::ImageType::Image3D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -475,7 +475,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 	case core::ImageViewType::ImageView2DArray:
 		if (image->getInfo().imageType != core::ImageType::Image2D
 				&& image->getInfo().imageType != core::ImageType::Image3D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -484,7 +484,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		break;
 	case core::ImageViewType::ImageView3D:
 		if (image->getInfo().imageType != core::ImageType::Image3D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -493,7 +493,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		break;
 	case core::ImageViewType::ImageViewCube:
 		if (image->getInfo().imageType != core::ImageType::Image2D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;
@@ -502,7 +502,7 @@ bool ImageView::init(Device &dev, Image *image, const ImageViewInfo &info) {
 		break;
 	case core::ImageViewType::ImageViewCubeArray:
 		if (image->getInfo().imageType != core::ImageType::Image2D) {
-			log::error("Vk-ImageView", "Incompatible ImageType '",
+			log::source().error("Vk-ImageView", "Incompatible ImageType '",
 					core::getImageTypeName(image->getInfo().imageType), "' and ImageViewType '",
 					core::getImageViewTypeName(info.type), "'");
 			return false;

@@ -31,6 +31,25 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 
+/** DependencyEvent используется для синхронизации данных на стороне GPU
+
+Поставщик DependencyEvent создаёт или изменяет данные на стороне GPU, а
+потребитель ожидает готовности этих данных.
+
+Поставщик создаёт DependencyEvent для совего набора очередей рендеринга
+и отправляет его с помощью FrameRequest::addSignalDependency при запуске 
+работы. Также, можно связывать событие с обновлением материала, меша или
+динамического изображения.
+
+Потребитель использует AttachmentInputData::waitDependencies для передачи
+событий в составе входящих данных для своего кадра. При работе с кадром,
+вложение использует FrameHandle::waitForDependencies для ожидания событий.
+Ожидание проходит асинхронно, кадр подготавливает вложения по мере поступления
+событий.
+
+Событие может завершиться с ошибкой. В таком случае, связанные кадры
+потребителя также должны завершиться с ошибкой.
+*/
 class SP_PUBLIC DependencyEvent final : public Ref {
 public:
 	using QueueSet = std::multiset<Rc<Queue>, std::less<Rc<Queue>>, std::allocator<Rc<Queue>>>;

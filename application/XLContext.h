@@ -170,7 +170,7 @@ public:
 	BytesView getMessageToken() const { return _messageToken; }
 
 	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr,
-			bool immediate = false, StringView tag = STAPPLER_LOCATION) const;
+			bool immediate = false, StringView tag = SP_FUNC) const;
 
 	template <typename T>
 	auto addComponent(Rc<T> &&) -> T *;

@@ -49,31 +49,34 @@ const core::QueuePassData *MatrixMulLayer::prepare(core::Queue::Builder &builder
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == attachments.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::MatrixMulLayer>::create(builder, passBuilder, this, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::MatrixMulLayer>::create(builder, passBuilder, this, inputIt->second,
+				outputIt->second);
 	});
 }
 
-const core::AttachmentData *MatrixMulLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *MatrixMulLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
 		auto ext = getOutputExtent();
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(ext.width * ext.height * ext.depth * sizeof(float)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(ext.width * ext.height * ext.depth * sizeof(float)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-void MatrixMulLayer::generateWeights(uint8_t *buf, uint64_t size, const core::BufferData::DataCallback &cb) const {
+void MatrixMulLayer::generateWeights(uint8_t *buf, uint64_t size,
+		const core::BufferData::DataCallback &cb) const {
 	auto &rand = _model->getRand();
 	auto ext = _input->getOutputExtent();
 	auto inputCount = ext.width * ext.height / 2;
@@ -84,20 +87,21 @@ void MatrixMulLayer::generateWeights(uint8_t *buf, uint64_t size, const core::Bu
 	double deviation = std::sqrt(1. / std::max(inputCount, uint32_t(1)));
 
 	while (size) {
-		*(target ++) = rand.normal(0, deviation);
-		-- size;
+		*(target++) = rand.normal(0, deviation);
+		--size;
 	}
 }
 
-void MatrixMulLayer::generateFreeTerms(uint8_t *buf, uint64_t size, const core::BufferData::DataCallback &cb) const {
+void MatrixMulLayer::generateFreeTerms(uint8_t *buf, uint64_t size,
+		const core::BufferData::DataCallback &cb) const {
 	size /= sizeof(float);
 	auto target = (float *)buf;
 
 	while (size) {
-		*(target ++) = 0.0f;
-		-- size;
+		*(target++) = 0.0f;
+		--size;
 	}
 }
 
 
-}
+} // namespace stappler::xenolith::shadernn

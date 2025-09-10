@@ -581,7 +581,7 @@ static inline bool _parseMessage(MessageParserData<Parser> &data, DBusMessageIte
 						}
 						break;
 					default:
-						log::error("DBus", "invalid DictEntry key");
+						log::source().error("DBus", "invalid DictEntry key");
 						return false;
 						break;
 					}
@@ -606,7 +606,7 @@ static inline bool _parseMessage(MessageParserData<Parser> &data, DBusMessageIte
 					}
 				}
 			} else {
-				log::error("DBus", "DictEntry should be within Array");
+				log::source().error("DBus", "DictEntry should be within Array");
 				return false;
 			}
 			break;

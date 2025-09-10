@@ -24,6 +24,7 @@
 #include "AppUtilsStorageTest.h"
 #include "XLStorageComponent.h"
 #include "XLStorageServer.h"
+#include "XLDirector.h"
 #include "SPValid.h"
 
 namespace stappler::xenolith::app {

@@ -268,8 +268,8 @@ void RenderQueueAttachmentHandle::runShaders(FrameHandle &frame) {
 				[this, req = it](FrameHandle &frame) {
 			auto ret = Rc<Shader>::create(*_device, *req);
 			if (!ret) {
-				log::error("RenderQueueAttachmentHandle", "Fail to compile shader program ",
-						req->key);
+				log::source().error("RenderQueueAttachmentHandle",
+						"Fail to compile shader program ", req->key);
 				return false;
 			} else {
 				req->program = _device->addProgram(ret);
@@ -301,7 +301,8 @@ void RenderQueueAttachmentHandle::runPasses(FrameHandle &frame) {
 				[this, req = it](FrameHandle &frame) -> bool {
 			auto ret = Rc<RenderPass>::create(*_device, *req);
 			if (!ret) {
-				log::error("RenderQueueAttachmentHandle", "Fail to compile render pass ", req->key);
+				log::source().error("RenderQueueAttachmentHandle", "Fail to compile render pass ",
+						req->key);
 				return false;
 			} else {
 				req->impl = ret.get();
@@ -334,8 +335,8 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 					auto ret =
 							Rc<GraphicPipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ",
-								pipeline->key);
+						log::source().error("RenderQueueAttachmentHandle",
+								"Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
@@ -352,8 +353,8 @@ void RenderQueueAttachmentHandle::runPipelines(FrameHandle &frame) {
 					auto ret =
 							Rc<ComputePipeline>::create(*_device, *pipeline, *pass, *_input->queue);
 					if (!ret) {
-						log::error("RenderQueueAttachmentHandle", "Fail to compile pipeline ",
-								pipeline->key);
+						log::source().error("RenderQueueAttachmentHandle",
+								"Fail to compile pipeline ", pipeline->key);
 						return false;
 					} else {
 						pipeline->pipeline = ret.get();
@@ -462,8 +463,8 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				if (_resource) {
 					if (!_resource->prepareCommands(_pool->getFamilyIdx(), buf, outputImageBarriers,
 								outputBufferBarriers)) {
-						log::error("vk::RenderQueueCompiler", "Fail to compile resource for ",
-								_queue->getName());
+						log::source().error("vk::RenderQueueCompiler",
+								"Fail to compile resource for ", _queue->getName());
 						return false;
 					}
 					_resource->compile();
@@ -473,7 +474,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 					for (auto &it : _queue->getAttachments()) {
 						if (auto v = it->attachment.cast<core::MaterialAttachment>()) {
 							if (!prepareMaterials(frame, buf, v, outputBufferBarriers)) {
-								log::error("vk::RenderQueueCompiler",
+								log::source().error("vk::RenderQueueCompiler",
 										"Fail to compile predefined materials for ",
 										_queue->getName());
 								return false;
@@ -497,7 +498,7 @@ bool RenderQueuePassHandle::prepare(FrameQueue &frame, Function<void(bool)> &&cb
 				_commandsReady = true;
 				_descriptorsReady = true;
 			} else {
-				log::error("VK-Error", "Fail to doPrepareCommands");
+				log::source().error("VK-Error", "Fail to doPrepareCommands");
 			}
 			cb(success);
 		}, this, "RenderPass::doPrepareCommands _attachment->getTransferResource");
@@ -523,7 +524,7 @@ void RenderQueuePassHandle::finalize(FrameQueue &frame, bool successful) {
 	QueuePassHandle::finalize(frame, successful);
 
 	if (!_attachment || !successful) {
-		log::error("RenderQueueCompiler", "Fail to compile render queue");
+		log::source().error("RenderQueueCompiler", "Fail to compile render queue");
 		return;
 	}
 

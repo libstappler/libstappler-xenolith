@@ -155,7 +155,7 @@ bool Controller::Data::worker() {
 	int running = 0;
 	auto err = curl_multi_perform(reinterpret_cast<CURLM *>(_handle), &running);
 	if (err != CURLM_OK) {
-		log::error("CURL", toString("Fail to perform multi: ", err));
+		log::source().error("CURL", toString("Fail to perform multi: ", err));
 		return false;
 	}
 
@@ -166,7 +166,7 @@ bool Controller::Data::worker() {
 
 	err = curl_multi_poll(reinterpret_cast<CURLM *>(_handle), NULL, 0, timeout, nullptr);
 	if (err != CURLM_OK) {
-		log::error("CURL", toString("Fail to poll multi: ", err));
+		log::source().error("CURL", toString("Fail to poll multi: ", err));
 		return false;
 	}
 

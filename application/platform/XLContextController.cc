@@ -46,7 +46,7 @@ Rc<ContextController> ContextController::create(NotNull<Context> ctx, ContextCon
 #if MACOS
 	return Rc<MacosContextController>::create(ctx, move(info));
 #endif
-	log::error("ContextController", "Unknown platform");
+	log::source().error("ContextController", "Unknown platform");
 	return nullptr;
 }
 
@@ -82,7 +82,11 @@ void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
 
 void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
 		core::UpdateConstraintsFlags flags) {
-	_context->handleNativeWindowConstraintsChanged(w, flags);
+	if (_withinPoll) {
+		_resizedWindows.emplace_back(w, flags);
+	} else {
+		_context->handleNativeWindowConstraintsChanged(w, flags);
+	}
 }
 void ContextController::notifyWindowInputEvents(NotNull<NativeWindow> w,
 		Vector<core::InputEventData> &&ev) {
@@ -95,7 +99,11 @@ void ContextController::notifyWindowTextInput(NotNull<NativeWindow> w,
 }
 
 bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
-	if (!hasFlag(opts, WindowCloseOptions::IgnoreExitGuard) && w->hasExitGuard()) {
+	if (_withinPoll) {
+		_closedWindows.emplace_back(w, opts);
+		return !hasFlag(w->getInfo()->state, WindowState::CloseGuard);
+	} else if (!hasFlag(opts, WindowCloseOptions::IgnoreExitGuard)
+			&& hasFlag(w->getInfo()->state, WindowState::CloseGuard)) {
 		return false;
 	} else {
 		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
@@ -111,7 +119,6 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseO
 }
 
 void ContextController::notifyWindowAllocated(NotNull<NativeWindow> w) { _allWindows.emplace(w); }
-
 
 void ContextController::notifyWindowDeallocated(NotNull<NativeWindow> w) {
 	auto it = _allWindows.find(w);
@@ -451,6 +458,27 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 void ContextController::poll() {
 	if (_looper) {
 		_looper->poll();
+	}
+}
+
+void ContextController::notifyPendingWindows() {
+	auto tmpResized = sp::move(_resizedWindows);
+	_resizedWindows.clear();
+
+	for (auto &it : tmpResized) {
+		ContextController::notifyWindowConstraintsChanged(it.first, it.second);
+	}
+
+	auto tmpClosed = sp::move(_closedWindows);
+	_closedWindows.clear();
+
+	for (auto &it : tmpClosed) {
+		// Close windows
+		if (hasFlag(it.first->getInfo()->state, WindowState::CloseGuard)) {
+			ContextController::notifyWindowClosed(it.first, it.second);
+		} else {
+			it.first->close();
+		}
 	}
 }
 

@@ -164,6 +164,7 @@ void WindowDecorations::handleLayout(Node *parent) {
 	setContentSize(Size2(cs.width, cs.height));
 	setPosition(cs / 2.0f);
 	setAnchorPoint(Anchor::Middle);
+	setLocalZOrder(ZOrder::max() - ZOrder(1));
 
 	auto newState = parent->getDirector()->getWindow()->getWindowState();
 	if (newState != _currentState) {
@@ -190,7 +191,7 @@ void WindowDecorations::updateWindowState(WindowState state) {
 }
 
 void WindowDecorations::updateWindowTheme(const ThemeInfo &theme) {
-	log::debug("WindowDecorations", "updateWindowTheme: ", theme.colorScheme);
+	log::source().debug("WindowDecorations", "updateWindowTheme: ", theme.colorScheme);
 }
 
 } // namespace stappler::xenolith

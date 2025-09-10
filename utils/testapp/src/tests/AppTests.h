@@ -25,8 +25,8 @@
 #ifndef TEST_SRC_ROOT_APPTESTS_H_
 #define TEST_SRC_ROOT_APPTESTS_H_
 
-#include "XLCommon.h"
-#include "AppWidgets.h"
+#include "XLCommon.h" // IWYU pragma: keep
+#include "AppWidgets.h" // IWYU pragma: keep
 #include "XL2dSceneLayout.h"
 
 namespace stappler::xenolith::app {
@@ -75,6 +75,7 @@ enum class LayoutName {
 	UtilsStorageTest = 256 * 5,
 	UtilsNetworkTest,
 	UtilsAssetTest,
+	UtilsWindowStateTest,
 
 	MaterialColorPickerTest = 256 * 6,
 	MaterialDynamicFontTest,

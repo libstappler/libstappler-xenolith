@@ -124,7 +124,7 @@ bool WaylandLibrary::open(Dso &handle) {
 	XL_LOAD_PROTO(handle, wl_display_roundtrip)
 
 	if (!validateFunctionList(&_wl_first_fn, &_wl_last_fn)) {
-		log::error("WaylandLibrary", "Fail to load libwayland-client");
+		log::source().error("WaylandLibrary", "Fail to load libwayland-client");
 		return false;
 	}
 
@@ -185,7 +185,7 @@ bool WaylandLibrary::openWaylandCursor(Dso &handle) {
 	XL_LOAD_PROTO(handle, wl_cursor_image_get_buffer)
 
 	if (!validateFunctionList(&_wlcursor_first_fn, &_wlcursor_last_fn)) {
-		log::error("WaylandLibrary", "Fail to load libwayland-client");
+		log::source().error("WaylandLibrary", "Fail to load libwayland-client");
 		return false;
 	}
 
@@ -240,7 +240,7 @@ bool WaylandLibrary::openDecor(Dso &handle) {
 	XL_LOAD_PROTO(handle, libdecor_configuration_get_window_state)
 
 	if (!validateFunctionList(&_libdecor_first_fn, &_libdecor_last_fn)) {
-		log::error("WaylandLibrary", "Fail to load libdecor");
+		log::source().error("WaylandLibrary", "Fail to load libdecor");
 		return false;
 	}
 

@@ -147,7 +147,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 						}));
 
 		subpassBuilder.setPrepareCallback([](FrameQueue &q, const SubpassData &subpass) {
-			// log::debug("MatrixMulLayer", getName(), ": prepare");
+			// log::source().debug("MatrixMulLayer", getName(), ": prepare");
 			auto layer = (MatrixMulLayer *)subpass.pass->pass.get();
 
 			vk::BufferAttachmentHandle *inputBuffer = nullptr;
@@ -192,7 +192,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 		subpassBuilder.setCommandsCallback(
 				[matMul, matMulBorders, addVec, relu4, relu](FrameQueue &q,
 						const SubpassData &subpass, core::CommandBuffer &b) {
-			// log::debug("MatrixMulLayer", getName(), ": commands");
+			// log::source().debug("MatrixMulLayer", getName(), ": commands");
 			auto &buf = static_cast<CommandBuffer &>(b);
 			auto pass = static_cast<RenderPass *>(subpass.pass->impl.get());
 			auto layer = static_cast<MatrixMulLayer *>(subpass.pass->pass.get());
@@ -278,7 +278,7 @@ bool MatrixMulLayer::init(Queue::Builder &queueBuilder, QueuePassBuilder &builde
 	});
 
 	builder.addCompleteCallback([](FrameQueue &q, const QueuePassData &, bool success) {
-		// log::debug("MatrixMulLayer", getName(), ": submitted");
+		// log::source().debug("MatrixMulLayer", getName(), ": submitted");
 		/*vk::BufferAttachmentHandle *weightsBuffer = nullptr;
 		vk::BufferAttachmentHandle *outputBuffer = nullptr;
 

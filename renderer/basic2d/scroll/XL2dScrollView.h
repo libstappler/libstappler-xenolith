@@ -78,7 +78,7 @@ public:
 		Direction _direction = Direction::Top;
 	};
 
-	virtual ~ScrollView() { }
+	virtual ~ScrollView() = default;
 
 	virtual bool init(Layout l) override;
 

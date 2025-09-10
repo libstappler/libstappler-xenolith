@@ -205,7 +205,7 @@ auto FrameContext::getPipelineForMaterial(const core::PipelineFamilyInfo *family
 				}
 			}
 		}
-		log::warn("Scene", "No pipeline for attachment '", _materialAttachment->getName(),
+		log::source().warn("Scene", "No pipeline for attachment '", _materialAttachment->getName(),
 				"': ", info.pipeline.description(), " : ", info.pipeline.data());
 	}
 	return nullptr;

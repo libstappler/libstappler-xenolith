@@ -38,7 +38,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Director::Director() { memset(&_drawStat, 0, sizeof(DrawStat)); }
 
-Director::~Director() { log::info("Director", "~Director"); }
+Director::~Director() { log::source().info("Director", "~Director"); }
 
 bool Director::init(NotNull<AppThread> app, const core::FrameConstraints &constraints,
 		NotNull<AppWindow> window) {
@@ -50,7 +50,7 @@ bool Director::init(NotNull<AppThread> app, const core::FrameConstraints &constr
 	_pool->perform([&, this] {
 		_scheduler = Rc<Scheduler>::create();
 		_actionManager = Rc<ActionManager>::create();
-		_inputDispatcher = Rc<InputDispatcher>::create(_pool);
+		_inputDispatcher = Rc<InputDispatcher>::create(_pool, _window->getWindowState());
 		_textInput = Rc<TextInputManager>::create(_window);
 	});
 	_startTime = sp::platform::clock(ClockType::Monotonic);
@@ -88,12 +88,12 @@ bool Director::acquireFrame(FrameRequest *req) {
 	}
 
 	if (!_scene) {
-		log::error("xenolith::Director", "No scene defined for a FrameRequest");
+		log::source().error("xenolith::Director", "No scene defined for a FrameRequest");
 		return false;
 	}
 
 	if (req->getQueue() && _scene->getQueue() != req->getQueue()) {
-		log::error("xenolith::Director",
+		log::source().error("xenolith::Director",
 				"Scene render queue is not the same, as in FrameRequest, can't render with it");
 		return false;
 	}
@@ -186,7 +186,7 @@ void Director::end() {
 				StringStream stream;
 				stream << "[" << id << ":" << time.toHttp<Interface>() << "]:\n";
 				for (auto &it : vec) { stream << "\t" << it << "\n"; }
-				log::debug("Director", stream.str());
+				log::source().debug("Director", stream.str());
 			});
 		} else {
 			_scene = nullptr;
@@ -230,7 +230,7 @@ void Director::runScene(Rc<Scene> &&scene) {
 		return;
 	}
 
-	log::debug("Director", "runScene");
+	log::source().debug("Director", "runScene");
 
 	auto linkId = retain();
 	auto &queue = scene->getQueue();

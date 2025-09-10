@@ -479,16 +479,16 @@ void ParticlePass::recordCommandBuffer(const core::SubpassData &subpass, core::F
 				feedback->map([&](uint8_t *buf, VkDeviceSize bufSize) {
 					auto fb = (ParticleFeedback *)buf;
 
-					log::debug("Particles", framesInGen, " ", nframes, " ", pcb.genframe, " ",
-							pcb.gentime, " ", pcb.gendt, " emitted:", fb->emissionCount,
+					log::source().debug("Particles", framesInGen, " ", nframes, " ", pcb.genframe,
+							" ", pcb.gentime, " ", pcb.gendt, " emitted:", fb->emissionCount,
 							" simulated:", fb->simulationCount, " skipped:", fb->skippedCount,
 							" written: ", fb->written);
 					if (fb->emissionCount > 0) {
-						log::debug("Particles", "P: ", fb->emitted.currentLifetime, " ",
+						log::source().debug("Particles", "P: ", fb->emitted.currentLifetime, " ",
 								fb->nframes);
 					}
 				}, DeviceMemoryAccess::Invalidate);
-			}, feedback, STAPPLER_LOCATION);
+			}, feedback, SP_FUNC);
 		}
 
 		buf.cmdPushConstants(VK_SHADER_STAGE_COMPUTE_BIT, 0,

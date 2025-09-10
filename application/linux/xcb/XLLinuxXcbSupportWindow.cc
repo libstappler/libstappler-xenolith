@@ -359,7 +359,7 @@ void XcbSupportWindow::handleSelectionNotify(xcb_selection_notify_event_t *event
 					_waiters.erase(wIt.first, wIt.second);
 				}
 			} else {
-				log::error("XcbConnection", "No requests waits for a ",
+				log::source().error("XcbConnection", "No requests waits for a ",
 						_connection->getAtomName(event->target), " clipboard target");
 
 				// remove property for a type
@@ -467,7 +467,7 @@ void XcbSupportWindow::handleExtensionEvent(int et, xcb_generic_event_t *e) {
 	} else if (et == _randr.firstEvent) {
 		switch (e->pad0) {
 		case XCB_RANDR_SCREEN_CHANGE_NOTIFY:
-			log::debug("XcbConnection", "XCB_RANDR_SCREEN_CHANGE_NOTIFY");
+			log::source().debug("XcbConnection", "XCB_RANDR_SCREEN_CHANGE_NOTIFY");
 			break;
 		case XCB_RANDR_NOTIFY: _connection->handleScreenUpdate(); break;
 		default: break;

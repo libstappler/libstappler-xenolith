@@ -227,7 +227,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 							if (st == Status::Ok) {
 								cb(setFullscreenState(sp::move(info)));
 							} else {
-								log::error("NativeWindow",
+								log::source().error("NativeWindow",
 										"Fail to reset mode for fullscreen: ", st);
 								cb(st);
 							}
@@ -293,7 +293,7 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 					cb(status);
 				}
 			} else {
-				log::error("NativeWindow", "Fail to set mode for fullscreen: ", st);
+				log::source().error("NativeWindow", "Fail to set mode for fullscreen: ", st);
 				cb(st);
 			}
 			ref = nullptr;
@@ -340,7 +340,14 @@ bool NativeWindow::enableState(WindowState state) {
 		if (!hasFlag(_info->state, WindowState::CloseRequest)) {
 			_appWindow->close(true);
 			return true;
+		} else {
+			updateState(0, _info->state & ~WindowState::CloseGuard);
+			_appWindow->close(true);
+			return true;
 		}
+	} else if (hasFlag(state, WindowState::CloseGuard)) {
+		updateState(0, _info->state | WindowState::CloseGuard);
+		return true;
 	}
 	return false;
 }
@@ -349,6 +356,10 @@ bool NativeWindow::disableState(WindowState state) {
 	if (hasFlag(state, WindowState::Fullscreen)) {
 		setFullscreen(FullscreenInfo(FullscreenInfo::None), [](Status) { }, nullptr);
 		return true;
+	} else if (hasFlag(state, WindowState::CloseGuard)) {
+		updateState(0, _info->state & ~WindowState::CloseGuard);
+	} else if (hasFlag(state, WindowState::CloseRequest)) {
+		updateState(0, _info->state & ~WindowState::CloseRequest);
 	}
 
 	return false;

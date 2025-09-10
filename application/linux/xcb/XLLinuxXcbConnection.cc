@@ -26,10 +26,10 @@
 #include "XLLinuxXcbWindow.h"
 #include "XLLinuxXcbLibrary.h"
 
-#define XL_X11_DEBUG 1
+#define XL_X11_DEBUG 0
 
 #if XL_X11_DEBUG
-#define XL_X11_LOG(...) log::format(log::Debug, "XCB", __VA_ARGS__)
+#define XL_X11_LOG(...) log::format(log::Debug, "XCB", SP_LOCATION, __VA_ARGS__)
 #else
 #define XL_X11_LOG(...)
 #endif
@@ -39,21 +39,22 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 void XcbConnection::ReportError(int error) {
 	switch (error) {
 	case XCB_CONN_ERROR:
-		stappler::log::error("XcbView",
+		stappler::log::source().error("XcbView",
 				"XCB_CONN_ERROR: socket error, pipe error or other stream error");
 		break;
 	case XCB_CONN_CLOSED_EXT_NOTSUPPORTED:
-		stappler::log::error("XcbView",
+		stappler::log::source().error("XcbView",
 				"XCB_CONN_CLOSED_EXT_NOTSUPPORTED: extension is not supported");
 		break;
 	case XCB_CONN_CLOSED_MEM_INSUFFICIENT:
-		stappler::log::error("XcbView", "XCB_CONN_CLOSED_MEM_INSUFFICIENT: out of memory");
+		stappler::log::source().error("XcbView", "XCB_CONN_CLOSED_MEM_INSUFFICIENT: out of memory");
 		break;
 	case XCB_CONN_CLOSED_REQ_LEN_EXCEED:
-		stappler::log::error("XcbView", "XCB_CONN_CLOSED_REQ_LEN_EXCEED: too large request");
+		stappler::log::source().error("XcbView",
+				"XCB_CONN_CLOSED_REQ_LEN_EXCEED: too large request");
 		break;
 	case XCB_CONN_CLOSED_PARSE_ERR:
-		stappler::log::error("XcbView",
+		stappler::log::source().error("XcbView",
 				"XCB_CONN_CLOSED_PARSE_ERR: error during parsing display string");
 		break;
 	case XCB_CONN_CLOSED_INVALID_SCREEN:
@@ -63,7 +64,8 @@ void XcbConnection::ReportError(int error) {
 						"the " "display");
 		break;
 	case XCB_CONN_CLOSED_FDPASSING_FAILED:
-		stappler::log::error("XcbView", "XCB_CONN_CLOSED_FDPASSING_FAILED: fail to pass some FD");
+		stappler::log::source().error("XcbView",
+				"XCB_CONN_CLOSED_FDPASSING_FAILED: fail to pass some FD");
 		break;
 	}
 }
@@ -122,7 +124,7 @@ XcbConnection::XcbConnection(NotNull<XcbLibrary> xcb, NotNull<XkbLibrary> xkb, S
 	}
 
 	if (_xcb->xcb_cursor_context_new(_connection, _screen, &_cursorContext) < 0) {
-		log::warn("XcbConnection", "Fail to load cursor context");
+		log::source().warn("XcbConnection", "Fail to load cursor context");
 		_cursorContext = nullptr;
 	}
 
@@ -190,7 +192,7 @@ static bool XcbConnection_forwardToWindow(StringView eventName,
 		}
 		return true;
 	}
-	log::warn("XcbConnection", "No window ", window, " attached for event ", eventName);
+	log::source().warn("XcbConnection", "No window ", window, " attached for event ", eventName);
 	return false;
 }
 
@@ -203,7 +205,7 @@ static bool XcbConnection_forwardToWindow(StringView eventName,
 		cb(event, wIt->second);
 		return true;
 	}
-	log::warn("XcbConnection", "No window ", window, " attached for event ", eventName);
+	log::source().warn("XcbConnection", "No window ", window, " attached for event ", eventName);
 	return false;
 }
 
@@ -220,7 +222,7 @@ uint32_t XcbConnection::poll() {
 		case 0: {
 			auto err = reinterpret_cast<xcb_generic_error_t *>(e);
 			printError("Connection error", err);
-			log::error("XcbConnection", "X11 error: ", int(err->error_code));
+			log::source().error("XcbConnection", "X11 error: ", int(err->error_code));
 			break;
 		}
 		case XCB_EXPOSE:
@@ -343,12 +345,12 @@ uint32_t XcbConnection::poll() {
 								(const char *)&reply);
 						_xcb->xcb_flush(_connection);
 					} else {
-						log::error("XcbView", "Unknown protocol message: ", event->window,
+						log::source().error("XcbView", "Unknown protocol message: ", event->window,
 								" of type ", event->type, ": ", event->data.data32[0]);
 					}
 				} else {
-					log::error("XcbView", "Unknown client message: ", event->window, " of type ",
-							event->type, ": ", event->data.data32[0]);
+					log::source().error("XcbView", "Unknown client message: ", event->window,
+							" of type ", event->type, ": ", event->data.data32[0]);
 				}
 			}));
 			break;
@@ -737,7 +739,7 @@ bool XcbConnection::isCursorSupported(WindowCursor cursor) {
 WindowCapabilities XcbConnection::getCapabilities() const {
 	WindowCapabilities caps = WindowCapabilities::ServerSideDecorations
 			| WindowCapabilities::AboveBelowState | WindowCapabilities::DemandsAttentionState
-			| WindowCapabilities::SkipTaskbarState;
+			| WindowCapabilities::SkipTaskbarState | WindowCapabilities::CloseGuard;
 
 	if (getVisualByDepth(32) != 0 && getAtom(XcbAtomIndex::_MOTIF_WM_HINTS) != 0
 			&& hasCapability(XcbAtomIndex::_GTK_EDGE_CONSTRAINTS)) {
@@ -800,13 +802,13 @@ static StringView XcbConnection_getCodeName(uint8_t code) {
 
 void XcbConnection::printError(StringView message, xcb_generic_error_t *error) const {
 	if (error) {
-		log::error("XcbConnection", message, "; code=", error->error_code, " (",
+		log::source().error("XcbConnection", message, "; code=", error->error_code, " (",
 				XcbConnection_getCodeName(error->error_code),
 				") " "; major=", getErrorMajorName(error->major_code),
 				"; minor=", getErrorMinorName(error->major_code, error->minor_code),
 				"; name=", getErrorName(error->error_code));
 	} else {
-		log::error("XcbConnection", message, "; no error reported");
+		log::source().error("XcbConnection", message, "; no error reported");
 	}
 }
 

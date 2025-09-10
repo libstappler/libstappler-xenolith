@@ -102,7 +102,7 @@ bool PresentationFrame::assignSwapchainImage(Swapchain::SwapchainAcquiredImage *
 	auto sw = getSwapchainImage();
 
 	if (acquiredImage->swapchain != _swapchain) {
-		log::error("core::PresentationFrame",
+		log::source().error("core::PresentationFrame",
 				"Image swapchain and ViewFrame swapchain are different");
 		return false;
 	}
@@ -116,7 +116,7 @@ bool PresentationFrame::assignSwapchainImage(Swapchain::SwapchainAcquiredImage *
 
 bool PresentationFrame::assignResult(core::ImageStorage *target) {
 	if (_target && _target != target) {
-		log::error("vk::ViewFrame", "Target already assigned");
+		log::source().error("vk::ViewFrame", "Target already assigned");
 		return false;
 	}
 	_target = target;

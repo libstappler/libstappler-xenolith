@@ -22,51 +22,56 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 #include "AppTests.h"
 
 #include "AppRootLayout.cc"
 
-#include "general/AppGeneralLabelTest.cc"
-#include "general/AppGeneralUpdateTest.cc"
-#include "general/AppGeneralZOrderTest.cc"
-#include "general/AppGeneralTransparencyTest.cc"
-#include "general/AppGeneralAutofitTest.cc"
-#include "general/AppGeneralTemporaryResourceTest.cc"
-#include "general/AppGeneralScissorTest.cc"
-#include "input/AppInputTouchTest.cc"
-#include "input/AppInputKeyboardTest.cc"
-#include "input/AppInputTapPressTest.cc"
-#include "input/AppInputSwipeTest.cc"
-#include "input/AppInputTextTest.cc"
-#include "input/AppInputPinchTest.cc"
-#include "action/AppActionEaseTest.cc"
-#include "action/AppActionMaterialTest.cc"
-#include "action/AppActionRepeatTest.cc"
-#include "vg/AppVgTessCanvas.cc"
-#include "vg/AppVgTessTest.cc"
-#include "vg/AppVgIconTest.cc"
-#include "vg/AppVgIconList.cc"
-#include "vg/AppVgShadowTest.cc"
-#include "vg/AppVgSdfTest.cc"
-#include "vg/AppVgDynamicIcons.cc"
-#include "vg/AppVgLinearGradientTest.cc"
-#include "vg/AppVgImageAutofitTest.cc"
 #include "utils/AppUtilsStorageTest.cc"
 #include "utils/AppUtilsNetworkTest.cc"
 #include "utils/AppUtilsAssetTest.cc"
-#include "material/AppMaterialColorPickerTest.cc"
-#include "material/AppMaterialDynamicFontTest.cc"
-#include "material/AppMaterialNodeTest.cc"
-#include "material/AppMaterialButtonTest.cc"
-#include "material/AppMaterialInputFieldTest.cc"
-#include "material/AppMaterialToolbarTest.cc"
-#include "material/AppMaterialMenuTest.cc"
-#include "material/AppMaterialTabBarTest.cc"
-#include "2d/Renderer2dAnimationTest.cc"
-#include "2d/Renderer2dParticleTest.cc"
+#include "utils/AppUtilsWindowStateTest.cc"
 #include "config/AppConfigMenu.cc"
 #include "config/AppConfigPresentModeSwitcher.cc"
+
+#include "2d/Renderer2dAnimationTest.h"
+#include "2d/Renderer2dParticleTest.h"
+#include "action/AppActionEaseTest.h"
+#include "action/AppActionMaterialTest.h"
+#include "action/AppActionRepeatTest.h"
+
+#include "general/AppGeneralLabelTest.h"
+#include "general/AppGeneralUpdateTest.h"
+#include "general/AppGeneralZOrderTest.h"
+#include "general/AppGeneralTransparencyTest.h"
+#include "general/AppGeneralAutofitTest.h"
+#include "general/AppGeneralTemporaryResourceTest.h"
+#include "general/AppGeneralScissorTest.h"
+
+#include "input/AppInputTouchTest.h"
+#include "input/AppInputKeyboardTest.h"
+#include "input/AppInputTapPressTest.h"
+#include "input/AppInputSwipeTest.h"
+#include "input/AppInputTextTest.h"
+#include "input/AppInputPinchTest.h"
+
+#include "material/AppMaterialColorPickerTest.h"
+#include "material/AppMaterialDynamicFontTest.h"
+#include "material/AppMaterialNodeTest.h"
+#include "material/AppMaterialButtonTest.h"
+#include "material/AppMaterialInputFieldTest.h"
+#include "material/AppMaterialToolbarTest.h"
+#include "material/AppMaterialMenuTest.h"
+#include "material/AppMaterialTabBarTest.h"
+
+#include "vg/AppVgTessTest.h"
+#include "vg/AppVgIconTest.h"
+#include "vg/AppVgIconList.h"
+#include "vg/AppVgShadowTest.h"
+#include "vg/AppVgSdfTest.h"
+#include "vg/AppVgDynamicIcons.h"
+#include "vg/AppVgLinearGradientTest.h"
+#include "vg/AppVgImageAutofitTest.h"
 
 namespace stappler::xenolith::app {
 
@@ -141,8 +146,12 @@ static Vector<MenuData> s_layouts{
 		"Utils tests",
 		[](LayoutName name) {
 	return Rc<LayoutMenu>::create(name,
-			Vector<LayoutName>{LayoutName::UtilsStorageTest, LayoutName::UtilsNetworkTest,
-				LayoutName::UtilsAssetTest});
+			Vector<LayoutName>{
+				LayoutName::UtilsStorageTest,
+				LayoutName::UtilsNetworkTest,
+				LayoutName::UtilsAssetTest,
+				LayoutName::UtilsWindowStateTest,
+			});
 }},
 	MenuData{LayoutName::MaterialTests, LayoutName::Root,
 		"org.stappler.xenolith.test.MaterialTests", "Material tests",
@@ -252,6 +261,9 @@ static Vector<MenuData> s_layouts{
 	MenuData{LayoutName::UtilsAssetTest, LayoutName::UtilsTests,
 		"org.stappler.xenolith.test.UtilsAssetTest", "Asset test",
 		[](LayoutName name) { return Rc<UtilsAssetTest>::create(); }},
+	MenuData{LayoutName::UtilsWindowStateTest, LayoutName::UtilsTests,
+		"org.stappler.xenolith.test.UtilsWindowStateTest", "WindowState test",
+		[](LayoutName name) { return Rc<UtilsWindowStateTest>::create(); }},
 
 	MenuData{LayoutName::MaterialColorPickerTest, LayoutName::MaterialTests,
 		"org.stappler.xenolith.test.MaterialColorPickerTest", "Color picker test",

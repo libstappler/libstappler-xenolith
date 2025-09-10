@@ -47,7 +47,7 @@ Rc<Instance> FunctionTable::createInstance(NotNull<core::InstanceInfo> instanceI
 	}
 
 	if (!backend->setup(data, info)) {
-		log::warn("Vk", "VkInstance creation was aborted by client");
+		log::source().warn("Vk", "VkInstance creation was aborted by client");
 		return nullptr;
 	}
 
@@ -112,7 +112,7 @@ bool FunctionTable::prepareData(InstanceData &data, const InstanceInfo &info) co
 bool FunctionTable::validateData(InstanceData &data, const InstanceInfo &info,
 		bool &validationEnabled) const {
 	if ((info.availableBackends & data.enableBackends) != data.enableBackends) {
-		log::error("Vk", "Invalid flags for surface backends");
+		log::source().error("Vk", "Invalid flags for surface backends");
 		return false;
 	}
 
@@ -128,9 +128,9 @@ bool FunctionTable::validateData(InstanceData &data, const InstanceInfo &info,
 			}
 
 			if (!validationLayerFound) {
-				log::error("Vk", "Validation layer not found: ", layerName);
+				log::source().error("Vk", "Validation layer not found: ", layerName);
 				if (hasFlag(info.flags, core::InstanceFlags::ForcedValidation)) {
-					log::error("Vk", "Forced validation flag is set: aborting");
+					log::source().error("Vk", "Forced validation flag is set: aborting");
 					return false;
 				}
 			} else {
@@ -178,7 +178,8 @@ bool FunctionTable::validateData(InstanceData &data, const InstanceInfo &info,
 		}
 
 		if (!debugExt) {
-			log::error("Vk", "Required extension not found: ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			log::source().error("Vk",
+					"Required extension not found: ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 	}
 
@@ -211,13 +212,13 @@ bool FunctionTable::validateData(InstanceData &data, const InstanceInfo &info,
 			}
 		}
 		if (!found) {
-			log::error("Vk", "Required extension not found: ", it);
+			log::source().error("Vk", "Required extension not found: ", it);
 			completeExt = false;
 		}
 	}
 
 	if (!completeExt) {
-		log::error("Vk", "Not all required extensions found, fail to create VkInstance");
+		log::source().error("Vk", "Not all required extensions found, fail to create VkInstance");
 		return false;
 	}
 
@@ -308,7 +309,7 @@ Rc<Instance> FunctionTable::doCreateInstance(InstanceData &data, const InstanceI
 	ret = vkCreateInstance(&createInfo, nullptr, &instance);
 
 	if (ret != VK_SUCCESS) {
-		log::error("Vk", "Fail to create Vulkan instance");
+		log::source().error("Vk", "Fail to create Vulkan instance");
 		return nullptr;
 	}
 
@@ -339,7 +340,7 @@ Rc<Instance> FunctionTable::doCreateInstance(InstanceData &data, const InstanceI
 
 		vkInstance->printDevicesInfo(out);
 
-		log::verbose("Vk-Info", out.str());
+		log::source().verbose("Vk-Info", out.str());
 	}
 
 	return vkInstance;

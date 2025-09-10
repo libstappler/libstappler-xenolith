@@ -86,7 +86,7 @@ int Context::run(int argc, const char **argv) {
 		}
 
 		if (!ctx) {
-			log::error("Context", "Fail to create Context");
+			log::source().error("Context", "Fail to create Context");
 			return -1;
 		}
 
@@ -136,7 +136,7 @@ bool Context::init(ContextConfig &&info) {
 	_controller = platform::ContextController::create(this, move(info));
 
 	if (!_controller) {
-		log::error("Context", "Fail to create ContextController");
+		log::source().error("Context", "Fail to create ContextController");
 		return false;
 	}
 	_looper = _controller->getLooper();
@@ -207,13 +207,13 @@ void Context::handleGraphicsLoaded(NotNull<core::Loop> loop) {
 Value Context::saveState() { return Value(); }
 
 void Context::handleAppThreadCreated(NotNull<AppThread>) {
-	log::info("Context", "handleAppThreadCreated");
+	log::source().info("Context", "handleAppThreadCreated");
 }
 void Context::handleAppThreadDestroyed(NotNull<AppThread>) {
-	log::info("Context", "handleAppThreadDestroyed");
+	log::source().info("Context", "handleAppThreadDestroyed");
 }
 void Context::handleAppThreadUpdate(NotNull<AppThread>, const UpdateTime &time) {
-	// log::info("Context", "handleAppThreadUpdate");
+	// log::source().info("Context", "handleAppThreadUpdate");
 }
 
 core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w,
@@ -243,7 +243,7 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	}
 
 	if (ret.presentMode == core::PresentMode::Unsupported) {
-		log::info("Context", "handleAppWindowSurfaceUpdate: fail to set up with ",
+		log::source().info("Context", "handleAppWindowSurfaceUpdate: fail to set up with ",
 				core::getPresentModeName(preferredPresentMode), " PresentMode, fallback to ",
 				core::getPresentModeName(info.presentModes.front()));
 		ret.presentMode = info.presentModes.front();
@@ -270,21 +270,25 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	if (it == info.formats.end()) {
 		ret.imageFormat = info.formats.front().first;
 		ret.colorSpace = info.formats.front().second;
-		log::info("Context",
-			"handleAppWindowSurfaceUpdate: fail to find (imageFormat:colorspace) pair "
-			"for a window, fallback to (",
-			core::getImageFormatName(ret.imageFormat), ":",
-			core::getColorSpaceName(ret.colorSpace), ")");
+		log::
+				source()
+						.info("Context",
+								"handleAppWindowSurfaceUpdate: fail to find "
+								"(imageFormat:colorspace) pair " "for a window, fallback to (",
+								core::getImageFormatName(ret.imageFormat), ":",
+								core::getColorSpaceName(ret.colorSpace), ")");
 	} else {
 		ret.imageFormat = it->first;
 		ret.colorSpace = it->second;
 	}
 
-	if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Opaque)
-			!= core::CompositeAlphaFlags::None) {
+	if (hasFlag(w->getInfo()->flags, WindowCreationFlags::UserSpaceDecorations)
+			&& hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Premultiplied)) {
+		// For user-space decoration, compositor can provide Premultiplied alpha mode, use it
+		ret.alpha = core::CompositeAlphaFlags::Premultiplied;
+	} else if (hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Opaque)) {
 		ret.alpha = core::CompositeAlphaFlags::Opaque;
-	} else if ((info.supportedCompositeAlpha & core::CompositeAlphaFlags::Inherit)
-			!= core::CompositeAlphaFlags::None) {
+	} else if (hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Inherit)) {
 		ret.alpha = core::CompositeAlphaFlags::Inherit;
 	}
 
@@ -302,7 +306,7 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 
 void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindow> w,
 		NotNull<Director> d) {
-	log::info("Context", "handleAppWindowCreated");
+	log::source().info("Context", "handleAppWindowCreated");
 
 	thread->addListener(w, [w](const UpdateTime &, bool wakeup) {
 		if (wakeup) {
@@ -320,22 +324,22 @@ void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindo
 }
 
 void Context::handleAppWindowDestroyed(NotNull<AppThread> thread, NotNull<AppWindow> w) {
-	log::info("Context", "handleAppWindowDestroyed");
+	log::source().info("Context", "handleAppWindowDestroyed");
 	thread->removeListener(w);
 }
 
 void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {
-	log::info("Context", "handleNativeWindowCreated");
+	log::source().info("Context", "handleNativeWindowCreated");
 
 	if (auto appWindow = makeAppWindow(w)) {
 		w->setAppWindow(move(appWindow));
 	} else {
-		log::error("Context", "Fail to create AppWindow for NativeWindow");
+		log::source().error("Context", "Fail to create AppWindow for NativeWindow");
 	}
 }
 
 void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
-	log::info("Context", "handleNativeWindowDestroyed");
+	log::source().info("Context", "handleNativeWindowDestroyed");
 	auto appWindow = w->getAppWindow();
 	if (appWindow) {
 		appWindow->close(true);
@@ -343,12 +347,12 @@ void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 }
 
 void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
-	log::info("Context", "handleNativeWindowRedrawNeeded");
+	log::source().info("Context", "handleNativeWindowRedrawNeeded");
 }
 
 void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w,
 		core::UpdateConstraintsFlags flags) {
-	log::info("Context", "handleNativeWindowConstraintsChanged");
+	log::source().info("Context", "handleNativeWindowConstraintsChanged");
 
 	auto appWindow = w->getAppWindow();
 	if (appWindow) {
@@ -373,12 +377,12 @@ void Context::handleNativeWindowTextInput(NotNull<NativeWindow> w,
 }
 
 void Context::handleLowMemory() {
-	log::info("Context", "handleLowMemory");
+	log::source().info("Context", "handleLowMemory");
 	for (auto &it : _components) { it.second->handleLowMemory(this); }
 }
 
 void Context::handleWillDestroy() {
-	log::info("Context", "handleWillDestroy");
+	log::source().info("Context", "handleWillDestroy");
 	for (auto &it : _components) { it.second->handleDestroy(this); }
 	_components.clear();
 
@@ -389,10 +393,10 @@ void Context::handleWillDestroy() {
 		_loop = nullptr;
 	}
 }
-void Context::handleDidDestroy() { log::info("Context", "handleDidDestroy"); }
+void Context::handleDidDestroy() { log::source().info("Context", "handleDidDestroy"); }
 
 void Context::handleWillStop() {
-	log::info("Context", "handleWillStop");
+	log::source().info("Context", "handleWillStop");
 	if (_running) {
 		for (auto &it : _components) { it.second->handleStop(this); }
 
@@ -401,7 +405,7 @@ void Context::handleWillStop() {
 }
 
 void Context::handleDidStop() {
-	log::info("Context", "handleDidStop");
+	log::source().info("Context", "handleDidStop");
 	if (_application) {
 		_application->stop();
 		_application->waitStopped();
@@ -410,25 +414,25 @@ void Context::handleDidStop() {
 }
 
 void Context::handleWillPause() {
-	log::info("Context", "handleWillPause");
+	log::source().info("Context", "handleWillPause");
 	for (auto &it : _components) { it.second->handlePause(this); }
 }
-void Context::handleDidPause() { log::info("Context", "handleDidPause"); }
+void Context::handleDidPause() { log::source().info("Context", "handleDidPause"); }
 
-void Context::handleWillResume() { log::info("Context", "handleWillResume"); }
+void Context::handleWillResume() { log::source().info("Context", "handleWillResume"); }
 
 void Context::handleDidResume() {
-	log::info("Context", "handleDidResume");
+	log::source().info("Context", "handleDidResume");
 	for (auto &it : _components) { it.second->handleResume(this); }
 }
 
 void Context::handleWillStart() {
-	log::info("Context", "handleWillStart");
+	log::source().info("Context", "handleWillStart");
 	_application = Rc<AppThread>::create(this);
 }
 
 void Context::handleDidStart() {
-	log::info("Context", "handleDidStart");
+	log::source().info("Context", "handleDidStart");
 	if (!_running) {
 		for (auto &it : _components) { it.second->handleStart(this); }
 
@@ -463,13 +467,14 @@ bool Context::configureWindow(NotNull<WindowInfo> w) {
 		switch (flag) {
 		case WindowCreationFlags::UserSpaceDecorations:
 			if (!hasFlag(caps, WindowCapabilities::UserSpaceDecorations)) {
-				log::warn("Context", "WindowCreationFlags::UserSpaceDecorations is not supported");
+				log::source().warn("Context",
+						"WindowCreationFlags::UserSpaceDecorations is not supported");
 				w->flags &= ~WindowCreationFlags::UserSpaceDecorations;
 			}
 			break;
 		case WindowCreationFlags::DirectOutput:
 			if (!hasFlag(caps, WindowCapabilities::DirectOutput)) {
-				log::warn("Context", "WindowCreationFlags::DirectOutput is not supported");
+				log::source().warn("Context", "WindowCreationFlags::DirectOutput is not supported");
 				w->flags &= ~WindowCreationFlags::DirectOutput;
 			}
 			break;
@@ -505,7 +510,8 @@ Rc<Scene> Context::makeScene(NotNull<AppWindow> w, const core::FrameConstraints 
 		scene = makeSceneSymbol(_application, w, c);
 	}
 	if (!scene) {
-		log::error("Context", "Fail to create scene for the window '", w->getInfo()->id, "'");
+		log::source().error("Context", "Fail to create scene for the window '", w->getInfo()->id,
+				"'");
 	}
 	return scene;
 }

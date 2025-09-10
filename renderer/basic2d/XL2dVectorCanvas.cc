@@ -585,7 +585,7 @@ uint32_t VectorCanvasPathDrawer::draw(memory::pool_t *pool, const VectorPath &p,
 
 	if (!success) {
 		if (verbose) {
-			log::error("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
+			log::source().error("VectorCanvasPathDrawer", "Failed path:\n", path->toString(true));
 		}
 	}
 
@@ -731,7 +731,7 @@ void VectorCanvasResult::updateColor(const Color4F &color) {
 			for (auto &vertex : iit.data->data) {
 				if (vertex.material != config::VGPseudoSdfMaterial) {
 					if (vertex.color.z > 1.0f) {
-						log::error("VectorCanvasResult", "vertex transform error");
+						log::source().error("VectorCanvasResult", "vertex transform error");
 					}
 					vertex.color = vertex.color * color;
 				}

@@ -302,7 +302,7 @@ bool GraphicPipeline::init(Device &dev, const PipelineData &params, const Subpas
 						entry.size = data.size();
 						break;
 					default:
-						log::error("GraphicPipeline",
+						log::source().error("GraphicPipeline",
 										"Invalid SpecializationConstant::Callback result, callback "
 										"should " "not return another callback");
 						break;
@@ -504,7 +504,7 @@ bool ComputePipeline::init(Device &dev, const PipelineData &params, const Subpas
 					entry.size = data.size();
 					break;
 				default:
-					log::error("GraphicPipeline",
+					log::source().error("GraphicPipeline",
 										"Invalid SpecializationConstant::Callback result, callback "
 										"should " "not return another callback");
 					break;

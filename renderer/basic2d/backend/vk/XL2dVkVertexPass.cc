@@ -26,7 +26,6 @@
 #include "XLCoreEnum.h"
 #include "XLCoreFrameHandle.h"
 #include "XLCoreFrameQueue.h"
-#include "XLCoreFrameCache.h"
 #include "XLDirector.h"
 #include "XLVkDeviceQueue.h"
 #include "XLVkRenderPass.h"
@@ -664,8 +663,8 @@ void VertexMaterialDynamicData::pushPlanVertexes(WriteTarget &writeTarget,
 						t.object = 0;
 					} else {
 #if DEBUG
-						log::warn("VertexMaterialDrawPlan", "Object not found: ", t.object, " ",
-								string::toUtf8<Interface>(char16_t(t.object)));
+						log::source().warn("VertexMaterialDrawPlan", "Object not found: ", t.object,
+								" ", string::toUtf8<Interface>(char16_t(t.object)));
 #endif
 						auto anchor = font::CharId::getAnchorForChar(t.object);
 						switch (anchor) {
@@ -1309,7 +1308,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 						makeSpanView(&set, 1), pipeline->layout->sets.size());
 				boundTextureSetIndex = textureSetIndex;
 			} else {
-				stappler::log::error("MaterialRenderPassHandle",
+				stappler::log::source().error("MaterialRenderPassHandle",
 						"Invalid textureSetlayout: ", textureSetIndex);
 				return;
 			}
@@ -1388,7 +1387,7 @@ void VertexPassHandle::applyDynamicState(const FrameContextHandle2d *commands, C
 
 	auto currentExtent = getFramebuffer()->getExtent();
 	auto state = commands->getState(stateId);
-	//log::verbose("VertexPassHandle", (void *)this, " enable state: ", stateId, " ", (void *)state);
+	//log::source().verbose("VertexPassHandle", (void *)this, " enable state: ", stateId, " ", (void *)state);
 	if (!state) {
 		if (_dynamicState.isScissorEnabled()) {
 			_dynamicState.enabled &= ~(core::DynamicState::Scissor);

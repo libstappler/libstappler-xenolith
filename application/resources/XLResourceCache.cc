@@ -93,7 +93,7 @@ Rc<Texture> ResourceCache::acquireTexture(StringView str) const {
 		}
 	}
 
-	log::error("ResourceCache", "Texture not found: ", str);
+	log::source().error("ResourceCache", "Texture not found: ", str);
 	return nullptr;
 }
 
@@ -110,7 +110,7 @@ Rc<MeshIndex> ResourceCache::acquireMeshIndex(StringView str) const {
 		}
 	}
 
-	log::error("ResourceCache", "MeshIndex not found: ", str);
+	log::source().error("ResourceCache", "MeshIndex not found: ", str);
 	return nullptr;
 }
 
@@ -137,8 +137,8 @@ Rc<Texture> ResourceCache::addExternalBitmapImageByRef(StringView key, core::Ima
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -159,8 +159,8 @@ Rc<Texture> ResourceCache::addExternalBitmapImage(StringView key, core::ImageInf
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -182,8 +182,8 @@ Rc<Texture> ResourceCache::addExternalEncodedImageByRef(StringView key, core::Im
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -204,8 +204,8 @@ Rc<Texture> ResourceCache::addExternalEncodedImage(StringView key, core::ImageIn
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -227,8 +227,8 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 
@@ -251,8 +251,8 @@ Rc<Texture> ResourceCache::addExternalImage(StringView key, core::ImageInfo &&in
 		if (auto tex = it->second->acquireTexture(key)) {
 			return tex;
 		}
-		log::error("ResourceCache", "Resource '", key, "' already exists, but no texture '", key,
-				"' found");
+		log::source().error("ResourceCache", "Resource '", key,
+				"' already exists, but no texture '", key, "' found");
 		return nullptr;
 	}
 

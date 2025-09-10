@@ -60,7 +60,7 @@ static struct wl_data_source_listener s_dataSourceListener{
 static struct wl_data_offer_listener s_dataOfferListener {
 	.offer = [](void *data, struct wl_data_offer *wl_data_offer, const char *mime_type) {
 		reinterpret_cast<WaylandDataOffer *>(data)->types.emplace_back(mime_type);
-		//log::debug("WaylandDataDevice", "offer: ", mime_type);
+		//log::source().debug("WaylandDataDevice", "offer: ", mime_type);
 	},
 
 	.source_actions = [](void *data, struct wl_data_offer *wl_data_offer, uint32_t source_actions) {
@@ -91,13 +91,13 @@ static struct wl_data_device_listener s_dataDeviceListener{
 		offer->y = y;
 
 		device->enter(offer);
-		//log::debug("WaylandDataDevice", "enter");
+		//log::source().debug("WaylandDataDevice", "enter");
 	},
 
 	.leave = [](void *data, struct wl_data_device *wl_data_device) {
 		auto device = reinterpret_cast<WaylandDataDevice *>(data);
 		device->leave();
-		//log::debug("WaylandDataDevice", "leave");
+		//log::source().debug("WaylandDataDevice", "leave");
 	},
 
 	.motion = [](void *data, struct wl_data_device *wl_data_device,
@@ -108,13 +108,13 @@ static struct wl_data_device_listener s_dataDeviceListener{
 			device->dnd->x = x;
 			device->dnd->y = y;
 		}
-		//log::debug("WaylandDataDevice", "motion");
+		//log::source().debug("WaylandDataDevice", "motion");
 	},
 
 	.drop = [](void *data, struct wl_data_device *wl_data_device) {
 		auto device = reinterpret_cast<WaylandDataDevice *>(data);
 		device->drop();
-		//log::debug("WaylandDataDevice", "drop");
+		//log::source().debug("WaylandDataDevice", "drop");
 	},
 
 	.selection = [](void *data, struct wl_data_device *wl_data_device, struct wl_data_offer *id) {

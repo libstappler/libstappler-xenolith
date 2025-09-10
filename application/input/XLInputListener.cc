@@ -27,8 +27,11 @@
 #include "XLAppWindow.h"
 #include "XLScene.h"
 #include "XLFrameContext.h"
+#include "XLFocusGroup.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+static std::atomic<uint64_t> s_inputListenerId = 1;
 
 InputListener::EventMask InputListener::EventMaskTouch = InputListener::makeEventMask({
 	InputEventName::Begin,
@@ -76,6 +79,8 @@ bool InputListener::init(int32_t priority) {
 void InputListener::handleEnter(Scene *scene) {
 	System::handleEnter(scene);
 
+	_id = s_inputListenerId.fetch_add(1);
+	_hasFocus = false;
 	_scene = scene;
 
 	for (auto &it : _recognizers) { it->onEnter(this); }
@@ -84,6 +89,9 @@ void InputListener::handleEnter(Scene *scene) {
 void InputListener::handleExit() {
 	for (auto &it : _recognizers) { it->onExit(); }
 
+	if (_hasFocus) {
+		handleFocusOut(nullptr);
+	}
 	_scene = nullptr;
 
 	System::handleExit();
@@ -93,6 +101,8 @@ void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeVisitFlags 
 	System::handleVisitSelf(info, node, flags);
 
 	if (_enabled) {
+		auto g = info.getSystem<FocusGroup>(FocusGroup::Id);
+
 		if (_windowLayer) {
 			WindowLayer layer{
 				TransformRect(Rect(Vec2(0, 0), node->getContentSize()),
@@ -100,19 +110,18 @@ void InputListener::handleVisitSelf(FrameInfo &info, Node *node, NodeVisitFlags 
 				_windowLayer.cursor,
 				_windowLayer.flags,
 			};
-			info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
-					sp::move(layer));
+			info.input->addListener(this, g, sp::move(layer));
 		} else {
-			info.input->addListener(this, _dedicatedFocus == 0 ? info.focusValue : _dedicatedFocus,
-					WindowLayer(_windowLayer));
+			info.input->addListener(this, g, WindowLayer(_windowLayer));
 		}
-		info.input->updateFocus(info.focusValue);
 	}
 }
 
 void InputListener::update(const UpdateTime &dt) {
 	for (auto &it : _recognizers) { it->update(dt.delta); }
 }
+
+uint64_t InputListener::getId() const { return _id; }
 
 void InputListener::setCursor(WindowCursor cursor) { _windowLayer.cursor = cursor; }
 
@@ -121,8 +130,6 @@ void InputListener::setLayerFlags(WindowLayerFlags flags) { _windowLayer.flags =
 void InputListener::setOwner(Node *owner) { _owner = owner; }
 
 void InputListener::setPriority(int32_t p) { _priority = p; }
-
-void InputListener::setDedicatedFocus(uint32_t v) { _dedicatedFocus = v; }
 
 void InputListener::setExclusive() {
 	if (_scene) {
@@ -240,9 +247,35 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 			releaseEvent(event.data.event);
 			result = InputEventState::Processed;
 		}
+		if (result == InputEventState::Processed && shouldSwallowEvent(event)) {
+			result = InputEventState::Captured;
+		}
 		ret = std::max(result, ret);
 	}
 	return ret;
+}
+
+bool InputListener::setFocused() {
+	if (auto g = getFocusGroup()) {
+		if (g->setFocus(this)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool InputListener::isFocused() const { return _hasFocus; }
+
+FocusGroup *InputListener::getFocusGroup() const {
+	auto owner = getOwner();
+	while (owner) {
+		auto g = owner->getSystemByType<FocusGroup>();
+		if (g) {
+			return g;
+		}
+		owner = owner->getParent();
+	}
+	return nullptr;
 }
 
 GestureRecognizer *InputListener::addTouchRecognizer(InputCallback<GestureData> &&cb,
@@ -316,6 +349,20 @@ void InputListener::setScreenUpdateCallback(Function<bool()> &&cb) {
 void InputListener::clear() {
 	_eventMask.reset();
 	_recognizers.clear();
+}
+
+void InputListener::handleFocusIn(FocusGroup *) {
+	_hasFocus = true;
+	if (_focusCallback) {
+		_focusCallback(_hasFocus);
+	}
+}
+
+void InputListener::handleFocusOut(FocusGroup *) {
+	_hasFocus = false;
+	if (_focusCallback) {
+		_focusCallback(_hasFocus);
+	}
 }
 
 bool InputListener::shouldProcessEvent(const InputEvent &event) const {

@@ -101,13 +101,13 @@ struct Component {
 		static_assert(requires(T) { T::Id.value; },
 				"Component type T should define `static ComponentId Id` field");
 		if (T::Id.value != id) {
-			log::error("Component", "ComponentId mismatch: ", T::Id.value, " vs. ", id);
+			log::source().error("Component", "ComponentId mismatch: ", T::Id.value, " vs. ", id);
 			return nullptr;
 		}
 
 		clear();
 
-		if (sizeof(T) > STATIC_SIZE) {
+		if constexpr (sizeof(T) > STATIC_SIZE) {
 			soo = 0;
 			destructor = [](void *ptr) { delete reinterpret_cast<T *>(ptr); };
 			dynamicStorage.size = sizeof(T);
@@ -163,14 +163,14 @@ public:
 	// If there is no component with type T - do nothing and returns nullptr.
 	// Callback should return true if value was modified
 	template <typename T>
-	const T *updateComponent(const Callback<bool(T *)> &);
+	const T *updateComponent(const Callback<bool(NotNull<T>)> &);
 
 	// Acquire current value of component T to perform some updates on it
 	// or create this component with default constructor (should be available)
 	// then return components's value into callback
 	// Callback should return true if value was modified.
 	template <typename T>
-	const T *setOrUpdateComponent(const Callback<bool(T *)> &);
+	const T *setOrUpdateComponent(const Callback<bool(NotNull<T>)> &);
 
 	// Acquire current value of component T or nullptr
 	template <typename T>
@@ -199,7 +199,7 @@ T *ComponentContainer::setComponent(Args &&...args) {
 }
 
 template <typename T>
-const T *ComponentContainer::updateComponent(const Callback<bool(T *)> &cb) {
+const T *ComponentContainer::updateComponent(const Callback<bool(NotNull<T>)> &cb) {
 	auto it = _components.find(T::Id);
 	if (it != _components.end()) {
 		if (cb((*it).template get<T>())) {
@@ -210,7 +210,7 @@ const T *ComponentContainer::updateComponent(const Callback<bool(T *)> &cb) {
 }
 
 template <typename T>
-const T *ComponentContainer::setOrUpdateComponent(const Callback<bool(T *)> &cb) {
+const T *ComponentContainer::setOrUpdateComponent(const Callback<bool(NotNull<T>)> &cb) {
 	static_assert(std::is_default_constructible_v<T>,
 			"Component with type T should be default constructable for Node::setOrUpdateComponent");
 	auto it = _components.find(T::Id);

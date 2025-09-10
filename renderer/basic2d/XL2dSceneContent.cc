@@ -103,7 +103,6 @@ void SceneContent2d::replaceLayout(SceneLayout2d *node) {
 			}
 		}
 		replaceNodes();
-		updateBackButtonStatus();
 	};
 
 	if (auto enter = node->makeEnterTransition(this)) {
@@ -197,7 +196,6 @@ void SceneContent2d::pushNodeInternal(SceneLayout2d *node, Function<void()> &&cb
 
 	auto fn = [this, node, cb = sp::move(cb)] {
 		updateNodesVisibility();
-		updateBackButtonStatus();
 		if (_layouts.size() > 1) {
 			_layouts.at(_layouts.size() - 2)->handleBackgroundTransitionEnded(this, node);
 		}
@@ -225,7 +223,6 @@ void SceneContent2d::eraseLayout(SceneLayout2d *node) {
 		}
 		updateNodesVisibility();
 	}
-	updateBackButtonStatus();
 }
 
 void SceneContent2d::eraseOverlay(SceneLayout2d *l) {
@@ -238,7 +235,6 @@ void SceneContent2d::eraseOverlay(SceneLayout2d *l) {
 		}
 		updateNodesVisibility();
 	}
-	updateBackButtonStatus();
 }
 
 void SceneContent2d::replaceNodes() {
@@ -273,24 +269,6 @@ void SceneContent2d::updateNodesVisibility() {
 	}
 }
 
-void SceneContent2d::updateBackButtonStatus() {
-	if (!_overlays.empty() || _layouts.size() > 1 || _layouts.back()->hasBackButtonAction()) {
-		if (!_retainBackButton) {
-			_retainBackButton = true;
-			if (_director && !_backButtonRetained) {
-				_director->getWindow()->retainExitGuard();
-				_backButtonRetained = true;
-			}
-		}
-	} else {
-		_retainBackButton = false;
-		if (_director && _backButtonRetained) {
-			_director->getWindow()->releaseExitGuard();
-			_backButtonRetained = false;
-		}
-	}
-}
-
 SceneLayout2d *SceneContent2d::getTopLayout() {
 	if (!_layouts.empty()) {
 		return _layouts.back();
@@ -320,7 +298,7 @@ bool SceneContent2d::popTopLayout() {
 
 bool SceneContent2d::isActive() const { return !_layouts.empty(); }
 
-bool SceneContent2d::onBackButton() {
+bool SceneContent2d::handleBackButton() {
 	if (_layouts.empty()) {
 		return false;
 	} else {
@@ -365,10 +343,7 @@ bool SceneContent2d::pushOverlay(SceneLayout2d *l) {
 
 	l->handlePush(this, false);
 
-	auto fn = [this, l] {
-		l->handlePushTransitionEnded(this, false);
-		updateBackButtonStatus();
-	};
+	auto fn = [this, l] { l->handlePushTransitionEnded(this, false); };
 
 	if (auto enter = l->makeEnterTransition(this)) {
 		l->runAction(Rc<Sequence>::create(move(enter), move(fn)), "ContentLayer.Transition"_tag);
@@ -393,7 +368,6 @@ bool SceneContent2d::popOverlay(SceneLayout2d *l) {
 		eraseOverlay(l);
 		l->handlePop(this, false);
 		l->release(linkId);
-		updateBackButtonStatus();
 	};
 
 	if (auto exit = l->makeExitTransition(this)) {
@@ -468,32 +442,32 @@ void SceneContent2d::setDefaultLights() {
 bool SceneContent2d::addLight(SceneLight *light, uint64_t tag, StringView name) {
 	if (tag != InvalidTag) {
 		if (_lightsByTag.find(tag) != _lightsByTag.end()) {
-			log::warn("Scene", "Light with tag ", tag, " is already defined");
+			log::source().warn("Scene", "Light with tag ", tag, " is already defined");
 			return false;
 		}
 	}
 	if (!name.empty()) {
 		if (_lightsByName.find(name) != _lightsByName.end()) {
-			log::warn("Scene", "Light with name ", name, " is already defined");
+			log::source().warn("Scene", "Light with name ", name, " is already defined");
 			return false;
 		}
 	}
 
 	if (light->getScene()) {
-		log::warn("Scene", "Light is already on scene");
+		log::source().warn("Scene", "Light is already on scene");
 		return false;
 	}
 
 	switch (light->getType()) {
 	case SceneLightType::Ambient:
 		if (_lightsAmbientCount >= config::MaxAmbientLights) {
-			log::warn("Scene", "Too many ambient lights");
+			log::source().warn("Scene", "Too many ambient lights");
 			return false;
 		}
 		break;
 	case SceneLightType::Direct:
 		if (_lightsDirectCount >= config::MaxDirectLights) {
-			log::warn("Scene", "Too many direct lights");
+			log::source().warn("Scene", "Too many direct lights");
 			return false;
 		}
 		break;

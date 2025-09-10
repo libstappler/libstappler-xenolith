@@ -51,11 +51,6 @@ public:
 	XcbConnection *getXcbConnection() const { return _xcbConnection; }
 	WaylandDisplay *getWaylandDisplay() const { return _waylandDisplay; }
 
-	virtual void notifyWindowConstraintsChanged(NotNull<NativeWindow>,
-			core::UpdateConstraintsFlags) override;
-	virtual bool notifyWindowClosed(NotNull<NativeWindow>,
-			WindowCloseOptions = WindowCloseOptions::CloseInPlace) override;
-
 	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
@@ -72,8 +67,6 @@ protected:
 	virtual void handleContextWillDestroy() override;
 	virtual void handleContextDidDestroy() override;
 
-	void notifyPendingWindows();
-
 	Rc<XcbLibrary> _xcb;
 	Rc<WaylandLibrary> _wayland;
 	Rc<XkbLibrary> _xkb;
@@ -85,9 +78,6 @@ protected:
 
 	Rc<event::PollHandle> _xcbPollHandle;
 	Rc<event::PollHandle> _waylandPollHandle;
-
-	Vector<Pair<NativeWindow *, core::UpdateConstraintsFlags>> _resizedWindows;
-	Vector<Pair<NativeWindow *, WindowCloseOptions>> _closedWindows;
 };
 
 } // namespace stappler::xenolith::platform

@@ -22,6 +22,7 @@
  **/
 
 #include "AppInputKeyboardTest.h"
+#include "AppCheckbox.h"
 #include "XL2dLayer.h"
 #include "XLDirector.h"
 #include "XLAppThread.h"

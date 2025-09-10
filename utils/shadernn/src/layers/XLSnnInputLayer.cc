@@ -51,38 +51,41 @@ const core::QueuePassData *InputLayer::prepare(core::Queue::Builder &builder,
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == inputs.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::InputLayer>::create(builder, passBuilder, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::InputLayer>::create(builder, passBuilder, inputIt->second,
+				outputIt->second);
 	});
 }
 
 const core::AttachmentData *InputLayer::makeInputAttachment(core::Queue::Builder &builder) {
 	return builder.addAttachemnt(toString(getName(), "_input"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		return Rc<vk::ImageAttachment>::create(attachmentBuilder,
-			core::ImageInfo(Extent2(getOutputExtent().width, getOutputExtent().height),
-					core::ImageUsage::Storage | core::ImageUsage::TransferSrc,
-					core::ImageTiling::Optimal, core::ImageFormat::R8G8B8A8_UNORM, core::PassType::Compute),
-			core::ImageAttachment::AttachmentInfo{
-				.initialLayout = core::AttachmentLayout::Ignored,
-				.finalLayout = core::AttachmentLayout::Ignored,
-				.clearOnLoad = true,
-				.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)}
-		);
+				core::ImageInfo(Extent2(getOutputExtent().width, getOutputExtent().height),
+						core::ImageUsage::Storage | core::ImageUsage::TransferSrc,
+						core::ImageTiling::Optimal, core::ImageFormat::R8G8B8A8_UNORM,
+						core::PassType::Compute),
+				core::ImageAttachment::AttachmentInfo{.initialLayout =
+															  core::AttachmentLayout::Ignored,
+					.finalLayout = core::AttachmentLayout::Ignored,
+					.clearOnLoad = true,
+					.clearColor = Color4F(0.0f, 0.0f, 0.0f, 0.0f)});
 	});
 }
 
-const core::AttachmentData *InputLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
-	auto modelFormat = _model->isHalfPrecision() ? core::ImageFormat::R16G16B16A16_SFLOAT : core::ImageFormat::R32G32B32A32_SFLOAT;
+const core::AttachmentData *InputLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
+	auto modelFormat = _model->isHalfPrecision() ? core::ImageFormat::R16G16B16A16_SFLOAT
+												 : core::ImageFormat::R32G32B32A32_SFLOAT;
 
 	auto output = getOutput();
 	auto attachment = builder.addAttachemnt(output->getName(),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
@@ -90,10 +93,9 @@ const core::AttachmentData *InputLayer::makeOutputAttachment(core::Queue::Builde
 				core::ImageInfo(output->getExtent(), core::ImageType::Image3D,
 						core::ImageUsage::Storage | core::ImageUsage::TransferSrc,
 						core::ImageTiling::Optimal, modelFormat, core::PassType::Compute),
-				core::ImageAttachment::AttachmentInfo{
-					.initialLayout = core::AttachmentLayout::Ignored,
-					.finalLayout = core::AttachmentLayout::Ignored }
-		);
+				core::ImageAttachment::AttachmentInfo{.initialLayout =
+															  core::AttachmentLayout::Ignored,
+					.finalLayout = core::AttachmentLayout::Ignored});
 	});
 	return attachment;
 }
@@ -120,36 +122,37 @@ const core::QueuePassData *InputBufferLayer::prepare(core::Queue::Builder &build
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == inputs.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::InputBufferLayer>::create(builder, passBuilder, this, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::InputBufferLayer>::create(builder, passBuilder, this,
+				inputIt->second, outputIt->second);
 	});
 }
 
 const core::AttachmentData *InputBufferLayer::makeInputAttachment(core::Queue::Builder &builder) {
 	return builder.addAttachemnt(toString(getName(), "_input"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(_inputWidth * _inputHeight * _inputObjects * sizeof(float)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(_inputWidth * _inputHeight * _inputObjects * sizeof(float)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-const core::AttachmentData *InputBufferLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *InputBufferLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(_inputWidth * _inputHeight * _inputObjects * sizeof(float)),
-					core::BufferUsage::StorageBuffer, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(_inputWidth * _inputHeight * _inputObjects * sizeof(float)),
+						core::BufferUsage::StorageBuffer, core::PassType::Compute));
 	});
 }
 
@@ -160,9 +163,7 @@ bool InputCsvIntLayer::init(Model *m, StringView tag, size_t idx, const Value &d
 
 	_inputObjects = data.getInteger("inputObjects");
 
-	for (auto &it : data.getArray("fields")) {
-		_fields.emplace_back(it.getInteger());
-	}
+	for (auto &it : data.getArray("fields")) { _fields.emplace_back(it.getInteger()); }
 
 	_isInputLayer = true;
 
@@ -180,37 +181,39 @@ const core::QueuePassData *InputCsvIntLayer::prepare(core::Queue::Builder &build
 	auto outputIt = attachments.find(getOutput());
 
 	if (inputIt == inputs.end() || outputIt == attachments.end()) {
-		log::error("snn::InputLayer", "No attachments specified");
+		log::source().error("snn::InputLayer", "No attachments specified");
 		return nullptr;
 	}
 
 	return builder.addPass(getName(), core::PassType::Compute, core::RenderOrdering(_inputIndex),
-			[&] (core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
-		return Rc<vk::shadernn::InputCsvIntLayer>::create(builder, passBuilder, this, inputIt->second, outputIt->second);
+			[&](core::QueuePassBuilder &passBuilder) -> Rc<core::QueuePass> {
+		return Rc<vk::shadernn::InputCsvIntLayer>::create(builder, passBuilder, this,
+				inputIt->second, outputIt->second);
 	});
 }
 
 const core::AttachmentData *InputCsvIntLayer::makeInputAttachment(core::Queue::Builder &builder) {
 	return builder.addAttachemnt(toString(getName(), "_input"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(_inputObjects * sizeof(uint64_t)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(_inputObjects * sizeof(uint64_t)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-const core::AttachmentData *InputCsvIntLayer::makeOutputAttachment(core::Queue::Builder &builder, bool isGlobalOutput) {
+const core::AttachmentData *InputCsvIntLayer::makeOutputAttachment(core::Queue::Builder &builder,
+		bool isGlobalOutput) {
 	return builder.addAttachemnt(toString(getName(), "_output"),
-			[&] (core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
+			[&](core::AttachmentBuilder &attachmentBuilder) -> Rc<core::Attachment> {
 		if (isGlobalOutput) {
 			attachmentBuilder.defineAsOutput();
 		}
 		return Rc<vk::BufferAttachment>::create(attachmentBuilder,
-			core::BufferInfo(size_t(_inputObjects * sizeof(uint64_t)),
-					core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst, core::PassType::Compute)
-		);
+				core::BufferInfo(size_t(_inputObjects * sizeof(uint64_t)),
+						core::BufferUsage::StorageBuffer | core::BufferUsage::TransferDst,
+						core::PassType::Compute));
 	});
 }
 
-}
+} // namespace stappler::xenolith::shadernn

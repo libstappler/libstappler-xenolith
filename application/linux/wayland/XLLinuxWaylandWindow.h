@@ -169,17 +169,26 @@ public:
 	WindowCursor getCursor() const;
 	bool isServerSideCursors() const { return _serverSideCursors; }
 
+	virtual bool enableState(WindowState) override;
+	virtual bool disableState(WindowState) override;
+
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
 			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
 
 	virtual void cancelTextInput() override;
 
-	void createDecorations();
-
 	virtual Status setFullscreenState(FullscreenInfo &&) override;
 
+	virtual void setCursor(WindowCursor) override;
+
 	bool configureDecorations(Extent2 extent);
+
+	bool initWithServerDecor();
+	bool initWithLibdecor();
+	bool initWithAppDecor();
+
+	void cancelPointerEvents();
 
 	Rc<WaylandDisplay> _display;
 	Rc<WaylandLibrary> _wayland;
@@ -205,12 +214,13 @@ protected:
 
 	Set<WaylandOutput *> _activeOutputs;
 
+	wl_fixed_t _surfaceFX = 0;
+	wl_fixed_t _surfaceFY = 0;
 	double _surfaceX = 0.0;
 	double _surfaceY = 0.0;
 	core::InputModifier _activeModifiers = core::InputModifier::None;
 	Vector<PointerEvent> _pointerEvents;
 
-	std::bitset<size_t(XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE + 1)> _capabilities;
 	Vector<Rc<WaylandDecoration>> _decors;
 	Rc<WaylandDecoration> _iconMaximized;
 
@@ -228,9 +238,12 @@ protected:
 	};
 
 	Map<uint32_t, KeyData> _keys;
-	WindowCursor _layerFlags = WindowCursor::Undefined;
-};
+	WindowCursor _cursor = WindowCursor::Default;
 
+	uint32_t _buttonGripSerial = 0;
+	WindowLayerFlags _buttonGripFlags = WindowLayerFlags::None;
+	std::bitset<64> _buttons;
+};
 
 } // namespace stappler::xenolith::platform
 

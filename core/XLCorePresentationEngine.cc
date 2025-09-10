@@ -38,7 +38,7 @@
 #endif
 
 #if XL_COREPRESENT_DEBUG
-#define XL_COREPRESENT_LOG(...) log::debug("core::PresentationEngine", __VA_ARGS__)
+#define XL_COREPRESENT_LOG(...) log::source().debug("core::PresentationEngine", __VA_ARGS__)
 #else
 #define XL_COREPRESENT_LOG(...)
 #endif
@@ -117,7 +117,7 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 			auto a = frame->setupOutputAttachment();
 			if (!a) {
 				if (frame->getRequest()->getQueue()) {
-					log::error("core::PresentationEngine", "Fail to run view with queue '",
+					log::source().error("core::PresentationEngine", "Fail to run view with queue '",
 							frame->getRequest()->getQueue()->getName(),
 							"': no usable output attachments found");
 				}
@@ -154,7 +154,8 @@ bool PresentationEngine::scheduleSwapchainImage(Rc<PresentationFrame> &&frame) {
 				_window->setFrameOrder(nextFrame->getOrder());
 			}
 		} else {
-			log::error("core::PresentationEngine", "acquireFrameData - Swapchain was invalidated");
+			log::source().error("core::PresentationEngine",
+					"acquireFrameData - Swapchain was invalidated");
 			frame->invalidate();
 		}
 	});
@@ -178,6 +179,10 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 		auto newConstraints = _window->exportFrameConstraints();
 		newConstraints.extent = _constraints.extent;
 		newConstraints.transform = _constraints.transform;
+		if (_swapchain
+				&& _swapchain->getConfig().alpha == core::CompositeAlphaFlags::Premultiplied) {
+			newConstraints.viewConstraints |= core::ViewConstraints::Transparent;
+		}
 
 		_constraints = sp::move(newConstraints);
 		_waitForDisplayLink = false;
@@ -218,7 +223,7 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 }
 
 PresentationEngine::~PresentationEngine() {
-	log::debug("PresentationEngine", "~PresentationEngine");
+	log::source().debug("PresentationEngine", "~PresentationEngine");
 }
 
 bool PresentationEngine::init(NotNull<Loop> loop, NotNull<Device> device,
@@ -366,7 +371,7 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, NotNull<Presentati
 		XL_COREPRESENT_LOG("presentWithQueue - deprecate swapchain");
 		_swapchain->deprecate();
 	} else if (res != Status::Ok) {
-		log::error("vk::View", "presentWithQueue: error:", res);
+		log::source().error("vk::View", "presentWithQueue: error:", res);
 	}
 	XL_COREPRESENT_LOG("presentWithQueue - presented");
 
@@ -608,7 +613,7 @@ void PresentationEngine::acquireFrameData(NotNull<PresentationFrame> frame,
 
 void PresentationEngine::scheduleSwapchainRecreation() {
 	if (_swapchain && _swapchain->getPresentedFramesCount() == 0) {
-		log::warn("core::PresentationEngine",
+		log::source().warn("core::PresentationEngine",
 				"Scheduling swapchain recreation without frame presentation");
 	}
 
@@ -616,7 +621,7 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 	if (!_swapchainRecreationScheduled) {
 		_swapchainRecreationScheduled = true;
 		_loop->performOnThread([this] {
-			log::debug("PresentationEngine", "scheduleSwapchainRecreation");
+			log::source().debug("PresentationEngine", "scheduleSwapchainRecreation");
 			_swapchainRecreationScheduled = false;
 			recreateSwapchain();
 		}, this, false);

@@ -32,7 +32,7 @@
 
 #ifndef XL_X11_DEBUG
 #if XL_X11_DEBUG
-#define XL_X11_LOG(...) log::debug("XCB", __VA_ARGS__)
+#define XL_X11_LOG(...) log::source().debug("XCB", __VA_ARGS__)
 #else
 #define XL_X11_LOG(...)
 #endif
@@ -75,7 +75,7 @@ static XcbMoveResize getMoveResizeForGrip(WindowLayerFlags grip) {
 	return XcbMoveResize::Cancel;
 }
 
-static void XcbWindow_updateState(XcbConnection *conn, WindowState state, xcb_window_t window,
+static bool XcbWindow_updateState(XcbConnection *conn, WindowState state, xcb_window_t window,
 		bool add) {
 	xcb_client_message_event_t msg;
 	msg.response_type = XCB_CLIENT_MESSAGE;
@@ -131,13 +131,14 @@ static void XcbWindow_updateState(XcbConnection *conn, WindowState state, xcb_wi
 		case WindowState::DemandsAttention:
 			msg.data.data32[1] = conn->getAtom(XcbAtomIndex::_NET_WM_STATE_DEMANDS_ATTENTION);
 			break;
-		default: return; break;
+		default: return false; break;
 		}
 	}
 
 	conn->getXcb()->xcb_send_event(conn->getConnection(), 0, conn->getDefaultScreen()->root,
 			XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
 			(const char *)&msg);
+	return true;
 }
 
 XcbWindow::~XcbWindow() {
@@ -241,7 +242,7 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 	_xinfo.wmClass = _wmClass;
 
 	if (!_connection->createWindow(_info, _xinfo)) {
-		log::error("XCB", "Fail to create window");
+		log::source().error("XCB", "Fail to create window");
 		return false;
 	}
 
@@ -914,6 +915,9 @@ bool XcbWindow::close() {
 	if (!_xinfo.closed) {
 		_xinfo.closed = true;
 		if (!_controller->notifyWindowClosed(this)) {
+			if (hasFlag(_info->state, WindowState::CloseGuard)) {
+				updateState(0, _info->state | WindowState::CloseRequest);
+			}
 			_xinfo.closed = false;
 			return false;
 		}
@@ -984,7 +988,7 @@ Rc<core::Surface> XcbWindow::makeSurface(NotNull<core::Instance> cinstance) {
 	}
 	return Rc<vk::Surface>::create(instance, surface, this);
 #else
-	log::error("XcbWindow", "No available GAPI found for a surface");
+	log::source().error("XcbWindow", "No available GAPI found for a surface");
 	return nullptr;
 #endif
 }
@@ -994,8 +998,7 @@ bool XcbWindow::enableState(WindowState state) {
 		return true;
 	}
 
-	XcbWindow_updateState(_connection, state, _xinfo.window, true);
-	return true;
+	return XcbWindow_updateState(_connection, state, _xinfo.window, true);
 }
 
 bool XcbWindow::disableState(WindowState state) {
@@ -1003,8 +1006,7 @@ bool XcbWindow::disableState(WindowState state) {
 		return true;
 	}
 
-	XcbWindow_updateState(_connection, state, _xinfo.window, false);
-	return true;
+	return XcbWindow_updateState(_connection, state, _xinfo.window, false);
 }
 
 void XcbWindow::startGrip(XcbMoveResize value, int32_t x, int32_t y, int32_t button) {
@@ -1257,7 +1259,7 @@ void XcbWindow::updateShadows() {
 
 void XcbWindow::generateShadowPixmaps(uint32_t size, uint32_t inset) {
 	if (_xinfo.depth != 32) {
-		log::error("XcbWindow", "Shadows can be generated only with depth 32");
+		log::source().error("XcbWindow", "Shadows can be generated only with depth 32");
 		return;
 	}
 

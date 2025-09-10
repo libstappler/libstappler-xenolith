@@ -150,7 +150,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		}, [this](FrameHandle &frame, bool success) {
 			if (!success) {
 				_valid = false;
-				log::error("VK-Error", "Fail to doPrepareDescriptors");
+				log::source().error("VK-Error", "Fail to doPrepareDescriptors");
 			}
 
 			_descriptorsReady = true;
@@ -181,7 +181,7 @@ bool QueuePassHandle::prepare(FrameQueue &q, Function<void(bool)> &&cb) {
 		return false;
 	}, [this, cb](FrameHandle &frame, bool success) {
 		if (!success) {
-			log::error("VK-Error", "Fail to doPrepareCommands");
+			log::source().error("VK-Error", "Fail to doPrepareCommands");
 			_valid = false;
 		}
 
@@ -304,7 +304,7 @@ bool QueuePassHandle::doSubmit(FrameHandle &frame, Function<void(bool)> &&onSubm
 		invalidate();
 
 		if (success != Status::Ok) {
-			log::error("VK-Error", "Fail to vkQueueSubmit: ", success);
+			log::source().error("VK-Error", "Fail to vkQueueSubmit: ", success);
 		}
 		_sync = nullptr;
 	},
@@ -352,7 +352,7 @@ void QueuePassHandle::doFinalizeTransfer(core::MaterialSet *materials,
 					true);
 			static_cast<TextureSet *>(it.set.get())->dropPendingBarriers();
 		} else {
-			log::error("QueuePassHandle", "No set for material layout");
+			log::source().error("QueuePassHandle", "No set for material layout");
 		}
 	}
 }
@@ -406,7 +406,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, NotNull<core::Material
 		auto targetBuffer = owner->allocateMaterialPersistentBuffer(it.get());
 
 		if (stagingBuffer->getSize() != targetBuffer->getSize()) {
-			log::error("QueuePassHandle",
+			log::source().error("QueuePassHandle",
 					"Material buffer size for staging and transfer must match (",
 					stagingBuffer->getSize(), " vs ", targetBuffer->getSize(), ")");
 		} else {

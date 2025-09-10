@@ -25,6 +25,8 @@
 #include "SPFilepath.h"
 #include "XL2dSprite.h"
 #include "XLAction.h"
+#include "XLDirector.h"
+#include "XLTexture.h"
 
 namespace stappler::xenolith::app {
 

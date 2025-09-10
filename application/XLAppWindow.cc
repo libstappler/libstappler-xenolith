@@ -35,7 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(AppWindow, onWindowState);
 
-AppWindow::~AppWindow() { log::info("AppWindow", "~AppWindow"); }
+AppWindow::~AppWindow() { log::source().info("AppWindow", "~AppWindow"); }
 
 bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<NativeWindow> w) {
 	_context = ctx;
@@ -279,22 +279,23 @@ uint64_t AppWindow::getFrameInterval() const {
 	return _presentationEngine ? _presentationEngine->getTargetFrameInterval() : 0;
 }
 
-void AppWindow::retainExitGuard() {
-	_context->performOnThread([this]() {
-		if (_exitGuard == 0) {
-			_window->setExitGuard(true);
+void AppWindow::retainCloseGuard() {
+	if (_exitGuard == 0) {
+		if (hasFlag(getCapabilities(), WindowCapabilities::CloseGuard)) {
+			enableState(WindowState::CloseGuard);
 		}
-		++_exitGuard;
-	}, this);
+	}
+	++_exitGuard;
 }
-void AppWindow::releaseExitGuard() {
-	_context->performOnThread([this]() {
-		SPASSERT(_exitGuard > 0, "Exit guard should be retained");
-		--_exitGuard;
-		if (_exitGuard == 0) {
-			_window->setExitGuard(false);
+
+void AppWindow::releaseCloseGuard() {
+	SPASSERT(_exitGuard > 0, "Exit guard should be retained");
+	--_exitGuard;
+	if (_exitGuard == 0) {
+		if (hasFlag(getCapabilities(), WindowCapabilities::CloseGuard)) {
+			disableState(WindowState::CloseGuard);
 		}
-	}, this);
+	}
 }
 
 WindowState AppWindow::getUpdatableStateFlags() const {
@@ -305,12 +306,16 @@ WindowState AppWindow::getUpdatableStateFlags() const {
 		flags |= WindowState::Above | WindowState::Below;
 	}
 
-	if (hasFlag(caps, WindowCapabilities::AboveBelowState)) {
+	if (hasFlag(caps, WindowCapabilities::DemandsAttentionState)) {
 		flags |= WindowState::DemandsAttention;
 	}
 
 	if (hasFlag(caps, WindowCapabilities::SkipTaskbarState)) {
 		flags |= WindowState::SkipTaskbar | WindowState::SkipPager;
+	}
+
+	if (hasFlag(caps, WindowCapabilities::CloseGuard)) {
+		flags |= WindowState::CloseGuard;
 	}
 
 	for (auto it : sp::flags(_state)) {
@@ -331,12 +336,12 @@ WindowState AppWindow::getUpdatableStateFlags() const {
 bool AppWindow::enableState(WindowState state) {
 	auto c = std::popcount(toInt(state));
 	if (c != 1 && state != WindowState::Maximized) {
-		log::error("AppWindow", "enableState: only one flag should be defined in state");
+		log::source().error("AppWindow", "enableState: only one flag should be defined in state");
 		return false;
 	}
 
 	if ((state & getUpdatableStateFlags()) != state) {
-		log::error("AppWindow", "enableState:", state, " is not updatable");
+		log::source().error("AppWindow", "enableState:", state, " is not updatable");
 		return false;
 	}
 
@@ -347,12 +352,12 @@ bool AppWindow::enableState(WindowState state) {
 bool AppWindow::disableState(WindowState state) {
 	auto c = std::popcount(toInt(state));
 	if (c != 1 && state != WindowState::Maximized) {
-		log::error("AppWindow", "enableState: only one flag should be defined in state");
+		log::source().error("AppWindow", "enableState: only one flag should be defined in state");
 		return false;
 	}
 
 	if ((state & getUpdatableStateFlags()) != state) {
-		log::error("AppWindow", "disableState:", state, " is not updatable");
+		log::source().error("AppWindow", "disableState:", state, " is not updatable");
 		return false;
 	}
 

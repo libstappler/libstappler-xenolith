@@ -42,6 +42,6 @@
 			"--compile-commands-dir=${workspaceFolder}",
 			"-background-index"
 		],
-		"debug.allowBreakpointsEverywhere": true
+		"debug.allowBreakpointsEverywhere": true,
 	}
 }

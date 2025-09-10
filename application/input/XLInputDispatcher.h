@@ -24,6 +24,7 @@
 #define XENOLITH_APPLICATION_INPUT_XLINPUTDISPATCHER_H_
 
 #include "XLContextInfo.h"
+#include "XLFocusGroup.h"
 #include "XLInputListener.h"
 #include "XLTextInputManager.h"
 
@@ -34,9 +35,10 @@ class DirectorWindow;
 class SP_PUBLIC InputListenerStorage : public PoolRef {
 public:
 	struct Rec {
-		InputListener *listener;
-		uint32_t focus;
+		Rc<InputListener> listener;
+		Rc<FocusGroup> focus;
 		WindowLayer layer;
+		uint32_t order = 0;
 	};
 
 	virtual ~InputListenerStorage();
@@ -46,25 +48,31 @@ public:
 	void clear();
 	void reserve(const InputListenerStorage *);
 
-	void addListener(InputListener *, uint32_t focusValue, WindowLayer &&);
+	void addListener(NotNull<InputListener>, FocusGroup *, WindowLayer &&);
 
-	void updateFocus(uint32_t focusValue);
+	void sort();
 
 	template <typename Callback>
-	bool foreach (const Callback &, bool focusOnly);
+	bool foreachListener(const Callback &, FocusGroup *);
+
+	template <typename Callback>
+	bool foreachFocusGroup(const Callback &, FocusGroup *parentGroup);
+
+	SpanView<Rec *> getFocusGroupListener(FocusGroup *) const;
 
 protected:
-	memory::vector<Rec> *_preSceneEvents;
-	memory::vector<Rec> *_sceneEvents; // in reverse order
-	memory::vector<Rec> *_postSceneEvents;
-	uint32_t _maxFocusValue = 0;
+	memory::vector<Rec> *_preSceneEvents = nullptr;
+	memory::vector<Rec> *_sceneEvents = nullptr; // in reverse order
+	memory::vector<Rec> *_postSceneEvents = nullptr;
+	memory::map<FocusGroup *, memory::vector<Rec *>> *_focus = nullptr;
+	uint32_t _order = 0;
 };
 
 class SP_PUBLIC InputDispatcher : public Ref {
 public:
 	virtual ~InputDispatcher() = default;
 
-	bool init(PoolRef *);
+	bool init(PoolRef *, WindowState state);
 
 	void update(const UpdateTime &time);
 
@@ -79,10 +87,7 @@ public:
 	void setListenerExclusiveForTouch(const InputListener *l, uint32_t);
 	void setListenerExclusiveForKey(const InputListener *l, InputKeyCode);
 
-	bool isInBackground() const { return _inBackground; }
-	bool hasFocus() const { return _hasFocus; }
-	bool isPointerWithinWindow() const { return _pointerInWindow; }
-
+	WindowState getWindowState() const { return _windowState; }
 	bool hasActiveInput() const;
 
 protected:
@@ -95,11 +100,14 @@ protected:
 		Rc<InputListener> exclusive;
 		Vector<const InputListener *> processed;
 		bool isKeyEvent = false;
+		FocusGroup *exclusiveGroup = nullptr;
 
 		void handle(bool removeOnFail);
 		void clear(bool cancel);
 
 		void setExclusive(const InputListener *);
+
+		void addListenersFromStorage(NotNull<InputListenerStorage>);
 	};
 
 	void setListenerExclusive(EventHandlersInfo &, const InputListener *l) const;
@@ -120,20 +128,33 @@ protected:
 	Rc<PoolRef> _pool;
 
 	Vec2 _pointerLocation = Vec2::ZERO;
-	bool _inBackground = false;
-	bool _hasFocus = true;
-	bool _pointerInWindow = false;
+	WindowState _windowState = WindowState::None;
 };
 
 template <typename Callback>
-bool InputListenerStorage::foreach (const Callback &cb, bool focusOnly) {
+bool InputListenerStorage::foreachListener(const Callback &cb, FocusGroup *focus) {
 	static_assert(std::is_invocable_v<Callback, const Rec &>, "Invalid callback type");
+
+	if (focus && !hasFlag(focus->getFlags(), FocusGroup::Flags::Propagate)) {
+		auto it = _focus->find(focus);
+		if (it != _focus->end()) {
+			for (auto &l : it->second) {
+				if (!cb(*l)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	memory::vector<Rec>::reverse_iterator it, end;
 	it = _preSceneEvents->rbegin();
 	end = _preSceneEvents->rend();
 
 	for (; it != end; ++it) {
-		if (!focusOnly || it->focus >= _maxFocusValue) {
+		if (!focus || it->focus == focus
+				|| (it->focus && hasFlag(focus->getFlags(), FocusGroup::Flags::Propagate)
+						&& it->focus->isParentGroup(focus))) {
 			if (!cb(*it)) {
 				return false;
 			}
@@ -144,7 +165,9 @@ bool InputListenerStorage::foreach (const Callback &cb, bool focusOnly) {
 	end = _sceneEvents->rend();
 
 	for (; it != end; ++it) {
-		if (!focusOnly || it->focus >= _maxFocusValue) {
+		if (!focus || it->focus == focus
+				|| (it->focus && hasFlag(focus->getFlags(), FocusGroup::Flags::Propagate)
+						&& it->focus->isParentGroup(focus))) {
 			if (!cb(*it)) {
 				return false;
 			}
@@ -155,13 +178,30 @@ bool InputListenerStorage::foreach (const Callback &cb, bool focusOnly) {
 	end = _postSceneEvents->rend();
 
 	for (; it != end; ++it) {
-		if (!focusOnly || it->focus >= _maxFocusValue) {
+		if (!focus || it->focus == focus
+				|| (it->focus && hasFlag(focus->getFlags(), FocusGroup::Flags::Propagate)
+						&& it->focus->isParentGroup(focus))) {
 			if (!cb(*it)) {
 				return false;
 			}
 		}
 	}
 
+	return true;
+}
+
+template <typename Callback>
+bool InputListenerStorage::foreachFocusGroup(const Callback &cb, FocusGroup *parentGroup) {
+	static_assert(std::is_invocable_v<Callback, NotNull<FocusGroup>, SpanView<Rec *>>,
+			"Invalid callback type");
+
+	for (auto &it : *_focus) {
+		if (!parentGroup || it.first == parentGroup || it.first->isParentGroup(parentGroup)) {
+			if (!cb(it.first, it.second)) {
+				return false;
+			}
+		}
+	}
 	return true;
 }
 

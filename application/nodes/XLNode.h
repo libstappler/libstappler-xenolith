@@ -56,6 +56,7 @@ public:
 	static constexpr ZOrder ZOrderTransparent = ZOrder::min();
 	static constexpr ZOrder ZOrderMax = ZOrder::max();
 	static constexpr ZOrder ZOrderMin = ZOrder::min() + ZOrder(1);
+	static constexpr uint64_t DefaultCallbackSystemTag = InvalidTag - 1;
 
 	static bool isParent(Node *parent, Node *node);
 	static Mat4 getChainNodeToParentTransform(Node *parent, Node *node, bool withParent);
@@ -228,15 +229,15 @@ public:
 	T *getSystemByType() const;
 
 	template <typename T>
-	T *getSystemByType(uint32_t tag) const;
+	T *getSystemByType(uint64_t tag) const;
 
-	virtual StringView getName() const { return _name; }
-	virtual void setName(StringView str) { _name = str.str<Interface>(); }
+	virtual StringView getName() const;
+	virtual void setName(StringView str);
 
-	virtual const Value &getDataValue() const { return _dataValue; }
-	virtual void setDataValue(Value &&val) { _dataValue = move(val); }
+	virtual const Value &getDataValue() const;
+	virtual void setDataValue(Value &&val);
 
-	virtual uint64_t getTag() const { return _tag; }
+	virtual uint64_t getTag() const;
 	virtual void setTag(uint64_t tag);
 
 	virtual bool isRunning() const { return _running; }
@@ -335,6 +336,9 @@ public:
 	virtual bool isTouched(const Vec2 &location, float padding = 0.0f);
 	virtual bool isTouchedNodeSpace(const Vec2 &location, float padding = 0.0f);
 
+	// Callbacks bound with default CallbackSystem to reduce common node memory footprint.
+	// System will be created when first callback attached, and marked with DefaultCallbackSystemTag
+	// to separate it from user-defined systems
 	virtual void setEnterCallback(Function<void(Scene *)> &&);
 	virtual void setExitCallback(Function<void()> &&);
 	virtual void setContentSizeDirtyCallback(Function<void()> &&);
@@ -352,12 +356,6 @@ public:
 	FrameContext *getFrameContext() const { return _frameContext; }
 
 	virtual float getMaxDepthIndex() const;
-
-	virtual void retainFocus();
-	virtual void releaseFocus();
-	virtual void clearFocus();
-
-	virtual uint32_t getFocus() const { return _focus; }
 
 	// Recurse into parent tree to find node with specific component.
 	// Node that have specific component will be returned to callback.
@@ -405,6 +403,8 @@ protected:
 
 	virtual bool wrapVisit(FrameInfo &, NodeVisitFlags flags, const VisitInfo &, bool useContext);
 
+	virtual CallbackSystem *makeDefaultCallbackSystem();
+
 	template <typename T>
 	bool enumerateChildsWithComponent(
 			const Callback<bool(NotNull<Node>, NotNull<const T>, uint32_t depth)> &cb,
@@ -427,12 +427,7 @@ protected:
 
 	NodeEventFlags _eventFlags = NodeEventFlags::None;
 
-	String _name;
-	Value _dataValue;
-
-	uint64_t _tag = InvalidTag;
 	ZOrder _zOrder = ZOrder(0);
-	uint32_t _focus = 0;
 
 	Vec2 _skew;
 	Vec2 _anchorPoint;
@@ -457,14 +452,6 @@ protected:
 	Vector<Rc<Node>> _children;
 	Node *_parent = nullptr;
 
-	Function<void(Scene *)> _enterCallback;
-	Function<void()> _exitCallback;
-	Function<void()> _contentSizeDirtyCallback;
-	Function<void()> _componentsDirtyCallback;
-	Function<void(const Mat4 &)> _transformDirtyCallback;
-	Function<void()> _reorderChildDirtyCallback;
-	Function<void(Node *)> _layoutCallback;
-
 	Vector<Rc<System>> _systems;
 
 	Scene *_scene = nullptr;
@@ -487,7 +474,7 @@ auto Node::getSystemByType() const -> T * {
 }
 
 template <typename T>
-auto Node::getSystemByType(uint32_t tag) const -> T * {
+auto Node::getSystemByType(uint64_t tag) const -> T * {
 	for (auto &it : _systems) {
 		if (it->getFrameTag() == tag) {
 			if (auto ret = dynamic_cast<T *>(it.get())) {
