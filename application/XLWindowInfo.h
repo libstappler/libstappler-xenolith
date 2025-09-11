@@ -98,6 +98,7 @@ enum class WindowLayerFlags : uint32_t {
 	ResizeBottomGrip,
 	ResizeBottomLeftGrip,
 	ResizeLeftGrip,
+	GripGuard, // to restrict grip for some layers
 
 	GripMask = 0xF,
 
@@ -246,6 +247,12 @@ enum class WindowCapabilities : uint32_t {
 
 	// Window supports separate MaximizeVert/MaximizeHorz in enableState/disableState
 	SeparateMaximize = 1 << 15,
+
+	// Window moving in maximized state is allowed
+	AllowMoveFromMaximized = 1 << 16,
+
+	// For buttons in grip layer to work, GripGuard flag required
+	GripGuardsRequired = 1 << 17,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

@@ -286,6 +286,9 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 			&& hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Premultiplied)) {
 		// For user-space decoration, compositor can provide Premultiplied alpha mode, use it
 		ret.alpha = core::CompositeAlphaFlags::Premultiplied;
+	} else if (hasFlag(w->getInfo()->flags, WindowCreationFlags::UserSpaceDecorations)
+			&& hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Postmultiplied)) {
+		ret.alpha = core::CompositeAlphaFlags::Postmultiplied;
 	} else if (hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Opaque)) {
 		ret.alpha = core::CompositeAlphaFlags::Opaque;
 	} else if (hasFlag(info.supportedCompositeAlpha, core::CompositeAlphaFlags::Inherit)) {

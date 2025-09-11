@@ -35,6 +35,12 @@
 #include "XLVkInstance.h"
 #endif
 
+#if XL_MACOS_DEBUG
+#define XL_MACOS_LOG(...) NSSP::log::source().debug(__VA_ARGS__)
+#else
+#define XL_MACOS_LOG(...)
+#endif
+
 @interface XLMacosAppDelegate : NSObject <NSApplicationDelegate> {
 	NSApplication *_application;
 	NSWindow *_window;
@@ -72,6 +78,10 @@ void MacosContextController::acquireDefaultConfig(ContextConfig &config, NativeC
 		config.instance->api = core::InstanceApi::Vulkan;
 	}
 
+	if (config.context) {
+		config.context->flags |= ContextFlags::DestroyWhenAllWindowsClosed;
+	}
+
 	if (config.loop) {
 		config.loop->defaultFormat = core::ImageFormat::B8G8R8A8_UNORM;
 	}
@@ -80,6 +90,7 @@ void MacosContextController::acquireDefaultConfig(ContextConfig &config, NativeC
 		if (config.window->imageFormat == core::ImageFormat::Undefined) {
 			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
 		}
+		config.window->userDecorations.borderRadius = 8.0f;
 	}
 }
 
@@ -142,9 +153,11 @@ void MacosContextController::handleContextDidStart() {
 			Rc<MacosDisplayConfigManager>::create(this, [](NotNull<DisplayConfigManager> m) { });
 
 	if (_windowInfo) {
-		auto window = Rc<MacosWindow>::create(this, sp::move(_windowInfo), true);
-		if (window) {
-			_activeWindows.emplace(window);
+		if (configureWindow(_windowInfo)) {
+			auto window = Rc<MacosWindow>::create(this, sp::move(_windowInfo));
+			if (window) {
+				_activeWindows.emplace(window);
+			}
 		}
 	}
 }
@@ -255,6 +268,66 @@ Status MacosContextController::writeToClipboard(Rc<ClipboardData> &&data) {
 	[pasteboard writeObjects:@[item]];
 
 	return Status::Ok;
+}
+
+bool MacosContextController::isCursorSupported(WindowCursor cursor, bool serverSide) const {
+	switch (cursor) {
+	case NSXL::WindowCursor::Default:
+	case NSXL::WindowCursor::ContextMenu:
+	case NSXL::WindowCursor::Help:
+	case NSXL::WindowCursor::Pointer:
+	case NSXL::WindowCursor::Crosshair:
+	case NSXL::WindowCursor::Text:
+	case NSXL::WindowCursor::VerticalText:
+	case NSXL::WindowCursor::Alias:
+	case NSXL::WindowCursor::Copy:
+	case NSXL::WindowCursor::NoDrop:
+	case NSXL::WindowCursor::NotAllowed:
+	case NSXL::WindowCursor::Grab:
+	case NSXL::WindowCursor::Grabbing:
+	case NSXL::WindowCursor::ZoomIn:
+	case NSXL::WindowCursor::ZoomOut:
+
+	case NSXL::WindowCursor::ResizeRight:
+	case NSXL::WindowCursor::ResizeTop:
+	case NSXL::WindowCursor::ResizeBottom:
+	case NSXL::WindowCursor::ResizeLeft:
+	case NSXL::WindowCursor::ResizeLeftRight:
+	case NSXL::WindowCursor::ResizeTopBottom:
+	case NSXL::WindowCursor::ResizeCol:
+	case NSXL::WindowCursor::ResizeRow: return true; break;
+
+	case NSXL::WindowCursor::Progress:
+	case NSXL::WindowCursor::Wait:
+	case NSXL::WindowCursor::Cell:
+	case NSXL::WindowCursor::Move:
+
+	case NSXL::WindowCursor::AllScroll:
+	case NSXL::WindowCursor::DndAsk:
+
+	case NSXL::WindowCursor::RightPtr:
+	case NSXL::WindowCursor::Pencil:
+	case NSXL::WindowCursor::Target:
+
+	case NSXL::WindowCursor::ResizeTopRight:
+	case NSXL::WindowCursor::ResizeTopLeft:
+	case NSXL::WindowCursor::ResizeBottomRight:
+	case NSXL::WindowCursor::ResizeBottomLeft:
+	case NSXL::WindowCursor::ResizeTopRightBottomLeft:
+	case NSXL::WindowCursor::ResizeTopLeftBottomRight:
+	case NSXL::WindowCursor::ResizeAll:
+	default: break;
+	}
+	return false;
+}
+
+WindowCapabilities MacosContextController::getCapabilities() const {
+	WindowCapabilities caps = WindowCapabilities::FullscreenWithMode
+			| WindowCapabilities::FullscreenSeamlessModeSwitch | WindowCapabilities::Fullscreen
+			| WindowCapabilities::ServerSideDecorations | WindowCapabilities::UserSpaceDecorations
+			| WindowCapabilities::CloseGuard | WindowCapabilities::AllowMoveFromMaximized;
+
+	return caps;
 }
 
 Rc<core::Instance> MacosContextController::loadInstance() {
@@ -420,12 +493,12 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillFinishLaunching");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillFinishLaunching");
 	_controller->handleContextWillStart();
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidFinishLaunching");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidFinishLaunching");
 	_controller->handleContextDidStart();
 
 	_pathMonitor = nw_path_monitor_create();
@@ -441,37 +514,37 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 }
 
 - (void)applicationWillHide:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillHide");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillHide");
 	_controller->handleContextWillStart();
 }
 
 - (void)applicationDidHide:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidHide");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidHide");
 }
 
 - (void)applicationWillUnhide:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillUnhide");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillUnhide");
 }
 
 - (void)applicationDidUnhide:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidUnhide");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidUnhide");
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillBecomeActive");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillBecomeActive");
 	_controller->handleContextWillResume();
 }
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidBecomeActive");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidBecomeActive");
 	_controller->handleContextDidResume();
 }
 - (void)applicationWillResignActive:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillResignActive");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillResignActive");
 	_controller->handleContextWillPause();
 }
 
 - (void)applicationDidResignActive:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidResignActive");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidResignActive");
 	_controller->handleContextDidPause();
 }
 
@@ -487,13 +560,13 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 		_pathMonitor = nullptr;
 	}
 
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationWillTerminate");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationWillTerminate");
 	_controller->applicationWillTerminate(_terminated);
 	self->_controller = nullptr;
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)notification {
-	NSSP::log::source().debug("XLMacosAppDelegate", "applicationDidChangeScreenParameters");
+	XL_MACOS_LOG("XLMacosAppDelegate", "applicationDidChangeScreenParameters");
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
@@ -550,14 +623,13 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 	auto data = _data->encodeCallback(tIt->second);
 
-	NSSP::log::source().debug("XLMacosPasteboardItem", "Write clipboard: ", tIt->second, " ",
-			data.size());
+	XL_MACOS_LOG("XLMacosPasteboardItem", "Write clipboard: ", tIt->second, " ", data.size());
 
 	[pasteboard setData:[[NSData alloc] initWithBytes:data.data() length:data.size()] forType:type];
 }
 
 - (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)pasteboard {
-	NSSP::log::source().debug("XLMacosPasteboardItem", "clear clipboard");
+	XL_MACOS_LOG("XLMacosPasteboardItem", "clear clipboard");
 	_data = nullptr;
 }
 

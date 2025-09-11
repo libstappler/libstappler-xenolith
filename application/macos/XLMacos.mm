@@ -26,6 +26,16 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
+uint32_t getMacosButtonNumber(core::InputMouseButton btn) {
+	switch (btn) {
+	case core::InputMouseButton::MouseLeft: return 0; break;
+	case core::InputMouseButton::MouseRight: return 1; break;
+	case core::InputMouseButton::MouseMiddle: return 2; break;
+	default: break;
+	}
+	return toInt(btn) + 3 - toInt(core::InputMouseButton::Mouse8);
+}
+
 core::InputMouseButton getInputMouseButton(int32_t buttonNumber) {
 	switch (buttonNumber) {
 	case 0: return core::InputMouseButton::MouseLeft;

@@ -32,6 +32,7 @@ struct WindowDecorationsState {
 	static const ComponentId Id;
 
 	WindowState state = WindowState::None;
+	WindowCapabilities capabilities = WindowCapabilities::None;
 };
 
 struct WindowDecorationsTheme {

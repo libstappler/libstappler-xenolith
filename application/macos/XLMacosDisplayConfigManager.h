@@ -43,7 +43,7 @@ public:
 
 	virtual void invalidate() override;
 
-	virtual void restoreMode(Function<void(Status)> &&, Ref *) override;
+	virtual void restoreMode(Function<void(Status)> &&, Ref *_Nullable) override;
 
 protected:
 	static void handleMacConfigUpdated(CGDirectDisplayID display, CGDisplayChangeSummaryFlags flags,

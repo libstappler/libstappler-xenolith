@@ -23,6 +23,12 @@
 #import "XLMacosView.h"
 #import "XLMacosWindow.h"
 
+#if XL_MACOS_DEBUG
+#define XL_MACOS_LOG(...) NSSP::log::source().debug(__VA_ARGS__)
+#else
+#define XL_MACOS_LOG(...)
+#endif
+
 static const NSRange kEmptyRange = {NSNotFound, 0};
 
 @implementation XLMacosView
@@ -53,7 +59,6 @@ static const NSRange kEmptyRange = {NSNotFound, 0};
 - (CALayer *)makeBackingLayer {
 	auto layer = [CAMetalLayer layer];
 	layer.delegate = self;
-	//layer.allowsNextDrawableTimeout = NO;
 	layer.needsDisplayOnBoundsChange = YES;
 	layer.autoresizingMask = kCALayerNotSizable;
 
@@ -68,7 +73,7 @@ static const NSRange kEmptyRange = {NSNotFound, 0};
 		shouldInheritContentsScale:(CGFloat)newScale
 						fromWindow:(NSWindow *)window {
 	_window->emitAppFrame();
-	NSSP::log::source().debug("XLMacosView", "shouldInheritContentsScale: ", newScale);
+	XL_MACOS_LOG("XLMacosView", "shouldInheritContentsScale: ", newScale);
 	return YES;
 }
 

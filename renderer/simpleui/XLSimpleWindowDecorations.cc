@@ -151,6 +151,11 @@ void WindowDecorationsButton::handleComponentsDirty() {
 
 	findParentWithComponent<WindowDecorationsState>(
 			[&](NotNull<Node>, NotNull<const WindowDecorationsState> state, uint32_t) {
+		if (hasFlag(state->capabilities, WindowCapabilities::GripGuardsRequired)) {
+			if (auto l = getSystemByType<InputListener>()) {
+				l->setLayerFlags(WindowLayerFlags::GripGuard);
+			}
+		}
 		if (_state != state->state) {
 			_state = state->state;
 			dirty = true;
@@ -246,13 +251,25 @@ void WindowDecorationsButton::updateState() {
 		_background->setVisible(false);
 		switch (_type) {
 		case WindowDecorationsButtonType::Close:
-			_icon->setColor(Color4F(0.992f, 0.373f, 0.361f, 1.0f));
+			if (hasFlag(_state, WindowState::Focused)) {
+				_icon->setColor(Color4F(0.992f, 0.373f, 0.361f, 1.0f));
+			} else {
+				_icon->setColor(Color::Grey_400);
+			}
 			break;
 		case WindowDecorationsButtonType::Minimize:
-			_icon->setColor(Color4F(0.188f, 0.792f, 0.294f, 1.0f));
+			if (hasFlag(_state, WindowState::Focused)) {
+				_icon->setColor(Color4F(0.188f, 0.792f, 0.294f, 1.0f));
+			} else {
+				_icon->setColor(Color::Grey_400);
+			}
 			break;
 		case WindowDecorationsButtonType::Maximize:
-			_icon->setColor(Color4F(0.996f, 0.741f, 0.263f, 1.0f));
+			if (hasFlag(_state, WindowState::Focused)) {
+				_icon->setColor(Color4F(0.996f, 0.741f, 0.263f, 1.0f));
+			} else {
+				_icon->setColor(Color::Grey_400);
+			}
 			break;
 		case WindowDecorationsButtonType::Fullscreen:
 		case WindowDecorationsButtonType::ContextMenu: _icon->setVisible(false); break;
@@ -362,7 +379,8 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 
 	auto allowedMove = hasFlag(state, WindowState::AllowedMove)
 			&& !hasFlag(state, WindowState::Fullscreen)
-			&& !hasFlagAll(state, WindowState::Maximized);
+			&& (!hasFlagAll(state, WindowState::Maximized)
+					|| hasFlag(_capabilities, WindowCapabilities::AllowMoveFromMaximized));
 
 	_header->getSystemByType<InputListener>()->setEnabled(allowedMove);
 
@@ -373,14 +391,24 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 	_buttonFullscreen->setVisible(hasFlag(state, WindowState::AllowedFullscreen));
 	_buttonMenu->setVisible(hasFlag(state, WindowState::AllowedWindowMenu));
 
+	if (hasFlag(state, WindowState::Focused)) {
+		_header->setColor(Color::Grey_200);
+	} else {
+		_header->setColor(Color::Grey_300);
+	}
+
 	setOrUpdateComponent<WindowDecorationsState>([&](WindowDecorationsState *value) {
+		bool dirty = false;
+		if (value->capabilities != _capabilities) {
+			value->capabilities = _capabilities;
+			dirty = true;
+		}
 		if (value->state != state) {
 			// Data was updated - return true
 			value->state = state;
-			return true;
+			dirty = true;
 		}
-		// data was not modified - return false
-		return false;
+		return dirty;
 	});
 
 	_contentSizeDirty = true;
@@ -388,6 +416,10 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 
 void WindowDecorationsDefault::updateWindowTheme(const ThemeInfo &theme) {
 	WindowDecorationsTheme decTheme;
+
+	if (theme.iconTheme == "Aqua") {
+		decTheme.icon = WindowDecorationsTheme::IconTheme::Macos;
+	}
 
 	setOrUpdateComponent<WindowDecorationsTheme>([&](WindowDecorationsTheme *value) {
 		if (value->color != decTheme.color || value->icon != decTheme.icon) {

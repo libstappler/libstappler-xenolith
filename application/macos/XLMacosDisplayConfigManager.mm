@@ -278,7 +278,7 @@ void MacosDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig 
 		}
 
 		if (!currentFound) {
-			auto &m = mon.modes.emplace_back(DisplayMode{
+			mon.modes.emplace_back(DisplayMode{
 				CGDisplayModeGetIODisplayModeID(currentMode),
 				currentModeInfo,
 				"",

@@ -40,14 +40,13 @@ class MacosWindow : public NativeWindow {
 public:
 	virtual ~MacosWindow();
 
-	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&, bool isRootWindow);
+	virtual bool init(NotNull<ContextController>, Rc<WindowInfo> &&);
 
 	virtual void mapWindow() override;
 	virtual void unmapWindow() override;
 	virtual bool close() override;
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
-	virtual void handleLayerUpdate(const WindowLayer &) override;
 
 	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const override;
 
@@ -66,10 +65,6 @@ public:
 
 	XLMacosWindow *getWindow() const { return _window; }
 
-	void addMacosStateFlags(NativeWindowStateFlags);
-	void clearMacosStateFlags(NativeWindowStateFlags);
-	void emitAppFrame();
-
 	bool hasOriginalFrame() const { return _hasOriginalFrame; }
 	CGRect getOriginalFrame() const { return _originalFrame; }
 
@@ -77,6 +72,14 @@ public:
 
 	MacosFullscreenRequest getFullscreenRequest() const { return _fullscreenRequest; }
 	NSScreen *getNextScreen() const { return _nextScreen; }
+
+	WindowLayerFlags getGripFlags() const { return _gripFlags; }
+
+	virtual bool enableState(WindowState) override;
+	virtual bool disableState(WindowState) override;
+
+	using NativeWindow::updateState;
+	using NativeWindow::emitAppFrame;
 
 protected:
 	virtual Status setFullscreenState(FullscreenInfo &&info) override;
@@ -86,9 +89,11 @@ protected:
 
 	virtual void cancelTextInput() override;
 
+	virtual void setCursor(WindowCursor) override;
+
 	XLMacosViewController *_rootViewController = nullptr;
 	XLMacosWindow *_window = nullptr;
-	WindowLayerFlags _currentCursor = WindowLayerFlags::None;
+	WindowCursor _currentCursor = WindowCursor::Undefined;
 
 	bool _initialized = false;
 	bool _windowLoaded = false;

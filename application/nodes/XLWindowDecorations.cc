@@ -38,56 +38,56 @@ bool WindowDecorations::init() {
 
 	_resizeTopLeft = addChild(Rc<Node>::create());
 	_resizeTopLeft->setAnchorPoint(Anchor::BottomRight);
-	_resizeTopLeft->setVisible(true);
+	_resizeTopLeft->setVisible(false);
 	l = _resizeTopLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopLeftGrip);
 	l->setCursor(WindowCursor::ResizeTopLeft);
 
 	_resizeTop = addChild(Rc<Node>::create());
 	_resizeTop->setAnchorPoint(Anchor::MiddleBottom);
-	_resizeTop->setVisible(true);
+	_resizeTop->setVisible(false);
 	l = _resizeTop->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopGrip);
 	l->setCursor(WindowCursor::ResizeTop);
 
 	_resizeTopRight = addChild(Rc<Node>::create());
 	_resizeTopRight->setAnchorPoint(Anchor::BottomLeft);
-	_resizeTopRight->setVisible(true);
+	_resizeTopRight->setVisible(false);
 	l = _resizeTopRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeTopRightGrip);
 	l->setCursor(WindowCursor::ResizeTopRight);
 
 	_resizeRight = addChild(Rc<Node>::create());
 	_resizeRight->setAnchorPoint(Anchor::MiddleLeft);
-	_resizeRight->setVisible(true);
+	_resizeRight->setVisible(false);
 	l = _resizeRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeRightGrip);
 	l->setCursor(WindowCursor::ResizeRight);
 
 	_resizeBottomRight = addChild(Rc<Node>::create());
 	_resizeBottomRight->setAnchorPoint(Anchor::TopLeft);
-	_resizeBottomRight->setVisible(true);
+	_resizeBottomRight->setVisible(false);
 	l = _resizeBottomRight->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomRightGrip);
 	l->setCursor(WindowCursor::ResizeBottomRight);
 
 	_resizeBottom = addChild(Rc<Node>::create());
 	_resizeBottom->setAnchorPoint(Anchor::MiddleTop);
-	_resizeBottom->setVisible(true);
+	_resizeBottom->setVisible(false);
 	l = _resizeBottom->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomGrip);
 	l->setCursor(WindowCursor::ResizeBottom);
 
 	_resizeBottomLeft = addChild(Rc<Node>::create());
 	_resizeBottomLeft->setAnchorPoint(Anchor::TopRight);
-	_resizeBottomLeft->setVisible(true);
+	_resizeBottomLeft->setVisible(false);
 	l = _resizeBottomLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeBottomLeftGrip);
 	l->setCursor(WindowCursor::ResizeBottomLeft);
 
 	_resizeLeft = addChild(Rc<Node>::create());
 	_resizeLeft->setAnchorPoint(Anchor::MiddleRight);
-	_resizeLeft->setVisible(true);
+	_resizeLeft->setVisible(false);
 	l = _resizeLeft->addSystem(Rc<InputListener>::create());
 	l->setLayerFlags(WindowLayerFlags::ResizeLeftGrip);
 	l->setCursor(WindowCursor::ResizeLeft);
@@ -115,6 +115,14 @@ bool WindowDecorations::shouldBePresentedOnScene(Scene *scene) const {
 		return true;
 	}
 	return false;
+}
+
+void WindowDecorations::handleEnter(Scene *scene) {
+	Node::handleEnter(scene);
+
+	_capabilities = _director->getWindow()->getInfo()->capabilities;
+
+	updateWindowState(_director->getWindow()->getWindowState());
 }
 
 void WindowDecorations::handleContentSizeDirty() {

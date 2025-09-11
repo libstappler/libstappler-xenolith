@@ -40,13 +40,6 @@ public:
 
 	virtual int run(NotNull<ContextContainer>) override;
 
-	/*virtual Rc<AppWindow> makeAppWindow(NotNull<AppThread>, NotNull<NativeWindow>) override;
-
-	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
-	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
-
-	virtual void handleThemeInfoChanged(const ThemeInfo &) override;*/
-
 	virtual void handleContextDidStop() override;
 
 	virtual void handleContextWillStart() override;
@@ -58,6 +51,9 @@ public:
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
 	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
+
+	virtual bool isCursorSupported(WindowCursor, bool serverSide) const override;
+	virtual WindowCapabilities getCapabilities() const override;
 
 protected:
 	Rc<core::Instance> loadInstance();

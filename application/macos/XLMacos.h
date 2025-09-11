@@ -26,6 +26,11 @@
 #include "XLContextInfo.h"
 #include "XLCoreTextInput.h"
 
+// Set to 1 to enable debug logging
+#ifndef XL_MACOS_DEBUG
+#define XL_MACOS_DEBUG 0
+#endif
+
 #if __OBJC__
 
 #define XL_OBJC_CALL(...) __VA_ARGS__
@@ -64,6 +69,7 @@ XL_OBJC_INTERFACE_FORWARD(NSScreen);
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
+SP_PUBLIC uint32_t getMacosButtonNumber(core::InputMouseButton btn);
 SP_PUBLIC core::InputMouseButton getInputMouseButton(int32_t buttonNumber);
 
 SP_PUBLIC void createKeyTables(core::InputKeyCode keycodes[256],

@@ -38,6 +38,9 @@ public:
 
 	virtual Padding getPadding() const { return Padding(); }
 
+	virtual WindowCapabilities getCapabilities() const { return _capabilities; }
+
+	virtual void handleEnter(Scene *) override;
 	virtual void handleContentSizeDirty() override;
 	virtual void handleLayout(Node *) override;
 
@@ -56,6 +59,7 @@ protected:
 	Node *_resizeLeft = nullptr;
 
 	WindowState _currentState = WindowState::None;
+	WindowCapabilities _capabilities = WindowCapabilities::None;
 };
 
 } // namespace stappler::xenolith

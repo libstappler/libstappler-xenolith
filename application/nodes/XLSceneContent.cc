@@ -65,8 +65,11 @@ void SceneContent::handleEnter(Scene *scene) {
 		_closeGuardRetained = true;
 	}
 
-	if (!_userDecorations && _windowDecorationsConstructor) {
-		_userDecorations = addChild(_windowDecorationsConstructor(this));
+	if (hasFlag(_director->getWindow()->getInfo()->flags,
+				WindowCreationFlags::UserSpaceDecorations)) {
+		if (!_userDecorations && _windowDecorationsConstructor) {
+			_userDecorations = addChild(_windowDecorationsConstructor(this));
+		}
 	}
 
 	if (_handlesViewDecoration) {
@@ -165,20 +168,24 @@ bool SceneContent::isScissorEnabled() const { return _scissor->isScissorEnabled(
 void SceneContent::setWindowDecorationsContructor(WindowDecorationsCallback &&cb) {
 	_windowDecorationsConstructor = sp::move(cb);
 
-	if (_windowDecorationsConstructor && _running) {
-		if (_userDecorations) {
-			_userDecorations->removeFromParent(true);
-			_userDecorations = nullptr;
-		}
-
-		if (auto d = _windowDecorationsConstructor(this)) {
-			if (!d->isRunning()) {
-				_userDecorations = addChild(d);
-			} else {
-				_userDecorations = d;
+	if (_running
+			&& hasFlag(_director->getWindow()->getInfo()->flags,
+					WindowCreationFlags::UserSpaceDecorations)) {
+		if (_windowDecorationsConstructor) {
+			if (_userDecorations) {
+				_userDecorations->removeFromParent(true);
+				_userDecorations = nullptr;
 			}
+
+			if (auto d = _windowDecorationsConstructor(this)) {
+				if (!d->isRunning()) {
+					_userDecorations = addChild(d);
+				} else {
+					_userDecorations = d;
+				}
+			}
+			_contentSizeDirty = true; // to place header correctly
 		}
-		_contentSizeDirty = true; // to place header correctly
 	}
 }
 

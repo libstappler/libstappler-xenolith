@@ -138,7 +138,9 @@ void AppThread::performOnAppThread(Function<void()> &&func, Ref *target, bool on
 		func();
 	} else {
 		waitRunning();
-		_appLooper->performOnThread(sp::move(func), target, !onNextFrame, tag);
+		if (_appLooper) {
+			_appLooper->performOnThread(sp::move(func), target, !onNextFrame, tag);
+		}
 	}
 }
 
@@ -147,7 +149,9 @@ void AppThread::performOnAppThread(Rc<Task> &&task, bool onNextFrame) {
 		task->handleCompleted();
 	} else {
 		waitRunning();
-		_appLooper->performOnThread(sp::move(task));
+		if (_appLooper) {
+			_appLooper->performOnThread(sp::move(task));
+		}
 	}
 }
 

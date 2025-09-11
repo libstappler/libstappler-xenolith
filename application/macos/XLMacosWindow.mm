@@ -33,6 +33,12 @@
 #include "XLVkSwapchain.h"
 #endif
 
+#if XL_MACOS_DEBUG
+#define XL_MACOS_LOG(...) NSSP::log::source().debug(__VA_ARGS__)
+#else
+#define XL_MACOS_LOG(...)
+#endif
+
 @interface XLMacosViewController : NSViewController <NSWindowDelegate> {
 	CADisplayLink *_displayLink;
 	CGPoint _currentPointerLocation;
@@ -40,6 +46,8 @@
 	NSXL::core::InputKeyCode _keycodes[256];
 	uint16_t _scancodes[128];
 	NSXLPL::MacosWindow *_engineWindow;
+	NSXL::WindowLayerFlags _buttonGripFlags;
+	std::bitset<64> _buttons;
 };
 
 - (instancetype _Nonnull)init:(NSSP::NotNull<NSXLPL::MacosWindow>)constroller
@@ -71,28 +79,30 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 MacosWindow::~MacosWindow() {
-	if (_controller && _isRootWindow) {
-		_controller->handleRootWindowClosed();
-	}
-
 	_rootViewController = nullptr;
 	if (_window) {
 		_window = nullptr;
 	}
 }
 
-bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&info,
-		bool isRootWindow) {
-	WindowCapabilities caps = WindowCapabilities::FullscreenWithMode
-			| WindowCapabilities::FullscreenSeamlessModeSwitch | WindowCapabilities::Fullscreen
-			| WindowCapabilities::ServerSideDecorations;
-
-	if (!NativeWindow::init(controller, sp::move(info), caps, isRootWindow)) {
+bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&info) {
+	if (!NativeWindow::init(controller, sp::move(info), controller->getCapabilities())) {
 		return false;
 	}
 
-	auto style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
-			| NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+	NSWindowStyleMask style = 0;
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		style = NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
+				| NSWindowStyleMaskClosable;
+
+		updateState(0,
+				WindowState::AllowedClose | WindowState::AllowedMinimize
+						| WindowState::AllowedMaximizeHorz | WindowState::AllowedMaximizeVert
+						| WindowState::AllowedMove | WindowState::AllowedFullscreen);
+	} else {
+		style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+				| NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+	}
 
 	auto rect = NSRect{
 		{static_cast<CGFloat>(_info->rect.x), static_cast<CGFloat>(_info->rect.y)},
@@ -104,18 +114,25 @@ bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&i
 												 backing:NSBackingStoreBuffered
 												   defer:YES];
 
-	_window.animationBehavior = NSWindowAnimationBehaviorNone;
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		[_window setOpaque:NO];
+		[_window setBackgroundColor:[NSColor clearColor]];
+	}
 
 	[_window setReleasedWhenClosed:false];
 	_rootViewController = [[XLMacosViewController alloc] init:this window:_window];
 	_window.contentViewController = _rootViewController;
 	_window.contentView = _window.contentViewController.view;
+	_window.title = [NSString stringWithCString:_info->title.data() encoding:NSUTF8StringEncoding];
+	_window.collectionBehavior |=
+			_window.collectionBehavior | NSWindowCollectionBehaviorFullScreenPrimary;
+
+
 	_initialized = true;
 
 	if (_windowLoaded) {
 		_controller->notifyWindowCreated(this);
 		[_window display];
-		//[_window makeKeyAndOrderFront:_rootViewController];
 	}
 	return true;
 }
@@ -126,9 +143,7 @@ void MacosWindow::mapWindow() {
 	[_window orderFrontRegardless];
 	[_window orderWindow:NSWindowAbove relativeTo:0];
 
-	if (_isRootWindow) {
-		[NSApp activateIgnoringOtherApps:YES];
-	}
+	[NSApp activateIgnoringOtherApps:YES];
 }
 
 void MacosWindow::unmapWindow() {
@@ -138,6 +153,9 @@ void MacosWindow::unmapWindow() {
 
 bool MacosWindow::close() {
 	if (!_controller->notifyWindowClosed(this)) {
+		if (hasFlag(_info->state, WindowState::CloseGuard)) {
+			updateState(0, _info->state | WindowState::CloseRequest);
+		}
 		return false;
 	}
 
@@ -149,111 +167,19 @@ bool MacosWindow::close() {
 
 void MacosWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) { }
 
-void MacosWindow::handleLayerUpdate(const WindowLayer &layer) {
-	auto cursor = layer.flags & WindowLayerFlags::CursorMask;
-	if (cursor != _currentCursor) {
-		NSCursor *targetCursor = nullptr;
-		switch (cursor) {
-		case NSXL::WindowLayerFlags::CursorDefault: targetCursor = [NSCursor arrowCursor]; break;
-		case NSXL::WindowLayerFlags::CursorContextMenu:
-			targetCursor = [NSCursor contextualMenuCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorHelp: targetCursor = [NSCursor arrowCursor]; break;
-		case NSXL::WindowLayerFlags::CursorPointer:
-			targetCursor = [NSCursor pointingHandCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorProgress: break;
-		case NSXL::WindowLayerFlags::CursorWait: break;
-		case NSXL::WindowLayerFlags::CursorCell: break;
-		case NSXL::WindowLayerFlags::CursorCrosshair:
-			targetCursor = [NSCursor crosshairCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorText: targetCursor = [NSCursor IBeamCursor]; break;
-		case NSXL::WindowLayerFlags::CursorVerticalText:
-			targetCursor = [NSCursor IBeamCursorForVerticalLayout];
-			break;
-		case NSXL::WindowLayerFlags::CursorAlias: targetCursor = [NSCursor dragLinkCursor]; break;
-		case NSXL::WindowLayerFlags::CursorCopy: targetCursor = [NSCursor dragCopyCursor]; break;
-		case NSXL::WindowLayerFlags::CursorMove: break;
-		case NSXL::WindowLayerFlags::CursorNoDrop:
-			targetCursor = [NSCursor operationNotAllowedCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorNotAllowed:
-			targetCursor = [NSCursor operationNotAllowedCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorGrab: targetCursor = [NSCursor openHandCursor]; break;
-		case NSXL::WindowLayerFlags::CursorGrabbing:
-			targetCursor = [NSCursor closedHandCursor];
-			break;
-
-		case NSXL::WindowLayerFlags::CursorAllScroll: break;
-		case NSXL::WindowLayerFlags::CursorZoomIn: targetCursor = [NSCursor zoomInCursor]; break;
-		case NSXL::WindowLayerFlags::CursorZoomOut: targetCursor = [NSCursor zoomOutCursor]; break;
-		case NSXL::WindowLayerFlags::CursorDndAsk: break;
-
-		case NSXL::WindowLayerFlags::CursorRightPtr: break;
-		case NSXL::WindowLayerFlags::CursorPencil: break;
-		case NSXL::WindowLayerFlags::CursorTarget: break;
-
-		case NSXL::WindowLayerFlags::CursorResizeRight:
-			targetCursor = [NSCursor resizeRightCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeTop:
-			targetCursor = [NSCursor resizeUpCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeTopRight: break;
-		case NSXL::WindowLayerFlags::CursorResizeTopLeft: break;
-		case NSXL::WindowLayerFlags::CursorResizeBottom:
-			targetCursor = [NSCursor resizeDownCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeBottomRight: break;
-		case NSXL::WindowLayerFlags::CursorResizeBottomLeft: break;
-		case NSXL::WindowLayerFlags::CursorResizeLeft:
-			targetCursor = [NSCursor resizeLeftCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeLeftRight:
-			targetCursor = [NSCursor resizeLeftRightCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeTopBottom:
-			targetCursor = [NSCursor resizeUpDownCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeTopRightBottomLeft: break;
-		case NSXL::WindowLayerFlags::CursorResizeTopLeftBottomRight: break;
-		case NSXL::WindowLayerFlags::CursorResizeCol:
-			targetCursor = [NSCursor columnResizeCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeRow:
-			targetCursor = [NSCursor rowResizeCursor];
-			break;
-		case NSXL::WindowLayerFlags::CursorResizeAll: break;
-		default: break;
-		}
-
-		if (targetCursor) {
-			[targetCursor set];
-			_currentCursor = cursor;
-		} else {
-			if (_currentCursor != WindowLayerFlags::None) {
-				[[NSCursor arrowCursor] set];
-				_currentCursor = WindowLayerFlags::None;
-			}
-		}
-	}
-	NativeWindow::handleLayerUpdate(layer);
-}
-
 core::SurfaceInfo MacosWindow::getSurfaceOptions(core::SurfaceInfo &&info) const {
 	return sp::move(info);
 }
 
 core::FrameConstraints MacosWindow::exportConstraints(core::FrameConstraints &&c) const {
-	core::FrameConstraints constraints = sp::move(c);
+	core::FrameConstraints constraints = NativeWindow::exportConstraints(sp::move(c));
 
 	if (constraints.density == 0.0f) {
 		constraints.density = 1.0f;
 	}
 
 	constraints.density *= _window.backingScaleFactor;
+	constraints.surfaceDensity = _window.backingScaleFactor;
 
 	return constraints;
 }
@@ -313,25 +239,6 @@ void MacosWindow::handleDisplayLink() {
 	}
 }
 
-void MacosWindow::addMacosStateFlags(NativeWindowStateFlags state) {
-	if (!hasFlagAll(_state, state)) {
-		_state |= state;
-	}
-}
-
-void MacosWindow::clearMacosStateFlags(NativeWindowStateFlags state) {
-	if (hasFlag(_state, state)) {
-		_state &= ~state;
-	}
-}
-
-void MacosWindow::emitAppFrame() {
-	if (_appWindow) {
-		_appWindow->setReadyForNextFrame();
-		_appWindow->update(core::PresentationUpdateFlags::DisplayLink);
-	}
-}
-
 void MacosWindow::handleFullscreenTransitionComplete(MacosFullscreenRequest req) {
 	if (_hasPendingFullscreenOp) {
 		if (_fullscreenRequest == req) {
@@ -344,6 +251,46 @@ void MacosWindow::handleFullscreenTransitionComplete(MacosFullscreenRequest req)
 	}
 }
 
+bool MacosWindow::enableState(WindowState state) {
+	if (NativeWindow::enableState(state)) {
+		return true;
+	}
+
+	switch (state) {
+	case WindowState::Maximized:
+		[_window zoom:nullptr];
+		return true;
+		break;
+	case WindowState::Minimized:
+		[_window miniaturize:nullptr];
+		return true;
+		break;
+	default: break;
+	}
+
+	return false;
+}
+
+bool MacosWindow::disableState(WindowState state) {
+	if (NativeWindow::disableState(state)) {
+		return true;
+	}
+
+	switch (state) {
+	case WindowState::Maximized:
+		[_window zoom:nullptr];
+		return true;
+		break;
+	case WindowState::Minimized:
+		[_window deminiaturize:nullptr];
+		return true;
+		break;
+	default: break;
+	}
+
+	return false;
+}
+
 Status MacosWindow::setFullscreenState(FullscreenInfo &&info) {
 	if (_hasPendingFullscreenOp) {
 		return Status::ErrorAgain;
@@ -351,7 +298,7 @@ Status MacosWindow::setFullscreenState(FullscreenInfo &&info) {
 
 	auto enable = info != FullscreenInfo::None;
 	if (!enable) {
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			_hasPendingFullscreenOp = true;
 			_fullscreenRequest = MacosFullscreenRequest::ExitFullscreen;
 			[_window toggleFullScreen:nil];
@@ -364,13 +311,13 @@ Status MacosWindow::setFullscreenState(FullscreenInfo &&info) {
 	} else {
 		auto frame = _window.frame;
 
-		if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 			_originalFrame = frame;
 			_hasOriginalFrame = true;
 		}
 
 		if (hasFlag(info.flags, FullscreenFlags::Current)) {
-			if (!hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+			if (!hasFlag(_info->state, WindowState::Fullscreen)) {
 				auto current = _controller->getDisplayConfigManager()->getCurrentConfig();
 
 				auto screen = _window.screen;
@@ -415,7 +362,7 @@ Status MacosWindow::setFullscreenState(FullscreenInfo &&info) {
 		info.mode = mon->getCurrent().mode;
 
 		// find target output
-		if (hasFlag(_state, NativeWindowStateFlags::Fullscreen)) {
+		if (hasFlag(_info->state, WindowState::Fullscreen)) {
 			if (screen != _window.screen) {
 				_hasPendingFullscreenOp = true;
 				_fullscreenRequest = MacosFullscreenRequest::ToggleFullscreen;
@@ -449,6 +396,75 @@ bool MacosWindow::updateTextInput(const TextInputRequest &req, TextInputFlags fl
 
 void MacosWindow::cancelTextInput() { }
 
+void MacosWindow::setCursor(WindowCursor cursor) {
+	if (cursor != _currentCursor) {
+		NSCursor *targetCursor = nullptr;
+		switch (cursor) {
+		case NSXL::WindowCursor::Default: targetCursor = [NSCursor arrowCursor]; break;
+		case NSXL::WindowCursor::ContextMenu: targetCursor = [NSCursor contextualMenuCursor]; break;
+		case NSXL::WindowCursor::Help: targetCursor = [NSCursor arrowCursor]; break;
+		case NSXL::WindowCursor::Pointer: targetCursor = [NSCursor pointingHandCursor]; break;
+		case NSXL::WindowCursor::Progress: break;
+		case NSXL::WindowCursor::Wait: break;
+		case NSXL::WindowCursor::Cell: break;
+		case NSXL::WindowCursor::Crosshair: targetCursor = [NSCursor crosshairCursor]; break;
+		case NSXL::WindowCursor::Text: targetCursor = [NSCursor IBeamCursor]; break;
+		case NSXL::WindowCursor::VerticalText:
+			targetCursor = [NSCursor IBeamCursorForVerticalLayout];
+			break;
+		case NSXL::WindowCursor::Alias: targetCursor = [NSCursor dragLinkCursor]; break;
+		case NSXL::WindowCursor::Copy: targetCursor = [NSCursor dragCopyCursor]; break;
+		case NSXL::WindowCursor::Move: break;
+		case NSXL::WindowCursor::NoDrop: targetCursor = [NSCursor operationNotAllowedCursor]; break;
+		case NSXL::WindowCursor::NotAllowed:
+			targetCursor = [NSCursor operationNotAllowedCursor];
+			break;
+		case NSXL::WindowCursor::Grab: targetCursor = [NSCursor openHandCursor]; break;
+		case NSXL::WindowCursor::Grabbing: targetCursor = [NSCursor closedHandCursor]; break;
+
+		case NSXL::WindowCursor::AllScroll: break;
+		case NSXL::WindowCursor::ZoomIn: targetCursor = [NSCursor zoomInCursor]; break;
+		case NSXL::WindowCursor::ZoomOut: targetCursor = [NSCursor zoomOutCursor]; break;
+		case NSXL::WindowCursor::DndAsk: break;
+
+		case NSXL::WindowCursor::RightPtr: break;
+		case NSXL::WindowCursor::Pencil: break;
+		case NSXL::WindowCursor::Target: break;
+
+		case NSXL::WindowCursor::ResizeRight: targetCursor = [NSCursor resizeRightCursor]; break;
+		case NSXL::WindowCursor::ResizeTop: targetCursor = [NSCursor resizeUpCursor]; break;
+		case NSXL::WindowCursor::ResizeTopRight: break;
+		case NSXL::WindowCursor::ResizeTopLeft: break;
+		case NSXL::WindowCursor::ResizeBottom: targetCursor = [NSCursor resizeDownCursor]; break;
+		case NSXL::WindowCursor::ResizeBottomRight: break;
+		case NSXL::WindowCursor::ResizeBottomLeft: break;
+		case NSXL::WindowCursor::ResizeLeft: targetCursor = [NSCursor resizeLeftCursor]; break;
+		case NSXL::WindowCursor::ResizeLeftRight:
+			targetCursor = [NSCursor resizeLeftRightCursor];
+			break;
+		case NSXL::WindowCursor::ResizeTopBottom:
+			targetCursor = [NSCursor resizeUpDownCursor];
+			break;
+		case NSXL::WindowCursor::ResizeTopRightBottomLeft: break;
+		case NSXL::WindowCursor::ResizeTopLeftBottomRight: break;
+		case NSXL::WindowCursor::ResizeCol: targetCursor = [NSCursor columnResizeCursor]; break;
+		case NSXL::WindowCursor::ResizeRow: targetCursor = [NSCursor rowResizeCursor]; break;
+		case NSXL::WindowCursor::ResizeAll: break;
+		default: break;
+		}
+
+		if (targetCursor) {
+			[targetCursor set];
+			_currentCursor = cursor;
+		} else {
+			if (_currentCursor != WindowCursor::Undefined) {
+				[[NSCursor arrowCursor] set];
+				_currentCursor = WindowCursor::Undefined;
+			}
+		}
+	}
+}
+
 } // namespace stappler::xenolith::platform
 
 @implementation XLMacosViewController
@@ -468,6 +484,9 @@ void MacosWindow::cancelTextInput() { }
 
 	_currentPointerLocation = CGPoint{0, 0};
 	_currentModifiers = NSXL::core::InputModifier::None;
+
+	_buttonGripFlags = NSXL::WindowLayerFlags::None;
+	_buttons.reset();
 
 	window.delegate = self;
 
@@ -490,8 +509,8 @@ void MacosWindow::cancelTextInput() { }
 
 - (void)setEngineLiveResize:(BOOL)value {
 	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
-			value ? NSXL::core::PresentationSwapchainFlags::EnableLiveResize
-				  : NSXL::core::PresentationSwapchainFlags::DisableLiveResize);
+			value ? NSXL::core::UpdateConstraintsFlags::EnableLiveResize
+				  : NSXL::core::UpdateConstraintsFlags::DisableLiveResize);
 }
 
 - (void)viewDidLoad {
@@ -511,7 +530,7 @@ void MacosWindow::cancelTextInput() { }
 
 	[super viewDidAppear];
 	_displayLink.paused = NO;
-	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Hidden);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state & ~NSXL::WindowState::Background);
 }
 
 - (void)viewWillDisappear {
@@ -519,7 +538,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Hidden);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state | NSXL::WindowState::Background);
 	_displayLink.paused = YES;
 	[super viewWillDisappear];
 }
@@ -530,9 +549,6 @@ void MacosWindow::cancelTextInput() { }
 
 - (void)loadView {
 	auto extent = _engineWindow->getWindow().contentLayoutRect.size;
-
-	//auto view = [[MTKView alloc] initWithFrame:_engineWindow->getWindow().contentLayoutRect
-	//									device:nullptr];
 
 	auto view = [[XLMacosView alloc] initWithFrame:NSRect{{0.0f, 0.0f}, extent}
 											window:_engineWindow];
@@ -552,22 +568,24 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	NSSize size = self.view.window.contentLayoutRect.size;
-	NSSP::log::source().debug("MacosWindow", "windowDidResize: ", size.width, " ", size.height);
+	XL_MACOS_LOG("MacosWindow", "windowDidResize: ", self.view.window.contentLayoutRect.size.width,
+			" ", self.view.window.contentLayoutRect.size.height);
 
-	CAMetalLayer *metalLayer = (CAMetalLayer *)self.view.layer; // 3
-	metalLayer.drawableSize = [self.view convertSizeToBacking:self.view.frame.size]; // 4
+	CAMetalLayer *metalLayer = (CAMetalLayer *)self.view.layer;
+	metalLayer.drawableSize = [self.view convertSizeToBacking:self.view.frame.size];
 
 	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
-			self.view.inLiveResize ? NSXL::core::PresentationSwapchainFlags::EnableLiveResize
-								   : NSXL::core::PresentationSwapchainFlags::None);
+			self.view.inLiveResize ? NSXL::core::UpdateConstraintsFlags::EnableLiveResize
+								   : NSXL::core::UpdateConstraintsFlags::None);
 	_engineWindow->emitAppFrame();
 
 	auto isZoomed = _engineWindow->getWindow().zoomed;
 	if (isZoomed) {
-		_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Maximized);
+		_engineWindow->updateState(0,
+				_engineWindow->getInfo()->state | NSXL::WindowState::Maximized);
 	} else {
-		_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Maximized);
+		_engineWindow->updateState(0,
+				_engineWindow->getInfo()->state & ~NSXL::WindowState::Maximized);
 	}
 }
 
@@ -583,7 +601,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Resizing);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state | NSXL::WindowState::Resizing);
 }
 
 - (void)windowDidEndLiveResize:(NSNotification *)notification {
@@ -591,9 +609,9 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Resizing);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state & ~NSXL::WindowState::Resizing);
 	_engineWindow->getController()->notifyWindowConstraintsChanged(_engineWindow,
-			NSXL::core::PresentationSwapchainFlags::DisableLiveResize);
+			NSXL::core::UpdateConstraintsFlags::DisableLiveResize);
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
@@ -601,8 +619,15 @@ void MacosWindow::cancelTextInput() { }
 		return YES;
 	}
 
-	return _engineWindow->getController()->notifyWindowClosed(_engineWindow,
-			NSXLPL::WindowCloseOptions::NotifyExitGuard);
+	if (!_engineWindow->getController()->notifyWindowClosed(_engineWindow,
+				NSXLPL::WindowCloseOptions::None)) {
+		if (NSSP::hasFlag(_engineWindow->getInfo()->state, NSXL::WindowState::CloseGuard)) {
+			_engineWindow->updateState(0,
+					_engineWindow->getInfo()->state | NSXL::WindowState::CloseRequest);
+		}
+		return NO;
+	}
+	return YES;
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
@@ -610,7 +635,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	NSSP::log::source().debug("XLMacosViewController", "windowWillClose");
+	XL_MACOS_LOG("XLMacosViewController", "windowWillClose");
 	_engineWindow->getWindow().delegate = nullptr;
 	_engineWindow->getController()->notifyWindowClosed(_engineWindow,
 			NSXLPL::WindowCloseOptions::CloseInPlace | NSXLPL::WindowCloseOptions::IgnoreExitGuard);
@@ -621,10 +646,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, true,
-				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
-	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Focused);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state | NSXL::WindowState::Focused);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
@@ -632,10 +654,7 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Focused);
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::FocusGain, false,
-				NSXL::Vec2(_currentPointerLocation.x, _currentPointerLocation.y))});
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state & ~NSXL::WindowState::Focused);
 }
 
 - (NSRect)windowWillUseStandardFrame:(NSWindow *)window defaultFrame:(NSRect)newFrame {
@@ -651,12 +670,13 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::Fullscreen, true)});
-	_engineWindow->addMacosStateFlags(NSXLPL::NativeWindowStateFlags::Fullscreen);
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state | NSXL::WindowState::Fullscreen);
 
 	_engineWindow->handleFullscreenTransitionComplete(
 			NSXLPL::MacosFullscreenRequest::EnterFullscreen);
+
+	[_engineWindow->getWindow() setOpaque:YES];
+	[self.view.layer setOpaque:YES];
 }
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification {
@@ -664,9 +684,10 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	_engineWindow->clearMacosStateFlags(NSXLPL::NativeWindowStateFlags::Fullscreen);
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{
-		NSXL::core::InputEventData::BoolEvent(NSXL::core::InputEventName::Fullscreen, false)});
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state & ~NSXL::WindowState::Fullscreen);
+
+	[_engineWindow->getWindow() setOpaque:NO];
+	[self.view.layer setOpaque:NO];
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
@@ -691,7 +712,7 @@ void MacosWindow::cancelTextInput() { }
 - (void)window:(NSWindow *)window
 		startCustomAnimationToEnterFullScreenOnScreen:(NSScreen *)screen
 										 withDuration:(NSTimeInterval)duration {
-	NSSP::log::source().debug("MacosWindow", "startCustomAnimationToEnterFullScreenOnScreen");
+	XL_MACOS_LOG("MacosWindow", "startCustomAnimationToEnterFullScreenOnScreen");
 
 	auto frame = window.frame;
 	[window setStyleMask:([window styleMask] | NSWindowStyleMaskFullScreen)];
@@ -709,7 +730,7 @@ void MacosWindow::cancelTextInput() { }
 
 - (void)window:(NSWindow *)window
 		startCustomAnimationToExitFullScreenWithDuration:(NSTimeInterval)duration {
-	NSSP::log::source().debug("MacosWindow", "startCustomAnimationToExitFullScreenWithDuration");
+	XL_MACOS_LOG("MacosWindow", "startCustomAnimationToExitFullScreenWithDuration");
 
 	__weak XLMacosWindow *w = _engineWindow->getWindow();
 
@@ -742,7 +763,7 @@ void MacosWindow::cancelTextInput() { }
 						  display:YES
 						 duration:duration
 				completionHandler:^() {
-				  NSSP::log::source().debug("XLMacosWindow",
+				  XL_MACOS_LOG("XLMacosWindow",
 						  "startCustomAnimationToExitFullScreenWithDuration complete");
 				}];
 
@@ -765,7 +786,7 @@ void MacosWindow::cancelTextInput() { }
 									display:YES
 								   duration:[w animationResizeTime:origFrame]
 						  completionHandler:^() {
-							NSSP::log::source().debug("XLMacosWindow",
+							XL_MACOS_LOG("XLMacosWindow",
 									"startCustomAnimationToExitFullScreenWithDuration complete");
 						  }];
 				}];
@@ -774,20 +795,23 @@ void MacosWindow::cancelTextInput() { }
 						  display:YES
 						 duration:duration
 				completionHandler:^() {
-				  NSSP::log::source().debug("XLMacosWindow",
+				  XL_MACOS_LOG("XLMacosWindow",
 						  "startCustomAnimationToExitFullScreenWithDuration complete");
 				}];
 	}
 }
 
 - (void)windowDidFailToExitFullScreen:(NSWindow *)window {
-	NSSP::log::source().debug("XLMacosWindow", "windowDidFailToExitFullScreen");
+	XL_MACOS_LOG("XLMacosWindow", "windowDidFailToExitFullScreen");
 }
 
 - (void)mouseDown:(NSEvent *)theEvent {
 	if (!_engineWindow) {
 		return;
 	}
+
+	_buttonGripFlags = _engineWindow->getGripFlags();
+	_buttons.set(NSSP::toInt(NSXL::core::InputMouseButton::MouseLeft));
 
 	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
 	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
@@ -796,10 +820,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Begin,
-		NSXL::core::InputMouseButton::MouseLeft,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::MouseLeft,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
@@ -811,6 +837,8 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
+	_buttons.set(NSSP::toInt(NSXL::core::InputMouseButton::MouseRight));
+
 	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
 	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
@@ -818,10 +846,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Begin,
-		NSXL::core::InputMouseButton::MouseRight,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::MouseRight,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
@@ -833,6 +863,8 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
+	_buttons.set(NSSP::toInt(NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber))));
+
 	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
 	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
@@ -840,10 +872,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Begin,
-		NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
@@ -855,21 +889,27 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
-	CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
-	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
+	if (_buttons.test(NSSP::toInt(NSXL::core::InputMouseButton::MouseLeft))) {
+		_buttons.reset(NSSP::toInt(NSXL::core::InputMouseButton::MouseLeft));
 
-	NSXL::core::InputEventData event{
-		static_cast<uint32_t>(theEvent.buttonNumber),
-		NSXL::core::InputEventName::End,
-		NSXL::core::InputMouseButton::MouseLeft,
-		mods,
-		float(loc.x),
-		float(loc.y),
-	};
+		auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+		CGPoint loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
+		auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
-	_currentPointerLocation = loc;
+		NSXL::core::InputEventData event{
+			static_cast<uint32_t>(theEvent.buttonNumber),
+			NSXL::core::InputEventName::End,
+			{{
+				NSXL::core::InputMouseButton::MouseLeft,
+				mods,
+				float(loc.x),
+				float(loc.y),
+			}},
+		};
+
+		_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
+		_currentPointerLocation = loc;
+	}
 }
 
 - (void)rightMouseUp:(NSEvent *)theEvent {
@@ -877,21 +917,27 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
-	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
+	if (_buttons.test(NSSP::toInt(NSXL::core::InputMouseButton::MouseRight))) {
+		_buttons.reset(NSSP::toInt(NSXL::core::InputMouseButton::MouseRight));
 
-	NSXL::core::InputEventData event{
-		static_cast<uint32_t>(theEvent.buttonNumber),
-		NSXL::core::InputEventName::End,
-		NSXL::core::InputMouseButton::MouseRight,
-		mods,
-		float(loc.x),
-		float(loc.y),
-	};
+		auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+		auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
+		auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
-	_currentPointerLocation = loc;
+		NSXL::core::InputEventData event{
+			static_cast<uint32_t>(theEvent.buttonNumber),
+			NSXL::core::InputEventName::End,
+			{{
+				NSXL::core::InputMouseButton::MouseRight,
+				mods,
+				float(loc.x),
+				float(loc.y),
+			}},
+		};
+
+		_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
+		_currentPointerLocation = loc;
+	}
 }
 
 - (void)otherMouseUp:(NSEvent *)theEvent {
@@ -899,21 +945,27 @@ void MacosWindow::cancelTextInput() { }
 		return;
 	}
 
-	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
-	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
-	auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
+	if (_buttons.test(NSSP::toInt(NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber))))) {
+		_buttons.reset(NSSP::toInt(NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber))));
 
-	NSXL::core::InputEventData event{
-		static_cast<uint32_t>(theEvent.buttonNumber),
-		NSXL::core::InputEventName::End,
-		NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
-		mods,
-		float(loc.x),
-		float(loc.y),
-	};
+		auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
+		auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
+		auto mods = NSXLPL::getInputModifiers(uint32_t(theEvent.modifierFlags)) | _currentModifiers;
 
-	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
-	_currentPointerLocation = loc;
+		NSXL::core::InputEventData event{
+			static_cast<uint32_t>(theEvent.buttonNumber),
+			NSXL::core::InputEventName::End,
+			{{
+				NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+				mods,
+				float(loc.x),
+				float(loc.y),
+			}},
+		};
+
+		_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
+		_currentPointerLocation = loc;
+	}
 }
 
 - (void)mouseMoved:(NSEvent *)theEvent {
@@ -928,19 +980,53 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		std::numeric_limits<uint32_t>::max(),
 		NSXL::core::InputEventName::MouseMove,
-		NSXL::core::InputMouseButton::None,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::None,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
 	_currentPointerLocation = loc;
 }
 
+- (void)clearButtonEvents {
+	for (uint32_t i = 0; i < 64; ++i) {
+		if (_buttons.test(i)) {
+			NSXL::Vector<NSXL::core::InputEventData> events;
+			events.emplace_back(NSXL::core::InputEventData({
+				NSXLPL::getMacosButtonNumber(NSXL::core::InputMouseButton(i)),
+				NSXL::core::InputEventName::Cancel,
+				{{
+					NSXL::core::InputMouseButton(i),
+					NSXL::core::InputModifier::None,
+					NSSP::nan(),
+					NSSP::nan(),
+				}},
+			}));
+			_engineWindow->handleInputEvents(move(events));
+		}
+	}
+	_buttons.reset();
+	_buttonGripFlags = NSXL::WindowLayerFlags::None;
+}
+
 - (void)mouseDragged:(NSEvent *)theEvent {
 	if (!_engineWindow) {
 		return;
+	}
+
+	if (_buttonGripFlags != NSXL::WindowLayerFlags::None) {
+		if (_buttons.test(NSSP::toInt(NSXL::core::InputMouseButton::MouseLeft))
+				&& _buttons.count() == 1) {
+			if (_buttonGripFlags == NSXL::WindowLayerFlags::MoveGrip) {
+				[self clearButtonEvents];
+				[_engineWindow->getWindow() performWindowDragWithEvent:theEvent];
+				return;
+			}
+		}
 	}
 
 	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
@@ -952,18 +1038,22 @@ void MacosWindow::cancelTextInput() { }
 	events.emplace_back(NSXL::core::InputEventData{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Move,
-		NSXL::core::InputMouseButton::MouseLeft,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::MouseLeft,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 	events.emplace_back(NSXL::core::InputEventData{
 		std::numeric_limits<uint32_t>::max(),
 		NSXL::core::InputEventName::MouseMove,
-		NSXL::core::InputMouseButton::None,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::None,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 
 	_engineWindow->handleInputEvents(move(events));
@@ -1003,26 +1093,32 @@ void MacosWindow::cancelTextInput() { }
 	events.emplace_back(NSXL::core::InputEventData{
 		buttonId,
 		NSXL::core::InputEventName::Begin,
-		buttonName,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			buttonName,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 	events.emplace_back(NSXL::core::InputEventData{
 		buttonId,
 		NSXL::core::InputEventName::Scroll,
-		buttonName,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			buttonName,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 	events.emplace_back(NSXL::core::InputEventData{
 		buttonId,
 		NSXL::core::InputEventName::End,
-		buttonName,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			buttonName,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 
 	events.at(1).point.valueX = theEvent.scrollingDeltaX;
@@ -1045,10 +1141,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Move,
-		NSXL::core::InputMouseButton::MouseRight,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::MouseRight,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
@@ -1067,10 +1165,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(theEvent.buttonNumber),
 		NSXL::core::InputEventName::Move,
-		NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	};
 
 	_engineWindow->handleInputEvents(NSXL::Vector<NSXL::core::InputEventData>{event});
@@ -1088,16 +1188,17 @@ void MacosWindow::cancelTextInput() { }
 
 	NSXL::Vector<NSXL::core::InputEventData> events;
 
-	events.emplace_back(NSXL::core::InputEventData::BoolEvent(
-			NSXL::core::InputEventName::PointerEnter, true, NSXL::Vec2(loc.x, loc.y)));
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state | NSXL::WindowState::Pointer);
 
 	events.emplace_back(NSXL::core::InputEventData{
 		std::numeric_limits<uint32_t>::max(),
 		NSXL::core::InputEventName::MouseMove,
-		NSXL::core::InputMouseButton::None,
-		mods,
-		float(loc.x),
-		float(loc.y),
+		{{
+			NSXL::core::InputMouseButton::None,
+			mods,
+			float(loc.x),
+			float(loc.y),
+		}},
 	});
 
 	_engineWindow->handleInputEvents(sp::move(events));
@@ -1112,9 +1213,7 @@ void MacosWindow::cancelTextInput() { }
 	auto pointInView = [self.targetView convertPoint:theEvent.locationInWindow fromView:nil];
 	auto loc = CGPoint([self.targetView convertPointToBacking:pointInView]);
 
-	_engineWindow->handleInputEvents(
-			NSXL::Vector<NSXL::core::InputEventData>{NSXL::core::InputEventData::BoolEvent(
-					NSXL::core::InputEventName::PointerEnter, false, NSXL::Vec2(loc.x, loc.y))});
+	_engineWindow->updateState(0, _engineWindow->getInfo()->state & ~NSXL::WindowState::Pointer);
 	_currentPointerLocation = loc;
 }
 
@@ -1137,10 +1236,12 @@ void MacosWindow::cancelTextInput() { }
 		static_cast<uint32_t>(code),
 		theEvent.isARepeat ? NSXL::core::InputEventName::KeyRepeated
 						   : NSXL::core::InputEventName::KeyPressed,
-		NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
-		mods,
-		float(_currentPointerLocation.x),
-		float(_currentPointerLocation.y),
+		{{
+			NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+			mods,
+			float(_currentPointerLocation.x),
+			float(_currentPointerLocation.y),
+		}},
 	};
 
 	NSXL::String chars = theEvent.characters.UTF8String;
@@ -1161,10 +1262,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(code),
 		NSXL::core::InputEventName::KeyReleased,
-		NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
-		mods,
-		float(_currentPointerLocation.x),
-		float(_currentPointerLocation.y),
+		{{
+			NSXLPL::getInputMouseButton(uint32_t(theEvent.buttonNumber)),
+			mods,
+			float(_currentPointerLocation.x),
+			float(_currentPointerLocation.y),
+		}},
 	};
 
 	NSXL::String chars = theEvent.characters.UTF8String;
@@ -1204,10 +1307,12 @@ void MacosWindow::cancelTextInput() { }
 	NSXL::core::InputEventData event{
 		static_cast<uint32_t>(0),
 		NSXL::core::InputEventName::KeyReleased,
-		NSXL::core::InputMouseButton::None,
-		mods,
-		float(_currentPointerLocation.x),
-		float(_currentPointerLocation.y),
+		{{
+			NSXL::core::InputMouseButton::None,
+			mods,
+			float(_currentPointerLocation.x),
+			float(_currentPointerLocation.y),
+		}},
 	};
 
 	for (auto &it : testmask) {
@@ -1247,6 +1352,14 @@ void MacosWindow::cancelTextInput() { }
 	return self;
 }
 
+- (BOOL)canBecomeKeyWindow {
+	return YES;
+}
+
+- (BOOL)canBecomeMainWindow {
+	return YES;
+}
+
 - (NSWindowStyleMask)defaultStyle {
 	return _defaultStyle;
 }
@@ -1270,14 +1383,14 @@ void MacosWindow::cancelTextInput() { }
 }
 
 - (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag {
-	NSSP::log::source().debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ",
-			frameRect.origin.y, " ", frameRect.size.width, " ", frameRect.size.height);
+	XL_MACOS_LOG("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y, " ",
+			frameRect.size.width, " ", frameRect.size.height);
 	[super setFrame:frameRect display:displayFlag];
 }
 
 - (void)setFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag {
-	NSSP::log::source().debug("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ",
-			frameRect.origin.y, " ", frameRect.size.width, " ", frameRect.size.height);
+	XL_MACOS_LOG("XLMacosWindow", "setFrame: ", frameRect.origin.x, " ", frameRect.origin.y, " ",
+			frameRect.size.width, " ", frameRect.size.height);
 	if (!animateFlag) {
 		[super setFrame:frameRect display:displayFlag animate:NO];
 	} else {
