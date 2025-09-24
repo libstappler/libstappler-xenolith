@@ -612,6 +612,15 @@ enum class CompositeAlphaFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(CompositeAlphaFlags)
 
+enum class FullScreenExclusiveMode : uint32_t {
+	Default = 0,
+	Allowed = 1,
+	Disallowed = 2,
+	ApplicationControlled = 3,
+};
+
+SP_DEFINE_ENUM_AS_MASK(FullScreenExclusiveMode)
+
 // mapping to VkImageTiling
 enum class ImageTiling {
 	Optimal = 0,
@@ -981,6 +990,9 @@ enum class WindowState : uint64_t {
 
 	// WM uses inset decorations
 	InsetDecorationsVisible = 1LLU << 17,
+
+	// Window is available for input events
+	Enabled = 1LLU << 18,
 
 	// Extra space here
 

@@ -143,7 +143,6 @@ public:
 	GestureKeyRecognizer *addKeyRecognizer(InputCallback<GestureData> &&, KeyMask && = KeyMask());
 
 	void setWindowStateCallback(Function<bool(WindowState, WindowState)> &&);
-	void setScreenUpdateCallback(Function<bool()> &&);
 
 	void clear();
 

@@ -309,7 +309,7 @@ void FrameQueue::onAttachmentSetupComplete(FrameAttachmentData &attachment) {
 					attachment->waitForResult = false;
 					if (success && !_finalized) {
 						onAttachmentInput(*attachment);
-						_loop->performOnThread([frame = _frame] {
+						_loop->performOnThread([frame = _frame.get()] {
 							if (frame) {
 								frame->update();
 							}
@@ -475,6 +475,11 @@ void FrameQueue::updateRenderPassState(FramePassData &data, FrameRenderPassState
 
 	if (!isRenderPassReadyForState(data, FrameRenderPassState(toInt(state) + 1)) && !_invalidated) {
 		_awaitPasses.emplace_back(&data, state);
+		return;
+	}
+
+	if (!_loop->isRunning()) {
+		invalidate();
 		return;
 	}
 

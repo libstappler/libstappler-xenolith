@@ -575,6 +575,10 @@ struct SP_PUBLIC SwapchainConfig {
 	bool transfer = true;
 	bool liveResize = false;
 
+	// Used when gAPI support for the fullscreen mode required
+	FullScreenExclusiveMode fullscreenMode = FullScreenExclusiveMode::Default;
+	void *fullscreenHandle = nullptr;
+
 	String description() const;
 
 	constexpr bool operator==(const SwapchainConfig &) const = default;
@@ -594,6 +598,10 @@ struct SP_PUBLIC SurfaceInfo {
 	ImageUsage supportedUsageFlags;
 	Vector<Pair<ImageFormat, ColorSpace>> formats;
 	Vector<PresentMode> presentModes;
+
+	// Used when gAPI support for the fullscreen mode required
+	FullScreenExclusiveMode fullscreenMode = FullScreenExclusiveMode::Default;
+	void *fullscreenHandle = nullptr;
 
 	bool isSupported(const SwapchainConfig &) const;
 

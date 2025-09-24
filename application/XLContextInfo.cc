@@ -204,6 +204,7 @@ ContextConfig::ContextConfig() {
 	context->appVersion = toString(getAppconfigVersionVariant(), ".", getAppconfigVersionApi(), ".",
 			getAppconfigVersionRev(), ".", getAppconfigVersionBuild());
 
+	window->id = context->bundleName;
 	window->title = context->appName;
 }
 
@@ -270,12 +271,10 @@ Value ContextConfig::encode() const {
 Value ThemeInfo::encode() const {
 	Value ret;
 	ret.setValue(colorScheme, "colorScheme");
-	ret.setValue(iconTheme, "iconTheme");
-	ret.setValue(cursorTheme, "cursorTheme");
-	ret.setValue(monospaceFontName, "monospaceFontName");
-	ret.setValue(defaultFontName, "defaultFontName");
+	ret.setValue(systemTheme, "systemTheme");
+	ret.setValue(systemFontName, "systemFontName");
 	ret.setValue(cursorSize, "cursorSize");
-	ret.setValue(scalingFactor, "scalingFactor");
+	ret.setValue(cursorScalingFactor, "cursorScalingFactor");
 	ret.setValue(textScaling, "textScaling");
 	return ret;
 }

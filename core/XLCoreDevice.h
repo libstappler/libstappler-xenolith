@@ -73,7 +73,6 @@ public:
 	void addObject(Object *);
 	void removeObject(Object *);
 
-	ImageFormat getCommonFormat() const { return _commonFormat; }
 	SpanView<ImageFormat> getSupportedDepthStencilFormat() const { return _depthFormats; }
 	SpanView<ImageFormat> getSupportedColorFormat() const { return _colorFormats; }
 
@@ -149,7 +148,6 @@ protected:
 
 	HashSet<Object *> _objects;
 
-	ImageFormat _commonFormat = ImageFormat::R8G8B8A8_UNORM;
 	Vector<ImageFormat> _depthFormats;
 	Vector<ImageFormat> _colorFormats;
 

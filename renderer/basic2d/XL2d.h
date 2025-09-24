@@ -172,7 +172,7 @@ struct ImagePlacementInfo {
 
 class SP_PUBLIC DeferredVertexResult : public Ref {
 public:
-	enum Flags {
+	enum Flags : uint32_t {
 		None = 0,
 		Immutable = 1 << 0,
 	};

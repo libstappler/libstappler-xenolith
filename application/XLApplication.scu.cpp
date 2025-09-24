@@ -57,6 +57,15 @@
 #include "linux/XLLinuxContextController.cc"
 #endif
 
+#if WIN32
+#include "windows/XLWindows.cc"
+#include "windows/XLWindowsMessageWindow.cc"
+#include "windows/XLWindowsWindowClass.cc"
+#include "windows/XLWindowsWindow.cc"
+#include "windows/XLWindowsDisplayConfigManager.cc"
+#include "windows/XLWindowsContextController.cc"
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 static SharedSymbol s_appSymbols[] = {

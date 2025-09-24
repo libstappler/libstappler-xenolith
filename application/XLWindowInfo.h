@@ -242,17 +242,20 @@ enum class WindowCapabilities : uint32_t {
 	// SkipTaskbar and SkipPager state supported
 	SkipTaskbarState = 1 << 13,
 
+	// Enabled state supported
+	EnabledState = 1 << 14,
+
 	// Platform supports CloseGuard
-	CloseGuard = 1 << 14,
+	CloseGuard = 1 << 15,
 
 	// Window supports separate MaximizeVert/MaximizeHorz in enableState/disableState
-	SeparateMaximize = 1 << 15,
+	SeparateMaximize = 1 << 16,
 
 	// Window moving in maximized state is allowed
-	AllowMoveFromMaximized = 1 << 16,
+	AllowMoveFromMaximized = 1 << 17,
 
 	// For buttons in grip layer to work, GripGuard flag required
-	GripGuardsRequired = 1 << 17,
+	GripGuardsRequired = 1 << 18,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

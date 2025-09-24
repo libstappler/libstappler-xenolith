@@ -43,25 +43,35 @@ using NativeContextHandle = ANativeActivity;
 using NativeContextHandle = void;
 #endif
 
+enum class SystemNotification : uint32_t {
+	LowMemory,
+	LowPower,
+	QuerySuspend,
+	Suspending,
+	Resume,
+	DisplayChanged,
+};
+
 enum class NetworkFlags : uint32_t {
 	None,
-	Internet = (1 << 0),
-	Congested = (1 << 1),
-	Metered = (1 << 2),
-	Restricted = (1 << 3),
-	Roaming = (1 << 4),
-	Suspended = (1 << 5),
-	Vpn = (1 << 6),
-	PrioritizeBandwidth = (1 << 7),
-	PrioritizeLatency = (1 << 8),
-	TemporarilyNotMetered = (1 << 9),
-	Trusted = (1 << 10),
-	Validated = (1 << 11),
-	WifiP2P = (1 << 12),
-	CaptivePortal = (1 << 13),
-	Local = (1 << 14),
-	Wired = (1 << 15),
-	Wireless = (1 << 16),
+	Internet = 1 << 0,
+	Congested = 1 << 1,
+	Metered = 1 << 2,
+	Restricted = 1 << 3,
+	Roaming = 1 << 4,
+	Suspended = 1 << 5,
+	Vpn = 1 << 6,
+	PrioritizeBandwidth = 1 << 7,
+	PrioritizeLatency = 1 << 8,
+	TemporarilyNotMetered = 1 << 9,
+	Trusted = 1 << 10,
+	Validated = 1 << 11,
+	WifiP2P = 1 << 12,
+	CaptivePortal = 1 << 13,
+	Local = 1 << 14,
+	Wired = 1 << 15,
+	WLAN = 1 << 16, // WIFI
+	WWAN = 1 << 17, // mobile connection
 };
 
 SP_DEFINE_ENUM_AS_MASK(NetworkFlags)
@@ -140,17 +150,14 @@ private:
 
 struct ThemeInfo {
 	static constexpr StringView SchemePreferDark = StringView("prefer-dark");
-	static constexpr StringView SchemePreferLight = StringView("prefer-dark");
+	static constexpr StringView SchemePreferLight = StringView("prefer-light");
 	static constexpr StringView SchemeDefault = StringView("default");
 
 	String colorScheme;
-	String iconTheme;
-	String cursorTheme;
-	String documentFontName;
-	String monospaceFontName;
-	String defaultFontName;
+	String systemTheme;
+	String systemFontName;
 	int32_t cursorSize = 0;
-	uint32_t scalingFactor = 0;
+	uint32_t cursorScalingFactor = 0;
 	float textScaling = 1.0f;
 	bool leftHandedMouse = false;
 	uint32_t doubleClickInterval = 500'000; // in microseconds

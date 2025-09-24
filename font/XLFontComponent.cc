@@ -153,7 +153,12 @@ void FontComponent::handleStop(Context *a) {
 	_active = false;
 }
 
-void FontComponent::handleLowMemory(Context *a) { update(); }
+void FontComponent::handleSystemNotification(Context *a, SystemNotification note) {
+	switch (note) {
+	case SystemNotification::LowMemory: update(); break;
+	default: break;
+	}
+}
 
 void FontComponent::update() { _library->update(); }
 

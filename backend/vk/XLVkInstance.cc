@@ -334,14 +334,63 @@ static core::PresentMode getGlPresentMode(VkPresentModeKHR presentMode) {
 	}
 }
 
-core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDevice device) const {
+core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDevice device,
+		core::FullScreenExclusiveMode fullscreenMode, void *fullscreenHandle) const {
+	VkSurfaceCapabilities2KHR caps{
+		VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR,
+		nullptr,
+	};
+
+	VkPhysicalDeviceSurfaceInfo2KHR info{
+		VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
+		nullptr,
+		surface,
+	};
+
+#if WIN32
+	VkSurfaceCapabilitiesFullScreenExclusiveEXT fullScreenCapabilities{
+		VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT,
+		nullptr,
+		0,
+	};
+
+	if (fullscreenMode != core::FullScreenExclusiveMode::Default) {
+		fullScreenCapabilities.pNext = caps.pNext;
+		caps.pNext = &fullScreenCapabilities;
+	}
+
+	VkSurfaceFullScreenExclusiveWin32InfoEXT fullScreenWin32{
+		VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT,
+		nullptr,
+		(HMONITOR)fullscreenHandle,
+	};
+
+	VkSurfaceFullScreenExclusiveInfoEXT fullScreenInfo{
+		VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT,
+		&fullScreenWin32,
+		VkFullScreenExclusiveEXT(fullscreenMode),
+	};
+
+	if (fullscreenMode != core::FullScreenExclusiveMode::Default) {
+		fullScreenWin32.pNext = (void *)info.pNext;
+		info.pNext = &fullScreenInfo;
+	}
+#endif
+
+	const bool usePresentModes2 = fullscreenMode != core::FullScreenExclusiveMode::Default
+			&& vkGetPhysicalDeviceSurfacePresentModes2EXT;
+
 	core::SurfaceInfo ret;
+
+	uint32_t presentModeCount = 0;
+	if (usePresentModes2) {
+		vkGetPhysicalDeviceSurfacePresentModes2EXT(device, &info, &presentModeCount, nullptr);
+	} else {
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+	}
 
 	uint32_t formatCount = 0;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-	uint32_t presentModeCount = 0;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
 	if (formatCount != 0) {
 		Vector<VkSurfaceFormatKHR> formats;
@@ -360,7 +409,13 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 		Vector<VkPresentModeKHR> modes;
 		modes.resize(presentModeCount);
 
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, modes.data());
+		if (usePresentModes2) {
+			vkGetPhysicalDeviceSurfacePresentModes2EXT(device, &info, &presentModeCount,
+					modes.data());
+		} else {
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
+					modes.data());
+		}
 
 		for (auto &it : modes) { ret.presentModes.emplace_back(getGlPresentMode(it)); }
 
@@ -368,22 +423,12 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 				[&](core::PresentMode l, core::PresentMode r) { return toInt(l) > toInt(r); });
 	}
 
-	VkSurfaceCapabilities2KHR caps;
-	caps.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
-	caps.pNext = nullptr;
-
 	// index into s_optionalExtension
-	if (_optionals[0]) {
-		VkPhysicalDeviceSurfaceInfo2KHR info;
-		info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
-		info.surface = surface;
-		info.pNext = nullptr;
-
+	if (_optionals[toInt(OptionalInstanceExtension::SurfaceCapabilities2)]) {
 		vkGetPhysicalDeviceSurfaceCapabilities2KHR(device, &info, &caps);
 	} else {
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &caps.surfaceCapabilities);
 	}
-
 
 	ret.minImageCount = caps.surfaceCapabilities.minImageCount;
 	ret.maxImageCount = caps.surfaceCapabilities.maxImageCount;
@@ -400,6 +445,14 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 	ret.supportedCompositeAlpha =
 			core::CompositeAlphaFlags(caps.surfaceCapabilities.supportedCompositeAlpha);
 	ret.supportedUsageFlags = core::ImageUsage(caps.surfaceCapabilities.supportedUsageFlags);
+
+#if WIN32
+	if (fullScreenCapabilities.fullScreenExclusiveSupported) {
+		ret.fullscreenMode = fullscreenMode;
+		ret.fullscreenHandle = fullscreenHandle;
+	}
+#endif
+
 	return ret;
 }
 

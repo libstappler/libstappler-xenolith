@@ -398,8 +398,8 @@ public:
 	void setOpticalAlignment(bool value);
 	bool isOpticallyAligned() const;
 
-	void setFillerChar(char16_t);
-	char16_t getFillerChar() const;
+	void setFillerChar(char32_t);
+	char32_t getFillerChar() const;
 
 	void setLocaleEnabled(bool);
 	bool isLocaleEnabled() const;
@@ -449,7 +449,7 @@ protected:
 
 	bool _opticalAlignment = false;
 	bool _emplaceAllChars = false;
-	char16_t _fillerChar = u'…';
+	char32_t _fillerChar = u'…';
 
 	bool _persistentGlyphData = false;
 };

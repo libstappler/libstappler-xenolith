@@ -22,6 +22,7 @@
 
 #include "XL2dVectorCanvas.h"
 #include "SPFilepath.h"
+#include "SPThread.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
@@ -163,6 +164,10 @@ Rc<VectorCanvas> VectorCanvas::getInstance(bool deferred) {
 	static thread_local Rc<VectorCanvas> tl_instance = nullptr;
 	if (!tl_instance) {
 		tl_instance = Rc<VectorCanvas>::create(deferred);
+		thread::ThreadInfo::addCleanup([value = &tl_instance] {
+			// deallocate thread interface
+			*value = nullptr;
+		});
 	}
 	return tl_instance;
 }

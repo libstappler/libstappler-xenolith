@@ -101,7 +101,7 @@ public:
 	virtual void handlePause(Context *a) { }
 	virtual void handleStop(Context *a) { }
 	virtual void handleDestroy(Context *a) { }
-	virtual void handleLowMemory(Context *a) { }
+	virtual void handleSystemNotification(Context *a, SystemNotification) { }
 
 	virtual void handleNetworkStateChanged(NetworkFlags) { }
 	virtual void handleThemeInfoChanged(const ThemeInfo &) { }
@@ -130,6 +130,9 @@ public:
 	using SurfaceInfo = core::SurfaceInfo;
 
 	static EventHeader onNetworkStateChanged;
+	static EventHeader onThemeChanged;
+	static EventHeader onSystemNotification;
+
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
 
@@ -203,14 +206,13 @@ public:
 
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
-	virtual void handleNativeWindowRedrawNeeded(NotNull<NativeWindow>);
 	virtual void handleNativeWindowConstraintsChanged(NotNull<NativeWindow>,
 			core::UpdateConstraintsFlags);
 	virtual void handleNativeWindowInputEvents(NotNull<NativeWindow>,
 			Vector<core::InputEventData> &&);
 	virtual void handleNativeWindowTextInput(NotNull<NativeWindow>, const core::TextInputState &);
 
-	virtual void handleLowMemory();
+	virtual void handleSystemNotification(SystemNotification);
 
 	virtual void handleWillDestroy();
 	virtual void handleDidDestroy();

@@ -104,7 +104,10 @@ public:
 
 	DisplayConfigManager *getDisplayConfigManager() const { return _displayConfigManager; }
 
-	bool isWithinPoll() const { return _withinPoll; }
+	bool isWithinPoll() const { return _pollDepth > 0; }
+
+	void retainPollDepth();
+	void releasePollDepth();
 
 	virtual bool isCursorSupported(WindowCursor, bool serverSide) const = 0;
 	virtual WindowCapabilities getCapabilities() const = 0;
@@ -146,6 +149,7 @@ public:
 
 	virtual void handleStateChanged(ContextState prevState, ContextState newState);
 
+	virtual void handleSystemNotification(SystemNotification);
 	virtual void handleNetworkStateChanged(NetworkFlags);
 	virtual void handleThemeInfoChanged(const ThemeInfo &);
 
@@ -199,7 +203,7 @@ protected:
 	Set<Rc<NativeWindow>> _activeWindows;
 	Set<NativeWindow *> _allWindows;
 
-	bool _withinPoll = false;
+	uint32_t _pollDepth = 0;
 
 	Vector<Pair<NativeWindow *, core::UpdateConstraintsFlags>> _resizedWindows;
 	Vector<Pair<NativeWindow *, WindowCloseOptions>> _closedWindows;

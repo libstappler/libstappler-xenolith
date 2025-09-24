@@ -108,15 +108,15 @@ EdidInfo EdidInfo::parse(BytesView data) {
 
 StringView EdidInfo::getVendorName(StringView data) { return pnp_name(data.data()); }
 
-constexpr const ModeInfo ModeInfo::Preferred{maxOf<uint16_t>(), maxOf<uint16_t>(), 0};
-constexpr const ModeInfo ModeInfo::Current{maxOf<uint16_t>(), maxOf<uint16_t>(), maxOf<uint16_t>()};
-constexpr const MonitorId MonitorId::Primary{"__primary__"};
-constexpr const MonitorId MonitorId::None;
+const ModeInfo ModeInfo::Preferred{maxOf<uint16_t>(), maxOf<uint16_t>(), 0};
+const ModeInfo ModeInfo::Current{maxOf<uint16_t>(), maxOf<uint16_t>(), maxOf<uint16_t>()};
+const MonitorId MonitorId::Primary{"__primary__"};
+const MonitorId MonitorId::None;
 
-constexpr const FullscreenInfo FullscreenInfo::None{MonitorId::None, ModeInfo::Current,
+const FullscreenInfo FullscreenInfo::None{MonitorId::None, ModeInfo::Current,
 	FullscreenFlags::None};
 
-constexpr const FullscreenInfo FullscreenInfo::Current{MonitorId::None, ModeInfo::Current,
+const FullscreenInfo FullscreenInfo::Current{MonitorId::None, ModeInfo::Current,
 	FullscreenFlags::Current};
 
 } // namespace stappler::xenolith::core

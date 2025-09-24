@@ -44,8 +44,7 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 bool PresentationEngine::run() {
-	auto info = _window->getSurfaceOptions(
-			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
+	auto info = _window->getSurfaceOptions(*static_cast<Device *>(_device), _surface);
 	auto cfg = _window->selectConfig(info, false);
 
 	createSwapchain(info, move(cfg), cfg.presentMode, true);
@@ -172,8 +171,7 @@ bool PresentationEngine::recreateSwapchain() {
 
 	auto fastModeSelected = _liveResizeEnabled
 			|| hasFlag(_deprecationFlags, core::UpdateConstraintsFlags::SwitchToFastMode);
-	auto info = _window->getSurfaceOptions(
-			_surface->getSurfaceOptions(*static_cast<Device *>(_device)));
+	auto info = _window->getSurfaceOptions(*static_cast<Device *>(_device), _surface);
 	auto cfg = _window->selectConfig(info, fastModeSelected);
 
 	if (!info.isSupported(cfg)) {
@@ -224,6 +222,11 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 	auto swapchainImageInfo = _window->getSwapchainImageInfo(cfg);
 	uint32_t queueFamilyIndices[] = {devInfo.graphicsFamily.index, devInfo.presentFamily.index};
 
+	if (!_exclusiveFullscreenAvailable
+			&& cfg.fullscreenMode == core::FullScreenExclusiveMode::ApplicationControlled) {
+		cfg.fullscreenMode = core::FullScreenExclusiveMode::Allowed;
+	}
+
 	do {
 		auto oldSwapchain = move(_swapchain);
 
@@ -238,6 +241,14 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 													: nullptr);
 
 		if (_swapchain) {
+			if (cfg.fullscreenMode == core::FullScreenExclusiveMode::ApplicationControlled) {
+				if (!_swapchain.get_cast<SwapchainHandle>()->enableExclusiveFullscreen(*dev)) {
+					cfg.fullscreenMode = core::FullScreenExclusiveMode::Allowed;
+					_swapchain = nullptr;
+					continue;
+				}
+			}
+
 			auto newConstraints = _window->exportFrameConstraints();
 			newConstraints.extent = cfg.extent;
 			newConstraints.transform = cfg.transform;
@@ -264,8 +275,9 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			// log::source().verbose("vk::PresentationEngine", "Swapchain: ", cfg.description());
 		} else {
 			log::source().error("vk::PresentationEngine", "Fail to create swapchain");
+			break;
 		}
-	} while (0);
+	} while (!_swapchain);
 
 	if (_swapchain) {
 		_waitForDisplayLink = false;

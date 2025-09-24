@@ -145,9 +145,10 @@ protected:
 	virtual void tryComplete();
 	virtual void onComplete();
 
-#if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override { return false; }
-#endif
+	// Uncomment to track retain/release cycles
+	//#if SP_REF_DEBUG
+	//	virtual bool isRetainTrackerEnabled() const override { return true; }
+	//#endif
 
 	Loop *_loop = nullptr; // loop can not die until frames are performed
 	Rc<Device> _device;

@@ -38,7 +38,7 @@ public:
 	struct Timer;
 	struct Internal;
 
-	virtual ~Loop() = default;
+	virtual ~Loop();
 
 	virtual bool init(NotNull<event::Looper>, NotNull<core::Instance>, Rc<LoopInfo> &&) override;
 

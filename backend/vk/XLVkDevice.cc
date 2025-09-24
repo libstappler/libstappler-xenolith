@@ -571,7 +571,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 		Rc<Fence> fence;
 	};
 
-	auto task = new (std::nothrow) CompileImageTask();
+	auto task = Rc<CompileImageTask>::create();
 	task->callback = sp::move(cb);
 	task->image = img;
 	task->loop = (Loop *)&loop;
@@ -595,10 +595,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 						task->image->getInfo().key, task->image->getInfo(), false);
 
 		if (!task->transferBuffer) {
-			task->loop->performOnThread([task] {
-				task->callback(false);
-				task->release(0);
-			});
+			task->loop->performOnThread([task] { task->callback(false); });
 			return;
 		}
 
@@ -610,12 +607,10 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 						task->device->acquireCommandPool(core::QueueFlags::Transfer));
 				task->queue = ref_cast<DeviceQueue>(queue);
 
-				auto refId = task->retain();
-				task->fence->addRelease([task, refId](bool) {
+				task->fence->addRelease([task](bool) {
 					task->device->releaseCommandPool(*task->loop, move(task->pool));
 					task->transferBuffer
 							->dropPendingBarrier(); // hold reference while commands is active
-					task->release(refId);
 				}, this, "TextureSetLayout::compileImage transferBuffer->dropPendingBarrier");
 
 				loop.performInQueue(
@@ -645,14 +640,10 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 					}
 					task->fence->schedule(*task->loop);
 					task->fence = nullptr;
-					task->release(0);
 				}));
-			}, [task](core::Loop &) {
-				task->callback(false);
-				task->release(0);
-			});
+			}, [task](core::Loop &) { task->callback(false); });
 		});
-	}, (Loop *)&loop);
+	}, task);
 }
 
 void Device::readImage(Loop &loop, const Rc<Image> &image, core::AttachmentLayout l,

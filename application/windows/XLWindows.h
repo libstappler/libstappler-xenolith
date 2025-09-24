@@ -18,33 +18,38 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-**/
+ **/
 
-#ifndef XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
-#define XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
+#ifndef XENOLITH_APPLICATION_MACOS_XLWINDOWS_H_
+#define XENOLITH_APPLICATION_MACOS_XLWINDOWS_H_
 
-#include "XLCorePresentationEngine.h"
-#include "XLVkSwapchain.h" // IWYU pragma: keep
+#include "XLContextInfo.h"
+#include "XLCoreTextInput.h"
+#include "SPPlatformUnistd.h"
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
+#define XL_WIN32_DEBUG 1
 
-class SP_PUBLIC PresentationEngine final : public core::PresentationEngine {
-public:
-	virtual ~PresentationEngine() = default;
+#ifndef XL_WIN32_LOG
+#if XL_WIN32_DEBUG
+#define XL_WIN32_LOG(...) log::source().debug("Win32", __VA_ARGS__)
+#else
+#define XL_WIN32_LOG(...)
+#endif
+#endif
 
-	virtual bool run() override;
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-	virtual Rc<core::ScreenInfo> getScreenInfo() const override;
-	virtual Status setFullscreenSurface(const core::MonitorId &, const core::ModeInfo &) override;
+struct KeyCodes {
+	static const KeyCodes &getInstance();
+	static core::InputModifier getKeyMods();
 
-	virtual bool recreateSwapchain() override;
-	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
-			core::PresentMode presentMode, bool oldSwapchainValid) override;
+	core::InputKeyCode keycodes[512];
+	uint16_t scancodes[toInt(core::InputKeyCode::Max)];
 
 protected:
-	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;
+	KeyCodes();
 };
 
-} // namespace stappler::xenolith::vk
+} // namespace stappler::xenolith::platform
 
-#endif /* XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_ */
+#endif // XENOLITH_APPLICATION_MACOS_XLWINDOWS_H_

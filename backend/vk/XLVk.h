@@ -110,12 +110,14 @@ static const char * const s_requiredExtension[] = {
 enum class OptionalInstanceExtension {
 	Display,
 	SurfaceCapabilities2,
+	SurfaceMaintenance1,
 	Max
 };
 
 static const char * const s_optionalExtension[] = {
 	VK_KHR_DISPLAY_EXTENSION_NAME,
 	VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+	VK_EXT_SURFACE_MAINTENANCE_1_EXTENSION_NAME,
 	nullptr
 };
 
@@ -140,6 +142,7 @@ enum class OptionalDeviceExtension {
 	DedicatedAllocation,
 	ExternalFenceFd,
 	SwapchainMaintenance1,
+	FullscreenExclusive,
 	Portability,
 	Max
 };
@@ -164,6 +167,7 @@ static const char * const s_optionalDeviceExtensions[] = {
 	VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
 	VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
 	VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME,
+	VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME,
 #if __APPLE__
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif

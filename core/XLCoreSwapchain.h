@@ -37,7 +37,8 @@ public:
 
 	Instance *getInstance() const { return _instance; }
 
-	virtual SurfaceInfo getSurfaceOptions(const Device &) const = 0;
+	virtual SurfaceInfo getSurfaceOptions(const Device &, FullScreenExclusiveMode,
+			void *) const = 0;
 
 protected:
 	Rc<Ref> _window;
@@ -83,6 +84,7 @@ public:
 	bool isDeprecated();
 	bool isOptimal() const;
 	bool isValid() const;
+	bool isExclusiveFullscreen() const { return _fullscreenExclusive; }
 
 	// returns true if it was first deprecation
 	bool deprecate();
@@ -105,6 +107,7 @@ protected:
 
 	bool _deprecated = false; // should we recreate swapchain
 	bool _invalid = false; // can we present images with this swapchain
+	bool _fullscreenExclusive = false;
 	core::PresentMode _presentMode = core::PresentMode::Unsupported;
 	ImageInfo _imageInfo;
 	core::SurfaceInfo _surfaceInfo;

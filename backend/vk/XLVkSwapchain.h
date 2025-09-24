@@ -35,7 +35,8 @@ public:
 
 	bool init(Instance *instance, VkSurfaceKHR surface, Ref * = nullptr);
 
-	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &) const;
+	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &, core::FullScreenExclusiveMode,
+			void *) const;
 
 	VkSurfaceKHR getSurface() const { return _surface; }
 
@@ -53,6 +54,8 @@ public:
 
 	bool init(Device &dev, const core::SurfaceInfo &, const core::SwapchainConfig &, ImageInfo &&,
 			core::PresentMode, Surface *, uint32_t families[2], SwapchainHandle *);
+
+	bool enableExclusiveFullscreen(Device &dev);
 
 	VkSwapchainKHR getSwapchain() const { return _data->swapchain; }
 

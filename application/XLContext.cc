@@ -41,6 +41,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 XL_DECLARE_EVENT_CLASS(Context, onNetworkStateChanged);
+XL_DECLARE_EVENT_CLASS(Context, onThemeChanged);
+XL_DECLARE_EVENT_CLASS(Context, onSystemNotification);
 XL_DECLARE_EVENT_CLASS(Context, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Context, onRemoteNotification)
 
@@ -304,6 +306,11 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 
 	ret.transform = info.currentTransform;
 
+	if (info.fullscreenHandle && info.fullscreenMode != core::FullScreenExclusiveMode::Default) {
+		ret.fullscreenMode = info.fullscreenMode;
+		ret.fullscreenHandle = info.fullscreenHandle;
+	}
+
 	return ret;
 }
 
@@ -349,10 +356,6 @@ void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 	}
 }
 
-void Context::handleNativeWindowRedrawNeeded(NotNull<NativeWindow>) {
-	log::source().info("Context", "handleNativeWindowRedrawNeeded");
-}
-
 void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w,
 		core::UpdateConstraintsFlags flags) {
 	log::source().info("Context", "handleNativeWindowConstraintsChanged");
@@ -379,9 +382,11 @@ void Context::handleNativeWindowTextInput(NotNull<NativeWindow> w,
 	}
 }
 
-void Context::handleLowMemory() {
-	log::source().info("Context", "handleLowMemory");
-	for (auto &it : _components) { it.second->handleLowMemory(this); }
+void Context::handleSystemNotification(SystemNotification note) {
+	log::source().info("Context", "handleSystemNotification");
+	for (auto &it : _components) { it.second->handleSystemNotification(this, note); }
+
+	onSystemNotification(this, toInt(note));
 }
 
 void Context::handleWillDestroy() {
@@ -461,6 +466,8 @@ void Context::handleThemeInfoChanged(const ThemeInfo &info) {
 	if (_application) {
 		_application->handleThemeInfoChanged(info);
 	}
+
+	onThemeChanged(this, info.encode());
 }
 
 bool Context::configureWindow(NotNull<WindowInfo> w) {

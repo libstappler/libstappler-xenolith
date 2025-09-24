@@ -33,6 +33,10 @@
 #include "macos/XLMacosContextController.h"
 #endif
 
+#if WIN32
+#include "windows/XLWindowsContextController.h"
+#endif
+
 #if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkInstance.h"
 #endif
@@ -46,6 +50,9 @@ Rc<ContextController> ContextController::create(NotNull<Context> ctx, ContextCon
 #if MACOS
 	return Rc<MacosContextController>::create(ctx, move(info));
 #endif
+#if WIN32
+	return Rc<WindowsContextController>::create(ctx, move(info));
+#endif
 	log::source().error("ContextController", "Unknown platform");
 	return nullptr;
 }
@@ -56,6 +63,9 @@ void ContextController::acquireDefaultConfig(ContextConfig &config, NativeContex
 #endif
 #if MACOS
 	MacosContextController::acquireDefaultConfig(config, handle);
+#endif
+#if WIN32
+	WindowsContextController::acquireDefaultConfig(config, handle);
 #endif
 
 	auto cfgSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeConfigSignature>(
@@ -72,6 +82,13 @@ bool ContextController::init(NotNull<Context> ctx) {
 
 int ContextController::run(NotNull<ContextContainer>) { return _resultCode; }
 
+void ContextController::retainPollDepth() { ++_pollDepth; }
+void ContextController::releasePollDepth() {
+	if (_pollDepth-- == 1) {
+		notifyPendingWindows();
+	}
+}
+
 bool ContextController::configureWindow(NotNull<WindowInfo> w) {
 	return _context->configureWindow(w);
 }
@@ -82,7 +99,7 @@ void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
 
 void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
 		core::UpdateConstraintsFlags flags) {
-	if (_withinPoll) {
+	if (isWithinPoll()) {
 		_resizedWindows.emplace_back(w, flags);
 	} else {
 		_context->handleNativeWindowConstraintsChanged(w, flags);
@@ -99,7 +116,7 @@ void ContextController::notifyWindowTextInput(NotNull<NativeWindow> w,
 }
 
 bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseOptions opts) {
-	if (_withinPoll) {
+	if (isWithinPoll()) {
 		_closedWindows.emplace_back(w, opts);
 		return !hasFlag(w->getInfo()->state, WindowState::CloseGuard);
 	} else if (!hasFlag(opts, WindowCloseOptions::IgnoreExitGuard)
@@ -160,6 +177,10 @@ Rc<ScreenInfo> ContextController::getScreenInfo() const {
 	}
 
 	return info;
+}
+
+void ContextController::handleSystemNotification(SystemNotification n) {
+	_context->handleSystemNotification(n);
 }
 
 void ContextController::handleNetworkStateChanged(NetworkFlags flags) {
@@ -426,8 +447,7 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 #if MODULE_XENOLITH_BACKEND_VK
 	if (instance->getApi() == core::InstanceApi::Vulkan) {
 		if (!_loopInfo->backend) {
-			auto isHeadless =
-					hasFlag(_context->getInfo()->flags, ContextFlags::DestroyWhenAllWindowsClosed);
+			auto isHeadless = hasFlag(_context->getInfo()->flags, ContextFlags::Headless);
 			auto data = Rc<vk::LoopBackendInfo>::alloc();
 			data->deviceSupportCallback = [isHeadless](const vk::DeviceInfo &dev) {
 				if (isHeadless) {
@@ -440,9 +460,12 @@ Rc<core::Loop> ContextController::makeLoop(NotNull<core::Instance> instance) {
 							!= dev.availableExtensions.end();
 				}
 			};
-			data->deviceExtensionsCallback = [](const vk::DeviceInfo &dev) -> Vector<StringView> {
+			data->deviceExtensionsCallback =
+					[isHeadless](const vk::DeviceInfo &dev) -> Vector<StringView> {
 				Vector<StringView> ret;
-				ret.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+				if (!isHeadless) {
+					ret.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+				}
 				return ret;
 			};
 			_loopInfo->backend = data;
@@ -462,6 +485,8 @@ void ContextController::poll() {
 }
 
 void ContextController::notifyPendingWindows() {
+	for (auto &it : _activeWindows) { it->dispatchPendingEvents(); }
+
 	auto tmpResized = sp::move(_resizedWindows);
 	_resizedWindows.clear();
 

@@ -225,12 +225,6 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 						ret);
 			}
 			break;
-		case core::InputEventName::ScreenUpdate:
-			if (auto f = std::get_if<Function<bool()>>(&it->second)) {
-				ret = std::max((*f)() ? InputEventState::Processed : InputEventState::Declined,
-						ret);
-			}
-			break;
 		default: break;
 		}
 	}
@@ -333,16 +327,6 @@ void InputListener::setWindowStateCallback(Function<bool(WindowState, WindowStat
 	} else {
 		_callbacks.erase(InputEventName::WindowState);
 		_eventMask.reset(toInt(InputEventName::WindowState));
-	}
-}
-
-void InputListener::setScreenUpdateCallback(Function<bool()> &&cb) {
-	if (cb) {
-		_callbacks.insert_or_assign(InputEventName::ScreenUpdate, sp::move(cb));
-		_eventMask.set(toInt(InputEventName::ScreenUpdate));
-	} else {
-		_callbacks.erase(InputEventName::ScreenUpdate);
-		_eventMask.reset(toInt(InputEventName::ScreenUpdate));
 	}
 }
 

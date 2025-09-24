@@ -2193,7 +2193,6 @@ StringView getInputEventName(InputEventName name) {
 	case InputEventName::KeyRepeated: return StringView("KeyRepeated"); break;
 	case InputEventName::KeyReleased: return StringView("KeyReleased"); break;
 	case InputEventName::KeyCanceled: return StringView("KeyCanceled"); break;
-	case InputEventName::ScreenUpdate: return StringView("ScreenUpdate"); break;
 	case InputEventName::WindowState: return StringView("WindowState"); break;
 	case InputEventName::Max: break;
 	}

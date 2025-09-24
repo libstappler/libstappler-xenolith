@@ -157,6 +157,7 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 			if (instance && !hasFlag(_context->getInfo()->flags, ContextFlags::Headless)
 					&& _waylandDisplay) {
 				// Try to load with Wayland only, then check if we have device to present images
+				// If not, try to use XWayland
 				bool supportsPresentation = false;
 				if (instance) {
 					for (auto &it : instance->getAvailableDevices()) {
@@ -167,7 +168,7 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 					}
 				}
 				if (!supportsPresentation) {
-					// Load x11 server, then recreate instance
+					// Load x11 server for XWayland, then recreate instance
 					if (_xcb && _xkb) {
 						_xcbConnection = Rc<XcbConnection>::create(_xcb, _xkb);
 					}
@@ -182,9 +183,8 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 			}
 			instance = loadInstance();
 		} else {
-			log::
-					source()
-							.error("LinuxContextController",
+			log::source()
+				.error("LinuxContextController",
 									"No X11 or Wayland session detected; If there were, please "
 									"consider to " "set XDG_SESSION_TYPE appropiriately");
 

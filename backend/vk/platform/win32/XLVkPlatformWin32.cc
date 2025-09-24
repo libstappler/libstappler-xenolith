@@ -25,24 +25,24 @@
 #if WIN32
 
 #include "SPPlatformUnistd.h"
-#include <libloaderapi.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-Rc<core::Instance> createInstance(const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 	FunctionTable table(vkGetInstanceProcAddr);
 
 	if (!table) {
 		return nullptr;
 	}
 
-	if (auto instance = table.createInstance(cb, Dso(), [] { })) {
+	if (auto instance = table.createInstance(info, info->backend.get_cast<InstanceBackendInfo>(),
+				Dso())) {
 		return instance;
 	}
 
 	return nullptr;
 }
 
-}
+} // namespace stappler::xenolith::vk::platform
 
 #endif

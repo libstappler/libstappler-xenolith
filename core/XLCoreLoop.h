@@ -119,6 +119,7 @@ public:
 			PresentationOptions) = 0;
 
 protected:
+// Uncomment to track retain/release cycles
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const override { return true; }
 #endif

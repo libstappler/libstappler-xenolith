@@ -63,6 +63,8 @@ public:
 
 class FontAttachmentHandle : public core::AttachmentHandle {
 public:
+	static constexpr uint64_t CopyBlockSize = 32_MiB;
+
 	virtual ~FontAttachmentHandle();
 
 	virtual bool setup(FrameQueue &, Function<void(bool)> &&) override;
@@ -92,7 +94,7 @@ protected:
 	uint32_t nextBufferOffset(size_t blockSize);
 	uint32_t nextPersistentTransferOffset(size_t blockSize);
 
-	bool addPersistentCopy(uint16_t fontId, char16_t c);
+	bool addPersistentCopy(uint16_t fontId, char32_t);
 	void pushCopyTexture(uint32_t reqIdx, const font::CharTexture &texData);
 	void pushAtlasTexture(core::DataAtlas *, VkBufferImageCopy &);
 
@@ -335,7 +337,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 
 	_frontBuffer = memPool->spawn(AllocationUsage::HostTransitionSource,
 			core::BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc),
-					size_t(Allocator::PageSize * 2)));
+					size_t(CopyBlockSize)));
 
 	_copyFromTmpBufferData.resize(totalCount - processedPersistent + (underlinePersistent ? 0 : 1));
 
@@ -349,7 +351,7 @@ void FontAttachmentHandle::doSubmitInput(FrameHandle &handle, Function<void(bool
 			_userdata->buffers.emplace_back(_userdata->mempool->spawn(AllocationUsage::DeviceLocal,
 					core::BufferInfo(core::ForceBufferUsage(core::BufferUsage::TransferSrc
 											 | core::BufferUsage::TransferDst),
-							size_t(Allocator::PageSize * 2))));
+							size_t(CopyBlockSize))));
 			_persistentTargetBuffer = _userdata->buffers.back();
 		} else {
 			auto tmp = move(_userdata);
@@ -377,10 +379,10 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 	if (!underlinePersistent) {
 		// write single white pixel for underlines
 		auto offset = _frontBuffer->reserveBlock(1, _optimalTextureAlignment);
-		if (offset + 1 <= Allocator::PageSize * 2) {
+		if (offset + 1 <= CopyBlockSize) {
 			uint8_t whiteColor = 255;
 			_frontBuffer->setData(BytesView(&whiteColor, 1), offset);
-			auto objectId = font::CharId::getCharId(font::CharId::SourceMax, char16_t(0),
+			auto objectId = font::CharId::getCharId(font::CharId::SourceMax, 0,
 					font::CharAnchor::BottomLeft);
 			auto texOffset = _textureTargetOffset.fetch_add(1);
 			_copyFromTmpBufferData[_copyFromTmpBufferData.size() - 1] = VkBufferImageCopy(
@@ -444,8 +446,8 @@ uint32_t FontAttachmentHandle::nextPersistentTransferOffset(size_t blockSize) {
 	return _persistentOffset.fetch_add(alignedSize);
 }
 
-bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char16_t c) {
-	auto objId = font::CharId::getCharId(fontId, c, font::CharAnchor::BottomLeft);
+bool FontAttachmentHandle::addPersistentCopy(uint16_t fontId, char32_t theChar) {
+	auto objId = font::CharId::getCharId(fontId, theChar, font::CharAnchor::BottomLeft);
 	auto it = _userdata->chars.find(objId);
 	if (it != _userdata->chars.end()) {
 		auto &buf = _userdata->buffers[it->second.bufferIdx];
@@ -474,7 +476,10 @@ void FontAttachmentHandle::pushCopyTexture(uint32_t reqIdx, const font::CharText
 
 	auto size = uint32_t(texData.bitmapRows * std::abs(texData.pitch));
 	auto offset = _frontBuffer->reserveBlock(size, _optimalTextureAlignment);
-	if (offset + size > Allocator::PageSize * 2) {
+	if (offset == maxOf<uint64_t>() || offset + size > CopyBlockSize) {
+		log::error("FontAttachmentHandle",
+				"Not enough space in _frontBuffer: ", _frontBuffer->getSize(), " (",
+				_frontBuffer->getReservedSize(), ")");
 		return;
 	}
 

@@ -162,6 +162,7 @@ const CallbackStream &operator<<(const CallbackStream &out, WindowState f) {
 		case WindowState::CloseGuard: out << " CloseGuard"; break;
 		case WindowState::CloseRequest: out << " CloseRequest"; break;
 		case WindowState::InsetDecorationsVisible: out << " InsetDecorationsVisible"; break;
+		case WindowState::Enabled: out << " Enabled"; break;
 		case WindowState::AllowedWindowMenu: out << " AllowedWindowMenu"; break;
 		case WindowState::AllowedMove: out << " MoveAllowed"; break;
 		case WindowState::AllowedResize: out << " ResizeAllowed"; break;

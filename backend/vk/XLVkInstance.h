@@ -94,7 +94,8 @@ public:
 
 	Rc<Device> makeDevice(const core::LoopInfo &) const;
 
-	core::SurfaceInfo getSurfaceOptions(VkSurfaceKHR, VkPhysicalDevice) const;
+	core::SurfaceInfo getSurfaceOptions(VkSurfaceKHR, VkPhysicalDevice,
+			core::FullScreenExclusiveMode fullscreenMode, void *fullscreenHandle) const;
 	VkExtent2D getSurfaceExtent(VkSurfaceKHR, VkPhysicalDevice) const;
 
 	VkInstance getInstance() const;

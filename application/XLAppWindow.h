@@ -140,7 +140,8 @@ protected:
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;
 	virtual core::ImageViewInfo getSwapchainImageViewInfo(
 			const core::ImageInfo &image) const override;
-	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&) const override;
+	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &,
+			NotNull<core::Surface>) const override;
 
 	virtual core::SwapchainConfig selectConfig(const core::SurfaceInfo &, bool fastMode) override;
 
@@ -157,13 +158,16 @@ protected:
 	virtual void propagateInputEvent(InputEventData &); // from app thread
 	virtual void propagateTextInput(TextInputState &); // from app thread
 
+	virtual void handleContextStateUpdate(WindowState state);
+
 	Rc<Context> _context;
 	Rc<AppThread> _application;
 	Rc<Director> _director;
 	NativeWindow *_window = nullptr;
 	Rc<core::PresentationEngine> _presentationEngine;
 
-	core::WindowState _state = core::WindowState::None;
+	core::WindowState _state = core::WindowState::None; // for app thread
+	core::WindowState _contextState = core::WindowState::None; // for context thread
 
 	uint32_t _exitGuard = 0;
 

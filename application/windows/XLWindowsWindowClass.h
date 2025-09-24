@@ -18,33 +18,43 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-**/
+ **/
 
-#ifndef XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
-#define XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_
+#ifndef XENOLITH_APPLICATION_WINDOWS_XLWINDOWSWINDOWCLASS_H_
+#define XENOLITH_APPLICATION_WINDOWS_XLWINDOWSWINDOWCLASS_H_
 
-#include "XLCorePresentationEngine.h"
-#include "XLVkSwapchain.h" // IWYU pragma: keep
+#include "XLWindows.h" // IWYU pragma: keep
 
-namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
+namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class SP_PUBLIC PresentationEngine final : public core::PresentationEngine {
+class WindowsWindow;
+class WindowsContextController;
+
+class WindowClass : public Ref {
 public:
-	virtual ~PresentationEngine() = default;
+	virtual ~WindowClass();
 
-	virtual bool run() override;
+	bool init(WideStringView);
 
-	virtual Rc<core::ScreenInfo> getScreenInfo() const override;
-	virtual Status setFullscreenSurface(const core::MonitorId &, const core::ModeInfo &) override;
+	WideStringView getName() const { return _name; }
+	HINSTANCE getModule() const { return _module; }
 
-	virtual bool recreateSwapchain() override;
-	virtual bool createSwapchain(const core::SurfaceInfo &, core::SwapchainConfig &&cfg,
-			core::PresentMode presentMode, bool oldSwapchainValid) override;
+	void attachWindow(WindowsWindow *);
+	void detachWindow(WindowsWindow *);
 
 protected:
-	bool isImagePresentable(const core::ImageObject &image, VkFilter &filter) const;
+	static LRESULT _wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	static LRESULT wndProc(WindowsWindow *, HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+	WindowsWindow *getWindow(HWND) const;
+
+	WideString _name;
+	HINSTANCE _module = nullptr;
+	WNDCLASSW _windowClass;
+	bool _registred = false;
+	Map<HWND, Rc<WindowsWindow>> _windows;
 };
 
-} // namespace stappler::xenolith::vk
+} // namespace stappler::xenolith::platform
 
-#endif /* XENOLITH_BACKEND_VK_XLVKPRESENTATIONENGINE_H_ */
+#endif

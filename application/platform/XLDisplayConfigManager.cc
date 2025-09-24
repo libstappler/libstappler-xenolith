@@ -105,12 +105,25 @@ const LogicalDisplay *DisplayConfig::getLogical(const MonitorId &id) const {
 	return nullptr;
 }
 
+const LogicalDisplay *DisplayConfig::getLogical(const NativeId &id) const {
+	for (auto &it : logical) {
+		if (it.xid == id) {
+			return &it;
+		}
+	}
+	return nullptr;
+}
+
 bool DisplayConfig::isEqual(const DisplayConfig *cfg) const {
 	return serial == cfg->serial && monitors == cfg->monitors && logical == cfg->logical;
 }
 
 Extent2 DisplayConfig::getSize() const {
 	Extent2 ret;
+	if (desktopRect.width > 0 || desktopRect.height > 0) {
+		return Extent2(desktopRect.width, desktopRect.height);
+	}
+
 	for (auto &it : logical) {
 		ret.width = std::max(ret.width, it.rect.x + it.rect.width);
 		ret.height = std::max(ret.height, it.rect.y + it.rect.height);
@@ -346,7 +359,8 @@ void DisplayConfigManager::restoreMode(Function<void(Status)> &&cb, Ref *ref) {
 	});
 }
 
-Rc<DisplayConfig> DisplayConfigManager::extractCurrentConfig(NotNull<DisplayConfig> config) const {
+Rc<DisplayConfig> DisplayConfigManager::extractCurrentConfig(
+		NotNull<const DisplayConfig> config) const {
 	auto ret = Rc<DisplayConfig>::create();
 	for (auto &it : config->monitors) {
 		auto &mon = ret->monitors.emplace_back(PhysicalDisplay{

@@ -49,9 +49,10 @@ bool Surface::init(Instance *instance, VkSurfaceKHR surface, Ref *win) {
 	return true;
 }
 
-core::SurfaceInfo Surface::getSurfaceOptions(const core::Device &dev) const {
+core::SurfaceInfo Surface::getSurfaceOptions(const core::Device &dev,
+		core::FullScreenExclusiveMode mode, void *handle) const {
 	return _instance.get_cast<Instance>()->getSurfaceOptions(_surface,
-			static_cast<const Device &>(dev).getPhysicalDevice());
+			static_cast<const Device &>(dev).getPhysicalDevice(), mode, handle);
 }
 
 static void SwapchainHandle_destroy(core::Device *dev, core::ObjectType, core::ObjectHandle handle,
@@ -79,42 +80,51 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 		core::PresentMode presentMode, Surface *surface, uint32_t families[2],
 		SwapchainHandle *old) {
 
-	VkSwapchainCreateInfoKHR swapChainCreateInfo{};
-	sanitizeVkStruct(swapChainCreateInfo);
-	swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	swapChainCreateInfo.surface = surface->getSurface();
-	swapChainCreateInfo.minImageCount = cfg.imageCount;
-	swapChainCreateInfo.imageFormat = VkFormat(swapchainImageInfo.format);
-	swapChainCreateInfo.imageColorSpace = VkColorSpaceKHR(cfg.colorSpace);
-	swapChainCreateInfo.imageExtent =
-			VkExtent2D({swapchainImageInfo.extent.width, swapchainImageInfo.extent.height});
-	swapChainCreateInfo.imageArrayLayers = swapchainImageInfo.arrayLayers.get();
-	swapChainCreateInfo.imageUsage = VkImageUsageFlags(swapchainImageInfo.usage);
+	VkSwapchainCreateInfoKHR swapChainCreateInfo{
+		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		nullptr,
+		0,
+		surface->getSurface(),
+		cfg.imageCount,
+		VkFormat(swapchainImageInfo.format),
+		VkColorSpaceKHR(cfg.colorSpace),
+		VkExtent2D({swapchainImageInfo.extent.width, swapchainImageInfo.extent.height}),
+		swapchainImageInfo.arrayLayers.get(),
+		VkImageUsageFlags(swapchainImageInfo.usage),
+		VK_SHARING_MODE_EXCLUSIVE,
+		0,
+		nullptr,
+		VkSurfaceTransformFlagBitsKHR(core::getPureTransform(cfg.transform)),
+		VkCompositeAlphaFlagBitsKHR(cfg.alpha),
+		getVkPresentMode(presentMode),
+		(cfg.clipped ? VK_TRUE : VK_FALSE),
+		old ? old->getSwapchain() : VK_NULL_HANDLE,
+	};
 
 	if (families[0] != families[1]) {
 		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		swapChainCreateInfo.queueFamilyIndexCount = 2;
 		swapChainCreateInfo.pQueueFamilyIndices = families;
-	} else {
-		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	}
 
-	if ((cfg.transform & core::SurfaceTransformFlags::PreRotated)
-			!= core::SurfaceTransformFlags::None) {
-		swapChainCreateInfo.preTransform =
-				VkSurfaceTransformFlagBitsKHR(core::getPureTransform(cfg.transform));
-	} else {
-		swapChainCreateInfo.preTransform = VkSurfaceTransformFlagBitsKHR(cfg.transform);
-	}
-	swapChainCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR(cfg.alpha);
-	swapChainCreateInfo.presentMode = getVkPresentMode(presentMode);
-	swapChainCreateInfo.clipped = (cfg.clipped ? VK_TRUE : VK_FALSE);
+#if WIN32
+	VkSurfaceFullScreenExclusiveWin32InfoEXT fullScreenWin32{
+		VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT,
+		nullptr,
+		(HMONITOR)cfg.fullscreenHandle,
+	};
 
-	if (old) {
-		swapChainCreateInfo.oldSwapchain = old->getSwapchain();
-	} else {
-		swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+	VkSurfaceFullScreenExclusiveInfoEXT fullScreenInfo{
+		VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT,
+		&fullScreenWin32,
+		VkFullScreenExclusiveEXT(cfg.fullscreenMode),
+	};
+
+	if (cfg.fullscreenMode != core::FullScreenExclusiveMode::Default) {
+		fullScreenWin32.pNext = (void *)swapChainCreateInfo.pNext;
+		swapChainCreateInfo.pNext = &fullScreenInfo;
 	}
+#endif
 
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 	VkResult result = VK_ERROR_UNKNOWN;
@@ -190,6 +200,21 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 	return false;
 }
 
+bool SwapchainHandle::enableExclusiveFullscreen(Device &dev) {
+	if (_config.fullscreenMode == core::FullScreenExclusiveMode::ApplicationControlled) {
+		auto result = dev.getTable()->vkAcquireFullScreenExclusiveModeEXT(dev.getDevice(),
+				_data->swapchain);
+		if (result == VK_SUCCESS) {
+			log::source().info("SwapchainHandle", "Fullscreen exclusive enabled");
+			_fullscreenExclusive = true;
+			return true;
+		} else {
+			log::source().error("SwapchainHandle", "Fullscreen exclusive failed");
+		}
+	}
+	return false;
+}
+
 SpanView<SwapchainHandle::SwapchainImageData> SwapchainHandle::getImages() const {
 	return _data->images;
 }
@@ -206,7 +231,7 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 	auto dev = static_cast<Device *>(_object.device);
 
 	uint32_t imageIndex = maxOf<uint32_t>();
-	VkResult ret = VK_ERROR_UNKNOWN;
+	VkResult result = VK_ERROR_UNKNOWN;
 	dev->makeApiCall([&, this](const DeviceTable &table, VkDevice device) {
 #if XL_VKAPI_DEBUG
 		auto t = sp::platform::clock(ClockType::Monotonic);
@@ -221,9 +246,9 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 			info.fence = fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE;
 			info.deviceMask = 1;
 
-			ret = table.vkAcquireNextImage2KHR(device, &info, &imageIndex);
+			result = table.vkAcquireNextImage2KHR(device, &info, &imageIndex);
 		} else {
-			ret = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
+			result = table.vkAcquireNextImageKHR(device, _data->swapchain, timeout,
 					sem ? sem.get_cast<Semaphore>()->getSemaphore() : VK_NULL_HANDLE,
 					fence ? fence.get_cast<Fence>()->getFence() : VK_NULL_HANDLE, &imageIndex);
 		}
@@ -233,10 +258,13 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 #endif
 	});
 
-	status = getStatus(ret);
+	if (result == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT) {
+		log::source().info("SwapchainHandle",
+				"acquire: VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT");
+	}
 
 	Rc<SwapchainAcquiredImage> image;
-	switch (ret) {
+	switch (result) {
 	case VK_SUCCESS: {
 		if (sem) {
 			sem->setSignaled(true);
@@ -285,13 +313,14 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 		break;
 	}
 	case VK_ERROR_OUT_OF_DATE_KHR:
+	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
 		_deprecated = true;
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
 		break;
 	case VK_TIMEOUT: releaseSemaphore(ref_cast<Semaphore>(move(sem))); break;
 	default:
 		releaseSemaphore(ref_cast<Semaphore>(move(sem)));
-		log::source().error("vk::SwapchainHandle", "Fail to acquire image: ", getStatus(ret));
+		log::source().error("vk::SwapchainHandle", "Fail to acquire image: ", getStatus(result));
 		break;
 	}
 
@@ -359,6 +388,11 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 
 	_data->presentSemaphores[imageIndex] = waitSem;
 
+	if (result == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT) {
+		log::source().info("SwapchainHandle",
+				"present: VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT");
+	}
+
 	if (result == VK_SUCCESS) {
 		++_presentedFrames;
 		if (!_config.liveResize && _presentedFrames == config::MaxSuboptimalFrames
@@ -366,7 +400,7 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 				&& _config.presentModeFast != _config.presentMode) {
 			result = VK_SUBOPTIMAL_KHR;
 		}
-	} else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+	} else {
 		_invalid = true;
 	}
 

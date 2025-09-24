@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::core {
 static constexpr ClockType FrameClockType = ClockType::Monotonic;
 
 #ifdef XL_FRAME_LOG
-#define XL_FRAME_LOG_INFO _request->getEmitter() ? "[Emitted] " : "", \
+#define XL_FRAME_LOG_INFO \
 	"[", _order, "] [", s_frameCount.load(), \
 	"] [", sp::platform::clock(FrameClockType) - _timeStart, "] "
 #else
@@ -139,7 +139,7 @@ bool FrameHandle::init(Loop &loop, Device &dev, Rc<FrameRequest> &&req, uint64_t
 	_gen = gen;
 	_order = _request->getQueue()->incrementOrder();
 
-	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "Init; ready: ", _request->isReadyForSubmit());
+	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "Init; ready: ");
 	return setup();
 }
 
@@ -150,7 +150,8 @@ void FrameHandle::update(bool init) {
 
 	XL_FRAME_LOG(XL_FRAME_LOG_INFO, "update");
 
-	for (auto &it : _queues) { it->update(); }
+	auto tmp = _queues;
+	for (auto &it : tmp) { it->update(); }
 }
 
 const Rc<Queue> &FrameHandle::getQueue() const { return _request->getQueue(); }

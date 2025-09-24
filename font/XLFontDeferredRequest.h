@@ -42,7 +42,7 @@ struct SP_PUBLIC DeferredRequest : Ref {
 	std::atomic<uint32_t> complete = 0;
 	uint32_t nrequests = 0;
 	Vector<Rc<font::FontFaceObject>> faces;
-	Vector<Pair<uint32_t, char16_t>> fontRequests;
+	Vector<Pair<uint32_t, char32_t>> fontRequests;
 
 	Rc<font::FontComponent> ext;
 	Function<void(uint32_t reqIdx, const font::CharTexture &texData)> onTexture;

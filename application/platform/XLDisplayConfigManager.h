@@ -98,6 +98,7 @@ struct LogicalDisplay {
 
 struct DisplayConfig : public Ref {
 	uint32_t serial = 0;
+	IRect desktopRect;
 	Vector<PhysicalDisplay> monitors;
 	Vector<LogicalDisplay> logical;
 
@@ -107,6 +108,7 @@ struct DisplayConfig : public Ref {
 
 	const PhysicalDisplay *getMonitor(const MonitorId &id) const;
 	const LogicalDisplay *getLogical(const MonitorId &id) const;
+	const LogicalDisplay *getLogical(const NativeId &id) const;
 
 	bool isEqual(const DisplayConfig *) const;
 
@@ -136,7 +138,7 @@ public:
 
 	bool hasSavedMode() const { return _savedConfig; }
 
-	DisplayConfig *getCurrentConfig() const { return _currentConfig; }
+	const DisplayConfig *getCurrentConfig() const { return _currentConfig; }
 
 protected:
 	// Как применяется изменение размера для конфигурации
@@ -154,7 +156,7 @@ protected:
 	};
 
 	// extract only current modes
-	Rc<DisplayConfig> extractCurrentConfig(NotNull<DisplayConfig>) const;
+	Rc<DisplayConfig> extractCurrentConfig(NotNull<const DisplayConfig>) const;
 	void adjustDisplay(NotNull<DisplayConfig>) const;
 
 	virtual void handleConfigChanged(NotNull<DisplayConfig>);

@@ -303,8 +303,8 @@ bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) 
 			return true;
 		}
 		auto clock = sp::platform::clock(ClockType::Monotonic);
-		if (_options.followDisplayLinkBarrier || !_options.usePresentWindow || !_nextPresentWindow
-				|| _nextPresentWindow < clock + _engineUpdateInterval) {
+		if (_waitUntilFrame || _options.followDisplayLinkBarrier || !_options.usePresentWindow
+				|| !_nextPresentWindow || _nextPresentWindow < clock + _engineUpdateInterval) {
 			runScheduledPresent(frame, image);
 		} else {
 			auto frameTimeout = _nextPresentWindow - clock;
@@ -367,7 +367,9 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, NotNull<Presentati
 	auto res = _swapchain->present(queue, image);
 	auto dt = updatePresentationInterval();
 
-	if (res == Status::Suboptimal || res == Status::ErrorCancelled) {
+	if (res == Status::ErrorFullscreenLost) {
+		_swapchain->deprecate();
+	} else if (res == Status::Suboptimal || res == Status::ErrorCancelled) {
 		XL_COREPRESENT_LOG("presentWithQueue - deprecate swapchain");
 		_swapchain->deprecate();
 	} else if (res != Status::Ok) {
@@ -472,6 +474,15 @@ bool PresentationEngine::isRenderOnDemand() const { return _options.renderOnDema
 
 bool PresentationEngine::isRunning() const {
 	return _running && _swapchain && !_swapchain->isDeprecated();
+}
+
+void PresentationEngine::enableExclusiveFullscreen() {
+	_exclusiveFullscreenAvailable = true;
+	if (_swapchain
+			&& _swapchain->getConfig().fullscreenMode != core::FullScreenExclusiveMode::Default
+			&& !_swapchain->isExclusiveFullscreen()) {
+		updateConstraints(UpdateConstraintsFlags::DeprecateSwapchain);
+	}
 }
 
 void PresentationEngine::setContentPadding(const Padding &padding) {

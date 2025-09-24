@@ -60,7 +60,7 @@ struct SP_PUBLIC SwapchainAcquiredImage : public Ref {
 
 class SP_PUBLIC PresentationFrame : public Ref {
 public:
-	enum Flags {
+	enum Flags : uint32_t {
 		None,
 		OffscreenTarget = 1 << 0,
 		DoNotPresent = 1 << 1,

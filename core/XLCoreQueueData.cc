@@ -43,7 +43,6 @@ void QueueData::clear() {
 
 	for (auto &it : attachments) { it->attachment = nullptr; }
 
-
 	for (auto &it : textureSets) {
 		it->layout = nullptr;
 		it->compiledSamplers.clear();

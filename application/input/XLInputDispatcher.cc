@@ -251,7 +251,8 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		handlers.handle(false);
 		break;
 	}
-	case InputEventName::ScreenUpdate: {
+	case InputEventName::WindowState: {
+		_windowState = event.window.state;
 		EventHandlersInfo handlers{getEventInfo(event)};
 		handlers.addListenersFromStorage(_events);
 		handlers.handle(false);
@@ -268,13 +269,7 @@ void InputDispatcher::handleInputEvent(const InputEventData &event) {
 		if (!hasFocus || inBackground) {
 			cancelKeyEvents(event.input.x, event.input.y, event.input.modifiers);
 		}
-		break;
-	}
-	case InputEventName::WindowState: {
-		_windowState = event.window.state;
-		EventHandlersInfo handlers{getEventInfo(event)};
-		handlers.addListenersFromStorage(_events);
-		handlers.handle(false);
+
 		break;
 	}
 	case InputEventName::KeyPressed: {

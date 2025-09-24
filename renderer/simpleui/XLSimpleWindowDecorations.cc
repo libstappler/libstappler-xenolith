@@ -417,7 +417,7 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 void WindowDecorationsDefault::updateWindowTheme(const ThemeInfo &theme) {
 	WindowDecorationsTheme decTheme;
 
-	if (theme.iconTheme == "Aqua") {
+	if (theme.systemTheme == "Aqua") {
 		decTheme.icon = WindowDecorationsTheme::IconTheme::Macos;
 	}
 

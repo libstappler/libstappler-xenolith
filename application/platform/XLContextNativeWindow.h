@@ -52,9 +52,8 @@ public:
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) { }
 
-	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const {
-		return move(info);
-	}
+	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &dev,
+			NotNull<core::Surface> surface) const;
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const;
 

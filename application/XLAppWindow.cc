@@ -54,9 +54,7 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 
 void AppWindow::runWithQueue(const Rc<core::Queue> &queue) {
 	if (!_presentationEngine->isRunning()) {
-		if (!_presentationEngine->isRunning()) {
-			_presentationEngine->run();
-		}
+		_presentationEngine->run();
 
 		_presentationEngine->scheduleNextImage([this](core::PresentationFrame *, bool success) {
 			// Map windows after frame was rendered
@@ -126,6 +124,14 @@ void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
 		return;
 	}
 
+	if (_context->getLooper()->isOnThisThread()) {
+		for (auto &it : events) {
+			if (it.event == core::InputEventName::WindowState) {
+				handleContextStateUpdate(it.window.state);
+			}
+		}
+	}
+
 	_application->performOnAppThread([this, events = sp::move(events)]() mutable {
 		for (auto &event : events) { propagateInputEvent(event); }
 		setReadyForNextFrame();
@@ -170,11 +176,12 @@ core::ImageInfo AppWindow::getSwapchainImageInfo(const core::SwapchainConfig &cf
 	return swapchainImageInfo;
 }
 
-core::SurfaceInfo AppWindow::getSurfaceOptions(core::SurfaceInfo &&info) const {
+core::SurfaceInfo AppWindow::getSurfaceOptions(const core::Device &dev,
+		NotNull<core::Surface> surface) const {
 	if (_window) {
-		return _window->getSurfaceOptions(move(info));
+		return _window->getSurfaceOptions(dev, surface);
 	}
-	return move(info);
+	return core::SurfaceInfo();
 }
 
 core::ImageViewInfo AppWindow::getSwapchainImageViewInfo(const core::ImageInfo &image) const {
@@ -315,7 +322,7 @@ WindowState AppWindow::getUpdatableStateFlags() const {
 	}
 
 	if (hasFlag(caps, WindowCapabilities::CloseGuard)) {
-		flags |= WindowState::CloseGuard;
+		flags |= WindowState::CloseGuard | WindowState::CloseRequest;
 	}
 
 	for (auto it : sp::flags(_state)) {
@@ -453,6 +460,19 @@ void AppWindow::propagateInputEvent(core::InputEventData &event) {
 
 void AppWindow::propagateTextInput(TextInputState &state) {
 	_director->getTextInputManager()->handleInputUpdate(state);
+}
+
+void AppWindow::handleContextStateUpdate(WindowState state) {
+	static constexpr auto FullscreenExclusiveMask =
+			WindowState::Fullscreen | WindowState::Focused | WindowState::Enabled;
+	if (_contextState != state) {
+		auto changes = state ^ _contextState;
+		_contextState = state;
+		if (hasFlag(changes, FullscreenExclusiveMask)
+				&& hasFlagAll(_contextState, FullscreenExclusiveMask)) {
+			_presentationEngine->enableExclusiveFullscreen();
+		}
+	}
 }
 
 } // namespace stappler::xenolith

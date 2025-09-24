@@ -164,7 +164,7 @@ VertexArray::Quad &VertexArray::Quad::setColor(
 	return setColor(SpanView<Color4F>(colors.begin(), colors.size()));
 }
 
-VertexArray::Quad &VertexArray::Quad::drawChar(const font::Metrics &m, char16_t charID,
+VertexArray::Quad &VertexArray::Quad::drawChar(const font::Metrics &m, char32_t charID,
 		int16_t charX, int16_t charY, const Color4B &color, font::TextDecoration, uint16_t face,
 		float layer) {
 

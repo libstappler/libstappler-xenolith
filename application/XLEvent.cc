@@ -25,7 +25,17 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 struct EventBus {
-	EventBus() { bus = Rc<event::Bus>::alloc(); }
+	static void initialize(void *ptr) { reinterpret_cast<EventBus *>(ptr)->init(); }
+	static void terminate(void *ptr) { reinterpret_cast<EventBus *>(ptr)->term(); }
+
+	EventBus() {
+		addInitializer(this, initialize, terminate);
+
+		bus = Rc<event::Bus>::alloc();
+	}
+
+	void init() { }
+	void term() { bus = nullptr; }
 
 	event::BusEventCategory allocateCategory(StringView name) {
 		SPASSERT(bus, "Bus should be initialized");

@@ -290,7 +290,6 @@ enum class InputEventName : uint32_t {
 	KeyReleased,
 	KeyCanceled,
 
-	ScreenUpdate, // ScreenInfo was changed
 	WindowState, // Window allowed actions or key constraints was changed
 	Max,
 };
@@ -326,7 +325,6 @@ static constexpr struct {
 	{InputEventName::KeyReleased, InputEventType::Input, InputEventDataType::Key},
 	{InputEventName::KeyCanceled, InputEventType::Input, InputEventDataType::Key},
 
-	{InputEventName::ScreenUpdate, InputEventType::Custom, InputEventDataType::None},
 	{InputEventName::WindowState, InputEventType::Input, InputEventDataType::Window},
 };
 
@@ -485,9 +483,12 @@ struct SP_PUBLIC InputEventData {
 				return false;
 			}
 			break;
-		default:
-			// bool event
+		case InputEventName::WindowState:
+			if (window.state != r.window.state || window.changes != r.window.changes) {
+				return false;
+			}
 			break;
+		default: break;
 		}
 		return true;
 	}

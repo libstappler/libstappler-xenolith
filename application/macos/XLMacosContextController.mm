@@ -115,6 +115,8 @@ bool MacosContextController::init(NotNull<Context> ctx, ContextConfig &&config) 
 }
 
 int MacosContextController::run(NotNull<ContextContainer> ctx) {
+	_context->handleConfigurationChanged(move(_contextInfo));
+
 	_container = ctx;
 
 	[_appDelegate run];

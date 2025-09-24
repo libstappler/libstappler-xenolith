@@ -58,6 +58,12 @@ bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 	return true;
 }
 
+
+core::SurfaceInfo NativeWindow::getSurfaceOptions(const core::Device &dev,
+		NotNull<core::Surface> surface) const {
+	return surface->getSurfaceOptions(dev, core::FullScreenExclusiveMode::Default, nullptr);
+}
+
 core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&c) const {
 	if (hasFlag(_info->state, WindowState::Fullscreen)
 			|| !hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
@@ -173,14 +179,20 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 
 		// remove fullscreen state
 		if (hasFlag(_info->state, WindowState::Fullscreen)) {
-			cb(setFullscreenState(sp::move(info)));
+			_controller->retainPollDepth();
+			auto st = setFullscreenState(sp::move(info));
+			_controller->releasePollDepth();
+			cb(st);
 		} else {
 			// not in fullsreen
 			cb(Status::Declined);
 		}
 	} else if (info == FullscreenInfo::Current) {
 		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
-			cb(setFullscreenState(sp::move(info)));
+			_controller->retainPollDepth();
+			auto st = setFullscreenState(sp::move(info));
+			_controller->releasePollDepth();
+			cb(st);
 		} else {
 			cb(Status::Declined);
 		}
@@ -212,7 +224,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 				if (info.mode == core::ModeInfo::Current || info.mode == current) {
 					if (!dcm->hasSavedMode()) {
 						// no saved mode - just switch to another monitor
-						cb(setFullscreenState(sp::move(info)));
+						_controller->retainPollDepth();
+						auto st = setFullscreenState(sp::move(info));
+						_controller->releasePollDepth();
+						cb(st);
 						return;
 					} else {
 						// with fullscreen engine, mode for other monitor should not be other then saved-current
@@ -225,7 +240,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 								[this, cb = sp::move(cb), info = sp::move(info),
 										ref = Rc<Ref>(ref)](Status st) mutable {
 							if (st == Status::Ok) {
-								cb(setFullscreenState(sp::move(info)));
+								_controller->retainPollDepth();
+								auto st = setFullscreenState(sp::move(info));
+								_controller->releasePollDepth();
+								cb(st);
 							} else {
 								log::source().error("NativeWindow",
 										"Fail to reset mode for fullscreen: ", st);
@@ -243,7 +261,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 						return;
 					}
 					// unset fullscreen, then set on other monitor with `setModeExclusive`
-					setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+					_controller->retainPollDepth();
+					auto st = setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+					_controller->releasePollDepth();
+					cb(st);
 				}
 			} else {
 				// requested mode-switch for current monitor
@@ -259,7 +280,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 
 					if (!hasSeamlessModeSetting) {
 						// exit from fullscreen before mode switch
-						setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+						_controller->retainPollDepth();
+						auto st = setFullscreenState(FullscreenInfo(FullscreenInfo::None));
+						_controller->releasePollDepth();
+						cb(st);
 					}
 				}
 			}
@@ -268,7 +292,10 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 			// check if requested mode is current
 			if (info.mode == core::ModeInfo::Current || info.mode == current) {
 				// if it is, - just set fullscreen flag
-				cb(setFullscreenState(sp::move(info)));
+				_controller->retainPollDepth();
+				auto st = setFullscreenState(sp::move(info));
+				_controller->releasePollDepth();
+				cb(st);
 				return;
 			}
 			// now - just set mode
@@ -284,7 +311,9 @@ void NativeWindow::setFullscreen(FullscreenInfo &&info, Function<void(Status)> &
 				[this, cb = sp::move(cb), info = sp::move(info), ref = Rc<Ref>(ref)](
 						Status st) mutable {
 			if (st == Status::Ok) {
+				_controller->retainPollDepth();
 				auto status = setFullscreenState(sp::move(info));
+				_controller->releasePollDepth();
 				if (status != Status::Ok && status != Status::Declined) {
 					auto dcm = _controller->getDisplayConfigManager();
 					dcm->restoreMode(nullptr, nullptr);

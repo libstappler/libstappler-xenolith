@@ -26,6 +26,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 Value WindowInfo::encode() const {
 	Value ret;
+	ret.setString(id, "id");
 	ret.setString(title, "title");
 	ret.setValue(
 			Value{

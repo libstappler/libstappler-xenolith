@@ -61,7 +61,7 @@ RangeLineIterator TextLayout::end() const { return _data.end(); }
 auto TextLayout::str(bool filter) const -> WideString {
 	WideString ret;
 	ret.reserve(_data.chars.size());
-	_data.str([&](char16_t ch) { ret.push_back(ch); }, filter);
+	_data.str([&](char32_t ch) { unicode::utf16Encode(ret, ch); }, filter);
 	return ret;
 }
 
@@ -69,7 +69,8 @@ auto TextLayout::str(uint32_t s_start, uint32_t s_end, size_t maxWords, bool ell
 		bool filter) const -> WideString {
 	WideString ret;
 	ret.reserve(s_end - s_start + 2);
-	_data.str([&](char16_t ch) { ret.push_back(ch); }, s_start, s_end, maxWords, ellipsis, filter);
+	_data.str([&](char32_t ch) { unicode::utf16Encode(ret, ch); }, s_start, s_end, maxWords,
+			ellipsis, filter);
 	return ret;
 }
 
@@ -480,13 +481,13 @@ void LabelBase::setOpticalAlignment(bool value) {
 }
 bool LabelBase::isOpticallyAligned() const { return _opticalAlignment; }
 
-void LabelBase::setFillerChar(char16_t c) {
+void LabelBase::setFillerChar(char32_t c) {
 	if (c != _fillerChar) {
 		_fillerChar = c;
 		setLabelDirty();
 	}
 }
-char16_t LabelBase::getFillerChar() const { return _fillerChar; }
+char32_t LabelBase::getFillerChar() const { return _fillerChar; }
 
 void LabelBase::setLocaleEnabled(bool value) {
 	if (_localeEnabled != value) {

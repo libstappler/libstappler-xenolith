@@ -51,7 +51,8 @@ struct DependencyRequest : public Ref {
 };
 
 struct Loop::Internal final : memory::AllocPool {
-	Internal(memory::pool_t *pool, Loop *l) : pool(pool), loop(l) { }
+	Internal(memory::pool_t *pool, Loop *l)
+	: pool(pool), loop(l), instance(static_cast<Instance *>(l->getInstance())) { }
 
 	void setDevice(Rc<Device> &&dev) {
 		device = move(dev);
@@ -112,24 +113,21 @@ struct Loop::Internal final : memory::AllocPool {
 
 		defaultFences.clear();
 		swapchainFences.clear();
-		transferQueue = nullptr;
-		renderQueueCompiler = nullptr;
-		materialQueue = nullptr;
-		meshQueue = nullptr;
 		device->end();
 		device = nullptr;
+		instance = nullptr;
 	}
 
-	void update() {
+	void update(bool lockfree = true) {
 		auto it = scheduledFences.begin();
 		while (it != scheduledFences.end()) {
-			if ((*it)->check(*loop, true)) {
+			if ((*it)->check(*loop, lockfree)) {
 				it = scheduledFences.erase(it);
 			}
 		}
 
 #if XL_VK_PAUSE_TIMER
-		if (scheduledFences.empty()) {
+		if (updateTimerHandle && scheduledFences.empty()) {
 			updateTimerHandle->pause();
 		}
 #endif
@@ -266,6 +264,11 @@ struct Loop::Internal final : memory::AllocPool {
 	}
 
 	void scheduleFence(Rc<Fence> &&fence) {
+		if (!_running) {
+			fence->check(*loop, false);
+			return;
+		}
+
 		if (auto handle = fence->exportFence(*loop, nullptr)) {
 			loop->getLooper()->performHandle(handle);
 		} else {
@@ -292,6 +295,7 @@ struct Loop::Internal final : memory::AllocPool {
 
 	Mutex resourceMutex;
 
+	Rc<Instance> instance;
 	Rc<Device> device;
 	Vector<Rc<Fence>> defaultFences;
 	Vector<Rc<Fence>> swapchainFences;
@@ -307,6 +311,29 @@ struct Loop::Internal final : memory::AllocPool {
 	Vector<Rc<TransferResource>> _tmpResources;
 	Vector<Pair<Rc<core::MaterialInputData>, Vector<Rc<DependencyEvent>>>> _tmpMaterials;
 };
+
+Loop::~Loop() {
+	_looper->performOnThread([internal = _internal, frameCache = _frameCache] {
+		internal->_running = false;
+
+		if (frameCache) {
+			frameCache->invalidate();
+		}
+
+		internal->waitIdle();
+		internal->endDevice();
+
+		auto mempool = internal->pool;
+
+		delete internal;
+
+		if (frameCache) {
+			frameCache->invalidate();
+		}
+
+		memory::pool::destroy(mempool);
+	}, nullptr);
+}
 
 bool Loop::init(NotNull<event::Looper> looper, NotNull<core::Instance> instance,
 		Rc<LoopInfo> &&info) {
@@ -349,43 +376,52 @@ void Loop::run() {
 		_internal->updateTimerHandle = _looper->scheduleTimer(event::TimerInfo{
 			.completion = event::TimerInfo::Completion::create<Loop>(this,
 					[](Loop *loop, event::TimerHandle *, uint32_t valuu, Status status) {
-			loop->_internal->update();
-			loop->_frameCache->clear();
+			if (loop->_internal) {
+				loop->_internal->update();
+			}
+			if (loop->_frameCache) {
+				loop->_frameCache->clear();
+			}
 		}),
 			.interval = TimeInterval::microseconds(config::PresentationSchedulerInterval),
 			.count = event::TimerInfo::Infinite});
+		_internal->updateTimerHandle->setUserdata(this);
 	}, this, true);
 }
 
 void Loop::stop() {
 	_looper->performOnThread([&] {
 		_internal->_running = false;
+		_internal->waitIdle();
+
+		_internal->update(false);
 
 		_internal->updateTimerHandle->cancel();
 		_internal->updateTimerHandle = nullptr;
 
-		if (_frameCache) {
-			_frameCache->invalidate();
+		_internal->transferQueue = nullptr;
+		_internal->renderQueueCompiler = nullptr;
+		_internal->materialQueue = nullptr;
+		_internal->meshQueue = nullptr;
+
+		_internal->defaultFences.clear();
+		_internal->swapchainFences.clear();
+
+#if SP_REF_DEBUG
+		if (_internal->loop->getReferenceCount() > 1) {
+			_internal->loop->foreachBacktrace(
+					[](uint64_t id, Time time, const std::vector<std::string> &backtrace) {
+				StringStream out;
+				out << id << ": " << time.toHttp<Interface>() << ":\n";
+				for (auto &it : backtrace) { out << "\t" << it << "\n"; }
+				log::debug("Contexnt", "Loop refs:\n", out.str());
+			});
 		}
-
-		_internal->waitIdle();
-		_internal->endDevice();
-
-		auto mempool = _internal->pool;
-
-		delete _internal;
-		_internal = nullptr;
-
-		if (_frameCache) {
-			_frameCache->invalidate();
-			_frameCache = nullptr;
-		}
-
-		memory::pool::destroy(mempool);
+#endif
 	}, this);
 }
 
-bool Loop::isRunning() const { return _internal->_running; }
+bool Loop::isRunning() const { return _internal && _internal->_running; }
 
 void Loop::compileResource(Rc<core::Resource> &&req, Function<void(bool)> &&cb,
 		bool preload) const {
@@ -521,7 +557,7 @@ void Loop::releaseImage(Rc<ImageStorage> &&image) {
 
 Rc<core::Semaphore> Loop::makeSemaphore() { return _internal->device->makeSemaphore(); }
 
-core::ImageFormat Loop::getCommonFormat() const { return _internal->device->getCommonFormat(); }
+core::ImageFormat Loop::getCommonFormat() const { return _info->defaultFormat; }
 
 SpanView<core::ImageFormat> Loop::getSupportedDepthStencilFormat() const {
 	return _internal->device->getSupportedDepthStencilFormat();

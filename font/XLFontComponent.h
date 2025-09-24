@@ -65,7 +65,7 @@ public:
 	virtual void handleStart(Context *) override;
 	virtual void handleStop(Context *) override;
 
-	virtual void handleLowMemory(Context *a) override;
+	virtual void handleSystemNotification(Context *a, SystemNotification) override;
 
 	virtual void update();
 

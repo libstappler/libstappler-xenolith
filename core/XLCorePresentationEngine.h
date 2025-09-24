@@ -43,7 +43,7 @@ public:
 
 	virtual ImageInfo getSwapchainImageInfo(const SwapchainConfig &cfg) const = 0;
 	virtual ImageViewInfo getSwapchainImageViewInfo(const ImageInfo &image) const = 0;
-	virtual SurfaceInfo getSurfaceOptions(SurfaceInfo &&) const = 0;
+	virtual SurfaceInfo getSurfaceOptions(const Device &, NotNull<Surface>) const = 0;
 
 	virtual SwapchainConfig selectConfig(const SurfaceInfo &, bool fastMode) = 0;
 
@@ -153,6 +153,8 @@ public:
 
 	bool isRunning() const;
 
+	void enableExclusiveFullscreen();
+
 	virtual bool handleFrameStarted(NotNull<PresentationFrame>);
 	virtual void handleFrameInvalidated(NotNull<PresentationFrame>);
 	virtual void handleFrameReady(NotNull<PresentationFrame>);
@@ -162,9 +164,10 @@ public:
 	virtual void captureScreenshot(Function<void(const ImageInfoData &info, BytesView view)> &&cb);
 
 protected:
-#if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const override { return true; }
-#endif
+	// Uncomment to track retain/release cycles
+	//#if SP_REF_DEBUG
+	//	virtual bool isRetainTrackerEnabled() const override { return true; }
+	//#endif
 
 	virtual void acquireFrameData(NotNull<PresentationFrame>,
 			Function<void(NotNull<PresentationFrame>)> &&);
@@ -241,6 +244,7 @@ protected:
 	bool _waitForDisplayLink = false;
 	bool _swapchainRecreationScheduled = false;
 	bool _liveResizeEnabled = false;
+	bool _exclusiveFullscreenAvailable = false;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;
