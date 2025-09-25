@@ -167,10 +167,6 @@ bool MacosWindow::close() {
 
 void MacosWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) { }
 
-core::SurfaceInfo MacosWindow::getSurfaceOptions(core::SurfaceInfo &&info) const {
-	return sp::move(info);
-}
-
 core::FrameConstraints MacosWindow::exportConstraints(core::FrameConstraints &&c) const {
 	core::FrameConstraints constraints = NativeWindow::exportConstraints(sp::move(c));
 

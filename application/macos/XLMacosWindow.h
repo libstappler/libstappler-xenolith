@@ -48,8 +48,6 @@ public:
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
 
-	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const override;
-
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
 
 	virtual Extent2 getExtent() const override;

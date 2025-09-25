@@ -427,9 +427,9 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 	if (nw_path_uses_interface_type(path, nw_interface_type_wired)) {
 		flags |= NSXL::NetworkFlags::Wired;
 	} else if (nw_path_uses_interface_type(path, nw_interface_type_wifi)) {
-		flags |= NSXL::NetworkFlags::Wireless;
+		flags |= NSXL::NetworkFlags::WLAN;
 	} else if (nw_path_uses_interface_type(path, nw_interface_type_cellular)) {
-		flags |= NSXL::NetworkFlags::Wireless;
+		flags |= NSXL::NetworkFlags::WWAN;
 	}
 
 	if (nw_path_is_expensive(path)) {
@@ -482,8 +482,7 @@ Rc<core::Instance> MacosContextController::loadInstance() {
 
 		_themeInfo.cursorSize = 24;
 		_themeInfo.colorScheme = color;
-		_themeInfo.iconTheme = r.str<NSXL::Interface>();
-		_themeInfo.cursorTheme = r.str<NSXL::Interface>();
+		_themeInfo.systemTheme = r.str<NSXL::Interface>();
 		_themeInfo.doubleClickInterval = 1'000'000 * [NSEvent doubleClickInterval];
 
 		_controller->handleThemeInfoChanged(_themeInfo);
