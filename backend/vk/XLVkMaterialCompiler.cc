@@ -186,6 +186,11 @@ void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInp
 	}
 }
 
+void MaterialCompiler::appendRequest(const MaterialAttachment *a, Rc<MaterialInputData> &&input,
+		SpanView<Rc<core::DependencyEvent>> deps) {
+	appendRequest(a, sp::move(input), deps.vec<Interface>());
+}
+
 void MaterialCompiler::clearRequests() { _requests.clear(); }
 
 auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input,
@@ -194,6 +199,11 @@ auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input,
 	req->addInput(_attachment, move(input));
 	req->addSignalDependencies(sp::move(deps));
 	return req;
+}
+
+auto MaterialCompiler::makeRequest(Rc<MaterialInputData> &&input,
+		SpanView<Rc<core::DependencyEvent>> deps) -> Rc<FrameRequest> {
+	return makeRequest(sp::move(input), deps.vec<Interface>());
 }
 
 void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<MaterialInputData> &&req,
@@ -232,6 +242,11 @@ void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<Material
 		}
 	});
 	h->update(true);
+}
+
+void MaterialCompiler::runMaterialCompilationFrame(core::Loop &loop, Rc<MaterialInputData> &&req,
+		SpanView<Rc<core::DependencyEvent>> deps) {
+	runMaterialCompilationFrame(loop, sp::move(req), deps.vec<Interface>());
 }
 
 auto MaterialCompilationAttachment::makeFrameHandle(const FrameQueue &handle)

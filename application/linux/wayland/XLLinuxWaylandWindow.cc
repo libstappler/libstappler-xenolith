@@ -42,14 +42,6 @@
 
 #include <linux/input.h>
 
-#ifndef XL_WAYLAND_LOG
-#if XL_WAYLAND_DEBUG
-#define XL_WAYLAND_LOG(...) log::source().debug("Wayland", __VA_ARGS__)
-#else
-#define XL_WAYLAND_LOG(...)
-#endif
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // clang-format off
@@ -277,7 +269,8 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 
 	bool surfacesDirty = configureDecorations(_commitedExtent);
 
-	if (_configureSerial != maxOf<uint32_t>()) {
+	if (_configureSerial != maxOf<uint32_t>()
+			&& (_awaitingExtent == Extent2(0, 0) || _awaitingExtent == _commitedExtent)) {
 		if (_toplevel) {
 			// TODO: configure it the right way
 			_wayland->xdg_toplevel_set_min_size(_toplevel, DecorWidth * 2 + IconSize * 3,
@@ -355,7 +348,9 @@ core::FrameConstraints WaylandWindow::exportConstraints(core::FrameConstraints &
 	return move(ret);
 }
 
-core::SurfaceInfo WaylandWindow::getSurfaceOptions(core::SurfaceInfo &&info) const {
+core::SurfaceInfo WaylandWindow::getSurfaceOptions(const core::Device &dev,
+		NotNull<core::Surface> surface) const {
+	auto info = NativeWindow::getSurfaceOptions(dev, surface);
 	info.currentExtent = _currentExtent;
 	if (_density != 0.0f) {
 		info.currentExtent.width *= _density;
@@ -404,6 +399,14 @@ void WaylandWindow::handleSurfaceEnter(wl_surface *surface, wl_output *output) {
 		_activeOutputs.emplace(out);
 		XL_WAYLAND_LOG("handleSurfaceEnter: output: ", out->description());
 	}
+
+	uint32_t rate = 60'000;
+	for (auto &it : _activeOutputs) { rate = std::max(rate, uint32_t(it->currentMode.rate)); }
+
+	if (rate != _frameRate) {
+		_frameRate = rate;
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
+	}
 }
 
 void WaylandWindow::handleSurfaceLeave(wl_surface *surface, wl_output *output) {
@@ -415,6 +418,14 @@ void WaylandWindow::handleSurfaceLeave(wl_surface *surface, wl_output *output) {
 	if (out) {
 		_activeOutputs.erase(out);
 		XL_WAYLAND_LOG("handleSurfaceLeave: output: ", out->description());
+	}
+
+	uint32_t rate = 60'000;
+	for (auto &it : _activeOutputs) { rate = std::max(rate, uint32_t(it->currentMode.rate)); }
+
+	if (rate != _frameRate) {
+		_frameRate = rate;
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 	}
 }
 
@@ -446,9 +457,11 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 		int32_t height, wl_array *states) {
 
 	StringStream stream;
-	stream << "handleToplevelConfigure: width: " << width << ", height: " << height << ";";
+	stream << "handleToplevelConfigure" << (!states ? "(syntetic)" : "") << " width: " << width
+		   << ", height: " << height << ";";
 
 	bool hasModeSwitch = false;
+	bool unfullscreen = false;
 
 	if (states) {
 		WindowState mask = WindowState::Maximized | WindowState::Fullscreen | WindowState::Resizing
@@ -490,9 +503,23 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 		if (hasFlag(state, WindowState::Fullscreen)
 				!= hasFlag(_info->state, WindowState::Fullscreen)) {
 			hasModeSwitch = true;
+			if (!hasFlag(state, WindowState::Fullscreen)) {
+				unfullscreen = true;
+			}
 		}
 
+		stream << state << " ";
+
 		updateState(_configureSerial, (_info->state & ~mask) | state);
+	}
+
+	if (unfullscreen && !_activeOutputs.empty()) {
+		auto extent = (*_activeOutputs.begin())->currentMode.size;
+		if (extent.width == uint32_t(width) && extent.height == uint32_t(height)) {
+			log::error("Wayland", "Unfullscreen failed, restore saved params");
+			width = _savedExtent.width;
+			height = _savedExtent.height;
+		}
 	}
 
 	auto checkVisible = [&, this](WaylandDecorationName name) {
@@ -568,7 +595,6 @@ void WaylandWindow::handleToplevelConfigure(xdg_toplevel *xdg_toplevel, int32_t 
 	}
 
 	if (width && height && _commitedExtent.width && _commitedExtent.height) {
-		// only for
 		if (!_clientDecor && !_serverDecor && !hasFlag(_info->state, WindowState::Fullscreen)
 				&& !hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
 			height -= (DecorInset + DecorOffset);
@@ -1391,17 +1417,7 @@ void WaylandWindow::handleKeyRepeat() {
 	for (auto &it : events) { _pendingEvents.emplace_back(it); }
 }
 
-void WaylandWindow::notifyScreenChange() {
-	XL_WAYLAND_LOG("notifyScreenChange");
-	core::InputEventData event =
-			core::InputEventData::BoolEvent(core::InputEventName::ScreenUpdate, true);
-
-	_pendingEvents.emplace_back(event);
-
-	if (!_controller.get_cast<LinuxContextController>()->isWithinPoll()) {
-		dispatchPendingEvents();
-	}
-}
+void WaylandWindow::notifyScreenChange() { XL_WAYLAND_LOG("notifyScreenChange"); }
 
 void WaylandWindow::motifyThemeChanged(const ThemeInfo &theme) {
 	if (theme.colorScheme == "dark" || theme.colorScheme == "prefer-dark") {
@@ -1580,6 +1596,7 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 	} else {
 		if (info == FullscreenInfo::Current) {
 			if (!hasFlag(_info->state, WindowState::Fullscreen)) {
+				_savedExtent = _currentExtent;
 				auto current = (*_activeOutputs.begin());
 				if (_toplevel) {
 					_wayland->xdg_toplevel_set_fullscreen(_toplevel, current->output);
@@ -1604,6 +1621,10 @@ Status WaylandWindow::setFullscreenState(FullscreenInfo &&info) {
 				return Status::Ok;
 			}
 			return Status::Declined;
+		}
+
+		if (!hasFlag(_info->state, WindowState::Fullscreen)) {
+			_savedExtent = _currentExtent;
 		}
 
 		// find target output

@@ -72,12 +72,13 @@ struct Loop::Internal final : memory::AllocPool {
 				if (!_running.load()) {
 					return;
 				}
-
-				for (auto &it : _tmpResources) {
-					auto h = loop->makeFrame(transferQueue->makeRequest(sp::move(it)), 0);
-					h->update(true);
-				}
-				_tmpResources.clear();
+				mem_pool::perform([&] {
+					for (auto &it : _tmpResources) {
+						auto h = loop->makeFrame(transferQueue->makeRequest(sp::move(it)), 0);
+						h->update(true);
+					}
+					_tmpResources.clear();
+				}, pool);
 			}, loop, true);
 		});
 		compileQueue(materialQueue, [this](bool success) {
@@ -90,18 +91,20 @@ struct Loop::Internal final : memory::AllocPool {
 					return;
 				}
 
-				for (auto &req : _tmpMaterials) {
-					if (materialQueue->inProgress(req.first->attachment)) {
-						materialQueue->appendRequest(req.first->attachment, sp::move(req.first),
-								sp::move(req.second));
-					} else {
-						auto attachment = req.first->attachment;
-						materialQueue->setInProgress(attachment);
-						materialQueue->runMaterialCompilationFrame(*loop, sp::move(req.first),
-								sp::move(req.second));
+				mem_pool::perform([&] {
+					for (auto &req : _tmpMaterials) {
+						if (materialQueue->inProgress(req.first->attachment)) {
+							materialQueue->appendRequest(req.first->attachment, sp::move(req.first),
+									sp::move(req.second));
+						} else {
+							auto attachment = req.first->attachment;
+							materialQueue->setInProgress(attachment);
+							materialQueue->runMaterialCompilationFrame(*loop, sp::move(req.first),
+									sp::move(req.second));
+						}
 					}
-				}
-				_tmpMaterials.clear();
+					_tmpMaterials.clear();
+				}, pool);
 			}, loop, true);
 		});
 	}
@@ -151,7 +154,7 @@ struct Loop::Internal final : memory::AllocPool {
 			}
 
 			if (!transferQueue->isCompiled()) {
-				_tmpResources.emplace_back(move(req));
+				mem_pool::perform([&] { _tmpResources.emplace_back(move(req)); }, pool);
 			} else {
 				auto h = loop->makeFrame(transferQueue->makeRequest(sp::move(req)), 0);
 				h->update(true);
@@ -187,18 +190,22 @@ struct Loop::Internal final : memory::AllocPool {
 			if (!_running.load()) {
 				return;
 			}
-			if (!materialQueue->isCompiled()) {
-				_tmpMaterials.emplace_back(move(req), sp::move(deps));
-			} else {
-				if (materialQueue->inProgress(req->attachment)) {
-					materialQueue->appendRequest(req->attachment, sp::move(req), sp::move(deps));
+			mem_pool::perform([&] {
+				if (!materialQueue->isCompiled()) {
+					_tmpMaterials.emplace_back(move(req),
+							mem_pool::Vector<Rc<DependencyEvent>>(deps.begin(), deps.end()));
 				} else {
-					auto attachment = req->attachment;
-					materialQueue->setInProgress(attachment);
-					materialQueue->runMaterialCompilationFrame(*loop, sp::move(req),
-							sp::move(deps));
+					if (materialQueue->inProgress(req->attachment)) {
+						materialQueue->appendRequest(req->attachment, sp::move(req),
+								sp::move(deps));
+					} else {
+						auto attachment = req->attachment;
+						materialQueue->setInProgress(attachment);
+						materialQueue->runMaterialCompilationFrame(*loop, sp::move(req),
+								sp::move(deps));
+					}
 				}
-			}
+			}, pool);
 		}, loop, true);
 	}
 
@@ -225,42 +232,45 @@ struct Loop::Internal final : memory::AllocPool {
 					}
 					++iit.first;
 				}
-
-				dependencyRequests.erase(tmp.first, tmp.second);
+				mem_pool::perform([&] { dependencyRequests.erase(tmp.first, tmp.second); }, pool);
 			}
 		}
 	}
 
 	void waitForDependencies(Vector<Rc<DependencyEvent>> &&events, Function<void(bool)> &&cb) {
+		mem_pool::perform([&] {
 #if XL_VK_DEPS_DEBUG
-		StringStream str;
-		str << "waitForDependencies:";
-		for (auto &it : events) { str << " " << it->getId(); }
-		log::source().debug("vk::Loop", "Wait: ", str.str());
+			StringStream str;
+			str << "waitForDependencies:";
+			for (auto &it : events) { str << " " << it->getId(); }
+			log::source().debug("vk::Loop", "Wait: ", str.str());
 #endif
 
-		auto req = Rc<DependencyRequest>::alloc();
-		req->events = sp::move(events);
-		req->callback = sp::move(cb);
-		req->initial = sp::platform::clock(ClockType::Monotonic);
+			auto req = Rc<DependencyRequest>::alloc();
+			req->events = sp::move(events);
+			req->callback = sp::move(cb);
+			req->initial = sp::platform::clock(ClockType::Monotonic);
 
-		for (auto &it : req->events) {
-			if (it->isSignaled()) {
-				if (!it->isSuccessful()) {
-					req->success = false;
+			mem_pool::perform([&] {
+				for (auto &it : req->events) {
+					if (it->isSignaled()) {
+						if (!it->isSuccessful()) {
+							req->success = false;
+						}
+						++req->signaled;
+					} else {
+						dependencyRequests.emplace(it.get(), req);
+					}
 				}
-				++req->signaled;
-			} else {
-				dependencyRequests.emplace(it.get(), req);
-			}
-		}
+			}, pool);
 
-		if (req->signaled == req->events.size()) {
+			if (req->signaled == req->events.size()) {
 #if XL_VK_DEPS_DEBUG
-			log::source().debug("vk::Loop", "Run: ", str.str());
+				log::source().debug("vk::Loop", "Run: ", str.str());
 #endif
-			req->callback(req->success);
-		}
+				req->callback(req->success);
+			}
+		}, pool);
 	}
 
 	void scheduleFence(Rc<Fence> &&fence) {
@@ -280,10 +290,11 @@ struct Loop::Internal final : memory::AllocPool {
 				}
 #endif
 			}
-			scheduledFences.emplace(move(fence));
+			mem_pool::perform([&] { scheduledFences.emplace(move(fence)); }, pool);
 		}
 	}
 
+	memory::allocator_t *alloc = nullptr;
 	memory::pool_t *pool = nullptr;
 
 	Loop *loop = nullptr;
@@ -297,9 +308,9 @@ struct Loop::Internal final : memory::AllocPool {
 
 	Rc<Instance> instance;
 	Rc<Device> device;
-	Vector<Rc<Fence>> defaultFences;
-	Vector<Rc<Fence>> swapchainFences;
-	Set<Rc<Fence>> scheduledFences;
+	mem_pool::Vector<Rc<Fence>> defaultFences;
+	mem_pool::Vector<Rc<Fence>> swapchainFences;
+	mem_pool::Set<Rc<Fence>> scheduledFences;
 
 	Rc<RenderQueueCompiler> renderQueueCompiler;
 	Rc<TransferQueue> transferQueue;
@@ -308,8 +319,9 @@ struct Loop::Internal final : memory::AllocPool {
 
 	std::atomic<bool> _running = true;
 
-	Vector<Rc<TransferResource>> _tmpResources;
-	Vector<Pair<Rc<core::MaterialInputData>, Vector<Rc<DependencyEvent>>>> _tmpMaterials;
+	mem_pool::Vector<Rc<TransferResource>> _tmpResources;
+	mem_pool::Vector<Pair<Rc<core::MaterialInputData>, mem_pool::Vector<Rc<DependencyEvent>>>>
+			_tmpMaterials;
 };
 
 Loop::~Loop() {
@@ -323,6 +335,7 @@ Loop::~Loop() {
 		internal->waitIdle();
 		internal->endDevice();
 
+		auto memalloc = internal->alloc;
 		auto mempool = internal->pool;
 
 		delete internal;
@@ -332,6 +345,7 @@ Loop::~Loop() {
 		}
 
 		memory::pool::destroy(mempool);
+		memory::allocator::destroy(memalloc);
 	}, nullptr);
 }
 
@@ -342,30 +356,35 @@ bool Loop::init(NotNull<event::Looper> looper, NotNull<core::Instance> instance,
 	}
 
 	looper->performOnThread([&] {
-		auto pool = memory::pool::create(_looper->getThreadMemPool());
+		auto alloc = memory::allocator::create();
+		auto pool = memory::pool::create(alloc);
 
-		_internal = new (pool) vk::Loop::Internal(pool, this);
-		_internal->pool = pool;
-		_internal->info = _info;
+		mem_pool::perform([&] {
+			_internal = new (pool) vk::Loop::Internal(pool, this);
+			_internal->alloc = alloc;
+			_internal->pool = pool;
+			_internal->info = _info;
 
-		if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
-			_internal->setDevice(move(dev));
-			_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
-		} else if (_info->deviceIdx != core::InstanceDefaultDevice) {
-			log::source().warn("vk::Loop", "Unable to create device with index: ", _info->deviceIdx,
-					", fallback to default");
-			_info->deviceIdx = core::InstanceDefaultDevice;
 			if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
 				_internal->setDevice(move(dev));
 				_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
+			} else if (_info->deviceIdx != core::InstanceDefaultDevice) {
+				log::source().warn("vk::Loop",
+						"Unable to create device with index: ", _info->deviceIdx,
+						", fallback to default");
+				_info->deviceIdx = core::InstanceDefaultDevice;
+				if (auto dev = _instance.get_cast<Instance>()->makeDevice(*_info)) {
+					_internal->setDevice(move(dev));
+					_frameCache = Rc<FrameCache>::create(*this, *_internal->device);
+				} else {
+					log::source().error("vk::Loop", "Unable to create device");
+					return;
+				}
 			} else {
 				log::source().error("vk::Loop", "Unable to create device");
 				return;
 			}
-		} else {
-			log::source().error("vk::Loop", "Unable to create device");
-			return;
-		}
+		}, pool);
 	}, this, true);
 
 	return true;
@@ -391,33 +410,35 @@ void Loop::run() {
 
 void Loop::stop() {
 	_looper->performOnThread([&] {
-		_internal->_running = false;
-		_internal->waitIdle();
+		mem_pool::perform([&] {
+			_internal->_running = false;
+			_internal->waitIdle();
 
-		_internal->update(false);
+			_internal->update(false);
 
-		_internal->updateTimerHandle->cancel();
-		_internal->updateTimerHandle = nullptr;
+			_internal->updateTimerHandle->cancel();
+			_internal->updateTimerHandle = nullptr;
 
-		_internal->transferQueue = nullptr;
-		_internal->renderQueueCompiler = nullptr;
-		_internal->materialQueue = nullptr;
-		_internal->meshQueue = nullptr;
+			_internal->transferQueue = nullptr;
+			_internal->renderQueueCompiler = nullptr;
+			_internal->materialQueue = nullptr;
+			_internal->meshQueue = nullptr;
 
-		_internal->defaultFences.clear();
-		_internal->swapchainFences.clear();
+			_internal->defaultFences.clear();
+			_internal->swapchainFences.clear();
 
 #if SP_REF_DEBUG
-		if (_internal->loop->getReferenceCount() > 1) {
-			_internal->loop->foreachBacktrace(
-					[](uint64_t id, Time time, const std::vector<std::string> &backtrace) {
-				StringStream out;
-				out << id << ": " << time.toHttp<Interface>() << ":\n";
-				for (auto &it : backtrace) { out << "\t" << it << "\n"; }
-				log::debug("Contexnt", "Loop refs:\n", out.str());
-			});
-		}
+			if (_internal->loop->getReferenceCount() > 1) {
+				_internal->loop->foreachBacktrace(
+						[](uint64_t id, Time time, const std::vector<std::string> &backtrace) {
+					StringStream out;
+					out << id << ": " << time.toHttp<Interface>() << ":\n";
+					for (auto &it : backtrace) { out << "\t" << it << "\n"; }
+					log::debug("Contexnt", "Loop refs:\n", out.str());
+				});
+			}
 #endif
+		}, _internal->pool);
 	}, this);
 }
 

@@ -23,7 +23,6 @@
 **/
 
 #include "XLVkInstance.h"
-#include "SPGeometry.h"
 #include "SPMemory.h"
 #include "XLVk.h"
 #include "XLVkInfo.h"
@@ -375,6 +374,11 @@ core::SurfaceInfo Instance::getSurfaceOptions(VkSurfaceKHR surface, VkPhysicalDe
 		fullScreenWin32.pNext = (void *)info.pNext;
 		info.pNext = &fullScreenInfo;
 	}
+#endif
+
+#if !defined(VK_EXT_full_screen_exclusive)
+	void (*vkGetPhysicalDeviceSurfacePresentModes2EXT)(VkPhysicalDevice,
+			VkPhysicalDeviceSurfaceInfo2KHR *, uint32_t *, VkPresentModeKHR *) = nullptr;
 #endif
 
 	const bool usePresentModes2 = fullscreenMode != core::FullScreenExclusiveMode::Default

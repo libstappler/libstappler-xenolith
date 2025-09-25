@@ -23,7 +23,6 @@
 #include "XLLinuxDBusController.h"
 #include "SPBytesReader.h"
 #include "SPMemInterface.h"
-#include "SPSpanView.h"
 #include "SPStatus.h"
 #include "SPString.h"
 #include "SPEventLooper.h"
@@ -32,35 +31,35 @@
 #include "dbus/dbus.h"
 #include "linux/dbus/XLLinuxDBusLibrary.h"
 #include "linux/XLLinuxContextController.h"
-#include "linux/xcb/XLLinuxXcbConnection.h"
 #include "XLLinuxDBusGnome.h"
 #include "XLLinuxDBusKde.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform::dbus {
 
-static constexpr auto NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
-static constexpr auto NM_SERVICE_CONNECTION_NAME =
+SP_UNUSED static constexpr auto NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
+SP_UNUSED static constexpr auto NM_SERVICE_CONNECTION_NAME =
 		"org.freedesktop.NetworkManager.Connection.Active";
-static constexpr auto NM_SERVICE_VPN_NAME = "org.freedesktop.NetworkManager.VPN.Plugin";
-static constexpr auto NM_SERVICE_FILTER =
+SP_UNUSED static constexpr auto NM_SERVICE_VPN_NAME = "org.freedesktop.NetworkManager.VPN.Plugin";
+SP_UNUSED static constexpr auto NM_SERVICE_FILTER =
 		"type='signal',interface='org.freedesktop.NetworkManager'";
-static constexpr auto NM_SERVICE_CONNECTION_FILTER =
+SP_UNUSED static constexpr auto NM_SERVICE_CONNECTION_FILTER =
 		"type='signal',interface='org.freedesktop.NetworkManager.Connection.Active'";
-static constexpr auto NM_SERVICE_VPN_FILTER =
+SP_UNUSED static constexpr auto NM_SERVICE_VPN_FILTER =
 		"type='signal',interface='org.freedesktop.NetworkManager.VPN.Plugin'";
-static constexpr auto NM_SERVICE_PATH = "/org/freedesktop/NetworkManager";
-static constexpr auto NM_SIGNAL_STATE_CHANGED = "StateChanged";
-static constexpr auto NM_SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
+SP_UNUSED static constexpr auto NM_SERVICE_PATH = "/org/freedesktop/NetworkManager";
+SP_UNUSED static constexpr auto NM_SIGNAL_STATE_CHANGED = "StateChanged";
+SP_UNUSED static constexpr auto NM_SIGNAL_PROPERTIES_CHANGED = "PropertiesChanged";
 
-static constexpr auto DESKTOP_PORTAL_SERVICE_NAME = "org.freedesktop.portal.Desktop";
-static constexpr auto DESKTOP_PORTAL_SERVICE_PATH = "/org/freedesktop/portal/desktop";
-static constexpr auto DESKTOP_PORTAL_SETTINGS_INTERFACE = "org.freedesktop.portal.Settings";
-static constexpr auto DESKTOP_PORTAL_SERVICE_FILTER =
+SP_UNUSED static constexpr auto DESKTOP_PORTAL_SERVICE_NAME = "org.freedesktop.portal.Desktop";
+SP_UNUSED static constexpr auto DESKTOP_PORTAL_SERVICE_PATH = "/org/freedesktop/portal/desktop";
+SP_UNUSED static constexpr auto DESKTOP_PORTAL_SETTINGS_INTERFACE =
+		"org.freedesktop.portal.Settings";
+SP_UNUSED static constexpr auto DESKTOP_PORTAL_SERVICE_FILTER =
 		"type='signal',interface='org.freedesktop.portal.Settings'";
 
-static constexpr auto GNOME_DISPLAY_CONFIG_SERVICE = "org.gnome.Mutter.DisplayConfig";
+SP_UNUSED static constexpr auto GNOME_DISPLAY_CONFIG_SERVICE = "org.gnome.Mutter.DisplayConfig";
 
-static constexpr auto KSCREEN_SERVICE = "org.kde.KScreen";
+SP_UNUSED static constexpr auto KSCREEN_SERVICE = "org.kde.KScreen";
 
 Controller::Controller(NotNull< Library> dbus, NotNull<event::Looper> looper,
 		NotNull<LinuxContextController> c) {
@@ -285,9 +284,9 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 		_looper->performOnThread([c]() { c->dispatchAll(); }, c, true);
 		break;
 	case dbus::Event::Wakeup:
-		_looper->performOnThread([c]() {
+		/*_looper->performOnThread([c]() {
 			//c->flush();
-		}, c, true);
+		}, c, true);*/
 		break;
 	case dbus::Event::Connected:
 		if (c == _systemBus) {
@@ -320,7 +319,7 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 
 void Controller::updateNetworkState() {
 	_systemBus->callMethod(NM_SERVICE_NAME, NM_SERVICE_PATH, "org.freedesktop.DBus.Properties",
-			"GetAll", [this](WriteIterator &iter) { iter.add(NM_SERVICE_NAME); },
+			"GetAll", [](WriteIterator &iter) { iter.add(NM_SERVICE_NAME); },
 			[this](NotNull<dbus::Connection> c, DBusMessage *reply) {
 		_networkState = NetworkState(_dbus, reply);
 
@@ -336,7 +335,7 @@ void Controller::updateNetworkState() {
 
 void Controller::updateInterfaceTheme() {
 	_sessionBus->callMethod(DESKTOP_PORTAL_SERVICE_NAME, DESKTOP_PORTAL_SERVICE_PATH,
-			DESKTOP_PORTAL_SETTINGS_INTERFACE, "ReadAll", [this](WriteIterator &iter) {
+			DESKTOP_PORTAL_SETTINGS_INTERFACE, "ReadAll", [](WriteIterator &iter) {
 		StringView array[] = {"org.gnome.desktop.interface", "org.gnome.desktop.peripherals.mouse"};
 		iter.add(makeSpanView(array));
 	}, [this](NotNull<dbus::Connection> c, DBusMessage *reply) {
@@ -451,17 +450,17 @@ struct MessageSettingsInfoParser {
 			} else if (prop == "document-font-name") {
 				const char *value = nullptr;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->documentFontName = String(value);
+					//target->documentFontName = String(value);
 				}
 			} else if (prop == "icon-theme") {
 				const char *value = nullptr;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->iconTheme = String(value);
+					//target->iconTheme = String(value);
 				}
 			} else if (prop == "scaling-factor") {
 				uint32_t value = 0;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->scalingFactor = value;
+					target->cursorScalingFactor = value;
 				}
 			} else if (prop == "cursor-size") {
 				int32_t value = 0;
@@ -471,7 +470,7 @@ struct MessageSettingsInfoParser {
 			} else if (prop == "monospace-font-name") {
 				const char *value = nullptr;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->monospaceFontName = String(value);
+					//target->monospaceFontName = String(value);
 				}
 			} else if (prop == "color-scheme") {
 				const char *value = nullptr;
@@ -481,7 +480,7 @@ struct MessageSettingsInfoParser {
 			} else if (prop == "cursor-theme") {
 				const char *value = nullptr;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->cursorTheme = String(value);
+					target->systemTheme = String(value);
 				}
 			} else if (prop == "text-scaling-factor") {
 				float value = 1.0f;
@@ -491,7 +490,7 @@ struct MessageSettingsInfoParser {
 			} else if (prop == "font-name") {
 				const char *value = nullptr;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->defaultFontName = String(value);
+					target->systemFontName = String(value);
 				}
 			} else if (prop == "left-handed") {
 				bool value = false;
@@ -580,7 +579,7 @@ NetworkFlags NetworkState::getFlags() const {
 	} else if (primaryConnectionType == "802-3-ethernet") {
 		ret |= NetworkFlags::Wired;
 	} else if (primaryConnectionType == "802-11-wireless") {
-		ret |= NetworkFlags::Wireless;
+		ret |= NetworkFlags::WLAN;
 	}
 
 	switch (connectivity) {

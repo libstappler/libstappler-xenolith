@@ -208,9 +208,9 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 			_xcbPollHandle = _looper->listenPollableHandle(_xcbConnection->getSocket(),
 					event::PollFlags::In | event::PollFlags::AllowMulti,
 					[this](int fd, event::PollFlags flags) {
-				_withinPoll = true;
+				retainPollDepth();
 				_xcbConnection->poll();
-				_withinPoll = false;
+				releasePollDepth();
 
 				notifyPendingWindows();
 
@@ -229,9 +229,9 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 					_waylandDisplay->flush();
 				}
 				if (hasFlag(flags, event::PollFlags::In)) {
-					_withinPoll = true;
+					retainPollDepth();
 					_waylandDisplay->poll();
-					_withinPoll = false;
+					releasePollDepth();
 				}
 
 				notifyPendingWindows();

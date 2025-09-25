@@ -863,14 +863,10 @@ void XcbWindow::handleSyncRequest(xcb_timestamp_t syncTime, xcb_sync_int64_t val
 void XcbWindow::handleCloseRequest() { _controller->notifyWindowClosed(this); }
 
 void XcbWindow::notifyScreenChange() {
-	core::InputEventData event =
-			core::InputEventData::BoolEvent(core::InputEventName::ScreenUpdate, true);
-
-	_pendingEvents.emplace_back(event);
-	_frameRate = getCurrentFrameRate();
-
-	if (!_controller.get_cast<LinuxContextController>()->isWithinPoll()) {
-		dispatchPendingEvents();
+	auto newFrameRate = getCurrentFrameRate();
+	if (newFrameRate != _frameRate) {
+		_frameRate = newFrameRate;
+		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 	}
 }
 

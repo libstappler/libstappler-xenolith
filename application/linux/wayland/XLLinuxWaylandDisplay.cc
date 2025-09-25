@@ -28,18 +28,6 @@
 
 #include <linux/input.h>
 
-#ifndef XL_WAYLAND_DEBUG
-#define XL_WAYLAND_DEBUG 0
-#endif
-
-#ifndef XL_WAYLAND_LOG
-#if XL_WAYLAND_DEBUG
-#define XL_WAYLAND_LOG(...) log::source().debug("Wayland", __VA_ARGS__)
-#else
-#define XL_WAYLAND_LOG(...)
-#endif
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // clang-format off
@@ -418,7 +406,7 @@ int WaylandDisplay::getFd() const { return wayland->wl_display_get_fd(display); 
 void WaylandDisplay::updateThemeInfo(const ThemeInfo &theme) {
 	if (seat) {
 		if ((seat->capabilities & WL_SEAT_CAPABILITY_POINTER) != 0) {
-			seat->setCursors(theme.cursorTheme, theme.cursorSize);
+			seat->setCursors(theme.systemTheme, theme.cursorSize);
 			seat->doubleClickInterval = theme.doubleClickInterval;
 		}
 	}

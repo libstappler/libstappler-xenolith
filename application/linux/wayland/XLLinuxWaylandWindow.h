@@ -110,7 +110,8 @@ public:
 
 	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&c) const override;
 
-	virtual core::SurfaceInfo getSurfaceOptions(core::SurfaceInfo &&info) const override;
+	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &dev,
+			NotNull<core::Surface> surface) const override;
 
 	virtual Extent2 getExtent() const override;
 
@@ -204,6 +205,7 @@ protected:
 	Extent2 _currentExtent;
 	Extent2 _commitedExtent;
 	Extent2 _awaitingExtent;
+	Extent2 _savedExtent;
 
 	bool _started = false;
 	bool _scheduleNext = false;

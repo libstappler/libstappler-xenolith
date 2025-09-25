@@ -201,6 +201,7 @@ bool SwapchainHandle::init(Device &dev, const core::SurfaceInfo &info,
 }
 
 bool SwapchainHandle::enableExclusiveFullscreen(Device &dev) {
+#if defined(VK_EXT_full_screen_exclusive)
 	if (_config.fullscreenMode == core::FullScreenExclusiveMode::ApplicationControlled) {
 		auto result = dev.getTable()->vkAcquireFullScreenExclusiveModeEXT(dev.getDevice(),
 				_data->swapchain);
@@ -212,6 +213,7 @@ bool SwapchainHandle::enableExclusiveFullscreen(Device &dev) {
 			log::source().error("SwapchainHandle", "Fullscreen exclusive failed");
 		}
 	}
+#endif
 	return false;
 }
 

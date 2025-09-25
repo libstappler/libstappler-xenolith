@@ -24,15 +24,12 @@
 #ifndef XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDLIBRARY_H_
 #define XENOLITH_APPLICATION_LINUX_WAYLAND_XLLINUXWAYLANDLIBRARY_H_
 
-#include "XLContextInfo.h"
-#include "linux/thirdparty/wayland-protocols/kde-output-device-v2.h"
-#include "linux/thirdparty/wayland-protocols/kde-output-order-v1.h"
-#include "linux/thirdparty/wayland-protocols/xdg-decoration.h"
+#include "XLContextInfo.h" // IWYU pragma: keep
 
 #if LINUX
 
 #include "XLLinuxWaylandProtocol.h"
-#include "linux/XLLinuxXkbLibrary.h"
+#include "linux/XLLinuxXkbLibrary.h" // IWYU pragma: keep
 
 #include <wayland-client.h>
 #include <wayland-cursor.h>

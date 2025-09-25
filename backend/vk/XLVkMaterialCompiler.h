@@ -24,8 +24,8 @@
 #ifndef XENOLITH_BACKEND_VK_XLMATERIALCOMPILER_H_
 #define XENOLITH_BACKEND_VK_XLMATERIALCOMPILER_H_
 
-#include "XLVkQueuePass.h"
-#include "XLVkAllocator.h"
+#include "XLVkQueuePass.h" // IWYU pragma: keep
+#include "XLVkAllocator.h" // IWYU pragma: keep
 #include "XLCoreAttachment.h"
 #include "XLCoreMaterial.h"
 
@@ -49,12 +49,18 @@ public:
 	bool hasRequest(const MaterialAttachment *) const;
 	void appendRequest(const MaterialAttachment *, Rc<MaterialInputData> &&,
 			Vector<Rc<core::DependencyEvent>> &&deps);
+	void appendRequest(const MaterialAttachment *, Rc<MaterialInputData> &&,
+			SpanView<Rc<core::DependencyEvent>> deps);
 	void clearRequests();
 
 	Rc<FrameRequest> makeRequest(Rc<MaterialInputData> &&,
 			Vector<Rc<core::DependencyEvent>> &&deps);
+	Rc<FrameRequest> makeRequest(Rc<MaterialInputData> &&,
+			SpanView<Rc<core::DependencyEvent>> deps);
 	void runMaterialCompilationFrame(core::Loop &loop, Rc<MaterialInputData> &&req,
 			Vector<Rc<core::DependencyEvent>> &&deps);
+	void runMaterialCompilationFrame(core::Loop &loop, Rc<MaterialInputData> &&req,
+			SpanView<Rc<core::DependencyEvent>> deps);
 
 protected:
 	using core::Queue::init;

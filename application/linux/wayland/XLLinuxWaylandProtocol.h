@@ -40,6 +40,16 @@
 #include "linux/thirdparty/wayland-protocols/kde-output-management-v2.h" // IWYU pragma: keep
 #include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h" // IWYU pragma: keep
 
+#ifndef XL_WAYLAND_DEBUG
+#define XL_WAYLAND_DEBUG 1
+#endif
+
+#if XL_WAYLAND_DEBUG
+#define XL_WAYLAND_LOG(...) log::source().debug("Wayland", __VA_ARGS__)
+#else
+#define XL_WAYLAND_LOG(...)
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 static const char *s_XenolithWaylandTag = "org.stappler.xenolith.wayland";
