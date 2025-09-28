@@ -376,7 +376,7 @@ public:
 
 	virtual ~GestureMouseOverRecognizer() = default;
 
-	virtual bool init(InputCallback &&, float padding = 0.0f);
+	virtual bool init(InputCallback &&, float padding = 0.0f, bool onlyFocused = true);
 
 	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
@@ -393,6 +393,7 @@ protected:
 	bool _viewHasFocus = false;
 	bool _hasMouseOver = false;
 	bool _value = false;
+	bool _onlyFocused = true;
 	float _padding = 0.0f;
 	InputCallback _callback;
 	InputListener *_listener = nullptr;

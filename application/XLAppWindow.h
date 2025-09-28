@@ -97,11 +97,11 @@ public:
 	void setFrameInterval(uint64_t); // from any thread
 	uint64_t getFrameInterval() const; // from any thread
 
-	// ExitGuard will prevent OS WM to close window on it's side.
-	// If ExitGuard is enabled, when WM or user tries to close window, it remains open and you will receive
+	// CloseGuard will prevent OS WM to close window on it's side.
+	// If CloseGuard is enabled, when WM or user tries to close window, it remains open and you will receive
 	// WindowState notification with CloseRequest flag set.
 	// When CloseRequest flag is set, ypu should commit this request with enableState(WindowState::CloseRequest)
-	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable ExitGuard
+	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable CloseGuard
 	// Also, when CloseRequest flag is set, next `close` call or next WM close action will close this window
 	void retainCloseGuard();
 	void releaseCloseGuard();
@@ -135,6 +135,11 @@ public:
 	bool setFullscreen(FullscreenInfo &&, Function<void(Status)> &&, Ref * = nullptr);
 
 	void captureScreenshot(Function<void(const core::ImageInfoData &info, BytesView view)> &&cb);
+
+	// pos - Location, on which window menu should be opened in presentation (Scene) coords;
+	// Use Vec2::INVALID to open window menu in current pointer location;
+	// WindowState::AlloedWindowMenu should be enabled
+	bool openWindowMenu(Vec2 pos);
 
 protected:
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;

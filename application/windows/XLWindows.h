@@ -27,7 +27,7 @@
 #include "XLCoreTextInput.h"
 #include "SPPlatformUnistd.h"
 
-#define XL_WIN32_DEBUG 1
+#define XL_WIN32_DEBUG 0
 
 #ifndef XL_WIN32_LOG
 #if XL_WIN32_DEBUG

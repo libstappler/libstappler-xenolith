@@ -70,10 +70,6 @@ void WindowsContextController::acquireDefaultConfig(ContextConfig &config, Nativ
 		config.window->flags |= WindowCreationFlags::Regular
 				| WindowCreationFlags::PreferServerSideDecoration
 				| WindowCreationFlags::PreferNativeDecoration;
-
-		config.window->userDecorations.borderRadius = 0.0f;
-		config.window->userDecorations.shadowWidth = 0.0f;
-		config.window->userDecorations.shadowOffset = Vec2(0.0f, 0.0f);
 	}
 }
 
@@ -204,7 +200,9 @@ WindowCapabilities WindowsContextController::getCapabilities() const {
 	return WindowCapabilities::Fullscreen | WindowCapabilities::FullscreenWithMode
 			| WindowCapabilities::FullscreenExclusive
 			| WindowCapabilities::FullscreenSeamlessModeSwitch | WindowCapabilities::CloseGuard
-			| WindowCapabilities::EnabledState;
+			| WindowCapabilities::EnabledState | WindowCapabilities::UserSpaceDecorations
+			| WindowCapabilities::GripGuardsRequired | WindowCapabilities::AllowMoveFromMaximized
+			| WindowCapabilities::DemandsAttentionState;
 }
 
 WindowClass *WindowsContextController::acquuireWindowClass(WideStringView str) {

@@ -131,6 +131,7 @@ struct SP_PUBLIC FrameContextHandle2d : public FrameContextHandle {
 	virtual ~FrameContextHandle2d();
 
 	ShadowLightInput lights;
+	WindowDecorationsInput decorations;
 	Rc<CommandList> commands;
 
 	memory::map<uint64_t, ParticleSystemRenderInfo> particleEmitters;

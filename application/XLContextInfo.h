@@ -148,6 +148,37 @@ private:
 	ContextConfig();
 };
 
+/** DecorationInfo - Data for user-space decoration drawing
+
+On some platforms, application should assist for WM to draw correct rounded corners and shadows
+
+if resizeInset > 0, resizing layers (when WindowState::AllowedResize is set) should be placed inside user window space with
+specified inset (and no other controls under this insets will receive events)
+
+If borderRadius > 0, ronded coners should be drawn by application, actial radius is borderRadius * constraints.surfaceDensity
+
+if userShadows is true, shadows should be drawn under rounded corners, using shadowWidth, shadowCurrentValue and shadowOffset
+*/
+struct SP_PUBLIC DecorationInfo {
+	float resizeInset = 0.0f;
+	float borderRadius = 0.0f;
+	float shadowWidth = 0.0f;
+	float shadowMinValue = 0.1f;
+	float shadowMaxValue = 0.25f;
+	float shadowCurrentValue = 0.3f;
+	Vec2 shadowOffset;
+	bool userShadows = false;
+
+	void decode(const Value &);
+	Value encode() const;
+
+	// check if shadows drawen in user space
+	bool hasShadows() const { return borderRadius > 0.0f || shadowWidth > 0.0f; }
+
+	bool operator==(const DecorationInfo &) const = default;
+	bool operator!=(const DecorationInfo &) const = default;
+};
+
 struct ThemeInfo {
 	static constexpr StringView SchemePreferDark = StringView("prefer-dark");
 	static constexpr StringView SchemePreferLight = StringView("prefer-light");
@@ -157,11 +188,15 @@ struct ThemeInfo {
 	String systemTheme;
 	String systemFontName;
 	int32_t cursorSize = 0;
-	uint32_t cursorScalingFactor = 0;
+	float cursorScaling = 1.0f;
 	float textScaling = 1.0f;
+	float scrollModifier = 1.0f;
 	bool leftHandedMouse = false;
 	uint32_t doubleClickInterval = 500'000; // in microseconds
 
+	DecorationInfo decorations;
+
+	void decode(const Value &);
 	Value encode() const;
 
 	bool operator==(const ThemeInfo &) const = default;

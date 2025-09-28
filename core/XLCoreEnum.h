@@ -915,9 +915,6 @@ enum class ViewConstraints : uint32_t {
 	Bottom = 1 << 2,
 	Right = 1 << 3,
 
-	// View corners is transparent, no need to decorate
-	Transparent = 1 << 4,
-
 	Vertical = Top | Bottom,
 	Horizontal = Left | Right,
 	All = Vertical | Horizontal

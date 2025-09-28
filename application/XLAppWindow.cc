@@ -441,6 +441,14 @@ void AppWindow::captureScreenshot(
 	}, this);
 }
 
+bool AppWindow::openWindowMenu(Vec2 pos) {
+	if (hasFlag(_state, WindowState::AllowedWindowMenu)) {
+		_context->performOnThread([this, pos]() { _window->openWindowMenu(pos); }, this);
+		return true;
+	}
+	return false;
+}
+
 void AppWindow::propagateInputEvent(core::InputEventData &event) {
 	if (event.isPointEvent()) {
 		event.point.density =

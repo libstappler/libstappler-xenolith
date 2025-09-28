@@ -59,6 +59,7 @@ public:
 	uint32_t getLightsCount() const;
 
 	const ShadowData &getShadowData() const { return _shadowData; }
+	const FrameContextHandle2d *getFrameInput() const { return _input; }
 	const Rc<Buffer> &getBuffer() const { return _data; }
 
 protected:

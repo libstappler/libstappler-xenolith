@@ -59,8 +59,19 @@ bool WindowsWindow::init(NotNull<WindowsContextController> c, Rc<WindowInfo> &&i
 
 	RECT rect = {0, 0, long(_info->rect.width), long(_info->rect.height)};
 
-	_currentState.style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX
-			| WS_SYSMENU | WS_CAPTION | WS_THICKFRAME;
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		_currentState.style =
+				WS_MAXIMIZEBOX | WS_SYSMENU | WS_THICKFRAME | WS_CAPTION | WS_CLIPCHILDREN;
+		_currentState.exstyle = WS_EX_APPWINDOW;
+		_info->state |= WindowState::AllowedMove | WindowState::AllowedResize
+				| WindowState::AllowedClose | WindowState::AllowedWindowMenu
+				| WindowState::AllowedMinimize | WindowState::AllowedMaximizeHorz
+				| WindowState::AllowedMaximizeVert | WindowState::AllowedFullscreen;
+	} else {
+		_currentState.style = WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SYSMENU | WS_CAPTION
+				| WS_THICKFRAME | WS_CLIPCHILDREN;
+		_currentState.exstyle = WS_EX_APPWINDOW | WS_EX_OVERLAPPEDWINDOW;
+	}
 
 	_info->state |= WindowState::Enabled;
 
@@ -69,7 +80,7 @@ bool WindowsWindow::init(NotNull<WindowsContextController> c, Rc<WindowInfo> &&i
 	_currentState.position = IVec2(rect.left, rect.top);
 	_currentState.extent = Extent2(rect.right - rect.left, rect.bottom - rect.top);
 
-	_window = CreateWindowExW(0, // Optional window styles.
+	_window = CreateWindowExW(_currentState.exstyle, // Optional window styles.
 			(wchar_t *)_class->getName().data(), // Window class
 			(wchar_t *)_wTitle.data(), // Window text
 			_currentState.style, // Window style
@@ -84,15 +95,32 @@ bool WindowsWindow::init(NotNull<WindowsContextController> c, Rc<WindowInfo> &&i
 
 	if (_window) {
 		SetWindowLongPtrW(_window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-	}
 
-	_density = float(GetDpiForWindow(_window)) / float(USER_DEFAULT_SCREEN_DPI);
+		if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+			// To force-enable rounded corners and shadows - uncomment this
+			/*DWM_WINDOW_CORNER_PREFERENCE pref = DWMWCP_ROUND;
+			if (::DwmSetWindowAttribute(_window, DWMWA_WINDOW_CORNER_PREFERENCE, &pref,
+						sizeof(DWM_WINDOW_CORNER_PREFERENCE))
+					!= S_OK) {
+				log::error("WondowsWindow", "Fail to set DWMWA_WINDOW_CORNER_PREFERENCE");
+			}*/
+
+			RECT rcClient;
+			GetWindowRect(_window, &rcClient);
+
+			SetWindowLongW(_window, GWL_STYLE, _currentState.style);
+			SetWindowPos(_window, 0, rcClient.left, rcClient.top, _currentState.extent.width,
+					_currentState.extent.height, SWP_FRAMECHANGED);
+		}
+
+		_density = float(GetDpiForWindow(_window)) / float(USER_DEFAULT_SCREEN_DPI);
+	}
 
 	return _window != nullptr;
 }
 
 void WindowsWindow::mapWindow() {
-	ShowWindow(_window, SW_SHOWNORMAL);
+	ShowWindow(_window, SW_SHOW);
 	SetForegroundWindow(_window);
 	SetActiveWindow(_window);
 	SetFocus(_window);
@@ -181,9 +209,93 @@ core::PresentationOptions WindowsWindow::getPreferredOptions() const {
 	return core::PresentationOptions();
 }
 
-bool WindowsWindow::enableState(WindowState state) { return NativeWindow::enableState(state); }
+bool WindowsWindow::enableState(WindowState state) {
+	if (NativeWindow::enableState(state)) {
+		return true;
+	}
+	if (state == WindowState::Maximized) {
+		SendMessageW(_window, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+		return true;
+	} else if (state == WindowState::Minimized) {
+		SendMessageW(_window, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+		return true;
+	} else if (state == WindowState::DemandsAttention) {
+		FlashWindow(_window, TRUE);
+		return true;
+	}
+	return false;
+}
 
-bool WindowsWindow::disableState(WindowState state) { return NativeWindow::disableState(state); }
+bool WindowsWindow::disableState(WindowState state) {
+	if (NativeWindow::disableState(state)) {
+		return true;
+	}
+	if (state == WindowState::Maximized) {
+		SendMessageW(_window, WM_SYSCOMMAND, SC_RESTORE, 0);
+		return true;
+	} else if (state == WindowState::DemandsAttention) {
+		FlashWindow(_window, FALSE);
+		return true;
+	}
+	return false;
+}
+
+void WindowsWindow::openWindowMenu(Vec2 pos) {
+	HMENU hMenu = GetSystemMenu(_window, FALSE);
+	if (hMenu) {
+		MENUITEMINFO mii;
+		mii.cbSize = sizeof(MENUITEMINFO);
+		mii.fMask = MIIM_STATE;
+		mii.fType = 0;
+
+		mii.fState = MF_ENABLED;
+		SetMenuItemInfoW(hMenu, SC_RESTORE, FALSE, &mii);
+		SetMenuItemInfoW(hMenu, SC_SIZE, FALSE, &mii);
+		SetMenuItemInfoW(hMenu, SC_MOVE, FALSE, &mii);
+		SetMenuItemInfoW(hMenu, SC_MAXIMIZE, FALSE, &mii);
+		SetMenuItemInfoW(hMenu, SC_MINIMIZE, FALSE, &mii);
+
+		mii.fState = MF_GRAYED;
+
+		WINDOWPLACEMENT wp;
+		GetWindowPlacement(_window, &wp);
+
+		switch (wp.showCmd) {
+		case SW_SHOWMAXIMIZED:
+			SetMenuItemInfoW(hMenu, SC_SIZE, FALSE, &mii);
+			SetMenuItemInfoW(hMenu, SC_MOVE, FALSE, &mii);
+			SetMenuItemInfoW(hMenu, SC_MAXIMIZE, FALSE, &mii);
+			SetMenuDefaultItem(hMenu, SC_CLOSE, FALSE);
+			break;
+		case SW_SHOWMINIMIZED:
+			SetMenuItemInfoW(hMenu, SC_MINIMIZE, FALSE, &mii);
+			SetMenuDefaultItem(hMenu, SC_RESTORE, FALSE);
+			break;
+		case SW_SHOWNORMAL:
+			SetMenuItemInfoW(hMenu, SC_RESTORE, FALSE, &mii);
+			SetMenuDefaultItem(hMenu, SC_CLOSE, FALSE);
+			break;
+		}
+
+		RECT winrect;
+		GetWindowRect(_window, &winrect);
+
+		if (!pos.isValid()) {
+			winrect.left += _pointerLocation.x;
+			winrect.top += (winrect.bottom - winrect.top) - _pointerLocation.y;
+		} else {
+			winrect.left += pos.x;
+			winrect.top += (winrect.bottom - winrect.top) - pos.y;
+		}
+
+		LPARAM cmd = TrackPopupMenu(hMenu, (TPM_RIGHTBUTTON | TPM_NONOTIFY | TPM_RETURNCMD),
+				winrect.left, winrect.top, NULL, _window, NULL);
+
+		if (cmd) {
+			PostMessageW(_window, WM_SYSCOMMAND, cmd, 0);
+		}
+	}
+}
 
 void WindowsWindow::handleDisplayChanged(const DisplayConfig *cfg) {
 	if (hasFlag(_info->state, WindowState::Fullscreen)) {
@@ -217,7 +329,7 @@ Status WindowsWindow::handleDestroy() {
 Status WindowsWindow::handleMove(IVec2 pos) {
 	XL_WIN32_LOG(std::source_location::current().function_name());
 	_currentState.position = pos;
-	return Status::Ok;
+	return Status::Propagate;
 }
 
 Status WindowsWindow::handleResize(Extent2 e, WindowState state, WindowState mask) {
@@ -231,11 +343,26 @@ Status WindowsWindow::handleResize(Extent2 e, WindowState state, WindowState mas
 	if (newState != _info->state) {
 		updateState(0, newState);
 	}
-	return Status::Ok;
+	return Status::Propagate;
 }
 
-Status WindowsWindow::handleActivate(ActivateStatus) {
+Status WindowsWindow::handleActivate(ActivateStatus st) {
 	XL_WIN32_LOG(std::source_location::current().function_name());
+
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		MARGINS margins;
+
+		margins.cxLeftWidth = -1;
+		margins.cxRightWidth = -1;
+		margins.cyBottomHeight = -1;
+		margins.cyTopHeight = -1;
+
+		auto hr = DwmExtendFrameIntoClientArea(_window, &margins);
+		if (!SUCCEEDED(hr)) {
+			log::error("WondowsWindow", "Fail to set DwmExtendFrameIntoClientArea");
+		}
+	}
+
 	return Status::Ok;
 }
 
@@ -247,7 +374,7 @@ Status WindowsWindow::handleFocus(bool focusGain) {
 	} else {
 		updateState(0, _info->state & ~WindowState::Focused);
 	}
-	return Status::Ok;
+	return Status::Propagate;
 }
 
 Status WindowsWindow::handleEnabled(bool enabled) {
@@ -258,7 +385,7 @@ Status WindowsWindow::handleEnabled(bool enabled) {
 	} else {
 		updateState(0, _info->state & ~WindowState::Enabled);
 	}
-	return Status::Ok;
+	return Status::Propagate;
 }
 
 Status WindowsWindow::handlePaint() {
@@ -296,16 +423,128 @@ Status WindowsWindow::handleWindowVisible(bool visible) {
 	} else {
 		updateState(0, _info->state | WindowState::Minimized);
 	}
-	return Status::Ok;
-}
-
-Status WindowsWindow::handleSetCursor() {
-	//XL_WIN32_LOG(std::source_location::current().function_name());
 	return Status::Propagate;
 }
 
-Status WindowsWindow::handleStyleChanging(StyleType, STYLESTRUCT *style) {
-	XL_WIN32_LOG(std::source_location::current().function_name());
+Status WindowsWindow::handleSetCursor() {
+	switch (_currentCursor) {
+	case WindowCursor::Undefined:
+	case WindowCursor::ContextMenu:
+	case WindowCursor::VerticalText:
+	case WindowCursor::Cell:
+	case WindowCursor::Alias:
+	case WindowCursor::Copy:
+	case WindowCursor::Grab:
+	case WindowCursor::Grabbing:
+	case WindowCursor::ZoomIn:
+	case WindowCursor::ZoomOut:
+	case WindowCursor::DndAsk:
+	case WindowCursor::RightPtr:
+	case WindowCursor::Target:
+	case WindowCursor::Default: SetCursor(LoadCursorW(0, IDC_ARROW)); break;
+	case WindowCursor::Pointer: SetCursor(LoadCursorW(0, IDC_HAND)); break;
+
+	case WindowCursor::Help: SetCursor(LoadCursorW(0, IDC_HELP)); break;
+	case WindowCursor::Progress: SetCursor(LoadCursorW(0, IDC_APPSTARTING)); break;
+	case WindowCursor::Wait: SetCursor(LoadCursorW(0, IDC_WAIT)); break;
+	case WindowCursor::Crosshair: SetCursor(LoadCursorW(0, IDC_CROSS)); break;
+	case WindowCursor::Text: SetCursor(LoadCursorW(0, IDC_IBEAM)); break;
+	case WindowCursor::Move: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
+	case WindowCursor::NoDrop: SetCursor(LoadCursorW(0, IDC_NO)); break;
+	case WindowCursor::NotAllowed: SetCursor(LoadCursorW(0, IDC_NO)); break;
+
+	case WindowCursor::AllScroll: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
+	case WindowCursor::Pencil: SetCursor(LoadCursorW(0, MAKEINTRESOURCE(32'631))); break;
+
+	case WindowCursor::ResizeRight:
+	case WindowCursor::ResizeLeft:
+	case WindowCursor::ResizeLeftRight:
+	case WindowCursor::ResizeCol: SetCursor(LoadCursorW(0, IDC_SIZEWE)); break;
+	case WindowCursor::ResizeTop:
+	case WindowCursor::ResizeBottom:
+	case WindowCursor::ResizeTopBottom:
+	case WindowCursor::ResizeRow: SetCursor(LoadCursorW(0, IDC_SIZENS)); break;
+	case WindowCursor::ResizeTopLeft:
+	case WindowCursor::ResizeBottomRight:
+	case WindowCursor::ResizeTopLeftBottomRight: SetCursor(LoadCursorW(0, IDC_SIZENWSE)); break;
+	case WindowCursor::ResizeTopRight:
+	case WindowCursor::ResizeBottomLeft:
+	case WindowCursor::ResizeTopRightBottomLeft: SetCursor(LoadCursorW(0, IDC_SIZENESW)); break;
+	case WindowCursor::ResizeAll: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
+	case WindowCursor::Max: break;
+	}
+	return Status::Ok;
+}
+
+static StringView getWindowStyleFlagName(DWORD value) {
+	switch (value) {
+	case WS_OVERLAPPED: return "WS_OVERLAPPED"; break;
+	case WS_POPUP: return "WS_POPUP"; break;
+	case WS_CHILD: return "WS_CHILD"; break;
+	case WS_MINIMIZE: return "WS_MINIMIZE"; break;
+	case WS_VISIBLE: return "WS_VISIBLE"; break;
+	case WS_DISABLED: return "WS_DISABLED"; break;
+	case WS_CLIPSIBLINGS: return "WS_CLIPSIBLINGS"; break;
+	case WS_CLIPCHILDREN: return "WS_CLIPCHILDREN"; break;
+	case WS_MAXIMIZE: return "WS_MAXIMIZE"; break;
+	case WS_CAPTION: return "WS_CAPTION"; break;
+	case WS_BORDER: return "WS_BORDER"; break;
+	case WS_DLGFRAME: return "WS_DLGFRAME"; break;
+	case WS_VSCROLL: return "WS_VSCROLL"; break;
+	case WS_HSCROLL: return "WS_HSCROLL"; break;
+	case WS_SYSMENU: return "WS_SYSMENU"; break;
+	case WS_THICKFRAME: return "WS_THICKFRAME"; break;
+	case WS_MINIMIZEBOX: return "WS_MINIMIZEBOX"; break;
+	case WS_MAXIMIZEBOX: return "WS_MAXIMIZEBOX"; break;
+	}
+	return StringView();
+}
+
+SP_UNUSED static String getWindowStyleName(DWORD value) {
+	StringStream out;
+	for (auto v : flags(value)) { out << " " << getWindowStyleFlagName(v); }
+	return out.str();
+}
+
+static StringView getWindowExStyleFlagName(DWORD value) {
+	switch (value) {
+	case WS_EX_DLGMODALFRAME: return "WS_EX_DLGMODALFRAME"; break;
+	case WS_EX_NOPARENTNOTIFY: return "WS_EX_NOPARENTNOTIFY"; break;
+	case WS_EX_TOPMOST: return "WS_EX_TOPMOST"; break;
+	case WS_EX_ACCEPTFILES: return "WS_EX_ACCEPTFILES"; break;
+	case WS_EX_TRANSPARENT: return "WS_EX_TRANSPARENT"; break;
+	case WS_EX_MDICHILD: return "WS_EX_MDICHILD"; break;
+	case WS_EX_TOOLWINDOW: return "WS_EX_TOOLWINDOW"; break;
+	case WS_EX_WINDOWEDGE: return "WS_EX_WINDOWEDGE"; break;
+	case WS_EX_CLIENTEDGE: return "WS_EX_CLIENTEDGE"; break;
+	case WS_EX_CONTEXTHELP: return "WS_EX_CONTEXTHELP"; break;
+	case WS_EX_RIGHT: return "WS_EX_RIGHT"; break;
+	case WS_EX_LEFT: return "WS_EX_LEFT"; break;
+	case WS_EX_RTLREADING: return "WS_EX_RTLREADING"; break;
+	case WS_EX_LEFTSCROLLBAR: return "WS_EX_LEFTSCROLLBAR"; break;
+	case WS_EX_CONTROLPARENT: return "WS_EX_CONTROLPARENT"; break;
+	case WS_EX_STATICEDGE: return "WS_EX_STATICEDGE"; break;
+	case WS_EX_APPWINDOW: return "WS_EX_APPWINDOW"; break;
+	case WS_EX_LAYERED: return "WS_EX_LAYERED"; break;
+	case WS_EX_NOINHERITLAYOUT: return "WS_EX_NOINHERITLAYOUT"; break;
+	case WS_EX_NOREDIRECTIONBITMAP: return "WS_EX_NOREDIRECTIONBITMAP"; break;
+	case WS_EX_LAYOUTRTL: return "WS_EX_LAYOUTRTL"; break;
+	case WS_EX_COMPOSITED: return "WS_EX_COMPOSITED"; break;
+	case WS_EX_NOACTIVATE: return "WS_EX_NOACTIVATE"; break;
+	}
+	return StringView();
+}
+
+SP_UNUSED static String getWindowExStyleName(DWORD value) {
+	StringStream out;
+	for (auto v : flags(value)) { out << " " << getWindowExStyleFlagName(v); }
+	return out.str();
+}
+
+Status WindowsWindow::handleStyleChanging(StyleType type, STYLESTRUCT *style) {
+	XL_WIN32_LOG(std::source_location::current().function_name(),
+			type == StyleType::Style ? getWindowStyleName(style->styleNew)
+									 : getWindowExStyleName(style->styleNew));
 	return Status::Propagate;
 }
 
@@ -318,9 +557,68 @@ Status WindowsWindow::handleStyleChanged(StyleType type, const STYLESTRUCT *styl
 	return Status::Propagate;
 }
 
-Status WindowsWindow::handleWindowDecorations(bool enabled, const NCCALCSIZE_PARAMS *,
-		const RECT *) {
-	XL_WIN32_LOG(std::source_location::current().function_name());
+Status WindowsWindow::handleWindowDecorations(bool enabled, NCCALCSIZE_PARAMS *params, RECT *) {
+	if (enabled && hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		XL_WIN32_LOG(std::source_location::current().function_name(), " ", params->rgrc[0].left,
+				" ", params->rgrc[0].top, " ", params->rgrc[0].right, " ", params->rgrc[0].bottom,
+				" - ", params->rgrc[1].left, " ", params->rgrc[1].top, " ", params->rgrc[1].right,
+				" ", params->rgrc[1].bottom, " - ", params->rgrc[2].left, " ", params->rgrc[2].top,
+				" ", params->rgrc[2].right, " ", params->rgrc[2].bottom);
+
+		if (!_activeCommands.empty() && _activeCommands.back() == SC_MAXIMIZE) {
+			HMONITOR hMon = MonitorFromWindow(_window, MONITOR_DEFAULTTONEAREST);
+			MONITORINFO mi = {sizeof(mi)};
+			GetMonitorInfoW(hMon, &mi);
+			params->rgrc[0].left = mi.rcWork.left;
+			params->rgrc[0].top = mi.rcWork.top;
+			params->rgrc[0].right = mi.rcWork.right;
+			params->rgrc[0].bottom = mi.rcWork.bottom;
+			return Status::Ok;
+		}
+
+		return Status::Ok;
+	}
+	return Status::Propagate;
+}
+
+LRESULT WindowsWindow::handleWindowDecorationsActivate(WPARAM wParam, LPARAM lParam) {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		// Documentation says, that
+		// "If this parameter is set to -1, DefWindowProc does not repaint the nonclient area to reflect the state change"
+		// It's wrong, it will be repainted!
+		// So, just return TRUE
+		// return DefWindowProc(_window, WM_NCACTIVATE, wParam, -1);
+
+		//return TRUE;
+		/*LRESULT ret = TRUE;
+		DwmDefWindowProc(_window, WM_NCACTIVATE, wParam, lParam, &ret);
+		return ret;*/
+	}
+	return DefWindowProc(_window, WM_NCACTIVATE, wParam, lParam);
+}
+
+Status WindowsWindow::handleWindowDecorationsPaint(WPARAM, LPARAM) {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		return Status::Propagate;
+	}
+	return Status::Propagate;
+}
+
+Status WindowsWindow::handleDecorationsMouseMove(IVec2 ipos) {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		auto pos = IVec2(ipos.x - _currentState.position.x, ipos.y - _currentState.position.y);
+		handleMouseMove(pos, true);
+	}
+	return Status::Propagate;
+}
+
+Status WindowsWindow::handleDecorationsMouseLeave() {
+	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		_mouseTrackedNonClient = false;
+		if (!_mouseTrackedClient && !_mouseTrackedNonClient) {
+			updateState(0, _info->state & ~WindowState::Pointer);
+		}
+	}
 	return Status::Propagate;
 }
 
@@ -413,23 +711,17 @@ Status WindowsWindow::handleChar(char32_t c) {
 	return Status::Ok;
 }
 
-Status WindowsWindow::handleMouseMove(IVec2 pos) {
+Status WindowsWindow::handleMouseMove(IVec2 pos, bool nonclient) {
 	_enabledModifiers = KeyCodes::getKeyMods();
 
-	_pointerLocation = Vec2(pos.x, _currentState.extent.height - pos.y);
+	enableMouseTracked(nonclient);
 
-	if (!_mouseTracked) {
-		TRACKMOUSEEVENT tme;
-		ZeroMemory(&tme, sizeof(tme));
-		tme.cbSize = sizeof(tme);
-		tme.dwFlags = TME_LEAVE;
-		tme.hwndTrack = _window;
-		::TrackMouseEvent(&tme);
-
-		_mouseTracked = true;
-
-		updateState(0, _info->state | WindowState::Pointer);
+	auto loc = Vec2(pos.x, int32_t(_currentState.extent.height) - pos.y - 1);
+	if (loc == _pointerLocation) {
+		return Status::Ok;
 	}
+
+	_pointerLocation = loc;
 
 	_pendingEvents.emplace_back(core::InputEventData({
 		maxOf<uint32_t>(),
@@ -445,8 +737,10 @@ Status WindowsWindow::handleMouseMove(IVec2 pos) {
 }
 
 Status WindowsWindow::handleMouseLeave() {
-	updateState(0, _info->state & ~WindowState::Pointer);
-	_mouseTracked = false;
+	_mouseTrackedClient = false;
+	if (!_mouseTrackedClient && !_mouseTrackedNonClient) {
+		updateState(0, _info->state & ~WindowState::Pointer);
+	}
 	return Status::Ok;
 }
 
@@ -538,7 +832,17 @@ Status WindowsWindow::handlePositionChanging(WINDOWPOS *pos) {
 		}
 	}*/
 
-	if (_currentState.isFullscreen) {
+	if (!_activeCommands.empty() && _activeCommands.back() == SC_MAXIMIZE) {
+		HMONITOR hMon = MonitorFromWindow(_window, MONITOR_DEFAULTTONEAREST);
+		MONITORINFO mi = {sizeof(mi)};
+		GetMonitorInfoW(hMon, &mi);
+		pos->x = mi.rcWork.left;
+		pos->y = mi.rcWork.top;
+		pos->cx = mi.rcWork.right - mi.rcWork.left;
+		pos->cy = mi.rcWork.bottom - mi.rcWork.top;
+		pos->flags = SWP_FRAMECHANGED | SWP_NOCOPYBITS | SWP_SHOWWINDOW;
+		return Status::Ok;
+	} else if (_currentState.isFullscreen) {
 		auto cfg = _controller->getDisplayConfigManager()->getCurrentConfig();
 		auto display = cfg->getLogical(_info->fullscreen.id);
 		if (display) {
@@ -619,7 +923,143 @@ Status WindowsWindow::handleDpiChanged(Vec2 scale, const RECT *rect) {
 	_frameRate = rate;
 	_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 
+	return Status::Propagate;
+}
+
+Status WindowsWindow::handleMinMaxInfo(MINMAXINFO *info) {
+	// update to corrent maximize size
+	HMONITOR hMon = MonitorFromWindow(_window, MONITOR_DEFAULTTONEAREST);
+	MONITORINFO mi = {sizeof(mi)};
+	GetMonitorInfoW(hMon, &mi);
+
+	info->ptMaxSize.x = mi.rcWork.right - mi.rcWork.left;
+	info->ptMaxSize.y = mi.rcWork.bottom - mi.rcWork.top;
+	info->ptMaxPosition.x = mi.rcWork.left;
+	info->ptMaxPosition.y = mi.rcWork.top;
+
+	XL_WIN32_LOG(std::source_location::current().function_name(), " ", info->ptMaxSize.x, " ",
+			info->ptMaxSize.y, " ", info->ptMaxPosition.x, " ", info->ptMaxPosition.y, " ",
+			info->ptMinTrackSize.x, " ", info->ptMinTrackSize.y, " ", info->ptMaxTrackSize.x, " ",
+			info->ptMaxTrackSize.y);
+
 	return Status::Ok;
+}
+
+LRESULT WindowsWindow::handleHitTest(WPARAM wParam, LPARAM lParam) {
+	if (!hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		return DefWindowProcW(_window, WM_NCHITTEST, wParam, lParam);
+	}
+
+	LRESULT res = DefWindowProcW(_window, WM_NCHITTEST, wParam, lParam);
+	auto pos = Vec2(GET_X_LPARAM(lParam) - _currentState.position.x,
+			(_currentState.extent.height - (GET_Y_LPARAM(lParam) - _currentState.position.y)) - 1);
+	bool hasGripGuard = false;
+	for (auto &it : _layers) {
+		if (hasFlag(it.flags, WindowLayerFlags::GripMask) && it.rect.containsPoint(pos)) {
+			switch (it.flags & WindowLayerFlags::GripMask) {
+			case WindowLayerFlags::GripGuard: hasGripGuard = true; break;
+			case WindowLayerFlags::MoveGrip:
+				//XL_WIN32_LOG("HTCAPTION ", pos, " ", it.rect);
+				res = HTCAPTION;
+				break;
+			case WindowLayerFlags::ResizeTopLeftGrip:
+				//XL_WIN32_LOG("HTTOPLEFT ", pos, " ", it.rect);
+				res = HTTOPLEFT;
+				break;
+			case WindowLayerFlags::ResizeTopGrip:
+				//XL_WIN32_LOG("HTTOP ", pos, " ", it.rect);
+				res = HTTOP;
+				break;
+			case WindowLayerFlags::ResizeTopRightGrip:
+				//XL_WIN32_LOG("HTTOPRIGHT ", pos, " ", it.rect);
+				res = HTTOPRIGHT;
+				break;
+			case WindowLayerFlags::ResizeRightGrip:
+				//XL_WIN32_LOG("HTRIGHT ", pos, " ", it.rect);
+				res = HTRIGHT;
+				break;
+			case WindowLayerFlags::ResizeBottomRightGrip:
+				//XL_WIN32_LOG("HTBOTTOMRIGHT ", pos, " ", it.rect);
+				res = HTBOTTOMRIGHT;
+				break;
+			case WindowLayerFlags::ResizeBottomGrip:
+				//XL_WIN32_LOG("HTBOTTOM ", pos, " ", it.rect);
+				res = HTBOTTOM;
+				break;
+			case WindowLayerFlags::ResizeBottomLeftGrip:
+				//XL_WIN32_LOG("HTBOTTOMLEFT ", pos, " ", it.rect);
+				res = HTBOTTOMLEFT;
+				break;
+			case WindowLayerFlags::ResizeLeftGrip:
+				//XL_WIN32_LOG("HTLEFT ", pos, " ", it.rect);
+				res = HTLEFT;
+				break;
+			default: break;
+			}
+		}
+	}
+	if (hasGripGuard) {
+		switch (res) {
+		case HTTOPLEFT:
+		case HTTOP:
+		case HTTOPRIGHT:
+		case HTRIGHT:
+		case HTBOTTOMRIGHT:
+		case HTBOTTOM:
+		case HTBOTTOMLEFT:
+		case HTLEFT: return res; break;
+		default: return HTCLIENT;
+		}
+	}
+	return res;
+}
+
+SP_UNUSED static StringView getCommandName(WPARAM cmd) {
+	switch (cmd) {
+	case SC_CLOSE: return StringView("SC_CLOSE"); break;
+	case SC_CONTEXTHELP: return StringView("SC_CONTEXTHELP"); break;
+	case SC_DEFAULT: return StringView("SC_DEFAULT"); break;
+	case SC_HOTKEY: return StringView("SC_HOTKEY"); break;
+	case SC_HSCROLL: return StringView("SC_HSCROLL"); break;
+	case SCF_ISSECURE: return StringView("SCF_ISSECURE"); break;
+	case SC_KEYMENU: return StringView("SC_KEYMENU"); break;
+	case SC_MAXIMIZE: return StringView("SC_MAXIMIZE"); break;
+	case SC_MINIMIZE: return StringView("SC_MINIMIZE"); break;
+	case SC_MONITORPOWER: return StringView("SC_MONITORPOWER"); break;
+	case SC_MOUSEMENU: return StringView("SC_MOUSEMENU"); break;
+	case SC_MOVE: return StringView("SC_MOVE"); break;
+	case SC_NEXTWINDOW: return StringView("SC_NEXTWINDOW"); break;
+	case SC_PREVWINDOW: return StringView("SC_PREVWINDOW"); break;
+	case SC_RESTORE: return StringView("SC_RESTORE"); break;
+	case SC_SCREENSAVE: return StringView("SC_SCREENSAVE"); break;
+	case SC_SIZE: return StringView("SC_SIZE"); break;
+	case SC_TASKLIST: return StringView("SC_TASKLIST"); break;
+	case SC_VSCROLL: return StringView("SC_VSCROLL"); break;
+	}
+	return StringView();
+}
+
+void WindowsWindow::pushCommand(WPARAM cmd) {
+	XL_WIN32_LOG(std::source_location::current().function_name(), " ", getCommandName(cmd));
+
+	if (cmd == SC_MAXIMIZE) {
+		WINDOWPLACEMENT placement;
+		placement.length = sizeof(WINDOWPLACEMENT);
+		GetWindowPlacement(_window, &placement);
+
+		placement.ptMaxPosition.x = 10;
+		placement.ptMaxPosition.y = 10;
+
+		SetWindowPlacement(_window, &placement);
+	}
+
+	_activeCommands.emplace_back(cmd);
+}
+
+void WindowsWindow::popCommand(WPARAM cmd) {
+	SPASSERT(!_activeCommands.empty() && _activeCommands.back() == cmd, "Invalid command");
+	XL_WIN32_LOG(std::source_location::current().function_name(), " ", getCommandName(cmd));
+	_activeCommands.pop_back();
 }
 
 bool WindowsWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) { return true; }
@@ -627,52 +1067,8 @@ bool WindowsWindow::updateTextInput(const TextInputRequest &, TextInputFlags fla
 void WindowsWindow::cancelTextInput() { }
 
 void WindowsWindow::setCursor(WindowCursor cursor) {
-	switch (cursor) {
-	case WindowCursor::Undefined:
-	case WindowCursor::ContextMenu:
-	case WindowCursor::VerticalText:
-	case WindowCursor::Cell:
-	case WindowCursor::Alias:
-	case WindowCursor::Copy:
-	case WindowCursor::Grab:
-	case WindowCursor::Grabbing:
-	case WindowCursor::ZoomIn:
-	case WindowCursor::ZoomOut:
-	case WindowCursor::DndAsk:
-	case WindowCursor::RightPtr:
-	case WindowCursor::Target:
-	case WindowCursor::Default: SetCursor(LoadCursorW(0, IDC_ARROW)); break;
-	case WindowCursor::Pointer: SetCursor(LoadCursorW(0, IDC_HAND)); break;
-
-	case WindowCursor::Help: SetCursor(LoadCursorW(0, IDC_HELP)); break;
-	case WindowCursor::Progress: SetCursor(LoadCursorW(0, IDC_APPSTARTING)); break;
-	case WindowCursor::Wait: SetCursor(LoadCursorW(0, IDC_WAIT)); break;
-	case WindowCursor::Crosshair: SetCursor(LoadCursorW(0, IDC_CROSS)); break;
-	case WindowCursor::Text: SetCursor(LoadCursorW(0, IDC_IBEAM)); break;
-	case WindowCursor::Move: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
-	case WindowCursor::NoDrop: SetCursor(LoadCursorW(0, IDC_NO)); break;
-	case WindowCursor::NotAllowed: SetCursor(LoadCursorW(0, IDC_NO)); break;
-
-	case WindowCursor::AllScroll: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
-	case WindowCursor::Pencil: SetCursor(LoadCursorW(0, MAKEINTRESOURCE(32'631))); break;
-
-	case WindowCursor::ResizeRight:
-	case WindowCursor::ResizeLeft:
-	case WindowCursor::ResizeLeftRight:
-	case WindowCursor::ResizeCol: SetCursor(LoadCursorW(0, IDC_SIZEWE)); break;
-	case WindowCursor::ResizeTop:
-	case WindowCursor::ResizeBottom:
-	case WindowCursor::ResizeTopBottom:
-	case WindowCursor::ResizeRow: SetCursor(LoadCursorW(0, IDC_SIZENS)); break;
-	case WindowCursor::ResizeTopLeft:
-	case WindowCursor::ResizeBottomRight:
-	case WindowCursor::ResizeTopLeftBottomRight: SetCursor(LoadCursorW(0, IDC_SIZENWSE)); break;
-	case WindowCursor::ResizeTopRight:
-	case WindowCursor::ResizeBottomLeft:
-	case WindowCursor::ResizeTopRightBottomLeft: SetCursor(LoadCursorW(0, IDC_SIZENESW)); break;
-	case WindowCursor::ResizeAll: SetCursor(LoadCursorW(0, IDC_SIZEALL)); break;
-	case WindowCursor::Max: break;
-	}
+	_currentCursor = cursor;
+	handleSetCursor();
 }
 
 Status WindowsWindow::setFullscreenState(FullscreenInfo &&info) {
@@ -788,6 +1184,29 @@ char32_t WindowsWindow::makeKeyChar(char32_t c) {
 		return c;
 	}
 	return 0;
+}
+
+void WindowsWindow::enableMouseTracked(bool nonclient) {
+	bool alreadyTracked = false;
+	if (nonclient) {
+		alreadyTracked = _mouseTrackedNonClient;
+	} else {
+		alreadyTracked = _mouseTrackedClient;
+	}
+
+	if (!alreadyTracked) {
+		TRACKMOUSEEVENT tme;
+		ZeroMemory(&tme, sizeof(tme));
+		tme.cbSize = sizeof(tme);
+		tme.dwFlags = TME_LEAVE;
+		if (nonclient) {
+			tme.dwFlags |= TME_NONCLIENT;
+		}
+		tme.hwndTrack = _window;
+		::TrackMouseEvent(&tme);
+
+		updateState(0, _info->state | WindowState::Pointer);
+	}
 }
 
 void WindowsWindow::updateWindowState(const State &state) {

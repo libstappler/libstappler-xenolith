@@ -253,10 +253,6 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 			newConstraints.extent = cfg.extent;
 			newConstraints.transform = cfg.transform;
 
-			if (cfg.alpha == core::CompositeAlphaFlags::Premultiplied) {
-				newConstraints.viewConstraints |= core::ViewConstraints::Transparent;
-			}
-
 			_constraints = sp::move(newConstraints);
 
 			Vector<uint64_t> ids;

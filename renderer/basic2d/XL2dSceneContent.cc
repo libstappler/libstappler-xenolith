@@ -597,6 +597,16 @@ void SceneContent2d::draw(FrameInfo &info, NodeVisitFlags flags) {
 			break;
 		}
 	}
+
+	auto &theme = _director->getApplication()->getThemeInfo();
+
+	ctx->decorations.borderRadius = theme.decorations.borderRadius;
+	ctx->decorations.shadowRadius = theme.decorations.shadowWidth;
+	ctx->decorations.shadowValue = theme.decorations.shadowCurrentValue;
+	ctx->decorations.shadowOffset = theme.decorations.shadowOffset;
+	ctx->decorations.viewConstraints =
+			core::getViewConstraints(_director->getWindow()->getWindowState());
+	ctx->decorations.drawUserShadows = theme.decorations.userShadows;
 }
 
 Vector<Rc<SceneLight>>::iterator SceneContent2d::removeLight(

@@ -58,6 +58,8 @@ public:
 	virtual bool enableState(WindowState) override;
 	virtual bool disableState(WindowState) override;
 
+	virtual void openWindowMenu(Vec2 pos) override;
+
 	HWND getWindow() const { return _window; }
 
 	void handleDisplayChanged(const DisplayConfig *);
@@ -91,14 +93,18 @@ public:
 	Status handleStyleChanging(StyleType, STYLESTRUCT *);
 	Status handleStyleChanged(StyleType, const STYLESTRUCT *);
 
-	Status handleWindowDecorations(bool enabled, const NCCALCSIZE_PARAMS *, const RECT *);
+	Status handleWindowDecorations(bool enabled, NCCALCSIZE_PARAMS *, RECT *);
+	LRESULT handleWindowDecorationsActivate(WPARAM, LPARAM);
+	Status handleWindowDecorationsPaint(WPARAM, LPARAM);
+	Status handleDecorationsMouseMove(IVec2);
+	Status handleDecorationsMouseLeave();
 
 	Status handleKeyPress(core::InputKeyCode, int scancode, char32_t c);
 	Status handleKeyRepeat(core::InputKeyCode, int scancode, char32_t c, int count);
 	Status handleKeyRelease(core::InputKeyCode, int scancode, char32_t c);
 	Status handleChar(char32_t);
 
-	Status handleMouseMove(IVec2);
+	Status handleMouseMove(IVec2, bool nonclient);
 	Status handleMouseLeave();
 	Status handleMouseEvent(IVec2, core::InputMouseButton, core::InputEventName);
 	Status handleMouseWheel(Vec2);
@@ -112,6 +118,13 @@ public:
 
 	Status handleDpiChanged(Vec2, const RECT *);
 
+	Status handleMinMaxInfo(MINMAXINFO *);
+
+	LRESULT handleHitTest(WPARAM, LPARAM);
+
+	void pushCommand(WPARAM);
+	void popCommand(WPARAM);
+
 protected:
 	virtual bool updateTextInput(const TextInputRequest &,
 			TextInputFlags flags = TextInputFlags::RunIfDisabled) override;
@@ -123,6 +136,8 @@ protected:
 	virtual Status setFullscreenState(FullscreenInfo &&) override;
 
 	char32_t makeKeyChar(char32_t);
+
+	void enableMouseTracked(bool nonclient);
 
 	struct State {
 		DWORD style = 0;
@@ -144,11 +159,15 @@ protected:
 	uint32_t _frameRate = 60'000;
 	float _density = 1.0f;
 
-	bool _mouseTracked = false;
+	bool _mouseTrackedClient = false;
+	bool _mouseTrackedNonClient = false;
 	Vec2 _pointerLocation;
 	core::InputModifier _enabledModifiers = core::InputModifier::None;
 	char32_t _highSurrogate = 0;
 	uint32_t _pointerButtonCapture = 0;
+	WindowCursor _currentCursor = WindowCursor::Default;
+
+	Vector<WPARAM> _activeCommands;
 };
 
 } // namespace stappler::xenolith::platform

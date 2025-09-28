@@ -36,7 +36,7 @@ class MenuSourceButton;
 
 class SP_PUBLIC Button : public Surface {
 public:
-	enum NodeMask {
+	enum NodeMask : uint32_t {
 		None = 0,
 		LabelText = 1 << 0,
 		LabelValue = 1 << 1,
@@ -51,8 +51,8 @@ public:
 
 	virtual ~Button() { }
 
-	virtual bool init(NodeStyle = NodeStyle::Filled,
-			ColorRole = ColorRole::Primary, uint32_t schemeTag = SurfaceStyle::PrimarySchemeTag);
+	virtual bool init(NodeStyle = NodeStyle::Filled, ColorRole = ColorRole::Primary,
+			uint32_t schemeTag = SurfaceStyle::PrimarySchemeTag);
 	virtual bool init(const SurfaceStyle &) override;
 
 	virtual void handleContentSizeDirty() override;
@@ -120,7 +120,9 @@ public:
 
 	virtual InputListener *getInputListener() const { return _inputListener; }
 
-	virtual DataListener<MenuSourceButton> *getMenuButtonListener() const { return _menuButtonListener; }
+	virtual DataListener<MenuSourceButton> *getMenuButtonListener() const {
+		return _menuButtonListener;
+	}
 
 	// in input coordinates
 	Vec2 getTouchLocation() const { return _touchLocation; }
@@ -169,6 +171,6 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(Button::NodeMask)
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_COMPONENTS_BUTTON_MATERIALBUTTON_H_ */

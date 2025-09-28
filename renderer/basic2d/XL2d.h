@@ -211,6 +211,15 @@ struct SP_PUBLIC ShadowLightInput {
 	Size2 getShadowSize(Size2 frameSize) const;
 };
 
+struct SP_PUBLIC WindowDecorationsInput {
+	float borderRadius = 0.0f;
+	float shadowRadius = 0.0f;
+	float shadowValue = 0.0f;
+	Vec2 shadowOffset;
+	ViewConstraints viewConstraints = ViewConstraints::None;
+	bool drawUserShadows = false;
+};
+
 } // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2D_H_ */

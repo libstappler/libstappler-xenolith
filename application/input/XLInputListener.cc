@@ -310,8 +310,9 @@ GestureRecognizer *InputListener::addMoveRecognizer(InputCallback<GestureData> &
 }
 
 GestureRecognizer *InputListener::addMouseOverRecognizer(InputCallback<GestureData> &&cb,
-		float padding) {
-	return addRecognizer(Rc<GestureMouseOverRecognizer>::create(sp::move(cb)));
+		float padding, bool onlyFocused) {
+	return addRecognizer(
+			Rc<GestureMouseOverRecognizer>::create(sp::move(cb), padding, onlyFocused));
 }
 
 GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData> &&cb,

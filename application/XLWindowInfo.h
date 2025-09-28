@@ -260,17 +260,6 @@ enum class WindowCapabilities : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
 
-struct SP_PUBLIC DecorationInfo {
-	float borderRadius = 0.0f;
-	float shadowWidth = 0.0f;
-	float shadowMinValue = 0.1f;
-	float shadowMaxValue = 0.25f;
-	float shadowCurrentValue = 0.3f;
-	Vec2 shadowOffset;
-
-	operator bool() const { return borderRadius > 0.0f || shadowWidth > 0.0f; }
-};
-
 struct SP_PUBLIC WindowInfo final : public Ref {
 	String id;
 	String title;
@@ -296,11 +285,6 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 	// Insets for decorations, that appears above user-drawing space
 	// Canvas inside this inset always be visible for user
 	Padding decorationInsets;
-
-	// User-space decorations properties
-	// Note that user-space decorations shadows drawed by native WM integration,
-	// but rounded corners and their shadow insets should be drawed by GL canvas itself
-	DecorationInfo userDecorations;
 
 	core::FrameConstraints exportConstraints() const {
 		return core::FrameConstraints{

@@ -98,6 +98,8 @@ public:
 	virtual bool enableState(WindowState);
 	virtual bool disableState(WindowState);
 
+	virtual void openWindowMenu(Vec2 pos);
+
 protected:
 	// Run text input mode or update text input buffer
 	//

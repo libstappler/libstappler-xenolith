@@ -33,7 +33,7 @@ bool WindowClass::init(WideStringView name) {
 
 	_module = GetModuleHandleW(nullptr);
 
-	_windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+	_windowClass.style = CS_HREDRAW | CS_VREDRAW;
 	_windowClass.lpfnWndProc = &_wndProc;
 	_windowClass.cbClsExtra = 0;
 	_windowClass.cbWndExtra = 0;
@@ -112,6 +112,10 @@ LRESULT WindowClass::_wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	case WM_SYNCPAINT: shouldRetainPoll = false; break;
 	}
 
+	if (uMsg == WM_SYSCOMMAND) {
+		win->pushCommand(wParam & 0xFFF0);
+	}
+
 	if (shouldRetainPoll) {
 		if (win->getController()->isWithinPoll()) {
 			log::source().debug("WindowClass", "Recursive processing");
@@ -124,6 +128,10 @@ LRESULT WindowClass::_wndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 	if (shouldRetainPoll) {
 		win->getController()->releasePollDepth();
+	}
+
+	if (uMsg == WM_SYSCOMMAND) {
+		win->popCommand(wParam & 0xFFF0);
 	}
 
 	return result;
@@ -154,7 +162,7 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 
 	case WM_MOVE:
 		return getResultForStatus("WM_MOVE",
-				win->handleMove(IVec2(LOWORD(lParam), HIWORD(lParam))));
+				win->handleMove(IVec2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
 		break;
 	case WM_SIZE: {
 		WindowState state = WindowState::None;
@@ -342,9 +350,12 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 	case WM_ACTIVATEAPP: return handleDefault(); break;
 
 	case WM_MOUSEMOVE:
-	case WM_NCMOUSEMOVE:
 		return getResultForStatus("WM_MOUSEMOVE",
-				win->handleMouseMove(IVec2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
+				win->handleMouseMove(IVec2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)), false));
+		break;
+	case WM_NCMOUSEMOVE:
+		return getResultForStatus("WM_NCMOUSEMOVE",
+				win->handleDecorationsMouseMove(IVec2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam))));
 		break;
 
 	case WM_LBUTTONDOWN:
@@ -427,18 +438,10 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 	case WM_EXITSIZEMOVE:
 		return getResultForStatus("WM_EXITSIZEMOVE", win->handleMoveResize(false));
 		break;
-	case WM_SYSCOMMAND: {
-		/*auto cmd = wParam & 0xFFF0;
-		switch (cmd) {
-		case SC_SIZE: return 0; break;
-		}*/
-		XL_WIN32_LOG("Event: WM_SYSCOMMAND");
-		return handleDefault();
-		break;
-	}
+	case WM_SYSCOMMAND: return handleDefault(); break;
+
 	case WM_GETMINMAXINFO:
-		//XL_WIN32_LOG("Event: WM_GETMINMAXINFO");
-		return handleDefault();
+		return getResultForStatus("WM_GETMINMAXINFO", win->handleMinMaxInfo((MINMAXINFO *)lParam));
 		break;
 	case WM_GETDPISCALEDSIZE:
 		XL_WIN32_LOG("Event: WM_GETDPISCALEDSIZE");
@@ -456,15 +459,18 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 	case WM_NCCALCSIZE:
 		if (wParam == TRUE) {
 			return getResultForStatus("WM_NCCALCSIZE",
-					win->handleWindowDecorations(true, (const NCCALCSIZE_PARAMS *)lParam, nullptr));
+					win->handleWindowDecorations(true, (NCCALCSIZE_PARAMS *)lParam, nullptr));
 		} else {
 			return getResultForStatus("WM_NCCALCSIZE",
-					win->handleWindowDecorations(false, nullptr, (const RECT *)lParam));
+					win->handleWindowDecorations(false, nullptr, (RECT *)lParam));
 		}
 		break;
-	case WM_NCHITTEST:
+	case WM_NCHITTEST: return win->handleHitTest(wParam, lParam); break;
+
 	case WM_NCPAINT:
-	case WM_NCACTIVATE:
+		return getResultForStatus("WM_NCPAINT", win->handleWindowDecorationsPaint(wParam, lParam));
+		break;
+	case WM_NCACTIVATE: return win->handleWindowDecorationsActivate(wParam, lParam); break;
 	case WM_NCLBUTTONDOWN:
 	case WM_NCLBUTTONUP:
 	case WM_NCLBUTTONDBLCLK:
@@ -473,7 +479,11 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 	case WM_NCRBUTTONDBLCLK:
 	case WM_NCMBUTTONDOWN:
 	case WM_NCMBUTTONUP:
-	case WM_NCMBUTTONDBLCLK:
+	case WM_NCMBUTTONDBLCLK: return handleDefault(); break;
+	case WM_NCMOUSEHOVER: return handleDefault(); break;
+	case WM_NCMOUSELEAVE:
+		return getResultForStatus("WM_NCMOUSELEAVE", win->handleDecorationsMouseLeave());
+		break;
 	case WM_SYNCPAINT: return handleDefault(); break;
 
 	case WM_IME_SETCONTEXT:
@@ -539,6 +549,11 @@ LRESULT WindowClass::wndProc(WindowsWindow *win, HWND hwnd, UINT uMsg, WPARAM wP
 		XL_WIN32_LOG("Event: WM_DISPLAYCHANGE");
 		return handleDefault();
 		break;
+
+	case WM_MENUSELECT:
+	case WM_MENUCHAR:
+	case WM_ENTERIDLE: return handleDefault(); break;
+
 	default:
 		XL_WIN32_LOG("Event: ", std::hex, uMsg);
 		return handleDefault();

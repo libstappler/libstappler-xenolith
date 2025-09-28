@@ -34,65 +34,34 @@ bool WindowDecorations::init() {
 		return false;
 	}
 
-	InputListener *l = nullptr;
+	auto makeResizeLayer = [&](Vec2 anchor, WindowLayerFlags flag, WindowCursor cursor) {
+		auto node = addChild(Rc<Node>::create());
+		node->setAnchorPoint(anchor);
+		node->setVisible(false);
+		auto l = node->addSystem(Rc<InputListener>::create());
+		l->setLayerFlags(flag);
+		l->setCursor(cursor);
+		return node;
+	};
 
-	_resizeTopLeft = addChild(Rc<Node>::create());
-	_resizeTopLeft->setAnchorPoint(Anchor::BottomRight);
-	_resizeTopLeft->setVisible(false);
-	l = _resizeTopLeft->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeTopLeftGrip);
-	l->setCursor(WindowCursor::ResizeTopLeft);
+	_resizeTopLeft = makeResizeLayer(Anchor::BottomRight, WindowLayerFlags::ResizeTopLeftGrip,
+			WindowCursor::ResizeTopLeft);
+	_resizeTop = makeResizeLayer(Anchor::MiddleBottom, WindowLayerFlags::ResizeTopGrip,
+			WindowCursor::ResizeTop);
+	_resizeTopRight = makeResizeLayer(Anchor::BottomLeft, WindowLayerFlags::ResizeTopRightGrip,
+			WindowCursor::ResizeTopRight);
+	_resizeRight = makeResizeLayer(Anchor::MiddleLeft, WindowLayerFlags::ResizeRightGrip,
+			WindowCursor::ResizeRight);
+	_resizeBottomRight = makeResizeLayer(Anchor::TopLeft, WindowLayerFlags::ResizeBottomRightGrip,
+			WindowCursor::ResizeBottomRight);
+	_resizeBottom = makeResizeLayer(Anchor::MiddleTop, WindowLayerFlags::ResizeBottomGrip,
+			WindowCursor::ResizeBottom);
+	_resizeBottomLeft = makeResizeLayer(Anchor::TopRight, WindowLayerFlags::ResizeBottomLeftGrip,
+			WindowCursor::ResizeBottomLeft);
+	_resizeLeft = makeResizeLayer(Anchor::MiddleRight, WindowLayerFlags::ResizeLeftGrip,
+			WindowCursor::ResizeLeft);
 
-	_resizeTop = addChild(Rc<Node>::create());
-	_resizeTop->setAnchorPoint(Anchor::MiddleBottom);
-	_resizeTop->setVisible(false);
-	l = _resizeTop->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeTopGrip);
-	l->setCursor(WindowCursor::ResizeTop);
-
-	_resizeTopRight = addChild(Rc<Node>::create());
-	_resizeTopRight->setAnchorPoint(Anchor::BottomLeft);
-	_resizeTopRight->setVisible(false);
-	l = _resizeTopRight->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeTopRightGrip);
-	l->setCursor(WindowCursor::ResizeTopRight);
-
-	_resizeRight = addChild(Rc<Node>::create());
-	_resizeRight->setAnchorPoint(Anchor::MiddleLeft);
-	_resizeRight->setVisible(false);
-	l = _resizeRight->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeRightGrip);
-	l->setCursor(WindowCursor::ResizeRight);
-
-	_resizeBottomRight = addChild(Rc<Node>::create());
-	_resizeBottomRight->setAnchorPoint(Anchor::TopLeft);
-	_resizeBottomRight->setVisible(false);
-	l = _resizeBottomRight->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeBottomRightGrip);
-	l->setCursor(WindowCursor::ResizeBottomRight);
-
-	_resizeBottom = addChild(Rc<Node>::create());
-	_resizeBottom->setAnchorPoint(Anchor::MiddleTop);
-	_resizeBottom->setVisible(false);
-	l = _resizeBottom->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeBottomGrip);
-	l->setCursor(WindowCursor::ResizeBottom);
-
-	_resizeBottomLeft = addChild(Rc<Node>::create());
-	_resizeBottomLeft->setAnchorPoint(Anchor::TopRight);
-	_resizeBottomLeft->setVisible(false);
-	l = _resizeBottomLeft->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeBottomLeftGrip);
-	l->setCursor(WindowCursor::ResizeBottomLeft);
-
-	_resizeLeft = addChild(Rc<Node>::create());
-	_resizeLeft->setAnchorPoint(Anchor::MiddleRight);
-	_resizeLeft->setVisible(false);
-	l = _resizeLeft->addSystem(Rc<InputListener>::create());
-	l->setLayerFlags(WindowLayerFlags::ResizeLeftGrip);
-	l->setCursor(WindowCursor::ResizeLeft);
-
-	l = addSystem(Rc<InputListener>::create());
+	auto l = addSystem(Rc<InputListener>::create());
 	l->setWindowStateCallback([this](WindowState state, WindowState changes) {
 		if (state != _currentState) {
 			updateWindowState(state);
@@ -128,34 +97,38 @@ void WindowDecorations::handleEnter(Scene *scene) {
 void WindowDecorations::handleContentSizeDirty() {
 	Node::handleContentSizeDirty();
 
-	const float resizeBarWidth = 12.0f;
+	auto &theme = _director->getApplication()->getThemeInfo();
+
+	const float inset = theme.decorations.resizeInset;
+	const float resizeBarWidth = 8.0f;
 	const float cornerWidth = 16.0f;
 	const float cornerInset = 4.0f;
+	const float fullInset = cornerInset + inset;
 
 	_resizeTopLeft->setContentSize(Size2(cornerWidth, cornerWidth));
-	_resizeTopLeft->setPosition(Vec2(cornerInset, _contentSize.height - cornerInset));
+	_resizeTopLeft->setPosition(Vec2(fullInset, _contentSize.height - fullInset));
 
-	_resizeTop->setContentSize(Size2(_contentSize.width - cornerInset * 2.0f, resizeBarWidth));
-	_resizeTop->setPosition(Vec2(_contentSize.width / 2, _contentSize.height));
+	_resizeTop->setContentSize(Size2(_contentSize.width - fullInset * 2.0f, resizeBarWidth));
+	_resizeTop->setPosition(Vec2(_contentSize.width / 2, _contentSize.height - inset));
 
 	_resizeTopRight->setContentSize(Size2(cornerWidth, cornerWidth));
 	_resizeTopRight->setPosition(
-			Vec2(_contentSize.width - cornerInset, _contentSize.height - cornerInset));
+			Vec2(_contentSize.width - fullInset, _contentSize.height - fullInset));
 
-	_resizeRight->setContentSize(Size2(resizeBarWidth, _contentSize.height - cornerInset * 2.0f));
-	_resizeRight->setPosition(Vec2(_contentSize.width, _contentSize.height / 2));
+	_resizeRight->setContentSize(Size2(resizeBarWidth, _contentSize.height - fullInset * 2.0f));
+	_resizeRight->setPosition(Vec2(_contentSize.width - inset, _contentSize.height / 2));
 
 	_resizeBottomRight->setContentSize(Size2(cornerWidth, cornerWidth));
-	_resizeBottomRight->setPosition(Vec2(_contentSize.width - cornerInset, cornerInset));
+	_resizeBottomRight->setPosition(Vec2(_contentSize.width - fullInset, fullInset));
 
-	_resizeBottom->setContentSize(Size2(_contentSize.width - cornerInset * 2.0f, resizeBarWidth));
-	_resizeBottom->setPosition(Vec2(_contentSize.width / 2, 0.0f));
+	_resizeBottom->setContentSize(Size2(_contentSize.width - fullInset * 2.0f, resizeBarWidth));
+	_resizeBottom->setPosition(Vec2(_contentSize.width / 2, inset));
 
 	_resizeBottomLeft->setContentSize(Size2(cornerWidth, cornerWidth));
-	_resizeBottomLeft->setPosition(Vec2(cornerInset, cornerInset));
+	_resizeBottomLeft->setPosition(Vec2(fullInset, fullInset));
 
-	_resizeLeft->setContentSize(Size2(resizeBarWidth, _contentSize.height - cornerInset * 2.0f));
-	_resizeLeft->setPosition(Vec2(0.0f, _contentSize.height / 2));
+	_resizeLeft->setContentSize(Size2(resizeBarWidth, _contentSize.height - fullInset * 2.0f));
+	_resizeLeft->setPosition(Vec2(inset, _contentSize.height / 2));
 }
 
 void WindowDecorations::handleLayout(Node *parent) {

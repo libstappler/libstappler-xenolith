@@ -725,18 +725,22 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		subpassIdx = buf.cmdNextSubpass();
 	}
 
-	if (_constraints.borderRadius > 0.0f) {
+	auto input = _shadowData->getFrameInput();
+	if (input->decorations.borderRadius > 0.0f) {
 		FrameClipperData data;
 		data.frameSize = Vec2(_constraints.extent.width, _constraints.extent.height);
-		data.radius = _constraints.borderRadius * _constraints.surfaceDensity;
-		data.shadow = _constraints.shadowRadius * _constraints.surfaceDensity;
+		data.radius = input->decorations.borderRadius * _constraints.surfaceDensity;
+		data.shadow = input->decorations.shadowRadius * _constraints.surfaceDensity;
 
 		const float sigma = sqrtf((data.shadow * data.shadow) / (-2.0f * logf(1.0f / 255.0f)));
 		data.sigma = (-1.0f / (2.0f * sigma * sigma));
-		data.value = _constraints.shadowValue;
-		data.offset = _constraints.shadowOffset * _constraints.surfaceDensity;
+		data.value = input->decorations.shadowValue;
+		data.offset = input->decorations.shadowOffset * _constraints.surfaceDensity;
 
-		data.constraints = toInt(_constraints.viewConstraints);
+		data.constraints = toInt(input->decorations.viewConstraints);
+		if (input->decorations.drawUserShadows) {
+			data.constraints |= (1 << 4);
+		}
 
 		auto pipeline = _data->subpasses[subpassIdx]->graphicPipelines.get(
 				StringView(ShadowPass::FrameClipperPipeline));

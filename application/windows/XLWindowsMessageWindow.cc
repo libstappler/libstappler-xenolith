@@ -312,9 +312,7 @@ struct MessageWindow::WinRtAdapter {
 		});
 
 		_clipboardChangedToken =
-				Clipboard::ContentChanged([](const auto &sender, const auto &args) {
-			std::cout << "Clipboard::ContentChanged\n";
-		});
+				Clipboard::ContentChanged([](const auto &sender, const auto &args) { });
 	}
 
 	~WinRtAdapter() {
@@ -958,6 +956,8 @@ ThemeInfo MessageWindow::getThemeInfo() {
 		ret.colorScheme = ThemeInfo::SchemePreferDark.str<Interface>();
 	}
 
+	ret.decorations.resizeInset = 6.0f;
+
 	ret.cursorSize = _adapter->getCursorSize();
 	ret.doubleClickInterval = _adapter->getDoubleClickInterval();
 	ret.textScaling = _adapter->getTextScaleFactor();
@@ -979,6 +979,11 @@ ThemeInfo MessageWindow::getThemeInfo() {
 	}
 
 	ret.leftHandedMouse = (GetSystemMetrics(SM_SWAPBUTTON) != 0);
+
+	UINT ulScrollLines;
+	if (SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &ulScrollLines, 0)) {
+		ret.scrollModifier = ulScrollLines;
+	}
 
 	HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 	LOGFONTW lf;

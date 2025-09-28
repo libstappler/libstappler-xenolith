@@ -179,10 +179,6 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 		auto newConstraints = _window->exportFrameConstraints();
 		newConstraints.extent = _constraints.extent;
 		newConstraints.transform = _constraints.transform;
-		if (_swapchain
-				&& _swapchain->getConfig().alpha == core::CompositeAlphaFlags::Premultiplied) {
-			newConstraints.viewConstraints |= core::ViewConstraints::Transparent;
-		}
 
 		_constraints = sp::move(newConstraints);
 		_waitForDisplayLink = false;

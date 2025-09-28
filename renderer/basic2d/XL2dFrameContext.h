@@ -37,7 +37,7 @@ public:
 	static constexpr StringView LightDataAttachmentName = "ShadowLightDataAttachment";
 	static constexpr StringView ParticleEmittersAttachment = "ParticleEmitters";
 
-	virtual ~FrameContext2d() { }
+	virtual ~FrameContext2d() = default;
 
 	virtual void onEnter(xenolith::Scene *) override;
 	virtual void onExit() override;

@@ -65,19 +65,6 @@ core::SurfaceInfo NativeWindow::getSurfaceOptions(const core::Device &dev,
 }
 
 core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&c) const {
-	if (hasFlag(_info->state, WindowState::Fullscreen)
-			|| !hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
-		c.borderRadius = 0.0f;
-		c.shadowRadius = 0.0f;
-		c.shadowValue = 0.0f;
-		c.shadowOffset = Vec2(0.0f, 0.0f);
-	} else {
-		c.borderRadius = _info->userDecorations.borderRadius;
-		c.shadowRadius = _info->userDecorations.shadowWidth;
-		c.shadowValue = _info->userDecorations.shadowCurrentValue;
-		c.shadowOffset = _info->userDecorations.shadowOffset;
-		c.viewConstraints = core::getViewConstraints(_info->state);
-	}
 	return move(c);
 }
 
@@ -394,6 +381,10 @@ bool NativeWindow::disableState(WindowState state) {
 	return false;
 }
 
+void NativeWindow::openWindowMenu(Vec2 pos) {
+	// do nothing
+}
+
 void NativeWindow::handleMotionEvent(const InputEventData &event) {
 	if (_handleLayerForMotion) {
 		_layerLocation = event.getLocation();
@@ -438,6 +429,10 @@ void NativeWindow::emitAppFrame() {
 }
 
 void NativeWindow::updateState(uint32_t id, WindowState state) {
+	if (state == _info->state) {
+		return;
+	}
+
 	auto changes = state ^ _info->state;
 
 	_info->state = state;

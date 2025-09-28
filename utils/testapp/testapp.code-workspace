@@ -26,12 +26,24 @@
 				"binaryPath": "${workspaceFolder}/stappler-build/host/debug/gcc/testapp",
 				"binaryArgs": []
 			},
+			{
+				"cwd": "c:\\Users\\sbkarr\\libstappler-root\\xenolith\\utils\\testapp\\stappler-build\\host\\debug\\clang",
+				"binaryPath": "c:\\Users\\sbkarr\\libstappler-root\\xenolith\\utils\\testapp\\stappler-build\\host\\debug\\clang\\testapp.exe",
+				"binaryArgs": []
+			}
 		],
 		"makefile.configurations": [
 			{
 				"name" : "Debug",
 				"makeArgs": [
 					"-j8",
+				]
+			},
+			{
+				"name" : "Release",
+				"makeArgs": [
+					"-j8",
+					"RELEASE=1"
 				]
 			}
 		],

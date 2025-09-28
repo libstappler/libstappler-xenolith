@@ -44,7 +44,7 @@ MODULE_XENOLITH_APPLICATION_GENERAL_CXXFLAGS += $(MODULE_XENOLITH_APPLICATION_DB
 endif
 
 ifdef WIN32
-MODULE_XENOLITH_APPLICATION_LIBS += -lshell32 -lOleAut32 -lWinhttp -lShcore -lGdi32 -lDxva2 -lSetupAPI -lUxTheme -lWindowsApp
+MODULE_XENOLITH_APPLICATION_LIBS += -lshell32 -lOleAut32 -lWinhttp -lShcore -lGdi32 -lDxva2 -lSetupAPI -lUxTheme -lWindowsApp -lDwmapi
 ifdef RELEASE
 MODULE_XENOLITH_APPLICATION_EXEC_LDFLAGS += -Wl,/subsystem:windows -Wl,/ENTRY:mainCRTStartup
 endif

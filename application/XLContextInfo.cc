@@ -268,14 +268,79 @@ Value ContextConfig::encode() const {
 	return ret;
 }
 
+void DecorationInfo::decode(const Value &val) {
+	for (auto &vIt : val.asDict()) {
+		if (vIt.first == "borderRadius") {
+			borderRadius = vIt.second.getDouble();
+		} else if (vIt.first == "shadowWidth") {
+			shadowWidth = vIt.second.getDouble();
+		} else if (vIt.first == "shadowMinValue") {
+			shadowMinValue = vIt.second.getDouble();
+		} else if (vIt.first == "shadowMaxValue") {
+			shadowMaxValue = vIt.second.getDouble();
+		} else if (vIt.first == "shadowCurrentValue") {
+			shadowCurrentValue = vIt.second.getDouble();
+		} else if (vIt.first == "resizeInset") {
+			resizeInset = vIt.second.getDouble();
+		} else if (vIt.first == "shadowOffset") {
+			shadowOffset = Vec2(vIt.second.getDouble(0), vIt.second.getDouble(1));
+		} else if (vIt.first == "userShadows") {
+			userShadows = vIt.second.getBool();
+		}
+	}
+}
+
+Value DecorationInfo::encode() const {
+	Value ret;
+	ret.setValue(borderRadius, "borderRadius");
+	ret.setValue(shadowWidth, "shadowWidth");
+	ret.setValue(shadowMinValue, "shadowMinValue");
+	ret.setValue(shadowMaxValue, "shadowMaxValue");
+	ret.setValue(shadowCurrentValue, "shadowCurrentValue");
+	ret.setValue(resizeInset, "resizeInset");
+	ret.setValue(Value{Value(shadowOffset.x), Value(shadowOffset.y)}, "shadowOffset");
+	ret.setValue(userShadows, "userShadows");
+	return ret;
+}
+
+void ThemeInfo::decode(const Value &val) {
+	for (auto &it : val.asDict()) {
+		if (it.first == "colorScheme") {
+			colorScheme = it.second.getString();
+		} else if (it.first == "systemTheme") {
+			systemTheme = it.second.getString();
+		} else if (it.first == "systemFontName") {
+			systemFontName = it.second.getString();
+		} else if (it.first == "cursorSize") {
+			cursorSize = it.second.getInteger();
+		} else if (it.first == "cursorScaling") {
+			cursorScaling = it.second.getDouble();
+		} else if (it.first == "textScaling") {
+			textScaling = it.second.getDouble();
+		} else if (it.first == "scrollModifier") {
+			scrollModifier = it.second.getDouble();
+		} else if (it.first == "leftHandedMouse") {
+			leftHandedMouse = it.second.getBool();
+		} else if (it.first == "doubleClickInterval") {
+			doubleClickInterval = it.second.getInteger();
+		} else if (it.first == "decorations") {
+			decorations.decode(it.second);
+		}
+	}
+}
+
 Value ThemeInfo::encode() const {
 	Value ret;
 	ret.setValue(colorScheme, "colorScheme");
 	ret.setValue(systemTheme, "systemTheme");
 	ret.setValue(systemFontName, "systemFontName");
 	ret.setValue(cursorSize, "cursorSize");
-	ret.setValue(cursorScalingFactor, "cursorScalingFactor");
+	ret.setValue(cursorScaling, "cursorScaling");
 	ret.setValue(textScaling, "textScaling");
+	ret.setValue(scrollModifier, "scrollModifier");
+	ret.setValue(leftHandedMouse, "leftHandedMouse");
+	ret.setValue(doubleClickInterval, "doubleClickInterval");
+	ret.setValue(decorations.encode(), "decorations");
 	return ret;
 }
 

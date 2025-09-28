@@ -942,13 +942,15 @@ InputEventState GestureKeyRecognizer::renewEvent(const InputEvent &event, float 
 	return InputEventState::Declined;
 }
 
-bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding) {
+bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding, bool onlyFocused) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_callback = sp::move(cb);
+		_padding = padding;
+		_onlyFocused = onlyFocused;
 		_eventMask.set(toInt(InputEventName::MouseMove));
 		_eventMask.set(toInt(InputEventName::WindowState));
 		return true;
@@ -1025,7 +1027,7 @@ void GestureMouseOverRecognizer::updateState(const InputEvent &event) {
 		_viewHasFocus = hasFlag(dispatcher->getWindowState(), WindowState::Focused);
 	}
 
-	auto value = _viewHasFocus && _viewHasPointer && _hasMouseOver;
+	auto value = (!_onlyFocused || _viewHasFocus) && _viewHasPointer && _hasMouseOver;
 	if (value != _value) {
 		_value = value;
 		_event.input = &event;

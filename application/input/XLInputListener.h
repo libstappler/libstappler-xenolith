@@ -138,7 +138,8 @@ public:
 			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
 	GestureRecognizer *addScrollRecognizer(InputCallback<GestureScroll> &&);
 	GestureRecognizer *addMoveRecognizer(InputCallback<GestureData> &&, bool withinNode = true);
-	GestureRecognizer *addMouseOverRecognizer(InputCallback<GestureData> &&, float padding = 0.0f);
+	GestureRecognizer *addMouseOverRecognizer(InputCallback<GestureData> &&, float padding = 0.0f,
+			bool onlyFocused = true);
 
 	GestureKeyRecognizer *addKeyRecognizer(InputCallback<GestureData> &&, KeyMask && = KeyMask());
 

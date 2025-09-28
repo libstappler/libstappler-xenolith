@@ -117,7 +117,7 @@ bool WindowDecorationsButton::init(WindowDecorationsButtonType type) {
 		default: break;
 		}
 		return true;
-	});
+	}, 0, false);
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			handleTap();
@@ -153,7 +153,7 @@ void WindowDecorationsButton::handleComponentsDirty() {
 			[&](NotNull<Node>, NotNull<const WindowDecorationsState> state, uint32_t) {
 		if (hasFlag(state->capabilities, WindowCapabilities::GripGuardsRequired)) {
 			if (auto l = getSystemByType<InputListener>()) {
-				l->setLayerFlags(WindowLayerFlags::GripGuard);
+				l->setLayerFlags(l->getLayerFlags() | WindowLayerFlags::GripGuard);
 			}
 		}
 		if (_state != state->state) {
@@ -204,7 +204,7 @@ void WindowDecorationsButton::handleTap() {
 			w->enableState(WindowState::Fullscreen);
 		}
 		break;
-	case WindowDecorationsButtonType::ContextMenu: break;
+	case WindowDecorationsButtonType::ContextMenu: w->openWindowMenu(Vec2::INVALID); break;
 	}
 }
 
@@ -392,9 +392,9 @@ void WindowDecorationsDefault::updateWindowState(WindowState state) {
 	_buttonMenu->setVisible(hasFlag(state, WindowState::AllowedWindowMenu));
 
 	if (hasFlag(state, WindowState::Focused)) {
-		_header->setColor(Color::Grey_200);
-	} else {
 		_header->setColor(Color::Grey_300);
+	} else {
+		_header->setColor(Color::Grey_400);
 	}
 
 	setOrUpdateComponent<WindowDecorationsState>([&](WindowDecorationsState *value) {
