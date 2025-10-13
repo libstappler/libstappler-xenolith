@@ -53,7 +53,7 @@ public:
 	virtual void handleFramePresented(NotNull<PresentationFrame>) = 0;
 
 	virtual Rc<Surface> makeSurface(NotNull<Instance>) = 0;
-	virtual FrameConstraints exportFrameConstraints() const = 0;
+	virtual FrameConstraints exportConstraints() const = 0;
 
 	virtual void setFrameOrder(uint64_t) = 0;
 };
@@ -67,6 +67,9 @@ enum class UpdateConstraintsFlags : uint32_t {
 	Finalized = 1 << 4,
 	EnableLiveResize = 1 << 5,
 	DisableLiveResize = 1 << 6,
+
+	// to be more clear what DeprecateSwapchain means
+	WindowResized = DeprecateSwapchain,
 };
 
 SP_DEFINE_ENUM_AS_MASK(UpdateConstraintsFlags)
@@ -183,12 +186,13 @@ protected:
 
 	void handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquiredImage> &&image);
 
-	void runScheduledPresent(NotNull<PresentationFrame> frame, ImageStorage *image);
+	void runScheduledPresent(NotNull<PresentationFrame> frame, ImageStorage *image,
+			uint64_t presentWindow);
 	void presentSwapchainImage(Rc<DeviceQueue> &&queue, NotNull<PresentationFrame> frame,
-			ImageStorage *image);
+			ImageStorage *image, uint64_t presentWindow);
 
-	void presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame,
-			ImageStorage *image);
+	void presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame, ImageStorage *image,
+			uint64_t presentWindow);
 
 	bool canScheduleNextFrame() const;
 
@@ -245,6 +249,11 @@ protected:
 	bool _swapchainRecreationScheduled = false;
 	bool _liveResizeEnabled = false;
 	bool _exclusiveFullscreenAvailable = false;
+
+	// Platform supports presentation with window timing specification,
+	// presentation engine should not implement scheduling by itself
+	// (see VK_GOOGLE_display_timing)
+	bool _presentWithWindowTiming = false;
 
 	// New frames, that waits next swapchain image
 	std::deque<Rc<PresentationFrame>> _framesAwaitingImages;

@@ -90,10 +90,6 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		config.window->flags |= WindowCreationFlags::Regular
 				| WindowCreationFlags::PreferServerSideDecoration
 				| WindowCreationFlags::PreferNativeDecoration;
-
-		config.window->userDecorations.borderRadius = 16.0f;
-		config.window->userDecorations.shadowWidth = 20.0f;
-		config.window->userDecorations.shadowOffset = Vec2(0.0f, 3.0f);
 	}
 }
 
@@ -114,6 +110,8 @@ bool LinuxContextController::init(NotNull<Context> ctx, ContextConfig &&config) 
 
 	_looper = event::Looper::acquire(
 			event::LooperInfo{.workersCount = _contextInfo->mainThreadsCount});
+
+	handleThemeInfoChanged(ThemeInfo{ThemeInfo::SchemeDefault.str<Interface>()});
 
 	return true;
 }
@@ -293,12 +291,15 @@ Status LinuxContextController::writeToClipboard(Rc<ClipboardData> &&data) {
 	return Status::ErrorNotImplemented;
 }
 
-void LinuxContextController::handleThemeInfoChanged(const ThemeInfo &newThemeInfo) {
+void LinuxContextController::handleThemeInfoChanged(ThemeInfo &&newThemeInfo) {
+	newThemeInfo.decorations.borderRadius = 16.0f;
+	newThemeInfo.decorations.shadowWidth = 20.0f;
+	newThemeInfo.decorations.shadowOffset = Vec2(0.0f, 3.0f);
 	if (_themeInfo != newThemeInfo) {
 		if (_waylandDisplay) {
 			_waylandDisplay->updateThemeInfo(newThemeInfo);
 		}
-		ContextController::handleThemeInfoChanged(newThemeInfo);
+		ContextController::handleThemeInfoChanged(sp::move(newThemeInfo));
 	}
 }
 
@@ -389,10 +390,12 @@ bool LinuxContextController::loadWindow() {
 		}
 		if (!window && _xcbConnection) {
 			window = Rc<XcbWindow>::create(_xcbConnection, move(wInfo), this);
+			if (window) {
+				notifyWindowCreated(window);
+			}
 		}
 
 		if (window) {
-			_activeWindows.emplace(window);
 			return true;
 		}
 	}

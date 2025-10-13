@@ -29,7 +29,11 @@
 #include "SPCommandLineParser.h"
 
 #if ANDROID
-struct ANativeActivity;
+namespace STAPPLER_VERSIONIZED stappler::platform {
+
+struct ApplicationInfo;
+
+}
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -38,7 +42,7 @@ class Context;
 class AppThread;
 
 #if ANDROID
-using NativeContextHandle = ANativeActivity;
+using NativeContextHandle = stappler::platform::ApplicationInfo;
 #else
 using NativeContextHandle = void;
 #endif
@@ -50,6 +54,7 @@ enum class SystemNotification : uint32_t {
 	Suspending,
 	Resume,
 	DisplayChanged,
+	ConfigurationChanged,
 };
 
 enum class NetworkFlags : uint32_t {
@@ -133,6 +138,7 @@ struct ContextConfig final {
 			const Callback<void(StringView)> &cb = nullptr);
 
 	CommonFlags flags = CommonFlags::None;
+	NativeContextHandle *native = nullptr;
 
 	Rc<ContextInfo> context;
 	Rc<WindowInfo> window;
@@ -140,7 +146,7 @@ struct ContextConfig final {
 	Rc<core::LoopInfo> loop;
 
 	ContextConfig(int argc, const char *argv[]);
-	ContextConfig(NativeContextHandle *, Value && = Value());
+	ContextConfig(NativeContextHandle *);
 
 	Value encode() const;
 
@@ -165,9 +171,7 @@ struct SP_PUBLIC DecorationInfo {
 	float shadowWidth = 0.0f;
 	float shadowMinValue = 0.1f;
 	float shadowMaxValue = 0.25f;
-	float shadowCurrentValue = 0.3f;
 	Vec2 shadowOffset;
-	bool userShadows = false;
 
 	void decode(const Value &);
 	Value encode() const;

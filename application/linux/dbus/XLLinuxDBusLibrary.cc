@@ -146,14 +146,14 @@ Connection::Connection(Library *lib, EventCallback &&cb, DBusBusType type)
 	lib->dbus_error_init(&error);
 	connection = lib->dbus_bus_get_private(type, &error);
 
-	// DBus is large enough to call _exit for the whole app, damn it...
-	lib->dbus_connection_set_exit_on_disconnect(connection, false);
-
 	if (lib->dbus_error_is_set(&error)) {
 		log::source().error("DBus", "Fail to connect: ", error.name, ": ", error.message);
 	}
 
 	if (connection) {
+		// DBus is large enough to call _exit for the whole app, damn it...
+		lib->dbus_connection_set_exit_on_disconnect(connection, false);
+
 		lib->dbus_connection_set_watch_functions(connection, [](DBusWatch *watch, void *data) {
 			auto conn = reinterpret_cast<Connection *>(data);
 			return conn->callback(conn, Event{Event::AddWatch, {watch}});
@@ -235,12 +235,17 @@ static void parseServiceList(Library *lib, Set<String> &services, DBusMessage *r
 }
 
 void Connection::setup() {
-	callMethod("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames",
-			nullptr, [](NotNull<Connection> c, DBusMessage *reply) {
-		parseServiceList(c->lib, c->services, reply);
-		c->connected = true;
-		c->callback(c, Event{Event::Connected});
-	}, this);
+	if (connection) {
+		callMethod("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+				"ListNames", nullptr, [](NotNull<Connection> c, DBusMessage *reply) {
+			parseServiceList(c->lib, c->services, reply);
+			c->connected = true;
+			c->callback(c, Event{Event::Connected});
+		}, this);
+	} else {
+		failed = true;
+		callback(this, Event{Event::Failed});
+	}
 }
 
 DBusPendingCall *Connection::callMethod(StringView bus, StringView path, StringView iface,

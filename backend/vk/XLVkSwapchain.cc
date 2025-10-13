@@ -329,7 +329,8 @@ auto SwapchainHandle::acquire(bool lockfree, const Rc<core::Fence> &fence, Statu
 	return nullptr;
 }
 
-Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *image) {
+Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *image,
+		uint64_t presentWindow) {
 	if (_invalid) {
 		return Status::ErrorCancelled;
 	}
@@ -340,17 +341,33 @@ Status SwapchainHandle::present(core::DeviceQueue &queue, core::ImageStorage *im
 
 	auto dev = static_cast<Device *>(_object.device);
 
-	VkPresentInfoKHR presentInfo{};
-	sanitizeVkStruct(presentInfo);
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	VkPresentTimeGOOGLE presentTime{
+		static_cast<uint32_t>(_presentedFrames & uint64_t(maxOf<uint32_t>())),
+		presentWindow * 1'000, // present window in micro, timings in nano
+	};
 
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &waitSemObj;
+	VkPresentTimesInfoGOOGLE presentTimeInfo{
+		VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
+		nullptr,
+		1,
+		&presentTime,
+	};
 
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &_data->swapchain;
-	presentInfo.pImageIndices = &imageIndex;
-	presentInfo.pResults = nullptr; // Optional
+	VkPresentInfoKHR presentInfo{
+		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		nullptr,
+		1,
+		&waitSemObj,
+		1,
+		&_data->swapchain,
+		&imageIndex,
+		nullptr,
+	};
+
+	if (dev->hasExtension(OptionalDeviceExtension::DisplayTiming)) {
+		presentTimeInfo.pNext = presentInfo.pNext;
+		presentInfo.pNext = &presentTimeInfo;
+	}
 
 	VkResult result = VK_ERROR_UNKNOWN;
 	dev->makeApiCall([&](const DeviceTable &table, VkDevice device) {

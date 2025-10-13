@@ -57,6 +57,9 @@ public:
 	virtual void setContent(SceneContent *) override;
 
 protected:
+	// override this to add initial resources to be compiled woth render queue
+	virtual void buildQueueResources(core::Queue::Builder &);
+
 	virtual void initialize();
 	virtual void addContentNodes(SceneContent *);
 

@@ -55,15 +55,19 @@ struct EventBus {
 	Rc<event::Bus> bus;
 };
 
-static EventBus s_eventBus;
+static EventBus *getEventBus() {
+	static EventBus s_eventBus;
+	return &s_eventBus;
+}
+
 
 static void EventHeader_send(const EventHeader &header, Ref *object, Value &&dataVal = Value(),
 		Ref *objVal = nullptr) {
 	auto ev = Rc<Event>::alloc(header, object, move(dataVal), objVal);
-	s_eventBus.dispatchEvent(ev.get());
+	getEventBus()->dispatchEvent(ev.get());
 }
 
-EventHeader::EventHeader(StringView name) : _category(s_eventBus.allocateCategory(name)) {
+EventHeader::EventHeader(StringView name) : _category(getEventBus()->allocateCategory(name)) {
 	SPASSERT(!name.empty(), "Event should have name");
 }
 
@@ -71,7 +75,7 @@ EventHeader::~EventHeader() { }
 
 EventId EventHeader::getEventId() const { return _category; }
 
-StringView EventHeader::getName() const { return s_eventBus.getCategoryName(_category); }
+StringView EventHeader::getName() const { return getEventBus()->getCategoryName(_category); }
 
 EventHeader::operator EventId() const { return _category; }
 
@@ -115,7 +119,7 @@ void EventHeader::send(Ref *object, Value &&value) const {
 }
 void EventHeader::send(Ref *object) const { EventHeader_send(*this, object); }
 
-event::Bus *Event::getBus() { return s_eventBus.bus; }
+event::Bus *Event::getBus() { return getEventBus()->bus; }
 
 EventId Event::getEventId() const { return getCategory(); }
 

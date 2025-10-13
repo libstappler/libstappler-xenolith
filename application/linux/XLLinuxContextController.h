@@ -56,7 +56,7 @@ public:
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
 	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
 
-	virtual void handleThemeInfoChanged(const ThemeInfo &) override;
+	virtual void handleThemeInfoChanged(ThemeInfo &&) override;
 
 	void tryStart();
 

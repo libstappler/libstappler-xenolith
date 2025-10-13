@@ -52,7 +52,7 @@ void main() {
 	if (d.x < data.radius && d.y < data.radius) {
 		float dist = length(data.radius.xx - d);
 		if (dist > data.radius) {
-			if ((data.constraints & (1 << 4)) != 0 ) {
+			if ((data.constraints & (1 << 4)) == 0) {
 				outColor = 0.0.xxxx;
 			} else {
 				dist = length(data.radius.xx - d - data.offset * s);

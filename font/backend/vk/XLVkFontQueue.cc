@@ -819,8 +819,14 @@ void FontRenderPassHandle::submitResult(FrameHandle &frame) {
 
 	auto &sig = frame.getSignalDependencies();
 
+	ImageViewInfo viewInfo;
+	viewInfo.setup(_targetImage->getInfo());
+	viewInfo.setup(core::ColorMode::SolidColor, true);
+
+	auto view = Rc<ImageView>::create(*_device, _targetImage, viewInfo);
+
 	input->image->updateInstance(*frame.getLoop(), _targetImage, move(atlas),
-			Rc<Ref>(_fontAttachment->getUserdata()), sig);
+			Rc<Ref>(_fontAttachment->getUserdata()), sig, sp::move(view));
 
 	if (input->output) {
 		_outBuffer->map([&, this](uint8_t *ptr, VkDeviceSize size) {

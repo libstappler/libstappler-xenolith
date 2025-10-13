@@ -181,17 +181,14 @@ bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
 		const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
+	buildQueueResources(builder);
+
 #if MODULE_XENOLITH_BACKEND_VK
 	basic2d::vk::ShadowPass::RenderQueueInfo info{
 		app->getContext()->getGlLoop(),
 		Extent2(constraints.extent.width, constraints.extent.height),
 		basic2d::vk::ShadowPass::Flags::None,
 	};
-
-	if (hasFlag(window->getInfo()->flags, WindowCreationFlags::UserSpaceDecorations)) {
-		// set default alpha to zero for user decorations
-		//info.backgroundColor.a = 0;
-	}
 
 	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
 
@@ -245,6 +242,8 @@ void Scene2d::setContent(SceneContent *content) {
 
 	addContentNodes(_content);
 }
+
+void Scene2d::buildQueueResources(core::Queue::Builder &) { }
 
 void Scene2d::initialize() {
 	_listener = addSystem(Rc<InputListener>::create());

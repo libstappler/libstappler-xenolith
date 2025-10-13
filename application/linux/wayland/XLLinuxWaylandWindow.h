@@ -108,7 +108,7 @@ public:
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame> frame) override;
 
-	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&c) const override;
+	virtual core::FrameConstraints exportConstraints() const override;
 
 	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &dev,
 			NotNull<core::Surface> surface) const override;

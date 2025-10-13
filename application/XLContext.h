@@ -142,8 +142,11 @@ public:
 	using SymbolPrintHelpSignature = void (*)(const ContextConfig &, int argc, const char **);
 	static constexpr auto SymbolPrintHelpName = "printHelp";
 
-	using SymbolParseConfigSignature = ContextConfig (*)(int argc, const char **);
-	static constexpr auto SymbolParseConfigName = "parseConfig";
+	using SymbolParseConfigCmdSignature = ContextConfig (*)(int argc, const char **);
+	static constexpr auto SymbolParseConfigCmdName = "parseConfigCmd";
+
+	using SymbolParseConfigNativeSignature = ContextConfig (*)(NativeContextHandle *);
+	static constexpr auto SymbolParseConfigNativeName = "parseConfigNative";
 
 	using SymbolMakeContextSignature = Rc<Context> (*)(ContextConfig &&);
 	static constexpr auto SymbolMakeContextName = "makeContext";
@@ -156,9 +159,12 @@ public:
 	static constexpr auto SymbolMakeConfigName = "makeConfig";
 
 	// Symbol name for the MODULE_XENOLITH_APPLICATION
+	using SymbolRunCmdSignature = int (*)(int argc, const char **argv);
+	using SymbolRunNativeSignature = int (*)(NativeContextHandle *);
 	static constexpr auto SymbolContextRunName = "Context::run";
 
 	static int run(int argc, const char **argv);
+	static int run(NativeContextHandle *);
 
 	Context();
 	virtual ~Context();
@@ -169,6 +175,8 @@ public:
 	event::Looper *getLooper() const { return _looper; }
 
 	core::Loop *getGlLoop() const { return _loop; }
+
+	platform::ContextController *getController() const { return _controller; }
 
 	BytesView getMessageToken() const { return _messageToken; }
 
@@ -238,6 +246,11 @@ public:
 	virtual void receiveRemoteNotification(Value &&val);
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;
+
+	template <typename Callback>
+	auto performTemporary(const Callback &cb) {
+		return memory::pool::perform_clear(cb, _tmpPool);
+	}
 
 protected:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<NativeWindow>);

@@ -54,6 +54,7 @@ struct Event {
 
 		Connected,
 		Message,
+		Failed,
 	};
 
 	Type type = None;
@@ -165,6 +166,7 @@ struct SP_PUBLIC Connection : public Ref {
 	DBusError error;
 
 	bool connected = false;
+	bool failed = false;
 	String name;
 	Set<String> services;
 	Set<BusFilter *> matchFilters;

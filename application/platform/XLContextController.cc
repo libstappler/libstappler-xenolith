@@ -37,6 +37,10 @@
 #include "windows/XLWindowsContextController.h"
 #endif
 
+#if ANDROID
+#include "android/XLAndroidContextController.h"
+#endif
+
 #if MODULE_XENOLITH_BACKEND_VK
 #include "XLVkInstance.h"
 #endif
@@ -53,6 +57,9 @@ Rc<ContextController> ContextController::create(NotNull<Context> ctx, ContextCon
 #if WIN32
 	return Rc<WindowsContextController>::create(ctx, move(info));
 #endif
+#if ANDROID
+	return Rc<AndroidContextController>::create(ctx, move(info));
+#endif
 	log::source().error("ContextController", "Unknown platform");
 	return nullptr;
 }
@@ -67,6 +74,9 @@ void ContextController::acquireDefaultConfig(ContextConfig &config, NativeContex
 #if WIN32
 	WindowsContextController::acquireDefaultConfig(config, handle);
 #endif
+#if ANDROID
+	AndroidContextController::acquireDefaultConfig(config);
+#endif
 
 	auto cfgSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeConfigSignature>(
 			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeConfigName);
@@ -80,7 +90,7 @@ bool ContextController::init(NotNull<Context> ctx) {
 	return true;
 }
 
-int ContextController::run(NotNull<ContextContainer>) { return _resultCode; }
+int ContextController::run(NotNull<ContextContainer> с) { return _resultCode; }
 
 void ContextController::retainPollDepth() { ++_pollDepth; }
 void ContextController::releasePollDepth() {
@@ -95,6 +105,7 @@ bool ContextController::configureWindow(NotNull<WindowInfo> w) {
 
 void ContextController::notifyWindowCreated(NotNull<NativeWindow> w) {
 	_context->handleNativeWindowCreated(w);
+	_activeWindows.emplace(w);
 }
 
 void ContextController::notifyWindowConstraintsChanged(NotNull<NativeWindow> w,
@@ -126,9 +137,9 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseO
 		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
 			auto it = _activeWindows.find(w.get());
 			if (it != _activeWindows.end()) {
-				_activeWindows.erase(it);
 				_context->handleNativeWindowDestroyed(w);
 				w->unmapWindow();
+				_activeWindows.erase(it);
 			}
 		}
 		return true;
@@ -188,8 +199,8 @@ void ContextController::handleNetworkStateChanged(NetworkFlags flags) {
 	_context->handleNetworkStateChanged(_networkFlags);
 }
 
-void ContextController::handleThemeInfoChanged(const ThemeInfo &theme) {
-	_themeInfo = theme;
+void ContextController::handleThemeInfoChanged(ThemeInfo &&theme) {
+	_themeInfo = sp::move(theme);
 	_context->handleThemeInfoChanged(_themeInfo);
 }
 

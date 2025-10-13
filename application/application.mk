@@ -1,5 +1,6 @@
 # Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
-# 
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -20,8 +21,11 @@
 
 MODULE_XENOLITH_APPLICATION_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
 MODULE_XENOLITH_APPLICATION_PRECOMPILED_HEADERS :=
-MODULE_XENOLITH_APPLICATION_SRCS_DIRS := $(XENOLITH_MODULE_DIR)/application
-MODULE_XENOLITH_APPLICATION_SRCS_OBJS :=
+MODULE_XENOLITH_APPLICATION_SRCS_DIRS :=
+MODULE_XENOLITH_APPLICATION_SRCS_OBJS := \
+	$(XENOLITH_MODULE_DIR)/application/XLApplication.scu.cpp \
+	$(XENOLITH_MODULE_DIR)/application/XLDirector.scu.cpp \
+	$(XENOLITH_MODULE_DIR)/application/XLNodes.scu.cpp
 MODULE_XENOLITH_APPLICATION_INCLUDES_DIRS := 
 MODULE_XENOLITH_APPLICATION_INCLUDES_OBJS := \
 	$(XENOLITH_MODULE_DIR)/application \

@@ -21,6 +21,7 @@
  **/
 
 #include "SPCommon.h" // IWYU pragma: keep
+#include "SPBytesView.h" // IWYU pragma: keep
 #include "SPSharedModule.h"
 #include "SPLog.h"
 
@@ -28,23 +29,74 @@
 #include "XLContext.h"
 #endif
 
-int main(int argc, const char *argv[]) {
-	// Main symbol should depend only on stappler_core for successful linkage
-	// So, use SharedModule to load `Context::run`
+#if ANDROID
+
+#include "SPJni.h"
+
+#include <android/native_activity.h>
+#include <android/configuration.h>
+
+SP_EXTERN_C JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+	STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::loadJava(vm);
 #if MODULE_XENOLITH_APPLICATION
-	auto runFn =
-			stappler::SharedModule::acquireTypedSymbol<decltype(&stappler::xenolith::Context::run)>(
-					stappler::buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-					stappler::xenolith::Context::SymbolContextRunName);
+	auto runFn = STAPPLER_VERSIONIZED_NAMESPACE::SharedModule::acquireTypedSymbol<
+			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolRunNativeSignature>(
+			STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
+			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolContextRunName);
 	if (runFn) {
-		return runFn(argc, argv);
+		auto app = STAPPLER_VERSIONIZED_NAMESPACE::platform::ApplicationInfo::getCurrent();
+		if (runFn(app.get()) != 0) {
+			return -1;
+		}
+	} else {
+		STAPPLER_VERSIONIZED_NAMESPACE::log::source().error("main",
+				"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
+		return -1;
 	}
-	stappler::log::source().error("main",
-			"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
-	return -1;
+	return JNI_VERSION_1_6;
 #else
-	stappler::log::source().error("main",
+	STAPPLER_VERSIONIZED_NAMESPACE::log::source().error("main",
 			"MODULE_XENOLITH_APPLICATION is not defined for the default entry point");
 	return -1;
 #endif
 }
+
+SP_EXTERN_C JNIEXPORT void JNI_DestroyJavaVM(JavaVM *vm) {
+	STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::finalizeJava();
+}
+
+SP_EXTERN_C JNIEXPORT void ANativeActivity_onCreate(ANativeActivity *activity, void *savedState,
+		size_t savedStateSize) {
+	auto app = STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::getApp();
+
+	auto savedData =
+			STAPPLER_VERSIONIZED_NAMESPACE::BytesView((const uint8_t *)savedState, savedStateSize);
+	if (!app->loadActivity(activity, savedData)) {
+		abort();
+	}
+}
+
+#else
+
+int main(int argc, const char *argv[]) {
+	// Main symbol should depend only on stappler_core for successful linkage
+	// So, use SharedModule to load `Context::run`
+#if MODULE_XENOLITH_APPLICATION
+	auto runFn = STAPPLER_VERSIONIZED_NAMESPACE::SharedModule::acquireTypedSymbol<
+			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolRunCmdSignature>(
+			STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
+			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolContextRunName);
+	if (runFn) {
+		return runFn(argc, argv);
+	}
+	STAPPLER_VERSIONIZED_NAMESPACE::log::source().error("main",
+			"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
+	return -1;
+#else
+	STAPPLER_VERSIONIZED_NAMESPACE::log::source().error("main",
+			"MODULE_XENOLITH_APPLICATION is not defined for the default entry point");
+	return -1;
+#endif
+}
+
+#endif

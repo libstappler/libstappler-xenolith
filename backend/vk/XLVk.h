@@ -150,6 +150,7 @@ enum class OptionalDeviceExtension {
 	ExternalFenceFd,
 	SwapchainMaintenance1,
 	FullscreenExclusive,
+	DisplayTiming,
 	Portability,
 	Max
 };
@@ -175,6 +176,7 @@ static const char * const s_optionalDeviceExtensions[] = {
 	VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
 	VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME,
 	VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME,
+	VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME,
 	VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 	nullptr
 };

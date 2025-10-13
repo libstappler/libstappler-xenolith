@@ -222,12 +222,13 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 	_density = float(dpi) / float(udpi);
 
 	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		auto &theme = _controller->getThemeInfo();
 		_xinfo.boundingRect = xcb_rectangle_t{static_cast<int16_t>(_info->rect.x * _density),
 			static_cast<int16_t>(_info->rect.y * _density),
 			static_cast<uint16_t>(
-					(_info->rect.width + _info->userDecorations.shadowWidth * 2) * _density),
+					(_info->rect.width + theme.decorations.shadowWidth * 2) * _density),
 			static_cast<uint16_t>(
-					(_info->rect.height + _info->userDecorations.shadowWidth * 2) * _density)};
+					(_info->rect.height + theme.decorations.shadowWidth * 2) * _density)};
 	} else {
 		_xinfo.boundingRect = xcb_rectangle_t{static_cast<int16_t>(_info->rect.x * _density),
 			static_cast<int16_t>(_info->rect.y * _density),
@@ -291,30 +292,34 @@ bool XcbWindow::init(NotNull<XcbConnection> conn, Rc<WindowInfo> &&info,
 			_connection->getAtom(XcbAtomIndex::_MOTIF_WM_HINTS), XCB_ATOM_CARDINAL, 32, 5, &hints);
 
 	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
-		generateShadowPixmaps(_info->userDecorations.shadowWidth * _density,
-				_info->userDecorations.borderRadius * _density);
+		auto &theme = _controller->getThemeInfo();
+		generateShadowPixmaps(theme.decorations.shadowWidth * _density,
+				theme.decorations.borderRadius * _density);
 	}
 
 	_xcb->xcb_flush(_connection->getConnection());
-
-	_controller->notifyWindowCreated(this);
 
 	return true;
 }
 
 void XcbWindow::handleExpose(xcb_expose_event_t *ev) {
+	if (!hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		return;
+	}
+
+	auto &theme = _controller->getThemeInfo();
+
 	auto writeCorner = [&](XcbShadowCornerContext &ctx, int16_t x, int16_t y) {
 		_xcb->xcb_copy_area(_connection->getConnection(), ctx.pixmap, _xinfo.window,
 				_xinfo.decorationGc, 0, 0, x, y, ctx.width, ctx.width);
 	};
 
-	auto shadowWidth = static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density);
+	auto shadowWidth = static_cast<uint32_t>(theme.decorations.shadowWidth * _density);
 
 	// Fill internal rect before drawing shadow
-	auto cornerSize = static_cast<uint32_t>(_info->userDecorations.borderRadius * _density);
+	auto cornerSize = static_cast<uint32_t>(theme.decorations.borderRadius * _density);
 	if (cornerSize) {
-		uint32_t color = static_cast<uint32_t>(_info->userDecorations.shadowCurrentValue * 255.0f)
-				<< 24;
+		uint32_t color = static_cast<uint32_t>(_shadowCurrentValue * 255.0f) << 24;
 		uint32_t values[2] = {color, 0};
 		_xcb->xcb_change_gc(_connection->getConnection(), _xinfo.decorationGc,
 				XCB_GC_FOREGROUND | XCB_GC_BACKGROUND, values);
@@ -371,9 +376,7 @@ void XcbWindow::handleExpose(xcb_expose_event_t *ev) {
 
 	// Draw shadows on edges line by line
 	makeShadowVector([&](uint32_t index, float value) {
-		uint32_t color =
-				static_cast<uint32_t>(value * _info->userDecorations.shadowCurrentValue * 255.0f)
-				<< 24;
+		uint32_t color = static_cast<uint32_t>(value * _shadowCurrentValue * 255.0f) << 24;
 
 		uint32_t values[2] = {color, 0};
 		_xcb->xcb_change_gc(_connection->getConnection(), _xinfo.decorationGc,
@@ -406,7 +409,7 @@ void XcbWindow::handleExpose(xcb_expose_event_t *ev) {
 
 		_xcb->xcb_poly_fill_rectangle(_connection->getConnection(), _xinfo.window,
 				_xinfo.decorationGc, nrects, rects);
-	}, static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density));
+	}, static_cast<uint32_t>(theme.decorations.shadowWidth * _density));
 }
 
 void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
@@ -430,9 +433,9 @@ void XcbWindow::handleConfigureNotify(xcb_configure_notify_event_t *ev) {
 		}
 	}
 
-	_info->rect = URect{
-		uint16_t(_xinfo.boundingRect.x + _xinfo.contentRect.x),
-		uint16_t(_xinfo.boundingRect.y + _xinfo.contentRect.y),
+	_info->rect = IRect{
+		_xinfo.boundingRect.x + _xinfo.contentRect.x,
+		_xinfo.boundingRect.y + _xinfo.contentRect.y,
 		_xinfo.contentRect.width,
 		_xinfo.contentRect.height,
 	};
@@ -494,12 +497,13 @@ void XcbWindow::handlePropertyNotify(xcb_property_notify_event_t *ev) {
 			}
 
 			if (hasFlag(_info->state ^ state, WindowState::Focused)) {
-				auto targetValue = _info->userDecorations.shadowMinValue;
+				auto &theme = _controller->getThemeInfo();
+				auto targetValue = theme.decorations.shadowMinValue;
 				if (hasFlag(state, WindowState::Focused)) {
-					targetValue = _info->userDecorations.shadowMaxValue;
+					targetValue = theme.decorations.shadowMaxValue;
 				}
-				if (_info->userDecorations.shadowCurrentValue != targetValue) {
-					_info->userDecorations.shadowCurrentValue = targetValue;
+				if (_shadowCurrentValue != targetValue) {
+					_shadowCurrentValue = targetValue;
 					updateShadows();
 				}
 			}
@@ -946,8 +950,8 @@ void XcbWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
 	}
 }
 
-core::FrameConstraints XcbWindow::exportConstraints(core::FrameConstraints &&c) const {
-	auto ret = NativeWindow::exportConstraints(sp::move(c));
+core::FrameConstraints XcbWindow::exportConstraints() const {
+	auto ret = NativeWindow::exportConstraints();
 
 	ret.extent = Extent3(_xinfo.contentRect.width, _xinfo.contentRect.height, 1);
 	if (ret.density == 0.0f) {
@@ -1176,11 +1180,12 @@ Status XcbWindow::setFullscreenState(FullscreenInfo &&info) {
 xcb_rectangle_t XcbWindow::getContentRect(xcb_rectangle_t boundingRect) const {
 	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)
 			&& !hasFlag(_info->state, WindowState::Fullscreen)) {
-		auto offset = static_cast<uint32_t>(_info->userDecorations.shadowWidth * _density);
+		auto &theme = _controller->getThemeInfo();
+		auto offset = static_cast<uint32_t>(theme.decorations.shadowWidth * _density);
 
 		auto rect = xcb_rectangle_t{
-			static_cast<int16_t>(offset + _info->userDecorations.shadowOffset.x * _density),
-			static_cast<int16_t>(offset - _info->userDecorations.shadowOffset.y * _density),
+			static_cast<int16_t>(offset + theme.decorations.shadowOffset.x * _density),
+			static_cast<int16_t>(offset - theme.decorations.shadowOffset.y * _density),
 			static_cast<uint16_t>(boundingRect.width - offset * 2),
 			static_cast<uint16_t>(boundingRect.height - offset * 2)};
 
@@ -1245,9 +1250,10 @@ void XcbWindow::configureOutputWindow() {
 
 void XcbWindow::updateShadows() {
 	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
+		auto &theme = _controller->getThemeInfo();
 		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
-		generateShadowPixmaps(_info->userDecorations.shadowWidth * _density,
-				_info->userDecorations.borderRadius * _density);
+		generateShadowPixmaps(theme.decorations.shadowWidth * _density,
+				theme.decorations.borderRadius * _density);
 		emitAppFrame();
 		_pendingExpose = true;
 	}
@@ -1305,7 +1311,7 @@ void XcbWindow::generateShadowPixmaps(uint32_t size, uint32_t inset) {
 	auto targetD = ptr + width * width * 3;
 
 	makeShadowCorner([&](uint32_t i, uint32_t j, float value) {
-		auto valueA = (uint8_t)(_info->userDecorations.shadowCurrentValue * 255.0f * value);
+		auto valueA = (uint8_t)(_shadowCurrentValue * 255.0f * value);
 		targetA[i * width + j].a = valueA;
 		targetB[(width - i - 1) * width + (width - j - 1)].a = valueA;
 		targetC[(i)*width + (width - j - 1)].a = valueA;

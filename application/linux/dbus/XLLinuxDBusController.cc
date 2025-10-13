@@ -105,7 +105,10 @@ void Controller::cancel() {
 	_controller = nullptr;
 }
 
-bool Controller::isConnectied() const { return _sessionBus->connected && _systemBus->connected; }
+bool Controller::isConnectied() const {
+	return (_sessionBus->connected || _sessionBus->failed)
+			&& (_systemBus->connected || _systemBus->failed);
+}
 
 Rc<DisplayConfigManager> Controller::makeDisplayConfigManager(
 		Function<void(NotNull<DisplayConfigManager>)> &&cb) {
@@ -313,6 +316,16 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		break;
 	}
+	case dbus::Event::Failed:
+		if (c == _systemBus) {
+			handleSystemConnected(c);
+		} else if (c == _sessionBus) {
+			handleSessionConnected(c);
+		}
+		if (isConnectied()) {
+			_controller->tryStart();
+		}
+		return 1;
 	}
 	return 0;
 }
@@ -342,7 +355,7 @@ void Controller::updateInterfaceTheme() {
 		auto newThemeInfo = readThemeInfo(_dbus, reply);
 
 		if (_controller) {
-			_controller->handleThemeInfoChanged(newThemeInfo);
+			_controller->handleThemeInfoChanged(sp::move(newThemeInfo));
 		}
 	});
 }
@@ -362,7 +375,6 @@ void Controller::handleSessionConnected(NotNull<dbus::Connection> c) {
 
 void Controller::handleSystemConnected(NotNull<dbus::Connection> c) {
 	if (c->services.find(NM_SERVICE_NAME) != c->services.end()) {
-
 		_networkConnectionFilter = Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_CONNECTION_FILTER,
 				NM_SERVICE_CONNECTION_NAME, "StateChanged",
 				[this](NotNull<const BusFilter>, NotNull<DBusMessage>) -> uint32_t {
@@ -460,7 +472,7 @@ struct MessageSettingsInfoParser {
 			} else if (prop == "scaling-factor") {
 				uint32_t value = 0;
 				if (MessagePropertyParser::parse(lib, entry, value)) {
-					target->cursorScalingFactor = value;
+					target->cursorScaling = value;
 				}
 			} else if (prop == "cursor-size") {
 				int32_t value = 0;

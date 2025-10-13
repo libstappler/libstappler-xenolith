@@ -737,7 +737,7 @@ void ShadowPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		data.value = input->decorations.shadowValue;
 		data.offset = input->decorations.shadowOffset * _constraints.surfaceDensity;
 
-		data.constraints = toInt(input->decorations.viewConstraints);
+		data.constraints = toInt(input->decorations.viewConstraints) | (1 << 4);
 		if (input->decorations.drawUserShadows) {
 			data.constraints |= (1 << 4);
 		}

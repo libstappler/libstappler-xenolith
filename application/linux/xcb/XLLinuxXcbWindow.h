@@ -97,7 +97,7 @@ public:
 
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
 
-	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const override;
+	virtual core::FrameConstraints exportConstraints() const override;
 
 	virtual Extent2 getExtent() const override;
 
@@ -155,6 +155,8 @@ protected:
 
 	Map<MonitorId, xenolith::ModeInfo> _capturedModes;
 	std::bitset<64> _buttons;
+
+	float _shadowCurrentValue = 0.0f;
 };
 
 } // namespace stappler::xenolith::platform

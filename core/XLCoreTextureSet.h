@@ -38,6 +38,9 @@ public:
 
 	virtual void write(const MaterialLayout &);
 
+	uint32_t size() const { return _count; }
+	SpanView<uint64_t> getIndexes() const { return _layoutIndexes; }
+
 protected:
 	uint32_t _count = 0;
 	Vector<uint64_t> _layoutIndexes;

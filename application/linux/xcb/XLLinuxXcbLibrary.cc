@@ -162,6 +162,7 @@ void XcbLibrary::openAux() {
 		XL_LOAD_PROTO(randr, xcb_randr_select_input_checked)
 		XL_LOAD_PROTO(randr, xcb_randr_query_version)
 		XL_LOAD_PROTO(randr, xcb_randr_query_version_reply)
+		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_unchecked)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_reply)
 		XL_LOAD_PROTO(randr, xcb_randr_get_screen_info_sizes)

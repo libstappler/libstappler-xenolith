@@ -131,7 +131,6 @@ bool MacosWindow::init(NotNull<ContextController> controller, Rc<WindowInfo> &&i
 	_initialized = true;
 
 	if (_windowLoaded) {
-		_controller->notifyWindowCreated(this);
 		[_window display];
 	}
 	return true;

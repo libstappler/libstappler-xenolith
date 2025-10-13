@@ -44,6 +44,11 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 bool PresentationEngine::run() {
+	auto dev = static_cast<Device *>(_device);
+	if (dev->hasExtension(OptionalDeviceExtension::DisplayTiming)) {
+		_presentWithWindowTiming = true;
+	}
+
 	auto info = _window->getSurfaceOptions(*static_cast<Device *>(_device), _surface);
 	auto cfg = _window->selectConfig(info, false);
 
@@ -217,7 +222,7 @@ bool PresentationEngine::recreateSwapchain() {
 bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::SwapchainConfig &&cfg,
 		core::PresentMode presentMode, bool oldSwapchainValid) {
 	auto dev = static_cast<Device *>(_device);
-	auto devInfo = dev->getInfo();
+	auto &devInfo = dev->getInfo();
 
 	auto swapchainImageInfo = _window->getSwapchainImageInfo(cfg);
 	uint32_t queueFamilyIndices[] = {devInfo.graphicsFamily.index, devInfo.presentFamily.index};
@@ -249,7 +254,7 @@ bool PresentationEngine::createSwapchain(const core::SurfaceInfo &info, core::Sw
 				}
 			}
 
-			auto newConstraints = _window->exportFrameConstraints();
+			auto newConstraints = _window->exportConstraints();
 			newConstraints.extent = cfg.extent;
 			newConstraints.transform = cfg.transform;
 

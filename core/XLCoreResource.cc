@@ -243,7 +243,7 @@ uint64_t Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, Byte
 	return 0;
 }
 
-uint64_t Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, StringView path,
+uint64_t Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, FileInfo path,
 		ImageFormat fmt, const ImageData::DataCallback &dcb) {
 	return memory::pool::perform_temporary([&]() -> uint64_t {
 		auto f = filesystem::openForReading(path);
@@ -604,14 +604,14 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img, co
 
 	Extent3 extent;
 	extent.depth = 1;
-	if (!bitmap::getImageSize(FileInfo(npath), extent.width, extent.height)) {
+	if (!bitmap::getImageSize(path, extent.width, extent.height)) {
 		log::source().error("Resource", "Fail to add image: ", key,
 				", fail to find image dimensions: ", path);
 		return nullptr;
 	}
 
 	auto p = Resource_conditionalInsert<ImageData>(_data->images, key, [&, this]() -> ImageData * {
-		auto fpath = StringView(npath).pdup(_data->pool);
+		auto fpath = FileInfo(path.path.pdup(_data->pool), path.category);
 		auto buf = new (_data->pool) ImageData;
 		static_cast<ImageInfo &>(*buf) = move(img);
 		buf->key = key.pdup(_data->pool);

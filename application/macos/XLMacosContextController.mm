@@ -156,10 +156,7 @@ void MacosContextController::handleContextDidStart() {
 
 	if (_windowInfo) {
 		if (configureWindow(_windowInfo)) {
-			auto window = Rc<MacosWindow>::create(this, sp::move(_windowInfo));
-			if (window) {
-				_activeWindows.emplace(window);
-			}
+			Rc<MacosWindow>::create(this, sp::move(_windowInfo));
 		}
 	}
 }

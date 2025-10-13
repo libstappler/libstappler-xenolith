@@ -184,6 +184,7 @@ public:
 	XL_DEFINE_PROTO(xcb_randr_select_input_checked)
 	XL_DEFINE_PROTO(xcb_randr_query_version)
 	XL_DEFINE_PROTO(xcb_randr_query_version_reply)
+	XL_DEFINE_PROTO(xcb_randr_get_screen_info)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_info_unchecked)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_info_reply)
 	XL_DEFINE_PROTO(xcb_randr_get_screen_info_sizes)

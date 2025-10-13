@@ -66,10 +66,23 @@
 #include "windows/XLWindowsContextController.cc"
 #endif
 
+#if ANDROID
+#include "android/XLAndroid.cc"
+#include "android/XLAndroidInput.cc"
+#include "android/XLAndroidWindow.cc"
+#include "android/XLAndroidActivity.cc"
+#include "android/XLAndroidDisplayConfigManager.cc"
+#include "android/XLAndroidNetworkConnectivity.cc"
+#include "android/XLAndroidContextController.cc"
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName, Context::run),
+	SharedSymbol(Context::SymbolContextRunName,
+			static_cast<Context::SymbolRunCmdSignature>(Context::run)),
+	SharedSymbol(Context::SymbolContextRunName,
+			static_cast<Context::SymbolRunNativeSignature>(Context::run)),
 };
 
 SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,

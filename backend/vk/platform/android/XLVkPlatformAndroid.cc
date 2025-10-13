@@ -26,8 +26,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk::platform {
 
-Rc<core::Instance> createInstance(
-		const Callback<bool(VulkanInstanceData &, const VulkanInstanceInfo &)> &cb) {
+Rc<core::Instance> createInstance(Rc<core::InstanceInfo> &&info) {
 	auto handle = Dso("libvulkan.so.1");
 	if (!handle) {
 		handle = Dso("libvulkan.so");
@@ -48,7 +47,8 @@ Rc<core::Instance> createInstance(
 		return nullptr;
 	}
 
-	if (auto instance = table.createInstance(cb, move(handle), nullptr)) {
+	if (auto instance = table.createInstance(info, info->backend.get_cast<InstanceBackendInfo>(),
+				move(handle))) {
 		return instance;
 	}
 

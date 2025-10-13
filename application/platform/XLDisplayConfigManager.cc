@@ -125,8 +125,18 @@ Extent2 DisplayConfig::getSize() const {
 	}
 
 	for (auto &it : logical) {
-		ret.width = std::max(ret.width, it.rect.x + it.rect.width);
-		ret.height = std::max(ret.height, it.rect.y + it.rect.height);
+		if (it.rect.width > 0 && it.rect.height > 0) {
+			ret.width = std::max(ret.width, it.rect.x + it.rect.width);
+			ret.height = std::max(ret.height, it.rect.y + it.rect.height);
+		} else {
+			for (auto &mId : it.monitors) {
+				if (auto m = getMonitor(mId)) {
+					auto &cMode = m->getCurrent();
+					ret.width = std::max(ret.width, it.rect.x + cMode.mode.width);
+					ret.height = std::max(ret.height, it.rect.y + cMode.mode.height);
+				}
+			}
+		}
 	}
 	return ret;
 }

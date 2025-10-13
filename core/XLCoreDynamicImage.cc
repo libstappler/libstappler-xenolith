@@ -49,13 +49,20 @@ Rc<DynamicImageInstance> DynamicImage::getInstance() {
 }
 
 void DynamicImage::updateInstance(Loop &loop, const Rc<ImageObject> &obj, Rc<DataAtlas> &&atlas,
-		Rc<Ref> &&userdata, const Vector<Rc<DependencyEvent>> &deps) {
+		Rc<Ref> &&userdata, const Vector<Rc<DependencyEvent>> &deps, Rc<ImageView> &&view) {
 	auto newInstance = Rc<DynamicImageInstance>::alloc();
 	static_cast<ImageInfoData &>(newInstance->data) = obj->getInfo();
+	newInstance->data.key = _keyData;
 	newInstance->data.image = obj;
 	newInstance->data.atlas = move(atlas);
 	newInstance->userdata = move(userdata);
 	newInstance->image = this;
+
+	if (view) {
+		static_cast<ImageViewInfo &>(newInstance->view) = view->getInfo();
+		newInstance->view.view = view;
+		newInstance->data.views.emplace_back(&newInstance->view);
+	}
 
 	std::unique_lock<Mutex> lock(_mutex);
 	if (!_instance) {
@@ -143,11 +150,12 @@ const ImageData *DynamicImage::Builder::setImage(StringView key, ImageInfo &&inf
 	_data->_keyData = key.str<Interface>();
 	static_cast<ImageInfo &>(_data->_data) = info;
 	_data->_data.key = _data->_keyData;
-	_data->_data.stdCallback = [npath, format = info.format](uint8_t *ptr, uint64_t size,
+	_data->_data.stdCallback = [npath = path.path.str<Interface>(), cat = path.category,
+									   format = info.format](uint8_t *ptr, uint64_t size,
 									   const ImageData::DataCallback &dcb) {
-		Resource::loadImageFileData(ptr, size, npath, format, dcb);
+		Resource::loadImageFileData(ptr, size, FileInfo(npath, cat), format, dcb);
 	};
-	;
+
 	_data->_data.atlas = move(atlas);
 	return &_data->_data;
 }

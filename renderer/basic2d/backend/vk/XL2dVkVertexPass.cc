@@ -1258,7 +1258,6 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 	//size_t i = 0;
 	//size_t min = 0;
 	//size_t max = (ctrl ++) % (spans.size());
-
 	auto drawSpan = [&](const VertexSpan &materialVertexSpan) {
 		//++ i;
 		//if (i != max) {
@@ -1274,7 +1273,7 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 
 		//++ i;
 
-		auto material = _materialBuffer->getSet()->getMaterialById(materialVertexSpan.material);
+		auto material = materials->getMaterialById(materialVertexSpan.material);
 		if (!material) {
 			return;
 		}
@@ -1286,6 +1285,8 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		pcb.gradientOffset = materialVertexSpan.gradientOffset;
 		pcb.gradientCount = materialVertexSpan.gradientCount;
 		//pcb.outlineOffset = materialVertexSpan.outlineOffset;
+
+		slog().debug("VertexPassHandle", "Draw: ", pcb.imageIdx);
 
 		if (auto a = material->getAtlas()) {
 			pcb.atlasPointer =

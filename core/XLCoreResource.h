@@ -38,7 +38,7 @@ public:
 
 	static uint64_t loadImageMemoryData(uint8_t *, uint64_t expectedSize, BytesView data,
 			ImageFormat fmt, const ImageData::DataCallback &dcb);
-	static uint64_t loadImageFileData(uint8_t *, uint64_t expectedSize, StringView path,
+	static uint64_t loadImageFileData(uint8_t *, uint64_t expectedSize, FileInfo path,
 			ImageFormat fmt, const ImageData::DataCallback &dcb);
 
 	Resource();

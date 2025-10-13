@@ -371,7 +371,7 @@ auto QueuePassHandle::updateMaterials(FrameHandle &frame, NotNull<core::Material
 			}
 		}
 
-		return Rc<ImageView>::create(*_device, static_cast<Image *>(image.image->image.get()),
+		return Rc<ImageView>::create(*_device, image.image->image.get_cast<Image>(),
 				image.info);
 	});
 

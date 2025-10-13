@@ -247,6 +247,26 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 	auto ret = Rc<DisplayConfig>::create();
 	auto cfg = Rc<XrandrConfig>::create();
 
+	auto parseScreenInfo = [&](xcb_randr_get_screen_info_cookie_t cookie) {
+		auto reply = _connection->perform(_xcb->xcb_randr_get_screen_info_reply, cookie);
+		if (!reply) {
+			return;
+		}
+
+		auto sizes = _xcb->xcb_randr_get_screen_info_sizes(reply);
+		auto len = _xcb->xcb_randr_get_screen_info_sizes_length(reply);
+		uint32_t sizeId = 0;
+		while (len > 0) {
+			if (sizeId == reply->sizeID) {
+				ret->desktopRect = IRect(0, 0, sizes->width, sizes->height);
+				break;
+			}
+			++sizes;
+			++sizeId;
+			--len;
+		}
+	};
+
 	auto parseScreenResourcesCurrentReply =
 			[&](xcb_randr_get_screen_resources_current_cookie_t cookie) {
 		auto reply =
@@ -526,10 +546,15 @@ void XcbDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)
 		}
 	};
 
-	auto screenResCurrentCookie = _xcb->xcb_randr_get_screen_resources_current_unchecked(
-			_connection->getConnection(), _root);
+	auto screenInfoCookie =
+			_xcb->xcb_randr_get_screen_info_unchecked(_connection->getConnection(), _root);
+
+	auto screenResCurrentCookie =
+			_xcb->xcb_randr_get_screen_resources_current(_connection->getConnection(), _root);
 
 	_xcb->xcb_flush(_connection->getConnection());
+
+	parseScreenInfo(screenInfoCookie);
 
 	parseScreenResourcesCurrentReply(screenResCurrentCookie);
 

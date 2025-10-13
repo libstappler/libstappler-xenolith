@@ -46,10 +46,32 @@ XL_DECLARE_EVENT_CLASS(Context, onSystemNotification);
 XL_DECLARE_EVENT_CLASS(Context, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Context, onRemoteNotification)
 
+static int Context_runWithConfig(ContextConfig &&config) {
+	Rc<Context> ctx;
+
+	auto makeContextSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeContextSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeContextName);
+	if (makeContextSymbol) {
+		ctx = makeContextSymbol(move(config));
+	} else {
+		ctx = Rc<Context>::create(move(config));
+	}
+
+	if (!ctx) {
+		log::source().error("Context", "Fail to create Context");
+		return -1;
+	}
+
+	auto container = Rc<platform::ContextContainer>::create();
+	container->context = sp::move(ctx);
+	container->controller = container->context->getController();
+
+	return container->controller->run(container);
+}
+
 int Context::run(int argc, const char **argv) {
 	auto runWithConfig = [&](ContextConfig &&config) -> int {
 		if (hasFlag(config.flags, CommonFlags::Help)) {
-
 			auto printHelpSymbol = SharedModule::acquireTypedSymbol<SymbolPrintHelpSignature>(
 					buildconfig::MODULE_APPCOMMON_NAME, SymbolPrintHelpName);
 			if (printHelpSymbol) {
@@ -77,35 +99,25 @@ int Context::run(int argc, const char **argv) {
 					  << "\n";
 		}
 
-		Rc<Context> ctx;
-
-		auto makeContextSymbol = SharedModule::acquireTypedSymbol<SymbolMakeContextSignature>(
-				buildconfig::MODULE_APPCOMMON_NAME, SymbolMakeContextName);
-		if (makeContextSymbol) {
-			ctx = makeContextSymbol(move(config));
-		} else {
-			ctx = Rc<Context>::create(move(config));
-		}
-
-		if (!ctx) {
-			log::source().error("Context", "Fail to create Context");
-			return -1;
-		}
-
-		auto container = Rc<platform::ContextContainer>::create();
-		container->context = sp::move(ctx);
-		container->controller = container->context->_controller;
-
-		return container->controller->run(container);
+		return Context_runWithConfig(sp::move(config));
 	};
 
-	// access context
-	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigSignature>(
-			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigName);
+	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigCmdSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigCmdName);
 	if (cfgSymbol) {
 		return runWithConfig(cfgSymbol(argc, argv));
 	} else {
 		return runWithConfig(ContextConfig(argc, argv));
+	}
+}
+
+int Context::run(NativeContextHandle *ctx) {
+	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigNativeSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigNativeName);
+	if (cfgSymbol) {
+		return Context_runWithConfig(cfgSymbol(ctx));
+	} else {
+		return Context_runWithConfig(ContextConfig(ctx));
 	}
 }
 
@@ -133,6 +145,8 @@ Context::~Context() {
 }
 
 bool Context::init(ContextConfig &&info) {
+	memory::pool::context ctx(_pool);
+
 	_info = info.context;
 
 	_controller = platform::ContextController::create(this, move(info));

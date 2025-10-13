@@ -256,6 +256,9 @@ enum class WindowCapabilities : uint32_t {
 
 	// For buttons in grip layer to work, GripGuard flag required
 	GripGuardsRequired = 1 << 18,
+
+	// GL Scene should assist to draw user space shadows
+	UserShadowsRequired = 1 << 19,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
@@ -263,7 +266,7 @@ SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)
 struct SP_PUBLIC WindowInfo final : public Ref {
 	String id;
 	String title;
-	URect rect = URect(0, 0, 1'024, 768);
+	IRect rect = IRect(0, 0, 1'024, 768);
 	float density = 0.0f;
 	WindowCreationFlags flags = WindowCreationFlags::None;
 
@@ -285,15 +288,6 @@ struct SP_PUBLIC WindowInfo final : public Ref {
 	// Insets for decorations, that appears above user-drawing space
 	// Canvas inside this inset always be visible for user
 	Padding decorationInsets;
-
-	core::FrameConstraints exportConstraints() const {
-		return core::FrameConstraints{
-			.extent = Extent2(rect.width, rect.height),
-			.contentPadding = decorationInsets,
-			.transform = core::SurfaceTransformFlags::Identity,
-			.density = density,
-		};
-	}
 
 	Value encode() const;
 };

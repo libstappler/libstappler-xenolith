@@ -290,8 +290,7 @@ void Director::updateGeneralTransform() {
 	default: proj = Mat4::IDENTITY; break;
 	}
 
-	if ((_constraints.transform & core::SurfaceTransformFlags::PreRotated)
-			!= core::SurfaceTransformFlags::None) {
+	if (hasFlag(_constraints.transform, core::SurfaceTransformFlags::PreRotated)) {
 		switch (transform) {
 		case core::SurfaceTransformFlags::Rotate90:
 		case core::SurfaceTransformFlags::Rotate270:

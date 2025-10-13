@@ -290,7 +290,6 @@ bool WindowsContextController::loadWindow() {
 	if (configureWindow(wInfo)) {
 		window = Rc<WindowsWindow>::create(this, move(wInfo));
 		if (window) {
-			_activeWindows.emplace(window);
 			notifyWindowCreated(window);
 			return true;
 		}

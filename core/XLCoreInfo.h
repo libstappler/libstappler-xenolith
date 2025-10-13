@@ -501,8 +501,7 @@ struct SP_PUBLIC FrameConstraints {
 	uint64_t frameInterval = 1'000'000 / 60;
 
 	Size2 getScreenSize() const {
-		if ((transform & core::SurfaceTransformFlags::PreRotated)
-				!= core::SurfaceTransformFlags::None) {
+		if (hasFlag(transform, core::SurfaceTransformFlags::PreRotated)) {
 			switch (core::getPureTransform(transform)) {
 			case SurfaceTransformFlags::Rotate90:
 			case SurfaceTransformFlags::Rotate270:

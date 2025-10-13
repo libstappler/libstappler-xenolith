@@ -55,7 +55,7 @@ public:
 	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &dev,
 			NotNull<core::Surface> surface) const;
 
-	virtual core::FrameConstraints exportConstraints(core::FrameConstraints &&) const;
+	virtual core::FrameConstraints exportConstraints() const;
 
 	virtual Extent2 getExtent() const = 0;
 

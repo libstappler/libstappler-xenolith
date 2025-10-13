@@ -331,8 +331,8 @@ void WaylandWindow::handleFramePresented(NotNull<core::PresentationFrame> frame)
 	XL_WAYLAND_LOG(stream.str());
 }
 
-core::FrameConstraints WaylandWindow::exportConstraints(core::FrameConstraints &&c) const {
-	auto ret = NativeWindow::exportConstraints(sp::move(c));
+core::FrameConstraints WaylandWindow::exportConstraints() const {
+	auto ret = NativeWindow::exportConstraints();
 
 	ret.extent = _currentExtent;
 	if (ret.density == 0.0f) {
@@ -1657,13 +1657,12 @@ void WaylandWindow::setCursor(WindowCursor cursor) {
 }
 
 bool WaylandWindow::configureDecorations(Extent2 extent) {
+	auto &theme = _controller->getThemeInfo();
 	bool userDecor = hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations);
 	int32_t x = 0;
 	int32_t y = 0;
-	int32_t width =
-			userDecor ? static_cast<uint32_t>(_info->userDecorations.shadowWidth) : DecorWidth;
-	int32_t inset =
-			userDecor ? static_cast<uint32_t>(_info->userDecorations.borderRadius) : DecorInset;
+	int32_t width = userDecor ? static_cast<uint32_t>(theme.decorations.shadowWidth) : DecorWidth;
+	int32_t inset = userDecor ? static_cast<uint32_t>(theme.decorations.borderRadius) : DecorInset;
 
 	int32_t topOffet = -width - inset;
 	int32_t topInset = 0;
@@ -1677,8 +1676,8 @@ bool WaylandWindow::configureDecorations(Extent2 extent) {
 		insetHeight = extent.height - inset * 2;
 		topInset = inset;
 
-		x = static_cast<uint32_t>(_info->userDecorations.shadowOffset.x);
-		y = static_cast<uint32_t>(_info->userDecorations.shadowOffset.y);
+		x = static_cast<uint32_t>(theme.decorations.shadowOffset.x);
+		y = static_cast<uint32_t>(theme.decorations.shadowOffset.y);
 	}
 
 	for (auto &it : _decors) {
@@ -1781,6 +1780,7 @@ bool WaylandWindow::initWithLibdecor() {
 }
 
 bool WaylandWindow::initWithAppDecor() {
+	auto &theme = _controller->getThemeInfo();
 	// application-based decorations
 	_xdgSurface = _wayland->xdg_wm_base_get_xdg_surface(_display->xdgWmBase, _surface);
 
@@ -1812,10 +1812,10 @@ bool WaylandWindow::initWithAppDecor() {
 	};
 
 	if (hasFlag(_info->flags, WindowCreationFlags::UserSpaceDecorations)) {
-		info.width = static_cast<uint32_t>(_info->userDecorations.shadowWidth);
-		info.inset = static_cast<uint32_t>(_info->userDecorations.borderRadius);
-		info.shadowMin = _info->userDecorations.shadowMinValue;
-		info.shadowMax = _info->userDecorations.shadowMaxValue;
+		info.width = static_cast<uint32_t>(theme.decorations.shadowWidth);
+		info.inset = static_cast<uint32_t>(theme.decorations.borderRadius);
+		info.shadowMin = theme.decorations.shadowMinValue;
+		info.shadowMax = theme.decorations.shadowMaxValue;
 	}
 
 	if (!allocateDecorations(_wayland, _display->shm->shm, info)) {

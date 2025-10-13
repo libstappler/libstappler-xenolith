@@ -117,6 +117,8 @@ void AppWindow::close(bool graceful) {
 			});
 		}
 	}, this);
+
+	_window = nullptr;
 }
 
 void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
@@ -228,11 +230,7 @@ Rc<core::Surface> AppWindow::makeSurface(NotNull<core::Instance> instance) {
 	return _window->makeSurface(instance);
 }
 
-core::FrameConstraints AppWindow::exportFrameConstraints() const {
-	auto c = _window->getInfo()->exportConstraints();
-	c.extent = _window->getExtent();
-	return _window->exportConstraints(sp::move(c));
-}
+core::FrameConstraints AppWindow::exportConstraints() const { return _window->exportConstraints(); }
 
 void AppWindow::setFrameOrder(uint64_t frameOrder) {
 	if (_window) {

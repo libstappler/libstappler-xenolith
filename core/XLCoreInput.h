@@ -60,6 +60,12 @@ enum class InputMouseButton : uint32_t {
 	Mouse13,
 	Mouse14,
 	Mouse15,
+
+	Stilus1,
+	Stilus2,
+	Stilus3,
+	Stilus4,
+
 	Max,
 
 	Touch = MouseLeft

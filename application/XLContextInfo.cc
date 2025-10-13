@@ -187,8 +187,8 @@ ContextConfig::ContextConfig(int argc, const char *argv[]) : ContextConfig() {
 	platform::ContextController::acquireDefaultConfig(*this, nullptr);
 }
 
-ContextConfig::ContextConfig(NativeContextHandle *handle, Value &&value) : ContextConfig() {
-	context->extra = move(value);
+ContextConfig::ContextConfig(NativeContextHandle *handle) : ContextConfig() {
+	native = handle;
 	platform::ContextController::acquireDefaultConfig(*this, handle);
 }
 
@@ -278,14 +278,10 @@ void DecorationInfo::decode(const Value &val) {
 			shadowMinValue = vIt.second.getDouble();
 		} else if (vIt.first == "shadowMaxValue") {
 			shadowMaxValue = vIt.second.getDouble();
-		} else if (vIt.first == "shadowCurrentValue") {
-			shadowCurrentValue = vIt.second.getDouble();
 		} else if (vIt.first == "resizeInset") {
 			resizeInset = vIt.second.getDouble();
 		} else if (vIt.first == "shadowOffset") {
 			shadowOffset = Vec2(vIt.second.getDouble(0), vIt.second.getDouble(1));
-		} else if (vIt.first == "userShadows") {
-			userShadows = vIt.second.getBool();
 		}
 	}
 }
@@ -296,10 +292,8 @@ Value DecorationInfo::encode() const {
 	ret.setValue(shadowWidth, "shadowWidth");
 	ret.setValue(shadowMinValue, "shadowMinValue");
 	ret.setValue(shadowMaxValue, "shadowMaxValue");
-	ret.setValue(shadowCurrentValue, "shadowCurrentValue");
 	ret.setValue(resizeInset, "resizeInset");
 	ret.setValue(Value{Value(shadowOffset.x), Value(shadowOffset.y)}, "shadowOffset");
-	ret.setValue(userShadows, "userShadows");
 	return ret;
 }
 

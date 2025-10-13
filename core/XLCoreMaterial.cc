@@ -435,6 +435,11 @@ bool Material::init(MaterialId id, const PipelineData *pipeline, Vector<Material
 	_pipeline = pipeline;
 	_images = sp::move(images);
 	_data = move(data);
+	for (auto &it : _images) {
+		if (it.dynamic && it.dynamic->data.atlas) {
+			_atlas = it.dynamic->data.atlas;
+		}
+	}
 	return true;
 }
 

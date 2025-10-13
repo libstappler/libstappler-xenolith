@@ -77,6 +77,8 @@ public:
 	const DeviceTable *getTable() const;
 	const Rc<Allocator> &getAllocator() const { return _allocator; }
 
+	bool hasExtension(OptionalDeviceExtension) const;
+
 	virtual core::DescriptorFlags getSupportedDescriptorFlags(DescriptorType) const override;
 
 	virtual Rc<core::Framebuffer> makeFramebuffer(const core::QueuePassData *,

@@ -340,6 +340,10 @@ const DeviceTable *Device::getTable() const {
 	return _table;
 }
 
+bool Device::hasExtension(OptionalDeviceExtension ext) const {
+	return _info.features.optionals.test(toInt(ext));
+}
+
 core::DescriptorFlags Device::getSupportedDescriptorFlags(DescriptorType type) const {
 	if (!_useDescriptorIndexing) {
 		return core::DescriptorFlags::None;

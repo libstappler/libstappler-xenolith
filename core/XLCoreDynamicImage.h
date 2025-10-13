@@ -36,6 +36,7 @@ struct SP_PUBLIC DynamicImageInstance : public Ref {
 	virtual ~DynamicImageInstance() = default;
 
 	ImageData data;
+	ImageViewData view;
 	Rc<Ref> userdata;
 	Rc<DynamicImage> image = nullptr;
 	uint32_t gen = 0;
@@ -54,7 +55,8 @@ public:
 
 	void updateInstance(Loop &, const Rc<ImageObject> &, Rc<DataAtlas> && = Rc<DataAtlas>(),
 			Rc<Ref> &&userdata = Rc<Ref>(),
-			const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>());
+			const Vector<Rc<DependencyEvent>> & = Vector<Rc<DependencyEvent>>(),
+			Rc<ImageView> && = Rc<ImageView>());
 
 	void addTracker(const MaterialAttachment *);
 	void removeTracker(const MaterialAttachment *);

@@ -147,11 +147,14 @@ public:
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;
 
+	virtual const ThemeInfo &getThemeInfo() const { return _themeInfo; }
+	virtual NetworkFlags getNetworkFlags() const { return _networkFlags; }
+
 	virtual void handleStateChanged(ContextState prevState, ContextState newState);
 
 	virtual void handleSystemNotification(SystemNotification);
 	virtual void handleNetworkStateChanged(NetworkFlags);
-	virtual void handleThemeInfoChanged(const ThemeInfo &);
+	virtual void handleThemeInfoChanged(ThemeInfo &&);
 
 	virtual void handleContextWillDestroy();
 	virtual void handleContextDidDestroy();
@@ -176,9 +179,9 @@ public:
 	virtual bool stop();
 	virtual bool destroy();
 
-protected:
 	virtual Value saveContextState();
 
+protected:
 	virtual Rc<core::Loop> makeLoop(NotNull<core::Instance>);
 
 	virtual void poll();

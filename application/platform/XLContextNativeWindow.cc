@@ -64,7 +64,12 @@ core::SurfaceInfo NativeWindow::getSurfaceOptions(const core::Device &dev,
 	return surface->getSurfaceOptions(dev, core::FullScreenExclusiveMode::Default, nullptr);
 }
 
-core::FrameConstraints NativeWindow::exportConstraints(core::FrameConstraints &&c) const {
+core::FrameConstraints NativeWindow::exportConstraints() const {
+	core::FrameConstraints c;
+	c.density = _info->density;
+	c.extent = Extent2(_info->rect.width, _info->rect.height);
+	c.contentPadding = _info->decorationInsets;
+
 	return move(c);
 }
 

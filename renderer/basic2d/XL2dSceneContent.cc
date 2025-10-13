@@ -600,13 +600,20 @@ void SceneContent2d::draw(FrameInfo &info, NodeVisitFlags flags) {
 
 	auto &theme = _director->getApplication()->getThemeInfo();
 
-	ctx->decorations.borderRadius = theme.decorations.borderRadius;
-	ctx->decorations.shadowRadius = theme.decorations.shadowWidth;
-	ctx->decorations.shadowValue = theme.decorations.shadowCurrentValue;
-	ctx->decorations.shadowOffset = theme.decorations.shadowOffset;
-	ctx->decorations.viewConstraints =
-			core::getViewConstraints(_director->getWindow()->getWindowState());
-	ctx->decorations.drawUserShadows = theme.decorations.userShadows;
+	if (hasFlag(_director->getWindow()->getInfo()->flags,
+				WindowCreationFlags::UserSpaceDecorations)) {
+		ctx->decorations.drawUserShadows = hasFlag(_director->getWindow()->getInfo()->capabilities,
+				WindowCapabilities::UserShadowsRequired);
+		ctx->decorations.borderRadius = theme.decorations.borderRadius;
+		ctx->decorations.shadowRadius = theme.decorations.shadowWidth;
+		ctx->decorations.shadowValue =
+				hasFlag(_director->getWindow()->getWindowState(), WindowState::Focused)
+				? theme.decorations.shadowMaxValue
+				: theme.decorations.shadowMinValue;
+		ctx->decorations.shadowOffset = theme.decorations.shadowOffset;
+		ctx->decorations.viewConstraints =
+				core::getViewConstraints(_director->getWindow()->getWindowState());
+	}
 }
 
 Vector<Rc<SceneLight>>::iterator SceneContent2d::removeLight(

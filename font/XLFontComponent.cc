@@ -92,7 +92,7 @@ FontController::Builder FontComponent::makeDefaultControllerBuilder(StringView k
 Rc<core::DynamicImage> FontComponent::makeInitialImage(StringView name) {
 	return Rc<core::DynamicImage>::create(
 			[name = name.str<Interface>()](core::DynamicImage::Builder &builder) {
-		builder.setImage(name,
+		builder.setImage(toString(name, "_Image"),
 				core::ImageInfo(Extent2(2, 2),
 						core::ImageUsage::Sampled | core::ImageUsage::TransferSrc,
 						core::PassType::Graphics, core::ImageFormat::R8_UNORM),
@@ -118,10 +118,17 @@ Rc<core::DynamicImage> FontComponent::makeInitialImage(StringView name) {
 
 bool FontComponent::init(Context *ctx) {
 	_context = ctx;
+	_library = Rc<FontLibrary>::alloc();
+	return true;
+}
+
+void FontComponent::handleStart(Context *a) {
 
 #if MODULE_XENOLITH_BACKEND_VK
-	if (ctx->getGlLoop()->getInstance()->getApi() == core::InstanceApi::Vulkan) {
-		_queue = Rc<vk::FontQueue>::create("FontQueue");
+	if (!_queue) {
+		if (a->getGlLoop()->getInstance()->getApi() == core::InstanceApi::Vulkan) {
+			_queue = Rc<vk::FontQueue>::create("FontQueue");
+		}
 	}
 #endif
 
@@ -129,11 +136,6 @@ bool FontComponent::init(Context *ctx) {
 		log::source().error("FontComponent", "Fail to create FontQueue for GAPI");
 	}
 
-	_library = Rc<FontLibrary>::alloc();
-	return true;
-}
-
-void FontComponent::handleStart(Context *a) {
 	if (_queue->isCompiled()) {
 		handleActivated();
 	} else {
@@ -267,7 +269,7 @@ Rc<FontController> FontComponent::acquireController(event::Looper *looper,
 void FontComponent::updateImage(event::Looper *looper, const Rc<core::DynamicImage> &image,
 		Vector<font::FontUpdateRequest> &&data, Rc<core::DependencyEvent> &&dep,
 		Function<void(bool)> &&complete) {
-	if (!_active) {
+	if (!_active || !_queue) {
 		_pendingImageQueries.emplace_back(ImageQuery{
 			looper,
 			image,

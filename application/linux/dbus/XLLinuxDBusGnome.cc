@@ -104,8 +104,12 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 
 	while (iter) {
 		switch (iter.getIndex()) {
-		case 0: ret->serial = iter.getU32(); break;
+		case 0:
+			// serial
+			ret->serial = iter.getU32();
+			break;
 		case 1:
+			// monitors
 			iter.foreach ([&](const ReadIterator &it) {
 				auto &mon = ret->monitors.emplace_back();
 				mon.index = it.getIndex();
@@ -113,6 +117,7 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 			});
 			break;
 		case 2:
+			// logical_monitors
 			iter.foreach ([&](const ReadIterator &it) {
 				auto &mon = ret->logical.emplace_back();
 				it.foreach ([&](const ReadIterator &field) {
@@ -138,6 +143,17 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 				});
 			});
 			break;
+		case 3: // properties
+			iter.foreachDictEntry([&](StringView key, const ReadIterator &value) {
+				if (key == "max-screen-size") {
+					value.foreach ([&](const ReadIterator &val) {
+						switch (val.getIndex()) {
+						case 0: ret->desktopRect.width = val.getI32(); break;
+						case 1: ret->desktopRect.height = val.getI32(); break;
+						}
+					});
+				}
+			});
 		default: break;
 		}
 
@@ -145,6 +161,60 @@ static Rc<DisplayConfig> readGnomeDisplayConfig(ReadIterator &iter) {
 	}
 
 	return ret;
+}
+
+static void readGnomeDisplayResources(ReadIterator &iter, DisplayConfig *info) {
+	while (iter) {
+		switch (iter.getIndex()) {
+		case 0:
+			// serial
+			break;
+		case 1:
+			// crtcs
+			break;
+		case 2:
+			// outputs
+			break;
+		case 3:
+			// modes
+			break;
+		case 4:
+			// max_screen_width
+			info->desktopRect.width = iter.getU32();
+			break;
+		case 5:
+			// max_screen_height
+			info->desktopRect.height = iter.getU32();
+			break;
+		default: break;
+		}
+
+		iter.next();
+	}
+}
+
+static void sanitizaDisplayConfig(DisplayConfig *info) {
+	for (auto &it : info->logical) {
+		if (it.rect.width == 9 || it.rect.height == 0) {
+			for (auto &mId : it.monitors) {
+				if (auto m = info->getMonitor(mId)) {
+					auto &cMode = m->getCurrent();
+					it.rect.width = cMode.mode.width;
+					it.rect.height = cMode.mode.height;
+					break;
+				}
+			}
+		}
+	}
+
+	// fix <any> placeholder with actual value
+	if (info->desktopRect.width == 32'767 || info->desktopRect.height == 32'767) {
+		info->desktopRect.width = 0;
+		info->desktopRect.height = 0;
+		auto size = info->getSize();
+		info->desktopRect.width = size.width;
+		info->desktopRect.height = size.height;
+	}
 }
 
 bool GnomeDisplayConfigManager::init(NotNull<Controller> c,
@@ -176,15 +246,38 @@ void GnomeDisplayConfigManager::invalidate() {
 void GnomeDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)> &&fn) {
 	_dbus->getSessionBus()->callMethod(GNOME_DISPLAY_CONFIG_NAME, GNOME_DISPLAY_CONFIG_PATH,
 			GNOME_DISPLAY_CONFIG_INTERFACE, "GetCurrentState",
-			[this, guard = Rc<GnomeDisplayConfigManager>(this),
-					fn = sp::move(fn)](NotNull<dbus::Connection> c, DBusMessage *reply) {
+			[guard = Rc<GnomeDisplayConfigManager>(this),
+					fn = sp::move(fn)](NotNull<dbus::Connection> c, DBusMessage *reply) mutable {
 		if (guard->_dbus) {
+
+			//dbus::describe(guard->_dbus->getLibrary(), reply, memory::makeCallback(std::cout));
+
 			ReadIterator iter(guard->_dbus->getLibrary(), reply);
 			auto info = readGnomeDisplayConfig(iter);
 			if (fn) {
 				fn(info);
 			}
-			handleConfigChanged(info);
+
+			// check if desktopRect was read from properties
+			// If not - read from resources
+			if (info->desktopRect.width == 0 || info->desktopRect.height == 0) {
+				guard->_dbus->getSessionBus()->callMethod(GNOME_DISPLAY_CONFIG_NAME,
+						GNOME_DISPLAY_CONFIG_PATH, GNOME_DISPLAY_CONFIG_INTERFACE, "GetResources",
+						[guard = sp::move(guard), fn = sp::move(fn), info = sp::move(info)](
+								NotNull<dbus::Connection> c, DBusMessage *reply) {
+					if (guard->_dbus) {
+						dbus::describe(guard->_dbus->getLibrary(), reply,
+								memory::makeCallback(std::cout));
+						ReadIterator iter(guard->_dbus->getLibrary(), reply);
+						// send notifications
+						readGnomeDisplayResources(iter, info);
+						sanitizaDisplayConfig(info);
+						guard->handleConfigChanged(info);
+					}
+				});
+			} else {
+				guard->handleConfigChanged(info);
+			}
 		}
 	});
 }

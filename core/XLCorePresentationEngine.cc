@@ -176,7 +176,7 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 
 	if (flags == UpdateConstraintsFlags::None) {
 		// update should not deprecate swapchain, just update secondary fields
-		auto newConstraints = _window->exportFrameConstraints();
+		auto newConstraints = _window->exportConstraints();
 		newConstraints.extent = _constraints.extent;
 		newConstraints.transform = _constraints.transform;
 
@@ -195,7 +195,7 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 
 	auto it = _scheduledForPresent.begin();
 	while (it != _scheduledForPresent.end()) {
-		runScheduledPresent(move(it->first), move(it->second));
+		runScheduledPresent(move(it->first), move(it->second), 0);
 		it = _scheduledForPresent.erase(it);
 	}
 
@@ -229,7 +229,7 @@ bool PresentationEngine::init(NotNull<Loop> loop, NotNull<Device> device,
 	_device = device;
 	_window = window;
 	_originalSurface = _surface = _window->makeSurface(loop->getInstance());
-	_constraints = _window->exportFrameConstraints();
+	_constraints = _window->exportConstraints();
 	return true;
 }
 
@@ -299,19 +299,21 @@ bool PresentationEngine::present(PresentationFrame *frame, ImageStorage *image) 
 			return true;
 		}
 		auto clock = sp::platform::clock(ClockType::Monotonic);
-		if (_waitUntilFrame || _options.followDisplayLinkBarrier || !_options.usePresentWindow
-				|| !_nextPresentWindow || _nextPresentWindow < clock + _engineUpdateInterval) {
-			runScheduledPresent(frame, image);
+		if (_presentWithWindowTiming || _waitUntilFrame || _options.followDisplayLinkBarrier
+				|| !_options.usePresentWindow || !_nextPresentWindow
+				|| _nextPresentWindow < clock + _engineUpdateInterval) {
+			runScheduledPresent(frame, image, _nextPresentWindow);
 		} else {
-			auto frameTimeout = _nextPresentWindow - clock;
+			auto presentWindow = _nextPresentWindow;
+			auto frameTimeout = presentWindow - clock;
 			XL_COREPRESENT_LOG("schedulePresent: ", frameTimeout);
 
 			// schedule image until next present window
 			auto handle = _loop->getLooper()->schedule(TimeInterval::microseconds(frameTimeout),
-					[this, frame = Rc<PresentationFrame>(frame),
-							image = Rc<ImageStorage>(image)](event::Handle *h, bool success) {
+					[this, frame = Rc<PresentationFrame>(frame), image = Rc<ImageStorage>(image),
+							presentWindow](event::Handle *h, bool success) {
 				if (success) {
-					runScheduledPresent(frame, image);
+					runScheduledPresent(frame, image, presentWindow);
 				} else {
 					frame->invalidate();
 				}
@@ -342,7 +344,7 @@ void PresentationEngine::update(PresentationUpdateFlags flags) {
 			|| hasFlag(flags, PresentationUpdateFlags::FlushPending)) {
 		// ignore present windows
 		for (auto &it : _scheduledForPresent) {
-			runScheduledPresent(move(it.first), move(it.second));
+			runScheduledPresent(move(it.first), move(it.second), 0);
 		}
 		_scheduledForPresent.clear();
 	}
@@ -357,10 +359,10 @@ void PresentationEngine::update(PresentationUpdateFlags flags) {
 void PresentationEngine::setTargetFrameInterval(uint64_t value) { _targetFrameInterval = value; }
 
 void PresentationEngine::presentWithQueue(DeviceQueue &queue, NotNull<PresentationFrame> frame,
-		ImageStorage *image) {
+		ImageStorage *image, uint64_t presentWindow) {
 	XL_COREPRESENT_LOG("presentWithQueue: ", _activeFrames.size());
 	auto clock = sp::platform::clock(ClockType::Monotonic);
-	auto res = _swapchain->present(queue, image);
+	auto res = _swapchain->present(queue, image, presentWindow);
 	auto dt = updatePresentationInterval();
 
 	if (res == Status::ErrorFullscreenLost) {
@@ -380,6 +382,7 @@ void PresentationEngine::presentWithQueue(DeviceQueue &queue, NotNull<Presentati
 
 	if (_waitUntilFrame) {
 		_loop->getLooper()->wakeup();
+		return;
 	}
 
 	if (!_options.followDisplayLink && _targetFrameInterval) {
@@ -747,8 +750,8 @@ void PresentationEngine::handleSwapchainImageReady(Rc<Swapchain::SwapchainAcquir
 	}
 }
 
-void PresentationEngine::runScheduledPresent(NotNull<PresentationFrame> frame,
-		ImageStorage *image) {
+void PresentationEngine::runScheduledPresent(NotNull<PresentationFrame> frame, ImageStorage *image,
+		uint64_t presentWindow) {
 	XL_COREPRESENT_LOG("runScheduledPresent");
 
 	if (!_loop->isRunning() || frame->hasFlag(PresentationFrame::Invalidated)) {
@@ -756,22 +759,22 @@ void PresentationEngine::runScheduledPresent(NotNull<PresentationFrame> frame,
 	}
 	auto queue = _device->tryAcquireQueue(QueueFlags::Present);
 	if (queue) {
-		presentSwapchainImage(move(queue), frame, image);
+		presentSwapchainImage(move(queue), frame, image, presentWindow);
 	} else {
 		_device->acquireQueue(QueueFlags::Present, *_loop,
-				[this, frame = Rc<PresentationFrame>(frame), image = Rc<ImageStorage>(image)](
-						Loop &, const Rc<DeviceQueue> &queue) mutable {
-			presentSwapchainImage(Rc<DeviceQueue>(queue), frame, image);
+				[this, frame = Rc<PresentationFrame>(frame), image = Rc<ImageStorage>(image),
+						presentWindow](Loop &, const Rc<DeviceQueue> &queue) mutable {
+			presentSwapchainImage(Rc<DeviceQueue>(queue), frame, image, presentWindow);
 		},
 				[frame = Rc<PresentationFrame>(frame)](Loop &) { frame->invalidate(); }, this);
 	}
 }
 
 void PresentationEngine::presentSwapchainImage(Rc<DeviceQueue> &&queue,
-		NotNull<PresentationFrame> frame, ImageStorage *image) {
+		NotNull<PresentationFrame> frame, ImageStorage *image, uint64_t presentWindow) {
 	XL_COREPRESENT_LOG("presentSwapchainImage");
 	if (frame->getSwapchain() == _swapchain && frame->getSwapchainImage()->isSubmitted()) {
-		presentWithQueue(*queue, frame, image);
+		presentWithQueue(*queue, frame, image, presentWindow);
 	}
 	_device->releaseQueue(move(queue));
 }

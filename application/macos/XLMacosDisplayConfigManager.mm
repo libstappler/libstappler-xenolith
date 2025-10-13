@@ -265,10 +265,8 @@ void MacosDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig 
 					std::max(float(pw) / float(w), float(ph) / float(h)),
 				},
 				"",
-				"",
+				toString(m.mode.width, "x", m.mode.height, "@", m.mode.rate),
 			});
-
-			m.name = toString(m.mode.width, "x", m.mode.height, "@", m.mode.rate);
 
 			m.current = m.mode == currentModeInfo;
 			if (m.current) {

@@ -156,7 +156,7 @@ protected:
 	virtual void handleFramePresented(NotNull<core::PresentationFrame>) override;
 
 	virtual Rc<core::Surface> makeSurface(NotNull<core::Instance>) override;
-	virtual core::FrameConstraints exportFrameConstraints() const override;
+	virtual core::FrameConstraints exportConstraints() const override;
 
 	virtual void setFrameOrder(uint64_t) override;
 
