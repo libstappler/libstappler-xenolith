@@ -55,6 +55,9 @@ public:
 
 	void update(uint64_t t);
 
+	// Can be nullptr to disconnect director from window
+	void setWindow(AppWindow *);
+
 	void end();
 
 	AppThread *getApplication() const { return _application; }

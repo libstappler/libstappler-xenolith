@@ -977,19 +977,33 @@ enum class WindowState : uint64_t {
 	Pointer = 1LLU << 14,
 
 	// Block any close request for a window
-	// If user or WM want window to be closed, framework will set CloseRequest state flag.
-	// You can commit CloseRequest with enabling CloseRequest state when it's already enabled
-	// or you can discard CloseRequest by disabling it
+	// CloseGuard will prevent OS WM to close window on it's side.
+	// If CloseGuard is enabled, when WM or user tries to close window, it remains open and you will receive
+	// WindowState notification with CloseRequest flag set.
+	// When CloseRequest flag is set, ypu should commit this request with enableState(WindowState::CloseRequest)
+	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable CloseGuard
+	// Also, when CloseRequest flag is set, next `close` call or next WM close action will close this window
+	//
+	// Note that on Android, Back Gesture is not a subject for CloseGuard, use
+	// WindowLayerFlag::BackButtonHandler and Predictive Back Gesture to achive similar user experience
+	// (https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
 	CloseGuard = 1LLU << 15,
 
 	// WM asked user to close this window
 	CloseRequest = 1LLU << 16,
 
-	// WM uses inset decorations
-	InsetDecorationsVisible = 1LLU << 17,
-
 	// Window is available for input events
-	Enabled = 1LLU << 18,
+	Enabled = 1LLU << 17,
+
+	// Android decoration handling
+	// This flags mapped to WindowInsetController class methods
+	DecorationStatusBarVisible = 1LLU << 18,
+	DecorationNavigationVisible = 1LLU << 19,
+	DecorationStatusBarLight = 1LLU << 20,
+	DecorationNavigationLight = 1LLU << 21,
+	DecorationShowBySwipe = 1LLU << 22,
+	DecorationState = DecorationStatusBarVisible | DecorationNavigationVisible
+			| DecorationStatusBarLight | DecorationNavigationLight | DecorationShowBySwipe,
 
 	// Extra space here
 
@@ -1026,9 +1040,9 @@ enum class WindowState : uint64_t {
 	TilingMask = TiledLeft | TiledRight | TiledTop | TiledBottom | ConstrainedLeft
 			| ConstrainedRight | ConstrainedTop | ConstrainedBottom,
 
-	All = TilingMask | AllowedActionsMask | Modal | Sticky | Maximized | Shaded | SkipTaskbar
-			| Minimized | Fullscreen | Above | Below | DemandsAttention | Focused | Resizing
-			| Pointer | CloseGuard | CloseRequest | InsetDecorationsVisible,
+	All = Modal | Sticky | Maximized | Shaded | SkipTaskbar | Minimized | Fullscreen | Above | Below
+			| DemandsAttention | Focused | Resizing | Pointer | CloseGuard | CloseRequest | Enabled
+			| DecorationState | AllowedActionsMask | TilingMask,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowState)

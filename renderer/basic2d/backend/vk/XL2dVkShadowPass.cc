@@ -374,21 +374,17 @@ bool ShadowPass::init(Queue::Builder &queueBuilder, QueuePassBuilder &passBuilde
 
 	passBuilder.addSubpassDependency(subpass2d, PipelineStage::LateFragmentTest,
 			AccessType::DepthStencilAttachmentWrite, subpassShadows, PipelineStage::FragmentShader,
-			AccessType::ShaderRead, true);
+			AccessType::InputAttachmantRead, true);
 
 	passBuilder.addSubpassDependency(subpass2d, PipelineStage::ColorAttachmentOutput,
 			AccessType::ColorAttachmentWrite, subpassShadows,
 			PipelineStage::FragmentShader | PipelineStage::ColorAttachmentOutput,
-			AccessType::InputAttachmantRead | AccessType::ShaderRead
-					| AccessType::ColorAttachmentWrite,
-			true);
+			AccessType::InputAttachmantRead | AccessType::ColorAttachmentWrite, true);
 
 	passBuilder.addSubpassDependency(subpassSdf, PipelineStage::ColorAttachmentOutput,
 			AccessType::ColorAttachmentWrite, subpassShadows,
 			PipelineStage::FragmentShader | PipelineStage::ColorAttachmentOutput,
-			AccessType::InputAttachmantRead | AccessType::ShaderRead
-					| AccessType::ColorAttachmentWrite,
-			true);
+			AccessType::InputAttachmantRead | AccessType::ColorAttachmentWrite, true);
 
 	// self-dependency to read from color output
 	passBuilder.addSubpassDependency(subpassSdf, PipelineStage::ColorAttachmentOutput,

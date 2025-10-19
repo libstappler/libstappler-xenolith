@@ -38,6 +38,14 @@ static void AppSupportActivity_handleActivityResult(JNIEnv *env, jobject thiz, j
 	}
 }
 
+static void AppSupportActivity_handleInsetsVisible(JNIEnv *env, jobject thiz, jlong native_pointer,
+		jboolean statusBarVisible, jboolean navigationVisible) {
+	auto activity = reinterpret_cast<AndroidActivity *>(native_pointer);
+	if (activity) {
+		activity->handleInsetsVisible(statusBarVisible, navigationVisible);
+	}
+}
+
 static void AppSupportActivity_handleContentInsets(JNIEnv *env, jobject thiz, jlong native_pointer,
 		jint top, jint right, jint bottom, jint left) {
 	auto activity = reinterpret_cast<AndroidActivity *>(native_pointer);
@@ -54,12 +62,22 @@ static void AppSupportActivity_handleImeInsets(JNIEnv *env, jobject thiz, jlong 
 	}
 }
 
+static void AppSupportActivity_handleBackInvoked(JNIEnv *env, jobject thiz, jlong native_pointer) {
+	auto activity = reinterpret_cast<AndroidActivity *>(native_pointer);
+	if (activity) {
+		activity->handleBackInvoked();
+	}
+}
+
 static JNINativeMethod s_activityMethods[] = {
 	{"handleActivityResult", "(JIILandroid/content/Intent;)V",
 		reinterpret_cast<void *>(&AppSupportActivity_handleActivityResult)},
+	{"handleInsetsVisible", "(JZZ)V",
+		reinterpret_cast<void *>(&AppSupportActivity_handleInsetsVisible)},
 	{"handleContentInsets", "(JIIII)V",
 		reinterpret_cast<void *>(&AppSupportActivity_handleContentInsets)},
 	{"handleImeInsets", "(JIIII)V", reinterpret_cast<void *>(&AppSupportActivity_handleImeInsets)},
+	{"handleBackInvoked", "(J)V", reinterpret_cast<void *>(&AppSupportActivity_handleBackInvoked)},
 };
 
 static void registerActivityMethods(const jni::RefClass &cl) {
@@ -172,48 +190,113 @@ ActivityProxy *AndroidActivity::getProxy() const { return _proxy; }
 Context *AndroidActivity::getContext() const { return _controller->getContext(); }
 
 void AndroidActivity::handleActivityResult(jint request, jint result, jobject data) {
-	log::source().info("AndroidContextController", "handleActivityResult: ", request, " ", result);
+	XL_ANDROID_LOG("AndroidActivity::handleActivityResult: ", request, " ", result);
+}
+
+void AndroidActivity::handleInsetsVisible(bool statusBarVisible, bool navigationVisible) {
+	XL_ANDROID_LOG("AndroidActivity::handleInsetsVisible: ", statusBarVisible, " ",
+			navigationVisible);
+
+	WindowState decorationState = WindowState::None;
+	if (statusBarVisible) {
+		decorationState |= WindowState::DecorationStatusBarVisible;
+	}
+	if (navigationVisible) {
+		decorationState |= WindowState::DecorationNavigationVisible;
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (app->WindowInsetsController) {
+		auto w = _proxy->Activity.getWindow(jni::Ref(_activity->clazz, env));
+		auto ic = app->Window.getInsetsController(w);
+		if (ic) {
+			auto b = app->WindowInsetsController.getSystemBarsBehavior(ic);
+			if (b == app->WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE()) {
+				decorationState |= WindowState::DecorationShowBySwipe;
+			}
+
+			auto a = app->WindowInsetsController.getSystemBarsAppearance(ic);
+
+			if (hasFlag(a, app->WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS())) {
+				decorationState |= WindowState::DecorationStatusBarLight;
+			}
+			if (hasFlag(a, app->WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS())) {
+				decorationState |= WindowState::DecorationNavigationLight;
+			}
+		}
+	}
+
+	if (_decorationState != decorationState) {
+		_decorationState = decorationState;
+
+		if (_window) {
+			auto newState =
+					(_window->getInfo()->state & ~WindowState::DecorationState) | _decorationState;
+			_window->updateState(0, newState);
+		}
+	}
 }
 
 void AndroidActivity::handleContentInsets(const Padding &p) {
-	log::source().info("AndroidContextController", "handleContentInsets: ", p.top, ", ", p.right,
-			", ", p.bottom, ", ", p.left);
+	getContext()->performTemporary([&] {
+		XL_ANDROID_LOG("AndroidActivity::AndroidActivity::handleContentInsets ", (void *)_activity,
+				" ", p);
+		_contentInsets = p;
+		updateInsets();
+	});
 }
 
 void AndroidActivity::handleImeInsets(const Padding &p) {
-	log::source().info("AndroidContextController", "handleImeInsets: ", p.top, ", ", p.right, ", ",
-			p.bottom, ", ", p.left);
+	getContext()->performTemporary([&] {
+		XL_ANDROID_LOG("AndroidActivity::AndroidActivity::handleImeInsets ", (void *)_activity, " ",
+				p);
+		_imeInsets = p;
+		updateInsets();
+	});
+}
+
+void AndroidActivity::handleBackInvoked() {
+	for (auto &it : _input) { it.second->handleBackInvoked(); }
 }
 
 void AndroidActivity::handleDisplayChanged() {
 	if (_window) {
-		_window->updateWindow();
+		_window->updateWindow(false);
 	}
+}
+
+void AndroidActivity::finish() {
+	_proxy->Activity.finishAffinity(jni::Ref(_activity->clazz, jni::Env::getEnv()));
+}
+
+void AndroidActivity::handleBackButton() {
+	XL_ANDROID_LOG("AndroidActivity::handleBackButton");
+	_proxy->Activity.onBackPressed(jni::Ref(_activity->clazz, jni::Env::getEnv()));
+}
+
+void AndroidActivity::setBackButtonHandlerEnabled(bool enabled) {
+	_proxy->Activity.setBackButtonHandlerEnabled(jni::Ref(_activity->clazz, jni::Env::getEnv()),
+			jboolean(enabled));
 }
 
 void AndroidActivity::handleContentRectChanged(const Padding &p) {
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION,
-				"ContentRectChanged: l=%f,t=%f,r=%f,b=%f", p.left, p.top, p.right, p.bottom);
-
-		Padding wp = p;
-		wp.bottom = _window->getExtent().height - p.bottom;
-		wp.right = _window->getExtent().width - p.right;
-		_window->setContentPadding(wp);
+		XL_ANDROID_LOG("AndroidActivity::handleContentRectChanged ", (void *)_activity, " ", p);
 	});
 }
 
 void AndroidActivity::handleInputQueueCreated(AInputQueue *queue) {
 	getContext()->performTemporary([&] {
-		log::source().info("AndroidContextController", "onInputQueueCreated");
-
+		XL_ANDROID_LOG("AndroidActivity::handleInputQueueCreated ", (void *)_activity);
 		_input.emplace(queue, Rc<InputQueue>::create(this, queue));
 	});
 }
 
 void AndroidActivity::handleInputQueueDestroyed(AInputQueue *queue) {
 	getContext()->performTemporary([&] {
-		log::source().info("AndroidContextController", "onInputQueueDestroyed");
+		XL_ANDROID_LOG("AndroidActivity::handleInputQueueDestroyed ", (void *)_activity);
 		_input.erase(queue);
 	});
 }
@@ -221,7 +304,7 @@ void AndroidActivity::handleInputQueueDestroyed(AInputQueue *queue) {
 void *AndroidActivity::handleSaveInstanceState(size_t *outLen) {
 	void *ret = nullptr;
 	getContext()->performTemporary([&] {
-		log::source().info("AndroidContextController", "onSaveInstanceState ", this);
+		XL_ANDROID_LOG("AndroidActivity::handleSaveInstanceState ", (void *)_activity);
 
 		auto stateData = _controller->saveContextState();
 		if (stateData) {
@@ -238,16 +321,20 @@ void *AndroidActivity::handleSaveInstanceState(size_t *outLen) {
 
 void AndroidActivity::handleNativeWindowCreated(ANativeWindow *window) {
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION,
-				"NativeWindowCreated: %p -- %p -- %d x %d", _activity, window,
-				ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+		XL_ANDROID_LOG("AndroidActivity::handleNativeWindowCreated ", (void *)_activity, " ",
+				(void *)window, " ", ANativeWindow_getWidth(window), " ",
+				ANativeWindow_getHeight(window));
 
 		Rc<AndroidWindow> win;
 		auto wInfo = _controller->makeWindowInfo(window);
 
+		// override window id with Activity class name
+		wInfo->id += toString(":", _proxy->Activity.getClass().getName().getString());
+
 		if (_controller->configureWindow(wInfo)) {
 			win = Rc<AndroidWindow>::create(this, move(wInfo), window);
 			if (win) {
+				win->setContentPadding(_fullInsets);
 				_window = sp::move(win);
 				_controller->notifyWindowCreated(_window);
 				return true;
@@ -260,11 +347,10 @@ void AndroidActivity::handleNativeWindowCreated(ANativeWindow *window) {
 
 void AndroidActivity::handleNativeWindowDestroyed(ANativeWindow *window) {
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION,
-				"NativeWindowDestroyed: %p -- %p", _activity, window);
+		XL_ANDROID_LOG("AndroidActivity::handleNativeWindowDestroyed ", (void *)_activity, " ",
+				(void *)window);
 
 		if (_window->getWindow() == window) {
-			_window->close();
 			_controller->notifyWindowClosed(_window,
 					WindowCloseOptions::CloseInPlace | WindowCloseOptions::IgnoreExitGuard);
 			_window = nullptr;
@@ -274,8 +360,8 @@ void AndroidActivity::handleNativeWindowDestroyed(ANativeWindow *window) {
 
 void AndroidActivity::handleNativeWindowRedrawNeeded(ANativeWindow *window) {
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION,
-				"NativeWindowRedrawNeeded: %p -- %p", _activity, window);
+		XL_ANDROID_LOG("AndroidActivity::handleNativeWindowRedrawNeeded ", (void *)_activity, " ",
+				(void *)window);
 		if (_window->getWindow() == window) {
 			_window->getAppWindow()->waitUntilFrame();
 		}
@@ -284,66 +370,48 @@ void AndroidActivity::handleNativeWindowRedrawNeeded(ANativeWindow *window) {
 
 void AndroidActivity::handleNativeWindowResized(ANativeWindow *window) {
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION,
-				"NativeWindowResized: %p -- %p -- %d x %d", _activity, window,
-				ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
+		XL_ANDROID_LOG("AndroidActivity::handleNativeWindowResized ", (void *)_activity, " ",
+				(void *)window, " ", ANativeWindow_getWidth(window), " ",
+				ANativeWindow_getHeight(window));
 
 		if (_window->getWindow() == window) {
-			_window->updateWindow();
+			_window->updateWindow(true);
 		}
 	});
 }
 
 void AndroidActivity::handlePause() {
-	getContext()->performTemporary([&] {
-		log::source().info("AndroidContextController", "onPause");
-		/*core::InputEventData event =
-				core::InputEventData::BoolEvent(core::InputEventName::Background, true);
-		transferInputEvent(event);*/
-
-		//pause();
-	});
+	getContext()->performTemporary(
+			[&] { XL_ANDROID_LOG("AndroidActivity::handlePause ", (void *)_activity); });
 }
 
 void AndroidActivity::handleStart() {
-	getContext()->performTemporary(
-			[&] { log::source().info("AndroidContextController", "onStart"); });
+	getContext()->performTemporary([&] {
+		XL_ANDROID_LOG("AndroidActivity::handleStart ", (void *)_activity);
+		if (_window) {
+			_window->updateState(0, _window->getInfo()->state | WindowState::Background);
+		}
+	});
 }
 
 void AndroidActivity::handleResume() {
-	getContext()->performTemporary([&] {
-		log::source().info("AndroidContextController", "onResume");
-		/*core::InputEventData event =
-				core::InputEventData::BoolEvent(core::InputEventName::Background, false);
-		transferInputEvent(event);*/
-
-		//resume();
-	});
+	getContext()->performTemporary(
+			[&] { XL_ANDROID_LOG("AndroidActivity::handleResume ", (void *)_activity); });
 }
 
 void AndroidActivity::handleStop() {
 	getContext()->performTemporary([&] {
-		stappler::log::source().info("AndroidContextController", "onStop");
-
-		/*if (_running) {
-			for (auto &it : _components) { it->handleStop(this); }
-
-			removeRemoteNotificationCallback(this);
-			removeTokenCallback(this);
-
-			_application->stop();
-
-			_running = false;
-		}*/
-		//stop();
+		XL_ANDROID_LOG("AndroidActivity::handleStop ", (void *)_activity);
+		if (_window) {
+			_window->updateState(0, _window->getInfo()->state & ~WindowState::Background);
+		}
 	});
 }
 
 void AndroidActivity::handleDestroy() {
 	auto id = retain();
 	getContext()->performTemporary([&] {
-		log::format(log::Info, "AndroidContextController", SP_LOCATION, "Destroy: %p", _activity);
-
+		XL_ANDROID_LOG("AndroidActivity::handleDestroy: ", (void *)_activity);
 		_controller->destroyActivity(this);
 	});
 	release(id);
@@ -351,11 +419,29 @@ void AndroidActivity::handleDestroy() {
 
 void AndroidActivity::handleWindowFocusChanged(int focused) {
 	getContext()->performTemporary([&] {
-		stappler::log::source().info("AndroidContextController", "onWindowFocusChanged: ", focused);
-		/*core::InputEventData event =
-			core::InputEventData::BoolEvent(core::InputEventName::FocusGain, focused != 0);
-	transferInputEvent(event);*/
+		XL_ANDROID_LOG("AndroidActivity::handleWindowFocusChanged: ", (void *)_activity, " ",
+				focused);
+		if (_window) {
+			if (focused) {
+				_window->updateState(0, _window->getInfo()->state | WindowState::Focused);
+			} else {
+				_window->updateState(0, _window->getInfo()->state & ~WindowState::Focused);
+			}
+		}
 	});
+}
+
+void AndroidActivity::updateInsets() {
+	Padding full(std::max(_contentInsets.top, _imeInsets.top),
+			std::max(_contentInsets.right, _imeInsets.right),
+			std::max(_contentInsets.bottom, _imeInsets.bottom),
+			std::max(_contentInsets.left, _imeInsets.left));
+	if (_fullInsets != full) {
+		_fullInsets = full;
+		if (_window) {
+			_window->setContentPadding(_fullInsets);
+		}
+	}
 }
 
 } // namespace stappler::xenolith::platform

@@ -314,6 +314,24 @@ bool InputDispatcher::hasActiveInput() const {
 	return !_activeEvents.empty() || !_activeKeys.empty();
 }
 
+void InputDispatcher::resetWindowState(WindowState state, bool propagate) {
+	_windowState = state;
+
+	cancelTouchEvents(nan(), nan(), InputModifier::None);
+	cancelKeyEvents(nan(), nan(), InputModifier::None);
+
+	if (propagate) {
+		core::InputEventData stateUpdate{
+				0,
+				core::InputEventName::WindowState,
+				{.input = {core::InputMouseButton::None, core::InputModifier::None, nan(), nan()}},
+				{.window = {state, WindowState::All}},
+		};
+
+		handleInputEvent(stateUpdate);
+	}
+}
+
 InputEvent InputDispatcher::getEventInfo(const InputEventData &event) const {
 	auto loc = event.getLocation();
 	return InputEvent{event, loc, loc, loc, _currentTime, _currentTime, _currentTime,

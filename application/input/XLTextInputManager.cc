@@ -22,6 +22,7 @@
 
 #include "XLTextInputManager.h"
 #include "XLCoreTextInput.h"
+#include "XLDirector.h"
 #include "XLAppWindow.h"
 
 #if WIN32
@@ -66,8 +67,8 @@ bool TextInputHandler::isActive() const {
 	return this->manager && this->manager->getHandler() == this;
 }
 
-bool TextInputManager::init(AppWindow *w) {
-	_window = w;
+bool TextInputManager::init(NotNull<Director> d) {
+	_director = d;
 	return true;
 }
 
@@ -89,7 +90,7 @@ bool TextInputManager::run(TextInputHandler *h, TextInputRequest &&req) {
 
 	_state = req.getState();
 
-	_window->acquireTextInput(move(req));
+	_director->getWindow()->acquireTextInput(move(req));
 	return true;
 }
 
@@ -110,7 +111,7 @@ bool TextInputManager::update(TextInputHandler *h, TextInputRequest &&req) {
 	}
 
 	_state = move(newState);
-	_window->acquireTextInput(move(req));
+	_director->getWindow()->acquireTextInput(move(req));
 	return true;
 }
 
@@ -141,7 +142,9 @@ void TextInputManager::cancel() {
 		_handler->onData(copy);
 		_handler->manager = nullptr;
 	}
-	_window->releaseTextInput();
+	if (auto w = _director->getWindow()) {
+		w->releaseTextInput();
+	}
 	_handler = nullptr;
 	_state.enabled = false;
 	_state.string = nullptr;

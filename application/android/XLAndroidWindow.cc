@@ -101,6 +101,11 @@ bool AndroidWindow::init(NotNull<AndroidActivity> activity, Rc<WindowInfo> &&inf
 		_ANativeWindow_setBuffersTransform =
 				_selfHandle.sym<decltype(_ANativeWindow_setBuffersTransform)>(
 						"ANativeWindow_setBuffersTransform");
+		_ANativeWindow_setFrameRate = _selfHandle.sym<decltype(_ANativeWindow_setFrameRate)>(
+				"ANativeWindow_setFrameRate");
+		_ANativeWindow_setFrameRateWithChangeStrategy =
+				_selfHandle.sym<decltype(_ANativeWindow_setFrameRateWithChangeStrategy)>(
+						"ANativeWindow_setFrameRateWithChangeStrategy");
 
 		_AChoreographer_postFrameCallback64 =
 				_selfHandle.sym<decltype(_AChoreographer_postFrameCallback64)>(
@@ -126,22 +131,7 @@ bool AndroidWindow::init(NotNull<AndroidActivity> activity, Rc<WindowInfo> &&inf
 	_info->rect.height = _identityExtent.height;
 
 	_info->density = acquireWindowDensity();
-
-	/*auto activity = c->getActivity();
-	auto proxy = c->getProxy();
-
-	auto env = jni::Env::getEnv();
-	jni::Ref thiz(activity->clazz, env);
-
-	jni::Local window = proxy->Activity.getWindow(thiz);
-	proxy->Window.clearFlags(window,
-			proxy->WindowLayoutParams.FLAG_TRANSLUCENT_STATUS_VALUE
-					| proxy->WindowLayoutParams.FLAG_TRANSLUCENT_NAVIGATION_VALUE
-					| proxy->WindowLayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS_VALUE
-					| proxy->WindowLayoutParams.FLAG_LAYOUT_INSET_DECOR_VALUE
-					| proxy->WindowLayoutParams.FLAG_LAYOUT_IN_SCREEN_VALUE);
-	proxy->Window.addFlags(window,
-			int(proxy->WindowLayoutParams.FLAG_LAYOUT_ATTACHED_IN_DECOR_VALUE));*/
+	_info->state |= _activity->getDecorationState();
 
 	return true;
 }
@@ -163,7 +153,18 @@ bool AndroidWindow::close() {
 	if (_unmapped) {
 		return true;
 	}
-	return false;
+
+	if (!_controller->notifyWindowClosed(this)) {
+		if (hasFlag(_info->state, WindowState::CloseGuard)) {
+			updateState(0, _info->state | WindowState::CloseRequest);
+		}
+		return false;
+	}
+
+	// prevent Director from preservation when user close app intentionally
+	_info->capabilities &= ~WindowCapabilities::PreserveDirector;
+	_activity->finish();
+	return true;
 }
 
 void AndroidWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
@@ -179,8 +180,8 @@ core::SurfaceInfo AndroidWindow::getSurfaceOptions(const core::Device &dev,
 	XL_ANDROID_LOG("AndroidWindow::getSurfaceOptions ", opts.currentExtent.width, " ",
 			opts.currentExtent.height, " ", toInt(opts.currentTransform));
 
-	uint32_t width = opts.currentExtent.width;
-	uint32_t height = opts.currentExtent.height;
+	uint32_t width = _extent.width;
+	uint32_t height = _extent.height;
 
 	if (hasFlag(opts.currentTransform, core::SurfaceTransformFlags::Rotate90)
 			|| hasFlag(opts.currentTransform, core::SurfaceTransformFlags::Rotate270)
@@ -188,6 +189,8 @@ core::SurfaceInfo AndroidWindow::getSurfaceOptions(const core::Device &dev,
 			|| hasFlag(opts.currentTransform, core::SurfaceTransformFlags::Rotate270)) {
 		opts.currentExtent.height = width;
 		opts.currentExtent.width = height;
+	} else {
+		opts.currentExtent = Extent2(width, height);
 	}
 
 	opts.currentTransform |= core::SurfaceTransformFlags::PreRotated;
@@ -283,13 +286,74 @@ core::PresentationOptions AndroidWindow::getPreferredOptions() const {
 		opts.followDisplayLinkBarrier = true;
 	}
 
+	opts.syncConstraintsUpdate = true;
 	return opts;
+}
+
+static void AndroidWindow_updateDecorationState(ActivityProxy *proxy, jobject activity,
+		const Callback<void(const jni::Ref &window, const jni::Ref &ic)> &cb) {
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (app->WindowInsetsController) {
+		auto w = proxy->Activity.getWindow(jni::Ref(activity, env));
+		auto ic = app->Window.getInsetsController(w);
+		if (ic) {
+			cb(w, ic);
+		}
+	}
 }
 
 bool AndroidWindow::enableState(WindowState state) {
 	if (NativeWindow::enableState(state)) {
 		return true;
 	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (state == WindowState::DecorationNavigationVisible) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.show(ic,
+					app->WindowInsetType.navigationBars(app->WindowInsetType.getClass().ref(env)));
+		});
+		return true;
+	} else if (state == WindowState::DecorationStatusBarVisible) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.show(ic,
+					app->WindowInsetType.statusBars(app->WindowInsetType.getClass().ref(env)));
+		});
+		return true;
+	} else if (state == WindowState::DecorationStatusBarLight) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsAppearance(ic,
+					app->WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS(),
+					app->WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS());
+		});
+		updateState(0, _info->state | WindowState::DecorationStatusBarLight);
+		return true;
+	} else if (state == WindowState::DecorationNavigationLight) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsAppearance(ic,
+					app->WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS(),
+					app->WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS());
+		});
+		updateState(0, _info->state | WindowState::DecorationNavigationLight);
+		return true;
+	} else if (state == WindowState::DecorationShowBySwipe) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsBehavior(ic,
+					app->WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE());
+		});
+		updateState(0, _info->state | WindowState::DecorationShowBySwipe);
+		return true;
+	}
+
 	return false;
 }
 
@@ -297,23 +361,71 @@ bool AndroidWindow::disableState(WindowState state) {
 	if (NativeWindow::disableState(state)) {
 		return true;
 	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (state == WindowState::DecorationNavigationVisible) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.hide(ic,
+					app->WindowInsetType.navigationBars(app->WindowInsetType.getClass().ref(env)));
+		});
+		return true;
+	} else if (state == WindowState::DecorationStatusBarVisible) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.hide(ic,
+					app->WindowInsetType.statusBars(app->WindowInsetType.getClass().ref(env)));
+		});
+		return true;
+	} else if (state == WindowState::DecorationStatusBarLight) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsAppearance(ic, 0,
+					app->WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS());
+		});
+		updateState(0, _info->state & ~WindowState::DecorationStatusBarLight);
+		return true;
+	} else if (state == WindowState::DecorationNavigationLight) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsAppearance(ic, 0,
+					app->WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS());
+		});
+		updateState(0, _info->state & ~WindowState::DecorationNavigationLight);
+		return true;
+	} else if (state == WindowState::DecorationShowBySwipe) {
+		AndroidWindow_updateDecorationState(_activity->getProxy(), _activity->getActivity()->clazz,
+				[&](const jni::Ref &window, const jni::Ref &ic) {
+			app->WindowInsetsController.setSystemBarsBehavior(ic,
+					app->WindowInsetsController.BEHAVIOR_DEFAULT());
+		});
+		updateState(0, _info->state & ~WindowState::DecorationShowBySwipe);
+		return true;
+	}
+
 	return false;
 }
 
-void AndroidWindow::updateWindow() {
+void AndroidWindow::updateWindow(bool sync) {
 	auto density = acquireWindowDensity();
 	auto extent = Extent2(ANativeWindow_getWidth(_window), ANativeWindow_getHeight(_window));
 	if (_extent != extent || _info->density != density) {
+		auto flags = (_extent != extent) ? core::UpdateConstraintsFlags::WindowResized
+										 : core::UpdateConstraintsFlags::None;
+		if (flags != core::UpdateConstraintsFlags::None) {
+			flags |= core::UpdateConstraintsFlags::SyncUpdate;
+		}
 		_extent = extent;
 		_info->density = density;
-		_controller->notifyWindowConstraintsChanged(this,
-				(_extent != extent) ? core::UpdateConstraintsFlags::WindowResized
-									: core::UpdateConstraintsFlags::None);
+		_controller->notifyWindowConstraintsChanged(this, flags);
 	}
 }
 
 void AndroidWindow::setContentPadding(const Padding &padding) {
 	if (_info->decorationInsets != padding) {
+		XL_ANDROID_LOG("AndroidWindow::setContentPadding ", (void *)_window, " ", padding);
 		_info->decorationInsets = padding;
 		_controller->notifyWindowConstraintsChanged(this, core::UpdateConstraintsFlags::None);
 	}
@@ -327,10 +439,27 @@ void AndroidWindow::setVsyncPeriod(uint64_t v) {
 }
 
 void AndroidWindow::postDisplayLink() {
-	if (_appWindow) {
+	if (_appWindow && !_unmapped) {
 		_appWindow->update(core::PresentationUpdateFlags::DisplayLink);
 	}
 }
+
+void AndroidWindow::updateLayers(Vector<WindowLayer> &&layers) {
+	if (_layers != layers) {
+		NativeWindow::updateLayers(sp::move(layers));
+
+		bool hasBackButtonHandler = false;
+		for (auto &it : _layers) {
+			if (hasFlag(it.flags, WindowLayerFlags::BackButtonHandler)) {
+				hasBackButtonHandler = true;
+			}
+		}
+
+		_activity->setBackButtonHandlerEnabled(hasBackButtonHandler);
+	}
+}
+
+void AndroidWindow::handleBackButton() { _activity->handleBackButton(); }
 
 bool AndroidWindow::updateTextInput(const TextInputRequest &, TextInputFlags flags) {
 	return false;
@@ -340,7 +469,7 @@ void AndroidWindow::cancelTextInput() { }
 
 void AndroidWindow::postFrameCallback() {
 	struct AndroidWindowFrameData {
-		AndroidWindow* window;
+		AndroidWindow *window;
 	};
 
 	auto data = new AndroidWindowFrameData;
@@ -395,6 +524,17 @@ float AndroidWindow::acquireWindowDensity() const {
 		return app->DisplayMetrics.density(dm);
 	}
 	return _info->density;
+}
+
+Status AndroidWindow::setPreferredFrameRate(float value) {
+	if (_ANativeWindow_setFrameRateWithChangeStrategy) {
+		return status::errnoToStatus(_ANativeWindow_setFrameRateWithChangeStrategy(_window, value,
+				0,
+				hasFlag(_info->flags, WindowCreationFlags::OnlySeamlessFrameRateSwitch) ? 0 : 1));
+	} else if (_ANativeWindow_setFrameRate) {
+		return status::errnoToStatus(_ANativeWindow_setFrameRate(_window, value, 0));
+	}
+	return Status::ErrorNotImplemented;
 }
 
 } // namespace stappler::xenolith::platform

@@ -51,7 +51,7 @@ bool Director::init(NotNull<AppThread> app, const core::FrameConstraints &constr
 		_scheduler = Rc<Scheduler>::create();
 		_actionManager = Rc<ActionManager>::create();
 		_inputDispatcher = Rc<InputDispatcher>::create(_pool, _window->getWindowState());
-		_textInput = Rc<TextInputManager>::create(_window);
+		_textInput = Rc<TextInputManager>::create(this);
 	});
 	_startTime = sp::platform::clock(ClockType::Monotonic);
 	_time.global = 0;
@@ -167,6 +167,26 @@ void Director::update(uint64_t t) {
 	_autorelease.clear();
 }
 
+void Director::setWindow(AppWindow *w) {
+	if (w != _window) {
+		_textInput->cancel();
+		if (w) {
+			_window = w;
+			_engine = w->getPresentationEngine();
+			_inputDispatcher->resetWindowState(_window->getWindowState(), true);
+
+			if (_scene && _scene->getQueue()->isCompiled()) {
+				_window->getContext()->performOnThread(
+						[w, q = _scene->getQueue()] { w->runWithQueue(q); }, w, false);
+			}
+		} else {
+			_window = nullptr;
+			_engine = nullptr;
+			_inputDispatcher->resetWindowState(WindowState::None, false);
+		}
+	}
+}
+
 void Director::end() {
 	if (_scene) {
 		_scene->handleFinished(this);
@@ -206,8 +226,7 @@ void Director::end() {
 
 	_nextScene = nullptr;
 
-	_window = nullptr;
-	_engine = nullptr;
+	setWindow(nullptr);
 
 	_autorelease.clear();
 }
@@ -226,7 +245,7 @@ void Director::setFrameConstraints(const core::FrameConstraints &c) {
 }
 
 void Director::runScene(Rc<Scene> &&scene) {
-	if (!scene) {
+	if (!scene || !_window) {
 		return;
 	}
 

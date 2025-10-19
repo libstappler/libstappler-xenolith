@@ -33,6 +33,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
+class Director;
+
 class SP_PUBLIC AppThread : public thread::Thread {
 public:
 	static EventHeader onNetworkState;
@@ -78,12 +80,34 @@ public:
 	/* Performs task in thread, identified by id */
 	void perform(Rc<Task> &&task, bool performFirst) const;
 
-	void readFromClipboard(Function<void(Status, BytesView, StringView)> &&,
-			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
+	// Read data from OS clipboard
+	//
+	// - dataCallback will receive data with selected type in this thread
+	// - selectCallback will be called in unknown OS thread and should select one of available data
+	// types by return it, or return StringView() to discard request
+	// - ref is preserved for all operation direction
+	void readFromClipboard(Function<void(Status, BytesView, StringView)> &&dataCallback,
+			Function<StringView(SpanView<StringView>)> &&selectCallback, Ref *ref = nullptr);
 
-	void writeToClipboard(BytesView, StringView contentType = StringView("text/plain"),
-			Ref * = nullptr);
-	void writeToClipboard(Function<Bytes(StringView)> &&, SpanView<StringView>, Ref * = nullptr);
+	// Test, which data is available to read from clipboard (if any)
+	//
+	// - cb will receive a list of types, available to read in this thread
+	// - ref is preserved for all operation direction
+	void probeClipboard(Function<void(Status, SpanView<StringView>)> &&cb, Ref *ref = nullptr);
+
+	// Provide static data for OS clipboard with specific type
+	// - ref is preserved until clibpoard data remains actial for OS
+	void writeToClipboard(BytesView data, StringView contentType = StringView("text/plain"),
+			Ref *ref = nullptr, StringView label = StringView());
+
+	// Provide data for OS clipboard via callback
+	//
+	// - dataCallback will be called in unknown OS thread to access actual data with specific type.
+	// Callback is preserved until clibpoard data remains actial for OS
+	// - types - list of types, that can be accessed with provided callback
+	// - ref is preserved until clibpoard data remains actial for OS
+	void writeToClipboard(Function<Bytes(StringView)> &&dataCallback, SpanView<StringView> types,
+			Ref *ref = nullptr, StringView label = StringView());
 
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 
@@ -102,6 +126,10 @@ public:
 	template <typename T>
 	T *getExtension() const;
 
+	virtual Rc<Director> handleAppWindowCreated(NotNull<AppWindow>,
+			const core::FrameConstraints &c);
+	virtual void handleAppWindowDestroyed(NotNull<AppWindow>, Rc<Director> &&);
+
 protected:
 	virtual void performAppUpdate(const UpdateTime &, bool wakeup);
 	virtual void performUpdate(bool wakeup);
@@ -109,6 +137,14 @@ protected:
 	virtual void loadExtensions();
 	virtual void initializeExtensions();
 	virtual void finalizeExtensions();
+
+	virtual bool shouldPreserveDirector(NotNull<AppWindow>, NotNull<Director>);
+	virtual void preserveDirector(NotNull<AppWindow>, Rc<Director> &&);
+
+	virtual bool hasPreservedDirector(NotNull<AppWindow>);
+	virtual Rc<Director> acquirePreservedDirector(NotNull<AppWindow>);
+
+	virtual Rc<Director> makeDirector(NotNull<AppWindow>, const core::FrameConstraints &);
 
 	Context *_context = nullptr;
 	event::Looper *_appLooper = nullptr;
@@ -127,6 +163,8 @@ protected:
 
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
 	Map<Rc<Ref>, Function<void(const UpdateTime &, bool)>> _listeners;
+
+	HashMap<String, Rc<Director>> _preservedDirectors;
 };
 
 template <typename T>

@@ -13,6 +13,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 public class AppSupportActivity extends NativeActivity {
 	private long _nativePointer = 0;
@@ -20,6 +22,8 @@ public class AppSupportActivity extends NativeActivity {
 	private TextInputWrapper _input = null;
 	private DisplayManager displayManager;
 	private DisplayManager.DisplayListener displayListener;
+	private OnBackInvokedCallback backCallback;
+	private boolean backCallbackEnabled = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +66,11 @@ public class AppSupportActivity extends NativeActivity {
 		view.setOnApplyWindowInsetsListener((v, insets) -> {
 			// Get the system window insets (e.g., status bar, navigation bar)
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+				boolean statusBarVisible = insets.isVisible(WindowInsets.Type.statusBars());
+				boolean navigationVisible = insets.isVisible(WindowInsets.Type.navigationBars());
+
+				handleInsetsVisible(_nativePointer, statusBarVisible, navigationVisible);
+
 				Insets i = insets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars());
 				this.handleContentInsets(_nativePointer, i.top, i.right, i.bottom, i.left);
 
@@ -158,9 +167,39 @@ public class AppSupportActivity extends NativeActivity {
 		_nativePointer = nativePointer;
 	}
 
+	protected void setBackButtonHandlerEnabled(boolean enabled) {
+		if (backCallbackEnabled == enabled) {
+			return;
+		}
+
+		backCallbackEnabled = enabled;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			if (backCallbackEnabled) {
+				backCallback = new OnBackInvokedCallback() {
+					@Override
+					public void onBackInvoked() {
+						handleBackInvoked(_nativePointer);
+					}
+				};
+
+				getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+					OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+					backCallback
+				);
+			} else {
+				getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(
+					backCallback
+				);
+				backCallback = null;
+			}
+		}
+	}
+
 	protected native void handleActivityResult(long nativePtr, int requestCode, int resultCode, Intent data);
+	protected native void handleInsetsVisible(long nativePtr, boolean statusBarVisible, boolean navigationVisible);
 	protected native void handleContentInsets(long nativePtr, int top, int right, int bottom, int left);
 	protected native void handleImeInsets(long nativePtr, int top, int right, int bottom, int left);
+	protected native void handleBackInvoked(long nativePtr);
 
 	static {
 		System.loadLibrary("application");

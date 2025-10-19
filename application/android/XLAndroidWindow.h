@@ -61,13 +61,19 @@ public:
 	virtual bool enableState(WindowState) override;
 	virtual bool disableState(WindowState) override;
 
-	void updateWindow();
+	void updateWindow(bool);
 	void setContentPadding(const Padding &);
 
 	ANativeWindow *getWindow() const { return _window; }
 
 	void setVsyncPeriod(uint64_t);
 	void postDisplayLink();
+
+	virtual void updateLayers(Vector<WindowLayer> &&) override;
+
+	virtual void handleBackButton() override;
+
+	virtual Status setPreferredFrameRate(float) override;
 
 protected:
 	friend class AndroidActivity;
@@ -96,6 +102,10 @@ protected:
 
 	int32_t (*_ANativeWindow_setBuffersTransform)(ANativeWindow *window,
 			int32_t transform) = nullptr;
+	int32_t (*_ANativeWindow_setFrameRate)(ANativeWindow *window, float frameRate,
+			int8_t compatibility) = nullptr;
+	int32_t (*_ANativeWindow_setFrameRateWithChangeStrategy)(ANativeWindow *window, float frameRate,
+			int8_t compatibility, int8_t changeFrameRateStrategy) = nullptr;
 
 	void (*_AChoreographer_postFrameCallback64)(AChoreographer *choreographer,
 			AChoreographer_frameCallback64 callback, void *data) = nullptr;

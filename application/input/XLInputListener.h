@@ -147,6 +147,8 @@ public:
 
 	void clear();
 
+	bool hasBackButtonRecognizer() const;
+
 protected:
 	friend class FocusGroup;
 

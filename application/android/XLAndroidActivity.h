@@ -52,14 +52,22 @@ public:
 
 	AndroidContextController *getController() const { return _controller; }
 	ANativeActivity *getActivity() const { return _activity; }
+	WindowState getDecorationState() const { return _decorationState; }
 	ActivityProxy *getProxy() const;
 
 	Context *getContext() const;
 
 	void handleActivityResult(jint request, jint result, jobject data);
+	void handleInsetsVisible(bool statusBarVisible, bool navigationVisible);
 	void handleContentInsets(const Padding &);
 	void handleImeInsets(const Padding &);
+	void handleBackInvoked();
 	void handleDisplayChanged();
+
+	void finish();
+	void handleBackButton();
+
+	void setBackButtonHandlerEnabled(bool);
 
 protected:
 	void handleContentRectChanged(const Padding &);
@@ -81,10 +89,11 @@ protected:
 
 	void handleWindowFocusChanged(int focused);
 
+	void updateInsets();
+
 	Rc<AndroidContextController> _controller;
 	ANativeActivity *_activity = nullptr;
 	Rc<ActivityProxy> _proxy;
-
 
 	Rc<NetworkConnectivity> _networkConnectivity;
 
@@ -95,6 +104,11 @@ protected:
 
 	Map<AInputQueue *, Rc<InputQueue>> _input;
 	Rc<AndroidWindow> _window;
+	Padding _contentInsets;
+	Padding _imeInsets;
+	Padding _fullInsets;
+
+	WindowState _decorationState;
 };
 
 } // namespace stappler::xenolith::platform

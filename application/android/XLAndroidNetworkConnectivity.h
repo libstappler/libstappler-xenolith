@@ -29,16 +29,25 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 struct NetworkConnectivity : public Ref {
-	jni::GlobalClass clazz = nullptr;
+	static constexpr StringView NetworkConnectivityClassName =
+			"org.stappler.xenolith.core.NetworkConnectivity";
+	static constexpr StringView NetworkConnectivityClassPath =
+			"org/stappler/xenolith/core/NetworkConnectivity";
+
+	struct NetworkConnectivityProxy : jni::ClassProxy {
+		jni::StaticMethod<"create",
+				jni::L<"org/stappler/xenolith/core/NetworkConnectivity">(
+						jni::L<"android.content.Context">, jlong)>
+				create = this;
+		jni::Method<"finalize", void()> finalize = this;
+
+		using jni::ClassProxy ::ClassProxy;
+	} proxy = "org/stappler/xenolith/core/NetworkConnectivity";
+
 	jni::Global thiz = nullptr;
 	NetworkFlags flags = NetworkFlags::None;
 	Function<void(NetworkFlags)> callback;
 
-	jmethodID j_hasCapability = nullptr;
-
-	int32_t sdkVersion = 0;
-
-	bool init(const jni::Ref &context, Function<void(NetworkFlags)> && = nullptr);
 	void finalize();
 
 	void handleCreated(JNIEnv *, jobject, jobject);
@@ -47,6 +56,9 @@ struct NetworkConnectivity : public Ref {
 	void handleLost(JNIEnv *);
 	void handleCapabilitiesChanged(JNIEnv *, jobject);
 	void handleLinkPropertiesChanged(JNIEnv *, jobject);
+
+	virtual ~NetworkConnectivity();
+	NetworkConnectivity(const jni::Ref &context, Function<void(NetworkFlags)> && = nullptr);
 };
 
 } // namespace stappler::xenolith::platform

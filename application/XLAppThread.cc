@@ -26,6 +26,8 @@
 #include "SPSharedModule.h"
 #include "SPEventTimerHandle.h"
 #include "XLEvent.h"
+#include "XLAppWindow.h"
+#include "XLDirector.h"
 
 #if MODULE_XENOLITH_FONT
 
@@ -184,29 +186,61 @@ void AppThread::readFromClipboard(Function<void(Status, BytesView, StringView)> 
 	}, this);
 }
 
-void AppThread::writeToClipboard(BytesView data, StringView contentType, Ref *ref) {
+void AppThread::probeClipboard(Function<void(Status, SpanView<StringView>)> &&cb, Ref *ref) {
+	_context->performOnThread([this, cb = sp::move(cb), ref = Rc<Ref>(ref)]() mutable {
+		auto st = _context->probeClipboard(
+				[this, cb = sp::move(cb), ref = sp::move(ref)](Status st,
+						SpanView<StringView> types) mutable {
+			Vector<String> typesData;
+			typesData.reserve(types.size());
+			for (auto it : types) { typesData.emplace_back(it.str<Interface>()); }
+			performOnAppThread(
+					[st, types = sp::move(typesData), cb = sp::move(cb),
+							ref = move(ref)]() mutable {
+				Vector<StringView> typesData;
+				typesData.reserve(types.size());
+				for (auto &it : types) { typesData.emplace_back(it); }
+				cb(st, typesData);
+				ref = nullptr;
+			},
+					this);
+		},
+				this);
+		if (st != Status::Ok) {
+			performOnAppThread([st, cb = sp::move(cb), ref = move(ref)]() mutable {
+				cb(st, SpanView<StringView>());
+				ref = nullptr;
+			}, this);
+		}
+	}, this);
+}
+
+void AppThread::writeToClipboard(BytesView data, StringView contentType, Ref *ref,
+		StringView label) {
 	_context->performOnThread(
 			[this, data = data.bytes<Interface>(), type = contentType.str<Interface>(),
-					ref = Rc<Ref>(ref)]() mutable {
+					ref = Rc<Ref>(ref), label = label.str<Interface>()]() mutable {
 		_context->writeToClipboard([data = sp::move(data), t = type](StringView type) -> Bytes {
 			if (t == type) {
 				return data;
 			}
 			return Bytes();
-		}, makeSpanView(&type, 1), ref);
+		}, makeSpanView(&type, 1), ref, label);
 	},
 			this);
 }
 
 void AppThread::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<StringView> types,
-		Ref *ref) {
+		Ref *ref, StringView label) {
 	Vector<String> vtypes;
 	vtypes.reserve(types.size());
 	for (auto &it : types) { vtypes.emplace_back(it.str<Interface>()); }
 	_context->performOnThread(
-			[this, cb = sp::move(cb), vtypes = sp::move(vtypes), ref = Rc<Ref>(ref)]() mutable {
-		_context->writeToClipboard(sp::move(cb), vtypes, ref);
-	}, this);
+			[this, cb = sp::move(cb), vtypes = sp::move(vtypes), ref = Rc<Ref>(ref),
+					label = label.str<Interface>()]() mutable {
+		_context->writeToClipboard(sp::move(cb), vtypes, ref, label);
+	},
+			this);
 }
 
 void AppThread::acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&cb, Ref *ref) {
@@ -236,6 +270,35 @@ bool AppThread::removeListener(NotNull<Ref> ref) {
 		return true;
 	}
 	return false;
+}
+
+Rc<Director> AppThread::handleAppWindowCreated(NotNull<AppWindow> w,
+		const core::FrameConstraints &c) {
+	log::source().info("AppThread", "handleAppWindowCreated");
+
+	addListener(w, [w](const UpdateTime &, bool wakeup) {
+		if (wakeup) {
+			w->setReadyForNextFrame();
+
+			// force display link to update views
+			w->update(core::PresentationUpdateFlags::DisplayLink);
+		}
+	});
+
+	return makeDirector(w, c);
+}
+
+void AppThread::handleAppWindowDestroyed(NotNull<AppWindow> w, Rc<Director> &&d) {
+	log::source().info("AppThread", "handleAppWindowDestroyed");
+	if (d) {
+		if (shouldPreserveDirector(w, d)) {
+			d->setWindow(nullptr);
+			preserveDirector(w, sp::move(d));
+		} else {
+			d->end();
+		}
+	}
+	removeListener(w);
 }
 
 void AppThread::performAppUpdate(const UpdateTime &time, bool wakeup) {
@@ -286,6 +349,56 @@ void AppThread::initializeExtensions() {
 
 void AppThread::finalizeExtensions() {
 	for (auto &it : _extensions) { it.second->invalidate(this); }
+}
+
+bool AppThread::shouldPreserveDirector(NotNull<AppWindow> w, NotNull<Director>) {
+	return hasFlag(w->getCapabilities(), WindowCapabilities::PreserveDirector);
+}
+
+void AppThread::preserveDirector(NotNull<AppWindow> w, Rc<Director> &&d) {
+	_preservedDirectors.emplace(w->getId().str<Interface>(), sp::move(d));
+}
+
+bool AppThread::hasPreservedDirector(NotNull<AppWindow> w) {
+	auto it = _preservedDirectors.find(w->getId().str<Interface>());
+	if (it != _preservedDirectors.end()) {
+		return true;
+	}
+	return false;
+}
+
+Rc<Director> AppThread::acquirePreservedDirector(NotNull<AppWindow> w) {
+	auto it = _preservedDirectors.find(w->getId().str<Interface>());
+	if (it != _preservedDirectors.end()) {
+		auto d = sp::move(it->second);
+		_preservedDirectors.erase(it);
+		return d;
+	}
+	return nullptr;
+}
+
+Rc<Director> AppThread::makeDirector(NotNull<AppWindow> w, const core::FrameConstraints &c) {
+	if (hasPreservedDirector(w)) {
+		auto d = acquirePreservedDirector(w);
+		if (d) {
+			d->setWindow(w);
+			return d;
+		}
+	}
+
+	Rc<Scene> scene;
+	auto makeSceneSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeSceneSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeSceneName);
+	if (makeSceneSymbol) {
+		scene = makeSceneSymbol(this, w, c);
+	}
+	if (!scene) {
+		log::source().error("AppThread", "Fail to create scene for the window '", w->getId(), "'");
+		return nullptr;
+	}
+	auto director = Rc<Director>::create(this, c, w);
+	director->runScene(move(scene));
+	return director;
 }
 
 } // namespace stappler::xenolith

@@ -74,7 +74,9 @@ public:
 	// To access WindowState in app thread, use getWindowState
 	const WindowInfo *getInfo() const;
 
-	WindowCapabilities getCapabilities() const;
+	StringView getId() const { return _windowId; }
+
+	WindowCapabilities getCapabilities() const { return _capabilities; }
 
 	core::PresentationEngine *getPresentationEngine() const { return _presentationEngine; }
 
@@ -89,22 +91,19 @@ public:
 	void setReadyForNextFrame(); // from any thread
 
 	// Block current thread until next frame
-	void waitUntilFrame(); // from any thread
+	bool waitUntilFrame();
 
-	void setRenderOnDemand(bool value); // from any thread
-	bool isRenderOnDemand() const; // from any thread
+	void setPresentationOnDemand(bool value); // from any thread
+	bool isPresentationOnDemand() const; // from any thread
 
-	void setFrameInterval(uint64_t); // from any thread
-	uint64_t getFrameInterval() const; // from any thread
+	// Set frame interval for Presentation engine
+	// Can be used to limit frame rate on value, lower that current display mode
+	// Can be called from any thread
+	void setPresentationFrameInterval(uint64_t);
 
-	// CloseGuard will prevent OS WM to close window on it's side.
-	// If CloseGuard is enabled, when WM or user tries to close window, it remains open and you will receive
-	// WindowState notification with CloseRequest flag set.
-	// When CloseRequest flag is set, ypu should commit this request with enableState(WindowState::CloseRequest)
-	// to close window or discard it with disableState(WindowState::CloseRequest) to remove this flag and re-enable CloseGuard
-	// Also, when CloseRequest flag is set, next `close` call or next WM close action will close this window
-	void retainCloseGuard();
-	void releaseCloseGuard();
+	// Get frame interval of presentation engine
+	// 0 if no frame interval is set
+	uint64_t getPresentationFrameInterval() const;
 
 	// State flags you can enable or disable
 	WindowState getUpdatableStateFlags() const;
@@ -129,17 +128,53 @@ public:
 
 	void updateLayers(Vector<WindowLayer> &&); // from app thread
 
-	// native window interface for app thread
+	// Acquire data describing current monitor configuration
 	void acquireScreenInfo(Function<void(NotNull<ScreenInfo>)> &&, Ref * = nullptr);
 
+	// Try to enter or exit fullscreen mode with specific mode
+	// Use FullscreenInfo::Current to use current monitor and mode for fullscreen
+	// Use FullscreenInfo::None to exit fullscreen mode
+	//
+	// At least WindowCapabilities::Fullscreen should be available for successful call
+	//
+	// WindowCapabilities::FullscreenWithMode should be available for values,
+	// other then FullscreenInfo::Current and FullscreenInfo::None
+	//
+	// WindowCapabilities::FullscreenExclusive required to use FullscreenFlags::Exclusive
+	//
+	// Without WindowCapabilities::FullscreenSeamlessModeSwitch, to set new display mode
+	// for already-fullscreened window, engine will exit fullscreen mode, then re-enter
+	// it with the new mode
 	bool setFullscreen(FullscreenInfo &&, Function<void(Status)> &&, Ref * = nullptr);
 
+	// Try to set preferred framerate for OS WM.
+	// WindowCapabilities::PreferredFrameRate should be available
+	bool setPreferredFrameRate(float, Function<void(Status)> && = nullptr);
+
+	// Capture current window contents as an image buffer
+	// (makes screenshot of the window's content without OS decorations)
+	//
+	// This call actually performs frame rendering into offscreen buffer
+	// (via PresentationEngine::scheduleSwapchainImage with PresentationFrame::OffscreenTarget),
+	// that then will be returned as info + data
 	void captureScreenshot(Function<void(const core::ImageInfoData &info, BytesView view)> &&cb);
 
 	// pos - Location, on which window menu should be opened in presentation (Scene) coords;
 	// Use Vec2::INVALID to open window menu in current pointer location;
 	// WindowState::AlloedWindowMenu should be enabled
 	bool openWindowMenu(Vec2 pos);
+
+	// Simulate back button press/gesture from app's thread (on Android)
+	// It shouldn't be used on modern Android devices (above API 32), instead,
+	//
+	// use WindowLayerFlags::BackButtonHandler on listeners, that handles Back button,
+	// which integrates with Predictive Back Gesture
+	// (https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)
+	//
+	// Note, that on API 33+ it should be enabled in manifest with
+	//  android:enableOnBackInvokedCallback="true"
+	// in <application> or <activity>
+	void handleBackButton();
 
 protected:
 	virtual core::ImageInfo getSwapchainImageInfo(const core::SwapchainConfig &cfg) const override;
@@ -164,7 +199,9 @@ protected:
 	virtual void propagateTextInput(TextInputState &); // from app thread
 
 	virtual void handleContextStateUpdate(WindowState state);
+	virtual void synchronizeClose();
 
+	String _windowId; // should be constant
 	Rc<Context> _context;
 	Rc<AppThread> _application;
 	Rc<Director> _director;
@@ -174,11 +211,12 @@ protected:
 	core::WindowState _state = core::WindowState::None; // for app thread
 	core::WindowState _contextState = core::WindowState::None; // for context thread
 
-	uint32_t _exitGuard = 0;
-
 	bool _inCloseRequest = false;
+	bool _syncClose = false;
 
 	core::SwapchainConfig _appSwapchainConfig;
+
+	WindowCapabilities _capabilities = WindowCapabilities::None;
 };
 
 } // namespace stappler::xenolith

@@ -137,8 +137,8 @@ bool ContextController::notifyWindowClosed(NotNull<NativeWindow> w, WindowCloseO
 		if (hasFlag(opts, WindowCloseOptions::CloseInPlace)) {
 			auto it = _activeWindows.find(w.get());
 			if (it != _activeWindows.end()) {
-				_context->handleNativeWindowDestroyed(w);
 				w->unmapWindow();
+				_context->handleNativeWindowDestroyed(w);
 				_activeWindows.erase(it);
 			}
 		}
@@ -173,6 +173,10 @@ void ContextController::initializeComponent(NotNull<ContextComponent> comp) {
 
 Status ContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	req->dataCallback(Status::ErrorNotImplemented, BytesView(), StringView());
+	return Status::ErrorNotImplemented;
+}
+
+Status ContextController::probeClipboard(Rc<ClipboardProbe> &&) {
 	return Status::ErrorNotImplemented;
 }
 

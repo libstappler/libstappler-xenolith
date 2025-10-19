@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-class AppWindow;
+class Director;
 class TextInputManager;
 
 // TextInputHandler used to capture text input
@@ -62,7 +62,7 @@ class SP_PUBLIC TextInputManager final : public Ref {
 public:
 	virtual ~TextInputManager() = default;
 
-	bool init(AppWindow *);
+	bool init(NotNull<Director>);
 
 	bool run(TextInputHandler *, TextInputRequest &&);
 	bool update(TextInputHandler *, TextInputRequest &&);
@@ -81,7 +81,7 @@ public:
 	void handleInputUpdate(const TextInputState &);
 
 protected:
-	AppWindow *_window = nullptr;
+	Director *_director = nullptr;
 	TextInputHandler *_handler = nullptr;
 
 	TextInputState _state;

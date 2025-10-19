@@ -75,6 +75,14 @@ struct SP_PUBLIC ActivityProxy : public Ref {
 				this;
 		jni::Method<"getPackageManager", jni::L<"android/content/pm/PackageManager">()>
 				getPackageManager = this;
+		jni::Method<"getContentResolver", jni::L<"android.content.ContentResolver">()>
+				getContentResolver = this;
+
+		jni::Method<"finishAffinity", void()> finishAffinity = this;
+		jni::Method<"finish", void()> finish = this;
+		jni::Method<"onBackPressed", void()> onBackPressed = this;
+		jni::Method<"setBackButtonHandlerEnabled", void(jboolean)> setBackButtonHandlerEnabled =
+				this;
 
 		using jni::ClassProxy::ClassProxy;
 	} Activity;
@@ -82,6 +90,18 @@ struct SP_PUBLIC ActivityProxy : public Ref {
 	jni::App *app = nullptr;
 
 	ActivityProxy(ANativeActivity *);
+};
+
+struct SP_PUBLIC ClipboardContentProviderProxy : jni::ClassProxy {
+	jni::StaticField<"Self", jni::L<"org/stappler/xenolith/core/ClipboardContentProvider">> Self =
+			this;
+	jni::Method<"getNative", jlong()> getNative = this;
+	jni::Method<"setNative", void(jlong)> setNative = this;
+	jni::Method<"getAuthority", jstring()> getAuthority = this;
+
+	jni::Global thiz = nullptr;
+
+	using jni::ClassProxy::ClassProxy;
 };
 
 SP_PUBLIC void saveApplicationInfo(const Value &);

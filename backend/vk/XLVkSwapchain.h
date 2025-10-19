@@ -35,8 +35,10 @@ public:
 
 	bool init(Instance *instance, VkSurfaceKHR surface, Ref * = nullptr);
 
+	virtual void invalidate() override;
+
 	virtual core::SurfaceInfo getSurfaceOptions(const core::Device &, core::FullScreenExclusiveMode,
-			void *) const;
+			void *) const override;
 
 	VkSurfaceKHR getSurface() const { return _surface; }
 

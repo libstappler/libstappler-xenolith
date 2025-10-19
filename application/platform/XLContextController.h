@@ -67,6 +67,11 @@ struct ClipboardRequest : public Ref {
 };
 
 struct ClipboardData : public Ref {
+	Time initial = Time::now();
+
+	// User-friendly description
+	String label;
+
 	// Supported types for the data
 	Vector<String> types;
 
@@ -77,6 +82,14 @@ struct ClipboardData : public Ref {
 
 	// Data owner
 	Rc<Ref> owner;
+};
+
+struct ClipboardProbe : public Ref {
+	// Function to receive available types
+	Function<void(Status, SpanView<StringView>)> typeCallback;
+
+	// Target to keep
+	Rc<Ref> target;
 };
 
 // For platforms, that has no return to entry point (like, MacOS [NSApp run])
@@ -143,6 +156,7 @@ public:
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&);
+	virtual Status probeClipboard(Rc<ClipboardProbe> &&);
 	virtual Status writeToClipboard(Rc<ClipboardData> &&);
 
 	virtual Rc<ScreenInfo> getScreenInfo() const;

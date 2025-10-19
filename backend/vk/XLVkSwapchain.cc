@@ -28,12 +28,8 @@
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 
 Surface::~Surface() {
-	if (_surface) {
-		auto inst = _instance.get_cast<Instance>();
-		inst->vkDestroySurfaceKHR(inst->getInstance(), _surface, nullptr);
-		_surface = VK_NULL_HANDLE;
-	}
-	_window = nullptr;
+	invalidate();
+	slog().debug("vk::Surface", "~Surface");
 }
 
 bool Surface::init(Instance *instance, VkSurfaceKHR surface, Ref *win) {
@@ -47,6 +43,15 @@ bool Surface::init(Instance *instance, VkSurfaceKHR surface, Ref *win) {
 
 	_surface = surface;
 	return true;
+}
+
+void Surface::invalidate() {
+	if (_surface) {
+		auto inst = _instance.get_cast<Instance>();
+		inst->vkDestroySurfaceKHR(inst->getInstance(), _surface, nullptr);
+		_surface = VK_NULL_HANDLE;
+	}
+	_window = nullptr;
 }
 
 core::SurfaceInfo Surface::getSurfaceOptions(const core::Device &dev,

@@ -44,6 +44,14 @@ static void registerDisplayConfigMethods(const jni::RefClass &cl) {
 	}
 }
 
+AndroidDisplayConfigManager::~AndroidDisplayConfigManager() {
+	if (thiz) {
+		auto env = jni::Env::getEnv();
+		proxy.finalize(thiz.ref(env));
+		thiz = nullptr;
+	}
+}
+
 bool AndroidDisplayConfigManager::init(NotNull<AndroidContextController> c,
 		Function<void(NotNull<DisplayConfigManager>)> &&cb) {
 	if (!DisplayConfigManager::init(sp::move(cb))) {
@@ -149,7 +157,6 @@ void AndroidDisplayConfigManager::updateDisplayConfig(
 				id == currentModeId,
 			});
 
-			slog().info("AndroidDisplayConfigManager", "Mode: ", id, " ", w, "x", h, "@", rate);
 			++midx;
 		}
 
@@ -214,84 +221,6 @@ void AndroidDisplayConfigManager::prepareDisplayConfigUpdate(
 
 void AndroidDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> config,
 		Function<void(Status)> &&cb) {
-	/*auto current = extractCurrentConfig(getCurrentConfig());
-	auto native = config->native.get_cast<WinDisplayConfig>();
-
-	struct ModeData {
-		wchar_t *name = nullptr;
-		DEVMODEW dm;
-		bool set = false;
-
-		core::ModeInfo getMode() {
-			return core::ModeInfo{dm.dmPelsWidth, dm.dmPelsHeight, dm.dmDisplayFrequency * 1'000};
-		};
-
-		ModeData(wchar_t *n) : name(n) {
-			ZeroMemory(&dm, sizeof(dm));
-			dm.dmSize = sizeof(dm);
-		}
-	};
-
-	Vector<ModeData> modesToSet;
-
-	for (auto &it : native->handles) {
-		auto l = config->getLogical(it.handle);
-		if (!l || l->monitors.size() == 0) {
-			continue;
-		}
-
-		auto mon = config->getMonitor(l->monitors.front());
-		if (!mon) {
-			continue;
-		}
-
-		auto mode = mon->getCurrent().mode;
-
-		auto &dm = modesToSet.emplace_back(ModeData((wchar_t *)it.adapter.data()));
-
-		if (EnumDisplaySettingsW(dm.name, ENUM_CURRENT_SETTINGS, &dm.dm)) {
-			if (mode == dm.getMode()) {
-				continue; // no need to switch mode
-			}
-		}
-
-		bool found = true;
-		DWORD modeNum = 0;
-		while (EnumDisplaySettingsW((wchar_t *)it.adapter.data(), modeNum++, &dm.dm)) {
-			if (hasFlag(dm.dm.dmFields, DWORD(DM_PELSWIDTH))
-					|| hasFlag(dm.dm.dmFields, DWORD(DM_PELSHEIGHT))
-					|| hasFlag(dm.dm.dmFields, DWORD(DM_DISPLAYFREQUENCY))) {
-				dm.dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
-				if (mode == dm.getMode()) {
-					if (ChangeDisplaySettingsExW(dm.name, &dm.dm, nullptr, CDS_TEST, nullptr)
-							== DISP_CHANGE_SUCCESSFUL) {
-						dm.set = true;
-						found = true;
-						break;
-					}
-				}
-			}
-		}
-		if (!found) {
-			if (cb) {
-				cb(Status::ErrorInvalidArguemnt);
-			}
-			return;
-		}
-	}
-
-	for (auto &dm : modesToSet) {
-		if (dm.set) {
-			if (ChangeDisplaySettingsExW(dm.name, &dm.dm, nullptr, CDS_FULLSCREEN, nullptr)
-					!= DISP_CHANGE_SUCCESSFUL) {
-				if (cb) {
-					cb(Status::ErrorInvalidArguemnt);
-				}
-				return;
-			}
-		}
-	}*/
-
 	if (cb) {
 		cb(Status::Ok);
 	}

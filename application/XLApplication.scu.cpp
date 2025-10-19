@@ -73,6 +73,7 @@
 #include "android/XLAndroidActivity.cc"
 #include "android/XLAndroidDisplayConfigManager.cc"
 #include "android/XLAndroidNetworkConnectivity.cc"
+#include "android/XLAndroidClipboardListener.cc"
 #include "android/XLAndroidContextController.cc"
 #endif
 

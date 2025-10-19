@@ -27,6 +27,7 @@
 #include "XLContextInfo.h"
 #include "platform/XLContextController.h"
 #include "XLAndroidNetworkConnectivity.h"
+#include "XLAndroidClipboardListener.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -34,11 +35,6 @@ class AndroidActivity;
 
 class AndroidContextController : public ContextController {
 public:
-	static constexpr StringView NetworkConnectivityClassName =
-			"org.stappler.xenolith.appsupport.NetworkConnectivity";
-	static constexpr StringView NetworkConnectivityClassPath =
-			"org/stappler/xenolith/appsupport/NetworkConnectivity";
-
 	static constexpr int FLAG_ACTIVITY_NEW_TASK = 268'435'456;
 
 	static void acquireDefaultConfig(ContextConfig &);
@@ -59,12 +55,32 @@ public:
 
 	Rc<WindowInfo> makeWindowInfo(ANativeWindow *) const;
 
+	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
+	virtual Status probeClipboard(Rc<ClipboardProbe> &&) override;
+	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
+
+	String getClipboardTypeForUri(StringView);
+	String getClipboardPathForUri(StringView);
+
 protected:
 	Rc<core::Instance> loadInstance();
 
+	void readClipboardStream(Rc<ClipboardRequest> &&, const jni::Ref &, StringView type);
+
+	void handleClipboardUpdate();
+	void clearClipboard();
+
 	Rc<NetworkConnectivity> _networkConnectivity;
+	Rc<ClipboardListener> _clipboardListener;
 	Rc<ContextContainer> _container;
 	Set<Rc<AndroidActivity>> _activities;
+	Rc<event::Handle> _stopTimer;
+
+	jni::Global _clipboardClip = nullptr;
+	Rc<ClipboardData> _clipboardData;
+	String _clipboardAuthority;
+	ClipboardContentProviderProxy ClipboardContentProvider =
+			"org/stappler/xenolith/core/ClipboardContentProvider";
 };
 
 } // namespace stappler::xenolith::platform

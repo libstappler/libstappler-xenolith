@@ -41,13 +41,11 @@ bool AppWindow::init(NotNull<Context> ctx, NotNull<AppThread> app, NotNull<Nativ
 	_context = ctx;
 	_application = app;
 	_window = w;
+	_capabilities = _window->getInfo()->capabilities;
+	_windowId = _window->getInfo()->id;
 
 	_presentationEngine =
 			_context->getGlLoop()->makePresentationEngine(this, w->getPreferredOptions());
-
-	auto c = _presentationEngine->getFrameConstraints();
-
-	_director = Rc<Director>::create(_application.get_cast<AppThread>(), c, this);
 
 	return _presentationEngine != nullptr;
 }
@@ -64,8 +62,9 @@ void AppWindow::runWithQueue(const Rc<core::Queue> &queue) {
 }
 
 void AppWindow::run() {
-	_application->performOnAppThread([this, director = _director]() mutable {
-		_context->handleAppWindowCreated(_application, this, director);
+	auto c = _presentationEngine->getFrameConstraints();
+	_application->performOnAppThread([this, c]() mutable {
+		_director = _application->handleAppWindowCreated(this, c);
 	}, this);
 }
 
@@ -73,6 +72,7 @@ void AppWindow::update(core::PresentationUpdateFlags flags) { _presentationEngin
 
 void AppWindow::end() {
 	if (!_presentationEngine) {
+		synchronizeClose();
 		return;
 	}
 
@@ -83,12 +83,21 @@ void AppWindow::end() {
 		engine->end();
 	}
 
+	// Preserve final window capabilities
+	// On Android, through capabilities we know if Director should be preserved
+	if (_window) {
+		_capabilities = _window->getInfo()->capabilities;
+	}
+
 	_application->performOnAppThread([this, engine = move(engine)]() mutable {
-		if (_director) {
-			_director->end();
-		}
-		_context->handleAppWindowDestroyed(_application, this);
-		_context->performOnThread([engine = move(engine)]() mutable { engine = nullptr; }, this);
+		_application->handleAppWindowDestroyed(this, sp::move(_director));
+		_context->performOnThread([this, engine = move(engine)]() mutable {
+			if (_syncClose) {
+				engine->synchronizeClose();
+			}
+			engine = nullptr;
+			synchronizeClose();
+		}, this);
 		_director = nullptr;
 	}, this);
 }
@@ -98,11 +107,19 @@ void AppWindow::close(bool graceful) {
 		return;
 	}
 
+	if (_context->getLooper()->isOnThisThread()
+			&& _presentationEngine->getOptions().syncConstraintsUpdate) {
+		_syncClose = true;
+	}
+
 	_inCloseRequest = true;
 	_context->performOnThread([this, w = _window, graceful] {
 		if (w) {
 			if (!w->close()) {
-				_application->performOnAppThread([this] { _inCloseRequest = false; }, this);
+				_application->performOnAppThread([this] {
+					_context->performOnThread([this] { synchronizeClose(); }, this);
+					_inCloseRequest = false;
+				}, this);
 				return;
 			}
 		}
@@ -114,11 +131,18 @@ void AppWindow::close(bool graceful) {
 					[this](bool) {
 				// successful stop
 				end();
+				_window = nullptr;
 			});
 		}
 	}, this);
 
-	_window = nullptr;
+	if (_syncClose) {
+		// run looper until successful close
+		// wakeup signal should be in AppWindow::end()
+		_context->getLooper()->run();
+		_syncClose = true;
+		_window = nullptr;
+	}
 }
 
 void AppWindow::handleInputEvents(Vector<InputEventData> &&events) {
@@ -155,13 +179,6 @@ const WindowInfo *AppWindow::getInfo() const {
 		return _window->getInfo();
 	}
 	return nullptr;
-}
-
-WindowCapabilities AppWindow::getCapabilities() const {
-	if (_window) {
-		return _window->getInfo()->capabilities;
-	}
-	return WindowCapabilities::None;
 }
 
 core::ImageInfo AppWindow::getSwapchainImageInfo(const core::SwapchainConfig &cfg) const {
@@ -223,7 +240,9 @@ void AppWindow::acquireFrameData(NotNull<core::PresentationFrame> frame,
 }
 
 void AppWindow::handleFramePresented(NotNull<core::PresentationFrame> frame) {
-	_window->handleFramePresented(frame);
+	if (_window) {
+		_window->handleFramePresented(frame);
+	}
 }
 
 Rc<core::Surface> AppWindow::makeSurface(NotNull<core::Instance> instance) {
@@ -254,13 +273,18 @@ void AppWindow::setReadyForNextFrame() {
 	}, this, true);
 }
 
-void AppWindow::waitUntilFrame() {
-	if (_presentationEngine) {
-		_presentationEngine->waitUntilFramePresentation();
+bool AppWindow::waitUntilFrame() {
+	if (!_context->getLooper()->isOnThisThread()) {
+		return false;
 	}
+
+	if (_presentationEngine) {
+		return _presentationEngine->waitUntilFramePresentation();
+	}
+	return false;
 }
 
-void AppWindow::setRenderOnDemand(bool value) {
+void AppWindow::setPresentationOnDemand(bool value) {
 	_context->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setRenderOnDemand(value);
@@ -268,11 +292,11 @@ void AppWindow::setRenderOnDemand(bool value) {
 	}, this, true);
 }
 
-bool AppWindow::isRenderOnDemand() const {
+bool AppWindow::isPresentationOnDemand() const {
 	return _presentationEngine ? _presentationEngine->isRenderOnDemand() : false;
 }
 
-void AppWindow::setFrameInterval(uint64_t value) {
+void AppWindow::setPresentationFrameInterval(uint64_t value) {
 	_context->performOnThread([this, value] {
 		if (_presentationEngine) {
 			_presentationEngine->setTargetFrameInterval(value);
@@ -280,27 +304,8 @@ void AppWindow::setFrameInterval(uint64_t value) {
 	}, this, true);
 }
 
-uint64_t AppWindow::getFrameInterval() const {
+uint64_t AppWindow::getPresentationFrameInterval() const {
 	return _presentationEngine ? _presentationEngine->getTargetFrameInterval() : 0;
-}
-
-void AppWindow::retainCloseGuard() {
-	if (_exitGuard == 0) {
-		if (hasFlag(getCapabilities(), WindowCapabilities::CloseGuard)) {
-			enableState(WindowState::CloseGuard);
-		}
-	}
-	++_exitGuard;
-}
-
-void AppWindow::releaseCloseGuard() {
-	SPASSERT(_exitGuard > 0, "Exit guard should be retained");
-	--_exitGuard;
-	if (_exitGuard == 0) {
-		if (hasFlag(getCapabilities(), WindowCapabilities::CloseGuard)) {
-			disableState(WindowState::CloseGuard);
-		}
-	}
 }
 
 WindowState AppWindow::getUpdatableStateFlags() const {
@@ -321,6 +326,10 @@ WindowState AppWindow::getUpdatableStateFlags() const {
 
 	if (hasFlag(caps, WindowCapabilities::CloseGuard)) {
 		flags |= WindowState::CloseGuard | WindowState::CloseRequest;
+	}
+
+	if (hasFlag(caps, WindowCapabilities::DecorationState)) {
+		flags |= WindowState::DecorationState;
 	}
 
 	for (auto it : sp::flags(_state)) {
@@ -371,17 +380,26 @@ bool AppWindow::disableState(WindowState state) {
 }
 
 void AppWindow::acquireTextInput(TextInputRequest &&req) {
-	_context->performOnThread([this, data = move(req)]() { _window->acquireTextInput(data); },
-			this);
+	_context->performOnThread([this, data = move(req)]() {
+		if (_window) {
+			_window->acquireTextInput(data);
+		}
+	}, this);
 }
 
 void AppWindow::releaseTextInput() {
-	_context->performOnThread([this]() { _window->releaseTextInput(); }, this);
+	_context->performOnThread([this]() {
+		if (_window) {
+			_window->releaseTextInput();
+		}
+	}, this);
 }
 
 void AppWindow::updateLayers(Vector<WindowLayer> &&layers) {
 	_context->performOnThread([this, layers = sp::move(layers)]() mutable {
-		_window->updateLayers(sp::move(layers));
+		if (_window) {
+			_window->updateLayers(sp::move(layers));
+		}
 	}, this);
 }
 
@@ -447,6 +465,12 @@ bool AppWindow::openWindowMenu(Vec2 pos) {
 	return false;
 }
 
+void AppWindow::handleBackButton() {
+	if (_window) {
+		_context->performOnThread([this]() { _window->handleBackButton(); }, this);
+	}
+}
+
 void AppWindow::propagateInputEvent(core::InputEventData &event) {
 	if (event.isPointEvent()) {
 		event.point.density =
@@ -478,6 +502,12 @@ void AppWindow::handleContextStateUpdate(WindowState state) {
 				&& hasFlagAll(_contextState, FullscreenExclusiveMask)) {
 			_presentationEngine->enableExclusiveFullscreen();
 		}
+	}
+}
+
+void AppWindow::synchronizeClose() {
+	if (_syncClose) {
+		_context->getLooper()->wakeup();
 	}
 }
 

@@ -49,7 +49,7 @@ SP_EXTERN_C JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 			return -1;
 		}
 	} else {
-		STAPPLER_VERSIONIZED_NAMESPACE::log::source().error("main",
+		STAPPLER_VERSIONIZED_NAMESPACE::slog().error("main",
 				"Fail to load entry point `Context::run` from MODULE_XENOLITH_APPLICATION_NAME");
 		return -1;
 	}
@@ -61,7 +61,7 @@ SP_EXTERN_C JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 #endif
 }
 
-SP_EXTERN_C JNIEXPORT void JNI_DestroyJavaVM(JavaVM *vm) {
+SP_EXTERN_C JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *unused) {
 	STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::finalizeJava();
 }
 

@@ -55,6 +55,7 @@ enum class SystemNotification : uint32_t {
 	Resume,
 	DisplayChanged,
 	ConfigurationChanged,
+	ClipboardChanged,
 };
 
 enum class NetworkFlags : uint32_t {

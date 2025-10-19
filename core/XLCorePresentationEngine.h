@@ -67,6 +67,7 @@ enum class UpdateConstraintsFlags : uint32_t {
 	Finalized = 1 << 4,
 	EnableLiveResize = 1 << 5,
 	DisableLiveResize = 1 << 6,
+	SyncUpdate = 1 << 7,
 
 	// to be more clear what DeprecateSwapchain means
 	WindowResized = DeprecateSwapchain,
@@ -138,6 +139,8 @@ public:
 
 	const FrameConstraints &getFrameConstraints() const { return _constraints; }
 
+	const PresentationOptions &getOptions() const { return _options; }
+
 	FrameTimeInfo updatePresentationInterval();
 
 	uint64_t getFrameOrder() const;
@@ -152,8 +155,6 @@ public:
 	void setRenderOnDemand(bool value);
 	bool isRenderOnDemand() const;
 
-	void setContentPadding(const Padding &padding);
-
 	bool isRunning() const;
 
 	void enableExclusiveFullscreen();
@@ -165,6 +166,8 @@ public:
 	virtual void handleFrameComplete(NotNull<PresentationFrame>);
 
 	virtual void captureScreenshot(Function<void(const ImageInfoData &info, BytesView view)> &&cb);
+
+	virtual void synchronizeClose();
 
 protected:
 	// Uncomment to track retain/release cycles
@@ -245,6 +248,7 @@ protected:
 	bool _running = false;
 	bool _readyForNextFrame = false;
 	bool _waitUntilFrame = false;
+	bool _waitUntilSwapchainRecreation = false;
 	bool _waitForDisplayLink = false;
 	bool _swapchainRecreationScheduled = false;
 	bool _liveResizeEnabled = false;

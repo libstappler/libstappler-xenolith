@@ -70,13 +70,15 @@ bool PresentationEngine::waitUntilFramePresentation() {
 		return false;
 	}
 
-	_waitUntilFrame = true;
-	_nextPresentWindow = 0;
-	setReadyForNextFrame();
-	auto ret = _loop->getLooper()->run();
-	_waitUntilFrame = false;
-
-	return ret == Status::Suspended;
+	if (_swapchain) {
+		_waitUntilFrame = true;
+		_nextPresentWindow = 0;
+		setReadyForNextFrame();
+		auto ret = _loop->getLooper()->run();
+		_waitUntilFrame = false;
+		return ret == Status::Suspended;
+	}
+	return false;
 }
 
 void PresentationEngine::scheduleNextImage(Function<void(PresentationFrame *, bool)> &&cb,
@@ -215,6 +217,13 @@ void PresentationEngine::updateConstraints(UpdateConstraintsFlags flags,
 	auto acquiredImages = _swapchain->getAcquiredImagesCount();
 	if (acquiredImages == 0) {
 		scheduleSwapchainRecreation();
+	}
+
+	if (_options.syncConstraintsUpdate && hasFlag(flags, UpdateConstraintsFlags::SyncUpdate)
+			&& !_waitUntilSwapchainRecreation) {
+		_waitUntilSwapchainRecreation = true;
+		_loop->getLooper()->run();
+		_waitUntilSwapchainRecreation = false;
 	}
 }
 
@@ -484,11 +493,6 @@ void PresentationEngine::enableExclusiveFullscreen() {
 	}
 }
 
-void PresentationEngine::setContentPadding(const Padding &padding) {
-	_constraints.contentPadding = padding;
-	setReadyForNextFrame();
-}
-
 bool PresentationEngine::handleFrameStarted(NotNull<PresentationFrame> frame) {
 	XL_COREPRESENT_LOG(frame->getFrameOrder(), ": handleFrameStarted");
 	if (frame->hasFlag(PresentationFrame::DoNotPresent)) {
@@ -616,6 +620,8 @@ void PresentationEngine::captureScreenshot(
 	}));
 }
 
+void PresentationEngine::synchronizeClose() { _surface->invalidate(); }
+
 void PresentationEngine::acquireFrameData(NotNull<PresentationFrame> frame,
 		Function<void(NotNull<PresentationFrame>)> &&cb) {
 	_window->acquireFrameData(frame, sp::move(cb));
@@ -634,6 +640,9 @@ void PresentationEngine::scheduleSwapchainRecreation() {
 			log::source().debug("PresentationEngine", "scheduleSwapchainRecreation");
 			_swapchainRecreationScheduled = false;
 			recreateSwapchain();
+			if (_waitUntilSwapchainRecreation) {
+				_loop->getLooper()->wakeup();
+			}
 		}, this, false);
 	}
 }

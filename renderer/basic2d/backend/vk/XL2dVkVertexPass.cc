@@ -1286,8 +1286,6 @@ void VertexPassHandle::prepareMaterialCommands(core::MaterialSet *materials, Com
 		pcb.gradientCount = materialVertexSpan.gradientCount;
 		//pcb.outlineOffset = materialVertexSpan.outlineOffset;
 
-		slog().debug("VertexPassHandle", "Draw: ", pcb.imageIdx);
-
 		if (auto a = material->getAtlas()) {
 			pcb.atlasPointer =
 					UVec2::convertFromPacked(buf.bindBufferAddress(a->getBuffer().get()));

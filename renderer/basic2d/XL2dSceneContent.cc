@@ -600,7 +600,8 @@ void SceneContent2d::draw(FrameInfo &info, NodeVisitFlags flags) {
 
 	auto &theme = _director->getApplication()->getThemeInfo();
 
-	if (hasFlag(_director->getWindow()->getInfo()->flags,
+	auto window = _director->getWindow();
+	if (hasFlag(window->getInfo()->flags,
 				WindowCreationFlags::UserSpaceDecorations)) {
 		ctx->decorations.drawUserShadows = hasFlag(_director->getWindow()->getInfo()->capabilities,
 				WindowCapabilities::UserShadowsRequired);

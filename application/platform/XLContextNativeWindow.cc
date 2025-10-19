@@ -58,7 +58,6 @@ bool NativeWindow::init(NotNull<ContextController> c, Rc<WindowInfo> &&info,
 	return true;
 }
 
-
 core::SurfaceInfo NativeWindow::getSurfaceOptions(const core::Device &dev,
 		NotNull<core::Surface> surface) const {
 	return surface->getSurfaceOptions(dev, core::FullScreenExclusiveMode::Default, nullptr);
@@ -67,7 +66,13 @@ core::SurfaceInfo NativeWindow::getSurfaceOptions(const core::Device &dev,
 core::FrameConstraints NativeWindow::exportConstraints() const {
 	core::FrameConstraints c;
 	c.density = _info->density;
-	c.extent = Extent2(_info->rect.width, _info->rect.height);
+
+	auto e = getExtent();
+	if (e.width != 0 && e.height != 0) {
+		c.extent = e;
+	} else {
+		c.extent = Extent2(_info->rect.width, _info->rect.height);
+	}
 	c.contentPadding = _info->decorationInsets;
 
 	return move(c);
@@ -389,6 +394,12 @@ bool NativeWindow::disableState(WindowState state) {
 void NativeWindow::openWindowMenu(Vec2 pos) {
 	// do nothing
 }
+
+void NativeWindow::handleBackButton() {
+	// do nothing
+}
+
+Status NativeWindow::setPreferredFrameRate(float) { return Status::ErrorNotImplemented; }
 
 void NativeWindow::handleMotionEvent(const InputEventData &event) {
 	if (_handleLayerForMotion) {

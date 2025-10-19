@@ -100,6 +100,10 @@ public:
 
 	virtual void openWindowMenu(Vec2 pos);
 
+	virtual void handleBackButton();
+
+	virtual Status setPreferredFrameRate(float);
+
 protected:
 	// Run text input mode or update text input buffer
 	//

@@ -628,6 +628,11 @@ int InputQueue::handleKeyEvent(AInputEvent *event) {
 	auto flags = AKeyEvent_getFlags(event);
 
 	auto keyCode = AKeyEvent_getKeyCode(event);
+
+	if (keyCode == AKEYCODE_BACK && !_backButtonHandlerEnabled) {
+		return 0;
+	}
+
 	// auto scanCode = AKeyEvent_getScanCode(event);
 
 	_activeModifiers = InputQueue_getInputModifiers(AKeyEvent_getMetaState(event));
@@ -912,6 +917,49 @@ int InputQueue::handleMotionEvent(AInputEvent *event) {
 		return 1;
 	}
 	return 0;
+}
+
+void InputQueue::setBackButtonHandlerEnabled(bool value) { _backButtonHandlerEnabled = value; }
+
+void InputQueue::handleBackInvoked() {
+	Vector<core::InputEventData> events;
+	auto keyCode = AKEYCODE_BACK;
+
+	do {
+		auto &ev = events.emplace_back(core::InputEventData{
+			uint32_t(keyCode),
+			core::InputEventName::KeyPressed,
+			{{
+				core::InputMouseButton::Touch,
+				_activeModifiers,
+				_hoverLocation.x,
+				_hoverLocation.y,
+			}},
+		});
+		ev.key.keycode = KeyCodes[keyCode];
+		ev.key.compose = core::InputKeyComposeState::Nothing;
+		ev.key.keysym = keyCode;
+		ev.key.keychar = 0;
+	} while (0);
+
+	do {
+		auto &ev = events.emplace_back(core::InputEventData{
+			uint32_t(keyCode),
+			core::InputEventName::KeyReleased,
+			{{
+				core::InputMouseButton::Touch,
+				_activeModifiers,
+				_hoverLocation.x,
+				_hoverLocation.y,
+			}},
+		});
+		ev.key.keycode = KeyCodes[keyCode];
+		ev.key.compose = core::InputKeyComposeState::Nothing;
+		ev.key.keysym = keyCode;
+		ev.key.keychar = 0;
+	} while (0);
+
+	_activity->notifyWindowInputEvents(sp::move(events));
 }
 
 } // namespace stappler::xenolith::platform

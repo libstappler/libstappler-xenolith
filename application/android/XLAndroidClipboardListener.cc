@@ -20,49 +20,52 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
-#define XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
-
-#include "XLAndroidWindow.h"
-#include "XLCoreInput.h"
-
-#include <android/input.h>
+#include "XLAndroidClipboardListener.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class AndroidActivity;
+static void ClipboardListener_handleClipChanged(JNIEnv *env, jobject thiz, jlong nativePointer) {
+	auto native = reinterpret_cast<ClipboardListener *>(nativePointer);
+	native->handleClipChanged(env);
+}
 
-class InputQueue : public Ref {
-public:
-	static core::InputKeyCode KeyCodes[];
-
-	virtual ~InputQueue();
-
-	bool init(AndroidActivity *, AInputQueue *);
-
-	int handleInputEventQueue(int fd, int events);
-	int handleInputEvent(AInputEvent *event);
-	int handleKeyEvent(AInputEvent *event);
-	int handleMotionEvent(AInputEvent *event);
-
-	void setBackButtonHandlerEnabled(bool);
-
-	void handleBackInvoked();
-
-protected:
-	AndroidActivity *_activity = nullptr;
-	AInputQueue *_queue = nullptr;
-
-	core::InputModifier _activeModifiers = core::InputModifier::None;
-	Vec2 _hoverLocation = Vec2::INVALID;
-
-	Dso _selfHandle;
-
-	int32_t (*_AMotionEvent_getActionButton)(const AInputEvent *) = nullptr;
-
-	bool _backButtonHandlerEnabled = false;
+static JNINativeMethod s_clipboardMethods[] = {
+	{"handleClipChanged", "(J)V", reinterpret_cast<void *>(&ClipboardListener_handleClipChanged)},
 };
 
-} // namespace stappler::xenolith::platform
+static void registerClipboardMethods(const jni::RefClass &cl) {
+	static std::atomic<int> s_counter = 0;
 
-#endif // XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
+	if (s_counter.fetch_add(1) == 0) {
+		cl.registerNatives(s_clipboardMethods);
+	}
+}
+
+void ClipboardListener::finalize() {
+	if (proxy && thiz) {
+		proxy.finalize(thiz.ref(jni::Env::getEnv()));
+	}
+
+	thiz = nullptr;
+}
+
+void ClipboardListener::handleClipChanged(JNIEnv *env) {
+	if (callback) {
+		callback();
+	}
+}
+
+ClipboardListener::~ClipboardListener() { finalize(); }
+
+ClipboardListener::ClipboardListener(const jni::Ref &context, Function<void()> &&cb)
+: proxy(jni::Env::getClassLoader()->findClass(context.getEnv(), ClassName)) {
+
+	auto clazz = proxy.getClass().ref(context.getEnv());
+	if (proxy) {
+		registerClipboardMethods(clazz);
+		thiz = proxy.create(clazz, context, reinterpret_cast<jlong>(this));
+		callback = sp::move(cb);
+	}
+}
+
+} // namespace stappler::xenolith::platform

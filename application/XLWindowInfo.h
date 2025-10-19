@@ -107,6 +107,16 @@ enum class WindowLayerFlags : uint32_t {
 
 	// Grip-like flag to open window menu with right-click
 	WindowMenuRight = 1 << 5,
+
+	// Set for listeners, that handles Android system back action
+	// Used for Android Predictive back gesture
+	//
+	// If at least one InputListener with this flag is enabled, back gesture will be captured by application,
+	// and predictive gesture will be blocked.
+	// If there are none, back gesture will be sent into system, and system animation will be shown
+	// See more about Predictive back gesture in Android doc:
+	// https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture
+	BackButtonHandler = 1 << 6,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowLayerFlags)
@@ -160,6 +170,9 @@ enum class WindowCreationFlags : uint32_t {
 
 	// draw window without server-side decoration borders
 	UserSpaceDecorations = 1 << 6,
+
+	// On android, allows setPreferredFrameRate only if seamless
+	OnlySeamlessFrameRateSwitch = 1 << 7,
 
 	// Use direct output to display, bypassing whole WM stack
 	// Check if it actually supported with WindowCapabilities::DirectOutput
@@ -227,38 +240,46 @@ enum class WindowCapabilities : uint32_t {
 	// Direct output is available on platform
 	DirectOutput = 1 << 8,
 
-	// 'Back' action can close application (Android-like)
-	BackIsExit = 1 << 9,
-
 	// Full user-space decoration mode is supported
-	UserSpaceDecorations = 1 << 10,
+	UserSpaceDecorations = 1 << 9,
 
 	// Above and below state supprted
-	AboveBelowState = 1 << 11,
+	AboveBelowState = 1 << 10,
 
 	// DemandsAttention state supprted
-	DemandsAttentionState = 1 << 12,
+	DemandsAttentionState = 1 << 11,
 
 	// SkipTaskbar and SkipPager state supported
-	SkipTaskbarState = 1 << 13,
+	SkipTaskbarState = 1 << 12,
 
 	// Enabled state supported
-	EnabledState = 1 << 14,
+	EnabledState = 1 << 13,
 
 	// Platform supports CloseGuard
-	CloseGuard = 1 << 15,
+	CloseGuard = 1 << 14,
 
 	// Window supports separate MaximizeVert/MaximizeHorz in enableState/disableState
-	SeparateMaximize = 1 << 16,
+	SeparateMaximize = 1 << 15,
 
 	// Window moving in maximized state is allowed
-	AllowMoveFromMaximized = 1 << 17,
+	AllowMoveFromMaximized = 1 << 16,
 
 	// For buttons in grip layer to work, GripGuard flag required
-	GripGuardsRequired = 1 << 18,
+	GripGuardsRequired = 1 << 17,
 
 	// GL Scene should assist to draw user space shadows
-	UserShadowsRequired = 1 << 19,
+	UserShadowsRequired = 1 << 18,
+
+	// It's adiced to preserve AppWindow's Director instead of recreate it with a new window.
+	// By default, Director will be preserved by WindowInfo::id parameter and will be connectoed
+	// to next window with this id
+	PreserveDirector = 1 << 19,
+
+	// setPreferredModeSwitch is available
+	PreferredFrameRate = 1 << 20,
+
+	// Decoration state can be changed by application (mostly Android)
+	DecorationState = 1 << 21,
 };
 
 SP_DEFINE_ENUM_AS_MASK(WindowCapabilities)

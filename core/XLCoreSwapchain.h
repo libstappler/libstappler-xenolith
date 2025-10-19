@@ -35,6 +35,8 @@ public:
 
 	virtual bool init(Instance *, Ref *);
 
+	virtual void invalidate() = 0;
+
 	Instance *getInstance() const { return _instance; }
 
 	virtual SurfaceInfo getSurfaceOptions(const Device &, FullScreenExclusiveMode,

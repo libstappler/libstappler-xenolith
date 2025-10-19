@@ -90,6 +90,9 @@ public:
 	WindowState getWindowState() const { return _windowState; }
 	bool hasActiveInput() const;
 
+	// When Director connected to other window, we should update cached WindowState
+	void resetWindowState(WindowState, bool propagate);
+
 protected:
 	InputEvent getEventInfo(const InputEventData &) const;
 	void updateEventInfo(InputEvent &, const InputEventData &) const;

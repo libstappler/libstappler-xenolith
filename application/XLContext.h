@@ -194,8 +194,9 @@ public:
 
 	virtual Status readFromClipboard(Function<void(Status, BytesView, StringView)> &&,
 			Function<StringView(SpanView<StringView>)> &&, Ref * = nullptr);
+	virtual Status probeClipboard(Function<void(Status, SpanView<StringView>)> &&, Ref * = nullptr);
 	virtual Status writeToClipboard(Function<Bytes(StringView)> &&, SpanView<String>,
-			Ref * = nullptr);
+			Ref * = nullptr, StringView label = StringView());
 
 	virtual void handleConfigurationChanged(Rc<ContextInfo> &&);
 
@@ -209,8 +210,6 @@ public:
 
 	virtual SwapchainConfig handleAppWindowSurfaceUpdate(NotNull<AppWindow>, const SurfaceInfo &,
 			bool fastMode);
-	virtual void handleAppWindowCreated(NotNull<AppThread>, NotNull<AppWindow>, NotNull<Director>);
-	virtual void handleAppWindowDestroyed(NotNull<AppThread>, NotNull<AppWindow>);
 
 	virtual void handleNativeWindowCreated(NotNull<NativeWindow>);
 	virtual void handleNativeWindowDestroyed(NotNull<NativeWindow>);
@@ -254,8 +253,6 @@ public:
 
 protected:
 	virtual Rc<AppWindow> makeAppWindow(NotNull<NativeWindow>);
-
-	virtual Rc<Scene> makeScene(NotNull<AppWindow>, const core::FrameConstraints &);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 

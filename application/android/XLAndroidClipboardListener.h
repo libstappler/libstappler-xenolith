@@ -20,49 +20,38 @@
  THE SOFTWARE.
  **/
 
-#ifndef XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
-#define XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
+#ifndef XENOLITH_APPLICATION_ANDROID_XLANDROIDCLIPBOARDLISTENER_H_
+#define XENOLITH_APPLICATION_ANDROID_XLANDROIDCLIPBOARDLISTENER_H_
 
-#include "XLAndroidWindow.h"
-#include "XLCoreInput.h"
-
-#include <android/input.h>
+#include "XLAndroid.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
-class AndroidActivity;
+struct ClipboardListener : public Ref {
+	static constexpr StringView ClassName = "org.stappler.xenolith.core.ClipboardListener";
+	static constexpr StringView ClassPath = "org/stappler/xenolith/core/ClipboardListener";
 
-class InputQueue : public Ref {
-public:
-	static core::InputKeyCode KeyCodes[];
+	struct NetworkConnectivityProxy : jni::ClassProxy {
+		jni::StaticMethod<"create",
+				jni::L<"org/stappler/xenolith/core/ClipboardListener">(
+						jni::L<"android.content.Context">, jlong)>
+				create = this;
+		jni::Method<"finalize", void()> finalize = this;
 
-	virtual ~InputQueue();
+		using jni::ClassProxy ::ClassProxy;
+	} proxy = "org/stappler/xenolith/core/ClipboardListener";
 
-	bool init(AndroidActivity *, AInputQueue *);
+	jni::Global thiz = nullptr;
+	Function<void()> callback;
 
-	int handleInputEventQueue(int fd, int events);
-	int handleInputEvent(AInputEvent *event);
-	int handleKeyEvent(AInputEvent *event);
-	int handleMotionEvent(AInputEvent *event);
+	void finalize();
 
-	void setBackButtonHandlerEnabled(bool);
+	void handleClipChanged(JNIEnv *);
 
-	void handleBackInvoked();
-
-protected:
-	AndroidActivity *_activity = nullptr;
-	AInputQueue *_queue = nullptr;
-
-	core::InputModifier _activeModifiers = core::InputModifier::None;
-	Vec2 _hoverLocation = Vec2::INVALID;
-
-	Dso _selfHandle;
-
-	int32_t (*_AMotionEvent_getActionButton)(const AInputEvent *) = nullptr;
-
-	bool _backButtonHandlerEnabled = false;
+	virtual ~ClipboardListener();
+	ClipboardListener(const jni::Ref &context, Function<void()> && = nullptr);
 };
 
 } // namespace stappler::xenolith::platform
 
-#endif // XENOLITH_APPLICATION_ANDROID_XLANDROIDINPUT_H_
+#endif

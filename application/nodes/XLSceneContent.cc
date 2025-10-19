@@ -42,7 +42,15 @@ bool SceneContent::init() {
 	_inputListener->setPriority(-1);
 	_inputListener->addKeyRecognizer([this](GestureData data) {
 		if (data.event == GestureEvent::Ended) {
-			return handleBackButton();
+			if (!handleBackButton()) {
+				// propagate back button to Window
+				if (_director) {
+					if (auto w = _director->getWindow()) {
+						w->handleBackButton();
+					}
+				}
+			}
+			return true;
 		}
 		return data.event == GestureEvent::Began;
 	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
@@ -51,6 +59,8 @@ bool SceneContent::init() {
 		handleWindowStateChanged(state, changes);
 		return true;
 	});
+
+	_inputListener->setLayerFlags(WindowLayerFlags::BackButtonHandler);
 
 	_scissor = addSystem(Rc<DynamicStateSystem>::create());
 
@@ -61,7 +71,7 @@ void SceneContent::handleEnter(Scene *scene) {
 	Node::handleEnter(scene);
 
 	if (_closeGuard && !_closeGuardRetained) {
-		_director->getWindow()->retainCloseGuard();
+		_director->getWindow()->enableState(WindowState::CloseGuard);
 		_closeGuardRetained = true;
 	}
 
@@ -83,7 +93,7 @@ void SceneContent::handleEnter(Scene *scene) {
 
 void SceneContent::handleExit() {
 	if (_closeGuard && _closeGuardRetained) {
-		_director->getWindow()->releaseCloseGuard();
+		_director->getWindow()->disableState(WindowState::CloseGuard);
 		_closeGuardRetained = false;
 	}
 
@@ -129,10 +139,10 @@ void SceneContent::setCloseGuardEnabled(bool value) {
 		_closeGuard = value;
 		if (_running) {
 			if (_closeGuard && !_closeGuardRetained) {
-				_director->getWindow()->retainCloseGuard();
+				_director->getWindow()->enableState(WindowState::CloseGuard);
 				_closeGuardRetained = true;
 			} else if (!_closeGuard && _closeGuardRetained) {
-				_director->getWindow()->releaseCloseGuard();
+				_director->getWindow()->disableState(WindowState::CloseGuard);
 				_closeGuardRetained = false;
 			}
 		}

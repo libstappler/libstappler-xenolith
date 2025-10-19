@@ -32,7 +32,7 @@ class AndroidContextController;
 
 class SP_PUBLIC AndroidDisplayConfigManager : public DisplayConfigManager {
 public:
-	virtual ~AndroidDisplayConfigManager() = default;
+	virtual ~AndroidDisplayConfigManager();
 
 	virtual bool init(NotNull<AndroidContextController>,
 			Function<void(NotNull<DisplayConfigManager>)> &&);

@@ -193,9 +193,17 @@ Status Context::readFromClipboard(Function<void(Status, BytesView, StringView)> 
 	return _controller->readFromClipboard(sp::move(request));
 }
 
-Status Context::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<String> types,
-		Ref *ref) {
+Status Context::probeClipboard(Function<void(Status, SpanView<StringView>)> &&cb, Ref *ref) {
+	auto probe = Rc<platform::ClipboardProbe>::create();
+	probe->typeCallback = sp::move(cb);
+	probe->target = ref;
+	return _controller->probeClipboard(sp::move(probe));
+}
+
+Status Context::writeToClipboard(Function<Bytes(StringView)> &&cb, SpanView<String> types, Ref *ref,
+		StringView label) {
 	auto data = Rc<platform::ClipboardData>::create();
+	data->label = label.str<Interface>();
 	data->encodeCallback = sp::move(cb);
 	data->types = types.vec<Interface>();
 	data->owner = ref;
@@ -328,30 +336,6 @@ core::SwapchainConfig Context::handleAppWindowSurfaceUpdate(NotNull<AppWindow> w
 	return ret;
 }
 
-void Context::handleAppWindowCreated(NotNull<AppThread> thread, NotNull<AppWindow> w,
-		NotNull<Director> d) {
-	log::source().info("Context", "handleAppWindowCreated");
-
-	thread->addListener(w, [w](const UpdateTime &, bool wakeup) {
-		if (wakeup) {
-			w->setReadyForNextFrame();
-
-			// force display link to update views
-			w->update(core::PresentationUpdateFlags::DisplayLink);
-		}
-	});
-
-	auto scene = makeScene(w, d->getFrameConstraints());
-	if (scene) {
-		d->runScene(move(scene));
-	}
-}
-
-void Context::handleAppWindowDestroyed(NotNull<AppThread> thread, NotNull<AppWindow> w) {
-	log::source().info("Context", "handleAppWindowDestroyed");
-	thread->removeListener(w);
-}
-
 void Context::handleNativeWindowCreated(NotNull<NativeWindow> w) {
 	log::source().info("Context", "handleNativeWindowCreated");
 
@@ -372,7 +356,7 @@ void Context::handleNativeWindowDestroyed(NotNull<NativeWindow> w) {
 
 void Context::handleNativeWindowConstraintsChanged(NotNull<NativeWindow> w,
 		core::UpdateConstraintsFlags flags) {
-	log::source().info("Context", "handleNativeWindowConstraintsChanged");
+	log::source().info("Context", "handleNativeWindowConstraintsChanged ", toInt(flags));
 
 	auto appWindow = w->getAppWindow();
 	if (appWindow) {
@@ -524,20 +508,6 @@ Rc<ScreenInfo> Context::getScreenInfo() const { return _controller->getScreenInf
 
 Rc<AppWindow> Context::makeAppWindow(NotNull<NativeWindow> w) {
 	return _controller->makeAppWindow(_application, w);
-}
-
-Rc<Scene> Context::makeScene(NotNull<AppWindow> w, const core::FrameConstraints &c) {
-	Rc<Scene> scene;
-	auto makeSceneSymbol = SharedModule::acquireTypedSymbol<SymbolMakeSceneSignature>(
-			buildconfig::MODULE_APPCOMMON_NAME, SymbolMakeSceneName);
-	if (makeSceneSymbol) {
-		scene = makeSceneSymbol(_application, w, c);
-	}
-	if (!scene) {
-		log::source().error("Context", "Fail to create scene for the window '", w->getInfo()->id,
-				"'");
-	}
-	return scene;
 }
 
 void Context::initializeComponent(NotNull<ContextComponent> comp) {

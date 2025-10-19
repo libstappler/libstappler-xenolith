@@ -161,8 +161,13 @@ const CallbackStream &operator<<(const CallbackStream &out, WindowState f) {
 		case WindowState::Pointer: out << " Pointer"; break;
 		case WindowState::CloseGuard: out << " CloseGuard"; break;
 		case WindowState::CloseRequest: out << " CloseRequest"; break;
-		case WindowState::InsetDecorationsVisible: out << " InsetDecorationsVisible"; break;
 		case WindowState::Enabled: out << " Enabled"; break;
+		case WindowState::DecorationStatusBarVisible: out << " DecorationStatusBarVisible"; break;
+		case WindowState::DecorationNavigationVisible: out << " DecorationNavigationVisible"; break;
+		case WindowState::DecorationStatusBarLight: out << " DecorationStatusBarLight"; break;
+		case WindowState::DecorationNavigationLight: out << " DecorationNavigationLight"; break;
+		case WindowState::DecorationShowBySwipe: out << " DecorationShowBySwipe"; break;
+		case WindowState::DecorationState: break;
 		case WindowState::AllowedWindowMenu: out << " AllowedWindowMenu"; break;
 		case WindowState::AllowedMove: out << " MoveAllowed"; break;
 		case WindowState::AllowedResize: out << " ResizeAllowed"; break;
