@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,26 +20,34 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h" // IWYU pragma: keep
+#ifndef XENOLITH_APPLICATION_XLLIVERELOAD_H_
+#define XENOLITH_APPLICATION_XLLIVERELOAD_H_
 
-#include "XLEvent.cc"
-#include "XLWindowInfo.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
-#include "XLLiveReload.cc"
+#include "XLComponent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName,
-			static_cast<Context::SymbolRunCmdSignature>(Context::run)),
-	SharedSymbol(Context::SymbolContextRunName,
-			static_cast<Context::SymbolRunNativeSignature>(Context::run)),
+struct SP_PUBLIC LiveReloadLibrary : public Ref {
+	String path;
+	Time mtime;
+	Dso library;
+
+	// we need toi release library only after all references are dead
+	event::Looper *releaseLooper = nullptr;
+
+	virtual ~LiveReloadLibrary();
+
+	bool init(StringView, Time, uint32_t version, event::Looper *);
+
+	uint32_t getVersion() const { return library.getVersion(); }
 };
 
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
+struct SP_PUBLIC LiveReloadComponent {
+	static const ComponentId Id;
+
+	Rc<LiveReloadLibrary> library;
+};
 
 } // namespace stappler::xenolith
+
+#endif // XENOLITH_APPLICATION_XLLIVERELOAD_H_

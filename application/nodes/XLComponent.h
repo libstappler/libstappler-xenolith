@@ -50,7 +50,7 @@ struct ComponentId {
 };
 
 struct Component {
-	// Size for static in-place storage
+	// Size in bytes for static in-place storage
 	static constexpr uint32_t STATIC_SIZE = 28;
 
 	static uint32_t GetNextId();

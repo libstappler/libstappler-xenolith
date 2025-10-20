@@ -75,10 +75,13 @@ struct SP_PUBLIC WaylandDisplay : Ref {
 	void notifyScreenChange();
 
 	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status probeClipboard(Rc<ClipboardProbe> &&probe);
 	Status writeToClipboard(Rc<ClipboardData> &&);
 
 	bool isCursorSupported(WindowCursor, bool serverSide) const;
 	WindowCapabilities getCapabilities() const;
+
+	void handleClipboardChanged();
 
 	Rc<WaylandLibrary> wayland;
 	wl_display *display = nullptr;
@@ -101,6 +104,8 @@ struct SP_PUBLIC WaylandDisplay : Ref {
 	Set<WaylandWindow *> windows;
 
 	bool seatDirty = false;
+
+	Function<void(SystemNotification)> systemNotification;
 };
 
 struct SP_PUBLIC WaylandShm : Ref {

@@ -56,6 +56,7 @@ enum class SystemNotification : uint32_t {
 	DisplayChanged,
 	ConfigurationChanged,
 	ClipboardChanged,
+	LiveReloadPerformed,
 };
 
 enum class NetworkFlags : uint32_t {

@@ -104,6 +104,8 @@ public:
 	Rc<DisplayConfigManager> makeDisplayConfigManager(
 			Function<void(NotNull<DisplayConfigManager>)> &&);
 
+	void setSystemNotificationHandler(Function<void(SystemNotification)> &&);
+
 	uint32_t poll();
 
 	XcbLibrary *getXcb() const { return _xcb; }
@@ -156,6 +158,7 @@ public:
 	bool setCursorId(xcb_window_t window, xcb_cursor_t);
 
 	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status probeClipboard(Rc<ClipboardProbe> &&);
 	Status writeToClipboard(Rc<ClipboardData> &&);
 
 	Value getSettingsValue(StringView) const;
@@ -191,6 +194,7 @@ public:
 
 	void handleSettingsUpdate();
 	void handleScreenUpdate();
+	void handleClipboardChanged();
 
 protected:
 	bool checkCookie(xcb_void_cookie_t cookie, StringView errMessage);
@@ -217,6 +221,8 @@ protected:
 	Vector<StringView> _capabilitiesByNames;
 	Vector<xcb_atom_t> _capabilitiesByAtoms;
 	Map<WindowCursor, xcb_cursor_t> _cursors;
+
+	Function<void(SystemNotification)> _onSystemNotification;
 };
 
 } // namespace stappler::xenolith::platform

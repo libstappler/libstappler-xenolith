@@ -391,6 +391,7 @@ void WaylandDataDevice::setSelection(NotNull<WaylandDataOffer> offer) {
 			offer->attached = true;
 			offer->release(0);
 		}
+		seat->root->handleClipboardChanged();
 	}
 }
 
@@ -429,6 +430,19 @@ Status WaylandDataDevice::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	}
 
 	return Status::ErrorNotImplemented;
+}
+
+Status WaylandDataDevice::probeClipboard(Rc<ClipboardProbe> &&probe) {
+	if (!selectionOffer) {
+		return Status::Declined;
+	}
+
+	Vector<StringView> dataList;
+	for (auto &it : selectionOffer->types) { dataList.emplace_back(it); }
+
+	probe->typeCallback(Status::Ok, dataList);
+
+	return Status::Ok;
 }
 
 Status WaylandDataDevice::writeToClipboard(Rc<ClipboardData> &&data) {

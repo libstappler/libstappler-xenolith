@@ -127,6 +127,7 @@ struct SP_PUBLIC WaylandDataDevice : public Ref {
 	void drop();
 
 	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status probeClipboard(Rc<ClipboardProbe> &&probe);
 	Status writeToClipboard(Rc<ClipboardData> &&);
 
 	WaylandLibrary *wayland = nullptr;

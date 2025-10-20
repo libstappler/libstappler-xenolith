@@ -72,7 +72,7 @@ struct MonitorId {
 	auto operator<=>(const MonitorId &) const = default;
 };
 
-struct FullscreenInfo {
+struct SP_PUBLIC FullscreenInfo {
 	// Exit fullscreen mode
 	static const FullscreenInfo None;
 

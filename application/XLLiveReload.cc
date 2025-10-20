@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,26 +20,38 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h" // IWYU pragma: keep
-
-#include "XLEvent.cc"
-#include "XLWindowInfo.cc"
-#include "XLContextInfo.cc"
-#include "XLContext.cc"
-#include "XLAppThread.cc"
-#include "XLAppWindow.cc"
-#include "XLLiveReload.cc"
+#include "XLLiveReload.h"
+#include "SPEventLooper.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-static SharedSymbol s_appSymbols[] = {
-	SharedSymbol(Context::SymbolContextRunName,
-			static_cast<Context::SymbolRunCmdSignature>(Context::run)),
-	SharedSymbol(Context::SymbolContextRunName,
-			static_cast<Context::SymbolRunNativeSignature>(Context::run)),
-};
+LiveReloadLibrary::~LiveReloadLibrary() {
+	if (releaseLooper) {
+		auto tmp = new (std::nothrow) Dso(sp::move(library));
+		releaseLooper->performOnThread([looper = releaseLooper, tmp, path = sp::move(path)] {
+			looper->schedule(TimeInterval::milliseconds(100),
+					[tmp, path = sp::move(path)](event::Handle *, bool) {
+				tmp->close();
+				delete tmp;
+				filesystem::remove(FileInfo(path));
+			});
+		}, nullptr, false);
+	}
+}
 
-SP_USED static SharedModule s_appCommonModule(buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
-		s_appSymbols, sizeof(s_appSymbols) / sizeof(SharedSymbol));
+bool LiveReloadLibrary::init(StringView p, Time time, uint32_t version, event::Looper *looper) {
+	library = Dso(p, version);
+	if (library) {
+		path = p.str<Interface>();
+		mtime = time;
+		releaseLooper = looper;
+		return true;
+	} else {
+		slog().debug("Context", "Fail to open Live reloadlibrary: ", p, ": ", library.getError());
+	}
+	return false;
+}
+
+const ComponentId LiveReloadComponent::Id;
 
 } // namespace stappler::xenolith

@@ -203,6 +203,10 @@ int LinuxContextController::run(NotNull<ContextContainer> container) {
 		}
 
 		if (_xcbConnection) {
+			_xcbConnection->setSystemNotificationHandler([this](SystemNotification notification) {
+				_context->handleSystemNotification(notification);
+			});
+
 			_xcbPollHandle = _looper->listenPollableHandle(_xcbConnection->getSocket(),
 					event::PollFlags::In | event::PollFlags::AllowMulti,
 					[this](int fd, event::PollFlags flags) {
@@ -269,6 +273,8 @@ void LinuxContextController::notifyScreenChange(NotNull<DisplayConfigManager> in
 	if (_xcbConnection) {
 		_xcbConnection->notifyScreenChange();
 	}
+
+	_context->handleSystemNotification(SystemNotification::DisplayChanged);
 }
 
 Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
@@ -277,6 +283,16 @@ Status LinuxContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	}
 	if (_waylandDisplay) {
 		return _waylandDisplay->readFromClipboard(sp::move(req));
+	}
+	return Status::ErrorNotSupported;
+}
+
+Status LinuxContextController::probeClipboard(Rc<ClipboardProbe> &&probe) {
+	if (_xcbConnection) {
+		return _xcbConnection->probeClipboard(sp::move(probe));
+	}
+	if (_waylandDisplay) {
+		return _waylandDisplay->probeClipboard(sp::move(probe));
 	}
 	return Status::ErrorNotSupported;
 }

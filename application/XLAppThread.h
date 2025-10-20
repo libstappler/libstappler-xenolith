@@ -27,9 +27,11 @@
 #include "XLContextInfo.h"
 #include "XLEvent.h"
 #include "XLResourceCache.h"
-#include "XLTemporaryResource.h"
+#include "XLTemporaryResource.h" // IWYU pragma: keep
 #include "XLApplicationExtension.h"
 #include "SPThread.h"
+#include "XLEventListener.h"
+#include "XLLiveReload.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -146,6 +148,8 @@ protected:
 
 	virtual Rc<Director> makeDirector(NotNull<AppWindow>, const core::FrameConstraints &);
 
+	virtual void performLiveReload(NotNull<LiveReloadLibrary> lib);
+
 	Context *_context = nullptr;
 	event::Looper *_appLooper = nullptr;
 	Rc<event::TimerHandle> _timer;
@@ -164,7 +168,10 @@ protected:
 	HashMap<std::type_index, Rc<ApplicationExtension>> _extensions;
 	Map<Rc<Ref>, Function<void(const UpdateTime &, bool)>> _listeners;
 
+	Set<AppWindow *> _windows;
 	HashMap<String, Rc<Director>> _preservedDirectors;
+
+	Rc<EventDelegate> _liveReloadListener;
 };
 
 template <typename T>

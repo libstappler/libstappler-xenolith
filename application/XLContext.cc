@@ -38,23 +38,100 @@
 
 #include "SPSharedModule.h"
 
+#include <dlfcn.h>
+
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
+
+ContentInitializer::ContentInitializer() { }
+
+ContentInitializer::~ContentInitializer() { terminate(); }
+
+ContentInitializer::ContentInitializer(ContentInitializer &&other) {
+	alloc = other.alloc;
+	pool = other.pool;
+	tmpPool = other.tmpPool;
+	init = other.init;
+
+	liveReloadPath = sp::move(other.liveReloadPath);
+	liveReloadCachePath = sp::move(other.liveReloadCachePath);
+	liveReloadLibrary = sp::move(other.liveReloadLibrary);
+
+	other.tmpPool = nullptr;
+	other.pool = nullptr;
+	other.alloc = nullptr;
+	other.init = false;
+}
+
+ContentInitializer &ContentInitializer::operator=(ContentInitializer &&other) {
+	terminate();
+
+	alloc = other.alloc;
+	pool = other.pool;
+	tmpPool = other.tmpPool;
+	init = other.init;
+
+	liveReloadPath = sp::move(other.liveReloadPath);
+	liveReloadCachePath = sp::move(other.liveReloadCachePath);
+	liveReloadLibrary = sp::move(other.liveReloadLibrary);
+
+	other.tmpPool = nullptr;
+	other.pool = nullptr;
+	other.alloc = nullptr;
+	other.init = false;
+	return *this;
+}
+
+bool ContentInitializer::initialize() {
+	if (init) {
+		return true;
+	}
+
+	alloc = memory::allocator::create();
+	pool = memory::pool::create(alloc);
+	tmpPool = memory::pool::create(pool);
+
+	// Context pool should be main thread's pool
+	thread::ThreadInfo::setThreadPool(pool);
+
+	int result = 0;
+	if (!sp::initialize(result)) {
+		init = false;
+	} else {
+		init = true;
+	}
+	return init;
+}
+
+void ContentInitializer::terminate() {
+	if (alloc) {
+		memory::pool::destroy(tmpPool);
+		memory::pool::destroy(pool);
+		memory::allocator::destroy(alloc);
+		sp::terminate();
+
+		tmpPool = nullptr;
+		pool = nullptr;
+		alloc = nullptr;
+		init = false;
+	}
+}
 
 XL_DECLARE_EVENT_CLASS(Context, onNetworkStateChanged);
 XL_DECLARE_EVENT_CLASS(Context, onThemeChanged);
 XL_DECLARE_EVENT_CLASS(Context, onSystemNotification);
+XL_DECLARE_EVENT_CLASS(Context, onLiveReload);
 XL_DECLARE_EVENT_CLASS(Context, onMessageToken)
 XL_DECLARE_EVENT_CLASS(Context, onRemoteNotification)
 
-static int Context_runWithConfig(ContextConfig &&config) {
+static int Context_runWithConfig(ContextConfig &&config, ContentInitializer &&init) {
 	Rc<Context> ctx;
 
 	auto makeContextSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeContextSignature>(
 			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeContextName);
 	if (makeContextSymbol) {
-		ctx = makeContextSymbol(move(config));
+		ctx = makeContextSymbol(move(config), sp::move(init));
 	} else {
-		ctx = Rc<Context>::create(move(config));
+		ctx = Rc<Context>::create(move(config), sp::move(init));
 	}
 
 	if (!ctx) {
@@ -70,7 +147,7 @@ static int Context_runWithConfig(ContextConfig &&config) {
 }
 
 int Context::run(int argc, const char **argv) {
-	auto runWithConfig = [&](ContextConfig &&config) -> int {
+	auto runWithConfig = [&](ContextConfig &&config, ContentInitializer &&init) -> int {
 		if (hasFlag(config.flags, CommonFlags::Help)) {
 			auto printHelpSymbol = SharedModule::acquireTypedSymbol<SymbolPrintHelpSignature>(
 					buildconfig::MODULE_APPCOMMON_NAME, SymbolPrintHelpName);
@@ -99,15 +176,47 @@ int Context::run(int argc, const char **argv) {
 					  << "\n";
 		}
 
-		return Context_runWithConfig(sp::move(config));
+		return Context_runWithConfig(sp::move(config), sp::move(init));
 	};
+
+	ContentInitializer init;
+	init.initialize();
+
+#ifdef EXEC_LIVE_RELOAD
+	// clear live reload cache first
+	filesystem::mkdir(FileInfo("live_reload_cache", FileInfo::AppRuntime));
+	auto liveReloadCache =
+			filesystem::findPath<Interface>(FileInfo("live_reload_cache", FileInfo::AppRuntime));
+	filesystem::remove(FileInfo(liveReloadCache), true, false);
+
+	auto liveReloadLib = SharedModule::acquireTypedSymbol<const char *>(
+			buildconfig::MODULE_APPCONFIG_NAME, "APPCONFIG_EXEC_LIVE_RELOAD_LIBRARY");
+	auto libName = filepath::lastComponent(liveReloadLib);
+	auto execPath = filesystem::platform::_getApplicationPath<Interface>();
+	auto execDir = filepath::root(execPath);
+
+	auto libPath = filepath::merge<Interface>(execDir, libName);
+	filesystem::Stat stat;
+	if (filesystem::stat(FileInfo(libPath), stat)) {
+		auto targetPath = toString(liveReloadCache, "/", libName, ".1");
+		filesystem::copy(FileInfo{libPath}, FileInfo(targetPath));
+
+		init.liveReloadLibrary = Rc<LiveReloadLibrary>::create(targetPath, stat.mtime, 1, nullptr);
+
+		if (init.liveReloadLibrary) {
+			init.liveReloadPath = libPath;
+			init.liveReloadCachePath = liveReloadCache;
+			slog().debug("Context", "Run with Live reload library: ", targetPath);
+		}
+	}
+#endif
 
 	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigCmdSignature>(
 			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigCmdName);
 	if (cfgSymbol) {
-		return runWithConfig(cfgSymbol(argc, argv));
+		return runWithConfig(cfgSymbol(argc, argv), sp::move(init));
 	} else {
-		return runWithConfig(ContextConfig(argc, argv));
+		return runWithConfig(ContextConfig(argc, argv), sp::move(init));
 	}
 }
 
@@ -115,37 +224,21 @@ int Context::run(NativeContextHandle *ctx) {
 	auto cfgSymbol = SharedModule::acquireTypedSymbol<SymbolParseConfigNativeSignature>(
 			buildconfig::MODULE_APPCOMMON_NAME, SymbolParseConfigNativeName);
 	if (cfgSymbol) {
-		return Context_runWithConfig(cfgSymbol(ctx));
+		return Context_runWithConfig(cfgSymbol(ctx), ContentInitializer());
 	} else {
-		return Context_runWithConfig(ContextConfig(ctx));
+		return Context_runWithConfig(ContextConfig(ctx), ContentInitializer());
 	}
 }
 
-Context::Context() {
-	_alloc = memory::allocator::create();
-	_pool = memory::pool::create(_alloc);
-	_tmpPool = memory::pool::create(_pool);
+Context::Context() { }
 
-	// Context pool should be main thread's pool
-	thread::ThreadInfo::setThreadPool(_pool);
+Context::~Context() { _initializer.terminate(); }
 
-	int result = 0;
-	if (!sp::initialize(result)) {
-		_valid = false;
-	} else {
-		_valid = true;
-	}
-}
+bool Context::init(ContextConfig &&info, ContentInitializer &&init) {
+	_initializer = sp::move(init);
+	_initializer.initialize();
 
-Context::~Context() {
-	memory::pool::destroy(_tmpPool);
-	memory::pool::destroy(_pool);
-	memory::allocator::destroy(_alloc);
-	sp::terminate();
-}
-
-bool Context::init(ContextConfig &&info) {
-	memory::pool::context ctx(_pool);
+	memory::pool::context ctx(_initializer.pool);
 
 	_info = info.context;
 
@@ -168,6 +261,22 @@ bool Context::init(ContextConfig &&info) {
 		}
 	}
 #endif
+
+	if (!_initializer.liveReloadPath.empty()) {
+		_actualLiveReloadLibrary = _initializer.liveReloadLibrary;
+		// add timer-based watchdog
+		// later we implement watchdog, based on event queue
+		_liveReloadWatchdog = _looper->scheduleTimer(
+				event::TimerInfo{
+					.completion = event::TimerInfo::Completion::create<Context>(this,
+							[](Context *ctx, event::TimerHandle *, uint32_t value, Status) {
+			ctx->updateLiveReload();
+		}),
+					.interval = TimeInterval::milliseconds(250),
+					.count = event::TimerInfo::Infinite,
+				},
+				this);
+	}
 
 	return true;
 }
@@ -512,6 +621,40 @@ Rc<AppWindow> Context::makeAppWindow(NotNull<NativeWindow> w) {
 
 void Context::initializeComponent(NotNull<ContextComponent> comp) {
 	_controller->initializeComponent(comp);
+}
+
+void Context::updateLiveReload() {
+	if (!_initializer.liveReloadPath.empty() && _actualLiveReloadLibrary) {
+		auto mtime = _actualLiveReloadLibrary->mtime;
+
+		filesystem::Stat stat;
+		if (filesystem::stat(FileInfo{_initializer.liveReloadPath}, stat)) {
+			if (stat.mtime != mtime) {
+				performLiveReload(stat);
+			}
+		}
+	}
+}
+
+void Context::performLiveReload(const filesystem::Stat &stat) {
+	if (_initializer.liveReloadPath.empty() || !_initializer.liveReloadLibrary) {
+		return;
+	}
+
+	uint32_t version = _actualLiveReloadLibrary->library.getVersion();
+
+	++version;
+
+	auto targetPath = toString(_initializer.liveReloadCachePath, "/",
+			filepath::lastComponent(_initializer.liveReloadPath), ".", version);
+
+	if (filesystem::copy(FileInfo(_initializer.liveReloadPath), FileInfo(targetPath))) {
+		auto newLib = Rc<LiveReloadLibrary>::create(targetPath, stat.mtime, version, _looper);
+		if (newLib) {
+			_actualLiveReloadLibrary = sp::move(newLib);
+			onLiveReload(this, _actualLiveReloadLibrary.get());
+		}
+	}
 }
 
 } // namespace stappler::xenolith

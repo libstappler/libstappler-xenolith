@@ -24,6 +24,7 @@
 #define XENOLITH_APPLICATION_LINUX_XLLINUXCONTEXTCONTROLLER_H_
 
 #include "XLContextInfo.h"
+#include "SPEventPollHandle.h"
 #include "dbus/XLLinuxDBusLibrary.h"
 #include "platform/XLContextController.h"
 
@@ -54,6 +55,7 @@ public:
 	void notifyScreenChange(NotNull<DisplayConfigManager>);
 
 	virtual Status readFromClipboard(Rc<ClipboardRequest> &&) override;
+	virtual Status probeClipboard(Rc<ClipboardProbe> &&) override;
 	virtual Status writeToClipboard(Rc<ClipboardData> &&) override;
 
 	virtual void handleThemeInfoChanged(ThemeInfo &&) override;

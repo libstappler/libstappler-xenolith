@@ -76,7 +76,7 @@ bool Director::acquireFrame(FrameRequest *req) {
 		return false;
 	}
 
-	if (_nextScene) {
+	if (_nextScene && !_scene) {
 		// handle scene transition
 		if (!req->getQueue() || req->getQueue() == _nextScene->getQueue()) {
 			_scene = _nextScene;
@@ -92,17 +92,17 @@ bool Director::acquireFrame(FrameRequest *req) {
 		return false;
 	}
 
-	if (req->getQueue() && _scene->getQueue() != req->getQueue()) {
-		log::source().error("xenolith::Director",
-				"Scene render queue is not the same, as in FrameRequest, can't render with it");
-		return false;
-	}
-
 	auto t = sp::platform::clock(ClockType::Monotonic);
 
 	setFrameConstraints(req->getFrameConstraints());
 
 	update(t);
+
+	if (req->getQueue() && _scene->getQueue() != req->getQueue()) {
+		log::source().error("xenolith::Director",
+				"Scene render queue is not the same, as in FrameRequest, can't render with it");
+		return false;
+	}
 
 	if (_scene) {
 		req->setQueue(_scene->getQueue());
@@ -153,6 +153,7 @@ void Director::update(uint64_t t) {
 		if (_scene) {
 			_scene->handleFinished(this);
 		}
+
 		_scene = _nextScene;
 
 		_scene->setFrameConstraints(_constraints);
@@ -262,7 +263,10 @@ void Director::runScene(Rc<Scene> &&scene) {
 		// now we on the main/view thread, call runWithQueue directly
 		if (success) {
 			auto &q = scene->getQueue();
-			_window->getContext()->performOnThread([w, q] { w->runWithQueue(q); }, w, false);
+			_window->getContext()->performOnThread([w, q] {
+				w->runWithQueue(q);
+				w->setReadyForNextFrame();
+			}, w, false);
 		}
 		release(linkId);
 	});

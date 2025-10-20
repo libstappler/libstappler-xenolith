@@ -217,6 +217,43 @@ Status XcbSupportWindow::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	return Status::Ok;
 }
 
+Status XcbSupportWindow::probeClipboard(Rc<ClipboardProbe> &&probe) {
+	if (!_owner) {
+		auto reply = _connection->perform(_xcb->xcb_get_selection_owner_reply,
+				_xcb->xcb_get_selection_owner(_connection->getConnection(),
+						_connection->getAtom(XcbAtomIndex::CLIPBOARD)));
+		if (reply) {
+			_owner = reply->owner;
+		}
+	}
+
+	if (!_owner) {
+		// there is no clipboard
+		probe->typeCallback(Status::Declined, SpanView<StringView>());
+		return Status::Declined;
+	}
+
+	if (_owner == _window) {
+		Vector<StringView> views;
+		views.reserve(_data->types.size());
+		for (auto &it : _data->types) { views.emplace_back(it); }
+		probe->typeCallback(Status::Ok, views);
+		return Status::Ok;
+	} else {
+		if (_requests.empty() && _waiters.empty()) {
+			// acquire list of formats
+			_xcb->xcb_convert_selection(_connection->getConnection(), _window,
+					_connection->getAtom(XcbAtomIndex::CLIPBOARD),
+					_connection->getAtom(XcbAtomIndex::TARGETS),
+					_connection->getAtom(XcbAtomIndex::XENOLITH_CLIPBOARD), XCB_CURRENT_TIME);
+			_xcb->xcb_flush(_connection->getConnection());
+		}
+
+		_probes.emplace_back(sp::move(probe));
+	}
+	return Status::Ok;
+}
+
 Status XcbSupportWindow::writeToClipboard(Rc<ClipboardData> &&data) {
 	Vector<xcb_atom_t> atoms{
 		_connection->getAtom(XcbAtomIndex::TARGETS),
@@ -303,6 +340,10 @@ void XcbSupportWindow::handleSelectionNotify(xcb_selection_notify_event_t *event
 							safeTypes.emplace_back(it);
 						}
 					}
+
+					for (auto &it : _probes) { it->typeCallback(Status::Ok, safeTypes); }
+					_probes.clear();
+
 					for (auto &it : _requests) {
 						auto type = it->typeCallback(safeTypes);
 						// check if type is in list of available types
@@ -631,6 +672,10 @@ void XcbSupportWindow::handleSelectionUpdateNotify(xcb_xfixes_selection_notify_e
 	} else if (ev->owner == XCB_WINDOW_NONE) {
 		_data = nullptr;
 		_typeAtoms.clear();
+	}
+
+	if (_connection) {
+		_connection->handleClipboardChanged();
 	}
 }
 

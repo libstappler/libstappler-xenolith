@@ -42,6 +42,7 @@ public:
 	xcb_window_t getWindow() const { return _window; }
 
 	Status readFromClipboard(Rc<ClipboardRequest> &&req);
+	Status probeClipboard(Rc<ClipboardProbe> &&probe);
 	Status writeToClipboard(Rc<ClipboardData> &&data);
 
 	void cancelTransfer(xcb_window_t w, xcb_atom_t p);
@@ -160,6 +161,7 @@ protected:
 	XkbInfo _xkb;
 
 	Vector<Rc<ClipboardRequest>> _requests;
+	Vector<Rc<ClipboardProbe>> _probes;
 	std::multimap<xcb_atom_t, Rc<ClipboardRequest>> _waiters;
 	Vector<Bytes> _incrBuffer;
 	xcb_atom_t _incrType = 0;

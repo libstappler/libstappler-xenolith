@@ -39,7 +39,10 @@ static void Scene_findUnresolvedInputs(const memory::vector<core::AttachmentData
 	}
 }
 
-Scene::~Scene() { _queue = nullptr; }
+Scene::~Scene() {
+	slog().debug("Scene", "~Scene");
+	_queue = nullptr;
+}
 
 bool Scene::init(Queue::Builder &&builder, const core::FrameConstraints &constraints) {
 	if (!Node::init()) {
@@ -198,6 +201,8 @@ void Scene::setClipContent(bool value) {
 }
 
 bool Scene::isClipContent() const { return _content ? _content->isScissorEnabled() : false; }
+
+void Scene::setLiveReloadAllowed(bool value) { _liveReloadAllowed = value; }
 
 auto Scene::makeQueue(Queue::Builder &&builder) -> Rc<Queue> {
 	builder.setBeginCallback([this](FrameRequest &frame) { handleFrameStarted(frame); });

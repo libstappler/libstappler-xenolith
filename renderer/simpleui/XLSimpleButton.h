@@ -45,7 +45,7 @@ enum class InputNodeState : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(InputNodeState)
 
-class Button : public Layer {
+class SP_PUBLIC Button : public Layer {
 public:
 	virtual ~Button() = default;
 
@@ -70,7 +70,7 @@ protected:
 	InputNodeState _state = InputNodeState::Enabled;
 };
 
-class ButtonWithLabel : public Button {
+class SP_PUBLIC ButtonWithLabel : public Button {
 public:
 	virtual ~ButtonWithLabel() = default;
 

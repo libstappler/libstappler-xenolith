@@ -209,6 +209,10 @@ static bool XcbConnection_forwardToWindow(StringView eventName,
 	return false;
 }
 
+void XcbConnection::setSystemNotificationHandler(Function<void(SystemNotification)> &&cb) {
+	_onSystemNotification = sp::move(cb);
+}
+
 uint32_t XcbConnection::poll() {
 	uint32_t ret = 0;
 
@@ -767,6 +771,11 @@ bool XcbConnection::setCursorId(xcb_window_t window, uint32_t cursorId) {
 Status XcbConnection::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	return _support->readFromClipboard(sp::move(req));
 }
+
+Status XcbConnection::probeClipboard(Rc<ClipboardProbe> &&probe) {
+	return _support->probeClipboard(sp::move(probe));
+}
+
 Status XcbConnection::writeToClipboard(Rc<ClipboardData> &&data) {
 	return _support->writeToClipboard(sp::move(data));
 }
@@ -815,11 +824,21 @@ void XcbConnection::printError(StringView message, xcb_generic_error_t *error) c
 
 void XcbConnection::handleSettingsUpdate() {
 	for (auto &it : _windows) { it.second->handleSettingsUpdated(); }
+
+	if (_onSystemNotification) {
+		_onSystemNotification(SystemNotification::ConfigurationChanged);
+	}
 }
 
 void XcbConnection::handleScreenUpdate() {
 	if (_displayConfig) {
 		_displayConfig->update();
+	}
+}
+
+void XcbConnection::handleClipboardChanged() {
+	if (_onSystemNotification) {
+		_onSystemNotification(SystemNotification::ClipboardChanged);
 	}
 }
 

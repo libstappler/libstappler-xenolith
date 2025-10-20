@@ -100,7 +100,7 @@ void EventHeader::send(Ref *object, bool value) const {
 	EventHeader_send(*this, object, Value(value));
 }
 void EventHeader::send(Ref *object, Ref *value) const {
-	EventHeader_send(*this, object, Value(value));
+	EventHeader_send(*this, object, Value(0), value);
 }
 void EventHeader::send(Ref *object, const char *value) const {
 	EventHeader_send(*this, object, Value(value));

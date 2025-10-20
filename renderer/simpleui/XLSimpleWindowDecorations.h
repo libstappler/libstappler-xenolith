@@ -28,14 +28,14 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith::simpleui {
 
 class WindowDecorationsButton;
 
-struct WindowDecorationsState {
+struct SP_PUBLIC WindowDecorationsState {
 	static const ComponentId Id;
 
 	WindowState state = WindowState::None;
 	WindowCapabilities capabilities = WindowCapabilities::None;
 };
 
-struct WindowDecorationsTheme {
+struct SP_PUBLIC WindowDecorationsTheme {
 	static const ComponentId Id;
 
 	enum class ColorTheme {
@@ -60,7 +60,7 @@ enum class WindowDecorationsButtonType {
 	ContextMenu,
 };
 
-class WindowDecorationsButton : public Node {
+class SP_PUBLIC WindowDecorationsButton : public Node {
 public:
 	virtual ~WindowDecorationsButton() = default;
 

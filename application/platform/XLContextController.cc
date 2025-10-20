@@ -24,6 +24,8 @@
 #include "XLContextNativeWindow.h"
 #include "XLContext.h"
 #include "XLAppWindow.h"
+#include "XLDirector.h"
+#include "XLAppThread.h"
 
 #if LINUX
 #include "linux/XLLinuxContextController.h"

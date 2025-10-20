@@ -424,6 +424,13 @@ Status WaylandDisplay::readFromClipboard(Rc<ClipboardRequest> &&req) {
 	return Status::ErrorNotImplemented;
 }
 
+Status WaylandDisplay::probeClipboard(Rc<ClipboardProbe> &&probe) {
+	if (seat->dataDevice) {
+		return seat->dataDevice->probeClipboard(sp::move(probe));
+	}
+	return Status::ErrorNotImplemented;
+}
+
 Status WaylandDisplay::writeToClipboard(Rc<ClipboardData> &&data) {
 	if (seat->dataDevice) {
 		return seat->dataDevice->writeToClipboard(sp::move(data));
@@ -459,6 +466,12 @@ WindowCapabilities WaylandDisplay::getCapabilities() const {
 	}
 
 	return caps;
+}
+
+void WaylandDisplay::handleClipboardChanged() {
+	if (systemNotification) {
+		systemNotification(SystemNotification::ClipboardChanged);
+	}
 }
 
 WaylandShm::~WaylandShm() {

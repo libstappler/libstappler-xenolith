@@ -28,11 +28,11 @@
 #include "XLEvent.h"
 #include "XLAppWindow.h"
 #include "XLDirector.h"
+#include "XLScene.h"
 
 #if MODULE_XENOLITH_FONT
 
 #include "XLFontComponent.h"
-#include "XLFontLocale.h"
 
 #endif
 
@@ -79,10 +79,23 @@ void AppThread::threadInit() {
 
 	performUpdate(true);
 
+	if (_context->isLiveReloadEnabled()) {
+		_liveReloadListener = Rc<EventDelegate>::create(this, Context::onLiveReload,
+				[](event::Bus &, const event::BusEvent &ev, event::BusDelegate &d) {
+			auto &xev = static_cast<const Event &>(ev);
+			auto thread = static_cast<AppThread *>(d.getOwner());
+			thread->performLiveReload(static_cast<LiveReloadLibrary *>(xev.getObjectValue()));
+		});
+		_liveReloadListener->enable(_appLooper);
+	}
+
 	Thread::threadInit();
 }
 
 void AppThread::threadDispose() {
+	_liveReloadListener->disable();
+	_liveReloadListener = nullptr;
+
 	_context->handleAppThreadDestroyed(this);
 
 	_timer->cancel();
@@ -285,7 +298,11 @@ Rc<Director> AppThread::handleAppWindowCreated(NotNull<AppWindow> w,
 		}
 	});
 
-	return makeDirector(w, c);
+	auto dir = makeDirector(w, c);
+	if (dir) {
+		_windows.emplace(w.get());
+	}
+	return dir;
 }
 
 void AppThread::handleAppWindowDestroyed(NotNull<AppWindow> w, Rc<Director> &&d) {
@@ -299,6 +316,7 @@ void AppThread::handleAppWindowDestroyed(NotNull<AppWindow> w, Rc<Director> &&d)
 		}
 	}
 	removeListener(w);
+	_windows.erase(w.get());
 }
 
 void AppThread::performAppUpdate(const UpdateTime &time, bool wakeup) {
@@ -399,6 +417,31 @@ Rc<Director> AppThread::makeDirector(NotNull<AppWindow> w, const core::FrameCons
 	auto director = Rc<Director>::create(this, c, w);
 	director->runScene(move(scene));
 	return director;
+}
+
+void AppThread::performLiveReload(NotNull<LiveReloadLibrary> lib) {
+	auto makeSceneSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeSceneSignature>(
+			buildconfig::MODULE_APPCOMMON_NAME, lib->getVersion(), Context::SymbolMakeSceneName);
+	if (makeSceneSymbol) {
+		for (auto &it : _windows) {
+			auto dir = it->getDirector();
+
+			if (dir) {
+				auto scene = dir->getScene();
+				if (scene && scene->isLiveReloadAllowed()) {
+					auto nextScene = makeSceneSymbol(this, it, scene->getFrameConstraints());
+
+					nextScene->setOrUpdateComponent<LiveReloadComponent>(
+							[&](NotNull<LiveReloadComponent> comp) {
+						comp->library = lib;
+						return true;
+					});
+
+					dir->runScene(sp::move(nextScene));
+				}
+			}
+		}
+	}
 }
 
 } // namespace stappler::xenolith

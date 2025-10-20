@@ -26,7 +26,8 @@
 #include "XLEvent.h"
 #include "XLContextInfo.h"
 #include "XLCoreTextInput.h"
-#include "SPSharedModule.h"
+#include "XLLiveReload.h"
+#include "SPSharedModule.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
@@ -124,7 +125,31 @@ public:
  It's essential to define Context::SymbolMakeScemeName or override `makeScene` for application to work
 */
 
-class Context : public Ref {
+struct SP_PUBLIC ContentInitializer {
+	memory::allocator_t *alloc = nullptr;
+	memory::pool_t *pool = nullptr;
+	memory::pool_t *tmpPool = nullptr;
+
+	String liveReloadPath;
+	String liveReloadCachePath;
+	Rc<LiveReloadLibrary> liveReloadLibrary;
+
+	bool init = false;
+
+	ContentInitializer();
+	~ContentInitializer();
+
+	ContentInitializer(const ContentInitializer &) = delete;
+	ContentInitializer &operator=(const ContentInitializer &) = delete;
+
+	ContentInitializer(ContentInitializer &&);
+	ContentInitializer &operator=(ContentInitializer &&);
+
+	bool initialize();
+	void terminate();
+};
+
+class SP_PUBLIC Context : public Ref {
 public:
 	using SwapchainConfig = core::SwapchainConfig;
 	using SurfaceInfo = core::SurfaceInfo;
@@ -132,6 +157,7 @@ public:
 	static EventHeader onNetworkStateChanged;
 	static EventHeader onThemeChanged;
 	static EventHeader onSystemNotification;
+	static EventHeader onLiveReload;
 
 	static EventHeader onMessageToken;
 	static EventHeader onRemoteNotification;
@@ -148,7 +174,7 @@ public:
 	using SymbolParseConfigNativeSignature = ContextConfig (*)(NativeContextHandle *);
 	static constexpr auto SymbolParseConfigNativeName = "parseConfigNative";
 
-	using SymbolMakeContextSignature = Rc<Context> (*)(ContextConfig &&);
+	using SymbolMakeContextSignature = Rc<Context> (*)(ContextConfig &&, ContentInitializer &&);
 	static constexpr auto SymbolMakeContextName = "makeContext";
 
 	using SymbolMakeSceneSignature = Rc<Scene> (*)(NotNull<AppThread>, NotNull<AppWindow>,
@@ -169,7 +195,7 @@ public:
 	Context();
 	virtual ~Context();
 
-	virtual bool init(ContextConfig &&);
+	virtual bool init(ContextConfig &&, ContentInitializer &&);
 
 	const ContextInfo *getInfo() const { return _info; }
 	event::Looper *getLooper() const { return _looper; }
@@ -179,6 +205,8 @@ public:
 	platform::ContextController *getController() const { return _controller; }
 
 	BytesView getMessageToken() const { return _messageToken; }
+
+	bool isLiveReloadEnabled() const { return _initializer.liveReloadLibrary; }
 
 	virtual void performOnThread(Function<void()> &&func, Ref *target = nullptr,
 			bool immediate = false, StringView tag = SP_FUNC) const;
@@ -248,7 +276,7 @@ public:
 
 	template <typename Callback>
 	auto performTemporary(const Callback &cb) {
-		return memory::pool::perform_clear(cb, _tmpPool);
+		return memory::pool::perform_clear(cb, _initializer.tmpPool);
 	}
 
 protected:
@@ -256,14 +284,13 @@ protected:
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
 
-	memory::allocator_t *_alloc = nullptr;
-	memory::pool_t *_pool = nullptr;
-	memory::pool_t *_tmpPool = nullptr;
+	virtual void updateLiveReload();
+	virtual void performLiveReload(const filesystem::Stat &);
+
+	ContentInitializer _initializer;
 
 	event::Looper *_looper = nullptr;
 
-	bool _isEmulator = false;
-	bool _valid = false;
 	bool _running = false;
 
 	Rc<ContextInfo> _info;
@@ -277,6 +304,9 @@ protected:
 	Rc<AppThread> _application;
 
 	HashMap<std::type_index, Rc<ContextComponent>> _components;
+
+	Rc<event::TimerHandle> _liveReloadWatchdog;
+	Rc<LiveReloadLibrary> _actualLiveReloadLibrary;
 };
 
 template <typename T>
