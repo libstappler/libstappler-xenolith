@@ -41,7 +41,8 @@ SP_UNUSED static constexpr auto NM_SERVICE_CONNECTION_NAME =
 		"org.freedesktop.NetworkManager.Connection.Active";
 SP_UNUSED static constexpr auto NM_SERVICE_VPN_NAME = "org.freedesktop.NetworkManager.VPN.Plugin";
 SP_UNUSED static constexpr auto NM_SERVICE_FILTER =
-		"type='signal',interface='org.freedesktop.NetworkManager'";
+		"type='signal',path='/org/freedesktop/"
+		"NetworkManager',interface='org.freedesktop.DBus.Properties'";
 SP_UNUSED static constexpr auto NM_SERVICE_CONNECTION_FILTER =
 		"type='signal',interface='org.freedesktop.NetworkManager.Connection.Active'";
 SP_UNUSED static constexpr auto NM_SERVICE_VPN_FILTER =
@@ -90,6 +91,7 @@ bool Controller::setup() {
 
 void Controller::cancel() {
 	_networkConnectionFilter = nullptr;
+	_networkPropertiesFilter = nullptr;
 	_settingsFilter = nullptr;
 
 	if (_sessionBus) {
@@ -332,13 +334,9 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 
 void Controller::updateNetworkState() {
 	_systemBus->callMethod(NM_SERVICE_NAME, NM_SERVICE_PATH, "org.freedesktop.DBus.Properties",
-			"GetAll", [](WriteIterator &iter) { iter.add(NM_SERVICE_NAME); },
+			"GetAll", [](WriteIterator &iter) { iter.add(StringView(NM_SERVICE_NAME)); },
 			[this](NotNull<dbus::Connection> c, DBusMessage *reply) {
 		_networkState = NetworkState(_dbus, reply);
-
-		std::cout << "NetworkState: ";
-		_networkState.description([](StringView str) { std::cout << str; });
-		std::cout << "\n";
 
 		if (_controller) {
 			_controller->handleNetworkStateChanged(_networkState.getFlags());
@@ -361,30 +359,41 @@ void Controller::updateInterfaceTheme() {
 }
 
 void Controller::handleSessionConnected(NotNull<dbus::Connection> c) {
-	if (c->services.find(DESKTOP_PORTAL_SERVICE_NAME) != c->services.end()) {
-		_settingsFilter = Rc<dbus::BusFilter>::alloc(c, DESKTOP_PORTAL_SERVICE_FILTER,
-				DESKTOP_PORTAL_SETTINGS_INTERFACE, "SettingChanged",
-				[this](NotNull<const BusFilter>, NotNull<DBusMessage>) -> uint32_t {
+	if (c->connected) {
+		if (c->services.find(DESKTOP_PORTAL_SERVICE_NAME) != c->services.end()) {
+			_settingsFilter = Rc<dbus::BusFilter>::alloc(c, DESKTOP_PORTAL_SERVICE_FILTER,
+					DESKTOP_PORTAL_SETTINGS_INTERFACE, "SettingChanged",
+					[this](NotNull<const BusFilter>, NotNull<DBusMessage>) -> uint32_t {
+				updateInterfaceTheme();
+				return DBUS_HANDLER_RESULT_HANDLED;
+			});
 			updateInterfaceTheme();
-			return DBUS_HANDLER_RESULT_HANDLED;
-		});
-		updateInterfaceTheme();
+		}
+		log::source().debug("dbus::Controller", "Session bus connected");
 	}
-	log::source().debug("dbus::Controller", "Session bus connected");
 }
 
 void Controller::handleSystemConnected(NotNull<dbus::Connection> c) {
-	if (c->services.find(NM_SERVICE_NAME) != c->services.end()) {
-		_networkConnectionFilter = Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_CONNECTION_FILTER,
-				NM_SERVICE_CONNECTION_NAME, "StateChanged",
-				[this](NotNull<const BusFilter>, NotNull<DBusMessage>) -> uint32_t {
-			updateNetworkState();
-			return DBUS_HANDLER_RESULT_HANDLED;
-		});
+	if (c->connected) {
+		if (c->services.find(NM_SERVICE_NAME) != c->services.end()) {
+			_networkConnectionFilter = Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_CONNECTION_FILTER,
+					NM_SERVICE_CONNECTION_NAME, "StateChanged",
+					[this](NotNull<const BusFilter>, NotNull<DBusMessage> message) -> uint32_t {
+				updateNetworkState();
+				return DBUS_HANDLER_RESULT_HANDLED;
+			});
 
-		updateNetworkState();
+			_networkPropertiesFilter = Rc<dbus::BusFilter>::alloc(c, NM_SERVICE_FILTER,
+					NM_SERVICE_NAME, "PropertiesChanged",
+					[this](NotNull<const BusFilter>, NotNull<DBusMessage> message) -> uint32_t {
+				updateNetworkState();
+				return DBUS_HANDLER_RESULT_HANDLED;
+			});
+
+			updateNetworkState();
+		}
+		log::source().debug("dbus::Controller", "System bus connected");
 	}
-	log::source().debug("dbus::Controller", "System bus connected");
 }
 
 struct MessageNetworkStateParser {

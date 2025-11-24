@@ -96,6 +96,8 @@ public:
 
 	virtual void update(AppThread *, const UpdateTime &t, bool) override;
 
+	StringView getRootPath() const { return _rootPath; }
+
 	String getAssetPath(int64_t);
 
 	bool acquireAsset(StringView url, AssetCallback &&cb, TimeInterval ttl = TimeInterval(),

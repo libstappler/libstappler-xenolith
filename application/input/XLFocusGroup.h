@@ -47,8 +47,6 @@ public:
 
 	using EventMask = std::bitset<toInt(InputEventName::Max)>;
 
-	static EventMask makeEventMask(std::initializer_list<InputEventName> &&);
-
 	static uint64_t Id;
 
 	virtual ~FocusGroup() = default;

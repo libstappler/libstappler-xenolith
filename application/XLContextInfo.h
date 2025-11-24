@@ -212,6 +212,9 @@ struct ThemeInfo {
 using OpacityValue = ValueWrapper<uint8_t, class OpacityTag>;
 using ZOrder = ValueWrapper<int16_t, class ZOrderTag>;
 
+SP_PUBLIC const CallbackStream &operator<<(const CallbackStream &stream, NetworkFlags t);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, NetworkFlags t);
+
 } // namespace stappler::xenolith
 
 #endif /* XENOLITH_APPLICATION_XLCONTEXTINFO_H_ */

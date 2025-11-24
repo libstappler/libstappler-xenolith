@@ -21,6 +21,7 @@
  **/
 
 #include "XLInputListener.h"
+#include "XLAction.h"
 #include "XLDirector.h"
 #include "XLInputDispatcher.h"
 #include "XLGestureRecognizer.h"
@@ -33,7 +34,7 @@ namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 static std::atomic<uint64_t> s_inputListenerId = 1;
 
-InputListener::EventMask InputListener::EventMaskTouch = InputListener::makeEventMask({
+InputListener::EventMask EventMaskTouch = makeEventMask({
 	InputEventName::Begin,
 	InputEventName::Move,
 	InputEventName::End,
@@ -41,29 +42,46 @@ InputListener::EventMask InputListener::EventMaskTouch = InputListener::makeEven
 	InputEventName::Scroll,
 });
 
-InputListener::EventMask InputListener::EventMaskKeyboard = InputListener::makeEventMask({
+InputListener::EventMask EventMaskKeyboard = makeEventMask({
 	InputEventName::KeyPressed,
 	InputEventName::KeyRepeated,
 	InputEventName::KeyReleased,
 	InputEventName::KeyCanceled,
 });
 
-InputListener::ButtonMask InputListener::makeButtonMask(
-		std::initializer_list<InputMouseButton> &&il) {
-	ButtonMask ret;
+InputButtonMask makeButtonMask(std::initializer_list<InputMouseButton> &&il) {
+	InputButtonMask ret;
 	for (auto &it : il) { ret.set(toInt(it)); }
 	return ret;
 }
 
-InputListener::EventMask InputListener::makeEventMask(std::initializer_list<InputEventName> &&il) {
-	EventMask ret;
+InputButtonMask makeButtonMask(InputMouseButton val) {
+	InputButtonMask ret;
+	ret.set(toInt(val));
+	return ret;
+}
+
+InputEventMask makeEventMask(std::initializer_list<InputEventName> &&il) {
+	InputEventMask ret;
 	for (auto &it : il) { ret.set(toInt(it)); }
 	return ret;
 }
 
-InputListener::KeyMask InputListener::makeKeyMask(std::initializer_list<InputKeyCode> &&il) {
-	KeyMask ret;
+InputEventMask makeEventMask(InputEventName val) {
+	InputEventMask ret;
+	ret.set(toInt(val));
+	return ret;
+}
+
+InputKeyMask makeKeyMask(std::initializer_list<InputKeyCode> &&il) {
+	InputKeyMask ret;
 	for (auto &it : il) { ret.set(toInt(it)); }
+	return ret;
+}
+
+InputKeyMask makeKeyMask(InputKeyCode val) {
+	InputKeyMask ret;
+	ret.set(toInt(val));
 	return ret;
 }
 
@@ -83,7 +101,12 @@ void InputListener::handleEnter(Scene *scene) {
 	_hasFocus = false;
 	_scene = scene;
 
-	for (auto &it : _recognizers) { it->onEnter(this); }
+	for (auto &it : _recognizers) {
+		if (it->requiresUpdate()) {
+			scheduleUpdate();
+		}
+		it->onEnter(this);
+	}
 }
 
 void InputListener::handleExit() {
@@ -234,12 +257,24 @@ InputEventState InputListener::handleEvent(const InputEvent &event) {
 		}
 
 		auto result = it->handleInputEvent(event, _owner->getInputDensity());
-		if (result == InputEventState::Retain) {
+		switch (result) {
+		case InputEventState::Retain:
 			result = InputEventState::Processed;
 			retainEvent(event.data.event);
-		} else if (result == InputEventState::Release) {
+			break;
+		case InputEventState::Release:
 			releaseEvent(event.data.event);
 			result = InputEventState::Processed;
+			break;
+		case InputEventState::DelayedProcessed:
+			result = InputEventState::Processed;
+			makeDelay();
+			break;
+		case InputEventState::DelayedCaptured:
+			result = InputEventState::Captured;
+			makeDelay();
+			break;
+		default: break;
 		}
 		if (result == InputEventState::Processed && shouldSwallowEvent(event)) {
 			result = InputEventState::Captured;
@@ -273,52 +308,49 @@ FocusGroup *InputListener::getFocusGroup() const {
 }
 
 GestureRecognizer *InputListener::addTouchRecognizer(InputCallback<GestureData> &&cb,
-		ButtonMask &&buttonMask) {
-	return addRecognizer(Rc<GestureTouchRecognizer>::create(sp::move(cb), sp::move(buttonMask)));
+		InputTouchInfo &&info) {
+	return addRecognizer(Rc<GestureTouchRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addTapRecognizer(InputCallback<GestureTap> &&cb,
-		ButtonMask &&buttonMask, uint32_t maxTapCount) {
-	return addRecognizer(
-			Rc<GestureTapRecognizer>::create(sp::move(cb), sp::move(buttonMask), maxTapCount));
+		InputTapInfo &&info) {
+	return addRecognizer(Rc<GestureTapRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
-GestureRecognizer *InputListener::addScrollRecognizer(InputCallback<GestureScroll> &&cb) {
-	return addRecognizer(Rc<GestureScrollRecognizer>::create(sp::move(cb)));
+GestureRecognizer *InputListener::addScrollRecognizer(InputCallback<GestureScroll> &&cb,
+		InputScrollInfo &&info) {
+	return addRecognizer(Rc<GestureScrollRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addPressRecognizer(InputCallback<GesturePress> &&cb,
-		TimeInterval interval, bool continuous, ButtonMask &&mask) {
-	return addRecognizer(
-			Rc<GesturePressRecognizer>::create(sp::move(cb), interval, continuous, sp::move(mask)));
+		InputPressInfo &&info) {
+	return addRecognizer(Rc<GesturePressRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addSwipeRecognizer(InputCallback<GestureSwipe> &&cb,
-		float threshold, bool sendThreshold, ButtonMask &&mask) {
-	return addRecognizer(Rc<GestureSwipeRecognizer>::create(sp::move(cb), threshold, sendThreshold,
-			sp::move(mask)));
+		InputSwipeInfo &&info) {
+	return addRecognizer(Rc<GestureSwipeRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addPinchRecognizer(InputCallback<GesturePinch> &&cb,
-		ButtonMask &&mask) {
-	return addRecognizer(Rc<GesturePinchRecognizer>::create(sp::move(cb), sp::move(mask)));
+		InputPinchInfo &&info) {
+	return addRecognizer(Rc<GesturePinchRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addMoveRecognizer(InputCallback<GestureData> &&cb,
-		bool withinNode) {
-	return addRecognizer(Rc<GestureMoveRecognizer>::create(sp::move(cb), withinNode));
+		InputMoveInfo &&info) {
+	return addRecognizer(Rc<GestureMoveRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureRecognizer *InputListener::addMouseOverRecognizer(InputCallback<GestureData> &&cb,
-		float padding, bool onlyFocused) {
-	return addRecognizer(
-			Rc<GestureMouseOverRecognizer>::create(sp::move(cb), padding, onlyFocused));
+		InputMouseOverInfo &&info) {
+	return addRecognizer(Rc<GestureMouseOverRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 GestureKeyRecognizer *InputListener::addKeyRecognizer(InputCallback<GestureData> &&cb,
-		KeyMask &&keys) {
+		InputKeyInfo &&info) {
 	return (GestureKeyRecognizer *)addRecognizer(
-			Rc<GestureKeyRecognizer>::create(sp::move(cb), sp::move(keys)));
+			Rc<GestureKeyRecognizer>::create(sp::move(cb), sp::move(info)));
 }
 
 void InputListener::setWindowStateCallback(Function<bool(WindowState, WindowState)> &&cb) {
@@ -393,6 +425,9 @@ GestureRecognizer *InputListener::addRecognizer(GestureRecognizer *rec) {
 	auto ret = _recognizers.emplace_back(rec).get();
 	if (_running) {
 		ret->onEnter(this);
+		if (ret->requiresUpdate()) {
+			scheduleUpdate();
+		}
 	}
 	return ret;
 }
@@ -417,4 +452,9 @@ void InputListener::releaseEvent(core::InputEventName name) {
 	}
 }
 
+void InputListener::makeDelay() {
+	if (_running) {
+		_owner->runAction(Rc<RenderContinuously>::create(1.0f));
+	}
+}
 } // namespace stappler::xenolith

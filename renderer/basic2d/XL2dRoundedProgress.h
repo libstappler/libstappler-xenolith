@@ -35,7 +35,7 @@ public:
 		Horizontal
 	};
 
-	virtual ~RoundedProgress();
+	virtual ~RoundedProgress() = default;
 
 	virtual bool init(Layout = Auto);
 	virtual void handleContentSizeDirty() override;
@@ -70,6 +70,6 @@ protected:
 	LayerRounded *_bar = nullptr;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DROUNDEDPROGRESS_H_ */

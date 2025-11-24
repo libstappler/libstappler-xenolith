@@ -26,6 +26,8 @@
 #include "XLLinuxXcbWindow.h"
 #include "XLLinuxXcbLibrary.h"
 
+#include "SPPlatformUnistd.h"
+
 #define XL_X11_DEBUG 0
 
 #if XL_X11_DEBUG
@@ -71,6 +73,11 @@ void XcbConnection::ReportError(int error) {
 }
 
 XcbConnection::~XcbConnection() {
+	if (_support) {
+		_support->invalidate();
+		_support = nullptr;
+	}
+
 	if (_errors) {
 		_xcb->xcb_errors_context_free(_errors);
 		_errors = nullptr;

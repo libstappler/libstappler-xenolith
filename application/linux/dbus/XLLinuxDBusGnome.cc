@@ -22,7 +22,6 @@
 
 #include "XLLinuxDBusGnome.h"
 #include "SPMemory.h"
-#include "SPNotNull.h"
 #include "SPString.h"
 #include "dbus/dbus.h"
 #include "linux/dbus/XLLinuxDBusLibrary.h"

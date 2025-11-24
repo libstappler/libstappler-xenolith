@@ -62,6 +62,8 @@ public:
 
 	void tryStart();
 
+	virtual void openUrl(StringView) override;
+
 protected:
 	Rc<core::Instance> loadInstance();
 	bool loadWindow();

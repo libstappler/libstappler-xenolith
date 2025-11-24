@@ -36,6 +36,22 @@ bool EventDelegate::init(Ref *owner, const EventHeader &ev, BusEventCallback &&c
 	return true;
 }
 
+bool EventDelegate::init(Ref *owner, SpanView<EventId> evs, BusEventCallback &&cb) {
+	_owner = owner;
+	_categories = evs.vec<Interface>();
+	_looper = nullptr;
+	_callback = sp::move(cb);
+	return true;
+}
+
+bool EventDelegate::init(Ref *owner, Vector<EventId> &&evs, BusEventCallback &&cb) {
+	_owner = owner;
+	_categories = sp::move(evs);
+	_looper = nullptr;
+	_callback = sp::move(cb);
+	return true;
+}
+
 void EventDelegate::enable(event::Looper *looper) {
 	_looper = looper;
 	Event::getBus()->addListener(this);

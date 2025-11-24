@@ -181,13 +181,20 @@ bool Scene2d::init(NotNull<AppThread> app, NotNull<AppWindow> window,
 		const Callback<void(Queue::Builder &)> &cb, const core::FrameConstraints &constraints) {
 	core::Queue::Builder builder("Loader");
 
-	buildQueueResources(builder);
+	QueueInfo queueInfo{
+		Extent2(constraints.extent.width, constraints.extent.height),
+		Color4F::WHITE,
+	};
+
+	buildQueueResources(queueInfo, builder);
 
 #if MODULE_XENOLITH_BACKEND_VK
+
 	basic2d::vk::ShadowPass::RenderQueueInfo info{
 		app->getContext()->getGlLoop(),
-		Extent2(constraints.extent.width, constraints.extent.height),
+		queueInfo.extent,
 		basic2d::vk::ShadowPass::Flags::None,
+		queueInfo.backgroundColor,
 	};
 
 	basic2d::vk::ShadowPass::makeRenderQueue(builder, info);
@@ -243,7 +250,7 @@ void Scene2d::setContent(SceneContent *content) {
 	addContentNodes(_content);
 }
 
-void Scene2d::buildQueueResources(core::Queue::Builder &) { }
+void Scene2d::buildQueueResources(QueueInfo &, core::Queue::Builder &) { }
 
 void Scene2d::initialize() {
 	_listener = addSystem(Rc<InputListener>::create());
@@ -252,7 +259,7 @@ void Scene2d::initialize() {
 			_fps->incrementMode();
 		}
 		return true;
-	}, InputListener::makeKeyMask({InputKeyCode::F12}));
+	}, InputKeyInfo{makeKeyMask({InputKeyCode::F12})});
 
 	_listener->addKeyRecognizer([this](const GestureData &ev) {
 		_pointerReal->setVisible(
@@ -262,14 +269,14 @@ void Scene2d::initialize() {
 		_pointerCenter->setVisible(
 				ev.event != GestureEvent::Ended && ev.event != GestureEvent::Cancelled);
 		return true;
-	}, InputListener::makeKeyMask({InputKeyCode::LEFT_CONTROL}));
+	}, InputKeyInfo{makeKeyMask({InputKeyCode::LEFT_CONTROL})});
 
 	_listener->addTapRecognizer([this](const GestureTap &ev) {
 		if (_fps->isTouched(ev.input->currentLocation)) {
 			_fps->incrementMode();
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+	}, InputTapInfo{makeButtonMask({InputMouseButton::Touch}), 1});
 
 	_listener->addTouchRecognizer([this](const GestureData &ev) {
 		if ((ev.input->data.getModifiers() & InputModifier::Ctrl) == InputModifier::None) {
@@ -308,7 +315,7 @@ void Scene2d::initialize() {
 		_scene->getDirector()->getWindow()->handleInputEvents(sp::move(events));
 
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}));
+	}, InputTouchInfo(makeButtonMask({InputMouseButton::MouseRight})));
 
 	_listener->addTapRecognizer([this](const GestureTap &tap) {
 		if ((tap.input->data.getModifiers() & InputModifier::Shift) != InputModifier::None
@@ -316,7 +323,7 @@ void Scene2d::initialize() {
 			_pointerCenter->setPosition(_content->convertToNodeSpace(tap.input->currentLocation));
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::MouseRight}), 1);
+	}, InputTapInfo(makeButtonMask({InputMouseButton::MouseRight}), 1));
 
 	_listener->addMoveRecognizer([this](const GestureData &ev) {
 		auto pos = _content->convertToNodeSpace(ev.input->currentLocation);

@@ -62,6 +62,8 @@ public:
 	String getClipboardTypeForUri(StringView);
 	String getClipboardPathForUri(StringView);
 
+	virtual void openUrl(StringView) override;
+
 protected:
 	Rc<core::Instance> loadInstance();
 

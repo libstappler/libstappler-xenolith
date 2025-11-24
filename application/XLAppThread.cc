@@ -93,8 +93,10 @@ void AppThread::threadInit() {
 }
 
 void AppThread::threadDispose() {
-	_liveReloadListener->disable();
-	_liveReloadListener = nullptr;
+	if (_liveReloadListener) {
+		_liveReloadListener->disable();
+		_liveReloadListener = nullptr;
+	}
 
 	_context->handleAppThreadDestroyed(this);
 
@@ -319,6 +321,11 @@ void AppThread::handleAppWindowDestroyed(NotNull<AppWindow> w, Rc<Director> &&d)
 	_windows.erase(w.get());
 }
 
+void AppThread::openUrl(StringView str) {
+	_context->performOnThread([str = str.str<Interface>(), ctx = _context] { ctx->openUrl(str); },
+			_context);
+}
+
 void AppThread::performAppUpdate(const UpdateTime &time, bool wakeup) {
 	_context->handleAppThreadUpdate(this, time);
 	for (auto &it : _extensions) { it.second->update(this, time, wakeup); }
@@ -404,6 +411,17 @@ Rc<Director> AppThread::makeDirector(NotNull<AppWindow> w, const core::FrameCons
 		}
 	}
 
+	Rc<Scene> scene = makeScene(w, c);
+	if (!scene) {
+		return nullptr;
+	}
+
+	auto director = Rc<Director>::create(this, c, w);
+	director->runScene(move(scene));
+	return director;
+}
+
+Rc<Scene> AppThread::makeScene(NotNull<AppWindow> w, const core::FrameConstraints &c) {
 	Rc<Scene> scene;
 	auto makeSceneSymbol = SharedModule::acquireTypedSymbol<Context::SymbolMakeSceneSignature>(
 			buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeSceneName);
@@ -414,9 +432,7 @@ Rc<Director> AppThread::makeDirector(NotNull<AppWindow> w, const core::FrameCons
 		log::source().error("AppThread", "Fail to create scene for the window '", w->getId(), "'");
 		return nullptr;
 	}
-	auto director = Rc<Director>::create(this, c, w);
-	director->runScene(move(scene));
-	return director;
+	return scene;
 }
 
 void AppThread::performLiveReload(NotNull<LiveReloadLibrary> lib) {
@@ -438,6 +454,9 @@ void AppThread::performLiveReload(NotNull<LiveReloadLibrary> lib) {
 					});
 
 					dir->runScene(sp::move(nextScene));
+				} else if (!scene->isLiveReloadAllowed()) {
+					slog().debug("AppThread",
+							"performLiveReload: live reload is disabled for scene");
 				}
 			}
 		}

@@ -44,51 +44,6 @@ class AppWindow;
 class Director;
 class Scene;
 
-// Syntactic sugar for SharedModule definition
-
-// Usage: DEFINE_CONFIG_FUNCTION((ContextConfig &config){ })
-
-#define DEFINE_CONFIG_FUNCTION(Function)\
-SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appMakeConfigSymbol(\
-		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME,\
-		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeConfigName,\
-		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeConfigSignature(\
-				[]Function));
-
-#define DEFINE_SCENE_FACTORY(SceneFactoryFunction) \
-static_assert(::std::is_same_v<decltype(&SceneFactoryFunction),\
-	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeSceneSignature>, \
-	"Scene factory function should match :Context::SymbolMakeSceneSignature"); \
-SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appCommonSceneFactorySymbol(\
-		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME, \
-		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeSceneName, \
-		&SceneFactoryFunction);
-
-#define DEFINE_PRIMARY_SCENE_CLASS(SceneClass) \
-	static STAPPLER_VERSIONIZED_NAMESPACE::Rc<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Scene> __macro_makeScene(\
-		STAPPLER_VERSIONIZED_NAMESPACE::NotNull<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::AppThread> app, \
-		STAPPLER_VERSIONIZED_NAMESPACE::NotNull<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::AppWindow> window, \
-		const STAPPLER_VERSIONIZED_NAMESPACE::xenolith::core::FrameConstraints &constraints) { \
-	return STAPPLER_VERSIONIZED_NAMESPACE::Rc<SceneClass>::create(app, window, constraints); \
-} \
-DEFINE_SCENE_FACTORY(__macro_makeScene)
-
-#define DEFINE_CONTEXT_CONSTRUCTOR(ContextConstructorFunction) \
-static_assert(::std::is_same_v<decltype(&ContextConstructorFunction),\
-	STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeContextSignature>, \
-	"Context constructor function should match :Context::SymbolMakeContextSignature"); \
-SP_USED static STAPPLER_VERSIONIZED_NAMESPACE::SharedExtension __macro_appCommonSContextConstructorSymbol(\
-		STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_APPCOMMON_NAME, \
-		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolMakeContextName, \
-		&ContextConstructorFunction);
-
-#define DEFINE_CONTEXT_CLASS(ContextClass) \
-	static STAPPLER_VERSIONIZED_NAMESPACE::Rc<STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context> __macro_makeContext(\
-		STAPPLER_VERSIONIZED_NAMESPACE::xenolith::ContextConfig &&config) { \
-	return STAPPLER_VERSIONIZED_NAMESPACE::Rc<ContextClass>::create(STAPPLER_VERSIONIZED_NAMESPACE::move(config)); \
-} \
-DEFINE_CONTEXT_CONSTRUCTOR(__macro_makeContext)
-
 using NativeWindow = platform::NativeWindow;
 
 class ContextComponent : public Ref {
@@ -176,6 +131,9 @@ public:
 
 	using SymbolMakeContextSignature = Rc<Context> (*)(ContextConfig &&, ContentInitializer &&);
 	static constexpr auto SymbolMakeContextName = "makeContext";
+
+	using SymbolMakeAppThreadSignature = Rc<AppThread> (*)(NotNull<Context>);
+	static constexpr auto SymbolMakeAppThreadName = "makeAppThread";
 
 	using SymbolMakeSceneSignature = Rc<Scene> (*)(NotNull<AppThread>, NotNull<AppWindow>,
 			const core::FrameConstraints &);
@@ -279,7 +237,10 @@ public:
 		return memory::pool::perform_clear(cb, _initializer.tmpPool);
 	}
 
+	virtual void openUrl(StringView);
+
 protected:
+	virtual Rc<AppThread> makeAppThread();
 	virtual Rc<AppWindow> makeAppWindow(NotNull<NativeWindow>);
 
 	virtual void initializeComponent(NotNull<ContextComponent>);
@@ -306,6 +267,9 @@ protected:
 	HashMap<std::type_index, Rc<ContextComponent>> _components;
 
 	Rc<event::TimerHandle> _liveReloadWatchdog;
+
+	// preserve last unloaded version until all async actions finished
+	Rc<LiveReloadLibrary> _unloadedLiveReloadLibrary;
 	Rc<LiveReloadLibrary> _actualLiveReloadLibrary;
 };
 

@@ -23,8 +23,8 @@
 #ifndef XENOLITH_APPLICATION_ACTIONS_XLACTION_H_
 #define XENOLITH_APPLICATION_ACTIONS_XLACTION_H_
 
-#include "XLCommon.h"
-#include "SPRefContainer.h"
+#include "XLCommon.h" // IWYU pragma: keep
+#include "SPRefContainer.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
@@ -35,9 +35,7 @@ public:
 	/** Default tag used for all the actions. */
 	static const uint32_t INVALID_TAG = std::numeric_limits<uint32_t>::max();
 
-	virtual ~Action();
-
-	Action();
+	virtual ~Action() = default;
 
 	/** Return true if the action has finished */
 	virtual bool isDone() const;
@@ -99,7 +97,7 @@ protected:
 
 class SP_PUBLIC ActionInstant : public Action {
 public:
-	virtual ~ActionInstant();
+	virtual ~ActionInstant() = default;
 
 	virtual bool init(bool runOnce = false);
 	virtual void step(float dt) override;
@@ -111,28 +109,28 @@ protected:
 
 class SP_PUBLIC Show : public ActionInstant {
 public:
-	virtual ~Show();
+	virtual ~Show() = default;
 
 	virtual void update(float time) override;
 };
 
 class SP_PUBLIC Hide : public ActionInstant {
 public:
-	virtual ~Hide();
+	virtual ~Hide() = default;
 
 	virtual void update(float time) override;
 };
 
 class SP_PUBLIC ToggleVisibility : public ActionInstant {
 public:
-	virtual ~ToggleVisibility();
+	virtual ~ToggleVisibility() = default;
 
 	virtual void update(float time) override;
 };
 
 class SP_PUBLIC RemoveSelf : public ActionInstant {
 public:
-	virtual ~RemoveSelf();
+	virtual ~RemoveSelf() = default;
 
 	virtual bool init(bool isNeedCleanUp, bool runOnce = false);
 	virtual void update(float time) override;
@@ -145,7 +143,7 @@ protected:
 
 class SP_PUBLIC Place : public ActionInstant {
 public:
-	virtual ~Place();
+	virtual ~Place() = default;
 
 	virtual bool init(const Vec2 &pos, bool runOnce = false);
 	virtual void update(float time) override;
@@ -158,7 +156,7 @@ protected:
 
 class SP_PUBLIC CallFunc : public ActionInstant {
 public:
-	virtual ~CallFunc();
+	virtual ~CallFunc() = default;
 
 	virtual bool init(Function<void()> &&func, bool runOnce = false);
 	virtual void update(float time) override;
@@ -171,7 +169,7 @@ protected:
 
 class SP_PUBLIC ActionInterval : public Action {
 public:
-	virtual ~ActionInterval();
+	virtual ~ActionInterval() = default;
 
 	bool init(float duration);
 
@@ -196,9 +194,7 @@ protected:
  */
 class SP_PUBLIC Speed : public Action {
 public:
-	virtual ~Speed();
-
-	Speed();
+	virtual ~Speed() = default;
 
 	bool init(Rc<ActionInterval> &&action, float speed);
 
@@ -221,7 +217,7 @@ protected:
 
 class SP_PUBLIC Sequence : public ActionInterval {
 public:
-	virtual ~Sequence();
+	virtual ~Sequence() = default;
 
 	template <typename... Args>
 	bool init(Args &&...args) {
@@ -299,7 +295,7 @@ protected:
 
 class SP_PUBLIC Spawn : public ActionInterval {
 public:
-	virtual ~Spawn();
+	virtual ~Spawn() = default;
 
 	template <typename... Args>
 	bool init(Args &&...args) {
@@ -352,7 +348,7 @@ protected:
 
 class SP_PUBLIC Repeat : public ActionInterval {
 public:
-	virtual ~Repeat();
+	virtual ~Repeat() = default;
 
 	virtual bool init(Rc<ActionInterval> &&, uint32_t times);
 
@@ -375,7 +371,7 @@ protected:
 
 class SP_PUBLIC RepeatForever : public ActionInterval {
 public:
-	virtual ~RepeatForever();
+	virtual ~RepeatForever() = default;
 
 	virtual bool init(ActionInterval *);
 
@@ -401,14 +397,14 @@ protected:
  */
 class SP_PUBLIC DelayTime : public ActionInterval {
 public:
-	virtual ~DelayTime();
+	virtual ~DelayTime() = default;
 
 	virtual void update(float time) override;
 };
 
 class SP_PUBLIC TintTo : public ActionInterval {
 public:
-	virtual ~TintTo();
+	virtual ~TintTo() = default;
 
 	bool init(float duration, const Color4F &, ColorMask = ColorMask::Color);
 
@@ -428,7 +424,7 @@ public:
 	using UpdateCallback = Function<void(float progress)>;
 	using StopCallback = Function<void()>;
 
-	virtual ~ActionProgress() { }
+	virtual ~ActionProgress() = default;
 
 	virtual bool init(float duration, UpdateCallback &&update, StartCallback &&start = nullptr,
 			StopCallback &&stop = nullptr);
@@ -466,7 +462,7 @@ protected:
 
 class SP_PUBLIC MoveTo : public ActionInterval {
 public:
-	virtual ~MoveTo() { }
+	virtual ~MoveTo() = default;
 
 	virtual bool init(float duration, const Vec2 &position);
 	virtual bool init(float duration, const Vec3 &position);
@@ -480,7 +476,7 @@ protected:
 
 class SP_PUBLIC ScaleTo : public ActionInterval {
 public:
-	virtual ~ScaleTo() { }
+	virtual ~ScaleTo() = default;
 
 	virtual bool init(float duration, float scale);
 	virtual bool init(float duration, const Vec3 &scale);
@@ -507,7 +503,7 @@ protected:
 
 class SP_PUBLIC FadeTo : public ActionInterval {
 public:
-	virtual ~FadeTo() { }
+	virtual ~FadeTo() = default;
 
 	virtual bool init(float duration, float target);
 	virtual void startWithTarget(Node *target) override;
@@ -520,7 +516,7 @@ protected:
 
 class SP_PUBLIC RenderContinuously : public ActionInterval {
 public:
-	virtual ~RenderContinuously() { }
+	virtual ~RenderContinuously() = default;
 
 	virtual bool init();
 	virtual bool init(float duration);

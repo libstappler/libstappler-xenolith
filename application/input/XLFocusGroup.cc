@@ -26,10 +26,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-FocusGroup::EventMask FocusGroup::makeEventMask(std::initializer_list<InputEventName> &&il) {
-	return InputListener::makeEventMask(sp::move(il));
-}
-
 uint64_t FocusGroup::Id = System::GetNextSystemId();
 
 bool FocusGroup::init() {

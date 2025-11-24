@@ -201,8 +201,10 @@ void ContextController::handleSystemNotification(SystemNotification n) {
 }
 
 void ContextController::handleNetworkStateChanged(NetworkFlags flags) {
-	_networkFlags = flags;
-	_context->handleNetworkStateChanged(_networkFlags);
+	if (flags != _networkFlags) {
+		_networkFlags = flags;
+		_context->handleNetworkStateChanged(_networkFlags);
+	}
 }
 
 void ContextController::handleThemeInfoChanged(ThemeInfo &&theme) {

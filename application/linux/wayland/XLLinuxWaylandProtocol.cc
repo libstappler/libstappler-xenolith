@@ -22,11 +22,11 @@
 
 #include "XLLinuxWaylandProtocol.h"
 #include "XLLinuxWaylandLibrary.h"
+#include "XLLinuxWaylandKeys.h"
 #include "linux/thirdparty/wayland-protocols/cursor-shape-v1.h"
 
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <linux/input.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

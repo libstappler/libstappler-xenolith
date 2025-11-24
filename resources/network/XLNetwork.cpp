@@ -22,7 +22,6 @@
 
 #include "XLCommon.h"
 
-#include "XLNetworkPlatform.cc"
 #include "XLNetworkController.cc"
 #include "XLNetworkRequest.cc"
 #include "XLNetworkShared.cc"

@@ -101,7 +101,7 @@ public class ClipboardContentProvider extends ContentProvider {
 			return "application/octet-stream";
 		}
 		String type = getTypeForUri(_native, uri.toString());
-`		if (type == null || type.isEmpty()) {
+		if (type == null || type.isEmpty()) {
 			return "application/octet-stream";
 		}
 		return type;

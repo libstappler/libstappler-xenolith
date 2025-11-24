@@ -33,6 +33,11 @@ class VectorSprite;
 
 class SP_PUBLIC Scene2d : public Scene {
 public:
+	struct QueueInfo {
+		Extent2 extent;
+		Color4F backgroundColor = Color4F::WHITE;
+	};
+
 	class FpsDisplay;
 
 	virtual ~Scene2d() = default;
@@ -58,7 +63,7 @@ public:
 
 protected:
 	// override this to add initial resources to be compiled woth render queue
-	virtual void buildQueueResources(core::Queue::Builder &);
+	virtual void buildQueueResources(QueueInfo &, core::Queue::Builder &);
 
 	virtual void initialize();
 	virtual void addContentNodes(SceneContent *);

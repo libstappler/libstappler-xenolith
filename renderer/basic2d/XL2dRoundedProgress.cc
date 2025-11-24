@@ -26,8 +26,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::basic2d {
 
-RoundedProgress::~RoundedProgress() { }
-
 bool RoundedProgress::init(Layout l) {
 	if (!LayerRounded::init(Color::Grey_500, 0.0f)) {
 		return false;

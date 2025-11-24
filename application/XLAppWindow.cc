@@ -68,7 +68,11 @@ void AppWindow::run() {
 	}, this);
 }
 
-void AppWindow::update(core::PresentationUpdateFlags flags) { _presentationEngine->update(flags); }
+void AppWindow::update(core::PresentationUpdateFlags flags) {
+	if (_presentationEngine) {
+		_presentationEngine->update(flags);
+	}
+}
 
 void AppWindow::end() {
 	if (!_presentationEngine) {
@@ -480,7 +484,12 @@ void AppWindow::propagateInputEvent(core::InputEventData &event) {
 	switch (event.event) {
 	case InputEventName::WindowState:
 		_state = event.window.state;
-		onWindowState(this, toInt(_state));
+		;
+		onWindowState(this,
+				Value({
+					pair("state", Value(toInt(event.window.state))),
+					pair("changes", Value(toInt(event.window.changes))),
+				}));
 		break;
 	default: break;
 	}

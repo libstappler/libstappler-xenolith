@@ -194,12 +194,26 @@ Connection::Connection(Library *lib, EventCallback &&cb, DBusBusType type)
 				[](DBusConnection *, DBusMessage *msg, void *data) -> DBusHandlerResult {
 			auto conn = reinterpret_cast<Connection *>(data);
 			for (auto &it : conn->matchFilters) {
-				if (it->handler
-						&& conn->lib->dbus_message_is_signal(msg, it->interface.data(),
+				if (it->handler) {
+					// check if interface message
+					if (conn->lib->dbus_message_is_signal(msg, it->interface.data(),
 								it->signal.data())) {
-					auto res = it->handler(it, msg);
-					if (res == DBUS_HANDLER_RESULT_HANDLED) {
-						return DBUS_HANDLER_RESULT_HANDLED;
+						auto res = it->handler(it, msg);
+						if (res == DBUS_HANDLER_RESULT_HANDLED) {
+							return DBUS_HANDLER_RESULT_HANDLED;
+						}
+
+						// or PropertiesChanged - check first arg
+					} else if (conn->lib->dbus_message_is_signal(msg,
+									   "org.freedesktop.DBus.Properties", "PropertiesChanged")) {
+						ReadIterator iter(it->connection->lib, msg);
+						auto name = iter.getString();
+						if (name == it->interface) {
+							auto res = it->handler(it, msg);
+							if (res == DBUS_HANDLER_RESULT_HANDLED) {
+								return DBUS_HANDLER_RESULT_HANDLED;
+							}
+						}
 					}
 				}
 			}
@@ -368,7 +382,7 @@ void Connection::removeMatchFilter(BusFilter *f) { matchFilters.erase(f); }
 bool Library::init() {
 	_handle = Dso("libdbus-1.so");
 	if (!_handle) {
-		log::source().error("DBusLibrary", "Fail to open libdbus-1.so");
+		log::source().error("DBusLibrary", "Fail to open libdbus-1.so: ", _handle.getError());
 		return false;
 	}
 

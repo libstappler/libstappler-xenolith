@@ -40,9 +40,10 @@ bool ScrollViewBase::init(Layout layout) {
 			onTap(tap.count, tap.pos);
 		}
 		return false;
-	}, InputListener::makeButtonMask({InputMouseButton::Touch}));
+	});
 
-	_inputListener->addPressRecognizer([this](const GesturePress &s) -> bool {
+	_inputListener->addPressRecognizer(
+			[this](const GesturePress &s) -> bool {
 		switch (s.event) {
 		case GestureEvent::Began: return onPressBegin(s.pos); break;
 		case GestureEvent::Activated: return onLongPress(s.pos, s.time, s.tickCount); break;
@@ -50,7 +51,9 @@ bool ScrollViewBase::init(Layout layout) {
 		case GestureEvent::Cancelled: return onPressCancel(s.pos, s.time); break;
 		}
 		return false;
-	}, TimeInterval::milliseconds(425), true);
+	},
+			InputPressInfo{makeButtonMask(InputMouseButton::Touch), TimeInterval::milliseconds(425),
+				InputPressFlags::Continuous});
 
 	_inputListener->addSwipeRecognizer([this](const GestureSwipe &s) -> bool {
 		switch (s.event) {
@@ -66,7 +69,7 @@ bool ScrollViewBase::init(Layout layout) {
 			break;
 		}
 		return false;
-	}, TapDistanceAllowed, true);
+	}, InputSwipeInfo{makeButtonMask(InputMouseButton::Touch), TapDistanceAllowed, true});
 
 	_inputListener->addScrollRecognizer([this](const GestureScroll &w) -> bool {
 		auto pos = getScrollPosition();

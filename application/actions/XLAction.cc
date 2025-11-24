@@ -25,11 +25,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-SP_COVERAGE_TRIVIAL
-Action::~Action() { }
-
-Action::Action() { }
-
 void Action::invalidate() {
 	if (_target) {
 		stop();
@@ -52,9 +47,6 @@ void Action::setContainer(Node *container) { _container = container; }
 
 void Action::setTarget(Node *target) { _target = target; }
 
-SP_COVERAGE_TRIVIAL
-ActionInstant::~ActionInstant() { }
-
 bool ActionInstant::init(bool runOnce) {
 	_duration = 0.0f;
 	_runOnce = runOnce;
@@ -68,19 +60,11 @@ void ActionInstant::step(float dt) {
 	}
 }
 
-Show::~Show() { }
-
 void Show::update(float time) { _target->setVisible(true); }
-
-Hide::~Hide() { }
 
 void Hide::update(float time) { _target->setVisible(false); }
 
-ToggleVisibility::~ToggleVisibility() { }
-
 void ToggleVisibility::update(float time) { _target->setVisible(!_target->isVisible()); }
-
-RemoveSelf::~RemoveSelf() { }
 
 bool RemoveSelf::init(bool isNeedCleanUp, bool runOnce) {
 	if (!ActionInstant::init(runOnce)) {
@@ -93,8 +77,6 @@ bool RemoveSelf::init(bool isNeedCleanUp, bool runOnce) {
 
 void RemoveSelf::update(float time) { _target->removeFromParent(_isNeedCleanUp); }
 
-Place::~Place() { }
-
 bool Place::init(const Vec2 &pos, bool runOnce) {
 	if (!ActionInstant::init(runOnce)) {
 		return false;
@@ -106,8 +88,6 @@ bool Place::init(const Vec2 &pos, bool runOnce) {
 
 void Place::update(float time) { _target->setPosition(_position); }
 
-CallFunc::~CallFunc() { }
-
 bool CallFunc::init(Function<void()> &&func, bool runOnce) {
 	if (!ActionInstant::init(runOnce)) {
 		return false;
@@ -118,9 +98,6 @@ bool CallFunc::init(Function<void()> &&func, bool runOnce) {
 }
 
 void CallFunc::update(float time) { _callback(); }
-
-SP_COVERAGE_TRIVIAL
-ActionInterval::~ActionInterval() { }
 
 bool ActionInterval::init(float duration) {
 	_duration = duration;
@@ -164,10 +141,6 @@ void ActionInterval::startWithTarget(Node *target) {
 
 void ActionInterval::setDuration(float duration) { _duration = std::max(_duration, FLT_EPSILON); }
 
-Speed::~Speed() { }
-
-Speed::Speed() { }
-
 bool Speed::init(Rc<ActionInterval> &&action, float speed) {
 	XLASSERT(action != nullptr, "action must not be NULL");
 	setInnerAction(move(action));
@@ -195,8 +168,6 @@ void Speed::stop() {
 void Speed::step(float dt) { _innerAction->step(dt * _speed); }
 
 bool Speed::isDone() const { return _innerAction->isDone(); }
-
-Sequence::~Sequence() { }
 
 void Sequence::stop(void) {
 	if (_prevTime < 1.0f && _currentIdx < _actions.size()) {
@@ -354,8 +325,6 @@ bool Sequence::addAction(Action *a) {
 	return true;
 }
 
-Spawn::~Spawn() { }
-
 void Spawn::stop(void) {
 	if (_prevTime < 1.0f) {
 		for (auto &it : _actions) {
@@ -411,9 +380,6 @@ bool Spawn::addAction(Action *a) {
 	_actions.emplace_back(ActionData{a});
 	return true;
 }
-
-SP_COVERAGE_TRIVIAL
-Repeat::~Repeat() { _innerAction = nullptr; }
 
 bool Repeat::init(Rc<ActionInterval> &&action, uint32_t times) {
 	float d = action->getDuration() * times;
@@ -481,9 +447,6 @@ void Repeat::startWithTarget(Node *target) {
 
 bool Repeat::isDone() const { return _total == _times; }
 
-SP_COVERAGE_TRIVIAL
-RepeatForever::~RepeatForever() { _innerAction = nullptr; }
-
 bool RepeatForever::init(ActionInterval *action) {
 	_innerAction = action;
 	return true;
@@ -509,11 +472,7 @@ void RepeatForever::step(float dt) {
 
 bool RepeatForever::isDone() const { return false; }
 
-DelayTime::~DelayTime() { }
-
 void DelayTime::update(float time) { }
-
-TintTo::~TintTo() { }
 
 bool TintTo::init(float duration, const Color4F &to, ColorMask mask) {
 	if (!ActionInterval::init(duration)) {

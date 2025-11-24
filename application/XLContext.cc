@@ -94,7 +94,7 @@ bool ContentInitializer::initialize() {
 	thread::ThreadInfo::setThreadPool(pool);
 
 	int result = 0;
-	if (!sp::initialize(result)) {
+	if (!sp::initialize(0, nullptr, result)) {
 		init = false;
 	} else {
 		init = true;
@@ -543,7 +543,7 @@ void Context::handleDidResume() {
 
 void Context::handleWillStart() {
 	log::source().info("Context", "handleWillStart");
-	_application = Rc<AppThread>::create(this);
+	_application = makeAppThread();
 }
 
 void Context::handleDidStart() {
@@ -565,6 +565,10 @@ void Context::handleNetworkStateChanged(NetworkFlags flags) {
 	}
 
 	onNetworkStateChanged(this, toInt(flags));
+
+	if (_application) {
+		_application->wakeup();
+	}
 }
 
 void Context::handleThemeInfoChanged(const ThemeInfo &info) {
@@ -575,6 +579,10 @@ void Context::handleThemeInfoChanged(const ThemeInfo &info) {
 	}
 
 	onThemeChanged(this, info.encode());
+
+	if (_application) {
+		_application->wakeup();
+	}
 }
 
 bool Context::configureWindow(NotNull<WindowInfo> w) {
@@ -615,6 +623,25 @@ void Context::receiveRemoteNotification(Value &&val) { onRemoteNotification(this
 
 Rc<ScreenInfo> Context::getScreenInfo() const { return _controller->getScreenInfo(); }
 
+void Context::openUrl(StringView str) { _controller->openUrl(str); }
+
+Rc<AppThread> Context::makeAppThread() {
+	auto makeAppThreadSymbol =
+			SharedModule::acquireTypedSymbol<Context::SymbolMakeAppThreadSignature>(
+					buildconfig::MODULE_APPCOMMON_NAME, Context::SymbolMakeAppThreadName);
+	if (makeAppThreadSymbol) {
+		auto thread = makeAppThreadSymbol(this);
+		if (thread) {
+			return thread;
+		} else {
+			slog().error("Context",
+					"Fail to create thread with function provided, fallback to default AppThread");
+		}
+	}
+
+	return Rc<AppThread>::create(this);
+}
+
 Rc<AppWindow> Context::makeAppWindow(NotNull<NativeWindow> w) {
 	return _controller->makeAppWindow(_application, w);
 }
@@ -651,6 +678,7 @@ void Context::performLiveReload(const filesystem::Stat &stat) {
 	if (filesystem::copy(FileInfo(_initializer.liveReloadPath), FileInfo(targetPath))) {
 		auto newLib = Rc<LiveReloadLibrary>::create(targetPath, stat.mtime, version, _looper);
 		if (newLib) {
+			_unloadedLiveReloadLibrary = sp::move(_actualLiveReloadLibrary);
 			_actualLiveReloadLibrary = sp::move(newLib);
 			onLiveReload(this, _actualLiveReloadLibrary.get());
 		}

@@ -29,10 +29,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
-static constexpr float TapDistanceAllowed = 12.0f;
-static constexpr float TapDistanceAllowedMulti = 32.0f;
-static constexpr TimeInterval TapIntervalAllowed = TimeInterval::microseconds(300'000ULL);
-
 class InputListener;
 
 enum class GestureEvent {
@@ -145,6 +141,8 @@ public:
 
 	EventMask getEventMask() const;
 
+	virtual bool requiresUpdate() const { return false; }
+
 	virtual void update(uint64_t dt);
 	virtual Vec2 getLocation() const;
 	virtual void cancel();
@@ -173,7 +171,7 @@ public:
 
 	virtual ~GestureTouchRecognizer() = default;
 
-	virtual bool init(InputCallback &&, ButtonMask &&);
+	virtual bool init(InputCallback &&, InputTouchInfo &&);
 
 	// disable touches if no button specified
 	virtual bool canHandleEvent(const InputEvent &event) const override;
@@ -190,6 +188,7 @@ protected:
 
 	GestureData _event = GestureData{GestureEvent::Cancelled, nullptr};
 	InputCallback _callback;
+	InputTouchInfo _info;
 };
 
 class SP_PUBLIC GestureTapRecognizer : public GestureRecognizer {
@@ -199,10 +198,12 @@ public:
 
 	virtual ~GestureTapRecognizer() = default;
 
-	virtual bool init(InputCallback &&, ButtonMask &&, uint32_t maxTapCount);
+	virtual bool init(InputCallback &&, InputTapInfo &&);
 
 	virtual void update(uint64_t dt) override;
 	virtual void cancel() override;
+
+	virtual bool requiresUpdate() const override { return true; }
 
 protected:
 	using GestureRecognizer::init;
@@ -212,11 +213,12 @@ protected:
 			float density) override;
 	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
-	virtual void registerTap();
+	// return true if tap was sent
+	virtual bool registerTap();
 
 	GestureTap _gesture;
 	InputCallback _callback;
-	uint32_t _maxTapCount = 2;
+	InputTapInfo _info;
 	InputEvent _tmpEvent;
 };
 
@@ -226,7 +228,7 @@ public:
 
 	virtual ~GesturePressRecognizer() = default;
 
-	virtual bool init(InputCallback &&, TimeInterval interval, bool continuous, ButtonMask &&);
+	virtual bool init(InputCallback &&, InputPressInfo &&);
 
 	virtual void update(uint64_t dt) override;
 	virtual void cancel() override;
@@ -244,9 +246,7 @@ protected:
 
 	GesturePress _gesture;
 	InputCallback _callback;
-
-	TimeInterval _interval;
-	bool _continuous = false;
+	InputPressInfo _info;
 };
 
 class SP_PUBLIC GestureSwipeRecognizer : public GestureRecognizer {
@@ -255,7 +255,7 @@ public:
 
 	virtual ~GestureSwipeRecognizer() = default;
 
-	virtual bool init(InputCallback &&, float threshold, bool includeThreshold, ButtonMask &&);
+	virtual bool init(InputCallback &&, InputSwipeInfo &&);
 
 	virtual void cancel() override;
 
@@ -275,9 +275,7 @@ protected:
 
 	GestureSwipe _gesture;
 	InputCallback _callback;
-
-	float _threshold = 6.0f;
-	bool _includeThreshold = true;
+	InputSwipeInfo _info;
 };
 
 class SP_PUBLIC GesturePinchRecognizer : public GestureRecognizer {
@@ -286,7 +284,7 @@ public:
 
 	virtual ~GesturePinchRecognizer() = default;
 
-	virtual bool init(InputCallback &&, ButtonMask &&);
+	virtual bool init(InputCallback &&, InputPinchInfo &&);
 
 	virtual void cancel() override;
 
@@ -303,6 +301,7 @@ protected:
 
 	GesturePinch _gesture;
 	InputCallback _callback;
+	InputPinchInfo _info;
 };
 
 class SP_PUBLIC GestureScrollRecognizer : public GestureRecognizer {
@@ -311,7 +310,7 @@ public:
 
 	virtual ~GestureScrollRecognizer() = default;
 
-	virtual bool init(InputCallback &&);
+	virtual bool init(InputCallback &&, InputScrollInfo &&);
 
 	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
@@ -320,6 +319,7 @@ protected:
 
 	GestureScroll _gesture;
 	InputCallback _callback;
+	InputScrollInfo _info;
 };
 
 class SP_PUBLIC GestureMoveRecognizer : public GestureRecognizer {
@@ -328,7 +328,7 @@ public:
 
 	virtual ~GestureMoveRecognizer() = default;
 
-	virtual bool init(InputCallback &&, bool withinNode);
+	virtual bool init(InputCallback &&, InputMoveInfo &&);
 
 	virtual bool canHandleEvent(const InputEvent &event) const override;
 	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
@@ -340,9 +340,9 @@ protected:
 	using GestureRecognizer::init;
 
 	GestureData _event = GestureData{GestureEvent::Cancelled, nullptr};
-	InputCallback _callback;
 	InputListener *_listener = nullptr;
-	bool _onlyWithinNode = true;
+	InputCallback _callback;
+	InputMoveInfo _info;
 };
 
 class SP_PUBLIC GestureKeyRecognizer : public GestureRecognizer {
@@ -352,7 +352,7 @@ public:
 
 	virtual ~GestureKeyRecognizer() = default;
 
-	virtual bool init(InputCallback &&, KeyMask &&);
+	virtual bool init(InputCallback &&, InputKeyInfo &&);
 
 	virtual bool canHandleEvent(const InputEvent &) const override;
 
@@ -365,9 +365,9 @@ protected:
 	virtual InputEventState removeEvent(const InputEvent &, bool success, float density) override;
 	virtual InputEventState renewEvent(const InputEvent &, float density) override;
 
-	KeyMask _keyMask;
 	KeyMask _pressedKeys;
 	InputCallback _callback;
+	InputKeyInfo _info;
 };
 
 class SP_PUBLIC GestureMouseOverRecognizer : public GestureRecognizer {
@@ -376,7 +376,7 @@ public:
 
 	virtual ~GestureMouseOverRecognizer() = default;
 
-	virtual bool init(InputCallback &&, float padding = 0.0f, bool onlyFocused = true);
+	virtual bool init(InputCallback &&, InputMouseOverInfo &&);
 
 	virtual InputEventState handleInputEvent(const InputEvent &, float density) override;
 
@@ -393,10 +393,9 @@ protected:
 	bool _viewHasFocus = false;
 	bool _hasMouseOver = false;
 	bool _value = false;
-	bool _onlyFocused = true;
-	float _padding = 0.0f;
-	InputCallback _callback;
 	InputListener *_listener = nullptr;
+	InputMouseOverInfo _info;
+	InputCallback _callback;
 };
 
 SP_PUBLIC std::ostream &operator<<(std::ostream &, GestureEvent);

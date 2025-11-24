@@ -28,6 +28,20 @@ public class AppSupportActivity extends NativeActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		boolean decorFitsSystemWindows = false;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Build.VERSION.SDK_INT < 35) {
+			final int stableFlag = View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+
+			final View decorView = getWindow().getDecorView();
+			final int sysUiVis = decorView.getSystemUiVisibility();
+			decorView.setSystemUiVisibility(decorFitsSystemWindows
+					? sysUiVis & ~stableFlag
+					: sysUiVis | stableFlag);
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			getWindow().setDecorFitsSystemWindows(decorFitsSystemWindows);
+		}
 	}
 
 	@Override
@@ -71,7 +85,7 @@ public class AppSupportActivity extends NativeActivity {
 
 				handleInsetsVisible(_nativePointer, statusBarVisible, navigationVisible);
 
-				Insets i = insets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars());
+				Insets i = insets.getInsets(WindowInsets.Type.systemBars());
 				this.handleContentInsets(_nativePointer, i.top, i.right, i.bottom, i.left);
 
 				Insets ime = insets.getInsets(WindowInsets.Type.ime());

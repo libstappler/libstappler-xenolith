@@ -21,7 +21,6 @@
  **/
 
 #include "XLLinuxXcbDisplayConfigManager.h"
-#include "SPLogInit.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

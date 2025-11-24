@@ -213,6 +213,7 @@ protected:
 	bool _surfaceDirty = false;
 	bool _pointerInit = false;
 	bool _serverSideCursors = false;
+	bool _mapped = false;
 
 	Set<WaylandOutput *> _activeOutputs;
 

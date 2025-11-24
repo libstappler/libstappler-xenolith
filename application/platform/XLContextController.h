@@ -195,6 +195,8 @@ public:
 
 	virtual Value saveContextState();
 
+	virtual void openUrl(StringView) = 0;
+
 protected:
 	virtual Rc<core::Loop> makeLoop(NotNull<core::Instance>);
 

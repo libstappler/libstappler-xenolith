@@ -23,7 +23,6 @@
  **/
 
 #include "XLVkObject.h"
-#include "SPMath.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::vk {
 

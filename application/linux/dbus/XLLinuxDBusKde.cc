@@ -416,7 +416,7 @@ void KdeDisplayConfigManager::invalidate() {
 void KdeDisplayConfigManager::updateDisplayConfig(Function<void(DisplayConfig *)> &&fn) {
 	_dbus->getSessionBus()->callMethod(KSCREEN_BUS_NAME, KSCREEN_BACKEND_PATH,
 			KSCREEN_BACKEND_INTERFACE, "getConfig",
-			[this, guard = Rc<KdeDisplayConfigManager>(this),
+			[guard = Rc<KdeDisplayConfigManager>(this),
 					fn = sp::move(fn)](NotNull<dbus::Connection> c, DBusMessage *reply) mutable {
 		if (guard->_dbus) {
 			guard->readDisplayConfig(reply, sp::move(fn));
@@ -485,7 +485,7 @@ void KdeDisplayConfigManager::applyDisplayConfig(NotNull<DisplayConfig> data,
 			KSCREEN_BACKEND_INTERFACE, "setConfig", [&](WriteIterator &req) {
 		// write request
 		writeKdeDisplayConfig(data, req);
-	}, [this, cb = sp::move(cb)](NotNull<dbus::Connection> c, DBusMessage *reply) {
+	}, [cb = sp::move(cb)](NotNull<dbus::Connection> c, DBusMessage *reply) {
 		//ReadIterator iter(_dbus->getLibrary(), reply);
 		// describe(_dbus->getLibrary(), reply, makeCallback(std::cout));
 		if (cb) {

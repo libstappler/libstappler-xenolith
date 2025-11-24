@@ -31,7 +31,6 @@
 #endif
 
 #include <sys/mman.h>
-#include <linux/input.h>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 

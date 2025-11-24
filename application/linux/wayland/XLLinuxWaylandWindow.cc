@@ -40,8 +40,6 @@
 #include "XLVkPresentationEngine.h" // IWYU pragma: keep
 #endif
 
-#include <linux/input.h>
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // clang-format off
@@ -206,16 +204,24 @@ bool WaylandWindow::init(NotNull<WaylandDisplay> display, Rc<WindowInfo> &&info,
 	return true;
 }
 
-void WaylandWindow::mapWindow() { _display->flush(); }
+void WaylandWindow::mapWindow() {
+	_mapped = true;
+	_display->flush();
+}
 
 void WaylandWindow::unmapWindow() {
 	if (_frameCallback) {
 		_wayland->wl_callback_destroy(_frameCallback);
 		_frameCallback = nullptr;
 	}
+	_mapped = false;
 }
 
 bool WaylandWindow::close() {
+	if (!_mapped) {
+		return true;
+	}
+
 	if (!_shouldClose) {
 		_shouldClose = true;
 		if (!_controller->notifyWindowClosed(this)) {

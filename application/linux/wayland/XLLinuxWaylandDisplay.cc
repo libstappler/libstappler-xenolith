@@ -26,8 +26,6 @@
 #include "XLLinuxWaylandWindow.h"
 #include "XLLinuxWaylandKdeDisplayConfigManager.h"
 
-#include <linux/input.h>
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
 
 // clang-format off

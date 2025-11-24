@@ -46,13 +46,6 @@ public:
 	using DefaultEventFilter = std::function<bool(const InputEvent &)>;
 	using EventFilter = Function<bool(const InputEvent &, const DefaultEventFilter &)>;
 
-	static EventMask EventMaskTouch;
-	static EventMask EventMaskKeyboard;
-
-	static ButtonMask makeButtonMask(std::initializer_list<InputMouseButton> &&);
-	static EventMask makeEventMask(std::initializer_list<InputEventName> &&);
-	static KeyMask makeKeyMask(std::initializer_list<InputKeyCode> &&);
-
 	virtual ~InputListener() = default;
 
 	bool init(int32_t priority = 0);
@@ -125,23 +118,24 @@ public:
 	FocusGroup *getFocusGroup() const;
 
 	GestureRecognizer *addTouchRecognizer(InputCallback<GestureData> &&,
-			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+			InputTouchInfo && = InputTouchInfo());
 	GestureRecognizer *addTapRecognizer(InputCallback<GestureTap> &&,
-			ButtonMask && = makeButtonMask({InputMouseButton::Touch}), uint32_t maxTapCount = 2);
+			InputTapInfo && = InputTapInfo());
 	GestureRecognizer *addPressRecognizer(InputCallback<GesturePress> &&,
-			TimeInterval interval = TapIntervalAllowed, bool continuous = false,
-			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+			InputPressInfo && = InputPressInfo());
 	GestureRecognizer *addSwipeRecognizer(InputCallback<GestureSwipe> &&,
-			float threshold = TapDistanceAllowed, bool sendThreshold = false,
-			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
+			InputSwipeInfo && = InputSwipeInfo());
 	GestureRecognizer *addPinchRecognizer(InputCallback<GesturePinch> &&,
-			ButtonMask && = makeButtonMask({InputMouseButton::Touch}));
-	GestureRecognizer *addScrollRecognizer(InputCallback<GestureScroll> &&);
-	GestureRecognizer *addMoveRecognizer(InputCallback<GestureData> &&, bool withinNode = true);
-	GestureRecognizer *addMouseOverRecognizer(InputCallback<GestureData> &&, float padding = 0.0f,
-			bool onlyFocused = true);
+			InputPinchInfo && = InputPinchInfo());
+	GestureRecognizer *addScrollRecognizer(InputCallback<GestureScroll> &&,
+			InputScrollInfo && = InputScrollInfo());
+	GestureRecognizer *addMoveRecognizer(InputCallback<GestureData> &&,
+			InputMoveInfo && = InputMoveInfo());
+	GestureRecognizer *addMouseOverRecognizer(InputCallback<GestureData> &&,
+			InputMouseOverInfo && = InputMouseOverInfo());
 
-	GestureKeyRecognizer *addKeyRecognizer(InputCallback<GestureData> &&, KeyMask && = KeyMask());
+	GestureKeyRecognizer *addKeyRecognizer(InputCallback<GestureData> &&,
+			InputKeyInfo && = InputKeyInfo());
 
 	void setWindowStateCallback(Function<bool(WindowState, WindowState)> &&);
 
@@ -166,6 +160,7 @@ protected:
 
 	void retainEvent(core::InputEventName);
 	void releaseEvent(core::InputEventName);
+	void makeDelay();
 
 	int32_t _priority = 0; // 0 - scene graph
 	uint64_t _id = 0;

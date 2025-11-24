@@ -23,8 +23,6 @@
 #ifndef XENOLITH_RENDERER_BASIC2D_XL2DPARTICLESYSTEM_H_
 #define XENOLITH_RENDERER_BASIC2D_XL2DPARTICLESYSTEM_H_
 
-#include "SPEnum.h"
-#include "SPNotNull.h"
 #include "XL2d.h"
 #include "XLCoreMaterial.h"
 #include "XLCurveBuffer.h"

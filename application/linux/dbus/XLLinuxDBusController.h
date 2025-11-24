@@ -24,7 +24,6 @@
 #define XENOLITH_APPLICATION_LINUX_DBUS_XLLINUXDBUSCONTROLLER_H_
 
 #include "SPEventLooper.h"
-#include "SPNotNull.h"
 #include "XLCommon.h"
 #include "XlCoreMonitorInfo.h"
 
@@ -130,6 +129,7 @@ protected:
 	Rc<Connection> _sessionBus;
 	Rc<Connection> _systemBus;
 	Rc<BusFilter> _networkConnectionFilter;
+	Rc<BusFilter> _networkPropertiesFilter;
 	Rc<BusFilter> _settingsFilter;
 
 	dbus::NetworkState _networkState;

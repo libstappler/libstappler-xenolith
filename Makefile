@@ -40,7 +40,6 @@ LOCAL_MODULES ?= \
 	xenolith_backend_vkgui \
 	xenolith_renderer_basic2d \
 	xenolith_renderer_material2d \
-	xenolith_resources_icons \
 	xenolith_resources_storage \
 	xenolith_resources_network \
 	xenolith_resources_assets
@@ -54,7 +53,6 @@ LOCAL_EXPORT_MODULES ?= \
 	xenolith_renderer_basic2d \
 	xenolith_renderer_material2d \
 	xenolith_resources_assets \
-	xenolith_resources_icons \
 	xenolith_resources_network \
 	xenolith_resources_storage
 

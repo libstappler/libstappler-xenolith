@@ -239,13 +239,12 @@ xkb_keysym_t XkbInfo::composeSymbol(xkb_keysym_t sym, core::InputKeyComposeState
 	return composedSym;
 }
 
-
 XkbLibrary::~XkbLibrary() { close(); }
 
 bool XkbLibrary::init() {
 	_handle = Dso("libxkbcommon.so");
 	if (!_handle) {
-		log::source().error("XkbLibrary", "Fail to open libxkbcommon.so");
+		log::source().error("XkbLibrary", "Fail to open libxkbcommon.so: ", _handle.getError());
 		return false;
 	}
 

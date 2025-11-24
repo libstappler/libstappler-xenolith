@@ -77,6 +77,17 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 
 	if (config.context) {
 		config.context->flags |= ContextFlags::DestroyWhenAllWindowsClosed;
+		if (auto bundleName = getAppconfigBundleName()) {
+			config.context->bundleName = bundleName;
+		}
+		if (auto appName = getAppconfigBundleName()) {
+			config.context->appName = appName;
+		}
+		if (auto verCode = getAppconfigVersionIndex()) {
+			config.context->appVersionCode = verCode;
+			config.context->appVersion = toString(getAppconfigVersionApi(), ".",
+					getAppconfigVersionRev(), ".", getAppconfigVersionBuild());
+		}
 	}
 
 	if (config.loop) {
@@ -87,9 +98,8 @@ void LinuxContextController::acquireDefaultConfig(ContextConfig &config,
 		if (config.window->imageFormat == core::ImageFormat::Undefined) {
 			config.window->imageFormat = core::ImageFormat::B8G8R8A8_UNORM;
 		}
-		config.window->flags |= WindowCreationFlags::Regular
-				| WindowCreationFlags::PreferServerSideDecoration
-				| WindowCreationFlags::PreferNativeDecoration;
+		config.window->flags |=
+				WindowCreationFlags::Regular | WindowCreationFlags::PreferServerSideDecoration;
 	}
 }
 
@@ -319,6 +329,14 @@ void LinuxContextController::handleThemeInfoChanged(ThemeInfo &&newThemeInfo) {
 	}
 }
 
+void LinuxContextController::openUrl(StringView str) {
+	auto string = toString("xdg-open '", str, "'");
+	auto ret = ::system(string.data());
+	if (ret != 0) {
+		slog().error("LinuxContextController", "Fail to open URL: ", str);
+	}
+}
+
 void LinuxContextController::tryStart() {
 	if (_dbusController && _dbusController->isConnectied() && (_xcbConnection || _waylandDisplay)) {
 		auto dcm = _dbusController->makeDisplayConfigManager(
@@ -403,6 +421,9 @@ bool LinuxContextController::loadWindow() {
 		if (_waylandDisplay) {
 			window = Rc<WaylandWindow>::create(_waylandDisplay, move(wInfo), this);
 			_waylandDisplay->flush();
+			if (window) {
+				_activeWindows.emplace(window);
+			}
 		}
 		if (!window && _xcbConnection) {
 			window = Rc<XcbWindow>::create(_xcbConnection, move(wInfo), this);

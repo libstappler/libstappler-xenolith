@@ -534,6 +534,23 @@ String AndroidContextController::getClipboardPathForUri(StringView uri) {
 	return String();
 }
 
+void AndroidContextController::openUrl(StringView str) {
+	if (_activities.empty()) {
+		return;
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	auto uri = app->Uri.parse(app->Uri.getClass().ref(env), env.newString(str));
+	auto intent = app->Intent.constructor(app->Intent.getClass().ref(env),
+			app->Intent.ACTION_VIEW(app->Intent.getClass().ref(env)), uri);
+
+	auto it = _activities.begin();
+
+	(*it)->getProxy()->Activity.startActivity(jni::Ref((*it)->getActivity()->clazz, env), intent);
+}
+
 Rc<core::Instance> AndroidContextController::loadInstance() {
 	Rc<core::Instance> instance;
 #if MODULE_XENOLITH_BACKEND_VK

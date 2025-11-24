@@ -24,12 +24,12 @@
 #define XENOLITH_APPLICATION_ANDROID_XLANDROID_H_
 
 #include "XLCommon.h" // IWYU pragma: keep
-#include "SPJni.h"
+#include "platform/SPJni.h"
 
 #include <android/configuration.h>
 #include <android/native_activity.h>
 
-#define XL_ANDROID_DEBUG 1
+#define XL_ANDROID_DEBUG 0
 
 #ifndef XL_ANDROID_LOG
 #if XL_ANDROID_DEBUG

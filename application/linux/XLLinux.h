@@ -23,7 +23,6 @@
 #ifndef XENOLITH_APPLICATION_LINUX_XLLINUX_H_
 #define XENOLITH_APPLICATION_LINUX_XLLINUX_H_
 
-#include "SPPlatformInit.h"
 #include "XLCommon.h"
 #include "SPDso.h"
 #include "XLContextInfo.h"

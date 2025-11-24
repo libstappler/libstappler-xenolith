@@ -31,7 +31,7 @@
 
 #if ANDROID
 
-#include "SPJni.h"
+#include "platform/SPJni.h"
 
 #include <android/native_activity.h>
 #include <android/configuration.h>

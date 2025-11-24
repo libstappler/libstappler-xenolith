@@ -1008,34 +1008,34 @@ enum class WindowState : uint64_t {
 	// Extra space here
 
 	// Values for allowed window actions
-	AllowedWindowMenu = 1LLU << 46,
-	AllowedMove = 1LLU << 47,
-	AllowedResize = 1LLU << 48,
-	AllowedMinimize = 1LLU << 49,
-	AllowedShade = 1LLU << 50,
-	AllowedStick = 1LLU << 51,
-	AllowedMaximizeVert = 1LLU << 52,
-	AllowedMaximizeHorz = 1LLU << 53,
-	AllowedClose = 1LLU << 54,
-	AllowedFullscreen = 1LLU << 55,
+	AllowedWindowMenu = 1LLU << 45,
+	AllowedMove = 1LLU << 46,
+	AllowedResize = 1LLU << 47,
+	AllowedMinimize = 1LLU << 48,
+	AllowedShade = 1LLU << 49,
+	AllowedStick = 1LLU << 50,
+	AllowedMaximizeVert = 1LLU << 51,
+	AllowedMaximizeHorz = 1LLU << 52,
+	AllowedClose = 1LLU << 53,
+	AllowedFullscreen = 1LLU << 54,
 	AllowedActionsMask = AllowedMove | AllowedResize | AllowedMinimize | AllowedShade | AllowedStick
 			| AllowedMaximizeVert | AllowedMaximizeHorz | AllowedClose | AllowedFullscreen,
 
 	// Window tiling constraints flag
-	TiledLeft = 1LLU << 56,
-	TiledRight = 1LLU << 57,
-	TiledTop = 1LLU << 58,
-	TiledBottom = 1LLU << 59,
+	TiledLeft = 1LLU << 55,
+	TiledRight = 1LLU << 56,
+	TiledTop = 1LLU << 57,
+	TiledBottom = 1LLU << 58,
 
 	TiledTopLeft = TiledLeft | TiledTop,
 	TiledTopRight = TiledRight | TiledTop,
 	TiledBottomLeft = TiledLeft | TiledBottom,
 	TiledBottomRight = TiledRight | TiledBottom,
 
-	ConstrainedLeft = 1LLU << 60,
-	ConstrainedRight = 1LLU << 61,
-	ConstrainedTop = 1LLU << 62,
-	ConstrainedBottom = 1LLU << 63,
+	ConstrainedLeft = 1LLU << 59,
+	ConstrainedRight = 1LLU << 60,
+	ConstrainedTop = 1LLU << 61,
+	ConstrainedBottom = 1LLU << 62,
 
 	TilingMask = TiledLeft | TiledRight | TiledTop | TiledBottom | ConstrainedLeft
 			| ConstrainedRight | ConstrainedTop | ConstrainedBottom,

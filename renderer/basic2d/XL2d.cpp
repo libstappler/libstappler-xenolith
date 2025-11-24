@@ -21,7 +21,7 @@
  THE SOFTWARE.
  **/
 
-#include "XLCommon.h"
+#include "XLCommon.h" // IWYU pragma: keep
 
 #include "XL2dCommandList.cc"
 #include "XL2dVertexArray.cc"
@@ -44,12 +44,7 @@
 #include "XL2dLinearProgress.cc"
 #include "XL2dRoundedProgress.cc"
 
-#include "scroll/XL2dScrollController.cc"
-#include "scroll/XL2dScrollItemHandle.cc"
-#include "scroll/XL2dScrollViewBase.cc"
-#include "scroll/XL2dScrollView.cc"
-
-#include "XL2dBootstrapApplication.cc"
+#include "icons/XL2dIconSprite.cc"
 
 #include "particle/XL2dParticleSystem.cc"
 #include "particle/XL2dParticleEmitter.cc"

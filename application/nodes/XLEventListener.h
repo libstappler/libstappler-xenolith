@@ -36,6 +36,8 @@ public:
 	virtual ~EventDelegate() = default;
 
 	bool init(Ref *, const EventHeader &h, BusEventCallback &&);
+	bool init(Ref *, SpanView<EventId>, BusEventCallback &&);
+	bool init(Ref *, Vector<EventId> &&, BusEventCallback &&);
 
 	void enable(event::Looper *);
 	void disable();

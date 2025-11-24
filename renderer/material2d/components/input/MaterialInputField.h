@@ -27,8 +27,6 @@
 #include "MaterialSurface.h"
 #include "MaterialInputTextContainer.h"
 #include "MaterialIconSprite.h"
-#include "SPEnum.h"
-#include "XLCoreTextInput.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

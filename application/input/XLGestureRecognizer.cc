@@ -214,15 +214,16 @@ InputEvent *GestureRecognizer::getTouchById(uint32_t id, uint32_t *index) {
 	return nullptr;
 }
 
-bool GestureTouchRecognizer::init(InputCallback &&cb, ButtonMask &&mask) {
+bool GestureTouchRecognizer::init(InputCallback &&cb, InputTouchInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_maxEvents = 10;
-		_buttonMask = sp::move(mask);
+		_buttonMask = info.buttonMask;
 		_callback = sp::move(cb);
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::Begin));
 		_eventMask.set(toInt(InputEventName::Move));
 		_eventMask.set(toInt(InputEventName::End));
@@ -298,16 +299,16 @@ InputEventState GestureTouchRecognizer::renewEvent(const InputEvent &event, floa
 }
 
 
-bool GestureTapRecognizer::init(InputCallback &&cb, ButtonMask &&mask, uint32_t maxTapCount) {
+bool GestureTapRecognizer::init(InputCallback &&cb, InputTapInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_maxEvents = 1;
-		_maxTapCount = maxTapCount;
+		_buttonMask = info.buttonMask;
 		_callback = sp::move(cb);
-		_buttonMask = sp::move(mask);
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::Begin));
 		_eventMask.set(toInt(InputEventName::Move));
 		_eventMask.set(toInt(InputEventName::End));
@@ -327,6 +328,7 @@ void GestureTapRecognizer::update(uint64_t dt) {
 		_callback(_gesture);
 		_gesture.event = GestureEvent::Cancelled;
 		_gesture.input = nullptr;
+		_gesture.time = Time();
 		_gesture.cleanup();
 	}
 }
@@ -339,6 +341,7 @@ void GestureTapRecognizer::cancel() {
 InputEventState GestureTapRecognizer::addEvent(const InputEvent &ev, float density) {
 	if (_gesture.count > 0
 			&& _gesture.pos.distance(ev.currentLocation) > TapDistanceAllowedMulti * density) {
+		_gesture.cleanup();
 		return InputEventState::Declined;
 	}
 	if (GestureRecognizer::addEvent(ev, density) != InputEventState::Declined) {
@@ -363,8 +366,12 @@ InputEventState GestureTapRecognizer::removeEvent(const InputEvent &ev, bool suc
 		_tmpEvent = ev;
 		if (successful
 				&& _gesture.pos.distance(ev.currentLocation) <= TapDistanceAllowed * density) {
-			registerTap();
-			ret = InputEventState::Processed;
+			if (!registerTap()) {
+				ret = _info.exclusive ? InputEventState::DelayedCaptured
+									  : InputEventState::DelayedProcessed;
+			} else {
+				ret = _info.exclusive ? InputEventState::Captured : InputEventState::Processed;
+			}
 		} else {
 			ret = InputEventState::Processed;
 		}
@@ -382,7 +389,7 @@ InputEventState GestureTapRecognizer::renewEvent(const InputEvent &ev, float den
 	return ret;
 }
 
-void GestureTapRecognizer::registerTap() {
+bool GestureTapRecognizer::registerTap() {
 	auto currentTime = Time::now();
 
 	if (currentTime < _gesture.time + TapIntervalAllowed) {
@@ -392,28 +399,29 @@ void GestureTapRecognizer::registerTap() {
 	}
 
 	_gesture.time = currentTime;
-	if (_gesture.count == _maxTapCount) {
+	if (_gesture.count == _info.maxTapCount) {
 		_gesture.event = GestureEvent::Activated;
 		_gesture.input = _events.empty() ? &_tmpEvent : &_events.front();
 		_callback(_gesture);
 		_gesture.event = GestureEvent::Cancelled;
 		_gesture.input = nullptr;
 		_gesture.cleanup();
+		return true;
+	} else {
+		return false;
 	}
 }
 
-bool GesturePressRecognizer::init(InputCallback &&cb, TimeInterval interval, bool continuous,
-		ButtonMask &&btn) {
+bool GesturePressRecognizer::init(InputCallback &&cb, InputPressInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_maxEvents = 1;
+		_buttonMask = info.buttonMask;
 		_callback = sp::move(cb);
-		_interval = interval;
-		_continuous = continuous;
-		_buttonMask = sp::move(btn);
+		_info = sp::move(info);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -432,9 +440,11 @@ void GesturePressRecognizer::cancel() {
 }
 
 void GesturePressRecognizer::update(uint64_t dt) {
-	if ((!_notified || _continuous) && _lastTime && _events.size() > 0) {
+	if ((!_notified || hasFlag(_info.flags, InputPressFlags::Continuous)) && _lastTime
+			&& _events.size() > 0) {
 		auto time = Time::now() - _lastTime;
-		if (_gesture.time.mksec() / _interval.mksec() != time.mksec() / _interval.mksec()) {
+		if (_gesture.time.mksec() / _info.interval.mksec()
+				!= time.mksec() / _info.interval.mksec()) {
 			_gesture.time = time;
 			++_gesture.tickCount;
 			_gesture.event = GestureEvent::Activated;
@@ -452,14 +462,18 @@ InputEventState GesturePressRecognizer::addEvent(const InputEvent &event, float 
 		_gesture.cleanup();
 		_gesture.pos = event.currentLocation;
 		_gesture.time.clear();
-		_gesture.limit = _interval;
+		_gesture.limit = _info.interval;
 		_gesture.event = GestureEvent::Began;
 		_gesture.input = &event;
 		if (_callback(_gesture)) {
 			GestureRecognizer::addEvent(event, density);
 			_lastTime = Time::now();
 			_notified = false;
-			return InputEventState::Captured;
+			if (hasFlag(_info.flags, InputPressFlags::Capture)) {
+				return InputEventState::Captured;
+			} else {
+				return InputEventState::Processed;
+			}
 		}
 	}
 	return InputEventState::Declined;
@@ -495,18 +509,16 @@ InputEventState GesturePressRecognizer::renewEvent(const InputEvent &event, floa
 	return InputEventState::Declined;
 }
 
-bool GestureSwipeRecognizer::init(InputCallback &&cb, float threshold, bool includeThreshold,
-		ButtonMask &&btn) {
+bool GestureSwipeRecognizer::init(InputCallback &&cb, InputSwipeInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_maxEvents = 2;
+		_buttonMask = info.buttonMask;
 		_callback = sp::move(cb);
-		_threshold = threshold;
-		_includeThreshold = includeThreshold;
-		_buttonMask = sp::move(btn);
+		_info = sp::move(info);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -583,9 +595,9 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 			_gesture.delta = current - prev;
 			_gesture.density = density;
 
-			if (!_swipeBegin && _gesture.delta.length() > _threshold * density) {
+			if (!_swipeBegin && _gesture.delta.length() > _info.threshold * density) {
 				_gesture.cleanup();
-				if (_includeThreshold) {
+				if (_info.sendThreshold) {
 					_gesture.delta = current - prev;
 				} else {
 					_gesture.delta = current - event.previousLocation;
@@ -602,7 +614,7 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 					return InputEventState::Declined;
 				}
 
-				if (_includeThreshold) {
+				if (_info.sendThreshold) {
 					_gesture.delta = current - event.previousLocation;
 				}
 			}
@@ -641,7 +653,7 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 				_gesture.midpoint = _gesture.secondTouch.getMidpoint(_gesture.firstTouch);
 				_gesture.delta = _gesture.midpoint - prev;
 
-				if (!_swipeBegin && _gesture.delta.length() > _threshold * density) {
+				if (!_swipeBegin && _gesture.delta.length() > _info.threshold * density) {
 					_gesture.cleanup();
 					_gesture.firstTouch = current;
 					_gesture.secondTouch = current;
@@ -685,15 +697,16 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 	}
 }
 
-bool GesturePinchRecognizer::init(InputCallback &&cb, ButtonMask &&btn) {
+bool GesturePinchRecognizer::init(InputCallback &&cb, InputPinchInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_maxEvents = 2;
+		_buttonMask = info.buttonMask;
 		_callback = sp::move(cb);
-		_buttonMask = sp::move(btn);
+		_info = sp::move(info);
 
 		// enable all touch events
 		_eventMask.set(toInt(InputEventName::Begin));
@@ -793,13 +806,14 @@ InputEventState GesturePinchRecognizer::renewEvent(const InputEvent &event, floa
 	return InputEventState::Declined;
 }
 
-bool GestureScrollRecognizer::init(InputCallback &&cb) {
+bool GestureScrollRecognizer::init(InputCallback &&cb, InputScrollInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_callback = sp::move(cb);
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::Scroll));
 		return true;
 	}
@@ -824,15 +838,15 @@ InputEventState GestureScrollRecognizer::handleInputEvent(const InputEvent &even
 }
 
 
-bool GestureMoveRecognizer::init(InputCallback &&cb, bool withinNode) {
+bool GestureMoveRecognizer::init(InputCallback &&cb, InputMoveInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_callback = sp::move(cb);
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::MouseMove));
-		_onlyWithinNode = withinNode;
 		return true;
 	}
 
@@ -841,7 +855,7 @@ bool GestureMoveRecognizer::init(InputCallback &&cb, bool withinNode) {
 
 bool GestureMoveRecognizer::canHandleEvent(const InputEvent &event) const {
 	if (GestureRecognizer::canHandleEvent(event)) {
-		if (!_onlyWithinNode
+		if (!_info.withinNode
 				|| (_listener && _listener->getOwner()
 						&& _listener->getOwner()->isTouched(event.currentLocation,
 								_listener->getTouchPadding()))) {
@@ -880,14 +894,14 @@ void GestureMoveRecognizer::onExit() {
 	GestureRecognizer::onExit();
 }
 
-bool GestureKeyRecognizer::init(InputCallback &&cb, KeyMask &&mask) {
+bool GestureKeyRecognizer::init(InputCallback &&cb, InputKeyInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
-	if (cb && mask.any()) {
+	if (cb && info.keyMask.any()) {
 		_callback = sp::move(cb);
-		_keyMask = mask;
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::KeyPressed));
 		_eventMask.set(toInt(InputEventName::KeyRepeated));
 		_eventMask.set(toInt(InputEventName::KeyReleased));
@@ -901,7 +915,7 @@ bool GestureKeyRecognizer::init(InputCallback &&cb, KeyMask &&mask) {
 
 bool GestureKeyRecognizer::canHandleEvent(const InputEvent &ev) const {
 	if (GestureRecognizer::canHandleEvent(ev)) {
-		if (_keyMask.test(toInt(ev.data.key.keycode))) {
+		if (_info.keyMask.test(toInt(ev.data.key.keycode))) {
 			return true;
 		}
 	}
@@ -916,7 +930,7 @@ bool GestureKeyRecognizer::isKeyPressed(InputKeyCode code) const {
 }
 
 InputEventState GestureKeyRecognizer::addEvent(const InputEvent &event, float density) {
-	if (_keyMask.test(toInt(event.data.key.keycode))) {
+	if (_info.keyMask.test(toInt(event.data.key.keycode))) {
 		_pressedKeys.set(toInt(event.data.key.keycode));
 		return _callback(GestureData{GestureEvent::Began, &event}) ? InputEventState::Captured
 																   : InputEventState::Declined;
@@ -942,15 +956,14 @@ InputEventState GestureKeyRecognizer::renewEvent(const InputEvent &event, float 
 	return InputEventState::Declined;
 }
 
-bool GestureMouseOverRecognizer::init(InputCallback &&cb, float padding, bool onlyFocused) {
+bool GestureMouseOverRecognizer::init(InputCallback &&cb, InputMouseOverInfo &&info) {
 	if (!GestureRecognizer::init()) {
 		return false;
 	}
 
 	if (cb) {
 		_callback = sp::move(cb);
-		_padding = padding;
-		_onlyFocused = onlyFocused;
+		_info = sp::move(info);
 		_eventMask.set(toInt(InputEventName::MouseMove));
 		_eventMask.set(toInt(InputEventName::WindowState));
 		return true;
@@ -977,7 +990,7 @@ InputEventState GestureMouseOverRecognizer::handleInputEvent(const InputEvent &e
 		break;
 	case InputEventName::MouseMove:
 		if (auto tar = _listener->getOwner()) {
-			auto v = tar->isTouched(event.currentLocation, _padding);
+			auto v = tar->isTouched(event.currentLocation, _info.padding);
 			if (_hasMouseOver != v) {
 				_hasMouseOver = v;
 				stateChanged = true;
@@ -1027,7 +1040,7 @@ void GestureMouseOverRecognizer::updateState(const InputEvent &event) {
 		_viewHasFocus = hasFlag(dispatcher->getWindowState(), WindowState::Focused);
 	}
 
-	auto value = (!_onlyFocused || _viewHasFocus) && _viewHasPointer && _hasMouseOver;
+	auto value = (!_info.onlyFocused || _viewHasFocus) && _viewHasPointer && _hasMouseOver;
 	if (value != _value) {
 		_value = value;
 		_event.input = &event;

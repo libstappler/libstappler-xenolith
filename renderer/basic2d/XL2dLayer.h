@@ -55,7 +55,7 @@ struct SP_PUBLIC SimpleGradient {
  */
 class SP_PUBLIC Layer : public Sprite {
 public:
-	virtual ~Layer() { }
+	virtual ~Layer() = default;
 
 	virtual bool init() override;
 	virtual bool init(const Color4F &);
@@ -77,16 +77,17 @@ protected:
 	SimpleGradient _gradient;
 };
 
-}
+} // namespace stappler::xenolith::basic2d
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-template <> inline
-xenolith::basic2d::SimpleGradient progress<xenolith::basic2d::SimpleGradient>(const xenolith::basic2d::SimpleGradient &a,
-		const xenolith::basic2d::SimpleGradient &b, float p) {
+template <>
+inline xenolith::basic2d::SimpleGradient progress<xenolith::basic2d::SimpleGradient>(
+		const xenolith::basic2d::SimpleGradient &a, const xenolith::basic2d::SimpleGradient &b,
+		float p) {
 	return xenolith::basic2d::SimpleGradient::progress(a, b, p);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* XENOLITH_RENDERER_BASIC2D_XL2DLAYER_H_ */

@@ -160,12 +160,31 @@ struct SP_PUBLIC FrameInfo {
 	Rc<Scene> scene;
 	Rc<InputListenerStorage> input;
 
+	// This is where the ZOrder value for the current nodes is stored as they are added (from parent to children)
 	memory::vector<ZOrder> zPath;
+
+	// Transformation values ​​for screen space (View/Director) are stored here
 	memory::vector<Mat4> viewProjectionStack;
+
+	// Transformation values ​​for the current nodes are stored here (from parent to child)
 	memory::vector<Mat4> modelTransformStack;
+
+	// Values ​​for the node positioning depth (from parent to child) are stored here.
+	// When processing the graph in depth, the value can only grow
+	// (child node must be higher than or at the same level as parent)
 	memory::vector<float> depthStack;
+
+	// Stack of context manipulators. The context corresponds to a separate render queue
+	// to which data will be sent when the context is popped from the stack
 	memory::vector<Rc<FrameContextHandle>> contextStack;
+
+	// A set of system stacks by their ID
+	// A node can add a new system of a certain type to the stack;
+	// this system will be placed on the stack corresponding to its ID and thereby replace
+	// for child nodes the system that was added to this stack earlier
 	memory::map<uint64_t, memory::vector<Rc<System>>> systemStack;
+
+	// Render queue attachments for which data has already been prepared are added here
 	memory::set<const core::AttachmentData *> resolvedInputs;
 
 	FrameContextHandle *currentContext = nullptr;

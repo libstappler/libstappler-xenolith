@@ -53,7 +53,7 @@ bool SceneContent::init() {
 			return true;
 		}
 		return data.event == GestureEvent::Began;
-	}, InputListener::makeKeyMask({InputKeyCode::ESCAPE}));
+	}, InputKeyInfo{makeKeyMask(InputKeyCode::ESCAPE)});
 
 	_inputListener->setWindowStateCallback([this](WindowState state, WindowState changes) -> bool {
 		handleWindowStateChanged(state, changes);
