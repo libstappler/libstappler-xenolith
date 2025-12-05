@@ -69,7 +69,8 @@ public:
 protected:
 	friend class Asset;
 
-	AssetLock(Rc<Asset> &&, const AssetVersionData &, Function<void(const AssetVersionData &)> &&, Ref *owner);
+	AssetLock(Rc<Asset> &&, const AssetVersionData &, Function<void(const AssetVersionData &)> &&,
+			Ref *owner);
 
 	AssetVersionData _lockedVersion;
 	Function<void(const AssetVersionData &)> _releaseFunction;
@@ -101,6 +102,8 @@ public:
 	StringView getCachePath() const { return _cache; }
 	Time getTouch() const { return _touch; }
 	TimeInterval getTtl() const { return _ttl; }
+
+	AssetLibrary *getLibrary() const { return _library; }
 
 	StringView getContentType() const;
 
@@ -163,6 +166,6 @@ protected:
 	mutable Mutex _mutex;
 };
 
-}
+} // namespace stappler::xenolith::storage
 
 #endif /* XENOLITH_RESOURCES_ASSETS_XLASSET_H_ */

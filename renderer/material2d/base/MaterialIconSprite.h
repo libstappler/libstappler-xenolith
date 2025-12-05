@@ -24,7 +24,7 @@
 #ifndef XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALICONSPRITE_H_
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALICONSPRITE_H_
 
-#include "XLIcons.h"
+#include "XL2dIcons.h"
 #include "XL2dVectorSprite.h"
 #include "MaterialSurfaceInterior.h"
 

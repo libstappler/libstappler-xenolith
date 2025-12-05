@@ -28,7 +28,7 @@
 #include "MaterialMenuSource.h"
 #include "MaterialLabel.h"
 #include "XLSubscriptionListener.h"
-#include "XLIcons.h"
+#include "XL2dIcons.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

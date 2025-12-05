@@ -24,9 +24,8 @@
 #include "MaterialDataScroll.h"
 #include "XLDirector.h"
 #include "XLAppThread.h"
-#include "XL2dLayerRounded.h"
 #include "XL2dScrollController.h"
-#include "XLIcons.h"
+#include "XL2dIcons.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 

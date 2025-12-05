@@ -426,6 +426,7 @@ Rc<FontFaceSet> FontController::getLayout(FontParameters style) {
 
 	auto familyIt = _families.find(style.fontFamily);
 	if (familyIt == _families.end()) {
+		slog().error("FontController", "Font family is not defined: ", style.fontFamily);
 		return nullptr;
 	}
 

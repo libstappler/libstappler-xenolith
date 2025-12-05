@@ -111,7 +111,7 @@ bool AndroidActivity::init(AndroidContextController *controller, ANativeActivity
 }
 
 bool AndroidActivity::run() {
-	memory::pool::context ctx(thread::ThreadInfo::getThreadInfo()->threadPool);
+	memory::context ctx(thread::ThreadInfo::getThreadInfo()->threadPool);
 
 	_activity->instance = this;
 

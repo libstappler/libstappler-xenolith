@@ -238,7 +238,7 @@ bool Context::init(ContextConfig &&info, ContentInitializer &&init) {
 	_initializer = sp::move(init);
 	_initializer.initialize();
 
-	memory::pool::context ctx(_initializer.pool);
+	memory::context ctx(_initializer.pool);
 
 	_info = info.context;
 

@@ -555,8 +555,7 @@ void ScrollViewBase::onOverscrollPerformed(float velocity, float pos, float boun
 	}
 }
 
-bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 &delta,
-		const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEventBegin(uint32_t id, Vec2 loc, Vec2 delta, Vec2 velocity) {
 	if (_layout == Layout::Vertical) {
 		if (std::abs(delta.x) < std::abs(delta.y)) {
 			_inputListener->setExclusiveForTouch(id);
@@ -588,8 +587,7 @@ bool ScrollViewBase::onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 
 	return true;
 }
 
-bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delta,
-		const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEvent(uint32_t id, Vec2 loc, Vec2 delta, Vec2 velocity) {
 	if (_layout == Vertical) {
 		return onSwipe(delta.y / _globalScale.y, velocity.y / _globalScale.y, false);
 	} else {
@@ -597,13 +595,12 @@ bool ScrollViewBase::onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &delt
 	}
 }
 
-bool ScrollViewBase::onSwipeEventEnd(uint32_t id, const Vec2 &loc, const Vec2 &d,
-		const Vec2 &velocity) {
+bool ScrollViewBase::onSwipeEventEnd(uint32_t id, Vec2 loc, Vec2 d, Vec2 velocity) {
 	_movement = Movement::None;
 	if (_layout == Vertical) {
-		return onSwipe(0, velocity.y / _globalScale.y, true);
+		return onSwipe(0, velocity.y / _inputDensity, true);
 	} else {
-		return onSwipe(0, -velocity.x / _globalScale.x, true);
+		return onSwipe(0, -velocity.x / _inputDensity, true);
 	}
 }
 
@@ -881,17 +878,17 @@ void ScrollViewBase::onOverscroll(float delta) {
 
 void ScrollViewBase::setScrollDirty(bool value) { _scrollDirty = value; }
 
-bool ScrollViewBase::onPressBegin(const Vec2 &) {
+bool ScrollViewBase::onPressBegin(Vec2) {
 	_root->stopAllActions();
 	onAnimationFinished();
 	return false;
 }
 
-bool ScrollViewBase::onLongPress(const Vec2 &, const TimeInterval &time, int count) { return true; }
-bool ScrollViewBase::onPressEnd(const Vec2 &, const TimeInterval &) { return true; }
-bool ScrollViewBase::onPressCancel(const Vec2 &, const TimeInterval &) { return true; }
+bool ScrollViewBase::onLongPress(Vec2, TimeInterval time, int count) { return true; }
+bool ScrollViewBase::onPressEnd(Vec2, TimeInterval) { return true; }
+bool ScrollViewBase::onPressCancel(Vec2, TimeInterval) { return true; }
 
-void ScrollViewBase::onTap(int count, const Vec2 &loc) { }
+void ScrollViewBase::onTap(int count, Vec2 loc) { }
 
 Vec2 ScrollViewBase::convertFromScrollableSpace(const Vec2 &pos) {
 	return _root->getNodeToParentTransform().transformPoint(pos);

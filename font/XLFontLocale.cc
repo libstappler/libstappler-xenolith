@@ -24,11 +24,9 @@
 #include "XLFontLocale.h"
 #include "SPBytesReader.h"
 #include "SPMemInterface.h"
-#include "SPMemPoolInterface.h"
 #include "SPRef.h"
 #include "SPString.h"
 #include "SPStringDetail.h"
-#include <cctype>
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::locale {
 
@@ -166,7 +164,7 @@ LocaleManager::LocaleManager(Ref *ref, memory::pool_t *p)
 bool LocaleManager::init() { return true; }
 
 void LocaleManager::define(const StringView &locale, LocaleInitList &&init) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 	auto it = _strings.find(locale);
 	if (it == _strings.end()) {
 		it = _strings.emplace(locale.str<Interface>(), StringMap()).first;
@@ -178,7 +176,7 @@ void LocaleManager::define(const StringView &locale, LocaleInitList &&init) {
 }
 
 void LocaleManager::define(const StringView &locale, LocaleIndexList &&init) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 	auto it = _indexes.find(locale);
 	if (it == _indexes.end()) {
 		it = _indexes.emplace(locale.str<Interface>(), StringIndexMap()).first;
@@ -190,7 +188,7 @@ void LocaleManager::define(const StringView &locale, LocaleIndexList &&init) {
 
 void LocaleManager::define(const StringView &locale,
 		const std::array<StringView, toInt(TimeTokens::Max)> &arr) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 	auto it = _timeTokens.find(locale);
 	if (it == _timeTokens.end()) {
 		it = _timeTokens

@@ -85,8 +85,8 @@ using InputEventMask = std::bitset<toInt(InputEventName::Max)>;
 using InputButtonMask = std::bitset<toInt(InputMouseButton::Max)>;
 using InputKeyMask = std::bitset<toInt(InputKeyCode::Max)>;
 
-extern InputEventMask EventMaskTouch;
-extern InputEventMask EventMaskKey;
+SP_PUBLIC extern InputEventMask EventMaskTouch;
+SP_PUBLIC extern InputEventMask EventMaskKey;
 
 SP_PUBLIC InputButtonMask makeButtonMask(std::initializer_list<InputMouseButton> &&);
 SP_PUBLIC InputButtonMask makeButtonMask(InputMouseButton);

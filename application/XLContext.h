@@ -234,7 +234,7 @@ public:
 
 	template <typename Callback>
 	auto performTemporary(const Callback &cb) {
-		return memory::pool::perform_clear(cb, _initializer.tmpPool);
+		return memory::perform_clear(cb, _initializer.tmpPool);
 	}
 
 	virtual void openUrl(StringView);

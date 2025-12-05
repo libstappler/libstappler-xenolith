@@ -141,6 +141,22 @@ event::BusDelegate *EventListener::listenForEventWithObject(const EventHeader &h
 	return d;
 }
 
+void EventListener::removeDelegate(event::BusDelegate *d) {
+	auto it = _listeners.find(d);
+	if (it != _listeners.end()) {
+		Rc<EventDelegate> l = (*it);
+
+		_listeners.erase(it);
+
+		if (l->getLooper()) {
+			l->invalidate();
+		}
+		if (l->getBus()) {
+			l->disable();
+		}
+	}
+}
+
 void EventListener::clear() {
 	auto l = sp::move(_listeners);
 	_listeners.clear();

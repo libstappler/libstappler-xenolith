@@ -24,7 +24,7 @@
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSNACKBARDATA_H_
 
 #include "MaterialConfig.h"
-#include "XLIcons.h"
+#include "XL2dIcons.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::material2d {
 
@@ -51,7 +51,8 @@ struct SP_PUBLIC SnackbarData {
 	SnackbarData(const StringView &str, const Color &color, float blendValue)
 	: text(str.str<Interface>()), textColor(color), textBlendValue(blendValue) { }
 
-	SnackbarData &withButton(const StringView &str, Function<void()> &&cb, const Color &color = Color::White, float buttonBlend = 0.0f) {
+	SnackbarData &withButton(const StringView &str, Function<void()> &&cb,
+			const Color &color = Color::White, float buttonBlend = 0.0f) {
 		buttonText = str.str<Interface>();
 		buttonIcon = IconName::None;
 		buttonCallback = cb;
@@ -60,7 +61,8 @@ struct SP_PUBLIC SnackbarData {
 		return *this;
 	}
 
-	SnackbarData &withButton(const StringView &str, IconName ic, Function<void()> &&cb, const Color &color = Color::White, float buttonBlend = 0.0f) {
+	SnackbarData &withButton(const StringView &str, IconName ic, Function<void()> &&cb,
+			const Color &color = Color::White, float buttonBlend = 0.0f) {
 		buttonText = str.str<Interface>();
 		buttonIcon = ic;
 		buttonCallback = cb;
@@ -69,7 +71,8 @@ struct SP_PUBLIC SnackbarData {
 		return *this;
 	}
 
-	SnackbarData &withButton(IconName ic, Function<void()> &&cb, const Color &color = Color::White, float buttonBlend = 0.0f) {
+	SnackbarData &withButton(IconName ic, Function<void()> &&cb, const Color &color = Color::White,
+			float buttonBlend = 0.0f) {
 		buttonText = String();
 		buttonIcon = ic;
 		buttonCallback = cb;
@@ -84,6 +87,6 @@ struct SP_PUBLIC SnackbarData {
 	}
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALSNACKBARDATA_H_ */

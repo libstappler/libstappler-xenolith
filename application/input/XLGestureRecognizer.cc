@@ -621,23 +621,23 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 
 			if (_swipeBegin /* && _gesture.delta.length() > 0.01f */) {
 				auto t = Time::now();
-				float tm = (float)1'000'000LL / (float)((t - _lastTime).toMicroseconds());
-				if (tm > 80) {
-					tm = 80;
+				float fsec = (t - _lastTime).toFloatSeconds();
+				if (_gesture.delta != Vec2::ZERO && fsec > 1.0f / 500.0f) {
+					auto tmd = _gesture.delta / fsec;
+
+					float velX = _velocityX.step(tmd.x);
+					float velY = _velocityY.step(tmd.y);
+
+					_gesture.velocity = Vec2(velX, velY);
+					_lastTime = t;
 				}
 
-				float velX = _velocityX.step(_gesture.delta.x * tm);
-				float velY = _velocityY.step(_gesture.delta.y * tm);
-
-				_gesture.velocity = Vec2(velX, velY);
 				_gesture.event = GestureEvent::Activated;
 				_gesture.input = &event;
 				if (!_callback(_gesture)) {
 					cancel();
 					return InputEventState::Declined;
 				}
-
-				_lastTime = t;
 			}
 		} else if (_events.size() == 2) {
 			Vec2 current = event.currentLocation;
@@ -671,23 +671,23 @@ InputEventState GestureSwipeRecognizer::renewEvent(const InputEvent &event, floa
 
 				if (_swipeBegin /* && _gesture.delta.length() > 0.01f */) {
 					auto t = Time::now();
-					float tm = (float)1'000'000LL / (float)((t - _lastTime).toMicroseconds());
-					if (tm > 80) {
-						tm = 80;
+					float fsec = (t - _lastTime).toFloatSeconds();
+					if (_gesture.delta != Vec2::ZERO && fsec > 1.0f / 500.0f) {
+						auto tmd = _gesture.delta / fsec;
+
+						float velX = _velocityX.step(tmd.x);
+						float velY = _velocityY.step(tmd.y);
+
+						_gesture.velocity = Vec2(velX, velY);
+						_lastTime = t;
 					}
 
-					float velX = _velocityX.step(_gesture.delta.x * tm);
-					float velY = _velocityY.step(_gesture.delta.y * tm);
-
-					_gesture.velocity = Vec2(velX, velY);
 					_gesture.event = GestureEvent::Activated;
 					_gesture.input = &event;
 					if (!_callback(_gesture)) {
 						cancel();
 						return InputEventState::Declined;
 					}
-
-					_lastTime = t;
 				}
 			}
 		}

@@ -142,7 +142,7 @@ CommandList::~CommandList() {
 		return;
 	}
 
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		auto cmd = _first;
 		do {
 			cmd->release();

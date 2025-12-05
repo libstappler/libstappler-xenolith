@@ -318,6 +318,15 @@ Size2 LabelBase::getLabelSize(font::FontController *source, const DescriptionSty
 	return Size2(spec.maxAdvance / style.font.density, spec.height / style.font.density);
 }
 
+void LabelBase::setCommonStyle(const DescriptionStyle &style) {
+	if (_style != style) {
+		_style = style;
+		setLabelDirty();
+	}
+}
+
+const LabelBase::DescriptionStyle &LabelBase::getCommonStyle() const { return _style; }
+
 void LabelBase::setAlignment(TextAlign alignment) {
 	if (_alignment != alignment) {
 		_alignment = alignment;

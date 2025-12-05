@@ -24,8 +24,6 @@
 #include "XLStorageServer.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
-#include "SPMemAlloc.h"
-#include "SPMemPoolInterface.h"
 #include "XLStorageComponent.h"
 #include "SPValid.h"
 #include "SPThread.h"
@@ -158,7 +156,7 @@ bool Server::init(AppThread *app, const Value &params) {
 	auto alloc = memory::allocator::create();
 	auto pool = memory::pool::create(alloc);
 
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	_data = new (std::nothrow) ServerData;
 	_data->_serverAlloc = alloc;
@@ -837,7 +835,7 @@ bool Server::ServerData::execute(const ServerDataTaskCallback &task) {
 
 	bool ret = false;
 
-	memory::pool::perform_clear([&] {
+	memory::perform_clear([&] {
 		driver->performWithStorage(handle, [&, this](const db::Adapter &adapter) {
 			adapter.performWithTransaction([&, this](const db::Transaction &t) {
 				currentTransaction = &t;
@@ -854,7 +852,7 @@ bool Server::ServerData::execute(const ServerDataTaskCallback &task) {
 }
 
 void Server::ServerData::runAsync() {
-	memory::pool::perform_clear([&] {
+	memory::perform_clear([&] {
 		while (asyncTasks && driver->isValid(handle)) {
 			auto tmp = asyncTasks;
 			asyncTasks = nullptr;
@@ -873,7 +871,7 @@ void Server::ServerData::runAsync() {
 }
 
 void Server::ServerData::threadInit() {
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		handle = driver->connect(storage->params);
 		if (!handle.get()) {
 			StringStream out;
@@ -889,7 +887,7 @@ void Server::ServerData::threadInit() {
 	asyncPool = memory::pool::create();
 	threadPool = memory::pool::create();
 
-	memory::pool::perform_clear([&] {
+	memory::perform_clear([&] {
 		driver->init(handle, db::Vector<db::StringView>());
 
 		driver->performWithStorage(handle, [&, this](const db::Adapter &adapter) {
@@ -940,6 +938,7 @@ bool Server::ServerData::worker() {
 		return false;
 	}
 
+	slog().debug("Server::ServerData", "execute");
 	execute(task);
 	return true;
 }
@@ -958,14 +957,14 @@ void Server::ServerData::threadDispose() {
 		}
 	}
 
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		if (driver->isValid(handle)) {
 			driver->performWithStorage(handle, [&, this](const db::Adapter &adapter) {
 				auto it = storage->components.begin();
 				while (it != storage->components.end()) {
 					adapter.performWithTransaction([&, this](const db::Transaction &t) {
 						do {
-							memory::pool::context ctx(it->second->pool);
+							memory::context ctx(it->second->pool);
 							for (auto &iit : it->second->components) {
 								iit.second->handleChildRelease(*server, t);
 								iit.second->~Component();
@@ -998,7 +997,7 @@ void Server::ServerData::handleHeartbeat() {
 void Server::ServerData::addAsyncTask(
 		const db::Callback<db::Function<void(const db::Transaction &)>(db::pool_t *)> &setupCb)
 		const {
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		if (!asyncTasks) {
 			asyncTasks = new (asyncPool) db::Vector<db::Function<void(const db::Transaction &)>>;
 		}
@@ -1009,7 +1008,7 @@ void Server::ServerData::addAsyncTask(
 bool Server::ServerData::addComponent(ComponentContainer *comp, const db::Transaction &t) {
 	ServerComponentLoader loader(this, t);
 
-	memory::pool::perform([&] { comp->handleStorageInit(loader); }, loader.getPool());
+	memory::perform([&] { comp->handleStorageInit(loader); }, loader.getPool());
 
 	return loader.run(comp);
 }
@@ -1021,7 +1020,7 @@ void Server::ServerData::removeComponent(ComponentContainer *comp, const db::Tra
 	}
 
 	do {
-		memory::pool::context ctx(cmpIt->second->pool);
+		memory::context ctx(cmpIt->second->pool);
 		for (auto &it : cmpIt->second->components) {
 			it.second->handleChildRelease(*server, t);
 			it.second->~Component();
@@ -1072,14 +1071,14 @@ ServerComponentLoader::ServerComponentLoader(Server::ServerData *data, const db:
 , _pool(memory::pool::create(data->serverPool))
 , _server(data->server)
 , _transaction(&t) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 
 	_components = new (std::nothrow) ServerComponentData;
 	_components->pool = _pool;
 }
 
 void ServerComponentLoader::exportComponent(Component *comp) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 
 	_components->components.emplace(comp->getName(), comp);
 }
@@ -1089,7 +1088,7 @@ const db::Scheme *ServerComponentLoader::exportScheme(const db::Scheme &scheme) 
 }
 
 bool ServerComponentLoader::run(ComponentContainer *comp) {
-	memory::pool::context ctx(_pool);
+	memory::context ctx(_pool);
 
 	_components->container = comp;
 	_data->storage->components.emplace(comp, _components);

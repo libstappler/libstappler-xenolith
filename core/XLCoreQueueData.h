@@ -135,7 +135,7 @@ struct SpecializationConstant {
 	SpecializationConstant(float val) : type(Float), floatValue(val) { }
 	SpecializationConstant(ValueCallback &&cb) : type(Callback) {
 		auto pool = memory::pool::acquire();
-		memory::pool::perform([&] { function = new (pool) ValueCallback(move(cb)); }, pool);
+		memory::perform([&] { function = new (pool) ValueCallback(move(cb)); }, pool);
 	}
 };
 

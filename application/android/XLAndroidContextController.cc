@@ -220,7 +220,7 @@ bool AndroidContextController::init(NotNull<Context> ctx, ContextConfig &&config
 }
 
 int AndroidContextController::run(NotNull<ContextContainer> c) {
-	memory::pool::context ctx(thread::ThreadInfo::getThreadInfo()->threadPool);
+	memory::context ctx(thread::ThreadInfo::getThreadInfo()->threadPool);
 
 	_displayConfigManager =
 			Rc<AndroidDisplayConfigManager>::create(this, [this](NotNull<DisplayConfigManager> m) {

@@ -245,7 +245,7 @@ uint64_t Resource::loadImageMemoryData(uint8_t *ptr, uint64_t expectedSize, Byte
 
 uint64_t Resource::loadImageFileData(uint8_t *ptr, uint64_t expectedSize, FileInfo path,
 		ImageFormat fmt, const ImageData::DataCallback &dcb) {
-	return memory::pool::perform_temporary([&]() -> uint64_t {
+	return memory::perform_temporary([&]() -> uint64_t {
 		auto f = filesystem::openForReading(path);
 		if (f) {
 			auto fsize = f.size();
@@ -337,8 +337,8 @@ static T *Resource_conditionalInsert(memory::vector<T *> &vec, StringView key,
 
 static void Resource_loadFileData(uint8_t *ptr, uint64_t size, StringView path,
 		const BufferData::DataCallback &dcb) {
-	memory::pool::perform_temporary([&] {
-		auto f = filesystem::openForReading(path);
+	memory::perform_temporary([&] {
+		auto f = filesystem::openForReading(FileInfo(path));
 		if (f) {
 			uint64_t fsize = f.size();
 			f.seek(0, io::Seek::Set);
@@ -363,7 +363,7 @@ Resource::Builder::Builder(StringView name)
 }
 
 Resource::Builder::Builder(memory::pool_t *p, StringView name) {
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		_data = new (p) ResourceData;
 		_data->pool = p;
 		_data->key = name.pdup(p);
@@ -660,7 +660,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 
 		Extent3 extent;
 		extent.depth = 1;
-		if (!bitmap::getImageSize(StringView(npath), extent.width, extent.height)) {
+		if (!bitmap::getImageSize(FileInfo(npath), extent.width, extent.height)) {
 			log::source().error("Resource", "Fail to add image: ", key,
 					", fail to find image dimensions: ", it);
 			return nullptr;
@@ -687,7 +687,7 @@ const ImageData *Resource::Builder::addImage(StringView key, ImageInfo &&img,
 		buf->memCallback = [imagesData, format = img.format](uint8_t *ptr, uint64_t size,
 								   const ImageData::DataCallback &dcb) {
 			for (auto &it : imagesData) {
-				auto ret = Resource::loadImageFileData(ptr, size, it.path, format, dcb);
+				auto ret = Resource::loadImageFileData(ptr, size, FileInfo(it.path), format, dcb);
 				if (ptr) {
 					if (size >= ret) {
 						ptr += ret;

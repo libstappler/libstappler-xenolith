@@ -916,7 +916,7 @@ uint64_t Queue::incrementOrder() {
 }
 
 bool Queue::prepare(Device &dev) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	for (auto &it : _data->programs) {
 		if (!it->data.empty()) {
@@ -1132,7 +1132,7 @@ AttachmentPassBuilder::AttachmentPassBuilder(AttachmentPassData *data) : _data(d
 bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, DescriptorType type,
 		AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto p = new (pool) PipelineDescriptor;
 	p->key = attachment->key;
@@ -1152,7 +1152,7 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment, D
 bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment,
 		DescriptorFlags flags, DescriptorType type, AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto p = new (pool) PipelineDescriptor;
 	p->key = attachment->key;
@@ -1173,7 +1173,7 @@ bool DescriptorSetBuilder::addDescriptor(const AttachmentPassData *attachment,
 bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count,
 		DescriptorFlags flags, DescriptorType type, AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto p = new (pool) PipelineDescriptor;
 	p->key = attachment->key;
@@ -1194,7 +1194,7 @@ bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachme
 bool DescriptorSetBuilder::addDescriptorArray(const AttachmentPassData *attachment, uint32_t count,
 		DescriptorType type, AttachmentLayout layout) {
 	auto pool = _data->layout->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto p = new (pool) PipelineDescriptor;
 	p->key = attachment->key;
@@ -1216,7 +1216,7 @@ DescriptorSetBuilder::DescriptorSetBuilder(DescriptorSetData *data) : _data(data
 
 bool PipelineLayoutBuilder::addSet(const Callback<void(DescriptorSetBuilder &)> &cb) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto s = new (pool) DescriptorSetData;
 	s->key = _data->key;
@@ -1251,7 +1251,7 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
 		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops,
 		BlendInfo blendInfo) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto a = new (pool) AttachmentSubpassData;
 	a->key = attachment->key;
@@ -1272,7 +1272,7 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
 bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
 		AttachmentDependencyInfo dependency, BlendInfo blendInfo) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto a = new (pool) AttachmentSubpassData;
 	a->key = attachment->key;
@@ -1291,7 +1291,7 @@ bool SubpassBuilder::addColor(const AttachmentPassData *attachment,
 bool SubpassBuilder::addInput(const AttachmentPassData *attachment,
 		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto a = new (pool) AttachmentSubpassData;
 	a->key = attachment->key;
@@ -1311,7 +1311,7 @@ bool SubpassBuilder::addInput(const AttachmentPassData *attachment,
 bool SubpassBuilder::addResolve(const AttachmentPassData *color, const AttachmentPassData *resolve,
 		AttachmentDependencyInfo colorDep, AttachmentDependencyInfo resolveDep) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto a = new (pool) AttachmentSubpassData;
 	a->key = color->key;
@@ -1340,7 +1340,7 @@ bool SubpassBuilder::addResolve(const AttachmentPassData *color, const Attachmen
 bool SubpassBuilder::setDepthStencil(const AttachmentPassData *attachment,
 		AttachmentDependencyInfo dependency, AttachmentLayout layout, AttachmentOps ops) {
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto a = new (pool) AttachmentSubpassData;
 	a->key = attachment->key;
@@ -1366,7 +1366,7 @@ const ComputePipelineData *SubpassBuilder::addComputePipeline(StringView key,
 	}
 
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto pipeline = new (pool) ComputePipelineData;
 	pipeline->key = key.pdup(pool);
@@ -1402,7 +1402,7 @@ GraphicPipelineData *SubpassBuilder::emplacePipeline(StringView key,
 	}
 
 	auto pool = _data->pass->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto pipeline = new (pool) GraphicPipelineData;
 	pipeline->key = key.pdup(pool);
@@ -1459,7 +1459,7 @@ SubpassBuilder::SubpassBuilder(SubpassData *data) : _data(data) { }
 const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(StringView str,
 		const Callback<void(PipelineLayoutBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto layout = new (pool) PipelineLayoutData;
 	layout->key = str.pdup(_data->queue->pool);
@@ -1483,7 +1483,7 @@ const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(StringView str,
 const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(
 		const Callback<void(PipelineLayoutBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto layout = new (pool) PipelineLayoutData;
 	layout->key = _data->key;
@@ -1506,7 +1506,7 @@ const PipelineLayoutData *QueuePassBuilder::addDescriptorLayout(
 
 const SubpassData *QueuePassBuilder::addSubpass(const Callback<void(SubpassBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto subpass = new (pool) SubpassData;
 	subpass->key = _data->key;
@@ -1541,7 +1541,7 @@ const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *
 const AttachmentPassData *QueuePassBuilder::addAttachment(const AttachmentData *data,
 		const Callback<void(AttachmentPassBuilder &)> &cb) {
 	auto pool = _data->queue->pool;
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	for (auto &it : _data->attachments) {
 		if (it->attachment == data) {
@@ -1588,7 +1588,7 @@ QueuePassBuilder::QueuePassBuilder(QueuePassData *data) : _data(data) { }
 Queue::Builder::Builder(StringView name)
 : _internalResource(memory::pool::create((memory::pool_t *)nullptr), toString(name, "_resource")) {
 	auto p = _internalResource.getPool();
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		_data = new (p) QueueData;
 		_data->pool = p;
 		_data->key = name.pdup(p);
@@ -1643,7 +1643,7 @@ const AttachmentData *Queue::Builder::addAttachemnt(StringView name,
 	auto it = _data->attachments.find(name);
 	if (it == _data->attachments.end()) {
 		AttachmentData *ret = nullptr;
-		memory::pool::perform([&] {
+		memory::perform([&] {
 			ret = new (_data->pool) AttachmentData();
 			ret->key = name.pdup(_data->pool);
 			ret->id = s_AttachmentCurrentIndex.fetch_add(1);
@@ -1667,7 +1667,7 @@ const QueuePassData *Queue::Builder::addPass(StringView name, PassType type,
 	auto it = _data->passes.find(name);
 	if (it == _data->passes.end()) {
 		QueuePassData *ret = nullptr;
-		memory::pool::perform([&] {
+		memory::perform([&] {
 			ret = new (_data->pool) QueuePassData();
 			ret->key = name.pdup(_data->pool);
 			ret->queue = _data;

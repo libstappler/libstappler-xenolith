@@ -143,9 +143,9 @@ public:
 	virtual void onDelta(float delta);
 	virtual void onOverscrollPerformed(float velocity, float pos, float boundary);
 
-	virtual bool onSwipeEventBegin(uint32_t id, const Vec2 &loc, const Vec2 &d, const Vec2 &v);
-	virtual bool onSwipeEvent(uint32_t id, const Vec2 &loc, const Vec2 &d, const Vec2 &v);
-	virtual bool onSwipeEventEnd(uint32_t id, const Vec2 &loc, const Vec2 &d, const Vec2 &v);
+	virtual bool onSwipeEventBegin(uint32_t id, Vec2 loc, Vec2 d, Vec2 v);
+	virtual bool onSwipeEvent(uint32_t id, Vec2 loc, Vec2 d, Vec2 v);
+	virtual bool onSwipeEventEnd(uint32_t id, Vec2 loc, Vec2 d, Vec2 v);
 
 	virtual void onSwipeBegin();
 	virtual bool onSwipe(float delta, float velocity, bool ended);
@@ -160,12 +160,12 @@ public:
 
 	virtual void fixPosition();
 
-	virtual bool onPressBegin(const Vec2 &);
-	virtual bool onLongPress(const Vec2 &, const TimeInterval &, int count);
-	virtual bool onPressEnd(const Vec2 &, const TimeInterval &);
-	virtual bool onPressCancel(const Vec2 &, const TimeInterval &);
+	virtual bool onPressBegin(Vec2);
+	virtual bool onLongPress(Vec2, TimeInterval, int count);
+	virtual bool onPressEnd(Vec2, TimeInterval);
+	virtual bool onPressCancel(Vec2, TimeInterval);
 
-	virtual void onTap(int count, const Vec2 &loc);
+	virtual void onTap(int count, Vec2 loc);
 
 protected:
 	Layout _layout = Vertical;

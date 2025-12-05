@@ -339,6 +339,9 @@ public:
 
 	virtual bool empty() const { return _string16.empty(); }
 
+	void setCommonStyle(const DescriptionStyle &);
+	const DescriptionStyle &getCommonStyle() const;
+
 	void setAlignment(TextAlign alignment);
 	TextAlign getAlignment() const;
 

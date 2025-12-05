@@ -144,7 +144,7 @@ protected:
 
 	virtual void onOverscroll(float delta) override;
 	virtual void onScroll(float delta, bool finished) override;
-	virtual void onTap(int count, const Vec2 &loc) override;
+	virtual void onTap(int count, Vec2 loc) override;
 	virtual void onAnimationFinished() override;
 
 	virtual void updateIndicatorPosition();

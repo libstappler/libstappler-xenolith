@@ -76,7 +76,8 @@ static size_t Label_getQuadsCount(const font::TextLayoutData<Interface> *format)
 		for (auto charIdx = start; charIdx < end; ++charIdx) {
 			const font::CharLayoutData &c = format->chars[charIdx];
 			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A)
-					&& c.charID != char16_t(0x00AD)) {
+					&& c.charID != char16_t(0x00AD)
+					&& c.charID != font::CharLayoutData::InvalidChar) {
 				++ret;
 			}
 		}
@@ -105,7 +106,7 @@ static void Label_writeTextureQuad(float height, const font::Metrics &m,
 				range.decoration, c.face, layer);
 		break;
 	case font::VerticalAlign::Super:
-		quad.drawChar(m, l, c.pos, height - float(line.pos + int16_t(m.ascender / 2)), range.color,
+		quad.drawChar(m, l, c.pos, height - float(line.pos - int16_t(m.ascender / 2)), range.color,
 				range.decoration, c.face, layer);
 		break;
 	default:
@@ -144,7 +145,8 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 		for (auto charIdx = start; charIdx < end; ++charIdx) {
 			const font::CharLayoutData &c = format->chars[charIdx];
 			if (!chars::isspace(c.charID) && c.charID != char16_t(0x0A)
-					&& c.charID != char16_t(0x00AD)) {
+					&& c.charID != char16_t(0x00AD)
+					&& c.charID != font::CharLayoutData::InvalidChar) {
 
 				uint16_t face = 0;
 				auto ch = targetRange->layout->getChar(c.charID, face);
@@ -207,8 +209,18 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 			const auto underlineBase = uint16_t(base);
 			const auto underlineX = firstChar.pos;
 			const auto underlineWidth = lastChar.pos + lastChar.advance - firstChar.pos;
-			const auto underlineY = format->height - it.line->pos + offset - underlineBase / 2;
 			const auto underlineHeight = underlineBase;
+			auto underlineY = format->height - it.line->pos + offset - int16_t(underlineBase / 2);
+
+			switch (it.range->align) {
+			case font::VerticalAlign::Sub:
+				underlineY -= int16_t(layoutMetrics.descender / 2);
+				break;
+			case font::VerticalAlign::Super:
+				underlineY += int16_t(layoutMetrics.ascender / 2);
+				break;
+			default: break;
+			}
 
 			auto quad = vertexes.addQuad();
 			Label_pushColorMap(*it.range, colorMap);

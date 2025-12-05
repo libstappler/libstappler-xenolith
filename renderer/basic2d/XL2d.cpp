@@ -33,6 +33,7 @@
 #include "XL2dScene.cc"
 #include "XL2dSceneContent.cc"
 #include "XL2dSceneLayout.cc"
+#include "XL2dOverlayLayout.cc"
 #include "XL2dSceneLight.cc"
 
 #include "XL2dVectorCanvas.cc"

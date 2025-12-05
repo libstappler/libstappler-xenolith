@@ -60,6 +60,8 @@ public:
 	event::BusDelegate *listenForEventWithObject(const EventHeader &h, Ref *obj, EventCallback &&,
 			bool removeAfterEvent = false);
 
+	void removeDelegate(event::BusDelegate *);
+
 	void clear();
 
 protected:

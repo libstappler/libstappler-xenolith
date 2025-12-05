@@ -411,7 +411,7 @@ void FontAttachmentHandle::writeAtlasData(FrameHandle &handle, bool underlinePer
 		}
 	}
 
-	memory::pool::perform_temporary([&] {
+	memory::perform_temporary([&] {
 		// TODO - use GPU rectangle placement
 		commands.emplace_back(_copyFromTmpBufferData);
 		for (auto &it : _copyFromPersistentBufferData) { commands.emplace_back(it.second); }

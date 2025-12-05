@@ -131,9 +131,13 @@ public:
 	virtual Vec2 getCursorPosition(uint32_t charIndex, bool prefix = true) const;
 	virtual Vec2 getCursorOrigin() const;
 
-	// returns character index in FormatSpec for position in label or maxOf<uint32_t>()
-	// pair.second - true if index match suffix or false if index match prefix
-	// use convertToNodeSpace to get position
+	/*
+	returns character index in FormatSpec for position in label or maxOf<uint32_t>()
+
+	pair.second - true if index match suffix or false if index match prefix
+
+	use convertToNodeSpace for input position
+	*/
 	virtual Pair<uint32_t, bool> getCharIndex(const Vec2 &,
 			font::CharSelectMode = font::CharSelectMode::Best) const;
 

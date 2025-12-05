@@ -183,7 +183,7 @@ VectorCanvas::~VectorCanvas() {
 
 bool VectorCanvas::init(bool deferred) {
 	auto p = memory::pool::create_tagged("xenolith::VectorCanvas");
-	memory::pool::context ctx(p);
+	memory::context ctx(p);
 	_data = new (p) Data(p, deferred);
 	if (_data) {
 		return true;
@@ -344,7 +344,7 @@ void VectorCanvas::Data::doDraw(const VectorPath &path, StringView id, StringVie
 
 	outData = &out->back();
 
-	memory::pool::perform_clear([&] {
+	memory::perform_clear([&] {
 		if (!deferred && !cache.empty()) {
 			auto style = path.getStyle();
 			float quality = pathDrawer.quality;

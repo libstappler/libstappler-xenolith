@@ -23,7 +23,7 @@
 #ifndef XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALMENUSOURCE_H_
 #define XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALMENUSOURCE_H_
 
-#include "XLIcons.h"
+#include "XL2dIcons.h"
 #include "SPSubscription.h"
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
@@ -85,8 +85,8 @@ public:
 
 	virtual float getMinWidth() const;
 	virtual float getHeight(Node *, float) const;
-	virtual const HeightFunction & getHeightFunction() const;
-	virtual const FactoryFunction & getFactoryFunction() const;
+	virtual const HeightFunction &getHeightFunction() const;
+	virtual const FactoryFunction &getFactoryFunction() const;
 
 protected:
 	float _minWidth = 0.0f;
@@ -96,7 +96,7 @@ protected:
 
 class SP_PUBLIC MenuSource : public Subscription {
 public:
-	using Callback = Function<void (Button *b, MenuSourceButton *)>;
+	using Callback = Function<void(Button *b, MenuSourceButton *)>;
 	using FactoryFunction = MenuSourceCustom::FactoryFunction;
 	using HeightFunction = MenuSourceCustom::HeightFunction;
 
@@ -113,7 +113,8 @@ public:
 	MenuSourceButton *addButton(StringView, IconName, Callback && = nullptr);
 	MenuSourceButton *addButton(StringView, IconName, Rc<MenuSource> &&);
 	MenuSourceCustom *addCustom(float h, const FactoryFunction &func, float minWidth = 0.0f);
-	MenuSourceCustom *addCustom(const HeightFunction &h, const FactoryFunction &func, float minWidth = 0.0f);
+	MenuSourceCustom *addCustom(const HeightFunction &h, const FactoryFunction &func,
+			float minWidth = 0.0f);
 	MenuSourceItem *addSeparator();
 
 	void clear();
@@ -129,7 +130,7 @@ protected:
 
 class SP_PUBLIC MenuSourceButton : public MenuSourceItem {
 public:
-	using Callback = Function<void (Button *b, MenuSourceButton *)>;
+	using Callback = Function<void(Button *b, MenuSourceButton *)>;
 
 	virtual ~MenuSourceButton();
 
@@ -139,10 +140,10 @@ public:
 	virtual Rc<MenuSourceItem> copy() const override;
 
 	virtual void setName(StringView);
-	virtual const String & getName() const;
+	virtual const String &getName() const;
 
 	virtual void setValue(StringView);
-	virtual const String & getValue() const;
+	virtual const String &getValue() const;
 
 	virtual void setNameIcon(IconName icon);
 	virtual IconName getNameIcon() const;
@@ -151,10 +152,10 @@ public:
 	virtual IconName getValueIcon() const;
 
 	virtual void setCallback(Callback &&);
-	virtual const Callback & getCallback() const;
+	virtual const Callback &getCallback() const;
 
 	virtual void setNextMenu(MenuSource *);
-	virtual MenuSource * getNextMenu() const;
+	virtual MenuSource *getNextMenu() const;
 
 	virtual void setSelected(bool value);
 	virtual bool isSelected() const;
@@ -171,6 +172,6 @@ protected:
 	bool _selected = false;
 };
 
-}
+} // namespace stappler::xenolith::material2d
 
 #endif /* XENOLITH_RENDERER_MATERIAL2D_BASE_MATERIALMENUSOURCE_H_ */

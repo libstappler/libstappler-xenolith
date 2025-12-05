@@ -212,7 +212,7 @@ void ScrollView::onScroll(float delta, bool finished) {
 	}
 }
 
-void ScrollView::onTap(int count, const Vec2 &loc) {
+void ScrollView::onTap(int count, Vec2 loc) {
 	if (_tapCallback) {
 		_tapCallback(count, loc);
 	}
