@@ -356,13 +356,15 @@ DBusDispatchStatus Connection::dispatch() {
 }
 
 void Connection::dispatchAll() {
-	if (!connection) {
+	if (!connection || busy) {
 		return;
 	}
 
+	busy = true;
 	while (lib->dbus_connection_dispatch(connection) == DBUS_DISPATCH_DATA_REMAINS) {
 		// empty
 	}
+	busy = false;
 }
 
 void Connection::close() {

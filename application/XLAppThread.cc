@@ -49,7 +49,7 @@ bool AppThread::init(NotNull<Context> ctx) {
 void AppThread::run() { Thread::run(); }
 
 void AppThread::threadInit() {
-	_thisThreadId = std::this_thread::get_id();
+	_thisThreadId = getCurrentThreadId();
 
 	_appLooper = event::Looper::acquire(event::LooperInfo{.name = StringView("Application"),
 		.workersCount = _context->getInfo()->appThreadsCount,

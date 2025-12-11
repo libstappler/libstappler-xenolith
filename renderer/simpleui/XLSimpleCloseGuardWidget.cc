@@ -32,7 +32,7 @@ bool CloseGuardWidgetDefault::init() {
 
 	auto f = addSystem(Rc<FocusGroup>::create());
 	f->setFlags(FocusGroup::Flags::Exclusive | FocusGroup::Flags::Propagate);
-	f->setEventMask(FocusGroup::makeEventMask({InputEventName::Begin, InputEventName::MouseMove,
+	f->setEventMask(makeEventMask({InputEventName::Begin, InputEventName::MouseMove,
 		InputEventName::Scroll, InputEventName::KeyPressed}));
 
 	// Add listener to capture exclusive events for the group
@@ -44,7 +44,7 @@ bool CloseGuardWidgetDefault::init() {
 			reject();
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+	}, InputTapInfo(1));
 
 	_background = addChild(Rc<Layer>::create(Color4F(0, 0, 0, 0.2f)), ZOrder(-1));
 	_background->setAnchorPoint(Anchor::Middle);

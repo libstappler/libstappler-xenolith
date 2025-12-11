@@ -167,6 +167,7 @@ struct SP_PUBLIC Connection : public Ref {
 
 	bool connected = false;
 	bool failed = false;
+	bool busy = false;
 	String name;
 	Set<String> services;
 	Set<BusFilter *> matchFilters;

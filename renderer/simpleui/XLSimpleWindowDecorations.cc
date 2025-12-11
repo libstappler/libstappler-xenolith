@@ -117,13 +117,13 @@ bool WindowDecorationsButton::init(WindowDecorationsButtonType type) {
 		default: break;
 		}
 		return true;
-	}, 0, false);
+	}, InputMouseOverInfo(0, false));
 	l->addTapRecognizer([this](const GestureTap &tap) {
 		if (tap.event == GestureEvent::Activated) {
 			handleTap();
 		}
 		return true;
-	}, InputListener::makeButtonMask({InputMouseButton::Touch}), 1);
+	}, InputTapInfo(1));
 
 	return true;
 }

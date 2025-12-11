@@ -100,7 +100,7 @@ struct SP_PUBLIC ContentInitializer {
 	ContentInitializer(ContentInitializer &&);
 	ContentInitializer &operator=(ContentInitializer &&);
 
-	bool initialize();
+	bool initialize(int argc, const char *argv[]);
 	void terminate();
 };
 

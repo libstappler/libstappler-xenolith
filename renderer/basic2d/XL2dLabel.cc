@@ -102,12 +102,12 @@ static void Label_writeTextureQuad(float height, const font::Metrics &m,
 		const font::LineLayoutData &line, VertexArray::Quad &quad, float layer) {
 	switch (range.align) {
 	case font::VerticalAlign::Sub:
-		quad.drawChar(m, l, c.pos, height - float(line.pos + int16_t(m.descender / 2)), range.color,
-				range.decoration, c.face, layer);
+		quad.drawChar(m, l, c.pos, height - float(int16_t(line.pos) - int16_t(m.descender * 2 / 3)),
+				range.color, range.decoration, c.face, layer);
 		break;
 	case font::VerticalAlign::Super:
-		quad.drawChar(m, l, c.pos, height - float(line.pos - int16_t(m.ascender / 2)), range.color,
-				range.decoration, c.face, layer);
+		quad.drawChar(m, l, c.pos, height - float(int16_t(line.pos) - int16_t(m.ascender * 2 / 3)),
+				range.color, range.decoration, c.face, layer);
 		break;
 	default:
 		quad.drawChar(m, l, c.pos, height - line.pos, range.color, range.decoration, c.face, layer);
@@ -210,14 +210,15 @@ static void Label_writeQuads(VertexArray &vertexes, const font::TextLayoutData<I
 			const auto underlineX = firstChar.pos;
 			const auto underlineWidth = lastChar.pos + lastChar.advance - firstChar.pos;
 			const auto underlineHeight = underlineBase;
-			auto underlineY = format->height - it.line->pos + offset - int16_t(underlineBase / 2);
+			auto underlineY = int16_t(format->height) - int16_t(it.line->pos) + offset
+					- int16_t(underlineBase / 2);
 
 			switch (it.range->align) {
 			case font::VerticalAlign::Sub:
-				underlineY -= int16_t(layoutMetrics.descender / 2);
+				underlineY += int16_t(layoutMetrics.descender * 2 / 3);
 				break;
 			case font::VerticalAlign::Super:
-				underlineY += int16_t(layoutMetrics.ascender / 2);
+				underlineY += int16_t(layoutMetrics.ascender * 2 / 3);
 				break;
 			default: break;
 			}

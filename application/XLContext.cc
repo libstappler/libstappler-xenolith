@@ -81,7 +81,7 @@ ContentInitializer &ContentInitializer::operator=(ContentInitializer &&other) {
 	return *this;
 }
 
-bool ContentInitializer::initialize() {
+bool ContentInitializer::initialize(int argc, const char *argv[]) {
 	if (init) {
 		return true;
 	}
@@ -94,7 +94,7 @@ bool ContentInitializer::initialize() {
 	thread::ThreadInfo::setThreadPool(pool);
 
 	int result = 0;
-	if (!sp::initialize(0, nullptr, result)) {
+	if (!sp::initialize(argc, argv, result)) {
 		init = false;
 	} else {
 		init = true;
@@ -180,7 +180,7 @@ int Context::run(int argc, const char **argv) {
 	};
 
 	ContentInitializer init;
-	init.initialize();
+	init.initialize(argc, argv);
 
 #ifdef EXEC_LIVE_RELOAD
 	// clear live reload cache first
@@ -236,7 +236,7 @@ Context::~Context() { _initializer.terminate(); }
 
 bool Context::init(ContextConfig &&info, ContentInitializer &&init) {
 	_initializer = sp::move(init);
-	_initializer.initialize();
+	_initializer.initialize(0, nullptr);
 
 	memory::context ctx(_initializer.pool);
 

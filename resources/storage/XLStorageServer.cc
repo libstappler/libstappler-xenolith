@@ -764,7 +764,7 @@ bool Server::perform(Function<bool(const Server &, const db::Transaction &)> &&c
 		return false;
 	}
 
-	if (std::this_thread::get_id() == _data->getThreadId()) {
+	if (thread::Thread::getCurrentThreadId() == _data->getThreadId()) {
 		_data->execute(ServerDataTaskCallback(sp::move(cb), ref));
 	} else {
 		_data->storage->queue.push(0, false, ServerDataTaskCallback(sp::move(cb), ref));
