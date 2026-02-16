@@ -144,7 +144,7 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 				event::CompletionHandle<event::PollHandle>::create<DBusWatch>(ev.watch,
 						[](DBusWatch *watch, event::PollHandle *handle, uint32_t flags,
 								Status status) {
-			if (status::isErrno(status)) {
+			if (sprt::status::isErrno(status)) {
 				return;
 			}
 
@@ -215,7 +215,7 @@ dbus_bool_t Controller::handleDbusEvent(dbus::Connection *c, const dbus::Event &
 										ev.timeout,
 										[](DBusTimeout *timeout, event::TimerHandle *handle,
 												uint32_t flags, Status status) {
-				if (status::isErrno(status)) {
+				if (sprt::status::isErrno(status)) {
 					return;
 				}
 

@@ -37,4 +37,4 @@ network interface, that can be bound with application loop.
 endef
 
 # module name resolution
-MODULE_xenolith_resources_network := MODULE_XENOLITH_RESOURCES_NETWORK
+$(call define_module, xenolith_resources_network, MODULE_XENOLITH_RESOURCES_NETWORK)

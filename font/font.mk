@@ -37,4 +37,4 @@ Font rendering based on GPU-side atlases and caches.
 endef
 
 # module name resolution
-MODULE_xenolith_font := MODULE_XENOLITH_FONT
+$(call define_module, xenolith_font, MODULE_XENOLITH_FONT)

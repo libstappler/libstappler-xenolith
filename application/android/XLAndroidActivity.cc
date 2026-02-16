@@ -86,7 +86,7 @@ static void registerActivityMethods(const jni::RefClass &cl) {
 
 	s_mutex.lock();
 	auto className = cl.getName();
-	auto classNameStr = className.getString().str<memory::StandartInterface>();
+	auto classNameStr = StringView(className.getString()).str<memory::StandartInterface>();
 
 	auto it = s_classes.find(classNameStr);
 	if (it == s_classes.end()) {
@@ -312,7 +312,7 @@ void *AndroidActivity::handleSaveInstanceState(size_t *outLen) {
 
 			*outLen = newData.size();
 			ret = ::malloc(newData.size());
-			::memcpy(ret, newData.data(), newData.size());
+			::__sprt_memcpy(ret, newData.data(), newData.size());
 		}
 	});
 

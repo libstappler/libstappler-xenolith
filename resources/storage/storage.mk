@@ -35,4 +35,4 @@ Module libxenolith-resources-storage implements internal application database.
 endef
 
 # module name resolution
-MODULE_xenolith_resources_storage := MODULE_XENOLITH_RESOURCES_STORAGE
+$(call define_module, xenolith_resources_storage, MODULE_XENOLITH_RESOURCES_STORAGE)

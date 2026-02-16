@@ -231,7 +231,7 @@ void WaylandDataInputTransfer::commit() {
 	data.resize(outBufferSize);
 	outBufferSize = 0;
 	for (auto &it : chunks) {
-		::memcpy(data.data() + outBufferSize, it.data(), it.size());
+		::__sprt_memcpy(data.data() + outBufferSize, it.data(), it.size());
 		outBufferSize += it.size();
 	}
 

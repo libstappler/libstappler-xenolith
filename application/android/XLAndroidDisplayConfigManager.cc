@@ -116,22 +116,22 @@ void AndroidDisplayConfigManager::updateDisplayConfig(
 		auto &monIt = info->monitors.emplace_back(PhysicalDisplay{
 			id,
 			idx,
-			MonitorId{name.getString().str<Interface >()},
+			MonitorId{StringView(name.getString()).str<Interface >()},
 			mmSize,
 		});
 
 		if (app->DeviceProductInfo && app->Display.getDeviceProductInfo) {
 			auto productInfo = app->Display.getDeviceProductInfo(displayIt);
 			if (productInfo) {
-				monIt.id.edid.vendorId = app->DeviceProductInfo.getManufacturerPnpId(productInfo)
-												 .getString()
+				monIt.id.edid.vendorId = StringView(
+						app->DeviceProductInfo.getManufacturerPnpId(productInfo).getString())
 												 .str<Interface>();
 				monIt.id.edid.vendor = core::EdidInfo::getVendorName(monIt.id.edid.vendorId);
-				monIt.id.edid.model = app->DeviceProductInfo.getProductId(productInfo)
-											  .getString()
-											  .str<Interface>();
-				monIt.id.name =
-						app->DeviceProductInfo.getName(productInfo).getString().str<Interface>();
+				monIt.id.edid.model =
+						StringView(app->DeviceProductInfo.getProductId(productInfo).getString())
+								.str<Interface>();
+				monIt.id.name = StringView(app->DeviceProductInfo.getName(productInfo).getString())
+										.str<Interface>();
 			}
 		}
 

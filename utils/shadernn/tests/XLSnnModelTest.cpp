@@ -56,7 +56,7 @@ void MnistTrainData::loadVectors(StringView ipath) {
 		}
 
 		vectorsData = (float *)malloc(dataSize * sizeof(float) * 10);
-		::memset(vectorsData, 0, dataSize * sizeof(float));
+		::__sprt_memset(vectorsData, 0, dataSize * sizeof(float));
 		auto ptr = vectorsData;
 		for (size_t i = 0; i < dataSize; ++i) {
 			for (size_t j = 0; j < 10; ++j) { ptr[j] = 0.0f; }
@@ -116,7 +116,8 @@ void MnistTrainData::readImages(uint8_t *iptr, uint64_t size, size_t offset) {
 	for (size_t i = 0; i < count; ++i) {
 		auto idx = indexes[offset + i];
 		auto blockSize = imagesHeader.rows * imagesHeader.columns;
-		::memcpy(ptr + i * blockSize, imagesData + idx * blockSize, blockSize * sizeof(float));
+		::__sprt_memcpy(ptr + i * blockSize, imagesData + idx * blockSize,
+				blockSize * sizeof(float));
 	}
 }
 
@@ -128,7 +129,8 @@ void MnistTrainData::readLabels(uint8_t *iptr, uint64_t size, size_t offset) {
 	for (size_t i = 0; i < count; ++i) {
 		auto idx = indexes[offset + i];
 		auto blockSize = 10;
-		::memcpy(ptr + i * blockSize, vectorsData + idx * blockSize, blockSize * sizeof(float));
+		::__sprt_memcpy(ptr + i * blockSize, vectorsData + idx * blockSize,
+				blockSize * sizeof(float));
 	}
 }
 
@@ -144,7 +146,7 @@ bool MnistTrainData::validateImages(const uint8_t *iptr, uint64_t size, size_t o
 		auto sourcePtr = ptr + i * blockSize;
 		auto targetPtr = imagesData + idx * blockSize;
 
-		if (::memcmp(sourcePtr, targetPtr, blockSize * sizeof(float)) != 0) {
+		if (::__sprt_memcmp(sourcePtr, targetPtr, blockSize * sizeof(float)) != 0) {
 			for (size_t j = 0; j < imagesHeader.rows; ++j) {
 				for (size_t k = 0; k < imagesHeader.columns; ++k) {
 					std::cout << " " << *(sourcePtr + (j * imagesHeader.rows) + k);

@@ -198,8 +198,12 @@ ContextConfig::ContextConfig() {
 	instance = Rc<core::InstanceInfo>::alloc();
 	loop = Rc<core::LoopInfo>::alloc();
 
-	context->bundleName = getAppconfigBundleName();
-	context->appName = getAppconfigAppName();
+	if (auto str = getAppconfigBundleName()) {
+		context->bundleName = str;
+	}
+	if (auto str = getAppconfigAppName()) {
+		context->appName = str;
+	}
 	context->appVersionCode = getAppconfigVersionIndex();
 	context->appVersion = toString(getAppconfigVersionVariant(), ".", getAppconfigVersionApi(), ".",
 			getAppconfigVersionRev(), ".", getAppconfigVersionBuild());

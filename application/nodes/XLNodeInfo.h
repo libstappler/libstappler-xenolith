@@ -98,18 +98,6 @@ struct SP_PUBLIC MaterialInfo {
 struct SP_PUBLIC ZOrderLess {
 	bool operator()(const SpanView<ZOrder> &l, const SpanView<ZOrder> &r) const noexcept {
 		auto len = std::max(l.size(), r.size());
-#if __LCC__ && __LCC__ <= 126
-		// compiler bug workaround
-		auto lData = (const ZOrder::Type *)l.data();
-		auto rData = (const ZOrder::Type *)r.data();
-		for (size_t i = 0; i < len; ++i) {
-			ZOrder::Type valL = (i < l.size()) ? lData[i] : 0;
-			ZOrder::Type valR = (i < r.size()) ? rData[i] : 0;
-			if (valL != valR) {
-				return valL < valR;
-			}
-		}
-#else
 		for (size_t i = 0; i < len; ++i) {
 			auto valL = (i < l.size()) ? l.at(i) : ZOrder(0);
 			auto valR = (i < r.size()) ? r.at(i) : ZOrder(0);
@@ -117,7 +105,6 @@ struct SP_PUBLIC ZOrderLess {
 				return valL < valR;
 			}
 		}
-#endif
 		return false;
 	} // namespace stappler::xenolith
 };

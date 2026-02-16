@@ -40,7 +40,7 @@ static jstring AndroidContextController_getTypeForUri(JNIEnv *env, jobject thiz,
 	auto ctx = reinterpret_cast<AndroidContextController *>(ptr);
 	if (ctx) {
 		auto str = ctx->getClipboardTypeForUri(jni::RefString(uri, env).getString());
-		return jni::Env(env).newStringRef(str);
+		return jni::Env(env).newStringRef(StringView(str));
 	}
 	return nullptr;
 }
@@ -50,7 +50,7 @@ static jstring AndroidContextController_getPathForUri(JNIEnv *env, jobject thiz,
 	auto ctx = reinterpret_cast<AndroidContextController *>(ptr);
 	if (ctx) {
 		auto str = ctx->getClipboardPathForUri(jni::RefString(uri, env).getString());
-		return jni::Env(env).newStringRef(str);
+		return jni::Env(env).newStringRef(StringView(str));
 	}
 	return nullptr;
 }
@@ -68,7 +68,7 @@ static void registerClipboardContentProviderMethods(const jni::RefClass &cl) {
 
 	s_mutex.lock();
 	auto className = cl.getName();
-	auto classNameStr = className.getString().str<memory::StandartInterface>();
+	auto classNameStr = StringView(className.getString()).str<memory::StandartInterface>();
 
 	auto it = s_classes.find(classNameStr);
 	if (it == s_classes.end()) {
@@ -80,7 +80,7 @@ static void registerClipboardContentProviderMethods(const jni::RefClass &cl) {
 
 void AndroidContextController::acquireDefaultConfig(ContextConfig &cfg) {
 	auto env = jni::Env::getEnv();
-	auto config = stappler::platform::ApplicationInfo::getCurrent();
+	auto config = jni::Env::getApp()->getCurrentInfo();
 
 	auto formatSupport = NativeBufferFormatSupport::get();
 
@@ -96,11 +96,11 @@ void AndroidContextController::acquireDefaultConfig(ContextConfig &cfg) {
 		cfg.context = Rc<ContextInfo>::alloc();
 	}
 
-	cfg.context->bundleName = config->bundleName.str<Interface>();
-	cfg.context->appName = config->applicationName.str<Interface>();
-	cfg.context->appVersion = config->applicationVersion.str<Interface>();
-	cfg.context->userLanguage = config->locale.str<Interface>();
-	cfg.context->userAgent = config->userAgent.str<Interface>();
+	cfg.context->bundleName = StringView(config->bundleName).str<Interface>();
+	cfg.context->appName = StringView(config->applicationName).str<Interface>();
+	cfg.context->appVersion = StringView(config->applicationVersion).str<Interface>();
+	cfg.context->userLanguage = StringView(config->locale).str<Interface>();
+	cfg.context->userAgent = StringView(config->userAgent).str<Interface>();
 	cfg.context->appVersionCode = SP_MAKE_API_VERSION(cfg.context->appVersion);
 
 	if (!cfg.loop) {
@@ -159,10 +159,10 @@ bool AndroidContextController::init(NotNull<Context> ctx, ContextConfig &&config
 	if (ClipboardContentProvider.thiz) {
 		ClipboardContentProvider.setNative(ClipboardContentProvider.thiz.ref(env),
 				reinterpret_cast<jlong>(this));
-		_clipboardAuthority =
+		_clipboardAuthority = StringView(
 				ClipboardContentProvider.getAuthority(ClipboardContentProvider.thiz.ref(env))
-						.getString()
-						.str<Interface>();
+						.getString())
+									  .str<Interface>();
 	}
 
 	_contextInfo = move(config.context);
@@ -194,7 +194,7 @@ bool AndroidContextController::init(NotNull<Context> ctx, ContextConfig &&config
 	}
 
 	auto v = info.emplace("drawables");
-	for (auto &it : app->drawables) { v.setInteger(it.second, it.first); }
+	app->inspectDrawables([&](StringView name, jint idx) { v.setInteger(idx, name); });
 
 	info.setString(_contextInfo->bundleName, "bundleName");
 	info.setString(_contextInfo->appName, "applicationName");
@@ -259,15 +259,16 @@ int AndroidContextController::run(NotNull<ContextContainer> c) {
 	_container = c;
 
 	auto app = jni::Env::getApp();
-	app->setActivityLoader(
-			[this](ANativeActivity *a, BytesView data) { return loadActivity(a, data); });
+	app->setActivityLoader([this](ANativeActivity *a, sprt::BytesView data) {
+		return loadActivity(a, BytesView(data.data(), data.size()));
+	});
 
 	app->setLowMemoryHandler([this] {
 		log::source().info("AndroidContextController", "onLowMemory");
 		handleSystemNotification(SystemNotification::LowMemory);
 	});
 
-	app->setConfigurationHandler([this](stappler::platform::ApplicationInfo *info) {
+	app->setConfigurationHandler([this](sprt::jni::ApplicationInfo *info) {
 		log::source().info("AndroidContextController", "onConfigurationChanged");
 		handleSystemNotification(SystemNotification::ConfigurationChanged);
 	});
@@ -324,7 +325,7 @@ jni::Ref AndroidContextController::getSelf() const {
 }
 
 Rc<WindowInfo> AndroidContextController::makeWindowInfo(ANativeWindow *w) const {
-	auto appInfo = stappler::platform::ApplicationInfo::getCurrent();
+	auto appInfo = sprt::jni::Env::getApp()->getCurrentInfo();
 	auto window = Rc<WindowInfo>::alloc();
 
 	auto info = _context->getInfo();
@@ -361,7 +362,7 @@ Status AndroidContextController::readFromClipboard(Rc<ClipboardRequest> &&req) {
 		auto nTypes = app->ClipDescription.getMimeTypeCount(desc);
 		for (uint32_t idx = 0; idx < nTypes; ++idx) {
 			auto str = app->ClipDescription.getMimeType(desc, jint(idx));
-			types.emplace_back(str.getString().pdup());
+			types.emplace_back(StringView(str.getString()).pdup());
 		}
 
 		auto type = req->typeCallback(types);
@@ -422,7 +423,7 @@ Status AndroidContextController::probeClipboard(Rc<ClipboardProbe> &&probe) {
 		auto nTypes = app->ClipDescription.getMimeTypeCount(desc);
 		for (uint32_t idx = 0; idx < nTypes; ++idx) {
 			auto str = app->ClipDescription.getMimeType(desc, jint(idx));
-			types.emplace_back(str.getString().pdup());
+			types.emplace_back(StringView(str.getString()).pdup());
 		}
 
 		probe->typeCallback(Status::Ok, types);
@@ -460,9 +461,9 @@ Status AndroidContextController::writeToClipboard(Rc<ClipboardData> &&data) {
 			auto item = app->ClipDataItem.constructorWithText(app->ClipDataItem.getClass().ref(env),
 					env.newString(StringView((const char *)d.data(), d.size())));
 			auto mimeArray = env.newArray<jstring>(1, env.findClass("java/lang/String"));
-			mimeArray.setElement(0, jni::Ref(env.newString(type)));
+			mimeArray.setElement(0, jni::Ref(env.newString(StringView(type))));
 			auto clipData = app->ClipData.constructor(app->ClipData.getClass().ref(env),
-					env.newString(data->label), mimeArray, item);
+					env.newString(StringView(data->label)), mimeArray, item);
 
 			app->ClipboardManager.setPrimaryClip(app->ClipboardManager.service.ref(env), clipData);
 			return Status::Ok;
@@ -478,19 +479,20 @@ Status AndroidContextController::writeToClipboard(Rc<ClipboardData> &&data) {
 	for (auto &it : data->types) {
 		auto index = i++;
 
-		mimeArray.setElement(index, jni::Ref(env.newString(it)));
+		mimeArray.setElement(index, jni::Ref(env.newString(StringView(it))));
 
 		uris.emplace_back(toString("content://", _clipboardAuthority, "/clipboard_content/",
 				data->initial.toMicros(), "/", index, "?displayName=", data->label));
 	}
 
 	auto item = app->ClipDataItem.constructorWithUri(app->ClipDataItem.getClass().ref(env),
-			app->Uri.parse(app->Uri.getClass().ref(env), env.newString(uris.front())));
+			app->Uri.parse(app->Uri.getClass().ref(env), env.newString(StringView(uris.front()))));
 	auto clipData = app->ClipData.constructor(app->ClipData.getClass().ref(env),
-			env.newString(data->label), mimeArray, item);
+			env.newString(StringView(data->label)), mimeArray, item);
 	for (i = 1; i < uris.size(); ++i) {
 		item = app->ClipDataItem.constructorWithUri(app->ClipDataItem.getClass().ref(env),
-				app->Uri.parse(app->Uri.getClass().ref(env), env.newString(uris.at(i))));
+				app->Uri.parse(app->Uri.getClass().ref(env),
+						env.newString(StringView(uris.at(i)))));
 		app->ClipData.addItem(clipData, item);
 	}
 

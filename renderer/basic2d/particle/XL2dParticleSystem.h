@@ -45,7 +45,7 @@ struct ParticleSystemData : public Ref {
 	Rc<CurveBuffer> colorCurve;
 	Vector<Vec2> emissionPoints;
 
-	ParticleSystemData() { ::memset(&data, 0, sizeof(ParticleEmitterData)); }
+	ParticleSystemData() { ::__sprt_memset(&data, 0, sizeof(ParticleEmitterData)); }
 };
 
 struct ParticleSystemRenderInfo {

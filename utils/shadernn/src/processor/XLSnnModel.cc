@@ -339,7 +339,7 @@ void getByteRepresentation(float in, Vector<unsigned char> &byteRep, bool fp16) 
 		byteRep.push_back(fp16Val >> 8 & 0xFF);
 	} else {
 		uint32_t fp32Val;
-		::memcpy(&fp32Val, &in, 4);
+		::__sprt_memcpy(&fp32Val, &in, 4);
 		for (int i = 0; i < 4; i++) { byteRep.push_back((fp32Val >> 8 * i) & 0xFF); }
 	}
 }

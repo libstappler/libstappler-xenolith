@@ -35,4 +35,4 @@ Module libxenolith-renderer-simpleui implements simple UI primitives for fast pr
 endef
 
 # module name resolution
-MODULE_xenolith_renderer_simpleui := MODULE_XENOLITH_RENDERER_SIMPLEUI
+$(call define_module, xenolith_renderer_simpleui, MODULE_XENOLITH_RENDERER_SIMPLEUI)

@@ -40,4 +40,4 @@ that capable to render structured documents.
 endef
 
 # module name resolution
-MODULE_xenolith_renderer_richtext := MODULE_XENOLITH_RENDERER_RICHTEXT
+$(call define_module, xenolith_renderer_richtext, MODULE_XENOLITH_RENDERER_RICHTEXT)

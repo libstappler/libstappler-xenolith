@@ -352,7 +352,7 @@ SP_PUBLIC VkPresentModeKHR getVkPresentMode(core::PresentMode presentMode);
 
 template <typename T>
 SP_PUBLIC void sanitizeVkStruct(T &t) {
-	::memset(&t, 0, sizeof(T));
+	::__sprt_memset(&t, 0, sizeof(T));
 }
 
 SP_PUBLIC Status getStatus(VkResult res);

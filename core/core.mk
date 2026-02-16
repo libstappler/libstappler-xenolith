@@ -48,4 +48,4 @@ Module libxenolith-core implenets API-independent interface for graphic engine:
 endef
 
 # module name resolution
-MODULE_xenolith_core := MODULE_XENOLITH_CORE
+$(call define_module, xenolith_core, MODULE_XENOLITH_CORE)

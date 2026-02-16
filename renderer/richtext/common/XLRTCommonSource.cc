@@ -211,7 +211,6 @@ void CommonSource::onDocumentLoaded(Document *doc) {
 
 void CommonSource::acquireNetworkAsset(Document *doc, const StringView &url,
 		const Function<void(SourceAsset *)> &fn) {
-	StringView urlView(url);
 	_assetLibrary->acquireAsset(url, [this, fn](const Rc<Asset> &a) {
 		fn(Rc<SourceNetworkAsset>::create(a));
 	}, config::getDocumentAssetTtl(), this);

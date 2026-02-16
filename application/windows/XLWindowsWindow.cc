@@ -1057,7 +1057,7 @@ void WindowsWindow::pushCommand(WPARAM cmd) {
 }
 
 void WindowsWindow::popCommand(WPARAM cmd) {
-	SPASSERT(!_activeCommands.empty() && _activeCommands.back() == cmd, "Invalid command");
+	sprt_passert(!_activeCommands.empty() && _activeCommands.back() == cmd, "Invalid command");
 	XL_WIN32_LOG(std::source_location::current().function_name(), " ", getCommandName(cmd));
 	_activeCommands.pop_back();
 }

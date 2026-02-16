@@ -2286,11 +2286,6 @@ String getInputModifiersNames(InputModifier mod) {
 	return out.str();
 }
 
-#ifdef __LCC__
-
-const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
-
-#endif
 } // namespace stappler::xenolith::core
 
 namespace std {

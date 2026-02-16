@@ -702,11 +702,13 @@ struct MessageWindow::WinRtAdapter {
 
 					uint8_t offset = 0;
 					auto ptr = utf8_str.data();
+					auto len = utf8_str.size();
 					auto end = ptr + utf8_str.size();
 					while (ptr < end) {
-						auto c = unicode::utf8Decode32(ptr, offset);
+						auto c = unicode::utf8Decode32(ptr, len, offset);
 						d += unicode::utf16EncodeBuf(d, c);
 						ptr += offset;
+						len -= offset;
 					}
 					d += unicode::utf16EncodeBuf(d, char32_t(0));
 

@@ -182,7 +182,7 @@ VkMappedMemoryRange DeviceMemory::calculateMappedMemoryRange(VkDeviceSize offset
 
 bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData &info,
 		uint32_t idx) {
-	SPASSERT(!key.empty(), "Image should have a name");
+	sprt_passert(!key.empty(), "Image should have a name");
 
 	_name = key.str<Interface>();
 	_info = info;
@@ -201,7 +201,7 @@ bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData
 
 bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData &info,
 		Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
-	SPASSERT(!key.empty(), "Image should have a name");
+	sprt_passert(!key.empty(), "Image should have a name");
 
 	_name = key.str<Interface>();
 	_info = info;
@@ -219,7 +219,7 @@ bool Image::init(Device &dev, StringView key, VkImage image, const ImageInfoData
 
 bool Image::init(Device &dev, StringView key, uint64_t idx, VkImage image,
 		const ImageInfoData &info, Rc<DeviceMemory> &&mem, Rc<core::DataAtlas> &&atlas) {
-	SPASSERT(!key.empty(), "Image should have a name");
+	sprt_passert(!key.empty(), "Image should have a name");
 
 	_name = key.str<Interface>();
 	_info = info;
@@ -376,8 +376,9 @@ void Buffer::flushMappedRegion(VkDeviceSize offset, VkDeviceSize size) {
 bool Buffer::setData(BytesView data, VkDeviceSize offset, DeviceMemoryAccess access) {
 	auto size = std::min(size_t(_info.size - offset), data.size());
 
-	return _memory->map([&](uint8_t *ptr, VkDeviceSize size) { ::memcpy(ptr, data.data(), size); },
-			_memoryOffset + offset, size, access);
+	return _memory->map([&](uint8_t *ptr, VkDeviceSize size) {
+		::__sprt_memcpy(ptr, data.data(), size);
+	}, _memoryOffset + offset, size, access);
 }
 
 Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset, DeviceMemoryAccess access) {
@@ -387,7 +388,7 @@ Bytes Buffer::getData(VkDeviceSize size, VkDeviceSize offset, DeviceMemoryAccess
 
 	_memory->map([&](uint8_t *ptr, VkDeviceSize size) {
 		ret.resize(size);
-		::memcpy(ret.data(), ptr, size);
+		::__sprt_memcpy(ret.data(), ptr, size);
 	}, _memoryOffset + offset, size, access);
 
 	return ret;

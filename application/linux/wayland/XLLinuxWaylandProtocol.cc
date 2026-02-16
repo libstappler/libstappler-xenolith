@@ -680,11 +680,12 @@ bool allocateDecorations(WaylandLibrary *wayland, wl_shm *shm, DecorationInfo &i
 	}, info.width);
 
 	// make normal
-	::memcpy(bufferBottomRightInactive.data, bufferTopLeftInactive.data,
+	::__sprt_memcpy(bufferBottomRightInactive.data, bufferTopLeftInactive.data,
 			bufferTopLeftInactive.size);
 	std::reverse(bufferTopLeftInactive.data, bufferTopLeftInactive.data + info.width);
 
-	::memcpy(bufferBottomRightActive.data, bufferTopLeftActive.data, bufferTopLeftActive.size);
+	::__sprt_memcpy(bufferBottomRightActive.data, bufferTopLeftActive.data,
+			bufferTopLeftActive.size);
 	std::reverse(bufferTopLeftActive.data, bufferTopLeftActive.data + info.width);
 
 	info.ret->top = Rc<WaylandBuffer>::create(wayland, pool, bufferTopLeftInactive.offset, 1,

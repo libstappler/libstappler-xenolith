@@ -440,7 +440,7 @@ String ListenerView::Selection::getSelectedString(size_t maxWords) const {
 		if (_selectionBounds.first.object == _selectionBounds.second.object) {
 			auto obj = res->getObject(_selectionBounds.first.object);
 			if (obj && obj->isLabel()) {
-				obj->asLabel()->layout.str([&](char16_t ch) { ret.push_back(ch); },
+				obj->asLabel()->layout.str([&](char32_t ch) { ret.push_back(ch); },
 						_selectionBounds.first.position, _selectionBounds.second.position, maxWords,
 						true);
 			}
@@ -448,7 +448,7 @@ String ListenerView::Selection::getSelectedString(size_t maxWords) const {
 			auto obj = res->getObject(_selectionBounds.first.object);
 			if (obj && obj->isLabel()) {
 				auto l = obj->asLabel();
-				l->layout.str([&](char16_t ch) { ret.push_back(ch); },
+				l->layout.str([&](char32_t ch) { ret.push_back(ch); },
 						_selectionBounds.first.position, uint32_t(l->layout.chars.size() - 1),
 						maxWords, true);
 			}
@@ -468,14 +468,14 @@ String ListenerView::Selection::getSelectedString(size_t maxWords) const {
 				auto obj = res->getObject(i);
 				if (obj && obj->isLabel()) {
 					auto l = obj->asLabel();
-					l->layout.str([&](char16_t ch) { ret.push_back(ch); }, 0,
+					l->layout.str([&](char32_t ch) { ret.push_back(ch); }, 0,
 							uint32_t(l->layout.chars.size() - 1), maxWords, true);
 				}
 			}
 
 			if (lastObj && lastObj->isLabel()) {
 				auto l = lastObj->asLabel();
-				l->layout.str([&](char16_t ch) { ret.push_back(ch); }, 0,
+				l->layout.str([&](char32_t ch) { ret.push_back(ch); }, 0,
 						_selectionBounds.second.position, maxWords, true);
 			}
 		}

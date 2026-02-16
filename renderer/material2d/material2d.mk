@@ -35,4 +35,4 @@ Module libxenolith-renderer-material2d implements GUI primitives, based on Mater
 endef
 
 # module name resolution
-MODULE_xenolith_renderer_material2d := MODULE_XENOLITH_RENDERER_MATERIAL2D
+$(call define_module, xenolith_renderer_material2d, MODULE_XENOLITH_RENDERER_MATERIAL2D)

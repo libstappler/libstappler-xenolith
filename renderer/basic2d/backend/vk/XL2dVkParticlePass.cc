@@ -203,7 +203,7 @@ ParticlePersistentData::EmitterData ParticlePersistentData::spawnEmitter(DeviceM
 	s->data.emissionData = UVec2::convertFromPacked(emissionData->getDeviceAddress());
 
 	addStaging(emitterBuffer, emitterBuffer->getSize(), 0,
-			[&](uint8_t *ptr, VkDeviceSize size) { ::memcpy(ptr, &s->data, size); });
+			[&](uint8_t *ptr, VkDeviceSize size) { ::__sprt_memcpy(ptr, &s->data, size); });
 
 	if (initParticles > 0) {
 		auto fullSize = particlesBuffer->getSize();

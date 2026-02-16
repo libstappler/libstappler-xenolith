@@ -147,9 +147,9 @@ void TextInputProcessor::deleteBackward() {
 	size_t nDeleteLen = 1;
 	if (newState.cursor.start - 1 < newState.size()) {
 		auto c = newState.string->string.at(newState.cursor.start - 1);
-		if (unicode::isUtf16HighSurrogate(c)) {
+		if (sprt::unicode::isUtf16HighSurrogate(c)) {
 			nDeleteLen = 2;
-		} else if (unicode::isUtf16LowSurrogate(c) && newState.cursor.start > 0) {
+		} else if (sprt::unicode::isUtf16LowSurrogate(c) && newState.cursor.start > 0) {
 			nDeleteLen = 2;
 			newState.cursor.start -= 1;
 		}
@@ -198,9 +198,9 @@ void TextInputProcessor::deleteForward() {
 	size_t nDeleteLen = 1;
 	if (newState.cursor.start < newState.size()) {
 		auto c = newState.string->string.at(newState.cursor.start);
-		if (unicode::isUtf16HighSurrogate(c)) {
+		if (sprt::unicode::isUtf16HighSurrogate(c)) {
 			nDeleteLen = 2;
-		} else if (unicode::isUtf16LowSurrogate(c) && newState.cursor.start > 0) {
+		} else if (sprt::unicode::isUtf16LowSurrogate(c) && newState.cursor.start > 0) {
 			nDeleteLen = 2;
 			newState.cursor.start -= 1;
 		}

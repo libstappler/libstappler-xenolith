@@ -31,20 +31,20 @@
 
 #if ANDROID
 
-#include "platform/SPJni.h"
+#include "jni/SPRuntimeJni.h"
 
 #include <android/native_activity.h>
 #include <android/configuration.h>
 
 SP_EXTERN_C JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-	STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::loadJava(vm);
+	sprt::jni::Env::loadJava(vm);
 #if MODULE_XENOLITH_APPLICATION
 	auto runFn = STAPPLER_VERSIONIZED_NAMESPACE::SharedModule::acquireTypedSymbol<
 			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolRunNativeSignature>(
 			STAPPLER_VERSIONIZED_NAMESPACE::buildconfig::MODULE_XENOLITH_APPLICATION_NAME,
 			STAPPLER_VERSIONIZED_NAMESPACE::xenolith::Context::SymbolContextRunName);
 	if (runFn) {
-		auto app = STAPPLER_VERSIONIZED_NAMESPACE::platform::ApplicationInfo::getCurrent();
+		auto app = sprt::jni::Env::getApp()->getCurrentInfo();
 		if (runFn(app.get()) != 0) {
 			return -1;
 		}
@@ -62,15 +62,14 @@ SP_EXTERN_C JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 SP_EXTERN_C JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *unused) {
-	STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::finalizeJava();
+	sprt::jni::Env::finalizeJava();
 }
 
 SP_EXTERN_C JNIEXPORT void ANativeActivity_onCreate(ANativeActivity *activity, void *savedState,
 		size_t savedStateSize) {
-	auto app = STAPPLER_VERSIONIZED_NAMESPACE::jni::Env::getApp();
+	auto app = sprt::jni::Env::getApp();
 
-	auto savedData =
-			STAPPLER_VERSIONIZED_NAMESPACE::BytesView((const uint8_t *)savedState, savedStateSize);
+	auto savedData = sprt::BytesView((const uint8_t *)savedState, savedStateSize);
 	if (!app->loadActivity(activity, savedData)) {
 		abort();
 	}

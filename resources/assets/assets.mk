@@ -36,4 +36,4 @@ external application assets
 endef
 
 # module name resolution
-MODULE_xenolith_resources_assets := MODULE_XENOLITH_RESOURCES_ASSETS
+$(call define_module, xenolith_resources_assets, MODULE_XENOLITH_RESOURCES_ASSETS)

@@ -24,7 +24,7 @@
 #define XENOLITH_APPLICATION_ANDROID_XLANDROID_H_
 
 #include "XLCommon.h" // IWYU pragma: keep
-#include "platform/SPJni.h"
+#include "jni/SPRuntimeJni.h"
 
 #include <android/configuration.h>
 #include <android/native_activity.h>
@@ -40,6 +40,8 @@
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::xenolith::platform {
+
+namespace jni = sprt::jni;
 
 struct NetworkConnectivity;
 struct ActivityProxy;

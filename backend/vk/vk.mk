@@ -40,7 +40,7 @@ This module only implements basic functions without platform-dependent parts.
 endef
 
 # module name resolution
-MODULE_xenolith_backend_vk := MODULE_XENOLITH_BACKEND_VK
+$(call define_module, xenolith_backend_vk, MODULE_XENOLITH_BACKEND_VK)
 
 ifdef VULKAN_SDK
 ifdef WIN32

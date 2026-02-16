@@ -201,11 +201,7 @@ struct InputKeyInfo {
 	InputKeyInfo(InputKeyMask &&mask) : keyMask(sp::move(mask)) { }
 };
 
-#ifndef __LCC__
-
 constexpr const TextCursor TextCursor::InvalidCursor(maxOf<uint32_t>(), 0.0f);
-
-#endif
 
 } // namespace stappler::xenolith
 

@@ -20,11 +20,11 @@
 
 // clang-format off
 
-#include <string.h>
-#include <stdint.h>
-#include <stddef.h>
+#include <c/__sprt_stddef.h>
+#include <c/__sprt_stdint.h>
+#include <c/__sprt_string.h>
 
-size_t num_ids = 2557;
+__sprt_size_t num_ids = 2557;
 
 /* pnp_keys is a string of 3-character PNP IDs */
 static const char *pnp_keys =
@@ -2594,29 +2594,34 @@ static const char *pnp_names[] =
 
 };
 
+// clang-format on
+
 /* pnp_name, given a key of three charaters (null terminator optional; any
 extra bytes are ignored), looks up the matching name and returns a pointer to
 it, or NULL if not found. The returned pointer, if not NULL, is to a
 null-terminated read-only string that does not need to be freed. The name is
 guarenteed to fit into a buffer of 128 bytes, including at least one null
 terminator. */
-const char *pnp_name(const char *key)
-{
-    /* binary search of pnp_keys */
-    size_t start = 0;
-    size_t pos = num_ids / 2;
-    size_t end = num_ids;
-    
-    while ((pos >= start) && (pos < end))
-    {
-        int c = memcmp(key, &pnp_keys[3 * pos], 3);
-        if (c == 0) { return pnp_names[pos]; }
-        if (c < 0)  { end = pos; }
-        if (c > 0)  { start = pos + 1; }
-        
-        pos = start + ((end - start) / 2);
-    }
-    
-    return NULL;
-}
+const char *pnp_name(const char *key) {
+	/* binary search of pnp_keys */
+	__sprt_size_t start = 0;
+	__sprt_size_t pos = num_ids / 2;
+	__sprt_size_t end = num_ids;
 
+	while ((pos >= start) && (pos < end)) {
+		int c = __sprt_memcmp(key, &pnp_keys[3 * pos], 3);
+		if (c == 0) {
+			return pnp_names[pos];
+		}
+		if (c < 0) {
+			end = pos;
+		}
+		if (c > 0) {
+			start = pos + 1;
+		}
+
+		pos = start + ((end - start) / 2);
+	}
+
+	return __SPRT_NULL;
+}

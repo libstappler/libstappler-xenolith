@@ -528,11 +528,11 @@ float AndroidWindow::acquireWindowDensity() const {
 
 Status AndroidWindow::setPreferredFrameRate(float value) {
 	if (_ANativeWindow_setFrameRateWithChangeStrategy) {
-		return status::errnoToStatus(_ANativeWindow_setFrameRateWithChangeStrategy(_window, value,
-				0,
+		return sprt::status::errnoToStatus(_ANativeWindow_setFrameRateWithChangeStrategy(_window,
+				value, 0,
 				hasFlag(_info->flags, WindowCreationFlags::OnlySeamlessFrameRateSwitch) ? 0 : 1));
 	} else if (_ANativeWindow_setFrameRate) {
-		return status::errnoToStatus(_ANativeWindow_setFrameRate(_window, value, 0));
+		return sprt::status::errnoToStatus(_ANativeWindow_setFrameRate(_window, value, 0));
 	}
 	return Status::ErrorNotImplemented;
 }

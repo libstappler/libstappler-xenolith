@@ -592,7 +592,7 @@ void Device::compileImage(const Loop &loop, const Rc<core::DynamicImage> &img,
 					view);
 		});
 
-		SPASSERT(!task->image->getInfo().key.empty(), "Unnamed dynamic image");
+		sprt_passert(!task->image->getInfo().key.empty(), "Unnamed dynamic image");
 
 		task->resultImage =
 				task->device->getAllocator()->spawnPersistent(AllocationUsage::DeviceLocal,

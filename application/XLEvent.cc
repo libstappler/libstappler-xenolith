@@ -38,17 +38,17 @@ struct EventBus {
 	void term() { bus = nullptr; }
 
 	event::BusEventCategory allocateCategory(StringView name) {
-		SPASSERT(bus, "Bus should be initialized");
+		sprt_passert(bus, "Bus should be initialized");
 		return bus->allocateCategory(name);
 	}
 
 	void dispatchEvent(NotNull<event::BusEvent> ev) {
-		SPASSERT(bus, "Bus should be initialized");
+		sprt_passert(bus, "Bus should be initialized");
 		bus->dispatchEvent(ev);
 	}
 
 	StringView getCategoryName(event::BusEventCategory id) {
-		SPASSERT(bus, "Bus should be initialized");
+		sprt_passert(bus, "Bus should be initialized");
 		return bus->getCategoryName(id);
 	}
 
@@ -68,7 +68,7 @@ static void EventHeader_send(const EventHeader &header, Ref *object, Value &&dat
 }
 
 EventHeader::EventHeader(StringView name) : _category(getEventBus()->allocateCategory(name)) {
-	SPASSERT(!name.empty(), "Event should have name");
+	sprt_passert(!name.empty(), "Event should have name");
 }
 
 EventHeader::~EventHeader() { }

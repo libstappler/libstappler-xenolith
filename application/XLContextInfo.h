@@ -28,21 +28,13 @@
 #include "XLCoreInstance.h"
 #include "SPCommandLineParser.h"
 
-#if ANDROID
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-struct ApplicationInfo;
-
-}
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::xenolith {
 
 class Context;
 class AppThread;
 
 #if ANDROID
-using NativeContextHandle = stappler::platform::ApplicationInfo;
+using NativeContextHandle = sprt::jni::ApplicationInfo;
 #else
 using NativeContextHandle = void;
 #endif

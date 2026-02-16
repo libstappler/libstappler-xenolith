@@ -150,7 +150,7 @@ struct SP_PUBLIC SamplerInfo {
 	float minLod = 0.0;
 	float maxLod = 0.0;
 
-	SP_THREE_WAY_COMPARISON_TYPE(SamplerInfo)
+	constexpr auto operator<=>(const SamplerInfo &) const = default;
 };
 
 using ForceBufferFlags = ValueWrapper<BufferFlags, class ForceBufferFlagsFlag>;
@@ -234,9 +234,8 @@ struct SP_PUBLIC ImageInfoData {
 
 	ImageViewInfo getViewInfo(const ImageViewInfo &info) const;
 
-#if SP_HAVE_THREE_WAY_COMPARISON
-	SP_THREE_WAY_COMPARISON_TYPE(ImageInfoData)
-#else
+	auto operator<=>(const ImageInfoData &) const = default;
+
 	constexpr bool operator==(const ImageInfoData &other) const {
 		return format == other.format && flags == other.flags && imageType == other.imageType
 				&& extent == other.extent && mipLevels == other.mipLevels
@@ -309,7 +308,6 @@ struct SP_PUBLIC ImageInfoData {
 		}
 		return false;
 	}
-#endif
 };
 
 struct SP_PUBLIC ImageInfo : NamedMem, ImageInfoData {
@@ -413,9 +411,8 @@ struct SP_PUBLIC ImageViewInfo {
 	bool isCompatible(const ImageInfo &) const;
 	String description() const;
 
-#if SP_HAVE_THREE_WAY_COMPARISON
-	SP_THREE_WAY_COMPARISON_TYPE(ImageViewInfo)
-#else
+	auto operator<=>(const ImageViewInfo &) const = default;
+
 	constexpr bool operator==(const ImageViewInfo &other) const {
 		return format == other.format && type == other.type && r == other.r && g == other.g
 				&& b == other.b && a == other.a && baseArrayLayer == other.baseArrayLayer
@@ -469,7 +466,6 @@ struct SP_PUBLIC ImageViewInfo {
 		}
 		return false;
 	}
-#endif
 };
 
 struct SP_PUBLIC ImageViewData : ImageViewInfo, memory::AllocPool {
